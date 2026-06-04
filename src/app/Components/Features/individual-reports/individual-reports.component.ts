@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { SelectModule } from 'primeng/select';
 import { ReportCourseComponent } from './report-course/report-course.component';
+import { ReportEducationIndividualComponent } from './report-education/report-education.component';
 import { REPORT_LABELS, type ReportLang } from '@/Core/i18n/report-labels';
 
 /**
@@ -18,7 +19,7 @@ import { REPORT_LABELS, type ReportLang } from '@/Core/i18n/report-labels';
 @Component({
     selector: 'app-individual-reports',
     standalone: true,
-    imports: [CommonModule, FormsModule, SelectModule, ReportCourseComponent],
+    imports: [CommonModule, FormsModule, SelectModule, ReportCourseComponent, ReportEducationIndividualComponent],
     templateUrl: './individual-reports.component.html',
     styleUrls: ['./individual-reports.component.scss'],
 })
@@ -28,7 +29,8 @@ export class IndividualReportsComponent implements OnInit {
 
     /** Picker options — extend as new individual reports are added. */
     reportTypes: { label: string; value: string }[] = [
-        { label: 'Course Report', value: 'course' },
+        { label: 'Course Report',    value: 'course' },
+        { label: 'Education Report', value: 'education' },
     ];
 
     reportType: string = 'course';

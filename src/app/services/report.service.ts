@@ -214,4 +214,10 @@ export class ReportService {
     runDynamicEmployeeCourseReport(req: DynamicReportRequest): Observable<DynamicReportResponse> {
         return this.http.post<DynamicReportResponse>(`${environment.apis.core}/DynamicReport/EmployeeCourseOverview`, req);
     }
+
+    /** Education-cardinality variant — one row per (employee × education).
+      Backs the Individual Personnel → Education report. */
+    runDynamicEmployeeEducationReport(req: DynamicReportRequest): Observable<DynamicReportResponse> {
+        return this.http.post<DynamicReportResponse>(`${environment.apis.core}/DynamicReport/EmployeeEducationOverview`, req);
+    }
 }

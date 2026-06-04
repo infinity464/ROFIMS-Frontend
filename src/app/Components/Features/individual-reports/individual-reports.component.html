@@ -25,6 +25,9 @@
             @case ('course') {
                 <app-report-course [lang]="reportLang" (langToggle)="toggleReportLang()" />
             }
+            @case ('education') {
+                <app-report-education-individual [lang]="reportLang" (langToggle)="toggleReportLang()" />
+            }
         }
     </div>
 </div>

@@ -1,33 +1,27 @@
-import { Component, EventEmitter, HostListener, Input, OnChanges, OnInit, Output, SimpleChanges } from '@angular/core';
+import { Component, EventEmitter, HostListener, Input, OnInit, Output, SimpleChanges, OnChanges } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { TableModule } from 'primeng/table';
 import { ButtonModule } from 'primeng/button';
-import { SelectModule } from 'primeng/select';
 import { MultiSelectModule } from 'primeng/multiselect';
 import { PaginatorModule } from 'primeng/paginator';
+import { InputTextModule } from 'primeng/inputtext';
+import { DialogModule } from 'primeng/dialog';
 import { Toast } from 'primeng/toast';
 import { MessageService } from 'primeng/api';
 import { ReportService } from '@/services/report.service';
-import { CommonCodeService } from '@/services/common-code-service';
+import { IdentityUserMemberTypeAccessService } from '@/services/identity-user-member-type-access.service';
+import { SharedService } from '@/shared/services/shared-service';
 import { Router } from '@angular/router';
 import { UserMenuService } from '@/services/user-menu.service';
 import { REPORT_LABELS, type ReportLang } from '@/Core/i18n/report-labels';
 import { BanglaNumerals } from '@/Core/i18n/bangla-numerals';
 import type {
-    EducationReportRow,
     ReportAccessibleScope,
     DynamicReportCriterion,
     DynamicReportRow,
 } from '@/models/report.model';
-import type { MotherOrganizationModel } from '@/models/mother-org-model';
-import type { CommonCodeModel } from '@/models/common-code-model';
-import {
-    unitScopeLine,
-    memberTypeScopeLine,
-    statusLocked,
-} from '../report-scope.helper';
-import { personnelMeta as personnelMetaHelper } from '../formal-rab-render.helper';
+import { personnelMeta as personnelMetaHelper } from '../../employee-reports/formal-rab-render.helper';
 import {
     AlignmentType,
     BorderStyle,
@@ -47,43 +41,82 @@ import {
 import { saveAs } from 'file-saver';
 import * as XLSX from 'xlsx';
 
+/**
+ * Standalone Education report — one row per (employee × education record).
+ * User searches by RAB ID / Service ID / NID (NID OR-matches NID + NIDOld),
+ * and sees every education record for the matched member. Mirrors the
+ * structure of report-course (sibling under individual-reports).
+ */
+type EducationReportRow = {
+    ser?: number;
+    // Education-side
+    educationId?: number;
+    examName?: string | null;
+    examNameBN?: string | null;
+    instituteType?: string | null;
+    instituteTypeBN?: string | null;
+    instituteName?: string | null;
+    instituteNameBN?: string | null;
+    departmentName?: string | null;
+    departmentNameBN?: string | null;
+    subjectName?: string | null;
+    subjectNameBN?: string | null;
+    grade?: string | null;
+    gradeBN?: string | null;
+    gradePoint?: string | null;
+    passingYear?: number | string | null;
+    educationDateFrom?: string | null;
+    educationDateTo?: string | null;
+    educationRemarks?: string | null;
+    // Employee-side (legacy property names — adapted from registry keys)
+    rabid?: string | null;
+    serviceId?: string | null;
+    name?: string | null;
+    nameBN?: string | null;
+    nid?: string | null;
+    rank?: string | null;
+    rankBN?: string | null;
+    orgName?: string | null;
+    orgNameBN?: string | null;
+    corps?: string | null;
+    corpsBN?: string | null;
+    trade?: string | null;
+    tradeBN?: string | null;
+    rabUnit?: string | null;
+    rabUnitBN?: string | null;
+    [extra: string]: unknown;
+};
+
 @Component({
-    selector: 'app-report-education',
+    selector: 'app-report-education-individual',
     standalone: true,
     imports: [
         CommonModule,
         FormsModule,
         TableModule,
         ButtonModule,
-        SelectModule,
         MultiSelectModule,
         PaginatorModule,
+        InputTextModule,
+        DialogModule,
         Toast,
     ],
     providers: [MessageService],
     templateUrl: './report-education.component.html',
-    styleUrls: ['../report-theme.scss', '../report-card-mtr.scss', './report-education.component.scss'],
+    styleUrls: ['../../employee-reports/report-theme.scss', '../../employee-reports/report-card-mtr.scss', './report-education.component.scss'],
 })
-export class ReportEducationComponent implements OnInit, OnChanges {
+export class ReportEducationIndividualComponent implements OnInit, OnChanges {
     L = REPORT_LABELS;
     @Input() lang: ReportLang = 'en';
-    /** Parent's CommonCode pick (Higher Education Qualification CodeId). */
-    @Input() commonCodeId: number | null = null;
-    @Input() reportTypeLabel = '';
-    @Input() commonCodeLabel = '';
-    @Input() postingStatus: string = 'Servings';
-    @Input() statusLabel = '';
-    @Input() statusLabelBn = '';
     @Output() langToggle = new EventEmitter<void>();
 
-    orgOptions: MotherOrganizationModel[] = [];
-    selectedOrgId: number | null = null;
-    rankOptions: { label: string; labelBn: string; value: number }[] = [];
-    corpsOptions: { label: string; labelBn: string; value: number }[] = [];
-    tradeOptions: { label: string; labelBn: string; value: number }[] = [];
-    selectedRankId: number | null = null;
-    selectedCorpsId: number | null = null;
-    selectedTradeId: number | null = null;
+    // ── Filter state ──────────────────────────────────────────────────
+    searchRabId = '';
+    searchServiceId = '';
+    searchNid = '';
+
+    /** Raw search result — kept across picker re-opens. */
+    private fullResult: EducationReportRow[] = [];
 
     list: EducationReportRow[] = [];
     loading = false;
@@ -98,102 +131,73 @@ export class ReportEducationComponent implements OnInit, OnChanges {
     appliedFilterLines: string[] = [];
 
     accessibleScope: ReportAccessibleScope | null = null;
-    @Output() scopeChange = new EventEmitter<ReportAccessibleScope | null>();
+    get orgScopeRestricted(): boolean {
+        return this.accessibleScope?.orgScopeRestricted === true;
+    }
 
-    get unitScopeLine(): string | null { return unitScopeLine(this.accessibleScope, this.lang); }
-    get memberTypeScopeLine(): string | null { return memberTypeScopeLine(this.accessibleScope, this.lang); }
-    get statusLocked(): boolean { return statusLocked(this.accessibleScope); }
+    showAccessDeniedDialog = false;
+    accessDeniedMessage = 'You do not have permission to view this employee. Either they are outside your accessible scope or no longer presently serving.';
+
+    showNotFoundDialog = false;
+    notFoundMessage = 'No member found with the given RAB ID / Service ID / NID.';
+
+    showPickerDialog = false;
+    pickerRows: Array<{
+        employeeId: number;
+        displayName: string;
+        orgName: string;
+        status: string;
+    }> = [];
+    private pickerLookupRows: DynamicReportRow[] = [];
 
     canInsert = true;
     canUpdate = true;
     canDelete = true;
 
-    /**
-     * Same shape as report-batch-course's catalog. The Higher Education
-     * Qualification is the filter context (parent's commonCodeId) — the
-     * on-screen title already shows it, so a per-row repeat would be noise.
-     * The filter is "any education matches X" (server-side EXISTS against
-     * EducationInfo via the educationAnyMatch sentinel field key).
-     */
+    // ── Column picker — education-only, like Course report ──────────
     columnCatalog: { key: string; labelEN: string; labelBN: string; hint: string; defaultVisible: boolean }[] = [
-        { key: 'ser',          labelEN: 'Ser',           labelBN: 'ক্রঃ',          hint: 'Serial',                defaultVisible: true  },
-        { key: 'personnel',    labelEN: 'RAB Personnel', labelBN: 'র‍্যাব সদস্য',   hint: 'RabPersonnelComposite', defaultVisible: true  },
-        { key: 'rabId',        labelEN: 'RAB ID',        labelBN: 'র‍্যাব আইডি',    hint: 'RabId',                 defaultVisible: true  },
-        { key: 'corps',        labelEN: 'Corps',         labelBN: 'কোর',           hint: 'Plain',                 defaultVisible: true  },
-        { key: 'trade',        labelEN: 'Trade',         labelBN: 'ট্রেড',         hint: 'Plain',                 defaultVisible: true  },
-        // Blank "Remark" column — always renders an empty cell so the
-        // printed roster has a writable space for handwritten notes.
-        // Default-visible; users can hide via the column picker.
-        { key: 'blankRemark',  labelEN: 'Remark',        labelBN: 'মন্তব্য',       hint: 'BlankRemark',           defaultVisible: true  },
-        // Opt-in extras (same as member-appointment / batch-course catalog).
-        { key: 'serviceId',         labelEN: 'Service ID',       labelBN: 'সার্ভিস আইডি',       hint: 'Plain', defaultVisible: false },
-        { key: 'nameEnglish',       labelEN: 'Name (EN)',        labelBN: 'নাম (ইংরেজি)',       hint: 'Plain', defaultVisible: false },
-        { key: 'nameBangla',        labelEN: 'Name (BN)',        labelBN: 'নাম (বাংলা)',        hint: 'Plain', defaultVisible: false },
-        { key: 'nid',               labelEN: 'NID',              labelBN: 'এনআইডি',            hint: 'Plain', defaultVisible: false },
-        { key: 'prefix',            labelEN: 'Prefix',           labelBN: 'প্রিফিক্স',          hint: 'Plain', defaultVisible: false },
-        { key: 'appointment',       labelEN: 'Appointment',      labelBN: 'নিয়োগ',             hint: 'Plain', defaultVisible: false },
-        { key: 'memberType',        labelEN: 'Member Type',      labelBN: 'সদস্য ধরন',          hint: 'Plain', defaultVisible: false },
-        { key: 'motherOrganization',labelEN: 'Mother Org',       labelBN: 'মাতৃ সংস্থা',        hint: 'Plain', defaultVisible: false },
-        { key: 'armyRank',          labelEN: 'Rank',             labelBN: 'র‍্যাঙ্ক',           hint: 'Plain', defaultVisible: false },
-        { key: 'tradeRemarks',      labelEN: 'Trade Remarks',    labelBN: 'ট্রেড মন্তব্য',       hint: 'Plain', defaultVisible: false },
-        { key: 'gender',            labelEN: 'Gender',           labelBN: 'লিঙ্গ',              hint: 'Plain', defaultVisible: false },
-        { key: 'motherUnit',        labelEN: 'Last Unit',        labelBN: 'শেষ ইউনিট',          hint: 'Plain', defaultVisible: false },
-        { key: 'rabUnit',           labelEN: 'RAB Unit',         labelBN: 'র‍্যাব ইউনিট',       hint: 'Plain', defaultVisible: false },
-        { key: 'dateOfCommission',  labelEN: 'Commission Date',  labelBN: 'কমিশন তারিখ',         hint: 'Plain', defaultVisible: false },
-        { key: 'joiningDate',       labelEN: 'Joining Date',     labelBN: 'যোগদান তারিখ',       hint: 'Plain', defaultVisible: false },
-        { key: 'rabServiceFrom',    labelEN: 'RAB Joining Date', labelBN: 'র‍্যাবে যোগদান তারিখ',hint: 'Plain', defaultVisible: false },
-        { key: 'rabServiceTo',      labelEN: 'RAB End Date',     labelBN: 'র‍্যাব শেষ তারিখ',   hint: 'Plain', defaultVisible: false },
-        { key: 'division',          labelEN: 'Division',         labelBN: 'বিভাগ',              hint: 'Plain', defaultVisible: false },
-        { key: 'district',          labelEN: 'District',         labelBN: 'জেলা',               hint: 'Plain', defaultVisible: false },
-        { key: 'upazila',           labelEN: 'Upazila',          labelBN: 'উপজেলা',             hint: 'Plain', defaultVisible: false },
-        { key: 'postOffice',        labelEN: 'Post Office',      labelBN: 'ডাকঘর',              hint: 'Plain', defaultVisible: false },
-        { key: 'dob',               labelEN: 'Date of Birth',    labelBN: 'জন্ম তারিখ',          hint: 'Plain', defaultVisible: false },
-        { key: 'religion',          labelEN: 'Religion',         labelBN: 'ধর্ম',               hint: 'Plain', defaultVisible: false },
-        { key: 'bloodGroup',        labelEN: 'Blood Group',      labelBN: 'রক্তের গ্রুপ',        hint: 'Plain', defaultVisible: false },
-        { key: 'maritalStatus',     labelEN: 'Marital Status',   labelBN: 'বৈবাহিক অবস্থা',      hint: 'Plain', defaultVisible: false },
-        { key: 'mobileNo',          labelEN: 'Mobile',           labelBN: 'মোবাইল',             hint: 'Plain', defaultVisible: false },
-        { key: 'email',             labelEN: 'Email',            labelBN: 'ইমেইল',              hint: 'Plain', defaultVisible: false },
+        { key: 'ser',               labelEN: 'Ser',           labelBN: 'ক্রঃ',          hint: 'Serial',    defaultVisible: true  },
+        { key: 'examName',          labelEN: 'Exam / Degree', labelBN: 'পরীক্ষা / ডিগ্রি', hint: 'Plain',   defaultVisible: true  },
+        { key: 'instituteName',     labelEN: 'Institute',     labelBN: 'প্রতিষ্ঠান',     hint: 'Plain',     defaultVisible: true  },
+        { key: 'subjectName',       labelEN: 'Subject',       labelBN: 'বিষয়',           hint: 'Plain',     defaultVisible: true  },
+        { key: 'grade',             labelEN: 'Result / Grade',labelBN: 'ফলাফল / গ্রেড',  hint: 'Plain',     defaultVisible: true  },
+        { key: 'gradePoint',        labelEN: 'Grade Point',   labelBN: 'গ্রেড পয়েন্ট',  hint: 'Plain',     defaultVisible: true  },
+        { key: 'passingYear',       labelEN: 'Passing Year',  labelBN: 'পাসের বছর',     hint: 'Plain',     defaultVisible: true  },
+        { key: 'educationRemarks',  labelEN: 'Remarks',       labelBN: 'মন্তব্য',        hint: 'Plain',     defaultVisible: true  },
+        // Opt-in extras
+        { key: 'instituteType',     labelEN: 'Institute Type',labelBN: 'প্রতিষ্ঠানের ধরন', hint: 'Plain',   defaultVisible: false },
+        { key: 'departmentName',    labelEN: 'Department',    labelBN: 'বিভাগ',          hint: 'Plain',     defaultVisible: false },
+        { key: 'educationDateFrom', labelEN: 'From Date',     labelBN: 'শুরু তারিখ',     hint: 'PlainDate', defaultVisible: false },
+        { key: 'educationDateTo',   labelEN: 'To Date',       labelBN: 'শেষ তারিখ',      hint: 'PlainDate', defaultVisible: false },
     ];
 
-    /** Same plainColumnPropertyMap as report-batch-course. */
     private static readonly plainColumnPropertyMap: Record<string, { en: string; bn?: string }> = {
-        serviceId:           { en: 'serviceId' },
-        nameEnglish:         { en: 'name' },
-        nameBangla:          { en: 'nameBN' },
-        nid:                 { en: 'nid' },
-        prefix:              { en: 'prefix',              bn: 'prefixBN' },
-        appointment:         { en: 'appointment',         bn: 'appointmentBN' },
-        memberType:          { en: 'memberType',          bn: 'memberTypeBN' },
-        motherOrganization:  { en: 'orgName',             bn: 'orgNameBN' },
-        armyRank:            { en: 'rank',                bn: 'rankBN' },
-        tradeRemarks:        { en: 'tradeRemarks' },
-        gender:              { en: 'gender',              bn: 'genderBN' },
-        motherUnit:          { en: 'motherUnit',          bn: 'motherUnitBN' },
-        rabUnit:             { en: 'rabUnit',             bn: 'rabUnitBN' },
-        dateOfCommission:    { en: 'dateOfCommission' },
-        joiningDate:         { en: 'joiningDate' },
-        rabServiceFrom:      { en: 'rabServiceFrom' },
-        rabServiceTo:        { en: 'rabServiceTo' },
-        division:            { en: 'division',            bn: 'divisionBN' },
-        district:            { en: 'district',            bn: 'districtBN' },
-        upazila:             { en: 'upazila',             bn: 'upazilaBN' },
-        postOffice:          { en: 'postOffice',          bn: 'postOfficeBN' },
-        corps:               { en: 'corps',               bn: 'corpsBN' },
-        trade:               { en: 'trade',               bn: 'tradeBN' },
-        dob:                 { en: 'dob' },
-        religion:            { en: 'religion' },
-        bloodGroup:          { en: 'bloodGroup' },
-        maritalStatus:       { en: 'maritalStatus' },
-        mobileNo:            { en: 'mobileNo' },
-        email:               { en: 'email' },
+        examName:           { en: 'examName',          bn: 'examNameBN' },
+        instituteType:      { en: 'instituteType',     bn: 'instituteTypeBN' },
+        instituteName:      { en: 'instituteName',     bn: 'instituteNameBN' },
+        departmentName:     { en: 'departmentName',    bn: 'departmentNameBN' },
+        subjectName:        { en: 'subjectName',       bn: 'subjectNameBN' },
+        grade:              { en: 'grade',             bn: 'gradeBN' },
+        gradePoint:         { en: 'gradePoint' },
+        passingYear:        { en: 'passingYear' },
+        educationDateFrom:  { en: 'educationDateFrom' },
+        educationDateTo:    { en: 'educationDateTo' },
+        educationRemarks:   { en: 'educationRemarks' },
     };
 
     plainCellValue(row: EducationReportRow, key: string): string {
-        const map = ReportEducationComponent.plainColumnPropertyMap[key];
+        const map = ReportEducationIndividualComponent.plainColumnPropertyMap[key];
         if (!map) return '-';
         const en = (row as any)[map.en] as string | null | undefined;
         const bn = map.bn ? (row as any)[map.bn] as string | null | undefined : undefined;
         return this.codeValue(en, bn);
+    }
+
+    plainDateCellValue(row: EducationReportRow, key: string): string {
+        const map = ReportEducationIndividualComponent.plainColumnPropertyMap[key];
+        if (!map) return '-';
+        const v = (row as any)[map.en] as string | null | undefined;
+        return this.formatDate(v);
     }
 
     selectedColumnKeys: string[] = this.columnCatalog.filter(c => c.defaultVisible).map(c => c.key);
@@ -245,33 +249,50 @@ export class ReportEducationComponent implements OnInit, OnChanges {
     }
 
     get criteriaItems(): { label: string; value: string }[] {
-        const L = this.L[this.lang];
         const items: { label: string; value: string }[] = [];
-        if (this.selectedOrgId != null) {
-            const org = this.orgOptions.find(o => o.orgId === this.selectedOrgId);
-            const val = this.lang === 'bn' ? (org?.orgNameBN || org?.orgNameEN) : org?.orgNameEN;
-            if (val) items.push({ label: L['report.search.motherOrg'], value: val });
-        }
-        if (this.selectedRankId != null) {
-            const rank = this.rankOptions.find(o => o.value === this.selectedRankId);
-            const val = this.lang === 'bn' ? rank?.labelBn : rank?.label;
-            if (val) items.push({ label: L['report.search.rank'], value: val });
-        }
-        if (this.selectedCorpsId != null) {
-            const corps = this.corpsOptions.find(o => o.value === this.selectedCorpsId);
-            const val = this.lang === 'bn' ? corps?.labelBn : corps?.label;
-            if (val) items.push({ label: L['report.table.corps'] ?? 'Corps', value: val });
-        }
-        if (this.selectedTradeId != null) {
-            const trade = this.tradeOptions.find(o => o.value === this.selectedTradeId);
-            const val = this.lang === 'bn' ? trade?.labelBn : trade?.label;
-            if (val) items.push({ label: L['report.search.trade'], value: val });
-        }
-        if (this.postingStatus && this.postingStatus !== 'All') {
-            const sLabel = this.lang === 'bn' ? this.statusLabelBn : this.statusLabel;
-            if (sLabel) items.push({ label: L['report.search.rabMemberStatus'], value: sLabel });
-        }
+        if (this.searchRabId.trim())     items.push({ label: 'RAB ID',     value: this.searchRabId.trim() });
+        if (this.searchServiceId.trim()) items.push({ label: 'Service ID', value: this.searchServiceId.trim() });
+        if (this.searchNid.trim())       items.push({ label: 'NID',        value: this.searchNid.trim() });
         return items;
+    }
+
+    /** Member identity card — reads from fullResult[0] so it still renders
+        when the matched member has zero education records. */
+    get employeeInfoItems(): { label: string; value: string }[] {
+        const row = this.fullResult?.[0] ?? this.list?.[0];
+        if (!row) return [];
+        const isBn = this.lang === 'bn';
+        const L = (en: string, bn: string) => isBn ? bn : en;
+        return [
+            { label: L('Name',        'নাম'),               value: this.codeValue(row.name,    row.nameBN) },
+            { label: L('Rank',        'র‍্যাঙ্ক'),           value: this.codeValue(row.rank,    row.rankBN) },
+            { label: L('Corps',       'কোর'),                value: this.codeValue(row.corps,   row.corpsBN) },
+            { label: L('Trade',       'ট্রেড'),              value: this.codeValue(row.trade,   row.tradeBN) },
+            { label: L('Mother Org',  'মাতৃ সংস্থা'),         value: this.codeValue(row.orgName, row.orgNameBN) },
+            { label: L('RAB Unit',    'র‍্যাব ইউনিট'),       value: this.codeValue(row.rabUnit, row.rabUnitBN) },
+            { label: L('Service ID',  'সার্ভিস আইডি'),       value: this.displayNum(row.serviceId) },
+            { label: L('RAB ID',      'র‍্যাব আইডি'),         value: row.rabid ? this.displayNum(row.rabid) : '-' },
+        ];
+    }
+
+    get employeeInfoCardTitle(): string {
+        return this.lang === 'bn' ? 'সদস্যের তথ্য' : 'MEMBER DETAILS';
+    }
+
+    get memberFoundNoCourses(): boolean {
+        // Re-used wording for "Member Details rendered, but no education list".
+        return this.searched && !this.loading && this.list.length === 0
+            && this.fullResult.length > 0 && !this.orgScopeRestricted;
+    }
+
+    get noCoursesMessage(): string {
+        return this.lang === 'bn'
+            ? 'এই সদস্যের কোনো শিক্ষা রেকর্ড নেই।'
+            : 'No education records found for this member.';
+    }
+
+    get noMatchMessage(): string {
+        return this.lang === 'bn' ? 'কোনো মিল পাওয়া যায়নি।' : 'No matching record found.';
     }
 
     // ── RAB paper getters ─────────────────────────────────────────────
@@ -286,16 +307,8 @@ export class ReportEducationComponent implements OnInit, OnChanges {
             ? 'বাংলাদেশ পুলিশ · সদর দপ্তর, কুর্মিটোলা, ঢাকা'
             : 'Bangladesh Police · Headquarters, Kurmitola, Dhaka';
     }
-    get rabSectionTitle(): string {
-        if (this.reportTypeLabel && this.commonCodeLabel) {
-            const suffix = this.lang === 'bn' ? 'প্রতিবেদন' : 'Report';
-            return `${this.reportTypeLabel}: ${this.commonCodeLabel} ${suffix}`;
-        }
-        return this.L[this.lang]['report.title.education'];
-    }
-    get rabSubtitleText(): string {
-        return (this.lang === 'bn' ? this.statusLabelBn : this.statusLabel) || '';
-    }
+    get rabSectionTitle(): string { return this.lang === 'bn' ? 'শিক্ষা প্রতিবেদন' : 'EDUCATION REPORT'; }
+    get rabSubtitleText(): string { return ''; }
     get rabCriteriaTitle(): string { return this.lang === 'bn' ? 'নির্বাচন মানদণ্ড' : 'SELECTION CRITERIA'; }
     get rabGeneratedLabel(): string { return this.lang === 'bn' ? 'উৎপন্ন' : 'GENERATED'; }
     get rabFormattedDate(): string {
@@ -310,57 +323,38 @@ export class ReportEducationComponent implements OnInit, OnChanges {
 
     constructor(
         private reportService: ReportService,
-        private commonCodeService: CommonCodeService,
         private messageService: MessageService,
+        private memberTypeAccess: IdentityUserMemberTypeAccessService,
+        private sharedService: SharedService,
         private _router: Router,
         private _userMenuService: UserMenuService
     ) {}
 
+    private isMemberTypeAllowed(memberTypeId: number | null | undefined): boolean {
+        if (memberTypeId == null) return true;
+        const userId = this.sharedService.getCurrentUserId?.() ?? null;
+        if (!userId) return true;
+        const allowed = this.memberTypeAccess.getCachedMemberTypeIds(userId);
+        if (allowed === null) return true;
+        return allowed.includes(memberTypeId as number);
+    }
+
     @HostListener('document:click')
     onDocumentClick(): void { this.exportDropdownOpen = false; }
 
-    get reportTitle(): string {
-        const sLabel = this.lang === 'bn' ? this.statusLabelBn : this.statusLabel;
-        const statusSuffix = sLabel ? ` (${sLabel})` : '';
-        if (this.reportTypeLabel && this.commonCodeLabel) {
-            const suffix = this.lang === 'bn' ? 'প্রতিবেদন' : 'Report';
-            return `${this.reportTypeLabel}: ${this.commonCodeLabel} ${suffix}${statusSuffix}`;
-        }
-        return this.L[this.lang]['report.title.education'] + statusSuffix;
-    }
+    get reportTitle(): string { return this.rabSectionTitle; }
 
     get dateLine(): string {
         const now = new Date();
-        if (this.lang === 'en') {
-            return now.toLocaleDateString('en-US', { day: 'numeric', month: 'long', year: 'numeric' });
-        }
+        if (this.lang === 'en') return now.toLocaleDateString('en-US', { day: 'numeric', month: 'long', year: 'numeric' });
         return now.toLocaleDateString('bn-BD', { day: 'numeric', month: 'long', year: 'numeric' });
     }
 
     buildFilterLines(): string[] {
-        const L = this.L[this.lang];
         const lines: string[] = [];
-        if (this.selectedOrgId != null) {
-            const org = this.orgOptions.find((o) => o.orgId === this.selectedOrgId);
-            const val = this.lang === 'bn' ? (org?.orgNameBN || org?.orgNameEN) : org?.orgNameEN;
-            if (val) lines.push(`${L['report.search.motherOrg']}: ${val}`);
-        }
-        if (this.selectedRankId != null) {
-            const rank = this.rankOptions.find((o) => o.value === this.selectedRankId);
-            const val = this.lang === 'bn' ? rank?.labelBn : rank?.label;
-            if (val) lines.push(`${L['report.search.rank']}: ${val}`);
-        }
-        if (this.selectedCorpsId != null) {
-            const corps = this.corpsOptions.find((o) => o.value === this.selectedCorpsId);
-            const val = this.lang === 'bn' ? corps?.labelBn : corps?.label;
-            const label = L['report.table.corps'] ?? 'Corps';
-            if (val) lines.push(`${label}: ${val}`);
-        }
-        if (this.selectedTradeId != null) {
-            const trade = this.tradeOptions.find((o) => o.value === this.selectedTradeId);
-            const val = this.lang === 'bn' ? trade?.labelBn : trade?.label;
-            if (val) lines.push(`${L['report.search.trade']}: ${val}`);
-        }
+        if (this.searchRabId.trim())     lines.push(`RAB ID: ${this.searchRabId.trim()}`);
+        if (this.searchServiceId.trim()) lines.push(`Service ID: ${this.searchServiceId.trim()}`);
+        if (this.searchNid.trim())       lines.push(`NID: ${this.searchNid.trim()}`);
         return lines;
     }
 
@@ -372,15 +366,9 @@ export class ReportEducationComponent implements OnInit, OnChanges {
     async exportAs(type: 'print' | 'word' | 'excel'): Promise<void> {
         this.exportDropdownOpen = false;
         if (!this.list?.length) return;
-        if (type === 'print') {
-            this.openRabPrintWindow();
-            return;
-        }
-        if (type === 'word') {
-            await this.exportRabWord();
-        } else {
-            this.exportRabExcel();
-        }
+        if (type === 'print') { this.openRabPrintWindow(); return; }
+        if (type === 'word') { await this.exportRabWord(); }
+        else { this.exportRabExcel(); }
     }
 
     ngOnInit(): void {
@@ -388,19 +376,9 @@ export class ReportEducationComponent implements OnInit, OnChanges {
         this.canInsert = _perms.canInsert;
         this.canUpdate = _perms.canUpdate;
         this.canDelete = _perms.canDelete;
-
-        this.loadOrgOptions();
-        this.load();
     }
 
     ngOnChanges(changes: SimpleChanges): void {
-        if (changes['commonCodeId'] && !changes['commonCodeId'].firstChange) {
-            this.first = 0;
-            this.load();
-        } else if (changes['postingStatus'] && !changes['postingStatus'].firstChange) {
-            this.first = 0;
-            this.load();
-        }
         if (changes['lang']) {
             this.appliedFilterLines = this.buildFilterLines();
         }
@@ -410,155 +388,257 @@ export class ReportEducationComponent implements OnInit, OnChanges {
 
     get activeFilterCount(): number {
         let c = 0;
-        if (this.selectedOrgId != null) c++;
-        if (this.selectedRankId != null) c++;
-        if (this.selectedCorpsId != null) c++;
-        if (this.selectedTradeId != null) c++;
+        if (this.searchRabId.trim()) c++;
+        if (this.searchServiceId.trim()) c++;
+        if (this.searchNid.trim()) c++;
         return c;
     }
 
     toggleFilter(): void { this.filterOpen = !this.filterOpen; }
 
     filterSubtitle(): string {
-        const L = this.L['en'];
-        if (this.activeFilterCount === 0) return L['report.search.panelSubtitle'];
+        if (this.activeFilterCount === 0) return 'Enter RAB ID, Service ID or NID to begin';
         const n = this.lang === 'bn' ? BanglaNumerals.toBangla(String(this.activeFilterCount)) : String(this.activeFilterCount);
-        return n + ' ' + L['report.search.panelSubtitleApplied'];
+        return n + ' active filter(s)';
     }
 
     clearFilters(): void {
-        this.selectedOrgId = null;
-        this.selectedRankId = null;
-        this.selectedCorpsId = null;
-        this.selectedTradeId = null;
-        this.rankOptions = [];
-        this.corpsOptions = [];
-        this.tradeOptions = [];
+        this.searchRabId = '';
+        this.searchServiceId = '';
+        this.searchNid = '';
         this.first = 0;
     }
-
-    loadOrgOptions(): void {
-        this.commonCodeService.getAllActiveMotherOrgs().subscribe({
-            next: (orgs) => (this.orgOptions = orgs),
-            error: (err) => {
-                console.error(err);
-                this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.message || 'Failed to load organizations' });
-            },
-        });
-    }
-
-    onOrgChange(): void {
-        this.rankOptions = [];
-        this.corpsOptions = [];
-        this.tradeOptions = [];
-        this.selectedRankId = null;
-        this.selectedCorpsId = null;
-        this.selectedTradeId = null;
-        const orgId = this.selectedOrgId;
-        if (orgId != null) {
-            this.commonCodeService.getAllActiveCommonCodesByOrgIdAndType(orgId, 'MotherOrgRank').subscribe({
-                next: (codes: CommonCodeModel[]) =>
-                    (this.rankOptions = codes.map((c) => ({ label: c.codeValueEN || String(c.codeId), labelBn: c.codeValueBN || c.codeValueEN || String(c.codeId), value: c.codeId }))),
-            });
-            this.commonCodeService.getAllActiveCommonCodesByOrgIdAndType(orgId, 'Corps').subscribe({
-                next: (codes: CommonCodeModel[]) =>
-                    (this.corpsOptions = codes.map((c) => ({ label: c.codeValueEN || String(c.codeId), labelBn: c.codeValueBN || c.codeValueEN || String(c.codeId), value: c.codeId }))),
-            });
-        }
-    }
-
-    onCorpsChange(): void {
-        this.tradeOptions = [];
-        this.selectedTradeId = null;
-        const corpsId = this.selectedCorpsId;
-        if (corpsId != null) {
-            this.commonCodeService.getAllActiveCommonCodesByParentId(corpsId).subscribe({
-                next: (codes: CommonCodeModel[]) =>
-                    (this.tradeOptions = codes.map((c) => ({ label: c.codeValueEN || String(c.codeId), labelBn: c.codeValueBN || c.codeValueEN || String(c.codeId), value: c.codeId }))),
-            });
-        }
-    }
-
-    onFilterChange(): void { /* Search applies on click */ }
 
     onPage(event: { first?: number; rows?: number }): void {
         this.first = event.first ?? 0;
         this.rows = event.rows ?? this.rows;
-        this.load();
+        // Step 2 returns at most 1000 rows already — no re-fetch on page.
     }
 
     load(): void {
+        if (!this.searchRabId.trim() && !this.searchServiceId.trim() && !this.searchNid.trim()) {
+            this.messageService.add({ severity: 'warn', summary: 'Search', detail: 'Enter RAB ID, Service ID or NID.' });
+            return;
+        }
         this.loading = true;
         this.appliedFilterLines = this.buildFilterLines();
-        const page_no = Math.floor(this.first / this.rows) + 1;
 
-        const criteria: DynamicReportCriterion[] = [];
-        if (this.selectedOrgId != null && this.selectedOrgId > 0)
-            criteria.push({ fieldKey: 'motherOrganization', idValue: this.selectedOrgId });
-        if (this.selectedRankId != null && this.selectedRankId > 0)
-            criteria.push({ fieldKey: 'armyRank', idValue: this.selectedRankId });
-        if (this.selectedCorpsId != null && this.selectedCorpsId > 0)
-            criteria.push({ fieldKey: 'corps', idValue: this.selectedCorpsId });
-        if (this.selectedTradeId != null && this.selectedTradeId > 0)
-            criteria.push({ fieldKey: 'trade', idValue: this.selectedTradeId });
-        // Parent's commonCodeId is the picked Higher Education Qualification.
-        // Filter is "employees who have completed this qualification at any
-        // time" (server-side EXISTS against EducationInfo via educationAnyMatch).
-        if (this.commonCodeId != null && this.commonCodeId > 0)
-            criteria.push({ fieldKey: 'educationAnyMatch', idValue: this.commonCodeId });
+        // Step 1: per-employee lookup (mirrors report-course's two-step).
+        const lookupCriteria: DynamicReportCriterion[] = [];
+        if (this.searchRabId.trim())     lookupCriteria.push({ fieldKey: 'rabId',     textValue: this.searchRabId.trim() });
+        if (this.searchServiceId.trim()) lookupCriteria.push({ fieldKey: 'serviceId', textValue: this.searchServiceId.trim() });
+        if (this.searchNid.trim())       lookupCriteria.push({ fieldKey: 'nid',       textValue: this.searchNid.trim() });
+
+        const lookupColumns = [
+            'rabId', 'serviceId', 'nameEnglish', 'nameBangla',
+            'armyRank', 'corps', 'trade', 'motherOrganization', 'rabUnit',
+            'prefix', 'postingStatus',
+        ];
 
         this.reportService.runDynamicEmployeeBaseReport({
-            columns: this.selectedColumnKeys,
-            criteria,
-            postingStatusFilter: this.postingStatus || null,
-            pagination: { page_no, row_per_page: this.rows },
+            columns: lookupColumns,
+            criteria: lookupCriteria,
+            pagination: { page_no: 1, row_per_page: 100 },
         }).subscribe({
-            next: (res) => {
-                const startSer = (page_no - 1) * this.rows + 1;
-                this.list = (res.datalist ?? []).map((d, i) => this.adaptDynamicRow(d, startSer + i));
-                this.totalRecords = res.pages?.Rows ?? res.pages?.rows ?? 0;
-                this.accessibleScope = res.accessibleScope ? {
+            next: (lookup) => {
+                this.searched = true;
+                this.accessibleScope = lookup.accessibleScope ? {
                     rabUnitNames: null,
                     rabUnitNamesBN: null,
                     memberTypeNames: null,
                     memberTypeNamesBN: null,
-                    orgScopeRestricted: res.accessibleScope.orgScopeRestricted,
+                    orgScopeRestricted: lookup.accessibleScope.orgScopeRestricted,
                 } as ReportAccessibleScope : null;
-                this.scopeChange.emit(this.accessibleScope);
-                this.searched = true;
+
+                const employees = (lookup.datalist ?? []) as Array<DynamicReportRow>;
+
+                if (employees.length === 0) {
+                    this.fullResult = [];
+                    this.list = [];
+                    this.totalRecords = 0;
+                    this.loading = false;
+                    const unrestrictedHasMatches =
+                        (lookup.accessibleScope as any)?.unrestrictedHasMatches === true;
+                    if (unrestrictedHasMatches) {
+                        this.showAccessDeniedDialog = true;
+                    } else {
+                        this.showNotFoundDialog = true;
+                    }
+                    return;
+                }
+
+                const allowed = employees.filter((d) => {
+                    const mtId = d['memberTypeId'] as number | null | undefined;
+                    return this.isMemberTypeAllowed(mtId);
+                });
+
+                if (allowed.length === 0) {
+                    this.fullResult = [];
+                    this.list = [];
+                    this.totalRecords = 0;
+                    this.loading = false;
+                    this.showAccessDeniedDialog = true;
+                    return;
+                }
+
+                if (allowed.length === 1) {
+                    const empId = allowed[0]['employeeId'] as number;
+                    this.fetchEducationForEmployee(empId, allowed[0]);
+                    return;
+                }
+
+                this.loading = false;
+                this.openPickerForCandidates(allowed);
+            },
+            error: (err) => {
+                console.error(err);
+                this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.message || 'Failed to look up member' });
+                this.loading = false;
+            },
+        });
+    }
+
+    /** Step 2: fetch education records for the picked employee. */
+    private fetchEducationForEmployee(employeeId: number, lookupRow?: DynamicReportRow): void {
+        this.loading = true;
+        this.first = 0;
+
+        // Always project the FULL catalog so the picker is reactive.
+        const requiredForCard = [
+            'rabId', 'serviceId', 'nameEnglish', 'nameBangla',
+            'armyRank', 'corps', 'trade', 'motherOrganization', 'rabUnit',
+            'prefix',
+        ];
+        const projectedColumns = Array.from(new Set([
+            ...this.columnCatalog.map(c => c.key),
+            ...this.selectedColumnKeys,
+            ...requiredForCard,
+        ]));
+
+        this.reportService.runDynamicEmployeeEducationReport({
+            columns: projectedColumns,
+            criteria: [{ fieldKey: 'employeeIdRaw', idValue: employeeId }],
+            pagination: { page_no: 1, row_per_page: 1000 },
+        }).subscribe({
+            next: (res) => {
+                let adapted = (res.datalist ?? []).map((d, i) => this.adaptDynamicRow(d, i + 1));
+                // If zero education records, synthesize a single row from
+                // the lookup so the Member Details card still renders.
+                if (adapted.length === 0 && lookupRow) {
+                    adapted = [this.adaptDynamicRow({ ...lookupRow, employeeId } as DynamicReportRow, 1)];
+                    this.fullResult = adapted;
+                    this.list = [];
+                    this.totalRecords = 0;
+                } else {
+                    this.fullResult = adapted;
+                    this.list = adapted;
+                    this.totalRecords = adapted.length;
+                }
                 this.loading = false;
             },
             error: (err) => {
                 console.error(err);
-                this.messageService.add({
-                    severity: 'error',
-                    summary: 'Error',
-                    detail: err?.error?.message || 'Failed to load report',
-                });
+                this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.message || 'Failed to load education records' });
                 this.loading = false;
             },
         });
+    }
+
+    private openPickerForCandidates(candidates: DynamicReportRow[]): void {
+        const sansEmptyDash = (s: string) => (!s || s === '-' || s === '—' ? '' : s);
+        this.pickerRows = candidates.map((d) => {
+            const prefix    = sansEmptyDash(this.codeValue(d['prefix'] as string, d['prefixBN'] as string));
+            const serviceId = d['serviceId'] ? this.displayNum(d['serviceId'] as string) : '';
+            const rank      = sansEmptyDash(this.codeValue(d['armyRank'] as string, d['armyRankBN'] as string));
+            const name      = this.codeValue(d['nameEnglish'] as string, d['nameBangla'] as string);
+            const parts: string[] = [];
+            if (prefix && serviceId) parts.push(`${prefix}-${serviceId}`);
+            else if (prefix)         parts.push(prefix);
+            else if (serviceId)      parts.push(serviceId);
+            if (rank) parts.push(rank);
+            if (name) parts.push(name);
+            return {
+                employeeId: d['employeeId'] as number,
+                displayName: parts.join(' '),
+                orgName:     this.codeValue(d['motherOrganization'] as string, d['motherOrganizationBN'] as string),
+                status:      this.formatPostingStatus(d['postingStatus']),
+            };
+        });
+        this.showPickerDialog = true;
+        this.pickerLookupRows = candidates;
+    }
+
+    pickerSelect(employeeId: number): void {
+        const lookupRow = this.pickerLookupRows.find((d) => d['employeeId'] === employeeId);
+        this.showPickerDialog = false;
+        this.pickerRows = [];
+        this.fetchEducationForEmployee(employeeId, lookupRow);
+    }
+
+    pickerClose(): void {
+        this.showPickerDialog = false;
+        this.pickerRows = [];
+        this.pickerLookupRows = [];
+        this.fullResult = [];
+        this.list = [];
+        this.totalRecords = 0;
+    }
+
+    private static readonly statusDisplayMap: Record<string, { en: string; bn: string }> = {
+        Servings:          { en: 'Serving',             bn: 'কর্মরত' },
+        Serving:           { en: 'Serving',             bn: 'কর্মরত' },
+        ExMember:          { en: 'Ex-Member',           bn: 'সাবেক সদস্য' },
+        Pending:           { en: 'Pending for Joining', bn: 'যোগদানের অপেক্ষায়' },
+        PendingForJoining: { en: 'Pending for Joining', bn: 'যোগদানের অপেক্ষায়' },
+        Supernumerary:     { en: 'Supernumerary',       bn: 'সুপারনিউমারারি' },
+    };
+
+    private formatPostingStatus(raw: unknown): string {
+        const s = (raw ?? '').toString().trim();
+        if (!s) return '-';
+        const mapped = ReportEducationIndividualComponent.statusDisplayMap[s];
+        if (mapped) return this.lang === 'bn' ? mapped.bn : mapped.en;
+        return s;
     }
 
     private adaptDynamicRow(d: DynamicReportRow, ser: number): EducationReportRow {
         return {
             ...d,
             ser,
-            serviceId:     d['serviceId']             as string,
-            name:          d['nameEnglish']           as string,
-            nameBN:        d['nameBangla']            as string,
-            rank:          d['armyRank']              as string,
-            rankBN:        d['armyRankBN']            as string,
-            orgName:       d['motherOrganization']    as string,
-            orgNameBN:     d['motherOrganizationBN']  as string,
-            corps:         d['corps']                 as string,
-            corpsBN:       d['corpsBN']               as string,
-            trade:         d['trade']                 as string,
-            tradeBN:       d['tradeBN']               as string,
-            presentUnit:   d['rabUnit']               as string,
-            presentUnitBN: d['rabUnitBN']             as string,
+            educationId:         d['educationId']            as number,
+            examName:            d['examName']               as string,
+            examNameBN:          d['examNameBN']             as string,
+            instituteType:       d['instituteType']          as string,
+            instituteTypeBN:     d['instituteTypeBN']        as string,
+            instituteName:       d['instituteName']          as string,
+            instituteNameBN:     d['instituteNameBN']        as string,
+            departmentName:      d['departmentName']         as string,
+            departmentNameBN:    d['departmentNameBN']       as string,
+            subjectName:         d['subjectName']            as string,
+            subjectNameBN:       d['subjectNameBN']          as string,
+            grade:               d['grade']                  as string,
+            gradeBN:             d['gradeBN']                as string,
+            gradePoint:          d['gradePoint'] != null ? String(d['gradePoint']) : null,
+            passingYear:         d['passingYear'] != null ? String(d['passingYear']) : null,
+            educationDateFrom:   d['educationDateFrom']      as string,
+            educationDateTo:     d['educationDateTo']        as string,
+            educationRemarks:    d['educationRemarks']       as string,
+            serviceId:           d['serviceId']              as string,
+            name:                d['nameEnglish']            as string,
+            nameBN:              d['nameBangla']             as string,
+            nid:                 d['nid']                    as string,
+            rank:                d['armyRank']               as string,
+            rankBN:              d['armyRankBN']             as string,
+            orgName:             d['motherOrganization']     as string,
+            orgNameBN:           d['motherOrganizationBN']   as string,
+            corps:               d['corps']                  as string,
+            corpsBN:             d['corpsBN']                as string,
+            trade:               d['trade']                  as string,
+            tradeBN:             d['tradeBN']                as string,
+            rabUnit:             d['rabUnit']                as string,
+            rabUnitBN:           d['rabUnitBN']              as string,
             ...(d['rabId'] ? { rabid: d['rabId'] as string } : {}),
-        } as EducationReportRow & { rabid?: string };
+        };
     }
 
     formatDate(v: string | null | undefined): string {
@@ -584,12 +664,12 @@ export class ReportEducationComponent implements OnInit, OnChanges {
 
     codeValue(enVal: string | null | undefined, bnVal: string | null | undefined): string {
         if (this.lang === 'bn' && bnVal != null && bnVal.trim() !== '') return bnVal.trim();
-        return enVal ?? bnVal ?? '-';
+        const v = enVal ?? bnVal;
+        return v != null && v.toString().trim() !== '' ? v : '-';
     }
 
     // ──────────────────────────────────────────────────────────────────
-    // EXPORTERS — same shape as report-batch-course (verbatim apart from
-    // file-name and section title).
+    // EXPORTERS — same shape as report-course / member-appointment.
     // ──────────────────────────────────────────────────────────────────
 
     private async exportRabWord(): Promise<void> {
@@ -611,21 +691,18 @@ export class ReportEducationComponent implements OnInit, OnChanges {
             new Paragraph({ alignment: AlignmentType.CENTER, spacing: { after: 80 }, children: [new TextRun({ text: wsafe(this.rabOverlineText), font: sans, size: S.overline, ...bnRunExtras(S.overline), color: C.mutedText, characterSpacing: isBn ? 0 : 60, allCaps: !isBn })] }),
             new Paragraph({ alignment: AlignmentType.CENTER, spacing: { after: 40 }, children: [new TextRun({ text: wsafe(this.rabOrgTitle), font: serif, size: S.title, ...bnRunExtras(S.title), bold: true, color: C.black, characterSpacing: isBn ? 0 : 24 })] }),
             new Paragraph({ alignment: AlignmentType.CENTER, spacing: { after: 200 }, children: [new TextRun({ text: wsafe(this.rabOrgSubtitle), font: serif, size: S.subtitle, ...bnRunExtras(S.subtitle), italics: true, color: C.mutedText })] }),
-            new Paragraph({ alignment: AlignmentType.CENTER, spacing: { after: this.rabSubtitleText ? 40 : 200 }, children: [new TextRun({ text: wsafe(this.rabSectionTitle), font: serif, size: S.sectionTitle, ...bnRunExtras(S.sectionTitle), bold: true, color: C.black, characterSpacing: isBn ? 0 : 32, allCaps: !isBn })] }),
+            new Paragraph({ alignment: AlignmentType.CENTER, spacing: { after: 200 }, children: [new TextRun({ text: wsafe(this.rabSectionTitle), font: serif, size: S.sectionTitle, ...bnRunExtras(S.sectionTitle), bold: true, color: C.black, characterSpacing: isBn ? 0 : 32, allCaps: !isBn })] }),
         ];
-        if (this.rabSubtitleText) {
-            headerPars.push(new Paragraph({ alignment: AlignmentType.CENTER, spacing: { after: 200 }, children: [new TextRun({ text: wsafe(this.rabSubtitleText), font: serif, size: S.sectionSub, ...bnRunExtras(S.sectionSub), italics: true, color: C.mutedText })] }));
-        }
 
         const colsPerCritRow = 4;
         const critCellPct = 100 / colsPerCritRow;
         const stripCell = (runs: TextRun[], alignment: typeof AlignmentType.LEFT | typeof AlignmentType.RIGHT) =>
             new TableCell({ columnSpan: 2, borders: { top: { style: BorderStyle.SINGLE, size: 4, color: C.border }, bottom: { style: BorderStyle.SINGLE, size: 4, color: C.border }, left: { style: BorderStyle.SINGLE, size: 4, color: C.border }, right: { style: BorderStyle.SINGLE, size: 4, color: C.border } }, margins: { top: 80, bottom: 80, left: 140, right: 140 }, width: { size: 50, type: WidthType.PERCENTAGE }, children: [new Paragraph({ alignment, children: runs })] });
         const stripRow = new TableRow({ cantSplit: true, children: [
-            stripCell([new TextRun({ text: wsafe(this.rabCriteriaTitle), font: sans, size: S.stripLabel, ...bnRunExtras(S.stripLabel), bold: true, color: C.black, characterSpacing: isBn ? 0 : 40, allCaps: !isBn })], AlignmentType.LEFT),
+            stripCell([new TextRun({ text: wsafe(this.employeeInfoCardTitle), font: sans, size: S.stripLabel, ...bnRunExtras(S.stripLabel), bold: true, color: C.black, characterSpacing: isBn ? 0 : 40, allCaps: !isBn })], AlignmentType.LEFT),
             stripCell([new TextRun({ text: wsafe(`${this.rabGeneratedLabel} · ${this.rabFormattedDate}`), font: sans, size: S.stripDate, ...bnRunExtras(S.stripDate), bold: true, color: C.mutedText, characterSpacing: isBn ? 0 : 30, allCaps: !isBn })], AlignmentType.RIGHT),
         ] });
-        const items = this.criteriaItems;
+        const items = this.employeeInfoItems;
         const critRows: TableRow[] = [stripRow];
         for (let i = 0; i < items.length; i += colsPerCritRow) {
             const cells: TableCell[] = [];
@@ -652,8 +729,6 @@ export class ReportEducationComponent implements OnInit, OnChanges {
         }));
         const headerRow = new TableRow({ tableHeader: true, cantSplit: true, children: headerCells });
 
-        const codeValue = (en?: string | null, bn?: string | null): string => (isBn && bn) ? bn.trim() : (en ?? bn ?? '-');
-
         const dataRows: TableRow[] = this.list.map((row, idx) => {
             const isEven = idx % 2 === 1;
             const shading = isEven ? { type: 'clear' as const, fill: C.zebra, color: 'auto' } : undefined;
@@ -664,17 +739,8 @@ export class ReportEducationComponent implements OnInit, OnChanges {
                 switch (col.hint) {
                     case 'Serial':
                         return new TableCell({ ...cellOpts, children: [new Paragraph({ alignment: AlignmentType.LEFT, children: [run(this.paddedSer((row as any).ser ?? idx + 1), { fontKey: mono, sz: S.name, bold: true, color: C.gray, chSp: isBn ? 0 : 8 })] })] });
-                    case 'RabPersonnelComposite': {
-                        const meta = this.personnelMeta(row);
-                        const children: Paragraph[] = [new Paragraph({ spacing: { after: meta ? 40 : 0 }, children: [run(codeValue(row.name, row.nameBN), { sz: S.name, bold: true })] })];
-                        if (meta) children.push(new Paragraph({ children: [new TextRun({ text: meta, font: mono, size: S.meta, ...bnRunExtras(S.meta), color: C.gray, characterSpacing: isBn ? 0 : 16, allCaps: !isBn })] }));
-                        return new TableCell({ ...cellOpts, children });
-                    }
-                    case 'RabId':
-                        return new TableCell({ ...cellOpts, children: [new Paragraph({ children: [run((row as any).rabid ? this.displayNum((row as any).rabid) : '-', { fontKey: mono, chSp: isBn ? 0 : 4 })] })] });
-                    case 'BlankRemark':
-                        // Always-empty cell — for handwritten notes after printing.
-                        return new TableCell({ ...cellOpts, children: [new Paragraph({ children: [run('')] })] });
+                    case 'PlainDate':
+                        return new TableCell({ ...cellOpts, children: [new Paragraph({ children: [run(this.plainDateCellValue(row, col.key), { fontKey: mono, chSp: isBn ? 0 : 4 })] })] });
                     case 'Plain':
                     default:
                         return new TableCell({ ...cellOpts, children: [new Paragraph({ children: [run(this.plainCellValue(row, col.key))] })] });
@@ -709,7 +775,6 @@ export class ReportEducationComponent implements OnInit, OnChanges {
         const visibleCols = this.visibleColumns;
         const headers: string[] = visibleCols.map(c => isBn ? c.labelBN : c.labelEN);
         const totalCols = headers.length || 1;
-        const codeValue = (en?: string | null, bn?: string | null): string => (isBn && bn) ? bn.trim() : (en ?? bn ?? '-');
 
         const aoa: any[][] = [];
         const pad = (n: number) => Array.from({ length: n }, () => '');
@@ -717,10 +782,9 @@ export class ReportEducationComponent implements OnInit, OnChanges {
         aoa.push([wsafe(this.rabOrgTitle), ...pad(totalCols - 1)]);
         aoa.push([wsafe(this.rabOrgSubtitle), ...pad(totalCols - 1)]);
         aoa.push([wsafe(this.rabSectionTitle), ...pad(totalCols - 1)]);
-        if (this.rabSubtitleText) aoa.push([wsafe(this.rabSubtitleText), ...pad(totalCols - 1)]);
         aoa.push(pad(totalCols));
-        aoa.push([`${this.rabCriteriaTitle}  ·  ${this.rabGeneratedLabel}: ${this.rabFormattedDate}`, ...pad(totalCols - 1)]);
-        for (const it of this.criteriaItems) aoa.push([`${it.label}: ${it.value}`, ...pad(totalCols - 1)]);
+        aoa.push([`${this.employeeInfoCardTitle}  ·  ${this.rabGeneratedLabel}: ${this.rabFormattedDate}`, ...pad(totalCols - 1)]);
+        for (const it of this.employeeInfoItems) aoa.push([`${it.label}: ${it.value}`, ...pad(totalCols - 1)]);
         aoa.push(pad(totalCols));
         aoa.push(headers);
         for (let i = 0; i < this.list.length; i++) {
@@ -728,13 +792,7 @@ export class ReportEducationComponent implements OnInit, OnChanges {
             const cells = visibleCols.map(col => {
                 switch (col.hint) {
                     case 'Serial':                return this.paddedSer((row as any).ser ?? i + 1);
-                    case 'RabPersonnelComposite': {
-                        const name = codeValue(row.name, row.nameBN);
-                        const meta = this.personnelMeta(row);
-                        return meta ? `${name}\n${meta}` : name;
-                    }
-                    case 'RabId':                 return (row as any).rabid ? this.displayNum((row as any).rabid) : '';
-                    case 'BlankRemark':           return '';
+                    case 'PlainDate':             return this.plainDateCellValue(row, col.key);
                     case 'Plain':
                     default:                      return this.plainCellValue(row, col.key);
                 }
@@ -746,7 +804,7 @@ export class ReportEducationComponent implements OnInit, OnChanges {
 
         const ws = XLSX.utils.aoa_to_sheet(aoa);
         ws['!merges'] = ws['!merges'] ?? [];
-        const titleRows = [0, 1, 2, 3, ...(this.rabSubtitleText ? [4] : []), 5 + (this.rabSubtitleText ? 1 : 0)];
+        const titleRows = [0, 1, 2, 3, 5];
         for (const r of titleRows) ws['!merges'].push({ s: { r, c: 0 }, e: { r, c: totalCols - 1 } });
         const lastRow = aoa.length - 1;
         ws['!merges'].push({ s: { r: lastRow, c: 0 }, e: { r: lastRow, c: totalCols - 1 } });
@@ -757,12 +815,9 @@ export class ReportEducationComponent implements OnInit, OnChanges {
     }
 
     private openRabPrintWindow(): void {
-        // IMPORTANT: open the popup BEFORE building the HTML string.
-        // Browsers tie window.open() to the synchronous user gesture
-        // (the click) — if buildRabPrintHtml() runs first and takes
-        // a few hundred ms for large rosters, the gesture context is
-        // gone and the popup gets blocked. Same fix applies to the
-        // sibling reports if they ever see the same symptom.
+        // Open the popup BEFORE building HTML so the synchronous user
+        // gesture (the click) is preserved — otherwise large rosters can
+        // hit the popup-blocker by the time window.open() is reached.
         const win = window.open('', '_blank', 'width=1200,height=900');
         if (!win) {
             this.messageService.add({
@@ -784,9 +839,9 @@ export class ReportEducationComponent implements OnInit, OnChanges {
     }
 
     private buildRabPrintHtml(): string {
-        // Coerce to string before HTML-escaping — some backend fields
-        // (e.g. numeric IDs spread in via `...d` in adaptDynamicRow) reach
-        // esc() as numbers and would throw "replace is not a function".
+        // Coerce to string before HTML-escaping — education fields like
+        // passingYear / gradePoint can arrive as numbers from the backend
+        // and would throw "replace is not a function" otherwise.
         const esc = (s: unknown) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;');
         const isBn = this.lang === 'bn';
         const serif = isBn ? "'Nirmala UI', 'Hind Siliguri', 'SolaimanLipi', serif" : "'Playfair Display', Georgia, 'Times New Roman', serif";
@@ -795,21 +850,13 @@ export class ReportEducationComponent implements OnInit, OnChanges {
 
         const visibleCols = this.visibleColumns;
         const tableHeaderHtml = `<tr>${visibleCols.map(c => `<th>${esc(this.lang === 'bn' ? c.labelBN : c.labelEN)}</th>`).join('')}</tr>`;
-        const codeValue = (en?: string | null, bn?: string | null): string => (this.lang === 'bn' && bn) ? bn.trim() : (en ?? bn ?? '-');
 
         const renderCell = (row: EducationReportRow, col: { key: string; hint: string }, idx: number): string => {
             switch (col.hint) {
                 case 'Serial':
                     return `<td class="td-ser"><span class="ser">${esc(this.paddedSer((row as any).ser ?? idx + 1))}</span></td>`;
-                case 'RabPersonnelComposite': {
-                    const meta = this.personnelMeta(row);
-                    const metaHtml = meta ? `<div class="personnel-meta">${esc(meta)}</div>` : '';
-                    return `<td class="td-personnel"><div class="personnel-name">${esc(codeValue(row.name, row.nameBN))}</div>${metaHtml}</td>`;
-                }
-                case 'RabId':
-                    return `<td class="td-date">${esc((row as any).rabid ? this.displayNum((row as any).rabid) : '-')}</td>`;
-                case 'BlankRemark':
-                    return `<td class="td-blank-remark"></td>`;
+                case 'PlainDate':
+                    return `<td class="td-date">${esc(this.plainDateCellValue(row, col.key))}</td>`;
                 case 'Plain':
                 default:
                     return `<td>${esc(this.plainCellValue(row, col.key))}</td>`;
@@ -817,13 +864,12 @@ export class ReportEducationComponent implements OnInit, OnChanges {
         };
 
         const tableBodyHtml = this.list.map((row, i) => `<tr>${visibleCols.map(c => renderCell(row, c, i)).join('')}</tr>`).join('');
-        const items = this.criteriaItems;
+        const items = this.employeeInfoItems;
         const criteriaGridHtml = items.length ? `<div class="criteria-grid">${items.map(item => `
                 <div class="cell">
                     <div class="cell-label">${esc(item.label)}</div>
                     <div class="cell-value">${esc(item.value)}</div>
                 </div>`).join('')}</div>` : '';
-        const subtitleHtml = this.rabSubtitleText ? `<div class="paper-section-sub"><em>${esc(this.rabSubtitleText)}</em></div>` : '';
         const confidential = this.rabConfidentialLabel;
         const warning = this.rabWarningLabel;
         const pageWord = isBn ? 'পৃষ্ঠা' : 'PAGE';
@@ -880,7 +926,6 @@ export class ReportEducationComponent implements OnInit, OnChanges {
     .orn-line { flex: 1; height: 0.25mm; background: linear-gradient(to right, transparent, #b78b3b 30%, #b78b3b 70%, transparent); }
     .orn-diamond { color: #b78b3b; font-size: 9pt; line-height: 1; }
     .paper-section { font-family: ${serif}; font-size: 13pt; font-weight: 700; letter-spacing: 0.16em; color: #0b0b0b; margin: 0 0 1mm 0; text-transform: uppercase; ${isBn ? 'letter-spacing:0;' : ''} }
-    .paper-section-sub { font-family: ${serif}; font-style: italic; color: #555; font-size: 10pt; }
     .criteria { margin: 5mm 0 6mm; border: 1px solid #d8d6d0; border-radius: 1mm; overflow: hidden; }
     .criteria-strip { display: flex; justify-content: space-between; align-items: center; padding: 1.5mm 3mm; background: #f4f4f2; border-bottom: 1px solid #d8d6d0; font-size: 8pt; letter-spacing: 0.2em; text-transform: uppercase; color: #4a4a4a; font-weight: 600; }
     .criteria-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(38mm, 1fr)); }
@@ -895,14 +940,7 @@ export class ReportEducationComponent implements OnInit, OnChanges {
     tbody tr { page-break-inside: avoid; }
     .td-ser { white-space: nowrap; }
     .ser { font-family: ${mono}; font-size: 9pt; font-weight: 600; color: #6b6b6b; letter-spacing: 0.04em; }
-    .td-personnel { min-width: 56mm; }
-    .personnel-name { font-family: ${sans}; font-weight: 600; font-size: 10pt; color: #0b0b0b; line-height: 1.2; }
-    .personnel-meta { margin-top: 0.7mm; font-family: ${mono}; font-size: 7pt; letter-spacing: 0.08em; text-transform: uppercase; color: #6b6b6b; ${isBn ? 'letter-spacing:0;text-transform:none;font-family:' + sans + ';' : ''} }
     .td-date { font-family: ${mono}; letter-spacing: 0.02em; white-space: nowrap; }
-    /* Blank Remark cell — empty by design so reviewers can write in
-       handwritten notes on the printed copy. Minimum width keeps the
-       cell visible as a usable writing area. */
-    .td-blank-remark { min-width: 35mm; }
 </style></head>
 <body>
     <div class="paper">
@@ -912,11 +950,10 @@ export class ReportEducationComponent implements OnInit, OnChanges {
             <div class="paper-sub"><em>${esc(this.rabOrgSubtitle)}</em></div>
             <div class="orn-divider"><span class="orn-line"></span><span class="orn-diamond">&#9670;</span><span class="orn-line"></span></div>
             <h2 class="paper-section">${esc(this.rabSectionTitle)}</h2>
-            ${subtitleHtml}
         </header>
         <div class="criteria">
             <div class="criteria-strip">
-                <span>${esc(this.rabCriteriaTitle)}</span>
+                <span>${esc(this.employeeInfoCardTitle)}</span>
                 <span>${esc(this.rabGeneratedLabel)} &middot; ${esc(this.rabFormattedDate)}</span>
             </div>
             ${criteriaGridHtml}
