@@ -531,6 +531,10 @@ export interface DynamicReportCriterion {
   fieldKey: string;
   textValue?: string | null;
   idValue?: number | null;
+  /** Multi-value variant of idValue: match if the row's FK is IN this list.
+      Used by the Corps / Trade "N/A" bundle where one UI option collapses
+      several CommonCode rows. When set, takes precedence over idValue. */
+  idValues?: number[] | null;
   stringIdValue?: string | null;
   /** ISO "yyyy-MM-dd". */
   dateFrom?: string | null;

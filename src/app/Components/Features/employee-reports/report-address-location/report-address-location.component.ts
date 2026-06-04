@@ -149,7 +149,7 @@ export class ReportAddressLocationComponent implements OnInit {
         { key: 'personnel',    labelEN: 'Personnel',     labelBN: 'সদস্য',          hint: 'PersonnelComposite', defaultVisible: true },
         { key: 'rabId',        labelEN: 'RAB ID',        labelBN: 'র‍্যাব আইডি',     hint: 'RabId',              defaultVisible: true },
         { key: 'addressOwner', labelEN: 'Address Owner', labelBN: 'ঠিকানার মালিক',   hint: 'AddressOwner',       defaultVisible: false },
-        { key: 'locationType', labelEN: 'Location Type', labelBN: 'অবস্থানের ধরন',   hint: 'LocationType',       defaultVisible: true },
+        { key: 'locationType', labelEN: 'Address Type',  labelBN: 'ঠিকানার ধরন',     hint: 'LocationType',       defaultVisible: true },
         { key: 'address',      labelEN: 'Address',       labelBN: 'ঠিকানা',         hint: 'AddressComposite',   defaultVisible: true },
         { key: 'status',       labelEN: 'Status',        labelBN: 'অবস্থা',          hint: 'Status',             defaultVisible: false },
         { key: 'remarks',      labelEN: 'Remarks',       labelBN: 'মন্তব্য',         hint: 'Remarks',            defaultVisible: true },
