@@ -6,6 +6,7 @@ import { ButtonModule } from 'primeng/button';
 import { MultiSelectModule } from 'primeng/multiselect';
 import { PaginatorModule } from 'primeng/paginator';
 import { InputTextModule } from 'primeng/inputtext';
+import { DatePickerModule } from 'primeng/datepicker';
 import { DialogModule } from 'primeng/dialog';
 import { Toast } from 'primeng/toast';
 import { MessageService } from 'primeng/api';
@@ -53,7 +54,7 @@ type DisciplineReportRow = {
 @Component({
     selector: 'app-report-discipline-individual',
     standalone: true,
-    imports: [CommonModule, FormsModule, TableModule, ButtonModule, MultiSelectModule, PaginatorModule, InputTextModule, DialogModule, Toast],
+    imports: [CommonModule, FormsModule, TableModule, ButtonModule, MultiSelectModule, PaginatorModule, InputTextModule, DatePickerModule, DialogModule, Toast],
     providers: [MessageService],
     templateUrl: './report-discipline.component.html',
     styleUrls: ['../../employee-reports/report-theme.scss', '../../employee-reports/report-card-mtr.scss', './report-discipline.component.scss'],
@@ -67,7 +68,12 @@ export class ReportDisciplineIndividualComponent implements OnInit, OnChanges {
     searchServiceId = '';
     searchNid = '';
 
+    /** Date-range filter (applied client-side over the fetched rows). */
+    dateFrom: Date | null = null;
+    dateTo: Date | null = null;
+
     list: DisciplineReportRow[] = [];
+    private allRows: DisciplineReportRow[] = [];
     private memberInfo: DynamicReportRow | null = null;
     loading = false;
     first = 0;
@@ -288,7 +294,7 @@ export class ReportDisciplineIndividualComponent implements OnInit, OnChanges {
         const n = this.lang === 'bn' ? BanglaNumerals.toBangla(String(this.activeFilterCount)) : String(this.activeFilterCount);
         return n + ' active filter(s)';
     }
-    clearFilters(): void { this.searchRabId = ''; this.searchServiceId = ''; this.searchNid = ''; this.first = 0; }
+    clearFilters(): void { this.searchRabId = ''; this.searchServiceId = ''; this.searchNid = ''; this.dateFrom = null; this.dateTo = null; this.first = 0; this.applyDateFilter(); }
     onPage(event: { first?: number; rows?: number }): void { this.first = event.first ?? 0; this.rows = event.rows ?? this.rows; }
 
     load(): void {
@@ -338,7 +344,29 @@ export class ReportDisciplineIndividualComponent implements OnInit, OnChanges {
         });
     }
 
-    private resetResults(): void { this.list = []; this.memberInfo = null; this.totalRecords = 0; }
+    private resetResults(): void { this.list = []; this.allRows = []; this.memberInfo = null; this.totalRecords = 0; }
+
+    onDateFilterChange(): void { this.applyDateFilter(); }
+
+    /** Re-derive the visible list from allRows using the offence-date filter. */
+    private applyDateFilter(): void {
+        const rows = this.allRows.filter(r => this.inDateRange(r.offenseDate));
+        rows.forEach((r, i) => { r.ser = i + 1; });
+        this.list = rows;
+        this.totalRecords = rows.length;
+        this.first = 0;
+    }
+
+    private inDateRange(date: string | null): boolean {
+        const f = this.dateFrom ? new Date(this.dateFrom.getFullYear(), this.dateFrom.getMonth(), this.dateFrom.getDate(), 0, 0, 0).getTime() : null;
+        const t = this.dateTo ? new Date(this.dateTo.getFullYear(), this.dateTo.getMonth(), this.dateTo.getDate(), 23, 59, 59).getTime() : null;
+        if (f == null && t == null) return true;
+        const d = date ? new Date(date).getTime() : null;
+        if (d == null) return false;
+        if (f != null && d < f) return false;
+        if (t != null && d > t) return false;
+        return true;
+    }
 
     private fetchForEmployee(employeeId: number, lookupRow: DynamicReportRow): void {
         this.loading = true;
@@ -363,9 +391,8 @@ export class ReportDisciplineIndividualComponent implements OnInit, OnChanges {
                         remarks: item.remarks ?? item.Remarks ?? null,
                     } as DisciplineReportRow));
                 shaped.sort((a, b) => this.timeOf(b.offenseDate) - this.timeOf(a.offenseDate));
-                shaped.forEach((r, i) => { r.ser = i + 1; });
-                this.list = shaped;
-                this.totalRecords = shaped.length;
+                this.allRows = shaped;
+                this.applyDateFilter();
                 this.loading = false;
             },
             error: (err) => {

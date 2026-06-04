@@ -1493,3 +1493,46 @@
     .bd-grid, .bd-grid-two { grid-template-columns: 1fr 1fr; gap: 14px 24px; }
     .bd-f.span2, .bd-f.span3 { grid-column: span 2; }
 }
+
+/* Per-section reorder groups in the field picker */
+.bd-reorder-section { margin-bottom: 0.6rem; }
+.bd-reorder-section:last-child { margin-bottom: 0; }
+.bd-reorder-sec-label {
+    font-size: 0.68rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--p-primary-color, #10b981);
+    margin: 0 0 0.3rem 0.1rem;
+}
+
+/* "Customize Fields" toggle in the Bio-Data Fields divider */
+.bd-fields-toggle {
+    flex: 0 0 auto;
+    height: 26px;
+    padding: 0 12px;
+    border-radius: 999px;
+    border: 1px solid var(--surface-border, rgba(255, 255, 255, 0.18));
+    background: var(--surface-card, rgba(255, 255, 255, 0.03));
+    color: var(--text-color-secondary, rgba(255, 255, 255, 0.7));
+    font-size: 0.72rem;
+    font-weight: 600;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    transition: border-color 0.15s, color 0.15s, background 0.15s;
+
+    i { font-size: 0.7rem; }
+
+    &:hover {
+        border-color: var(--p-primary-color, #10b981);
+        color: var(--p-primary-color, #10b981);
+        background: rgba(16, 185, 129, 0.08);
+    }
+    &.on {
+        border-color: var(--p-primary-color, #10b981);
+        background: var(--p-primary-color, #10b981);
+        color: var(--p-primary-contrast-color, #fff);
+    }
+}

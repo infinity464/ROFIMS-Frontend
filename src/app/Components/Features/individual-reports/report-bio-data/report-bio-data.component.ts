@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ButtonModule } from 'primeng/button';
 import { InputTextModule } from 'primeng/inputtext';
+import { MultiSelectModule } from 'primeng/multiselect';
 import { TableModule } from 'primeng/table';
 import { DialogModule } from 'primeng/dialog';
 import { Toast } from 'primeng/toast';
@@ -36,6 +37,17 @@ import { saveAs } from 'file-saver';
 
 interface BioField { k: string; v: string; span?: 2 | 3; }
 
+/** A pickable field in the bio-data field catalog. */
+interface BioCatalogItem {
+    key: string;
+    labelEN: string;
+    labelBN: string;
+    section: 1 | 2 | 3 | 4;
+    span?: 2;
+    kind: 'text' | 'orientation' | 'punishment' | 'chips';
+    defaultVisible: boolean;
+}
+
 /**
  * Standalone "Short Bio-Data" report — a single-member formal bio-data sheet
  * (not a roster table). Searches by RAB ID / Service ID / NID, resolves the
@@ -46,7 +58,7 @@ interface BioField { k: string; v: string; span?: 2 | 3; }
 @Component({
     selector: 'app-report-bio-data-individual',
     standalone: true,
-    imports: [CommonModule, FormsModule, ButtonModule, InputTextModule, TableModule, DialogModule, Toast],
+    imports: [CommonModule, FormsModule, ButtonModule, InputTextModule, MultiSelectModule, TableModule, DialogModule, Toast],
     providers: [MessageService],
     templateUrl: './report-bio-data.component.html',
     styleUrls: ['../../employee-reports/report-theme.scss', '../../employee-reports/report-card-mtr.scss', './report-bio-data.component.scss'],
@@ -86,6 +98,8 @@ export class ReportBioDataIndividualComponent implements OnInit, OnDestroy {
     private pickerLookupRows: DynamicReportRow[] = [];
 
     filterOpen = true;
+    /** When false, the add/remove + reorder field editor stays collapsed. */
+    showFieldEditor = false;
 
     constructor(
         private reportService: ReportService,
@@ -233,63 +247,210 @@ export class ReportBioDataIndividualComponent implements OnInit, OnDestroy {
     }
     get orientationHasValue(): boolean { return this.hasRfts != null; }
 
-    get serviceItems(): BioField[] {
-        const p = this.profile;
-        if (!p) return [];
-        return [
-            { k: this.lx('Mother Organization, Unit & Location', 'মাতৃ সংস্থা, ইউনিট ও অবস্থান'), v: this.orgUnitLocation, span: 2 },
-            { k: this.lx('Rank', 'পদবি'),                       v: this.codeValue(p.armyRank, p.armyRankBN) },
-            { k: this.lx('Corps / Regiment', 'কোর / রেজিমেন্ট'), v: this.codeValue(p.corps, p.corpsBN) },
-            { k: this.lx('Trade', 'ট্রেড'),                     v: this.codeValue(p.trade, p.tradeBN) },
-            { k: this.lx('Long Course / BCS', 'লং কোর্স / বিসিএস'), v: this.codeValue(p.batch ?? p.courseBatch, p.batchBN) },
-            { k: this.lx('Date of Commission', 'কমিশনের তারিখ'), v: this.formatDate(p.dateOfCommission) },
-            { k: this.lx('Enrolment in Service', 'চাকরিতে যোগদান'), v: this.formatDate(p.dateOfJoiningInServiceTraining) },
-            { k: this.lx('Promotion in Present Rank', 'বর্তমান পদবিতে পদোন্নতি'), v: this.formatDate(this.promotionPresentDate) },
-            { k: this.lx('Joining in RAB', 'র‍্যাবে যোগদান'),    v: this.formatDate(p.joiningDate) },
-            { k: this.lx('RAB Present Unit', 'র‍্যাব বর্তমান ইউনিট'), v: this.codeValue(p.rabUnit, p.rabUnitBN) },
-            { k: this.lx('Joining in Present Unit', 'বর্তমান ইউনিটে যোগদান'), v: '-' },
-        ];
+    // ── Field catalog (drives the add/remove + reorder picker) ─────────
+    // Every field the bio-data can show, drawn from the Personal Info /
+    // Employee Basic Info overview. `section` 1-4 maps to the sheet sections;
+    // `kind` picks the renderer; `defaultVisible` is the out-of-the-box set.
+    readonly fieldCatalog: BioCatalogItem[] = [
+        // 01 — Service & Posting
+        { key: 'orgUnitLocation',     labelEN: 'Mother Organization, Unit & Location', labelBN: 'মাতৃ সংস্থা, ইউনিট ও অবস্থান', section: 1, span: 2, kind: 'text', defaultVisible: true },
+        { key: 'rank',                labelEN: 'Rank',                  labelBN: 'পদবি',                   section: 1, kind: 'text', defaultVisible: true },
+        { key: 'corps',               labelEN: 'Corps / Regiment',      labelBN: 'কোর / রেজিমেন্ট',        section: 1, kind: 'text', defaultVisible: true },
+        { key: 'trade',               labelEN: 'Trade',                 labelBN: 'ট্রেড',                  section: 1, kind: 'text', defaultVisible: true },
+        { key: 'batch',               labelEN: 'Long Course / BCS',     labelBN: 'লং কোর্স / বিসিএস',      section: 1, kind: 'text', defaultVisible: true },
+        { key: 'dateOfCommission',    labelEN: 'Date of Commission',    labelBN: 'কমিশনের তারিখ',          section: 1, kind: 'text', defaultVisible: true },
+        { key: 'enrolment',           labelEN: 'Enrolment in Service',  labelBN: 'চাকরিতে যোগদান',         section: 1, kind: 'text', defaultVisible: true },
+        { key: 'promotionPresent',    labelEN: 'Promotion in Present Rank', labelBN: 'বর্তমান পদবিতে পদোন্নতি', section: 1, kind: 'text', defaultVisible: true },
+        { key: 'joiningRab',          labelEN: 'Joining in RAB',        labelBN: 'র‍্যাবে যোগদান',         section: 1, kind: 'text', defaultVisible: true },
+        { key: 'rabUnit',             labelEN: 'RAB Present Unit',      labelBN: 'র‍্যাব বর্তমান ইউনিট',   section: 1, kind: 'text', defaultVisible: true },
+        { key: 'joiningPresentUnit',  labelEN: 'Joining in Present Unit', labelBN: 'বর্তমান ইউনিটে যোগদান', section: 1, kind: 'text', defaultVisible: true },
+        { key: 'appointment',         labelEN: 'Appointment',           labelBN: 'নিয়োগ',                 section: 1, kind: 'text', defaultVisible: false },
+        { key: 'memberType',          labelEN: 'Member Type',           labelBN: 'সদস্যের ধরন',            section: 1, kind: 'text', defaultVisible: false },
+        { key: 'motherOrganization',  labelEN: 'Mother Organization',   labelBN: 'মাতৃ সংস্থা',            section: 1, kind: 'text', defaultVisible: false },
+        { key: 'motherUnit',          labelEN: 'Mother Unit',           labelBN: 'মাতৃ ইউনিট',             section: 1, kind: 'text', defaultVisible: false },
+        { key: 'location',            labelEN: 'Location',              labelBN: 'অবস্থান',                section: 1, kind: 'text', defaultVisible: false },
+        // 02 — Personal Information
+        { key: 'dateOfBirth',         labelEN: 'Date of Birth',         labelBN: 'জন্ম তারিখ',             section: 2, kind: 'text', defaultVisible: true },
+        { key: 'bloodGroup',          labelEN: 'Blood Group',           labelBN: 'রক্তের গ্রুপ',            section: 2, kind: 'text', defaultVisible: true },
+        { key: 'height',              labelEN: 'Height',                labelBN: 'উচ্চতা',                 section: 2, kind: 'text', defaultVisible: true },
+        { key: 'religion',            labelEN: 'Religion',              labelBN: 'ধর্ম',                   section: 2, kind: 'text', defaultVisible: true },
+        { key: 'maritalStatus',       labelEN: 'Marital Status',        labelBN: 'বৈবাহিক অবস্থা',         section: 2, kind: 'text', defaultVisible: true },
+        { key: 'gallantry',           labelEN: 'Gallantry Award',       labelBN: 'বীরত্বসূচক পদক',         section: 2, kind: 'text', defaultVisible: true },
+        { key: 'professionalQual',    labelEN: 'Professional Qualification', labelBN: 'পেশাগত যোগ্যতা',    section: 2, kind: 'text', defaultVisible: true },
+        { key: 'personalQual',        labelEN: 'Personal Qualification', labelBN: 'ব্যক্তিগত যোগ্যতা',     section: 2, kind: 'text', defaultVisible: true },
+        { key: 'mobileNo',            labelEN: 'Mobile No',             labelBN: 'মোবাইল নম্বর',           section: 2, kind: 'text', defaultVisible: true },
+        { key: 'officeMobile',        labelEN: 'Office Mobile No',      labelBN: 'অফিস মোবাইল নম্বর',      section: 2, kind: 'text', defaultVisible: true },
+        { key: 'email',               labelEN: 'Email Address',         labelBN: 'ইমেইল',                  section: 2, kind: 'text', defaultVisible: true },
+        { key: 'nid',                 labelEN: 'NID',                   labelBN: 'এনআইডি',                 section: 2, kind: 'text', defaultVisible: true },
+        { key: 'educationQual',       labelEN: 'Last Educational Qualification', labelBN: 'সর্বশেষ শিক্ষাগত যোগ্যতা', section: 2, kind: 'text', defaultVisible: true },
+        { key: 'identificationMark',  labelEN: 'Identification Marks',  labelBN: 'সনাক্তকরণ চিহ্ন',        section: 2, span: 2, kind: 'text', defaultVisible: true },
+        { key: 'weight',              labelEN: 'Weight',                labelBN: 'ওজন',                    section: 2, kind: 'text', defaultVisible: false },
+        { key: 'gender',              labelEN: 'Gender',                labelBN: 'লিঙ্গ',                  section: 2, kind: 'text', defaultVisible: false },
+        { key: 'medicalCategory',     labelEN: 'Medical Category',      labelBN: 'মেডিকেল ক্যাটাগরি',      section: 2, kind: 'text', defaultVisible: false },
+        { key: 'emergencyContact',    labelEN: 'Emergency Contact',     labelBN: 'জরুরি যোগাযোগ',          section: 2, kind: 'text', defaultVisible: false },
+        { key: 'nidOld',              labelEN: 'NID (Old)',             labelBN: 'পুরাতন এনআইডি',          section: 2, kind: 'text', defaultVisible: false },
+        { key: 'passport',            labelEN: 'Passport No',           labelBN: 'পাসপোর্ট নম্বর',         section: 2, kind: 'text', defaultVisible: false },
+        // 03 — District, Family & Education
+        { key: 'ownDistrict',         labelEN: 'Own District',          labelBN: 'নিজ জেলা',               section: 3, kind: 'text', defaultVisible: true },
+        { key: 'wifeDistrict',        labelEN: 'Wife District',         labelBN: 'স্ত্রীর জেলা',           section: 3, kind: 'text', defaultVisible: true },
+        { key: 'noOfChildren',        labelEN: 'No. of Children',       labelBN: 'সন্তান সংখ্যা',          section: 3, kind: 'text', defaultVisible: true },
+        // 04 — RAB Experience & Training
+        { key: 'orientation',         labelEN: 'Orientation Training',  labelBN: 'ওরিয়েন্টেশন প্রশিক্ষণ', section: 4, kind: 'orientation', defaultVisible: true },
+        { key: 'punishment',          labelEN: 'Punishment Details',    labelBN: 'শাস্তির বিবরণ',          section: 4, kind: 'punishment', defaultVisible: true },
+        { key: 'prevService',         labelEN: 'Service in RAB',        labelBN: 'র‍্যাবে চাকরি',          section: 4, span: 2, kind: 'text', defaultVisible: true },
+        { key: 'specialTraining',     labelEN: 'Special Training',      labelBN: 'বিশেষ প্রশিক্ষণ',        section: 4, span: 2, kind: 'chips', defaultVisible: true },
+    ];
+
+    /** Ordered source of truth for which fields show and in what order.
+        Drag-reorder mutates THIS directly. */
+    selectedFieldKeys: string[] = this.fieldCatalog.filter(c => c.defaultVisible).map(c => c.key);
+
+    /** MultiSelect binding — controls membership only. Adding/removing in the
+        dropdown never reorders the existing selection (which the drag strip
+        owns); new picks are appended in catalog order. This keeps drag-reorder
+        from being reverted when the MultiSelect writes its value back. */
+    get pickerModel(): string[] { return this.selectedFieldKeys; }
+    set pickerModel(keys: string[]) {
+        const set = new Set(keys);
+        const kept = this.selectedFieldKeys.filter(k => set.has(k));
+        const existing = new Set(kept);
+        const added = this.fieldCatalog.map(c => c.key).filter(k => set.has(k) && !existing.has(k));
+        this.selectedFieldKeys = [...kept, ...added];
     }
 
-    get personalItems(): BioField[] {
-        const p = this.profile;
-        if (!p) return [];
-        return [
-            { k: this.lx('Date of Birth', 'জন্ম তারিখ'),       v: this.formatDate(p.dateOfBirth) },
-            { k: this.lx('Blood Group', 'রক্তের গ্রুপ'),        v: this.val(p.bloodGroup) },
-            { k: this.lx('Height', 'উচ্চতা'),                  v: p.height != null ? `${this.displayNum(p.height)} ${this.lx('Inch', 'ইঞ্চি')}` : '-' },
-            { k: this.lx('Religion', 'ধর্ম'),                  v: this.codeValue(p.religion, p.religionBN) },
-            { k: this.lx('Marital Status', 'বৈবাহিক অবস্থা'),   v: this.codeValue(p.maritalStatus, p.maritalStatusBN) },
-            { k: this.lx('Gallantry Award', 'বীরত্বসূচক পদক'),  v: this.codeValue(p.gallantryAwardsDecoration, p.gallantryAwardsDecorationBN) },
-            { k: this.lx('Professional Qualification', 'পেশাগত যোগ্যতা'), v: this.codeValue(p.professionalQualification, p.professionalQualificationBN) },
-            { k: this.lx('Personal Qualification', 'ব্যক্তিগত যোগ্যতা'),  v: this.codeValue(p.personalQualification, p.personalQualificationBN) },
-            { k: this.lx('Mobile No', 'মোবাইল নম্বর'),          v: this.displayNum(p.mobileNo) },
-            { k: this.lx('Office Mobile No', 'অফিস মোবাইল নম্বর'), v: this.displayNum(p.mobileNoOfficial) },
-            { k: this.lx('Email Address', 'ইমেইল'),            v: this.val(p.emailAddress) },
-            { k: this.lx('NID', 'এনআইডি'),                     v: this.displayNum(p.nid) },
-            { k: this.lx('Identification Marks', 'সনাক্তকরণ চিহ্ন'), v: this.val(p.identificationMark), span: 2 },
-        ];
+    readonly sections: (1 | 2 | 3 | 4)[] = [1, 2, 3, 4];
+
+    sectionLabel(section: 1 | 2 | 3 | 4): string {
+        switch (section) {
+            case 1: return this.secService;
+            case 2: return this.secPersonal;
+            case 3: return this.secDistrict;
+            case 4: return this.secRabExp;
+        }
     }
 
-    get districtItems(): BioField[] {
-        const p = this.profile;
-        if (!p) return [];
-        return [
-            { k: this.lx('Own District', 'নিজ জেলা'),           v: this.codeValue(p.permanentDistrictTypeName, p.permanentDistrictTypeNameBN) },
-            { k: this.lx('Wife District', 'স্ত্রীর জেলা'),       v: '-' },
-            { k: this.lx('No. of Children', 'সন্তান সংখ্যা'),    v: '-' },
-            { k: this.lx('Last Educational Qualification', 'সর্বশেষ শিক্ষাগত যোগ্যতা'), v: this.codeValue(p.educationQualification, p.educationQualificationBN) },
-        ];
+    /** Add/remove options for the MultiSelect, grouped by the 4 sections. */
+    get groupedFieldOptions(): { label: string; items: { label: string; value: string }[] }[] {
+        return this.sections.map(sec => ({
+            label: this.sectionLabel(sec),
+            items: this.fieldCatalog
+                .filter(c => c.section === sec)
+                .map(c => ({ label: this.isBn ? c.labelBN : c.labelEN, value: c.key })),
+        }));
     }
+
+    fieldLabel(it: BioCatalogItem): string { return this.isBn ? it.labelBN : it.labelEN; }
+
+    /** Selected fields belonging to a section, in the user-picked order. */
+    visibleFields(section: 1 | 2 | 3 | 4): BioCatalogItem[] {
+        const byKey = new Map(this.fieldCatalog.map(c => [c.key, c]));
+        return this.selectedFieldKeys
+            .map(k => byKey.get(k))
+            .filter((c): c is BioCatalogItem => c != null && c.section === section);
+    }
+    get visibleColumns(): BioCatalogItem[] {
+        const byKey = new Map(this.fieldCatalog.map(c => [c.key, c]));
+        return this.selectedFieldKeys.map(k => byKey.get(k)).filter((c): c is BioCatalogItem => c != null);
+    }
+    sectionHasFields(section: 1 | 2 | 3 | 4): boolean { return this.visibleFields(section).length > 0; }
+
+    /** Resolve a text field's value from the profile. */
+    valueFor(key: string): string {
+        const p = this.profile;
+        if (!p) return '-';
+        switch (key) {
+            case 'orgUnitLocation':    return this.orgUnitLocation;
+            case 'rank':               return this.codeValue(p.armyRank, p.armyRankBN);
+            case 'corps':              return this.codeValue(p.corps, p.corpsBN);
+            case 'trade':              return this.codeValue(p.trade, p.tradeBN);
+            case 'batch':              return this.codeValue(p.batch ?? p.courseBatch, p.batchBN);
+            case 'dateOfCommission':   return this.formatDate(p.dateOfCommission);
+            case 'enrolment':          return this.formatDate(p.dateOfJoiningInServiceTraining);
+            case 'promotionPresent':   return this.formatDate(this.promotionPresentDate);
+            case 'joiningRab':         return this.formatDate(p.joiningDate);
+            case 'rabUnit':            return this.codeValue(p.rabUnit, p.rabUnitBN);
+            case 'joiningPresentUnit': return '-';
+            case 'appointment':        return this.codeValue(p.appointment, p.appointmentBN);
+            case 'memberType':         return this.codeValue(p.memberType, p.memberTypeBN);
+            case 'motherOrganization': return this.codeValue(p.motherOrganization, p.motherOrganizationBN);
+            case 'motherUnit':         return this.codeValue(p.motherUnit, p.motherUnitBN);
+            case 'location':           return this.codeValue(p.location, p.locationBN);
+            case 'dateOfBirth':        return this.formatDate(p.dateOfBirth);
+            case 'bloodGroup':         return this.val(p.bloodGroup);
+            case 'height':             return p.height != null ? `${this.displayNum(p.height)} ${this.lx('Inch', 'ইঞ্চি')}` : '-';
+            case 'weight':             return p.weight != null ? `${this.displayNum(p.weight)} ${this.lx('lbs', 'পাউন্ড')}` : '-';
+            case 'religion':           return this.codeValue(p.religion, p.religionBN);
+            case 'maritalStatus':      return this.codeValue(p.maritalStatus, p.maritalStatusBN);
+            case 'gallantry':          return this.codeValue(p.gallantryAwardsDecoration, p.gallantryAwardsDecorationBN);
+            case 'professionalQual':   return this.codeValue(p.professionalQualification, p.professionalQualificationBN);
+            case 'personalQual':       return this.codeValue(p.personalQualification, p.personalQualificationBN);
+            case 'educationQual':      return this.codeValue(p.educationQualification, p.educationQualificationBN);
+            case 'medicalCategory':    return this.codeValue(p.medicalCategory, p.medicalCategoryBN);
+            case 'gender':             return this.codeValue(p.gender, p.genderBN);
+            case 'mobileNo':           return this.displayNum(p.mobileNo);
+            case 'officeMobile':       return this.displayNum(p.mobileNoOfficial);
+            case 'email':              return this.val(p.emailAddress);
+            case 'emergencyContact':   return this.displayNum(p.emergencyContactNo);
+            case 'nid':                return this.displayNum(p.nid);
+            case 'nidOld':             return this.displayNum(p.nidOld);
+            case 'passport':           return this.displayNum(p.passportNo);
+            case 'identificationMark': return this.val(p.identificationMark);
+            case 'ownDistrict':        return this.codeValue(p.permanentDistrictTypeName, p.permanentDistrictTypeNameBN);
+            case 'wifeDistrict':       return '-';
+            case 'noOfChildren':       return '-';
+            case 'prevService':        return this.previousServiceInRab;
+            default:                   return '-';
+        }
+    }
+
+    /** Plain-text value for any field (used by exports). */
+    fieldDisplayValue(it: BioCatalogItem): string {
+        switch (it.kind) {
+            case 'orientation': return this.orientationLabel;
+            case 'punishment':  return this.punishmentLabel;
+            case 'chips':       return this.specialTrainingChips.length ? this.specialTrainingChips.join(', ') : '-';
+            default:            return this.valueFor(it.key);
+        }
+    }
+
+    // ── Column/field picker — drag reorder of the chip strip ───────────
+    draggingFieldKey: string | null = null;
+    onColumnDragStart(key: string, event: DragEvent): void {
+        this.draggingFieldKey = key;
+        event.dataTransfer?.setData('text/plain', key);
+        if (event.dataTransfer) event.dataTransfer.effectAllowed = 'move';
+    }
+    onColumnDragOver(event: DragEvent): void { event.preventDefault(); if (event.dataTransfer) event.dataTransfer.dropEffect = 'move'; }
+    onColumnDrop(targetKey: string, event: DragEvent): void {
+        event.preventDefault();
+        const sourceKey = this.draggingFieldKey;
+        this.draggingFieldKey = null;
+        if (!sourceKey || sourceKey === targetKey) return;
+        // Reorder is confined to a single section — a field cannot move into
+        // another section.
+        const byKey = new Map(this.fieldCatalog.map(c => [c.key, c]));
+        const src = byKey.get(sourceKey);
+        const tgt = byKey.get(targetKey);
+        if (!src || !tgt || src.section !== tgt.section) return;
+        const arr = [...this.selectedFieldKeys];
+        const fromIdx = arr.indexOf(sourceKey);
+        const toIdx = arr.indexOf(targetKey);
+        if (fromIdx === -1 || toIdx === -1) return;
+        const [moved] = arr.splice(fromIdx, 1);
+        arr.splice(toIdx, 0, moved);
+        this.selectedFieldKeys = arr;
+    }
+    onColumnDragEnd(): void { this.draggingFieldKey = null; }
+    removeColumn(key: string): void { this.selectedFieldKeys = this.selectedFieldKeys.filter(k => k !== key); }
 
     // ── Section / sheet labels ─────────────────────────────────────────
     get secService(): string { return this.lx('Service & Posting', 'চাকরি ও পদায়ন'); }
     get secPersonal(): string { return this.lx('Personal Information', 'ব্যক্তিগত তথ্য'); }
-    get secDistrict(): string { return this.lx('District, Family & Education', 'জেলা, পরিবার ও শিক্ষা'); }
+    get secDistrict(): string { return this.lx('District & Family', 'জেলা ও পরিবার'); }
     get secRabExp(): string { return this.lx('RAB Experience & Training', 'র‍্যাব অভিজ্ঞতা ও প্রশিক্ষণ'); }
     get lblOrientation(): string { return this.lx('Orientation Training', 'ওরিয়েন্টেশন প্রশিক্ষণ'); }
     get lblPunishment(): string { return this.lx('Punishment Details', 'শাস্তির বিবরণ'); }
-    get lblPrevService(): string { return this.lx('Previous Service in RAB', 'র‍্যাবে পূর্ববর্তী চাকরি'); }
+    get lblPrevService(): string { return this.lx('Service in RAB', 'র‍্যাবে চাকরি'); }
     get lblSpecialTraining(): string { return this.lx('Special Training', 'বিশেষ প্রশিক্ষণ'); }
 
     // ── Search / lookup ────────────────────────────────────────────────
@@ -509,20 +670,34 @@ export class ReportBioDataIndividualComponent implements OnInit, OnDestroy {
         const grotesk = isBn ? "'Hind Siliguri', 'Noto Sans Bengali', 'Space Grotesk', sans-serif" : "'Space Grotesk', 'Helvetica Neue', Helvetica, sans-serif";
         const mono = isBn ? "'Hind Siliguri', 'Noto Sans Bengali', 'IBM Plex Mono', monospace" : "'IBM Plex Mono', ui-monospace, 'SF Mono', Menlo, monospace";
 
-        const f = (it: BioField) => {
-            const cls = 'f' + (it.span === 2 ? ' span2' : it.span === 3 ? ' span3' : '');
-            const v = it.v === '-' ? `<span class="v empty">—</span>` : `<span class="v">${esc(it.v)}</span>`;
-            return `<div class="${cls}"><span class="k">${esc(it.k)}</span>${v}</div>`;
+        const renderItem = (it: BioCatalogItem): string => {
+            const cls = 'f' + (it.span === 2 ? ' span2' : '');
+            let inner: string;
+            if (it.kind === 'chips') {
+                inner = this.specialTrainingChips.length
+                    ? `<span class="chips">${this.specialTrainingChips.map(c => `<span class="chip">${esc(c)}</span>`).join('')}</span>`
+                    : `<span class="v empty">—</span>`;
+            } else if (it.kind === 'orientation' || it.kind === 'punishment') {
+                const label = it.kind === 'orientation' ? this.orientationLabel : this.punishmentLabel;
+                const has = it.kind === 'orientation' ? this.orientationHasValue : this.punishmentHasValue;
+                inner = has ? `<span class="pill">${esc(label)}</span>` : `<span class="v empty">—</span>`;
+            } else {
+                const v = this.valueFor(it.key);
+                inner = v === '-' ? `<span class="v empty">—</span>` : `<span class="v">${esc(v)}</span>`;
+            }
+            return `<div class="${cls}"><span class="k">${esc(this.fieldLabel(it))}</span>${inner}</div>`;
+        };
+        const section = (num: string, title: string, sec: 1 | 2 | 3 | 4): string => {
+            const items = this.visibleFields(sec);
+            if (!items.length) return '';
+            const gridCls = sec === 4 ? 'grid two' : 'grid';
+            return `<section class="section"><div class="sec-head"><span class="sec-num">${num}</span><span class="sec-title">${esc(title)}</span><span class="sec-rule"></span></div><div class="${gridCls}">${items.map(renderItem).join('')}</div></section>`;
         };
         const photo = this.profileImageUrl
             ? `<div class="photo"><img src="${this.profileImageUrl}" alt="Photo" /></div>`
             : `<div class="photo photo-ph">${esc(this.lx('PHOTO', 'ছবি'))}</div>`;
         const headMeta = this.headMetaParts.map(p => `<span>${esc(p)}</span>`).join('<span class="dot"></span>');
         const idStrip = this.idStrip.map(b => `<div class="blk"><span class="ik">${esc(b.k)}</span><span class="iv">${esc(b.v)}</span></div>`).join('');
-        const chips = this.specialTrainingChips.length
-            ? `<span class="chips">${this.specialTrainingChips.map(c => `<span class="chip">${esc(c)}</span>`).join('')}</span>`
-            : `<span class="v empty">—</span>`;
-        const pill = (label: string, has: boolean) => has || label !== '-' ? `<span class="pill">${esc(label)}</span>` : `<span class="v empty">—</span>`;
 
         return `<!DOCTYPE html>
 <html lang="${isBn ? 'bn' : 'en'}">
@@ -580,27 +755,10 @@ export class ReportBioDataIndividualComponent implements OnInit, OnDestroy {
       </div>
       ${photo}
     </header>
-    <section class="section">
-      <div class="sec-head"><span class="sec-num">01</span><span class="sec-title">${esc(this.secService)}</span><span class="sec-rule"></span></div>
-      <div class="grid">${this.serviceItems.map(f).join('')}</div>
-    </section>
-    <section class="section">
-      <div class="sec-head"><span class="sec-num">02</span><span class="sec-title">${esc(this.secPersonal)}</span><span class="sec-rule"></span></div>
-      <div class="grid">${this.personalItems.map(f).join('')}</div>
-    </section>
-    <section class="section">
-      <div class="sec-head"><span class="sec-num">03</span><span class="sec-title">${esc(this.secDistrict)}</span><span class="sec-rule"></span></div>
-      <div class="grid">${this.districtItems.map(f).join('')}</div>
-    </section>
-    <section class="section">
-      <div class="sec-head"><span class="sec-num">04</span><span class="sec-title">${esc(this.secRabExp)}</span><span class="sec-rule"></span></div>
-      <div class="grid two">
-        <div class="f"><span class="k">${esc(this.lblOrientation)}</span>${pill(this.orientationLabel, this.orientationHasValue)}</div>
-        <div class="f"><span class="k">${esc(this.lblPunishment)}</span>${pill(this.punishmentLabel, this.punishmentHasValue)}</div>
-        <div class="f span2"><span class="k">${esc(this.lblPrevService)}</span>${this.previousServiceInRab === '-' ? '<span class="v empty">—</span>' : `<span class="v">${esc(this.previousServiceInRab)}</span>`}</div>
-        <div class="f span2"><span class="k">${esc(this.lblSpecialTraining)}</span>${chips}</div>
-      </div>
-    </section>
+    ${section('01', this.secService, 1)}
+    ${section('02', this.secPersonal, 2)}
+    ${section('03', this.secDistrict, 3)}
+    ${section('04', this.secRabExp, 4)}
   </div>
 </body></html>`;
     }
@@ -647,25 +805,27 @@ export class ReportBioDataIndividualComponent implements OnInit, OnDestroy {
                 children: [new TextRun({ text: `${num}  ·  ${title}`, font: mono, size: 19, ...ext(19), bold: true, color: C.ink, allCaps: !isBn, characterSpacing: isBn ? 0 : 28 })],
             });
 
-            const rabExpItems: { k: string; v: string }[] = [
-                { k: this.lblOrientation, v: this.orientationLabel === '-' ? '—' : this.orientationLabel },
-                { k: this.lblPunishment, v: this.punishmentLabel === '-' ? '—' : this.punishmentLabel },
-                { k: this.lblPrevService, v: this.previousServiceInRab === '-' ? '—' : this.previousServiceInRab },
-                { k: this.lblSpecialTraining, v: this.specialTrainingChips.length ? this.specialTrainingChips.join(', ') : '—' },
-            ];
-            const toKV = (arr: BioField[]) => arr.map(it => ({ k: it.k, v: it.v === '-' ? '—' : it.v }));
+            // Only sections that have at least one selected field are emitted.
+            const sectionToKV = (sec: 1 | 2 | 3 | 4) => this.visibleFields(sec).map(it => {
+                const v = this.fieldDisplayValue(it);
+                return { k: this.fieldLabel(it), v: v === '-' ? '—' : v };
+            });
+            const sectionBlocks: (Paragraph | Table)[] = [];
+            const addSection = (num: string, title: string, sec: 1 | 2 | 3 | 4) => {
+                const kv = sectionToKV(sec);
+                if (!kv.length) return;
+                sectionBlocks.push(sectionHeading(num, title), kvTable(kv));
+            };
+            addSection('01', this.secService, 1);
+            addSection('02', this.secPersonal, 2);
+            addSection('03', this.secDistrict, 3);
+            addSection('04', this.secRabExp, 4);
 
             const doc = new Document({
                 sections: [{
                     properties: { page: { size: { orientation: PageOrientation.PORTRAIT }, margin: { top: 720, bottom: 720, left: 800, right: 800 } } },
                     footers: { default: new Footer({ children: [new Paragraph({ alignment: AlignmentType.RIGHT, children: [new TextRun({ children: [`${isBn ? 'পৃষ্ঠা' : 'PAGE'} `, PageNumber.CURRENT, ` ${isBn ? '/' : 'OF'} `, PageNumber.TOTAL_PAGES], font: mono, size: 13, ...ext(13), color: C.muted, allCaps: !isBn })] })] }) },
-                    children: [
-                        ...headerPars,
-                        sectionHeading('01', this.secService), kvTable(toKV(this.serviceItems)),
-                        sectionHeading('02', this.secPersonal), kvTable(toKV(this.personalItems)),
-                        sectionHeading('03', this.secDistrict), kvTable(toKV(this.districtItems)),
-                        sectionHeading('04', this.secRabExp), kvTable(rabExpItems),
-                    ],
+                    children: [...headerPars, ...sectionBlocks],
                 }],
             });
             const blob = await Packer.toBlob(doc);

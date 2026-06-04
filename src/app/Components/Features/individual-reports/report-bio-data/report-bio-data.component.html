@@ -53,6 +53,49 @@
                             </div>
                         </div>
                     </div>
+
+                    @if (profile) {
+                    <div class="ds-field-group">
+                        <div class="ds-group-divider">
+                            <span class="ds-group-label">Bio-Data Fields</span>
+                            <span class="ds-group-line"></span>
+                            <button type="button" class="bd-fields-toggle" [class.on]="showFieldEditor" (click)="showFieldEditor = !showFieldEditor">
+                                <i class="pi" [class.pi-pencil]="!showFieldEditor" [class.pi-check]="showFieldEditor"></i>
+                                {{ showFieldEditor ? (lang === 'bn' ? 'সম্পন্ন' : 'Done') : (lang === 'bn' ? 'ক্ষেত্র কাস্টমাইজ করুন' : 'Customize Fields') }}
+                            </button>
+                        </div>
+                        @if (showFieldEditor) {
+                        <div class="ds-field">
+                            <label class="ds-field-label">Add / remove fields</label>
+                            <p-multiSelect [options]="groupedFieldOptions" [group]="true" optionGroupLabel="label" optionGroupChildren="items" [(ngModel)]="pickerModel" optionLabel="label" optionValue="value" display="chip" [filter]="true" placeholder="Pick fields…" styleClass="w-full" appendTo="body"></p-multiSelect>
+                        </div>
+                        <div class="ds-field">
+                            <label class="ds-field-label column-order-label">Field order — drag to rearrange within each section</label>
+                            @for (sec of sections; track sec) {
+                                @if (sectionHasFields(sec)) {
+                                    <div class="bd-reorder-section">
+                                        <div class="bd-reorder-sec-label">{{ sectionLabel(sec) }}</div>
+                                        <div class="column-order-strip" (dragover)="onColumnDragOver($event)">
+                                            @for (col of visibleFields(sec); track col.key) {
+                                                <span class="column-order-chip" [class.dragging]="draggingFieldKey === col.key" draggable="true" (dragstart)="onColumnDragStart(col.key, $event)" (dragend)="onColumnDragEnd()" (dragover)="onColumnDragOver($event)" (drop)="onColumnDrop(col.key, $event)">
+                                                    <i class="pi pi-bars chip-handle" aria-hidden="true"></i>
+                                                    <span class="chip-label">{{ fieldLabel(col) }}</span>
+                                                    <button type="button" class="chip-remove" (click)="removeColumn(col.key)" title="Remove field">
+                                                        <i class="pi pi-times" aria-hidden="true"></i>
+                                                    </button>
+                                                </span>
+                                            }
+                                        </div>
+                                    </div>
+                                }
+                            }
+                            @if (visibleColumns.length === 0) {
+                                <div class="column-order-strip"><span class="column-order-empty">Pick fields above to populate the sheet.</span></div>
+                            }
+                        </div>
+                        }
+                    </div>
+                    }
                 </div>
 
                 <div class="ds-actions">
@@ -137,81 +180,78 @@
                 </div>
             </header>
 
+            <!-- Reusable field renderer (used by every section) -->
+            <ng-template #fieldTpl let-it>
+                <div class="bd-f" [class.span2]="it.span === 2">
+                    <span class="bd-k">{{ fieldLabel(it) }}</span>
+                    @switch (it.kind) {
+                        @case ('orientation') {
+                            @if (orientationHasValue) { <span class="bd-v bd-v-bare"><span class="bd-pill">{{ orientationLabel }}</span></span> }
+                            @else { <span class="bd-v empty">—</span> }
+                        }
+                        @case ('punishment') {
+                            @if (punishmentHasValue) { <span class="bd-v bd-v-bare"><span class="bd-pill">{{ punishmentLabel }}</span></span> }
+                            @else { <span class="bd-v empty">—</span> }
+                        }
+                        @case ('chips') {
+                            @if (specialTrainingChips.length) {
+                                <span class="bd-chips">@for (c of specialTrainingChips; track c) { <span class="bd-chip">{{ c }}</span> }</span>
+                            } @else { <span class="bd-v empty">—</span> }
+                        }
+                        @default {
+                            <span class="bd-v" [class.empty]="valueFor(it.key) === '-'">{{ valueFor(it.key) === '-' ? '—' : valueFor(it.key) }}</span>
+                        }
+                    }
+                </div>
+            </ng-template>
+
             <!-- 01 Service & Posting -->
+            @if (sectionHasFields(1)) {
             <section class="bd-section">
                 <div class="bd-sec-head"><span class="bd-sec-num">01</span><span class="bd-sec-title">{{ secService }}</span><span class="bd-sec-rule"></span></div>
                 <div class="bd-grid">
-                    @for (it of serviceItems; track it.k) {
-                        <div class="bd-f" [class.span2]="it.span === 2" [class.span3]="it.span === 3">
-                            <span class="bd-k">{{ it.k }}</span>
-                            <span class="bd-v" [class.empty]="it.v === '-'">{{ it.v === '-' ? '—' : it.v }}</span>
-                        </div>
+                    @for (it of visibleFields(1); track it.key) {
+                        <ng-container *ngTemplateOutlet="fieldTpl; context: { $implicit: it }"></ng-container>
                     }
                 </div>
             </section>
+            }
 
             <!-- 02 Personal Information -->
+            @if (sectionHasFields(2)) {
             <section class="bd-section">
                 <div class="bd-sec-head"><span class="bd-sec-num">02</span><span class="bd-sec-title">{{ secPersonal }}</span><span class="bd-sec-rule"></span></div>
                 <div class="bd-grid">
-                    @for (it of personalItems; track it.k) {
-                        <div class="bd-f" [class.span2]="it.span === 2" [class.span3]="it.span === 3">
-                            <span class="bd-k">{{ it.k }}</span>
-                            <span class="bd-v" [class.empty]="it.v === '-'">{{ it.v === '-' ? '—' : it.v }}</span>
-                        </div>
+                    @for (it of visibleFields(2); track it.key) {
+                        <ng-container *ngTemplateOutlet="fieldTpl; context: { $implicit: it }"></ng-container>
                     }
                 </div>
             </section>
+            }
 
             <!-- 03 District, Family & Education -->
+            @if (sectionHasFields(3)) {
             <section class="bd-section">
                 <div class="bd-sec-head"><span class="bd-sec-num">03</span><span class="bd-sec-title">{{ secDistrict }}</span><span class="bd-sec-rule"></span></div>
                 <div class="bd-grid">
-                    @for (it of districtItems; track it.k) {
-                        <div class="bd-f" [class.span2]="it.span === 2" [class.span3]="it.span === 3">
-                            <span class="bd-k">{{ it.k }}</span>
-                            <span class="bd-v" [class.empty]="it.v === '-'">{{ it.v === '-' ? '—' : it.v }}</span>
-                        </div>
+                    @for (it of visibleFields(3); track it.key) {
+                        <ng-container *ngTemplateOutlet="fieldTpl; context: { $implicit: it }"></ng-container>
                     }
                 </div>
             </section>
+            }
 
             <!-- 04 RAB Experience & Training -->
+            @if (sectionHasFields(4)) {
             <section class="bd-section">
                 <div class="bd-sec-head"><span class="bd-sec-num">04</span><span class="bd-sec-title">{{ secRabExp }}</span><span class="bd-sec-rule"></span></div>
                 <div class="bd-grid bd-grid-two">
-                    <div class="bd-f">
-                        <span class="bd-k">{{ lblOrientation }}</span>
-                        @if (orientationHasValue) {
-                            <span class="bd-v bd-v-bare"><span class="bd-pill">{{ orientationLabel }}</span></span>
-                        } @else {
-                            <span class="bd-v empty">—</span>
-                        }
-                    </div>
-                    <div class="bd-f">
-                        <span class="bd-k">{{ lblPunishment }}</span>
-                        @if (punishmentHasValue) {
-                            <span class="bd-v bd-v-bare"><span class="bd-pill">{{ punishmentLabel }}</span></span>
-                        } @else {
-                            <span class="bd-v empty">—</span>
-                        }
-                    </div>
-                    <div class="bd-f span2">
-                        <span class="bd-k">{{ lblPrevService }}</span>
-                        <span class="bd-v" [class.empty]="previousServiceInRab === '-'">{{ previousServiceInRab === '-' ? '—' : previousServiceInRab }}</span>
-                    </div>
-                    <div class="bd-f span2">
-                        <span class="bd-k">{{ lblSpecialTraining }}</span>
-                        @if (specialTrainingChips.length) {
-                            <span class="bd-chips">
-                                @for (c of specialTrainingChips; track c) { <span class="bd-chip">{{ c }}</span> }
-                            </span>
-                        } @else {
-                            <span class="bd-v empty">—</span>
-                        }
-                    </div>
+                    @for (it of visibleFields(4); track it.key) {
+                        <ng-container *ngTemplateOutlet="fieldTpl; context: { $implicit: it }"></ng-container>
+                    }
                 </div>
             </section>
+            }
         </div>
     </div>
     }

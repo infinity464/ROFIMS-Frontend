@@ -6,6 +6,7 @@ import { ButtonModule } from 'primeng/button';
 import { MultiSelectModule } from 'primeng/multiselect';
 import { PaginatorModule } from 'primeng/paginator';
 import { InputTextModule } from 'primeng/inputtext';
+import { DatePickerModule } from 'primeng/datepicker';
 import { DialogModule } from 'primeng/dialog';
 import { Toast } from 'primeng/toast';
 import { MessageService } from 'primeng/api';
@@ -54,7 +55,7 @@ interface CodeName { en: string | null; bn: string | null; }
 @Component({
     selector: 'app-report-leave-individual',
     standalone: true,
-    imports: [CommonModule, FormsModule, TableModule, ButtonModule, MultiSelectModule, PaginatorModule, InputTextModule, DialogModule, Toast],
+    imports: [CommonModule, FormsModule, TableModule, ButtonModule, MultiSelectModule, PaginatorModule, InputTextModule, DatePickerModule, DialogModule, Toast],
     providers: [MessageService],
     templateUrl: './report-leave.component.html',
     styleUrls: ['../../employee-reports/report-theme.scss', '../../employee-reports/report-card-mtr.scss', './report-leave.component.scss'],
@@ -68,7 +69,12 @@ export class ReportLeaveIndividualComponent implements OnInit, OnChanges {
     searchServiceId = '';
     searchNid = '';
 
+    /** Date-range filter (applied client-side over the fetched rows). */
+    dateFrom: Date | null = null;
+    dateTo: Date | null = null;
+
     list: LeaveReportRow[] = [];
+    private allRows: LeaveReportRow[] = [];
     private memberInfo: DynamicReportRow | null = null;
     loading = false;
     first = 0;
@@ -286,7 +292,7 @@ export class ReportLeaveIndividualComponent implements OnInit, OnChanges {
         const n = this.lang === 'bn' ? BanglaNumerals.toBangla(String(this.activeFilterCount)) : String(this.activeFilterCount);
         return n + ' active filter(s)';
     }
-    clearFilters(): void { this.searchRabId = ''; this.searchServiceId = ''; this.searchNid = ''; this.first = 0; }
+    clearFilters(): void { this.searchRabId = ''; this.searchServiceId = ''; this.searchNid = ''; this.dateFrom = null; this.dateTo = null; this.first = 0; this.applyDateFilter(); }
     onPage(event: { first?: number; rows?: number }): void { this.first = event.first ?? 0; this.rows = event.rows ?? this.rows; }
 
     load(): void {
@@ -336,7 +342,33 @@ export class ReportLeaveIndividualComponent implements OnInit, OnChanges {
         });
     }
 
-    private resetResults(): void { this.list = []; this.memberInfo = null; this.totalRecords = 0; }
+    private resetResults(): void { this.list = []; this.allRows = []; this.memberInfo = null; this.totalRecords = 0; }
+
+    onDateFilterChange(): void { this.applyDateFilter(); }
+
+    /** Re-derive the visible list from allRows using the date-range filter.
+        A leave is kept when its [fromDate, toDate] period overlaps the range. */
+    private applyDateFilter(): void {
+        const rows = this.allRows.filter(r => this.inDateRange(r.fromDate, r.toDate));
+        rows.forEach((r, i) => { r.ser = i + 1; });
+        this.list = rows;
+        this.totalRecords = rows.length;
+        this.first = 0;
+    }
+
+    private inDateRange(from: string | null, to: string | null): boolean {
+        const f = this.dateFrom ? new Date(this.dateFrom.getFullYear(), this.dateFrom.getMonth(), this.dateFrom.getDate(), 0, 0, 0).getTime() : null;
+        const t = this.dateTo ? new Date(this.dateTo.getFullYear(), this.dateTo.getMonth(), this.dateTo.getDate(), 23, 59, 59).getTime() : null;
+        if (f == null && t == null) return true;
+        const rf = from ? new Date(from).getTime() : null;
+        const rt = to ? new Date(to).getTime() : rf;
+        const start = rf ?? rt;
+        const end = rt ?? rf;
+        if (start == null) return false;
+        if (f != null && (end == null || end < f)) return false;
+        if (t != null && start > t) return false;
+        return true;
+    }
 
     private fetchForEmployee(employeeId: number, lookupRow: DynamicReportRow): void {
         this.loading = true;
@@ -364,9 +396,8 @@ export class ReportLeaveIndividualComponent implements OnInit, OnChanges {
                         } as LeaveReportRow;
                     });
                 shaped.sort((a, b) => this.timeOf(b.fromDate) - this.timeOf(a.fromDate));
-                shaped.forEach((r, i) => { r.ser = i + 1; });
-                this.list = shaped;
-                this.totalRecords = shaped.length;
+                this.allRows = shaped;
+                this.applyDateFilter();
                 this.loading = false;
             },
             error: (err) => {
