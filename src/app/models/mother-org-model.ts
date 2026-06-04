@@ -21,6 +21,9 @@ export interface MotherOrganizationModel {
 
   parentOrg?: number;
 
+  /** Backend MotherOrg.SortOrder — drives org-level ordering in reports. */
+  sortOrder?: number | null;
+
   createdBy?: string;
   createdDate?: string;
 

@@ -5,6 +5,16 @@ import { SelectModule } from 'primeng/select';
 import { ReportCourseComponent } from './report-course/report-course.component';
 import { ReportEducationIndividualComponent } from './report-education/report-education.component';
 import { ReportAddressIndividualComponent } from './report-address/report-address.component';
+import { ReportNomineeIndividualComponent } from './report-nominee/report-nominee.component';
+import { ReportRabServiceIndividualComponent } from './report-rab-service/report-rab-service.component';
+import { ReportMoServiceIndividualComponent } from './report-mo-service/report-mo-service.component';
+import { ReportPromotionIndividualComponent } from './report-promotion/report-promotion.component';
+import { ReportRankConfirmationIndividualComponent } from './report-rank-confirmation/report-rank-confirmation.component';
+import { ReportDisciplineIndividualComponent } from './report-discipline/report-discipline.component';
+import { ReportBankIndividualComponent } from './report-bank/report-bank.component';
+import { ReportForeignVisitIndividualComponent } from './report-foreign-visit/report-foreign-visit.component';
+import { ReportLeaveIndividualComponent } from './report-leave/report-leave.component';
+import { ReportBioDataIndividualComponent } from './report-bio-data/report-bio-data.component';
 import { REPORT_LABELS, type ReportLang } from '@/Core/i18n/report-labels';
 
 /**
@@ -20,7 +30,7 @@ import { REPORT_LABELS, type ReportLang } from '@/Core/i18n/report-labels';
 @Component({
     selector: 'app-individual-reports',
     standalone: true,
-    imports: [CommonModule, FormsModule, SelectModule, ReportCourseComponent, ReportEducationIndividualComponent, ReportAddressIndividualComponent],
+    imports: [CommonModule, FormsModule, SelectModule, ReportCourseComponent, ReportEducationIndividualComponent, ReportAddressIndividualComponent, ReportNomineeIndividualComponent, ReportRabServiceIndividualComponent, ReportMoServiceIndividualComponent, ReportPromotionIndividualComponent, ReportRankConfirmationIndividualComponent, ReportDisciplineIndividualComponent, ReportBankIndividualComponent, ReportForeignVisitIndividualComponent, ReportLeaveIndividualComponent, ReportBioDataIndividualComponent],
     templateUrl: './individual-reports.component.html',
     styleUrls: ['./individual-reports.component.scss'],
 })
@@ -30,9 +40,19 @@ export class IndividualReportsComponent implements OnInit {
 
     /** Picker options — extend as new individual reports are added. */
     reportTypes: { label: string; value: string }[] = [
-        { label: 'Course Report',       value: 'course' },
-        { label: 'Education Report',    value: 'education' },
-        { label: 'Address Info Report', value: 'address' },
+        { label: 'Course Report',                            value: 'course' },
+        { label: 'Education Report',                         value: 'education' },
+        { label: 'Address Info Report',                      value: 'address' },
+        { label: 'Nominee Information Report',               value: 'nominee' },
+        { label: 'Service History in RAB',                   value: 'rab-service' },
+        { label: 'Service History in Mother Organization',   value: 'mo-service' },
+        { label: 'Promotion History',                        value: 'promotion' },
+        { label: 'Rank Confirmation Report',                 value: 'rank-confirmation' },
+        { label: 'Discipline Issue Report',                  value: 'discipline' },
+        { label: 'Bank Account Report',                      value: 'bank' },
+        { label: 'Ex-Bangladesh Leave (Foreign Visit)',      value: 'foreign-visit' },
+        { label: 'Leave Information Report',                 value: 'leave' },
+        { label: 'Short Bio-Data',                           value: 'bio-data' },
     ];
 
     reportType: string = 'course';
