@@ -15,6 +15,7 @@ import { ReportBankIndividualComponent } from './report-bank/report-bank.compone
 import { ReportForeignVisitIndividualComponent } from './report-foreign-visit/report-foreign-visit.component';
 import { ReportLeaveIndividualComponent } from './report-leave/report-leave.component';
 import { ReportBioDataIndividualComponent } from './report-bio-data/report-bio-data.component';
+import { ReportBioDataFullIndividualComponent } from './report-bio-data-full/report-bio-data-full.component';
 import { REPORT_LABELS, type ReportLang } from '@/Core/i18n/report-labels';
 
 /**
@@ -30,7 +31,7 @@ import { REPORT_LABELS, type ReportLang } from '@/Core/i18n/report-labels';
 @Component({
     selector: 'app-individual-reports',
     standalone: true,
-    imports: [CommonModule, FormsModule, SelectModule, ReportCourseComponent, ReportEducationIndividualComponent, ReportAddressIndividualComponent, ReportNomineeIndividualComponent, ReportRabServiceIndividualComponent, ReportMoServiceIndividualComponent, ReportPromotionIndividualComponent, ReportRankConfirmationIndividualComponent, ReportDisciplineIndividualComponent, ReportBankIndividualComponent, ReportForeignVisitIndividualComponent, ReportLeaveIndividualComponent, ReportBioDataIndividualComponent],
+    imports: [CommonModule, FormsModule, SelectModule, ReportCourseComponent, ReportEducationIndividualComponent, ReportAddressIndividualComponent, ReportNomineeIndividualComponent, ReportRabServiceIndividualComponent, ReportMoServiceIndividualComponent, ReportPromotionIndividualComponent, ReportRankConfirmationIndividualComponent, ReportDisciplineIndividualComponent, ReportBankIndividualComponent, ReportForeignVisitIndividualComponent, ReportLeaveIndividualComponent, ReportBioDataIndividualComponent, ReportBioDataFullIndividualComponent],
     templateUrl: './individual-reports.component.html',
     styleUrls: ['./individual-reports.component.scss'],
 })
@@ -53,6 +54,7 @@ export class IndividualReportsComponent implements OnInit {
         { label: 'Ex-Bangladesh Leave (Foreign Visit)',      value: 'foreign-visit' },
         { label: 'Leave Information Report',                 value: 'leave' },
         { label: 'Short Bio-Data',                           value: 'bio-data' },
+        { label: 'Detailed Bio-Data',                        value: 'bio-data-full' },
     ];
 
     reportType: string = 'course';
