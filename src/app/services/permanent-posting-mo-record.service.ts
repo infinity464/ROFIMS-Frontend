@@ -26,6 +26,7 @@ export interface PermanentPostingMORecordModel {
     clearanceGiven: boolean | null;
     clearanceGivenDate: string | null;
     postingOrderFilesReferences: string | null;
+    isFinalPostedOut: boolean;
     status: string;
     createdBy: string;
     createdDate: string;
@@ -136,6 +137,7 @@ export class PermanentPostingMORecordService {
             clearanceGiven: model.clearanceGiven ?? null,
             clearanceGivenDate: model.clearanceGivenDate ?? null,
             postingOrderFilesReferences: model.postingOrderFilesReferences ?? null,
+            isFinalPostedOut: model.isFinalPostedOut ?? false,
             status: model.status ?? 'Draft',
             createdBy: model.createdBy ?? 'system',
             lastUpdatedBy: model.lastUpdatedBy ?? 'system'

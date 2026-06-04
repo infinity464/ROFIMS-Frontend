@@ -107,17 +107,32 @@ export class PostedOutPersonListComponent implements OnInit {
 
     onDelete(row: PermanentPostingMORecordModel): void {
         this.confirmationService.confirm({
-            message: `Delete record #${row.id}?`,
+            message: `Delete record #${row.id}? If a linked New Joining Person record exists, it will also be removed.`,
             header: 'Confirm Delete',
             icon: 'pi pi-exclamation-triangle',
             acceptButtonStyleClass: 'p-button-danger',
             accept: () => {
                 this.recordSvc.delete(row.id).subscribe({
-                    next: () => {
-                        this.messageService.add({ severity: 'success', summary: 'Deleted', detail: 'Record deleted.' });
+                    next: (res: any) => {
+                        if (res?.statusCode === 403) {
+                            this.messageService.add({ severity: 'warn', summary: 'Cannot Delete', detail: res.description ?? 'This person is an Ex-Member. Ex-Member records cannot be removed.' });
+                            return;
+                        }
+                        if (res?.statusCode !== 200) {
+                            this.messageService.add({ severity: 'error', summary: 'Error', detail: res?.description ?? 'Delete failed.' });
+                            return;
+                        }
+                        this.messageService.add({ severity: 'success', summary: 'Deleted', detail: res.description ?? 'Record deleted.' });
                         this.loadRecords();
                     },
-                    error: () => this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Delete failed.' })
+                    error: (err: any) => {
+                        const body = err?.error;
+                        if (body?.statusCode === 403) {
+                            this.messageService.add({ severity: 'warn', summary: 'Cannot Delete', detail: body.description ?? 'This person is an Ex-Member. Ex-Member records cannot be removed.' });
+                        } else {
+                            this.messageService.add({ severity: 'error', summary: 'Error', detail: body?.description ?? 'Delete failed.' });
+                        }
+                    }
                 });
             }
         });

@@ -228,8 +228,17 @@ export class NewJoiningPersonListComponent implements OnInit, OnDestroy {
             acceptButtonStyleClass: 'p-button-danger',
             accept: () => {
                 this.detailSvc.delete(row.id).subscribe({
-                    next: () => { this.messageService.add({ severity: 'success', summary: 'Deleted', detail: 'Joinee record deleted.' }); this.loadList(); },
-                    error: () => this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Delete failed.' })
+                    next: (res: any) => {
+                        if (res?.statusCode !== 200) {
+                            this.messageService.add({ severity: 'error', summary: 'Error', detail: res?.description ?? 'Delete failed.' });
+                            return;
+                        }
+                        this.messageService.add({ severity: 'success', summary: 'Deleted', detail: res.description ?? 'Joinee record deleted.' });
+                        this.loadList();
+                    },
+                    error: (err: any) => {
+                        this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.description ?? 'Delete failed.' });
+                    }
                 });
             }
         });
