@@ -15,6 +15,7 @@ import { EmpService } from '@/services/emp-service';
 import { PreviousRABServiceService } from '@/services/previous-rab-service.service';
 import { PromotionInfoService } from '@/services/promotion-info.service';
 import { DisciplineInfoService } from '@/services/discipline-info.service';
+import { DraftCourseService } from '@/services/draft-course.service';
 import { IdentityUserMemberTypeAccessService } from '@/services/identity-user-member-type-access.service';
 import { SharedService } from '@/shared/services/shared-service';
 import { Router } from '@angular/router';
@@ -64,6 +65,7 @@ export class ReportBioDataIndividualComponent implements OnInit, OnDestroy {
     private previousRabUnitsBN: string[] = [];
     private promotionPresentDate: string | null = null;
     private hasPunishment: boolean | null = null;
+    private hasRfts: boolean | null = null;
 
     loading = false;
     searched = false;
@@ -85,8 +87,6 @@ export class ReportBioDataIndividualComponent implements OnInit, OnDestroy {
 
     filterOpen = true;
 
-    private static readonly MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-
     constructor(
         private reportService: ReportService,
         private servingMembersService: ServingMembersService,
@@ -94,6 +94,7 @@ export class ReportBioDataIndividualComponent implements OnInit, OnDestroy {
         private previousRabService: PreviousRABServiceService,
         private promotionInfoService: PromotionInfoService,
         private disciplineInfoService: DisciplineInfoService,
+        private draftCourseService: DraftCourseService,
         private messageService: MessageService,
         private memberTypeAccess: IdentityUserMemberTypeAccessService,
         private sharedService: SharedService,
@@ -129,7 +130,7 @@ export class ReportBioDataIndividualComponent implements OnInit, OnDestroy {
         try {
             const d = new Date(v);
             if (isNaN(d.getTime())) return v;
-            const s = `${String(d.getDate()).padStart(2, '0')} ${ReportBioDataIndividualComponent.MONTHS[d.getMonth()]} ${d.getFullYear()}`;
+            const s = `${String(d.getDate()).padStart(2, '0')}-${String(d.getMonth() + 1).padStart(2, '0')}-${d.getFullYear()}`;
             return this.isBn ? BanglaNumerals.toBangla(s) : s;
         } catch { return v; }
     }
@@ -140,14 +141,20 @@ export class ReportBioDataIndividualComponent implements OnInit, OnDestroy {
     }
 
     // ── Header ─────────────────────────────────────────────────────────
-    get docTypeLabel(): string { return this.lx('Bio-Data', 'বায়ো-ডাটা'); }
-    get confidentialLine(): string { return this.lx('Confidential · Personnel Record', 'গোপনীয় · কর্মী রেকর্ড'); }
+    get docTypeLabel(): string { return this.lx('Bio-Data', 'জীবনবৃত্তান্ত'); }
+    get confidentialLine(): string { return this.lx('Confidential · Personnel Record', 'গোপনীয়'); }
     get heroName(): string {
         const p = this.profile;
         if (!p) return '-';
         return this.isBn ? this.val(p.nameBN ?? p.nameEnglish) : this.val(p.nameEnglish);
     }
-    get heroNameBN(): string { return this.val(this.profile?.nameBN); }
+    /** Secondary name line — shows the OTHER language so both names appear
+        and swap when the language toggles (bn primary → en secondary, etc.). */
+    get heroNameAlt(): string {
+        const p = this.profile;
+        if (!p) return '-';
+        return this.isBn ? this.val(p.nameEnglish) : this.val(p.nameBN);
+    }
     /** Post-nominals: gallantry · professional qualification · corps. */
     get postNom(): string {
         const p = this.profile;
@@ -218,6 +225,13 @@ export class ReportBioDataIndividualComponent implements OnInit, OnDestroy {
         return this.hasPunishment ? this.lx('Yes', 'হ্যাঁ') : this.lx('No', 'না');
     }
     get punishmentHasValue(): boolean { return this.hasPunishment != null; }
+
+    /** Orientation Training — "Yes" when the member has any RFTS training record. */
+    get orientationLabel(): string {
+        if (this.hasRfts == null) return '-';
+        return this.hasRfts ? this.lx('Yes', 'হ্যাঁ') : this.lx('No', 'না');
+    }
+    get orientationHasValue(): boolean { return this.hasRfts != null; }
 
     get serviceItems(): BioField[] {
         const p = this.profile;
@@ -355,6 +369,7 @@ export class ReportBioDataIndividualComponent implements OnInit, OnDestroy {
         this.previousRabUnitsBN = [];
         this.promotionPresentDate = null;
         this.hasPunishment = null;
+        this.hasRfts = null;
         if (this.profileImageUrl) { URL.revokeObjectURL(this.profileImageUrl); this.profileImageUrl = null; }
     }
 
@@ -367,8 +382,9 @@ export class ReportBioDataIndividualComponent implements OnInit, OnDestroy {
             previousRab: this.previousRabService.getViewByEmployeeId(employeeId).pipe(catchError(() => of([] as any[]))),
             promotion: this.promotionInfoService.getViewByEmployeeId(employeeId).pipe(catchError(() => of([] as any[]))),
             discipline: this.disciplineInfoService.getViewByEmployeeId(employeeId).pipe(catchError(() => of([] as any[]))),
+            rfts: this.draftCourseService.getRftsTrainingByEmployeeId(employeeId).pipe(catchError(() => of([] as any[]))),
         }).subscribe({
-            next: ({ profile, previousRab, promotion, discipline }) => {
+            next: ({ profile, previousRab, promotion, discipline, rfts }) => {
                 if (!profile) { this.profile = null; this.loading = false; this.showAccessDeniedDialog = true; return; }
                 this.profile = profile;
 
@@ -388,6 +404,8 @@ export class ReportBioDataIndividualComponent implements OnInit, OnDestroy {
 
                 const disc = (discipline ?? []).filter((r: any) => (r.employeeID ?? r.EmployeeID) === employeeId);
                 this.hasPunishment = disc.length > 0;
+
+                this.hasRfts = (rfts ?? []).length > 0;
 
                 this.loadProfileImage(profile);
                 this.loading = false;
@@ -556,7 +574,7 @@ export class ReportBioDataIndividualComponent implements OnInit, OnDestroy {
       <div>
         <div class="name">${esc(this.heroName)}</div>
         ${this.postNom ? `<div class="postnom">${esc(this.postNom)}</div>` : ''}
-        ${this.heroNameBN !== '-' ? `<div class="name-bn">${esc(this.heroNameBN)}</div>` : ''}
+        ${this.heroNameAlt !== '-' ? `<div class="name-bn">${esc(this.heroNameAlt)}</div>` : ''}
         <div class="head-meta">${headMeta}</div>
         <div class="id-strip">${idStrip}</div>
       </div>
@@ -577,7 +595,7 @@ export class ReportBioDataIndividualComponent implements OnInit, OnDestroy {
     <section class="section">
       <div class="sec-head"><span class="sec-num">04</span><span class="sec-title">${esc(this.secRabExp)}</span><span class="sec-rule"></span></div>
       <div class="grid two">
-        <div class="f"><span class="k">${esc(this.lblOrientation)}</span><span class="v empty">—</span></div>
+        <div class="f"><span class="k">${esc(this.lblOrientation)}</span>${pill(this.orientationLabel, this.orientationHasValue)}</div>
         <div class="f"><span class="k">${esc(this.lblPunishment)}</span>${pill(this.punishmentLabel, this.punishmentHasValue)}</div>
         <div class="f span2"><span class="k">${esc(this.lblPrevService)}</span>${this.previousServiceInRab === '-' ? '<span class="v empty">—</span>' : `<span class="v">${esc(this.previousServiceInRab)}</span>`}</div>
         <div class="f span2"><span class="k">${esc(this.lblSpecialTraining)}</span>${chips}</div>
@@ -591,8 +609,11 @@ export class ReportBioDataIndividualComponent implements OnInit, OnDestroy {
         this.exporting = true;
         try {
             const isBn = this.isBn;
-            const bnFont = { ascii: 'Nirmala UI', hAnsi: 'Nirmala UI', cs: 'Nirmala UI', hint: 'cs' as const };
-            const bnLang = { value: 'bn-BD', bidirectional: 'bn-BD' } as any;
+            // Bangla glyphs are complex-script — the run must carry a cs (and
+            // eastAsia) font + sizeComplexScript, otherwise Word falls back to a
+            // non-Bangla cs font and renders boxes. Nirmala UI ships with Windows.
+            const bnFont = { ascii: 'Nirmala UI', hAnsi: 'Nirmala UI', cs: 'Nirmala UI', eastAsia: 'Nirmala UI', hint: 'cs' as const };
+            const bnLang = { value: 'bn-BD', bidirectional: 'bn-BD', eastAsia: 'bn-BD' } as any;
             const sans = isBn ? (bnFont as any) : 'Calibri';
             const serif = isBn ? (bnFont as any) : 'Cambria';
             const mono = isBn ? (bnFont as any) : 'Consolas';
@@ -609,7 +630,7 @@ export class ReportBioDataIndividualComponent implements OnInit, OnDestroy {
                 new Paragraph({ spacing: { after: 20 }, children: [new TextRun({ text: ws(this.heroName), font: serif, size: 40, ...ext(40), bold: true, color: C.ink })] }),
             ];
             if (this.postNom) headerPars.push(new Paragraph({ spacing: { after: 20 }, children: [new TextRun({ text: ws(this.postNom), font: mono, size: 18, ...ext(18), color: C.soft, allCaps: !isBn, characterSpacing: isBn ? 0 : 24 })] }));
-            if (this.heroNameBN !== '-') headerPars.push(new Paragraph({ spacing: { after: 20 }, children: [new TextRun({ text: ws(this.heroNameBN), font: serif, size: 22, ...ext(22), color: C.soft })] }));
+            if (this.heroNameAlt !== '-') headerPars.push(new Paragraph({ spacing: { after: 20 }, children: [new TextRun({ text: ws(this.heroNameAlt), font: serif, size: 22, ...ext(22), color: C.soft })] }));
             headerPars.push(new Paragraph({ spacing: { after: 60 }, children: [new TextRun({ text: this.headMetaParts.join('   ·   '), font: mono, size: 18, ...ext(18), color: C.ink, allCaps: !isBn })] }));
             headerPars.push(new Paragraph({ spacing: { after: 240 }, children: [new TextRun({ text: this.idStrip.map(b => `${b.k}: ${b.v}`).join('     '), font: mono, size: 18, ...ext(18), bold: true, color: C.ink })] }));
 
@@ -627,7 +648,7 @@ export class ReportBioDataIndividualComponent implements OnInit, OnDestroy {
             });
 
             const rabExpItems: { k: string; v: string }[] = [
-                { k: this.lblOrientation, v: '—' },
+                { k: this.lblOrientation, v: this.orientationLabel === '-' ? '—' : this.orientationLabel },
                 { k: this.lblPunishment, v: this.punishmentLabel === '-' ? '—' : this.punishmentLabel },
                 { k: this.lblPrevService, v: this.previousServiceInRab === '-' ? '—' : this.previousServiceInRab },
                 { k: this.lblSpecialTraining, v: this.specialTrainingChips.length ? this.specialTrainingChips.join(', ') : '—' },

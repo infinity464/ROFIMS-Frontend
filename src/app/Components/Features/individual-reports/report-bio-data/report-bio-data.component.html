@@ -3,7 +3,7 @@
 <div class="employee-reports-page">
     <div class="report-filter-card">
         <div class="report-filter-card-title">
-            <h1 class="report-page-title">{{ lang === 'bn' ? 'সংক্ষিপ্ত বায়ো-ডাটা' : 'Short Bio-Data' }}</h1>
+            <h1 class="report-page-title">{{ lang === 'bn' ? 'সংক্ষিপ্ত জীবনবৃত্তান্ত' : 'Short Bio-Data' }}</h1>
         </div>
 
         <div class="report-filter-header" [class.open]="filterOpen" (click)="toggleFilter()" role="button" tabindex="0" (keydown.enter)="toggleFilter()" (keydown.space)="toggleFilter()">
@@ -115,7 +115,7 @@
                 <div class="bd-head-main">
                     <div class="bd-name">{{ heroName }}</div>
                     @if (postNom) { <div class="bd-postnom">{{ postNom }}</div> }
-                    @if (heroNameBN !== '-') { <div class="bd-name-bn">{{ heroNameBN }}</div> }
+                    @if (heroNameAlt !== '-') { <div class="bd-name-bn">{{ heroNameAlt }}</div> }
                     <div class="bd-head-meta">
                         @for (part of headMetaParts; track part; let last = $last) {
                             <span>{{ part }}</span>
@@ -182,7 +182,11 @@
                 <div class="bd-grid bd-grid-two">
                     <div class="bd-f">
                         <span class="bd-k">{{ lblOrientation }}</span>
-                        <span class="bd-v empty">—</span>
+                        @if (orientationHasValue) {
+                            <span class="bd-v bd-v-bare"><span class="bd-pill">{{ orientationLabel }}</span></span>
+                        } @else {
+                            <span class="bd-v empty">—</span>
+                        }
                     </div>
                     <div class="bd-f">
                         <span class="bd-k">{{ lblPunishment }}</span>

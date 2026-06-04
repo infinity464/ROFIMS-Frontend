@@ -1,232 +1,321 @@
 <p-toast position="top-center"></p-toast>
 
-<div class="employee-reports-page">
-    <div class="report-filter-card">
-        <div class="report-filter-card-title">
-            <h1 class="report-page-title">Report On Supernumerary List</h1>
-        </div>
-
-        <div class="report-filter-header" [class.open]="filterOpen" (click)="toggleFilter()" role="button" tabindex="0" (keydown.enter)="toggleFilter()" (keydown.space)="toggleFilter()">
-            <div class="report-filter-header-left">
-                <div class="report-filter-icon">
-                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-                        <path d="M2 4h12M4 8h8M6 12h4" stroke="var(--primary-color)" stroke-width="1.8" stroke-linecap="round"/>
-                    </svg>
-                </div>
-                <div>
-                    <div class="report-filter-title">Search &amp; filter</div>
-                    <div class="report-filter-subtitle">{{ filterSubtitle() }}</div>
-                </div>
+<div class="report-filter-card">
+    <div class="report-filter-header" [class.open]="filterOpen" (click)="toggleFilter()" role="button" tabindex="0" (keydown.enter)="toggleFilter()" (keydown.space)="toggleFilter()">
+        <div class="report-filter-header-left">
+            <div class="report-filter-icon">
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                    <path d="M2 4h12M4 8h8M6 12h4" stroke="var(--primary-color)" stroke-width="1.8" stroke-linecap="round"/>
+                </svg>
             </div>
-            <div class="report-filter-header-right">
-                @if (activeFilterCount > 0) {
-                    <span class="ds-field-count">{{ activeFilterCount }} active</span>
-                }
-                <div class="report-chevron">
-                    <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
-                        <path d="M2 4l4 4 4-4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
-                    </svg>
-                </div>
+            <div>
+                <div class="report-filter-title">{{ L['en']['report.search.createList'] }}</div>
+                <div class="report-filter-subtitle">{{ filterSubtitle() }}</div>
             </div>
         </div>
-
-        <div class="report-filter-body" [class.open]="filterOpen">
-            <div class="report-filter-body-inner">
-                <div class="ds-criteria-section">
-                    <div class="ds-field-group">
-                        <div class="ds-group-divider">
-                            <span class="ds-group-label">Organization &amp; Role</span>
-                            <span class="ds-group-line"></span>
-                        </div>
-                        <div class="ds-criteria-grid">
-                            <div class="ds-field">
-                                <label class="ds-field-label">{{ L['en']['report.search.motherOrg'] }}</label>
-                                <p-select
-                                    [options]="orgOptions"
-                                    [(ngModel)]="selectedOrgId"
-                                    (ngModelChange)="onOrgChange()"
-                                    optionLabel="orgNameEN"
-                                    optionValue="orgId"
-                                    placeholder="Select Mother Org"
-                                    styleClass="w-full"
-                                    [filter]="true"
-                                    [showClear]="true"
-                                    appendTo="body">
-                                </p-select>
-                            </div>
-                            <div class="ds-field">
-                                <label class="ds-field-label">{{ L['en']['report.search.memberType'] }}</label>
-                                <p-select
-                                    [options]="memberTypeOptions"
-                                    [(ngModel)]="selectedMemberTypeId"
-                                    optionLabel="label"
-                                    optionValue="value"
-                                    placeholder="Select Member Type"
-                                    styleClass="w-full"
-                                    [filter]="true"
-                                    [showClear]="true"
-                                    appendTo="body">
-                                </p-select>
-                            </div>
-                            <div class="ds-field">
-                                <label class="ds-field-label">{{ L['en']['report.search.rank'] }}</label>
-                                <p-select
-                                    [options]="rankOptions"
-                                    [(ngModel)]="selectedRankId"
-                                    optionLabel="label"
-                                    optionValue="value"
-                                    placeholder="Select Rank"
-                                    styleClass="w-full"
-                                    [disabled]="selectedOrgId == null"
-                                    [filter]="true"
-                                    [showClear]="true"
-                                    appendTo="body">
-                                </p-select>
-                            </div>
-                            <div class="ds-field">
-                                <label class="ds-field-label">{{ L['en']['report.search.trade'] }}</label>
-                                <p-select
-                                    [options]="tradeOptions"
-                                    [(ngModel)]="selectedTradeId"
-                                    optionLabel="label"
-                                    optionValue="value"
-                                    placeholder="Select Trade"
-                                    styleClass="w-full"
-                                    [disabled]="selectedOrgId == null"
-                                    [filter]="true"
-                                    [showClear]="true"
-                                    appendTo="body">
-                                </p-select>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="ds-actions">
-                    <button type="button" class="ds-btn-clear" (click)="clearFilters()">
-                        <i class="pi pi-times"></i>
-                        Clear All
-                    </button>
-                    <button type="button" class="ds-btn-search" (click)="search()" [disabled]="loading">
-                        <i class="pi pi-search"></i>
-                        Search
-                    </button>
-                </div>
+        <div class="report-filter-header-right">
+            <span class="report-filters-badge" [class.show]="activeFilterCount > 0">{{ activeFilterCount }} active</span>
+            <div class="report-chevron">
+                <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+                    <path d="M2 4l4 4 4-4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
             </div>
         </div>
     </div>
 
-    @if (searched) {
-    <div class="report-results-card">
-        <div class="report-results-header">
-            <div class="report-toolbar-row">
-                <div class="report-results-actions">
-                    <button type="button" class="report-lang-toggle" (click)="toggleLang()">
-                        {{ lang === 'en' ? 'বাংলা' : 'English' }}
-                    </button>
-                    <div class="report-export-wrap">
-                        <button type="button" class="report-btn-export"
-                                (click)="toggleExportDropdown($event)"
-                                [disabled]="loading || exporting || list.length === 0">
-                            @if (exporting) {
-                                <i class="pi pi-spin pi-spinner" style="font-size:13px"></i>
-                                Generating...
-                            } @else {
-                                <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
-                                    <path d="M6.5 1v7M3.5 5.5l3 3 3-3M1.5 10.5h10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-                                </svg>
-                                {{ L['en']['report.search.export'] }}
-                            }
-                        </button>
-                        @if (exportDropdownOpen) {
-                        <div class="report-export-dropdown" (click)="$event.stopPropagation()">
-                            <button type="button" class="report-export-item report-export-print" (click)="exportAs('print')">
-                                <i class="pi pi-print" style="font-size:0.75rem"></i> Print
-                            </button>
-                            <button type="button" class="report-export-item report-export-pdf" (click)="exportAs('pdf')">
-                                <span class="report-export-icon">⬇</span> PDF
-                            </button>
-                            <button type="button" class="report-export-item report-export-word" (click)="exportAs('word')">
-                                <span class="report-export-icon">⬇</span> Word
-                            </button>
-                            <button type="button" class="report-export-item report-export-excel" (click)="exportAs('excel')">
-                                <span class="report-export-icon">⬇</span> Excel
-                            </button>
-                        </div>
-                        }
-                    </div>
+    <div class="report-filter-body" [class.open]="filterOpen">
+        <div class="report-filter-body-inner">
+            <div class="report-fields-row">
+                <div class="report-filter-field">
+                    <label>{{ L['en']['report.search.motherOrg'] }}</label>
+                    <p-select
+                        [options]="orgOptions"
+                        [(ngModel)]="selectedOrgId"
+                        (ngModelChange)="onOrgChange()"
+                        optionLabel="orgNameEN"
+                        optionValue="orgId"
+                        placeholder="Select"
+                        styleClass="w-full"
+                        [filter]="true"
+                        [showClear]="true"
+                        appendTo="body">
+                    </p-select>
+                </div>
+                <div class="report-filter-field">
+                    <label>{{ L['en']['report.search.memberType'] }}</label>
+                    <p-select
+                        [options]="memberTypeOptions"
+                        [(ngModel)]="selectedMemberTypeId"
+                        (ngModelChange)="onFilterChange()"
+                        optionLabel="label"
+                        optionValue="value"
+                        placeholder="Select"
+                        styleClass="w-full"
+                        [filter]="true"
+                        [showClear]="true"
+                        appendTo="body">
+                    </p-select>
+                </div>
+                <div class="report-filter-field">
+                    <label>{{ L['en']['report.search.rank'] }}</label>
+                    <p-select
+                        [options]="rankOptions"
+                        [(ngModel)]="selectedRankId"
+                        (ngModelChange)="onFilterChange()"
+                        optionLabel="label"
+                        optionValue="value"
+                        placeholder="Select"
+                        styleClass="w-full"
+                        [disabled]="selectedOrgId == null"
+                        [filter]="true"
+                        [showClear]="true"
+                        appendTo="body">
+                    </p-select>
+                </div>
+                <div class="report-filter-field">
+                    <label>{{ L['en']['report.search.trade'] }}</label>
+                    <p-select
+                        [options]="tradeOptions"
+                        [(ngModel)]="selectedTradeId"
+                        (ngModelChange)="onFilterChange()"
+                        optionLabel="label"
+                        optionValue="value"
+                        placeholder="Select"
+                        styleClass="w-full"
+                        [disabled]="selectedOrgId == null"
+                        [filter]="true"
+                        [showClear]="true"
+                        appendTo="body">
+                    </p-select>
                 </div>
             </div>
 
-            <div class="report-header-title-block">
-                <div class="report-main-title">{{ reportTitle }}</div>
-                <div class="report-date-line">{{ dateLine }}</div>
-                @if (memberTypeScopeLine) {
-                    <div class="report-scope-line">{{ memberTypeScopeLine }}</div>
-                }
-                @if (appliedFilterLines.length > 0) {
-                    <div class="report-filter-summary">
-                        @for (line of appliedFilterLines; track line) {
-                            <span class="report-filter-tag">{{ line }}</span>
-                        }
+            <!-- Column picker — shown after a search has populated rows. -->
+            @if (searched) {
+                <div class="ds-field-group">
+                    <div class="ds-group-divider">
+                        <span class="ds-group-label">Columns</span>
+                        <span class="ds-group-line"></span>
                     </div>
-                }
+                    <div class="ds-field">
+                        <label class="ds-field-label">Visible columns</label>
+                        <p-multiSelect
+                            [options]="columnPickerOptions"
+                            [(ngModel)]="selectedColumnKeys"
+                            optionLabel="label"
+                            optionValue="value"
+                            display="chip"
+                            [filter]="true"
+                            placeholder="Pick columns…"
+                            styleClass="w-full"
+                            appendTo="body">
+                        </p-multiSelect>
+                    </div>
+                    <div class="ds-field">
+                        <label class="ds-field-label column-order-label">Column order — drag to rearrange</label>
+                        <div class="column-order-strip" (dragover)="onColumnDragOver($event)">
+                            @for (col of visibleColumns; track col.key) {
+                                <span
+                                    class="column-order-chip"
+                                    [class.dragging]="draggingColumnKey === col.key"
+                                    draggable="true"
+                                    (dragstart)="onColumnDragStart(col.key, $event)"
+                                    (dragend)="onColumnDragEnd()"
+                                    (dragover)="onColumnDragOver($event)"
+                                    (drop)="onColumnDrop(col.key, $event)">
+                                    <i class="pi pi-bars chip-handle" aria-hidden="true"></i>
+                                    <span class="chip-label">{{ lang === 'bn' ? col.labelBN : col.labelEN }}</span>
+                                    <button
+                                        type="button"
+                                        class="chip-remove"
+                                        (click)="removeColumn(col.key)"
+                                        title="Remove column">
+                                        <i class="pi pi-times" aria-hidden="true"></i>
+                                    </button>
+                                </span>
+                            }
+                            @if (visibleColumns.length === 0) {
+                                <span class="column-order-empty">Pick columns above to populate the table.</span>
+                            }
+                        </div>
+                    </div>
+                </div>
+            }
+
+            <div class="report-filter-actions">
+                <button type="button" class="report-btn-clear" (click)="clearFilters()">
+                    <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+                        <path d="M1 1l10 10M11 1L1 11" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+                    </svg>
+                    {{ L['en']['report.search.clear'] }}
+                </button>
+                <button type="button" class="report-btn-search" (click)="load()">
+                    <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+                        <circle cx="6" cy="6" r="4.5" stroke="white" stroke-width="1.6"/>
+                        <path d="M10 10l2.5 2.5" stroke="white" stroke-width="1.6" stroke-linecap="round"/>
+                    </svg>
+                    {{ L['en']['report.search.search'] }}
+                </button>
             </div>
         </div>
+    </div>
+</div>
 
-        <div class="report-table-wrap">
+@if (searched) {
+<div class="rab-report-document">
+    <div class="rab-toolbar">
+        <button type="button" class="report-lang-toggle" (click)="toggleLang()">
+            {{ lang === 'en' ? 'বাংলা' : 'English' }}
+        </button>
+        <div class="report-export-wrap">
+            <button type="button" class="report-btn-export"
+                    (click)="toggleExportDropdown($event)"
+                    [disabled]="loading || exporting || list.length === 0">
+                @if (exporting) {
+                    <i class="pi pi-spin pi-spinner" style="font-size:13px"></i>
+                    Generating...
+                } @else {
+                    <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
+                        <path d="M6.5 1v7M3.5 5.5l3 3 3-3M1.5 10.5h10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                    {{ L['en']['report.search.export'] }}
+                }
+            </button>
+            @if (exportDropdownOpen) {
+            <div class="report-export-dropdown" (click)="$event.stopPropagation()">
+                <button type="button" class="report-export-item report-export-print" (click)="exportAs('print')">
+                    <i class="pi pi-print" style="font-size:0.75rem"></i> Print
+                </button>
+                <button type="button" class="report-export-item report-export-word" (click)="exportAs('word')">
+                    <span class="report-export-icon">⬇</span> Word
+                </button>
+                <button type="button" class="report-export-item report-export-excel" (click)="exportAs('excel')">
+                    <span class="report-export-icon">⬇</span> Excel
+                </button>
+            </div>
+            }
+        </div>
+    </div>
+
+    <div class="rab-paper" [class.rab-lang-bn]="lang === 'bn'">
+        <header class="rab-paper-head">
+            <div class="rab-overline">{{ rabOverlineText }}</div>
+            <h1 class="rab-paper-title">{{ rabOrgTitle }}</h1>
+            <div class="rab-paper-sub"><em>{{ rabOrgSubtitle }}</em></div>
+            <div class="rab-orn-divider">
+                <span class="rab-orn-line"></span>
+                <span class="rab-orn-diamond">&#9670;</span>
+                <span class="rab-orn-line"></span>
+            </div>
+            <h2 class="rab-paper-section">{{ rabSectionTitle }}</h2>
+            @if (memberTypeScopeLine) {
+                <div class="report-scope-line">{{ memberTypeScopeLine }}</div>
+            }
+        </header>
+
+        @if (criteriaItems.length > 0) {
+            <div class="rab-criteria">
+                <div class="rab-criteria-strip">
+                    <span class="rab-criteria-strip-title"><span class="rab-diamond-bullet">&#9670;</span> {{ rabCriteriaTitle }}</span>
+                    <span class="rab-criteria-strip-date">{{ rabGeneratedLabel }} &middot; {{ rabFormattedDate }}</span>
+                </div>
+                <div class="rab-criteria-grid">
+                    @for (item of criteriaItems; track item.label) {
+                        <div class="rab-criteria-cell">
+                            <div class="rab-criteria-cell-label">{{ item.label }}</div>
+                            <div class="rab-criteria-cell-value">{{ item.value }}</div>
+                        </div>
+                    }
+                </div>
+            </div>
+        } @else {
+            <div class="rab-criteria rab-criteria-stamp-only">
+                <div class="rab-criteria-strip">
+                    <span class="rab-criteria-strip-title"><span class="rab-diamond-bullet">&#9670;</span> {{ rabCriteriaTitle }}</span>
+                    <span class="rab-criteria-strip-date">{{ rabGeneratedLabel }} &middot; {{ rabFormattedDate }}</span>
+                </div>
+            </div>
+        }
+
+        <div class="rab-paper-table-wrap">
             <p-table
                 [value]="list"
                 [loading]="loading"
+                [lazy]="true"
+                [first]="first"
                 [rows]="rows"
-                [paginator]="true"
-                [rowsPerPageOptions]="[20, 50, 100]"
-                paginatorDropdownAppendTo="body"
-                [tableStyle]="{ 'min-width': '75rem' }"
-                styleClass="p-datatable-sm"
-                [showCurrentPageReport]="true"
-                currentPageReportTemplate="{first} - {last} of {totalRecords}">
+                [totalRecords]="totalRecords"
+                [paginator]="false"
+                styleClass="rab-data-table p-datatable-sm">
                 <ng-template pTemplate="header">
                     <tr>
-                        <th>{{ L[lang]['report.table.ser'] }}</th>
-                        <th>{{ L[lang]['report.table.serviceId'] }}</th>
-                        <th>{{ L[lang]['report.table.rank'] }}</th>
-                        <th>{{ L[lang]['report.table.corps'] }}</th>
-                        <th>{{ L[lang]['report.table.trade'] }}</th>
-                        <th>{{ L[lang]['report.table.name'] }}</th>
-                        <th>{{ L[lang]['report.table.motherOrg'] }}</th>
-                        <th>{{ dateOfJoiningInRabLabel }}</th>
-                        <th>{{ rabOrientationTrainingLabel }}</th>
-                        <th>{{ L[lang]['report.table.rmks'] }}</th>
+                        @for (col of visibleColumns; track col.key) {
+                            <th [class]="'rab-th-' + col.key">{{ lang === 'bn' ? col.labelBN : col.labelEN }}</th>
+                        }
                     </tr>
                 </ng-template>
-                <ng-template pTemplate="body" let-row let-rowIndex="rowIndex">
+                <ng-template pTemplate="body" let-row let-i="rowIndex">
                     <tr>
-                        <td><span class="report-ser-num">{{ displayNum(rowIndex + 1) }}</span></td>
-                        <td>{{ displayNum(row.serviceId) }}</td>
-                        <td>{{ row.rankName ?? '—' }}</td>
-                        <td>
-                            @if (row.corpsName) {
-                                <span class="report-badge-corps">{{ row.corpsName }}</span>
-                            } @else {
-                                <span class="report-dash">—</span>
+                        @for (col of visibleColumns; track col.key) {
+                            @switch (col.hint) {
+                                @case ('Serial') {
+                                    <td class="rab-td-ser"><span class="rab-ser">{{ paddedSer(row.ser ?? (i + 1)) }}</span></td>
+                                }
+                                @case ('RabPersonnelComposite') {
+                                    <td class="rab-td-personnel">
+                                        <div class="rab-personnel-name">{{ codeValue(row.name, row.nameBN) }}</div>
+                                        @if (personnelMeta(row); as meta) {
+                                            @if (meta) {
+                                                <div class="rab-personnel-meta">{{ meta }}</div>
+                                            }
+                                        }
+                                    </td>
+                                }
+                                @case ('RabId') {
+                                    <td class="rab-td-date">{{ row.rabid ? displayNum(row.rabid) : '—' }}</td>
+                                }
+                                @case ('Remarks') {
+                                    <td class="rab-td-rmks">{{ row.rmks || '' }}</td>
+                                }
+                                @case ('Plain') {
+                                    <td>{{ plainCellValue(row, col.key) }}</td>
+                                }
+                                @default {
+                                    <td>{{ plainCellValue(row, col.key) }}</td>
+                                }
                             }
-                        </td>
-                        <td>{{ row.tradeName ?? '—' }}</td>
-                        <td>{{ codeValue(row.fullNameEN, row.fullNameBN) }}</td>
-                        <td>{{ motherOrgName(row) }}</td>
-                        <td>{{ formatDate(row.joiningDateInRAB ?? row.joiningDate) }}</td>
-                        <td><span class="report-dash">—</span></td>
-                        <td><span class="report-dash">{{ row.sendingRemark ?? '—' }}</span></td>
+                        }
                     </tr>
                 </ng-template>
                 <ng-template pTemplate="emptymessage">
                     <tr>
-                        <td colspan="10" class="text-center p-4">{{ L['en']['report.empty'] }}</td>
+                        <td [attr.colspan]="visibleColumns.length || 1" class="text-center p-4">{{ L['en']['report.empty'] }}</td>
                     </tr>
                 </ng-template>
             </p-table>
         </div>
+
+        <footer class="rab-paper-foot">
+            <div class="rab-foot-line"></div>
+            <div class="rab-foot-row">
+                <span class="rab-foot-confidential"><span class="rab-foot-dot"></span>{{ rabConfidentialLabel }}</span>
+                <span class="rab-foot-page">{{ rabPageOfLabel }}</span>
+                <span class="rab-foot-warning">{{ rabWarningLabel }}</span>
+            </div>
+        </footer>
     </div>
+
+    @if (totalRecords > 0) {
+        <div class="rab-paginator-bar">
+            <p-paginator
+                [first]="first"
+                [rows]="rows"
+                [totalRecords]="totalRecords"
+                [rowsPerPageOptions]="rowsPerPageOptions"
+                (onPageChange)="onPage($event)"
+                dropdownAppendTo="body">
+            </p-paginator>
+        </div>
     }
 </div>
+}
