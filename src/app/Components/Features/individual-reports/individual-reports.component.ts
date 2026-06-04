@@ -41,6 +41,8 @@ export class IndividualReportsComponent implements OnInit {
 
     /** Picker options — extend as new individual reports are added. */
     reportTypes: { label: string; value: string }[] = [
+        { label: 'Short Bio-Data',                           value: 'bio-data' },
+        { label: 'Detailed Bio-Data',                        value: 'bio-data-full' },
         { label: 'Course Report',                            value: 'course' },
         { label: 'Education Report',                         value: 'education' },
         { label: 'Address Info Report',                      value: 'address' },
@@ -53,11 +55,9 @@ export class IndividualReportsComponent implements OnInit {
         { label: 'Bank Account Report',                      value: 'bank' },
         { label: 'Ex-Bangladesh Leave (Foreign Visit)',      value: 'foreign-visit' },
         { label: 'Leave Information Report',                 value: 'leave' },
-        { label: 'Short Bio-Data',                           value: 'bio-data' },
-        { label: 'Detailed Bio-Data',                        value: 'bio-data-full' },
     ];
 
-    reportType: string = 'course';
+    reportType: string = 'bio-data';
 
     ngOnInit(): void { /* no-op for now */ }
 

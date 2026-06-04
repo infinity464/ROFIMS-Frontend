@@ -12,6 +12,8 @@
                         [(ngModel)]="reportType"
                         optionLabel="label"
                         optionValue="value"
+                        [filter]="true"
+                        filterBy="label"
                         [inputId]="'individual-report-select'"
                         placeholder="Select Report"
                         appendTo="body" />
