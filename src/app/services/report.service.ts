@@ -16,8 +16,6 @@ import type {
     BloodGroupReportRow,
     FamilyOccupationReportParams,
     FamilyOccupationReportRow,
-    RftsCompletionReportParams,
-    RftsCompletionReportRow,
     AddressLocationReportParams,
     AddressLocationReportRow,
     AddressLocationReportPagedResponse,
@@ -137,10 +135,6 @@ export class ReportService {
 
     getFamilyOccupationReport(params: FamilyOccupationReportParams): Observable<PagedResponse<FamilyOccupationReportRow> & { accessibleScope: ReportAccessibleScope | null }> {
         return this.http.post<ScopedReportPagedResponse<FamilyOccupationReportRow>>(`${this.apiUrl}/GetFamilyOccupationReport`, params).pipe(map(normalizeScopedPages));
-    }
-
-    getRftsCompletionReport(params: RftsCompletionReportParams): Observable<PagedResponse<RftsCompletionReportRow>> {
-        return this.http.post<ReportPagedResponse<RftsCompletionReportRow>>(`${this.apiUrl}/GetRftsCompletionReport`, params).pipe(map(normalizePages));
     }
 
     getAddressLocationReport(params: AddressLocationReportParams): Observable<PagedResponse<AddressLocationReportRow> & { accessibleScope: ReportAccessibleScope | null }> {

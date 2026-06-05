@@ -185,23 +185,6 @@ export interface RftsCompletionReportRow {
   latestCourseDateTo?: string | null;
 }
 
-export interface RftsCompletionReportParams {
-  /** "Completed" or "NotCompleted" (defaults to "Completed" on the server). */
-  completionStatus: 'Completed' | 'NotCompleted';
-  postingStatus?: string | null;
-  rabId?: string | null;
-  serviceId?: string | null;
-  motherOrgId?: number | null;
-  memberTypeId?: number | null;
-  rankId?: number | null;
-  /** Course no — when set, the completion filter pivots on this specific RFTS course. */
-  courseNo?: string | null;
-  /** Duration filters — yyyy-MM-dd (server expects ISO date strings). */
-  dateFrom?: string | null;
-  dateTo?: string | null;
-  pagination: ReportPagination;
-}
-
 /** Report H: Address Location – Division, District, Upazila, Post Office, Address details, RAB Unit. */
 export interface AddressLocationReportRow extends ReportRowBase {
   rabid?: string | null;
