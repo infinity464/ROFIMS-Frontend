@@ -30,13 +30,9 @@ import type {
     PresentStatusByMotherOrgReportResponse,
     PresentStatusUnitWiseReportParams,
     PresentStatusUnitWiseReportResponse,
-    UnitDurationNominalRollReportParams,
     UnitDurationNominalRollReportRow,
-    LongStayNominalRollReportParams,
     LongStayNominalRollReportRow,
-    StayAfterRelieverJoinedReportParams,
     StayAfterRelieverJoinedReportRow,
-    DeceasedReportParams,
     DeceasedReportRow,
     DynamicReportFieldMeta,
     DynamicReportRequest,
@@ -161,22 +157,6 @@ export class ReportService {
 
     getPresentStatusUnitWiseReport(params: PresentStatusUnitWiseReportParams): Observable<PresentStatusUnitWiseReportResponse> {
         return this.http.post<PresentStatusUnitWiseReportResponse>(`${this.apiUrl}/GetPresentStatusUnitWiseReport`, params);
-    }
-
-    getUnitDurationNominalRollReport(params: UnitDurationNominalRollReportParams): Observable<PagedResponse<UnitDurationNominalRollReportRow> & { accessibleScope: ReportAccessibleScope | null }> {
-        return this.http.post<ScopedReportPagedResponse<UnitDurationNominalRollReportRow>>(`${this.apiUrl}/GetUnitDurationNominalRollReport`, params).pipe(map(normalizeScopedPages));
-    }
-
-    getLongStayNominalRollReport(params: LongStayNominalRollReportParams): Observable<PagedResponse<LongStayNominalRollReportRow> & { accessibleScope: ReportAccessibleScope | null }> {
-        return this.http.post<ScopedReportPagedResponse<LongStayNominalRollReportRow>>(`${this.apiUrl}/GetLongStayNominalRollReport`, params).pipe(map(normalizeScopedPages));
-    }
-
-    getStayAfterRelieverJoinedReport(params: StayAfterRelieverJoinedReportParams): Observable<PagedResponse<StayAfterRelieverJoinedReportRow>> {
-        return this.http.post<ReportPagedResponse<StayAfterRelieverJoinedReportRow>>(`${this.apiUrl}/GetStayAfterRelieverJoinedReport`, params).pipe(map(normalizePages));
-    }
-
-    getDeceasedReport(params: DeceasedReportParams): Observable<PagedResponse<DeceasedReportRow>> {
-        return this.http.post<ReportPagedResponse<DeceasedReportRow>>(`${this.apiUrl}/GetDeceasedReport`, params).pipe(map(normalizePages));
     }
 
     // ── Dynamic Employee Report ─────────────────────────────────────────────

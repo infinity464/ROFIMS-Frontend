@@ -378,21 +378,6 @@ export interface PresentStatusUnitWiseReportResponse {
 
 // ── Unit & Specific Duration wise Nominal Roll ──────────────────────────
 
-/**
- * Request for the Unit + Duration nominal roll. RabUnitId is required for a meaningful result.
- * DurationFrom/DurationTo are ISO "yyyy-MM-dd"; backend treats them as an inclusive overlap window
- * against PreviousRABServiceInfo stints. PostingStatus defaults to "Servings" server-side.
- */
-export interface UnitDurationNominalRollReportParams {
-  rabUnitId?: number | null;
-  durationFrom?: string | null;
-  durationTo?: string | null;
-  orgId?: number | null;
-  rankId?: number | null;
-  postingStatus?: string | null;
-  pagination: ReportPagination;
-}
-
 /** One row of the Unit + Duration nominal roll (one per matching PreviousRABServiceInfo stint). */
 export interface UnitDurationNominalRollReportRow extends ReportRowBase {
   /** Stint start date (ISO "yyyy-MM-dd") — RAB Service "From" column. */
@@ -404,29 +389,7 @@ export interface UnitDurationNominalRollReportRow extends ReportRowBase {
 
 // ── Nominal Roll of Stay in RAB Above N Years ───────────────────────────
 
-/**
- * Request for the long-stay nominal roll. MinDuration + Unit ("Years" | "Months") select the
- * threshold; both default to 2 / "Years" server-side. PostingStatus defaults to "Servings".
- */
-export interface LongStayNominalRollReportParams {
-  minDuration?: number | null;
-  unit?: 'Years' | 'Months' | null;
-  orgId?: number | null;
-  rankId?: number | null;
-  postingStatus?: string | null;
-  pagination: ReportPagination;
-}
-
 // ── Nominal Roll of Deceased Members ───────────────────────────────────
-
-/** Filter on Date of Death (PresentStatusInfo.Dated); both bounds optional. Mother Org + Rank optional. */
-export interface DeceasedReportParams {
-  dateFrom?: string | null;
-  dateTo?: string | null;
-  orgId?: number | null;
-  rankId?: number | null;
-  pagination: ReportPagination;
-}
 
 export interface DeceasedReportRow {
   ser?: number;
@@ -448,13 +411,6 @@ export interface DeceasedReportRow {
 }
 
 // ── Nominal Roll of Stay in RAB after Reliever Joined ──────────────────
-
-export interface StayAfterRelieverJoinedReportParams {
-  orgId?: number | null;
-  rankId?: number | null;
-  postingStatus?: string | null;
-  pagination: ReportPagination;
-}
 
 /** One row — subset of the long-stay row, minus Mother Unit / Posting Order Date. */
 export interface StayAfterRelieverJoinedReportRow {
