@@ -17,9 +17,10 @@ import { BanglaNumerals } from '@/Core/i18n/bangla-numerals';
 import type { CommonCodeModel } from '@/models/common-code-model';
 import type { MotherOrganizationModel } from '@/models/mother-org-model';
 import type {
-    UnitDurationNominalRollReportParams,
     UnitDurationNominalRollReportRow,
     ReportAccessibleScope,
+    DynamicReportCriterion,
+    DynamicReportRow,
 } from '@/models/report.model';
 import { unitScopeLine, memberTypeScopeLine } from '../report-scope.helper';
 import {
@@ -93,9 +94,45 @@ export class ReportUnitDurationNominalRollComponent implements OnInit {
         { key: 'rabServiceFrom', labelEN: 'RAB Service From',    labelBN: 'র‍্যাব স্থিতিকাল হইতে',  hint: 'Date',      defaultVisible: true  },
         { key: 'rabServiceTo',   labelEN: 'RAB Service To',      labelBN: 'র‍্যাব স্থিতিকাল পর্যন্ত', hint: 'Date',      defaultVisible: true  },
         { key: 'rmks',           labelEN: 'Remarks',             labelBN: 'মন্তব্য',                hint: 'Remarks',   defaultVisible: true  },
+        // ── Opt-in extras (registry FieldKeys) — hidden by default ────────
+        { key: 'stintUnit',      labelEN: 'Stint Unit',          labelBN: 'স্টিন্ট ইউনিট',          hint: 'Plain',     defaultVisible: false },
+        { key: 'rabId',          labelEN: 'RAB ID',              labelBN: 'র‍্যাব আইডি',            hint: 'Plain',     defaultVisible: false },
+        { key: 'nameBangla',     labelEN: 'Name (Bangla)',       labelBN: 'নাম (বাংলা)',            hint: 'Plain',     defaultVisible: false },
+        { key: 'nid',            labelEN: 'NID',                 labelBN: 'এনআইডি',                hint: 'Plain',     defaultVisible: false },
+        { key: 'prefix',         labelEN: 'Prefix',              labelBN: 'প্রিফিক্স',              hint: 'Plain',     defaultVisible: false },
+        { key: 'appointment',    labelEN: 'Appointment',         labelBN: 'নিয়োগ',                 hint: 'Plain',     defaultVisible: false },
+        { key: 'memberType',     labelEN: 'Member Type',         labelBN: 'সদস্য ধরন',              hint: 'Plain',     defaultVisible: false },
+        { key: 'gender',         labelEN: 'Gender',              labelBN: 'লিঙ্গ',                  hint: 'Plain',     defaultVisible: false },
+        { key: 'motherUnit',     labelEN: 'Mother Unit',         labelBN: 'মাতৃ ইউনিট',             hint: 'Plain',     defaultVisible: false },
+        { key: 'rabUnit',        labelEN: 'RAB Unit',            labelBN: 'র‍্যাব ইউনিট',           hint: 'Plain',     defaultVisible: false },
+        { key: 'dateOfCommission', labelEN: 'Commission Date',   labelBN: 'কমিশন তারিখ',            hint: 'Date',      defaultVisible: false },
+        { key: 'joiningInRab',   labelEN: 'RAB Joining Date',    labelBN: 'র‍্যাবে যোগদানের তারিখ',  hint: 'Date',      defaultVisible: false },
+        { key: 'postingStatus',  labelEN: 'Posting Status',      labelBN: 'নিয়োগ অবস্থা',          hint: 'Plain',     defaultVisible: false },
+        { key: 'officerType',    labelEN: 'Officer Type',        labelBN: 'অফিসার ধরণ',             hint: 'Plain',     defaultVisible: false },
+        { key: 'dob',            labelEN: 'Date of Birth',       labelBN: 'জন্ম তারিখ',             hint: 'Date',      defaultVisible: false },
+        { key: 'religion',       labelEN: 'Religion',            labelBN: 'ধর্ম',                   hint: 'Plain',     defaultVisible: false },
+        { key: 'bloodGroup',     labelEN: 'Blood Group',         labelBN: 'রক্তের গ্রুপ',            hint: 'Plain',     defaultVisible: false },
+        { key: 'maritalStatus',  labelEN: 'Marital Status',      labelBN: 'বৈবাহিক অবস্থা',          hint: 'Plain',     defaultVisible: false },
+        { key: 'mobileNo',       labelEN: 'Mobile',              labelBN: 'মোবাইল',                 hint: 'Plain',     defaultVisible: false },
+        { key: 'email',          labelEN: 'Email',               labelBN: 'ইমেইল',                  hint: 'Plain',     defaultVisible: false },
     ];
     selectedColumnKeys: string[] = this.columnCatalog.filter(c => c.defaultVisible).map(c => c.key);
     draggingColumnKey: string | null = null;
+
+    /** Legacy column key → UnitDurationReportFieldRegistry FieldKey for the request. */
+    private static readonly colKeyToBackend: Record<string, string> = {
+        ser: 'ser', name: 'personnel', rank: 'armyRank', orgName: 'orgName',
+        serviceId: 'serviceId', corps: 'corps', trade: 'trade', presentUnit: 'presentUnit',
+        rabServiceFrom: 'rabServiceFrom', rabServiceTo: 'rabServiceTo', rmks: 'rmks',
+    };
+    /** Extra (registry-keyed) columns rendered as formatted dates. */
+    private static readonly extraDateKeys = new Set([
+        'dateOfCommission', 'joiningInRab', 'dob',
+    ]);
+    /** Extra columns that are plain identifiers/text (no BN mirror). */
+    private static readonly extraPlainKeys = new Set([
+        'rabId', 'nameBangla', 'nid', 'bloodGroup', 'mobileNo', 'email', 'postingStatus',
+    ]);
 
     get columnPickerOptions(): { label: string; value: string }[] {
         return this.columnCatalog.map(c => ({ label: this.lang === 'bn' ? c.labelBN : c.labelEN, value: c.key }));
@@ -282,20 +319,32 @@ export class ReportUnitDurationNominalRollComponent implements OnInit {
     private loadPage(): void {
         this.loading = true;
         const pageNo = Math.floor(this.first / this.rows) + 1;
-        const params: UnitDurationNominalRollReportParams = {
-            rabUnitId: this.selectedRabUnitId,
-            durationFrom: this.fmtDate(this.fromDate),
-            durationTo: this.fmtDate(this.toDate),
-            orgId: this.selectedOrgId,
-            rankId: this.selectedRankId,
-            postingStatus: 'Servings',
+
+        const criteria: DynamicReportCriterion[] = [];
+        if (this.selectedOrgId != null && this.selectedOrgId > 0)
+            criteria.push({ fieldKey: 'orgName', idValue: this.selectedOrgId });
+        if (this.selectedRankId != null && this.selectedRankId > 0)
+            criteria.push({ fieldKey: 'armyRank', idValue: this.selectedRankId });
+
+        const columns = this.selectedColumnKeys.map(
+            k => ReportUnitDurationNominalRollComponent.colKeyToBackend[k] ?? k,
+        );
+
+        this.reportService.runDynamicUnitDurationReport({
+            columns,
+            criteria,
+            postingStatusFilter: 'Servings',
+            stintUnitId: this.selectedRabUnitId,
+            stintOverlapFrom: this.fmtDate(this.fromDate),
+            stintOverlapTo: this.fmtDate(this.toDate),
             pagination: { page_no: pageNo, row_per_page: this.rows },
-        };
-        this.reportService.getUnitDurationNominalRollReport(params).subscribe({
+        }).subscribe({
             next: (res) => {
-                this.list = res.datalist ?? [];
-                this.totalRecords = res.pages?.rows ?? 0;
-                this.accessibleScope = res.accessibleScope ?? this.accessibleScope;
+                const startSer = (pageNo - 1) * this.rows + 1;
+                this.list = (res.datalist ?? []).map((d, i) => this.adaptDynamicRow(d, startSer + i));
+                this.totalRecords = res.pages?.Rows ?? res.pages?.rows ?? 0;
+                // Scope chips come from the eager /GetMyReportAccessScope fetch
+                // on init; the dynamic response carries IDs only.
                 this.loading = false;
             },
             error: (err) => {
@@ -351,8 +400,41 @@ export class ReportUnitDurationNominalRollComponent implements OnInit {
             case 'rabServiceFrom': return this.formatDateLabel(row.rabServiceFrom);
             case 'rabServiceTo':   return this.formatDateLabel(row.rabServiceTo);
             case 'rmks':           return row.rmks ?? '';
-            default:               return '—';
+            default:               return this.extraCellValue(row, key);
         }
+    }
+
+    /** Resolve an opt-in (registry-keyed) column from the spread property bag. */
+    private extraCellValue(row: UnitDurationNominalRollReportRow, key: string): string {
+        const anyRow = row as any;
+        if (ReportUnitDurationNominalRollComponent.extraDateKeys.has(key)) return this.formatDateLabel(anyRow[key]);
+        if (ReportUnitDurationNominalRollComponent.extraPlainKeys.has(key)) return this.displayNum(anyRow[key]);
+        return this.codeValue(anyRow[key], anyRow[key + 'BN']);
+    }
+
+    /** Translate a dynamic-backend property bag (one row per stint) into the
+        legacy row shape the renderers + exports consume. */
+    private adaptDynamicRow(d: DynamicReportRow, ser: number): UnitDurationNominalRollReportRow {
+        return {
+            ...d,
+            ser,
+            orgName:        d['orgName']        as string,
+            orgNameBN:      d['orgNameBN']      as string,
+            serviceId:      d['serviceId']      as string,
+            rank:           d['armyRank']       as string,
+            rankBN:         d['armyRankBN']     as string,
+            corps:          d['corps']          as string,
+            corpsBN:        d['corpsBN']        as string,
+            trade:          d['trade']          as string,
+            tradeBN:        d['tradeBN']        as string,
+            name:           d['nameEnglish']    as string,
+            nameBN:         d['nameBangla']     as string,
+            presentUnit:    d['presentUnit']    as string,
+            presentUnitBN:  d['presentUnitBN']  as string,
+            rabServiceFrom: d['rabServiceFrom'] as string,
+            rabServiceTo:   d['rabServiceTo']   as string,
+            rmks:           null,
+        } as UnitDurationNominalRollReportRow;
     }
 
     toggleExportDropdown(event: Event): void { event.stopPropagation(); this.exportDropdownOpen = !this.exportDropdownOpen; }

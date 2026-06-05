@@ -15,8 +15,9 @@ import { CommonCodeService } from '@/services/common-code-service';
 import { UserMenuService } from '@/services/user-menu.service';
 import { BanglaNumerals } from '@/Core/i18n/bangla-numerals';
 import type {
-    DeceasedReportParams,
     DeceasedReportRow,
+    DynamicReportCriterion,
+    DynamicReportRow,
 } from '@/models/report.model';
 import type { CommonCodeModel } from '@/models/common-code-model';
 import type { MotherOrganizationModel } from '@/models/mother-org-model';
@@ -96,6 +97,17 @@ export class ReportDeceasedComponent implements OnInit {
 
     filterOpen = true;
 
+    /**
+     * Column catalog. The default set mirrors the legacy Death Member report;
+     * the opt-in extras below are pulled from the dynamic backend's
+     * DeceasedReportFieldRegistry so the user can add ANY employee/service/
+     * personal field — same field-picker UX as report-address-location.
+     *
+     * Default-column keys are the legacy names (`rank`, `name`, …) the render
+     * + export code already understands; `colKeyToBackend` maps them to the
+     * registry FieldKey when building the request. Opt-in extras use the
+     * registry FieldKey directly and resolve through `extraCellValue`.
+     */
     columnCatalog: { key: string; labelEN: string; labelBN: string; hint: 'Serial' | 'Personnel' | 'Date' | 'Plain' | 'Remarks'; defaultVisible: boolean }[] = [
         { key: 'ser',            labelEN: 'Ser',                  labelBN: 'ক্রঃ',                   hint: 'Serial',     defaultVisible: true  },
         { key: 'serviceId',      labelEN: 'Service ID',           labelBN: 'সার্ভিস আইডি',           hint: 'Plain',      defaultVisible: true  },
@@ -108,7 +120,57 @@ export class ReportDeceasedComponent implements OnInit {
         { key: 'dateOfDeath',    labelEN: 'Date of Death',        labelBN: 'মৃত্যুবরণের তারিখ',       hint: 'Date',       defaultVisible: true  },
         { key: 'deceasedReason', labelEN: 'Death Reason',         labelBN: 'মৃত্যুর কারণ',           hint: 'Plain',      defaultVisible: true  },
         { key: 'rmks',           labelEN: 'Remarks',              labelBN: 'মন্তব্য',                hint: 'Remarks',    defaultVisible: true  },
+        // ── Opt-in extras (registry FieldKeys) — hidden by default ────────
+        { key: 'rabId',          labelEN: 'RAB ID',               labelBN: 'র‍্যাব আইডি',            hint: 'Plain',      defaultVisible: false },
+        { key: 'nameBangla',     labelEN: 'Name (Bangla)',        labelBN: 'নাম (বাংলা)',            hint: 'Plain',      defaultVisible: false },
+        { key: 'nid',            labelEN: 'NID',                  labelBN: 'এনআইডি',                hint: 'Plain',      defaultVisible: false },
+        { key: 'prefix',         labelEN: 'Prefix',               labelBN: 'প্রিফিক্স',              hint: 'Plain',      defaultVisible: false },
+        { key: 'appointment',    labelEN: 'Appointment',          labelBN: 'নিয়োগ',                 hint: 'Plain',      defaultVisible: false },
+        { key: 'memberType',     labelEN: 'Member Type',          labelBN: 'সদস্য ধরন',              hint: 'Plain',      defaultVisible: false },
+        { key: 'motherOrganization', labelEN: 'Mother Org',       labelBN: 'মাতৃ সংস্থা',            hint: 'Plain',      defaultVisible: false },
+        { key: 'gender',         labelEN: 'Gender',               labelBN: 'লিঙ্গ',                  hint: 'Plain',      defaultVisible: false },
+        { key: 'motherUnit',     labelEN: 'Mother Unit',          labelBN: 'মাতৃ ইউনিট',             hint: 'Plain',      defaultVisible: false },
+        { key: 'rabUnit',        labelEN: 'RAB Unit',             labelBN: 'র‍্যাব ইউনিট',           hint: 'Plain',      defaultVisible: false },
+        { key: 'dateOfCommission', labelEN: 'Commission Date',    labelBN: 'কমিশন তারিখ',            hint: 'Date',       defaultVisible: false },
+        { key: 'rabServiceFrom', labelEN: 'RAB Service From',     labelBN: 'র‍্যাব স্থিতিকাল হইতে',   hint: 'Date',       defaultVisible: false },
+        { key: 'rabServiceTo',   labelEN: 'RAB Service To',       labelBN: 'র‍্যাব স্থিতিকাল পর্যন্ত', hint: 'Date',      defaultVisible: false },
+        { key: 'postingStatus',  labelEN: 'Posting Status',       labelBN: 'নিয়োগ অবস্থা',          hint: 'Plain',      defaultVisible: false },
+        { key: 'officerType',    labelEN: 'Officer Type',         labelBN: 'অফিসার ধরণ',             hint: 'Plain',      defaultVisible: false },
+        { key: 'dob',            labelEN: 'Date of Birth',        labelBN: 'জন্ম তারিখ',             hint: 'Date',       defaultVisible: false },
+        { key: 'religion',       labelEN: 'Religion',             labelBN: 'ধর্ম',                   hint: 'Plain',      defaultVisible: false },
+        { key: 'bloodGroup',     labelEN: 'Blood Group',          labelBN: 'রক্তের গ্রুপ',            hint: 'Plain',      defaultVisible: false },
+        { key: 'maritalStatus',  labelEN: 'Marital Status',       labelBN: 'বৈবাহিক অবস্থা',          hint: 'Plain',      defaultVisible: false },
+        { key: 'mobileNo',       labelEN: 'Mobile',               labelBN: 'মোবাইল',                 hint: 'Plain',      defaultVisible: false },
+        { key: 'email',          labelEN: 'Email',                labelBN: 'ইমেইল',                  hint: 'Plain',      defaultVisible: false },
     ];
+
+    /**
+     * Maps a legacy default-column key to its DeceasedReportFieldRegistry
+     * FieldKey for the request `columns` list. Opt-in extras already use the
+     * registry key, so they map to themselves (identity via the fallback).
+     */
+    private static readonly colKeyToBackend: Record<string, string> = {
+        ser: 'ser',
+        name: 'personnel',
+        rank: 'armyRank',
+        serviceId: 'serviceId',
+        corps: 'corps',
+        trade: 'trade',
+        joiningInRab: 'joiningInRab',
+        lastUnit: 'lastUnit',
+        dateOfDeath: 'dateOfDeath',
+        deceasedReason: 'deceasedReason',
+        rmks: 'rmks',
+    };
+
+    /** Extra (registry-keyed) columns that should render as formatted dates. */
+    private static readonly extraDateKeys = new Set([
+        'dateOfCommission', 'rabServiceFrom', 'rabServiceTo', 'dob',
+    ]);
+    /** Extra columns that are plain identifiers/text (no BN mirror). */
+    private static readonly extraPlainKeys = new Set([
+        'rabId', 'nameBangla', 'nid', 'bloodGroup', 'mobileNo', 'email', 'postingStatus',
+    ]);
 
     selectedColumnKeys: string[] = this.columnCatalog.filter(c => c.defaultVisible).map(c => c.key);
 
@@ -301,17 +363,36 @@ export class ReportDeceasedComponent implements OnInit {
     private loadPage(): void {
         this.loading = true;
         const pageNo = Math.floor(this.first / this.rows) + 1;
-        const params: DeceasedReportParams = {
-            dateFrom: this.fmtDate(this.fromDate),
-            dateTo: this.fmtDate(this.toDate),
-            orgId: this.selectedOrgId,
-            rankId: this.selectedRankId,
+
+        // ── Map UI filters → dynamic-backend criteria (registry FieldKeys) ──
+        const criteria: DynamicReportCriterion[] = [];
+        const dateFrom = this.fmtDate(this.fromDate);
+        const dateTo = this.fmtDate(this.toDate);
+        if (dateFrom || dateTo) {
+            criteria.push({ fieldKey: 'dateOfDeath', dateFrom: dateFrom, dateTo: dateTo });
+        }
+        if (this.selectedOrgId != null && this.selectedOrgId > 0)
+            criteria.push({ fieldKey: 'motherOrganization', idValue: this.selectedOrgId });
+        if (this.selectedRankId != null && this.selectedRankId > 0)
+            criteria.push({ fieldKey: 'armyRank', idValue: this.selectedRankId });
+
+        // Translate selected column keys to registry FieldKeys. The backend
+        // ignores unknown keys (e.g. the synthetic `ser`) and auto-expands the
+        // `personnel` composite's underlying atoms, so the projection covers
+        // every curated cell regardless of which atoms the user also picked.
+        const columns = this.selectedColumnKeys.map(
+            k => ReportDeceasedComponent.colKeyToBackend[k] ?? k,
+        );
+
+        this.reportService.runDynamicDeceasedReport({
+            columns,
+            criteria,
             pagination: { page_no: pageNo, row_per_page: this.rows },
-        };
-        this.reportService.getDeceasedReport(params).subscribe({
+        }).subscribe({
             next: (res) => {
-                this.list = res.datalist ?? [];
-                this.totalRecords = res.pages?.rows ?? 0;
+                const startSer = (pageNo - 1) * this.rows + 1;
+                this.list = (res.datalist ?? []).map((d, i) => this.adaptDynamicRow(d, startSer + i));
+                this.totalRecords = res.pages?.Rows ?? res.pages?.rows ?? 0;
                 this.loading = false;
             },
             error: (err) => {
@@ -324,6 +405,35 @@ export class ReportDeceasedComponent implements OnInit {
                 this.loading = false;
             },
         });
+    }
+
+    /**
+     * Translate a dynamic-backend property bag (keyed by registry FieldKeys)
+     * into the legacy DeceasedReportRow shape the renderers + exports already
+     * consume. The spread keeps every raw registry key on the object too, so
+     * opt-in extra columns resolve through `extraCellValue` (which reads
+     * `row[key]` / `row[key]BN`).
+     */
+    private adaptDynamicRow(d: DynamicReportRow, ser: number): DeceasedReportRow {
+        return {
+            ...d,
+            ser,
+            serviceId:      d['serviceId']       as string,
+            name:           d['nameEnglish']     as string,
+            nameBN:         d['nameBangla']      as string,
+            rank:           d['armyRank']        as string,
+            rankBN:         d['armyRankBN']      as string,
+            corps:          d['corps']           as string,
+            corpsBN:        d['corpsBN']         as string,
+            trade:          d['trade']           as string,
+            tradeBN:        d['tradeBN']         as string,
+            joiningInRab:   d['joiningInRab']    as string,
+            lastUnit:       d['lastUnit']        as string,
+            lastUnitBN:     d['lastUnitBN']      as string,
+            dateOfDeath:    d['dateOfDeath']     as string,
+            deceasedReason: d['deceasedReason']  as string,
+            rmks:           null,
+        } as DeceasedReportRow;
     }
 
     paddedSer(n: number | string | null | undefined): string {
@@ -353,8 +463,21 @@ export class ReportDeceasedComponent implements OnInit {
             case 'dateOfDeath':     return this.formatDateLabel(row.dateOfDeath);
             case 'deceasedReason':  return row.deceasedReason ?? '—';
             case 'rmks':            return row.rmks ?? '';
-            default:                return '—';
+            default:                return this.extraCellValue(row, key);
         }
+    }
+
+    /**
+     * Resolve an opt-in (registry-keyed) column. The adapted row spreads the
+     * raw dynamic property bag, so a column key `k` reads `row[k]` (+ `row[kBN]`
+     * for bilingual coded fields). Dates are formatted; plain identifiers pass
+     * through; everything else uses the EN/BN code-value fallback.
+     */
+    private extraCellValue(row: DeceasedReportRow, key: string): string {
+        const anyRow = row as any;
+        if (ReportDeceasedComponent.extraDateKeys.has(key)) return this.formatDateLabel(anyRow[key]);
+        if (ReportDeceasedComponent.extraPlainKeys.has(key)) return this.displayNum(anyRow[key]);
+        return this.codeValue(anyRow[key], anyRow[key + 'BN']);
     }
 
     get rabOverlineText(): string {

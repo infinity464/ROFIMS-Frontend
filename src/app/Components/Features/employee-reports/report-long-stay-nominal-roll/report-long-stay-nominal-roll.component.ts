@@ -15,9 +15,10 @@ import { CommonCodeService } from '@/services/common-code-service';
 import { UserMenuService } from '@/services/user-menu.service';
 import { BanglaNumerals } from '@/Core/i18n/bangla-numerals';
 import type {
-    LongStayNominalRollReportParams,
     LongStayNominalRollReportRow,
     ReportAccessibleScope,
+    DynamicReportCriterion,
+    DynamicReportRow,
 } from '@/models/report.model';
 import type { CommonCodeModel } from '@/models/common-code-model';
 import type { MotherOrganizationModel } from '@/models/mother-org-model';
@@ -95,9 +96,49 @@ export class ReportLongStayNominalRollComponent implements OnInit {
         { key: 'postingOrderDate',   labelEN: 'Posting Order Date', labelBN: 'প্রেষনাদেশের তারিখ',     hint: 'Date',      defaultVisible: true  },
         { key: 'relieverJoiningDate',labelEN: 'Reliever Joining Date', labelBN: 'প্রতিস্থাপক যোগদানের তারিখ', hint: 'Date', defaultVisible: true },
         { key: 'rmks',               labelEN: 'Remarks',            labelBN: 'মন্তব্য',                hint: 'Remarks',   defaultVisible: true  },
+        // ── Opt-in extras (registry FieldKeys) — hidden by default ────────
+        { key: 'relieverServiceId',  labelEN: 'Reliever Service ID',labelBN: 'প্রতিস্থাপক সার্ভিস আইডি', hint: 'Plain',  defaultVisible: false },
+        { key: 'corps',              labelEN: 'Corps',              labelBN: 'কোর',                    hint: 'Plain',     defaultVisible: false },
+        { key: 'trade',              labelEN: 'Trade',              labelBN: 'ট্রেড',                  hint: 'Plain',     defaultVisible: false },
+        { key: 'rabId',              labelEN: 'RAB ID',             labelBN: 'র‍্যাব আইডি',            hint: 'Plain',     defaultVisible: false },
+        { key: 'nameBangla',         labelEN: 'Name (Bangla)',      labelBN: 'নাম (বাংলা)',            hint: 'Plain',     defaultVisible: false },
+        { key: 'nid',                labelEN: 'NID',                labelBN: 'এনআইডি',                hint: 'Plain',     defaultVisible: false },
+        { key: 'prefix',             labelEN: 'Prefix',             labelBN: 'প্রিফিক্স',              hint: 'Plain',     defaultVisible: false },
+        { key: 'appointment',        labelEN: 'Appointment',        labelBN: 'নিয়োগ',                 hint: 'Plain',     defaultVisible: false },
+        { key: 'memberType',         labelEN: 'Member Type',        labelBN: 'সদস্য ধরন',              hint: 'Plain',     defaultVisible: false },
+        { key: 'motherOrganization', labelEN: 'Mother Org',         labelBN: 'মাতৃ সংস্থা',            hint: 'Plain',     defaultVisible: false },
+        { key: 'gender',             labelEN: 'Gender',             labelBN: 'লিঙ্গ',                  hint: 'Plain',     defaultVisible: false },
+        { key: 'rabUnit',            labelEN: 'RAB Unit',           labelBN: 'র‍্যাব ইউনিট',           hint: 'Plain',     defaultVisible: false },
+        { key: 'dateOfCommission',   labelEN: 'Commission Date',    labelBN: 'কমিশন তারিখ',            hint: 'Date',      defaultVisible: false },
+        { key: 'rabServiceFrom',     labelEN: 'RAB Service From',   labelBN: 'র‍্যাব স্থিতিকাল হইতে',   hint: 'Date',      defaultVisible: false },
+        { key: 'rabServiceTo',       labelEN: 'RAB Service To',     labelBN: 'র‍্যাব স্থিতিকাল পর্যন্ত', hint: 'Date',     defaultVisible: false },
+        { key: 'postingStatus',      labelEN: 'Posting Status',     labelBN: 'নিয়োগ অবস্থা',          hint: 'Plain',     defaultVisible: false },
+        { key: 'officerType',        labelEN: 'Officer Type',       labelBN: 'অফিসার ধরণ',             hint: 'Plain',     defaultVisible: false },
+        { key: 'dob',                labelEN: 'Date of Birth',      labelBN: 'জন্ম তারিখ',             hint: 'Date',      defaultVisible: false },
+        { key: 'religion',           labelEN: 'Religion',           labelBN: 'ধর্ম',                   hint: 'Plain',     defaultVisible: false },
+        { key: 'bloodGroup',         labelEN: 'Blood Group',        labelBN: 'রক্তের গ্রুপ',            hint: 'Plain',     defaultVisible: false },
+        { key: 'maritalStatus',      labelEN: 'Marital Status',     labelBN: 'বৈবাহিক অবস্থা',          hint: 'Plain',     defaultVisible: false },
+        { key: 'mobileNo',           labelEN: 'Mobile',             labelBN: 'মোবাইল',                 hint: 'Plain',     defaultVisible: false },
+        { key: 'email',              labelEN: 'Email',              labelBN: 'ইমেইল',                  hint: 'Plain',     defaultVisible: false },
     ];
     selectedColumnKeys: string[] = this.columnCatalog.filter(c => c.defaultVisible).map(c => c.key);
     draggingColumnKey: string | null = null;
+
+    /** Legacy column key → LongStayReportFieldRegistry FieldKey for the request. */
+    private static readonly colKeyToBackend: Record<string, string> = {
+        ser: 'ser', name: 'personnel', rank: 'armyRank', durationOfStay: 'durationOfStay',
+        serviceId: 'serviceId', motherUnit: 'motherUnit', joiningInRab: 'joiningInRab',
+        presentUnit: 'presentUnit', postedOutUnit: 'postedOutUnit',
+        postingOrderDate: 'postingOrderDate', relieverJoiningDate: 'relieverJoiningDate', rmks: 'rmks',
+    };
+    /** Extra (registry-keyed) columns rendered as formatted dates. */
+    private static readonly extraDateKeys = new Set([
+        'dateOfCommission', 'rabServiceFrom', 'rabServiceTo', 'dob',
+    ]);
+    /** Extra columns that are plain identifiers/text (no BN mirror). */
+    private static readonly extraPlainKeys = new Set([
+        'relieverServiceId', 'rabId', 'nameBangla', 'nid', 'bloodGroup', 'mobileNo', 'email', 'postingStatus',
+    ]);
 
     get columnPickerOptions(): { label: string; value: string }[] {
         return this.columnCatalog.map(c => ({ label: this.lang === 'bn' ? c.labelBN : c.labelEN, value: c.key }));
@@ -258,19 +299,33 @@ export class ReportLongStayNominalRollComponent implements OnInit {
     private loadPage(): void {
         this.loading = true;
         const pageNo = Math.floor(this.first / this.rows) + 1;
-        const params: LongStayNominalRollReportParams = {
-            minDuration: this.minDuration,
-            unit: this.unit,
-            orgId: this.selectedOrgId,
-            rankId: this.selectedRankId,
-            postingStatus: 'Servings',
+
+        const criteria: DynamicReportCriterion[] = [];
+        if (this.selectedOrgId != null && this.selectedOrgId > 0)
+            criteria.push({ fieldKey: 'motherOrganization', idValue: this.selectedOrgId });
+        if (this.selectedRankId != null && this.selectedRankId > 0)
+            criteria.push({ fieldKey: 'armyRank', idValue: this.selectedRankId });
+
+        const columns = Array.from(new Set([
+            ...this.selectedColumnKeys.map(k => ReportLongStayNominalRollComponent.colKeyToBackend[k] ?? k),
+            'joiningInRab',
+        ]));
+
+        this.reportService.runDynamicLongStayReport({
+            columns,
+            criteria,
+            postingStatusFilter: 'Servings',
+            minStayValue: this.minDuration,
+            minStayUnit: this.unit,
             pagination: { page_no: pageNo, row_per_page: this.rows },
-        };
-        this.reportService.getLongStayNominalRollReport(params).subscribe({
+        }).subscribe({
             next: (res) => {
-                this.list = res.datalist ?? [];
-                this.totalRecords = res.pages?.rows ?? 0;
-                this.accessibleScope = res.accessibleScope ?? this.accessibleScope;
+                const startSer = (pageNo - 1) * this.rows + 1;
+                this.list = (res.datalist ?? []).map((d, i) => this.adaptDynamicRow(d, startSer + i));
+                this.totalRecords = res.pages?.Rows ?? res.pages?.rows ?? 0;
+                // Scope chips come from the eager /GetMyReportAccessScope fetch
+                // on init; the dynamic response carries IDs only, so leave the
+                // resolved (named) scope as-is.
                 this.loading = false;
             },
             error: (err) => {
@@ -325,14 +380,62 @@ export class ReportLongStayNominalRollComponent implements OnInit {
             case 'name':                 return this.codeValue(row.name, row.nameBN);
             case 'motherUnit':           return this.codeValue(row.motherUnit, row.motherUnitBN);
             case 'joiningInRab':         return this.formatDateLabel(row.joiningInRab);
-            case 'durationOfStay':       return this.formatDuration(row.durationOfStay);
+            case 'durationOfStay':       return this.formatDuration(this.computeDurationString(row.joiningInRab));
             case 'presentUnit':          return this.codeValue(row.presentUnit, row.presentUnitBN);
             case 'postedOutUnit':        return this.codeValue(row.postedOutUnit, row.postedOutUnitBN);
             case 'postingOrderDate':     return this.formatDateLabel(row.postingOrderDate);
             case 'relieverJoiningDate':  return this.formatDateLabel(row.relieverJoiningDate);
             case 'rmks':                 return row.rmks ?? '';
-            default:                     return '—';
+            default:                     return this.extraCellValue(row, key);
         }
+    }
+
+    /** Total RAB tenure as a "Yy Mm" string (mirrors backend FormatYearsMonths),
+        computed from joiningInRab. Empty when joiningInRab is missing. */
+    private computeDurationString(joining: string | null | undefined): string {
+        if (!joining) return '';
+        const f = new Date(joining);
+        if (isNaN(f.getTime())) return '';
+        const today = new Date();
+        let years = today.getFullYear() - f.getFullYear();
+        let months = today.getMonth() - f.getMonth();
+        if (today.getDate() < f.getDate()) months--;
+        if (months < 0) { years--; months += 12; }
+        if (years < 0) { years = 0; months = 0; }
+        return `${years}y ${months}m`;
+    }
+
+    /** Resolve an opt-in (registry-keyed) column from the spread property bag. */
+    private extraCellValue(row: LongStayNominalRollReportRow, key: string): string {
+        const anyRow = row as any;
+        if (ReportLongStayNominalRollComponent.extraDateKeys.has(key)) return this.formatDateLabel(anyRow[key]);
+        if (ReportLongStayNominalRollComponent.extraPlainKeys.has(key)) return this.displayNum(anyRow[key]);
+        return this.codeValue(anyRow[key], anyRow[key + 'BN']);
+    }
+
+    /** Translate a dynamic-backend property bag into the legacy row shape. */
+    private adaptDynamicRow(d: DynamicReportRow, ser: number): LongStayNominalRollReportRow {
+        return {
+            ...d,
+            ser,
+            serviceId:           d['serviceId']           as string,
+            name:                d['nameEnglish']         as string,
+            nameBN:              d['nameBangla']          as string,
+            rank:                d['armyRank']            as string,
+            rankBN:              d['armyRankBN']          as string,
+            motherUnit:          d['motherUnit']          as string,
+            motherUnitBN:        d['motherUnitBN']        as string,
+            joiningInRab:        d['joiningInRab']        as string,
+            presentUnit:         d['presentUnit']         as string,
+            presentUnitBN:       d['presentUnitBN']       as string,
+            postedOutUnit:       d['postedOutUnit']       as string,
+            postedOutUnitBN:     d['postedOutUnitBN']     as string,
+            postingOrderDate:    d['postingOrderDate']    as string,
+            relieverServiceId:   d['relieverServiceId']   as string,
+            relieverJoiningDate: d['relieverJoiningDate'] as string,
+            durationOfStay:      null,
+            rmks:                null,
+        } as LongStayNominalRollReportRow;
     }
 
     toggleExportDropdown(event: Event): void { event.stopPropagation(); this.exportDropdownOpen = !this.exportDropdownOpen; }

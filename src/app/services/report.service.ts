@@ -220,4 +220,41 @@ export class ReportService {
     runDynamicEmployeeEducationReport(req: DynamicReportRequest): Observable<DynamicReportResponse> {
         return this.http.post<DynamicReportResponse>(`${environment.apis.core}/DynamicReport/EmployeeEducationOverview`, req);
     }
+
+    /** Field catalog for the dynamic Death Member report (employee fields +
+      deceased-specific dateOfDeath / deceasedReason / lastUnit). */
+    getDeceasedReportFields(): Observable<DynamicReportFieldMeta[]> {
+        return this.http.get<DynamicReportFieldMeta[]>(`${environment.apis.core}/DynamicReport/GetDeceasedFields`);
+    }
+
+    /** Deceased-cardinality variant — one row per deceased member (the
+      'Deceased' present-status filter is baked into the view). Backs the
+      Death Member report's dynamic column picker. */
+    runDynamicDeceasedReport(req: DynamicReportRequest): Observable<DynamicReportResponse> {
+        return this.http.post<DynamicReportResponse>(`${environment.apis.core}/DynamicReport/DeceasedOverview`, req);
+    }
+
+    /** Field catalog for the long-stay family (Stay over N Years + Stay After
+      Reliever Joined). */
+    getLongStayReportFields(): Observable<DynamicReportFieldMeta[]> {
+        return this.http.get<DynamicReportFieldMeta[]>(`${environment.apis.core}/DynamicReport/GetLongStayFields`);
+    }
+
+    /** Long-stay-cardinality variant (one row per employee). The request's
+      relieverJoinedOnly / minStayValue + minStayUnit select between the two
+      reports. */
+    runDynamicLongStayReport(req: DynamicReportRequest): Observable<DynamicReportResponse> {
+        return this.http.post<DynamicReportResponse>(`${environment.apis.core}/DynamicReport/LongStayOverview`, req);
+    }
+
+    /** Field catalog for the Unit-Duration nominal roll (per-stint). */
+    getUnitDurationReportFields(): Observable<DynamicReportFieldMeta[]> {
+        return this.http.get<DynamicReportFieldMeta[]>(`${environment.apis.core}/DynamicReport/GetUnitDurationFields`);
+    }
+
+    /** Unit-duration-cardinality variant — one row per posting stint. Requires
+      stintUnitId; optional stintOverlapFrom / stintOverlapTo. */
+    runDynamicUnitDurationReport(req: DynamicReportRequest): Observable<DynamicReportResponse> {
+        return this.http.post<DynamicReportResponse>(`${environment.apis.core}/DynamicReport/UnitDurationOverview`, req);
+    }
 }

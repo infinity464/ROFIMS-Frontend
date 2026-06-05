@@ -560,6 +560,19 @@ export interface DynamicReportRequest {
   addressOwnerFilter?: string | null;
   /** True = active addresses only (default UI value). */
   activeOnly?: boolean | null;
+  // ── Report-specific filter slots (nominal-roll family) ──────────────
+  /** Stay-After-Reliever: keep only members whose reliever has joined RAB. */
+  relieverJoinedOnly?: boolean | null;
+  /** Long-Stay: minimum RAB tenure threshold value (paired with minStayUnit). */
+  minStayValue?: number | null;
+  /** "Years" (default) | "Months" — unit for minStayValue. */
+  minStayUnit?: string | null;
+  /** Unit-Duration: REQUIRED RAB Unit (stint unit) for the per-stint view. */
+  stintUnitId?: number | null;
+  /** Unit-Duration overlap window start, ISO "yyyy-MM-dd". */
+  stintOverlapFrom?: string | null;
+  /** Unit-Duration overlap window end, ISO "yyyy-MM-dd". */
+  stintOverlapTo?: string | null;
   pagination: ReportPagination;
 }
 
