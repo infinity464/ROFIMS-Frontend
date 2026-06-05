@@ -529,6 +529,14 @@ export interface DynamicReportRequest {
   stintOverlapFrom?: string | null;
   /** Unit-Duration overlap window end, ISO "yyyy-MM-dd". */
   stintOverlapTo?: string | null;
+  /** RFTS: "Completed" (default) | "NotCompleted". */
+  rftsCompletionStatus?: string | null;
+  /** RFTS course-no filter. */
+  rftsCourseNo?: string | null;
+  /** RFTS course-window start, ISO "yyyy-MM-dd". */
+  rftsDateFrom?: string | null;
+  /** RFTS course-window end, ISO "yyyy-MM-dd". */
+  rftsDateTo?: string | null;
   pagination: ReportPagination;
 }
 

@@ -7,6 +7,7 @@ import { ButtonModule } from 'primeng/button';
 import { SelectModule } from 'primeng/select';
 import { InputTextModule } from 'primeng/inputtext';
 import { DatePickerModule } from 'primeng/datepicker';
+import { MultiSelectModule } from 'primeng/multiselect';
 import { Toast } from 'primeng/toast';
 import { MessageService } from 'primeng/api';
 import { ReportService } from '@/services/report.service';
@@ -15,14 +16,18 @@ import { ExportService } from '@/services/export.service';
 import { UserMenuService } from '@/services/user-menu.service';
 import { REPORT_LABELS, type ReportLang } from '@/Core/i18n/report-labels';
 import { BanglaNumerals } from '@/Core/i18n/bangla-numerals';
-import type { RftsCompletionReportRow } from '@/models/report.model';
+import type {
+    RftsCompletionReportRow,
+    DynamicReportCriterion,
+    DynamicReportRow,
+} from '@/models/report.model';
 import type { CommonCodeModel } from '@/models/common-code-model';
 import type { MotherOrganizationModel } from '@/models/mother-org-model';
 
 @Component({
     selector: 'app-report-rfts-completion',
     standalone: true,
-    imports: [CommonModule, FormsModule, TableModule, ButtonModule, SelectModule, InputTextModule, DatePickerModule, Toast],
+    imports: [CommonModule, FormsModule, TableModule, ButtonModule, SelectModule, InputTextModule, DatePickerModule, MultiSelectModule, Toast],
     providers: [MessageService],
     templateUrl: './report-rfts-completion.component.html',
     styleUrls: ['../report-theme.scss', '../report-card-mtr.scss', './report-rfts-completion.component.scss'],
@@ -63,6 +68,102 @@ export class ReportRftsCompletionComponent implements OnInit {
     first = 0;
     rows = 20;
     totalRecords = 0;
+
+    // ── Dynamic column picker ─────────────────────────────────────────────
+    /** RFTS course columns — only meaningful in the "Completed" view. */
+    private static readonly courseKeys = ['latestCourseNo', 'latestCourseDateFrom', 'latestCourseDateTo', 'coursesCompleted'];
+
+    columnCatalog: { key: string; labelEN: string; labelBN: string; hint: 'Serial' | 'Name' | 'Date' | 'Plain'; defaultVisible: boolean; courseOnly?: boolean }[] = [
+        { key: 'ser',                  labelEN: 'Ser',              labelBN: 'ক্রঃ',            hint: 'Serial', defaultVisible: true  },
+        { key: 'name',                 labelEN: 'Name',             labelBN: 'নাম',             hint: 'Name',   defaultVisible: true  },
+        { key: 'rabId',                labelEN: 'RAB ID',           labelBN: 'র‍্যাব আইডি',     hint: 'Plain',  defaultVisible: true  },
+        { key: 'serviceId',            labelEN: 'Service ID',       labelBN: 'সার্ভিস আইডি',    hint: 'Plain',  defaultVisible: true  },
+        { key: 'rank',                 labelEN: 'Rank',             labelBN: 'পদবী',            hint: 'Plain',  defaultVisible: true  },
+        { key: 'corps',                labelEN: 'Corps',            labelBN: 'কোর',             hint: 'Plain',  defaultVisible: true  },
+        { key: 'trade',                labelEN: 'Trade',            labelBN: 'ট্রেড',           hint: 'Plain',  defaultVisible: true  },
+        { key: 'orgName',              labelEN: 'Mother Org',       labelBN: 'মাতৃ সংস্থা',     hint: 'Plain',  defaultVisible: true  },
+        { key: 'latestCourseNo',       labelEN: 'Latest Course No', labelBN: 'সর্বশেষ কোর্স নং', hint: 'Plain', defaultVisible: true,  courseOnly: true },
+        { key: 'latestCourseDateFrom', labelEN: 'From',             labelBN: 'হইতে',            hint: 'Date',   defaultVisible: true,  courseOnly: true },
+        { key: 'latestCourseDateTo',   labelEN: 'To',               labelBN: 'পর্যন্ত',         hint: 'Date',   defaultVisible: true,  courseOnly: true },
+        // ── Opt-in extras (registry FieldKeys) ────────────────────────────
+        { key: 'coursesCompleted',     labelEN: 'Courses Completed',labelBN: 'সম্পন্ন কোর্স',   hint: 'Plain',  defaultVisible: false, courseOnly: true },
+        { key: 'nameBangla',           labelEN: 'Name (Bangla)',    labelBN: 'নাম (বাংলা)',     hint: 'Plain',  defaultVisible: false },
+        { key: 'nid',                  labelEN: 'NID',              labelBN: 'এনআইডি',          hint: 'Plain',  defaultVisible: false },
+        { key: 'prefix',               labelEN: 'Prefix',           labelBN: 'প্রিফিক্স',       hint: 'Plain',  defaultVisible: false },
+        { key: 'appointment',          labelEN: 'Appointment',      labelBN: 'নিয়োগ',          hint: 'Plain',  defaultVisible: false },
+        { key: 'memberType',           labelEN: 'Member Type',      labelBN: 'সদস্য ধরন',       hint: 'Plain',  defaultVisible: false },
+        { key: 'gender',               labelEN: 'Gender',           labelBN: 'লিঙ্গ',           hint: 'Plain',  defaultVisible: false },
+        { key: 'motherUnit',           labelEN: 'Mother Unit',      labelBN: 'মাতৃ ইউনিট',      hint: 'Plain',  defaultVisible: false },
+        { key: 'rabUnit',              labelEN: 'RAB Unit',         labelBN: 'র‍্যাব ইউনিট',    hint: 'Plain',  defaultVisible: false },
+        { key: 'dateOfCommission',     labelEN: 'Commission Date',  labelBN: 'কমিশন তারিখ',     hint: 'Date',   defaultVisible: false },
+        { key: 'joiningInRab',         labelEN: 'RAB Joining Date', labelBN: 'র‍্যাবে যোগদান',   hint: 'Date',   defaultVisible: false },
+        { key: 'officerType',          labelEN: 'Officer Type',     labelBN: 'অফিসার ধরণ',      hint: 'Plain',  defaultVisible: false },
+        { key: 'postingStatus',        labelEN: 'Posting Status',   labelBN: 'নিয়োগ অবস্থা',    hint: 'Plain',  defaultVisible: false },
+        { key: 'dob',                  labelEN: 'Date of Birth',    labelBN: 'জন্ম তারিখ',      hint: 'Date',   defaultVisible: false },
+        { key: 'religion',             labelEN: 'Religion',         labelBN: 'ধর্ম',            hint: 'Plain',  defaultVisible: false },
+        { key: 'bloodGroup',           labelEN: 'Blood Group',      labelBN: 'রক্তের গ্রুপ',     hint: 'Plain',  defaultVisible: false },
+        { key: 'maritalStatus',        labelEN: 'Marital Status',   labelBN: 'বৈবাহিক অবস্থা',   hint: 'Plain',  defaultVisible: false },
+        { key: 'mobileNo',             labelEN: 'Mobile',           labelBN: 'মোবাইল',          hint: 'Plain',  defaultVisible: false },
+        { key: 'email',                labelEN: 'Email',            labelBN: 'ইমেইল',           hint: 'Plain',  defaultVisible: false },
+    ];
+
+    /** Legacy column key → RftsReportFieldRegistry FieldKey for the request. */
+    private static readonly colKeyToBackend: Record<string, string> = {
+        ser: 'ser', name: 'personnel', rank: 'armyRank', orgName: 'motherOrganization',
+        rabId: 'rabId', serviceId: 'serviceId', corps: 'corps', trade: 'trade',
+        latestCourseNo: 'latestCourseNo', latestCourseDateFrom: 'latestCourseDateFrom',
+        latestCourseDateTo: 'latestCourseDateTo', coursesCompleted: 'coursesCompleted',
+    };
+    private static readonly extraDateKeys = new Set(['dateOfCommission', 'joiningInRab', 'dob']);
+    private static readonly extraPlainKeys = new Set(['nameBangla', 'nid', 'bloodGroup', 'mobileNo', 'email', 'postingStatus']);
+
+    selectedColumnKeys: string[] = this.defaultColumnsFor('Completed');
+    draggingColumnKey: string | null = null;
+
+    /** Default visible columns for a view — drops course columns in NotCompleted. */
+    private defaultColumnsFor(status: 'Completed' | 'NotCompleted'): string[] {
+        return this.columnCatalog
+            .filter(c => c.defaultVisible && (status === 'Completed' || !c.courseOnly))
+            .map(c => c.key);
+    }
+
+    /** Picker options — hide course-only fields in the NotCompleted view. */
+    get columnPickerOptions(): { label: string; value: string }[] {
+        return this.columnCatalog
+            .filter(c => this.isCompletedView || !c.courseOnly)
+            .map(c => ({ label: this.lang === 'bn' ? c.labelBN : c.labelEN, value: c.key }));
+    }
+    get visibleColumns(): typeof this.columnCatalog {
+        const map = new Map(this.columnCatalog.map(c => [c.key, c]));
+        return this.selectedColumnKeys
+            .map(k => map.get(k))
+            .filter((c): c is typeof this.columnCatalog[number] => c != null);
+    }
+
+    onColumnDragStart(key: string, event: DragEvent): void {
+        this.draggingColumnKey = key;
+        event.dataTransfer?.setData('text/plain', key);
+        if (event.dataTransfer) event.dataTransfer.effectAllowed = 'move';
+    }
+    onColumnDragOver(event: DragEvent): void {
+        event.preventDefault();
+        if (event.dataTransfer) event.dataTransfer.dropEffect = 'move';
+    }
+    onColumnDrop(targetKey: string, event: DragEvent): void {
+        event.preventDefault();
+        const sourceKey = this.draggingColumnKey;
+        this.draggingColumnKey = null;
+        if (!sourceKey || sourceKey === targetKey) return;
+        const arr = [...this.selectedColumnKeys];
+        const fromIdx = arr.indexOf(sourceKey);
+        const toIdx   = arr.indexOf(targetKey);
+        if (fromIdx === -1 || toIdx === -1) return;
+        const [moved] = arr.splice(fromIdx, 1);
+        arr.splice(toIdx, 0, moved);
+        this.selectedColumnKeys = arr;
+    }
+    onColumnDragEnd(): void { this.draggingColumnKey = null; }
+    removeColumn(key: string): void { this.selectedColumnKeys = this.selectedColumnKeys.filter(k => k !== key); }
 
     exportDropdownOpen = false;
     exporting = false;
@@ -251,39 +352,63 @@ export class ReportRftsCompletionComponent implements OnInit {
         return lines;
     }
 
+    /** Export reflects the visible column picker (labels + values, in order). */
     getExportData(): { columns: string[]; rows: string[][] } {
-        const L = this.L[this.lang];
-        const isCompleted = this.selectedCompletionStatus === 'Completed';
-        const columns = [
-            L['report.table.ser'],
-            L['report.table.name'],
-            L['report.table.rabId'] ?? 'RAB ID',
-            L['report.table.serviceId'],
-            L['report.table.rank'],
-            L['report.table.corps'],
-            L['report.table.trade'],
-            L['report.table.motherOrg'],
-            ...(isCompleted ? [L['report.table.latestCourseNo'], L['report.table.from'], L['report.table.to']] : []),
-        ];
-        const rows = this.list.map((row) => {
-            const base = [
-                this.displayNum(row.ser),
-                this.codeValue(row.name, row.nameBN),
-                row.rabid ?? '—',
-                this.displayNum(row.serviceId),
-                this.codeValue(row.rank, row.rankBN),
-                this.codeValue(row.corps, row.corpsBN),
-                this.codeValue(row.trade, row.tradeBN),
-                this.codeValue(row.orgName, row.orgNameBN),
-            ];
-            if (isCompleted) {
-                base.push(row.latestCourseNo ?? '—');
-                base.push(this.fmtDate(row.latestCourseDateFrom));
-                base.push(this.fmtDate(row.latestCourseDateTo));
-            }
-            return base;
-        });
+        const cols = this.visibleColumns;
+        const columns = cols.map(c => this.lang === 'bn' ? c.labelBN : c.labelEN);
+        const rows = this.list.map(row => cols.map(c => this.cellValue(row, c.key)));
         return { columns, rows };
+    }
+
+    /** Resolve a cell's display value by column key. */
+    cellValue(row: RftsCompletionReportRow, key: string): string {
+        switch (key) {
+            case 'name':                 return this.codeValue(row.name, row.nameBN);
+            case 'rabId':                return row.rabid ?? '—';
+            case 'serviceId':            return this.displayNum(row.serviceId);
+            case 'rank':                 return this.codeValue(row.rank, row.rankBN);
+            case 'corps':                return this.codeValue(row.corps, row.corpsBN);
+            case 'trade':                return this.codeValue(row.trade, row.tradeBN);
+            case 'orgName':              return this.codeValue(row.orgName, row.orgNameBN);
+            case 'latestCourseNo':       return row.latestCourseNo ?? '—';
+            case 'latestCourseDateFrom': return this.fmtDate(row.latestCourseDateFrom);
+            case 'latestCourseDateTo':   return this.fmtDate(row.latestCourseDateTo);
+            case 'coursesCompleted':     return this.displayNum(row.coursesCompleted);
+            default:                     return this.extraCellValue(row, key);
+        }
+    }
+
+    /** Resolve an opt-in (registry-keyed) column from the spread property bag. */
+    private extraCellValue(row: RftsCompletionReportRow, key: string): string {
+        const anyRow = row as any;
+        if (ReportRftsCompletionComponent.extraDateKeys.has(key)) return this.fmtDate(anyRow[key]);
+        if (ReportRftsCompletionComponent.extraPlainKeys.has(key)) return this.displayNum(anyRow[key]);
+        return this.codeValue(anyRow[key], anyRow[key + 'BN']);
+    }
+
+    /** Translate a dynamic-backend property bag into the row shape. */
+    private adaptDynamicRow(d: DynamicReportRow, ser: number): RftsCompletionReportRow {
+        return {
+            ...d,
+            ser,
+            employeeId:           d['employeeId']           as number,
+            name:                 d['nameEnglish']          as string,
+            nameBN:               d['nameBangla']           as string,
+            rabid:                d['rabId']                as string,
+            serviceId:            d['serviceId']            as string,
+            rank:                 d['armyRank']             as string,
+            rankBN:               d['armyRankBN']           as string,
+            corps:                d['corps']                as string,
+            corpsBN:              d['corpsBN']              as string,
+            trade:                d['trade']                as string,
+            tradeBN:              d['tradeBN']              as string,
+            orgName:              d['motherOrganization']   as string,
+            orgNameBN:            d['motherOrganizationBN'] as string,
+            coursesCompleted:     d['coursesCompleted']     as number,
+            latestCourseNo:       d['latestCourseNo']       as string,
+            latestCourseDateFrom: d['latestCourseDateFrom'] as string,
+            latestCourseDateTo:   d['latestCourseDateTo']   as string,
+        } as RftsCompletionReportRow;
     }
 
     toggleExportDropdown(event: Event): void {
@@ -341,6 +466,9 @@ export class ReportRftsCompletionComponent implements OnInit {
             this.dateFrom = null;
             this.dateTo = null;
         }
+        // Reset the visible columns to the view's defaults (course columns are
+        // dropped for NotCompleted, restored for Completed).
+        this.selectedColumnKeys = this.defaultColumnsFor(this.selectedCompletionStatus);
     }
 
     toggleFilter(): void {
@@ -362,6 +490,7 @@ export class ReportRftsCompletionComponent implements OnInit {
         this.searchCourseNo = '';
         this.dateFrom = null;
         this.dateTo = null;
+        this.selectedColumnKeys = this.defaultColumnsFor('Completed');
         this.first = 0;
         this.list = [];
         this.totalRecords = 0;
@@ -382,21 +511,35 @@ export class ReportRftsCompletionComponent implements OnInit {
         this.loading = true;
         this.appliedFilterLines = this.buildFilterLines();
         const page_no = Math.floor(this.first / this.rows) + 1;
+
+        // Map UI filters → dynamic-backend criteria (registry FieldKeys).
+        const criteria: DynamicReportCriterion[] = [];
+        if (this.selectedMotherOrgId != null)
+            criteria.push({ fieldKey: 'motherOrganization', idValue: this.selectedMotherOrgId });
+        if (this.selectedMemberTypeId != null)
+            criteria.push({ fieldKey: 'memberType', idValue: this.selectedMemberTypeId });
+        if (this.selectedRankId != null)
+            criteria.push({ fieldKey: 'armyRank', idValue: this.selectedRankId });
+
+        const columns = this.selectedColumnKeys.map(
+            k => ReportRftsCompletionComponent.colKeyToBackend[k] ?? k,
+        );
+
         this.reportService
-            .getRftsCompletionReport({
-                completionStatus: this.selectedCompletionStatus,
-                motherOrgId: this.selectedMotherOrgId ?? undefined,
-                memberTypeId: this.selectedMemberTypeId ?? undefined,
-                rankId: this.selectedRankId ?? undefined,
-                courseNo: this.isCompletedView ? (this.searchCourseNo.trim() || undefined) : undefined,
-                dateFrom: this.isCompletedView ? (this.toLocalDateStr(this.dateFrom) ?? undefined) : undefined,
-                dateTo: this.isCompletedView ? (this.toLocalDateStr(this.dateTo) ?? undefined) : undefined,
+            .runDynamicRftsReport({
+                columns,
+                criteria,
+                rftsCompletionStatus: this.selectedCompletionStatus,
+                rftsCourseNo: this.isCompletedView ? (this.searchCourseNo.trim() || null) : null,
+                rftsDateFrom: this.isCompletedView ? this.toLocalDateStr(this.dateFrom) : null,
+                rftsDateTo: this.isCompletedView ? this.toLocalDateStr(this.dateTo) : null,
                 pagination: { page_no, row_per_page: this.rows },
             })
             .subscribe({
                 next: (res) => {
-                    this.list = res.datalist ?? [];
-                    this.totalRecords = res.pages?.rows ?? 0;
+                    const startSer = (page_no - 1) * this.rows + 1;
+                    this.list = (res.datalist ?? []).map((d, i) => this.adaptDynamicRow(d, startSer + i));
+                    this.totalRecords = res.pages?.Rows ?? res.pages?.rows ?? 0;
                     this.loading = false;
                 },
                 error: (err) => {

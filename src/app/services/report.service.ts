@@ -237,4 +237,16 @@ export class ReportService {
     runDynamicUnitDurationReport(req: DynamicReportRequest): Observable<DynamicReportResponse> {
         return this.http.post<DynamicReportResponse>(`${environment.apis.core}/DynamicReport/UnitDurationOverview`, req);
     }
+
+    /** Field catalog for the RFTS-completion report. */
+    getRftsReportFields(): Observable<DynamicReportFieldMeta[]> {
+        return this.http.get<DynamicReportFieldMeta[]>(`${environment.apis.core}/DynamicReport/GetRftsFields`);
+    }
+
+    /** RFTS-completion variant (one row per employee). The request's
+      rftsCompletionStatus / rftsCourseNo / rftsDateFrom / rftsDateTo drive the
+      Completed-vs-NotCompleted membership + the latest-course columns. */
+    runDynamicRftsReport(req: DynamicReportRequest): Observable<DynamicReportResponse> {
+        return this.http.post<DynamicReportResponse>(`${environment.apis.core}/DynamicReport/RftsOverview`, req);
+    }
 }
