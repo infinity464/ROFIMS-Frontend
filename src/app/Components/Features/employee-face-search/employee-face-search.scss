@@ -234,11 +234,11 @@
 .fs-btn-primary:hover:not(:disabled) { filter: brightness(1.08); }
 .fs-btn-search {
     flex: 1;
-    background: var(--surface-100);
-    color: var(--fs-text);
-    border-color: var(--fs-border);
+    background: var(--fs-accent);
+    color: #fff;
+    border-color: var(--fs-accent);
 }
-.fs-btn-search:hover:not(:disabled) { border-color: var(--fs-accent-2); color: var(--fs-accent-2); }
+.fs-btn-search:hover:not(:disabled) { filter: brightness(1.08); }
 .fs-btn-ghost {
     background: transparent;
     color: var(--fs-muted);

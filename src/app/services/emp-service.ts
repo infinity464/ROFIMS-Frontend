@@ -429,8 +429,8 @@ export class EmpService {
     }
 
     /** Paginated global face-search history. */
-    getFaceSearchHistory(pageNo: number, rowPerPage: number): Observable<{ datalist: FaceSearchHistoryItem[]; pages: { Rows: number; TotalPages: number }; retentionDays: number }> {
-        return this.http.get<{ datalist: FaceSearchHistoryItem[]; pages: { Rows: number; TotalPages: number }; retentionDays: number }>(
+    getFaceSearchHistory(pageNo: number, rowPerPage: number): Observable<{ datalist: FaceSearchHistoryItem[]; pages: { rows: number; totalPages: number }; retentionDays: number }> {
+        return this.http.get<{ datalist: FaceSearchHistoryItem[]; pages: { rows: number; totalPages: number }; retentionDays: number }>(
             `${this.empApi}/EmployeeInfo/GetFaceSearchHistory`,
             { params: { page_no: String(pageNo), row_per_page: String(rowPerPage) } }
         );

@@ -23,7 +23,7 @@ export class EmployeeFaceSearchHistoryComponent implements OnInit, OnDestroy {
     rows: FaceSearchHistoryItem[] = [];
     totalRecords = 0;
     loading = false;
-    rowsPerPage = 10;
+    rowsPerPage = 5;
     first = 0;
     retentionDays = 30;
 
@@ -91,7 +91,7 @@ export class EmployeeFaceSearchHistoryComponent implements OnInit, OnDestroy {
         this.empService.getFaceSearchHistory(page, this.rowsPerPage).subscribe({
             next: (res) => {
                 this.rows = res?.datalist ?? [];
-                this.totalRecords = res?.pages?.Rows ?? 0;
+                this.totalRecords = res?.pages?.rows ?? 0;
                 if (res?.retentionDays) this.retentionDays = res.retentionDays;
                 this.loading = false;
                 this.loadThumbnails();

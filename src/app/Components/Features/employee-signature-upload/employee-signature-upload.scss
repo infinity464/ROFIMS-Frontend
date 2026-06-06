@@ -56,13 +56,15 @@
 
 /* ============== Face Images (Recognition) — dark tactical panel ============== */
 .fi-panel {
-    --fi-bg: #12161d;
-    --fi-panel: #171c24;
-    --fi-card: #1b2430;
-    --fi-border: #2a323d;
-    --fi-text: #e6eaf0;
-    --fi-muted: #8a94a2;
-    --fi-faint: #5b6573;
+    /* Theme-aware surfaces/text (flip automatically with .app-dark) */
+    --fi-bg: var(--surface-card);
+    --fi-panel: var(--surface-100);
+    --fi-card: var(--surface-200);
+    --fi-border: var(--surface-border);
+    --fi-text: var(--text-color);
+    --fi-muted: var(--text-color-secondary);
+    --fi-faint: var(--text-color-secondary);
+    /* Fixed accent (works on light + dark) */
     --fi-accent: #ef4d6a;
 
     background: var(--fi-bg);
