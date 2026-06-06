@@ -37,6 +37,23 @@ export interface FaceCandidate {
     confidence: number;
 }
 
+/** One row of the face-search history (from GetFaceSearchHistory). */
+export interface FaceSearchHistoryItem {
+    id: number;
+    searchedAt: string;
+    isMatched: boolean;
+    confidence: number;
+    hasImage: boolean;
+    matchedEmployeeId: number | null;
+    matchedName: string | null;
+    matchedRank: string | null;
+    matchedServiceId: string | null;
+    matchedRabId: string | null;
+    searchedByName: string | null;
+    searchedByRank: string | null;
+    searchedByServiceId: string | null;
+}
+
 /** One enrolled face photo's metadata (from GetEnrolledFacePhotos). */
 export interface EnrolledFacePhoto {
     photo_id: string;
@@ -402,6 +419,19 @@ export class EmpService {
             params: { employeeId: String(employeeId), photoId },
             responseType: 'blob'
         });
+    }
+
+    /** Paginated global face-search history. */
+    getFaceSearchHistory(pageNo: number, rowPerPage: number): Observable<{ datalist: FaceSearchHistoryItem[]; pages: { Rows: number; TotalPages: number }; retentionDays: number }> {
+        return this.http.get<{ datalist: FaceSearchHistoryItem[]; pages: { Rows: number; TotalPages: number }; retentionDays: number }>(
+            `${this.empApi}/EmployeeInfo/GetFaceSearchHistory`,
+            { params: { page_no: String(pageNo), row_per_page: String(rowPerPage) } }
+        );
+    }
+
+    /** The query image for a single history row, as a Blob. */
+    getFaceSearchImageBlob(id: number): Observable<Blob> {
+        return this.http.get(`${this.empApi}/EmployeeInfo/GetFaceSearchImage/${id}`, { responseType: 'blob' });
     }
 
     /** Get signature image URL for an employee. Returns the API URL string (not an Observable). */

@@ -114,6 +114,7 @@ import { PostingOrderListComponent } from '@/Components/Features/posting-order-l
 import { PostingOrderPreviewPageComponent } from '@/Components/Features/posting-order-preview/posting-order-preview';
 import { EmployeeSignatureUploadComponent } from '@/Components/Features/employee-signature-upload/employee-signature-upload';
 import { EmployeeFaceSearchComponent } from '@/Components/Features/employee-face-search/employee-face-search';
+import { EmployeeFaceSearchHistoryComponent } from '@/Components/Features/employee-face-search-history/employee-face-search-history';
 import { AddDraftInterPostingComponent } from '@/Components/Features/add-draft-inter-posting/add-draft-inter-posting';
 import { InterPostingNotesheetGenerateComponent } from '@/Components/Features/inter-posting-notesheet-generate/inter-posting-notesheet-generate';
 import { PresentlyServingMembers } from '@/Components/Features/presently-serving-members/presently-serving-members';
@@ -387,6 +388,7 @@ export const appRoutes: Routes = [
             { path: 'office-order-ex-bd-leave/preview', component: OfficeOrderExBdLeavePreviewComponent },
             { path: 'employee-signature-upload', component: EmployeeSignatureUploadComponent },
             { path: 'employee-face-search', component: EmployeeFaceSearchComponent },
+            { path: 'employee-face-search-history', component: EmployeeFaceSearchHistoryComponent },
             { path: 'presently-serving-members', component: PresentlyServingMembers },
             { path: 'serving-members-for-inter-posting', component: PresentlyServingMembers, data: { mode: 'interPosting' } },
             { path: 'presently-serving-members/organogram', component: OrgTreeServingComponent },
