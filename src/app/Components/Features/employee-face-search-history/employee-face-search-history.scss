@@ -195,6 +195,11 @@
     color: var(--fsh-accent);
     background: rgba(239, 77, 106, 0.1);
 }
+.fsh-conf[data-sev='none'] {
+    border-color: var(--fsh-border);
+    color: var(--fsh-muted);
+    background: transparent;
+}
 
 /* Searched by */
 .fsh-by-name { font-weight: 700; font-size: 0.88rem; color: var(--fsh-cyan); }

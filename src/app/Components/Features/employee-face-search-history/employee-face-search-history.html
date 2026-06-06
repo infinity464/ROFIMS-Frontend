@@ -80,9 +80,13 @@
 
                     <!-- Confidence -->
                     <div class="c-conf">
-                        <span class="fsh-conf" [attr.data-sev]="confidenceSeverity(row.confidence)">
-                            {{ row.confidence * 100 | number: '1.0-0' }}%
-                        </span>
+                        @if (row.isMatched) {
+                            <span class="fsh-conf" [attr.data-sev]="confidenceSeverity(row.confidence)">
+                                {{ row.confidence * 100 | number: '1.0-0' }}%
+                            </span>
+                        } @else {
+                            <span class="fsh-conf" data-sev="none">-</span>
+                        }
                     </div>
 
                     <!-- Searched by -->
