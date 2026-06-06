@@ -1,4 +1,5 @@
 <p-toast position="top-center"></p-toast>
+<p-confirmDialog [style]="{ width: '420px' }"></p-confirmDialog>
 
 <div class="form-card">
     <div class="form-card-header">
@@ -127,69 +128,110 @@
         </div>
 
         <!-- ============== Face Images (Recognition) ============== -->
-        <div class="form-section mt-4" style="border-top: 1px solid var(--surface-200); padding-top: 1rem;">
-            <div class="flex align-items-center justify-content-between mb-2">
-                <h4 class="form-card-title mb-0">Face Images (Recognition)</h4>
-                <span class="text-600 text-sm">Enrolled: <strong>{{ enrolledFaceCount }}</strong></span>
-            </div>
-            <small class="text-500 block mb-3">
-                Upload one or more clear, front-facing photos. These are stored in the face-recognition
-                database and used later to identify this employee. PNG/JPG, max 10 MB each, up to 10 per upload.
-            </small>
+        <input #faceInput type="file" accept="image/png,image/jpeg,image/jpg" multiple hidden (change)="onFaceInputChange($event)" />
 
-            <div class="form-row">
-                <div class="form-field" style="flex: 2; min-width: 300px;">
-                    <label class="form-label">Select Face Image(s)</label>
-                    <p-fileUpload
-                        #faceUploader
-                        mode="basic"
-                        chooseLabel="Choose Face Image(s)"
-                        chooseIcon="pi pi-images"
-                        accept="image/png,image/jpeg,image/jpg"
-                        [multiple]="true"
-                        [auto]="false"
-                        (onSelect)="onFaceFilesSelected($event)">
-                    </p-fileUpload>
+        <div class="fi-panel mt-4">
+            <!-- Header -->
+            <div class="fi-head">
+                <div class="fi-head-left">
+                    <span class="fi-logo"><i class="pi pi-images"></i></span>
+                    <div>
+                        <div class="fi-title">Face Images (Recognition)</div>
+                        <div class="fi-sub">Upload clear, front-facing photos. PNG/JPG · max 10 MB each · up to {{ MAX_FACES_PER_EMPLOYEE }} per employee</div>
+                    </div>
+                </div>
+                <div class="fi-head-right">
+                    @if (enrolledFaceCount > 0) {
+                        <button type="button" class="fi-btn ghost" (click)="toggleEnrolledImages()">
+                            <i class="pi" [ngClass]="showEnrolled ? 'pi-eye-slash' : 'pi-eye'"></i>
+                            {{ showEnrolled ? 'Hide Images' : 'Show All Images' }}
+                        </button>
+                    }
+                    <span class="fi-enrolled"><i class="pi pi-id-card"></i> Enrolled: {{ enrolledFaceCount }}</span>
                 </div>
             </div>
 
-            @if (facePreviewUrls.length > 0) {
-                <div class="form-row">
-                    <div class="form-field">
-                        <label class="form-label">Selected ({{ facePreviewUrls.length }})</label>
-                        <div class="flex flex-wrap gap-2">
-                            @for (url of facePreviewUrls; track url; let i = $index) {
-                                <div class="face-thumb" style="position: relative; width: 96px; height: 96px;">
-                                    <img [src]="url" alt="Face image"
-                                         style="width: 96px; height: 96px; object-fit: cover; border-radius: 6px; border: 1px solid var(--surface-300);" />
-                                    <span style="position: absolute; top: -8px; right: -8px;">
-                                        <p-button icon="pi pi-times" [rounded]="true" severity="danger" size="small"
-                                                  styleClass="p-button-sm"
-                                                  pTooltip="Remove" (onClick)="removeFaceFile(i)">
-                                        </p-button>
-                                    </span>
+            <!-- Enrolled images gallery (inline, toggled) -->
+            @if (showEnrolled) {
+                <div class="fi-gallery">
+                    @if (loadingEnrolled) {
+                        <div class="fi-state"><i class="pi pi-spin pi-spinner"></i> Loading enrolled images…</div>
+                    } @else if (enrolledFaces.length === 0) {
+                        <div class="fi-state">No enrolled images.</div>
+                    } @else {
+                        <div class="fi-grid">
+                            @for (f of enrolledFaces; track f.photoId; let i = $index) {
+                                <div class="fi-card">
+                                    <span class="corner tl"></span><span class="corner tr"></span>
+                                    <span class="corner bl"></span><span class="corner br"></span>
+                                    <img [src]="f.url" alt="Enrolled face" />
+                                    <span class="fi-card-label">Enroll #{{ i + 1 }}</span>
+                                    <button type="button" class="fi-del" [disabled]="deletingPhotoId === f.photoId"
+                                            (click)="deleteEnrolledFace(f.photoId)" title="Delete">
+                                        <i class="pi" [ngClass]="deletingPhotoId === f.photoId ? 'pi-spin pi-spinner' : 'pi-times'"></i>
+                                    </button>
                                 </div>
                             }
                         </div>
-                    </div>
+                    }
                 </div>
             }
 
-            <div class="form-actions mt-3">
-                @if (enrolledFaceCount > 0) {
-                    <p-button label="Delete All Enrolled" icon="pi pi-trash" severity="danger" [outlined]="true"
-                              [class.perm-hidden]="!canDelete"
-                              (onClick)="deleteEnrolledFaces()">
-                    </p-button>
-                }
-                <p-button
-                    label="Enroll Face Images"
-                    icon="pi pi-user-plus"
-                    [loading]="enrollingFaces"
-                    [disabled]="faceFiles.length === 0"
-                    [class.perm-hidden]="!canUpdate"
-                    (onClick)="enrollFaces()">
-                </p-button>
+            <!-- Drop zone -->
+            <div class="fi-dropzone" [class.drag]="dragOverFace"
+                 (click)="triggerFaceInput()"
+                 (dragover)="onFaceDragOver($event)"
+                 (dragleave)="onFaceDragLeave($event)"
+                 (drop)="onFaceDrop($event)">
+                <i class="pi pi-image fi-drop-icon"></i>
+                <div class="fi-drop-text">Drop photos here or <span class="fi-link" (click)="$event.stopPropagation(); triggerFaceInput()">browse files</span></div>
+                <div class="fi-drop-hint">Stored in the face-recognition database to identify this employee</div>
+                <button type="button" class="fi-btn primary" [disabled]="faceSlotsLeft <= 0"
+                        (click)="$event.stopPropagation(); triggerFaceInput()">
+                    <i class="pi pi-upload"></i> Choose Face Image(s)
+                </button>
+            </div>
+
+            <!-- Pending selected previews -->
+            @if (facePreviewUrls.length > 0) {
+                <div class="fi-grid pending">
+                    @for (url of facePreviewUrls; track url; let i = $index) {
+                        <div class="fi-card">
+                            <span class="corner tl"></span><span class="corner tr"></span>
+                            <span class="corner bl"></span><span class="corner br"></span>
+                            <img [src]="url" alt="Selected face" />
+                            <span class="fi-card-label">New #{{ i + 1 }}</span>
+                            <button type="button" class="fi-del" (click)="removeFaceFile(i)" title="Remove">
+                                <i class="pi pi-times"></i>
+                            </button>
+                        </div>
+                    }
+                </div>
+            }
+
+            <!-- Footer actions -->
+            <div class="fi-foot">
+                <span class="fi-chosen">
+                    @if (faceFiles.length > 0) {
+                        <i class="pi pi-check-circle"></i> {{ faceFiles.length }} file(s) chosen · {{ faceSlotsLeft }} slot(s) left
+                    } @else {
+                        <i class="pi pi-paperclip"></i> No file chosen
+                    }
+                </span>
+                <div class="fi-foot-actions">
+                    @if (enrolledFaceCount > 0) {
+                        <button type="button" class="fi-btn danger-outline" [class.perm-hidden]="!canDelete"
+                                (click)="deleteEnrolledFaces()">
+                            <i class="pi pi-trash"></i> Delete All Enrolled
+                        </button>
+                    }
+                    <button type="button" class="fi-btn primary"
+                            [disabled]="faceFiles.length === 0 || enrollingFaces"
+                            [class.perm-hidden]="!canUpdate"
+                            (click)="enrollFaces()">
+                        <i class="pi" [ngClass]="enrollingFaces ? 'pi-spin pi-spinner' : 'pi-user-plus'"></i> Enroll Face Images
+                    </button>
+                </div>
             </div>
         </div>
     }

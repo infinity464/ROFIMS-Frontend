@@ -395,6 +395,13 @@ export class EmpService {
         return this.http.delete(`${this.empApi}/EmployeeInfo/DeleteEnrolledFaces/${employeeId}`);
     }
 
+    /** Remove a single enrolled face image (and its search vector). */
+    deleteEnrolledFace(employeeId: number, photoId: string): Observable<any> {
+        return this.http.delete(`${this.empApi}/EmployeeInfo/DeleteEnrolledFace`, {
+            params: { employeeId: String(employeeId), photoId }
+        });
+    }
+
     /**
      * Recognize the most prominent face in an image against enrolled employees.
      * Returns { matched, employee_id, confidence, candidates, ... }.
