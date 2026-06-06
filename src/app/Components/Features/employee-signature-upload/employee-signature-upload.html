@@ -125,5 +125,72 @@
                 </p-button>
             </div>
         </div>
+
+        <!-- ============== Face Images (Recognition) ============== -->
+        <div class="form-section mt-4" style="border-top: 1px solid var(--surface-200); padding-top: 1rem;">
+            <div class="flex align-items-center justify-content-between mb-2">
+                <h4 class="form-card-title mb-0">Face Images (Recognition)</h4>
+                <span class="text-600 text-sm">Enrolled: <strong>{{ enrolledFaceCount }}</strong></span>
+            </div>
+            <small class="text-500 block mb-3">
+                Upload one or more clear, front-facing photos. These are stored in the face-recognition
+                database and used later to identify this employee. PNG/JPG, max 10 MB each, up to 10 per upload.
+            </small>
+
+            <div class="form-row">
+                <div class="form-field" style="flex: 2; min-width: 300px;">
+                    <label class="form-label">Select Face Image(s)</label>
+                    <p-fileUpload
+                        #faceUploader
+                        mode="basic"
+                        chooseLabel="Choose Face Image(s)"
+                        chooseIcon="pi pi-images"
+                        accept="image/png,image/jpeg,image/jpg"
+                        [multiple]="true"
+                        [auto]="false"
+                        (onSelect)="onFaceFilesSelected($event)">
+                    </p-fileUpload>
+                </div>
+            </div>
+
+            @if (facePreviewUrls.length > 0) {
+                <div class="form-row">
+                    <div class="form-field">
+                        <label class="form-label">Selected ({{ facePreviewUrls.length }})</label>
+                        <div class="flex flex-wrap gap-2">
+                            @for (url of facePreviewUrls; track url; let i = $index) {
+                                <div class="face-thumb" style="position: relative; width: 96px; height: 96px;">
+                                    <img [src]="url" alt="Face image"
+                                         style="width: 96px; height: 96px; object-fit: cover; border-radius: 6px; border: 1px solid var(--surface-300);" />
+                                    <span style="position: absolute; top: -8px; right: -8px;">
+                                        <p-button icon="pi pi-times" [rounded]="true" severity="danger" size="small"
+                                                  styleClass="p-button-sm"
+                                                  pTooltip="Remove" (onClick)="removeFaceFile(i)">
+                                        </p-button>
+                                    </span>
+                                </div>
+                            }
+                        </div>
+                    </div>
+                </div>
+            }
+
+            <div class="form-actions mt-3">
+                @if (enrolledFaceCount > 0) {
+                    <p-button label="Delete All Enrolled" icon="pi pi-trash" severity="danger" [outlined]="true"
+                              [class.perm-hidden]="!canDelete"
+                              (onClick)="deleteEnrolledFaces()">
+                    </p-button>
+                }
+                <p-button
+                    label="Enroll Face Images"
+                    icon="pi pi-user-plus"
+                    [loading]="enrollingFaces"
+                    [disabled]="faceFiles.length === 0"
+                    [class.perm-hidden]="!canUpdate"
+                    (onClick)="enrollFaces()">
+                </p-button>
+            </div>
+        </div>
     }
 </div>

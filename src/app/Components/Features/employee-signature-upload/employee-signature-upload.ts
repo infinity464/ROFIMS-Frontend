@@ -65,6 +65,15 @@ export class EmployeeSignatureUploadComponent implements OnInit {
     // Current saved signature
     currentSignatureUrl: string = '';
 
+    // ---- Face recognition enrollment ----
+    faceFiles: File[] = [];
+    facePreviewUrls: string[] = [];
+    enrolledFaceCount = 0;
+    enrollingFaces = false;
+    private readonly MAX_FACE_FILES = 10;
+    private readonly MAX_FACE_SIZE_MB = 10;
+    @ViewChild('faceUploader') faceUploader: any;
+
     constructor(
         private empService: EmpService,
         private messageService: MessageService,
@@ -83,7 +92,9 @@ export class EmployeeSignatureUploadComponent implements OnInit {
         this.employeeId = emp.employeeID;
         this.employeeInfo = emp;
         this.loadCurrentSignature();
+        this.loadFaceCount();
         this.resetSelection();
+        this.clearFaceSelection();
     }
 
     onSearchReset(): void {
@@ -93,7 +104,9 @@ export class EmployeeSignatureUploadComponent implements OnInit {
             URL.revokeObjectURL(this.currentSignatureUrl);
             this.currentSignatureUrl = '';
         }
+        this.enrolledFaceCount = 0;
         this.resetSelection();
+        this.clearFaceSelection();
     }
 
     onCropToggleChange(): void {
@@ -416,5 +429,112 @@ export class EmployeeSignatureUploadComponent implements OnInit {
 
     onSignatureLoadError(): void {
         this.currentSignatureUrl = '';
+    }
+
+    // ---------------------------------------------------------------- Face enrollment
+
+    /** Add selected images to the pending face list (dedup, size + count guarded). */
+    onFaceFilesSelected(event: { files: File[] }): void {
+        const incoming = event.files || [];
+        for (const file of incoming) {
+            if (file.size > this.MAX_FACE_SIZE_MB * 1024 * 1024) {
+                this.messageService.add({ severity: 'warn', summary: 'Warning', detail: `"${file.name}" exceeds ${this.MAX_FACE_SIZE_MB} MB.` });
+                continue;
+            }
+            if (this.faceFiles.length >= this.MAX_FACE_FILES) {
+                this.messageService.add({ severity: 'warn', summary: 'Warning', detail: `You can upload at most ${this.MAX_FACE_FILES} images at a time.` });
+                break;
+            }
+            // Skip exact duplicates (same name + size).
+            if (this.faceFiles.some((f) => f.name === file.name && f.size === file.size)) {
+                continue;
+            }
+            this.faceFiles.push(file);
+            this.facePreviewUrls.push(URL.createObjectURL(file));
+        }
+        this.faceUploader?.clear();
+    }
+
+    /** Remove one pending face image by index. */
+    removeFaceFile(index: number): void {
+        if (this.facePreviewUrls[index]) {
+            URL.revokeObjectURL(this.facePreviewUrls[index]);
+        }
+        this.faceFiles.splice(index, 1);
+        this.facePreviewUrls.splice(index, 1);
+    }
+
+    /** Upload all pending face images to the recognition service. */
+    enrollFaces(): void {
+        if (!this.canUpdate) {
+            this.messageService.add({ severity: 'warn', summary: 'Permission Denied', detail: 'You do not have permission to upload face images.' });
+            return;
+        }
+        if (!this.employeeId) {
+            this.messageService.add({ severity: 'warn', summary: 'Warning', detail: 'Please select an employee.' });
+            return;
+        }
+        if (this.faceFiles.length === 0) {
+            this.messageService.add({ severity: 'warn', summary: 'Warning', detail: 'Please select at least one face image.' });
+            return;
+        }
+
+        this.enrollingFaces = true;
+        this.empService.enrollFaces(this.employeeId, this.faceFiles).subscribe({
+            next: (res: any) => {
+                const enrolled = res?.photos_enrolled ?? 0;
+                const rejected = res?.photos_rejected ?? 0;
+                if (enrolled > 0) {
+                    this.messageService.add({
+                        severity: rejected > 0 ? 'warn' : 'success',
+                        summary: 'Face Enrollment',
+                        detail: `${enrolled} image(s) enrolled${rejected > 0 ? `, ${rejected} rejected (no/low-quality face).` : '.'}`
+                    });
+                } else {
+                    this.messageService.add({ severity: 'error', summary: 'Face Enrollment', detail: 'No images were enrolled. Ensure each image shows a clear, well-lit face.' });
+                }
+                this.enrollingFaces = false;
+                this.clearFaceSelection();
+                this.loadFaceCount();
+            },
+            error: (err: any) => {
+                this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.message || 'Failed to enroll face images.' });
+                this.enrollingFaces = false;
+            }
+        });
+    }
+
+    /** Delete all enrolled face images for the current employee. */
+    deleteEnrolledFaces(): void {
+        if (!this.canDelete) {
+            this.messageService.add({ severity: 'warn', summary: 'Permission Denied', detail: 'You do not have permission to delete face images.' });
+            return;
+        }
+        if (!this.employeeId) return;
+
+        this.empService.deleteEnrolledFaces(this.employeeId).subscribe({
+            next: () => {
+                this.messageService.add({ severity: 'success', summary: 'Success', detail: 'All enrolled face images removed.' });
+                this.loadFaceCount();
+            },
+            error: (err: any) => {
+                this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.message || 'Failed to remove face images.' });
+            }
+        });
+    }
+
+    private loadFaceCount(): void {
+        if (!this.employeeId) return;
+        this.empService.getEnrolledFaceCount(this.employeeId).subscribe({
+            next: (res) => { this.enrolledFaceCount = res?.photoCount ?? 0; },
+            error: () => { this.enrolledFaceCount = 0; }
+        });
+    }
+
+    private clearFaceSelection(): void {
+        this.facePreviewUrls.forEach((url) => URL.revokeObjectURL(url));
+        this.faceFiles = [];
+        this.facePreviewUrls = [];
+        this.faceUploader?.clear();
     }
 }
