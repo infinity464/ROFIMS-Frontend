@@ -6,7 +6,13 @@ import jsreport from '@jsreport/browser-client';
 // Dev: http://localhost:5488 (Node process on the dev machine).
 // Prod: '/jsreport-api' (relative) — IIS reverse-proxies to localhost:5488 on
 // the server, so the browser sees same-origin (no CORS, no mixed-content).
-const JSREPORT_SERVER_URL = environment.jsreportUrl;
+//
+// @jsreport/browser-client runs `new URL(serverUrl)` internally, which throws
+// on a relative path ("Failed to construct 'URL': Invalid URL"). So resolve a
+// relative value against the current page origin → absolute, still same-origin.
+const JSREPORT_SERVER_URL = /^https?:\/\//i.test(environment.jsreportUrl)
+    ? environment.jsreportUrl
+    : `${window.location.origin}${environment.jsreportUrl.startsWith('/') ? '' : '/'}${environment.jsreportUrl}`;
 
 /** Default chrome-pdf options shared across previews. Margins must leave space
  * for the footer (page numbers). 1cm bottom is enough at 9pt footer text. */
