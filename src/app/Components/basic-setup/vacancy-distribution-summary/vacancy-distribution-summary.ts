@@ -16,7 +16,7 @@ import { MasterBasicSetupService } from '../shared/services/MasterBasicSetupServ
 import { SharedService } from '@/shared/services/shared-service';
 import { CommonCode } from '../shared/models/common-code';
 import { OrganizationModel } from '../organization-setup/models/organization';
-import { MotherOrgRankVacancyDistributionModel } from '../shared/models/mother-org-rank-vacancy';
+import { MotherOrgRankVacancyDistributionModel, MotherOrgVacancyLockModel } from '../shared/models/mother-org-rank-vacancy';
 
 export interface RankColumn {
     field: string;
@@ -30,10 +30,16 @@ export interface DisplayRow {
     /** 0=Unit, 1=Wing, 2=Branch, 3=Sub-Branch, 4=Section, 5=Sub-Section */
     level: 0 | 1 | 2 | 3 | 4 | 5;
     officeName: string;
+    /** This office's OWN directly-assigned quantity per rank field (no descendants). */
+    ownByField: Record<string, number>;
+    /** Displayed quantity per rank field = own + sum of all descendants (roll-up). */
     qtyByField: Record<string, number>;
+    /** Displayed row total = sum of qtyByField (rolled-up). */
     total: number;
     /** Has at least one descendant row directly below */
     hasChildren: boolean;
+    /** Backend entry-lock: true = this office's cells are frozen against direct entry. */
+    locked: boolean;
     /** This row is the last sibling at its level (└ elbow). Otherwise ├ elbow. */
     isLast: boolean;
     /** For each ancestor level a (0..level-1): true = draw vertical pipe (ancestor has more siblings to come) */
@@ -76,6 +82,10 @@ export class VacancyDistributionSummaryComponent implements OnInit {
     /** ordered list: Unit > Wing > Branch > Sub-Branch > Section > Sub-Section; unitCodeId for filtering */
     private orderedRabIds: { codeId: number; level: 0 | 1 | 2 | 3 | 4 | 5; unitCodeId: number }[] = [];
     private lastDistributionList: MotherOrgRankVacancyDistributionModel[] = [];
+    /** rabCodeIds whose entry is locked in the backend for the selected org. */
+    private lockedRabIds = new Set<number>();
+    /** rabCodeId currently being toggled (shows spinner on the lock button). */
+    togglingLockRabId: number | null = null;
 
     showDistributionModal = false;
     distributionForm!: FormGroup;
@@ -307,15 +317,97 @@ export class VacancyDistributionSummaryComponent implements OnInit {
         return v > 0 ? String(v) : '—';
     }
 
+    /** Hover popover data + position for a parent cell's own/descendants breakdown. */
+    hoverBreakdown: { own: number; children: number; total: number } | null = null;
+    hoverPos = { x: 0, y: 0 };
+
+    /**
+     * Returns the own/descendants/total split for a parent cell — but only when the
+     * office has children AND both its own value and the descendants' sum are non-zero.
+     * Returns null otherwise (leaf rows, pure-own, or pure-children cells).
+     */
+    cellBreakdown(row: DisplayRow, col: RankColumn): { own: number; children: number; total: number } | null {
+        if (!row.hasChildren || this.isCellLocked(row)) return null;
+        const own = row.ownByField[col.field] ?? 0;
+        const total = row.qtyByField[col.field] ?? 0;
+        const children = total - own;
+        return own > 0 && children > 0 ? { own, children, total } : null;
+    }
+
+    onCellEnter(row: DisplayRow, col: RankColumn, event: MouseEvent): void {
+        if (this.editingCellKey) { this.hoverBreakdown = null; return; }
+        const bd = this.cellBreakdown(row, col);
+        this.hoverBreakdown = bd;
+        if (bd) this.hoverPos = { x: event.clientX, y: event.clientY };
+    }
+
+    onCellMove(event: MouseEvent): void {
+        if (this.hoverBreakdown) this.hoverPos = { x: event.clientX, y: event.clientY };
+    }
+
+    onCellLeave(): void {
+        this.hoverBreakdown = null;
+    }
+
     colTotalDisplay(field: string): string {
         const v = this.columnTotals[field] ?? 0;
         return v > 0 ? String(v) : '—';
     }
 
+    /** A cell is locked when the user has locked this office's entry in the backend. */
+    isCellLocked(row: DisplayRow): boolean {
+        return row.locked;
+    }
+
+    /** Toggle the backend entry-lock for an office (requires update permission). */
+    toggleLock(row: DisplayRow, event: Event): void {
+        event.stopPropagation();
+        if (!this.selectedOrg || !this.canUpdate || this.togglingLockRabId != null) return;
+        const next = !row.locked;
+        const model: MotherOrgVacancyLockModel = {
+            orgId: this.selectedOrg.orgId,
+            rabCodeId: row.rabCodeId,
+            isLocked: next,
+            createdBy: this.shareService.getCurrentUser?.() ?? 'System',
+            lastUpdatedBy: this.shareService.getCurrentUser?.() ?? 'System'
+        };
+        this.togglingLockRabId = row.rabCodeId;
+        this.masterBasicSetup.setMotherOrgVacancyLock(model).subscribe({
+            next: (res) => {
+                this.togglingLockRabId = null;
+                if (res?.statusCode === 200) {
+                    if (next) this.lockedRabIds.add(row.rabCodeId);
+                    else this.lockedRabIds.delete(row.rabCodeId);
+                    row.locked = next;
+                    // Close any in-progress edit on a row that just got locked.
+                    if (next && this.editingCellKey?.startsWith(`${row.rabCodeId}_`)) {
+                        this.editingCellKey = null;
+                    }
+                    this.messageService.add({
+                        severity: 'success', summary: 'Success',
+                        detail: next ? 'Entry locked' : 'Entry unlocked'
+                    });
+                } else {
+                    this.messageService.add({ severity: 'warn', summary: 'Warning', detail: res?.description ?? 'Failed to update lock' });
+                }
+            },
+            error: (err) => {
+                this.togglingLockRabId = null;
+                this.messageService.add({
+                    severity: 'error', summary: 'Error',
+                    detail: err?.error?.description ?? err?.message ?? 'Failed to update lock'
+                });
+            }
+        });
+    }
+
     startEdit(row: DisplayRow, col: RankColumn, event: Event): void {
         if (!this.selectedOrg) return;
+        // Block accidental direct entry on aggregate (parent) rows.
+        if (this.isCellLocked(row)) return;
         this.editingCellKey = this.cellKey(row, col.field);
-        this.editingCellValue = row.qtyByField[col.field] ?? 0;
+        // Edit this office's OWN value, not the rolled-up display total.
+        this.editingCellValue = row.ownByField[col.field] ?? 0;
         // Focus the input after render
         setTimeout(() => {
             const el = (event.target as HTMLElement)?.closest('td')?.querySelector('input');
@@ -341,7 +433,7 @@ export class VacancyDistributionSummaryComponent implements OnInit {
 
     private saveCell(row: DisplayRow, col: RankColumn): void {
         if (!this.selectedOrg) { this.editingCellKey = null; return; }
-        const oldValue = row.qtyByField[col.field] ?? 0;
+        const oldValue = row.ownByField[col.field] ?? 0;
         const newValue = this.editingCellValue ?? 0;
 
         // No change — just close
@@ -378,19 +470,13 @@ export class VacancyDistributionSummaryComponent implements OnInit {
             next: (res) => {
                 this.savingCellKey = null;
                 if (res?.statusCode === 200) {
-                    // Update local data immediately
-                    const diff = newValue - oldValue;
-                    row.qtyByField[col.field] = newValue;
-                    row.total += diff;
-                    this.columnTotals[col.field] = (this.columnTotals[col.field] ?? 0) + diff;
-                    this.grandTotal += diff;
-
-                    // Update distribution list cache
+                    // Update distribution cache, then rebuild so ancestor roll-ups refresh.
                     if (existing) {
                         existing.quantity = newValue;
                     } else {
                         this.lastDistributionList.push({ ...model });
                     }
+                    this.buildDisplayRows(this.lastDistributionList);
                 } else {
                     this.messageService.add({ severity: 'warn', summary: 'Warning', detail: res?.description ?? 'Save failed' });
                 }
@@ -558,15 +644,21 @@ export class VacancyDistributionSummaryComponent implements OnInit {
                     header: rankNameById[r.codeId] ?? String(r.codeId),
                     motherOrgRankId: r.codeId
                 }));
-                forkJoin(
-                    rankList.map((r) =>
-                        this.masterBasicSetup.getMotherOrgRankVacancyDistributionByVacancy(orgId, r.codeId)
-                    )
-                ).subscribe({
-                            next: (distPerRank) => {
+                forkJoin({
+                    distPerRank: forkJoin(
+                        rankList.map((r) =>
+                            this.masterBasicSetup.getMotherOrgRankVacancyDistributionByVacancy(orgId, r.codeId)
+                        )
+                    ),
+                    locks: this.masterBasicSetup.getMotherOrgVacancyLocksByOrg(orgId)
+                }).subscribe({
+                            next: ({ distPerRank, locks }) => {
                                 const allDist: MotherOrgRankVacancyDistributionModel[] = [];
                                 distPerRank.forEach((list) => allDist.push(...(list ?? [])));
                                 this.lastDistributionList = allDist;
+                                this.lockedRabIds = new Set(
+                                    (locks ?? []).filter((l) => l.isLocked).map((l) => l.rabCodeId)
+                                );
                                 this.buildDisplayRows(allDist);
                                 this.loading = false;
                             },
@@ -608,29 +700,54 @@ export class VacancyDistributionSummaryComponent implements OnInit {
 
         source.forEach(({ codeId, level }) => {
             const qtyByRankId = byRab.get(codeId) ?? {};
-            const qtyByField: Record<string, number> = {};
-            let rowTotal = 0;
+            const ownByField: Record<string, number> = {};
+            let ownTotal = 0;
             this.dynamicColumns.forEach((col) => {
                 const qty = qtyByRankId[col.motherOrgRankId] ?? 0;
-                qtyByField[col.field] = qty;
-                rowTotal += qty;
+                ownByField[col.field] = qty;
+                ownTotal += qty;
+                // Column/grand totals use OWN values only — roll-up rows must not double-count.
                 this.columnTotals[col.field] = (this.columnTotals[col.field] ?? 0) + qty;
             });
-            this.grandTotal += rowTotal;
+            this.grandTotal += ownTotal;
             rows.push({
                 rabCodeId: codeId,
                 level,
                 officeName: this.rabNameById[codeId] ?? String(codeId),
-                qtyByField,
-                total: rowTotal,
+                ownByField,
+                qtyByField: { ...ownByField },
+                total: ownTotal,
+                locked: this.lockedRabIds.has(codeId),
                 hasChildren: false,
                 isLast: true,
                 branchLines: []
             });
         });
 
+        this.applyRollup(rows);
         this.decorateTreeShape(rows);
         this.displayRows = rows;
+    }
+
+    /**
+     * Roll up every non-leaf row's displayed quantity to own + sum of all descendants.
+     * Rows are in pre-order, so a row's descendants are the contiguous block that
+     * follows it until the next row at the same-or-shallower level.
+     */
+    private applyRollup(rows: DisplayRow[]): void {
+        for (let i = 0; i < rows.length; i++) {
+            const row = rows[i];
+            const rolled: Record<string, number> = { ...row.ownByField };
+            for (let j = i + 1; j < rows.length; j++) {
+                if (rows[j].level <= row.level) break;
+                const descOwn = rows[j].ownByField;
+                for (const field in descOwn) {
+                    rolled[field] = (rolled[field] ?? 0) + descOwn[field];
+                }
+            }
+            row.qtyByField = rolled;
+            row.total = this.dynamicColumns.reduce((sum, col) => sum + (rolled[col.field] ?? 0), 0);
+        }
     }
 
     /** Compute hasChildren / isLast / branchLines for tree connector rendering. */

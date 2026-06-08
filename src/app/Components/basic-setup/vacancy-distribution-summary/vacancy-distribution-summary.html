@@ -100,11 +100,35 @@
                                             {{ row.hasChildren ? '▼' : '•' }}
                                         </span>
                                         <span class="tree-label">{{ row.officeName }}</span>
+                                        @if (row.hasChildren) {
+                                            @if (canUpdate) {
+                                                <button type="button"
+                                                        class="tree-lock-btn"
+                                                        [class.tree-lock-btn--locked]="row.locked"
+                                                        [attr.title]="row.locked ? 'Entry locked — click to unlock' : 'Lock entry for this office'"
+                                                        [disabled]="togglingLockRabId === row.rabCodeId"
+                                                        (click)="toggleLock(row, $event)">
+                                                    @if (togglingLockRabId === row.rabCodeId) {
+                                                        <i class="pi pi-spin pi-spinner"></i>
+                                                    } @else {
+                                                        <i class="pi" [class.pi-lock]="row.locked" [class.pi-lock-open]="!row.locked"></i>
+                                                    }
+                                                </button>
+                                            } @else if (row.locked) {
+                                                <i class="pi pi-lock tree-lock-static" title="Entry locked"></i>
+                                            }
+                                        }
                                     </div>
                                 </td>
                                 @for (col of dynamicColumns; track col.field) {
-                                    <td class="dist-table__cell dist-table__cell--editable"
+                                    <td class="dist-table__cell"
+                                        [class.dist-table__cell--editable]="!isCellLocked(row)"
+                                        [class.dist-table__cell--locked]="isCellLocked(row)"
                                         [class.dist-table__cell--saving]="savingCellKey === cellKey(row, col.field)"
+                                        [class.dist-table__cell--breakdown]="cellBreakdown(row, col)"
+                                        (mouseenter)="onCellEnter(row, col, $event)"
+                                        (mousemove)="onCellMove($event)"
+                                        (mouseleave)="onCellLeave()"
                                         (click)="startEdit(row, col, $event)">
                                         @if (editingCellKey === cellKey(row, col.field)) {
                                             <input type="number"
@@ -287,4 +311,28 @@
             <p-button label="Save" icon="pi pi-check" [loading]="isSubmittingDistribution" [disabled]="distributionForm.invalid" (onClick)="saveDistributionModal()"></p-button>
         </ng-template>
     </p-dialog>
+
+    <!-- Own / Descendants breakdown popover (follows cursor, never clipped) -->
+    @if (hoverBreakdown) {
+        <div class="dist-breakdown-pop"
+             [style.left.px]="hoverPos.x"
+             [style.top.px]="hoverPos.y">
+            <div class="dist-breakdown-pop__row">
+                <span class="dist-breakdown-pop__label">Own</span>
+                <span class="dist-breakdown-pop__val dist-breakdown-pop__val--own">{{ hoverBreakdown.own }}</span>
+            </div>
+            <div class="dist-breakdown-pop__row">
+                <span class="dist-breakdown-pop__label">Descendants</span>
+                <span class="dist-breakdown-pop__val dist-breakdown-pop__val--desc">{{ hoverBreakdown.children }}</span>
+            </div>
+            <div class="dist-breakdown-pop__divider"></div>
+            <div class="dist-breakdown-pop__row">
+                <span class="dist-breakdown-pop__label dist-breakdown-pop__label--total">Total</span>
+                <span class="dist-breakdown-pop__val dist-breakdown-pop__val--total">{{ hoverBreakdown.total }}</span>
+            </div>
+            <div class="dist-breakdown-pop__formula">
+                {{ hoverBreakdown.own }} + {{ hoverBreakdown.children }} = {{ hoverBreakdown.total }}
+            </div>
+        </div>
+    }
 </p-fluid>
