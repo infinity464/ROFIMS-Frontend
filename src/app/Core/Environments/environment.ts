@@ -5,7 +5,10 @@ export const environment = {
         //core: 'http://114.134.95.234:31999/rab/api',
         auth: 'https://localhost:7187'
         //auth: 'http://114.134.95.234:31999'
-    }
+    },
+    // JsReport CE server. Dev: local Node process on :5488.
+    // Prod: '/jsreport-api' (IIS reverse-proxies to localhost:5488 → same-origin).
+    jsreportUrl: 'http://localhost:5488'
 };
 
 // export const environment = {
