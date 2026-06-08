@@ -8,6 +8,7 @@ import {
     type ManpowerSummaryResponse
 } from '@/services/statistics.service';
 import { UserMenuService } from '@/services/user-menu.service';
+import { OrgTreeFilterComponent } from '../shared/org-tree-filter/org-tree-filter.component';
 
 const SLICE_COLORS = [
     '#4f46e5','#06b6d4','#10b981','#f59e0b','#ef4444',
@@ -61,7 +62,7 @@ const PIE_PERCENTAGE_PLUGIN = {
 @Component({
     selector: 'app-manpower-chart',
     standalone: true,
-    imports: [CommonModule, ChartModule],
+    imports: [CommonModule, ChartModule, OrgTreeFilterComponent],
     templateUrl: './manpower-chart.html',
     styleUrl: './manpower-chart.scss'
 })
@@ -78,6 +79,9 @@ export class ManpowerChartComponent implements OnInit {
 
     /** Names of the RAB Units the user is restricted to. null/empty = full access. */
     accessibleRabUnitNames: string[] | null = null;
+
+    /** Org-tree node filter (Unit/Wing/Branch/…) — scopes the chart server-side. */
+    filterRabCodeId: number | null = null;
 
     authData: any = null;
     heldData: any = null;
@@ -98,9 +102,14 @@ export class ManpowerChartComponent implements OnInit {
         this.loadData();
     }
 
+    onOrgTreeFilter(e: { codeId: number | null; label: string | null }): void {
+        this.filterRabCodeId = e.codeId;
+        this.loadData();
+    }
+
     loadData(): void {
         this.loading = true;
-        this.statisticsService.getManpowerSummary().subscribe({
+        this.statisticsService.getManpowerSummary(this.filterRabCodeId).subscribe({
             next: (res: ManpowerSummaryResponse) => {
                 this.rows   = res.rows ?? [];
                 this.accessibleRabUnitNames = res.accessibleRabUnitNames ?? null;

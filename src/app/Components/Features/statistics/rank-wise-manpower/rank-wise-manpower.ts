@@ -18,13 +18,15 @@ import {
     type RankWiseManpowerResponse
 } from '@/services/statistics.service';
 import { MasterBasicSetupService } from '@/Components/basic-setup/shared/services/MasterBasicSetupService';
+import { OrgTreeFilterComponent } from '../shared/org-tree-filter/org-tree-filter.component';
+import { RabReportPrintService } from '../shared/rab-report-print.service';
 
 type Lang = 'en' | 'bn';
 
 @Component({
     selector: 'app-rank-wise-manpower',
     standalone: true,
-    imports: [CommonModule, FormsModule, MultiSelectModule, CheckboxModule],
+    imports: [CommonModule, FormsModule, MultiSelectModule, CheckboxModule, OrgTreeFilterComponent],
     templateUrl: './rank-wise-manpower.html',
     styleUrl: './rank-wise-manpower.scss'
 })
@@ -54,6 +56,10 @@ export class RankWiseManpowerComponent implements OnInit {
     /** Currently selected org IDs (empty = show all) */
     selectedOrgIds: number[] = [];
 
+    /** Org-tree node filter (Unit/Wing/Branch/…) — scopes Auth + Held server-side. */
+    filterRabCodeId: number | null = null;
+    filterLabel: string | null = null;
+
     /** When true, the equivalent-name (basic-setup/rank-equivalent) is appended in parens after each rank name. */
     showEquivalentRanks = false;
 
@@ -79,8 +85,15 @@ export class RankWiseManpowerComponent implements OnInit {
         private _userMenuService: UserMenuService,
         private statisticsService: StatisticsService,
         private exportService: ExportService,
-        private masterBasicSetup: MasterBasicSetupService
+        private masterBasicSetup: MasterBasicSetupService,
+        private rabPrint: RabReportPrintService
     ) {}
+
+    onOrgTreeFilter(e: { codeId: number | null; label: string | null }): void {
+        this.filterRabCodeId = e.codeId;
+        this.filterLabel = e.label;
+        this.loadData();
+    }
 
     @HostListener('document:click')
     onDocumentClick(): void { this.exportDropdownOpen = false; }
@@ -131,7 +144,7 @@ export class RankWiseManpowerComponent implements OnInit {
 
     loadData(): void {
         this.loading = true;
-        this.statisticsService.getRankWiseManpower().subscribe({
+        this.statisticsService.getRankWiseManpower(this.filterRabCodeId).subscribe({
             next: (res: RankWiseManpowerResponse) => {
                 this.allOrgs = res.orgs ?? [];
                 this.filteredOrgs = [...this.allOrgs];
@@ -191,6 +204,23 @@ export class RankWiseManpowerComponent implements OnInit {
         this.exportDropdownOpen = !this.exportDropdownOpen;
     }
 
+    /** Label/value pairs for the print letterhead's SELECTION CRITERIA grid. */
+    private buildCriteriaItems(): { label: string; value: string }[] {
+        const bn = this.lang === 'bn';
+        const items: { label: string; value: string }[] = [];
+        if (this.filterLabel) items.push({ label: bn ? 'অফিস' : 'OFFICE', value: this.filterLabel });
+        const unitNames = (bn ? this.accessibleRabUnitNamesBN : this.accessibleRabUnitNames) ?? this.accessibleRabUnitNames;
+        if (unitNames && unitNames.length > 0) items.push({ label: bn ? 'ইউনিট' : 'UNITS', value: unitNames.join(', ') });
+        const mtNames = (bn ? this.accessibleMemberTypeNamesBN : this.accessibleMemberTypeNames) ?? this.accessibleMemberTypeNames;
+        if (mtNames && mtNames.length > 0) items.push({ label: bn ? 'সদস্য ধরণ' : 'MEMBER TYPES', value: mtNames.join(', ') });
+        if (this.selectedOrgIds.length > 0) {
+            const names = this.orgOptions.filter(o => this.selectedOrgIds.includes(o.value)).map(o => o.label);
+            if (names.length) items.push({ label: bn ? 'বাহিনী' : 'ORGANIZATIONS', value: names.join(', ') });
+        }
+        if (items.length === 0) items.push({ label: bn ? 'পরিসর' : 'SCOPE', value: bn ? 'সকল ইউনিট' : 'All Unit' });
+        return items;
+    }
+
     async exportAs(type: 'pdf' | 'print' | 'word' | 'excel'): Promise<void> {
         this.exportDropdownOpen = false;
 
@@ -247,6 +277,24 @@ export class RankWiseManpowerComponent implements OnInit {
             filterLines: scope ? [scope] : undefined
         };
 
+        // Print uses the shared RAB letterhead (frontend only). Numeric columns
+        // start at index 2 (Ser + Rank are the left text columns).
+        if (type === 'print') {
+            this.rabPrint.print({
+                lang: this.lang,
+                reportTitle: this.titleLabel,
+                criteriaItems: this.buildCriteriaItems(),
+                columns: sectionedConfig.columns.map((label, i) => ({
+                    label, align: i <= 1 ? 'left' : 'center', mono: i >= 2
+                })),
+                sections: sectionedConfig.sections.map(s => ({
+                    title: s.title, rows: s.rows, totalRow: s.subtotalRow
+                })),
+                grandTotalRow: sectionedConfig.grandTotalRow
+            });
+            return;
+        }
+
         try {
             this.exporting = true;
             switch (type) {
@@ -256,19 +304,12 @@ export class RankWiseManpowerComponent implements OnInit {
                 case 'excel':
                     this.exportService.exportExcelSectioned(sectionedConfig);
                     break;
-                case 'pdf':
-                case 'print': {
-                    // PDF opens as a preview tab; Print opens a popup with the PDF
-                    // in an iframe and auto-triggers the browser's print dialog.
+                case 'pdf': {
                     const doc = this.exportService.buildSectionedWordDoc(sectionedConfig);
                     const docxBlob = await Packer.toBlob(doc);
                     const pdfBlob = await this.convertDocxToPdf(docxBlob);
                     const pdfUrl = URL.createObjectURL(pdfBlob);
-                    if (type === 'pdf') {
-                        window.open(pdfUrl, '_blank');
-                    } else {
-                        this.exportService.openPdfPrintPopup(pdfUrl);
-                    }
+                    window.open(pdfUrl, '_blank');
                     break;
                 }
             }

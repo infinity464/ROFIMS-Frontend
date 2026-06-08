@@ -450,6 +450,8 @@ export class ManpowerSummaryComponent implements OnInit {
 
     table { width: 100%; border-collapse: collapse; font-family: ${sans}; font-size: 9pt; }
     thead { display: table-header-group; }
+    /* Total row on the LAST page only — table-footer-group would repeat it every page. */
+    tfoot { display: table-row-group; }
     thead th { background: #0b0b0b; color: #d9c79a; font-family: ${mono}; font-size: 7pt; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; padding: 2mm; text-align: center; vertical-align: middle; white-space: nowrap; border: 1px solid rgba(11,11,11,0.05); ${isBn ? 'letter-spacing:0.04em;font-family:' + sans + ';' : ''} }
     tbody td { padding: 2mm; font-size: 9pt; color: #0b0b0b; border: 1px solid rgba(11,11,11,0.06); vertical-align: middle; background: #fff; }
     tbody tr:nth-child(even) td { background: #fafaf6; }

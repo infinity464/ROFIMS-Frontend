@@ -7,7 +7,7 @@
         <!-- Row 1: filter left | buttons right -->
         <div class="report-toolbar-row">
 
-            <!-- Org filter multiselect -->
+            <!-- Org filter multiselect + RAB org-tree cascade filter -->
             <div class="org-filter-wrap">
                 <p-multiselect
                     [(ngModel)]="selectedOrgIds"
@@ -22,6 +22,7 @@
                     styleClass="org-filter-select"
                     [disabled]="loading">
                 </p-multiselect>
+                <app-org-tree-filter (filterChange)="onOrgTreeFilter($event)"></app-org-tree-filter>
             </div>
 
             <!-- Lang + Export -->
@@ -62,10 +63,6 @@
                             <button type="button" class="report-export-item report-export-print"
                                     (click)="exportAs('print')">
                                 <i class="pi pi-print" style="font-size:0.75rem"></i> Print
-                            </button>
-                            <button type="button" class="report-export-item report-export-pdf"
-                                    (click)="exportAs('pdf')">
-                                <span class="report-export-icon">⬇</span> PDF
                             </button>
                             <button type="button" class="report-export-item report-export-word"
                                     (click)="exportAs('word')">

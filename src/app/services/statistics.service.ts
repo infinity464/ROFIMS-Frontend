@@ -285,23 +285,29 @@ export class StatisticsService {
         return this.http.get<ManpowerSummaryResponse>(`${this.apiUrl}/GetManpowerSummary`, { params });
     }
 
-    getRankWiseManpower(): Observable<RankWiseManpowerResponse> {
-        return this.http.get<RankWiseManpowerResponse>(`${this.apiUrl}/GetRankWiseManpower`);
+    getRankWiseManpower(rabCodeId?: number | null): Observable<RankWiseManpowerResponse> {
+        const params: any = {};
+        if (rabCodeId != null) params.rabCodeId = rabCodeId;
+        return this.http.get<RankWiseManpowerResponse>(`${this.apiUrl}/GetRankWiseManpower`, { params });
     }
 
     getMotherOrgOptions(): Observable<MotherUnitOrgOption[]> {
         return this.http.get<MotherUnitOrgOption[]>(`${this.apiUrl}/GetMotherOrgOptions`);
     }
 
-    getMotherUnitWiseManpower(orgId: number): Observable<MotherUnitWiseManpowerResponse> {
+    getMotherUnitWiseManpower(orgId: number, rabCodeId?: number | null): Observable<MotherUnitWiseManpowerResponse> {
+        const params: any = { orgId };
+        if (rabCodeId != null) params.rabCodeId = rabCodeId;
         return this.http.get<MotherUnitWiseManpowerResponse>(
-            `${this.apiUrl}/GetMotherUnitWiseManpower`, { params: { orgId } }
+            `${this.apiUrl}/GetMotherUnitWiseManpower`, { params }
         );
     }
 
-    getCorpsWiseManpower(orgId: number): Observable<CorpsWiseManpowerResponse> {
+    getCorpsWiseManpower(orgId: number, rabCodeId?: number | null): Observable<CorpsWiseManpowerResponse> {
+        const params: any = { orgId };
+        if (rabCodeId != null) params.rabCodeId = rabCodeId;
         return this.http.get<CorpsWiseManpowerResponse>(
-            `${this.apiUrl}/GetCorpsWiseManpower`, { params: { orgId } }
+            `${this.apiUrl}/GetCorpsWiseManpower`, { params }
         );
     }
 
@@ -311,16 +317,19 @@ export class StatisticsService {
         );
     }
 
-    getTradeWiseManpower(orgId: number, corpsId?: number): Observable<TradeWiseManpowerResponse> {
+    getTradeWiseManpower(orgId: number, corpsId?: number, rabCodeId?: number | null): Observable<TradeWiseManpowerResponse> {
         const params: any = { orgId };
         if (corpsId != null) params.corpsId = corpsId;
+        if (rabCodeId != null) params.rabCodeId = rabCodeId;
         return this.http.get<TradeWiseManpowerResponse>(
             `${this.apiUrl}/GetTradeWiseManpower`, { params }
         );
     }
 
-    getMemberTypeWiseManpower(): Observable<MemberTypeWiseManpowerResponse> {
-        return this.http.get<MemberTypeWiseManpowerResponse>(`${this.apiUrl}/GetMemberTypeWiseManpower`);
+    getMemberTypeWiseManpower(rabCodeId?: number | null): Observable<MemberTypeWiseManpowerResponse> {
+        const params: any = {};
+        if (rabCodeId != null) params.rabCodeId = rabCodeId;
+        return this.http.get<MemberTypeWiseManpowerResponse>(`${this.apiUrl}/GetMemberTypeWiseManpower`, { params });
     }
 
     getUnitRankWiseManpower(
