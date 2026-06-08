@@ -1,4 +1,4 @@
-import { Component, OnInit, inject } from '@angular/core';
+import { Component, OnInit, ViewChild, ElementRef, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
@@ -25,6 +25,7 @@ import { NotesheetMembersTableComponent } from '@/Components/Shared/notesheet-me
 import { Document, Packer, Paragraph, TextRun, AlignmentType, BorderStyle, Table, TableRow, TableCell, WidthType, VerticalAlign, TableLayoutType } from 'docx';
 import { saveAs } from 'file-saver';
 import { firstValueFrom } from 'rxjs';
+import { JsReportService } from '@/services/jsreport.service';
 
 @Component({
     selector: 'app-office-order-ex-bd-leave-preview',
@@ -57,6 +58,9 @@ export class OfficeOrderExBdLeavePreviewComponent implements OnInit {
     private empService = inject(EmpService);
     private messageService = inject(MessageService);
     private sanitizer = inject(DomSanitizer);
+    private jsreportService = inject(JsReportService);
+
+    @ViewChild('legalPaper') legalPaper!: ElementRef<HTMLDivElement>;
 
     readonly ApprovalStatus = ApprovalStatus;
 
@@ -603,33 +607,108 @@ export class OfficeOrderExBdLeavePreviewComponent implements OnInit {
         }
     }
 
+    // ─── PDF download via JsReport (chrome-pdf, exact web view) ──
     async exportPdf(): Promise<void> {
+        if (!this.order || !this.legalPaper) return;
         this.exportingPdf = true;
         try {
-            const doc = await this.buildWordDocument();
-            const docxBlob = await Packer.toBlob(doc);
-            const form = new FormData();
-            form.append('file', docxBlob, 'document.docx');
-            const pdfBlob = await firstValueFrom(this.http.post(`${environment.apis.core}/Document/ConvertToPdf`, form, { responseType: 'blob' }));
-            saveAs(pdfBlob, `ExBdLeaveOfficeOrder_${this.order?.letterNo ?? 'export'}.pdf`);
-        } catch {
-            this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to export PDF.' });
+            const { html, chrome } = this.buildJsReportPdf();
+            await this.jsreportService.downloadPdf(
+                html, {}, `ExBdLeaveOfficeOrder_${this.order?.letterNo ?? 'export'}.pdf`, chrome,
+            );
+        } catch (err: any) {
+            this.messageService.add({
+                severity: 'error', summary: 'JsReport error',
+                detail: err?.message || 'Failed to render PDF via JsReport. Is the server reachable?'
+            });
         } finally { this.exportingPdf = false; }
     }
 
+    // ─── Print Preview via JsReport (chrome-pdf, new tab) ──
     async printPreview(): Promise<void> {
+        if (!this.order || !this.legalPaper) return;
         this.printingPreview = true;
         try {
-            const doc = await this.buildWordDocument();
-            const docxBlob = await Packer.toBlob(doc);
-            const form = new FormData();
-            form.append('file', docxBlob, 'document.docx');
-            const pdfBlob = await firstValueFrom(this.http.post(`${environment.apis.core}/Document/ConvertToPdf`, form, { responseType: 'blob' }));
-            const url = URL.createObjectURL(pdfBlob);
-            window.open(url, '_blank');
-        } catch {
-            this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to generate print preview.' });
+            const { html, chrome } = this.buildJsReportPdf();
+            await this.jsreportService.previewPdfInNewTab(
+                html, {}, `ExBdLeaveOfficeOrder_${this.order?.letterNo ?? 'export'}`, chrome,
+            );
+        } catch (err: any) {
+            this.messageService.add({
+                severity: 'error', summary: 'JsReport error',
+                detail: err?.message || 'Failed to render PDF via JsReport. Is the server reachable?'
+            });
         } finally { this.printingPreview = false; }
+    }
+
+    /**
+     * Build chrome-pdf HTML + chrome options reproducing the on-screen
+     * `.legal-paper` exactly. Ships every same-origin stylesheet so Chromium
+     * applies the scoped `.oo-*` CSS; @page insets mirror `.legal-paper`'s
+     * padding (14/10/20mm) so the text column matches the web view.
+     */
+    private buildJsReportPdf(): { html: string; chrome: Record<string, unknown> } {
+        const styles = this.collectDocumentStyles();
+        const body = this.legalPaper.nativeElement.innerHTML;
+        const isLetter = this.selectedPageSize === 'letter';
+        // a4: 210×297mm (190mm column). letter: 215.9×279.4mm (195.9mm column).
+        const pageWidth = isLetter ? '215.9mm' : '210mm';
+        const pageHeight = isLetter ? '279.4mm' : '297mm';
+        const colWidth = isLetter ? '195.9mm' : '190mm';
+        const padX = 10, padTop = 14, padBottom = 20; // mm — .legal-paper padding
+
+        const html = `<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+${styles}
+
+@page { size: ${pageWidth} ${pageHeight}; margin: ${padTop}mm ${padX}mm ${padBottom}mm ${padX}mm; }
+html, body { margin: 0; padding: 0; background: transparent; }
+
+.no-print, .preview-header, .preview-actions, .approval-header-right, .oo-onulipi-filter, .oo-file-attachments { display: none !important; }
+
+.pdf-flow {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    width: ${colWidth};
+    font-family: 'Times New Roman', 'Noto Sans Bengali', 'SolaimanLipi', Times, serif;
+    font-size: 10pt;
+    line-height: 1.7;
+    color: #000;
+}
+</style>
+</head>
+<body>
+<div class="pdf-flow">${body}</div>
+</body>
+</html>`;
+
+        const chrome: Record<string, unknown> = {
+            format: null,
+            width: pageWidth,
+            height: pageHeight,
+            landscape: false,
+            marginTop: '0', marginBottom: '0', marginLeft: '0', marginRight: '0',
+            printBackground: true,
+            displayHeaderFooter: false,
+            headerTemplate: '', footerTemplate: ''
+        };
+
+        return { html, chrome };
+    }
+
+    /** Concatenate every same-origin stylesheet loaded into the page. */
+    private collectDocumentStyles(): string {
+        const out: string[] = [];
+        for (const sheet of Array.from(document.styleSheets)) {
+            try {
+                for (const rule of Array.from(sheet.cssRules)) out.push(rule.cssText);
+            } catch { /* cross-origin — skip */ }
+        }
+        return out.join('\n');
     }
 
     // ─── Approval ───────────────────────────────────────
