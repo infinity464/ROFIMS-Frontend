@@ -321,7 +321,7 @@ export class ReportStayAfterRelieverJoinedComponent implements OnInit {
     get rabOrgSubtitle(): string { return this.lang === 'bn' ? 'বাংলাদেশ পুলিশ · সদর দপ্তর, কুর্মিটোলা, ঢাকা' : 'Bangladesh Police · Headquarters, Kurmitola, Dhaka'; }
     get rabSectionTitle(): string { return this.reportTitle; }
     get rabCriteriaTitle(): string { return this.lang === 'bn' ? 'নির্বাচন মানদণ্ড' : 'SELECTION CRITERIA'; }
-    get rabGeneratedLabel(): string { return this.lang === 'bn' ? 'উৎপন্ন' : 'GENERATED'; }
+    get rabGeneratedLabel(): string { return this.lang === 'bn' ? 'তারিখ' : 'GENERATED'; }
     get rabFormattedDate(): string {
         const now = new Date();
         return this.lang === 'bn'

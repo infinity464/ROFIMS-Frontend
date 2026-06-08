@@ -285,7 +285,7 @@ export class ReportSupernumeraryComponent implements OnInit {
     }
     get rabSectionTitle(): string { return this.L[this.lang]['report.title.supernumerary']; }
     get rabCriteriaTitle(): string { return this.lang === 'bn' ? 'নির্বাচন মানদণ্ড' : 'SELECTION CRITERIA'; }
-    get rabGeneratedLabel(): string { return this.lang === 'bn' ? 'উৎপন্ন' : 'GENERATED'; }
+    get rabGeneratedLabel(): string { return this.lang === 'bn' ? 'তারিখ' : 'GENERATED'; }
     get rabFormattedDate(): string {
         const now = new Date();
         return this.lang === 'bn'

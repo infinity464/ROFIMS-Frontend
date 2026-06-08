@@ -353,7 +353,7 @@ export class ReportAddressIndividualComponent implements OnInit, OnChanges {
     }
     get rabSectionTitle(): string { return this.lang === 'bn' ? 'ঠিকানা প্রতিবেদন' : 'ADDRESS REPORT'; }
     get rabSubtitleText(): string { return ''; }
-    get rabGeneratedLabel(): string { return this.lang === 'bn' ? 'উৎপন্ন' : 'GENERATED'; }
+    get rabGeneratedLabel(): string { return this.lang === 'bn' ? 'তারিখ' : 'GENERATED'; }
     get rabFormattedDate(): string {
         const now = new Date();
         return this.lang === 'bn'

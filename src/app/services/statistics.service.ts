@@ -279,8 +279,10 @@ export class StatisticsService {
 
     constructor(private http: HttpClient) {}
 
-    getManpowerSummary(): Observable<ManpowerSummaryResponse> {
-        return this.http.get<ManpowerSummaryResponse>(`${this.apiUrl}/GetManpowerSummary`);
+    getManpowerSummary(rabCodeId?: number | null): Observable<ManpowerSummaryResponse> {
+        const params: any = {};
+        if (rabCodeId != null) params.rabCodeId = rabCodeId;
+        return this.http.get<ManpowerSummaryResponse>(`${this.apiUrl}/GetManpowerSummary`, { params });
     }
 
     getRankWiseManpower(): Observable<RankWiseManpowerResponse> {

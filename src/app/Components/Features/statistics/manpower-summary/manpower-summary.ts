@@ -2,12 +2,16 @@ import { Component, HostListener, OnInit, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Router } from '@angular/router';
 import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
+import { SelectModule } from 'primeng/select';
 import { firstValueFrom } from 'rxjs';
 import { Packer } from 'docx';
 import { ExportService } from '@/services/export.service';
 import { UserMenuService } from '@/services/user-menu.service';
 import { BanglaNumerals } from '@/Core/i18n/bangla-numerals';
 import { environment } from '@/Core/Environments/environment';
+import { MasterBasicSetupService } from '@/Components/basic-setup/shared/services/MasterBasicSetupService';
+import { CommonCode } from '@/Components/basic-setup/shared/models/common-code';
 import {
     StatisticsService,
     type ManpowerSummaryRow,
@@ -35,10 +39,18 @@ const COLUMNS: ColDef[] = [
     { field: 'remark',     labelEn: 'Remark',        labelBn: 'মন্তব্য' }
 ];
 
+/** One level of the RAB org-tree cascade filter (Unit → … → Sub-Section). */
+interface FilterLevel {
+    labelEn: string;
+    labelBn: string;
+    options: { codeId: number; label: string }[];
+    selectedId: number | null;
+}
+
 @Component({
     selector: 'app-manpower-summary',
     standalone: true,
-    imports: [CommonModule],
+    imports: [CommonModule, FormsModule, SelectModule],
     templateUrl: './manpower-summary.html',
     styleUrl: './manpower-summary.scss'
 })
@@ -64,7 +76,18 @@ export class ManpowerSummaryComponent implements OnInit {
 
     readonly columns = COLUMNS;
 
+    /** Cascading RAB org-tree filter: Unit → Wing → Branch → Sub-Branch → Section → Sub-Section. */
+    filterLevels: FilterLevel[] = [
+        { labelEn: 'Unit',        labelBn: 'ইউনিট',      options: [], selectedId: null },
+        { labelEn: 'Wing',        labelBn: 'উইং',         options: [], selectedId: null },
+        { labelEn: 'Branch',      labelBn: 'শাখা',        options: [], selectedId: null },
+        { labelEn: 'Sub-Branch',  labelBn: 'উপ-শাখা',     options: [], selectedId: null },
+        { labelEn: 'Section',     labelBn: 'সেকশন',       options: [], selectedId: null },
+        { labelEn: 'Sub-Section', labelBn: 'উপ-সেকশন',    options: [], selectedId: null }
+    ];
+
     private http = inject(HttpClient);
+    private masterBasicSetup = inject(MasterBasicSetupService);
 
     constructor(
         private _router: Router,
@@ -72,6 +95,74 @@ export class ManpowerSummaryComponent implements OnInit {
         private statisticsService: StatisticsService,
         private exportService: ExportService
     ) {}
+
+    /** Deepest selected node id in the cascade — the active filter (null = none). */
+    get resolvedFilterCodeId(): number | null {
+        for (let i = this.filterLevels.length - 1; i >= 0; i--) {
+            if (this.filterLevels[i].selectedId != null) return this.filterLevels[i].selectedId;
+        }
+        return null;
+    }
+
+    /** Label of the deepest selected node, for the report scope line. */
+    get filterScopeLabel(): string | null {
+        for (let i = this.filterLevels.length - 1; i >= 0; i--) {
+            const lv = this.filterLevels[i];
+            if (lv.selectedId != null) {
+                return lv.options.find((o) => o.codeId === lv.selectedId)?.label ?? null;
+            }
+        }
+        return null;
+    }
+
+    get hasActiveFilter(): boolean {
+        return this.resolvedFilterCodeId != null;
+    }
+
+    filterLevelLabel(lv: FilterLevel): string {
+        // Filter dropdowns stay in English regardless of the report language toggle.
+        return lv.labelEn;
+    }
+
+    /** Load the root Units into level 0. */
+    private loadFilterUnits(): void {
+        this.masterBasicSetup.getAllByType('RabUnit').subscribe({
+            next: (items) => {
+                this.filterLevels[0].options = (items ?? []).map((c: CommonCode) => ({
+                    codeId: c.codeId, label: c.codeValueEN ?? String(c.codeId)
+                }));
+            }
+        });
+    }
+
+    /** A cascade dropdown changed: clear deeper levels, load this node's children, reload. */
+    onFilterChange(levelIndex: number): void {
+        // Clear every deeper level's selection + options.
+        for (let i = levelIndex + 1; i < this.filterLevels.length; i++) {
+            this.filterLevels[i].selectedId = null;
+            this.filterLevels[i].options = [];
+        }
+        const selectedId = this.filterLevels[levelIndex].selectedId;
+        const childLevel = this.filterLevels[levelIndex + 1];
+        if (selectedId != null && childLevel) {
+            this.masterBasicSetup.getByParentId(selectedId).subscribe({
+                next: (items) => {
+                    childLevel.options = (items ?? []).map((c: CommonCode) => ({
+                        codeId: c.codeId, label: c.codeValueEN ?? String(c.codeId)
+                    }));
+                }
+            });
+        }
+        this.loadData();
+    }
+
+    clearFilter(): void {
+        for (let i = 0; i < this.filterLevels.length; i++) {
+            this.filterLevels[i].selectedId = null;
+            if (i > 0) this.filterLevels[i].options = [];
+        }
+        this.loadData();
+    }
 
     @HostListener('document:click')
     onDocumentClick(): void {
@@ -84,12 +175,13 @@ export class ManpowerSummaryComponent implements OnInit {
         this.canUpdate = _perms.canUpdate;
         this.canDelete = _perms.canDelete;
 
+        this.loadFilterUnits();
         this.loadData();
     }
 
     loadData(): void {
         this.loading = true;
-        this.statisticsService.getManpowerSummary().subscribe({
+        this.statisticsService.getManpowerSummary(this.resolvedFilterCodeId).subscribe({
             next: (res: ManpowerSummaryResponse) => {
                 this.rows   = res.rows ?? [];
                 this.totals = res.totals ?? { auth: 0, held: 0, def: 0, sur: 0, postingIn: 0, postingOut: 0 };
@@ -118,6 +210,11 @@ export class ManpowerSummaryComponent implements OnInit {
             ?? this.accessibleMemberTypeNames;
 
         const parts: string[] = [];
+        // The user-chosen org-tree filter takes precedence as the leading scope label.
+        const filterLabel = this.filterScopeLabel;
+        if (filterLabel) {
+            parts.push(filterLabel);
+        }
         // Unit names go in bare — the picked node name (e.g. "General Br") is
         // self-describing and the redundant "Units:" prefix was just visual noise
         // per the latest design pass.
@@ -143,8 +240,13 @@ export class ManpowerSummaryComponent implements OnInit {
     async exportAs(type: 'pdf' | 'print' | 'word' | 'excel'): Promise<void> {
         this.exportDropdownOpen = false;
 
-        // All four formats share one source-of-truth: the same Word config.
-        // PDF + Print build the docx and convert server-side via /Document/ConvertToPdf.
+        // Print is a pure-frontend RAB-letterhead window (no Word/backend round-trip).
+        if (type === 'print') {
+            this.openRabPrintWindow();
+            return;
+        }
+
+        // PDF/Word/Excel still share one source-of-truth: the Word config.
         const { columns, rows, subtotalRow } = this.getExportData();
         const scope = this.scopeLine;
         const config = {
@@ -167,19 +269,13 @@ export class ManpowerSummaryComponent implements OnInit {
                 case 'excel':
                     this.exportService.exportExcel(config);
                     break;
-                case 'pdf':
-                case 'print': {
-                    // PDF opens as a preview tab; Print opens a popup with the PDF
-                    // in an iframe and auto-triggers the browser's print dialog.
+                case 'pdf': {
+                    // PDF opens as a preview tab (docx → server-side PDF conversion).
                     const doc = this.exportService.buildWordDoc(config);
                     const docxBlob = await Packer.toBlob(doc);
                     const pdfBlob = await this.convertDocxToPdf(docxBlob);
                     const pdfUrl = URL.createObjectURL(pdfBlob);
-                    if (type === 'pdf') {
-                        window.open(pdfUrl, '_blank');
-                    } else {
-                        this.exportService.openPdfPrintPopup(pdfUrl);
-                    }
+                    window.open(pdfUrl, '_blank');
                     break;
                 }
             }
@@ -197,6 +293,200 @@ export class ManpowerSummaryComponent implements OnInit {
         return await firstValueFrom(
             this.http.post(`${environment.apis.core}/Document/ConvertToPdf`, form, { responseType: 'blob' })
         );
+    }
+
+    // ── RAB letterhead print (frontend-only, mirrors the Course report) ──────
+    private get rabOverlineText(): string {
+        return this.lang === 'bn'
+            ? 'গণপ্রজাতন্ত্রী বাংলাদেশ সরকার'
+            : "GOVERNMENT OF THE PEOPLE'S REPUBLIC OF BANGLADESH";
+    }
+    private get rabOrgTitle(): string {
+        return this.lang === 'bn' ? 'র‍্যাপিড অ্যাকশন ব্যাটালিয়ন' : 'RAPID ACTION BATTALION';
+    }
+    private get rabOrgSubtitle(): string {
+        return this.lang === 'bn'
+            ? 'বাংলাদেশ পুলিশ · সদর দপ্তর, কুর্মিটোলা, ঢাকা'
+            : 'Bangladesh Police · Headquarters, Kurmitola, Dhaka';
+    }
+    private get rabCriteriaTitle(): string { return this.lang === 'bn' ? 'নির্বাচন মানদণ্ড' : 'SELECTION CRITERIA'; }
+    private get rabGeneratedLabel(): string { return this.lang === 'bn' ? 'তারিখ' : 'GENERATED'; }
+    private get rabFormattedDate(): string {
+        const now = new Date();
+        return this.lang === 'bn'
+            ? now.toLocaleDateString('bn-BD', { day: 'numeric', month: 'long', year: 'numeric' }).toUpperCase()
+            : now.toLocaleDateString('en-US', { day: 'numeric', month: 'long', year: 'numeric' }).toUpperCase();
+    }
+    private get rabConfidentialLabel(): string { return this.lang === 'bn' ? 'গোপনীয়' : 'CONFIDENTIAL'; }
+    private get rabWarningLabel(): string { return this.lang === 'bn' ? 'অননুমোদিত প্রকাশ নিষিদ্ধ' : 'UNAUTHORIZED DISCLOSURE PROHIBITED'; }
+
+    /** Label/value pairs shown in the SELECTION CRITERIA grid. */
+    private get rabCriteriaItems(): { label: string; value: string }[] {
+        const items: { label: string; value: string }[] = [];
+        const filterLabel = this.filterScopeLabel;
+        if (filterLabel) {
+            items.push({ label: this.lang === 'bn' ? 'অফিস' : 'OFFICE', value: filterLabel });
+        }
+        const unitNames = (this.lang === 'bn' ? this.accessibleRabUnitNamesBN : this.accessibleRabUnitNames) ?? this.accessibleRabUnitNames;
+        if (unitNames && unitNames.length > 0) {
+            items.push({ label: this.lang === 'bn' ? 'ইউনিট' : 'UNITS', value: unitNames.join(', ') });
+        }
+        const memberTypeNames = (this.lang === 'bn' ? this.accessibleMemberTypeNamesBN : this.accessibleMemberTypeNames) ?? this.accessibleMemberTypeNames;
+        if (memberTypeNames && memberTypeNames.length > 0) {
+            items.push({ label: this.lang === 'bn' ? 'সদস্য ধরণ' : 'MEMBER TYPES', value: memberTypeNames.join(', ') });
+        }
+        if (items.length === 0) {
+            items.push({ label: this.lang === 'bn' ? 'পরিসর' : 'SCOPE', value: this.lang === 'bn' ? 'সকল ইউনিট' : 'All Unit' });
+        }
+        return items;
+    }
+
+    private openRabPrintWindow(): void {
+        if (this.rows.length === 0) return;
+        const html = this.buildRabPrintHtml();
+        const win = window.open('', '_blank', 'width=1200,height=900');
+        if (!win) return;
+        win.document.open();
+        win.document.write(html);
+        win.document.close();
+        setTimeout(() => {
+            try { win.focus(); win.print(); } catch { /* user can Ctrl+P */ }
+        }, 600);
+    }
+
+    private buildRabPrintHtml(): string {
+        const esc = (s: string) =>
+            (s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;');
+        const isBn = this.lang === 'bn';
+        const serif = isBn
+            ? "'Nirmala UI', 'Hind Siliguri', 'SolaimanLipi', serif"
+            : "'Playfair Display', Georgia, 'Times New Roman', serif";
+        const sans = isBn
+            ? "'Nirmala UI', 'Hind Siliguri', 'SolaimanLipi', sans-serif"
+            : "'DM Sans', 'Segoe UI', Arial, sans-serif";
+        const mono = "'JetBrains Mono', 'Consolas', 'Courier New', monospace";
+
+        const cols = COLUMNS;
+        const headerCells = cols.map(c => `<th>${esc(this.lang === 'en' ? c.labelEn : c.labelBn)}</th>`).join('');
+
+        const bodyHtml = this.rows.map((row, i) => {
+            const cells = cols.map(col => {
+                if (col.field === 'ser') return `<td class="td-ser"><span class="ser">${esc(this.fmt(i + 1))}</span></td>`;
+                if (col.field === 'orgName') return `<td class="td-org">${esc(this.orgLabel(row))}</td>`;
+                if (col.field === 'remark') return `<td>${esc(row.remark ?? '')}</td>`;
+                const v = (row as any)[col.field] as number;
+                return `<td class="td-num">${esc(this.fmt(v))}</td>`;
+            }).join('');
+            return `<tr>${cells}</tr>`;
+        }).join('');
+
+        const totalLabel = this.lang === 'en' ? 'Total' : 'মোট';
+        const totalCells = cols.map(col => {
+            if (col.field === 'ser') return `<td></td>`;
+            if (col.field === 'orgName') return `<td class="td-total-label">${esc(totalLabel)}</td>`;
+            if (col.field === 'remark') return `<td></td>`;
+            const v = (this.totals as any)[col.field] as number;
+            return `<td class="td-num">${esc(this.fmt(v))}</td>`;
+        }).join('');
+
+        const criteriaGridHtml = `<div class="criteria-grid">${this.rabCriteriaItems
+            .map(it => `<div class="cell"><div class="cell-label">${esc(it.label)}</div><div class="cell-value">${esc(it.value)}</div></div>`)
+            .join('')}</div>`;
+
+        const cssStr = (s: string) => s.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
+        const confidential = this.rabConfidentialLabel;
+        const warning = this.rabWarningLabel;
+        const pageWord = isBn ? 'পৃষ্ঠা' : 'PAGE';
+        const ofWord = isBn ? '/' : 'OF';
+
+        return `<!DOCTYPE html>
+<html lang="${isBn ? 'bn' : 'en'}">
+<head>
+<meta charset="UTF-8" />
+<title>${esc(this.titleLabel)}</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=DM+Sans:wght@400;500;600&family=Hind+Siliguri:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<style>
+    @page {
+        margin: 12mm 8mm 22mm 8mm;
+        @bottom-left {
+            content: "● " "${cssStr(confidential)}";
+            font-family: ${mono}; font-size: 6.5pt; font-weight: 600;
+            letter-spacing: 0.3em; text-transform: uppercase; color: #b03a3a; padding: 5mm 0 0 8mm;
+        }
+        @bottom-center {
+            content: "${cssStr(pageWord)} " counter(page) " ${cssStr(ofWord)} " counter(pages);
+            font-family: ${mono}; font-size: 6.5pt; font-weight: 600;
+            letter-spacing: 0.25em; text-transform: uppercase; color: #4a4a4a; padding-top: 5mm;
+        }
+        @bottom-right {
+            content: "${cssStr(warning)}";
+            font-family: ${mono}; font-size: 6.5pt; font-weight: 600;
+            letter-spacing: 0.3em; text-transform: uppercase; color: #b03a3a; padding: 5mm 8mm 0 0;
+        }
+    }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; padding: 0; background: #fff; color: #0b0b0b; font-family: ${sans}; font-size: 10pt; line-height: 1.35; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    .paper { padding: 4mm 8mm; }
+    .paper-head { text-align: center; margin-bottom: 6mm; }
+    .overline { font-size: 7.5pt; letter-spacing: 0.3em; color: #555; text-transform: uppercase; margin-bottom: 3mm; font-weight: 500; ${isBn ? 'letter-spacing:0;text-transform:none;font-size:9pt;' : ''} }
+    .paper-title { font-family: ${serif}; font-weight: 700; font-size: 22pt; margin: 0 0 2mm 0; letter-spacing: 0.12em; color: #0b0b0b; ${isBn ? 'letter-spacing:0;' : ''} }
+    .paper-sub { font-family: ${serif}; font-style: italic; color: #555; font-size: 10pt; margin-bottom: 4mm; }
+    .orn-divider { display: flex; justify-content: center; align-items: center; gap: 6mm; margin: 4mm auto; max-width: 65%; }
+    .orn-line { flex: 1; height: 1px; background: linear-gradient(to right, transparent, #b78b3b, transparent); }
+    .orn-diamond { color: #b78b3b; font-size: 9pt; }
+    .paper-section { font-family: ${serif}; font-size: 13pt; font-weight: 700; letter-spacing: 0.16em; color: #0b0b0b; margin: 0; text-transform: uppercase; ${isBn ? 'letter-spacing:0;' : ''} }
+
+    .criteria { margin: 5mm 0 6mm; border: 1px solid #d8d6d0; border-radius: 1mm; overflow: hidden; }
+    .criteria-strip { display: flex; justify-content: space-between; align-items: center; padding: 1.5mm 3mm; background: #f4f4f2; border-bottom: 1px solid #d8d6d0; font-size: 8pt; letter-spacing: 0.2em; text-transform: uppercase; color: #4a4a4a; font-weight: 600; ${isBn ? 'letter-spacing:0.04em;text-transform:none;' : ''} }
+    .criteria-strip-title { display: inline-flex; gap: 1.5mm; align-items: center; color: #0b0b0b; }
+    .diamond-bullet { color: #b78b3b; }
+    .criteria-strip-date { opacity: 0.75; font-weight: 500; }
+    .criteria-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(45mm, 1fr)); }
+    .cell { padding: 2mm 3mm; border-right: 1px solid #e6e4de; border-top: 1px solid #e6e4de; }
+    .cell-label { font-size: 7pt; letter-spacing: 0.16em; text-transform: uppercase; color: #8a8a8a; margin-bottom: 1mm; font-weight: 600; ${isBn ? 'letter-spacing:0.04em;text-transform:none;' : ''} }
+    .cell-value { font-family: ${serif}; font-size: 10pt; font-weight: 700; color: #0b0b0b; line-height: 1.2; ${isBn ? 'font-family:' + sans + ';' : ''} }
+
+    table { width: 100%; border-collapse: collapse; font-family: ${sans}; font-size: 9pt; }
+    thead { display: table-header-group; }
+    thead th { background: #0b0b0b; color: #d9c79a; font-family: ${mono}; font-size: 7pt; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; padding: 2mm; text-align: center; vertical-align: middle; white-space: nowrap; border: 1px solid rgba(11,11,11,0.05); ${isBn ? 'letter-spacing:0.04em;font-family:' + sans + ';' : ''} }
+    tbody td { padding: 2mm; font-size: 9pt; color: #0b0b0b; border: 1px solid rgba(11,11,11,0.06); vertical-align: middle; background: #fff; }
+    tbody tr:nth-child(even) td { background: #fafaf6; }
+    tbody tr { page-break-inside: avoid; }
+    .td-num { text-align: center; font-family: ${mono}; }
+    .td-ser { text-align: center; white-space: nowrap; }
+    .ser { font-family: ${mono}; font-size: 9pt; font-weight: 600; color: #6b6b6b; }
+    .td-org { font-weight: 600; }
+    tfoot td { padding: 2mm; font-size: 9pt; font-weight: 700; border: 1px solid rgba(11,11,11,0.12); background: #f0efe9; }
+    tfoot .td-num { text-align: center; font-family: ${mono}; }
+    .td-total-label { text-transform: uppercase; letter-spacing: 0.06em; }
+</style>
+</head>
+<body>
+    <div class="paper">
+        <header class="paper-head">
+            <div class="overline">${esc(this.rabOverlineText)}</div>
+            <h1 class="paper-title">${esc(this.rabOrgTitle)}</h1>
+            <div class="paper-sub"><em>${esc(this.rabOrgSubtitle)}</em></div>
+            <div class="orn-divider"><span class="orn-line"></span><span class="orn-diamond">&#9670;</span><span class="orn-line"></span></div>
+            <h2 class="paper-section">${esc(this.titleLabel)}</h2>
+        </header>
+        <div class="criteria">
+            <div class="criteria-strip">
+                <span class="criteria-strip-title"><span class="diamond-bullet">&#9670;</span> ${esc(this.rabCriteriaTitle)}</span>
+                <span class="criteria-strip-date">${esc(this.rabGeneratedLabel)} &middot; ${esc(this.rabFormattedDate)}</span>
+            </div>
+            ${criteriaGridHtml}
+        </div>
+        <table>
+            <thead><tr>${headerCells}</tr></thead>
+            <tbody>${bodyHtml}</tbody>
+            <tfoot><tr>${totalCells}</tr></tfoot>
+        </table>
+    </div>
+</body>
+</html>`;
     }
 
     getExportData(): { columns: string[]; rows: string[][]; subtotalRow: string[] } {

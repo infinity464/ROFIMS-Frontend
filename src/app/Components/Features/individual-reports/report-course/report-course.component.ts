@@ -361,7 +361,7 @@ export class ReportCourseComponent implements OnInit, OnChanges {
     get rabSectionTitle(): string { return this.lang === 'bn' ? 'কোর্স প্রতিবেদন' : 'COURSE REPORT'; }
     get rabSubtitleText(): string { return ''; }
     get rabCriteriaTitle(): string { return this.lang === 'bn' ? 'নির্বাচন মানদণ্ড' : 'SELECTION CRITERIA'; }
-    get rabGeneratedLabel(): string { return this.lang === 'bn' ? 'উৎপন্ন' : 'GENERATED'; }
+    get rabGeneratedLabel(): string { return this.lang === 'bn' ? 'তারিখ' : 'GENERATED'; }
     get rabFormattedDate(): string {
         const now = new Date();
         return this.lang === 'bn'

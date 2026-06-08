@@ -34,10 +34,6 @@
                                     (click)="exportAs('print')">
                                 <i class="pi pi-print" style="font-size:0.75rem"></i> Print
                             </button>
-                            <button type="button" class="report-export-item report-export-pdf"
-                                    (click)="exportAs('pdf')">
-                                <span class="report-export-icon">⬇</span> PDF
-                            </button>
                             <button type="button" class="report-export-item report-export-word"
                                     (click)="exportAs('word')">
                                 <span class="report-export-icon">⬇</span> Word
@@ -50,6 +46,34 @@
                     }
                 </div>
             </div>
+        </div>
+
+        <!-- Row 1b: RAB org-tree cascade filter (Unit → Wing → Branch → …) -->
+        <div class="report-filter-row">
+            @for (lv of filterLevels; track $index) {
+                @if ($index === 0 || lv.options.length > 0) {
+                    <div class="report-filter-field">
+                        <label class="report-filter-label">{{ filterLevelLabel(lv) }}</label>
+                        <p-select
+                            [options]="lv.options"
+                            [(ngModel)]="lv.selectedId"
+                            optionLabel="label"
+                            optionValue="codeId"
+                            [showClear]="true"
+                            [filter]="true"
+                            filterBy="label"
+                            [placeholder]="'All'"
+                            (ngModelChange)="onFilterChange($index)"
+                            [style]="{ minWidth: '160px' }">
+                        </p-select>
+                    </div>
+                }
+            }
+            @if (hasActiveFilter) {
+                <button type="button" class="report-filter-clear" (click)="clearFilter()">
+                    <i class="pi pi-times" style="font-size:0.7rem"></i> Clear
+                </button>
+            }
         </div>
 
         <!-- Row 2: centered title block -->

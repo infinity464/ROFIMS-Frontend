@@ -289,7 +289,7 @@ export class ReportTradeComponent implements OnInit, OnChanges {
         return (this.lang === 'bn' ? this.statusLabelBn : this.statusLabel) || '';
     }
     get rabCriteriaTitle(): string { return this.lang === 'bn' ? 'নির্বাচন মানদণ্ড' : 'SELECTION CRITERIA'; }
-    get rabGeneratedLabel(): string { return this.lang === 'bn' ? 'উৎপন্ন' : 'GENERATED'; }
+    get rabGeneratedLabel(): string { return this.lang === 'bn' ? 'তারিখ' : 'GENERATED'; }
     get rabFormattedDate(): string {
         const now = new Date();
         return this.lang === 'bn'

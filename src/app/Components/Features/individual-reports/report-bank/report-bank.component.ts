@@ -183,7 +183,7 @@ export class ReportBankIndividualComponent implements OnInit, OnChanges {
     get rabOrgTitle(): string { return this.lang === 'bn' ? 'র‍্যাপিড অ্যাকশন ব্যাটালিয়ন' : 'RAPID ACTION BATTALION'; }
     get rabOrgSubtitle(): string { return this.lang === 'bn' ? 'বাংলাদেশ পুলিশ · সদর দপ্তর, কুর্মিটোলা, ঢাকা' : 'Bangladesh Police · Headquarters, Kurmitola, Dhaka'; }
     get rabSectionTitle(): string { return this.lang === 'bn' ? 'ব্যাংক হিসাব প্রতিবেদন' : 'BANK ACCOUNT REPORT'; }
-    get rabGeneratedLabel(): string { return this.lang === 'bn' ? 'উৎপন্ন' : 'GENERATED'; }
+    get rabGeneratedLabel(): string { return this.lang === 'bn' ? 'তারিখ' : 'GENERATED'; }
     get rabFormattedDate(): string {
         const now = new Date();
         return this.lang === 'bn'
