@@ -1194,18 +1194,6 @@ export class NotesheetPreviewPostingComponent extends NotesheetPreviewBase imple
         this.editParagraphs.splice(index, 1);
     }
 
-    // ── Print Preview ───────────────────────────────────────
-    async printPreview(): Promise<void> {
-        if (!this.noteSheet) return;
-        try {
-            const doc = await this.buildWordDocument();
-            const docxBlob = await Packer.toBlob(doc);
-            await this.openPdfPreview(docxBlob);
-        } catch {
-            this.messageService.add({ severity: 'error', summary: 'Preview Error', detail: 'Failed to generate print preview.' });
-        }
-    }
-
     // ── File references handlers ─────────────────────────────
     onFileRowsChange(event: FileRowData[]): void {
         if (event && Array.isArray(event)) {
