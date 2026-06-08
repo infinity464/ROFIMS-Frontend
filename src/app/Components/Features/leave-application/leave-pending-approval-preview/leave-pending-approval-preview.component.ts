@@ -15,8 +15,7 @@ import { ButtonModule } from 'primeng/button';
 import { TextareaModule } from 'primeng/textarea';
 import { ToastModule } from 'primeng/toast';
 import { TooltipModule } from 'primeng/tooltip';
-import html2canvas from 'html2canvas';
-import jsPDF from 'jspdf';
+import { JsReportService } from '@/services/jsreport.service';
 import { Document, Packer, Paragraph, TextRun, AlignmentType, BorderStyle, Table, TableRow, TableCell, WidthType, TableBorders } from 'docx';
 
 interface EmpInfo {
@@ -126,7 +125,8 @@ export class LeavePendingApprovalPreviewComponent implements OnInit {
         private servingMembersService: ServingMembersService,
         private messageService: MessageService,
         private _userMenuService: UserMenuService,
-        private empService: EmpService
+        private empService: EmpService,
+        private jsreportService: JsReportService
     ) {}
 
     ngOnInit(): void {
@@ -205,41 +205,67 @@ export class LeavePendingApprovalPreviewComponent implements OnInit {
   .letter-section-body { margin: 0; white-space: pre-line; font-size: 11pt; }`;
     }
 
-    private printPreview(): void {
-        const el = document.getElementById('leave-preview-print');
-        if (!el) return;
-        const title = this.lang === 'bn' ? 'ছুটির আবেদন' : 'Leave Application';
-        const w = window.open('', '_blank', 'width=800,height=600');
-        if (!w) return;
-        w.document.write(`<html><head><title>${title}</title><style>${this.getPrintStyles()}</style></head><body>${el.outerHTML}</body></html>`);
-        w.document.close();
-        w.onload = () => {
-            w.focus();
-            w.print();
-        };
-    }
-
-    private async exportPDF(): Promise<void> {
-        const el = document.getElementById('leave-preview-print');
-        if (!el) return;
+    // Print Preview via JsReport (chrome-pdf) — opens the PDF in a new tab.
+    private async printPreview(): Promise<void> {
         try {
-            const canvas = await html2canvas(el, {
-                scale: 2,
-                useCORS: true,
-                backgroundColor: '#ffffff',
-                logging: false
+            const html = this.buildJsReportHtml();
+            if (!html) return;
+            await this.jsreportService.previewPdfInNewTab(html, {}, this.exportFileStem(), this.jsReportChrome());
+        } catch (err: any) {
+            this.messageService.add({
+                severity: 'error', summary: 'JsReport error',
+                detail: err?.message || 'Failed to render PDF via JsReport. Is the server reachable?'
             });
-            const pdf = new jsPDF('p', 'mm', 'a4');
-            const marginMm = 10;
-            const pdfWidth = pdf.internal.pageSize.getWidth() - marginMm * 2;
-            const imgHeight = (canvas.height * pdfWidth) / canvas.width;
-            pdf.addImage(canvas.toDataURL('image/jpeg', 0.92), 'JPEG', marginMm, marginMm, pdfWidth, imgHeight);
-            const pdfBlob = pdf.output('blob');
-            const pdfUrl = URL.createObjectURL(pdfBlob);
-            window.open(pdfUrl, '_blank');
         } finally {
             this.exporting = false;
         }
+    }
+
+    // PDF download via JsReport (chrome-pdf) — same render as Print Preview.
+    private async exportPDF(): Promise<void> {
+        try {
+            const html = this.buildJsReportHtml();
+            if (!html) return;
+            await this.jsreportService.downloadPdf(html, {}, `${this.exportFileStem()}.pdf`, this.jsReportChrome());
+        } catch (err: any) {
+            this.messageService.add({
+                severity: 'error', summary: 'JsReport error',
+                detail: err?.message || 'Failed to render PDF via JsReport. Is the server reachable?'
+            });
+        } finally {
+            this.exporting = false;
+        }
+    }
+
+    /** Wrap the rendered letter element + its print CSS into a standalone HTML
+     *  document for jsReport's chrome-pdf recipe. */
+    private buildJsReportHtml(): string | null {
+        const el = document.getElementById('leave-preview-print');
+        if (!el) return null;
+        return `<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>${this.getPrintStyles()}</style>
+</head>
+<body>${el.outerHTML}</body>
+</html>`;
+    }
+
+    /** Chrome-pdf options: A4 portrait with the same margins as the print CSS. */
+    private jsReportChrome(): Record<string, unknown> {
+        return {
+            format: 'A4',
+            landscape: false,
+            marginTop: '18mm', marginBottom: '18mm', marginLeft: '16mm', marginRight: '16mm',
+            printBackground: true,
+            displayHeaderFooter: false,
+            headerTemplate: '', footerTemplate: ''
+        };
+    }
+
+    private exportFileStem(): string {
+        return `LeaveApplication_${this.application?.applicantEmployeeId ?? 'export'}`;
     }
 
     private async exportWord(): Promise<void> {

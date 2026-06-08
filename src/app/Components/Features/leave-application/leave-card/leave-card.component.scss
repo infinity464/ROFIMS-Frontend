@@ -258,29 +258,41 @@
     }
 }
 
-/* ── Dark mode — match the leave-preview behaviour: outer page and toolbar
-     buttons keep their light look, paper stays white. The shared
-     report-theme-common.scss adds `!important` overrides for buttons in
-     dark mode, so we must use `!important` here to beat them. ─ */
+/* ════════════════════════════════════════════════════════════════════
+   DARK MODE — backdrop + the toolbar/buttons/dropdown that sit OUTSIDE
+   the white sheet. The A4 sheet (.lc-paper) stays WHITE.
+   The shared report-theme-common.scss adds `!important` overrides for
+   buttons in dark mode, so we must use `!important` here to beat them.
+   ════════════════════════════════════════════════════════════════════ */
 :host-context(.app-dark) {
-    background: #d8d8d8;
 
+    /* Backdrop — ROFIMS standard dark navy */
+    background: #2a2d35;
+
+    /* A4 sheet stays white; just a stronger shadow on the dark backdrop */
     .lc-paper {
         background: #fff;
         color: #000;
+        box-shadow: 0 10px 40px rgba(0, 0, 0, 0.6);
     }
 
-    /* Back and English — white-with-gray-border like the preview */
+    /* Loading / empty states sit on the dark backdrop */
+    .leave-card-loading,
+    .leave-card-empty {
+        color: #94a3b8;
+    }
+
+    /* Back and English — dark surfaces on the dark backdrop */
     .report-btn-back,
     .report-lang-toggle {
-        background: #fff !important;
-        border: 1px solid #d1d5db !important;
-        color: #1f2937 !important;
+        background: #1e2230 !important;
+        border: 1px solid #3a3f4e !important;
+        color: #cbd5e1 !important;
 
         &:hover {
-            background: #f3f4f6 !important;
-            border-color: #9ca3af !important;
-            color: #1f2937 !important;
+            background: #232838 !important;
+            border-color: #4a5062 !important;
+            color: #e2e8f0 !important;
         }
     }
 
@@ -294,6 +306,25 @@
             background: var(--primary-color, #22c55e) !important;
             color: #fff !important;
             filter: brightness(1.05);
+        }
+    }
+
+    /* Export dropdown menu — dark surface, dark items */
+    .report-export-dropdown {
+        background: #12151a;
+        border: 1px solid #3a3f4e;
+    }
+    .report-export-item {
+        background: #12151a;
+        color: #cbd5e1;
+
+        &:hover {
+            background: #232838;
+            color: #e2e8f0;
+        }
+
+        & + & {
+            border-top-color: #3a3f4e;
         }
     }
 }
