@@ -976,3 +976,117 @@
         }
     }
 }
+
+/* ════════════════════════════════════════════════════════════════════
+   DARK MODE  (active when an ancestor carries .app-dark)
+   The note-sheet paper itself stays WHITE — only the surrounding
+   chrome (toolbar, filter bar, preview backdrop) is darkened.
+   ════════════════════════════════════════════════════════════════════ */
+:host-context(.app-dark) {
+
+    /* Preview backdrop — ROFIMS standard dark navy */
+    background: #2a2d35;
+
+    /* ── Top toolbar ───────────────────────────────────────── */
+    .preview-header {
+        background: #12151a;
+        border-bottom: 1px solid #3a3f4e;
+    }
+
+    /* Icon / outlined buttons in the toolbar: subtle bordered chips */
+    .preview-header ::ng-deep .p-button.p-button-outlined,
+    .preview-header ::ng-deep .p-button.p-button-text {
+        border: 1px solid #3a3f4e;
+        background: #1a1e27;
+        color: #cbd5e1;
+
+        &:hover {
+            background: #232838;
+            border-color: #4a5062;
+        }
+    }
+
+    /* ── Action buttons — clearly distinguishable dark tints ── */
+    // Approve / Submit / Save → dark green
+    .preview-header ::ng-deep .p-button.p-button-success {
+        background: rgba(34, 197, 94, 0.14);
+        border: 1px solid #2e7d32;
+        color: #4ade80;
+        &:hover { background: rgba(34, 197, 94, 0.24); border-color: #388e3c; }
+    }
+    // Decline → dark red
+    .preview-header ::ng-deep .p-button.p-button-danger {
+        background: rgba(239, 68, 68, 0.14);
+        border: 1px solid #b71c1c;
+        color: #f87171;
+        &:hover { background: rgba(239, 68, 68, 0.24); border-color: #c62828; }
+    }
+    // Back → dark slate
+    .preview-header ::ng-deep .p-button.p-button-secondary {
+        background: #232834;
+        border: 1px solid #3a3f4e;
+        color: #cbd5e1;
+        &:hover { background: #2c3340; border-color: #4a5062; }
+    }
+    // Edit → dark amber
+    .preview-header ::ng-deep .p-button.p-button-warning {
+        background: rgba(245, 158, 11, 0.14);
+        border: 1px solid #b45309;
+        color: #fbbf24;
+        &:hover { background: rgba(245, 158, 11, 0.24); border-color: #d97706; }
+    }
+    // Print Preview (info) → dark blue
+    .preview-header ::ng-deep .p-button.p-button-info {
+        background: rgba(59, 130, 246, 0.14);
+        border: 1px solid #1d4ed8;
+        color: #60a5fa;
+        &:hover { background: rgba(59, 130, 246, 0.24); border-color: #2563eb; }
+    }
+
+    /* Status / step chips in the toolbar */
+    .ns-status-badge {
+        background: #1e2230;
+        color: #cbd5e1;
+        border: 1px solid #3a3f4e;
+    }
+    .ns-status-badge--pending {
+        background: rgba(234, 179, 8, 0.16);
+        color: #fcd34d;
+        border-color: #92670c;
+    }
+    .ns-status-badge--step {
+        background: rgba(34, 197, 94, 0.14);
+        color: #4ade80;
+        border-color: #2e7d32;
+    }
+
+    /* ── Filter / export bar ───────────────────────────────── */
+    .export-options-bar {
+        background: #1e2230 !important;
+        border: 1px solid #3a3f4e;
+        color: #cbd5e1;
+
+        span, label { color: #cbd5e1; }
+
+        /* Selected checkboxes → green chips with dark green border */
+        ::ng-deep .p-checkbox.p-checkbox-checked .p-checkbox-box {
+            background: rgba(34, 197, 94, 0.18);
+            border-color: #2e7d32;
+        }
+        ::ng-deep .p-checkbox.p-checkbox-checked .p-checkbox-icon { color: #4ade80; }
+    }
+
+    /* ── Loading / error states on the dark backdrop ───────── */
+    .preview-loading,
+    .preview-error { color: #94a3b8; }
+
+    /* ════════════════════════════════════════════════════════
+       Note-sheet paper: stays WHITE. Just a stronger drop shadow
+       so it reads clearly against the dark backdrop.
+       ════════════════════════════════════════════════════════ */
+    .a4-paper {
+        background: #fff;
+        color: #000;
+        box-shadow: 0 10px 40px rgba(0, 0, 0, 0.6);
+    }
+}
