@@ -579,9 +579,17 @@ export class NotesheetPreviewCCComponent implements OnInit {
      * text column matches the web view.
      */
     private buildJsReportPdf(): { html: string; chrome: Record<string, unknown> } {
-        const styles = this.collectDocumentStyles();
-        const body = this.paper.nativeElement.innerHTML;
         const sz = this.selectedPageSize;
+        // Rewrite the body-row height directly in the collected CSS: the on-screen
+        // rule `tbody .cc-cell { padding-bottom: 150pt }` is Angular-scoped and
+        // !important, so a separate override can't out-specify it. A4 landscape is
+        // shorter than Legal/Letter (210mm vs 215.9mm tall), so the same row height
+        // spills to a 2nd page — give A4 a reduced value (~−25pt at the 0.667 zoom)
+        // so it fits one page.
+        const rowPad = sz === 'A4' ? 217 : 242;
+        const styles = this.collectDocumentStyles()
+            .replace(/padding-bottom:\s*150pt/gi, `padding-bottom:${rowPad}pt`);
+        const body = this.paper.nativeElement.innerHTML;
         // CC is a wide grid → LANDSCAPE: page width = the long edge, height = short.
         const pageWidth = sz === 'A4' ? '297mm' : sz === 'Letter' ? '279.4mm' : '355.6mm';
         const pageHeight = sz === 'A4' ? '210mm' : '215.9mm';
