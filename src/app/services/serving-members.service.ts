@@ -9,6 +9,10 @@ import { PagedResponse } from '@/Core/Models/Pagination';
 export interface ServingMemberFilterOptionsItem {
     codeId: number;
     codeValueEN: string;
+    /** Owning Mother Organization (set for ranks/corps/trades; drives the cascade). */
+    orgId?: number | null;
+    /** Parent CommonCode (set for trades = Corps CodeId; drives the Trade-by-Corps cascade). */
+    parentCodeId?: number | null;
 }
 
 export interface ServingMemberFilterOptions {
@@ -26,6 +30,7 @@ export interface ServingMemberFilterRequest {
     nidId?: string;
     nameBangla?: string;
     nameEnglish?: string;
+    motherOrganizationId?: number | null;
     rabUnitId?: number | null;
     rankId?: number | null;
     corpsId?: number | null;
@@ -33,7 +38,7 @@ export interface ServingMemberFilterRequest {
     joiningDateFrom?: string | null;
     joiningDateTo?: string | null;
     permanentDistrictType?: number | null;
-    spousePermanentDistrictType?: number | null;
+    wifePermanentDistrictType?: number | null;
     appointmentId?: number | null;
     /** Subtree filter: placement under this CommonCode org node (inclusive). */
     organogramNodeCodeId?: number | null;

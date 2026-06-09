@@ -61,6 +61,9 @@
                             optionLabel="label"
                             optionValue="value"
                             placeholder="Select"
+                            [filter]="true"
+                            filterBy="label"
+                            [showClear]="true"
                             styleClass="w-full"
                             appendTo="body">
                         </p-select>
@@ -73,12 +76,32 @@
                             optionLabel="label"
                             optionValue="value"
                             placeholder="Select"
+                            [filter]="true"
+                            filterBy="label"
+                            [showClear]="true"
                             styleClass="w-full"
                             appendTo="body">
                         </p-select>
                     </div>
                 </div>
                 <div class="report-fields-row">
+                    <div class="report-filter-field">
+                        <label>Mother Organization</label>
+                        <p-select
+                            [(ngModel)]="filter.motherOrg"
+                            [options]="motherOrgOptions"
+                            optionLabel="label"
+                            optionValue="value"
+                            placeholder="Select"
+                            [filter]="true"
+                            filterBy="label"
+                            [showClear]="true"
+                            (onChange)="onMotherOrgChange()"
+                            (onClear)="onMotherOrgChange()"
+                            styleClass="w-full"
+                            appendTo="body">
+                        </p-select>
+                    </div>
                     <div class="report-filter-field">
                         <label>RAB Unit</label>
                         <p-select
@@ -87,6 +110,9 @@
                             optionLabel="label"
                             optionValue="value"
                             placeholder="Select"
+                            [filter]="true"
+                            filterBy="label"
+                            [showClear]="true"
                             styleClass="w-full"
                             appendTo="body">
                         </p-select>
@@ -99,6 +125,9 @@
                             optionLabel="label"
                             optionValue="value"
                             placeholder="Select"
+                            [filter]="true"
+                            filterBy="label"
+                            [showClear]="true"
                             styleClass="w-full"
                             appendTo="body">
                         </p-select>
@@ -111,6 +140,11 @@
                             optionLabel="label"
                             optionValue="value"
                             placeholder="Select"
+                            [filter]="true"
+                            filterBy="label"
+                            [showClear]="true"
+                            (onChange)="onCorpsChange()"
+                            (onClear)="onCorpsChange()"
                             styleClass="w-full"
                             appendTo="body">
                         </p-select>
@@ -123,6 +157,9 @@
                             optionLabel="label"
                             optionValue="value"
                             placeholder="Select"
+                            [filter]="true"
+                            filterBy="label"
+                            [showClear]="true"
                             styleClass="w-full"
                             appendTo="body">
                         </p-select>
@@ -159,6 +196,9 @@
                             optionLabel="label"
                             optionValue="value"
                             placeholder="Select"
+                            [filter]="true"
+                            filterBy="label"
+                            [showClear]="true"
                             styleClass="w-full"
                             appendTo="body">
                         </p-select>
