@@ -19,6 +19,7 @@ import { BloodGroup } from '@/Components/basic-setup/blood-group/blood-group';
 import { MovementReason } from '@/Components/basic-setup/movement-reason/movement-reason';
 import { MovementInfoComponent } from '@/Components/Features/movement-info/movement-info';
 import { MovementListComponent } from '@/Components/Features/movement-list/movement-list';
+import { Article47TakeoverBulkComponent } from '@/Components/Features/article-47-takeover-bulk/article-47-takeover-bulk';
 import { NotesheetPreviewArticle47TakeoverComponent } from '@/Components/Features/notesheet-preview/article-47-takeover/notesheet-preview-article-47-takeover';
 import { NotesheetPreviewArticle47HandoverComponent } from '@/Components/Features/notesheet-preview/article-47-handover/notesheet-preview-article-47-handover';
 import { NotesheetPreviewMOComponent } from '@/Components/Features/notesheet-preview/mo/notesheet-preview-mo';
@@ -225,6 +226,7 @@ export const appRoutes: Routes = [
             { path: 'basic-setup/movement-reason', component: MovementReason },
             { path: 'basic-setup/movement-letter-number-config', component: MovementLetterNumberConfigComponent },
             { path: 'movement-info', component: MovementInfoComponent },
+            { path: 'movement/article-47-takeover-bulk', component: Article47TakeoverBulkComponent },
             { path: 'movement-list', component: MovementListComponent },
             { path: 'movement-preview/article-47-takeover', component: NotesheetPreviewArticle47TakeoverComponent },
             { path: 'movement-preview/article-47-handover', component: NotesheetPreviewArticle47HandoverComponent },

@@ -302,17 +302,19 @@ export class EmployeeReportsComponent implements OnInit {
         // Child components receive [postingStatus] binding and react on input change
     }
 
-    /** Top section (report type card) stays in English only. */
+    /**
+     * Top section (report type card) stays in English only. The second dropdown's label
+     * mirrors the selected report type (e.g. "Education" → "Education") instead of a generic
+     * "Common Code" caption.
+     */
     get commonCodeDropdownLabelEn(): string {
-        return this.reportType === 'motherOrg'
-            ? this.L['en']['report.motherOrgLabel']
-            : this.L['en']['report.commonCodeLabel'];
+        const opt = this.reportTypes.find((o) => o.value === this.reportType);
+        return opt?.label ?? this.L['en']['report.commonCodeLabel'];
     }
 
     get commonCodePlaceholderEn(): string {
-        return this.reportType === 'motherOrg'
-            ? this.L['en']['report.placeholderMotherOrg']
-            : this.L['en']['report.placeholderCommonCode'];
+        const opt = this.reportTypes.find((o) => o.value === this.reportType);
+        return opt ? `Select ${opt.label}` : this.L['en']['report.placeholderCommonCode'];
     }
 
     /** Label of the currently selected common code (language-aware, for child report titles). Handles the synthetic N/A bucket. */
