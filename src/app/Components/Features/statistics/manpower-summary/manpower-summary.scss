@@ -61,7 +61,10 @@
 /* Row 1: buttons right-aligned */
 .report-toolbar-row {
     display: flex;
-    justify-content: flex-end;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    flex-wrap: wrap;
 }
 
 /* Row 2: centered title block */

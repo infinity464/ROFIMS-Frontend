@@ -3,15 +3,13 @@ import { HttpClient } from '@angular/common/http';
 import { Router } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { SelectModule } from 'primeng/select';
 import { firstValueFrom } from 'rxjs';
 import { Packer } from 'docx';
 import { ExportService } from '@/services/export.service';
 import { UserMenuService } from '@/services/user-menu.service';
 import { BanglaNumerals } from '@/Core/i18n/bangla-numerals';
 import { environment } from '@/Core/Environments/environment';
-import { MasterBasicSetupService } from '@/Components/basic-setup/shared/services/MasterBasicSetupService';
-import { CommonCode } from '@/Components/basic-setup/shared/models/common-code';
+import { OrgTreeFilterComponent } from '../shared/org-tree-filter/org-tree-filter.component';
 import {
     StatisticsService,
     type ManpowerSummaryRow,
@@ -39,18 +37,10 @@ const COLUMNS: ColDef[] = [
     { field: 'remark',     labelEn: 'Remark',        labelBn: 'মন্তব্য' }
 ];
 
-/** One level of the RAB org-tree cascade filter (Unit → … → Sub-Section). */
-interface FilterLevel {
-    labelEn: string;
-    labelBn: string;
-    options: { codeId: number; label: string }[];
-    selectedId: number | null;
-}
-
 @Component({
     selector: 'app-manpower-summary',
     standalone: true,
-    imports: [CommonModule, FormsModule, SelectModule],
+    imports: [CommonModule, FormsModule, OrgTreeFilterComponent],
     templateUrl: './manpower-summary.html',
     styleUrl: './manpower-summary.scss'
 })
@@ -76,18 +66,11 @@ export class ManpowerSummaryComponent implements OnInit {
 
     readonly columns = COLUMNS;
 
-    /** Cascading RAB org-tree filter: Unit → Wing → Branch → Sub-Branch → Section → Sub-Section. */
-    filterLevels: FilterLevel[] = [
-        { labelEn: 'Unit',        labelBn: 'ইউনিট',      options: [], selectedId: null },
-        { labelEn: 'Wing',        labelBn: 'উইং',         options: [], selectedId: null },
-        { labelEn: 'Branch',      labelBn: 'শাখা',        options: [], selectedId: null },
-        { labelEn: 'Sub-Branch',  labelBn: 'উপ-শাখা',     options: [], selectedId: null },
-        { labelEn: 'Section',     labelBn: 'সেকশন',       options: [], selectedId: null },
-        { labelEn: 'Sub-Section', labelBn: 'উপ-সেকশন',    options: [], selectedId: null }
-    ];
+    /** Org-tree node filter (Unit/Wing/Branch/…) from the shared <app-org-tree-filter>. */
+    filterRabCodeId: number | null = null;
+    filterLabel: string | null = null;
 
     private http = inject(HttpClient);
-    private masterBasicSetup = inject(MasterBasicSetupService);
 
     constructor(
         private _router: Router,
@@ -96,71 +79,9 @@ export class ManpowerSummaryComponent implements OnInit {
         private exportService: ExportService
     ) {}
 
-    /** Deepest selected node id in the cascade — the active filter (null = none). */
-    get resolvedFilterCodeId(): number | null {
-        for (let i = this.filterLevels.length - 1; i >= 0; i--) {
-            if (this.filterLevels[i].selectedId != null) return this.filterLevels[i].selectedId;
-        }
-        return null;
-    }
-
-    /** Label of the deepest selected node, for the report scope line. */
-    get filterScopeLabel(): string | null {
-        for (let i = this.filterLevels.length - 1; i >= 0; i--) {
-            const lv = this.filterLevels[i];
-            if (lv.selectedId != null) {
-                return lv.options.find((o) => o.codeId === lv.selectedId)?.label ?? null;
-            }
-        }
-        return null;
-    }
-
-    get hasActiveFilter(): boolean {
-        return this.resolvedFilterCodeId != null;
-    }
-
-    filterLevelLabel(lv: FilterLevel): string {
-        // Filter dropdowns stay in English regardless of the report language toggle.
-        return lv.labelEn;
-    }
-
-    /** Load the root Units into level 0. */
-    private loadFilterUnits(): void {
-        this.masterBasicSetup.getAllByType('RabUnit').subscribe({
-            next: (items) => {
-                this.filterLevels[0].options = (items ?? []).map((c: CommonCode) => ({
-                    codeId: c.codeId, label: c.codeValueEN ?? String(c.codeId)
-                }));
-            }
-        });
-    }
-
-    /** A cascade dropdown changed: clear deeper levels, load this node's children, reload. */
-    onFilterChange(levelIndex: number): void {
-        // Clear every deeper level's selection + options.
-        for (let i = levelIndex + 1; i < this.filterLevels.length; i++) {
-            this.filterLevels[i].selectedId = null;
-            this.filterLevels[i].options = [];
-        }
-        const selectedId = this.filterLevels[levelIndex].selectedId;
-        const childLevel = this.filterLevels[levelIndex + 1];
-        if (selectedId != null && childLevel) {
-            this.masterBasicSetup.getByParentId(selectedId).subscribe({
-                next: (items) => {
-                    childLevel.options = (items ?? []).map((c: CommonCode) => ({
-                        codeId: c.codeId, label: c.codeValueEN ?? String(c.codeId)
-                    }));
-                }
-            });
-        }
-        this.loadData();
-    }
-
-    clearFilter(): void {
-        for (let i = 0; i < this.filterLevels.length; i++) {
-            this.filterLevels[i].selectedId = null;
-            if (i > 0) this.filterLevels[i].options = [];
-        }
+    onOrgTreeFilter(e: { codeId: number | null; label: string | null }): void {
+        this.filterRabCodeId = e.codeId;
+        this.filterLabel = e.label;
         this.loadData();
     }
 
@@ -175,13 +96,12 @@ export class ManpowerSummaryComponent implements OnInit {
         this.canUpdate = _perms.canUpdate;
         this.canDelete = _perms.canDelete;
 
-        this.loadFilterUnits();
         this.loadData();
     }
 
     loadData(): void {
         this.loading = true;
-        this.statisticsService.getManpowerSummary(this.resolvedFilterCodeId).subscribe({
+        this.statisticsService.getManpowerSummary(this.filterRabCodeId).subscribe({
             next: (res: ManpowerSummaryResponse) => {
                 this.rows   = res.rows ?? [];
                 this.totals = res.totals ?? { auth: 0, held: 0, def: 0, sur: 0, postingIn: 0, postingOut: 0 };
@@ -211,7 +131,7 @@ export class ManpowerSummaryComponent implements OnInit {
 
         const parts: string[] = [];
         // The user-chosen org-tree filter takes precedence as the leading scope label.
-        const filterLabel = this.filterScopeLabel;
+        const filterLabel = this.filterLabel;
         if (filterLabel) {
             parts.push(filterLabel);
         }
@@ -246,9 +166,9 @@ export class ManpowerSummaryComponent implements OnInit {
             return;
         }
 
-        // PDF/Word/Excel still share one source-of-truth: the Word config.
         const { columns, rows, subtotalRow } = this.getExportData();
         const scope = this.scopeLine;
+        // Flat config (Excel).
         const config = {
             title: this.titleLabel,
             lang: this.lang,
@@ -259,19 +179,32 @@ export class ManpowerSummaryComponent implements OnInit {
             filename: 'manpower-summary',
             filterLines: scope ? [scope] : undefined
         };
+        // Sectioned config (Word/PDF) — single untitled section so it gets the RAB letterhead.
+        const sectionedConfig = {
+            title: this.titleLabel,
+            lang: this.lang,
+            columns,
+            sections: [{ title: '', rows }],
+            grandTotalRow: subtotalRow,
+            showPageNumbers: true,
+            filename: 'manpower-summary',
+            filterLines: scope ? [scope] : undefined,
+            rabLetterhead: true,
+            criteriaItems: this.rabCriteriaItems
+        };
 
         try {
             this.exporting = true;
             switch (type) {
                 case 'word':
-                    await this.exportService.exportWord(config);
+                    await this.exportService.exportWordSectioned(sectionedConfig);
                     break;
                 case 'excel':
                     this.exportService.exportExcel(config);
                     break;
                 case 'pdf': {
                     // PDF opens as a preview tab (docx → server-side PDF conversion).
-                    const doc = this.exportService.buildWordDoc(config);
+                    const doc = this.exportService.buildSectionedWordDoc(sectionedConfig);
                     const docxBlob = await Packer.toBlob(doc);
                     const pdfBlob = await this.convertDocxToPdf(docxBlob);
                     const pdfUrl = URL.createObjectURL(pdfBlob);
@@ -323,7 +256,7 @@ export class ManpowerSummaryComponent implements OnInit {
     /** Label/value pairs shown in the SELECTION CRITERIA grid. */
     private get rabCriteriaItems(): { label: string; value: string }[] {
         const items: { label: string; value: string }[] = [];
-        const filterLabel = this.filterScopeLabel;
+        const filterLabel = this.filterLabel;
         if (filterLabel) {
             items.push({ label: this.lang === 'bn' ? 'অফিস' : 'OFFICE', value: filterLabel });
         }

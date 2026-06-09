@@ -5,9 +5,6 @@
     <div class="chart-results-header">
         <!-- Row 1: toolbar right-aligned -->
         <div class="chart-toolbar-row">
-            <!-- RAB org-tree cascade filter -->
-            <app-org-tree-filter (filterChange)="onOrgTreeFilter($event)"></app-org-tree-filter>
-
             <!-- Toggle checkboxes -->
             <div class="chart-toggles">
                 <label class="toggle-label">
@@ -33,6 +30,9 @@
                 Print
             </button>
         </div>
+
+        <!-- RAB org-tree cascade filter (collapsible) -->
+        <app-org-tree-filter (filterChange)="onOrgTreeFilter($event)"></app-org-tree-filter>
 
         <!-- Row 2: centered title -->
         <div class="chart-header-title-block">

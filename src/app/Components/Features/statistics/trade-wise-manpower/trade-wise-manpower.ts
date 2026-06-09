@@ -94,13 +94,14 @@ export class TradeWiseManpowerComponent implements OnInit {
     private buildCriteriaItems(): { label: string; value: string }[] {
         const bn = this.lang === 'bn';
         const items: { label: string; value: string }[] = [];
+        // Organization first.
+        const orgNames = this.filteredOrgs.map(o => this.orgLabel(o));
+        if (orgNames.length) items.push({ label: bn ? 'বাহিনী' : 'ORGANIZATION', value: orgNames.join(', ') });
         if (this.filterLabel) items.push({ label: bn ? 'অফিস' : 'OFFICE', value: this.filterLabel });
         const unitNames = (bn ? this.accessibleRabUnitNamesBN : this.accessibleRabUnitNames) ?? this.accessibleRabUnitNames;
         if (unitNames && unitNames.length > 0) items.push({ label: bn ? 'ইউনিট' : 'UNITS', value: unitNames.join(', ') });
         const mtNames = (bn ? this.accessibleMemberTypeNamesBN : this.accessibleMemberTypeNames) ?? this.accessibleMemberTypeNames;
         if (mtNames && mtNames.length > 0) items.push({ label: bn ? 'সদস্য ধরণ' : 'MEMBER TYPES', value: mtNames.join(', ') });
-        const orgNames = this.filteredOrgs.map(o => this.orgLabel(o));
-        if (orgNames.length) items.push({ label: bn ? 'বাহিনী' : 'ORGANIZATIONS', value: orgNames.join(', ') });
         if (items.length === 0) items.push({ label: bn ? 'পরিসর' : 'SCOPE', value: bn ? 'সকল ইউনিট' : 'All Unit' });
         return items;
     }
@@ -233,7 +234,9 @@ export class TradeWiseManpowerComponent implements OnInit {
             showPageNumbers: true,
             filename: 'trade-wise-manpower',
             filterLines: scope ? [scope] : undefined,
-            landscape: true
+            landscape: true,
+            rabLetterhead: true,
+            criteriaItems: this.buildCriteriaItems()
         };
 
         // Print uses the shared RAB letterhead (frontend only). Matrix mode: each

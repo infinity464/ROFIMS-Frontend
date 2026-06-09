@@ -208,15 +208,16 @@ export class RankWiseManpowerComponent implements OnInit {
     private buildCriteriaItems(): { label: string; value: string }[] {
         const bn = this.lang === 'bn';
         const items: { label: string; value: string }[] = [];
+        // Organization first.
+        if (this.selectedOrgIds.length > 0) {
+            const names = this.orgOptions.filter(o => this.selectedOrgIds.includes(o.value)).map(o => o.label);
+            if (names.length) items.push({ label: bn ? 'বাহিনী' : 'ORGANIZATION', value: names.join(', ') });
+        }
         if (this.filterLabel) items.push({ label: bn ? 'অফিস' : 'OFFICE', value: this.filterLabel });
         const unitNames = (bn ? this.accessibleRabUnitNamesBN : this.accessibleRabUnitNames) ?? this.accessibleRabUnitNames;
         if (unitNames && unitNames.length > 0) items.push({ label: bn ? 'ইউনিট' : 'UNITS', value: unitNames.join(', ') });
         const mtNames = (bn ? this.accessibleMemberTypeNamesBN : this.accessibleMemberTypeNames) ?? this.accessibleMemberTypeNames;
         if (mtNames && mtNames.length > 0) items.push({ label: bn ? 'সদস্য ধরণ' : 'MEMBER TYPES', value: mtNames.join(', ') });
-        if (this.selectedOrgIds.length > 0) {
-            const names = this.orgOptions.filter(o => this.selectedOrgIds.includes(o.value)).map(o => o.label);
-            if (names.length) items.push({ label: bn ? 'বাহিনী' : 'ORGANIZATIONS', value: names.join(', ') });
-        }
         if (items.length === 0) items.push({ label: bn ? 'পরিসর' : 'SCOPE', value: bn ? 'সকল ইউনিট' : 'All Unit' });
         return items;
     }
@@ -274,7 +275,9 @@ export class RankWiseManpowerComponent implements OnInit {
             })(),
             showPageNumbers: true,
             filename: 'rank-wise-manpower',
-            filterLines: scope ? [scope] : undefined
+            filterLines: scope ? [scope] : undefined,
+            rabLetterhead: true,
+            criteriaItems: this.buildCriteriaItems()
         };
 
         // Print uses the shared RAB letterhead (frontend only). Numeric columns

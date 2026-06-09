@@ -22,7 +22,6 @@
                     styleClass="org-filter-select"
                     [disabled]="loading">
                 </p-multiselect>
-                <app-org-tree-filter (filterChange)="onOrgTreeFilter($event)"></app-org-tree-filter>
             </div>
 
             <!-- Lang + Export -->
@@ -67,6 +66,9 @@
                 </div>
             </div>
         </div>
+
+        <!-- RAB org-tree cascade filter (collapsible) -->
+        <app-org-tree-filter (filterChange)="onOrgTreeFilter($event)"></app-org-tree-filter>
 
         <!-- Row 2: centered title -->
         <div class="report-header-title-block">
