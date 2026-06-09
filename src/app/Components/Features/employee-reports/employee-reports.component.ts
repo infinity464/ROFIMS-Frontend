@@ -157,7 +157,7 @@ export class EmployeeReportsComponent implements OnInit {
      * "All" sends empty/null to backend (no filter).
      */
     statusOptions: { label: string; labelBn: string; value: string }[] = [
-        { label: 'All', labelBn: 'সকল', value: '' },
+        { label: 'All Member', labelBn: 'সকল সদস্য', value: '' },
         { label: 'Presently Serving', labelBn: 'কর্মরত', value: 'Servings' },
         { label: 'Ex Member', labelBn: 'সাবেক সদস্য', value: 'ExMember' },
         { label: 'Supernumerary', labelBn: 'সুপারনিউমারারি', value: 'Supernumerary' },
