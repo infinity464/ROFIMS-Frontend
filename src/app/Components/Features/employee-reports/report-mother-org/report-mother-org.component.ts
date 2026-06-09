@@ -133,15 +133,30 @@ export class ReportMotherOrgComponent implements OnInit, OnChanges {
      */
     columnCatalog: { key: string; labelEN: string; labelBN: string; hint: string; defaultVisible: boolean }[] = [
         { key: 'ser',          labelEN: 'Ser',           labelBN: 'ক্রঃ',          hint: 'Serial',                defaultVisible: true  },
-        { key: 'personnel',    labelEN: 'RAB Personnel', labelBN: 'র‍্যাব সদস্য',   hint: 'RabPersonnelComposite', defaultVisible: true  },
-        { key: 'rabId',        labelEN: 'RAB ID',        labelBN: 'র‍্যাব আইডি',    hint: 'RabId',                 defaultVisible: true  },
+        { key: 'serviceId',    labelEN: 'Service ID',    labelBN: 'সার্ভিস আইডি',  hint: 'Plain',                 defaultVisible: true  },
+        { key: 'armyRank',     labelEN: 'Rank',          labelBN: 'র‍্যাঙ্ক',       hint: 'Plain',                 defaultVisible: true  },
         { key: 'corps',        labelEN: 'Corps',         labelBN: 'কোর',           hint: 'Plain',                 defaultVisible: true  },
         { key: 'trade',        labelEN: 'Trade',         labelBN: 'ট্রেড',         hint: 'Plain',                 defaultVisible: true  },
-        { key: 'motherUnit',   labelEN: 'Mother Unit',   labelBN: 'মাতৃ ইউনিট',     hint: 'Plain',                 defaultVisible: true  },
-        { key: 'joiningDate',  labelEN: 'Joining Date',  labelBN: 'যোগদান তারিখ',   hint: 'JoiningDate',          defaultVisible: true  },
-        { key: 'rmks',         labelEN: 'Remarks',       labelBN: 'মন্তব্য',       hint: 'Remarks',               defaultVisible: true  },
+        { key: 'name',         labelEN: 'Name',          labelBN: 'নাম',           hint: 'Name',                  defaultVisible: true  },
+        // Selected-value column: header mirrors the chosen report type
+        // (e.g. "Education") and every cell shows the picked CommonCode
+        // value (e.g. "SSC") — the filter context surfaced per row.
+        { key: 'selectedValue',labelEN: 'Selected Value',labelBN: 'নির্বাচিত মান',  hint: 'SelectedValue',         defaultVisible: true  },
+        // Member-status column — opt-in only (hidden by default). The user can
+        // add it via the column picker; most useful when the Status filter is
+        // "All" and rows are of mixed statuses. When selected, backendColumnKeys()
+        // requests the raw `status` field so memberStatusText() can localize it.
+        { key: 'memberStatus', labelEN: 'Member Status',  labelBN: 'সদস্য অবস্থা',   hint: 'MemberStatus',          defaultVisible: false },
+        // Blank "Remark" column — always renders an empty cell so the
+        // printed roster has a writable space for handwritten notes.
+        // Default-visible; users can hide via the column picker.
+        { key: 'blankRemark',  labelEN: 'Remark',        labelBN: 'মন্তব্য',       hint: 'BlankRemark',           defaultVisible: true  },
         // Opt-in extras
-        { key: 'serviceId',         labelEN: 'Service ID',       labelBN: 'সার্ভিস আইডি',       hint: 'Plain', defaultVisible: false },
+        { key: 'personnel',    labelEN: 'RAB Personnel', labelBN: 'র‍্যাব সদস্য',   hint: 'RabPersonnelComposite', defaultVisible: false },
+        { key: 'rabId',        labelEN: 'RAB ID',        labelBN: 'র‍্যাব আইডি',    hint: 'RabId',                 defaultVisible: false },
+        { key: 'motherUnit',        labelEN: 'Mother Unit',      labelBN: 'মাতৃ ইউনিট',         hint: 'Plain', defaultVisible: false },
+        { key: 'joiningDate',       labelEN: 'Joining Date',     labelBN: 'যোগদান তারিখ',       hint: 'JoiningDate', defaultVisible: false },
+        { key: 'rmks',              labelEN: 'Remarks',          labelBN: 'মন্তব্য',           hint: 'Remarks', defaultVisible: false },
         { key: 'nameEnglish',       labelEN: 'Name (EN)',        labelBN: 'নাম (ইংরেজি)',       hint: 'Plain', defaultVisible: false },
         { key: 'nameBangla',        labelEN: 'Name (BN)',        labelBN: 'নাম (বাংলা)',        hint: 'Plain', defaultVisible: false },
         { key: 'nid',               labelEN: 'NID',              labelBN: 'এনআইডি',            hint: 'Plain', defaultVisible: false },
@@ -149,7 +164,6 @@ export class ReportMotherOrgComponent implements OnInit, OnChanges {
         { key: 'appointment',       labelEN: 'Appointment',      labelBN: 'নিয়োগ',             hint: 'Plain', defaultVisible: false },
         { key: 'memberType',        labelEN: 'Member Type',      labelBN: 'সদস্য ধরন',          hint: 'Plain', defaultVisible: false },
         { key: 'motherOrganization',labelEN: 'Mother Org',       labelBN: 'মাতৃ সংস্থা',        hint: 'Plain', defaultVisible: false },
-        { key: 'armyRank',          labelEN: 'Rank',             labelBN: 'র‍্যাঙ্ক',           hint: 'Plain', defaultVisible: false },
         { key: 'tradeRemarks',      labelEN: 'Trade Remarks',    labelBN: 'ট্রেড মন্তব্য',       hint: 'Plain', defaultVisible: false },
         { key: 'gender',            labelEN: 'Gender',           labelBN: 'লিঙ্গ',              hint: 'Plain', defaultVisible: false },
         { key: 'rabUnit',           labelEN: 'RAB Unit',         labelBN: 'র‍্যাব ইউনিট',       hint: 'Plain', defaultVisible: false },
@@ -257,9 +271,46 @@ export class ReportMotherOrgComponent implements OnInit, OnChanges {
         return personnelMetaHelper(row as any, this.lang);
     }
 
+    /** Cell text for the synthetic "Selected Value" column — the picked CommonCode value (e.g. "SSC"), identical for every row. */
+    get selectedValueCellText(): string {
+        return this.commonCodeLabel?.trim() ? this.commonCodeLabel.trim() : '—';
+    }
+
+    /** Localized labels for the raw PostingStatus passthrough values (matches the parent Status dropdown wording). */
+    private static readonly MEMBER_STATUS_LABELS: Record<string, { en: string; bn: string }> = {
+        Servings:          { en: 'Presently Serving',  bn: 'কর্মরত' },
+        ExMember:          { en: 'Ex Member',          bn: 'সাবেক সদস্য' },
+        Supernumerary:     { en: 'Supernumerary',      bn: 'সুপারনিউমারারি' },
+        Pending:           { en: 'Pending for Joining',bn: 'যোগদানের অপেক্ষায়' },
+        PendingForJoining: { en: 'Pending for Joining',bn: 'যোগদানের অপেক্ষায়' },
+    };
+
+    /** Per-row member-status cell text, localized; falls back to the raw value. */
+    memberStatusText(row: MemberAppointmentReportRow): string {
+        const raw = (row as any).status as string | null | undefined;
+        if (!raw) return '—';
+        const m = ReportMotherOrgComponent.MEMBER_STATUS_LABELS[raw];
+        return m ? (this.lang === 'bn' ? m.bn : m.en) : raw;
+    }
+
+    /** Keep the "Selected Value" column header mirroring the chosen report type (e.g. "Education"). */
+    private syncSelectedValueColumnLabel(): void {
+        const col = this.columnCatalog.find((c) => c.key === 'selectedValue');
+        if (!col) return;
+        const label = this.reportTypeLabel?.trim();
+        col.labelEN = label || 'Selected Value';
+        col.labelBN = label || 'নির্বাচিত মান';
+    }
+
     get criteriaItems(): { label: string; value: string }[] {
         const L = this.L[this.lang];
         const items: { label: string; value: string }[] = [];
+        // Status (Member Status) leads the criteria list — always surfaced
+        // (including "All Member"); it used to render as the header subtitle.
+        {
+            const sLabel = this.lang === 'bn' ? this.statusLabelBn : this.statusLabel;
+            if (sLabel) items.push({ label: L['report.search.rabMemberStatus'], value: sLabel });
+        }
         if (this.selectedMotherOrgUnitId != null) {
             const unit = this.motherOrgUnitOptions.find(u => u.orgId === this.selectedMotherOrgUnitId);
             const val = this.lang === 'bn' ? (unit?.orgNameBN || unit?.orgNameEN) : unit?.orgNameEN;
@@ -279,10 +330,6 @@ export class ReportMotherOrgComponent implements OnInit, OnChanges {
             const trade = this.tradeOptions.find(o => o.value === this.selectedTradeId);
             const val = this.lang === 'bn' ? trade?.labelBn : trade?.label;
             if (val) items.push({ label: L['report.search.trade'], value: val });
-        }
-        if (this.postingStatus && this.postingStatus !== 'All') {
-            const sLabel = this.lang === 'bn' ? this.statusLabelBn : this.statusLabel;
-            if (sLabel) items.push({ label: L['report.search.rabMemberStatus'], value: sLabel });
         }
         return items;
     }
@@ -309,7 +356,9 @@ export class ReportMotherOrgComponent implements OnInit, OnChanges {
         return this.L[this.lang]['report.title.motherOrg'];
     }
     get rabSubtitleText(): string {
-        return (this.lang === 'bn' ? this.statusLabelBn : this.statusLabel) || '';
+        // Status moved into the Selection Criteria block (see criteriaItems);
+        // the header no longer carries it as a subtitle.
+        return '';
     }
     get rabCriteriaTitle(): string { return this.lang === 'bn' ? 'নির্বাচন মানদণ্ড' : 'SELECTION CRITERIA'; }
     get rabGeneratedLabel(): string { return this.lang === 'bn' ? 'তারিখ' : 'GENERATED'; }
@@ -541,6 +590,15 @@ export class ReportMotherOrgComponent implements OnInit, OnChanges {
                         return new TableCell({ ...cellOpts, children: [new Paragraph({ children: [run(this.formatDate(row.joiningDate), { fontKey: mono, chSp: isBn ? 0 : 4 })] })] });
                     case 'Remarks':
                         return new TableCell({ ...cellOpts, children: [new Paragraph({ children: [run(row.rmks || '', { color: C.gray })] })] });
+                    case 'Name':
+                        return new TableCell({ ...cellOpts, children: [new Paragraph({ children: [run(codeValue(row.name, row.nameBN), { sz: S.name, bold: true })] })] });
+                    case 'SelectedValue':
+                        return new TableCell({ ...cellOpts, children: [new Paragraph({ children: [run(this.selectedValueCellText)] })] });
+                    case 'MemberStatus':
+                        return new TableCell({ ...cellOpts, children: [new Paragraph({ children: [run(this.memberStatusText(row))] })] });
+                    case 'BlankRemark':
+                        // Always-empty cell — for handwritten notes after printing.
+                        return new TableCell({ ...cellOpts, children: [new Paragraph({ children: [run('')] })] });
                     case 'Plain':
                     default:
                         return new TableCell({ ...cellOpts, children: [new Paragraph({ children: [run(this.plainCellValue(row, col.key))] })] });
@@ -626,6 +684,10 @@ export class ReportMotherOrgComponent implements OnInit, OnChanges {
                     case 'RabId':                 return (row as any).rabid ? this.displayNum((row as any).rabid) : '';
                     case 'JoiningDate':           return this.formatDate(row.joiningDate);
                     case 'Remarks':               return row.rmks || '';
+                    case 'Name':                  return codeValue(row.name, row.nameBN);
+                    case 'SelectedValue':         return this.selectedValueCellText;
+                    case 'MemberStatus':          return this.memberStatusText(row);
+                    case 'BlankRemark':           return '';
                     case 'Plain':
                     default:                      return this.plainCellValue(row, col.key);
                 }
@@ -710,6 +772,14 @@ export class ReportMotherOrgComponent implements OnInit, OnChanges {
                     return `<td class="td-date">${esc(this.formatDate(row.joiningDate))}</td>`;
                 case 'Remarks':
                     return `<td class="td-rmks">${esc(row.rmks || '')}</td>`;
+                case 'Name':
+                    return `<td class="td-personnel"><div class="personnel-name">${esc(codeValue(row.name, row.nameBN))}</div></td>`;
+                case 'SelectedValue':
+                    return `<td>${esc(this.selectedValueCellText)}</td>`;
+                case 'MemberStatus':
+                    return `<td>${esc(this.memberStatusText(row))}</td>`;
+                case 'BlankRemark':
+                    return `<td class="td-blank-remark"></td>`;
                 case 'Plain':
                 default:
                     return `<td>${esc(this.plainCellValue(row, col.key))}</td>`;
@@ -853,6 +923,7 @@ export class ReportMotherOrgComponent implements OnInit, OnChanges {
         this.canUpdate = _perms.canUpdate;
         this.canDelete = _perms.canDelete;
 
+        this.syncSelectedValueColumnLabel();
         if (this.commonCodeId != null) {
             this.loadDependentOptions(this.commonCodeId);
         }
@@ -885,6 +956,9 @@ export class ReportMotherOrgComponent implements OnInit, OnChanges {
         }
         if (changes['lang']) {
             this.appliedFilterLines = this.buildFilterLines();
+        }
+        if (changes['reportTypeLabel']) {
+            this.syncSelectedValueColumnLabel();
         }
     }
 
@@ -960,6 +1034,26 @@ export class ReportMotherOrgComponent implements OnInit, OnChanges {
         this.load();
     }
 
+    /**
+     * Translate the display column keys into backend field keys. The synthetic
+     * "name" column maps to the registry's nameEnglish/nameBangla fields so the
+     * server projects the name data; "selectedValue" is frontend-only (filled
+     * from commonCodeLabel) and needs no server field. ser/blankRemark are
+     * synthetic too and are simply ignored server-side.
+     */
+    private backendColumnKeys(): string[] {
+        const out: string[] = [];
+        const seen = new Set<string>();
+        const push = (k: string) => { if (!seen.has(k)) { seen.add(k); out.push(k); } };
+        for (const key of this.selectedColumnKeys) {
+            if (key === 'name') { push('nameEnglish'); push('nameBangla'); continue; }
+            if (key === 'memberStatus') { push('status'); continue; }
+            if (key === 'selectedValue') continue;
+            push(key);
+        }
+        return out;
+    }
+
     load(): void {
         this.loading = true;
         this.appliedFilterLines = this.buildFilterLines();
@@ -982,7 +1076,7 @@ export class ReportMotherOrgComponent implements OnInit, OnChanges {
             criteria.push({ fieldKey: 'trade', idValue: this.selectedTradeId });
 
         this.reportService.runDynamicEmployeeBaseReport({
-            columns: this.selectedColumnKeys,
+            columns: this.backendColumnKeys(),
             criteria,
             postingStatusFilter: this.postingStatus || null,
             pagination: { page_no, row_per_page: this.rows },

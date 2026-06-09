@@ -243,6 +243,20 @@
                                 @case ('Remarks') {
                                     <td class="rab-td-rmks">{{ row.rmks || '' }}</td>
                                 }
+                                @case ('Name') {
+                                    <td class="rab-td-personnel">
+                                        <div class="rab-personnel-name">{{ codeValue(row.name, row.nameBN) }}</div>
+                                    </td>
+                                }
+                                @case ('SelectedValue') {
+                                    <td>{{ selectedValueCellText }}</td>
+                                }
+                                @case ('MemberStatus') {
+                                    <td>{{ memberStatusText(row) }}</td>
+                                }
+                                @case ('BlankRemark') {
+                                    <td class="rab-td-blank-remark"></td>
+                                }
                                 @case ('Plain') {
                                     <td>{{ plainCellValue(row, col.key) }}</td>
                                 }

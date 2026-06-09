@@ -257,6 +257,12 @@ export class ReportEducationComponent implements OnInit, OnChanges {
     get criteriaItems(): { label: string; value: string }[] {
         const L = this.L[this.lang];
         const items: { label: string; value: string }[] = [];
+        // Status (Member Status) leads the criteria list — always surfaced
+        // (including "All Member"); it used to render as the header subtitle.
+        {
+            const sLabel = this.lang === 'bn' ? this.statusLabelBn : this.statusLabel;
+            if (sLabel) items.push({ label: L['report.search.rabMemberStatus'], value: sLabel });
+        }
         if (this.selectedOrgId != null) {
             const org = this.orgOptions.find(o => o.orgId === this.selectedOrgId);
             const val = this.lang === 'bn' ? (org?.orgNameBN || org?.orgNameEN) : org?.orgNameEN;
@@ -276,12 +282,6 @@ export class ReportEducationComponent implements OnInit, OnChanges {
             const trade = this.tradeOptions.find(o => o.value === this.selectedTradeId);
             const val = this.lang === 'bn' ? trade?.labelBn : trade?.label;
             if (val) items.push({ label: L['report.search.trade'], value: val });
-        }
-        // Status is always surfaced here (including "All") — it used to render
-        // as the header subtitle, but now lives inside Selection Criteria.
-        {
-            const sLabel = this.lang === 'bn' ? this.statusLabelBn : this.statusLabel;
-            if (sLabel) items.push({ label: L['report.search.rabMemberStatus'], value: sLabel });
         }
         return items;
     }
