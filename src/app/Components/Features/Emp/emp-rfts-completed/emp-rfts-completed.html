@@ -85,8 +85,12 @@
                     </span>
                 </div>
 
+                @if (isLoadingMembers) {
+                    <div class="text-center py-4 text-color-secondary"><i class="pi pi-spin pi-spinner mr-2"></i>Loading members…</div>
+                }
                 <p-table
                     [value]="selectedGroup.members"
+                    [loading]="isLoadingMembers"
                     styleClass="p-datatable-sm"
                     dataKey="id"
                     [paginator]="selectedGroup.members.length > 10"

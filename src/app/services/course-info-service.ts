@@ -56,6 +56,24 @@ export interface EmployeeCourseFilterParams {
     take?: number;
 }
 
+/** Filter params for the "Pending RFTS" table view on /emp-send-to-course. */
+export interface PendingRftsFilterParams {
+    /** Free-text — matched against Name / Service ID / RAB ID server-side. */
+    query?: string;
+    orgId?: number | null;
+    memberTypeId?: number | null;
+    rankId?: number | null;
+    tradeId?: number | null;
+    /** Multiple trade ids — used by the collapsed "N/A" trade option. Wins over tradeId. */
+    tradeIds?: number[] | null;
+    /** yyyy-MM-dd */
+    joiningDateFrom?: string | null;
+    /** yyyy-MM-dd */
+    joiningDateTo?: string | null;
+    /** Optional hard cap. When omitted the server returns every pending member. */
+    take?: number;
+}
+
 @Injectable({
     providedIn: 'root'
 })
@@ -102,6 +120,31 @@ export class CourseInfoService {
             const qs = p.toString();
             if (qs) url += '?' + qs;
         }
+        return this.http
+            .get<EmployeeSearchInfoModel[]>(url)
+            .pipe(map((res) => (Array.isArray(res) ? res : [])));
+    }
+
+    /**
+     * Table view source for /emp-send-to-course: employees pending RFTS
+     * (IsRFTSComplted null or false). Unlike the autocomplete, an empty query
+     * returns the full pending list. Optional filters narrow by org / member type /
+     * rank / trade / joining-date range. Ex-members excluded; member-type scope applies.
+     */
+    getEmployeesPendingRfts(filter?: PendingRftsFilterParams): Observable<EmployeeSearchInfoModel[]> {
+        let url = `${this.apiUrl}/GetEmployeesPendingRfts`;
+        const p = new URLSearchParams();
+        if (filter?.query?.trim()) p.set('query', filter.query.trim());
+        if (filter?.orgId != null) p.set('orgId', String(filter.orgId));
+        if (filter?.memberTypeId != null) p.set('memberTypeId', String(filter.memberTypeId));
+        if (filter?.rankId != null) p.set('rankId', String(filter.rankId));
+        if (filter?.tradeIds != null && filter.tradeIds.length > 0) p.set('tradeIds', filter.tradeIds.join(','));
+        else if (filter?.tradeId != null) p.set('tradeId', String(filter.tradeId));
+        if (filter?.joiningDateFrom) p.set('joiningDateFrom', filter.joiningDateFrom);
+        if (filter?.joiningDateTo) p.set('joiningDateTo', filter.joiningDateTo);
+        if (filter?.take != null) p.set('take', String(filter.take));
+        const qs = p.toString();
+        if (qs) url += '?' + qs;
         return this.http
             .get<EmployeeSearchInfoModel[]>(url)
             .pipe(map((res) => (Array.isArray(res) ? res : [])));
