@@ -23,6 +23,16 @@ export interface RabPrintSection {
     columns?: RabPrintColumn[];
 }
 
+/**
+ * Two-row grouped header (e.g. unit × rank pivot): leading column(s) span both
+ * rows; each group spans its sub-headers. Applied to every section's table.
+ */
+export interface RabPrintGroupedHeader {
+    leading: RabPrintColumn[];
+    groups: string[];
+    subHeaders: string[];
+}
+
 export interface RabPrintConfig {
     lang: 'en' | 'bn';
     /** Section title under the letterhead (e.g. "RANK WISE MANPOWER"). */
@@ -33,6 +43,10 @@ export interface RabPrintConfig {
     sections: RabPrintSection[];
     /** Optional grand-total row rendered in a tfoot after all sections. */
     grandTotalRow?: string[];
+    /** Two-row grouped header shared across sections (Auth/Held-style pivots). */
+    groupedHeader?: RabPrintGroupedHeader;
+    /** Landscape page orientation (default portrait). */
+    landscape?: boolean;
 }
 
 /**
@@ -125,9 +139,32 @@ export class RabReportPrintService {
             ? `<div class="matrix-section"><table><tbody>${renderRowCols(cfg.columns.length ? cfg.columns : (cfg.sections[0]?.columns ?? []), cfg.grandTotalRow, 'grand')}</tbody></table></div>`
             : '';
 
-        const tableBlockHtml = isMatrix
-            ? `${matrixHtml}${matrixGrandHtml}`
-            : `<table><thead>${headerHtml}</thead><tbody>${sectionsHtml}</tbody>${grandTotalHtml}</table>`;
+        // Grouped two-row header mode (Auth/Held-style pivot) — one table per section.
+        const gh = cfg.groupedHeader;
+        const groupedHeadHtml = gh
+            ? `<tr>${gh.leading.map(c => `<th rowspan="2" style="${alignCss(c.align ?? 'left')}">${esc(c.label)}</th>`).join('')}`
+              + `${gh.groups.map(g => `<th colspan="${gh.subHeaders.length}" style="text-align:center">${esc(g)}</th>`).join('')}</tr>`
+              + `<tr>${gh.groups.map(() => gh.subHeaders.map(s => `<th style="text-align:center">${esc(s)}</th>`).join('')).join('')}</tr>`
+            : '';
+        const renderGroupedRow = (cells: string[], cls = ''): string =>
+            `<tr class="${cls}">${cells.map((cell, i) => {
+                const lead = gh ? i < gh.leading.length : false;
+                const style = lead ? alignCss(gh!.leading[i]?.align ?? 'left') : `text-align:center;font-family:${mono};`;
+                return `<td style="${style}">${esc(cell ?? '')}</td>`;
+            }).join('')}</tr>`;
+        const groupedHtml = gh
+            ? cfg.sections.filter(s => s.rows.length > 0).map(sec => {
+                const titleHtml = sec.title ? `<div class="matrix-title">${esc(sec.title)}</div>` : '';
+                const rowsHtml = sec.rows.map(r => renderGroupedRow(r)).join('');
+                return `<div class="matrix-section">${titleHtml}<table><thead>${groupedHeadHtml}</thead><tbody>${rowsHtml}</tbody></table></div>`;
+            }).join('')
+            : '';
+
+        const tableBlockHtml = gh
+            ? groupedHtml
+            : isMatrix
+                ? `${matrixHtml}${matrixGrandHtml}`
+                : `<table><thead>${headerHtml}</thead><tbody>${sectionsHtml}</tbody>${grandTotalHtml}</table>`;
 
         const criteriaGridHtml = `<div class="criteria-grid">${cfg.criteriaItems
             .map(it => `<div class="cell"><div class="cell-label">${esc(it.label)}</div><div class="cell-value">${esc(it.value)}</div></div>`)
@@ -148,6 +185,7 @@ export class RabReportPrintService {
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=DM+Sans:wght@400;500;600&family=Hind+Siliguri:wght@400;500;600;700&display=swap" rel="stylesheet" />
 <style>
     @page {
+        ${cfg.landscape ? 'size: A4 landscape;' : ''}
         margin: 12mm 8mm 22mm 8mm;
         @bottom-left { content: "● " "${cssStr(confidential)}"; font-family: ${mono}; font-size: 6.5pt; font-weight: 600; letter-spacing: 0.3em; text-transform: uppercase; color: #b03a3a; padding: 5mm 0 0 8mm; }
         @bottom-center { content: "${cssStr(pageWord)} " counter(page) " ${cssStr(ofWord)} " counter(pages); font-family: ${mono}; font-size: 6.5pt; font-weight: 600; letter-spacing: 0.25em; text-transform: uppercase; color: #4a4a4a; padding-top: 5mm; }
@@ -188,8 +226,19 @@ export class RabReportPrintService {
     tr.subtotal td { background: #f0efe9; font-weight: 700; }
     tr.grand td { padding: 2mm; font-size: 9pt; font-weight: 700; border: 1px solid rgba(11,11,11,0.12); background: #e7e4da; }
     tfoot tr.grand td { padding: 2mm; font-size: 9pt; font-weight: 700; border: 1px solid rgba(11,11,11,0.12); background: #e7e4da; }
-    .matrix-section { margin-bottom: 6mm; page-break-inside: avoid; }
-    .matrix-title { font-family: ${serif}; font-weight: 700; font-size: 11pt; letter-spacing: 0.04em; text-transform: uppercase; color: #0b0b0b; margin: 0 0 1.5mm; padding: 1.5mm 2mm; background: #ece9e0; }
+    /* Sections may span pages — DON'T avoid breaks, or a tall table jumps whole to
+       the next page and leaves the letterhead alone on page 1. Keep the title with
+       its first rows instead, and repeat the header on each page (thead group). */
+    .matrix-section { margin-bottom: 6mm; }
+    .matrix-title { font-family: ${serif}; font-weight: 700; font-size: 11pt; letter-spacing: 0.04em; text-transform: uppercase; color: #0b0b0b; margin: 0 0 1.5mm; padding: 1.5mm 2mm; background: #ece9e0; page-break-after: avoid; break-after: avoid; }
+    ${cfg.landscape ? `
+    /* Landscape pivots are wide — shrink type & padding so the table fits the page width. */
+    table { font-size: 7pt; table-layout: fixed; }
+    thead th { font-size: 5.5pt; padding: 1mm 0.6mm; letter-spacing: 0.03em; word-break: break-word; white-space: normal; }
+    tbody td { font-size: 6.5pt; padding: 0.8mm 0.6mm; word-break: break-word; }
+    tr.subtotal td, tr.grand td { font-size: 6.5pt; padding: 0.8mm 0.6mm; }
+    .matrix-title { font-size: 9pt; }
+    ` : ''}
 </style>
 </head>
 <body>
