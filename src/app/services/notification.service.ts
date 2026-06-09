@@ -4,9 +4,6 @@ import { BehaviorSubject } from 'rxjs';
 import { tap, catchError } from 'rxjs/operators';
 import { of } from 'rxjs';
 
-// #region agent log
-const _log = (m: string, d: Record<string, unknown>) => fetch('http://127.0.0.1:7682/ingest/24c52934-7935-4f35-a09e-2dbd51502872', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Debug-Session-Id': '3a6509' }, body: JSON.stringify({ sessionId: '3a6509', location: 'notification.service', message: m, data: d, timestamp: Date.now(), hypothesisId: d['h'] as string }) }).catch(() => {});
-// #endregion
 import { environment } from '@/Core/Environments/environment';
 
 export type NotificationType = 'leaveApproval' | string;
@@ -42,7 +39,6 @@ export class NotificationService {
   constructor(private http: HttpClient) {}
 
   add(notification: Omit<AppNotification, 'id' | 'createdAt' | 'read'> & { serverId?: number }): void {
-    _log('add notification', { h: 'H5', serverId: notification.serverId });
     const id = notification.serverId != null ? String(notification.serverId) : `n-${Date.now()}-${Math.random().toString(36).slice(2)}`;
     const { serverId, ...rest } = notification;
     const item: AppNotification = {
@@ -55,12 +51,10 @@ export class NotificationService {
   }
 
   loadFromApi(): void {
-    _log('loadFromApi started', { h: 'H2' });
     this.http
       .get<NotificationApiDto[]>(`${this.api}/Get`)
       .pipe(
         tap((dtos) => {
-          _log('loadFromApi received', { h: 'H1', dtosLen: dtos?.length ?? 0, firstRead: dtos?.[0]?.read, firstKeys: dtos?.[0] ? Object.keys(dtos[0]) : [] });
           const items: AppNotification[] = dtos.map((d) => {
             let data: Record<string, unknown> | undefined;
             try {
@@ -80,11 +74,9 @@ export class NotificationService {
             };
           });
           const unread = items.filter((n) => !n.read).length;
-          _log('loadFromApi next', { h: 'H1', itemsLen: items.length, unread });
           this.notificationsSubject.next(items);
         }),
         catchError((err) => {
-          _log('loadFromApi error', { h: 'H2', err: String(err?.message ?? err) });
           return of([]);
         })
       )
