@@ -92,6 +92,30 @@ export interface PermanentPostingCombinedReportModel {
     tradeNameBN: string | null;
 }
 
+export interface PostedOutServedReportModel {
+    employeeID: number;
+    serviceId: string | null;
+    prefix: string | null;
+    prefixBN: string | null;
+    rank: string | null;
+    rankBN: string | null;
+    corps: string | null;
+    corpsBN: string | null;
+    trade: string | null;
+    tradeBN: string | null;
+    name: string | null;
+    nameBN: string | null;
+    servedFromDate: string | null;
+    presentUnit: string | null;
+    presentUnitBN: string | null;
+    postedUnit: string | null;
+    postedUnitBN: string | null;
+    contactNumber: string | null;
+    postingOrderDate: string | null;
+    isFinalPostedOut: boolean | null;
+    rmks: string | null;
+}
+
 @Injectable({ providedIn: 'root' })
 export class PermanentPostingMORecordService {
     private baseUrl = `${environment.apis.core}/PermanentPostingMORecord`;
@@ -157,6 +181,22 @@ export class PermanentPostingMORecordService {
         if (entryStatus !== undefined && entryStatus !== null) params = params.set('entryStatus', entryStatus);
         return this.http.get<PaginatedResult<PermanentPostingCombinedReportModel>>(
             `${this.baseUrl}/GetCombinedReportPaginated`, { params });
+    }
+
+    getPostedOutServedReportPaginated(
+        pageNo: number, rowPerPage: number, search?: string,
+        dateFrom?: string, dateTo?: string, rankId?: number | null, presentUnitId?: number | null
+    ): Observable<PaginatedResult<PostedOutServedReportModel>> {
+        let params = new HttpParams()
+            .set('page_no', pageNo)
+            .set('row_per_page', rowPerPage);
+        if (search) params = params.set('search', search);
+        if (dateFrom) params = params.set('dateFrom', dateFrom);
+        if (dateTo) params = params.set('dateTo', dateTo);
+        if (rankId != null) params = params.set('rankId', rankId);
+        if (presentUnitId != null) params = params.set('presentUnitId', presentUnitId);
+        return this.http.get<PaginatedResult<PostedOutServedReportModel>>(
+            `${this.baseUrl}/GetPostedOutServedReportPaginated`, { params });
     }
 
     delete(id: number): Observable<any> {

@@ -99,6 +99,7 @@ import { TemporaryMovementReturnComponent } from '@/Components/Features/temporar
 import { PostedOutPersonListComponent } from '@/Components/Features/posted-out-person-list/posted-out-person-list';
 import { NewJoiningPersonListComponent } from '@/Components/Features/new-joining-person-list/new-joining-person-list';
 import { PostedOutRelieverReportComponent } from '@/Components/Features/posted-out-reliever-report/posted-out-reliever-report';
+import { PostedOutServedReportComponent } from '@/Components/Features/posted-out-served-report/posted-out-served-report';
 import { EmpPresentStatus } from '@/Components/Features/Emp/emp-present-status/emp-present-status';
 import { EmpPersonalServiceInfoComponent } from '@/Components/Features/Emp/emp-personal-service-info/emp-personal-service-info';
 import { EmpPresentMemberCheckComponent } from '@/Components/Features/Emp/emp-present-member-check/emp-present-member-check.component';
@@ -374,6 +375,7 @@ export const appRoutes: Routes = [
             { path: 'posting/posted-out-person-list', component: PostedOutPersonListComponent },
             { path: 'posting/new-joining-person-list', component: NewJoiningPersonListComponent },
             { path: 'posting/posted-out-reliever-report', component: PostedOutRelieverReportComponent },
+            { path: 'posting/posted-out-served-report', component: PostedOutServedReportComponent },
             { path: 'posting/add-draft-new-posting', component: AddDraftNewPostingComponent },
             { path: 'posting/notesheet-generate', component: PostingNotesheetGenerateComponent },
             { path: 'posting/add-draft-inter-posting', component: AddDraftInterPostingComponent },
