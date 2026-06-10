@@ -1,0 +1,74 @@
+<p-confirmDialog></p-confirmDialog>
+
+<section class="tmr-section">
+    <div class="tmr-filters">
+        <div class="tmr-field">
+            <label>Letter No</label>
+            <input pInputText [(ngModel)]="filterLetterNo" (ngModelChange)="applyFilters()" placeholder="Search letter no" />
+        </div>
+        <div class="tmr-field">
+            <label>Mother Org</label>
+            <p-select [options]="motherOrgOptions" optionLabel="label" optionValue="value"
+                [(ngModel)]="filterMotherOrgId" (onChange)="applyFilters()" [showClear]="true"
+                placeholder="All" appendTo="body" styleClass="w-full"></p-select>
+        </div>
+        <div class="tmr-field">
+            <label>Mother Unit</label>
+            <p-select [options]="motherUnitOptions" optionLabel="label" optionValue="value"
+                [(ngModel)]="filterMotherUnitId" (onChange)="applyFilters()" [showClear]="true"
+                placeholder="All" appendTo="body" styleClass="w-full"></p-select>
+        </div>
+        <div class="tmr-field">
+            <label>Return Date From</label>
+            <p-datepicker [(ngModel)]="filterReturnFrom" (ngModelChange)="applyFilters()" appFlexibleDate
+                dateFormat="dd-mm-yy" [showIcon]="true" appendTo="body" styleClass="w-full"></p-datepicker>
+        </div>
+        <div class="tmr-field">
+            <label>Return Date To</label>
+            <p-datepicker [(ngModel)]="filterReturnTo" (ngModelChange)="applyFilters()" appFlexibleDate
+                dateFormat="dd-mm-yy" [showIcon]="true" appendTo="body" styleClass="w-full"></p-datepicker>
+        </div>
+        <div class="tmr-field tmr-filter-actions">
+            <button pButton type="button" label="Clear" icon="pi pi-filter-slash"
+                class="p-button-text" (click)="clearFilters()"></button>
+        </div>
+    </div>
+
+    <p-table [value]="records" [loading]="loading" [paginator]="true" [rows]="10"
+        [rowsPerPageOptions]="[10, 25, 50]" styleClass="p-datatable-sm" responsiveLayout="scroll">
+        <ng-template pTemplate="header">
+            <tr>
+                <th>#</th>
+                <th>Personnel</th>
+                <th>Service ID</th>
+                <th>Mother Org</th>
+                <th>Mother Unit</th>
+                <th>Letter No</th>
+                <th>Letter Date</th>
+                <th>Return Date</th>
+                <th>Actions</th>
+            </tr>
+        </ng-template>
+        <ng-template pTemplate="body" let-row let-i="rowIndex">
+            <tr>
+                <td>{{ i + 1 }}</td>
+                <td>{{ row.fullNameEN || '—' }}</td>
+                <td>{{ row.serviceId || '—' }}</td>
+                <td>{{ row.motherOrgName || '—' }}</td>
+                <td>{{ row.destinedMotherUnitName || '—' }}</td>
+                <td>{{ row.letterNo || '—' }}</td>
+                <td>{{ row.letterIssueDate ? (row.letterIssueDate | date: 'dd-MM-yyyy') : '—' }}</td>
+                <td>{{ row.returnDate ? (row.returnDate | date: 'dd-MM-yyyy') : '—' }}</td>
+                <td>
+                    <button pButton icon="pi pi-pencil" class="p-button-text p-button-sm"
+                        pTooltip="Edit" (click)="editRecord.emit(row)"></button>
+                    <button pButton icon="pi pi-trash" class="p-button-text p-button-sm p-button-danger"
+                        pTooltip="Delete" (click)="confirmDelete(row)"></button>
+                </td>
+            </tr>
+        </ng-template>
+        <ng-template pTemplate="emptymessage">
+            <tr><td colspan="9" class="tmr-empty">No return records found.</td></tr>
+        </ng-template>
+    </p-table>
+</section>

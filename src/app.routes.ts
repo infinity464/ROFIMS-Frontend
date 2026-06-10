@@ -95,6 +95,7 @@ import { EmpAdditionalRemarks } from '@/Components/Features/Emp/emp-additional-r
 import { EmpConfidentialRemarks } from '@/Components/Features/Emp/emp-confidential-remarks/emp-confidential-remarks.component';
 import { EmpPermPostingMotherOrg } from '@/Components/Features/Emp/emp-perm-posting-mother-org/emp-perm-posting-mother-org.component';
 import { PermanentPostingMORecordComponent } from '@/Components/Features/permanent-posting-mo-record/permanent-posting-mo-record';
+import { TemporaryMovementReturnComponent } from '@/Components/Features/temporary-movement-return/temporary-movement-return';
 import { PostedOutPersonListComponent } from '@/Components/Features/posted-out-person-list/posted-out-person-list';
 import { NewJoiningPersonListComponent } from '@/Components/Features/new-joining-person-list/new-joining-person-list';
 import { PostedOutRelieverReportComponent } from '@/Components/Features/posted-out-reliever-report/posted-out-reliever-report';
@@ -369,6 +370,7 @@ export const appRoutes: Routes = [
             { path: 'supernumerary-profile/:id', component: SupernumeraryProfile },
             { path: 'new-joinee-sending-notesheet', component: NewJoineeSendingNotesheet },
             { path: 'posting/permanent-posting-mo-record', component: PermanentPostingMORecordComponent },
+            { path: 'movement/temporary-movement-return', component: TemporaryMovementReturnComponent },
             { path: 'posting/posted-out-person-list', component: PostedOutPersonListComponent },
             { path: 'posting/new-joining-person-list', component: NewJoiningPersonListComponent },
             { path: 'posting/posted-out-reliever-report', component: PostedOutRelieverReportComponent },
