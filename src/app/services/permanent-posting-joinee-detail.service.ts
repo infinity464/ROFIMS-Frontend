@@ -52,6 +52,10 @@ export interface PermanentPostingJoineeDetailListModel {
     postedOutServiceId: string | null;
     postedOutNameBN: string | null;
     postedOutNameEN: string | null;
+    postedOutRank: string | null;
+    postedOutRankBN: string | null;
+    postedOutRabUnit: string | null;
+    postedOutRabUnitBN: string | null;
     motherOrgName: string | null;
     motherOrgNameBN: string | null;
     motherOrgUnitName: string | null;
@@ -73,6 +77,8 @@ export interface PermanentPostingJoineeDetailFilterRequest {
     isAddedInNewJoineeDataEntry?: boolean | null;
     dateFrom?: string | null;
     dateTo?: string | null;
+    possibleJoiningDateFrom?: string | null;
+    possibleJoiningDateTo?: string | null;
 }
 
 export interface PermanentPostingJoineeDetailPaginatedFilterRequest {

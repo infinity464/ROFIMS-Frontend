@@ -502,6 +502,12 @@ export interface DynamicReportRequest {
   // ── Report-specific filter slots (nominal-roll family) ──────────────
   /** Stay-After-Reliever: keep only members whose reliever has joined RAB. */
   relieverJoinedOnly?: boolean | null;
+  /** Stay-After-Reliever (inverse): posted out but reliever has NOT yet joined. */
+  relieverNotJoinedOnly?: boolean | null;
+  /** Stay-After-Reliever (Stand Release): every member in the posted-out list. */
+  postedOutAllOnly?: boolean | null;
+  /** Stay-After-Reliever (New Posting Person List): joinee-detail entry still pending. */
+  newPostingPendingOnly?: boolean | null;
   /** Long-Stay: minimum RAB tenure threshold value (paired with minStayUnit). */
   minStayValue?: number | null;
   /** "Years" (default) | "Months" — unit for minStayValue. */

@@ -3,7 +3,7 @@
 <div class="employee-reports-page">
 <div class="report-filter-card">
     <div class="report-filter-card-title">
-        <h1 class="report-page-title">Stay After Reliever Joined Nominal Roll</h1>
+        <h1 class="report-page-title">Posted Out/In Person Report</h1>
     </div>
     <div class="report-filter-header" [class.open]="filterOpen" (click)="toggleFilter()" role="button" tabindex="0" (keydown.enter)="toggleFilter()" (keydown.space)="toggleFilter()">
         <div class="report-filter-header-left">
@@ -30,41 +30,77 @@
     <div class="report-filter-body" [class.open]="filterOpen">
         <div class="report-filter-body-inner">
             <div class="report-fields-row">
-                <div class="report-filter-field">
-                    <label>{{ lang === 'en' ? 'Mother Org' : 'মাতৃ সংস্থা' }}</label>
-                    <p-multiSelect [options]="orgOptions" [(ngModel)]="selectedOrgIds" (ngModelChange)="onOrgChange()"
-                        optionLabel="label" optionValue="value" display="chip" [filter]="true"
-                        placeholder="Select" styleClass="w-full" appendTo="body"></p-multiSelect>
-                </div>
-                <div class="report-filter-field">
-                    <label>{{ lang === 'en' ? 'Member Type' : 'সদস্য ধরন' }}</label>
-                    <p-multiSelect [options]="memberTypeOptions" [(ngModel)]="selectedMemberTypeIds" (ngModelChange)="onMemberTypeChange()"
-                        optionLabel="label" optionValue="value" display="chip" [filter]="true"
-                        placeholder="Select" styleClass="w-full" appendTo="body"></p-multiSelect>
-                </div>
-                <div class="report-filter-field">
-                    <label>{{ lang === 'en' ? 'Rank' : 'পদবী' }}</label>
-                    <p-select [options]="rankOptions" [(ngModel)]="selectedRankId" (ngModelChange)="onFilterChange()"
+                <div class="report-filter-field" style="flex: 1 1 100%; max-width: 100%;">
+                    <label>{{ lang === 'en' ? 'Report Type' : 'প্রতিবেদনের ধরন' }}</label>
+                    <p-select [options]="relieverModeOptions" [(ngModel)]="relieverMode" (ngModelChange)="onModeChange()"
                         optionLabel="label" optionValue="value" placeholder="Select" styleClass="w-full"
-                        [disabled]="selectedOrgIds.length === 0" [filter]="true" [showClear]="true" appendTo="body"></p-select>
-                </div>
-                <div class="report-filter-field">
-                    <label>{{ lang === 'en' ? 'Corps' : 'কোর' }}</label>
-                    <p-multiSelect [options]="corpsOptions" [(ngModel)]="selectedCorpsIds" (ngModelChange)="onCorpsChange()"
-                        optionLabel="label" optionValue="value" display="chip" [filter]="true"
-                        [disabled]="selectedOrgIds.length === 0"
-                        placeholder="Select" styleClass="w-full" appendTo="body"></p-multiSelect>
-                </div>
-                <div class="report-filter-field">
-                    <label>{{ lang === 'en' ? 'Trade' : 'ট্রেড' }}</label>
-                    <p-multiSelect [options]="tradeOptions" [(ngModel)]="selectedTradeIds"
-                        optionLabel="label" optionValue="value" display="chip" [filter]="true"
-                        [disabled]="selectedCorpsIds.length === 0"
-                        placeholder="Select" styleClass="w-full" appendTo="body"></p-multiSelect>
+                        appendTo="body"></p-select>
                 </div>
             </div>
+            <div class="report-fields-row">
+                @if (relieverMode !== 'newPosting') {
+                    <div class="report-filter-field">
+                        <label>{{ lang === 'en' ? 'Mother Org' : 'মাতৃ সংস্থা' }}</label>
+                        <p-multiSelect [options]="orgOptions" [(ngModel)]="selectedOrgIds" (ngModelChange)="onOrgChange()"
+                            optionLabel="label" optionValue="value" display="chip" [filter]="true"
+                            placeholder="Select" styleClass="w-full" appendTo="body"></p-multiSelect>
+                    </div>
+                    <div class="report-filter-field">
+                        <label>{{ lang === 'en' ? 'Member Type' : 'সদস্য ধরন' }}</label>
+                        <p-multiSelect [options]="memberTypeOptions" [(ngModel)]="selectedMemberTypeIds" (ngModelChange)="onMemberTypeChange()"
+                            optionLabel="label" optionValue="value" display="chip" [filter]="true"
+                            placeholder="Select" styleClass="w-full" appendTo="body"></p-multiSelect>
+                    </div>
+                    <div class="report-filter-field">
+                        <label>{{ lang === 'en' ? 'Rank' : 'পদবী' }}</label>
+                        <p-select [options]="rankOptions" [(ngModel)]="selectedRankId" (ngModelChange)="onFilterChange()"
+                            optionLabel="label" optionValue="value" placeholder="Select" styleClass="w-full"
+                            [disabled]="selectedOrgIds.length === 0" [filter]="true" [showClear]="true" appendTo="body"></p-select>
+                    </div>
+                    <div class="report-filter-field">
+                        <label>{{ lang === 'en' ? 'Corps' : 'কোর' }}</label>
+                        <p-multiSelect [options]="corpsOptions" [(ngModel)]="selectedCorpsIds" (ngModelChange)="onCorpsChange()"
+                            optionLabel="label" optionValue="value" display="chip" [filter]="true"
+                            [disabled]="selectedOrgIds.length === 0"
+                            placeholder="Select" styleClass="w-full" appendTo="body"></p-multiSelect>
+                    </div>
+                    <div class="report-filter-field">
+                        <label>{{ lang === 'en' ? 'Trade' : 'ট্রেড' }}</label>
+                        <p-multiSelect [options]="tradeOptions" [(ngModel)]="selectedTradeIds"
+                            optionLabel="label" optionValue="value" display="chip" [filter]="true"
+                            [disabled]="selectedCorpsIds.length === 0"
+                            placeholder="Select" styleClass="w-full" appendTo="body"></p-multiSelect>
+                    </div>
+                    <div class="report-filter-field">
+                        <label>{{ lang === 'en' ? 'RAB Unit' : 'র‍্যাব ইউনিট' }}</label>
+                        <p-multiSelect [options]="rabUnitOptions" [(ngModel)]="selectedRabUnitIds"
+                            optionLabel="label" optionValue="value" display="chip" [filter]="true"
+                            placeholder="Select" styleClass="w-full" appendTo="body"></p-multiSelect>
+                    </div>
+                }
+                @if (relieverMode === 'standRelease') {
+                    <div class="report-filter-field">
+                        <label>{{ lang === 'en' ? 'Possible Release From' : 'সম্ভাব্য রিলিজ হইতে' }}</label>
+                        <p-datepicker [(ngModel)]="releaseFrom" dateFormat="dd-mm-yy" placeholder="Select" [showIcon]="true" appendTo="body"></p-datepicker>
+                    </div>
+                    <div class="report-filter-field">
+                        <label>{{ lang === 'en' ? 'Possible Release To' : 'সম্ভাব্য রিলিজ পর্যন্ত' }}</label>
+                        <p-datepicker [(ngModel)]="releaseTo" dateFormat="dd-mm-yy" placeholder="Select" [showIcon]="true" appendTo="body"></p-datepicker>
+                    </div>
+                }
+                @if (relieverMode === 'newPosting') {
+                    <div class="report-filter-field">
+                        <label>{{ lang === 'en' ? 'Possible Joining From' : 'সম্ভাব্য যোগদান হইতে' }}</label>
+                        <p-datepicker [(ngModel)]="joiningFrom" dateFormat="dd-mm-yy" placeholder="Select" [showIcon]="true" appendTo="body"></p-datepicker>
+                    </div>
+                    <div class="report-filter-field">
+                        <label>{{ lang === 'en' ? 'Possible Joining To' : 'সম্ভাব্য যোগদান পর্যন্ত' }}</label>
+                        <p-datepicker [(ngModel)]="joiningTo" dateFormat="dd-mm-yy" placeholder="Select" [showIcon]="true" appendTo="body"></p-datepicker>
+                    </div>
+                }
+            </div>
 
-            @if (searched) {
+            @if (searched && relieverMode !== 'newPosting') {
                 <div class="ds-field-group">
                     <div class="ds-group-divider"><span class="ds-group-label">Columns</span><span class="ds-group-line"></span></div>
                     <div class="ds-field">
