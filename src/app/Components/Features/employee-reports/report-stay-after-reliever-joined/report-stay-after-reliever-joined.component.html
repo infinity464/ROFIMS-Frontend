@@ -206,7 +206,7 @@
             </div>
         }
 
-        <div class="rab-paper-table-wrap">
+        <div class="rab-paper-table-wrap" [class.is-loading]="loading">
             <p-table [value]="list" [loading]="loading" [lazy]="true" [first]="first" [rows]="rows"
                 [totalRecords]="totalRecords" [paginator]="false" styleClass="rab-data-table p-datatable-sm">
                 <ng-template pTemplate="header">
