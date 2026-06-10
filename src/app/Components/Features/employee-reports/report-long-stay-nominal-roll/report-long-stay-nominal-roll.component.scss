@@ -5,6 +5,24 @@
     min-width: 160px;
 }
 
+/* Exactly 4 filter fields per row (gap is 12px → 3 gaps = 36px). */
+:host ::ng-deep .report-fields-row .report-filter-field {
+    flex: 0 0 calc((100% - 36px) / 4);
+    max-width: calc((100% - 36px) / 4);
+}
+@media (max-width: 900px) {
+    :host ::ng-deep .report-fields-row .report-filter-field {
+        flex: 0 0 calc((100% - 12px) / 2);
+        max-width: calc((100% - 12px) / 2);
+    }
+}
+@media (max-width: 560px) {
+    :host ::ng-deep .report-fields-row .report-filter-field {
+        flex: 0 0 100%;
+        max-width: 100%;
+    }
+}
+
 /* Force datepicker to fill the same width as p-select dropdowns */
 :host ::ng-deep .report-fields-row .report-filter-field p-datepicker,
 :host ::ng-deep .report-fields-row .report-filter-field .p-datepicker {

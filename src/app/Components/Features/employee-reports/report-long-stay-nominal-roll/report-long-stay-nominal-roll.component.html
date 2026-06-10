@@ -5,7 +5,7 @@
         <div class="report-filter-header-left">
             <div class="report-filter-icon"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M2 4h12M4 8h8M6 12h4" stroke="var(--primary-color)" stroke-width="1.8" stroke-linecap="round"/></svg></div>
             <div>
-                <div class="report-filter-title">{{ lang === 'en' ? 'Search' : 'অনুসন্ধান' }}</div>
+                <div class="report-filter-title">Search</div>
                 <div class="report-filter-subtitle">{{ filterSubtitle() }}</div>
             </div>
         </div>
@@ -19,24 +19,50 @@
         <div class="report-filter-body-inner">
             <div class="report-fields-row">
                 <div class="report-filter-field">
-                    <label>{{ lang === 'en' ? 'Minimum Stay' : 'সর্বনিম্ন অবস্থান' }} <span style="color:#b03a3a">*</span></label>
+                    <label>Minimum Stay <span style="color:#b03a3a">*</span></label>
                     <p-inputNumber [(ngModel)]="minDuration" [min]="1" [showButtons]="true" inputStyleClass="w-full" styleClass="w-full"></p-inputNumber>
                 </div>
                 <div class="report-filter-field">
-                    <label>{{ lang === 'en' ? 'Unit' : 'একক' }}</label>
+                    <label>Unit</label>
                     <p-select [options]="unitOptions" [(ngModel)]="unit" optionLabel="label" optionValue="value" placeholder="Select" styleClass="w-full" appendTo="body"></p-select>
                 </div>
                 <div class="report-filter-field">
-                    <label>{{ lang === 'en' ? 'Mother Org' : 'মাতৃ সংস্থা' }}</label>
-                    <p-select [options]="orgOptions" [(ngModel)]="selectedOrgId" (ngModelChange)="onOrgChange()"
-                        optionLabel="label" optionValue="value" placeholder="Select" styleClass="w-full"
-                        [filter]="true" [showClear]="true" appendTo="body"></p-select>
+                    <label>Mother Org</label>
+                    <p-multiSelect [options]="orgOptions" [(ngModel)]="selectedOrgIds" (ngModelChange)="onOrgChange()"
+                        optionLabel="label" optionValue="value" display="chip" [filter]="true"
+                        placeholder="Select" styleClass="w-full" appendTo="body"></p-multiSelect>
                 </div>
                 <div class="report-filter-field">
-                    <label>{{ lang === 'en' ? 'Rank' : 'পদবী' }}</label>
+                    <label>Member Type</label>
+                    <p-multiSelect [options]="memberTypeOptions" [(ngModel)]="selectedMemberTypeIds" (ngModelChange)="onMemberTypeChange()"
+                        optionLabel="label" optionValue="value" display="chip" [filter]="true"
+                        placeholder="Select" styleClass="w-full" appendTo="body"></p-multiSelect>
+                </div>
+                <div class="report-filter-field">
+                    <label>Rank</label>
                     <p-select [options]="rankOptions" [(ngModel)]="selectedRankId" (ngModelChange)="onFilterChange()"
                         optionLabel="label" optionValue="value" placeholder="Select" styleClass="w-full"
-                        [disabled]="selectedOrgId == null" [filter]="true" [showClear]="true" appendTo="body"></p-select>
+                        [disabled]="selectedOrgIds.length === 0" [filter]="true" [showClear]="true" appendTo="body"></p-select>
+                </div>
+                <div class="report-filter-field">
+                    <label>Corps</label>
+                    <p-multiSelect [options]="corpsOptions" [(ngModel)]="selectedCorpsIds" (ngModelChange)="onCorpsChange()"
+                        optionLabel="label" optionValue="value" display="chip" [filter]="true"
+                        [disabled]="selectedOrgIds.length === 0"
+                        placeholder="Select" styleClass="w-full" appendTo="body"></p-multiSelect>
+                </div>
+                <div class="report-filter-field">
+                    <label>Trade</label>
+                    <p-multiSelect [options]="tradeOptions" [(ngModel)]="selectedTradeIds"
+                        optionLabel="label" optionValue="value" display="chip" [filter]="true"
+                        [disabled]="selectedCorpsIds.length === 0"
+                        placeholder="Select" styleClass="w-full" appendTo="body"></p-multiSelect>
+                </div>
+                <div class="report-filter-field">
+                    <label>RAB Unit</label>
+                    <p-multiSelect [options]="rabUnitOptions" [(ngModel)]="selectedRabUnitIds"
+                        optionLabel="label" optionValue="value" display="chip" [filter]="true"
+                        placeholder="Select" styleClass="w-full" appendTo="body"></p-multiSelect>
                 </div>
             </div>
 
@@ -46,6 +72,7 @@
                     <div class="ds-field">
                         <label class="ds-field-label">Visible columns</label>
                         <p-multiSelect [options]="columnPickerOptions" [(ngModel)]="selectedColumnKeys"
+                            (ngModelChange)="onColumnsChange()"
                             optionLabel="label" optionValue="value" display="chip" [filter]="true"
                             placeholder="Pick columns…" styleClass="w-full" appendTo="body"></p-multiSelect>
                     </div>
@@ -75,11 +102,11 @@
             <div class="report-filter-actions">
                 <button type="button" class="report-btn-clear" (click)="clearFilters()">
                     <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M1 1l10 10M11 1L1 11" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
-                    {{ lang === 'en' ? 'Clear' : 'মুছে ফেলুন' }}
+                    Clear
                 </button>
                 <button type="button" class="report-btn-search" (click)="search()">
                     <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><circle cx="6" cy="6" r="4.5" stroke="white" stroke-width="1.6"/><path d="M10 10l2.5 2.5" stroke="white" stroke-width="1.6" stroke-linecap="round"/></svg>
-                    {{ lang === 'en' ? 'Search' : 'অনুসন্ধান' }}
+                    Search
                 </button>
             </div>
         </div>
@@ -97,7 +124,7 @@
                     <i class="pi pi-spin pi-spinner" style="font-size:13px"></i> Generating...
                 } @else {
                     <svg width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M6.5 1v7M3.5 5.5l3 3 3-3M1.5 10.5h10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
-                    {{ lang === 'en' ? 'Export' : 'এক্সপোর্ট' }}
+                    Export
                 }
             </button>
             @if (exportDropdownOpen) {

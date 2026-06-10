@@ -1791,18 +1791,28 @@ export class EmpBasicInfo implements OnInit {
         return (selected.codeValueEN || '').toLowerCase() !== 'unmarried';
     }
 
+    /**
+     * Officer Types come from basic-setup/officer-type, stored as CommonCode rows with
+     * codeType="OfficerType", orgId=mother org and parentCodeId=member type (EmployeeType).
+     * So we fetch the org's OfficerType rows and filter them by the selected member type.
+     */
     loadOfficerType(codeId: number, orgId?: number | null) {
-        this.commonCodeService.getAllActiveCommonCodesByParentId(codeId).subscribe({
-            next: (res) => {
-                if (orgId == null) {
-                    this.officerTypes = res;
-                    return;
-                }
-                this.officerTypes = res.filter((item) => item.orgId === orgId || item.orgId === 0);
-            },
-            error: (err) => {
-                console.error(err);
-            }
+        const filterByMemberType = (res: CommonCodeModel[]) => {
+            this.officerTypes = (res ?? []).filter((item) => item.parentCodeId === codeId);
+        };
+
+        if (orgId == null) {
+            // No org yet — fall back to all OfficerType rows for this member type.
+            this.commonCodeService.getAllActiveCommonCodesType('OfficerType').subscribe({
+                next: filterByMemberType,
+                error: (err) => console.error(err)
+            });
+            return;
+        }
+
+        this.commonCodeService.getAllActiveCommonCodesByOrgIdAndType(orgId, 'OfficerType').subscribe({
+            next: filterByMemberType,
+            error: (err) => console.error(err)
         });
     }
     loadAppointment() {
