@@ -39,6 +39,7 @@ import {
 } from 'docx';
 import { saveAs } from 'file-saver';
 import * as XLSX from 'xlsx';
+import { forkJoin } from 'rxjs';
 
 type Lang = 'en' | 'bn';
 
@@ -83,8 +84,18 @@ export class ReportDeceasedComponent implements OnInit {
 
     orgOptions: { label: string; labelBn: string; value: number }[] = [];
     rankOptions: { label: string; labelBn: string; value: number }[] = [];
-    selectedOrgId: number | null = null;
+    memberTypeOptions: { label: string; labelBn: string; value: number }[] = [];
+    corpsOptions: { label: string; labelBn: string; value: number }[] = [];
+    tradeOptions: { label: string; labelBn: string; value: number }[] = [];
+    selectedOrgIds: number[] = [];
     selectedRankId: number | null = null;
+    rabUnitOptions: { label: string; labelBn: string; value: number }[] = [];
+    selectedMemberTypeIds: number[] = [];
+    selectedCorpsIds: number[] = [];
+    selectedTradeIds: number[] = [];
+    selectedRabUnitIds: number[] = [];
+    /** Raw org-scoped MotherOrgRank rows, re-filtered client-side by Member Type. */
+    private allRanksForOrg: CommonCodeModel[] = [];
 
     first = 0;
     rows = 20;
@@ -211,6 +222,9 @@ export class ReportDeceasedComponent implements OnInit {
     }
     onColumnDragEnd(): void { this.draggingColumnKey = null; }
     removeColumn(key: string): void { this.selectedColumnKeys = this.selectedColumnKeys.filter(k => k !== key); }
+    /** Picker selection changed — reload so newly-added columns' data is fetched
+        (the backend only returns the columns requested at query time). */
+    onColumnsChange(): void { if (this.searched) this.loadPage(); }
 
     constructor(
         private _router: Router,
@@ -232,6 +246,8 @@ export class ReportDeceasedComponent implements OnInit {
         this.canDelete = _perms.canDelete;
 
         this.loadMotherOrgs();
+        this.loadMemberTypes();
+        this.loadRabUnits();
         // Auto-run with no filters so the user lands on a populated list.
         this.search();
     }
@@ -248,31 +264,100 @@ export class ReportDeceasedComponent implements OnInit {
             error: () => (this.orgOptions = []),
         });
     }
+    private mapCodes(codes: CommonCodeModel[]): { label: string; labelBn: string; value: number }[] {
+        return (codes || []).map((c) => ({
+            label: c.codeValueEN || String(c.codeId),
+            labelBn: c.codeValueBN || c.codeValueEN || String(c.codeId),
+            value: c.codeId,
+        }));
+    }
+    private loadMemberTypes(): void {
+        this.commonCodeService.getAccessibleMemberTypes().subscribe({
+            next: (codes: CommonCodeModel[]) => (this.memberTypeOptions = this.mapCodes(codes)),
+            error: () => (this.memberTypeOptions = []),
+        });
+    }
+    private loadRabUnits(): void {
+        this.commonCodeService.getAllActiveCommonCodesType('RabUnit').subscribe({
+            next: (codes: CommonCodeModel[]) => (this.rabUnitOptions = this.mapCodes(codes)),
+            error: () => (this.rabUnitOptions = []),
+        });
+    }
+    /** Dedupe CommonCode rows by codeId, preserving first-seen order. */
+    private dedupeByCodeId(rows: CommonCodeModel[]): CommonCodeModel[] {
+        const byId = new Map<number, CommonCodeModel>();
+        for (const r of rows || []) if (!byId.has(r.codeId)) byId.set(r.codeId, r);
+        return Array.from(byId.values());
+    }
 
+    /** Mother Org changed → reload its org-scoped Ranks and Corps; reset Trade. */
     onOrgChange(): void {
         this.selectedRankId = null;
         this.rankOptions = [];
-        if (this.selectedOrgId == null) return;
-        this.commonCodeService
-            .getAllActiveCommonCodesByOrgIdAndType(this.selectedOrgId, 'MotherOrgRank')
-            .subscribe({
-                next: (codes: CommonCodeModel[]) => {
-                    this.rankOptions = (codes || []).map((c) => ({
-                        label: c.codeValueEN || String(c.codeId),
-                        labelBn: c.codeValueBN || c.codeValueEN || String(c.codeId),
-                        value: c.codeId,
-                    }));
-                },
-                error: () => (this.rankOptions = []),
-            });
+        this.allRanksForOrg = [];
+        this.selectedCorpsIds = [];
+        this.corpsOptions = [];
+        this.selectedTradeIds = [];
+        this.tradeOptions = [];
+        if (!this.selectedOrgIds.length) return;
+        forkJoin(
+            this.selectedOrgIds.map(orgId =>
+                this.commonCodeService.getAllActiveCommonCodesByOrgIdAndType(orgId, 'MotherOrgRank'))
+        ).subscribe({
+            next: (results: CommonCodeModel[][]) => {
+                this.allRanksForOrg = this.dedupeByCodeId(results.flat());
+                this.applyRankMemberTypeFilter();
+            },
+            error: () => { this.allRanksForOrg = []; this.rankOptions = []; },
+        });
+        forkJoin(
+            this.selectedOrgIds.map(orgId =>
+                this.commonCodeService.getAllActiveCommonCodesByOrgIdAndType(orgId, 'Corps'))
+        ).subscribe({
+            next: (results: CommonCodeModel[][]) => {
+                this.corpsOptions = this.mapCodes(this.dedupeByCodeId(results.flat()));
+            },
+            error: () => (this.corpsOptions = []),
+        });
+    }
+
+    /** Member Type changed → re-filter the org-scoped ranks by parentCodeId. */
+    onMemberTypeChange(): void {
+        this.applyRankMemberTypeFilter();
+    }
+
+    /** Rank = org-scoped MotherOrgRank rows whose parentCodeId is a selected Member Type. */
+    private applyRankMemberTypeFilter(): void {
+        let rows = this.allRanksForOrg;
+        if (this.selectedMemberTypeIds.length)
+            rows = rows.filter(r => r.parentCodeId != null && this.selectedMemberTypeIds.includes(r.parentCodeId));
+        this.rankOptions = this.mapCodes(rows);
+        if (this.selectedRankId != null && !this.rankOptions.some(o => o.value === this.selectedRankId))
+            this.selectedRankId = null;
+    }
+
+    /** Corps changed → reload Trades (children of the selected Corps rows). */
+    onCorpsChange(): void {
+        this.selectedTradeIds = [];
+        this.tradeOptions = [];
+        if (!this.selectedCorpsIds.length) return;
+        forkJoin(
+            this.selectedCorpsIds.map(corpsId =>
+                this.commonCodeService.getAllActiveCommonCodesByParentId(corpsId))
+        ).subscribe({
+            next: (results: CommonCodeModel[][]) => {
+                this.tradeOptions = this.mapCodes(this.dedupeByCodeId(results.flat()));
+            },
+            error: () => (this.tradeOptions = []),
+        });
     }
 
     onFilterChange(): void {}
 
     get reportTitle(): string {
         return this.lang === 'en'
-            ? 'List of Death Members Serving in RAB'
-            : 'র‍্যাবে কর্মরত মৃত সদস্যদের তালিকা';
+            ? 'Death Members Report'
+            : 'মৃত সদস্যদের প্রতিবেদন';
     }
 
     get dateLine(): string {
@@ -301,16 +386,24 @@ export class ReportDeceasedComponent implements OnInit {
             const lbl = this.lang === 'en' ? 'Date of Death To' : 'মৃত্যু তারিখ পর্যন্ত';
             items.push({ label: lbl, value: this.formatDateLabel(this.fmtDate(this.toDate)!) });
         }
-        if (this.selectedOrgId != null) {
-            const opt = this.orgOptions.find(o => o.value === this.selectedOrgId);
-            const lbl = this.lang === 'en' ? 'Mother Org' : 'মাতৃ সংস্থা';
-            if (opt) items.push({ label: lbl, value: this.lang === 'bn' ? opt.labelBn : opt.label });
-        }
+        const multi = (ids: number[], opts: { label: string; labelBn: string; value: number }[], en: string, bn: string) => {
+            if (!ids.length) return;
+            const names = ids
+                .map(id => opts.find(o => o.value === id))
+                .filter((o): o is typeof opts[number] => o != null)
+                .map(o => this.lang === 'bn' ? o.labelBn : o.label);
+            if (names.length) items.push({ label: this.lang === 'en' ? en : bn, value: names.join(', ') });
+        };
+        multi(this.selectedOrgIds, this.orgOptions, 'Mother Org', 'মাতৃ সংস্থা');
+        multi(this.selectedMemberTypeIds, this.memberTypeOptions, 'Member Type', 'সদস্য ধরন');
         if (this.selectedRankId != null) {
             const opt = this.rankOptions.find(o => o.value === this.selectedRankId);
             const lbl = this.lang === 'en' ? 'Rank' : 'পদবী';
             if (opt) items.push({ label: lbl, value: this.lang === 'bn' ? opt.labelBn : opt.label });
         }
+        multi(this.selectedCorpsIds, this.corpsOptions, 'Corps', 'কোর');
+        multi(this.selectedTradeIds, this.tradeOptions, 'Trade', 'ট্রেড');
+        multi(this.selectedRabUnitIds, this.rabUnitOptions, 'RAB Unit', 'র‍্যাব ইউনিট');
         return items;
     }
 
@@ -318,8 +411,12 @@ export class ReportDeceasedComponent implements OnInit {
         let c = 0;
         if (this.fromDate) c++;
         if (this.toDate) c++;
-        if (this.selectedOrgId != null) c++;
+        if (this.selectedOrgIds.length > 0) c++;
         if (this.selectedRankId != null) c++;
+        if (this.selectedMemberTypeIds.length > 0) c++;
+        if (this.selectedCorpsIds.length > 0) c++;
+        if (this.selectedTradeIds.length > 0) c++;
+        if (this.selectedRabUnitIds.length > 0) c++;
         return c;
     }
 
@@ -336,9 +433,16 @@ export class ReportDeceasedComponent implements OnInit {
     clearFilters(): void {
         this.fromDate = null;
         this.toDate = null;
-        this.selectedOrgId = null;
+        this.selectedOrgIds = [];
         this.selectedRankId = null;
         this.rankOptions = [];
+        this.allRanksForOrg = [];
+        this.selectedMemberTypeIds = [];
+        this.selectedCorpsIds = [];
+        this.corpsOptions = [];
+        this.selectedTradeIds = [];
+        this.tradeOptions = [];
+        this.selectedRabUnitIds = [];
         this.first = 0;
     }
 
@@ -371,10 +475,18 @@ export class ReportDeceasedComponent implements OnInit {
         if (dateFrom || dateTo) {
             criteria.push({ fieldKey: 'dateOfDeath', dateFrom: dateFrom, dateTo: dateTo });
         }
-        if (this.selectedOrgId != null && this.selectedOrgId > 0)
-            criteria.push({ fieldKey: 'motherOrganization', idValue: this.selectedOrgId });
+        if (this.selectedOrgIds.length > 0)
+            criteria.push({ fieldKey: 'motherOrganization', idValues: this.selectedOrgIds });
         if (this.selectedRankId != null && this.selectedRankId > 0)
             criteria.push({ fieldKey: 'armyRank', idValue: this.selectedRankId });
+        if (this.selectedMemberTypeIds.length > 0)
+            criteria.push({ fieldKey: 'memberType', idValues: this.selectedMemberTypeIds });
+        if (this.selectedCorpsIds.length > 0)
+            criteria.push({ fieldKey: 'corps', idValues: this.selectedCorpsIds });
+        if (this.selectedTradeIds.length > 0)
+            criteria.push({ fieldKey: 'trade', idValues: this.selectedTradeIds });
+        if (this.selectedRabUnitIds.length > 0)
+            criteria.push({ fieldKey: 'rabUnit', idValues: this.selectedRabUnitIds });
 
         // Translate selected column keys to registry FieldKeys. The backend
         // ignores unknown keys (e.g. the synthetic `ser`) and auto-expands the

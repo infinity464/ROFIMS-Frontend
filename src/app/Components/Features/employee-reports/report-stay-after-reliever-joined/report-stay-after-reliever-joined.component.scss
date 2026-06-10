@@ -5,6 +5,48 @@
     min-width: 160px;
 }
 
+/* ── Match report-address-location's page + title chrome ──────────── */
+.employee-reports-page {
+    background: transparent;
+    color: var(--text-color, inherit);
+    font-family: inherit;
+    margin: 0 auto;
+    padding: 0 0 1.5rem 0;
+}
+.report-filter-card-title {
+    padding: 0 0 0.75rem 0;
+    margin: 0 0 1.25rem 0;
+    border-bottom: 1px solid var(--surface-border, rgba(255, 255, 255, 0.08));
+}
+.report-page-title {
+    font-size: 1.75rem;
+    font-weight: 700;
+    color: var(--text-color, #fff);
+    margin: 0;
+    letter-spacing: 0;
+}
+:host-context(.app-dark) .report-page-title {
+    color: var(--text-color);
+}
+
+/* Exactly 4 filter fields per row (gap is 12px → 3 gaps = 36px). */
+:host ::ng-deep .report-fields-row .report-filter-field {
+    flex: 0 0 calc((100% - 36px) / 4);
+    max-width: calc((100% - 36px) / 4);
+}
+@media (max-width: 900px) {
+    :host ::ng-deep .report-fields-row .report-filter-field {
+        flex: 0 0 calc((100% - 12px) / 2);
+        max-width: calc((100% - 12px) / 2);
+    }
+}
+@media (max-width: 560px) {
+    :host ::ng-deep .report-fields-row .report-filter-field {
+        flex: 0 0 100%;
+        max-width: 100%;
+    }
+}
+
 /* Force datepicker to fill the same width as p-select dropdowns */
 :host ::ng-deep .report-fields-row .report-filter-field p-datepicker,
 :host ::ng-deep .report-fields-row .report-filter-field .p-datepicker {

@@ -1,6 +1,10 @@
 <p-toast position="top-center"></p-toast>
 
+<div class="employee-reports-page">
 <div class="report-filter-card">
+    <div class="report-filter-card-title">
+        <h1 class="report-page-title">Long Stay Nominal Roll</h1>
+    </div>
     <div class="report-filter-header" [class.open]="filterOpen" (click)="toggleFilter()" role="button" tabindex="0" (keydown.enter)="toggleFilter()" (keydown.space)="toggleFilter()">
         <div class="report-filter-header-left">
             <div class="report-filter-icon"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M2 4h12M4 8h8M6 12h4" stroke="var(--primary-color)" stroke-width="1.8" stroke-linecap="round"/></svg></div>
@@ -226,3 +230,4 @@
     }
 </div>
 }
+</div>

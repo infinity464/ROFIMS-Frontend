@@ -122,12 +122,12 @@ export class EmpBasicInfo implements OnInit {
         employeeId: this.employeeId
     };
 
-    // Spouse Present address config (with "Same as Spouse Permanent" option)
+    // Spouse Present address config (with "Same As Member Present" option)
     spousePresentAddressConfig: AddressFormConfig = {
         title: 'Spouse Present Address',
         addressType: 'spousePresent',
         showSameAsPresent: true,
-        sameAsLabel: 'Same as Permanent Address',
+        sameAsLabel: 'Same As Member Present Address',
         employeeId: this.employeeId
     };
 
@@ -527,6 +527,14 @@ export class EmpBasicInfo implements OnInit {
         const spousePermanentData = this.spousePermanentAddressForm?.getFormData();
         if (spousePermanentData?.data) {
             this.spousePresentAddressForm?.populateFromSourceAddress(spousePermanentData.data);
+        }
+    }
+
+    // Copy member present address data to spouse present address form
+    copyMemberPresentToSpousePresent(): void {
+        const presentData = this.presentAddressForm?.getFormData();
+        if (presentData?.data) {
+            this.spousePresentAddressForm?.populateFromSourceAddress(presentData.data);
         }
     }
 

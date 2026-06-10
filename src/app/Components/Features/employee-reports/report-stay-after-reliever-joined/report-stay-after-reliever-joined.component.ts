@@ -28,6 +28,7 @@ import {
 } from 'docx';
 import { saveAs } from 'file-saver';
 import * as XLSX from 'xlsx';
+import { forkJoin } from 'rxjs';
 
 type Lang = 'en' | 'bn';
 
@@ -58,8 +59,16 @@ export class ReportStayAfterRelieverJoinedComponent implements OnInit {
 
     orgOptions: { label: string; labelBn: string; value: number }[] = [];
     rankOptions: { label: string; labelBn: string; value: number }[] = [];
-    selectedOrgId: number | null = null;
+    memberTypeOptions: { label: string; labelBn: string; value: number }[] = [];
+    corpsOptions: { label: string; labelBn: string; value: number }[] = [];
+    tradeOptions: { label: string; labelBn: string; value: number }[] = [];
+    selectedOrgIds: number[] = [];
     selectedRankId: number | null = null;
+    selectedMemberTypeIds: number[] = [];
+    selectedCorpsIds: number[] = [];
+    selectedTradeIds: number[] = [];
+    /** Raw org-scoped MotherOrgRank rows, re-filtered client-side by Member Type. */
+    private allRanksForOrg: CommonCodeModel[] = [];
 
     first = 0;
     rows = 20;
@@ -88,6 +97,11 @@ export class ReportStayAfterRelieverJoinedComponent implements OnInit {
         { key: 'rmks',               labelEN: 'Remarks',            labelBN: 'মন্তব্য',                hint: 'Remarks',   defaultVisible: true  },
         // ── Opt-in extras (registry FieldKeys) — hidden by default ────────
         { key: 'relieverServiceId',  labelEN: 'Reliever Service ID',labelBN: 'প্রতিস্থাপক সার্ভিস আইডি', hint: 'Plain',  defaultVisible: false },
+        { key: 'relieverName',       labelEN: 'Reliever Name',      labelBN: 'প্রতিস্থাপক নাম',         hint: 'Plain',     defaultVisible: false },
+        { key: 'relieverRank',       labelEN: 'Reliever Rank',      labelBN: 'প্রতিস্থাপক পদবী',        hint: 'Plain',     defaultVisible: false },
+        { key: 'relieverCorps',      labelEN: 'Reliever Corps',     labelBN: 'প্রতিস্থাপক কোর',         hint: 'Plain',     defaultVisible: false },
+        { key: 'relieverTrade',      labelEN: 'Reliever Trade',     labelBN: 'প্রতিস্থাপক ট্রেড',       hint: 'Plain',     defaultVisible: false },
+        { key: 'possibleJoiningDate',labelEN: 'Possible Joining Date',labelBN: 'সম্ভাব্য যোগদানের তারিখ', hint: 'Date',    defaultVisible: false },
         { key: 'postingOrderDate',   labelEN: 'Posting Order Date', labelBN: 'প্রেষনাদেশের তারিখ',      hint: 'Date',      defaultVisible: false },
         { key: 'motherUnit',         labelEN: 'Mother Unit',        labelBN: 'মাতৃ ইউনিট',             hint: 'Plain',     defaultVisible: false },
         { key: 'corps',              labelEN: 'Corps',              labelBN: 'কোর',                    hint: 'Plain',     defaultVisible: false },
@@ -123,7 +137,7 @@ export class ReportStayAfterRelieverJoinedComponent implements OnInit {
     };
     /** Extra (registry-keyed) columns rendered as formatted dates. */
     private static readonly extraDateKeys = new Set([
-        'postingOrderDate', 'dateOfCommission', 'rabServiceFrom', 'rabServiceTo', 'dob',
+        'postingOrderDate', 'dateOfCommission', 'rabServiceFrom', 'rabServiceTo', 'dob', 'possibleJoiningDate',
     ]);
     /** Extra columns that are plain identifiers/text (no BN mirror). */
     private static readonly extraPlainKeys = new Set([
@@ -162,6 +176,9 @@ export class ReportStayAfterRelieverJoinedComponent implements OnInit {
     }
     onColumnDragEnd(): void { this.draggingColumnKey = null; }
     removeColumn(key: string): void { this.selectedColumnKeys = this.selectedColumnKeys.filter(k => k !== key); }
+    /** Picker selection changed — reload so newly-added columns' data is fetched
+        (the backend only returns the columns requested at query time). */
+    onColumnsChange(): void { if (this.searched) this.loadPage(); }
 
     constructor(
         private _router: Router,
@@ -186,6 +203,7 @@ export class ReportStayAfterRelieverJoinedComponent implements OnInit {
         });
 
         this.loadMotherOrgs();
+        this.loadMemberTypes();
         this.search();
     }
 
@@ -201,20 +219,85 @@ export class ReportStayAfterRelieverJoinedComponent implements OnInit {
             error: () => (this.orgOptions = []),
         });
     }
+    private mapCodes(codes: CommonCodeModel[]): { label: string; labelBn: string; value: number }[] {
+        return (codes || []).map((c) => ({
+            label: c.codeValueEN || String(c.codeId),
+            labelBn: c.codeValueBN || c.codeValueEN || String(c.codeId),
+            value: c.codeId,
+        }));
+    }
+    private loadMemberTypes(): void {
+        this.commonCodeService.getAccessibleMemberTypes().subscribe({
+            next: (codes: CommonCodeModel[]) => (this.memberTypeOptions = this.mapCodes(codes)),
+            error: () => (this.memberTypeOptions = []),
+        });
+    }
+    /** Dedupe CommonCode rows by codeId, preserving first-seen order. */
+    private dedupeByCodeId(rows: CommonCodeModel[]): CommonCodeModel[] {
+        const byId = new Map<number, CommonCodeModel>();
+        for (const r of rows || []) if (!byId.has(r.codeId)) byId.set(r.codeId, r);
+        return Array.from(byId.values());
+    }
 
+    /** Mother Org changed → reload its org-scoped Ranks and Corps; reset Trade. */
     onOrgChange(): void {
         this.selectedRankId = null;
         this.rankOptions = [];
-        if (this.selectedOrgId == null) return;
-        this.commonCodeService.getAllActiveCommonCodesByOrgIdAndType(this.selectedOrgId, 'MotherOrgRank').subscribe({
-            next: (codes: CommonCodeModel[]) => {
-                this.rankOptions = (codes || []).map((c) => ({
-                    label: c.codeValueEN || String(c.codeId),
-                    labelBn: c.codeValueBN || c.codeValueEN || String(c.codeId),
-                    value: c.codeId,
-                }));
+        this.allRanksForOrg = [];
+        this.selectedCorpsIds = [];
+        this.corpsOptions = [];
+        this.selectedTradeIds = [];
+        this.tradeOptions = [];
+        if (!this.selectedOrgIds.length) return;
+        forkJoin(
+            this.selectedOrgIds.map(orgId =>
+                this.commonCodeService.getAllActiveCommonCodesByOrgIdAndType(orgId, 'MotherOrgRank'))
+        ).subscribe({
+            next: (results: CommonCodeModel[][]) => {
+                this.allRanksForOrg = this.dedupeByCodeId(results.flat());
+                this.applyRankMemberTypeFilter();
             },
-            error: () => (this.rankOptions = []),
+            error: () => { this.allRanksForOrg = []; this.rankOptions = []; },
+        });
+        forkJoin(
+            this.selectedOrgIds.map(orgId =>
+                this.commonCodeService.getAllActiveCommonCodesByOrgIdAndType(orgId, 'Corps'))
+        ).subscribe({
+            next: (results: CommonCodeModel[][]) => {
+                this.corpsOptions = this.mapCodes(this.dedupeByCodeId(results.flat()));
+            },
+            error: () => (this.corpsOptions = []),
+        });
+    }
+
+    /** Member Type changed → re-filter the org-scoped ranks by parentCodeId. */
+    onMemberTypeChange(): void {
+        this.applyRankMemberTypeFilter();
+    }
+
+    /** Rank = org-scoped MotherOrgRank rows whose parentCodeId is a selected Member Type. */
+    private applyRankMemberTypeFilter(): void {
+        let rows = this.allRanksForOrg;
+        if (this.selectedMemberTypeIds.length)
+            rows = rows.filter(r => r.parentCodeId != null && this.selectedMemberTypeIds.includes(r.parentCodeId));
+        this.rankOptions = this.mapCodes(rows);
+        if (this.selectedRankId != null && !this.rankOptions.some(o => o.value === this.selectedRankId))
+            this.selectedRankId = null;
+    }
+
+    /** Corps changed → reload Trades (children of the selected Corps rows). */
+    onCorpsChange(): void {
+        this.selectedTradeIds = [];
+        this.tradeOptions = [];
+        if (!this.selectedCorpsIds.length) return;
+        forkJoin(
+            this.selectedCorpsIds.map(corpsId =>
+                this.commonCodeService.getAllActiveCommonCodesByParentId(corpsId))
+        ).subscribe({
+            next: (results: CommonCodeModel[][]) => {
+                this.tradeOptions = this.mapCodes(this.dedupeByCodeId(results.flat()));
+            },
+            error: () => (this.tradeOptions = []),
         });
     }
 
@@ -223,8 +306,11 @@ export class ReportStayAfterRelieverJoinedComponent implements OnInit {
 
     get activeFilterCount(): number {
         let c = 0;
-        if (this.selectedOrgId != null) c++;
+        if (this.selectedOrgIds.length > 0) c++;
         if (this.selectedRankId != null) c++;
+        if (this.selectedMemberTypeIds.length > 0) c++;
+        if (this.selectedCorpsIds.length > 0) c++;
+        if (this.selectedTradeIds.length > 0) c++;
         return c;
     }
     filterSubtitle(): string {
@@ -236,24 +322,37 @@ export class ReportStayAfterRelieverJoinedComponent implements OnInit {
 
     get criteriaItems(): { label: string; value: string }[] {
         const items: { label: string; value: string }[] = [];
-        if (this.selectedOrgId != null) {
-            const opt = this.orgOptions.find(o => o.value === this.selectedOrgId);
-            const lbl = this.lang === 'en' ? 'Mother Org' : 'মাতৃ সংস্থা';
-            if (opt) items.push({ label: lbl, value: this.lang === 'bn' ? opt.labelBn : opt.label });
-        }
+        const multi = (ids: number[], opts: { label: string; labelBn: string; value: number }[], en: string, bn: string) => {
+            if (!ids.length) return;
+            const names = ids
+                .map(id => opts.find(o => o.value === id))
+                .filter((o): o is typeof opts[number] => o != null)
+                .map(o => this.lang === 'bn' ? o.labelBn : o.label);
+            if (names.length) items.push({ label: this.lang === 'en' ? en : bn, value: names.join(', ') });
+        };
+        multi(this.selectedOrgIds, this.orgOptions, 'Mother Org', 'মাতৃ সংস্থা');
+        multi(this.selectedMemberTypeIds, this.memberTypeOptions, 'Member Type', 'সদস্য ধরন');
         if (this.selectedRankId != null) {
             const opt = this.rankOptions.find(o => o.value === this.selectedRankId);
             const lbl = this.lang === 'en' ? 'Rank' : 'পদবী';
             if (opt) items.push({ label: lbl, value: this.lang === 'bn' ? opt.labelBn : opt.label });
         }
+        multi(this.selectedCorpsIds, this.corpsOptions, 'Corps', 'কোর');
+        multi(this.selectedTradeIds, this.tradeOptions, 'Trade', 'ট্রেড');
         return items;
     }
     private buildFilterLines(): string[] { return this.criteriaItems.map(it => `${it.label}: ${it.value}`); }
 
     clearFilters(): void {
-        this.selectedOrgId = null;
+        this.selectedOrgIds = [];
         this.selectedRankId = null;
         this.rankOptions = [];
+        this.allRanksForOrg = [];
+        this.selectedMemberTypeIds = [];
+        this.selectedCorpsIds = [];
+        this.corpsOptions = [];
+        this.selectedTradeIds = [];
+        this.tradeOptions = [];
         this.first = 0;
     }
     toggleLang(): void { this.lang = this.lang === 'en' ? 'bn' : 'en'; this.appliedFilterLines = this.buildFilterLines(); }
@@ -275,10 +374,16 @@ export class ReportStayAfterRelieverJoinedComponent implements OnInit {
         const pageNo = Math.floor(this.first / this.rows) + 1;
 
         const criteria: DynamicReportCriterion[] = [];
-        if (this.selectedOrgId != null && this.selectedOrgId > 0)
-            criteria.push({ fieldKey: 'motherOrganization', idValue: this.selectedOrgId });
+        if (this.selectedOrgIds.length > 0)
+            criteria.push({ fieldKey: 'motherOrganization', idValues: this.selectedOrgIds });
         if (this.selectedRankId != null && this.selectedRankId > 0)
             criteria.push({ fieldKey: 'armyRank', idValue: this.selectedRankId });
+        if (this.selectedMemberTypeIds.length > 0)
+            criteria.push({ fieldKey: 'memberType', idValues: this.selectedMemberTypeIds });
+        if (this.selectedCorpsIds.length > 0)
+            criteria.push({ fieldKey: 'corps', idValues: this.selectedCorpsIds });
+        if (this.selectedTradeIds.length > 0)
+            criteria.push({ fieldKey: 'trade', idValues: this.selectedTradeIds });
 
         // Map column keys → registry FieldKeys; always include joiningInRab so
         // the client-computed Duration of Stay has a source even if its column

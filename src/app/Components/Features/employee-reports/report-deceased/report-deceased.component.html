@@ -1,6 +1,10 @@
 <p-toast position="top-center"></p-toast>
 
+<div class="employee-reports-page">
 <div class="report-filter-card">
+    <div class="report-filter-card-title">
+        <h1 class="report-page-title">Death Members Report</h1>
+    </div>
     <div class="report-filter-header" [class.open]="filterOpen" (click)="toggleFilter()" role="button" tabindex="0" (keydown.enter)="toggleFilter()" (keydown.space)="toggleFilter()">
         <div class="report-filter-header-left">
             <div class="report-filter-icon">
@@ -27,6 +31,54 @@
         <div class="report-filter-body-inner">
             <div class="report-fields-row">
                 <div class="report-filter-field">
+                    <label>{{ lang === 'en' ? 'Mother Org' : 'মাতৃ সংস্থা' }}</label>
+                    <p-multiSelect [options]="orgOptions" [(ngModel)]="selectedOrgIds" (ngModelChange)="onOrgChange()"
+                        optionLabel="label" optionValue="value" display="chip" [filter]="true"
+                        placeholder="Select" styleClass="w-full" appendTo="body"></p-multiSelect>
+                </div>
+                <div class="report-filter-field">
+                    <label>{{ lang === 'en' ? 'Member Type' : 'সদস্য ধরন' }}</label>
+                    <p-multiSelect [options]="memberTypeOptions" [(ngModel)]="selectedMemberTypeIds" (ngModelChange)="onMemberTypeChange()"
+                        optionLabel="label" optionValue="value" display="chip" [filter]="true"
+                        placeholder="Select" styleClass="w-full" appendTo="body"></p-multiSelect>
+                </div>
+                <div class="report-filter-field">
+                    <label>{{ lang === 'en' ? 'Rank' : 'পদবী' }}</label>
+                    <p-select
+                        [options]="rankOptions"
+                        [(ngModel)]="selectedRankId"
+                        (ngModelChange)="onFilterChange()"
+                        optionLabel="label"
+                        optionValue="value"
+                        placeholder="Select"
+                        styleClass="w-full"
+                        [disabled]="selectedOrgIds.length === 0"
+                        [filter]="true"
+                        [showClear]="true"
+                        appendTo="body">
+                    </p-select>
+                </div>
+                <div class="report-filter-field">
+                    <label>{{ lang === 'en' ? 'Corps' : 'কোর' }}</label>
+                    <p-multiSelect [options]="corpsOptions" [(ngModel)]="selectedCorpsIds" (ngModelChange)="onCorpsChange()"
+                        optionLabel="label" optionValue="value" display="chip" [filter]="true"
+                        [disabled]="selectedOrgIds.length === 0"
+                        placeholder="Select" styleClass="w-full" appendTo="body"></p-multiSelect>
+                </div>
+                <div class="report-filter-field">
+                    <label>{{ lang === 'en' ? 'Trade' : 'ট্রেড' }}</label>
+                    <p-multiSelect [options]="tradeOptions" [(ngModel)]="selectedTradeIds"
+                        optionLabel="label" optionValue="value" display="chip" [filter]="true"
+                        [disabled]="selectedCorpsIds.length === 0"
+                        placeholder="Select" styleClass="w-full" appendTo="body"></p-multiSelect>
+                </div>
+                <div class="report-filter-field">
+                    <label>{{ lang === 'en' ? 'RAB Unit' : 'র‍্যাব ইউনিট' }}</label>
+                    <p-multiSelect [options]="rabUnitOptions" [(ngModel)]="selectedRabUnitIds"
+                        optionLabel="label" optionValue="value" display="chip" [filter]="true"
+                        placeholder="Select" styleClass="w-full" appendTo="body"></p-multiSelect>
+                </div>
+                <div class="report-filter-field">
                     <label>{{ lang === 'en' ? 'Date of Death From' : 'মৃত্যু তারিখ হইতে' }}</label>
                     <p-datepicker
                         [(ngModel)]="fromDate"
@@ -46,37 +98,6 @@
                         appendTo="body">
                     </p-datepicker>
                 </div>
-                <div class="report-filter-field">
-                    <label>{{ lang === 'en' ? 'Mother Org' : 'মাতৃ সংস্থা' }}</label>
-                    <p-select
-                        [options]="orgOptions"
-                        [(ngModel)]="selectedOrgId"
-                        (ngModelChange)="onOrgChange()"
-                        optionLabel="label"
-                        optionValue="value"
-                        placeholder="Select"
-                        styleClass="w-full"
-                        [filter]="true"
-                        [showClear]="true"
-                        appendTo="body">
-                    </p-select>
-                </div>
-                <div class="report-filter-field">
-                    <label>{{ lang === 'en' ? 'Rank' : 'পদবী' }}</label>
-                    <p-select
-                        [options]="rankOptions"
-                        [(ngModel)]="selectedRankId"
-                        (ngModelChange)="onFilterChange()"
-                        optionLabel="label"
-                        optionValue="value"
-                        placeholder="Select"
-                        styleClass="w-full"
-                        [disabled]="selectedOrgId == null"
-                        [filter]="true"
-                        [showClear]="true"
-                        appendTo="body">
-                    </p-select>
-                </div>
             </div>
 
             <!-- Column picker — shown after a search has populated rows. -->
@@ -91,6 +112,7 @@
                         <p-multiSelect
                             [options]="columnPickerOptions"
                             [(ngModel)]="selectedColumnKeys"
+                            (ngModelChange)="onColumnsChange()"
                             optionLabel="label"
                             optionValue="value"
                             display="chip"
@@ -305,3 +327,4 @@
     }
 </div>
 }
+</div>
