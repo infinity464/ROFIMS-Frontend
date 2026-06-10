@@ -2028,6 +2028,23 @@ export class EmpBasicInfo implements OnInit {
     /**
      * Check if a field is invalid
      */
+    /**
+     * Capitalize the first letter of each word in the given text field (fixes
+     * casing mistakes like "john doe" → "John Doe"). Runs on blur.
+     */
+    capitalizeWords(fieldName: string): void {
+        const field = this.postingForm.get(fieldName);
+        const value = field?.value;
+        if (typeof value !== 'string' || !value.trim()) return;
+        const formatted = value
+            .replace(/\s+/g, ' ')
+            .trim()
+            .replace(/\b\p{L}/gu, (ch) => ch.toUpperCase());
+        if (formatted !== value) {
+            field!.setValue(formatted);
+        }
+    }
+
     isFieldInvalid(fieldName: string): boolean {
         const field = this.postingForm.get(fieldName);
         return !!(field && field.invalid && (field.dirty || field.touched));
