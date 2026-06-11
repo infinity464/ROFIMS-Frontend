@@ -257,6 +257,28 @@ export class ReportService {
         return this.http.post<DynamicReportResponse>(`${environment.apis.core}/DynamicReport/PunishmentOverview`, req);
     }
 
+    /** Field catalog for the overall Present-Status report. */
+    getPresentStatusReportFields(): Observable<DynamicReportFieldMeta[]> {
+        return this.http.get<DynamicReportFieldMeta[]>(`${environment.apis.core}/DynamicReport/GetPresentStatusFields`);
+    }
+
+    /** Present-status variant (one row per member, latest status). The request's
+      presentStatusTypeFilter selects the status (null/empty = all). */
+    runDynamicPresentStatusReport(req: DynamicReportRequest): Observable<DynamicReportResponse> {
+        return this.http.post<DynamicReportResponse>(`${environment.apis.core}/DynamicReport/PresentStatusOverview`, req);
+    }
+
+    /** Field catalog for the Rank-wise report. */
+    getRankWiseReportFields(): Observable<DynamicReportFieldMeta[]> {
+        return this.http.get<DynamicReportFieldMeta[]>(`${environment.apis.core}/DynamicReport/GetRankWiseFields`);
+    }
+
+    /** Rank-wise variant (one row per employee). Requires a single Mother Org +
+      Rank (passed via criteria). */
+    runDynamicRankWiseReport(req: DynamicReportRequest): Observable<DynamicReportResponse> {
+        return this.http.post<DynamicReportResponse>(`${environment.apis.core}/DynamicReport/RankWiseOverview`, req);
+    }
+
     /** Field catalog for the Unit-Duration nominal roll (per-stint). */
     getUnitDurationReportFields(): Observable<DynamicReportFieldMeta[]> {
         return this.http.get<DynamicReportFieldMeta[]>(`${environment.apis.core}/DynamicReport/GetUnitDurationFields`);

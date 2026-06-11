@@ -185,6 +185,8 @@ import { ReportStayAfterRelieverJoinedComponent } from '@/Components/Features/em
 import { ReportNearHomeDistrictComponent } from '@/Components/Features/employee-reports/report-near-home-district/report-near-home-district.component';
 import { ReportJoiningLeaveComponent } from '@/Components/Features/employee-reports/report-joining-leave/report-joining-leave.component';
 import { ReportPunishmentComponent } from '@/Components/Features/employee-reports/report-punishment/report-punishment.component';
+import { ReportPresentStatusComponent } from '@/Components/Features/employee-reports/report-present-status/report-present-status.component';
+import { ReportRankWiseComponent } from '@/Components/Features/employee-reports/report-rank-wise/report-rank-wise.component';
 import { ReportDeceasedComponent } from '@/Components/Features/employee-reports/report-deceased/report-deceased.component';
 import { IndividualReportsComponent } from '@/Components/Features/individual-reports/individual-reports.component';
 import { RabUnitAor } from '@/Components/basic-setup/rab-unit-aor/rab-unit-aor';
@@ -425,6 +427,8 @@ export const appRoutes: Routes = [
             { path: 'report-near-home-district', component: ReportNearHomeDistrictComponent },
             { path: 'report-joining-leave', component: ReportJoiningLeaveComponent },
             { path: 'report-punishment', component: ReportPunishmentComponent },
+            { path: 'report-present-status', component: ReportPresentStatusComponent },
+            { path: 'report-rank-wise', component: ReportRankWiseComponent },
             { path: 'report-deceased', component: ReportDeceasedComponent },
 
             // Individual Personnel Report (parent with dropdown — Course, then more)

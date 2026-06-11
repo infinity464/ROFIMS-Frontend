@@ -482,6 +482,53 @@ export interface PunishmentReportRow {
   rmks?: string | null;
 }
 
+/** One row of the overall "Employee Present-Status Report". */
+export interface PresentStatusReportRow {
+  ser?: number;
+  serviceId?: string | null;
+  rank?: string | null;
+  rankBN?: string | null;
+  corps?: string | null;
+  corpsBN?: string | null;
+  trade?: string | null;
+  tradeBN?: string | null;
+  name?: string | null;
+  nameBN?: string | null;
+  motherOrganization?: string | null;
+  motherOrganizationBN?: string | null;
+  presentUnit?: string | null;
+  presentUnitBN?: string | null;
+  /** Raw present-status enum ('OnDuty'…'Arrested'); mapped to a label client-side. */
+  presentStatus?: string | null;
+  /** ISO "yyyy-MM-dd" — status date. */
+  statusDate?: string | null;
+  statusDetails?: string | null;
+  rmks?: string | null;
+}
+
+/** One row of the "Rank-wise Report". */
+export interface RankWiseReportRow {
+  ser?: number;
+  serviceId?: string | null;
+  rank?: string | null;
+  rankBN?: string | null;
+  name?: string | null;
+  nameBN?: string | null;
+  ownHomeDistrict?: string | null;
+  ownHomeDistrictBN?: string | null;
+  spouseHomeDistrict?: string | null;
+  spouseHomeDistrictBN?: string | null;
+  motherUnit?: string | null;
+  motherUnitBN?: string | null;
+  /** ISO "yyyy-MM-dd". */
+  dob?: string | null;
+  joiningInRab?: string | null;
+  joiningPresentUnit?: string | null;
+  presentWorkplace?: string | null;
+  presentWorkplaceBN?: string | null;
+  rmks?: string | null;
+}
+
 /** One row of the long-stay nominal roll. */
 export interface LongStayNominalRollReportRow {
   ser?: number;
@@ -598,6 +645,8 @@ export interface DynamicReportRequest {
   joiningLeaveDateFrom?: string | null;
   /** Joining-Leave: leave-window upper bound, ISO "yyyy-MM-dd". */
   joiningLeaveDateTo?: string | null;
+  /** Present-Status: selected status type ('OnDuty'…'Arrested'). "" = all. */
+  presentStatusTypeFilter?: string | null;
   pagination: ReportPagination;
 }
 
