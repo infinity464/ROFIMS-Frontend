@@ -100,12 +100,12 @@
                 }
             </div>
 
-            @if (searched && relieverMode !== 'newPosting') {
+            @if (searched) {
                 <div class="ds-field-group">
                     <div class="ds-group-divider"><span class="ds-group-label">Columns</span><span class="ds-group-line"></span></div>
                     <div class="ds-field">
                         <label class="ds-field-label">Visible columns</label>
-                        <p-multiSelect [options]="columnPickerOptions" [(ngModel)]="selectedColumnKeys"
+                        <p-multiSelect [options]="columnPickerOptions" [(ngModel)]="activeColumnKeys"
                             (ngModelChange)="onColumnsChange()"
                             optionLabel="label" optionValue="value" display="chip" [filter]="true"
                             placeholder="Pick columns…" styleClass="w-full" appendTo="body"></p-multiSelect>

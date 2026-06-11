@@ -53,6 +53,9 @@ export class ReportStayAfterRelieverJoinedComponent implements OnInit {
 
     /** Report mode — reliever joined (default) vs reliever not yet joined. */
     relieverMode: 'joined' | 'notJoined' | 'standRelease' | 'newPosting' = 'joined';
+    /** Mode of the CURRENTLY DISPLAYED results — updated only on Search, so the
+        table/columns don't change when the dropdown changes before searching. */
+    appliedMode: 'joined' | 'notJoined' | 'standRelease' | 'newPosting' = 'joined';
     relieverModeOptions: { label: string; value: 'joined' | 'notJoined' | 'standRelease' | 'newPosting' }[] = [
         { label: 'Stay After Reliever Joined', value: 'joined' },
         { label: 'Member Stay Reliever Not Joined', value: 'notJoined' },
@@ -186,14 +189,28 @@ export class ReportStayAfterRelieverJoinedComponent implements OnInit {
     private static readonly extraPlainKeys = new Set(['relieverServiceId', 'rabId', 'nameBangla', 'nid', 'bloodGroup', 'mobileNo', 'email', 'postingStatus']);
     draggingColumnKey: string | null = null;
 
+    /** New Posting has its own column selection (joinee columns only). */
+    joineeSelectedColumnKeys: string[] = this.joineeColumnCatalog.map((c) => c.key);
+
+    /** Catalog + selected-keys for the CURRENTLY DISPLAYED mode (so the picker
+        shows joinee columns in New Posting, long-stay columns otherwise). */
+    private get activeColumnCatalog(): typeof this.columnCatalog {
+        return this.appliedMode === 'newPosting' ? this.joineeColumnCatalog : this.columnCatalog;
+    }
+    get activeColumnKeys(): string[] {
+        return this.appliedMode === 'newPosting' ? this.joineeSelectedColumnKeys : this.selectedColumnKeys;
+    }
+    set activeColumnKeys(v: string[]) {
+        if (this.appliedMode === 'newPosting') this.joineeSelectedColumnKeys = v;
+        else this.selectedColumnKeys = v;
+    }
+
     get columnPickerOptions(): { label: string; value: string }[] {
-        return this.columnCatalog.map((c) => ({ label: this.lang === 'bn' ? c.labelBN : c.labelEN, value: c.key }));
+        return this.activeColumnCatalog.map((c) => ({ label: this.lang === 'bn' ? c.labelBN : c.labelEN, value: c.key }));
     }
     get visibleColumns(): typeof this.columnCatalog {
-        // New Posting uses a fixed joinee-list column set (no picker).
-        if (this.relieverMode === 'newPosting') return this.joineeColumnCatalog;
-        const map = new Map(this.columnCatalog.map((c) => [c.key, c]));
-        return this.selectedColumnKeys.map((k) => map.get(k)).filter((c): c is (typeof this.columnCatalog)[number] => c != null);
+        const map = new Map(this.activeColumnCatalog.map((c) => [c.key, c]));
+        return this.activeColumnKeys.map((k) => map.get(k)).filter((c): c is (typeof this.columnCatalog)[number] => c != null);
     }
     onColumnDragStart(key: string, event: DragEvent): void {
         this.draggingColumnKey = key;
@@ -209,24 +226,25 @@ export class ReportStayAfterRelieverJoinedComponent implements OnInit {
         const sourceKey = this.draggingColumnKey;
         this.draggingColumnKey = null;
         if (!sourceKey || sourceKey === targetKey) return;
-        const arr = [...this.selectedColumnKeys];
+        const arr = [...this.activeColumnKeys];
         const fromIdx = arr.indexOf(sourceKey);
         const toIdx = arr.indexOf(targetKey);
         if (fromIdx === -1 || toIdx === -1) return;
         const [moved] = arr.splice(fromIdx, 1);
         arr.splice(toIdx, 0, moved);
-        this.selectedColumnKeys = arr;
+        this.activeColumnKeys = arr;
     }
     onColumnDragEnd(): void {
         this.draggingColumnKey = null;
     }
     removeColumn(key: string): void {
-        this.selectedColumnKeys = this.selectedColumnKeys.filter((k) => k !== key);
+        this.activeColumnKeys = this.activeColumnKeys.filter((k) => k !== key);
     }
-    /** Picker selection changed — reload so newly-added columns' data is fetched
-        (the backend only returns the columns requested at query time). */
+    /** Picker selection changed. Long-stay modes need a reload (the backend only
+        returns the requested columns); New Posting already has every joinee field,
+        so show/hide is purely client-side — no refetch. */
     onColumnsChange(): void {
-        if (this.searched) this.loadPage();
+        if (this.searched && this.appliedMode !== 'newPosting') this.loadPage();
     }
 
     constructor(
@@ -357,10 +375,15 @@ export class ReportStayAfterRelieverJoinedComponent implements OnInit {
     }
 
     onFilterChange(): void {}
-    /** Report Type changed — show the derived "Reliever (Yes/No)" column only in Stand Release. */
-    onModeChange(): void {
+    /** Report Type changed — no immediate effect on the displayed table; results
+        (columns/data) only change on Search via appliedMode. */
+    onModeChange(): void {}
+
+    /** Show the derived "Reliever (Yes/No)" column only when Stand Release is the
+        applied (searched) mode. Called from search() after appliedMode is set. */
+    private syncStandReleaseColumn(): void {
         const key = 'relieverYesNo';
-        if (this.relieverMode === 'standRelease') {
+        if (this.appliedMode === 'standRelease') {
             if (!this.selectedColumnKeys.includes(key)) {
                 const arr = [...this.selectedColumnKeys];
                 const at = arr.indexOf('relieverJoiningDate');
@@ -412,7 +435,7 @@ export class ReportStayAfterRelieverJoinedComponent implements OnInit {
                 .map((o) => (this.lang === 'bn' ? o.labelBn : o.label));
             if (names.length) items.push({ label: this.lang === 'en' ? en : bn, value: names.join(', ') });
         };
-        if (this.relieverMode !== 'newPosting') {
+        if (this.appliedMode !== 'newPosting') {
             multi(this.selectedOrgIds, this.orgOptions, 'Mother Org', 'মাতৃ সংস্থা');
             multi(this.selectedMemberTypeIds, this.memberTypeOptions, 'Member Type', 'সদস্য ধরন');
             if (this.selectedRankId != null) {
@@ -424,11 +447,11 @@ export class ReportStayAfterRelieverJoinedComponent implements OnInit {
             multi(this.selectedTradeIds, this.tradeOptions, 'Trade', 'ট্রেড');
             multi(this.selectedRabUnitIds, this.rabUnitOptions, 'RAB Unit', 'র‍্যাব ইউনিট');
         }
-        if (this.relieverMode === 'standRelease') {
+        if (this.appliedMode === 'standRelease') {
             if (this.releaseFrom) items.push({ label: this.lang === 'en' ? 'Possible Release From' : 'সম্ভাব্য রিলিজ হইতে', value: this.formatDateLabel(this.fmtDate(this.releaseFrom)!) });
             if (this.releaseTo) items.push({ label: this.lang === 'en' ? 'Possible Release To' : 'সম্ভাব্য রিলিজ পর্যন্ত', value: this.formatDateLabel(this.fmtDate(this.releaseTo)!) });
         }
-        if (this.relieverMode === 'newPosting') {
+        if (this.appliedMode === 'newPosting') {
             if (this.joiningFrom) items.push({ label: this.lang === 'en' ? 'Possible Joining From' : 'সম্ভাব্য যোগদান হইতে', value: this.formatDateLabel(this.fmtDate(this.joiningFrom)!) });
             if (this.joiningTo) items.push({ label: this.lang === 'en' ? 'Possible Joining To' : 'সম্ভাব্য যোগদান পর্যন্ত', value: this.formatDateLabel(this.fmtDate(this.joiningTo)!) });
         }
@@ -463,6 +486,10 @@ export class ReportStayAfterRelieverJoinedComponent implements OnInit {
     search(): void {
         this.first = 0;
         this.searched = true;
+        // Lock the displayed mode to what was searched (so the table doesn't
+        // change when the Report Type dropdown changes before the next Search).
+        this.appliedMode = this.relieverMode;
+        this.syncStandReleaseColumn();
         this.appliedFilterLines = this.buildFilterLines();
         this.loadPage();
     }
@@ -475,7 +502,7 @@ export class ReportStayAfterRelieverJoinedComponent implements OnInit {
     private loadPage(): void {
         // New Posting mode draws from the joinee-detail list (one row per joinee),
         // exactly like the posting/new-joining-person-list page.
-        if (this.relieverMode === 'newPosting') {
+        if (this.appliedMode === 'newPosting') {
             this.loadNewPostingPage();
             return;
         }
@@ -492,7 +519,7 @@ export class ReportStayAfterRelieverJoinedComponent implements OnInit {
         // RAB Unit applies to all (long-stay) modes. New Posting is handled by
         // loadNewPostingPage() above, so relieverMode is never 'newPosting' here.
         if (this.selectedRabUnitIds.length > 0) criteria.push({ fieldKey: 'rabUnit', idValues: this.selectedRabUnitIds });
-        if (this.relieverMode === 'standRelease') {
+        if (this.appliedMode === 'standRelease') {
             const rFrom = this.fmtDate(this.releaseFrom);
             const rTo = this.fmtDate(this.releaseTo);
             if (rFrom || rTo) criteria.push({ fieldKey: 'possibleReleaseDate', dateFrom: rFrom, dateTo: rTo });
@@ -508,9 +535,9 @@ export class ReportStayAfterRelieverJoinedComponent implements OnInit {
                 columns,
                 criteria,
                 postingStatusFilter: 'Servings',
-                relieverJoinedOnly: this.relieverMode === 'joined',
-                relieverNotJoinedOnly: this.relieverMode === 'notJoined',
-                postedOutAllOnly: this.relieverMode === 'standRelease',
+                relieverJoinedOnly: this.appliedMode === 'joined',
+                relieverNotJoinedOnly: this.appliedMode === 'notJoined',
+                postedOutAllOnly: this.appliedMode === 'standRelease',
                 pagination: { page_no: pageNo, row_per_page: this.rows }
             })
             .subscribe({
@@ -605,13 +632,13 @@ export class ReportStayAfterRelieverJoinedComponent implements OnInit {
     }
 
     get reportTitle(): string {
-        if (this.relieverMode === 'newPosting') {
+        if (this.appliedMode === 'newPosting') {
             return this.lang === 'en' ? 'New Posting Person Report' : 'নতুন পোস্টিং ব্যক্তির প্রতিবেদন';
         }
-        if (this.relieverMode === 'standRelease') {
+        if (this.appliedMode === 'standRelease') {
             return this.lang === 'en' ? 'Nominal Roll of Stand Release' : 'স্ট্যান্ড রিলিজ এর নামীয় তালিকা';
         }
-        if (this.relieverMode === 'notJoined') {
+        if (this.appliedMode === 'notJoined') {
             return this.lang === 'en' ? 'Nominal Roll of Stay in RAB though Reliever Not Joined' : 'প্রতিস্থাপক যোগদান না করা সত্ত্বেও র‍্যাবে অবস্থানরত সদস্যের নামীয় তালিকা';
         }
         return this.lang === 'en' ? 'Nominal Roll of Stay in RAB after Reliever Joined' : 'প্রতিস্থাপক যোগদানের পর র‍্যাবে অবস্থানরত সদস্যের নামীয় তালিকা';
@@ -662,7 +689,7 @@ export class ReportStayAfterRelieverJoinedComponent implements OnInit {
         return bits.join(' · ');
     }
     cellValue(row: StayAfterRelieverJoinedReportRow, key: string): string {
-        if (this.relieverMode === 'newPosting') return this.joineeCellValue(row as any, key);
+        if (this.appliedMode === 'newPosting') return this.joineeCellValue(row as any, key);
         switch (key) {
             case 'serviceId':
                 return this.displayNum(row.serviceId);
