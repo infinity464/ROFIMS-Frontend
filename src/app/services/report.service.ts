@@ -221,6 +221,18 @@ export class ReportService {
         return this.http.post<DynamicReportResponse>(`${environment.apis.core}/DynamicReport/LongStayOverview`, req);
     }
 
+    /** Field catalog for the Near-Home report (#10). */
+    getNearHomeReportFields(): Observable<DynamicReportFieldMeta[]> {
+        return this.http.get<DynamicReportFieldMeta[]>(`${environment.apis.core}/DynamicReport/GetNearHomeFields`);
+    }
+
+    /** Near-home-cardinality variant (one row per employee). Lists serving
+      members posted within their unit's AOR for their own home district OR
+      their wife's present district. */
+    runDynamicNearHomeReport(req: DynamicReportRequest): Observable<DynamicReportResponse> {
+        return this.http.post<DynamicReportResponse>(`${environment.apis.core}/DynamicReport/NearHomeOverview`, req);
+    }
+
     /** Field catalog for the Unit-Duration nominal roll (per-stint). */
     getUnitDurationReportFields(): Observable<DynamicReportFieldMeta[]> {
         return this.http.get<DynamicReportFieldMeta[]>(`${environment.apis.core}/DynamicReport/GetUnitDurationFields`);

@@ -414,6 +414,31 @@ export interface StayAfterRelieverJoinedReportRow {
   rmks?: string | null;
 }
 
+/** One row of the "Members Posted Near Home / Wife District" report (#10). */
+export interface NearHomeReportRow {
+  ser?: number;
+  serviceId?: string | null;
+  rank?: string | null;
+  rankBN?: string | null;
+  corps?: string | null;
+  corpsBN?: string | null;
+  trade?: string | null;
+  tradeBN?: string | null;
+  name?: string | null;
+  nameBN?: string | null;
+  /** ISO "yyyy-MM-dd" — EmployeeInfo.JoiningDate (joining in RAB). */
+  joiningInRab?: string | null;
+  presentUnit?: string | null;
+  presentUnitBN?: string | null;
+  /** ISO "yyyy-MM-dd" — active placement ServiceFrom (joining in present Bn/Wg). */
+  currentUnitFrom?: string | null;
+  ownHomeDistrict?: string | null;
+  ownHomeDistrictBN?: string | null;
+  spouseHomeDistrict?: string | null;
+  spouseHomeDistrictBN?: string | null;
+  rmks?: string | null;
+}
+
 /** One row of the long-stay nominal roll. */
 export interface LongStayNominalRollReportRow {
   ser?: number;
