@@ -89,7 +89,7 @@ export class ReportNearHomeDistrictComponent implements OnInit {
         { key: 'rank', labelEN: 'Rank', labelBN: 'পদবি', hint: 'Plain', defaultVisible: true },
         { key: 'corps', labelEN: 'Corps', labelBN: 'কোর', hint: 'Plain', defaultVisible: true },
         { key: 'trade', labelEN: 'Trade', labelBN: 'ট্রেড', hint: 'Plain', defaultVisible: true },
-        { key: 'name', labelEN: 'Name', labelBN: 'নাম', hint: 'Personnel', defaultVisible: true },
+        { key: 'name', labelEN: 'Name', labelBN: 'নাম', hint: 'Plain', defaultVisible: true },
         { key: 'joiningInRab', labelEN: 'Date of Joining in RAB', labelBN: 'র‍্যাবে যোগদানের তারিখ', hint: 'Date', defaultVisible: true },
         { key: 'presentUnit', labelEN: 'Battalion', labelBN: 'ব্যাটালিয়ন', hint: 'Plain', defaultVisible: true },
         { key: 'currentUnitFrom', labelEN: 'Date of Joining in Bn', labelBN: 'ব্যাটালিয়নে যোগদানের তারিখ', hint: 'Date', defaultVisible: true },

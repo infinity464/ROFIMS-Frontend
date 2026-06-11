@@ -95,7 +95,7 @@ export class ReportPunishmentComponent implements OnInit {
         { key: 'rank', labelEN: 'Rank', labelBN: 'পদবি', hint: 'Plain', defaultVisible: true },
         { key: 'corps', labelEN: 'Corps', labelBN: 'কোর', hint: 'Plain', defaultVisible: true },
         { key: 'trade', labelEN: 'Trade', labelBN: 'ট্রেড', hint: 'Plain', defaultVisible: true },
-        { key: 'name', labelEN: 'Name', labelBN: 'নাম', hint: 'Personnel', defaultVisible: true },
+        { key: 'name', labelEN: 'Name', labelBN: 'নাম', hint: 'Plain', defaultVisible: true },
         { key: 'offenceDetails', labelEN: 'Offence Details', labelBN: 'অপরাধের বিবরণ', hint: 'Plain', defaultVisible: true },
         { key: 'punishmentDate', labelEN: 'Punishment Date', labelBN: 'শাস্তির তারিখ', hint: 'Date', defaultVisible: true },
         { key: 'punishment', labelEN: 'Punishment', labelBN: 'শাস্তির বিবরণ', hint: 'Plain', defaultVisible: true },

@@ -93,7 +93,7 @@ export class ReportJoiningLeaveComponent implements OnInit {
         { key: 'rank', labelEN: 'Rank', labelBN: 'পদবি', hint: 'Plain', defaultVisible: true },
         { key: 'corps', labelEN: 'Corps', labelBN: 'কোর', hint: 'Plain', defaultVisible: true },
         { key: 'trade', labelEN: 'Trade', labelBN: 'ট্রেড', hint: 'Plain', defaultVisible: true },
-        { key: 'name', labelEN: 'Name', labelBN: 'নাম', hint: 'Personnel', defaultVisible: true },
+        { key: 'name', labelEN: 'Name', labelBN: 'নাম', hint: 'Plain', defaultVisible: true },
         { key: 'presentBnWg', labelEN: 'Present Bn', labelBN: 'বর্তমান ইউনিট', hint: 'Plain', defaultVisible: true },
         { key: 'postedBnWg', labelEN: 'Posted Bn', labelBN: 'বদলিকৃত ইউনিট', hint: 'Plain', defaultVisible: true },
         { key: 'joiningLeaveFrom', labelEN: 'Joining Leave From', labelBN: 'ছুটি শুরুর তারিখ', hint: 'Date', defaultVisible: true },
