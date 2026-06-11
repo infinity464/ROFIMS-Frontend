@@ -462,6 +462,26 @@ export interface JoiningLeaveReportRow {
   rmks?: string | null;
 }
 
+/** One row of the "Punishment Report" (#23). */
+export interface PunishmentReportRow {
+  ser?: number;
+  serviceId?: string | null;
+  rank?: string | null;
+  rankBN?: string | null;
+  corps?: string | null;
+  corpsBN?: string | null;
+  trade?: string | null;
+  tradeBN?: string | null;
+  name?: string | null;
+  nameBN?: string | null;
+  offenceDetails?: string | null;
+  /** ISO "yyyy-MM-dd" — RAB punishment date. */
+  punishmentDate?: string | null;
+  punishment?: string | null;
+  punishmentBN?: string | null;
+  rmks?: string | null;
+}
+
 /** One row of the long-stay nominal roll. */
 export interface LongStayNominalRollReportRow {
   ser?: number;

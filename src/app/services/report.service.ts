@@ -245,6 +245,18 @@ export class ReportService {
         return this.http.post<DynamicReportResponse>(`${environment.apis.core}/DynamicReport/JoiningLeaveOverview`, req);
     }
 
+    /** Field catalog for the Punishment report (#23). */
+    getPunishmentReportFields(): Observable<DynamicReportFieldMeta[]> {
+        return this.http.get<DynamicReportFieldMeta[]>(`${environment.apis.core}/DynamicReport/GetPunishmentFields`);
+    }
+
+    /** Punishment variant (one row per employee × discipline record). The
+      request's punishmentDate / punishmentDateMo DateRange criteria narrow the
+      RAB / Mother-Org punishment-date windows. */
+    runDynamicPunishmentReport(req: DynamicReportRequest): Observable<DynamicReportResponse> {
+        return this.http.post<DynamicReportResponse>(`${environment.apis.core}/DynamicReport/PunishmentOverview`, req);
+    }
+
     /** Field catalog for the Unit-Duration nominal roll (per-stint). */
     getUnitDurationReportFields(): Observable<DynamicReportFieldMeta[]> {
         return this.http.get<DynamicReportFieldMeta[]>(`${environment.apis.core}/DynamicReport/GetUnitDurationFields`);
