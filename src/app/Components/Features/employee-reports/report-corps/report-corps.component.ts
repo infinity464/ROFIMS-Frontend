@@ -83,10 +83,16 @@ export class ReportCorpsComponent implements OnInit, OnChanges {
         mother org so we can scope the Rank picker. */
     private allCorpsCodes: CommonCodeModel[] = [];
 
+    memberTypeOptions: { label: string; labelBn: string; value: number }[] = [];
+    selectedMemberTypeIds: number[] = [];
     rankOptions: { label: string; labelBn: string; value: number }[] = [];
     tradeOptions: { label: string; labelBn: string; value: number }[] = [];
-    selectedRankId: number | null = null;
-    selectedTradeId: number | null = null;
+    rabUnitOptions: { label: string; labelBn: string; value: number }[] = [];
+    selectedRankIds: number[] = [];
+    selectedTradeIds: number[] = [];
+    selectedRabUnitIds: number[] = [];
+    /** Raw corps-scoped MotherOrgRank rows (with parentCodeId), re-filtered client-side by Member Type. */
+    private allRanksForCorps: { label: string; labelBn: string; value: number; parentCodeId: number | null }[] = [];
 
     list: MemberAppointmentReportRow[] = [];
     loading = false;
@@ -124,6 +130,7 @@ export class ReportCorpsComponent implements OnInit, OnChanges {
         { key: 'ser',          labelEN: 'Ser',           labelBN: 'ক্রঃ',          hint: 'Serial',                defaultVisible: true  },
         { key: 'serviceId',    labelEN: 'Service ID',    labelBN: 'সার্ভিস আইডি',  hint: 'Plain',                 defaultVisible: true  },
         { key: 'armyRank',     labelEN: 'Rank',          labelBN: 'র‍্যাঙ্ক',       hint: 'Plain',                 defaultVisible: true  },
+        { key: 'rabRank',      labelEN: 'RAB Rank',      labelBN: 'র‍্যাব র‍্যাঙ্ক', hint: 'Plain',                 defaultVisible: false },
         { key: 'corps',        labelEN: 'Corps',         labelBN: 'কোর',           hint: 'Plain',                 defaultVisible: true  },
         { key: 'trade',        labelEN: 'Trade',         labelBN: 'ট্রেড',         hint: 'Plain',                 defaultVisible: true  },
         { key: 'name',         labelEN: 'Name',          labelBN: 'নাম',           hint: 'Name',                  defaultVisible: true  },
@@ -181,6 +188,7 @@ export class ReportCorpsComponent implements OnInit, OnChanges {
         memberType:          { en: 'memberType',          bn: 'memberTypeBN' },
         motherOrganization:  { en: 'orgName',             bn: 'orgNameBN' },
         armyRank:            { en: 'rank',                bn: 'rankBN' },
+        rabRank:             { en: 'rabRank',             bn: 'rabRankBN' },
         tradeRemarks:        { en: 'tradeRemarks' },
         gender:              { en: 'gender',              bn: 'genderBN' },
         motherUnit:          { en: 'motherUnit',          bn: 'motherUnitBN' },
@@ -249,7 +257,17 @@ export class ReportCorpsComponent implements OnInit, OnChanges {
         this.selectedColumnKeys = arr;
     }
     onColumnDragEnd(): void { this.draggingColumnKey = null; }
-    removeColumn(key: string): void { this.selectedColumnKeys = this.selectedColumnKeys.filter(k => k !== key); }
+    removeColumn(key: string): void {
+        this.selectedColumnKeys = this.selectedColumnKeys.filter(k => k !== key);
+        this.onColumnsChange();
+    }
+
+    /** Column selection changed — re-fetch so newly added columns are populated
+        (the backend only returns the columns that were requested). Only reloads
+        once a search has been run. */
+    onColumnsChange(): void {
+        if (this.searched) this.load();
+    }
 
     paddedSer(n: number | string | null | undefined): string {
         const s = n == null ? '' : String(n);
@@ -300,16 +318,18 @@ export class ReportCorpsComponent implements OnInit, OnChanges {
             const sLabel = this.lang === 'bn' ? this.statusLabelBn : this.statusLabel;
             if (sLabel) items.push({ label: L['report.search.rabMemberStatus'], value: sLabel });
         }
-        if (this.selectedRankId != null) {
-            const rank = this.rankOptions.find(o => o.value === this.selectedRankId);
-            const val = this.lang === 'bn' ? rank?.labelBn : rank?.label;
-            if (val) items.push({ label: L['report.search.rank'], value: val });
-        }
-        if (this.selectedTradeId != null) {
-            const trade = this.tradeOptions.find(o => o.value === this.selectedTradeId);
-            const val = this.lang === 'bn' ? trade?.labelBn : trade?.label;
-            if (val) items.push({ label: L['report.search.trade'], value: val });
-        }
+        const multi = (ids: number[], opts: { label: string; labelBn: string; value: number }[], label: string) => {
+            if (!ids.length) return;
+            const names = ids
+                .map((id) => opts.find((o) => o.value === id))
+                .filter((o): o is (typeof opts)[number] => o != null)
+                .map((o) => (this.lang === 'bn' ? o.labelBn : o.label));
+            if (names.length) items.push({ label, value: names.join(', ') });
+        };
+        multi(this.selectedMemberTypeIds, this.memberTypeOptions, this.lang === 'bn' ? 'সদস্য ধরন' : 'Member Type');
+        multi(this.selectedRankIds, this.rankOptions, L['report.search.rank']);
+        multi(this.selectedTradeIds, this.tradeOptions, L['report.search.trade']);
+        multi(this.selectedRabUnitIds, this.rabUnitOptions, this.lang === 'bn' ? 'র‍্যাব ইউনিট' : 'RAB Unit');
         return items;
     }
 
@@ -382,16 +402,18 @@ export class ReportCorpsComponent implements OnInit, OnChanges {
     buildFilterLines(): string[] {
         const L = this.L[this.lang];
         const lines: string[] = [];
-        if (this.selectedRankId != null) {
-            const rank = this.rankOptions.find((o) => o.value === this.selectedRankId);
-            const val = this.lang === 'bn' ? rank?.labelBn : rank?.label;
-            if (val) lines.push(`${L['report.search.rank']}: ${val}`);
-        }
-        if (this.selectedTradeId != null) {
-            const trade = this.tradeOptions.find((o) => o.value === this.selectedTradeId);
-            const val = this.lang === 'bn' ? trade?.labelBn : trade?.label;
-            if (val) lines.push(`${L['report.search.trade']}: ${val}`);
-        }
+        const multi = (ids: number[], opts: { label: string; labelBn: string; value: number }[], label: string) => {
+            if (!ids.length) return;
+            const names = ids
+                .map((id) => opts.find((o) => o.value === id))
+                .filter((o): o is (typeof opts)[number] => o != null)
+                .map((o) => (this.lang === 'bn' ? o.labelBn : o.label));
+            if (names.length) lines.push(`${label}: ${names.join(', ')}`);
+        };
+        multi(this.selectedMemberTypeIds, this.memberTypeOptions, this.lang === 'bn' ? 'সদস্য ধরন' : 'Member Type');
+        multi(this.selectedRankIds, this.rankOptions, L['report.search.rank']);
+        multi(this.selectedTradeIds, this.tradeOptions, L['report.search.trade']);
+        multi(this.selectedRabUnitIds, this.rabUnitOptions, this.lang === 'bn' ? 'র‍্যাব ইউনিট' : 'RAB Unit');
         return lines;
     }
 
@@ -686,6 +708,26 @@ export class ReportCorpsComponent implements OnInit, OnChanges {
 
         this.syncSelectedValueColumnLabel();
 
+        this.commonCodeService.getAccessibleMemberTypes().subscribe({
+            next: (codes) =>
+                (this.memberTypeOptions = (codes || []).map((c) => ({
+                    label: c.codeValueEN || String(c.codeId),
+                    labelBn: c.codeValueBN || c.codeValueEN || String(c.codeId),
+                    value: c.codeId,
+                }))),
+            error: () => (this.memberTypeOptions = []),
+        });
+
+        this.commonCodeService.getAllActiveCommonCodesType('RabUnit').subscribe({
+            next: (codes) =>
+                (this.rabUnitOptions = (codes || []).map((c) => ({
+                    label: c.codeValueEN || String(c.codeId),
+                    labelBn: c.codeValueBN || c.codeValueEN || String(c.codeId),
+                    value: c.codeId,
+                }))),
+            error: () => (this.rabUnitOptions = []),
+        });
+
         // Cache Corps codes so we can resolve the picked Corps's mother org
         // without an extra round-trip every time the parent's pick changes.
         this.commonCodeService.getAllActiveCommonCodesType('Corps').subscribe({
@@ -701,10 +743,11 @@ export class ReportCorpsComponent implements OnInit, OnChanges {
 
     ngOnChanges(changes: SimpleChanges): void {
         if (changes['commonCodeIds']) {
-            this.selectedRankId = null;
-            this.selectedTradeId = null;
+            this.selectedRankIds = [];
+            this.selectedTradeIds = [];
             this.rankOptions = [];
             this.tradeOptions = [];
+            this.allRanksForCorps = [];
             this.refreshDependentOptions();
             if (!changes['commonCodeIds'].firstChange) {
                 this.first = 0;
@@ -733,14 +776,39 @@ export class ReportCorpsComponent implements OnInit, OnChanges {
         const orgId = corps?.orgId ?? null;
         if (orgId != null && orgId > 0) {
             this.commonCodeService.getAllActiveCommonCodesByOrgIdAndType(orgId, 'MotherOrgRank').subscribe({
-                next: (codes: CommonCodeModel[]) =>
-                    (this.rankOptions = codes.map((c) => ({ label: c.codeValueEN || String(c.codeId), labelBn: c.codeValueBN || c.codeValueEN || String(c.codeId), value: c.codeId }))),
+                next: (codes: CommonCodeModel[]) => {
+                    this.allRanksForCorps = codes.map((c) => ({
+                        label: c.codeValueEN || String(c.codeId),
+                        labelBn: c.codeValueBN || c.codeValueEN || String(c.codeId),
+                        value: c.codeId,
+                        parentCodeId: (c.parentCodeId ?? (c as any).ParentCodeId) ?? null,
+                    }));
+                    this.applyRankMemberTypeFilter();
+                },
+                error: () => { this.allRanksForCorps = []; this.applyRankMemberTypeFilter(); },
             });
         }
         this.commonCodeService.getAllActiveCommonCodesByParentId(corpsId).subscribe({
-            next: (codes: CommonCodeModel[]) =>
-                (this.tradeOptions = codes.map((c) => ({ label: c.codeValueEN || String(c.codeId), labelBn: c.codeValueBN || c.codeValueEN || String(c.codeId), value: c.codeId }))),
+            next: (codes: CommonCodeModel[]) => {
+                this.tradeOptions = codes.map((c) => ({ label: c.codeValueEN || String(c.codeId), labelBn: c.codeValueBN || c.codeValueEN || String(c.codeId), value: c.codeId }));
+                this.selectedTradeIds = this.selectedTradeIds.filter((id) => this.tradeOptions.some((o) => o.value === id));
+            },
         });
+    }
+
+    /** Member Type changed → re-filter the corps-scoped ranks by parentCodeId. */
+    onMemberTypeChange(): void {
+        this.applyRankMemberTypeFilter();
+    }
+
+    /** Rank = corps-scoped MotherOrgRank rows whose parentCodeId is a selected Member Type. */
+    private applyRankMemberTypeFilter(): void {
+        let rows = this.allRanksForCorps;
+        if (this.selectedMemberTypeIds.length) {
+            rows = rows.filter((r) => r.parentCodeId != null && this.selectedMemberTypeIds.includes(r.parentCodeId));
+        }
+        this.rankOptions = rows.map((r) => ({ label: r.label, labelBn: r.labelBn, value: r.value }));
+        this.selectedRankIds = this.selectedRankIds.filter((id) => this.rankOptions.some((o) => o.value === id));
     }
 
     onFilterChange(): void {}
@@ -749,8 +817,10 @@ export class ReportCorpsComponent implements OnInit, OnChanges {
 
     get activeFilterCount(): number {
         let c = 0;
-        if (this.selectedRankId != null) c++;
-        if (this.selectedTradeId != null) c++;
+        if (this.selectedMemberTypeIds.length > 0) c++;
+        if (this.selectedRankIds.length > 0) c++;
+        if (this.selectedTradeIds.length > 0) c++;
+        if (this.selectedRabUnitIds.length > 0) c++;
         return c;
     }
 
@@ -764,8 +834,12 @@ export class ReportCorpsComponent implements OnInit, OnChanges {
     }
 
     clearFilters(): void {
-        this.selectedRankId = null;
-        this.selectedTradeId = null;
+        this.selectedMemberTypeIds = [];
+        this.selectedRankIds = [];
+        this.selectedTradeIds = [];
+        this.selectedRabUnitIds = [];
+        this.allRanksForCorps = [];
+        this.rankOptions = [];
         this.first = 0;
     }
 
@@ -812,10 +886,14 @@ export class ReportCorpsComponent implements OnInit, OnChanges {
                 criteria.push({ fieldKey: 'corps', idValues: [...this.commonCodeIds] });
             }
         }
-        if (this.selectedRankId != null && this.selectedRankId > 0)
-            criteria.push({ fieldKey: 'armyRank', idValue: this.selectedRankId });
-        if (this.selectedTradeId != null && this.selectedTradeId > 0)
-            criteria.push({ fieldKey: 'trade', idValue: this.selectedTradeId });
+        if (this.selectedMemberTypeIds.length > 0)
+            criteria.push({ fieldKey: 'memberType', idValues: [...this.selectedMemberTypeIds] });
+        if (this.selectedRankIds.length > 0)
+            criteria.push({ fieldKey: 'armyRank', idValues: [...this.selectedRankIds] });
+        if (this.selectedTradeIds.length > 0)
+            criteria.push({ fieldKey: 'trade', idValues: [...this.selectedTradeIds] });
+        if (this.selectedRabUnitIds.length > 0)
+            criteria.push({ fieldKey: 'rabUnit', idValues: [...this.selectedRabUnitIds] });
 
         this.reportService.runDynamicEmployeeBaseReport({
             columns: this.backendColumnKeys(),

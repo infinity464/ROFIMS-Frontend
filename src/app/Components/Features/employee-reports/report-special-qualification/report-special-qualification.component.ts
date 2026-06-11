@@ -46,6 +46,7 @@ import {
 } from 'docx';
 import { saveAs } from 'file-saver';
 import * as XLSX from 'xlsx';
+import { forkJoin } from 'rxjs';
 
 /**
  * Special Qualification Report — parent's `commonCodeId` is a CommonCode
@@ -76,14 +77,20 @@ export class ReportSpecialQualificationComponent implements OnInit, OnChanges {
     @Input() statusLabelBn = '';
     @Output() langToggle = new EventEmitter<void>();
 
-    orgOptions: MotherOrganizationModel[] = [];
-    selectedOrgId: number | null = null;
+    orgOptions: { label: string; labelBn: string; value: number }[] = [];
+    selectedOrgIds: number[] = [];
+    memberTypeOptions: { label: string; labelBn: string; value: number }[] = [];
+    selectedMemberTypeIds: number[] = [];
+    rabUnitOptions: { label: string; labelBn: string; value: number }[] = [];
+    selectedRabUnitIds: number[] = [];
     rankOptions: { label: string; labelBn: string; value: number }[] = [];
     corpsOptions: { label: string; labelBn: string; value: number }[] = [];
     tradeOptions: { label: string; labelBn: string; value: number }[] = [];
-    selectedRankId: number | null = null;
-    selectedCorpsId: number | null = null;
-    selectedTradeId: number | null = null;
+    selectedRankIds: number[] = [];
+    selectedCorpsIds: number[] = [];
+    selectedTradeIds: number[] = [];
+    /** Raw org-scoped MotherOrgRank rows, re-filtered client-side by Member Type. */
+    private allRanksForOrg: CommonCodeModel[] = [];
 
     list: MemberAppointmentReportRow[] = [];
     loading = false;
@@ -112,6 +119,7 @@ export class ReportSpecialQualificationComponent implements OnInit, OnChanges {
         { key: 'ser',          labelEN: 'Ser',           labelBN: 'ক্রঃ',          hint: 'Serial',                defaultVisible: true  },
         { key: 'serviceId',    labelEN: 'Service ID',    labelBN: 'সার্ভিস আইডি',  hint: 'Plain',                 defaultVisible: true  },
         { key: 'armyRank',     labelEN: 'Rank',          labelBN: 'র‍্যাঙ্ক',       hint: 'Plain',                 defaultVisible: true  },
+        { key: 'rabRank',      labelEN: 'RAB Rank',      labelBN: 'র‍্যাব র‍্যাঙ্ক', hint: 'Plain',                 defaultVisible: false },
         { key: 'corps',        labelEN: 'Corps',         labelBN: 'কোর',           hint: 'Plain',                 defaultVisible: true  },
         { key: 'trade',        labelEN: 'Trade',         labelBN: 'ট্রেড',         hint: 'Plain',                 defaultVisible: true  },
         { key: 'name',         labelEN: 'Name',          labelBN: 'নাম',           hint: 'Name',                  defaultVisible: true  },
@@ -170,6 +178,7 @@ export class ReportSpecialQualificationComponent implements OnInit, OnChanges {
         memberType:          { en: 'memberType',          bn: 'memberTypeBN' },
         motherOrganization:  { en: 'orgName',             bn: 'orgNameBN' },
         armyRank:            { en: 'rank',                bn: 'rankBN' },
+        rabRank:             { en: 'rabRank',             bn: 'rabRankBN' },
         tradeRemarks:        { en: 'tradeRemarks' },
         gender:              { en: 'gender',              bn: 'genderBN' },
         motherUnit:          { en: 'motherUnit',          bn: 'motherUnitBN' },
@@ -240,7 +249,17 @@ export class ReportSpecialQualificationComponent implements OnInit, OnChanges {
         this.selectedColumnKeys = arr;
     }
     onColumnDragEnd(): void { this.draggingColumnKey = null; }
-    removeColumn(key: string): void { this.selectedColumnKeys = this.selectedColumnKeys.filter(k => k !== key); }
+    removeColumn(key: string): void {
+        this.selectedColumnKeys = this.selectedColumnKeys.filter(k => k !== key);
+        this.onColumnsChange();
+    }
+
+    /** Column selection changed — re-fetch so newly added columns are populated
+        (the backend only returns the columns that were requested). Only reloads
+        once a search has been run. */
+    onColumnsChange(): void {
+        if (this.searched) this.load();
+    }
 
     paddedSer(n: number | string | null | undefined): string {
         const s = n == null ? '' : String(n);
@@ -291,26 +310,20 @@ export class ReportSpecialQualificationComponent implements OnInit, OnChanges {
             const sLabel = this.lang === 'bn' ? this.statusLabelBn : this.statusLabel;
             if (sLabel) items.push({ label: L['report.search.rabMemberStatus'], value: sLabel });
         }
-        if (this.selectedOrgId != null) {
-            const org = this.orgOptions.find(o => o.orgId === this.selectedOrgId);
-            const val = this.lang === 'bn' ? (org?.orgNameBN || org?.orgNameEN) : org?.orgNameEN;
-            if (val) items.push({ label: L['report.search.motherOrg'], value: val });
-        }
-        if (this.selectedRankId != null) {
-            const rank = this.rankOptions.find(o => o.value === this.selectedRankId);
-            const val = this.lang === 'bn' ? rank?.labelBn : rank?.label;
-            if (val) items.push({ label: L['report.search.rank'], value: val });
-        }
-        if (this.selectedCorpsId != null) {
-            const corps = this.corpsOptions.find(o => o.value === this.selectedCorpsId);
-            const val = this.lang === 'bn' ? corps?.labelBn : corps?.label;
-            if (val) items.push({ label: L['report.table.corps'] ?? 'Corps', value: val });
-        }
-        if (this.selectedTradeId != null) {
-            const trade = this.tradeOptions.find(o => o.value === this.selectedTradeId);
-            const val = this.lang === 'bn' ? trade?.labelBn : trade?.label;
-            if (val) items.push({ label: L['report.search.trade'], value: val });
-        }
+        const multi = (ids: number[], opts: { label: string; labelBn: string; value: number }[], label: string) => {
+            if (!ids.length) return;
+            const names = ids
+                .map((id) => opts.find((o) => o.value === id))
+                .filter((o): o is (typeof opts)[number] => o != null)
+                .map((o) => (this.lang === 'bn' ? o.labelBn : o.label));
+            if (names.length) items.push({ label, value: names.join(', ') });
+        };
+        multi(this.selectedOrgIds, this.orgOptions, L['report.search.motherOrg']);
+        multi(this.selectedMemberTypeIds, this.memberTypeOptions, this.lang === 'bn' ? 'সদস্য ধরন' : 'Member Type');
+        multi(this.selectedRankIds, this.rankOptions, L['report.search.rank']);
+        multi(this.selectedCorpsIds, this.corpsOptions, L['report.table.corps'] ?? 'Corps');
+        multi(this.selectedTradeIds, this.tradeOptions, L['report.search.trade']);
+        multi(this.selectedRabUnitIds, this.rabUnitOptions, this.lang === 'bn' ? 'র‍্যাব ইউনিট' : 'RAB Unit');
         return items;
     }
 
@@ -383,27 +396,20 @@ export class ReportSpecialQualificationComponent implements OnInit, OnChanges {
     buildFilterLines(): string[] {
         const L = this.L[this.lang];
         const lines: string[] = [];
-        if (this.selectedOrgId != null) {
-            const org = this.orgOptions.find((o) => o.orgId === this.selectedOrgId);
-            const val = this.lang === 'bn' ? (org?.orgNameBN || org?.orgNameEN) : org?.orgNameEN;
-            if (val) lines.push(`${L['report.search.motherOrg']}: ${val}`);
-        }
-        if (this.selectedRankId != null) {
-            const rank = this.rankOptions.find((o) => o.value === this.selectedRankId);
-            const val = this.lang === 'bn' ? rank?.labelBn : rank?.label;
-            if (val) lines.push(`${L['report.search.rank']}: ${val}`);
-        }
-        if (this.selectedCorpsId != null) {
-            const corps = this.corpsOptions.find((o) => o.value === this.selectedCorpsId);
-            const val = this.lang === 'bn' ? corps?.labelBn : corps?.label;
-            const label = L['report.table.corps'] ?? 'Corps';
-            if (val) lines.push(`${label}: ${val}`);
-        }
-        if (this.selectedTradeId != null) {
-            const trade = this.tradeOptions.find((o) => o.value === this.selectedTradeId);
-            const val = this.lang === 'bn' ? trade?.labelBn : trade?.label;
-            if (val) lines.push(`${L['report.search.trade']}: ${val}`);
-        }
+        const multi = (ids: number[], opts: { label: string; labelBn: string; value: number }[], label: string) => {
+            if (!ids.length) return;
+            const names = ids
+                .map((id) => opts.find((o) => o.value === id))
+                .filter((o): o is (typeof opts)[number] => o != null)
+                .map((o) => (this.lang === 'bn' ? o.labelBn : o.label));
+            if (names.length) lines.push(`${label}: ${names.join(', ')}`);
+        };
+        multi(this.selectedOrgIds, this.orgOptions, L['report.search.motherOrg']);
+        multi(this.selectedMemberTypeIds, this.memberTypeOptions, this.lang === 'bn' ? 'সদস্য ধরন' : 'Member Type');
+        multi(this.selectedRankIds, this.rankOptions, L['report.search.rank']);
+        multi(this.selectedCorpsIds, this.corpsOptions, L['report.table.corps'] ?? 'Corps');
+        multi(this.selectedTradeIds, this.tradeOptions, L['report.search.trade']);
+        multi(this.selectedRabUnitIds, this.rabUnitOptions, this.lang === 'bn' ? 'র‍্যাব ইউনিট' : 'RAB Unit');
         return lines;
     }
 
@@ -698,7 +704,33 @@ export class ReportSpecialQualificationComponent implements OnInit, OnChanges {
 
         this.syncSelectedValueColumnLabel();
         this.loadOrgOptions();
+        this.loadMemberTypeOptions();
+        this.loadRabUnitOptions();
         this.load();
+    }
+
+    loadMemberTypeOptions(): void {
+        this.commonCodeService.getAccessibleMemberTypes().subscribe({
+            next: (codes) =>
+                (this.memberTypeOptions = (codes || []).map((c) => ({
+                    label: c.codeValueEN || String(c.codeId),
+                    labelBn: c.codeValueBN || c.codeValueEN || String(c.codeId),
+                    value: c.codeId,
+                }))),
+            error: () => (this.memberTypeOptions = []),
+        });
+    }
+
+    loadRabUnitOptions(): void {
+        this.commonCodeService.getAllActiveCommonCodesType('RabUnit').subscribe({
+            next: (codes) =>
+                (this.rabUnitOptions = (codes || []).map((c) => ({
+                    label: c.codeValueEN || String(c.codeId),
+                    labelBn: c.codeValueBN || c.codeValueEN || String(c.codeId),
+                    value: c.codeId,
+                }))),
+            error: () => (this.rabUnitOptions = []),
+        });
     }
 
     ngOnChanges(changes: SimpleChanges): void {
@@ -721,10 +753,12 @@ export class ReportSpecialQualificationComponent implements OnInit, OnChanges {
 
     get activeFilterCount(): number {
         let c = 0;
-        if (this.selectedOrgId != null) c++;
-        if (this.selectedRankId != null) c++;
-        if (this.selectedCorpsId != null) c++;
-        if (this.selectedTradeId != null) c++;
+        if (this.selectedOrgIds.length > 0) c++;
+        if (this.selectedRankIds.length > 0) c++;
+        if (this.selectedCorpsIds.length > 0) c++;
+        if (this.selectedTradeIds.length > 0) c++;
+        if (this.selectedMemberTypeIds.length > 0) c++;
+        if (this.selectedRabUnitIds.length > 0) c++;
         return c;
     }
 
@@ -738,19 +772,43 @@ export class ReportSpecialQualificationComponent implements OnInit, OnChanges {
     }
 
     clearFilters(): void {
-        this.selectedOrgId = null;
-        this.selectedRankId = null;
-        this.selectedCorpsId = null;
-        this.selectedTradeId = null;
+        this.selectedOrgIds = [];
+        this.selectedRankIds = [];
+        this.selectedCorpsIds = [];
+        this.selectedTradeIds = [];
+        this.selectedMemberTypeIds = [];
+        this.selectedRabUnitIds = [];
         this.rankOptions = [];
         this.corpsOptions = [];
         this.tradeOptions = [];
+        this.allRanksForOrg = [];
         this.first = 0;
+    }
+
+    /** Map CommonCode rows to {label, labelBn, value} option shape. */
+    private mapCodes(codes: CommonCodeModel[]): { label: string; labelBn: string; value: number }[] {
+        return (codes || []).map((c) => ({
+            label: c.codeValueEN || String(c.codeId),
+            labelBn: c.codeValueBN || c.codeValueEN || String(c.codeId),
+            value: c.codeId,
+        }));
+    }
+
+    /** Dedupe CommonCode rows by codeId, preserving first-seen order. */
+    private dedupeByCodeId(rows: CommonCodeModel[]): CommonCodeModel[] {
+        const byId = new Map<number, CommonCodeModel>();
+        for (const r of rows || []) if (!byId.has(r.codeId)) byId.set(r.codeId, r);
+        return Array.from(byId.values());
     }
 
     loadOrgOptions(): void {
         this.commonCodeService.getAllActiveMotherOrgs().subscribe({
-            next: (orgs) => (this.orgOptions = orgs),
+            next: (orgs: MotherOrganizationModel[]) =>
+                (this.orgOptions = (orgs || []).map((o) => ({
+                    label: o.orgNameEN || String(o.orgId),
+                    labelBn: o.orgNameBN || o.orgNameEN || String(o.orgId),
+                    value: o.orgId,
+                }))),
             error: (err) => {
                 console.error(err);
                 this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.message || 'Failed to load organizations' });
@@ -758,36 +816,58 @@ export class ReportSpecialQualificationComponent implements OnInit, OnChanges {
         });
     }
 
+    /** Mother Org changed → reload org-scoped Ranks and Corps across all selected orgs; reset Trade. */
     onOrgChange(): void {
         this.rankOptions = [];
+        this.allRanksForOrg = [];
+        this.selectedRankIds = [];
         this.corpsOptions = [];
+        this.selectedCorpsIds = [];
         this.tradeOptions = [];
-        this.selectedRankId = null;
-        this.selectedCorpsId = null;
-        this.selectedTradeId = null;
-        const orgId = this.selectedOrgId;
-        if (orgId != null) {
-            this.commonCodeService.getAllActiveCommonCodesByOrgIdAndType(orgId, 'MotherOrgRank').subscribe({
-                next: (codes: CommonCodeModel[]) =>
-                    (this.rankOptions = codes.map((c) => ({ label: c.codeValueEN || String(c.codeId), labelBn: c.codeValueBN || c.codeValueEN || String(c.codeId), value: c.codeId }))),
-            });
-            this.commonCodeService.getAllActiveCommonCodesByOrgIdAndType(orgId, 'Corps').subscribe({
-                next: (codes: CommonCodeModel[]) =>
-                    (this.corpsOptions = codes.map((c) => ({ label: c.codeValueEN || String(c.codeId), labelBn: c.codeValueBN || c.codeValueEN || String(c.codeId), value: c.codeId }))),
-            });
-        }
+        this.selectedTradeIds = [];
+        if (!this.selectedOrgIds.length) return;
+        forkJoin(this.selectedOrgIds.map((orgId) => this.commonCodeService.getAllActiveCommonCodesByOrgIdAndType(orgId, 'MotherOrgRank'))).subscribe({
+            next: (results: CommonCodeModel[][]) => {
+                this.allRanksForOrg = this.dedupeByCodeId(results.flat());
+                this.applyRankMemberTypeFilter();
+            },
+            error: () => {
+                this.allRanksForOrg = [];
+                this.rankOptions = [];
+            },
+        });
+        forkJoin(this.selectedOrgIds.map((orgId) => this.commonCodeService.getAllActiveCommonCodesByOrgIdAndType(orgId, 'Corps'))).subscribe({
+            next: (results: CommonCodeModel[][]) => {
+                this.corpsOptions = this.mapCodes(this.dedupeByCodeId(results.flat()));
+            },
+            error: () => (this.corpsOptions = []),
+        });
     }
 
+    /** Member Type changed → re-filter the org-scoped ranks by parentCodeId. */
+    onMemberTypeChange(): void {
+        this.applyRankMemberTypeFilter();
+    }
+
+    /** Rank = org-scoped MotherOrgRank rows whose parentCodeId is a selected Member Type. */
+    private applyRankMemberTypeFilter(): void {
+        let rows = this.allRanksForOrg;
+        if (this.selectedMemberTypeIds.length) rows = rows.filter((r) => r.parentCodeId != null && this.selectedMemberTypeIds.includes(r.parentCodeId));
+        this.rankOptions = this.mapCodes(rows);
+        this.selectedRankIds = this.selectedRankIds.filter((id) => this.rankOptions.some((o) => o.value === id));
+    }
+
+    /** Cascade: a new Corps reloads Trades (children of selected Corps rows). */
     onCorpsChange(): void {
         this.tradeOptions = [];
-        this.selectedTradeId = null;
-        const corpsId = this.selectedCorpsId;
-        if (corpsId != null) {
-            this.commonCodeService.getAllActiveCommonCodesByParentId(corpsId).subscribe({
-                next: (codes: CommonCodeModel[]) =>
-                    (this.tradeOptions = codes.map((c) => ({ label: c.codeValueEN || String(c.codeId), labelBn: c.codeValueBN || c.codeValueEN || String(c.codeId), value: c.codeId }))),
-            });
-        }
+        this.selectedTradeIds = [];
+        if (!this.selectedCorpsIds.length) return;
+        forkJoin(this.selectedCorpsIds.map((corpsId) => this.commonCodeService.getAllActiveCommonCodesByParentId(corpsId))).subscribe({
+            next: (results: CommonCodeModel[][]) => {
+                this.tradeOptions = this.mapCodes(this.dedupeByCodeId(results.flat()));
+            },
+            error: () => (this.tradeOptions = []),
+        });
     }
 
     onFilterChange(): void {}
@@ -824,14 +904,18 @@ export class ReportSpecialQualificationComponent implements OnInit, OnChanges {
         const page_no = Math.floor(this.first / this.rows) + 1;
 
         const criteria: DynamicReportCriterion[] = [];
-        if (this.selectedOrgId != null && this.selectedOrgId > 0)
-            criteria.push({ fieldKey: 'motherOrganization', idValue: this.selectedOrgId });
-        if (this.selectedRankId != null && this.selectedRankId > 0)
-            criteria.push({ fieldKey: 'armyRank', idValue: this.selectedRankId });
-        if (this.selectedCorpsId != null && this.selectedCorpsId > 0)
-            criteria.push({ fieldKey: 'corps', idValue: this.selectedCorpsId });
-        if (this.selectedTradeId != null && this.selectedTradeId > 0)
-            criteria.push({ fieldKey: 'trade', idValue: this.selectedTradeId });
+        if (this.selectedOrgIds.length > 0)
+            criteria.push({ fieldKey: 'motherOrganization', idValues: this.selectedOrgIds });
+        if (this.selectedMemberTypeIds.length > 0)
+            criteria.push({ fieldKey: 'memberType', idValues: this.selectedMemberTypeIds });
+        if (this.selectedRankIds.length > 0)
+            criteria.push({ fieldKey: 'armyRank', idValues: this.selectedRankIds });
+        if (this.selectedCorpsIds.length > 0)
+            criteria.push({ fieldKey: 'corps', idValues: this.selectedCorpsIds });
+        if (this.selectedTradeIds.length > 0)
+            criteria.push({ fieldKey: 'trade', idValues: this.selectedTradeIds });
+        if (this.selectedRabUnitIds.length > 0)
+            criteria.push({ fieldKey: 'rabUnit', idValues: this.selectedRabUnitIds });
         if (this.commonCodeId != null && this.commonCodeId > 0)
             criteria.push({ fieldKey: 'specialQualificationMatch', idValue: this.commonCodeId });
 

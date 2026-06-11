@@ -55,8 +55,41 @@
                         </div>
                     </div>
 
-                    <!-- Group 2: Column picker (after first search) -->
-                    @if (searched) {
+                    <!-- Group 2: Common search criteria (multi-select, cascading) -->
+                    <div class="ds-field-group">
+                        <div class="ds-group-divider">
+                            <span class="ds-group-label">Filters</span>
+                            <span class="ds-group-line"></span>
+                        </div>
+                        <div class="ds-criteria-grid">
+                            <div class="ds-field">
+                                <label class="ds-field-label">{{ L['en']['report.search.motherOrg'] }}</label>
+                                <p-multiSelect [options]="orgOptions" [(ngModel)]="selectedOrgIds" (ngModelChange)="onOrgChange()" optionLabel="label" optionValue="value" display="chip" [filter]="true" placeholder="Select" styleClass="w-full" appendTo="body"></p-multiSelect>
+                            </div>
+                            <div class="ds-field">
+                                <label class="ds-field-label">{{ lang === 'bn' ? 'সদস্য ধরন' : 'Member Type' }}</label>
+                                <p-multiSelect [options]="memberTypeOptions" [(ngModel)]="selectedMemberTypeIds" (ngModelChange)="onMemberTypeChange()" optionLabel="label" optionValue="value" display="chip" [filter]="true" placeholder="Select" styleClass="w-full" appendTo="body"></p-multiSelect>
+                            </div>
+                            <div class="ds-field">
+                                <label class="ds-field-label">{{ L['en']['report.search.rank'] }}</label>
+                                <p-multiSelect [options]="rankOptions" [(ngModel)]="selectedRankIds" optionLabel="label" optionValue="value" display="chip" [filter]="true" placeholder="Select" styleClass="w-full" [disabled]="selectedOrgIds.length === 0" appendTo="body"></p-multiSelect>
+                            </div>
+                            <div class="ds-field">
+                                <label class="ds-field-label">{{ L['en']['report.table.corps'] }}</label>
+                                <p-multiSelect [options]="corpsOptions" [(ngModel)]="selectedCorpsIds" (ngModelChange)="onCorpsChange()" optionLabel="label" optionValue="value" display="chip" [filter]="true" placeholder="Select" styleClass="w-full" [disabled]="selectedOrgIds.length === 0" appendTo="body"></p-multiSelect>
+                            </div>
+                            <div class="ds-field">
+                                <label class="ds-field-label">{{ L['en']['report.search.trade'] }}</label>
+                                <p-multiSelect [options]="tradeOptions" [(ngModel)]="selectedTradeIds" optionLabel="label" optionValue="value" display="chip" [filter]="true" placeholder="Select" styleClass="w-full" [disabled]="selectedCorpsIds.length === 0" appendTo="body"></p-multiSelect>
+                            </div>
+                            <div class="ds-field">
+                                <label class="ds-field-label">{{ lang === 'bn' ? 'র‍্যাব ইউনিট' : 'RAB Unit' }}</label>
+                                <p-multiSelect [options]="rabUnitOptions" [(ngModel)]="selectedRabUnitIds" optionLabel="label" optionValue="value" display="chip" [filter]="true" placeholder="Select" styleClass="w-full" appendTo="body"></p-multiSelect>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Group 3: Column picker (always visible) -->
                     <div class="ds-field-group">
                         <div class="ds-group-divider">
                             <span class="ds-group-label">Columns</span>
@@ -64,7 +97,7 @@
                         </div>
                         <div class="ds-field">
                             <label class="ds-field-label">Visible columns</label>
-                            <p-multiSelect [options]="columnPickerOptions" [(ngModel)]="selectedColumnKeys" optionLabel="label" optionValue="value" display="chip" [filter]="true" placeholder="Pick columns…" styleClass="w-full" appendTo="body"></p-multiSelect>
+                            <p-multiSelect [options]="columnPickerOptions" [(ngModel)]="selectedColumnKeys" (ngModelChange)="onColumnsChange()" optionLabel="label" optionValue="value" display="chip" [filter]="true" placeholder="Pick columns…" styleClass="w-full" appendTo="body"></p-multiSelect>
                         </div>
                         <div class="ds-field">
                             <label class="ds-field-label column-order-label">Column order — drag to rearrange</label>
@@ -84,7 +117,6 @@
                             </div>
                         </div>
                     </div>
-                    }
                 </div>
 
                 <div class="ds-actions">

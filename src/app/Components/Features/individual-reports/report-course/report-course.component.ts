@@ -10,6 +10,7 @@ import { DialogModule } from 'primeng/dialog';
 import { Toast } from 'primeng/toast';
 import { MessageService } from 'primeng/api';
 import { ReportService } from '@/services/report.service';
+import { CommonCodeService } from '@/services/common-code-service';
 import { IdentityUserMemberTypeAccessService } from '@/services/identity-user-member-type-access.service';
 import { SharedService } from '@/shared/services/shared-service';
 import { Router } from '@angular/router';
@@ -21,6 +22,8 @@ import type {
     DynamicReportCriterion,
     DynamicReportRow,
 } from '@/models/report.model';
+import type { MotherOrganizationModel } from '@/models/mother-org-model';
+import type { CommonCodeModel } from '@/models/common-code-model';
 import { personnelMeta as personnelMetaHelper } from '../../employee-reports/formal-rab-render.helper';
 import {
     AlignmentType,
@@ -40,6 +43,7 @@ import {
 } from 'docx';
 import { saveAs } from 'file-saver';
 import * as XLSX from 'xlsx';
+import { forkJoin } from 'rxjs';
 
 /**
  * Standalone Course report — one row per (employee × course). User
@@ -114,6 +118,22 @@ export class ReportCourseComponent implements OnInit, OnChanges {
     searchRabId = '';
     searchServiceId = '';
     searchNid = '';
+
+    // ── Common search criteria (multi-select, cascading) ──────────────
+    orgOptions: { label: string; labelBn: string; value: number }[] = [];
+    selectedOrgIds: number[] = [];
+    memberTypeOptions: { label: string; labelBn: string; value: number }[] = [];
+    selectedMemberTypeIds: number[] = [];
+    rankOptions: { label: string; labelBn: string; value: number }[] = [];
+    selectedRankIds: number[] = [];
+    corpsOptions: { label: string; labelBn: string; value: number }[] = [];
+    selectedCorpsIds: number[] = [];
+    tradeOptions: { label: string; labelBn: string; value: number }[] = [];
+    selectedTradeIds: number[] = [];
+    rabUnitOptions: { label: string; labelBn: string; value: number }[] = [];
+    selectedRabUnitIds: number[] = [];
+    /** Raw org-scoped MotherOrgRank rows, re-filtered client-side by Member Type. */
+    private allRanksForOrg: CommonCodeModel[] = [];
 
     /** Raw search result — keeps every row across all matching employees,
         used to repopulate when the user re-opens the picker. */
@@ -223,6 +243,8 @@ export class ReportCourseComponent implements OnInit, OnChanges {
         { key: 'trainingInstitute', labelEN: 'Training Inst', labelBN: 'প্রশিক্ষণ প্রতিষ্ঠান', hint: 'Plain', defaultVisible: true  },
         { key: 'country',           labelEN: 'Country',       labelBN: 'দেশ',           hint: 'Plain',     defaultVisible: true  },
         { key: 'courseRemarks',     labelEN: 'Remarks',       labelBN: 'মন্তব্য',        hint: 'Plain',     defaultVisible: true  },
+        // ── Employee extras (opt-in) ─────────────────────────────────
+        { key: 'rabRank',           labelEN: 'RAB Rank',      labelBN: 'র‍্যাব র‍্যাঙ্ক', hint: 'Plain',     defaultVisible: false },
         // ── Course extras (opt-in) ───────────────────────────────────
         { key: 'courseType',        labelEN: 'Course Type',   labelBN: 'কোর্সের ধরন',     hint: 'Plain',     defaultVisible: false },
         { key: 'courseAddress',     labelEN: 'Address',       labelBN: 'ঠিকানা',        hint: 'Plain',     defaultVisible: false },
@@ -231,6 +253,7 @@ export class ReportCourseComponent implements OnInit, OnChanges {
 
     /** Plain-hint cell resolver — course keys only. */
     private static readonly plainColumnPropertyMap: Record<string, { en: string; bn?: string }> = {
+        rabRank:             { en: 'rabRank',             bn: 'rabRankBN' },
         courseName:          { en: 'courseName',          bn: 'courseNameBN' },
         courseType:          { en: 'courseType',          bn: 'courseTypeBN' },
         courseNo:            { en: 'courseNo' },
@@ -297,7 +320,16 @@ export class ReportCourseComponent implements OnInit, OnChanges {
         this.selectedColumnKeys = arr;
     }
     onColumnDragEnd(): void { this.draggingColumnKey = null; }
-    removeColumn(key: string): void { this.selectedColumnKeys = this.selectedColumnKeys.filter(k => k !== key); }
+    removeColumn(key: string): void {
+        this.selectedColumnKeys = this.selectedColumnKeys.filter(k => k !== key);
+        this.onColumnsChange();
+    }
+
+    /** Column selection changed — re-fetch so newly added columns are populated.
+        Only reloads once a search has been run. */
+    onColumnsChange(): void {
+        if (this.searched) this.load();
+    }
 
     // ── Display helpers ───────────────────────────────────────────────
     paddedSer(n: number | string | null | undefined): string {
@@ -310,7 +342,22 @@ export class ReportCourseComponent implements OnInit, OnChanges {
     }
 
     get criteriaItems(): { label: string; value: string }[] {
+        const L = this.L[this.lang];
         const items: { label: string; value: string }[] = [];
+        const multi = (ids: number[], opts: { label: string; labelBn: string; value: number }[], label: string) => {
+            if (!ids.length) return;
+            const names = ids
+                .map((id) => opts.find((o) => o.value === id))
+                .filter((o): o is (typeof opts)[number] => o != null)
+                .map((o) => (this.lang === 'bn' ? o.labelBn : o.label));
+            if (names.length) items.push({ label, value: names.join(', ') });
+        };
+        multi(this.selectedOrgIds, this.orgOptions, L['report.search.motherOrg']);
+        multi(this.selectedMemberTypeIds, this.memberTypeOptions, this.lang === 'bn' ? 'সদস্য ধরন' : 'Member Type');
+        multi(this.selectedRankIds, this.rankOptions, L['report.search.rank']);
+        multi(this.selectedCorpsIds, this.corpsOptions, L['report.table.corps'] ?? 'Corps');
+        multi(this.selectedTradeIds, this.tradeOptions, L['report.search.trade']);
+        multi(this.selectedRabUnitIds, this.rabUnitOptions, this.lang === 'bn' ? 'র‍্যাব ইউনিট' : 'RAB Unit');
         if (this.searchRabId.trim())     items.push({ label: 'RAB ID',     value: this.searchRabId.trim() });
         if (this.searchServiceId.trim()) items.push({ label: 'Service ID', value: this.searchServiceId.trim() });
         if (this.searchNid.trim())       items.push({ label: 'NID',        value: this.searchNid.trim() });
@@ -374,6 +421,7 @@ export class ReportCourseComponent implements OnInit, OnChanges {
 
     constructor(
         private reportService: ReportService,
+        private commonCodeService: CommonCodeService,
         private messageService: MessageService,
         private memberTypeAccess: IdentityUserMemberTypeAccessService,
         private sharedService: SharedService,
@@ -405,7 +453,22 @@ export class ReportCourseComponent implements OnInit, OnChanges {
     }
 
     buildFilterLines(): string[] {
+        const L = this.L[this.lang];
         const lines: string[] = [];
+        const multi = (ids: number[], opts: { label: string; labelBn: string; value: number }[], label: string) => {
+            if (!ids.length) return;
+            const names = ids
+                .map((id) => opts.find((o) => o.value === id))
+                .filter((o): o is (typeof opts)[number] => o != null)
+                .map((o) => (this.lang === 'bn' ? o.labelBn : o.label));
+            if (names.length) lines.push(`${label}: ${names.join(', ')}`);
+        };
+        multi(this.selectedOrgIds, this.orgOptions, L['report.search.motherOrg']);
+        multi(this.selectedMemberTypeIds, this.memberTypeOptions, this.lang === 'bn' ? 'সদস্য ধরন' : 'Member Type');
+        multi(this.selectedRankIds, this.rankOptions, L['report.search.rank']);
+        multi(this.selectedCorpsIds, this.corpsOptions, L['report.table.corps'] ?? 'Corps');
+        multi(this.selectedTradeIds, this.tradeOptions, L['report.search.trade']);
+        multi(this.selectedRabUnitIds, this.rabUnitOptions, this.lang === 'bn' ? 'র‍্যাব ইউনিট' : 'RAB Unit');
         if (this.searchRabId.trim())     lines.push(`RAB ID: ${this.searchRabId.trim()}`);
         if (this.searchServiceId.trim()) lines.push(`Service ID: ${this.searchServiceId.trim()}`);
         if (this.searchNid.trim())       lines.push(`NID: ${this.searchNid.trim()}`);
@@ -431,8 +494,109 @@ export class ReportCourseComponent implements OnInit, OnChanges {
         this.canUpdate = _perms.canUpdate;
         this.canDelete = _perms.canDelete;
 
+        this.loadOrgOptions();
+        this.loadMemberTypeOptions();
+        this.loadRabUnitOptions();
+
         // Don't auto-load — wait for the user to enter at least one
         // identifier (RAB ID / Service ID / NID).
+    }
+
+    // ── Option loaders + cascade ──────────────────────────────────────
+    /** Map CommonCode rows to {label, labelBn, value} option shape. */
+    private mapCodes(codes: CommonCodeModel[]): { label: string; labelBn: string; value: number }[] {
+        return (codes || []).map((c) => ({
+            label: c.codeValueEN || String(c.codeId),
+            labelBn: c.codeValueBN || c.codeValueEN || String(c.codeId),
+            value: c.codeId,
+        }));
+    }
+
+    /** Dedupe CommonCode rows by codeId, preserving first-seen order. */
+    private dedupeByCodeId(rows: CommonCodeModel[]): CommonCodeModel[] {
+        const byId = new Map<number, CommonCodeModel>();
+        for (const r of rows || []) if (!byId.has(r.codeId)) byId.set(r.codeId, r);
+        return Array.from(byId.values());
+    }
+
+    loadOrgOptions(): void {
+        this.commonCodeService.getAllActiveMotherOrgs().subscribe({
+            next: (orgs: MotherOrganizationModel[]) =>
+                (this.orgOptions = (orgs || []).map((o) => ({
+                    label: o.orgNameEN || String(o.orgId),
+                    labelBn: o.orgNameBN || o.orgNameEN || String(o.orgId),
+                    value: o.orgId,
+                }))),
+            error: () => (this.orgOptions = []),
+        });
+    }
+
+    loadMemberTypeOptions(): void {
+        this.commonCodeService.getAccessibleMemberTypes().subscribe({
+            next: (codes) => (this.memberTypeOptions = this.mapCodes(codes)),
+            error: () => (this.memberTypeOptions = []),
+        });
+    }
+
+    loadRabUnitOptions(): void {
+        this.commonCodeService.getAllActiveCommonCodesType('RabUnit').subscribe({
+            next: (codes) => (this.rabUnitOptions = this.mapCodes(codes)),
+            error: () => (this.rabUnitOptions = []),
+        });
+    }
+
+    /** Mother Org changed → reload org-scoped Ranks and Corps across all selected orgs; reset Trade. */
+    onOrgChange(): void {
+        this.rankOptions = [];
+        this.allRanksForOrg = [];
+        this.selectedRankIds = [];
+        this.corpsOptions = [];
+        this.selectedCorpsIds = [];
+        this.tradeOptions = [];
+        this.selectedTradeIds = [];
+        if (!this.selectedOrgIds.length) return;
+        forkJoin(this.selectedOrgIds.map((orgId) => this.commonCodeService.getAllActiveCommonCodesByOrgIdAndType(orgId, 'MotherOrgRank'))).subscribe({
+            next: (results: CommonCodeModel[][]) => {
+                this.allRanksForOrg = this.dedupeByCodeId(results.flat());
+                this.applyRankMemberTypeFilter();
+            },
+            error: () => {
+                this.allRanksForOrg = [];
+                this.rankOptions = [];
+            },
+        });
+        forkJoin(this.selectedOrgIds.map((orgId) => this.commonCodeService.getAllActiveCommonCodesByOrgIdAndType(orgId, 'Corps'))).subscribe({
+            next: (results: CommonCodeModel[][]) => {
+                this.corpsOptions = this.mapCodes(this.dedupeByCodeId(results.flat()));
+            },
+            error: () => (this.corpsOptions = []),
+        });
+    }
+
+    /** Member Type changed → re-filter the org-scoped ranks by parentCodeId. */
+    onMemberTypeChange(): void {
+        this.applyRankMemberTypeFilter();
+    }
+
+    /** Rank = org-scoped MotherOrgRank rows whose parentCodeId is a selected Member Type. */
+    private applyRankMemberTypeFilter(): void {
+        let rows = this.allRanksForOrg;
+        if (this.selectedMemberTypeIds.length) rows = rows.filter((r) => r.parentCodeId != null && this.selectedMemberTypeIds.includes(r.parentCodeId));
+        this.rankOptions = this.mapCodes(rows);
+        this.selectedRankIds = this.selectedRankIds.filter((id) => this.rankOptions.some((o) => o.value === id));
+    }
+
+    /** Cascade: a new Corps reloads Trades (children of selected Corps rows). */
+    onCorpsChange(): void {
+        this.tradeOptions = [];
+        this.selectedTradeIds = [];
+        if (!this.selectedCorpsIds.length) return;
+        forkJoin(this.selectedCorpsIds.map((corpsId) => this.commonCodeService.getAllActiveCommonCodesByParentId(corpsId))).subscribe({
+            next: (results: CommonCodeModel[][]) => {
+                this.tradeOptions = this.mapCodes(this.dedupeByCodeId(results.flat()));
+            },
+            error: () => (this.tradeOptions = []),
+        });
     }
 
     ngOnChanges(changes: SimpleChanges): void {
@@ -448,6 +612,12 @@ export class ReportCourseComponent implements OnInit, OnChanges {
         if (this.searchRabId.trim()) c++;
         if (this.searchServiceId.trim()) c++;
         if (this.searchNid.trim()) c++;
+        if (this.selectedOrgIds.length > 0) c++;
+        if (this.selectedMemberTypeIds.length > 0) c++;
+        if (this.selectedRankIds.length > 0) c++;
+        if (this.selectedCorpsIds.length > 0) c++;
+        if (this.selectedTradeIds.length > 0) c++;
+        if (this.selectedRabUnitIds.length > 0) c++;
         return c;
     }
 
@@ -463,6 +633,16 @@ export class ReportCourseComponent implements OnInit, OnChanges {
         this.searchRabId = '';
         this.searchServiceId = '';
         this.searchNid = '';
+        this.selectedOrgIds = [];
+        this.selectedMemberTypeIds = [];
+        this.selectedRankIds = [];
+        this.selectedCorpsIds = [];
+        this.selectedTradeIds = [];
+        this.selectedRabUnitIds = [];
+        this.rankOptions = [];
+        this.corpsOptions = [];
+        this.tradeOptions = [];
+        this.allRanksForOrg = [];
         this.first = 0;
     }
 
@@ -496,6 +676,18 @@ export class ReportCourseComponent implements OnInit, OnChanges {
         if (this.searchRabId.trim())     lookupCriteria.push({ fieldKey: 'rabId',     textValue: this.searchRabId.trim() });
         if (this.searchServiceId.trim()) lookupCriteria.push({ fieldKey: 'serviceId', textValue: this.searchServiceId.trim() });
         if (this.searchNid.trim())       lookupCriteria.push({ fieldKey: 'nid',       textValue: this.searchNid.trim() });
+        if (this.selectedOrgIds.length > 0)
+            lookupCriteria.push({ fieldKey: 'motherOrganization', idValues: this.selectedOrgIds });
+        if (this.selectedMemberTypeIds.length > 0)
+            lookupCriteria.push({ fieldKey: 'memberType', idValues: this.selectedMemberTypeIds });
+        if (this.selectedRankIds.length > 0)
+            lookupCriteria.push({ fieldKey: 'armyRank', idValues: this.selectedRankIds });
+        if (this.selectedCorpsIds.length > 0)
+            lookupCriteria.push({ fieldKey: 'corps', idValues: this.selectedCorpsIds });
+        if (this.selectedTradeIds.length > 0)
+            lookupCriteria.push({ fieldKey: 'trade', idValues: this.selectedTradeIds });
+        if (this.selectedRabUnitIds.length > 0)
+            lookupCriteria.push({ fieldKey: 'rabUnit', idValues: this.selectedRabUnitIds });
 
         // Fields the picker + Member Details card need from the lookup
         // response. All registry FieldKeys; the base view exposes the
@@ -699,6 +891,8 @@ export class ReportCourseComponent implements OnInit, OnChanges {
             nid:                 d['nid']                     as string,
             rank:                d['armyRank']                as string,
             rankBN:              d['armyRankBN']              as string,
+            rabRank:             d['rabRank']                 as string,
+            rabRankBN:           d['rabRankBN']               as string,
             orgName:             d['motherOrganization']      as string,
             orgNameBN:           d['motherOrganizationBN']    as string,
             corps:               d['corps']                   as string,

@@ -27,73 +27,102 @@
         <div class="report-filter-body-inner">
             <div class="report-fields-row">
                 <div class="report-filter-field">
+                    <label>{{ lang === 'bn' ? 'সদস্য ধরন' : 'Member Type' }}</label>
+                    <p-multiSelect
+                        [options]="memberTypeOptions"
+                        [(ngModel)]="selectedMemberTypeIds"
+                        (ngModelChange)="onMemberTypeChange()"
+                        optionLabel="label"
+                        optionValue="value"
+                        display="chip"
+                        placeholder="Select"
+                        styleClass="w-full"
+                        [filter]="true"
+                        appendTo="body">
+                    </p-multiSelect>
+                </div>
+                <div class="report-filter-field">
                     <label>{{ L['en']['report.search.motherOrgUnit'] ?? 'Mother Org Unit' }}</label>
-                    <p-select
+                    <p-multiSelect
                         [options]="motherOrgUnitOptions"
-                        [(ngModel)]="selectedMotherOrgUnitId"
+                        [(ngModel)]="selectedMotherOrgUnitIds"
                         (ngModelChange)="onFilterChange()"
                         optionLabel="orgNameEN"
                         optionValue="orgId"
+                        display="chip"
                         placeholder="Select"
                         styleClass="w-full"
                         [disabled]="commonCodeId == null"
                         [filter]="true"
-                        [showClear]="true"
                         appendTo="body">
-                    </p-select>
+                    </p-multiSelect>
                 </div>
                 <div class="report-filter-field">
                     <label>{{ L['en']['report.search.rank'] }}</label>
-                    <p-select
+                    <p-multiSelect
                         [options]="rankOptions"
-                        [(ngModel)]="selectedRankId"
+                        [(ngModel)]="selectedRankIds"
                         (ngModelChange)="onFilterChange()"
                         optionLabel="label"
                         optionValue="value"
+                        display="chip"
                         placeholder="Select"
                         styleClass="w-full"
                         [disabled]="commonCodeId == null"
                         [filter]="true"
-                        [showClear]="true"
                         appendTo="body">
-                    </p-select>
+                    </p-multiSelect>
                 </div>
                 <div class="report-filter-field">
                     <label>{{ L['en']['report.table.corps'] }}</label>
-                    <p-select
+                    <p-multiSelect
                         [options]="corpsOptions"
-                        [(ngModel)]="selectedCorpsId"
+                        [(ngModel)]="selectedCorpsIds"
                         (ngModelChange)="onCorpsChange()"
                         optionLabel="label"
                         optionValue="value"
+                        display="chip"
                         placeholder="Select"
                         styleClass="w-full"
                         [disabled]="commonCodeId == null"
                         [filter]="true"
-                        [showClear]="true"
                         appendTo="body">
-                    </p-select>
+                    </p-multiSelect>
                 </div>
                 <div class="report-filter-field">
                     <label>{{ L['en']['report.search.trade'] }}</label>
-                    <p-select
+                    <p-multiSelect
                         [options]="tradeOptions"
-                        [(ngModel)]="selectedTradeId"
+                        [(ngModel)]="selectedTradeIds"
                         (ngModelChange)="onFilterChange()"
                         optionLabel="label"
                         optionValue="value"
+                        display="chip"
                         placeholder="Select"
                         styleClass="w-full"
-                        [disabled]="selectedCorpsId == null"
+                        [disabled]="selectedCorpsIds.length === 0"
                         [filter]="true"
-                        [showClear]="true"
                         appendTo="body">
-                    </p-select>
+                    </p-multiSelect>
+                </div>
+                <div class="report-filter-field">
+                    <label>{{ lang === 'bn' ? 'র‍্যাব ইউনিট' : 'RAB Unit' }}</label>
+                    <p-multiSelect
+                        [options]="rabUnitOptions"
+                        [(ngModel)]="selectedRabUnitIds"
+                        (ngModelChange)="onFilterChange()"
+                        optionLabel="label"
+                        optionValue="value"
+                        display="chip"
+                        placeholder="Select"
+                        styleClass="w-full"
+                        [filter]="true"
+                        appendTo="body">
+                    </p-multiSelect>
                 </div>
             </div>
 
-            <!-- Column picker — shown after a search has populated rows. -->
-            @if (searched) {
+            <!-- Column picker — always visible so columns can be chosen before searching. -->
                 <div class="ds-field-group">
                     <div class="ds-group-divider">
                         <span class="ds-group-label">Columns</span>
@@ -104,6 +133,7 @@
                         <p-multiSelect
                             [options]="columnPickerOptions"
                             [(ngModel)]="selectedColumnKeys"
+                            (ngModelChange)="onColumnsChange()"
                             optionLabel="label"
                             optionValue="value"
                             display="chip"
@@ -142,7 +172,6 @@
                         </div>
                     </div>
                 </div>
-            }
 
             <div class="report-filter-actions">
                 <button type="button" class="report-btn-clear" (click)="clearFilters()">

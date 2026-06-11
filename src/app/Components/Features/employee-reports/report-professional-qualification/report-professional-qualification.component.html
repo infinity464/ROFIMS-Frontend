@@ -28,117 +28,144 @@
             <div class="report-fields-row">
                 <div class="report-filter-field">
                     <label>{{ L['en']['report.search.motherOrg'] }}</label>
-                    <p-select
-                        [options]="orgOptions"
-                        [(ngModel)]="selectedOrgId"
-                        (ngModelChange)="onOrgChange()"
-                        optionLabel="orgNameEN"
-                        optionValue="orgId"
+                    <p-multiSelect [options]="orgOptions" [(ngModel)]="selectedOrgIds" (ngModelChange)="onOrgChange()" optionLabel="label" optionValue="value" display="chip" placeholder="Select" styleClass="w-full" [filter]="true" appendTo="body">
+                    </p-multiSelect>
+                </div>
+                <div class="report-filter-field">
+                    <label>{{ lang === 'bn' ? 'সদস্য ধরন' : 'Member Type' }}</label>
+                    <p-multiSelect
+                        [options]="memberTypeOptions"
+                        [(ngModel)]="selectedMemberTypeIds"
+                        (ngModelChange)="onMemberTypeChange()"
+                        optionLabel="label"
+                        optionValue="value"
+                        display="chip"
                         placeholder="Select"
                         styleClass="w-full"
                         [filter]="true"
-                        appendTo="body">
-                    </p-select>
+                        appendTo="body"
+                    >
+                    </p-multiSelect>
                 </div>
                 <div class="report-filter-field">
                     <label>{{ L['en']['report.search.rank'] }}</label>
-                    <p-select
+                    <p-multiSelect
                         [options]="rankOptions"
-                        [(ngModel)]="selectedRankId"
+                        [(ngModel)]="selectedRankIds"
                         (ngModelChange)="onFilterChange()"
                         optionLabel="label"
                         optionValue="value"
+                        display="chip"
                         placeholder="Select"
                         styleClass="w-full"
-                        [disabled]="selectedOrgId == null"
-                        appendTo="body">
-                    </p-select>
+                        [disabled]="selectedOrgIds.length === 0"
+                        [filter]="true"
+                        appendTo="body"
+                    >
+                    </p-multiSelect>
                 </div>
                 <div class="report-filter-field">
                     <label>{{ L['en']['report.table.corps'] }}</label>
-                    <p-select
+                    <p-multiSelect
                         [options]="corpsOptions"
-                        [(ngModel)]="selectedCorpsId"
+                        [(ngModel)]="selectedCorpsIds"
                         (ngModelChange)="onCorpsChange()"
                         optionLabel="label"
                         optionValue="value"
+                        display="chip"
                         placeholder="Select"
                         styleClass="w-full"
-                        [disabled]="selectedOrgId == null"
+                        [disabled]="selectedOrgIds.length === 0"
                         [filter]="true"
-                        [showClear]="true"
-                        appendTo="body">
-                    </p-select>
+                        appendTo="body"
+                    >
+                    </p-multiSelect>
                 </div>
                 <div class="report-filter-field">
                     <label>{{ L['en']['report.search.trade'] }}</label>
-                    <p-select
+                    <p-multiSelect
                         [options]="tradeOptions"
-                        [(ngModel)]="selectedTradeId"
+                        [(ngModel)]="selectedTradeIds"
                         (ngModelChange)="onFilterChange()"
                         optionLabel="label"
                         optionValue="value"
+                        display="chip"
                         placeholder="Select"
                         styleClass="w-full"
-                        [disabled]="selectedCorpsId == null"
+                        [disabled]="selectedCorpsIds.length === 0"
                         [filter]="true"
-                        [showClear]="true"
-                        appendTo="body">
-                    </p-select>
+                        appendTo="body"
+                    >
+                    </p-multiSelect>
+                </div>
+                <div class="report-filter-field">
+                    <label>{{ lang === 'bn' ? 'র‍্যাব ইউনিট' : 'RAB Unit' }}</label>
+                    <p-multiSelect
+                        [options]="rabUnitOptions"
+                        [(ngModel)]="selectedRabUnitIds"
+                        (ngModelChange)="onFilterChange()"
+                        optionLabel="label"
+                        optionValue="value"
+                        display="chip"
+                        placeholder="Select"
+                        styleClass="w-full"
+                        [filter]="true"
+                        appendTo="body"
+                    >
+                    </p-multiSelect>
                 </div>
             </div>
 
-            <!-- Column picker — shown after a search has populated rows. -->
-            @if (searched) {
-                <div class="ds-field-group">
-                    <div class="ds-group-divider">
-                        <span class="ds-group-label">Columns</span>
-                        <span class="ds-group-line"></span>
-                    </div>
-                    <div class="ds-field">
-                        <label class="ds-field-label">Visible columns</label>
-                        <p-multiSelect
-                            [options]="columnPickerOptions"
-                            [(ngModel)]="selectedColumnKeys"
-                            optionLabel="label"
-                            optionValue="value"
-                            display="chip"
-                            [filter]="true"
-                            placeholder="Pick columns…"
-                            styleClass="w-full"
-                            appendTo="body">
-                        </p-multiSelect>
-                    </div>
-                    <div class="ds-field">
-                        <label class="ds-field-label column-order-label">Column order — drag to rearrange</label>
-                        <div class="column-order-strip" (dragover)="onColumnDragOver($event)">
-                            @for (col of visibleColumns; track col.key) {
-                                <span
-                                    class="column-order-chip"
-                                    [class.dragging]="draggingColumnKey === col.key"
-                                    draggable="true"
-                                    (dragstart)="onColumnDragStart(col.key, $event)"
-                                    (dragend)="onColumnDragEnd()"
-                                    (dragover)="onColumnDragOver($event)"
-                                    (drop)="onColumnDrop(col.key, $event)">
-                                    <i class="pi pi-bars chip-handle" aria-hidden="true"></i>
-                                    <span class="chip-label">{{ lang === 'bn' ? col.labelBN : col.labelEN }}</span>
-                                    <button
-                                        type="button"
-                                        class="chip-remove"
-                                        (click)="removeColumn(col.key)"
-                                        title="Remove column">
-                                        <i class="pi pi-times" aria-hidden="true"></i>
-                                    </button>
-                                </span>
-                            }
-                            @if (visibleColumns.length === 0) {
-                                <span class="column-order-empty">Pick columns above to populate the table.</span>
-                            }
-                        </div>
+            <!-- Column picker — always visible so columns can be chosen before searching. -->
+            <div class="ds-field-group">
+                <div class="ds-group-divider">
+                    <span class="ds-group-label">Columns</span>
+                    <span class="ds-group-line"></span>
+                </div>
+                <div class="ds-field">
+                    <label class="ds-field-label">Visible columns</label>
+                    <p-multiSelect
+                        [options]="columnPickerOptions"
+                        [(ngModel)]="selectedColumnKeys"
+                        (ngModelChange)="onColumnsChange()"
+                        optionLabel="label"
+                        optionValue="value"
+                        display="chip"
+                        [filter]="true"
+                        placeholder="Pick columns…"
+                        styleClass="w-full"
+                        appendTo="body">
+                    </p-multiSelect>
+                </div>
+                <div class="ds-field">
+                    <label class="ds-field-label column-order-label">Column order — drag to rearrange</label>
+                    <div class="column-order-strip" (dragover)="onColumnDragOver($event)">
+                        @for (col of visibleColumns; track col.key) {
+                            <span
+                                class="column-order-chip"
+                                [class.dragging]="draggingColumnKey === col.key"
+                                draggable="true"
+                                (dragstart)="onColumnDragStart(col.key, $event)"
+                                (dragend)="onColumnDragEnd()"
+                                (dragover)="onColumnDragOver($event)"
+                                (drop)="onColumnDrop(col.key, $event)">
+                                <i class="pi pi-bars chip-handle" aria-hidden="true"></i>
+                                <span class="chip-label">{{ lang === 'bn' ? col.labelBN : col.labelEN }}</span>
+                                <button
+                                    type="button"
+                                    class="chip-remove"
+                                    (click)="removeColumn(col.key)"
+                                    title="Remove column">
+                                    <i class="pi pi-times" aria-hidden="true"></i>
+                                </button>
+                            </span>
+                        }
+                        @if (visibleColumns.length === 0) {
+                            <span class="column-order-empty">Pick columns above to populate the table.</span>
+                        }
                     </div>
                 </div>
-            }
+            </div>
 
             <div class="report-filter-actions">
                 <button type="button" class="report-btn-clear" (click)="clearFilters()">
