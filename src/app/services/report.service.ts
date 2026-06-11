@@ -233,6 +233,18 @@ export class ReportService {
         return this.http.post<DynamicReportResponse>(`${environment.apis.core}/DynamicReport/NearHomeOverview`, req);
     }
 
+    /** Field catalog for the Joining-Leave report (#15). */
+    getJoiningLeaveReportFields(): Observable<DynamicReportFieldMeta[]> {
+        return this.http.get<DynamicReportFieldMeta[]>(`${environment.apis.core}/DynamicReport/GetJoiningLeaveFields`);
+    }
+
+    /** Joining-leave variant (one row per movement × member). Lists members on
+      joining leave (defaults to those currently on leave); the request's
+      joiningLeaveDateFrom / joiningLeaveDateTo narrow the leave window. */
+    runDynamicJoiningLeaveReport(req: DynamicReportRequest): Observable<DynamicReportResponse> {
+        return this.http.post<DynamicReportResponse>(`${environment.apis.core}/DynamicReport/JoiningLeaveOverview`, req);
+    }
+
     /** Field catalog for the Unit-Duration nominal roll (per-stint). */
     getUnitDurationReportFields(): Observable<DynamicReportFieldMeta[]> {
         return this.http.get<DynamicReportFieldMeta[]>(`${environment.apis.core}/DynamicReport/GetUnitDurationFields`);

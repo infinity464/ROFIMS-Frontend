@@ -183,6 +183,7 @@ import { ReportUnitDurationNominalRollComponent } from '@/Components/Features/em
 import { ReportLongStayNominalRollComponent } from '@/Components/Features/employee-reports/report-long-stay-nominal-roll/report-long-stay-nominal-roll.component';
 import { ReportStayAfterRelieverJoinedComponent } from '@/Components/Features/employee-reports/report-stay-after-reliever-joined/report-stay-after-reliever-joined.component';
 import { ReportNearHomeDistrictComponent } from '@/Components/Features/employee-reports/report-near-home-district/report-near-home-district.component';
+import { ReportJoiningLeaveComponent } from '@/Components/Features/employee-reports/report-joining-leave/report-joining-leave.component';
 import { ReportDeceasedComponent } from '@/Components/Features/employee-reports/report-deceased/report-deceased.component';
 import { IndividualReportsComponent } from '@/Components/Features/individual-reports/individual-reports.component';
 import { RabUnitAor } from '@/Components/basic-setup/rab-unit-aor/rab-unit-aor';
@@ -421,6 +422,7 @@ export const appRoutes: Routes = [
             { path: 'report-long-stay-nominal-roll', component: ReportLongStayNominalRollComponent },
             { path: 'report-stay-after-reliever-joined', component: ReportStayAfterRelieverJoinedComponent },
             { path: 'report-near-home-district', component: ReportNearHomeDistrictComponent },
+            { path: 'report-joining-leave', component: ReportJoiningLeaveComponent },
             { path: 'report-deceased', component: ReportDeceasedComponent },
 
             // Individual Personnel Report (parent with dropdown — Course, then more)

@@ -439,6 +439,29 @@ export interface NearHomeReportRow {
   rmks?: string | null;
 }
 
+/** One row of the "Members on Joining Leave" report (#15). */
+export interface JoiningLeaveReportRow {
+  ser?: number;
+  serviceId?: string | null;
+  rank?: string | null;
+  rankBN?: string | null;
+  corps?: string | null;
+  corpsBN?: string | null;
+  trade?: string | null;
+  tradeBN?: string | null;
+  name?: string | null;
+  nameBN?: string | null;
+  presentBnWg?: string | null;
+  presentBnWgBN?: string | null;
+  postedBnWg?: string | null;
+  postedBnWgBN?: string | null;
+  /** ISO "yyyy-MM-dd" — JoiningLeaveTo (date of joining the new unit). */
+  joiningDate?: string | null;
+  /** Inclusive leave length in days. */
+  leaveDuration?: number | null;
+  rmks?: string | null;
+}
+
 /** One row of the long-stay nominal roll. */
 export interface LongStayNominalRollReportRow {
   ser?: number;
@@ -551,6 +574,10 @@ export interface DynamicReportRequest {
   rftsDateFrom?: string | null;
   /** RFTS course-window end, ISO "yyyy-MM-dd". */
   rftsDateTo?: string | null;
+  /** Joining-Leave: leave-window lower bound, ISO "yyyy-MM-dd". Null+null = currently on leave. */
+  joiningLeaveDateFrom?: string | null;
+  /** Joining-Leave: leave-window upper bound, ISO "yyyy-MM-dd". */
+  joiningLeaveDateTo?: string | null;
   pagination: ReportPagination;
 }
 
