@@ -5,40 +5,47 @@ import { FormsModule } from '@angular/forms';
 import { TableModule } from 'primeng/table';
 import { ButtonModule } from 'primeng/button';
 import { SelectModule } from 'primeng/select';
-import { InputTextModule } from 'primeng/inputtext';
-import { DatePickerModule } from 'primeng/datepicker';
 import { MultiSelectModule } from 'primeng/multiselect';
+import { PaginatorModule } from 'primeng/paginator';
 import { Toast } from 'primeng/toast';
 import { MessageService } from 'primeng/api';
 import { ReportService } from '@/services/report.service';
 import { CommonCodeService } from '@/services/common-code-service';
-import { ExportService } from '@/services/export.service';
+import type { CommonCodeModel } from '@/models/common-code-model';
+import { forkJoin } from 'rxjs';
 import { UserMenuService } from '@/services/user-menu.service';
-import { REPORT_LABELS, type ReportLang } from '@/Core/i18n/report-labels';
 import { BanglaNumerals } from '@/Core/i18n/bangla-numerals';
 import type {
     RftsCompletionReportRow,
     DynamicReportCriterion,
     DynamicReportRow,
 } from '@/models/report.model';
-import type { CommonCodeModel } from '@/models/common-code-model';
 import type { MotherOrganizationModel } from '@/models/mother-org-model';
+import { AlignmentType, BorderStyle, Document, Footer, Packer, PageNumber, PageOrientation, Paragraph, Table, TableCell, TableLayoutType, TableRow, TextRun, WidthType } from 'docx';
+import { saveAs } from 'file-saver';
+import * as XLSX from 'xlsx';
 
+type Lang = 'en' | 'bn';
+
+/**
+ * RFTS Completion Report — list of members who have (Completed) or have not
+ * (NotCompleted) completed RFTS. RAB-formal paper layout, dynamic column
+ * picker, drag-to-reorder, self-contained Print/Word/Excel exports.
+ */
 @Component({
     selector: 'app-report-rfts-completion',
     standalone: true,
-    imports: [CommonModule, FormsModule, TableModule, ButtonModule, SelectModule, InputTextModule, DatePickerModule, MultiSelectModule, Toast],
+    imports: [CommonModule, FormsModule, TableModule, ButtonModule, SelectModule, MultiSelectModule, PaginatorModule, Toast],
     providers: [MessageService],
     templateUrl: './report-rfts-completion.component.html',
     styleUrls: ['../report-theme.scss', '../report-card-mtr.scss', './report-rfts-completion.component.scss'],
 })
 export class ReportRftsCompletionComponent implements OnInit {
+    lang: Lang = 'en';
+
     canInsert = true;
     canUpdate = true;
     canDelete = true;
-
-    L = REPORT_LABELS;
-    lang: ReportLang = 'en';
 
     /** Primary filter — switches the report between the two lists. */
     statusOptions: { label: string; labelBn: string; value: 'Completed' | 'NotCompleted' }[] = [
@@ -47,31 +54,32 @@ export class ReportRftsCompletionComponent implements OnInit {
     ];
     selectedCompletionStatus: 'Completed' | 'NotCompleted' = 'Completed';
 
-    /** Org / role dropdowns — loaded from CommonCode + MotherOrg endpoints. */
+    /** Org / role dropdowns — loaded from CommonCode + MotherOrg endpoints. All multi-select. */
     motherOrgOptions: { label: string; labelBn: string; value: number }[] = [];
-    selectedMotherOrgId: number | null = null;
+    selectedOrgIds: number[] = [];
     memberTypeOptions: { label: string; labelBn: string; value: number }[] = [];
-    selectedMemberTypeId: number | null = null;
-    /** Full rank list — kept so we can re-derive the visible options when Member Type changes. */
-    private allRankOptions: { label: string; labelBn: string; value: number; parentCodeId: number | null }[] = [];
+    selectedMemberTypeIds: number[] = [];
+    /** Full org-scoped rank list — re-filtered client-side by Member Type. */
+    private allRanksForOrg: CommonCodeModel[] = [];
     rankOptions: { label: string; labelBn: string; value: number }[] = [];
-    selectedRankId: number | null = null;
-
-    /** Course-specific filters. */
-    searchCourseNo: string = '';
-    /** Duration filter — RFTS course start/end window. */
-    dateFrom: Date | null = null;
-    dateTo: Date | null = null;
+    selectedRankIds: number[] = [];
+    corpsOptions: { label: string; labelBn: string; value: number }[] = [];
+    selectedCorpsIds: number[] = [];
+    tradeOptions: { label: string; labelBn: string; value: number }[] = [];
+    selectedTradeIds: number[] = [];
 
     list: RftsCompletionReportRow[] = [];
     loading = false;
+    searched = false;
     first = 0;
     rows = 20;
+    rowsPerPageOptions = [20, 50, 100];
     totalRecords = 0;
 
-    // ── Dynamic column picker ─────────────────────────────────────────────
-    /** RFTS course columns — only meaningful in the "Completed" view. */
-    private static readonly courseKeys = ['latestCourseNo', 'latestCourseDateFrom', 'latestCourseDateTo', 'coursesCompleted'];
+    exportDropdownOpen = false;
+    exporting = false;
+    appliedFilterLines: string[] = [];
+    filterOpen = true;
 
     columnCatalog: { key: string; labelEN: string; labelBN: string; hint: 'Serial' | 'Name' | 'Date' | 'Plain'; defaultVisible: boolean; courseOnly?: boolean }[] = [
         { key: 'ser',                  labelEN: 'Ser',              labelBN: 'ক্রঃ',            hint: 'Serial', defaultVisible: true  },
@@ -165,18 +173,12 @@ export class ReportRftsCompletionComponent implements OnInit {
     onColumnDragEnd(): void { this.draggingColumnKey = null; }
     removeColumn(key: string): void { this.selectedColumnKeys = this.selectedColumnKeys.filter(k => k !== key); }
 
-    exportDropdownOpen = false;
-    exporting = false;
-    appliedFilterLines: string[] = [];
-    filterOpen = true;
-
     constructor(
         private _router: Router,
         private _userMenuService: UserMenuService,
         private reportService: ReportService,
         private commonCodeService: CommonCodeService,
         private messageService: MessageService,
-        private exportService: ExportService
     ) {}
 
     @HostListener('document:click')
@@ -192,7 +194,6 @@ export class ReportRftsCompletionComponent implements OnInit {
 
         this.loadMotherOrgOptions();
         this.loadMemberTypeOptions();
-        this.loadRankOptions();
     }
 
     private loadMotherOrgOptions(): void {
@@ -208,156 +209,235 @@ export class ReportRftsCompletionComponent implements OnInit {
         });
     }
 
-    /**
-     * Mother Org changed — reload ranks scoped to that org (each org
-     * has its own MotherOrgRank table), then re-apply the member-type
-     * sub-filter. When no org is selected, fall back to the global
-     * MotherOrgRank list so the dropdown isn't empty by default.
-     */
-    onMotherOrgChange(): void {
-        this.loadRankOptions();
-        if (this.selectedRankId != null) this.selectedRankId = null;
+    /** Map CommonCode rows to dropdown options. */
+    private mapCodes(codes: CommonCodeModel[]): { label: string; labelBn: string; value: number }[] {
+        return (codes || []).map((c) => ({
+            label: c.codeValueEN || String(c.codeId),
+            labelBn: c.codeValueBN || c.codeValueEN || String(c.codeId),
+            value: c.codeId,
+        }));
+    }
+
+    /** Dedupe CommonCode rows by codeId, preserving first-seen order. */
+    private dedupeByCodeId(rows: CommonCodeModel[]): CommonCodeModel[] {
+        const byId = new Map<number, CommonCodeModel>();
+        for (const r of rows || []) if (!byId.has(r.codeId)) byId.set(r.codeId, r);
+        return Array.from(byId.values());
+    }
+
+    /** Mother Org changed → reload org-scoped Ranks and Corps; reset Rank/Corps/Trade. */
+    onOrgChange(): void {
+        this.selectedRankIds = [];
+        this.rankOptions = [];
+        this.allRanksForOrg = [];
+        this.selectedCorpsIds = [];
+        this.corpsOptions = [];
+        this.selectedTradeIds = [];
+        this.tradeOptions = [];
+        if (!this.selectedOrgIds.length) return;
+        forkJoin(this.selectedOrgIds.map((orgId) => this.commonCodeService.getAllActiveCommonCodesByOrgIdAndType(orgId, 'MotherOrgRank'))).subscribe({
+            next: (results: CommonCodeModel[][]) => {
+                this.allRanksForOrg = this.dedupeByCodeId(results.flat());
+                this.applyRankMemberTypeFilter();
+            },
+            error: () => {
+                this.allRanksForOrg = [];
+                this.rankOptions = [];
+            },
+        });
+        forkJoin(this.selectedOrgIds.map((orgId) => this.commonCodeService.getAllActiveCommonCodesByOrgIdAndType(orgId, 'Corps'))).subscribe({
+            next: (results: CommonCodeModel[][]) => {
+                this.corpsOptions = this.mapCodes(this.dedupeByCodeId(results.flat()));
+            },
+            error: () => (this.corpsOptions = []),
+        });
     }
 
     private loadMemberTypeOptions(): void {
         // "Member Type" in business language === "EmployeeType" CodeType in the DB.
-        // getAccessibleMemberTypes() is the access-scoped variant — returns
-        // ONLY the EmployeeType rows the caller can see, matching the
-        // member-type access scope this report enforces.
         this.commonCodeService.getAccessibleMemberTypes().subscribe({
-            next: (codes: any[]) => {
-                this.memberTypeOptions = (Array.isArray(codes) ? codes : []).map((c: any) => this.toOption(c));
-            },
+            next: (codes: CommonCodeModel[]) => (this.memberTypeOptions = this.mapCodes(codes)),
             error: () => { this.memberTypeOptions = []; },
         });
     }
 
-    private loadRankOptions(): void {
-        // EmployeeInfo.Rank is a CommonCode CodeId of CodeType
-        // 'MotherOrgRank' (per-org). Each rank's parentCodeId points to
-        // its owning Member Type (EmployeeType) — that's the cascade.
-        // When a Mother Org is picked, scope ranks to that org; when
-        // none is picked, fall back to the global MotherOrgRank list so
-        // the dropdown isn't empty.
-        const source$ = this.selectedMotherOrgId != null
-            ? this.commonCodeService.getAllActiveCommonCodesByOrgIdAndType(this.selectedMotherOrgId, 'MotherOrgRank')
-            : this.commonCodeService.getAllActiveCommonCodesType('MotherOrgRank');
-        source$.subscribe({
-            next: (codes: any[]) => {
-                const list = Array.isArray(codes) ? codes : [];
-                this.allRankOptions = list.map((c: any) => ({
-                    ...this.toOption(c),
-                    parentCodeId: c?.parentCodeId ?? c?.ParentCodeId ?? null,
-                }));
-                this.applyRankMemberTypeFilter();
+    /** Member Type changed → re-filter the org-scoped ranks by parentCodeId. */
+    onMemberTypeChange(): void {
+        this.applyRankMemberTypeFilter();
+    }
+
+    /** Rank = org-scoped MotherOrgRank rows whose parentCodeId is a selected Member Type. */
+    private applyRankMemberTypeFilter(): void {
+        let rows = this.allRanksForOrg;
+        if (this.selectedMemberTypeIds.length) rows = rows.filter((r) => r.parentCodeId != null && this.selectedMemberTypeIds.includes(r.parentCodeId));
+        this.rankOptions = this.mapCodes(rows);
+        if (this.selectedRankIds.length) this.selectedRankIds = this.selectedRankIds.filter((id) => this.rankOptions.some((o) => o.value === id));
+    }
+
+    /** Corps changed → reload Trades (children of the selected Corps rows). */
+    onCorpsChange(): void {
+        this.selectedTradeIds = [];
+        this.tradeOptions = [];
+        if (!this.selectedCorpsIds.length) return;
+        forkJoin(this.selectedCorpsIds.map((corpsId) => this.commonCodeService.getAllActiveCommonCodesByParentId(corpsId))).subscribe({
+            next: (results: CommonCodeModel[][]) => {
+                this.tradeOptions = this.mapCodes(this.dedupeByCodeId(results.flat()));
             },
-            error: () => { this.allRankOptions = []; this.rankOptions = []; },
+            error: () => (this.tradeOptions = []),
         });
     }
 
-    /**
-     * Show only ranks whose owning Member Type matches the selected
-     * Member Type. When no Member Type is picked, show all ranks. If
-     * the previously selected rank doesn't survive the filter, clear it
-     * so the request doesn't carry a stale, no-longer-valid id.
-     */
-    onMemberTypeChange(): void {
-        this.applyRankMemberTypeFilter();
-        if (this.selectedRankId != null && !this.rankOptions.some((r) => r.value === this.selectedRankId)) {
-            this.selectedRankId = null;
-        }
-    }
-
-    private applyRankMemberTypeFilter(): void {
-        const memberType = this.selectedMemberTypeId;
-        const filtered = memberType == null
-            ? this.allRankOptions
-            : this.allRankOptions.filter((r) => r.parentCodeId === memberType);
-        // Strip parentCodeId before exposing to the dropdown — keeps the
-        // template's option type narrow.
-        this.rankOptions = filtered.map((r) => ({ label: r.label, labelBn: r.labelBn, value: r.value }));
-    }
-
-    /**
-     * Maps a CommonCode-shaped object to the { label, labelBn, value }
-     * shape the p-select dropdowns expect. Falls back through camelCase
-     * and PascalCase property names since the .NET serializer convention
-     * isn't uniform across all CommonCode-returning endpoints.
-     */
-    private toOption(c: any): { label: string; labelBn: string; value: number } {
-        const id = c?.codeId ?? c?.CodeId ?? 0;
-        const en = c?.codeValueEN ?? c?.CodeValueEN ?? c?.displayCodeValueEN ?? c?.DisplayCodeValueEN ?? String(id);
-        const bn = c?.codeValueBN ?? c?.CodeValueBN ?? c?.displayCodeValueBN ?? c?.DisplayCodeValueBN ?? en;
-        return { label: en, labelBn: bn, value: id };
-    }
-
-    /** YYYY-MM-DD from local date parts — avoids the UTC shift that toISOString does. */
-    private toLocalDateStr(d: Date | null): string | null {
-        if (!d) return null;
-        const x = new Date(d);
-        if (isNaN(x.getTime())) return null;
-        const y = x.getFullYear();
-        const m = String(x.getMonth() + 1).padStart(2, '0');
-        const day = String(x.getDate()).padStart(2, '0');
-        return `${y}-${m}-${day}`;
-    }
-
     get reportTitle(): string {
-        const base = this.L[this.lang]['report.title.rftsCompletion'];
-        const status = this.statusOptions.find((o) => o.value === this.selectedCompletionStatus);
-        const statusLabel = this.lang === 'bn' ? status?.labelBn : status?.label;
-        return statusLabel ? `${base} (${statusLabel})` : base;
-    }
-
-    get dateLine(): string {
-        const now = new Date();
         if (this.lang === 'en') {
-            return now.toLocaleDateString('en-US', { day: 'numeric', month: 'long', year: 'numeric' });
+            const status = this.statusOptions.find((o) => o.value === this.selectedCompletionStatus);
+            return status ? `RFTS Completion Report (${status.label})` : 'RFTS Completion Report';
         }
-        return now.toLocaleDateString('bn-BD', { day: 'numeric', month: 'long', year: 'numeric' });
+        const status = this.statusOptions.find((o) => o.value === this.selectedCompletionStatus);
+        return status ? `আরএফটিএস সম্পন্নের প্রতিবেদন (${status.labelBn})` : 'আরএফটিএস সম্পন্নের প্রতিবেদন';
     }
 
-    /** Caption fragment showing the active completion filter — used inside the heading and the export footer. */
+    /** Caption fragment showing the active completion filter. */
     private statusCaption(): string {
         const s = this.statusOptions.find((o) => o.value === this.selectedCompletionStatus);
         return this.lang === 'bn' ? (s?.labelBn ?? '') : (s?.label ?? '');
     }
 
+    /** Selection-criteria items — drives the criteria grid + Word/Excel/print exports. */
+    get criteriaItems(): { label: string; value: string }[] {
+        const items: { label: string; value: string }[] = [];
+        items.push({ label: 'Completion Status', value: this.statusCaption() });
+        const multi = (ids: number[], opts: { label: string; labelBn: string; value: number }[], label: string) => {
+            if (!ids.length) return;
+            const names = ids
+                .map((id) => opts.find((o) => o.value === id))
+                .filter((o): o is (typeof opts)[number] => o != null)
+                .map((o) => (this.lang === 'bn' ? o.labelBn : o.label));
+            if (names.length) items.push({ label, value: names.join(', ') });
+        };
+        multi(this.selectedOrgIds, this.motherOrgOptions, 'Mother Org');
+        multi(this.selectedMemberTypeIds, this.memberTypeOptions, 'Member Type');
+        multi(this.selectedRankIds, this.rankOptions, 'Rank');
+        multi(this.selectedCorpsIds, this.corpsOptions, 'Corps');
+        multi(this.selectedTradeIds, this.tradeOptions, 'Trade');
+        return items;
+    }
     buildFilterLines(): string[] {
-        const L = this.L[this.lang];
-        const lines: string[] = [];
-        lines.push(`${L['report.search.completionStatus']}: ${this.statusCaption()}`);
-        if (this.selectedMotherOrgId != null) {
-            const o = this.motherOrgOptions.find((x) => x.value === this.selectedMotherOrgId);
-            const val = this.lang === 'bn' ? o?.labelBn : o?.label;
-            if (val) lines.push(`${L['report.search.motherOrg']}: ${val}`);
-        }
-        if (this.selectedMemberTypeId != null) {
-            const o = this.memberTypeOptions.find((x) => x.value === this.selectedMemberTypeId);
-            const val = this.lang === 'bn' ? o?.labelBn : o?.label;
-            if (val) lines.push(`${L['report.search.memberType']}: ${val}`);
-        }
-        if (this.selectedRankId != null) {
-            const o = this.rankOptions.find((x) => x.value === this.selectedRankId);
-            const val = this.lang === 'bn' ? o?.labelBn : o?.label;
-            if (val) lines.push(`${L['report.search.rank']}: ${val}`);
-        }
-        if (this.isCompletedView) {
-            if (this.searchCourseNo.trim()) lines.push(`Course No: ${this.searchCourseNo.trim()}`);
-            const df = this.toLocalDateStr(this.dateFrom);
-            const dt = this.toLocalDateStr(this.dateTo);
-            if (df) lines.push(`${L['report.search.fromDate']}: ${df}`);
-            if (dt) lines.push(`${L['report.search.toDate']}: ${dt}`);
-        }
-        return lines;
+        return this.criteriaItems.map((it) => `${it.label}: ${it.value}`);
     }
 
-    /** Export reflects the visible column picker (labels + values, in order). */
-    getExportData(): { columns: string[]; rows: string[][] } {
-        const cols = this.visibleColumns;
-        const columns = cols.map(c => this.lang === 'bn' ? c.labelBN : c.labelEN);
-        const rows = this.list.map(row => cols.map(c => this.cellValue(row, c.key)));
-        return { columns, rows };
+    get activeFilterCount(): number {
+        let c = 1; // completion status is always set
+        if (this.selectedOrgIds.length > 0) c++;
+        if (this.selectedMemberTypeIds.length > 0) c++;
+        if (this.selectedRankIds.length > 0) c++;
+        if (this.selectedCorpsIds.length > 0) c++;
+        if (this.selectedTradeIds.length > 0) c++;
+        return c;
+    }
+
+    /**
+     * Completion status is the report mode. Reset the visible columns to the
+     * view's defaults (course columns are dropped for NotCompleted, restored
+     * for Completed).
+     */
+    onCompletionStatusChange(): void {
+        this.selectedColumnKeys = this.defaultColumnsFor(this.selectedCompletionStatus);
+    }
+
+    toggleFilter(): void {
+        this.filterOpen = !this.filterOpen;
+    }
+
+    filterSubtitle(): string {
+        if (this.activeFilterCount === 0) return this.lang === 'en' ? 'Select fields to search on' : 'খোঁজার জন্য ক্ষেত্র নির্বাচন করুন';
+        const n = this.lang === 'bn' ? BanglaNumerals.toBangla(String(this.activeFilterCount)) : String(this.activeFilterCount);
+        return this.lang === 'en' ? `${n} filters applied` : `${n} ফিল্টার প্রয়োগকৃত`;
+    }
+
+    clearFilters(): void {
+        this.selectedCompletionStatus = 'Completed';
+        this.selectedOrgIds = [];
+        this.selectedMemberTypeIds = [];
+        this.selectedRankIds = [];
+        this.selectedCorpsIds = [];
+        this.selectedTradeIds = [];
+        this.rankOptions = [];
+        this.allRanksForOrg = [];
+        this.corpsOptions = [];
+        this.tradeOptions = [];
+        this.selectedColumnKeys = this.defaultColumnsFor('Completed');
+        this.first = 0;
+        this.list = [];
+        this.totalRecords = 0;
+    }
+
+    search(): void {
+        this.first = 0;
+        this.searched = true;
+        this.appliedFilterLines = this.buildFilterLines();
+        this.load();
+    }
+
+    onPage(event: { first?: number; rows?: number }): void {
+        this.first = event.first ?? 0;
+        this.rows = event.rows ?? this.rows;
+        this.load();
+    }
+
+    toggleLang(): void {
+        this.lang = this.lang === 'en' ? 'bn' : 'en';
+        this.appliedFilterLines = this.buildFilterLines();
+    }
+
+    load(): void {
+        this.loading = true;
+        this.appliedFilterLines = this.buildFilterLines();
+        const page_no = Math.floor(this.first / this.rows) + 1;
+
+        // Map UI filters → dynamic-backend criteria (registry FieldKeys).
+        const criteria: DynamicReportCriterion[] = [];
+        if (this.selectedOrgIds.length)
+            criteria.push({ fieldKey: 'motherOrganization', idValues: this.selectedOrgIds });
+        if (this.selectedMemberTypeIds.length)
+            criteria.push({ fieldKey: 'memberType', idValues: this.selectedMemberTypeIds });
+        if (this.selectedRankIds.length)
+            criteria.push({ fieldKey: 'armyRank', idValues: this.selectedRankIds });
+        if (this.selectedCorpsIds.length)
+            criteria.push({ fieldKey: 'corps', idValues: this.selectedCorpsIds });
+        if (this.selectedTradeIds.length)
+            criteria.push({ fieldKey: 'trade', idValues: this.selectedTradeIds });
+
+        const columns = this.selectedColumnKeys.map(
+            k => ReportRftsCompletionComponent.colKeyToBackend[k] ?? k,
+        );
+
+        this.reportService
+            .runDynamicRftsReport({
+                columns,
+                criteria,
+                rftsCompletionStatus: this.selectedCompletionStatus,
+                rftsCourseNo: null,
+                rftsDateFrom: null,
+                rftsDateTo: null,
+                pagination: { page_no, row_per_page: this.rows },
+            })
+            .subscribe({
+                next: (res) => {
+                    const startSer = (page_no - 1) * this.rows + 1;
+                    this.list = (res.datalist ?? []).map((d, i) => this.adaptDynamicRow(d, startSer + i));
+                    this.totalRecords = res.pages?.Rows ?? res.pages?.rows ?? 0;
+                    this.loading = false;
+                },
+                error: (err) => {
+                    console.error(err);
+                    this.messageService.add({
+                        severity: 'error',
+                        summary: 'Error',
+                        detail: err?.error?.message || 'Failed to load report',
+                    });
+                    this.loading = false;
+                },
+            });
     }
 
     /** Resolve a cell's display value by column key. */
@@ -411,149 +491,6 @@ export class ReportRftsCompletionComponent implements OnInit {
         } as RftsCompletionReportRow;
     }
 
-    toggleExportDropdown(event: Event): void {
-        event.stopPropagation();
-        this.exportDropdownOpen = !this.exportDropdownOpen;
-    }
-
-    async exportAs(type: 'print' | 'pdf' | 'word' | 'excel'): Promise<void> {
-        this.exportDropdownOpen = false;
-        const { columns, rows } = this.getExportData();
-        const config = {
-            title: this.reportTitle,
-            lang: this.lang,
-            columns,
-            rows,
-            showPageNumbers: true,
-            filterLines: this.appliedFilterLines,
-            landscape: true,
-            marginMm: 5,
-        };
-        if (type === 'pdf') {
-            this.exporting = true;
-            try { await this.exportService.generatePDF(config); } finally { this.exporting = false; }
-        } else if (type === 'print') {
-            this.exportService.exportPDF(config);
-        } else if (type === 'word') {
-            await this.exportService.exportWord(config);
-        } else {
-            this.exportService.exportExcel(config);
-        }
-    }
-
-    get activeFilterCount(): number {
-        let c = 1; // completion status is always set
-        if (this.selectedMotherOrgId != null) c++;
-        if (this.selectedMemberTypeId != null) c++;
-        if (this.selectedRankId != null) c++;
-        if (this.isCompletedView) {
-            if (this.searchCourseNo.trim()) c++;
-            if (this.dateFrom) c++;
-            if (this.dateTo) c++;
-        }
-        return c;
-    }
-
-    /**
-     * Course No / duration filters only make sense for "Completed RFTS"
-     * (they pivot the membership filter on a specific course / window).
-     * Clear them when switching to the Not Completed view so a stale value
-     * doesn't silently come back when the user switches back.
-     */
-    onCompletionStatusChange(): void {
-        if (!this.isCompletedView) {
-            this.searchCourseNo = '';
-            this.dateFrom = null;
-            this.dateTo = null;
-        }
-        // Reset the visible columns to the view's defaults (course columns are
-        // dropped for NotCompleted, restored for Completed).
-        this.selectedColumnKeys = this.defaultColumnsFor(this.selectedCompletionStatus);
-    }
-
-    toggleFilter(): void {
-        this.filterOpen = !this.filterOpen;
-    }
-
-    filterSubtitle(): string {
-        const L = this.L['en'];
-        if (this.activeFilterCount === 0) return L['report.search.panelSubtitle'];
-        const n = this.lang === 'bn' ? BanglaNumerals.toBangla(String(this.activeFilterCount)) : String(this.activeFilterCount);
-        return n + ' ' + L['report.search.panelSubtitleApplied'];
-    }
-
-    clearFilters(): void {
-        this.selectedCompletionStatus = 'Completed';
-        this.selectedMotherOrgId = null;
-        this.selectedMemberTypeId = null;
-        this.selectedRankId = null;
-        this.searchCourseNo = '';
-        this.dateFrom = null;
-        this.dateTo = null;
-        this.selectedColumnKeys = this.defaultColumnsFor('Completed');
-        this.first = 0;
-        this.list = [];
-        this.totalRecords = 0;
-    }
-
-    onPage(event: { first: number; rows: number }): void {
-        this.first = event.first;
-        this.rows = event.rows;
-        this.load();
-    }
-
-    toggleLang(): void {
-        this.lang = this.lang === 'en' ? 'bn' : 'en';
-        this.appliedFilterLines = this.buildFilterLines();
-    }
-
-    load(): void {
-        this.loading = true;
-        this.appliedFilterLines = this.buildFilterLines();
-        const page_no = Math.floor(this.first / this.rows) + 1;
-
-        // Map UI filters → dynamic-backend criteria (registry FieldKeys).
-        const criteria: DynamicReportCriterion[] = [];
-        if (this.selectedMotherOrgId != null)
-            criteria.push({ fieldKey: 'motherOrganization', idValue: this.selectedMotherOrgId });
-        if (this.selectedMemberTypeId != null)
-            criteria.push({ fieldKey: 'memberType', idValue: this.selectedMemberTypeId });
-        if (this.selectedRankId != null)
-            criteria.push({ fieldKey: 'armyRank', idValue: this.selectedRankId });
-
-        const columns = this.selectedColumnKeys.map(
-            k => ReportRftsCompletionComponent.colKeyToBackend[k] ?? k,
-        );
-
-        this.reportService
-            .runDynamicRftsReport({
-                columns,
-                criteria,
-                rftsCompletionStatus: this.selectedCompletionStatus,
-                rftsCourseNo: this.isCompletedView ? (this.searchCourseNo.trim() || null) : null,
-                rftsDateFrom: this.isCompletedView ? this.toLocalDateStr(this.dateFrom) : null,
-                rftsDateTo: this.isCompletedView ? this.toLocalDateStr(this.dateTo) : null,
-                pagination: { page_no, row_per_page: this.rows },
-            })
-            .subscribe({
-                next: (res) => {
-                    const startSer = (page_no - 1) * this.rows + 1;
-                    this.list = (res.datalist ?? []).map((d, i) => this.adaptDynamicRow(d, startSer + i));
-                    this.totalRecords = res.pages?.Rows ?? res.pages?.rows ?? 0;
-                    this.loading = false;
-                },
-                error: (err) => {
-                    console.error(err);
-                    this.messageService.add({
-                        severity: 'error',
-                        summary: 'Error',
-                        detail: err?.error?.message || 'Failed to load report',
-                    });
-                    this.loading = false;
-                },
-            });
-    }
-
     displayNum(v: number | string | null | undefined): string {
         if (v == null || v === '') return '-';
         const s = String(v);
@@ -586,5 +523,432 @@ export class ReportRftsCompletionComponent implements OnInit {
     /** Convenience for the template — completion view shows extra columns. */
     get isCompletedView(): boolean {
         return this.selectedCompletionStatus === 'Completed';
+    }
+
+    // ── RAB paper getters ─────────────────────────────────────────────
+    get rabOverlineText(): string {
+        return this.lang === 'bn' ? 'গণপ্রজাতন্ত্রী বাংলাদেশ সরকার' : "GOVERNMENT OF THE PEOPLE'S REPUBLIC OF BANGLADESH";
+    }
+    get rabOrgTitle(): string {
+        return this.lang === 'bn' ? 'র‍্যাপিড অ্যাকশন ব্যাটালিয়ন' : 'RAPID ACTION BATTALION';
+    }
+    get rabOrgSubtitle(): string {
+        return this.lang === 'bn' ? 'বাংলাদেশ পুলিশ · সদর দপ্তর, কুর্মিটোলা, ঢাকা' : 'Bangladesh Police · Headquarters, Kurmitola, Dhaka';
+    }
+    get rabSectionTitle(): string {
+        return this.reportTitle;
+    }
+    get rabCriteriaTitle(): string {
+        return this.lang === 'bn' ? 'নির্বাচন মানদণ্ড' : 'SELECTION CRITERIA';
+    }
+    get rabGeneratedLabel(): string {
+        return this.lang === 'bn' ? 'তারিখ' : 'GENERATED';
+    }
+    get rabFormattedDate(): string {
+        const now = new Date();
+        return this.lang === 'bn' ? now.toLocaleDateString('bn-BD', { day: 'numeric', month: 'long', year: 'numeric' }).toUpperCase() : now.toLocaleDateString('en-US', { day: 'numeric', month: 'long', year: 'numeric' }).toUpperCase();
+    }
+    get rabConfidentialLabel(): string {
+        return this.lang === 'bn' ? 'গোপনীয়' : 'CONFIDENTIAL';
+    }
+    get rabWarningLabel(): string {
+        return this.lang === 'bn' ? 'অননুমোদিত প্রকাশ নিষিদ্ধ' : 'UNAUTHORIZED DISCLOSURE PROHIBITED';
+    }
+    get rabPageOfLabel(): string {
+        return this.lang === 'bn' ? 'পৃষ্ঠা ১ / ১' : 'PAGE 1 OF 1';
+    }
+
+    paddedSer(n: number | string | null | undefined): string {
+        const s = n == null ? '' : String(n);
+        return this.lang === 'bn' ? BanglaNumerals.toBangla(s.padStart(2, '0')) : s.padStart(2, '0');
+    }
+
+    // ── Export ────────────────────────────────────────────────────────
+    toggleExportDropdown(event: Event): void {
+        event.stopPropagation();
+        this.exportDropdownOpen = !this.exportDropdownOpen;
+    }
+
+    async exportAs(type: 'print' | 'word' | 'excel'): Promise<void> {
+        this.exportDropdownOpen = false;
+        if (!this.list?.length) return;
+        if (type === 'print') {
+            this.openRabPrintWindow();
+            return;
+        }
+        if (type === 'word') await this.exportRabWord();
+        else this.exportRabExcel();
+    }
+
+    private async exportRabWord(): Promise<void> {
+        const isBn = this.lang === 'bn';
+        const bnFont = { ascii: 'Nirmala UI', hAnsi: 'Nirmala UI', cs: 'Nirmala UI', hint: 'cs' as const };
+        const bnLang = { value: 'bn-BD', bidirectional: 'bn-BD' } as any;
+        const sans = isBn ? (bnFont as any) : 'Calibri';
+        const serif = isBn ? (bnFont as any) : 'Cambria';
+        const mono = isBn ? (bnFont as any) : 'Consolas';
+        const bnRunExtras = (size: number) => (isBn ? { language: bnLang, sizeComplexScript: size } : {});
+        const wsafe = (s: string | null | undefined): string => s ?? '';
+        const S = { overline: 15, title: 44, subtitle: 20, sectionTitle: 26, sectionSub: 20, stripLabel: 16, stripDate: 16, critLabel: 14, critValue: 20, tableHeader: 14, name: 20, meta: 14, body: 16, footer: 13 };
+        const C = { black: '0B0B0B', mutedText: '555555', gray: '6B6B6B', labelGray: '8A8A8A', zebra: 'FAFAF6', border: 'BFBFBF', innerBorder: 'D9D9D9' };
+        const innerCellBorder = {
+            top: { style: BorderStyle.SINGLE, size: 2, color: C.innerBorder },
+            bottom: { style: BorderStyle.SINGLE, size: 2, color: C.innerBorder },
+            left: { style: BorderStyle.SINGLE, size: 2, color: C.innerBorder },
+            right: { style: BorderStyle.SINGLE, size: 2, color: C.innerBorder }
+        };
+        const headerCellBorder = {
+            top: { style: BorderStyle.SINGLE, size: 8, color: C.black },
+            bottom: { style: BorderStyle.SINGLE, size: 8, color: C.black },
+            left: { style: BorderStyle.SINGLE, size: 4, color: C.border },
+            right: { style: BorderStyle.SINGLE, size: 4, color: C.border }
+        };
+        const headerPars: Paragraph[] = [];
+        headerPars.push(
+            new Paragraph({
+                alignment: AlignmentType.CENTER,
+                spacing: { after: 80 },
+                children: [new TextRun({ text: wsafe(this.rabOverlineText), font: sans, size: S.overline, ...bnRunExtras(S.overline), color: C.mutedText, characterSpacing: isBn ? 0 : 60, allCaps: !isBn })]
+            })
+        );
+        headerPars.push(
+            new Paragraph({
+                alignment: AlignmentType.CENTER,
+                spacing: { after: 40 },
+                children: [new TextRun({ text: wsafe(this.rabOrgTitle), font: serif, size: S.title, ...bnRunExtras(S.title), bold: true, color: C.black, characterSpacing: isBn ? 0 : 24 })]
+            })
+        );
+        headerPars.push(
+            new Paragraph({ alignment: AlignmentType.CENTER, spacing: { after: 200 }, children: [new TextRun({ text: wsafe(this.rabOrgSubtitle), font: serif, size: S.subtitle, ...bnRunExtras(S.subtitle), italics: true, color: C.mutedText })] })
+        );
+        headerPars.push(
+            new Paragraph({
+                alignment: AlignmentType.CENTER,
+                spacing: { after: 200 },
+                children: [new TextRun({ text: wsafe(this.rabSectionTitle), font: serif, size: S.sectionTitle, ...bnRunExtras(S.sectionTitle), bold: true, color: C.black, characterSpacing: isBn ? 0 : 32, allCaps: !isBn })]
+            })
+        );
+        const colsPerCritRow = 4;
+        const critCellPct = 100 / colsPerCritRow;
+        const stripCell = (runs: TextRun[], alignment: typeof AlignmentType.LEFT | typeof AlignmentType.RIGHT) =>
+            new TableCell({
+                columnSpan: 2,
+                borders: {
+                    top: { style: BorderStyle.SINGLE, size: 4, color: C.border },
+                    bottom: { style: BorderStyle.SINGLE, size: 4, color: C.border },
+                    left: { style: BorderStyle.SINGLE, size: 4, color: C.border },
+                    right: { style: BorderStyle.SINGLE, size: 4, color: C.border }
+                },
+                margins: { top: 80, bottom: 80, left: 140, right: 140 },
+                width: { size: 50, type: WidthType.PERCENTAGE },
+                children: [new Paragraph({ alignment, children: runs })]
+            });
+        const stripRow = new TableRow({
+            cantSplit: true,
+            children: [
+                stripCell([new TextRun({ text: wsafe(this.rabCriteriaTitle), font: sans, size: S.stripLabel, ...bnRunExtras(S.stripLabel), bold: true, color: C.black, characterSpacing: isBn ? 0 : 40, allCaps: !isBn })], AlignmentType.LEFT),
+                stripCell(
+                    [new TextRun({ text: wsafe(`${this.rabGeneratedLabel} · ${this.rabFormattedDate}`), font: sans, size: S.stripDate, ...bnRunExtras(S.stripDate), bold: true, color: C.mutedText, characterSpacing: isBn ? 0 : 30, allCaps: !isBn })],
+                    AlignmentType.RIGHT
+                )
+            ]
+        });
+        const items = this.criteriaItems;
+        const critRows: TableRow[] = [stripRow];
+        for (let i = 0; i < items.length; i += colsPerCritRow) {
+            const cells: TableCell[] = [];
+            for (let j = 0; j < colsPerCritRow; j++) {
+                const it = items[i + j];
+                cells.push(
+                    new TableCell({
+                        borders: innerCellBorder,
+                        margins: { top: 100, bottom: 100, left: 140, right: 140 },
+                        width: { size: critCellPct, type: WidthType.PERCENTAGE },
+                        children: it
+                            ? [
+                                  new Paragraph({
+                                      spacing: { after: 40 },
+                                      children: [new TextRun({ text: wsafe(it.label), font: sans, size: S.critLabel, ...bnRunExtras(S.critLabel), bold: true, color: C.labelGray, characterSpacing: isBn ? 0 : 32, allCaps: !isBn })]
+                                  }),
+                                  new Paragraph({ children: [new TextRun({ text: wsafe(it.value), font: serif, size: S.critValue, ...bnRunExtras(S.critValue), bold: true, color: C.black })] })
+                              ]
+                            : [new Paragraph({ children: [new TextRun({ text: ' ', font: sans, size: S.critValue, ...bnRunExtras(S.critValue) })] })]
+                    })
+                );
+            }
+            critRows.push(new TableRow({ cantSplit: true, children: cells }));
+        }
+        const criteriaTable = new Table({ width: { size: 100, type: WidthType.PERCENTAGE }, layout: TableLayoutType.AUTOFIT, rows: critRows });
+        const visibleCols = this.visibleColumns;
+        const headerLabels = visibleCols.map((c) => (this.lang === 'bn' ? c.labelBN : c.labelEN));
+        const dataColPct = visibleCols.length > 0 ? 100 / visibleCols.length : 100;
+        const headerCells: TableCell[] = headerLabels.map(
+            (label) =>
+                new TableCell({
+                    borders: headerCellBorder,
+                    margins: { top: 120, bottom: 120, left: 140, right: 140 },
+                    width: { size: dataColPct, type: WidthType.PERCENTAGE },
+                    children: [
+                        new Paragraph({
+                            alignment: AlignmentType.LEFT,
+                            children: [new TextRun({ text: wsafe(label), font: sans, size: S.tableHeader, ...bnRunExtras(S.tableHeader), bold: true, color: C.black, characterSpacing: isBn ? 0 : 30, allCaps: !isBn })]
+                        })
+                    ]
+                })
+        );
+        const headerRow = new TableRow({ tableHeader: true, cantSplit: true, children: headerCells });
+        const dataRows: TableRow[] = this.list.map((row, idx) => {
+            const isEven = idx % 2 === 1;
+            const shading = isEven ? { type: 'clear' as const, fill: C.zebra, color: 'auto' } : undefined;
+            const cellOpts = { borders: innerCellBorder, margins: { top: 100, bottom: 100, left: 140, right: 140 }, width: { size: dataColPct, type: WidthType.PERCENTAGE }, shading };
+            const cells: TableCell[] = visibleCols.map((col) => {
+                const run = (text: string, opts: { fontKey?: any; sz?: number; bold?: boolean; color?: string; chSp?: number } = {}) =>
+                    new TextRun({
+                        text: wsafe(text),
+                        font: opts.fontKey ?? sans,
+                        size: opts.sz ?? S.body,
+                        ...bnRunExtras(opts.sz ?? S.body),
+                        bold: opts.bold ?? false,
+                        color: opts.color ?? C.black,
+                        ...(opts.chSp != null ? { characterSpacing: opts.chSp } : {})
+                    });
+                switch (col.hint) {
+                    case 'Serial':
+                        return new TableCell({ ...cellOpts, children: [new Paragraph({ alignment: AlignmentType.LEFT, children: [run(this.paddedSer(idx + 1), { fontKey: mono, sz: S.name, bold: true, color: C.gray, chSp: isBn ? 0 : 8 })] })] });
+                    case 'Name':
+                        return new TableCell({ ...cellOpts, children: [new Paragraph({ children: [run(this.cellValue(row, col.key), { sz: S.name, bold: true })] })] });
+                    case 'Date':
+                        return new TableCell({ ...cellOpts, children: [new Paragraph({ children: [run(this.cellValue(row, col.key), { fontKey: mono, chSp: isBn ? 0 : 4 })] })] });
+                    case 'Plain':
+                    default:
+                        return new TableCell({ ...cellOpts, children: [new Paragraph({ children: [run(this.cellValue(row, col.key))] })] });
+                }
+            });
+            return new TableRow({ cantSplit: true, children: cells });
+        });
+        const dataTable = new Table({ width: { size: 100, type: WidthType.PERCENTAGE }, layout: TableLayoutType.AUTOFIT, rows: [headerRow, ...dataRows] });
+        const footerCellBorder = {
+            top: { style: BorderStyle.SINGLE, size: 6, color: C.black },
+            bottom: { style: BorderStyle.NONE, size: 0, color: 'FFFFFF' },
+            left: { style: BorderStyle.NONE, size: 0, color: 'FFFFFF' },
+            right: { style: BorderStyle.NONE, size: 0, color: 'FFFFFF' }
+        };
+        const footerCellMargins = { top: 80, bottom: 0, left: 0, right: 0 };
+        const footer = new Footer({
+            children: [
+                new Table({
+                    width: { size: 100, type: WidthType.PERCENTAGE },
+                    layout: TableLayoutType.FIXED,
+                    columnWidths: [3000, 3000, 3000],
+                    rows: [
+                        new TableRow({
+                            cantSplit: true,
+                            children: [
+                                new TableCell({
+                                    borders: footerCellBorder,
+                                    margins: footerCellMargins,
+                                    children: [
+                                        new Paragraph({
+                                            alignment: AlignmentType.LEFT,
+                                            children: [new TextRun({ text: wsafe(this.rabConfidentialLabel), font: mono, size: S.footer, ...bnRunExtras(S.footer), bold: true, color: C.black, characterSpacing: isBn ? 0 : 30, allCaps: !isBn })]
+                                        })
+                                    ]
+                                }),
+                                new TableCell({ borders: footerCellBorder, margins: footerCellMargins, children: [new Paragraph({ children: [] })] }),
+                                new TableCell({
+                                    borders: footerCellBorder,
+                                    margins: footerCellMargins,
+                                    children: [
+                                        new Paragraph({
+                                            alignment: AlignmentType.RIGHT,
+                                            children: [
+                                                new TextRun({
+                                                    children: [`${isBn ? 'পৃষ্ঠা' : 'PAGE'} `, PageNumber.CURRENT, ` ${isBn ? '/' : 'OF'} `, PageNumber.TOTAL_PAGES],
+                                                    font: mono,
+                                                    size: S.footer,
+                                                    ...bnRunExtras(S.footer),
+                                                    bold: true,
+                                                    color: C.black,
+                                                    characterSpacing: isBn ? 0 : 24,
+                                                    allCaps: !isBn
+                                                })
+                                            ]
+                                        })
+                                    ]
+                                })
+                            ]
+                        })
+                    ]
+                })
+            ]
+        });
+        const doc = new Document({
+            sections: [
+                {
+                    properties: { page: { size: { orientation: PageOrientation.LANDSCAPE }, margin: { top: 680, bottom: 1247, left: 680, right: 680 } } },
+                    footers: { default: footer },
+                    children: [...headerPars, criteriaTable, new Paragraph({ spacing: { before: 0, after: 200 }, children: [new TextRun({ text: '', font: sans, size: 4 })] }), dataTable]
+                }
+            ]
+        });
+        const blob = await Packer.toBlob(doc);
+        saveAs(blob, `rfts-completion-report_${this.lang}.docx`);
+    }
+
+    private exportRabExcel(): void {
+        const isBn = this.lang === 'bn';
+        const wsafe = (s: string | null | undefined): string => s ?? '';
+        const visibleCols = this.visibleColumns;
+        const headers: string[] = visibleCols.map((c) => (isBn ? c.labelBN : c.labelEN));
+        const totalCols = headers.length || 1;
+        const aoa: any[][] = [];
+        const pad = (n: number) => Array.from({ length: n }, () => '');
+        aoa.push([wsafe(this.rabOverlineText), ...pad(totalCols - 1)]);
+        aoa.push([wsafe(this.rabOrgTitle), ...pad(totalCols - 1)]);
+        aoa.push([wsafe(this.rabOrgSubtitle), ...pad(totalCols - 1)]);
+        aoa.push([wsafe(this.rabSectionTitle), ...pad(totalCols - 1)]);
+        aoa.push(pad(totalCols));
+        aoa.push([`${this.rabCriteriaTitle}  ·  ${this.rabGeneratedLabel}: ${this.rabFormattedDate}`, ...pad(totalCols - 1)]);
+        for (const it of this.criteriaItems) aoa.push([`${it.label}: ${it.value}`, ...pad(totalCols - 1)]);
+        aoa.push(pad(totalCols));
+        aoa.push(headers);
+        for (let i = 0; i < this.list.length; i++) {
+            const row = this.list[i];
+            const cells = visibleCols.map((col) => {
+                switch (col.hint) {
+                    case 'Serial':
+                        return this.paddedSer(i + 1);
+                    case 'Date':
+                    case 'Name':
+                    case 'Plain':
+                    default:
+                        return this.cellValue(row, col.key);
+                }
+            });
+            aoa.push(cells);
+        }
+        aoa.push(pad(totalCols));
+        aoa.push([`${this.rabConfidentialLabel}  ·  ${this.rabWarningLabel}`, ...pad(totalCols - 1)]);
+        const ws = XLSX.utils.aoa_to_sheet(aoa);
+        ws['!merges'] = ws['!merges'] ?? [];
+        const titleRows = [0, 1, 2, 3, 4];
+        for (const r of titleRows) ws['!merges'].push({ s: { r, c: 0 }, e: { r, c: totalCols - 1 } });
+        const lastRow = aoa.length - 1;
+        ws['!merges'].push({ s: { r: lastRow, c: 0 }, e: { r: lastRow, c: totalCols - 1 } });
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, isBn ? 'প্রতিবেদন' : 'Report');
+        XLSX.writeFile(wb, `rfts-completion-report_${this.lang}.xlsx`);
+    }
+
+    private openRabPrintWindow(): void {
+        const win = window.open('', '_blank', 'width=1200,height=900');
+        if (!win) {
+            this.messageService.add({ severity: 'warn', summary: 'Popup blocked', detail: 'Allow popups for this site to use Print.', life: 6000 });
+            return;
+        }
+        const html = this.buildRabPrintHtml();
+        win.document.open();
+        win.document.write(html);
+        win.document.close();
+        setTimeout(() => {
+            try {
+                win.focus();
+                win.print();
+            } catch {
+                /* user can Ctrl+P from the open window */
+            }
+        }, 700);
+    }
+
+    private buildRabPrintHtml(): string {
+        const esc = (s: unknown) =>
+            String(s ?? '')
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#039;');
+        const isBn = this.lang === 'bn';
+        const serif = isBn ? "'Nirmala UI', 'Hind Siliguri', 'SolaimanLipi', serif" : "'Playfair Display', Georgia, 'Times New Roman', serif";
+        const sans = isBn ? "'Nirmala UI', 'Hind Siliguri', 'SolaimanLipi', sans-serif" : "'DM Sans', 'Segoe UI', Arial, sans-serif";
+        const mono = "'JetBrains Mono', 'Consolas', 'Courier New', monospace";
+        const visibleCols = this.visibleColumns;
+        const tableHeaderHtml = `<tr>${visibleCols.map((c) => `<th>${esc(this.lang === 'bn' ? c.labelBN : c.labelEN)}</th>`).join('')}</tr>`;
+        const renderCell = (row: RftsCompletionReportRow, col: { key: string; hint: string }, idx: number): string => {
+            switch (col.hint) {
+                case 'Serial':
+                    return `<td class="td-ser"><span class="ser">${esc(this.paddedSer(idx + 1))}</span></td>`;
+                case 'Name':
+                    return `<td class="td-name">${esc(this.cellValue(row, col.key))}</td>`;
+                case 'Date':
+                    return `<td class="td-date">${esc(this.cellValue(row, col.key))}</td>`;
+                case 'Plain':
+                default:
+                    return `<td>${esc(this.cellValue(row, col.key))}</td>`;
+            }
+        };
+        const tableBodyHtml = this.list.map((row, i) => `<tr>${visibleCols.map((c) => renderCell(row, c, i)).join('')}</tr>`).join('');
+        const items = this.criteriaItems;
+        const criteriaGridHtml = items.length ? `<div class="criteria-grid">${items.map((item) => `<div class="cell"><div class="cell-label">${esc(item.label)}</div><div class="cell-value">${esc(item.value)}</div></div>`).join('')}</div>` : '';
+        const confidential = this.rabConfidentialLabel;
+        const warning = this.rabWarningLabel;
+        const pageWord = isBn ? 'পৃষ্ঠা' : 'PAGE';
+        const ofWord = isBn ? '/' : 'OF';
+        const cssStr = (s: string) => s.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
+        return `<!DOCTYPE html><html lang="${isBn ? 'bn' : 'en'}"><head><meta charset="UTF-8" /><title>${esc(this.rabSectionTitle)}</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" /><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=DM+Sans:wght@400;500;600&family=Hind+Siliguri:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<style>
+    @counter-style bn-digits { system: numeric; symbols: '\\09E6' '\\09E7' '\\09E8' '\\09E9' '\\09EA' '\\09EB' '\\09EC' '\\09ED' '\\09EE' '\\09EF'; }
+    @page {
+        margin: 12mm 5mm 22mm 5mm;
+        @bottom-left { content: "● " "${cssStr(confidential)}"; font-family: ${mono}; font-size: 6.5pt; font-weight: 600; letter-spacing: 0.3em; text-transform: uppercase; color: #b03a3a; padding: 5mm 0 0 8mm; background-image: linear-gradient(rgba(176, 58, 58, 0.5), rgba(176, 58, 58, 0.5)); background-position: 8mm 1.5mm; background-size: calc(100% - 8mm) 0.7mm; background-repeat: no-repeat; vertical-align: top; ${isBn ? 'letter-spacing:0.05em;text-transform:none;font-family:' + sans + ';' : ''} }
+        @bottom-center { content: "${cssStr(pageWord)} " counter(page${isBn ? ', bn-digits' : ''}) " ${cssStr(ofWord)} " counter(pages${isBn ? ', bn-digits' : ''}); font-family: ${mono}; font-size: 6.5pt; font-weight: 600; letter-spacing: 0.25em; text-transform: uppercase; color: #4a4a4a; padding-top: 5mm; background-image: linear-gradient(rgba(176, 58, 58, 0.5), rgba(176, 58, 58, 0.5)); background-position: 0 1.5mm; background-size: 100% 0.7mm; background-repeat: no-repeat; vertical-align: top; ${isBn ? 'letter-spacing:0.05em;text-transform:none;font-family:' + sans + ';' : ''} }
+        @bottom-right { content: "${cssStr(warning)}"; font-family: ${mono}; font-size: 6.5pt; font-weight: 600; letter-spacing: 0.3em; text-transform: uppercase; color: #b03a3a; padding: 5mm 8mm 0 0; background-image: linear-gradient(rgba(176, 58, 58, 0.5), rgba(176, 58, 58, 0.5)); background-position: 0 1.5mm; background-size: calc(100% - 8mm) 0.7mm; background-repeat: no-repeat; vertical-align: top; ${isBn ? 'letter-spacing:0.05em;text-transform:none;font-family:' + sans + ';' : ''} }
+    }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; padding: 0; background: #fff; color: #0b0b0b; font-family: ${sans}; font-size: 10pt; line-height: 1.35; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    .paper { padding: 4mm 8mm; }
+    .paper-head { text-align: center; margin-bottom: 6mm; }
+    .overline { font-size: 7.5pt; letter-spacing: 0.3em; color: #555; text-transform: uppercase; margin-bottom: 3mm; font-weight: 500; ${isBn ? 'letter-spacing:0;text-transform:none;font-family:' + sans + ';font-size:9pt;' : ''} }
+    .paper-title { font-family: ${serif}; font-weight: 700; font-size: 22pt; margin: 0 0 2mm 0; letter-spacing: 0.12em; color: #0b0b0b; ${isBn ? 'letter-spacing:0;' : ''} }
+    .paper-sub { font-family: ${serif}; font-style: italic; color: #555; font-size: 10pt; margin-bottom: 4mm; }
+    .orn-divider { display: flex; justify-content: center; align-items: center; gap: 6mm; margin: 4mm auto; max-width: 65%; }
+    .orn-line { flex: 1; height: 1px; background: linear-gradient(to right, transparent, #b78b3b, transparent); }
+    .orn-diamond { color: #b78b3b; font-size: 9pt; }
+    .paper-section { font-family: ${serif}; font-size: 13pt; font-weight: 700; letter-spacing: 0.16em; color: #0b0b0b; margin: 0 0 1mm 0; text-transform: uppercase; ${isBn ? 'letter-spacing:0;' : ''} }
+    .criteria { margin: 5mm 0 6mm; border: 1px solid #d8d6d0; border-radius: 1mm; overflow: hidden; }
+    .criteria-strip { display: flex; justify-content: space-between; align-items: center; padding: 1.5mm 3mm; background: #f4f4f2; border-bottom: 1px solid #d8d6d0; font-size: 8pt; letter-spacing: 0.2em; text-transform: uppercase; color: #4a4a4a; font-weight: 600; ${isBn ? 'letter-spacing:0.04em;text-transform:none;' : ''} }
+    .criteria-strip-title { display: inline-flex; gap: 1.5mm; align-items: center; color: #0b0b0b; }
+    .diamond-bullet { color: #b78b3b; }
+    .criteria-strip-date { opacity: 0.75; font-weight: 500; }
+    .criteria-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(38mm, 1fr)); }
+    .cell { padding: 2mm 3mm; border-right: 1px solid #e6e4de; border-top: 1px solid #e6e4de; }
+    .cell-label { font-size: 7pt; letter-spacing: 0.16em; text-transform: uppercase; color: #8a8a8a; margin-bottom: 1mm; font-weight: 600; ${isBn ? 'letter-spacing:0.04em;text-transform:none;' : ''} }
+    .cell-value { font-family: ${serif}; font-size: 10pt; font-weight: 700; color: #0b0b0b; line-height: 1.2; ${isBn ? 'font-family:' + sans + ';' : ''} }
+    table { width: 100%; border-collapse: collapse; table-layout: auto; font-family: ${sans}; font-size: 8pt; }
+    thead { display: table-header-group; }
+    thead th { background: #0b0b0b; color: #d9c79a; font-family: ${mono}; font-size: 6.5pt; font-weight: 600; letter-spacing: 0.15em; text-transform: uppercase; padding: 1.8mm 2mm; text-align: left; vertical-align: middle; white-space: nowrap; border: 1px solid rgba(11,11,11,0.05); ${isBn ? 'letter-spacing:0.04em;font-family:' + sans + ';' : ''} }
+    tbody td { padding: 2mm 2mm; font-size: 8pt; color: #0b0b0b; border: 1px solid rgba(11,11,11,0.05); vertical-align: top; background: #fff; word-break: break-word; overflow-wrap: anywhere; }
+    tbody tr:nth-child(even) td { background: #fafaf6; }
+    tbody tr { page-break-inside: avoid; }
+    .td-ser { white-space: nowrap; }
+    .ser { font-family: ${mono}; font-size: 9pt; font-weight: 600; color: #6b6b6b; letter-spacing: 0.04em; white-space: nowrap; }
+    .td-name { font-family: ${sans}; font-weight: 600; font-size: 10pt; color: #0b0b0b; line-height: 1.2; min-width: 50mm; }
+    .td-date { font-family: ${mono}; letter-spacing: 0.02em; white-space: nowrap; }
+</style></head><body><div class="paper">
+    <header class="paper-head">
+        <div class="overline">${esc(this.rabOverlineText)}</div>
+        <h1 class="paper-title">${esc(this.rabOrgTitle)}</h1>
+        <div class="paper-sub"><em>${esc(this.rabOrgSubtitle)}</em></div>
+        <div class="orn-divider"><span class="orn-line"></span><span class="orn-diamond">&#9670;</span><span class="orn-line"></span></div>
+        <h2 class="paper-section">${esc(this.rabSectionTitle)}</h2>
+    </header>
+    <div class="criteria">
+        <div class="criteria-strip"><span class="criteria-strip-title"><span class="diamond-bullet">&#9670;</span> ${esc(this.rabCriteriaTitle)}</span><span class="criteria-strip-date">${esc(this.rabGeneratedLabel)} &middot; ${esc(this.rabFormattedDate)}</span></div>
+        ${criteriaGridHtml}
+    </div>
+    <table><thead>${tableHeaderHtml}</thead><tbody>${tableBodyHtml}</tbody></table>
+</div></body></html>`;
     }
 }

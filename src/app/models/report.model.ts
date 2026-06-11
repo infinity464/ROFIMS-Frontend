@@ -629,6 +629,8 @@ export interface DynamicReportRequest {
   minStayUnit?: string | null;
   /** Unit-Duration: REQUIRED RAB Unit (stint unit) for the per-stint view. */
   stintUnitId?: number | null;
+  /** Unit-Duration: one or more RAB Units (takes precedence over stintUnitId). */
+  stintUnitIds?: number[];
   /** Unit-Duration overlap window start, ISO "yyyy-MM-dd". */
   stintOverlapFrom?: string | null;
   /** Unit-Duration overlap window end, ISO "yyyy-MM-dd". */

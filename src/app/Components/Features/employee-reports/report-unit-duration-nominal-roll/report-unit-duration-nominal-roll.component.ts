@@ -59,7 +59,7 @@ export class ReportUnitDurationNominalRollComponent implements OnInit {
     searched = false;
 
     rabUnitOptions: { label: string; labelBn: string; value: number }[] = [];
-    selectedRabUnitId: number | null = null;
+    selectedRabUnitIds: number[] = [];
 
     orgOptions: { label: string; labelBn: string; value: number }[] = [];
     rankOptions: { label: string; labelBn: string; value: number }[] = [];
@@ -67,7 +67,7 @@ export class ReportUnitDurationNominalRollComponent implements OnInit {
     corpsOptions: { label: string; labelBn: string; value: number }[] = [];
     tradeOptions: { label: string; labelBn: string; value: number }[] = [];
     selectedOrgIds: number[] = [];
-    selectedRankId: number | null = null;
+    selectedRankIds: number[] = [];
     selectedMemberTypeIds: number[] = [];
     selectedCorpsIds: number[] = [];
     selectedTradeIds: number[] = [];
@@ -264,7 +264,7 @@ export class ReportUnitDurationNominalRollComponent implements OnInit {
 
     /** Mother Org changed → reload its org-scoped Ranks and Corps; reset Trade. */
     onOrgChange(): void {
-        this.selectedRankId = null;
+        this.selectedRankIds = [];
         this.rankOptions = [];
         this.allRanksForOrg = [];
         this.selectedCorpsIds = [];
@@ -306,8 +306,7 @@ export class ReportUnitDurationNominalRollComponent implements OnInit {
         if (this.selectedMemberTypeIds.length)
             rows = rows.filter(r => r.parentCodeId != null && this.selectedMemberTypeIds.includes(r.parentCodeId));
         this.rankOptions = this.mapCodes(rows);
-        if (this.selectedRankId != null && !this.rankOptions.some(o => o.value === this.selectedRankId))
-            this.selectedRankId = null;
+        this.selectedRankIds = this.selectedRankIds.filter(id => this.rankOptions.some(o => o.value === id));
     }
 
     /** Corps changed → reload Trades (children of the selected Corps rows). */
@@ -330,9 +329,9 @@ export class ReportUnitDurationNominalRollComponent implements OnInit {
 
     get activeFilterCount(): number {
         let c = 0;
-        if (this.selectedRabUnitId != null) c++;
+        if (this.selectedRabUnitIds.length > 0) c++;
         if (this.selectedOrgIds.length > 0) c++;
-        if (this.selectedRankId != null) c++;
+        if (this.selectedRankIds.length > 0) c++;
         if (this.selectedMemberTypeIds.length > 0) c++;
         if (this.selectedCorpsIds.length > 0) c++;
         if (this.selectedTradeIds.length > 0) c++;
@@ -352,11 +351,6 @@ export class ReportUnitDurationNominalRollComponent implements OnInit {
     }
     get criteriaItems(): { label: string; value: string }[] {
         const items: { label: string; value: string }[] = [];
-        if (this.selectedRabUnitId != null) {
-            const opt = this.rabUnitOptions.find(o => o.value === this.selectedRabUnitId);
-            const lbl = this.lang === 'en' ? 'RAB Unit' : 'র‍্যাব ইউনিট';
-            if (opt) items.push({ label: lbl, value: this.lang === 'bn' ? opt.labelBn : opt.label });
-        }
         const multi = (ids: number[], opts: { label: string; labelBn: string; value: number }[], en: string, bn: string) => {
             if (!ids.length) return;
             const names = ids
@@ -365,13 +359,10 @@ export class ReportUnitDurationNominalRollComponent implements OnInit {
                 .map(o => this.lang === 'bn' ? o.labelBn : o.label);
             if (names.length) items.push({ label: this.lang === 'en' ? en : bn, value: names.join(', ') });
         };
+        multi(this.selectedRabUnitIds, this.rabUnitOptions, 'RAB Unit', 'র‍্যাব ইউনিট');
         multi(this.selectedOrgIds, this.orgOptions, 'Mother Org', 'মাতৃ সংস্থা');
         multi(this.selectedMemberTypeIds, this.memberTypeOptions, 'Member Type', 'সদস্য ধরন');
-        if (this.selectedRankId != null) {
-            const opt = this.rankOptions.find(o => o.value === this.selectedRankId);
-            const lbl = this.lang === 'en' ? 'Rank' : 'পদবী';
-            if (opt) items.push({ label: lbl, value: this.lang === 'bn' ? opt.labelBn : opt.label });
-        }
+        multi(this.selectedRankIds, this.rankOptions, 'Rank', 'পদবী');
         multi(this.selectedCorpsIds, this.corpsOptions, 'Corps', 'কোর');
         multi(this.selectedTradeIds, this.tradeOptions, 'Trade', 'ট্রেড');
         if (this.fromDate) {
@@ -386,9 +377,9 @@ export class ReportUnitDurationNominalRollComponent implements OnInit {
     }
     private buildFilterLines(): string[] { return this.criteriaItems.map(it => `${it.label}: ${it.value}`); }
     clearFilters(): void {
-        this.selectedRabUnitId = null;
+        this.selectedRabUnitIds = [];
         this.selectedOrgIds = [];
-        this.selectedRankId = null;
+        this.selectedRankIds = [];
         this.rankOptions = [];
         this.allRanksForOrg = [];
         this.selectedMemberTypeIds = [];
@@ -403,11 +394,11 @@ export class ReportUnitDurationNominalRollComponent implements OnInit {
     toggleLang(): void { this.lang = this.lang === 'en' ? 'bn' : 'en'; this.appliedFilterLines = this.buildFilterLines(); }
 
     search(): void {
-        if (this.selectedRabUnitId == null) {
+        if (!this.selectedRabUnitIds.length) {
             this.messageService.add({
                 severity: 'warn',
                 summary: this.lang === 'en' ? 'RAB Unit required' : 'র‍্যাব ইউনিট প্রয়োজন',
-                detail: this.lang === 'en' ? 'Please select a RAB Unit to generate this nominal roll.' : 'নামীয় তালিকা তৈরি করতে একটি র‍্যাব ইউনিট নির্বাচন করুন।',
+                detail: this.lang === 'en' ? 'Please select at least one RAB Unit to generate this nominal roll.' : 'নামীয় তালিকা তৈরি করতে অন্তত একটি র‍্যাব ইউনিট নির্বাচন করুন।',
             });
             return;
         }
@@ -429,8 +420,8 @@ export class ReportUnitDurationNominalRollComponent implements OnInit {
         const criteria: DynamicReportCriterion[] = [];
         if (this.selectedOrgIds.length > 0)
             criteria.push({ fieldKey: 'orgName', idValues: this.selectedOrgIds });
-        if (this.selectedRankId != null && this.selectedRankId > 0)
-            criteria.push({ fieldKey: 'armyRank', idValue: this.selectedRankId });
+        if (this.selectedRankIds.length > 0)
+            criteria.push({ fieldKey: 'armyRank', idValues: this.selectedRankIds });
         if (this.selectedMemberTypeIds.length > 0)
             criteria.push({ fieldKey: 'memberType', idValues: this.selectedMemberTypeIds });
         if (this.selectedCorpsIds.length > 0)
@@ -446,7 +437,7 @@ export class ReportUnitDurationNominalRollComponent implements OnInit {
             columns,
             criteria,
             postingStatusFilter: 'Servings',
-            stintUnitId: this.selectedRabUnitId,
+            stintUnitIds: this.selectedRabUnitIds,
             stintOverlapFrom: this.fmtDate(this.fromDate),
             stintOverlapTo: this.fmtDate(this.toDate),
             pagination: { page_no: pageNo, row_per_page: this.rows },
