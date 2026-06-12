@@ -48,6 +48,9 @@ export class ChatService {
   private leaveReturnedSubject = new Subject<{ leaveApplicationId: number; applicantEmployeeId: number; returnedByEmployeeId: number; reason: string; message: string; notificationId?: number }>();
   public leaveReturned$ = this.leaveReturnedSubject.asObservable();
 
+  private noticePublishedSubject = new Subject<{ noticeId: number; topic: string; message: string; link?: string; notificationId?: number }>();
+  public noticePublished$ = this.noticePublishedSubject.asObservable();
+
   private connectionStatusSubject = new BehaviorSubject<boolean>(false);
   public connectionStatus$ = this.connectionStatusSubject.asObservable();
 
@@ -215,6 +218,13 @@ export class ChatService {
         console.debug('[ChatService] LeaveReturned received', payload);
       }
       this.leaveReturnedSubject.next(payload);
+    });
+
+    this.hubConnection.on('NoticePublished', (payload: any) => {
+      if (typeof console !== 'undefined' && console.debug) {
+        console.debug('[ChatService] NoticePublished received', payload);
+      }
+      this.noticePublishedSubject.next(payload);
     });
 
     this.hubConnection.on('Error', (message: string) => {

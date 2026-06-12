@@ -18,6 +18,8 @@ export interface NoticeListDto {
     isActive: boolean;
     createdDate?: string;
     createdBy?: string;
+    /** Publisher display name (Rank + English name), resolved server-side. */
+    createdByName?: string;
     recipientUserIds?: string[];
 }
 

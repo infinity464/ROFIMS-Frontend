@@ -3,7 +3,7 @@ import { MenuItem } from 'primeng/api';
 import { Router, RouterModule } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { map, switchMap, catchError } from 'rxjs/operators';
-import { Observable, of, EMPTY } from 'rxjs';
+import { Observable, of, EMPTY, Subscription } from 'rxjs';
 import { FormsModule } from '@angular/forms';
 import { StyleClassModule } from 'primeng/styleclass';
 import { PopoverModule } from 'primeng/popover';
@@ -179,6 +179,7 @@ export class AppTopbar implements OnInit, OnDestroy {
     userInitials = '?';
     private readonly DARK_MODE_KEY = 'darkMode';
     private closeBound: ((e: MouseEvent) => void) | null = null;
+    private noticeSub?: Subscription;
     @ViewChild('notificationContainer') notificationContainer?: ElementRef<HTMLElement>;
 
     constructor(
@@ -200,9 +201,21 @@ export class AppTopbar implements OnInit, OnDestroy {
 
     ngOnInit(): void {
         this.chatService.connectToHub().catch(() => {});
+
+        // Live bell update when a notice is published to me.
+        this.noticeSub = this.chatService.noticePublished$.subscribe((p) => {
+            this.notificationService.add({
+                type: 'notice',
+                title: 'New Notice',
+                message: p?.message || 'A new notice was published.',
+                link: p?.link || '/dashboard',
+                serverId: p?.notificationId
+            });
+        });
     }
 
     ngOnDestroy(): void {
+        this.noticeSub?.unsubscribe();
         if (this.profileImageUrl) {
             URL.revokeObjectURL(this.profileImageUrl);
             this.profileImageUrl = null;

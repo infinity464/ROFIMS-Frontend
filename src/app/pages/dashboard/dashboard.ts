@@ -391,7 +391,9 @@ type CalItem = { id: string; day: string; mon: string; dow: string; title: strin
                                     }
                                 </div>
                                 <div class="font-medium text-surface-900 dark:text-surface-0 mt-1 truncate">{{ n.topic }}</div>
-                                <div class="text-muted-color text-xs mt-1">{{ noticeDate(n) }}</div>
+                                <div class="text-muted-color text-xs mt-1">
+                                    {{ noticeDate(n) }}@if (n.createdByName) { <span> · By {{ n.createdByName }}</span> }
+                                </div>
                             </div>
                         }
                     }
@@ -421,7 +423,9 @@ type CalItem = { id: string; day: string; mon: string; dow: string; title: strin
                         <div class="text-muted-color text-xs uppercase mb-1">Details</div>
                         <div class="text-surface-900 dark:text-surface-0 whitespace-pre-line">{{ n.details || 'No details provided.' }}</div>
                     </div>
-                    <div class="text-muted-color text-sm">{{ noticeDate(n) }}</div>
+                    <div class="text-muted-color text-sm">
+                        {{ noticeDate(n) }}@if (n.createdByName) { <span> · Published by {{ n.createdByName }}</span> }
+                    </div>
                 </div>
             }
         </p-dialog>
