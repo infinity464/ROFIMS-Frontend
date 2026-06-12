@@ -37,16 +37,16 @@
                         placeholder="Select" styleClass="w-full" appendTo="body"></p-multiSelect>
                 </div>
                 <div class="report-filter-field">
+                    <label>Member Type</label>
+                    <p-multiSelect [options]="memberTypeOptions" [(ngModel)]="selectedMemberTypeIds" (ngModelChange)="onMemberTypeChange()"
+                        optionLabel="label" optionValue="value" display="chip" [filter]="true"
+                        placeholder="Select" styleClass="w-full" appendTo="body"></p-multiSelect>
+                </div>
+                <div class="report-filter-field">
                     <label>Rank</label>
                     <p-multiSelect [options]="rankOptions" [(ngModel)]="selectedRankIds"
                         optionLabel="label" optionValue="value" display="chip" [filter]="true"
                         [disabled]="selectedOrgIds.length === 0"
-                        placeholder="Select" styleClass="w-full" appendTo="body"></p-multiSelect>
-                </div>
-                <div class="report-filter-field">
-                    <label>Member Type</label>
-                    <p-multiSelect [options]="memberTypeOptions" [(ngModel)]="selectedMemberTypeIds" (ngModelChange)="onMemberTypeChange()"
-                        optionLabel="label" optionValue="value" display="chip" [filter]="true"
                         placeholder="Select" styleClass="w-full" appendTo="body"></p-multiSelect>
                 </div>
                 <div class="report-filter-field">

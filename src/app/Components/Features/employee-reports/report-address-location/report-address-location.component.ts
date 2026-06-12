@@ -31,6 +31,7 @@ import type {
     DynamicReportRow,
 } from '@/models/report.model';
 import type { CommonCodeModel } from '@/models/common-code-model';
+import type { MotherOrganizationModel } from '@/models/mother-org-model';
 import {
     Document,
     Packer,
@@ -49,6 +50,7 @@ import {
 } from 'docx';
 import { saveAs } from 'file-saver';
 import * as XLSX from 'xlsx';
+import { forkJoin } from 'rxjs';
 
 @Component({
     selector: 'app-report-address-location',
@@ -76,6 +78,24 @@ export class ReportAddressLocationComponent implements OnInit {
     selectedDistrictId: number | null = null;
     selectedUpazilaId: number | null = null;
     selectedPostOfficeId: number | null = null;
+
+    /** Common org/rank multi-select cascade (mirrors member-appointment). */
+    orgOptions: { label: string; labelBn: string; value: number }[] = [];
+    memberTypeOptions: { label: string; labelBn: string; value: number }[] = [];
+    rankOptions: { label: string; labelBn: string; value: number }[] = [];
+    corpsOptions: { label: string; labelBn: string; value: number }[] = [];
+    tradeOptions: { label: string; labelBn: string; value: number }[] = [];
+    rabUnitOptions: { label: string; labelBn: string; value: number }[] = [];
+
+    selectedOrgIds: number[] = [];
+    selectedMemberTypeIds: number[] = [];
+    selectedRankIds: number[] = [];
+    selectedCorpsIds: number[] = [];
+    selectedTradeIds: number[] = [];
+    selectedRabUnitIds: number[] = [];
+
+    /** Raw org-scoped MotherOrgRank rows, re-filtered client-side by Member Type. */
+    private allRanksForOrg: CommonCodeModel[] = [];
 
     /** Separate search fields */
     searchRabId: string = '';
@@ -146,7 +166,10 @@ export class ReportAddressLocationComponent implements OnInit {
         defaultVisible: boolean;
     }[] = [
         { key: 'ser',          labelEN: 'Ser',           labelBN: 'ক্রঃ',           hint: 'Serial',             defaultVisible: true },
-        { key: 'personnel',    labelEN: 'Personnel',     labelBN: 'সদস্য',          hint: 'PersonnelComposite', defaultVisible: true },
+        // Personnel composite (name + SVC·Rank·Org meta) — opt-in only now;
+        // the identity renders as separate plain columns (serviceId/rank/corps/
+        // trade/name) by default instead.
+        { key: 'personnel',    labelEN: 'Personnel',     labelBN: 'সদস্য',          hint: 'PersonnelComposite', defaultVisible: false },
         { key: 'rabId',        labelEN: 'RAB ID',        labelBN: 'র‍্যাব আইডি',     hint: 'RabId',              defaultVisible: true },
         { key: 'addressOwner', labelEN: 'Address Owner', labelBN: 'ঠিকানার মালিক',   hint: 'AddressOwner',       defaultVisible: false },
         { key: 'locationType', labelEN: 'Address Type',  labelBN: 'ঠিকানার ধরন',     hint: 'LocationType',       defaultVisible: true },
@@ -158,7 +181,8 @@ export class ReportAddressLocationComponent implements OnInit {
         // Service-side extras (data comes from the dynamic backend via
         // vw_DynamicReportEmployee). Keys match the backend ReportFieldRegistry
         // so the request → response round-trip works without renames.
-        { key: 'serviceId',         labelEN: 'Service ID',       labelBN: 'সার্ভিস আইডি',       hint: 'Plain', defaultVisible: false },
+        { key: 'serviceId',         labelEN: 'Service ID',       labelBN: 'সার্ভিস আইডি',       hint: 'Plain', defaultVisible: true },
+        { key: 'name',              labelEN: 'Name',             labelBN: 'নাম',               hint: 'Plain', defaultVisible: true },
         { key: 'nameEnglish',       labelEN: 'Name (EN)',        labelBN: 'নাম (ইংরেজি)',      hint: 'Plain', defaultVisible: false },
         { key: 'nameBangla',        labelEN: 'Name (BN)',        labelBN: 'নাম (বাংলা)',       hint: 'Plain', defaultVisible: false },
         { key: 'nid',               labelEN: 'NID',              "labelBN": 'এনআইডি',          hint: 'Plain', defaultVisible: false },
@@ -166,9 +190,10 @@ export class ReportAddressLocationComponent implements OnInit {
         { key: 'appointment',       labelEN: 'Appointment',      labelBN: 'নিয়োগ',            hint: 'Plain', defaultVisible: false },
         { key: 'memberType',        labelEN: 'Member Type',      labelBN: 'সদস্য ধরন',         hint: 'Plain', defaultVisible: false },
         { key: 'motherOrganization',labelEN: 'Mother Org',       labelBN: 'মাতৃ সংস্থা',       hint: 'Plain', defaultVisible: false },
-        { key: 'armyRank',          labelEN: 'Rank',             labelBN: 'র‍্যাঙ্ক',          hint: 'Plain', defaultVisible: false },
-        { key: 'corps',             labelEN: 'Corps',            labelBN: 'কোর',              hint: 'Plain', defaultVisible: false },
-        { key: 'trade',             labelEN: 'Trade',            labelBN: 'ট্রেড',             hint: 'Plain', defaultVisible: false },
+        { key: 'armyRank',          labelEN: 'Rank',             labelBN: 'র‍্যাঙ্ক',          hint: 'Plain', defaultVisible: true },
+        { key: 'rabRank',           labelEN: 'RAB Rank',         labelBN: 'র‍্যাব র‍্যাঙ্ক',    hint: 'Plain', defaultVisible: false },
+        { key: 'corps',             labelEN: 'Corps',            labelBN: 'কোর',              hint: 'Plain', defaultVisible: true },
+        { key: 'trade',             labelEN: 'Trade',            labelBN: 'ট্রেড',             hint: 'Plain', defaultVisible: true },
         { key: 'tradeRemarks',      labelEN: 'Trade Remarks',    labelBN: 'ট্রেড মন্তব্য',      hint: 'Plain', defaultVisible: false },
         { key: 'gender',            labelEN: 'Gender',           labelBN: 'লিঙ্গ',             hint: 'Plain', defaultVisible: false },
         { key: 'motherUnit',        labelEN: 'Last Unit',        labelBN: 'শেষ ইউনিট',         hint: 'Plain', defaultVisible: false },
@@ -252,6 +277,7 @@ export class ReportAddressLocationComponent implements OnInit {
     /** "×" button on a chip — removes the column from the picker selection. */
     removeColumn(key: string): void {
         this.selectedColumnKeys = this.selectedColumnKeys.filter((k) => k !== key);
+        this.onColumnsChange();
     }
 
     /** Show the Address Owner column whenever the filter is something OTHER than
@@ -284,6 +310,7 @@ export class ReportAddressLocationComponent implements OnInit {
         // Service-side — keys match the picker; values are the AddressLocation
         // legacy property names the adapter renames the dynamic response to.
         serviceId:           { en: 'serviceId' },
+        name:                { en: 'name',                bn: 'nameBN' },
         nameEnglish:         { en: 'name' },
         nameBangla:          { en: 'nameBN' },
         nid:                 { en: 'nid' },
@@ -292,6 +319,7 @@ export class ReportAddressLocationComponent implements OnInit {
         memberType:          { en: 'memberType',          bn: 'memberTypeBN' },
         motherOrganization:  { en: 'orgName',             bn: 'orgNameBN' },
         armyRank:            { en: 'rank',                bn: 'rankBN' },
+        rabRank:             { en: 'rabRank',             bn: 'rabRankBN' },
         corps:               { en: 'corps',               bn: 'corpsBN' },
         trade:               { en: 'trade',               bn: 'tradeBN' },
         tradeRemarks:        { en: 'tradeRemarks' },
@@ -654,6 +682,22 @@ export class ReportAddressLocationComponent implements OnInit {
 
         const items: { label: string; value: string }[] = [];
 
+        // ── Common org/rank criteria first ──────────────────────────────
+        const multi = (ids: number[], opts: { label: string; labelBn: string; value: number }[], label: string) => {
+            if (!ids.length) return;
+            const names = ids
+                .map((id) => opts.find((o) => o.value === id))
+                .filter((o): o is (typeof opts)[number] => o != null)
+                .map((o) => (bn ? o.labelBn : o.label));
+            if (names.length) items.push({ label, value: names.join(', ') });
+        };
+        multi(this.selectedOrgIds, this.orgOptions, lbl('MOTHER ORG', 'মাতৃ সংস্থা'));
+        multi(this.selectedMemberTypeIds, this.memberTypeOptions, lbl('MEMBER TYPE', 'সদস্য ধরন'));
+        multi(this.selectedRankIds, this.rankOptions, lbl('RANK', 'র‍্যাঙ্ক'));
+        multi(this.selectedCorpsIds, this.corpsOptions, lbl('CORPS', 'কোর'));
+        multi(this.selectedTradeIds, this.tradeOptions, lbl('TRADE', 'ট্রেড'));
+        multi(this.selectedRabUnitIds, this.rabUnitOptions, lbl('RAB UNIT', 'র‍্যাব ইউনিট'));
+
         // Address Owner always renders — when "All" is picked it reads as the
         // friendly "Member & Family" instead of the placeholder "All", so a
         // reader can see the scope of the search at a glance.
@@ -711,6 +755,20 @@ export class ReportAddressLocationComponent implements OnInit {
     buildFilterLines(): string[] {
         const L = this.L[this.lang];
         const lines: string[] = [];
+        const multi = (ids: number[], opts: { label: string; labelBn: string; value: number }[], label: string) => {
+            if (!ids.length) return;
+            const names = ids
+                .map((id) => opts.find((o) => o.value === id))
+                .filter((o): o is (typeof opts)[number] => o != null)
+                .map((o) => (this.lang === 'bn' ? o.labelBn : o.label));
+            if (names.length) lines.push(`${label}: ${names.join(', ')}`);
+        };
+        multi(this.selectedOrgIds, this.orgOptions, this.lang === 'bn' ? 'মাতৃ সংস্থা' : 'Mother Org');
+        multi(this.selectedMemberTypeIds, this.memberTypeOptions, this.lang === 'bn' ? 'সদস্য ধরন' : 'Member Type');
+        multi(this.selectedRankIds, this.rankOptions, this.lang === 'bn' ? 'র‍্যাঙ্ক' : 'Rank');
+        multi(this.selectedCorpsIds, this.corpsOptions, this.lang === 'bn' ? 'কোর' : 'Corps');
+        multi(this.selectedTradeIds, this.tradeOptions, this.lang === 'bn' ? 'ট্রেড' : 'Trade');
+        multi(this.selectedRabUnitIds, this.rabUnitOptions, this.lang === 'bn' ? 'র‍্যাব ইউনিট' : 'RAB Unit');
         if (this.searchRabId.trim()) lines.push(`RAB ID: ${this.searchRabId.trim()}`);
         if (this.searchServiceId.trim()) lines.push(`Service ID: ${this.searchServiceId.trim()}`);
         if (this.searchNid.trim()) lines.push(`NID: ${this.searchNid.trim()}`);
@@ -1846,6 +1904,105 @@ export class ReportAddressLocationComponent implements OnInit {
 
         this.loadDivisions();
         this.loadRelationshipOptions();
+        this.loadOrgOptions();
+        this.loadMemberTypeOptions();
+        this.loadRabUnitOptions();
+    }
+
+    /** Map CommonCode rows to {label, labelBn, value} option shape. */
+    private mapCodes(codes: CommonCodeModel[]): { label: string; labelBn: string; value: number }[] {
+        return (codes || []).map((c) => ({
+            label: c.codeValueEN || String(c.codeId),
+            labelBn: c.codeValueBN || c.codeValueEN || String(c.codeId),
+            value: c.codeId,
+        }));
+    }
+
+    /** Dedupe CommonCode rows by codeId, preserving first-seen order. */
+    private dedupeByCodeId(rows: CommonCodeModel[]): CommonCodeModel[] {
+        const byId = new Map<number, CommonCodeModel>();
+        for (const r of rows || []) if (!byId.has(r.codeId)) byId.set(r.codeId, r);
+        return Array.from(byId.values());
+    }
+
+    loadOrgOptions(): void {
+        this.commonCodeService.getAllActiveMotherOrgs().subscribe({
+            next: (orgs: MotherOrganizationModel[]) =>
+                (this.orgOptions = (orgs || []).map((o) => ({
+                    label: o.orgNameEN || String(o.orgId),
+                    labelBn: o.orgNameBN || o.orgNameEN || String(o.orgId),
+                    value: o.orgId,
+                }))),
+            error: () => (this.orgOptions = []),
+        });
+    }
+
+    loadMemberTypeOptions(): void {
+        this.commonCodeService.getAccessibleMemberTypes().subscribe({
+            next: (codes) => (this.memberTypeOptions = this.mapCodes(codes)),
+            error: () => (this.memberTypeOptions = []),
+        });
+    }
+
+    loadRabUnitOptions(): void {
+        this.commonCodeService.getAllActiveCommonCodesType('RabUnit').subscribe({
+            next: (codes) => (this.rabUnitOptions = this.mapCodes(codes)),
+            error: () => (this.rabUnitOptions = []),
+        });
+    }
+
+    /** Mother Org changed → reload org-scoped Ranks and Corps across all selected orgs; reset Rank/Corps/Trade. */
+    onOrgChange(): void {
+        this.rankOptions = [];
+        this.allRanksForOrg = [];
+        this.selectedRankIds = [];
+        this.corpsOptions = [];
+        this.selectedCorpsIds = [];
+        this.tradeOptions = [];
+        this.selectedTradeIds = [];
+        if (!this.selectedOrgIds.length) return;
+        forkJoin(this.selectedOrgIds.map((orgId) => this.commonCodeService.getAllActiveCommonCodesByOrgIdAndType(orgId, 'MotherOrgRank'))).subscribe({
+            next: (results: CommonCodeModel[][]) => {
+                this.allRanksForOrg = this.dedupeByCodeId(results.flat());
+                this.applyRankMemberTypeFilter();
+            },
+            error: () => {
+                this.allRanksForOrg = [];
+                this.rankOptions = [];
+            },
+        });
+        forkJoin(this.selectedOrgIds.map((orgId) => this.commonCodeService.getAllActiveCommonCodesByOrgIdAndType(orgId, 'Corps'))).subscribe({
+            next: (results: CommonCodeModel[][]) => {
+                this.corpsOptions = this.mapCodes(this.dedupeByCodeId(results.flat()));
+            },
+            error: () => (this.corpsOptions = []),
+        });
+    }
+
+    /** Member Type changed → re-filter the org-scoped ranks by parentCodeId. */
+    onMemberTypeChange(): void {
+        this.applyRankMemberTypeFilter();
+    }
+
+    /** Rank = org-scoped MotherOrgRank rows whose parentCodeId is a selected Member Type. */
+    private applyRankMemberTypeFilter(): void {
+        let rows = this.allRanksForOrg;
+        if (this.selectedMemberTypeIds.length) rows = rows.filter((r) => r.parentCodeId != null && this.selectedMemberTypeIds.includes(r.parentCodeId));
+        this.rankOptions = this.mapCodes(rows);
+        this.selectedRankIds = this.selectedRankIds.filter((id) => this.rankOptions.some((o) => o.value === id));
+    }
+
+    /** Cascade: a new Corps reloads Trades (children of selected Corps rows). */
+    onCorpsChange(): void {
+        this.tradeOptions = [];
+        this.selectedTradeIds = [];
+        if (!this.selectedCorpsIds.length) return;
+        forkJoin(this.selectedCorpsIds.map((corpsId) => this.commonCodeService.getAllActiveCommonCodesByParentId(corpsId))).subscribe({
+            next: (results: CommonCodeModel[][]) => {
+                this.tradeOptions = this.mapCodes(this.dedupeByCodeId(results.flat()));
+            },
+            error: () => (this.tradeOptions = []),
+        });
     }
 
     loadDivisions(): void {
@@ -1939,6 +2096,12 @@ export class ReportAddressLocationComponent implements OnInit {
 
     get activeFilterCount(): number {
         let c = 0;
+        if (this.selectedOrgIds.length > 0) c++;
+        if (this.selectedMemberTypeIds.length > 0) c++;
+        if (this.selectedRankIds.length > 0) c++;
+        if (this.selectedCorpsIds.length > 0) c++;
+        if (this.selectedTradeIds.length > 0) c++;
+        if (this.selectedRabUnitIds.length > 0) c++;
         if (this.searchRabId.trim()) c++;
         if (this.searchServiceId.trim()) c++;
         if (this.searchNid.trim()) c++;
@@ -1978,6 +2141,16 @@ export class ReportAddressLocationComponent implements OnInit {
     }
 
     clearFilters(): void {
+        this.selectedOrgIds = [];
+        this.selectedMemberTypeIds = [];
+        this.selectedRankIds = [];
+        this.selectedCorpsIds = [];
+        this.selectedTradeIds = [];
+        this.selectedRabUnitIds = [];
+        this.allRanksForOrg = [];
+        this.rankOptions = [];
+        this.corpsOptions = [];
+        this.tradeOptions = [];
         this.searchRabId = '';
         this.searchServiceId = '';
         this.searchNid = '';
@@ -2011,6 +2184,27 @@ export class ReportAddressLocationComponent implements OnInit {
         this.appliedFilterLines = this.buildFilterLines();
     }
 
+    /** Translate display column keys → backend registry field keys. The
+        synthetic "name" column maps to nameEnglish/nameBangla so the server
+        projects the name data; ser/personnel are synthetic/composite and pass
+        through harmlessly (the backend whitelists/expands them). */
+    private backendColumnKeys(): string[] {
+        const out: string[] = [];
+        const seen = new Set<string>();
+        const push = (k: string) => { if (!seen.has(k)) { seen.add(k); out.push(k); } };
+        for (const key of this.selectedColumnKeys) {
+            if (key === 'name') { push('nameEnglish'); push('nameBangla'); continue; }
+            push(key);
+        }
+        return out;
+    }
+
+    /** Column selection changed — re-fetch so newly added columns are populated
+        (the backend only returns requested columns). Reloads only post-search. */
+    onColumnsChange(): void {
+        if (this.searched) this.load();
+    }
+
     load(): void {
         this.searched = true;
         this.loading = true;
@@ -2021,6 +2215,12 @@ export class ReportAddressLocationComponent implements OnInit {
         // text searches go through `criteria`; AddressOwner / LocationType /
         // PostingStatus / ActiveOnly use the special top-level slots.
         const criteria: DynamicReportCriterion[] = [];
+        if (this.selectedOrgIds.length > 0)        criteria.push({ fieldKey: 'motherOrganization', idValues: this.selectedOrgIds });
+        if (this.selectedMemberTypeIds.length > 0) criteria.push({ fieldKey: 'memberType',         idValues: this.selectedMemberTypeIds });
+        if (this.selectedRankIds.length > 0)       criteria.push({ fieldKey: 'armyRank',           idValues: this.selectedRankIds });
+        if (this.selectedCorpsIds.length > 0)      criteria.push({ fieldKey: 'corps',              idValues: this.selectedCorpsIds });
+        if (this.selectedTradeIds.length > 0)      criteria.push({ fieldKey: 'trade',              idValues: this.selectedTradeIds });
+        if (this.selectedRabUnitIds.length > 0)    criteria.push({ fieldKey: 'rabUnit',            idValues: this.selectedRabUnitIds });
         if (this.selectedDivisionId != null)    criteria.push({ fieldKey: 'division',   idValue: this.selectedDivisionId });
         if (this.selectedDistrictId != null)    criteria.push({ fieldKey: 'district',   idValue: this.selectedDistrictId });
         if (this.selectedUpazilaId != null)     criteria.push({ fieldKey: 'upazila',    idValue: this.selectedUpazilaId });
@@ -2030,7 +2230,7 @@ export class ReportAddressLocationComponent implements OnInit {
         if (this.searchNid.trim())              criteria.push({ fieldKey: 'nid',        textValue: this.searchNid.trim() });
 
         this.reportService.runDynamicReport({
-            columns: this.selectedColumnKeys,
+            columns: this.backendColumnKeys(),
             criteria,
             postingStatusFilter: this.selectedPostingStatus || null,
             locationTypeFilter:  this.selectedLocationType  || null,

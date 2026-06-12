@@ -1,6 +1,21 @@
 :host {
     display: block;
 }
+.report-filter-card-title {
+    padding: 0 0 0.75rem 0;
+    margin: 0 0 1.25rem 0;
+    border-bottom: 1px solid var(--surface-border, rgba(255, 255, 255, 0.08));
+}
+.report-page-title {
+    font-size: 1.75rem;
+    font-weight: 700;
+    color: var(--text-color, #fff);
+    margin: 0;
+    letter-spacing: 0;
+}
+:host-context(.app-dark) .report-page-title {
+    color: var(--text-color);
+}
 .filter-field {
     min-width: 160px;
 }

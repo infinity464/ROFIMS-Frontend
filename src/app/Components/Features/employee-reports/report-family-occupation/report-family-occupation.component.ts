@@ -41,6 +41,8 @@ import {
 } from 'docx';
 import { saveAs } from 'file-saver';
 import * as XLSX from 'xlsx';
+import { forkJoin } from 'rxjs';
+import type { MotherOrganizationModel } from '@/models/mother-org-model';
 
 @Component({
     selector: 'app-report-family-occupation',
@@ -65,6 +67,22 @@ export class ReportFamilyOccupationComponent implements OnInit {
     /** Occupation dropdown */
     occupationOptions: { label: string; labelBn: string; value: number }[] = [];
     selectedOccupationId: number | null = null;
+
+    // ── Common org/rank multi-select filters (mirror member-appointment) ──
+    orgOptions: { label: string; labelBn: string; value: number }[] = [];
+    selectedOrgIds: number[] = [];
+    memberTypeOptions: { label: string; labelBn: string; value: number }[] = [];
+    selectedMemberTypeIds: number[] = [];
+    rankOptions: { label: string; labelBn: string; value: number }[] = [];
+    selectedRankIds: number[] = [];
+    corpsOptions: { label: string; labelBn: string; value: number }[] = [];
+    selectedCorpsIds: number[] = [];
+    tradeOptions: { label: string; labelBn: string; value: number }[] = [];
+    selectedTradeIds: number[] = [];
+    rabUnitOptions: { label: string; labelBn: string; value: number }[] = [];
+    selectedRabUnitIds: number[] = [];
+    /** Raw org-scoped MotherOrgRank rows, re-filtered client-side by Member Type. */
+    private allRanksForOrg: CommonCodeModel[] = [];
 
     /** RAB Member Status dropdown */
     statusOptions: { label: string; labelBn: string; value: string }[] = [
@@ -116,8 +134,19 @@ export class ReportFamilyOccupationComponent implements OnInit {
      */
     columnCatalog: { key: string; labelEN: string; labelBN: string; hint: string; defaultVisible: boolean }[] = [
         { key: 'ser',                labelEN: 'Ser',                  labelBN: 'ক্রঃ',                hint: 'Serial',                defaultVisible: true  },
-        // Composite: Name + (SVC · Rank · Mother Org) on a secondary line.
-        { key: 'rabPersonnel',       labelEN: 'RAB Personnel',        labelBN: 'র‍্যাব সদস্য',        hint: 'RabPersonnelComposite', defaultVisible: true  },
+        // ── Printed-header default employee columns (SER · SERVICE ID · RANK · CORPS · TRADE · NAME) ──
+        // Plain cells whose keys MATCH FamilyReportFieldRegistry FieldKeys so
+        // the picker → backend projection round-trip works; resolved via
+        // plainColumnPropertyMap + adaptDynamicRow legacy renames.
+        { key: 'serviceId',          labelEN: 'Service ID',           labelBN: 'সার্ভিস আইডি',       hint: 'Plain',                 defaultVisible: true  },
+        { key: 'armyRank',           labelEN: 'Rank',                 labelBN: 'র‍্যাঙ্ক',           hint: 'Plain',                 defaultVisible: true  },
+        { key: 'rabRank',            labelEN: 'RAB Rank',             labelBN: 'র‍্যাব র‍্যাঙ্ক',     hint: 'Plain',                 defaultVisible: false },
+        { key: 'corps',              labelEN: 'Corps',                labelBN: 'কোর',               hint: 'Plain',                 defaultVisible: true  },
+        { key: 'trade',              labelEN: 'Trade',                labelBN: 'ট্রেড',             hint: 'Plain',                 defaultVisible: true  },
+        // Plain employee name (just the name — no SVC·Rank·Org meta line).
+        { key: 'name',               labelEN: 'Name',                 labelBN: 'নাম',               hint: 'Plain',                 defaultVisible: true  },
+        // Composite: Name + (SVC · Rank · Mother Org) on a secondary line. Opt-in.
+        { key: 'rabPersonnel',       labelEN: 'RAB Personnel',        labelBN: 'র‍্যাব সদস্য',        hint: 'RabPersonnelComposite', defaultVisible: false },
         { key: 'rabId',              labelEN: 'RAB ID',               labelBN: 'র‍্যাব আইডি',         hint: 'RabId',                 defaultVisible: true  },
         { key: 'familyMemberName',   labelEN: 'Family Member Name',   labelBN: 'পরিবারের সদস্যের নাম', hint: 'FamilyName',            defaultVisible: true  },
         { key: 'relation',           labelEN: 'Relation',             labelBN: 'সম্পর্ক',             hint: 'Relation',              defaultVisible: true  },
@@ -130,7 +159,6 @@ export class ReportFamilyOccupationComponent implements OnInit {
         { key: 'familyMemberEmail',  labelEN: 'Family Email',         labelBN: 'পরিবার ইমেইল',       hint: 'Plain',                 defaultVisible: false },
         { key: 'familyMemberDOB',    labelEN: 'Family DOB',           labelBN: 'পরিবার জন্ম তারিখ',   hint: 'Plain',                 defaultVisible: false },
         // ── Service / Posting extras (mirror ReportFieldRegistry) ────
-        { key: 'serviceId',          labelEN: 'Service ID',           labelBN: 'সার্ভিস আইডি',       hint: 'Plain',                 defaultVisible: false },
         { key: 'nameEnglish',        labelEN: 'Name (EN)',            labelBN: 'নাম (ইংরেজি)',      hint: 'Plain',                 defaultVisible: false },
         { key: 'nameBangla',         labelEN: 'Name (BN)',            labelBN: 'নাম (বাংলা)',       hint: 'Plain',                 defaultVisible: false },
         { key: 'nid',                labelEN: 'NID',                  labelBN: 'এনআইডি',            hint: 'Plain',                 defaultVisible: false },
@@ -138,9 +166,6 @@ export class ReportFamilyOccupationComponent implements OnInit {
         { key: 'appointment',        labelEN: 'Appointment',          labelBN: 'নিয়োগ',             hint: 'Plain',                 defaultVisible: false },
         { key: 'memberType',         labelEN: 'Member Type',          labelBN: 'সদস্য ধরন',          hint: 'Plain',                 defaultVisible: false },
         { key: 'motherOrganization', labelEN: 'Mother Org',           labelBN: 'মাতৃ সংস্থা',        hint: 'Plain',                 defaultVisible: false },
-        { key: 'armyRank',           labelEN: 'Rank',                 labelBN: 'র‍্যাঙ্ক',           hint: 'Plain',                 defaultVisible: false },
-        { key: 'corps',              labelEN: 'Corps',                labelBN: 'কোর',               hint: 'Plain',                 defaultVisible: false },
-        { key: 'trade',              labelEN: 'Trade',                labelBN: 'ট্রেড',             hint: 'Plain',                 defaultVisible: false },
         { key: 'tradeRemarks',       labelEN: 'Trade Remarks',        labelBN: 'ট্রেড মন্তব্য',      hint: 'Plain',                 defaultVisible: false },
         { key: 'gender',             labelEN: 'Gender',               labelBN: 'লিঙ্গ',             hint: 'Plain',                 defaultVisible: false },
         { key: 'motherUnit',         labelEN: 'Last Unit',            labelBN: 'শেষ ইউনিট',         hint: 'Plain',                 defaultVisible: false },
@@ -169,6 +194,9 @@ export class ReportFamilyOccupationComponent implements OnInit {
     private static readonly plainColumnPropertyMap: Record<string, { en: string; bn?: string }> = {
         // Service-side
         serviceId:           { en: 'serviceId' },
+        // Plain employee name — resolves to the adapted row.name / row.nameBN.
+        name:                { en: 'name',                bn: 'nameBN' },
+        rabRank:             { en: 'rabRank',             bn: 'rabRankBN' },
         nameEnglish:         { en: 'name' },
         nameBangla:          { en: 'nameBN' },
         nid:                 { en: 'nid' },
@@ -252,7 +280,17 @@ export class ReportFamilyOccupationComponent implements OnInit {
         this.selectedColumnKeys = arr;
     }
     onColumnDragEnd(): void { this.draggingColumnKey = null; }
-    removeColumn(key: string): void { this.selectedColumnKeys = this.selectedColumnKeys.filter(k => k !== key); }
+    removeColumn(key: string): void {
+        this.selectedColumnKeys = this.selectedColumnKeys.filter(k => k !== key);
+        this.onColumnsChange();
+    }
+
+    /** Column selection changed — re-fetch so newly added columns are populated
+        (the backend only returns the columns that were requested). Reloads only
+        after a search has run. */
+    onColumnsChange(): void {
+        if (this.searched) this.load();
+    }
 
     /** Auto-tick Status when filter = "All", auto-untick otherwise. */
     onPostingStatusFilterChange(): void {
@@ -299,7 +337,22 @@ export class ReportFamilyOccupationComponent implements OnInit {
 
     /** Criteria items for the on-page strip + Print/Word/Excel exports. */
     get criteriaItems(): { label: string; value: string }[] {
+        const L = this.L[this.lang];
         const items: { label: string; value: string }[] = [];
+        const multi = (ids: number[], opts: { label: string; labelBn: string; value: number }[], label: string) => {
+            if (!ids.length) return;
+            const names = ids
+                .map((id) => opts.find((o) => o.value === id))
+                .filter((o): o is (typeof opts)[number] => o != null)
+                .map((o) => (this.lang === 'bn' ? o.labelBn : o.label));
+            if (names.length) items.push({ label, value: names.join(', ') });
+        };
+        multi(this.selectedOrgIds, this.orgOptions, L['report.search.motherOrg']);
+        multi(this.selectedMemberTypeIds, this.memberTypeOptions, this.lang === 'bn' ? 'সদস্য ধরন' : 'Member Type');
+        multi(this.selectedRankIds, this.rankOptions, L['report.search.rank']);
+        multi(this.selectedCorpsIds, this.corpsOptions, L['report.table.corps'] ?? 'Corps');
+        multi(this.selectedTradeIds, this.tradeOptions, L['report.search.trade']);
+        multi(this.selectedRabUnitIds, this.rabUnitOptions, this.lang === 'bn' ? 'র‍্যাব ইউনিট' : 'RAB Unit');
         if (this.selectedRelationId != null && this.selectedRelationId > 0) {
             const rel = this.relationOptions.find(o => o.value === this.selectedRelationId);
             const val = this.lang === 'bn' ? rel?.labelBn : rel?.label;
@@ -386,6 +439,20 @@ export class ReportFamilyOccupationComponent implements OnInit {
     buildFilterLines(): string[] {
         const L = this.L[this.lang];
         const lines: string[] = [];
+        const multi = (ids: number[], opts: { label: string; labelBn: string; value: number }[], label: string) => {
+            if (!ids.length) return;
+            const names = ids
+                .map((id) => opts.find((o) => o.value === id))
+                .filter((o): o is (typeof opts)[number] => o != null)
+                .map((o) => (this.lang === 'bn' ? o.labelBn : o.label));
+            if (names.length) lines.push(`${label}: ${names.join(', ')}`);
+        };
+        multi(this.selectedOrgIds, this.orgOptions, L['report.search.motherOrg']);
+        multi(this.selectedMemberTypeIds, this.memberTypeOptions, this.lang === 'bn' ? 'সদস্য ধরন' : 'Member Type');
+        multi(this.selectedRankIds, this.rankOptions, L['report.search.rank']);
+        multi(this.selectedCorpsIds, this.corpsOptions, L['report.table.corps'] ?? 'Corps');
+        multi(this.selectedTradeIds, this.tradeOptions, L['report.search.trade']);
+        multi(this.selectedRabUnitIds, this.rabUnitOptions, this.lang === 'bn' ? 'র‍্যাব ইউনিট' : 'RAB Unit');
         if (this.selectedRelationId != null) {
             const rel = this.relationOptions.find((o) => o.value === this.selectedRelationId);
             const val = this.lang === 'bn' ? rel?.labelBn : rel?.label;
@@ -965,6 +1032,111 @@ export class ReportFamilyOccupationComponent implements OnInit {
 
         this.loadRelationOptions();
         this.loadOccupationOptions();
+        this.loadOrgOptions();
+        this.loadMemberTypeOptions();
+        this.loadRabUnitOptions();
+    }
+
+    /** Map CommonCode rows to {label, labelBn, value} option shape. */
+    private mapCodes(codes: CommonCodeModel[]): { label: string; labelBn: string; value: number }[] {
+        return (codes || []).map((c) => ({
+            label: c.codeValueEN || String(c.codeId),
+            labelBn: c.codeValueBN || c.codeValueEN || String(c.codeId),
+            value: c.codeId,
+        }));
+    }
+
+    /** Dedupe CommonCode rows by codeId, preserving first-seen order. */
+    private dedupeByCodeId(rows: CommonCodeModel[]): CommonCodeModel[] {
+        const byId = new Map<number, CommonCodeModel>();
+        for (const r of rows || []) if (!byId.has(r.codeId)) byId.set(r.codeId, r);
+        return Array.from(byId.values());
+    }
+
+    loadOrgOptions(): void {
+        this.commonCodeService.getAllActiveMotherOrgs().subscribe({
+            next: (orgs: MotherOrganizationModel[]) =>
+                (this.orgOptions = (orgs || []).map((o) => ({
+                    label: o.orgNameEN || String(o.orgId),
+                    labelBn: o.orgNameBN || o.orgNameEN || String(o.orgId),
+                    value: o.orgId,
+                }))),
+            error: (err: any) => {
+                this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.message || 'Failed to load organizations' });
+            },
+        });
+    }
+
+    loadMemberTypeOptions(): void {
+        this.commonCodeService.getAccessibleMemberTypes().subscribe({
+            next: (codes) => (this.memberTypeOptions = this.mapCodes(codes || [])),
+            error: () => (this.memberTypeOptions = []),
+        });
+    }
+
+    loadRabUnitOptions(): void {
+        this.commonCodeService.getAllActiveCommonCodesType('RabUnit').subscribe({
+            next: (codes) => (this.rabUnitOptions = this.mapCodes(codes || [])),
+            error: () => (this.rabUnitOptions = []),
+        });
+    }
+
+    /** Mother Org changed → reload org-scoped Ranks and Corps across all selected orgs; reset Trade. */
+    onOrgChange(): void {
+        this.rankOptions = [];
+        this.allRanksForOrg = [];
+        this.selectedRankIds = [];
+        this.corpsOptions = [];
+        this.selectedCorpsIds = [];
+        this.tradeOptions = [];
+        this.selectedTradeIds = [];
+        if (!this.selectedOrgIds.length) return;
+        forkJoin(this.selectedOrgIds.map((orgId) => this.commonCodeService.getAllActiveCommonCodesByOrgIdAndType(orgId, 'MotherOrgRank'))).subscribe({
+            next: (results: CommonCodeModel[][]) => {
+                this.allRanksForOrg = this.dedupeByCodeId(results.flat());
+                this.applyRankMemberTypeFilter();
+            },
+            error: () => {
+                this.allRanksForOrg = [];
+                this.rankOptions = [];
+            },
+        });
+        forkJoin(this.selectedOrgIds.map((orgId) => this.commonCodeService.getAllActiveCommonCodesByOrgIdAndType(orgId, 'Corps'))).subscribe({
+            next: (results: CommonCodeModel[][]) => {
+                this.corpsOptions = this.mapCodes(this.dedupeByCodeId(results.flat()));
+            },
+            error: () => (this.corpsOptions = []),
+        });
+    }
+
+    /** Member Type changed → re-filter the org-scoped ranks by parentCodeId. */
+    onMemberTypeChange(): void {
+        this.applyRankMemberTypeFilter();
+    }
+
+    /** Rank = org-scoped MotherOrgRank rows whose parentCodeId is a selected Member Type. */
+    private applyRankMemberTypeFilter(): void {
+        let rows = this.allRanksForOrg;
+        if (this.selectedMemberTypeIds.length) rows = rows.filter((r) => r.parentCodeId != null && this.selectedMemberTypeIds.includes(r.parentCodeId));
+        this.rankOptions = this.mapCodes(rows);
+        this.selectedRankIds = this.selectedRankIds.filter((id) => this.rankOptions.some((o) => o.value === id));
+    }
+
+    /** Cascade: a new Corps reloads Trades (children of selected Corps rows). */
+    onCorpsChange(): void {
+        this.tradeOptions = [];
+        this.selectedTradeIds = [];
+        if (!this.selectedCorpsIds.length) return;
+        forkJoin(this.selectedCorpsIds.map((corpsId) => this.commonCodeService.getAllActiveCommonCodesByParentId(corpsId))).subscribe({
+            next: (results: CommonCodeModel[][]) => {
+                this.tradeOptions = this.mapCodes(this.dedupeByCodeId(results.flat()));
+            },
+            error: () => (this.tradeOptions = []),
+        });
+    }
+
+    onFilterChange(): void {
+        // Only update options; search runs when user clicks Search.
     }
 
     loadRelationOptions(): void {
@@ -1011,6 +1183,12 @@ export class ReportFamilyOccupationComponent implements OnInit {
 
     get activeFilterCount(): number {
         let c = 0;
+        if (this.selectedOrgIds.length > 0) c++;
+        if (this.selectedMemberTypeIds.length > 0) c++;
+        if (this.selectedRankIds.length > 0) c++;
+        if (this.selectedCorpsIds.length > 0) c++;
+        if (this.selectedTradeIds.length > 0) c++;
+        if (this.selectedRabUnitIds.length > 0) c++;
         if (this.selectedRelationId != null) c++;
         if (this.selectedOccupationId != null) c++;
         if (this.selectedPostingStatus) c++;
@@ -1029,6 +1207,16 @@ export class ReportFamilyOccupationComponent implements OnInit {
     }
 
     clearFilters(): void {
+        this.selectedOrgIds = [];
+        this.selectedMemberTypeIds = [];
+        this.selectedRankIds = [];
+        this.selectedCorpsIds = [];
+        this.selectedTradeIds = [];
+        this.selectedRabUnitIds = [];
+        this.rankOptions = [];
+        this.corpsOptions = [];
+        this.tradeOptions = [];
+        this.allRanksForOrg = [];
         this.selectedRelationId = null;
         this.selectedOccupationId = null;
         this.selectedPostingStatus = 'Servings';
@@ -1048,6 +1236,23 @@ export class ReportFamilyOccupationComponent implements OnInit {
         this.appliedFilterLines = this.buildFilterLines();
     }
 
+    /**
+     * Translate display column keys into backend (FamilyReportFieldRegistry)
+     * field keys. The synthetic plain "name" column maps to nameEnglish +
+     * nameBangla so the server projects the employee name; ser is synthetic
+     * and ignored server-side. All other keys already match registry FieldKeys.
+     */
+    private backendColumnKeys(): string[] {
+        const out: string[] = [];
+        const seen = new Set<string>();
+        const push = (k: string) => { if (!seen.has(k)) { seen.add(k); out.push(k); } };
+        for (const key of this.selectedColumnKeys) {
+            if (key === 'name') { push('nameEnglish'); push('nameBangla'); continue; }
+            push(key);
+        }
+        return out;
+    }
+
     load(): void {
         this.loading = true;
         this.appliedFilterLines = this.buildFilterLines();
@@ -1056,13 +1261,25 @@ export class ReportFamilyOccupationComponent implements OnInit {
         // Map UI filters → registry criteria. Keys MATCH FamilyReportFieldRegistry
         // so the backend whitelist accepts them (unknown keys would 400).
         const criteria: DynamicReportCriterion[] = [];
+        if (this.selectedOrgIds.length > 0)
+            criteria.push({ fieldKey: 'motherOrganization', idValues: this.selectedOrgIds });
+        if (this.selectedMemberTypeIds.length > 0)
+            criteria.push({ fieldKey: 'memberType', idValues: this.selectedMemberTypeIds });
+        if (this.selectedRankIds.length > 0)
+            criteria.push({ fieldKey: 'armyRank', idValues: this.selectedRankIds });
+        if (this.selectedCorpsIds.length > 0)
+            criteria.push({ fieldKey: 'corps', idValues: this.selectedCorpsIds });
+        if (this.selectedTradeIds.length > 0)
+            criteria.push({ fieldKey: 'trade', idValues: this.selectedTradeIds });
+        if (this.selectedRabUnitIds.length > 0)
+            criteria.push({ fieldKey: 'rabUnit', idValues: this.selectedRabUnitIds });
         if (this.selectedRelationId != null && this.selectedRelationId > 0)
             criteria.push({ fieldKey: 'relation', idValue: this.selectedRelationId });
         if (this.selectedOccupationId != null && this.selectedOccupationId > 0)
             criteria.push({ fieldKey: 'occupation', idValue: this.selectedOccupationId });
 
         this.reportService.runDynamicFamilyReport({
-            columns: this.selectedColumnKeys,
+            columns: this.backendColumnKeys(),
             criteria,
             postingStatusFilter: this.selectedPostingStatus && this.selectedPostingStatus !== 'All'
                 ? this.selectedPostingStatus

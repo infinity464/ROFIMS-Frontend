@@ -39,6 +39,7 @@ import {
 } from 'docx';
 import { saveAs } from 'file-saver';
 import * as XLSX from 'xlsx';
+import { forkJoin } from 'rxjs';
 
 /**
  * Pending Inter-Posting Report — rows are pending posting orders (each
@@ -85,11 +86,22 @@ export class ReportPendingInterPostingComponent implements OnInit {
     loading = false;
     searched = false;
 
-    motherOrgOptions: { label: string; value: string }[] = [];
-    transferUnitOptions: { label: string; value: number }[] = [];
+    orgOptions: { label: string; labelBn: string; value: number }[] = [];
+    rabUnitOptions: { label: string; value: number }[] = [];
+    memberTypeOptions: { label: string; value: number }[] = [];
+    rankOptions: { label: string; labelBn: string; value: number }[] = [];
+    corpsOptions: { label: string; labelBn: string; value: number }[] = [];
+    tradeOptions: { label: string; labelBn: string; value: number }[] = [];
 
-    selectedMotherOrg: string | null = null;
-    selectedTransferUnitId: number | null = null;
+    selectedFromUnitIds: number[] = [];
+    selectedPostedUnitIds: number[] = [];
+    selectedOrgIds: number[] = [];
+    selectedMemberTypeIds: number[] = [];
+    selectedRankIds: number[] = [];
+    selectedCorpsIds: number[] = [];
+    selectedTradeIds: number[] = [];
+    /** Raw org-scoped MotherOrgRank rows, re-filtered client-side by Member Type. */
+    private allRanksForOrg: CommonCodeModel[] = [];
 
     first = 0;
     rows = 20;
@@ -110,6 +122,7 @@ export class ReportPendingInterPostingComponent implements OnInit {
         { key: 'ser',                labelEN: 'Ser',            labelBN: 'ক্রঃ',           hint: 'Serial',     defaultVisible: true  },
         { key: 'serviceId',          labelEN: 'Service ID',     labelBN: 'সার্ভিস আইডি',    hint: 'Plain',      defaultVisible: true  },
         { key: 'rank',               labelEN: 'Rank',           labelBN: 'র‍্যাঙ্ক',        hint: 'Plain',      defaultVisible: true  },
+        { key: 'rabRank',            labelEN: 'RAB Rank',       labelBN: 'র‍্যাব র‍্যাঙ্ক',  hint: 'Plain',      defaultVisible: false },
         { key: 'corps',              labelEN: 'Corps',          labelBN: 'কোর',            hint: 'Plain',      defaultVisible: true  },
         { key: 'trade',              labelEN: 'Trade',          labelBN: 'ট্রেড',          hint: 'Plain',      defaultVisible: true  },
         { key: 'name',               labelEN: 'Name',           labelBN: 'নাম',            hint: 'Personnel',  defaultVisible: true  },
@@ -124,6 +137,7 @@ export class ReportPendingInterPostingComponent implements OnInit {
         { key: 'noteSheetNo',        labelEN: 'NoteSheet No',   labelBN: 'নোটশীট নম্বর',    hint: 'Plain',      defaultVisible: false },
         { key: 'transferToHierarchy',labelEN: 'Posted (Full Path)', labelBN: 'পোস্টেড (পূর্ণ পথ)', hint: 'Plain', defaultVisible: false },
         { key: 'motherUnitName',     labelEN: 'Mother Unit',    labelBN: 'মাতৃ ইউনিট',      hint: 'Plain',      defaultVisible: false },
+        { key: 'memberType',         labelEN: 'Member Type',    labelBN: 'সদস্য ধরন',       hint: 'Plain',      defaultVisible: false },
     ];
 
     selectedColumnKeys: string[] = this.columnCatalog.filter(c => c.defaultVisible).map(c => c.key);
@@ -193,8 +207,7 @@ export class ReportPendingInterPostingComponent implements OnInit {
             error: () => { /* silent */ },
         });
 
-        this.loadMotherOrgs();
-        this.loadRabUnits();
+        this.loadFilterOptions();
         this.loadData();
     }
 
@@ -217,26 +230,110 @@ export class ReportPendingInterPostingComponent implements OnInit {
         });
     }
 
-    private loadMotherOrgs(): void {
+    private loadFilterOptions(): void {
+        // RAB Unit options — shared for Present + Posted.
+        this.commonCodeService.getAllActiveCommonCodesType('RabUnit').subscribe({
+            next: (codes: CommonCodeModel[]) =>
+                (this.rabUnitOptions = (codes || []).map((c) => ({ label: c.codeValueEN || String(c.codeId), value: c.codeId }))),
+            error: () => (this.rabUnitOptions = []),
+        });
+
         this.commonCodeService.getAllActiveMotherOrgs().subscribe({
             next: (orgs: MotherOrganizationModel[]) =>
-                (this.motherOrgOptions = (orgs || []).map((o) => ({ label: o.orgNameEN || String(o.orgId), value: o.orgNameEN }))),
-            error: () => (this.motherOrgOptions = []),
+                (this.orgOptions = (orgs || []).map((o) => ({
+                    label: o.orgNameEN || String(o.orgId),
+                    labelBn: o.orgNameBN || o.orgNameEN || String(o.orgId),
+                    value: o.orgId,
+                }))),
+            error: () => (this.orgOptions = []),
+        });
+
+        this.commonCodeService.getAccessibleMemberTypes().subscribe({
+            next: (codes: CommonCodeModel[]) =>
+                (this.memberTypeOptions = (codes || []).map((c) => ({ label: c.codeValueEN || String(c.codeId), value: c.codeId }))),
+            error: () => (this.memberTypeOptions = []),
         });
     }
 
-    private loadRabUnits(): void {
-        this.commonCodeService.getAllActiveCommonCodesType('RabUnit').subscribe({
-            next: (codes: CommonCodeModel[]) =>
-                (this.transferUnitOptions = (codes || []).map((c) => ({ label: c.codeValueEN || String(c.codeId), value: c.codeId }))),
-            error: () => (this.transferUnitOptions = []),
+    /** Map common codes to id-valued bilingual options. */
+    private mapCodes(codes: CommonCodeModel[]): { label: string; labelBn: string; value: number }[] {
+        return (codes || []).map((c) => ({
+            label: c.codeValueEN || String(c.codeId),
+            labelBn: c.codeValueBN || c.codeValueEN || String(c.codeId),
+            value: c.codeId,
+        }));
+    }
+
+    /** Dedupe CommonCode rows by codeId, preserving first-seen order. */
+    private dedupeByCodeId(rows: CommonCodeModel[]): CommonCodeModel[] {
+        const byId = new Map<number, CommonCodeModel>();
+        for (const r of rows || []) if (!byId.has(r.codeId)) byId.set(r.codeId, r);
+        return Array.from(byId.values());
+    }
+
+    /** Mother Org changed → reload org-scoped Ranks and Corps across all selected orgs; reset Trade. */
+    onOrgChange(): void {
+        this.rankOptions = [];
+        this.allRanksForOrg = [];
+        this.selectedRankIds = [];
+        this.corpsOptions = [];
+        this.selectedCorpsIds = [];
+        this.tradeOptions = [];
+        this.selectedTradeIds = [];
+        if (!this.selectedOrgIds.length) return;
+        forkJoin(this.selectedOrgIds.map((orgId) => this.commonCodeService.getAllActiveCommonCodesByOrgIdAndType(orgId, 'MotherOrgRank'))).subscribe({
+            next: (results: CommonCodeModel[][]) => {
+                this.allRanksForOrg = this.dedupeByCodeId(results.flat());
+                this.applyRankMemberTypeFilter();
+            },
+            error: () => {
+                this.allRanksForOrg = [];
+                this.rankOptions = [];
+            },
+        });
+        forkJoin(this.selectedOrgIds.map((orgId) => this.commonCodeService.getAllActiveCommonCodesByOrgIdAndType(orgId, 'Corps'))).subscribe({
+            next: (results: CommonCodeModel[][]) => {
+                this.corpsOptions = this.mapCodes(this.dedupeByCodeId(results.flat()));
+            },
+            error: () => (this.corpsOptions = []),
+        });
+    }
+
+    /** Member Type changed → re-filter the org-scoped ranks by parentCodeId. */
+    onMemberTypeChange(): void {
+        this.applyRankMemberTypeFilter();
+    }
+
+    /** Rank = org-scoped MotherOrgRank rows whose parentCodeId is a selected Member Type. */
+    private applyRankMemberTypeFilter(): void {
+        let rows = this.allRanksForOrg;
+        if (this.selectedMemberTypeIds.length) rows = rows.filter((r) => r.parentCodeId != null && this.selectedMemberTypeIds.includes(r.parentCodeId));
+        this.rankOptions = this.mapCodes(rows);
+        this.selectedRankIds = this.selectedRankIds.filter((id) => this.rankOptions.some((o) => o.value === id));
+    }
+
+    /** Cascade: a new Corps reloads Trades (children of selected Corps rows). */
+    onCorpsChange(): void {
+        this.tradeOptions = [];
+        if (!this.selectedCorpsIds.length) { this.selectedTradeIds = []; return; }
+        forkJoin(this.selectedCorpsIds.map((corpsId) => this.commonCodeService.getAllActiveCommonCodesByParentId(corpsId))).subscribe({
+            next: (results: CommonCodeModel[][]) => {
+                this.tradeOptions = this.mapCodes(this.dedupeByCodeId(results.flat()));
+                this.selectedTradeIds = this.selectedTradeIds.filter((id) => this.tradeOptions.some((o) => o.value === id));
+            },
+            error: () => (this.tradeOptions = []),
         });
     }
 
     get activeFilterCount(): number {
         let c = 0;
-        if (this.selectedMotherOrg) c++;
-        if (this.selectedTransferUnitId != null) c++;
+        if (this.selectedFromUnitIds.length) c++;
+        if (this.selectedPostedUnitIds.length) c++;
+        if (this.selectedOrgIds.length) c++;
+        if (this.selectedMemberTypeIds.length) c++;
+        if (this.selectedRankIds.length) c++;
+        if (this.selectedCorpsIds.length) c++;
+        if (this.selectedTradeIds.length) c++;
         return c;
     }
 
@@ -250,9 +347,36 @@ export class ReportPendingInterPostingComponent implements OnInit {
     }
 
     clearFilters(): void {
-        this.selectedMotherOrg = null;
-        this.selectedTransferUnitId = null;
+        this.selectedFromUnitIds = [];
+        this.selectedPostedUnitIds = [];
+        this.selectedOrgIds = [];
+        this.selectedMemberTypeIds = [];
+        this.selectedRankIds = [];
+        this.selectedCorpsIds = [];
+        this.selectedTradeIds = [];
+        this.allRanksForOrg = [];
+        this.rankOptions = [];
+        this.corpsOptions = [];
+        this.tradeOptions = [];
         this.first = 0;
+    }
+
+    /** Join the option labels for a set of selected ids. */
+    private labelsForIds(ids: number[], options: { label: string; value: number }[]): string {
+        return ids
+            .map(id => options.find(o => o.value === id)?.label ?? String(id))
+            .join(', ');
+    }
+
+    /** Join bilingual option labels for a set of selected ids. */
+    private bilingualLabelsForIds(ids: number[], options: { label: string; labelBn: string; value: number }[]): string {
+        return ids
+            .map(id => {
+                const o = options.find(opt => opt.value === id);
+                if (!o) return String(id);
+                return this.lang === 'bn' ? o.labelBn : o.label;
+            })
+            .join(', ');
     }
 
     toggleLang(): void {
@@ -267,10 +391,28 @@ export class ReportPendingInterPostingComponent implements OnInit {
     get criteriaItems(): { label: string; value: string }[] {
         const L = this.L[this.lang];
         const items: { label: string; value: string }[] = [];
-        if (this.selectedMotherOrg) items.push({ label: L['report.search.motherOrg'], value: this.selectedMotherOrg });
-        if (this.selectedTransferUnitId != null) {
-            const opt = this.transferUnitOptions.find(o => o.value === this.selectedTransferUnitId);
-            if (opt) items.push({ label: L['report.search.postedUnit'] ?? 'Posted Unit', value: opt.label });
+        const presentLabel = this.lang === 'bn' ? 'বর্তমান ইউনিট' : 'Present Unit';
+        const corpsLabel = this.lang === 'bn' ? 'কোর' : 'Corps';
+        if (this.selectedFromUnitIds.length) {
+            items.push({ label: presentLabel, value: this.labelsForIds(this.selectedFromUnitIds, this.rabUnitOptions) });
+        }
+        if (this.selectedPostedUnitIds.length) {
+            items.push({ label: L['report.search.postedUnit'] ?? 'Posted Unit', value: this.labelsForIds(this.selectedPostedUnitIds, this.rabUnitOptions) });
+        }
+        if (this.selectedOrgIds.length) {
+            items.push({ label: L['report.search.motherOrg'], value: this.bilingualLabelsForIds(this.selectedOrgIds, this.orgOptions) });
+        }
+        if (this.selectedMemberTypeIds.length) {
+            items.push({ label: L['report.search.memberType'], value: this.labelsForIds(this.selectedMemberTypeIds, this.memberTypeOptions) });
+        }
+        if (this.selectedRankIds.length) {
+            items.push({ label: L['report.search.rank'], value: this.bilingualLabelsForIds(this.selectedRankIds, this.rankOptions) });
+        }
+        if (this.selectedCorpsIds.length) {
+            items.push({ label: corpsLabel, value: this.bilingualLabelsForIds(this.selectedCorpsIds, this.corpsOptions) });
+        }
+        if (this.selectedTradeIds.length) {
+            items.push({ label: L['report.search.trade'], value: this.bilingualLabelsForIds(this.selectedTradeIds, this.tradeOptions) });
         }
         return items;
     }
@@ -280,8 +422,13 @@ export class ReportPendingInterPostingComponent implements OnInit {
         this.searched = true;
         this.appliedFilterLines = this.buildFilterLines();
         this.list = this.allRows.filter((r) => {
-            if (this.selectedMotherOrg && r.motherOrganization !== this.selectedMotherOrg) return false;
-            if (this.selectedTransferUnitId != null && r.transferRabUnitId !== this.selectedTransferUnitId) return false;
+            if (this.selectedFromUnitIds.length && !this.selectedFromUnitIds.includes(r.fromRabUnitId as number)) return false;
+            if (this.selectedPostedUnitIds.length && !this.selectedPostedUnitIds.includes(r.transferRabUnitId as number)) return false;
+            if (this.selectedOrgIds.length && !this.selectedOrgIds.includes(r.motherOrganizationId as number)) return false;
+            if (this.selectedMemberTypeIds.length && !this.selectedMemberTypeIds.includes(r.memberTypeId as number)) return false;
+            if (this.selectedRankIds.length && !this.selectedRankIds.includes(r.rankId as number)) return false;
+            if (this.selectedCorpsIds.length && !this.selectedCorpsIds.includes(r.corpsId as number)) return false;
+            if (this.selectedTradeIds.length && !this.selectedTradeIds.includes(r.tradeId as number)) return false;
             return true;
         });
         this.first = 0;
@@ -321,6 +468,8 @@ export class ReportPendingInterPostingComponent implements OnInit {
         switch (key) {
             case 'serviceId':           return this.displayNum(row.serviceId);
             case 'rank':                return this.codeValue(row.rankName, row.rankNameBN);
+            case 'rabRank':             return this.codeValue(row.rabRank, row.rabRankBN);
+            case 'memberType':          return this.codeValue(row.memberType, row.memberTypeBN);
             case 'corps':               return this.codeValue(row.corps, row.corpsBN);
             case 'trade':               return this.codeValue(row.trade, row.tradeBN);
             case 'name':                return this.codeValue(row.fullNameEN, row.fullNameBN);

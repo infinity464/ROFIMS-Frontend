@@ -47,6 +47,7 @@ import {
 } from 'docx';
 import { saveAs } from 'file-saver';
 import * as XLSX from 'xlsx';
+import { forkJoin } from 'rxjs';
 
 /**
  * Member Type (Serving) Report — standalone report (no parent dropdown).
@@ -78,19 +79,25 @@ export class ReportMemberTypeServingComponent implements OnInit {
 
     /** Member Type — independent root pick. */
     memberTypeOptions: { label: string; labelBn: string; value: number }[] = [];
-    selectedMemberTypeId: number | null = null;
+    selectedMemberTypeIds: number[] = [];
 
     /** RAB Unit → Wing cascade. */
     rabUnitOptions: { label: string; labelBn: string; value: number }[] = [];
     wingOptions: { label: string; labelBn: string; value: number }[] = [];
-    selectedRabUnitId: number | null = null;
-    selectedWingId: number | null = null;
+    selectedRabUnitIds: number[] = [];
+    selectedWingIds: number[] = [];
 
-    /** Mother Org → Rank cascade. */
-    orgOptions: MotherOrganizationModel[] = [];
+    /** Mother Org → Rank/Corps cascade. */
+    orgOptions: { label: string; labelBn: string; value: number }[] = [];
     rankOptions: { label: string; labelBn: string; value: number }[] = [];
-    selectedOrgId: number | null = null;
-    selectedRankId: number | null = null;
+    corpsOptions: { label: string; labelBn: string; value: number }[] = [];
+    tradeOptions: { label: string; labelBn: string; value: number }[] = [];
+    selectedOrgIds: number[] = [];
+    selectedRankIds: number[] = [];
+    selectedCorpsIds: number[] = [];
+    selectedTradeIds: number[] = [];
+    /** Raw org-scoped MotherOrgRank rows, re-filtered client-side by Member Type. */
+    private allRanksForOrg: CommonCodeModel[] = [];
 
     /** Joining-in-RAB date range (maps to registry `joiningDate`). */
     joiningInRabFrom: Date | null = null;
@@ -126,6 +133,7 @@ export class ReportMemberTypeServingComponent implements OnInit {
         { key: 'memberType',   labelEN: 'Member Type',   labelBN: 'সদস্য ধরন',      hint: 'Plain',                 defaultVisible: true  },
         { key: 'rabUnit',      labelEN: 'RAB Unit',      labelBN: 'র‍্যাব ইউনিট',   hint: 'Plain',                 defaultVisible: true  },
         { key: 'rabWing',      labelEN: 'RAB Wing',      labelBN: 'র‍্যাব উইং',     hint: 'Plain',                 defaultVisible: true  },
+        { key: 'rabRank',      labelEN: 'RAB Rank',      labelBN: 'র‍্যাব র‍্যাঙ্ক', hint: 'Plain',                 defaultVisible: false },
         { key: 'corps',        labelEN: 'Corps',         labelBN: 'কোর',           hint: 'Plain',                 defaultVisible: true  },
         { key: 'trade',        labelEN: 'Trade',         labelBN: 'ট্রেড',         hint: 'Plain',                 defaultVisible: true  },
         { key: 'motherOrganization',labelEN: 'Mother Org', labelBN: 'মাতৃ সংস্থা',  hint: 'Plain',                 defaultVisible: true  },
@@ -167,6 +175,7 @@ export class ReportMemberTypeServingComponent implements OnInit {
         memberType:          { en: 'memberType',          bn: 'memberTypeBN' },
         motherOrganization:  { en: 'orgName',             bn: 'orgNameBN' },
         armyRank:            { en: 'rank',                bn: 'rankBN' },
+        rabRank:             { en: 'rabRank',             bn: 'rabRankBN' },
         tradeRemarks:        { en: 'tradeRemarks' },
         gender:              { en: 'gender',              bn: 'genderBN' },
         motherUnit:          { en: 'motherUnit',          bn: 'motherUnitBN' },
@@ -236,7 +245,7 @@ export class ReportMemberTypeServingComponent implements OnInit {
         this.selectedColumnKeys = arr;
     }
     onColumnDragEnd(): void { this.draggingColumnKey = null; }
-    removeColumn(key: string): void { this.selectedColumnKeys = this.selectedColumnKeys.filter(k => k !== key); }
+    removeColumn(key: string): void { this.selectedColumnKeys = this.selectedColumnKeys.filter(k => k !== key); this.onColumnsChange(); }
 
     paddedSer(n: number | string | null | undefined): string {
         const s = n == null ? '' : String(n);
@@ -250,31 +259,21 @@ export class ReportMemberTypeServingComponent implements OnInit {
     get criteriaItems(): { label: string; value: string }[] {
         const L = this.L[this.lang];
         const items: { label: string; value: string }[] = [];
-        if (this.selectedMemberTypeId != null) {
-            const opt = this.memberTypeOptions.find(o => o.value === this.selectedMemberTypeId);
-            const val = this.lang === 'bn' ? opt?.labelBn : opt?.label;
-            if (val) items.push({ label: L['report.search.memberType'], value: val });
-        }
-        if (this.selectedRabUnitId != null) {
-            const opt = this.rabUnitOptions.find(o => o.value === this.selectedRabUnitId);
-            const val = this.lang === 'bn' ? opt?.labelBn : opt?.label;
-            if (val) items.push({ label: L['report.search.rabUnit'], value: val });
-        }
-        if (this.selectedWingId != null) {
-            const opt = this.wingOptions.find(o => o.value === this.selectedWingId);
-            const val = this.lang === 'bn' ? opt?.labelBn : opt?.label;
-            if (val) items.push({ label: L['report.search.wing'] ?? 'Wing', value: val });
-        }
-        if (this.selectedOrgId != null) {
-            const org = this.orgOptions.find(o => o.orgId === this.selectedOrgId);
-            const val = this.lang === 'bn' ? (org?.orgNameBN || org?.orgNameEN) : org?.orgNameEN;
-            if (val) items.push({ label: L['report.search.motherOrg'], value: val });
-        }
-        if (this.selectedRankId != null) {
-            const rank = this.rankOptions.find(o => o.value === this.selectedRankId);
-            const val = this.lang === 'bn' ? rank?.labelBn : rank?.label;
-            if (val) items.push({ label: L['report.search.rank'], value: val });
-        }
+        const multi = (ids: number[], opts: { label: string; labelBn: string; value: number }[], label: string) => {
+            if (!ids.length) return;
+            const names = ids
+                .map((id) => opts.find((o) => o.value === id))
+                .filter((o): o is (typeof opts)[number] => o != null)
+                .map((o) => (this.lang === 'bn' ? o.labelBn : o.label));
+            if (names.length) items.push({ label, value: names.join(', ') });
+        };
+        multi(this.selectedMemberTypeIds, this.memberTypeOptions, L['report.search.memberType']);
+        multi(this.selectedRabUnitIds, this.rabUnitOptions, L['report.search.rabUnit']);
+        multi(this.selectedWingIds, this.wingOptions, L['report.search.wing'] ?? 'Wing');
+        multi(this.selectedOrgIds, this.orgOptions, L['report.search.motherOrg']);
+        multi(this.selectedRankIds, this.rankOptions, L['report.search.rank']);
+        multi(this.selectedCorpsIds, this.corpsOptions, L['report.table.corps'] ?? 'Corps');
+        multi(this.selectedTradeIds, this.tradeOptions, L['report.search.trade']);
         if (this.joiningInRabFrom != null) {
             items.push({ label: L['report.search.joiningInRabFrom'] ?? 'Joining From', value: this.formatDate(this.toDateStr(this.joiningInRabFrom)) });
         }
@@ -368,56 +367,121 @@ export class ReportMemberTypeServingComponent implements OnInit {
 
     loadOrgs(): void {
         this.commonCodeService.getAllActiveMotherOrgs().subscribe({
-            next: (orgs) => (this.orgOptions = orgs),
+            next: (orgs: MotherOrganizationModel[]) =>
+                (this.orgOptions = (orgs || []).map((o) => ({
+                    label: o.orgNameEN || String(o.orgId),
+                    labelBn: o.orgNameBN || o.orgNameEN || String(o.orgId),
+                    value: o.orgId,
+                }))),
             error: () => (this.orgOptions = []),
         });
     }
 
-    onRabUnitChange(): void {
-        this.wingOptions = [];
-        this.selectedWingId = null;
-        if (this.selectedRabUnitId != null) {
-            this.commonCodeService.getAllActiveCommonCodesByParentId(this.selectedRabUnitId).subscribe({
-                next: (codes: CommonCodeModel[]) =>
-                    (this.wingOptions = (codes || [])
-                        .filter((c) => c.codeType === 'Wing' || c.codeType === 'RabWing' || c.codeType === 'RABWING')
-                        .map((c) => ({
-                            label: c.codeValueEN || String(c.codeId),
-                            labelBn: c.codeValueBN || c.codeValueEN || String(c.codeId),
-                            value: c.codeId,
-                        }))),
-                error: () => (this.wingOptions = []),
-            });
-        }
+    /** Map CommonCode rows to {label, labelBn, value} option shape. */
+    private mapCodes(codes: CommonCodeModel[]): { label: string; labelBn: string; value: number }[] {
+        return (codes || []).map((c) => ({
+            label: c.codeValueEN || String(c.codeId),
+            labelBn: c.codeValueBN || c.codeValueEN || String(c.codeId),
+            value: c.codeId,
+        }));
     }
 
+    /** Dedupe CommonCode rows by codeId, preserving first-seen order. */
+    private dedupeByCodeId(rows: CommonCodeModel[]): CommonCodeModel[] {
+        const byId = new Map<number, CommonCodeModel>();
+        for (const r of rows || []) if (!byId.has(r.codeId)) byId.set(r.codeId, r);
+        return Array.from(byId.values());
+    }
+
+    /** RAB Unit changed → Wing options = union of children across selected units. */
+    onRabUnitChange(): void {
+        this.wingOptions = [];
+        this.selectedWingIds = [];
+        if (!this.selectedRabUnitIds.length) return;
+        forkJoin(this.selectedRabUnitIds.map((unitId) => this.commonCodeService.getAllActiveCommonCodesByParentId(unitId))).subscribe({
+            next: (results: CommonCodeModel[][]) => {
+                const wings = this.dedupeByCodeId(
+                    results.flat().filter((c) => c.codeType === 'Wing' || c.codeType === 'RabWing' || c.codeType === 'RABWING')
+                );
+                this.wingOptions = this.mapCodes(wings);
+                this.selectedWingIds = this.selectedWingIds.filter((id) => this.wingOptions.some((o) => o.value === id));
+            },
+            error: () => (this.wingOptions = []),
+        });
+    }
+
+    /** Mother Org changed → reload org-scoped Ranks and Corps across all selected orgs; reset Trade. */
     onOrgChange(): void {
         this.rankOptions = [];
-        this.selectedRankId = null;
-        if (this.selectedOrgId != null) {
-            this.commonCodeService.getAllActiveCommonCodesByOrgIdAndType(this.selectedOrgId, 'MotherOrgRank').subscribe({
-                next: (codes: CommonCodeModel[]) =>
-                    (this.rankOptions = codes.map((c) => ({
-                        label: c.codeValueEN || String(c.codeId),
-                        labelBn: c.codeValueBN || c.codeValueEN || String(c.codeId),
-                        value: c.codeId,
-                    }))),
-                error: () => (this.rankOptions = []),
-            });
-        }
+        this.allRanksForOrg = [];
+        this.selectedRankIds = [];
+        this.corpsOptions = [];
+        this.selectedCorpsIds = [];
+        this.tradeOptions = [];
+        this.selectedTradeIds = [];
+        if (!this.selectedOrgIds.length) return;
+        forkJoin(this.selectedOrgIds.map((orgId) => this.commonCodeService.getAllActiveCommonCodesByOrgIdAndType(orgId, 'MotherOrgRank'))).subscribe({
+            next: (results: CommonCodeModel[][]) => {
+                this.allRanksForOrg = this.dedupeByCodeId(results.flat());
+                this.applyRankMemberTypeFilter();
+            },
+            error: () => {
+                this.allRanksForOrg = [];
+                this.rankOptions = [];
+            },
+        });
+        forkJoin(this.selectedOrgIds.map((orgId) => this.commonCodeService.getAllActiveCommonCodesByOrgIdAndType(orgId, 'Corps'))).subscribe({
+            next: (results: CommonCodeModel[][]) => {
+                this.corpsOptions = this.mapCodes(this.dedupeByCodeId(results.flat()));
+            },
+            error: () => (this.corpsOptions = []),
+        });
+    }
+
+    /** Member Type changed → re-filter the org-scoped ranks by parentCodeId. */
+    onMemberTypeChange(): void {
+        this.applyRankMemberTypeFilter();
+    }
+
+    /** Rank = org-scoped MotherOrgRank rows whose parentCodeId is a selected Member Type. */
+    private applyRankMemberTypeFilter(): void {
+        let rows = this.allRanksForOrg;
+        if (this.selectedMemberTypeIds.length) rows = rows.filter((r) => r.parentCodeId != null && this.selectedMemberTypeIds.includes(r.parentCodeId));
+        this.rankOptions = this.mapCodes(rows);
+        this.selectedRankIds = this.selectedRankIds.filter((id) => this.rankOptions.some((o) => o.value === id));
+    }
+
+    /** Cascade: a new Corps reloads Trades (children of selected Corps rows). */
+    onCorpsChange(): void {
+        this.tradeOptions = [];
+        this.selectedTradeIds = [];
+        if (!this.selectedCorpsIds.length) return;
+        forkJoin(this.selectedCorpsIds.map((corpsId) => this.commonCodeService.getAllActiveCommonCodesByParentId(corpsId))).subscribe({
+            next: (results: CommonCodeModel[][]) => {
+                this.tradeOptions = this.mapCodes(this.dedupeByCodeId(results.flat()));
+            },
+            error: () => (this.tradeOptions = []),
+        });
     }
 
     onFilterChange(): void {}
+
+    /** Column selection changed — re-fetch so newly added columns are populated. */
+    onColumnsChange(): void {
+        if (this.searched) this.load();
+    }
 
     filterOpen = true;
 
     get activeFilterCount(): number {
         let c = 0;
-        if (this.selectedMemberTypeId != null) c++;
-        if (this.selectedRabUnitId != null) c++;
-        if (this.selectedWingId != null) c++;
-        if (this.selectedOrgId != null) c++;
-        if (this.selectedRankId != null) c++;
+        if (this.selectedMemberTypeIds.length > 0) c++;
+        if (this.selectedRabUnitIds.length > 0) c++;
+        if (this.selectedWingIds.length > 0) c++;
+        if (this.selectedOrgIds.length > 0) c++;
+        if (this.selectedRankIds.length > 0) c++;
+        if (this.selectedCorpsIds.length > 0) c++;
+        if (this.selectedTradeIds.length > 0) c++;
         if (this.joiningInRabFrom != null) c++;
         if (this.joiningInRabTo != null) c++;
         return c;
@@ -433,13 +497,18 @@ export class ReportMemberTypeServingComponent implements OnInit {
     }
 
     clearFilters(): void {
-        this.selectedMemberTypeId = null;
-        this.selectedRabUnitId = null;
-        this.selectedWingId = null;
-        this.selectedOrgId = null;
-        this.selectedRankId = null;
+        this.selectedMemberTypeIds = [];
+        this.selectedRabUnitIds = [];
+        this.selectedWingIds = [];
+        this.selectedOrgIds = [];
+        this.selectedRankIds = [];
+        this.selectedCorpsIds = [];
+        this.selectedTradeIds = [];
         this.wingOptions = [];
         this.rankOptions = [];
+        this.corpsOptions = [];
+        this.tradeOptions = [];
+        this.allRanksForOrg = [];
         this.joiningInRabFrom = null;
         this.joiningInRabTo = null;
         this.first = 0;
@@ -475,16 +544,20 @@ export class ReportMemberTypeServingComponent implements OnInit {
         // report. Date range on Joining-in-RAB maps to the registry's
         // `joiningDate` DateRange field.
         const criteria: DynamicReportCriterion[] = [];
-        if (this.selectedMemberTypeId != null && this.selectedMemberTypeId > 0)
-            criteria.push({ fieldKey: 'memberType', idValue: this.selectedMemberTypeId });
-        if (this.selectedRabUnitId != null && this.selectedRabUnitId > 0)
-            criteria.push({ fieldKey: 'rabUnit', idValue: this.selectedRabUnitId });
-        if (this.selectedWingId != null && this.selectedWingId > 0)
-            criteria.push({ fieldKey: 'rabWing', idValue: this.selectedWingId });
-        if (this.selectedOrgId != null && this.selectedOrgId > 0)
-            criteria.push({ fieldKey: 'motherOrganization', idValue: this.selectedOrgId });
-        if (this.selectedRankId != null && this.selectedRankId > 0)
-            criteria.push({ fieldKey: 'armyRank', idValue: this.selectedRankId });
+        if (this.selectedMemberTypeIds.length > 0)
+            criteria.push({ fieldKey: 'memberType', idValues: this.selectedMemberTypeIds });
+        if (this.selectedRabUnitIds.length > 0)
+            criteria.push({ fieldKey: 'rabUnit', idValues: this.selectedRabUnitIds });
+        if (this.selectedWingIds.length > 0)
+            criteria.push({ fieldKey: 'rabWing', idValues: this.selectedWingIds });
+        if (this.selectedOrgIds.length > 0)
+            criteria.push({ fieldKey: 'motherOrganization', idValues: this.selectedOrgIds });
+        if (this.selectedRankIds.length > 0)
+            criteria.push({ fieldKey: 'armyRank', idValues: this.selectedRankIds });
+        if (this.selectedCorpsIds.length > 0)
+            criteria.push({ fieldKey: 'corps', idValues: this.selectedCorpsIds });
+        if (this.selectedTradeIds.length > 0)
+            criteria.push({ fieldKey: 'trade', idValues: this.selectedTradeIds });
         const jFrom = this.toDateStr(this.joiningInRabFrom);
         const jTo   = this.toDateStr(this.joiningInRabTo);
         if (jFrom || jTo) {

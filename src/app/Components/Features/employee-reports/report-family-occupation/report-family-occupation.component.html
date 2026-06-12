@@ -92,11 +92,40 @@
                                     <small class="ds-field-hint">Locked to Presently Serving — your access scope is restricted.</small>
                                 }
                             </div>
+                            <div class="ds-field">
+                                <label class="ds-field-label">{{ L['en']['report.search.motherOrg'] }}</label>
+                                <p-multiSelect [options]="orgOptions" [(ngModel)]="selectedOrgIds" (ngModelChange)="onOrgChange()" optionLabel="label" optionValue="value" display="chip" placeholder="Select" styleClass="w-full" [filter]="true" appendTo="body">
+                                </p-multiSelect>
+                            </div>
+                            <div class="ds-field">
+                                <label class="ds-field-label">{{ lang === 'bn' ? 'সদস্য ধরন' : 'Member Type' }}</label>
+                                <p-multiSelect [options]="memberTypeOptions" [(ngModel)]="selectedMemberTypeIds" (ngModelChange)="onMemberTypeChange()" optionLabel="label" optionValue="value" display="chip" placeholder="Select" styleClass="w-full" [filter]="true" appendTo="body">
+                                </p-multiSelect>
+                            </div>
+                            <div class="ds-field">
+                                <label class="ds-field-label">{{ L['en']['report.search.rank'] }}</label>
+                                <p-multiSelect [options]="rankOptions" [(ngModel)]="selectedRankIds" (ngModelChange)="onFilterChange()" optionLabel="label" optionValue="value" display="chip" placeholder="Select" styleClass="w-full" [disabled]="selectedOrgIds.length === 0" [filter]="true" appendTo="body">
+                                </p-multiSelect>
+                            </div>
+                            <div class="ds-field">
+                                <label class="ds-field-label">{{ L['en']['report.table.corps'] }}</label>
+                                <p-multiSelect [options]="corpsOptions" [(ngModel)]="selectedCorpsIds" (ngModelChange)="onCorpsChange()" optionLabel="label" optionValue="value" display="chip" placeholder="Select" styleClass="w-full" [disabled]="selectedOrgIds.length === 0" [filter]="true" appendTo="body">
+                                </p-multiSelect>
+                            </div>
+                            <div class="ds-field">
+                                <label class="ds-field-label">{{ L['en']['report.search.trade'] }}</label>
+                                <p-multiSelect [options]="tradeOptions" [(ngModel)]="selectedTradeIds" (ngModelChange)="onFilterChange()" optionLabel="label" optionValue="value" display="chip" placeholder="Select" styleClass="w-full" [disabled]="selectedCorpsIds.length === 0" [filter]="true" appendTo="body">
+                                </p-multiSelect>
+                            </div>
+                            <div class="ds-field">
+                                <label class="ds-field-label">{{ lang === 'bn' ? 'র‍্যাব ইউনিট' : 'RAB Unit' }}</label>
+                                <p-multiSelect [options]="rabUnitOptions" [(ngModel)]="selectedRabUnitIds" (ngModelChange)="onFilterChange()" optionLabel="label" optionValue="value" display="chip" placeholder="Select" styleClass="w-full" [filter]="true" appendTo="body">
+                                </p-multiSelect>
+                            </div>
                         </div>
                     </div>
 
-                    <!-- Group 2: Column picker — only after a search has populated rows. -->
-                    @if (searched) {
+                    <!-- Group 2: Column picker — always visible so columns can be chosen before searching. -->
                     <div class="ds-field-group">
                         <div class="ds-group-divider">
                             <span class="ds-group-label">Columns</span>
@@ -107,6 +136,7 @@
                             <p-multiSelect
                                 [options]="columnPickerOptions"
                                 [(ngModel)]="selectedColumnKeys"
+                                (ngModelChange)="onColumnsChange()"
                                 optionLabel="label"
                                 optionValue="value"
                                 display="chip"
@@ -148,7 +178,6 @@
                             </div>
                         </div>
                     </div>
-                    }
                 </div>
 
                 <div class="ds-actions">

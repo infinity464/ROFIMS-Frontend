@@ -156,13 +156,112 @@
                     </div>
                 </div>
 
+                <!-- Group 0: Organization & Rank (cascading multi-select) -->
+                <div class="ds-field-group">
+                    <div class="ds-group-divider">
+                        <span class="ds-group-label">Organization &amp; Rank</span>
+                        <span class="ds-group-line"></span>
+                    </div>
+                    <div class="ds-criteria-grid">
+                        <div class="ds-field">
+                            <label class="ds-field-label">{{ L['en']['report.search.motherOrg'] }}</label>
+                            <p-multiSelect
+                                [options]="orgOptions"
+                                [(ngModel)]="selectedOrgIds"
+                                (ngModelChange)="onOrgChange()"
+                                optionLabel="label"
+                                optionValue="value"
+                                display="chip"
+                                [filter]="true"
+                                placeholder="Select Mother Org"
+                                styleClass="w-full"
+                                appendTo="body">
+                            </p-multiSelect>
+                        </div>
+                        <div class="ds-field">
+                            <label class="ds-field-label">Member Type</label>
+                            <p-multiSelect
+                                [options]="memberTypeOptions"
+                                [(ngModel)]="selectedMemberTypeIds"
+                                (ngModelChange)="onMemberTypeChange()"
+                                optionLabel="label"
+                                optionValue="value"
+                                display="chip"
+                                [filter]="true"
+                                placeholder="Select Member Type"
+                                styleClass="w-full"
+                                appendTo="body">
+                            </p-multiSelect>
+                        </div>
+                        <div class="ds-field">
+                            <label class="ds-field-label">{{ L['en']['report.search.rank'] }}</label>
+                            <p-multiSelect
+                                [options]="rankOptions"
+                                [(ngModel)]="selectedRankIds"
+                                optionLabel="label"
+                                optionValue="value"
+                                display="chip"
+                                [filter]="true"
+                                placeholder="Select Rank"
+                                styleClass="w-full"
+                                [disabled]="selectedOrgIds.length === 0"
+                                appendTo="body">
+                            </p-multiSelect>
+                        </div>
+                        <div class="ds-field">
+                            <label class="ds-field-label">{{ L['en']['report.table.corps'] }}</label>
+                            <p-multiSelect
+                                [options]="corpsOptions"
+                                [(ngModel)]="selectedCorpsIds"
+                                (ngModelChange)="onCorpsChange()"
+                                optionLabel="label"
+                                optionValue="value"
+                                display="chip"
+                                [filter]="true"
+                                placeholder="Select Corps"
+                                styleClass="w-full"
+                                [disabled]="selectedOrgIds.length === 0"
+                                appendTo="body">
+                            </p-multiSelect>
+                        </div>
+                        <div class="ds-field">
+                            <label class="ds-field-label">{{ L['en']['report.search.trade'] }}</label>
+                            <p-multiSelect
+                                [options]="tradeOptions"
+                                [(ngModel)]="selectedTradeIds"
+                                optionLabel="label"
+                                optionValue="value"
+                                display="chip"
+                                [filter]="true"
+                                placeholder="Select Trade"
+                                styleClass="w-full"
+                                [disabled]="selectedCorpsIds.length === 0"
+                                appendTo="body">
+                            </p-multiSelect>
+                        </div>
+                        <div class="ds-field">
+                            <label class="ds-field-label">RAB Unit</label>
+                            <p-multiSelect
+                                [options]="rabUnitOptions"
+                                [(ngModel)]="selectedRabUnitIds"
+                                optionLabel="label"
+                                optionValue="value"
+                                display="chip"
+                                [filter]="true"
+                                placeholder="Select RAB Unit"
+                                styleClass="w-full"
+                                appendTo="body">
+                            </p-multiSelect>
+                        </div>
+                    </div>
+                </div>
+
                 <!-- Group 3: Column picker — toggles which columns appear in
                      the table + Word/Excel/Print exports. Pre-ticked with the
                      existing default-visible set; auto-managed for Address
                      Owner / Status based on the filter dropdowns above.
                      Hidden until the first search — the picker has nothing
                      useful to do before there are any rows to render. -->
-                @if (searched) {
                 <div class="ds-field-group">
                     <div class="ds-group-divider">
                         <span class="ds-group-label">Columns</span>
@@ -173,6 +272,7 @@
                         <p-multiSelect
                             [options]="columnPickerOptions"
                             [(ngModel)]="selectedColumnKeys"
+                            (ngModelChange)="onColumnsChange()"
                             optionLabel="label"
                             optionValue="value"
                             display="chip"
@@ -215,7 +315,6 @@
                         </div>
                     </div>
                 </div>
-                }
 
             </div>
 

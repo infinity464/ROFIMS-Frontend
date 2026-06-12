@@ -124,6 +124,7 @@ export class ReportDeceasedComponent implements OnInit {
         { key: 'serviceId',      labelEN: 'Service ID',           labelBN: 'সার্ভিস আইডি',           hint: 'Plain',      defaultVisible: true  },
         { key: 'rank',           labelEN: 'Rank',                 labelBN: 'পদবী',                   hint: 'Plain',      defaultVisible: true  },
         { key: 'corps',          labelEN: 'Corps',                labelBN: 'কোর',                    hint: 'Plain',      defaultVisible: true  },
+        { key: 'rabRank',        labelEN: 'RAB Rank',             labelBN: 'র‍্যাব র‍্যাঙ্ক',         hint: 'Plain',      defaultVisible: false },
         { key: 'trade',          labelEN: 'Trade',                labelBN: 'ট্রেড',                  hint: 'Plain',      defaultVisible: true  },
         { key: 'name',           labelEN: 'Name',                 labelBN: 'নাম',                    hint: 'Personnel',  defaultVisible: true  },
         { key: 'joiningInRab',   labelEN: 'RAB Joining Date',     labelBN: 'র‍্যাবে যোগদানের তারিখ',  hint: 'Date',       defaultVisible: true  },

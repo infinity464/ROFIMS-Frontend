@@ -87,6 +87,7 @@ export class ReportRankWiseComponent implements OnInit {
         { key: 'ser', labelEN: 'Ser', labelBN: 'ক্রমিক', hint: 'Serial', defaultVisible: true },
         { key: 'serviceId', labelEN: 'Service ID', labelBN: 'ব্যক্তিগত নম্বর', hint: 'Plain', defaultVisible: true },
         { key: 'rank', labelEN: 'Rank', labelBN: 'পদবি', hint: 'Plain', defaultVisible: true },
+        { key: 'rabRank', labelEN: 'RAB Rank', labelBN: 'র‍্যাব র‍্যাঙ্ক', hint: 'Plain', defaultVisible: false },
         { key: 'name', labelEN: 'Name', labelBN: 'নাম', hint: 'Plain', defaultVisible: true },
         { key: 'ownHomeDistrict', labelEN: 'Own Home District', labelBN: 'নিজ জেলা', hint: 'Plain', defaultVisible: true },
         { key: 'spouseHomeDistrict', labelEN: 'Spouse District', labelBN: 'স্ত্রীর জেলা', hint: 'Plain', defaultVisible: true },

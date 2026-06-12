@@ -115,6 +115,7 @@ export class ReportLongStayNominalRollComponent implements OnInit {
         { key: 'relieverTrade',      labelEN: 'Reliever Trade',     labelBN: 'প্রতিস্থাপক ট্রেড',       hint: 'Plain',     defaultVisible: false },
         { key: 'possibleJoiningDate',labelEN: 'Possible Joining Date',labelBN: 'সম্ভাব্য যোগদানের তারিখ', hint: 'Date',    defaultVisible: false },
         { key: 'corps',              labelEN: 'Corps',              labelBN: 'কোর',                    hint: 'Plain',     defaultVisible: true  },
+        { key: 'rabRank',            labelEN: 'RAB Rank',           labelBN: 'র‍্যাব র‍্যাঙ্ক',         hint: 'Plain',     defaultVisible: false },
         { key: 'trade',              labelEN: 'Trade',              labelBN: 'ট্রেড',                  hint: 'Plain',     defaultVisible: true  },
         { key: 'rabId',              labelEN: 'RAB ID',             labelBN: 'র‍্যাব আইডি',            hint: 'Plain',     defaultVisible: false },
         { key: 'nameBangla',         labelEN: 'Name (Bangla)',      labelBN: 'নাম (বাংলা)',            hint: 'Plain',     defaultVisible: false },
