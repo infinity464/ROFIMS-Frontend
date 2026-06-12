@@ -7,6 +7,7 @@ import { DialogModule } from 'primeng/dialog';
 import { ButtonModule } from 'primeng/button';
 import { CalendarService, type CalendarEventApi } from '@/services/calendar.service';
 import { EmpService } from '@/services/emp-service';
+import { NoticeService, type NoticeListDto } from '@/services/notice.service';
 import { Router } from '@angular/router';
 import { RabUnitAorMap } from '../../Components/basic-setup/rab-unit-aor-map/rab-unit-aor-map';
 import { ServingMembersService } from '@/services/serving-members.service';
@@ -53,8 +54,40 @@ const PIE_PERCENTAGE_PLUGIN = {
 };
 
 type Severity = 'success' | 'info' | 'warn' | 'danger' | 'secondary' | 'contrast';
-type Notice = { tag: string; severity: Severity; title: string; date: string };
 type Notify = { icon: string; color: string; title: string; time: string };
+
+/** Notice-tag taxonomy: 5 severity bands, CRITICAL highest. Drives chip colour + sort order. */
+type NoticeBand = 'critical' | 'action' | 'personnel' | 'informational' | 'routine';
+const NOTICE_BAND_META: Record<NoticeBand, { rank: number; classes: string }> = {
+    critical:      { rank: 0, classes: 'text-red-600 dark:text-red-400 bg-red-500/10 border-red-500/30' },
+    action:        { rank: 1, classes: 'text-amber-600 dark:text-amber-400 bg-amber-500/10 border-amber-500/30' },
+    personnel:     { rank: 2, classes: 'text-green-600 dark:text-green-400 bg-green-500/10 border-green-500/30' },
+    informational: { rank: 3, classes: 'text-blue-600 dark:text-blue-400 bg-blue-500/10 border-blue-500/30' },
+    routine:       { rank: 4, classes: 'text-surface-500 dark:text-surface-400 bg-surface-500/10 border-surface-400/30' }
+};
+/** Known tag (UPPER) → band + icon. Unknown tags fall back to routine / pi-tag. */
+const NOTICE_TAG_META: Record<string, { band: NoticeBand; icon: string }> = {
+    URGENT:      { band: 'critical', icon: 'pi-exclamation-triangle' },
+    ALERT:       { band: 'critical', icon: 'pi-bell' },
+    RECALL:      { band: 'critical', icon: 'pi-replay' },
+    OPERATION:   { band: 'critical', icon: 'pi-bullseye' },
+    ORDER:       { band: 'action', icon: 'pi-file' },
+    DEADLINE:    { band: 'action', icon: 'pi-clock' },
+    DEPLOYMENT:  { band: 'action', icon: 'pi-map-marker' },
+    SECURITY:    { band: 'action', icon: 'pi-shield' },
+    POSTING:     { band: 'personnel', icon: 'pi-sync' },
+    PROMOTION:   { band: 'personnel', icon: 'pi-angle-double-up' },
+    LEAVE:       { band: 'personnel', icon: 'pi-send' },
+    RECRUITMENT: { band: 'personnel', icon: 'pi-user-plus' },
+    POLICY:      { band: 'informational', icon: 'pi-check-square' },
+    EVENT:       { band: 'informational', icon: 'pi-calendar' },
+    MEETING:     { band: 'informational', icon: 'pi-users' },
+    CIRCULAR:    { band: 'informational', icon: 'pi-envelope' },
+    TRAINING:    { band: 'routine', icon: 'pi-book' },
+    MAINTENANCE: { band: 'routine', icon: 'pi-cog' },
+    WELFARE:     { band: 'routine', icon: 'pi-heart' },
+    ADMIN:       { band: 'routine', icon: 'pi-folder' }
+};
 type LookupCard = {
     employeeId: number;
     name: string; nameBn: string;
@@ -113,14 +146,44 @@ type CalItem = { id: string; day: string; mon: string; dow: string; title: strin
             </div>
 
             <div class="col-span-12 xl:col-span-4">
-                <div class="card mb-0 h-full">
+                <div class="card mb-0 h-full flex flex-col">
                     <div class="flex justify-between items-center mb-3">
-                        <span class="font-semibold text-surface-900 dark:text-surface-0">Notice</span>
-                        <span class="text-muted-color text-sm">1/4</span>
+                        <span class="text-muted-color font-medium uppercase text-sm tracking-wide">Urgent Notice</span>
+                        @if (criticalNotices.length) {
+                            <span class="inline-flex items-center gap-2 text-muted-color text-sm">
+                                <span class="w-2 h-2 rounded-full bg-green-500"></span>
+                                {{ criticalIndex + 1 }}/{{ criticalNotices.length }}
+                            </span>
+                        }
                     </div>
-                    <p-tag severity="danger" value="URGENT" class="mb-2"></p-tag>
-                    <div class="font-medium text-surface-900 dark:text-surface-0 mt-2">Nationwide security advisory — Election week deployment</div>
-                    <div class="text-muted-color text-sm mt-1">11 Jun 2026</div>
+
+                    @if (criticalNotices.length === 0) {
+                        <div class="text-muted-color text-sm py-6 text-center">No urgent notices.</div>
+                    } @else if (currentCritical; as n) {
+                        <div class="flex-1 cursor-pointer" (click)="openNotice(n)">
+                            @if (n.tags?.length) {
+                                <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-semibold uppercase mb-2 text-red-600 dark:text-red-400 bg-red-500/10">
+                                    <i class="pi {{ tagMeta(n.tags[0]).icon }} text-[0.7rem]"></i>{{ tagMeta(n.tags[0]).label }}
+                                </span>
+                            }
+                            <div class="font-medium text-surface-900 dark:text-surface-0 mt-1 notice-topic-clamp">{{ n.topic }}</div>
+                            <div class="text-muted-color text-sm mt-1">{{ noticeDate(n) }}</div>
+                        </div>
+
+                        @if (criticalNotices.length > 1) {
+                            <div class="flex items-center gap-1.5 mt-4">
+                                @for (n2 of criticalNotices; track n2.noticeId; let i = $index) {
+                                    <button type="button" class="notice-seg flex-1" (click)="goCritical(i)" aria-label="Go to notice">
+                                        @if (i < criticalIndex) {
+                                            <span class="notice-seg-fill" style="width:100%"></span>
+                                        } @else if (i === criticalIndex) {
+                                            <span class="notice-seg-fill notice-seg-anim"></span>
+                                        }
+                                    </button>
+                                }
+                            </div>
+                        }
+                    }
                 </div>
             </div>
 
@@ -309,16 +372,59 @@ type CalItem = { id: string; day: string; mon: string; dow: string; title: strin
                 <div class="card mb-0 h-full">
                     <div class="font-semibold text-lg text-surface-900 dark:text-surface-0">Notice Board</div>
                     <div class="text-muted-color text-sm mb-4">Force-wide announcements</div>
-                    @for (n of notices; track n.title) {
-                        <div class="py-3 border-b border-surface-200 dark:border-surface-700 last:border-0">
-                            <p-tag [severity]="n.severity" [value]="n.tag" class="mb-1"></p-tag>
-                            <div class="font-medium text-surface-900 dark:text-surface-0 mt-1">{{ n.title }}</div>
-                            <div class="text-muted-color text-xs mt-1">{{ n.date }}</div>
+                    @if (notices.length === 0) {
+                        <div class="py-10 text-center text-muted-color border border-dashed border-surface-300 dark:border-surface-600 rounded">
+                            No active notices.
                         </div>
+                    } @else {
+                        @for (n of notices; track n.noticeId) {
+                            <div class="py-3 border-b border-surface-200 dark:border-surface-700 last:border-0 cursor-pointer hover:bg-surface-100 dark:hover:bg-surface-800 -mx-2 px-2 rounded"
+                                [class.border-l-4]="isCriticalNotice(n)"
+                                [class.border-l-red-500]="isCriticalNotice(n)"
+                                (click)="openNotice(n)">
+                                <div class="flex flex-wrap gap-1.5 mb-1">
+                                    @for (t of n.tags; track t) {
+                                        <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded border text-xs font-semibold uppercase"
+                                            [class]="tagMeta(t).classes">
+                                            <i class="pi {{ tagMeta(t).icon }} text-[0.7rem]"></i>{{ tagMeta(t).label }}
+                                        </span>
+                                    }
+                                </div>
+                                <div class="font-medium text-surface-900 dark:text-surface-0 mt-1 truncate">{{ n.topic }}</div>
+                                <div class="text-muted-color text-xs mt-1">{{ noticeDate(n) }}</div>
+                            </div>
+                        }
                     }
                 </div>
             </div>
         </div>
+
+        <p-dialog [(visible)]="noticeDialogVisible" [modal]="true" [draggable]="false" [style]="{ width: '36rem' }"
+            [breakpoints]="{ '640px': '92vw' }" header="Notice">
+            @if (selectedNotice; as n) {
+                <div class="flex flex-col gap-4">
+                    @if (n.tags?.length) {
+                        <div class="flex flex-wrap gap-1.5">
+                            @for (t of n.tags; track t) {
+                                <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded border text-xs font-semibold uppercase"
+                                    [class]="tagMeta(t).classes">
+                                    <i class="pi {{ tagMeta(t).icon }} text-[0.7rem]"></i>{{ tagMeta(t).label }}
+                                </span>
+                            }
+                        </div>
+                    }
+                    <div>
+                        <div class="text-muted-color text-xs uppercase mb-1">Topic</div>
+                        <div class="text-surface-900 dark:text-surface-0 font-medium">{{ n.topic }}</div>
+                    </div>
+                    <div>
+                        <div class="text-muted-color text-xs uppercase mb-1">Details</div>
+                        <div class="text-surface-900 dark:text-surface-0 whitespace-pre-line">{{ n.details || 'No details provided.' }}</div>
+                    </div>
+                    <div class="text-muted-color text-sm">{{ noticeDate(n) }}</div>
+                </div>
+            }
+        </p-dialog>
 
         <p-dialog [(visible)]="eventDialogVisible" [modal]="true" [draggable]="false" [style]="{ width: '32rem' }"
             [header]="selectedEvent?.title || 'Details'">
@@ -373,6 +479,41 @@ type CalItem = { id: string; day: string; mon: string; dow: string; title: strin
             width: 100%;
             height: 26rem;
         }
+        /* Clamp the urgent-notice title to 2 lines with an ellipsis; fixed height stops card resize. */
+        .notice-topic-clamp {
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+            white-space: normal;
+            line-height: 1.5rem;
+            height: 3rem;        /* exactly two lines — clips any 3rd line, keeps card height fixed */
+        }
+        .notice-seg {
+            height: 6px;
+            border-radius: 999px;
+            background: var(--surface-200, #e2e8f0);
+            overflow: hidden;
+            padding: 0;
+            border: 0;
+            cursor: pointer;
+        }
+        :host-context(.app-dark) .notice-seg {
+            background: var(--surface-700, #3f3f46);
+        }
+        .notice-seg-fill {
+            display: block;
+            height: 100%;
+            background: #22c55e;
+            border-radius: 999px;
+        }
+        .notice-seg-anim {
+            animation: noticeSegFill 5s linear forwards;
+        }
+        @keyframes noticeSegFill {
+            from { width: 0%; }
+            to { width: 100%; }
+        }
         .event-row {
             transition: background-color 0.15s ease;
         }
@@ -402,6 +543,7 @@ export class Dashboard implements OnInit, OnDestroy {
     private statisticsSvc = inject(StatisticsService);
     private calendarSvc = inject(CalendarService);
     private empService = inject(EmpService);
+    private noticeService = inject(NoticeService);
     private router = inject(Router);
     servingCount: number | null = null;
     postedOutCount: number | null = null;
@@ -544,12 +686,76 @@ export class Dashboard implements OnInit, OnDestroy {
 
     events: CalItem[] = [];
 
-    notices: Notice[] = [
-        { tag: 'URGENT', severity: 'danger', title: 'Nationwide security advisory — Election week deployment', date: '11 Jun 2026' },
-        { tag: 'POLICY', severity: 'info', title: 'Revised standard operating procedure for narcotics raids', date: '08 Jun 2026' },
-        { tag: 'EVENT', severity: 'warn', title: 'Annual Police Week — parade rehearsal schedule released', date: '05 Jun 2026' },
-        { tag: 'TRAINING', severity: 'success', title: 'Counter-terrorism workshop, Battalion 4 HQ', date: '02 Jun 2026' }
-    ];
+    notices: NoticeListDto[] = [];
+    selectedNotice: NoticeListDto | null = null;
+    noticeDialogVisible = false;
+    criticalIndex = 0;
+    private criticalTimer?: ReturnType<typeof setInterval>;
+
+    get criticalNotices(): NoticeListDto[] {
+        return this.notices.filter((n) => this.isCriticalNotice(n));
+    }
+
+    get currentCritical(): NoticeListDto | null {
+        const list = this.criticalNotices;
+        if (list.length === 0) return null;
+        return list[this.criticalIndex % list.length] ?? list[0];
+    }
+
+    /** Auto-advance the urgent-notice slider; restarts the dwell timer on manual jump. */
+    private startCriticalRotation(): void {
+        clearInterval(this.criticalTimer);
+        this.criticalTimer = setInterval(() => {
+            const len = this.criticalNotices.length;
+            if (len > 1) this.criticalIndex = (this.criticalIndex + 1) % len;
+        }, 5000);
+    }
+
+    goCritical(i: number): void {
+        this.criticalIndex = i;
+        this.startCriticalRotation();
+    }
+
+    openNotice(n: NoticeListDto): void {
+        this.selectedNotice = n;
+        this.noticeDialogVisible = true;
+    }
+
+    private loadNotices(): void {
+        this.noticeService.getForCurrentUser().subscribe({
+            next: (list) => {
+                this.notices = (list ?? []).sort((a, b) => this.noticeRank(a) - this.noticeRank(b));
+                this.criticalIndex = 0;
+                this.startCriticalRotation();
+            },
+            error: () => (this.notices = [])
+        });
+    }
+
+    /** Lowest band rank among a notice's tags — CRITICAL (0) sorts first. */
+    private noticeRank(n: NoticeListDto): number {
+        const ranks = (n.tags ?? []).map((t) => this.tagMeta(t).rank);
+        return ranks.length ? Math.min(...ranks) : 99;
+    }
+
+    /** Resolve a tag string → display label, chip classes, icon and band rank. */
+    tagMeta(tag: string): { label: string; classes: string; icon: string; rank: number } {
+        const key = (tag ?? '').trim().toUpperCase();
+        const meta = NOTICE_TAG_META[key];
+        const band = meta?.band ?? 'routine';
+        const bandMeta = NOTICE_BAND_META[band];
+        return { label: key || 'TAG', classes: bandMeta.classes, icon: meta?.icon ?? 'pi-tag', rank: bandMeta.rank };
+    }
+
+    /** Notices carrying a CRITICAL-band tag — used to flag the row. */
+    isCriticalNotice(n: NoticeListDto): boolean {
+        return this.noticeRank(n) === 0;
+    }
+
+    noticeDate(n: NoticeListDto): string {
+        const d = n.createdDate ? new Date(n.createdDate) : null;
+        return d && !isNaN(d.getTime()) ? d.toLocaleDateString('en-US', { day: '2-digit', month: 'short', year: 'numeric' }) : '';
+    }
 
     /** Default range: today 00:00 → last day of the current month 23:59. */
     private loadCalendar(): void {
@@ -598,6 +804,7 @@ export class Dashboard implements OnInit, OnDestroy {
 
     ngOnInit(): void {
         this.loadCalendar();
+        this.loadNotices();
 
         // Total serving members = total record count of presently-serving (Posting Status = Serving).
         this.servingMembers.getPresentlyServingMembersPaginated(1, 1).subscribe({
@@ -637,6 +844,7 @@ export class Dashboard implements OnInit, OnDestroy {
     ngOnDestroy(): void {
         this.themeObserver?.disconnect();
         this.revokeLookupPhoto();
+        clearInterval(this.criticalTimer);
     }
 
     private buildPieOptions(): any {
