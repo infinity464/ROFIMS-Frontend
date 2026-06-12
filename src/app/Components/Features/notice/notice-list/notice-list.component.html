@@ -79,7 +79,7 @@
 
         <div class="flex flex-col gap-1">
             <label for="expireDate">Expire Date <span class="text-gray-400 text-sm">(optional — leave empty to keep active until manually deactivated)</span></label>
-            <p-datepicker id="expireDate" formControlName="expireDate" [showTime]="true" [showIcon]="true" [defaultDate]="defaultExpireDate" dateFormat="dd/mm/yy" hourFormat="24" appendTo="body" styleClass="w-full" (onSelect)="setExpireDateEndOfDay($event)"></p-datepicker>
+            <p-datepicker id="expireDate" formControlName="expireDate" [showIcon]="true" [defaultDate]="defaultExpireDate" dateFormat="dd/mm/yy" appendTo="body" styleClass="w-full"></p-datepicker>
         </div>
 
         <div class="flex flex-col gap-2">

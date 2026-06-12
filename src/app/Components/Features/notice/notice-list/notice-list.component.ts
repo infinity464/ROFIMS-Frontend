@@ -185,15 +185,6 @@ export class NoticeListComponent implements OnInit {
         return this.endOfDay();
     }
 
-    setExpireDateEndOfDay(event: Date | null): void {
-        if (!event) {
-            this.form.get('expireDate')?.setValue(null);
-            return;
-        }
-
-        this.form.get('expireDate')?.setValue(this.endOfDay(event));
-    }
-
     get isSpecific(): boolean {
         return this.form?.get('audienceType')?.value === 'Specific';
     }
