@@ -508,6 +508,28 @@ type CalItem = { id: string; day: string; mon: string; dow: string; title: strin
                 overflow-y: auto;
                 overflow-x: hidden;
             }
+            /* Scrollbar stays hidden until the card is hovered (still scrollable). */
+            .notif-scroll,
+            .dash-scroll {
+                scrollbar-width: none; /* Firefox */
+            }
+            .notif-scroll::-webkit-scrollbar,
+            .dash-scroll::-webkit-scrollbar {
+                width: 0;
+            }
+            .card:hover .notif-scroll,
+            .card:hover .dash-scroll {
+                scrollbar-width: thin; /* Firefox */
+            }
+            .card:hover .notif-scroll::-webkit-scrollbar,
+            .card:hover .dash-scroll::-webkit-scrollbar {
+                width: 8px;
+            }
+            .card:hover .notif-scroll::-webkit-scrollbar-thumb,
+            .card:hover .dash-scroll::-webkit-scrollbar-thumb {
+                background: rgba(148, 163, 184, 0.5);
+                border-radius: 4px;
+            }
             /* Unread notification: subtle pulsing highlight; clears once marked read. */
             .notif-unread {
                 background: rgba(239, 68, 68, 0.08);
