@@ -226,7 +226,7 @@ type CalItem = { id: string; day: string; mon: string; dow: string; title: strin
                     @if (notificationService.notifications.length === 0) {
                         <div class="py-10 text-center text-muted-color border border-dashed border-surface-300 dark:border-surface-600 rounded">No notifications.</div>
                     } @else {
-                        <ul class="list-none p-0 m-0 dash-scroll">
+                        <ul class="list-none p-0 m-0 notif-scroll">
                             @for (n of notificationService.notifications; track n.id) {
                                 <li
                                     class="flex gap-3 items-start py-3 px-2 -mx-2 rounded border-b border-surface-200 dark:border-surface-700 last:border-0 cursor-pointer hover:bg-surface-100 dark:hover:bg-surface-800"
@@ -497,6 +497,14 @@ type CalItem = { id: string; day: string; mon: string; dow: string; title: strin
             /* Vertical-only scroll for dashboard lists (no horizontal bar). */
             .dash-scroll {
                 max-height: 22rem;
+                overflow-y: auto;
+                overflow-x: hidden;
+            }
+            /* Notifications list matches the pie-chart body height (.dash-chart-wrap = 26rem),
+               so this card stays the same height as its row siblings and the list only
+               scrolls once content overflows the full card — not before. */
+            .notif-scroll {
+                max-height: 26rem;
                 overflow-y: auto;
                 overflow-x: hidden;
             }
