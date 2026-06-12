@@ -104,6 +104,13 @@ export class PermanentPostingJoineeDetailService {
         return this.http.post<PagedResponse<PermanentPostingJoineeDetailListModel>>(`${this.baseUrl}/GetPaginatedFiltered`, request);
     }
 
+    /** Lightweight total count for a given filter (dashboard KPI) — no row payload, fast load. */
+    getCountFiltered(filter: PermanentPostingJoineeDetailFilterRequest): Observable<number> {
+        return this.http
+            .post<{ count: number }>(`${this.baseUrl}/GetCountFiltered`, filter)
+            .pipe(map((r) => r?.count ?? 0));
+    }
+
     getByRecordId(recordId: number): Observable<PermanentPostingJoineeDetailModel | null> {
         return this.http.get<any>(`${this.baseUrl}/GetByRecordIdAsyn/${recordId}`).pipe(
             map((r) => { const a = Array.isArray(r) ? r : r ? [r] : []; return a.length ? a[0] : null; })

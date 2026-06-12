@@ -421,19 +421,16 @@ type CalItem = { id: string; day: string; mon: string; dow: string; title: strin
             </div>
         </div>
 
-        <p-dialog [(visible)]="noticeDialogVisible" [modal]="true" [draggable]="false" [style]="{ width: '36rem' }" [breakpoints]="{ '640px': '92vw' }" header="Notice">
+        <p-dialog [(visible)]="noticeDialogVisible" [modal]="true" [draggable]="false" [style]="{ width: '52rem' }" [breakpoints]="{ '640px': '92vw' }" [header]="selectedNotice?.topic || 'Notice'">
             @if (selectedNotice; as n) {
                 <div class="flex flex-col gap-4">
-                    @if (n.tags?.length) {
-                        <div class="flex flex-wrap gap-1.5">
+                    <div class="flex flex-wrap items-center gap-3">
+                        @if (n.tags?.length) {
                             @for (t of n.tags; track t) {
                                 <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded border text-xs font-semibold uppercase" [class]="tagMeta(t).classes"> <i class="pi {{ tagMeta(t).icon }} text-[0.7rem]"></i>{{ tagMeta(t).label }} </span>
                             }
-                        </div>
-                    }
-                    <div>
-                        <div class="text-muted-color text-xs uppercase mb-1">Topic</div>
-                        <div class="text-surface-900 dark:text-surface-0 font-medium">{{ n.topic }}</div>
+                        }
+                        <span class="text-muted-color text-sm">{{ noticeDate(n) }}</span>
                     </div>
                     <div>
                         <div class="text-muted-color text-xs uppercase mb-1">Details</div>
@@ -443,12 +440,11 @@ type CalItem = { id: string; day: string; mon: string; dow: string; title: strin
                         <div class="text-muted-color text-xs uppercase mb-1">Published by</div>
                         <div class="text-surface-900 dark:text-surface-0">{{ n.createdByName || n.createdBy || 'Unknown' }}</div>
                     </div>
-                    <div class="text-muted-color text-sm">{{ noticeDate(n) }}</div>
                 </div>
             }
         </p-dialog>
 
-        <p-dialog [(visible)]="eventDialogVisible" [modal]="true" [draggable]="false" [style]="{ width: '32rem' }" [header]="selectedEvent?.title || 'Details'">
+        <p-dialog [(visible)]="eventDialogVisible" [modal]="true" [draggable]="false" [style]="{ width: '48rem' }" [breakpoints]="{ '640px': '92vw' }" [header]="selectedEvent?.title || 'Details'">
             @if (selectedEvent; as e) {
                 <div class="flex flex-col gap-4">
                     <div class="flex items-center gap-3">
@@ -862,41 +858,31 @@ export class Dashboard implements OnInit, OnDestroy {
         };
     }
 
-    /** Read the total record count from a paginated response, tolerant of Rows/rows casing. */
-    private pagesTotal(res: any): number {
-        const p = res?.pages;
-        return p?.Rows ?? p?.rows ?? 0;
-    }
-
     ngOnInit(): void {
         this.loadCalendar();
         this.loadNotices();
         this.notificationService.loadFromApi();
         this.chatService.connectToHub().catch(() => {});
 
-        // Total serving members = total record count of presently-serving (Posting Status = Serving).
-        this.servingMembers.getPresentlyServingMembersPaginated(1, 1).subscribe({
-            next: (res) => (this.servingCount = this.pagesTotal(res)),
+        // Total serving members = count of presently-serving (Posting Status = Serving).
+        // Dedicated count endpoint: no row payload, no ordering — fast KPI load.
+        this.servingMembers.getPresentlyServingCount().subscribe({
+            next: (count) => (this.servingCount = count),
             error: () => (this.servingCount = 0)
         });
 
         // Posted Out count (posting/posted-out-person-list source).
-        this.postedOutSvc.getAllPaginated(1, 10).subscribe({
-            next: (res) => (this.postedOutCount = this.pagesTotal(res)),
+        this.postedOutSvc.getCount().subscribe({
+            next: (count) => (this.postedOutCount = count),
             error: () => (this.postedOutCount = 0)
         });
 
         // New Posting count (posting/new-joining-person-list source).
         // The list defaults to "Entry Pending" (isAddedInNewJoineeDataEntry = false); match that view.
-        this.newJoiningSvc
-            .getPaginatedFiltered({
-                pagination: { page_no: 1, row_per_page: 1 },
-                filter: { isAddedInNewJoineeDataEntry: false }
-            })
-            .subscribe({
-                next: (res) => (this.newPostingCount = this.pagesTotal(res)),
-                error: () => (this.newPostingCount = 0)
-            });
+        this.newJoiningSvc.getCountFiltered({ isAddedInNewJoineeDataEntry: false }).subscribe({
+            next: (count) => (this.newPostingCount = count),
+            error: () => (this.newPostingCount = 0)
+        });
 
         this.pieOptions = this.buildPieOptions();
 

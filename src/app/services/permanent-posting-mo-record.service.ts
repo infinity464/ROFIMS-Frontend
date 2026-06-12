@@ -138,6 +138,17 @@ export class PermanentPostingMORecordService {
             `${this.baseUrl}/GetAllWithEmployeePaginated`, { params });
     }
 
+    /** Lightweight total count (dashboard KPI) — no row payload, fast load. */
+    getCount(search?: string, dateFrom?: string, dateTo?: string): Observable<number> {
+        let params = new HttpParams();
+        if (search) params = params.set('search', search);
+        if (dateFrom) params = params.set('dateFrom', dateFrom);
+        if (dateTo) params = params.set('dateTo', dateTo);
+        return this.http
+            .get<{ count: number }>(`${this.baseUrl}/GetAllWithEmployeeCount`, { params })
+            .pipe(map((r) => r?.count ?? 0));
+    }
+
     getById(id: number): Observable<PermanentPostingMORecordModel | null> {
         return this.http.get<any>(`${this.baseUrl}/GetFilteredByKeysAsyn/${id}`).pipe(
             map((r) => { const a = Array.isArray(r) ? r : r ? [r] : []; return a.length ? a[0] : null; })
