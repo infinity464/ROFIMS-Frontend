@@ -8,6 +8,8 @@ import { ButtonModule } from 'primeng/button';
 import { CalendarService, type CalendarEventApi } from '@/services/calendar.service';
 import { EmpService } from '@/services/emp-service';
 import { NoticeService, type NoticeListDto } from '@/services/notice.service';
+import { NotificationService, type AppNotification } from '@/services/notification.service';
+import { ChatService } from '@/services/chat.service';
 import { Router } from '@angular/router';
 import { RabUnitAorMap } from '../../Components/basic-setup/rab-unit-aor-map/rab-unit-aor-map';
 import { ServingMembersService } from '@/services/serving-members.service';
@@ -15,11 +17,7 @@ import { PermanentPostingMORecordService } from '@/services/permanent-posting-mo
 import { PermanentPostingJoineeDetailService } from '@/services/permanent-posting-joinee-detail.service';
 import { StatisticsService, type ManpowerSummaryResponse } from '@/services/statistics.service';
 
-const SLICE_COLORS = [
-    '#4f46e5', '#06b6d4', '#10b981', '#f59e0b', '#ef4444',
-    '#8b5cf6', '#ec4899', '#14b8a6', '#f97316', '#6366f1',
-    '#22c55e', '#0ea5e9', '#a855f7', '#fb923c', '#84cc16'
-];
+const SLICE_COLORS = ['#4f46e5', '#06b6d4', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#14b8a6', '#f97316', '#6366f1', '#22c55e', '#0ea5e9', '#a855f7', '#fb923c', '#84cc16'];
 
 /** Draws percentage labels on each pie slice (baked into the canvas). */
 const PIE_PERCENTAGE_PLUGIN = {
@@ -54,46 +52,51 @@ const PIE_PERCENTAGE_PLUGIN = {
 };
 
 type Severity = 'success' | 'info' | 'warn' | 'danger' | 'secondary' | 'contrast';
-type Notify = { icon: string; color: string; title: string; time: string };
 
 /** Notice-tag taxonomy: 5 severity bands, CRITICAL highest. Drives chip colour + sort order. */
 type NoticeBand = 'critical' | 'action' | 'personnel' | 'informational' | 'routine';
 const NOTICE_BAND_META: Record<NoticeBand, { rank: number; classes: string }> = {
-    critical:      { rank: 0, classes: 'text-red-600 dark:text-red-400 bg-red-500/10 border-red-500/30' },
-    action:        { rank: 1, classes: 'text-amber-600 dark:text-amber-400 bg-amber-500/10 border-amber-500/30' },
-    personnel:     { rank: 2, classes: 'text-green-600 dark:text-green-400 bg-green-500/10 border-green-500/30' },
+    critical: { rank: 0, classes: 'text-red-600 dark:text-red-400 bg-red-500/10 border-red-500/30' },
+    action: { rank: 1, classes: 'text-amber-600 dark:text-amber-400 bg-amber-500/10 border-amber-500/30' },
+    personnel: { rank: 2, classes: 'text-green-600 dark:text-green-400 bg-green-500/10 border-green-500/30' },
     informational: { rank: 3, classes: 'text-blue-600 dark:text-blue-400 bg-blue-500/10 border-blue-500/30' },
-    routine:       { rank: 4, classes: 'text-surface-500 dark:text-surface-400 bg-surface-500/10 border-surface-400/30' }
+    routine: { rank: 4, classes: 'text-surface-500 dark:text-surface-400 bg-surface-500/10 border-surface-400/30' }
 };
 /** Known tag (UPPER) → band + icon. Unknown tags fall back to routine / pi-tag. */
 const NOTICE_TAG_META: Record<string, { band: NoticeBand; icon: string }> = {
-    URGENT:      { band: 'critical', icon: 'pi-exclamation-triangle' },
-    ALERT:       { band: 'critical', icon: 'pi-bell' },
-    RECALL:      { band: 'critical', icon: 'pi-replay' },
-    OPERATION:   { band: 'critical', icon: 'pi-bullseye' },
-    ORDER:       { band: 'action', icon: 'pi-file' },
-    DEADLINE:    { band: 'action', icon: 'pi-clock' },
-    DEPLOYMENT:  { band: 'action', icon: 'pi-map-marker' },
-    SECURITY:    { band: 'action', icon: 'pi-shield' },
-    POSTING:     { band: 'personnel', icon: 'pi-sync' },
-    PROMOTION:   { band: 'personnel', icon: 'pi-angle-double-up' },
-    LEAVE:       { band: 'personnel', icon: 'pi-send' },
+    URGENT: { band: 'critical', icon: 'pi-exclamation-triangle' },
+    ALERT: { band: 'critical', icon: 'pi-bell' },
+    RECALL: { band: 'critical', icon: 'pi-replay' },
+    OPERATION: { band: 'critical', icon: 'pi-bullseye' },
+    ORDER: { band: 'action', icon: 'pi-file' },
+    DEADLINE: { band: 'action', icon: 'pi-clock' },
+    DEPLOYMENT: { band: 'action', icon: 'pi-map-marker' },
+    SECURITY: { band: 'action', icon: 'pi-shield' },
+    POSTING: { band: 'personnel', icon: 'pi-sync' },
+    PROMOTION: { band: 'personnel', icon: 'pi-angle-double-up' },
+    LEAVE: { band: 'personnel', icon: 'pi-send' },
     RECRUITMENT: { band: 'personnel', icon: 'pi-user-plus' },
-    POLICY:      { band: 'informational', icon: 'pi-check-square' },
-    EVENT:       { band: 'informational', icon: 'pi-calendar' },
-    MEETING:     { band: 'informational', icon: 'pi-users' },
-    CIRCULAR:    { band: 'informational', icon: 'pi-envelope' },
-    TRAINING:    { band: 'routine', icon: 'pi-book' },
+    POLICY: { band: 'informational', icon: 'pi-check-square' },
+    EVENT: { band: 'informational', icon: 'pi-calendar' },
+    MEETING: { band: 'informational', icon: 'pi-users' },
+    CIRCULAR: { band: 'informational', icon: 'pi-envelope' },
+    TRAINING: { band: 'routine', icon: 'pi-book' },
     MAINTENANCE: { band: 'routine', icon: 'pi-cog' },
-    WELFARE:     { band: 'routine', icon: 'pi-heart' },
-    ADMIN:       { band: 'routine', icon: 'pi-folder' }
+    WELFARE: { band: 'routine', icon: 'pi-heart' },
+    ADMIN: { band: 'routine', icon: 'pi-folder' }
 };
 type LookupCard = {
     employeeId: number;
-    name: string; nameBn: string;
-    rabId: string; serviceId: string;
-    rank: string; corps: string; trade: string; motherOrg: string;
-    profileImages: string | null; photoUrl: string | null;
+    name: string;
+    nameBn: string;
+    rabId: string;
+    serviceId: string;
+    rank: string;
+    corps: string;
+    trade: string;
+    motherOrg: string;
+    profileImages: string | null;
+    photoUrl: string | null;
 };
 type CalItem = { id: string; day: string; mon: string; dow: string; title: string; description: string; type: 'task' | 'event'; sev: Severity; tag: string; sortTs: number };
 
@@ -210,21 +213,41 @@ type CalItem = { id: string; day: string; mon: string; dow: string; title: strin
 
             <div class="col-span-12 xl:col-span-4">
                 <div class="card mb-0 h-full">
-                    <div class="font-semibold text-lg text-surface-900 dark:text-surface-0">Notifications</div>
-                    <div class="text-muted-color text-sm mb-4">Last 24 hours</div>
-                    <ul class="list-none p-0 m-0">
-                        @for (n of notifications; track n.title) {
-                            <li class="flex gap-3 items-start py-3 border-b border-surface-200 dark:border-surface-700 last:border-0">
-                                <span class="flex items-center justify-center rounded-full shrink-0" [style.background]="n.color + '22'" style="width:2rem;height:2rem">
-                                    <i [class]="'pi ' + n.icon" [style.color]="n.color"></i>
-                                </span>
-                                <div>
-                                    <div class="text-surface-900 dark:text-surface-0 text-sm font-medium">{{ n.title }}</div>
-                                    <div class="text-muted-color text-xs mt-1">{{ n.time }}</div>
-                                </div>
-                            </li>
+                    <div class="flex justify-between items-center mb-1">
+                        <span class="font-semibold text-lg text-surface-900 dark:text-surface-0">Notifications</span>
+                        @if (notificationService.getUnreadCount() > 0) {
+                            <span class="inline-flex items-center justify-center min-w-5 h-5 px-1.5 rounded-full bg-red-500 text-white text-xs font-semibold">
+                                {{ notificationService.getUnreadCount() }}
+                            </span>
                         }
-                    </ul>
+                    </div>
+                    <div class="text-muted-color text-sm mb-4">Your latest alerts</div>
+
+                    @if (notificationService.notifications.length === 0) {
+                        <div class="py-10 text-center text-muted-color border border-dashed border-surface-300 dark:border-surface-600 rounded">No notifications.</div>
+                    } @else {
+                        <ul class="list-none p-0 m-0 dash-scroll">
+                            @for (n of notificationService.notifications; track n.id) {
+                                <li
+                                    class="flex gap-3 items-start py-3 px-2 -mx-2 rounded border-b border-surface-200 dark:border-surface-700 last:border-0 cursor-pointer hover:bg-surface-100 dark:hover:bg-surface-800"
+                                    [class.notif-unread]="!n.read"
+                                    (click)="onNotificationClick(n)"
+                                >
+                                    <span class="flex items-center justify-center rounded-full shrink-0" [style.background]="notifColor(n.type) + '22'" style="width:2rem;height:2rem">
+                                        <i [class]="'pi ' + notifIcon(n.type)" [style.color]="notifColor(n.type)"></i>
+                                    </span>
+                                    <div class="flex-1 min-w-0">
+                                        <div class="text-surface-900 dark:text-surface-0 text-sm font-medium truncate" [title]="n.title">{{ n.title }}</div>
+                                        <div class="text-muted-color text-xs truncate" [title]="n.message">{{ n.message }}</div>
+                                        <div class="text-muted-color text-xs mt-1">{{ notifTime(n.createdAt) }}</div>
+                                    </div>
+                                    @if (!n.read) {
+                                        <span class="w-2 h-2 rounded-full bg-red-500 shrink-0 mt-2"></span>
+                                    }
+                                </li>
+                            }
+                        </ul>
+                    }
                 </div>
             </div>
 
@@ -248,29 +271,25 @@ type CalItem = { id: string; day: string; mon: string; dow: string; title: strin
                     </div>
 
                     @if (events.length === 0) {
-                        <div class="py-10 text-center text-muted-color border border-dashed border-surface-300 dark:border-surface-600 rounded">
-                            No tasks or events scheduled for the rest of the month.
-                        </div>
+                        <div class="py-10 text-center text-muted-color border border-dashed border-surface-300 dark:border-surface-600 rounded">No tasks or events scheduled for the rest of the month.</div>
                     } @else {
-                        @for (e of events; track e.id; let even = $even) {
-                            <div class="event-row flex items-center gap-4 px-2 py-3 rounded cursor-pointer"
-                                [class.event-row-alt]="even"
-                                (click)="openEvent(e)">
-                                <div class="text-center shrink-0 px-3 py-1 rounded bg-surface-100 dark:bg-surface-800">
-                                    <div class="text-xs text-muted-color uppercase">{{ e.mon }}</div>
-                                    <div class="text-xl font-bold text-surface-900 dark:text-surface-0 leading-none">{{ e.day }}</div>
-                                    <div class="text-xs text-muted-color">{{ e.dow }}</div>
+                        <div class="dash-scroll">
+                            @for (e of events; track e.id; let even = $even) {
+                                <div class="event-row flex items-center gap-4 px-2 py-3 rounded cursor-pointer" [class.event-row-alt]="even" (click)="openEvent(e)">
+                                    <div class="text-center shrink-0 px-3 py-1 rounded bg-surface-100 dark:bg-surface-800">
+                                        <div class="text-xs text-muted-color uppercase">{{ e.mon }}</div>
+                                        <div class="text-xl font-bold text-surface-900 dark:text-surface-0 leading-none">{{ e.day }}</div>
+                                        <div class="text-xs text-muted-color">{{ e.dow }}</div>
+                                    </div>
+                                    <div class="flex-1 min-w-0">
+                                        <div class="font-medium text-surface-900 dark:text-surface-0 truncate">{{ e.title }}</div>
+                                        <div class="text-muted-color text-sm truncate">{{ e.description || '—' }}</div>
+                                    </div>
+                                    <p-tag [severity]="e.sev" [value]="e.tag"></p-tag>
+                                    <button type="button" pButton text rounded icon="pi pi-ellipsis-v" class="shrink-0" (click)="$event.stopPropagation(); openEvent(e)" aria-label="View details"></button>
                                 </div>
-                                <div class="flex-1 min-w-0">
-                                    <div class="font-medium text-surface-900 dark:text-surface-0 truncate">{{ e.title }}</div>
-                                    <div class="text-muted-color text-sm truncate">{{ e.description || '—' }}</div>
-                                </div>
-                                <p-tag [severity]="e.sev" [value]="e.tag"></p-tag>
-                                <button type="button" pButton text rounded
-                                    icon="pi pi-ellipsis-v" class="shrink-0"
-                                    (click)="$event.stopPropagation(); openEvent(e)" aria-label="View details"></button>
-                            </div>
-                        }
+                            }
+                        </div>
                     }
                 </div>
             </div>
@@ -283,17 +302,19 @@ type CalItem = { id: string; day: string; mon: string; dow: string; title: strin
                     <div class="flex gap-2">
                         <div class="relative flex-1">
                             <i class="pi pi-search absolute left-3 top-1/2 -translate-y-1/2 text-muted-color"></i>
-                            <input type="text" [(ngModel)]="lookup" (keyup.enter)="runLookup()" placeholder="e.g. 19880801"
-                                class="w-full p-3 pl-10 border border-surface-300 dark:border-surface-600 rounded bg-transparent text-surface-900 dark:text-surface-0" />
+                            <input
+                                type="text"
+                                [(ngModel)]="lookup"
+                                (keyup.enter)="runLookup()"
+                                placeholder="e.g. 19880801"
+                                class="w-full p-3 pl-10 border border-surface-300 dark:border-surface-600 rounded bg-transparent text-surface-900 dark:text-surface-0"
+                            />
                         </div>
-                        <button type="button" pButton label="Search" icon="pi pi-search"
-                            [loading]="lookupLoading" (click)="runLookup()"></button>
+                        <button type="button" pButton label="Search" icon="pi pi-search" [loading]="lookupLoading" (click)="runLookup()"></button>
                     </div>
 
                     @if (lookupLoading) {
-                        <div class="mt-6 flex items-center gap-3 text-muted-color">
-                            <i class="pi pi-spin pi-spinner"></i> Searching…
-                        </div>
+                        <div class="mt-6 flex items-center gap-3 text-muted-color"><i class="pi pi-spin pi-spinner"></i> Searching…</div>
                     } @else if (lookupError) {
                         <div class="mt-6 py-6 text-center text-red-500 border border-dashed border-red-300 dark:border-red-700 rounded">
                             {{ lookupError }}
@@ -302,9 +323,7 @@ type CalItem = { id: string; day: string; mon: string; dow: string; title: strin
                         <div class="mt-6 border border-surface-200 dark:border-surface-700 rounded-lg overflow-hidden">
                             <!-- header -->
                             <div class="flex items-center px-4 py-2 bg-primary-50 dark:bg-primary-400/10 border-b border-surface-200 dark:border-surface-700">
-                                <span class="inline-flex items-center gap-2 text-primary font-medium text-sm">
-                                    <i class="pi pi-check-circle"></i> Match found
-                                </span>
+                                <span class="inline-flex items-center gap-2 text-primary font-medium text-sm"> <i class="pi pi-check-circle"></i> Match found </span>
                             </div>
 
                             <!-- identity -->
@@ -356,14 +375,11 @@ type CalItem = { id: string; day: string; mon: string; dow: string; title: strin
 
                             <!-- action -->
                             <div class="p-3 border-t border-surface-200 dark:border-surface-700">
-                                <button type="button" pButton class="w-full" icon="pi pi-user"
-                                    label="View profile" (click)="viewProfile(r.employeeId)"></button>
+                                <button type="button" pButton class="w-full" icon="pi pi-user" label="View profile" (click)="viewProfile(r.employeeId)"></button>
                             </div>
                         </div>
                     } @else {
-                        <div class="mt-6 py-10 text-center text-muted-color border border-dashed border-surface-300 dark:border-surface-600 rounded">
-                            Search by RAB ID, Service ID, Mobile, Office Mobile, NID, Old NID, Passport or Email
-                        </div>
+                        <div class="mt-6 py-10 text-center text-muted-color border border-dashed border-surface-300 dark:border-surface-600 rounded">Search by RAB ID, Service ID, Mobile, Office Mobile, NID, Old NID, Passport or Email</div>
                     }
                 </div>
             </div>
@@ -373,45 +389,45 @@ type CalItem = { id: string; day: string; mon: string; dow: string; title: strin
                     <div class="font-semibold text-lg text-surface-900 dark:text-surface-0">Notice Board</div>
                     <div class="text-muted-color text-sm mb-4">Force-wide announcements</div>
                     @if (notices.length === 0) {
-                        <div class="py-10 text-center text-muted-color border border-dashed border-surface-300 dark:border-surface-600 rounded">
-                            No active notices.
-                        </div>
+                        <div class="py-10 text-center text-muted-color border border-dashed border-surface-300 dark:border-surface-600 rounded">No active notices.</div>
                     } @else {
-                        @for (n of notices; track n.noticeId) {
-                            <div class="py-3 border-b border-surface-200 dark:border-surface-700 last:border-0 cursor-pointer hover:bg-surface-100 dark:hover:bg-surface-800 -mx-2 px-2 rounded"
-                                [class.border-l-4]="isCriticalNotice(n)"
-                                [class.border-l-red-500]="isCriticalNotice(n)"
-                                (click)="openNotice(n)">
-                                <div class="flex flex-wrap gap-1.5 mb-1">
-                                    @for (t of n.tags; track t) {
-                                        <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded border text-xs font-semibold uppercase"
-                                            [class]="tagMeta(t).classes">
-                                            <i class="pi {{ tagMeta(t).icon }} text-[0.7rem]"></i>{{ tagMeta(t).label }}
-                                        </span>
-                                    }
+                        <div class="dash-scroll">
+                            @for (n of notices; track n.noticeId) {
+                                <div
+                                    class="py-3 border-b border-surface-200 dark:border-surface-700 last:border-0 cursor-pointer hover:bg-surface-100 dark:hover:bg-surface-800 -mx-2 px-2 rounded"
+                                    [class.border-l-4]="isCriticalNotice(n)"
+                                    [class.border-l-red-500]="isCriticalNotice(n)"
+                                    (click)="openNotice(n)"
+                                >
+                                    <div class="flex flex-wrap gap-1.5 mb-1">
+                                        @for (t of n.tags; track t) {
+                                            <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded border text-xs font-semibold uppercase" [class]="tagMeta(t).classes">
+                                                <i class="pi {{ tagMeta(t).icon }} text-[0.7rem]"></i>{{ tagMeta(t).label }}
+                                            </span>
+                                        }
+                                    </div>
+                                    <div class="font-medium text-surface-900 dark:text-surface-0 mt-1 truncate">{{ n.topic }}</div>
+                                    <div class="text-muted-color text-xs mt-1">
+                                        {{ noticeDate(n) }}
+                                        @if (n.createdByName) {
+                                            <span> · By {{ n.createdByName }}</span>
+                                        }
+                                    </div>
                                 </div>
-                                <div class="font-medium text-surface-900 dark:text-surface-0 mt-1 truncate">{{ n.topic }}</div>
-                                <div class="text-muted-color text-xs mt-1">
-                                    {{ noticeDate(n) }}@if (n.createdByName) { <span> · By {{ n.createdByName }}</span> }
-                                </div>
-                            </div>
-                        }
+                            }
+                        </div>
                     }
                 </div>
             </div>
         </div>
 
-        <p-dialog [(visible)]="noticeDialogVisible" [modal]="true" [draggable]="false" [style]="{ width: '36rem' }"
-            [breakpoints]="{ '640px': '92vw' }" header="Notice">
+        <p-dialog [(visible)]="noticeDialogVisible" [modal]="true" [draggable]="false" [style]="{ width: '36rem' }" [breakpoints]="{ '640px': '92vw' }" header="Notice">
             @if (selectedNotice; as n) {
                 <div class="flex flex-col gap-4">
                     @if (n.tags?.length) {
                         <div class="flex flex-wrap gap-1.5">
                             @for (t of n.tags; track t) {
-                                <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded border text-xs font-semibold uppercase"
-                                    [class]="tagMeta(t).classes">
-                                    <i class="pi {{ tagMeta(t).icon }} text-[0.7rem]"></i>{{ tagMeta(t).label }}
-                                </span>
+                                <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded border text-xs font-semibold uppercase" [class]="tagMeta(t).classes"> <i class="pi {{ tagMeta(t).icon }} text-[0.7rem]"></i>{{ tagMeta(t).label }} </span>
                             }
                         </div>
                     }
@@ -423,28 +439,21 @@ type CalItem = { id: string; day: string; mon: string; dow: string; title: strin
                         <div class="text-muted-color text-xs uppercase mb-1">Details</div>
                         <div class="text-surface-900 dark:text-surface-0 whitespace-pre-line">{{ n.details || 'No details provided.' }}</div>
                     </div>
-                    <div class="text-muted-color text-sm">
-                        {{ noticeDate(n) }}@if (n.createdByName) { <span> · Published by {{ n.createdByName }}</span> }
+                    <div>
+                        <div class="text-muted-color text-xs uppercase mb-1">Published by</div>
+                        <div class="text-surface-900 dark:text-surface-0">{{ n.createdByName || n.createdBy || 'Unknown' }}</div>
                     </div>
+                    <div class="text-muted-color text-sm">{{ noticeDate(n) }}</div>
                 </div>
             }
         </p-dialog>
 
-        <p-dialog [(visible)]="eventDialogVisible" [modal]="true" [draggable]="false" [style]="{ width: '32rem' }"
-            [header]="selectedEvent?.title || 'Details'">
+        <p-dialog [(visible)]="eventDialogVisible" [modal]="true" [draggable]="false" [style]="{ width: '32rem' }" [header]="selectedEvent?.title || 'Details'">
             @if (selectedEvent; as e) {
                 <div class="flex flex-col gap-4">
                     <div class="flex items-center gap-3">
                         <p-tag [severity]="e.sev" [value]="e.tag"></p-tag>
                         <span class="text-muted-color text-sm">{{ e.mon }} {{ e.day }} ({{ e.dow }})</span>
-                    </div>
-                    <div>
-                        <div class="text-muted-color text-xs uppercase mb-1">Title</div>
-                        <div class="text-surface-900 dark:text-surface-0 font-medium">{{ e.title }}</div>
-                    </div>
-                    <div>
-                        <div class="text-muted-color text-xs uppercase mb-1">Type</div>
-                        <div class="text-surface-900 dark:text-surface-0 capitalize">{{ e.type }}</div>
                     </div>
                     <div>
                         <div class="text-muted-color text-xs uppercase mb-1">Description</div>
@@ -454,11 +463,8 @@ type CalItem = { id: string; day: string; mon: string; dow: string; title: strin
             }
         </p-dialog>
 
-        <p-dialog [(visible)]="candidateDialogVisible" [modal]="true" [draggable]="false" [style]="{ width: '40rem' }"
-            header="Multiple matches — select a person">
-            <div class="text-muted-color text-sm mb-3">
-                {{ candidates.length }} records matched this identifier. Choose the correct person.
-            </div>
+        <p-dialog [(visible)]="candidateDialogVisible" [modal]="true" [draggable]="false" [style]="{ width: '40rem' }" header="Multiple matches — select a person">
+            <div class="text-muted-color text-sm mb-3">{{ candidates.length }} records matched this identifier. Choose the correct person.</div>
             <div class="flex flex-col gap-2">
                 @for (c of candidates; track c.employeeId) {
                     <div class="flex items-center gap-3 border border-surface-200 dark:border-surface-700 rounded p-3">
@@ -467,9 +473,7 @@ type CalItem = { id: string; day: string; mon: string; dow: string; title: strin
                         </div>
                         <div class="flex-1 min-w-0">
                             <div class="font-medium text-surface-900 dark:text-surface-0 truncate">{{ c.name || 'Unknown' }}</div>
-                            <div class="text-sm text-muted-color truncate">
-                                RAB ID: {{ c.rabId || '—' }} · Service ID: {{ c.serviceId || '—' }} · {{ c.motherOrg || '—' }}
-                            </div>
+                            <div class="text-sm text-muted-color truncate">RAB ID: {{ c.rabId || '—' }} · Service ID: {{ c.serviceId || '—' }} · {{ c.motherOrg || '—' }}</div>
                         </div>
                         <button type="button" pButton label="Select" size="small" (click)="chooseCandidate(c)"></button>
                     </div>
@@ -477,67 +481,93 @@ type CalItem = { id: string; day: string; mon: string; dow: string; title: strin
             </div>
         </p-dialog>
     `,
-    styles: [`
-        .dash-chart-wrap {
-            position: relative;
-            width: 100%;
-            height: 26rem;
-        }
-        /* Clamp the urgent-notice title to 2 lines with an ellipsis; fixed height stops card resize. */
-        .notice-topic-clamp {
-            display: -webkit-box;
-            -webkit-line-clamp: 2;
-            -webkit-box-orient: vertical;
-            overflow: hidden;
-            white-space: normal;
-            line-height: 1.5rem;
-            height: 3rem;        /* exactly two lines — clips any 3rd line, keeps card height fixed */
-        }
-        .notice-seg {
-            height: 6px;
-            border-radius: 999px;
-            background: var(--surface-200, #e2e8f0);
-            overflow: hidden;
-            padding: 0;
-            border: 0;
-            cursor: pointer;
-        }
-        :host-context(.app-dark) .notice-seg {
-            background: var(--surface-700, #3f3f46);
-        }
-        .notice-seg-fill {
-            display: block;
-            height: 100%;
-            background: #22c55e;
-            border-radius: 999px;
-        }
-        .notice-seg-anim {
-            animation: noticeSegFill 5s linear forwards;
-        }
-        @keyframes noticeSegFill {
-            from { width: 0%; }
-            to { width: 100%; }
-        }
-        .event-row {
-            transition: background-color 0.15s ease;
-        }
-        .event-row-alt {
-            background: var(--surface-100, #f1f5f9);
-        }
-        :host-context(.app-dark) .event-row-alt {
-            background: color-mix(in srgb, var(--surface-card) 80%, #ffffff 6%);
-        }
-        .event-row:hover {
-            background: var(--surface-200, #e2e8f0);
-        }
-        :host-context(.app-dark) .event-row:hover {
-            background: color-mix(in srgb, var(--surface-card) 70%, #ffffff 12%);
-        }
-        .dash-chart-wrap :is(p-chart, canvas) {
-            width: 100% !important;
-            height: 100% !important;
-        }
-    `]
+    styles: [
+        `
+            .dash-chart-wrap {
+                position: relative;
+                width: 100%;
+                height: 26rem;
+            }
+            /* Clamp the urgent-notice title to 2 lines with an ellipsis; fixed height stops card resize. */
+            .notice-topic-clamp {
+                display: -webkit-box;
+                -webkit-line-clamp: 2;
+                -webkit-box-orient: vertical;
+                overflow: hidden;
+                white-space: normal;
+                line-height: 1.5rem;
+                height: 3rem; /* exactly two lines — clips any 3rd line, keeps card height fixed */
+            }
+            /* Vertical-only scroll for dashboard lists (no horizontal bar). */
+            .dash-scroll {
+                max-height: 22rem;
+                overflow-y: auto;
+                overflow-x: hidden;
+            }
+            /* Unread notification: subtle pulsing highlight; clears once marked read. */
+            .notif-unread {
+                background: rgba(239, 68, 68, 0.08);
+                animation: notifBlink 1.4s ease-in-out infinite;
+            }
+            @keyframes notifBlink {
+                0%,
+                100% {
+                    background: rgba(239, 68, 68, 0.04);
+                }
+                50% {
+                    background: rgba(239, 68, 68, 0.16);
+                }
+            }
+            .notice-seg {
+                height: 6px;
+                border-radius: 999px;
+                background: var(--surface-200, #e2e8f0);
+                overflow: hidden;
+                padding: 0;
+                border: 0;
+                cursor: pointer;
+            }
+            :host-context(.app-dark) .notice-seg {
+                background: var(--surface-700, #3f3f46);
+            }
+            .notice-seg-fill {
+                display: block;
+                height: 100%;
+                background: #22c55e;
+                border-radius: 999px;
+            }
+            .notice-seg-anim {
+                animation: noticeSegFill 5s linear forwards;
+            }
+            @keyframes noticeSegFill {
+                from {
+                    width: 0%;
+                }
+                to {
+                    width: 100%;
+                }
+            }
+            .event-row {
+                transition: background-color 0.15s ease;
+            }
+            .event-row-alt {
+                background: var(--surface-100, #f1f5f9);
+            }
+            :host-context(.app-dark) .event-row-alt {
+                background: color-mix(in srgb, var(--surface-card) 80%, #ffffff 6%);
+            }
+            .event-row:hover {
+                background: var(--surface-200, #e2e8f0);
+            }
+            :host-context(.app-dark) .event-row:hover {
+                background: color-mix(in srgb, var(--surface-card) 70%, #ffffff 12%);
+            }
+            .dash-chart-wrap :is(p-chart, canvas) {
+                width: 100% !important;
+                height: 100% !important;
+            }
+        `
+    ]
 })
 export class Dashboard implements OnInit, OnDestroy {
     private themeObserver?: MutationObserver;
@@ -548,6 +578,8 @@ export class Dashboard implements OnInit, OnDestroy {
     private calendarSvc = inject(CalendarService);
     private empService = inject(EmpService);
     private noticeService = inject(NoticeService);
+    notificationService = inject(NotificationService);
+    private chatService = inject(ChatService);
     private router = inject(Router);
     servingCount: number | null = null;
     postedOutCount: number | null = null;
@@ -588,9 +620,7 @@ export class Dashboard implements OnInit, OnDestroy {
             },
             error: (err) => {
                 this.lookupLoading = false;
-                this.lookupError = err?.status === 403
-                    ? (err?.error?.message || 'You do not have permission to view this person.')
-                    : 'Lookup failed. Please try again.';
+                this.lookupError = err?.status === 403 ? err?.error?.message || 'You do not have permission to view this person.' : 'Lookup failed. Please try again.';
             }
         });
     }
@@ -636,7 +666,10 @@ export class Dashboard implements OnInit, OnDestroy {
             nameBn: (this.ci(e, 'FullNameBN') ?? '').toString(),
             rabId: (this.ci(e, 'RABID') ?? '').toString().trim(),
             serviceId: (this.ci(e, 'ServiceId') ?? '').toString().trim(),
-            rank: '', corps: '', trade: '', motherOrg: '',
+            rank: '',
+            corps: '',
+            trade: '',
+            motherOrg: '',
             profileImages: (this.ci(e, 'ProfileImages') ?? null) as string | null,
             photoUrl: null
         };
@@ -654,7 +687,11 @@ export class Dashboard implements OnInit, OnDestroy {
         const json = card.profileImages;
         if (!json || typeof json !== 'string') return;
         let refs: { FileId?: number; fileId?: number }[];
-        try { refs = JSON.parse(json); } catch { return; }
+        try {
+            refs = JSON.parse(json);
+        } catch {
+            return;
+        }
         const first = Array.isArray(refs) && refs.length > 0 ? refs[0] : null;
         const fileId = first?.FileId ?? first?.fileId;
         if (fileId == null || fileId <= 0) return;
@@ -680,13 +717,40 @@ export class Dashboard implements OnInit, OnDestroy {
     heldData: any;
     pieOptions: any;
 
-    notifications: Notify[] = [
-        { icon: 'pi-exclamation-triangle', color: '#ef4444', title: 'Operation Code Red — Sector 7', time: '2 min ago' },
-        { icon: 'pi-check-circle', color: '#22c55e', title: 'Posting approval: SI Karim Hossain', time: '18 min ago' },
-        { icon: 'pi-clock', color: '#3b82f6', title: 'Roll call rescheduled to 06:30', time: '1 hr ago' },
-        { icon: 'pi-bell', color: '#a855f7', title: 'New training module published', time: '3 hr ago' },
-        { icon: 'pi-exclamation-triangle', color: '#ef4444', title: 'Vehicle BR-114 reported missing', time: 'Yesterday' }
-    ];
+    // ── Notifications (real, per-user) ───────────────────────────────────
+    notifColor(type: string): string {
+        if (type === 'notice') return '#ef4444';
+        if (type === 'leaveApproval') return '#f59e0b';
+        if (type === 'leaveReturn') return '#3b82f6';
+        return '#a855f7';
+    }
+    notifIcon(type: string): string {
+        if (type === 'notice') return 'pi-megaphone';
+        if (type === 'leaveApproval') return 'pi-check-circle';
+        if (type === 'leaveReturn') return 'pi-replay';
+        return 'pi-bell';
+    }
+    notifTime(d: Date): string {
+        const dt = d instanceof Date ? d : new Date(d);
+        if (isNaN(dt.getTime())) return '';
+        return dt.toLocaleString('en-US', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' });
+    }
+
+    onNotificationClick(n: AppNotification): void {
+        if (!n.read) this.notificationService.markAsRead(n.id); // clears the unread highlight
+
+        if (n.type === 'notice') {
+            // Open the notice detail modal; fall back to the feed if not in the current list.
+            const noticeId = Number((n.data as any)?.noticeId);
+            const match = noticeId ? this.notices.find((x) => x.noticeId === noticeId) : undefined;
+            if (match) {
+                this.openNotice(match);
+                return;
+            }
+        }
+        // Leave (and anything else) → behave as before: navigate to the linked page.
+        if (n.link) this.router.navigateByUrl(n.link);
+    }
 
     events: CalItem[] = [];
 
@@ -768,9 +832,7 @@ export class Dashboard implements OnInit, OnDestroy {
         const end = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59);
         this.calendarSvc.getByDateRange(start, end).subscribe({
             next: (list) => {
-                this.events = (list ?? [])
-                    .map((a) => this.mapCalItem(a))
-                    .sort((x, y) => x.sortTs - y.sortTs);
+                this.events = (list ?? []).map((a) => this.mapCalItem(a)).sort((x, y) => x.sortTs - y.sortTs);
             },
             error: () => (this.events = [])
         });
@@ -809,6 +871,8 @@ export class Dashboard implements OnInit, OnDestroy {
     ngOnInit(): void {
         this.loadCalendar();
         this.loadNotices();
+        this.notificationService.loadFromApi();
+        this.chatService.connectToHub().catch(() => {});
 
         // Total serving members = total record count of presently-serving (Posting Status = Serving).
         this.servingMembers.getPresentlyServingMembersPaginated(1, 1).subscribe({
@@ -824,13 +888,15 @@ export class Dashboard implements OnInit, OnDestroy {
 
         // New Posting count (posting/new-joining-person-list source).
         // The list defaults to "Entry Pending" (isAddedInNewJoineeDataEntry = false); match that view.
-        this.newJoiningSvc.getPaginatedFiltered({
-            pagination: { page_no: 1, row_per_page: 1 },
-            filter: { isAddedInNewJoineeDataEntry: false }
-        }).subscribe({
-            next: (res) => (this.newPostingCount = this.pagesTotal(res)),
-            error: () => (this.newPostingCount = 0)
-        });
+        this.newJoiningSvc
+            .getPaginatedFiltered({
+                pagination: { page_no: 1, row_per_page: 1 },
+                filter: { isAddedInNewJoineeDataEntry: false }
+            })
+            .subscribe({
+                next: (res) => (this.newPostingCount = this.pagesTotal(res)),
+                error: () => (this.newPostingCount = 0)
+            });
 
         this.pieOptions = this.buildPieOptions();
 

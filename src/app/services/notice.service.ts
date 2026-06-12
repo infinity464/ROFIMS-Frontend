@@ -60,6 +60,7 @@ export class NoticeService {
             isActive: r.isActive ?? r.IsActive ?? false,
             createdDate: r.createdDate ?? r.CreatedDate,
             createdBy: r.createdBy ?? r.CreatedBy,
+            createdByName: r.createdByName ?? r.CreatedByName,
             recipientUserIds: r.recipientUserIds ?? r.RecipientUserIds ?? []
         };
     }
