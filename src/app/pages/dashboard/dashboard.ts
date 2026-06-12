@@ -6,6 +6,8 @@ import { TagModule } from 'primeng/tag';
 import { DialogModule } from 'primeng/dialog';
 import { ButtonModule } from 'primeng/button';
 import { CalendarService, type CalendarEventApi } from '@/services/calendar.service';
+import { EmpService } from '@/services/emp-service';
+import { Router } from '@angular/router';
 import { RabUnitAorMap } from '../../Components/basic-setup/rab-unit-aor-map/rab-unit-aor-map';
 import { ServingMembersService } from '@/services/serving-members.service';
 import { PermanentPostingMORecordService } from '@/services/permanent-posting-mo-record.service';
@@ -53,6 +55,13 @@ const PIE_PERCENTAGE_PLUGIN = {
 type Severity = 'success' | 'info' | 'warn' | 'danger' | 'secondary' | 'contrast';
 type Notice = { tag: string; severity: Severity; title: string; date: string };
 type Notify = { icon: string; color: string; title: string; time: string };
+type LookupCard = {
+    employeeId: number;
+    name: string; nameBn: string;
+    rabId: string; serviceId: string;
+    rank: string; corps: string; trade: string; motherOrg: string;
+    profileImages: string | null; photoUrl: string | null;
+};
 type CalItem = { id: string; day: string; mon: string; dow: string; title: string; description: string; type: 'task' | 'event'; sev: Severity; tag: string; sortTs: number };
 
 @Component({
@@ -207,15 +216,92 @@ type CalItem = { id: string; day: string; mon: string; dow: string; title: strin
             <div class="col-span-12 xl:col-span-7">
                 <div class="card mb-0 h-full">
                     <div class="font-semibold text-lg text-surface-900 dark:text-surface-0">Personnel Lookup</div>
-                    <div class="text-muted-color text-sm mb-4">Search by Service ID, name or rank</div>
-                    <div class="relative w-full">
-                        <i class="pi pi-search absolute left-3 top-1/2 -translate-y-1/2 text-muted-color"></i>
-                        <input type="text" [(ngModel)]="lookup" placeholder="e.g. RAB-04821 or Rezaul"
-                            class="w-full p-3 pl-10 border border-surface-300 dark:border-surface-600 rounded bg-transparent text-surface-900 dark:text-surface-0" />
+                    <div class="text-muted-color text-sm mb-4">Enter a unique identifier above to find personnel.</div>
+                    <div class="flex gap-2">
+                        <div class="relative flex-1">
+                            <i class="pi pi-search absolute left-3 top-1/2 -translate-y-1/2 text-muted-color"></i>
+                            <input type="text" [(ngModel)]="lookup" (keyup.enter)="runLookup()" placeholder="e.g. 19880801"
+                                class="w-full p-3 pl-10 border border-surface-300 dark:border-surface-600 rounded bg-transparent text-surface-900 dark:text-surface-0" />
+                        </div>
+                        <button type="button" pButton label="Search" icon="pi pi-search"
+                            [loading]="lookupLoading" (click)="runLookup()"></button>
                     </div>
-                    <div class="mt-6 py-10 text-center text-muted-color border border-dashed border-surface-300 dark:border-surface-600 rounded">
-                        Start typing a unique identifier — Service ID, name or rank — to find personnel.
-                    </div>
+
+                    @if (lookupLoading) {
+                        <div class="mt-6 flex items-center gap-3 text-muted-color">
+                            <i class="pi pi-spin pi-spinner"></i> Searching…
+                        </div>
+                    } @else if (lookupError) {
+                        <div class="mt-6 py-6 text-center text-red-500 border border-dashed border-red-300 dark:border-red-700 rounded">
+                            {{ lookupError }}
+                        </div>
+                    } @else if (lookupResult; as r) {
+                        <div class="mt-6 border border-surface-200 dark:border-surface-700 rounded-lg overflow-hidden">
+                            <!-- header -->
+                            <div class="flex items-center px-4 py-2 bg-primary-50 dark:bg-primary-400/10 border-b border-surface-200 dark:border-surface-700">
+                                <span class="inline-flex items-center gap-2 text-primary font-medium text-sm">
+                                    <i class="pi pi-check-circle"></i> Match found
+                                </span>
+                            </div>
+
+                            <!-- identity -->
+                            <div class="flex gap-5 p-4">
+                                <div class="shrink-0 w-28 h-32 rounded-lg overflow-hidden bg-surface-100 dark:bg-surface-800 flex items-center justify-center border border-surface-200 dark:border-surface-700">
+                                    @if (r.photoUrl) {
+                                        <img [src]="r.photoUrl" alt="Profile" class="w-full h-full object-cover" />
+                                    } @else {
+                                        <i class="pi pi-user text-5xl text-muted-color"></i>
+                                    }
+                                </div>
+                                <div class="flex-1 min-w-0">
+                                    <div class="text-2xl font-bold text-surface-900 dark:text-surface-0 truncate">{{ r.name || 'Unknown' }}</div>
+                                    @if (r.nameBn) {
+                                        <div class="text-muted-color truncate">{{ r.nameBn }}</div>
+                                    }
+                                    <div class="flex flex-wrap gap-2 mt-3">
+                                        <span class="inline-flex items-center gap-2 px-3 py-1 rounded-md bg-surface-100 dark:bg-surface-800 border border-surface-200 dark:border-surface-700 text-sm">
+                                            <span class="text-muted-color uppercase text-xs">RAB ID</span>
+                                            <span class="font-semibold text-surface-900 dark:text-surface-0">{{ r.rabId || '—' }}</span>
+                                        </span>
+                                        <span class="inline-flex items-center gap-2 px-3 py-1 rounded-md bg-surface-100 dark:bg-surface-800 border border-surface-200 dark:border-surface-700 text-sm">
+                                            <span class="text-muted-color uppercase text-xs">Service ID</span>
+                                            <span class="font-semibold text-surface-900 dark:text-surface-0">{{ r.serviceId || '—' }}</span>
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- attribute boxes -->
+                            <div class="grid grid-cols-2 sm:grid-cols-4 border-t border-surface-200 dark:border-surface-700">
+                                <div class="p-3 border-r border-surface-200 dark:border-surface-700">
+                                    <div class="flex items-center gap-2 text-muted-color text-xs uppercase mb-1"><i class="pi pi-star"></i> Rank</div>
+                                    <div class="text-surface-900 dark:text-surface-0 truncate" [class.text-muted-color]="!r.rank" [class.italic]="!r.rank">{{ r.rank || 'Not assigned' }}</div>
+                                </div>
+                                <div class="p-3 border-r border-surface-200 dark:border-surface-700">
+                                    <div class="flex items-center gap-2 text-muted-color text-xs uppercase mb-1"><i class="pi pi-shield"></i> Corps</div>
+                                    <div class="text-surface-900 dark:text-surface-0 truncate" [class.text-muted-color]="!r.corps" [class.italic]="!r.corps">{{ r.corps || 'Not assigned' }}</div>
+                                </div>
+                                <div class="p-3 border-r border-surface-200 dark:border-surface-700">
+                                    <div class="flex items-center gap-2 text-muted-color text-xs uppercase mb-1"><i class="pi pi-wrench"></i> Trade</div>
+                                    <div class="text-surface-900 dark:text-surface-0 truncate" [class.text-muted-color]="!r.trade" [class.italic]="!r.trade">{{ r.trade || 'Not assigned' }}</div>
+                                </div>
+                                <div class="p-3">
+                                    <div class="flex items-center gap-2 text-muted-color text-xs uppercase mb-1"><i class="pi pi-building"></i> Mother Org</div>
+                                    <div class="text-surface-900 dark:text-surface-0 truncate" [class.text-muted-color]="!r.motherOrg" [class.italic]="!r.motherOrg">{{ r.motherOrg || 'Not assigned' }}</div>
+                                </div>
+                            </div>
+
+                            <!-- action -->
+                            <div class="p-3 border-t border-surface-200 dark:border-surface-700">
+                                <button type="button" pButton class="w-full" icon="pi pi-user"
+                                    label="View profile" (click)="viewProfile(r.employeeId)"></button>
+                            </div>
+                        </div>
+                    } @else {
+                        <div class="mt-6 py-10 text-center text-muted-color border border-dashed border-surface-300 dark:border-surface-600 rounded">
+                            Search by RAB ID, Service ID, Mobile, Office Mobile, NID, Old NID, Passport or Email
+                        </div>
+                    }
                 </div>
             </div>
 
@@ -257,6 +343,29 @@ type CalItem = { id: string; day: string; mon: string; dow: string; title: strin
                 </div>
             }
         </p-dialog>
+
+        <p-dialog [(visible)]="candidateDialogVisible" [modal]="true" [draggable]="false" [style]="{ width: '40rem' }"
+            header="Multiple matches — select a person">
+            <div class="text-muted-color text-sm mb-3">
+                {{ candidates.length }} records matched this identifier. Choose the correct person.
+            </div>
+            <div class="flex flex-col gap-2">
+                @for (c of candidates; track c.employeeId) {
+                    <div class="flex items-center gap-3 border border-surface-200 dark:border-surface-700 rounded p-3">
+                        <div class="shrink-0 w-12 h-12 rounded-full overflow-hidden bg-surface-100 dark:bg-surface-800 flex items-center justify-center">
+                            <i class="pi pi-user text-muted-color"></i>
+                        </div>
+                        <div class="flex-1 min-w-0">
+                            <div class="font-medium text-surface-900 dark:text-surface-0 truncate">{{ c.name || 'Unknown' }}</div>
+                            <div class="text-sm text-muted-color truncate">
+                                RAB ID: {{ c.rabId || '—' }} · Service ID: {{ c.serviceId || '—' }} · {{ c.motherOrg || '—' }}
+                            </div>
+                        </div>
+                        <button type="button" pButton label="Select" size="small" (click)="chooseCandidate(c)"></button>
+                    </div>
+                }
+            </div>
+        </p-dialog>
     `,
     styles: [`
         .dash-chart-wrap {
@@ -292,6 +401,8 @@ export class Dashboard implements OnInit, OnDestroy {
     private newJoiningSvc = inject(PermanentPostingJoineeDetailService);
     private statisticsSvc = inject(StatisticsService);
     private calendarSvc = inject(CalendarService);
+    private empService = inject(EmpService);
+    private router = inject(Router);
     servingCount: number | null = null;
     postedOutCount: number | null = null;
     newPostingCount: number | null = null;
@@ -299,6 +410,117 @@ export class Dashboard implements OnInit, OnDestroy {
     readonly chartPlugins = [PIE_PERCENTAGE_PLUGIN];
 
     lookup = '';
+    lookupLoading = false;
+    lookupError = '';
+    lookupResult: LookupCard | null = null;
+    candidates: LookupCard[] = [];
+    candidateDialogVisible = false;
+
+    runLookup(): void {
+        const term = this.lookup.trim();
+        this.lookupError = '';
+        this.revokeLookupPhoto();
+        this.lookupResult = null;
+        this.candidates = [];
+        this.candidateDialogVisible = false;
+        if (!term) return;
+
+        this.lookupLoading = true;
+        this.empService.searchByUniqueIdentifier(term).subscribe({
+            next: (list) => {
+                this.lookupLoading = false;
+                const cards = (list ?? []).map((e) => this.toLookupCard(e));
+                if (cards.length === 0) {
+                    this.lookupError = 'No personnel found for this identifier.';
+                } else if (cards.length === 1) {
+                    this.selectLookup(cards[0]);
+                } else {
+                    // Service ID (or other id) matched multiple people — let the user pick.
+                    this.candidates = cards;
+                    this.candidateDialogVisible = true;
+                }
+            },
+            error: (err) => {
+                this.lookupLoading = false;
+                this.lookupError = err?.status === 403
+                    ? (err?.error?.message || 'You do not have permission to view this person.')
+                    : 'Lookup failed. Please try again.';
+            }
+        });
+    }
+
+    viewProfile(employeeId: number): void {
+        if (employeeId) this.router.navigate(['/members/profile', employeeId]);
+    }
+
+    chooseCandidate(c: LookupCard): void {
+        this.candidateDialogVisible = false;
+        this.selectLookup(c);
+    }
+
+    private selectLookup(card: LookupCard): void {
+        this.lookupResult = card;
+        // Enrich rank / corps / trade / mother-org (and name) from the search-info view.
+        if (!card.employeeId) return;
+        this.empService.getEmployeeSearchInfo(card.employeeId).subscribe((info: any) => {
+            if (!info || this.lookupResult !== card) return;
+            card.rank = (this.ci(info, 'Rank') ?? card.rank ?? '').toString();
+            card.corps = (this.ci(info, 'Corps') ?? card.corps ?? '').toString();
+            card.trade = (this.ci(info, 'Trade') ?? card.trade ?? '').toString();
+            card.motherOrg = (this.ci(info, 'MotherOrganization') ?? card.motherOrg ?? '').toString();
+            if (!card.name) card.name = (this.ci(info, 'FullNameEN') ?? '').toString();
+        });
+        this.loadLookupPhoto(card);
+    }
+
+    /** Case-insensitive property read — the API serializes camelCase but field casing varies. */
+    private ci(obj: any, key: string): any {
+        if (!obj) return undefined;
+        const want = key.toLowerCase();
+        for (const k of Object.keys(obj)) {
+            if (k.toLowerCase() === want) return obj[k];
+        }
+        return undefined;
+    }
+
+    private toLookupCard(e: any): LookupCard {
+        return {
+            employeeId: Number(this.ci(e, 'EmployeeID')) || 0,
+            name: (this.ci(e, 'FullNameEN') ?? '').toString(),
+            nameBn: (this.ci(e, 'FullNameBN') ?? '').toString(),
+            rabId: (this.ci(e, 'RABID') ?? '').toString().trim(),
+            serviceId: (this.ci(e, 'ServiceId') ?? '').toString().trim(),
+            rank: '', corps: '', trade: '', motherOrg: '',
+            profileImages: (this.ci(e, 'ProfileImages') ?? null) as string | null,
+            photoUrl: null
+        };
+    }
+
+    private revokeLookupPhoto(): void {
+        if (this.lookupResult?.photoUrl) {
+            URL.revokeObjectURL(this.lookupResult.photoUrl);
+            this.lookupResult.photoUrl = null;
+        }
+    }
+
+    /** ProfileImages JSON → first FileId → download blob → object URL. */
+    private loadLookupPhoto(card: LookupCard): void {
+        const json = card.profileImages;
+        if (!json || typeof json !== 'string') return;
+        let refs: { FileId?: number; fileId?: number }[];
+        try { refs = JSON.parse(json); } catch { return; }
+        const first = Array.isArray(refs) && refs.length > 0 ? refs[0] : null;
+        const fileId = first?.FileId ?? first?.fileId;
+        if (fileId == null || fileId <= 0) return;
+        this.empService.downloadFile(fileId).subscribe({
+            next: (blob) => {
+                if (blob && blob.size > 0 && this.lookupResult === card) {
+                    card.photoUrl = URL.createObjectURL(blob);
+                }
+            },
+            error: () => {}
+        });
+    }
 
     selectedEvent: CalItem | null = null;
     eventDialogVisible = false;
@@ -414,6 +636,7 @@ export class Dashboard implements OnInit, OnDestroy {
 
     ngOnDestroy(): void {
         this.themeObserver?.disconnect();
+        this.revokeLookupPhoto();
     }
 
     private buildPieOptions(): any {

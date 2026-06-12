@@ -49,6 +49,60 @@
             cursor: crosshair;
         }
     }
+
+    // When zoomed in, the host shows a grab/grabbing hand for panning.
+    &.zoomed {
+        cursor: grab;
+
+        .upazila:hover { cursor: grab; }
+    }
+    &.panning,
+    &.panning .upazila {
+        cursor: grabbing !important;
+    }
+}
+
+.aor-map-controls {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    z-index: 5;
+
+    // Hidden until the map is hovered.
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.15s ease, visibility 0.15s ease;
+
+    .aor-map-host:hover & {
+        opacity: 1;
+        visibility: visible;
+    }
+
+    button {
+        width: 34px;
+        height: 34px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border: 1px solid var(--surface-border, #d4d4d8);
+        border-radius: 6px;
+        background: var(--surface-card, #ffffff);
+        color: var(--text-color, #334155);
+        cursor: pointer;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.18);
+        transition: background-color 0.15s ease, color 0.15s ease;
+
+        &:hover {
+            background: var(--surface-100, #f1f5f9);
+        }
+
+        i {
+            font-size: 0.9rem;
+        }
+    }
 }
 
 .aor-map-tip {

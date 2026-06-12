@@ -136,6 +136,19 @@ export class EmpService {
         return this.http.get<EmpModel[]>(`${this.empApi}/EmployeeInfo/SearchByIdAsyn`, { params }).pipe(map((data) => data ?? []));
     }
 
+    /**
+     * Single-box personnel lookup — matches the term against any unique identifier
+     * (RAB ID, Service ID, Service ID Card No, NID / Old NID, Mobile, Office Mobile,
+     * Passport, Email). Returns all matches (Service ID can repeat).
+     */
+    searchByUniqueIdentifier(term: string, presentMemberOnly = false): Observable<EmpModel[]> {
+        const params: any = { term };
+        if (presentMemberOnly) params.presentMemberOnly = 'true';
+        return this.http
+            .get<EmpModel[]>(`${this.empApi}/EmployeeInfo/SearchByUniqueIdentifierAsyn`, { params })
+            .pipe(map((data) => data ?? []));
+    }
+
     /** Gets display info from vw_EmployeeSearchInfo (Rank, Corps, Trade, MotherOrganization, MemberType). Call after search when employee is found. */
     getEmployeeSearchInfo(employeeId: number): Observable<EmployeeSearchInfoModel | null> {
         return this.http.get<EmployeeSearchInfoModel>(`${this.empApi}/EmployeeInfo/GetEmployeeSearchInfo/${employeeId}`).pipe(

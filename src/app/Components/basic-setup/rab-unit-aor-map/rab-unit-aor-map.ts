@@ -66,6 +66,17 @@ export class RabUnitAorMap implements OnInit {
 
     private aorByUpazila = new Map<number, { unitId: number; unitName: string; color: string; battalionHQ: string }>();
 
+    // ── Zoom / pan state (in viewBox units) ──────────────────────────────
+    private vbW = 800;
+    private vbH = 1000;
+    zoom = 1;
+    panX = 0;
+    panY = 0;
+    isPanning = false;
+    private panOrigin = { x: 0, y: 0, panX: 0, panY: 0 };
+    private readonly MIN_ZOOM = 1;
+    private readonly MAX_ZOOM = 8;
+
     ngOnInit(): void {
         this.loadAll();
     }
@@ -279,7 +290,76 @@ export class RabUnitAorMap implements OnInit {
         return palette[Math.abs(seed) % palette.length];
     }
 
+    // ── Zoom / pan ───────────────────────────────────────────────────────
+    zoomIn(): void { this.applyZoom(this.zoom * 1.4); }
+    zoomOut(): void { this.applyZoom(this.zoom / 1.4); }
+
+    resetView(): void {
+        this.zoom = 1;
+        this.panX = 0;
+        this.panY = 0;
+    }
+
+    /** Zoom toward the viewBox centre, keeping that point fixed. */
+    private applyZoom(next: number, anchorX = this.vbW / 2, anchorY = this.vbH / 2): void {
+        const z = Math.min(this.MAX_ZOOM, Math.max(this.MIN_ZOOM, next));
+        // content point currently under the anchor
+        const cx = (anchorX - this.panX) / this.zoom;
+        const cy = (anchorY - this.panY) / this.zoom;
+        this.zoom = z;
+        this.panX = anchorX - cx * z;
+        this.panY = anchorY - cy * z;
+        this.clampPan();
+    }
+
+    private clampPan(): void {
+        const minX = this.vbW * (1 - this.zoom);
+        const minY = this.vbH * (1 - this.zoom);
+        this.panX = Math.min(0, Math.max(minX, this.panX));
+        this.panY = Math.min(0, Math.max(minY, this.panY));
+    }
+
+    onWheel(event: WheelEvent): void {
+        event.preventDefault();
+        const host = this.mapHost?.nativeElement;
+        if (!host) return;
+        const rect = host.getBoundingClientRect();
+        // Anchor zoom at the cursor position (converted to viewBox units).
+        const ax = ((event.clientX - rect.left) / rect.width) * this.vbW;
+        const ay = ((event.clientY - rect.top) / rect.height) * this.vbH;
+        this.applyZoom(event.deltaY < 0 ? this.zoom * 1.15 : this.zoom / 1.15, ax, ay);
+    }
+
+    onPanStart(event: MouseEvent): void {
+        if (this.zoom <= 1) return; // nothing to pan when fully zoomed out
+        this.isPanning = true;
+        this.panOrigin = { x: event.clientX, y: event.clientY, panX: this.panX, panY: this.panY };
+        this.tooltip.visible = false;
+    }
+
+    onPanMove(event: MouseEvent): void {
+        if (!this.isPanning) return;
+        const host = this.mapHost?.nativeElement;
+        if (!host) return;
+        const rect = host.getBoundingClientRect();
+        const dx = ((event.clientX - this.panOrigin.x) / rect.width) * this.vbW;
+        const dy = ((event.clientY - this.panOrigin.y) / rect.height) * this.vbH;
+        this.panX = this.panOrigin.panX + dx;
+        this.panY = this.panOrigin.panY + dy;
+        this.clampPan();
+    }
+
+    onPanEnd(): void {
+        this.isPanning = false;
+    }
+
+    onHostLeave(): void {
+        this.isPanning = false;
+        this.onFeatureLeave();
+    }
+
     onFeatureMove(event: MouseEvent, f: RenderedFeature): void {
+        if (this.isPanning) return;
         const host = this.mapHost?.nativeElement;
         if (!host) return;
         const rect = host.getBoundingClientRect();

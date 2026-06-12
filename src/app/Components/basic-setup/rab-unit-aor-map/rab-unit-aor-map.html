@@ -12,19 +12,40 @@
         <p-message severity="error" [text]="errorMessage"></p-message>
     } @else {
         <div class="aor-map-grid" [class.no-legend]="hideLegend">
-            <div class="aor-map-host" #mapHost (mouseleave)="onFeatureLeave()"
+            <div class="aor-map-host" #mapHost (mouseleave)="onHostLeave()"
+                [class.panning]="isPanning"
+                [class.zoomed]="zoom > 1"
                 [style.aspect-ratio]="heightPx ? 'auto' : null"
-                [style.height.px]="heightPx || null">
+                [style.height.px]="heightPx || null"
+                (mousedown)="onPanStart($event)"
+                (mousemove)="onPanMove($event)"
+                (mouseup)="onPanEnd()"
+                (wheel)="onWheel($event)">
                 <svg [attr.viewBox]="viewBox" preserveAspectRatio="xMidYMid meet">
-                    @for (f of rendered; track $index) {
-                        <path
-                            class="upazila"
-                            [attr.d]="f.pathD"
-                            [attr.fill]="f.color"
-                            (mousemove)="onFeatureMove($event, f)">
-                        </path>
-                    }
+                    <g [attr.transform]="'translate(' + panX + ',' + panY + ') scale(' + zoom + ')'">
+                        @for (f of rendered; track $index) {
+                            <path
+                                class="upazila"
+                                [attr.d]="f.pathD"
+                                [attr.fill]="f.color"
+                                (mousemove)="onFeatureMove($event, f)">
+                            </path>
+                        }
+                    </g>
                 </svg>
+
+                <div class="aor-map-controls">
+                    <button type="button" (click)="zoomIn()" title="Zoom in" aria-label="Zoom in">
+                        <i class="pi pi-plus"></i>
+                    </button>
+                    <button type="button" (click)="zoomOut()" title="Zoom out" aria-label="Zoom out">
+                        <i class="pi pi-minus"></i>
+                    </button>
+                    <button type="button" (click)="resetView()" title="Reset / fit"
+                        aria-label="Reset view" [class.active]="zoom === 1 && panX === 0 && panY === 0">
+                        <i class="pi pi-arrows-alt"></i>
+                    </button>
+                </div>
 
                 @if (tooltip.visible) {
                     <div class="aor-map-tip" [style.left.px]="tooltip.x" [style.top.px]="tooltip.y">
