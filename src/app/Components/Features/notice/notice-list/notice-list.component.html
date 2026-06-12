@@ -9,8 +9,7 @@
         }
     </div>
 
-    <p-table [value]="notices" [loading]="loading" [paginator]="true" [rows]="10"
-             [rowsPerPageOptions]="[10, 25, 50]" responsiveLayout="scroll" dataKey="noticeId">
+    <p-table [value]="notices" [loading]="loading" [paginator]="true" [rows]="10" [rowsPerPageOptions]="[10, 25, 50]" responsiveLayout="scroll" dataKey="noticeId">
         <ng-template pTemplate="header">
             <tr>
                 <th style="width: 4rem">#</th>
@@ -19,18 +18,20 @@
                 <th style="width: 12rem">Expire Date</th>
                 <th style="width: 8rem">Audience</th>
                 <th style="width: 6rem">Active</th>
-                <th style="width: 7rem">Complete</th>
-                <th style="width: 11rem">Actions</th>
+                <th style="width: 18rem">Actions</th>
             </tr>
         </ng-template>
         <ng-template pTemplate="body" let-row let-rowIndex="rowIndex">
             <tr>
                 <td>{{ rowIndex + 1 }}</td>
-                <td>{{ row.topic }}</td>
+                <td>
+                    <span class="notice-topic-cell" [pTooltip]="row.topic" tooltipPosition="top" tooltipEvent="hover">
+                        {{ row.topic }}
+                    </span>
+                </td>
                 <td>
                     @for (tag of row.tags; track tag) {
-                        <span class="inline-flex items-center gap-1 px-2 py-0.5 mr-1 mb-1 rounded border text-xs font-semibold uppercase"
-                            [ngClass]="tagDisplay(tag).classes">
+                        <span class="inline-flex items-center gap-1 px-2 py-0.5 mr-1 mb-1 rounded border text-xs font-semibold uppercase" [ngClass]="tagDisplay(tag).classes">
                             <i class="pi {{ tagDisplay(tag).icon }} text-[0.7rem]"></i>{{ tag }}
                         </span>
                     }
@@ -38,36 +39,33 @@
                 <td>{{ row.expireDate ? (row.expireDate | date: 'dd/MM/yyyy HH:mm') : '—' }}</td>
                 <td>{{ row.audienceType }}</td>
                 <td>
-                    <p-tag [value]="row.isActive ? 'Active' : 'Inactive'"
-                           [severity]="row.isActive ? 'success' : 'secondary'"></p-tag>
+                    <p-tag [value]="row.isActive ? 'Active' : 'Inactive'" [severity]="row.isActive ? 'success' : 'secondary'"></p-tag>
                 </td>
                 <td>
-                    <i class="pi" [ngClass]="row.isComplete ? 'pi-check-circle text-green-500' : 'pi-circle text-gray-400'"></i>
-                </td>
-                <td>
-                    @if (canUpdate) {
-                        <button pButton type="button" icon="pi pi-pencil" class="p-button-text p-button-sm"
-                                pTooltip="Edit" (click)="openEdit(row)"></button>
-                    }
-                    @if (canUpdate && row.isActive) {
-                        <button pButton type="button" icon="pi pi-ban" class="p-button-text p-button-sm p-button-warn"
-                                pTooltip="Deactivate" (click)="confirmDeactivate(row)"></button>
-                    }
-                    @if (canDelete) {
-                        <button pButton type="button" icon="pi pi-trash" class="p-button-text p-button-sm p-button-danger"
-                                pTooltip="Delete" (click)="confirmDelete(row)"></button>
-                    }
+                    <div class="flex items-center gap-2">
+                        <span class="inline-flex items-center gap-2" [pTooltip]="row.isComplete ? 'Complete' : 'Pending'" tooltipPosition="top">
+                            <p-toggleswitch [(ngModel)]="row.isComplete" (onChange)="toggleComplete(row)" [disabled]="isTogglingComplete(row)"></p-toggleswitch>
+                            <span class="text-sm text-muted-color">{{ row.isComplete ? 'Complete' : 'Pending' }}</span>
+                        </span>
+                        @if (canUpdate) {
+                            <button pButton type="button" icon="pi pi-pencil" class="p-button-text p-button-sm" pTooltip="Edit" (click)="openEdit(row)"></button>
+                        }
+                        @if (canDelete) {
+                            <button pButton type="button" icon="pi pi-trash" class="p-button-text p-button-sm p-button-danger" pTooltip="Delete" (click)="confirmDelete(row)"></button>
+                        }
+                    </div>
                 </td>
             </tr>
         </ng-template>
         <ng-template pTemplate="emptymessage">
-            <tr><td colspan="8" class="text-center">No notices found.</td></tr>
+            <tr>
+                <td colspan="7" class="text-center">No notices found.</td>
+            </tr>
         </ng-template>
     </p-table>
 </div>
 
-<p-dialog [(visible)]="dialogVisible" [modal]="true" [style]="{ width: '56rem' }" [breakpoints]="{ '960px': '90vw' }"
-          [header]="editingId > 0 ? 'Edit Notice' : 'New Notice'" [draggable]="false">
+<p-dialog [(visible)]="dialogVisible" [modal]="true" [style]="{ width: '56rem' }" [breakpoints]="{ '960px': '90vw' }" [header]="editingId > 0 ? 'Edit Notice' : 'New Notice'" [draggable]="false">
     <form [formGroup]="form" (ngSubmit)="onSubmit()" class="flex flex-col gap-4">
         <div class="flex flex-col gap-1">
             <label for="topic">Topic <span class="text-red-500">*</span></label>
@@ -76,14 +74,12 @@
 
         <div class="flex flex-col gap-1">
             <label for="details">Details <span class="text-red-500">*</span></label>
-            <textarea pTextarea id="details" formControlName="details" rows="4" autoResize="true"
-                      placeholder="Notice details"></textarea>
+            <textarea pTextarea id="details" formControlName="details" rows="4" autoResize="true" placeholder="Notice details"></textarea>
         </div>
 
         <div class="flex flex-col gap-1">
             <label for="expireDate">Expire Date <span class="text-gray-400 text-sm">(optional — leave empty to keep active until manually deactivated)</span></label>
-            <p-datepicker id="expireDate" formControlName="expireDate" [showTime]="true" [showIcon]="true"
-                          dateFormat="dd/mm/yy" hourFormat="24" appendTo="body" styleClass="w-full"></p-datepicker>
+            <p-datepicker id="expireDate" formControlName="expireDate" [showTime]="true" [showIcon]="true" [defaultDate]="defaultExpireDate" dateFormat="dd/mm/yy" hourFormat="24" appendTo="body" styleClass="w-full" (onSelect)="setExpireDateEndOfDay($event)"></p-datepicker>
         </div>
 
         <div class="flex flex-col gap-2">
@@ -103,9 +99,18 @@
         @if (isSpecific) {
             <div class="flex flex-col gap-1">
                 <label for="recipients">Recipients</label>
-                <p-multiSelect id="recipients" formControlName="recipientUserIds" [options]="userOptions"
-                               optionLabel="label" optionValue="value" [filter]="true" display="chip"
-                               placeholder="Select users" appendTo="body" styleClass="w-full"></p-multiSelect>
+                <p-multiSelect
+                    id="recipients"
+                    formControlName="recipientUserIds"
+                    [options]="userOptions"
+                    optionLabel="label"
+                    optionValue="value"
+                    [filter]="true"
+                    display="chip"
+                    placeholder="Select users"
+                    appendTo="body"
+                    styleClass="w-full"
+                ></p-multiSelect>
             </div>
         }
 
@@ -116,12 +121,16 @@
                     <div class="text-xs uppercase tracking-wide mb-2" [ngClass]="b.classes">{{ b.label }}</div>
                     <div class="flex flex-wrap gap-2">
                         @for (t of b.tags; track t.name) {
-                            <button type="button"
+                            <button
+                                type="button"
                                 class="inline-flex items-center gap-2 px-3 py-1.5 rounded-md border text-sm font-semibold uppercase transition-colors"
-                                [ngClass]="isTagSelected(t.name) ? b.selectedClasses : (b.classes + ' opacity-70 hover:opacity-100')"
-                                (click)="toggleTag(t.name)">
+                                [ngClass]="isTagSelected(t.name) ? b.selectedClasses : b.classes + ' opacity-70 hover:opacity-100'"
+                                (click)="toggleTag(t.name)"
+                            >
                                 <i class="pi {{ t.icon }}"></i>{{ t.name }}
-                                @if (isTagSelected(t.name)) { <i class="pi pi-check text-xs"></i> }
+                                @if (isTagSelected(t.name)) {
+                                    <i class="pi pi-check text-xs"></i>
+                                }
                             </button>
                         }
                     </div>

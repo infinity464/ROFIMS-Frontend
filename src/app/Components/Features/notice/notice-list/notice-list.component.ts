@@ -1,7 +1,7 @@
 import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
-import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
+import { FormBuilder, FormGroup, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
 import { TableModule } from 'primeng/table';
 import { ButtonModule } from 'primeng/button';
 import { Dialog } from 'primeng/dialog';
@@ -24,52 +24,76 @@ import type { ApplicationUser } from '@/models/identity.model';
 import { NoticeService, NoticeListDto, NoticeSaveDto, NoticeAudienceType } from '@/services/notice.service';
 
 /** Notice-tag taxonomy: 5 priority bands, CRITICAL highest. Selecting drives chip colour + dashboard sort. */
-export interface NoticeTagOption { name: string; icon: string; }
-export interface NoticeTagBand { band: string; label: string; classes: string; selectedClasses: string; tags: NoticeTagOption[]; }
+export interface NoticeTagOption {
+    name: string;
+    icon: string;
+}
+export interface NoticeTagBand {
+    band: string;
+    label: string;
+    classes: string;
+    selectedClasses: string;
+    tags: NoticeTagOption[];
+}
 export const NOTICE_TAG_BANDS: NoticeTagBand[] = [
     {
-        band: 'critical', label: 'CRITICAL · act now',
+        band: 'critical',
+        label: 'CRITICAL · act now',
         classes: 'text-red-600 dark:text-red-400 border-red-500/40',
         selectedClasses: 'bg-red-500/15 border-red-500 text-red-600 dark:text-red-400',
         tags: [
-            { name: 'URGENT', icon: 'pi-exclamation-triangle' }, { name: 'ALERT', icon: 'pi-bell' },
-            { name: 'RECALL', icon: 'pi-replay' }, { name: 'OPERATION', icon: 'pi-bullseye' }
+            { name: 'URGENT', icon: 'pi-exclamation-triangle' },
+            { name: 'ALERT', icon: 'pi-bell' },
+            { name: 'RECALL', icon: 'pi-replay' },
+            { name: 'OPERATION', icon: 'pi-bullseye' }
         ]
     },
     {
-        band: 'action', label: 'ACTION · response needed',
+        band: 'action',
+        label: 'ACTION · response needed',
         classes: 'text-amber-600 dark:text-amber-400 border-amber-500/40',
         selectedClasses: 'bg-amber-500/15 border-amber-500 text-amber-600 dark:text-amber-400',
         tags: [
-            { name: 'ORDER', icon: 'pi-file' }, { name: 'DEADLINE', icon: 'pi-clock' },
-            { name: 'DEPLOYMENT', icon: 'pi-map-marker' }, { name: 'SECURITY', icon: 'pi-shield' }
+            { name: 'ORDER', icon: 'pi-file' },
+            { name: 'DEADLINE', icon: 'pi-clock' },
+            { name: 'DEPLOYMENT', icon: 'pi-map-marker' },
+            { name: 'SECURITY', icon: 'pi-shield' }
         ]
     },
     {
-        band: 'personnel', label: 'PERSONNEL',
+        band: 'personnel',
+        label: 'PERSONNEL',
         classes: 'text-green-600 dark:text-green-400 border-green-500/40',
         selectedClasses: 'bg-green-500/15 border-green-500 text-green-600 dark:text-green-400',
         tags: [
-            { name: 'POSTING', icon: 'pi-sync' }, { name: 'PROMOTION', icon: 'pi-angle-double-up' },
-            { name: 'LEAVE', icon: 'pi-send' }, { name: 'RECRUITMENT', icon: 'pi-user-plus' }
+            { name: 'POSTING', icon: 'pi-sync' },
+            { name: 'PROMOTION', icon: 'pi-angle-double-up' },
+            { name: 'LEAVE', icon: 'pi-send' },
+            { name: 'RECRUITMENT', icon: 'pi-user-plus' }
         ]
     },
     {
-        band: 'informational', label: 'INFORMATIONAL',
+        band: 'informational',
+        label: 'INFORMATIONAL',
         classes: 'text-blue-600 dark:text-blue-400 border-blue-500/40',
         selectedClasses: 'bg-blue-500/15 border-blue-500 text-blue-600 dark:text-blue-400',
         tags: [
-            { name: 'POLICY', icon: 'pi-check-square' }, { name: 'EVENT', icon: 'pi-calendar' },
-            { name: 'MEETING', icon: 'pi-users' }, { name: 'CIRCULAR', icon: 'pi-envelope' }
+            { name: 'POLICY', icon: 'pi-check-square' },
+            { name: 'EVENT', icon: 'pi-calendar' },
+            { name: 'MEETING', icon: 'pi-users' },
+            { name: 'CIRCULAR', icon: 'pi-envelope' }
         ]
     },
     {
-        band: 'routine', label: 'ROUTINE',
+        band: 'routine',
+        label: 'ROUTINE',
         classes: 'text-surface-500 dark:text-surface-400 border-surface-400/40',
         selectedClasses: 'bg-surface-500/15 border-surface-500 text-surface-700 dark:text-surface-300',
         tags: [
-            { name: 'TRAINING', icon: 'pi-book' }, { name: 'MAINTENANCE', icon: 'pi-cog' },
-            { name: 'WELFARE', icon: 'pi-heart' }, { name: 'ADMIN', icon: 'pi-folder' }
+            { name: 'TRAINING', icon: 'pi-book' },
+            { name: 'MAINTENANCE', icon: 'pi-cog' },
+            { name: 'WELFARE', icon: 'pi-heart' },
+            { name: 'ADMIN', icon: 'pi-folder' }
         ]
     }
 ];
@@ -79,6 +103,7 @@ export const NOTICE_TAG_BANDS: NoticeTagBand[] = [
     standalone: true,
     imports: [
         CommonModule,
+        FormsModule,
         ReactiveFormsModule,
         TableModule,
         ButtonModule,
@@ -117,6 +142,7 @@ export class NoticeListComponent implements OnInit {
     dialogVisible = false;
     isSubmitting = false;
     editingId = 0;
+    changingCompleteIds = new Set<number>();
 
     form!: FormGroup;
 
@@ -148,6 +174,26 @@ export class NoticeListComponent implements OnInit {
         });
     }
 
+    private endOfDay(date = new Date()): Date {
+        const d = new Date(date);
+        d.setHours(23, 59, 0, 0);
+        return d;
+    }
+
+    /** Time the expire-date picker opens at when the field is empty (23:59 today). */
+    get defaultExpireDate(): Date {
+        return this.endOfDay();
+    }
+
+    setExpireDateEndOfDay(event: Date | null): void {
+        if (!event) {
+            this.form.get('expireDate')?.setValue(null);
+            return;
+        }
+
+        this.form.get('expireDate')?.setValue(this.endOfDay(event));
+    }
+
     get isSpecific(): boolean {
         return this.form?.get('audienceType')?.value === 'Specific';
     }
@@ -174,7 +220,57 @@ export class NoticeListComponent implements OnInit {
                     value: u.id
                 }));
             },
-            error: () => { /* non-fatal — recipient picker stays empty */ }
+            error: () => {
+                /* non-fatal — recipient picker stays empty */
+            }
+        });
+    }
+
+    isTogglingComplete(row: NoticeListDto): boolean {
+        return this.changingCompleteIds.has(row.noticeId);
+    }
+
+    toggleComplete(row: NoticeListDto): void {
+        if (this.isTogglingComplete(row)) {
+            return;
+        }
+
+        // ngModel has already flipped row.isComplete by the time onChange fires —
+        // use that as the target value (do NOT negate again, or it double-flips).
+        const nextValue = row.isComplete;
+        this.changingCompleteIds.add(row.noticeId);
+
+        const payload: NoticeSaveDto = {
+            noticeId: row.noticeId,
+            topic: row.topic,
+            details: row.details,
+            expireDate: row.expireDate ?? null,
+            audienceType: row.audienceType,
+            tags: Array.isArray(row.tags) ? row.tags : [],
+            isComplete: nextValue,
+            recipientUserIds: Array.isArray(row.recipientUserIds) ? row.recipientUserIds : []
+        };
+
+        this.noticeService.update(payload).subscribe({
+            next: (res) => {
+                this.changingCompleteIds.delete(row.noticeId);
+                const code = res.statusCode ?? res.StatusCode;
+                if (code === 200) {
+                    this.messageService.add({
+                        severity: 'success',
+                        summary: 'Success',
+                        detail: nextValue ? 'Marked complete' : 'Marked pending'
+                    });
+                } else {
+                    row.isComplete = !nextValue;
+                    this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to update completion status' });
+                }
+            },
+            error: () => {
+                this.changingCompleteIds.delete(row.noticeId);
+                row.isComplete = !nextValue;
+                this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to update completion status' });
+            }
         });
     }
 
@@ -216,8 +312,13 @@ export class NoticeListComponent implements OnInit {
     openCreate(): void {
         this.editingId = 0;
         this.form.reset({
-            topic: '', details: '', expireDate: null,
-            audienceType: 'All', recipientUserIds: [], tags: [], isComplete: false
+            topic: '',
+            details: '',
+            expireDate: null,
+            audienceType: 'All',
+            recipientUserIds: [],
+            tags: [],
+            isComplete: false
         });
         this.dialogVisible = true;
     }
@@ -243,7 +344,8 @@ export class NoticeListComponent implements OnInit {
             return;
         }
         const v = this.form.getRawValue();
-        const expire: Date | null = v.expireDate;
+        // Expire date always lands at 23:59 (end of day), regardless of the time spinner.
+        const expire: Date | null = v.expireDate ? this.endOfDay(v.expireDate) : null;
         const payload: NoticeSaveDto = {
             noticeId: this.editingId,
             topic: (v.topic || '').trim(),
