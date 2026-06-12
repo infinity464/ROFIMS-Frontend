@@ -1,5 +1,7 @@
-<div class="card">
-    <div class="font-semibold text-xl mb-4">{{ title }}</div>
+<div [class.card]="!bare">
+    @if (!hideTitle) {
+        <div class="font-semibold text-xl mb-4">{{ title }}</div>
+    }
 
     @if (loading) {
         <div class="flex items-center gap-3 py-6">
@@ -9,8 +11,10 @@
     } @else if (errorMessage) {
         <p-message severity="error" [text]="errorMessage"></p-message>
     } @else {
-        <div class="aor-map-grid">
-            <div class="aor-map-host" #mapHost (mouseleave)="onFeatureLeave()">
+        <div class="aor-map-grid" [class.no-legend]="hideLegend">
+            <div class="aor-map-host" #mapHost (mouseleave)="onFeatureLeave()"
+                [style.aspect-ratio]="heightPx ? 'auto' : null"
+                [style.height.px]="heightPx || null">
                 <svg [attr.viewBox]="viewBox" preserveAspectRatio="xMidYMid meet">
                     @for (f of rendered; track $index) {
                         <path
@@ -38,6 +42,7 @@
                 }
             </div>
 
+            @if (!hideLegend) {
             <aside class="aor-map-legend">
                 <div class="font-semibold mb-2">RAB Units</div>
                 @if (legend.length === 0) {
@@ -55,6 +60,7 @@
                 }
 
             </aside>
+            }
         </div>
     }
 </div>

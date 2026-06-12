@@ -1,4 +1,4 @@
-import { Component, ElementRef, OnInit, ViewChild, inject } from '@angular/core';
+import { Component, ElementRef, Input, OnInit, ViewChild, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { HttpClient } from '@angular/common/http';
 import { forkJoin } from 'rxjs';
@@ -45,6 +45,13 @@ export class RabUnitAorMap implements OnInit {
     private http = inject(HttpClient);
 
     @ViewChild('mapHost', { static: false }) mapHost?: ElementRef<HTMLDivElement>;
+
+    /** When embedded (e.g. dashboard) hide the card chrome / legend so only the atlas shows. */
+    @Input() hideTitle = false;
+    @Input() hideLegend = false;
+    @Input() bare = false;
+    /** Override the map host height (px). When set, the default 4:5 aspect-ratio is ignored. */
+    @Input() heightPx?: number;
 
     title = 'RAB Unit AOR — Upazila Map';
     loading = true;

@@ -123,7 +123,9 @@ export class ManpowerChartComponent implements OnInit {
     buildOptions(): void {
         this.chartOptions = {
             responsive: true,
-            maintainAspectRatio: true,
+            // Height is fixed by .chart-canvas-wrap CSS; deriving it from width here causes
+            // a resize feedback loop that visibly shrinks the pie on every frame.
+            maintainAspectRatio: false,
             plugins: {
                 legend: {
                     position: 'bottom',

@@ -192,8 +192,16 @@
 }
 
 .chart-canvas-wrap {
+    position: relative;
     width: 100%;
     max-width: 380px;
+    height: 320px;
+
+    // PrimeNG p-chart -> canvas must fill the fixed-height box, not drive it.
+    :is(p-chart, canvas) {
+        width: 100% !important;
+        height: 100% !important;
+    }
 }
 
 /* ── Dark mode overrides ─────────────────────────────────────────────── */

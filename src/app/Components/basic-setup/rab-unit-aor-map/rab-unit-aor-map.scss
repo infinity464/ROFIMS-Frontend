@@ -10,12 +10,21 @@
     @media (max-width: 900px) {
         grid-template-columns: 1fr;
     }
+
+    &.no-legend {
+        grid-template-columns: 1fr;
+    }
 }
 
 .aor-map-host {
     position: relative;
     background: #faf6ec;
     border: 1px solid var(--surface-border, #d4d4d8);
+
+    :host-context(.app-dark) & {
+        background: var(--surface-ground, #1e1e2d);
+        border-color: var(--surface-border, #3f3f46);
+    }
     border-radius: 6px;
     overflow: hidden;
     aspect-ratio: 4 / 5;
