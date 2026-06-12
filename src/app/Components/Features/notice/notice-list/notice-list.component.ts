@@ -180,10 +180,13 @@ export class NoticeListComponent implements OnInit {
         return d;
     }
 
-    /** Time the expire-date picker opens at when the field is empty (23:59 today). */
-    get defaultExpireDate(): Date {
-        return this.endOfDay();
-    }
+    /**
+     * Time the expire-date picker opens at when the field is empty (23:59 today).
+     * MUST be a stable reference — a getter returns a fresh Date each change-detection
+     * cycle, which makes p-datepicker re-render and swallow clicks (needs multiple taps
+     * to select). Computed once at construction instead.
+     */
+    readonly defaultExpireDate: Date = this.endOfDay();
 
     get isSpecific(): boolean {
         return this.form?.get('audienceType')?.value === 'Specific';
