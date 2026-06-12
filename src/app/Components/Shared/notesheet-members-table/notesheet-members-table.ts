@@ -91,6 +91,33 @@ export class NotesheetMembersTableComponent implements OnInit, OnChanges {
         return val;
     }
 
+    /** Bangla header text per column key (EN + BN variants map to one Bangla
+     *  label). Falls back to the configured English label when not listed. */
+    private readonly colHeaderBN: Record<string, string> = {
+        serviceId: 'সার্ভিস আইডি', rabId: 'র‍্যাব আইডি', prefixWithServiceId: 'সার্ভিস আইডি', prefixWithServiceIdBN: 'সার্ভিস আইডি',
+        nameEnglish: 'নাম', nameBN: 'নাম',
+        armyRank: 'পদবি', armyRankBN: 'পদবি',
+        corps: 'কোর', corpsBN: 'কোর',
+        trade: 'ট্রেড', tradeBN: 'ট্রেড', tradeRemarks: 'ট্রেড মন্তব্য',
+        motherOrganization: 'মূল সংস্থা', motherOrganizationBN: 'মূল সংস্থা',
+        motherUnit: 'মাতৃ ইউনিট', motherUnitBN: 'মাতৃ ইউনিট',
+        memberType: 'সদস্য ধরন', memberTypeBN: 'সদস্য ধরন',
+        appointment: 'নিয়োগ', appointmentBN: 'নিয়োগ',
+        joiningDate: 'যোগদানের তারিখ',
+        rabUnit: 'র‍্যাব ইউনিট', rabUnitBN: 'র‍্যাব ইউনিট',
+        gender: 'লিঙ্গ', genderBN: 'লিঙ্গ',
+        batch: 'ব্যাচ', batchBN: 'ব্যাচ',
+        postingStatus: 'পোস্টিং অবস্থা',
+        permanentDistrictTypeName: 'স্থায়ী জেলা', permanentDistrictTypeNameBN: 'স্থায়ী জেলা',
+        prefix: 'উপসর্গ', prefixBN: 'উপসর্গ',
+    };
+
+    /** Column header — Bangla when the document is Bangla, English label otherwise. */
+    getColHeader(col: MembersColumnDef): string {
+        if (!this.isBangla) return col.label;
+        return this.colHeaderBN[col.key] ?? col.label;
+    }
+
     getColWidth(col: MembersColumnDef): number {
         if (col.width) return col.width;
         if (this.columns.length === 0) return 100;
