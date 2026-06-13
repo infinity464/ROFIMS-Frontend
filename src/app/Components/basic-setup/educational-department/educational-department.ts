@@ -9,8 +9,6 @@ import { ConfirmationService, MessageService } from 'primeng/api';
 import { DynamicFormComponent } from '../shared/componets/dynamic-form-component/dynamic-form';
 import { DataTable } from '../shared/componets/data-table/data-table';
 import { Fluid } from 'primeng/fluid';
-
-import { CommonCode } from '../shared/models/common-code';
 import { SharedService } from '@/shared/services/shared-service';
 
 @Component({
@@ -41,31 +39,8 @@ export class EducationalDepartment {
     searchValue: string = '';
     isSubmitting = false;
 
-    InstitutionTypeOptions: { label: string; value: any }[] = [];
-    institutionNameOptions: { label: string; value: any }[] = [];
-    allInstitutions: any[] = [];
-    ancestors: CommonCode[] = [];
-
     formConfig: FormConfig = {
         formFields: [
-            {
-                name: 'InstitutionTypeId',
-                label: 'Institution Type',
-                type: 'select',
-                required: false,
-                default: null,
-                options: []
-            },
-            {
-                name: 'institutionNameId',
-                label: 'Institution Name',
-                type: 'select',
-                required: false,
-                default: null,
-                options: [],
-                dependsOn: 'InstitutionTypeId',
-                cascadeLoad: true
-            },
             {
                 name: 'codeValueEN',
                 label: 'EducationalDepartment Name (English)',
@@ -94,8 +69,6 @@ export class EducationalDepartment {
 
     tableConfig: TableConfig = {
         tableColumns: [
-            { field: 'institutionTypeNameDisplay', header: 'Institution Type' },
-            { field: 'institutionNameDisplay', header: 'Institution Name' },
             { field: 'codeValueEN', header: 'Educational Department Name (EN)' },
             { field: 'codeValueBN', header: 'Educational Department Name (BN)' },
             {
@@ -125,26 +98,15 @@ export class EducationalDepartment {
 
         this.initForm();
         this.setupFormFilterListeners();
-        this.loadInstitutionTypes();
+        this.getAllData();
     }
 
     private setupFormFilterListeners() {
-        this.commonForm.get('InstitutionTypeId')?.valueChanges.subscribe((typeId) => {
-            this.commonForm.patchValue({ institutionNameId: null }, { emitEvent: false });
-            const instField = this.formConfig.formFields.find((f) => f.name === 'institutionNameId');
-            if (instField) instField.options = [];
-            if (typeId) this.loadInstitutionNames(typeId);
-            this.first = 0;
-            this.buildTableData();
-        });
-        this.commonForm.get('institutionNameId')?.valueChanges.subscribe(() => { this.first = 0; this.buildTableData(); });
         this.commonForm.get('status')?.valueChanges.subscribe(() => { this.first = 0; this.buildTableData(); });
     }
 
     initForm() {
         this.commonForm = this.fb.group({
-            InstitutionTypeId: [null],
-            institutionNameId: [null],
             codeValueEN: ['', Validators.required],
             codeValueBN: ['', Validators.required],
             status: [null],
@@ -164,46 +126,7 @@ export class EducationalDepartment {
         });
     }
 
-    loadInstitutionTypes() {
-        this.masterBasicSetupService.getAllByType('EducationInstitutionType').subscribe({
-            next: (types) => {
-                this.InstitutionTypeOptions = types.map((d) => ({ label: d.codeValueEN, value: d.codeId }));
-                const field = this.formConfig.formFields.find((f) => f.name === 'InstitutionTypeId');
-                if (field) field.options = this.InstitutionTypeOptions;
-                this.masterBasicSetupService.getAllByType('EducationInstitution').subscribe({
-                    next: (insts) => {
-                        this.allInstitutions = Array.isArray(insts) ? insts : [];
-                        this.getAllData();
-                    }
-                });
-            },
-            error: (err) => {
-                console.error('Error loading InstitutionTypes:', err);
-                this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.message || 'Failed to load InstitutionTypes' });
-            }
-        });
-    }
-
-    loadInstitutionNames(InstitutionTypeId: number) {
-        this.masterBasicSetupService.getByParentId(InstitutionTypeId).subscribe({
-            next: (insts) => {
-                this.institutionNameOptions = insts.map((d) => ({ label: d.codeValueEN, value: d.codeId }));
-                const field = this.formConfig.formFields.find((f) => f.name === 'institutionNameId');
-                if (field) field.options = this.institutionNameOptions;
-            },
-            error: (err) => {
-                console.error('Error loading institutionNames:', err);
-                this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.message || 'Failed to load institutionNames' });
-            }
-        });
-    }
-
-    onFieldChange(event: { fieldName: string; value: any }) {
-        if (event.fieldName === 'institutionNameId' && event.value?.parentField === 'InstitutionTypeId') {
-            const typeId = event.value.parentValue;
-            if (typeId) this.loadInstitutionNames(typeId);
-        }
-    }
+    onFieldChange(_event: { fieldName: string; value: any }) {}
 
     getAllData() {
         this.loading = true;
@@ -222,26 +145,8 @@ export class EducationalDepartment {
     }
 
     private buildTableData() {
-        const typeOpts = this.InstitutionTypeOptions;
-        const getTypeName = (id: number) => typeOpts.find((o: any) => o.value === id)?.label ?? '-';
-        const getInstName = (id: number) => {
-            const i = this.allInstitutions.find((x: any) => x.codeId === id);
-            return i?.codeValueEN ?? this.institutionNameOptions.find((o: any) => o.value === id)?.label ?? '-';
-        };
-        const instToTypeId = (instId: number) => this.allInstitutions.find((i: any) => i.codeId === instId)?.parentCodeId;
-        let list = this.allData.map((r: any) => ({
-            ...r,
-            institutionNameDisplay: getInstName(r.parentCodeId),
-            institutionTypeNameDisplay: getTypeName(instToTypeId(r.parentCodeId) ?? 0)
-        }));
-        const typeId = this.commonForm?.get('InstitutionTypeId')?.value;
-        const institutionNameId = this.commonForm?.get('institutionNameId')?.value;
+        let list = [...this.allData];
         const status = this.commonForm?.get('status')?.value;
-        if (institutionNameId != null && institutionNameId !== '') list = list.filter((r: any) => r.parentCodeId === institutionNameId);
-        else if (typeId != null && typeId !== '') {
-            const instIds = this.allInstitutions.filter((i: any) => i.parentCodeId === typeId).map((i: any) => i.codeId);
-            list = list.filter((r: any) => instIds.includes(r.parentCodeId));
-        }
         if (status != null) list = list.filter((r: any) => r.status === status);
         const q = (this.searchValue ?? '').toLowerCase().trim();
         if (q) list = list.filter((r: any) => r.codeValueEN?.toLowerCase().includes(q) || r.codeValueBN?.toLowerCase().includes(q));
@@ -251,17 +156,7 @@ export class EducationalDepartment {
     }
 
     submit(data: any) {
-        const typeId = this.commonForm.get('InstitutionTypeId')?.value;
-        const institutionNameId = this.commonForm.get('institutionNameId')?.value;
         const status = this.commonForm.get('status')?.value;
-        if (typeId == null || typeId === '') {
-            this.messageService.add({ severity: 'warn', summary: 'Validation', detail: 'Please select Institution Type' });
-            return;
-        }
-        if (institutionNameId == null || institutionNameId === '') {
-            this.messageService.add({ severity: 'warn', summary: 'Validation', detail: 'Please select Institution Name' });
-            return;
-        }
         if (status == null) {
             this.messageService.add({ severity: 'warn', summary: 'Validation', detail: 'Please select Status' });
             return;
@@ -273,7 +168,8 @@ export class EducationalDepartment {
 
         const currentUser = this.getCurrentUser();
         const currentDateTime = this.shareService.getCurrentDateTime();
-        this.commonForm.patchValue({ parentCodeId: this.commonForm.value.institutionNameId });
+        // Educational Department is an independent (flat) list — no parent institution.
+        this.commonForm.patchValue({ parentCodeId: null });
 
         if (this.editingId) {
             this.updateDepartment(currentUser, currentDateTime);
@@ -314,24 +210,10 @@ export class EducationalDepartment {
 
     update(row: any) {
         this.editingId = row.codeId;
-        this.masterBasicSetupService.getAncestorsOfCommonCode(row.codeId).subscribe({
-            next: (ancestors) => {
-                this.ancestors = ancestors;
-                const InstitutionTypeId = this.ancestors[0]?.codeId;
-                if (InstitutionTypeId) {
-                    this.loadInstitutionNames(InstitutionTypeId);
-                    setTimeout(() => {
-                        this.commonForm.patchValue({
-                            InstitutionTypeId: InstitutionTypeId,
-                            institutionNameId: row.parentCodeId,
-                            codeValueEN: row.codeValueEN,
-                            codeValueBN: row.codeValueBN,
-                            status: row.status
-                        });
-                    }, 100);
-                }
-            },
-            error: (err) => console.error('Error loading ancestors:', err)
+        this.commonForm.patchValue({
+            codeValueEN: row.codeValueEN,
+            codeValueBN: row.codeValueBN,
+            status: row.status
         });
     }
 
@@ -363,11 +245,7 @@ export class EducationalDepartment {
         this.editingId = null;
         this.isSubmitting = false;
         this.searchValue = '';
-        const instField = this.formConfig.formFields.find((f) => f.name === 'institutionNameId');
-        if (instField) instField.options = [];
         this.commonForm.reset({
-            InstitutionTypeId: null,
-            institutionNameId: null,
             orgId: 0,
             codeId: 0,
             codeType: 'EducationalDepartment',
