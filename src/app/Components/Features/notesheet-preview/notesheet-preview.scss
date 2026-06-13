@@ -288,24 +288,18 @@
 }
 
 .ns-cell-ref {
-    padding: 5px 16px 5px 20px;
+    padding: 5px 16px 0 20px;
     font-size: 8pt;
-    display: flex;
-    align-items: flex-start;
-    flex-wrap: wrap;
-    gap: 0 4px;
 
-    .ns-ref-content { flex: 1; min-width: 0; }
+    .ns-ref-content { margin-left: 0; }
     ::ng-deep .ns-ref-content p { margin: 0 0 0.2rem; }
     ::ng-deep .ns-ref-content p:last-child { margin-bottom: 0; }
     @include ns-rich-list-styles();
 }
 .ns-ref-key {
     font-weight: 700;
-    margin-right: 4px;
 }
 .ns-ref-item {
-    padding-left: 8px;
     .ns-ref-serial {
         font-weight: 600;
         margin-right: 4px;
@@ -330,7 +324,7 @@
 /* Body paragraph (serial + text) */
 .ns-para {
     display: flex;
-    gap: 8px;
+    gap: 4px;
     padding: 10px 16px 10px 20px;
     font-size: 8pt;
     line-height: 1.85;
@@ -338,7 +332,6 @@
 .ns-para-no {
     flex-shrink: 0;
     font-weight: 700;
-    min-width: 30px;
 }
 .ns-para-text {
     flex: 1;

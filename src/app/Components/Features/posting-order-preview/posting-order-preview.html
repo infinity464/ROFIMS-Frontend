@@ -458,6 +458,10 @@
                 <p-checkbox [(ngModel)]="showPrevWorkplaceUnit" [binary]="true" inputId="chkPrevUnit"></p-checkbox>
                 <label for="chkPrevUnit" style="cursor:pointer;">{{ isBangla ? 'পূর্ববতী কর্মস্থল (র‌্যাব ইউনিট)' : 'Previous Workplace (RAB Unit)' }}</label>
             </span>
+            <span *ngIf="isApproved" style="display:inline-flex; align-items:center; gap:0.4rem;">
+                <p-checkbox [(ngModel)]="showDeleteColumn" [binary]="true" inputId="chkDeleteCol"></p-checkbox>
+                <label for="chkDeleteCol" style="cursor:pointer;">{{ isBangla ? 'মুছুন' : 'Delete' }}</label>
+            </span>
         </div>
     </div>
 
@@ -514,45 +518,45 @@
                     <!-- Inter-posting: single-row header (no Trade, no RAB ID) -->
                     <ng-container *ngIf="isInterPosting">
                         <tr>
-                            <th style="width:5%">{{ isBangla ? 'ক্রমিক' : 'Ser' }}</th>
+                            <th style="width:4%">{{ isBangla ? 'ক্রমিক' : 'Ser' }}</th>
                             <th style="width:10%">{{ isBangla ? 'ব্যক্তিগত নং' : 'Service ID' }}</th>
-                            <th style="width:8%">{{ isBangla ? 'পদবি' : 'Rank' }}</th>
-                            <th>{{ isBangla ? 'নাম' : 'Name' }}</th>
-                            <th *ngIf="showOwnDistrict">{{ isBangla ? 'নিজ জেলা' : 'Own District' }}</th>
-                            <th>{{ isBangla ? 'পূর্ববতী কর্মস্থল' : 'Previous Workplace' }}</th>
-                            <th>{{ isBangla ? 'বদলিকৃত কর্মস্থল' : 'Transfer Station' }}</th>
-                            <th>{{ isBangla ? 'মন্তব্য' : 'Remarks' }}</th>
-                            <th *ngIf="isApproved" class="no-print" style="width:50px"></th>
+                            <th style="width:7%">{{ isBangla ? 'পদবি' : 'Rank' }}</th>
+                            <th style="width:13%">{{ isBangla ? 'নাম' : 'Name' }}</th>
+                            <th *ngIf="showOwnDistrict" style="width:10%">{{ isBangla ? 'নিজ জেলা' : 'Own District' }}</th>
+                            <th style="width:14%">{{ isBangla ? 'পূর্ববতী কর্মস্থল' : 'Previous Workplace' }}</th>
+                            <th style="width:14%">{{ isBangla ? 'বদলিকৃত কর্মস্থল' : 'Transfer Station' }}</th>
+                            <th style="width:18%">{{ isBangla ? 'মন্তব্য' : 'Remarks' }}</th>
+                            <th *ngIf="isApproved && showDeleteColumn" class="no-print" style="width:30px"></th>
                         </tr>
                     </ng-container>
                     <!-- Non-inter-posting: single header row -->
                     <ng-container *ngIf="!isInterPosting">
                         <tr>
                             <ng-container *ngIf="isBangla">
-                                <th style="width:5%">ক্রমিক</th>
-                                <th style="width:10%">ব্যক্তিগত নম্বর</th>
-                                <th style="width:8%">পদবি</th>
-                                <th style="width:8%">ট্রেড</th>
-                                <th>নাম</th>
-                                <th *ngIf="showOwnDistrict">নিজ জেলা</th>
-                                <th>পূর্ববতী কর্মস্থল</th>
-                                <th>বদলিকৃত কর্মস্থল</th>
-                                <th>র‌্যাব আইডি</th>
-                                <th>মন্তব্য</th>
+                                <th style="width:3%">ক্রমিক</th>
+                                <th style="width:9%">ব্যক্তিগত নম্বর</th>
+                                <th style="width:6%">পদবি</th>
+                                <th style="width:6%">ট্রেড</th>
+                                <th style="width:10%">নাম</th>
+                                <th *ngIf="showOwnDistrict" style="width:8%">নিজ জেলা</th>
+                                <th style="width:13%">পূর্ববতী কর্মস্থল</th>
+                                <th style="width:13%">বদলিকৃত কর্মস্থল</th>
+                                <th style="width:7%">র‌্যাব আইডি</th>
+                                <th style="width:15%">মন্তব্য</th>
                             </ng-container>
                             <ng-container *ngIf="!isBangla">
-                                <th style="width:5%">Ser</th>
-                                <th style="width:10%">Service ID</th>
-                                <th style="width:8%">Rank</th>
-                                <th style="width:8%">Trade</th>
-                                <th>Name</th>
-                                <th *ngIf="showOwnDistrict">Own District</th>
-                                <th>Previous Workplace</th>
-                                <th>Transfer Unit</th>
-                                <th>RAB ID</th>
-                                <th>Remarks</th>
+                                <th style="width:3%">Ser</th>
+                                <th style="width:9%">Service ID</th>
+                                <th style="width:6%">Rank</th>
+                                <th style="width:6%">Trade</th>
+                                <th style="width:10%">Name</th>
+                                <th *ngIf="showOwnDistrict" style="width:8%">Own District</th>
+                                <th style="width:13%">Previous Workplace</th>
+                                <th style="width:13%">Transfer Unit</th>
+                                <th style="width:7%">RAB ID</th>
+                                <th style="width:15%">Remarks</th>
                             </ng-container>
-                            <th *ngIf="isApproved" class="no-print" style="width:50px"></th>
+                            <th *ngIf="isApproved && showDeleteColumn" class="no-print" style="width:30px"></th>
                         </tr>
                     </ng-container>
                 </thead>
@@ -567,7 +571,7 @@
                             <td style="white-space: pre-line;">{{ empPrevWorkplace(emp) }}</td>
                             <td>{{ empTransferUnit(emp) }}</td>
                             <td style="white-space: pre-line; word-break: break-word; min-width: 150px;">{{ empCombinedRemarks(emp) }}</td>
-                            <td *ngIf="isApproved" class="text-center no-print">
+                            <td *ngIf="isApproved && showDeleteColumn" class="text-center no-print">
                                 <p-button
                                     [icon]="removingEmployeeId === emp.employeeId ? 'pi pi-spin pi-spinner' : 'pi pi-trash'"
                                     severity="danger"
@@ -593,7 +597,7 @@
                             <td>{{ empTransferUnit(emp) }}</td>
                             <td>{{ empRabId(emp) }}</td>
                             <td>{{ getRemovalRemark(emp) }}</td>
-                            <td *ngIf="isApproved" class="text-center no-print">
+                            <td *ngIf="isApproved && showDeleteColumn" class="text-center no-print">
                                 <p-button
                                     [icon]="removingEmployeeId === emp.employeeId ? 'pi pi-spin pi-spinner' : 'pi pi-trash'"
                                     severity="danger"

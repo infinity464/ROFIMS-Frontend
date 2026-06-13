@@ -136,6 +136,7 @@ import { NoteSheetNumberConfigComponent } from '@/Components/basic-setup/noteshe
 import { LeaveCardNumberConfigComponent } from '@/Components/basic-setup/leave-card-number-config/leave-card-number-config';
 import { NoteSheetApproverConfigComponent } from '@/Components/basic-setup/notesheet-approver-config/notesheet-approver-config';
 import { PostingOrderNumberConfigComponent } from '@/Components/basic-setup/posting-order-number-config/posting-order-number-config';
+import { OnulipiConfigComponent } from '@/Components/basic-setup/onulipi-config/onulipi-config';
 import { NotesheetGenerateComponent } from '@/Components/Features/notesheet-generate/notesheet-generate';
 import { NotesheetExBdLeaveComponent } from '@/Components/Features/notesheet-ex-bd-leave/notesheet-ex-bd-leave';
 import { ExBdLeaveApplyComponent } from '@/Components/Features/ex-bd-leave-application/ex-bd-leave-apply/ex-bd-leave-apply.component';
@@ -289,6 +290,7 @@ export const appRoutes: Routes = [
             { path: 'basic-setup/leave-card-number-config', component: LeaveCardNumberConfigComponent },
             { path: 'basic-setup/notesheet-approver-config', component: NoteSheetApproverConfigComponent },
             { path: 'basic-setup/posting-order-number-config', component: PostingOrderNumberConfigComponent },
+            { path: 'basic-setup/onulipi-config', component: OnulipiConfigComponent },
             { path: 'notesheet-generate', component: NotesheetGenerateComponent },
             { path: 'notesheet-ex-bd-leave', component: NotesheetExBdLeaveComponent },
             { path: 'ex-bd-leave/apply', component: ExBdLeaveApplyComponent },

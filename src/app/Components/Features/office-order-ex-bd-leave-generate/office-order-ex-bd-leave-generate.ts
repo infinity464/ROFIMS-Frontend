@@ -24,6 +24,7 @@ import { CodeType, PostingType } from '@/models/enums';
 import { FlexibleDateDirective } from '@/shared/directives/flexible-date.directive';
 import { FileReferencesFormComponent, FileRowData } from '@/Components/Common/file-references-form/file-references-form';
 import { EmpService } from '@/services/emp-service';
+import { OnulipiItem } from '@/Components/basic-setup/shared/models/onulipi-config';
 
 /** Reference No paragraph entry. */
 interface ReferenceNoEntry {
@@ -287,11 +288,12 @@ export class OfficeOrderExBdLeaveGenerateComponent implements OnInit {
         }));
     }
 
-    /** When a notesheet is selected, auto-fill Subject and TextType. */
+    /** When a notesheet is selected, auto-fill Subject, TextType, Body, and Onulipi. */
     onNoteSheetChange(): void {
         this.selectedNoteSheetNo = null;
         this.selectedNoteSheetApprovedDate = null;
         this.subject = '';
+        this.onulipiParagraphs = [];
         if (!this.selectedNoteSheetId) return;
 
         this.http.get<any>(`${this.noteSheetApi}/GetFilteredByKeysAsyn/${this.selectedNoteSheetId}`).subscribe({
@@ -306,9 +308,27 @@ export class OfficeOrderExBdLeaveGenerateComponent implements OnInit {
                 this.bodyText = ns.mainText ?? ns.MainText ?? '';
                 this.postingOrderNumberConfigId = null;
                 this.rebuildConfigOptions();
+                this.loadOnulipiFromConfig();
             },
             error: (err: any) => {
                 this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.message || 'Failed to load notesheet details.' });
+            }
+        });
+    }
+
+    private loadOnulipiFromConfig(): void {
+        this.masterBasicSetupService.getAllOnulipiConfig().subscribe({
+            next: (configs) => {
+                const match = (configs ?? []).find(c => c.postingType === PostingType.ExBdLeave && c.status);
+                if (!match) return;
+                const json = this.isBangla ? match.onulipiJsonBN : match.onulipiJsonEN;
+                if (!json) return;
+                try {
+                    const items: OnulipiItem[] = JSON.parse(json);
+                    this.onulipiParagraphs = items
+                        .sort((a, b) => a.serial - b.serial)
+                        .map(item => ({ text: item.text, transferRabUnitId: null, transferRabUnitName: null }));
+                } catch { /* ignore parse errors */ }
             }
         });
     }
@@ -350,6 +370,18 @@ export class OfficeOrderExBdLeaveGenerateComponent implements OnInit {
         this.onulipiParagraphs.splice(index, 1);
     }
 
+    moveOnulipiUp(index: number): void {
+        if (index <= 0) return;
+        [this.onulipiParagraphs[index - 1], this.onulipiParagraphs[index]] =
+            [this.onulipiParagraphs[index], this.onulipiParagraphs[index - 1]];
+    }
+
+    moveOnulipiDown(index: number): void {
+        if (index >= this.onulipiParagraphs.length - 1) return;
+        [this.onulipiParagraphs[index], this.onulipiParagraphs[index + 1]] =
+            [this.onulipiParagraphs[index + 1], this.onulipiParagraphs[index]];
+    }
+
     trackByIndex(index: number): number {
         return index;
     }
@@ -375,6 +407,22 @@ export class OfficeOrderExBdLeaveGenerateComponent implements OnInit {
         }
         if (!this.selectedApprovalEmployeeId) {
             this.messageService.add({ severity: 'warn', summary: 'Warning', detail: 'Please select an approval person.' });
+            return;
+        }
+        if (!this.addressTo?.trim()) {
+            this.messageService.add({ severity: 'warn', summary: 'Warning', detail: 'Address To is required.' });
+            return;
+        }
+        if (this.referenceEntries.filter(e => e.text.trim()).length === 0) {
+            this.messageService.add({ severity: 'warn', summary: 'Warning', detail: 'At least one Reference No is required.' });
+            return;
+        }
+        if (!this.subject?.trim()) {
+            this.messageService.add({ severity: 'warn', summary: 'Warning', detail: 'Subject is required.' });
+            return;
+        }
+        if (!this.bodyText?.trim()) {
+            this.messageService.add({ severity: 'warn', summary: 'Warning', detail: 'Body is required.' });
             return;
         }
 

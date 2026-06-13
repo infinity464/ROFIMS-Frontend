@@ -172,6 +172,10 @@ export class ExBdLeaveApplicationService {
         try { return JSON.parse(json); } catch { return []; }
     }
 
+    getNoteSheetBodyData(exBdLeaveApplicationId: number): Observable<ExBdLeaveNoteSheetBodyData | null> {
+        return this.http.get<ExBdLeaveNoteSheetBodyData>(`${this.baseUrl}/GetNoteSheetBodyData/${exBdLeaveApplicationId}`);
+    }
+
     // ── Progress view ────────────────────────────────────────────────
 
     getProgressByEmployee(employeeId: number): Observable<ExBdLeaveApplicationProgressView[]> {
@@ -210,4 +214,23 @@ export interface ExBdLeaveApplicationProgressView {
     officeOrderApprovalStatus: string | null;
     progressStatus: string;
     isDeleted: boolean;
+}
+
+export interface ExBdLeaveNoteSheetBodyData {
+    exBdLeaveApplicationId: number;
+    applicantEmployeeId: number;
+    empNameEN: string | null;
+    empNameBN: string | null;
+    rabid: string | null;
+    placementEN: string | null;
+    placementBN: string | null;
+    visitTypeNameEN: string | null;
+    visitTypeNameBN: string | null;
+    countriesDisplayEN: string | null;
+    countriesDisplayBN: string | null;
+    familyMembersDisplayEN: string | null;
+    familyMembersDisplayBN: string | null;
+    fromDate: string;
+    toDate: string;
+    totalDays: number;
 }

@@ -97,7 +97,7 @@
             <!-- Reference No (+) -->
             <div class="field mb-4 p-4 surface-50 border-round">
                 <div class="flex align-items-center gap-2 mb-3">
-                    <span class="font-semibold text-700">Reference No</span>
+                    <span class="font-semibold text-700">Reference No <span class="text-red-500">*</span></span>
                     <p-button
                         icon="pi pi-plus"
                         [rounded]="true"
@@ -136,14 +136,20 @@
 
             <!-- Address To (Rich Text) -->
             <div class="field mb-4">
-                <label class="font-semibold block mb-2 text-700">Address To</label>
+                <label class="font-semibold block mb-2 text-700">Address To <span class="text-red-500">*</span></label>
                 <p-editor [(ngModel)]="addressTo" [style]="{ height: '120px' }"></p-editor>
             </div>
 
             <!-- Subject -->
             <div class="field mb-4">
-                <label class="font-semibold block mb-2 text-700">Subject</label>
+                <label class="font-semibold block mb-2 text-700">Subject <span class="text-red-500">*</span></label>
                 <input pInputText [(ngModel)]="subject" class="w-full" placeholder="Enter subject..." />
+            </div>
+
+            <!-- Body -->
+            <div class="field mb-4">
+                <label class="font-semibold block mb-2 text-700">Body <span class="text-red-500">*</span></label>
+                <p-editor [(ngModel)]="bodyText" [style]="{ height: '200px' }"></p-editor>
             </div>
 
             <!-- Onulipi / অনুলিপি -->
@@ -170,6 +176,10 @@
                             placeholder="Enter paragraph text..."
                             [autoResize]="true"
                         ></textarea>
+                        <div class="flex flex-column gap-1">
+                            <p-button icon="pi pi-arrow-up" [rounded]="true" [text]="true" size="small" pTooltip="Move up" [disabled]="i === 0" (onClick)="moveOnulipiUp(i)"></p-button>
+                            <p-button icon="pi pi-arrow-down" [rounded]="true" [text]="true" size="small" pTooltip="Move down" [disabled]="i === onulipiParagraphs.length - 1" (onClick)="moveOnulipiDown(i)"></p-button>
+                        </div>
                         <p-button
                             icon="pi pi-times"
                             severity="danger"

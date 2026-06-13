@@ -20,6 +20,7 @@ import { NoteSheetApproverConfigModel } from '../models/notesheet-approver-confi
 import { RABUnitAORModel, ResultViewModel } from '../models/rab-unit-aor';
 import { PostingOrderNumberConfigModel } from '../models/posting-order-number-config';
 import { MovementLetterNumberConfigModel } from '../models/movement-letter-number-config';
+import { OnulipiConfigModel } from '../models/onulipi-config';
 
 export interface AuthorizedCountItem {
     codeId: number;
@@ -46,6 +47,7 @@ export class MasterBasicSetupService {
     private apiUrlRABUnitAOR = `${environment.apis.core}/RABUnitAOR`;
     private apiUrlPostingOrderNumberConfig = `${environment.apis.core}/PostingOrderNumberConfig`;
     private apiUrlMovementLetterNumberConfig = `${environment.apis.core}/MovementLetterNumberConfig`;
+    private apiUrlOnulipiConfig = `${environment.apis.core}/OnulipiConfig`;
 
 
     getAllByType(codeType: string): Observable<CommonCode[]> {
@@ -416,5 +418,27 @@ export class MasterBasicSetupService {
 
     deleteMovementLetterNumberConfig(id: number): Observable<any> {
         return this.http.delete(`${this.apiUrlMovementLetterNumberConfig}/DeleteAsyn/${id}`);
+    }
+
+    // OnulipiConfig CRUD
+
+    getAllOnulipiConfig(): Observable<OnulipiConfigModel[]> {
+        return this.http.get<OnulipiConfigModel[]>(`${this.apiUrlOnulipiConfig}/GetAll`);
+    }
+
+    getOnulipiConfigById(id: number): Observable<OnulipiConfigModel> {
+        return this.http.get<OnulipiConfigModel>(`${this.apiUrlOnulipiConfig}/GetFilteredByKeysAsyn/${id}`);
+    }
+
+    createOnulipiConfig(model: OnulipiConfigModel): Observable<any> {
+        return this.http.post(`${this.apiUrlOnulipiConfig}/SaveAsyn`, model);
+    }
+
+    updateOnulipiConfig(model: OnulipiConfigModel): Observable<any> {
+        return this.http.post(`${this.apiUrlOnulipiConfig}/UpdateAsyn`, model);
+    }
+
+    deleteOnulipiConfig(id: number): Observable<any> {
+        return this.http.delete(`${this.apiUrlOnulipiConfig}/DeleteAsyn/${id}`);
     }
 }
