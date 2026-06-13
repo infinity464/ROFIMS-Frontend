@@ -358,11 +358,7 @@ export class ClearanceExBdLeavePreviewComponent implements OnInit {
             ? { width: 12240, height: 15840 }
             : { width: 11906, height: 16838 };
 
-        children.push(new Paragraph({
-            children: [new TextRun({ text: 'Clearance', font, size: 24, bold: true, underline: {} })],
-            alignment: AlignmentType.CENTER,
-            spacing: { after: 200 }
-        }));
+
 
         const headerLines = [
             "Government of the People's Republic of Bangladesh",
@@ -431,10 +427,7 @@ export class ClearanceExBdLeavePreviewComponent implements OnInit {
 
         const exportOnulipi = this.exportOnulipiEntries;
         if (exportOnulipi.length > 0) {
-            if (this.order.noteSheetNo) {
-                children.push(new Paragraph({ children: [new TextRun({ text: this.order.noteSheetNo, font, size: contentSize })], spacing: { before: 300 } }));
-            }
-            children.push(new Paragraph({ children: [new TextRun({ text: 'Information:', font, size: contentSize, bold: true })], spacing: { before: this.order.noteSheetNo ? 80 : 300 } }));
+            children.push(new Paragraph({ children: [new TextRun({ text: 'Information:', font, size: contentSize, bold: true })], spacing: { before: 300 } }));
             exportOnulipi.forEach((entry, idx) => {
                 const ser = String(idx + 1);
                 children.push(new Paragraph({ children: [new TextRun({ text: `${ser}. ${entry.text}`, font, size: contentSize })], indent: { left: 360 }, spacing: { after: 20 } }));

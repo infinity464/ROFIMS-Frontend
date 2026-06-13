@@ -18,7 +18,7 @@
             [paginator]="true"
             [rows]="10"
             [rowsPerPageOptions]="[10, 25, 50]"
-            [globalFilterFields]="['letterNo', 'noteSheetNo', 'subject', 'status']"
+            [globalFilterFields]="['letterNo', 'noteSheetNo', 'subject', 'approvalStatus', 'applicantName', 'applicantServiceId']"
         >
             <ng-template pTemplate="caption">
                 <div class="flex justify-content-end">
@@ -31,12 +31,12 @@
             <ng-template pTemplate="header">
                 <tr>
                     <th style="width: 50px">Ser</th>
+                    <th style="min-width: 200px">Applicant</th>
                     <th style="min-width: 160px">Letter No</th>
                     <th style="min-width: 110px">Letter Date</th>
                     <th style="min-width: 140px">NoteSheet No</th>
                     <th style="min-width: 200px">Subject</th>
-                    <th style="min-width: 90px">Status</th>
-                    <th style="min-width: 100px">Created By</th>
+                    <th style="min-width: 120px">Status</th>
                     <th style="min-width: 110px">Created Date</th>
                     <th style="width: 100px">Action</th>
                 </tr>
@@ -44,18 +44,18 @@
             <ng-template pTemplate="body" let-row let-rowIndex="rowIndex">
                 <tr>
                     <td>{{ rowIndex + 1 }}</td>
+                    <td>{{ (row.applicantPrefix && row.applicantServiceId ? row.applicantPrefix + '-' + row.applicantServiceId : row.applicantPrefix || row.applicantServiceId || '') }} {{ row.applicantName || '' }}</td>
                     <td><span class="font-semibold">{{ row.letterNo || '-' }}</span></td>
                     <td>{{ formatDate(row.letterDate) }}</td>
                     <td>{{ row.noteSheetNo || '-' }}</td>
                     <td>{{ row.subject || '-' }}</td>
                     <td>
-                        <p-tag [value]="row.status" [severity]="getStatusSeverity(row.status)"></p-tag>
+                        <p-tag [value]="row.approvalStatus || 'Pending'" [severity]="getStatusSeverity(row.approvalStatus)"></p-tag>
                     </td>
-                    <td>{{ row.createdBy || '-' }}</td>
                     <td>{{ formatDate(row.createdDate) }}</td>
                     <td>
                         <p-button icon="pi pi-eye" [rounded]="true" [text]="true" size="small" pTooltip="View / Preview" (onClick)="viewPreview(row)"></p-button>
-                        <p-button *ngIf="canUpdate && row.status?.toLowerCase() !== 'approved'" icon="pi pi-pencil" [rounded]="true" [text]="true" size="small" pTooltip="Edit" (onClick)="editClearance(row)"></p-button>
+                        <p-button *ngIf="canUpdate && row.approvalStatus !== 'approve'" icon="pi pi-pencil" [rounded]="true" [text]="true" size="small" pTooltip="Edit" (onClick)="editClearance(row)"></p-button>
                     </td>
                 </tr>
             </ng-template>

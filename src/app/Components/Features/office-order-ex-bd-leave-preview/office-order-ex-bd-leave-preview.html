@@ -17,7 +17,7 @@
             [paginator]="true"
             [rows]="10"
             [rowsPerPageOptions]="[10, 25, 50]"
-            [globalFilterFields]="['letterNo', 'noteSheetNo', 'subject', 'approvalStatus', 'createdBy']"
+            [globalFilterFields]="['letterNo', 'noteSheetNo', 'subject', 'approvalStatus', 'applicantName', 'applicantServiceId']"
         >
             <ng-template pTemplate="caption">
                 <div class="flex justify-content-end">
@@ -30,13 +30,12 @@
             <ng-template pTemplate="header">
                 <tr>
                     <th style="width: 50px">SL</th>
+                    <th style="min-width: 200px">Applicant</th>
                     <th style="min-width: 160px">Letter No</th>
                     <th style="min-width: 110px">Date</th>
                     <th style="min-width: 200px">Subject</th>
                     <th style="min-width: 140px">NoteSheet No</th>
-                    <th style="min-width: 90px">Status</th>
-                    <th style="min-width: 120px">Approval</th>
-                    <th style="min-width: 100px">Created By</th>
+                    <th style="min-width: 120px">Status</th>
                     <th style="min-width: 110px">Created Date</th>
                     <th style="width: 80px">Action</th>
                 </tr>
@@ -44,15 +43,14 @@
             <ng-template pTemplate="body" let-row let-rowIndex="rowIndex">
                 <tr>
                     <td>{{ rowIndex + 1 }}</td>
+                    <td>{{ (row.applicantPrefix && row.applicantServiceId ? row.applicantPrefix + '-' + row.applicantServiceId : row.applicantPrefix || row.applicantServiceId || '') }} {{ row.applicantName || '' }}</td>
                     <td><span class="font-semibold">{{ row.letterNo || '-' }}</span></td>
                     <td>{{ formatDate(row.letterDate) }}</td>
                     <td>{{ row.subject || '-' }}</td>
                     <td>{{ row.noteSheetNo || '-' }}</td>
-                    <td>{{ row.status || '-' }}</td>
                     <td>
                         <p-tag [value]="approvalStatusLabel(row.approvalStatus)" [severity]="approvalStatusSeverity(row.approvalStatus)"></p-tag>
                     </td>
-                    <td>{{ row.createdBy || '-' }}</td>
                     <td>{{ formatDate(row.createdDate) }}</td>
                     <td>
                         <p-button icon="pi pi-eye" [rounded]="true" [text]="true" size="small" pTooltip="View" (onClick)="viewOrder(row)"></p-button>
@@ -62,7 +60,7 @@
             </ng-template>
             <ng-template pTemplate="emptymessage">
                 <tr>
-                    <td colspan="10" class="text-center p-4">
+                    <td colspan="9" class="text-center p-4">
                         <div class="flex flex-column align-items-center gap-3 py-5">
                             <i class="pi pi-inbox text-5xl text-400"></i>
                             <span class="text-lg text-500">No office orders found.</span>

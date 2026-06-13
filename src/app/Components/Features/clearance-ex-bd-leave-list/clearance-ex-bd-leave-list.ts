@@ -82,11 +82,11 @@ export class ClearanceExBdLeaveListComponent implements OnInit {
     }
 
     getStatusSeverity(status: string): "success" | "info" | "warn" | "danger" | "secondary" | "contrast" {
-        switch (status?.toLowerCase()) {
-            case 'approved': return 'success';
-            case 'draft': return 'warn';
-            case 'cancelled': return 'danger';
-            default: return 'info';
+        switch (status) {
+            case 'approve': return 'success';
+            case 'cancel': return 'danger';
+            case 'pending':
+            default: return 'warn';
         }
     }
 

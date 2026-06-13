@@ -25,10 +25,11 @@ import { FlexibleDateDirective } from '@/shared/directives/flexible-date.directi
 import { FileReferencesFormComponent, FileRowData } from '@/Components/Common/file-references-form/file-references-form';
 import { EmpService } from '@/services/emp-service';
 import { EmployeeSearchInfoModel } from '@/models/EmpModel';
-import { ExBdLeaveApplicationService } from '@/services/ex-bd-leave-application.service';
+import { ExBdLeaveApplicationService, ExBdLeaveNoteSheetBodyData } from '@/services/ex-bd-leave-application.service';
 import { OnulipiItem } from '@/Components/basic-setup/shared/models/onulipi-config';
 import { CommonCodeService } from '@/services/common-code-service';
 import { CommonCodeModel } from '@/models/common-code-model';
+import { toEnglishWords, formatDateEnglish } from '@/Core/i18n/bangla-numerals';
 
 /** Reference No paragraph entry. */
 interface ReferenceNoEntry {
@@ -318,16 +319,52 @@ export class ClearanceExBdLeaveGenerateComponent implements OnInit {
                 } else {
                     this.subject = ns.subject ?? '';
                 }
-                this.bodyText = ns.mainText ?? ns.MainText ?? '';
                 this.postingOrderNumberConfigId = null;
                 this.rebuildConfigOptions();
                 this.loadOnulipiFromConfig();
 
                 const appId = ns.exBdLeaveApplicationId ?? ns.ExBdLeaveApplicationId;
-                if (appId) this.loadApplicantInfo(appId);
+                if (appId) {
+                    this.loadApplicantInfo(appId);
+                    this.buildEnglishBody(appId);
+                }
             },
             error: (err: any) => {
                 this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.message || 'Failed to load notesheet details.' });
+            }
+        });
+    }
+
+    private buildEnglishBody(exBdLeaveApplicationId: number): void {
+        this.exBdLeaveAppService.getNoteSheetBodyData(exBdLeaveApplicationId).subscribe({
+            next: (bd) => {
+                if (!bd) return;
+                this.empService.getEmployeeSearchInfo(bd.applicantEmployeeId).subscribe({
+                    next: (emp) => {
+                        const name = bd.empNameEN || '';
+                        const prefix = bd.prefixEN || '';
+                        const serviceId = emp?.ServiceId || emp?.serviceId || '';
+                        const identity = [prefix, serviceId].filter(Boolean).join('-');
+                        const unit = bd.placementEN || '';
+                        const purpose = bd.visitTypeNameEN || '';
+                        const countries = bd.countriesDisplayEN || '';
+                        const totalDays = bd.totalDays ?? 0;
+                        const daysWords = toEnglishWords(totalDays);
+                        const fromDate = formatDateEnglish(bd.fromDate ? new Date(bd.fromDate) : null);
+                        const toDate = formatDateEnglish(bd.toDate ? new Date(bd.toDate) : null);
+                        let family = '';
+                        if (bd.familyMembersDisplayEN) family = ` self and family members (${bd.familyMembersDisplayEN})`;
+
+                        const dynamic = `Currently serving at ${unit} under RAB deputation, ${identity} ${name} has applied for ${purpose}${family}, for ${totalDays} (${daysWords}) days from ${fromDate} to ${toDate}, or ${totalDays} (${daysWords}) days from the date of journey within the aforementioned period, to ${countries} for earned `;
+                        const suffix = 'Has applied to the Senior Secretary, Public Security Division, Ministry of Home Affairs, Bangladesh Secretariat, Dhaka, for the grant of leave. ' +
+                            'His/Her attested application, along with the relevant documents, has been received in this office in accordance with the reference memo.' +
+                            '<br><br>' +
+                            'In these circumstances, the attested application and relevant documents of the aforementioned police officer may be forwarded to the Police Headquarters, Dhaka.' +
+                            '<br>' +
+                            'Presented for kind approval.';
+                        this.bodyText = dynamic + suffix;
+                    }
+                });
             }
         });
     }

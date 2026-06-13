@@ -24,6 +24,9 @@ export interface ExBdLeaveOfficeOrderDto {
     approvalNote: string | null;
     cancelReason: string | null;
     approvalDate: string | null;
+    applicantName: string | null;
+    applicantPrefix: string | null;
+    applicantServiceId: string | null;
 }
 
 export interface ExBdLeaveOfficeOrderWithDetailsDto {

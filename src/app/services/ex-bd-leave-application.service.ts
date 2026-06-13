@@ -222,6 +222,7 @@ export interface ExBdLeaveNoteSheetBodyData {
     empNameEN: string | null;
     empNameBN: string | null;
     rabid: string | null;
+    prefixEN: string | null;
     placementEN: string | null;
     placementBN: string | null;
     visitTypeNameEN: string | null;

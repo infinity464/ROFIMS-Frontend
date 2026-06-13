@@ -87,7 +87,7 @@ export class PostingOrderNumberConfigComponent implements OnInit {
             prefix: [null, Validators.required],
             prefixBN: [null, Validators.required],
             startNumber: [null, [Validators.required, Validators.min(1)]],
-            includeDate: [true]
+            includeDate: [false]
         });
     }
 
@@ -204,6 +204,7 @@ export class PostingOrderNumberConfigComponent implements OnInit {
             memberTypeId: formVal.memberTypeId,
             prefix: formVal.prefix,
             prefixBN: formVal.prefixBN ?? '',
+            includeDate: formVal.includeDate ?? false,
             lastUpdatedBy: this.currentUser,
             lastupdate: currentDateTime
         };
@@ -283,7 +284,7 @@ export class PostingOrderNumberConfigComponent implements OnInit {
             prefix: null,
             prefixBN: null,
             startNumber: null,
-            includeDate: true
+            includeDate: false
         });
         // Re-enable fields that were disabled during edit
         this.configForm.get('postingType')?.enable();
