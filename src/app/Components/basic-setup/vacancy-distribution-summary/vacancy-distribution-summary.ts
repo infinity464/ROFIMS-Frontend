@@ -500,11 +500,21 @@ export class VacancyDistributionSummaryComponent implements OnInit {
         });
     }
 
+    /** Stable sort by sortOrder (nulls last), tie-broken by English name. */
+    private sortCodes(list: CommonCode[] | null | undefined): CommonCode[] {
+        return [...(list ?? [])].sort((a, b) => {
+            const sa = a.sortOrder ?? Number.MAX_SAFE_INTEGER;
+            const sb = b.sortOrder ?? Number.MAX_SAFE_INTEGER;
+            if (sa !== sb) return sa - sb;
+            return (a.codeValueEN ?? '').localeCompare(b.codeValueEN ?? '');
+        });
+    }
+
     /** Load full RAB tree: Unit → Wing → Branch → Sub-Branch → Section → Sub-Section */
     private loadRabTree(): void {
         this.masterBasicSetup.getAllByType('RabUnit').subscribe({
             next: (units) => {
-                const unitList = (units ?? []) as CommonCode[];
+                const unitList = this.sortCodes((units ?? []) as CommonCode[]);
                 if (!unitList.length) { this.rabUnitOptions = []; this.orderedRabIds = []; return; }
                 unitList.forEach((u) => { this.rabNameById[u.codeId] = u.codeValueEN ?? ''; });
                 this.rabUnitOptions = unitList.map((u) => ({ codeId: u.codeId, label: u.codeValueEN ?? '' }));
@@ -520,7 +530,8 @@ export class VacancyDistributionSummaryComponent implements OnInit {
     private buildOrderedRabIds(units: CommonCode[]): import('rxjs').Observable<{ codeId: number; level: 0 | 1 | 2 | 3 | 4 | 5; unitCodeId: number }[]> {
         const wingsReqs = units.map((u) => this.masterBasicSetup.getByParentId(u.codeId));
         return forkJoin(wingsReqs).pipe(
-            switchMap((wingsPerUnit) => {
+            switchMap((wingsPerUnitRaw) => {
+                const wingsPerUnit = wingsPerUnitRaw.map((w) => this.sortCodes(w as CommonCode[]));
                 const allWings = wingsPerUnit.flat() as CommonCode[];
                 allWings.forEach((w) => { this.rabNameById[w.codeId] = w.codeValueEN ?? ''; });
                 if (!allWings.length) {
@@ -528,7 +539,8 @@ export class VacancyDistributionSummaryComponent implements OnInit {
                 }
                 const branchReqs = allWings.map((w) => this.masterBasicSetup.getByParentId(w.codeId));
                 return forkJoin(branchReqs).pipe(
-                    switchMap((branchesPerWing) => {
+                    switchMap((branchesPerWingRaw) => {
+                        const branchesPerWing = branchesPerWingRaw.map((b) => this.sortCodes(b as CommonCode[]));
                         const allBranches = branchesPerWing.flat() as CommonCode[];
                         allBranches.forEach((b) => { this.rabNameById[b.codeId] = b.codeValueEN ?? ''; });
                         if (allBranches.length === 0) {
@@ -536,17 +548,20 @@ export class VacancyDistributionSummaryComponent implements OnInit {
                         }
                         const subBranchReqs = allBranches.map((b) => this.masterBasicSetup.getByParentId(b.codeId));
                         return forkJoin(subBranchReqs).pipe(
-                            switchMap((subBranchesPerBranch) => {
+                            switchMap((subBranchesPerBranchRaw) => {
+                                const subBranchesPerBranch = subBranchesPerBranchRaw.map((sb) => this.sortCodes(sb as CommonCode[]));
                                 const allSubBranches = subBranchesPerBranch.flat() as CommonCode[];
                                 allSubBranches.forEach((sb) => { this.rabNameById[sb.codeId] = sb.codeValueEN ?? ''; });
                                 const sectionReqs = allSubBranches.map((sb) => this.masterBasicSetup.getByParentId(sb.codeId));
                                 return forkJoin(sectionReqs).pipe(
-                                    switchMap((sectionsPerSubBranch) => {
+                                    switchMap((sectionsPerSubBranchRaw) => {
+                                        const sectionsPerSubBranch = sectionsPerSubBranchRaw.map((s) => this.sortCodes(s as CommonCode[]));
                                         const allSections = sectionsPerSubBranch.flat() as CommonCode[];
                                         allSections.forEach((s) => { this.rabNameById[s.codeId] = s.codeValueEN ?? ''; });
                                         const subSectionReqs = allSections.map((s) => this.masterBasicSetup.getByParentId(s.codeId));
                                         return forkJoin(subSectionReqs).pipe(
-                                            switchMap((subSectionsPerSection) => {
+                                            switchMap((subSectionsPerSectionRaw) => {
+                                                const subSectionsPerSection = subSectionsPerSectionRaw.map((ss) => this.sortCodes(ss as CommonCode[]));
                                                 const allSubSections = subSectionsPerSection.flat() as CommonCode[];
                                                 allSubSections.forEach((ss) => { this.rabNameById[ss.codeId] = ss.codeValueEN ?? ''; });
                                                 const result = this.flattenHierarchy(
@@ -635,7 +650,7 @@ export class VacancyDistributionSummaryComponent implements OnInit {
         this.loading = true;
         this.masterBasicSetup.getAllActiveCommonCodesByOrgIdAndType(orgId, 'MotherOrgRank').subscribe({
             next: (ranks) => {
-                const rankList = (ranks ?? []) as CommonCode[];
+                const rankList = this.sortCodes((ranks ?? []) as CommonCode[]);
                 if (rankList.length === 0) { this.loading = false; return; }
                 const rankNameById: Record<number, string> = {};
                 rankList.forEach((r) => { rankNameById[r.codeId] = r.codeValueEN ?? ''; });
