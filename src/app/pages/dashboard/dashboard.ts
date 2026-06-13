@@ -254,7 +254,7 @@ type CalItem = { id: string; day: string; mon: string; dow: string; title: strin
             <!-- ===== Row 3: Map + Event Calendar ===== -->
             <div class="col-span-12 xl:col-span-7">
                 <div class="card mb-0 h-full">
-                    <div class="font-semibold text-lg text-surface-900 dark:text-surface-0">Deployment Map</div>
+                    <div class="font-semibold text-lg text-surface-900 dark:text-surface-0">RAB Area of Responsibility Map</div>
                     <div class="text-muted-color text-sm mb-4">Bangladesh · RAB Unit AOR</div>
                     <app-rab-unit-aor-map [bare]="true" [hideTitle]="true" [hideLegend]="true" [heightPx]="420"></app-rab-unit-aor-map>
                 </div>
@@ -818,7 +818,8 @@ export class Dashboard implements OnInit, OnDestroy {
     private loadNotices(): void {
         this.noticeService.getForCurrentUser().subscribe({
             next: (list) => {
-                this.notices = (list ?? []).sort((a, b) => this.noticeRank(a) - this.noticeRank(b));
+                // Completed notices drop off the dashboard (both Urgent Notice & Notice Board).
+                this.notices = (list ?? []).filter((n) => !n.isComplete).sort((a, b) => this.noticeRank(a) - this.noticeRank(b));
                 this.criticalIndex = 0;
                 this.startCriticalRotation();
             },
