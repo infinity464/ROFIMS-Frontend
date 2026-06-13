@@ -16,7 +16,7 @@ import { ConfirmDialogModule } from 'primeng/confirmdialog';
 import { TooltipModule } from 'primeng/tooltip';
 import { MessageService, ConfirmationService } from 'primeng/api';
 import { environment } from '@/Core/Environments/environment';
-import { ExBdLeaveOfficeOrderService } from '@/services/ex-bd-leave-office-order.service';
+import { ExBdLeaveClearanceService } from '@/services/ex-bd-leave-clearance.service';
 import { MasterBasicSetupService } from '@/Components/basic-setup/shared/services/MasterBasicSetupService';
 import { ApprovedNoteSheetItem } from '@/models/posting.model';
 import { PostingOrderNumberConfigModel } from '@/Components/basic-setup/shared/models/posting-order-number-config';
@@ -44,7 +44,7 @@ interface OnulipiParagraph {
 }
 
 @Component({
-    selector: 'app-office-order-ex-bd-leave-generate',
+    selector: 'app-clearance-ex-bd-leave-generate',
     standalone: true,
     imports: [
         CommonModule,
@@ -61,10 +61,10 @@ interface OnulipiParagraph {
         FileReferencesFormComponent
     ],
     providers: [MessageService, ConfirmationService],
-    templateUrl: './office-order-ex-bd-leave-generate.html',
-    styleUrl: './office-order-ex-bd-leave-generate.scss'
+    templateUrl: './clearance-ex-bd-leave-generate.html',
+    styleUrl: './clearance-ex-bd-leave-generate.scss'
 })
-export class OfficeOrderExBdLeaveGenerateComponent implements OnInit {
+export class ClearanceExBdLeaveGenerateComponent implements OnInit {
     @ViewChild('fileReferencesForm') fileReferencesForm!: FileReferencesFormComponent;
 
     private _router = inject(Router);
@@ -76,33 +76,33 @@ export class OfficeOrderExBdLeaveGenerateComponent implements OnInit {
     private route = inject(ActivatedRoute);
     private noteSheetApi = `${environment.apis.core}/NoteSheetInfo`;
 
-    // ─── Edit mode ────────────────────────────────────────
+    // --- Edit mode ------------------------------------------------
     editMode = false;
     editId: number | null = null;
 
-    // ─── NoteSheet selection ──────────────────────────────
+    // --- NoteSheet selection --------------------------------------
     approvedNoteSheets: ApprovedNoteSheetItem[] = [];
     selectedNoteSheetId: number | null = null;
     loadingNoteSheets = false;
     selectedNoteSheetNo: string | null = null;
     selectedNoteSheetApprovedDate: string | null = null;
 
-    // ─── Number Config dropdown ──────────────────────────
+    // --- Number Config dropdown -----------------------------------
     configOptions: { label: string; value: number }[] = [];
     postingOrderNumberConfigId: number | null = null;
     private allConfigs: PostingOrderNumberConfigModel[] = [];
     private memberTypeMap: Record<number, string> = {};
 
-    // ─── Approval Person dropdown ─────────────────────────
+    // --- Approval Person dropdown ---------------------------------
     approvalEmployees: { label: string; value: number }[] = [];
     selectedApprovalEmployeeId: number | null = null;
     loadingApprovalEmployees = false;
 
-    // ─── Applicant info (shown when notesheet selected) ─────
+    // --- Applicant info (shown when notesheet selected) -------------
     applicantInfo: EmployeeSearchInfoModel | null = null;
     loadingApplicant = false;
 
-    // ─── Form fields ─────────────────────────────────────
+    // --- Form fields ----------------------------------------------
     manualLetterNo = '';
     letterDate: Date | null = null;
     selectedTextType = 'en';
@@ -115,27 +115,18 @@ export class OfficeOrderExBdLeaveGenerateComponent implements OnInit {
     remarks = '';
     saving = false;
 
-    /** Bangla serial letters */
-    private banglaSerials = ['ক', 'খ', 'গ', 'ঘ', 'ঙ', 'চ', 'ছ', 'জ', 'ঝ', 'ঞ', 'ট', 'ঠ', 'ড', 'ঢ', 'ণ', 'ত', 'থ', 'দ', 'ধ', 'ন'];
-
     get isBangla(): boolean {
-        return this.selectedTextType === 'bn';
-    }
-
-    toBanglaDigits(s: string): string {
-        return s.replace(/\d/g, d => String.fromCharCode(0x09E6 + Number(d)));
+        return false;
     }
 
     getReferenceSerial(index: number): string {
-        return this.isBangla
-            ? (this.banglaSerials[index] ?? String(index + 1))
-            : String.fromCharCode(65 + index);  // A, B, C...
+        return String.fromCharCode(65 + index);  // A, B, C...
     }
 
     private subjectTypes: CommonCodeModel[] = [];
 
     constructor(
-        private exBdLeaveOfficeOrderService: ExBdLeaveOfficeOrderService,
+        private exBdLeaveClearanceService: ExBdLeaveClearanceService,
         private exBdLeaveAppService: ExBdLeaveApplicationService,
         private masterBasicSetupService: MasterBasicSetupService,
         private commonCodeService: CommonCodeService,
@@ -162,15 +153,15 @@ export class OfficeOrderExBdLeaveGenerateComponent implements OnInit {
         if (id) {
             this.editMode = true;
             this.editId = id;
-            this.loadOrderForEdit(id);
+            this.loadClearanceForEdit(id);
         }
     }
 
-    private loadOrderForEdit(id: number): void {
-        this.exBdLeaveOfficeOrderService.getOfficeOrderById(id).subscribe({
+    private loadClearanceForEdit(id: number): void {
+        this.exBdLeaveClearanceService.getClearanceById(id).subscribe({
             next: (data) => {
                 if (!data) return;
-                this.selectedTextType = data.textType === 'bn' ? 'bn' : 'en';
+                this.selectedTextType = 'en';
                 this.letterDate = data.letterDate ? new Date(data.letterDate) : new Date();
                 this.manualLetterNo = data.letterNo ?? '';
                 this.subject = data.subject ?? '';
@@ -179,7 +170,7 @@ export class OfficeOrderExBdLeaveGenerateComponent implements OnInit {
                 this.remarks = data.remarks ?? '';
                 this.selectedApprovalEmployeeId = data.approvalEmployeeId ?? null;
 
-                // NoteSheet — add to dropdown if not already present, then select
+                // NoteSheet -- add to dropdown if not already present, then select
                 if (data.noteSheetId) {
                     this.selectedNoteSheetId = data.noteSheetId;
                     this.selectedNoteSheetNo = data.noteSheetNo ?? null;
@@ -190,6 +181,7 @@ export class OfficeOrderExBdLeaveGenerateComponent implements OnInit {
                             ...this.approvedNoteSheets
                         ];
                     }
+                    // Load applicant info for edit mode
                     this.http.get<any>(`${this.noteSheetApi}/GetFilteredByKeysAsyn/${data.noteSheetId}`).subscribe({
                         next: (nsData) => {
                             const ns = Array.isArray(nsData) ? nsData[0] : nsData;
@@ -219,14 +211,14 @@ export class OfficeOrderExBdLeaveGenerateComponent implements OnInit {
                 this.rebuildConfigOptions();
             },
             error: () => {
-                this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to load office order for editing.' });
+                this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to load clearance for editing.' });
             }
         });
     }
 
     loadApprovalEmployees(): void {
         this.loadingApprovalEmployees = true;
-        this.exBdLeaveOfficeOrderService.getApprovalEmployees().subscribe({
+        this.exBdLeaveClearanceService.getApprovalEmployees().subscribe({
             next: (list) => {
                 this.approvalEmployees = list ?? [];
                 this.loadingApprovalEmployees = false;
@@ -237,7 +229,7 @@ export class OfficeOrderExBdLeaveGenerateComponent implements OnInit {
 
     loadApprovedNoteSheets(): void {
         this.loadingNoteSheets = true;
-        this.exBdLeaveOfficeOrderService.getApprovedExBdLeaveNoteSheets().subscribe({
+        this.exBdLeaveClearanceService.getApprovedExBdLeaveNoteSheets().subscribe({
             next: (list) => {
                 this.approvedNoteSheets = list ?? [];
                 this.loadingNoteSheets = false;
@@ -265,24 +257,18 @@ export class OfficeOrderExBdLeaveGenerateComponent implements OnInit {
     }
 
     private rebuildConfigOptions(): void {
-        const isBN = this.selectedTextType === 'bn';
         const now = new Date();
         const nowYear = now.getFullYear();
         const nowMonth = now.getMonth() + 1;
         this.configOptions = this.allConfigs
-            .filter((c) => c.postingType === PostingType.ExBdLeave && c.status)
+            .filter((c) => c.postingType === PostingType.ExBdLeaveClearance && c.status)
             .map((c) => {
-                const prefixLabel = isBN ? (c.prefixBN || c.prefix) : c.prefix;
+                const prefixLabel = c.prefix;
                 const yearReset = c.currentYear !== nowYear || c.currentMonth !== nowMonth;
                 const nextNum = yearReset ? c.startNumber : c.currentNumber + 1;
-                let yearStr = String(nowYear);
-                let monthStr = String(nowMonth).padStart(2, '0');
-                let numStr = String(nextNum);
-                if (isBN) {
-                    yearStr = this.toBanglaDigits(yearStr);
-                    monthStr = this.toBanglaDigits(monthStr);
-                    numStr = this.toBanglaDigits(numStr);
-                }
+                const yearStr = String(nowYear);
+                const monthStr = String(nowMonth).padStart(2, '0');
+                const numStr = String(nextNum);
                 const previewNo = c.includeDate
                     ? `${prefixLabel}/${yearStr}/${monthStr}/${numStr}`
                     : `${prefixLabel}/${numStr}`;
@@ -308,7 +294,7 @@ export class OfficeOrderExBdLeaveGenerateComponent implements OnInit {
         }));
     }
 
-    /** When a notesheet is selected, auto-fill Subject, TextType, Body, Onulipi, and load applicant info. */
+    /** When a notesheet is selected, auto-fill Subject, Body, Onulipi, and load applicant info. */
     onNoteSheetChange(): void {
         this.selectedNoteSheetNo = null;
         this.selectedNoteSheetApprovedDate = null;
@@ -324,13 +310,11 @@ export class OfficeOrderExBdLeaveGenerateComponent implements OnInit {
 
                 this.selectedNoteSheetNo = ns.noteSheetNo;
                 this.selectedNoteSheetApprovedDate = ns.finalApprovalApprovedDate ?? ns.lastupdate;
-                this.selectedTextType = (ns.textType === 1 || ns.textType === '1') ? 'bn' : 'en';
+                this.selectedTextType = 'en';
                 const subjectId = ns.exBdLeaveSubjectId ?? ns.ExBdLeaveSubjectId;
                 if (subjectId) {
                     const code = this.subjectTypes.find(c => c.codeId === subjectId);
-                    this.subject = code
-                        ? (this.isBangla ? (code.codeValueBN || code.codeValueEN) : code.codeValueEN)
-                        : (ns.subject ?? '');
+                    this.subject = code ? code.codeValueEN : (ns.subject ?? '');
                 } else {
                     this.subject = ns.subject ?? '';
                 }
@@ -365,9 +349,9 @@ export class OfficeOrderExBdLeaveGenerateComponent implements OnInit {
     private loadOnulipiFromConfig(): void {
         this.masterBasicSetupService.getAllOnulipiConfig().subscribe({
             next: (configs) => {
-                const match = (configs ?? []).find(c => c.postingType === PostingType.ExBdLeave && c.status);
+                const match = (configs ?? []).find(c => c.postingType === PostingType.ExBdLeaveClearance && c.status);
                 if (!match) return;
-                const json = this.isBangla ? match.onulipiJsonBN : match.onulipiJsonEN;
+                const json = match.onulipiJsonEN;
                 if (!json) return;
                 try {
                     const items: OnulipiItem[] = JSON.parse(json);
@@ -379,7 +363,7 @@ export class OfficeOrderExBdLeaveGenerateComponent implements OnInit {
         });
     }
 
-    // ─── Reference No entries ───────────────────────────
+    // --- Reference No entries ------------------------------------
     addReferenceEntry(): void {
         const serial = this.getReferenceSerial(this.referenceEntries.length);
         this.referenceEntries.push({ serial, text: '' });
@@ -393,7 +377,7 @@ export class OfficeOrderExBdLeaveGenerateComponent implements OnInit {
         });
     }
 
-    // ─── File References ─────────────────────────────────
+    // --- File References -----------------------------------------
     onFileRowsChange(event: FileRowData[]): void {
         if (event && Array.isArray(event)) {
             this.fileRows = event;
@@ -407,7 +391,7 @@ export class OfficeOrderExBdLeaveGenerateComponent implements OnInit {
         });
     }
 
-    // ─── Onulipi paragraphs ────────────────────────────
+    // --- Onulipi paragraphs --------------------------------------
     addOnulipiParagraph(): void {
         this.onulipiParagraphs.push({ text: '', transferRabUnitId: null, transferRabUnitName: null });
     }
@@ -432,7 +416,7 @@ export class OfficeOrderExBdLeaveGenerateComponent implements OnInit {
         return index;
     }
 
-    // ─── Generate ───────────────────────────────────────
+    // --- Generate ------------------------------------------------
     private formatDateToString(value: Date | null): string {
         if (!value) {
             const today = new Date();
@@ -490,7 +474,7 @@ export class OfficeOrderExBdLeaveGenerateComponent implements OnInit {
                 : null;
 
             const saveObs = this.editMode && this.editId
-                ? this.exBdLeaveOfficeOrderService.updateOfficeOrder({
+                ? this.exBdLeaveClearanceService.updateClearance({
                     id: this.editId,
                     letterNo: this.manualLetterNo || '',
                     letterDate: this.formatDateToString(this.letterDate),
@@ -499,13 +483,13 @@ export class OfficeOrderExBdLeaveGenerateComponent implements OnInit {
                     referenceNo: refJson,
                     body: this.bodyText?.trim() || null,
                     onulipi: onulipiJson,
-                    textType: this.selectedTextType === 'bn' ? 'bn' : 'en',
+                    textType: 'en',
                     filesReferences: filesReferencesJson,
                     remarks: this.remarks || null,
                     updatedBy: 'system',
                     approvalEmployeeId: this.selectedApprovalEmployeeId ?? null
                 })
-                : this.exBdLeaveOfficeOrderService.createOfficeOrder({
+                : this.exBdLeaveClearanceService.createClearance({
                     letterNo: '',
                     letterDate: this.formatDateToString(this.letterDate),
                     noteSheetId: this.selectedNoteSheetId!,
@@ -514,7 +498,7 @@ export class OfficeOrderExBdLeaveGenerateComponent implements OnInit {
                     referenceNo: refJson,
                     body: this.bodyText?.trim() || null,
                     onulipi: onulipiJson,
-                    textType: this.selectedTextType === 'bn' ? 'bn' : 'en',
+                    textType: 'en',
                     filesReferences: filesReferencesJson,
                     remarks: this.remarks || null,
                     createdBy: 'system',
@@ -526,8 +510,8 @@ export class OfficeOrderExBdLeaveGenerateComponent implements OnInit {
                 next: (res) => {
                     this.saving = false;
                     if (res.statusCode === 200) {
-                        this.messageService.add({ severity: 'success', summary: 'Success', detail: this.editMode ? 'Office Order updated successfully.' : 'Office Order generated successfully.' });
-                        this.router.navigate(['/office-order-ex-bd-leave/preview']);
+                        this.messageService.add({ severity: 'success', summary: 'Success', detail: this.editMode ? 'Clearance updated successfully.' : 'Clearance generated successfully.' });
+                        this.router.navigate(['/clearance-ex-bd-leave-list']);
                     } else {
                         this.messageService.add({ severity: 'error', summary: 'Error', detail: res.description ?? 'Failed.' });
                     }

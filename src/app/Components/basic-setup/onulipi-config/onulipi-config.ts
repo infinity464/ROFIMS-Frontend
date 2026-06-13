@@ -40,7 +40,8 @@ export class OnulipiConfigComponent implements OnInit {
         { label: 'New Posting', value: PostingType.NewPosting },
         { label: 'Inter Posting', value: PostingType.InterPosting },
         { label: 'General', value: PostingType.General },
-        { label: 'Ex-BD Leave', value: PostingType.ExBdLeave }
+        { label: 'Ex-BD Leave', value: PostingType.ExBdLeave },
+        { label: 'Ex-BD Leave Clearance', value: PostingType.ExBdLeaveClearance }
     ];
 
     currentUser: string = '';

@@ -194,6 +194,9 @@ import { OfficeOrderGenerateComponent } from '@/Components/Features/office-order
 import { OfficeOrderPreviewComponent } from '@/Components/Features/office-order-preview/office-order-preview';
 import { OfficeOrderExBdLeaveGenerateComponent } from '@/Components/Features/office-order-ex-bd-leave-generate/office-order-ex-bd-leave-generate';
 import { OfficeOrderExBdLeavePreviewComponent } from '@/Components/Features/office-order-ex-bd-leave-preview/office-order-ex-bd-leave-preview';
+import { ClearanceExBdLeaveGenerateComponent } from '@/Components/Features/clearance-ex-bd-leave-generate/clearance-ex-bd-leave-generate';
+import { ClearanceExBdLeavePreviewComponent } from '@/Components/Features/clearance-ex-bd-leave-preview/clearance-ex-bd-leave-preview';
+import { ClearanceExBdLeaveListComponent } from '@/Components/Features/clearance-ex-bd-leave-list/clearance-ex-bd-leave-list';
 
 export const appRoutes: Routes = [
     // Public routes
@@ -384,6 +387,9 @@ export const appRoutes: Routes = [
             { path: 'office-order-ex-bd-leave/generate', component: OfficeOrderExBdLeaveGenerateComponent },
             { path: 'office-order-ex-bd-leave/list', component: OfficeOrderExBdLeavePreviewComponent },
             { path: 'office-order-ex-bd-leave/preview', component: OfficeOrderExBdLeavePreviewComponent },
+            { path: 'clearance-ex-bd-leave/generate', component: ClearanceExBdLeaveGenerateComponent },
+            { path: 'clearance-ex-bd-leave/preview', component: ClearanceExBdLeavePreviewComponent },
+            { path: 'clearance-ex-bd-leave-list', component: ClearanceExBdLeaveListComponent },
             { path: 'employee-signature-upload', component: EmployeeSignatureUploadComponent },
             { path: 'presently-serving-members', component: PresentlyServingMembers },
             { path: 'serving-members-for-inter-posting', component: PresentlyServingMembers, data: { mode: 'interPosting' } },

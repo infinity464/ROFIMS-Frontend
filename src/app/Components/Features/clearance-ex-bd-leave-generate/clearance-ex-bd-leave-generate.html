@@ -4,7 +4,7 @@
 <div class="office-order-generate">
     <div class="form-card">
         <div class="form-card-header">
-            <h3 class="form-card-title">{{ editMode ? 'Edit Ex-BD Leave Office Order' : 'Generate Ex-BD Leave Office Order' }}</h3>
+            <h3 class="form-card-title">{{ editMode ? 'Edit Ex-BD Leave Clearance' : 'Generate Ex-BD Leave Clearance' }}</h3>
         </div>
 
         <!-- Row 1: NoteSheet + Date + Config + Approval -->
@@ -165,7 +165,7 @@
                 <p-editor [(ngModel)]="bodyText" [style]="{ height: '200px' }"></p-editor>
             </div>
 
-            <!-- Onulipi / অনুলিপি -->
+            <!-- Onulipi -->
             <div class="field mb-4 p-4 surface-50 border-round">
                 <div class="flex align-items-center gap-2 mb-3">
                     <span class="font-semibold text-700">Onulipi</span>
@@ -180,7 +180,7 @@
                 </div>
                 @for (para of onulipiParagraphs; track trackByIndex($index); let i = $index) {
                     <div class="flex gap-2 align-items-start mb-2">
-                        <span class="para-number font-semibold text-600 mt-2" style="min-width: 30px">{{ isBangla ? toBanglaDigits('' + (i + 1)) : (i + 1) }}.</span>
+                        <span class="para-number font-semibold text-600 mt-2" style="min-width: 30px">{{ i + 1 }}.</span>
                         <textarea
                             pTextarea
                             [(ngModel)]="onulipiParagraphs[i].text"
@@ -224,7 +224,7 @@
         <!-- Generate Button (bottom right) -->
         <div style="display: flex; justify-content: flex-end; margin-top: 1rem;">
             <p-button
-                [label]="editMode ? 'Update Office Order' : 'Generate Office Order'"
+                [label]="editMode ? 'Update Clearance' : 'Generate Clearance'"
                 [icon]="editMode ? 'pi pi-save' : 'pi pi-file-export'"
                 [loading]="saving"
                 (onClick)="onGenerate()"
