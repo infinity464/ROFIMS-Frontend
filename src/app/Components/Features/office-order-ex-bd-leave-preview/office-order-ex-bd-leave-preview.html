@@ -180,21 +180,9 @@
                     </div>
                 </div>
 
-                <!-- ═══ Main Paragraph (built like notesheet preview) ═══ -->
-                <ng-container *ngIf="order!.appEmployeeName || hasNoteSheetContent">
-                    <div class="oo-doc-body">
-                        <div class="oo-doc-rich-content" [innerHTML]="getMainParagraphSafe()"></div>
-                    </div>
-                    <ng-container *ngFor="let para of nsParagraphs">
-                        <div class="oo-doc-body">
-                            <div class="oo-doc-rich-content" [innerHTML]="getParagraphSafe(para)"></div>
-                        </div>
-                    </ng-container>
-                </ng-container>
-
-                <!-- Body (fallback if no notesheet content) -->
-                <div class="oo-doc-body" *ngIf="!hasNoteSheetContent && order.body">
-                    <div class="oo-doc-rich-content" [innerHTML]="order.body"></div>
+                <!-- ═══ Body (exactly what is stored in DB) ═══ -->
+                <div class="oo-doc-body" *ngIf="order.body">
+                    <div class="oo-doc-rich-content" [innerHTML]="getBodySafe()"></div>
                 </div>
 
                 <!-- ═══ Approval Person Signature ═══ -->

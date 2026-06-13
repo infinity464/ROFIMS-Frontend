@@ -296,6 +296,10 @@ export class OfficeOrderExBdLeavePreviewComponent implements OnInit {
         return this.sanitizer.bypassSecurityTrustHtml(this.buildMainParagraph());
     }
 
+    getBodySafe(): SafeHtml {
+        return this.sanitizer.bypassSecurityTrustHtml(this.order?.body?.trim() || '');
+    }
+
     private numberToBanglaWord(n: number): string {
         const words: Record<number, string> = {
             1: 'এক', 2: 'দুই', 3: 'তিন', 4: 'চার', 5: 'পাঁচ',
@@ -523,30 +527,14 @@ export class OfficeOrderExBdLeavePreviewComponent implements OnInit {
         }
 
         if (this.referenceEntries.length > 0) {
-            children.push(new Paragraph({ children: [new TextRun({ text: this.isBangla ? 'সূত্র:' : 'Reference:', font, size: contentSize, bold: true })], spacing: { before: 80 } }));
+            children.push(new Paragraph({ children: [new TextRun({ text: this.isBangla ? 'সূত্র:' : 'Reference:', font, size: contentSize, bold: true })], spacing: { before: 80, after: 0 } }));
             for (const ref of this.referenceEntries) {
-                children.push(new Paragraph({ children: [new TextRun({ text: `${ref.serial}। ${ref.text}`, font, size: contentSize })], indent: { left: 360 }, spacing: { after: 20 } }));
+                children.push(new Paragraph({ children: [new TextRun({ text: `${ref.serial}। ${ref.text}`, font, size: contentSize })], spacing: { after: 20 } }));
             }
             children.push(new Paragraph({ text: '', spacing: { after: 60 } }));
         }
 
-        if (this.order.appEmployeeName || this.hasNoteSheetContent) {
-            // Main paragraph (dynamically built like notesheet) - strip HTML for Word
-            const mainParaHtml = this.buildMainParagraph();
-            const mainParaPlain = this.htmlToPlainText(mainParaHtml);
-            if (mainParaPlain) {
-                const lines = mainParaPlain.split('\n').filter(l => l.trim());
-                for (const line of lines) {
-                    children.push(new Paragraph({ children: [new TextRun({ text: line, font, size: contentSize })], alignment: AlignmentType.JUSTIFIED, spacing: { after: 80 } }));
-                }
-            }
-            for (let pi = 0; pi < this.nsParagraphs.length; pi++) {
-                const plainPara = this.htmlToPlainText(this.nsParagraphs[pi]);
-                if (plainPara) {
-                    children.push(new Paragraph({ children: [new TextRun({ text: plainPara, font, size: contentSize })], alignment: AlignmentType.JUSTIFIED, spacing: { after: 80 } }));
-                }
-            }
-        } else if (this.order.body) {
+        if (this.order.body) {
             const plainBody = this.htmlToPlainText(this.order.body);
             if (plainBody) {
                 for (const line of plainBody.split('\n').filter(l => l.trim())) {

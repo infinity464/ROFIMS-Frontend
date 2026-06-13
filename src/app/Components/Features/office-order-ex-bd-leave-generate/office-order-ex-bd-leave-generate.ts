@@ -25,6 +25,8 @@ import { FlexibleDateDirective } from '@/shared/directives/flexible-date.directi
 import { FileReferencesFormComponent, FileRowData } from '@/Components/Common/file-references-form/file-references-form';
 import { EmpService } from '@/services/emp-service';
 import { OnulipiItem } from '@/Components/basic-setup/shared/models/onulipi-config';
+import { CommonCodeService } from '@/services/common-code-service';
+import { CommonCodeModel } from '@/models/common-code-model';
 
 /** Reference No paragraph entry. */
 interface ReferenceNoEntry {
@@ -124,9 +126,12 @@ export class OfficeOrderExBdLeaveGenerateComponent implements OnInit {
             : String.fromCharCode(65 + index);  // A, B, C...
     }
 
+    private subjectTypes: CommonCodeModel[] = [];
+
     constructor(
         private exBdLeaveOfficeOrderService: ExBdLeaveOfficeOrderService,
         private masterBasicSetupService: MasterBasicSetupService,
+        private commonCodeService: CommonCodeService,
         private empService: EmpService,
         private http: HttpClient,
         private router: Router,
@@ -144,6 +149,7 @@ export class OfficeOrderExBdLeaveGenerateComponent implements OnInit {
         this.loadApprovalEmployees();
         this.loadNumberConfigs();
         this.loadApprovedNoteSheets();
+        this.commonCodeService.getAllActiveCommonCodesType('SubjectType').subscribe(list => this.subjectTypes = list ?? []);
 
         const id = Number(this.route.snapshot.queryParamMap.get('id'));
         if (id) {
@@ -304,7 +310,15 @@ export class OfficeOrderExBdLeaveGenerateComponent implements OnInit {
                 this.selectedNoteSheetNo = ns.noteSheetNo;
                 this.selectedNoteSheetApprovedDate = ns.finalApprovalApprovedDate ?? ns.lastupdate;
                 this.selectedTextType = (ns.textType === 1 || ns.textType === '1') ? 'bn' : 'en';
-                this.subject = ns.subject ?? '';
+                const subjectId = ns.exBdLeaveSubjectId ?? ns.ExBdLeaveSubjectId;
+                if (subjectId) {
+                    const code = this.subjectTypes.find(c => c.codeId === subjectId);
+                    this.subject = code
+                        ? (this.isBangla ? (code.codeValueBN || code.codeValueEN) : code.codeValueEN)
+                        : (ns.subject ?? '');
+                } else {
+                    this.subject = ns.subject ?? '';
+                }
                 this.bodyText = ns.mainText ?? ns.MainText ?? '';
                 this.postingOrderNumberConfigId = null;
                 this.rebuildConfigOptions();
