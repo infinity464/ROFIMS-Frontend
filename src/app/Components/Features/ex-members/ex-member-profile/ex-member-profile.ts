@@ -246,7 +246,7 @@ export class ExMemberProfile implements OnInit, OnDestroy {
             kv(L['field.professionalQualification'], this.codeValue(p.professionalQualification, p.professionalQualificationBN)),
             kv(L['field.personalQualification'], this.codeValue(p.personalQualification, p.personalQualificationBN)),
             kv(L['field.gallantryAwards'], this.codeValue(p.gallantryAwardsDecoration, p.gallantryAwardsDecorationBN)),
-            kv(L['field.bloodGroup'], this.val(p.bloodGroup)),
+            kv(L['field.bloodGroup'], this.bloodGroupDisplay(p.bloodGroup)),
             kv(L['field.nid'], this.valDisplay(p.nid)),
             kv(L['field.nidOld'], this.valDisplay(p.nidOld)),
             kv(L['field.emailAddress'], this.val(p.emailAddress)),
@@ -932,16 +932,38 @@ export class ExMemberProfile implements OnInit, OnDestroy {
         return '-';
     }
 
+    /** Blood group shown in Bangla words when in BN mode (e.g. AB+ → এবি পজিটিভ). */
+    bloodGroupDisplay(value: string | null | undefined): string {
+        const v = (value ?? '').toString().trim();
+        if (!v) return '-';
+        if (!this.isBn) return v;
+        const m = v.toUpperCase().match(/^(AB|A|B|O)\s*([+-]|POS(?:ITIVE)?|NEG(?:ATIVE)?)?$/);
+        if (!m) return v;
+        const letterMap: Record<string, string> = { A: 'এ', B: 'বি', AB: 'এবি', O: 'ও' };
+        const sign = m[2] ?? '';
+        const signBn = sign === '+' || sign.startsWith('POS') ? ' পজিটিভ' : sign === '-' || sign.startsWith('NEG') ? ' নেগেটিভ' : '';
+        return `${letterMap[m[1]]}${signBn}`;
+    }
+
     heightDisplay(p: EmployeePersonalServiceOverview | null): string {
         if (!p || p.height == null) return '-';
-        const h = this.isBn ? BanglaNumerals.toBangla(String(p.height)) : String(p.height);
-        return `${h} Inch`;
+        // Stored height is in inches → show as feet + inches.
+        const totalInches = Number(p.height);
+        if (isNaN(totalInches)) return '-';
+        const feet = Math.floor(totalInches / 12);
+        const inches = totalInches % 12;
+        if (this.isBn) {
+            const f = BanglaNumerals.toBangla(String(feet));
+            const i = BanglaNumerals.toBangla(String(inches));
+            return `${f} ফুট ${i} ইঞ্চি`;
+        }
+        return `${feet} ft ${inches} in`;
     }
 
     weightDisplay(p: EmployeePersonalServiceOverview | null): string {
         if (!p || p.weight == null) return '-';
         const w = this.isBn ? BanglaNumerals.toBangla(String(p.weight)) : String(p.weight);
-        return `${w} lbs`;
+        return this.isBn ? `${w} কেজি` : `${w} kg`;
     }
 
     formatFamilyDob(value: string | null | undefined): string {

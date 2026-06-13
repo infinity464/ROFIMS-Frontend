@@ -17,6 +17,7 @@ export interface CourseInfoByEmployeeView {
     courseNameBN?: string | null;
     trainingInstituteId?: number | null;
     trainingInstituteName: string | null;
+    trainingInstituteNameBN?: string | null;
     countryId?: number | null;
     country: string | null;
     countryBN?: string | null;
