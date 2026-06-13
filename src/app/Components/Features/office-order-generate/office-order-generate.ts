@@ -306,6 +306,7 @@ export class OfficeOrderGenerateComponent implements OnInit {
                 this.bodyText = ns.mainText ?? ns.MainText ?? '';
                 this.postingOrderNumberConfigId = null;
                 this.rebuildConfigOptions();
+                this.loadOnulipiFromConfig();
             },
             error: (err: any) => {
                 this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.message || 'Failed to load notesheet details.' });
@@ -342,12 +343,41 @@ export class OfficeOrderGenerateComponent implements OnInit {
     }
 
     // ─── Onulipi paragraphs ────────────────────────────
+    private loadOnulipiFromConfig(): void {
+        this.masterBasicSetupService.getOnulipiConfigByPostingType(PostingType.General).subscribe({
+            next: (configs) => {
+                const match = (configs ?? [])[0];
+                if (!match) return;
+                const json = this.isBangla ? (match.onulipiJsonBN || match.onulipiJsonEN) : match.onulipiJsonEN;
+                if (!json) return;
+                try {
+                    const items: { serial: number; text: string }[] = JSON.parse(json);
+                    this.onulipiParagraphs = items
+                        .sort((a, b) => a.serial - b.serial)
+                        .map(item => ({ text: item.text, transferRabUnitId: null, transferRabUnitName: null }));
+                } catch { /* ignore parse errors */ }
+            }
+        });
+    }
+
     addOnulipiParagraph(): void {
         this.onulipiParagraphs.push({ text: '', transferRabUnitId: null, transferRabUnitName: null });
     }
 
     removeOnulipiParagraph(index: number): void {
         this.onulipiParagraphs.splice(index, 1);
+    }
+
+    moveOnulipiUp(index: number): void {
+        if (index <= 0) return;
+        [this.onulipiParagraphs[index - 1], this.onulipiParagraphs[index]] =
+            [this.onulipiParagraphs[index], this.onulipiParagraphs[index - 1]];
+    }
+
+    moveOnulipiDown(index: number): void {
+        if (index >= this.onulipiParagraphs.length - 1) return;
+        [this.onulipiParagraphs[index], this.onulipiParagraphs[index + 1]] =
+            [this.onulipiParagraphs[index + 1], this.onulipiParagraphs[index]];
     }
 
     trackByIndex(index: number): number {

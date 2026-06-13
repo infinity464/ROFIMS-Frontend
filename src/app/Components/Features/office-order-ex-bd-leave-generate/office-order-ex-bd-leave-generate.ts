@@ -363,9 +363,9 @@ export class OfficeOrderExBdLeaveGenerateComponent implements OnInit {
     }
 
     private loadOnulipiFromConfig(): void {
-        this.masterBasicSetupService.getAllOnulipiConfig().subscribe({
+        this.masterBasicSetupService.getOnulipiConfigByPostingType(PostingType.ExBdLeave).subscribe({
             next: (configs) => {
-                const match = (configs ?? []).find(c => c.postingType === PostingType.ExBdLeave && c.status);
+                const match = (configs ?? []).find(c => c.status);
                 if (!match) return;
                 const json = this.isBangla ? match.onulipiJsonBN : match.onulipiJsonEN;
                 if (!json) return;

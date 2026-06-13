@@ -426,6 +426,10 @@ export class MasterBasicSetupService {
         return this.http.get<OnulipiConfigModel[]>(`${this.apiUrlOnulipiConfig}/GetAll`);
     }
 
+    getOnulipiConfigByPostingType(postingType: string): Observable<OnulipiConfigModel[]> {
+        return this.http.get<OnulipiConfigModel[]>(`${this.apiUrlOnulipiConfig}/GetByPostingType/${postingType}`);
+    }
+
     getOnulipiConfigById(id: number): Observable<OnulipiConfigModel> {
         return this.http.get<OnulipiConfigModel>(`${this.apiUrlOnulipiConfig}/GetFilteredByKeysAsyn/${id}`);
     }

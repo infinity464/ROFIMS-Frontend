@@ -384,9 +384,9 @@ export class ClearanceExBdLeaveGenerateComponent implements OnInit {
     }
 
     private loadOnulipiFromConfig(): void {
-        this.masterBasicSetupService.getAllOnulipiConfig().subscribe({
+        this.masterBasicSetupService.getOnulipiConfigByPostingType(PostingType.ExBdLeaveClearance).subscribe({
             next: (configs) => {
-                const match = (configs ?? []).find(c => c.postingType === PostingType.ExBdLeaveClearance && c.status);
+                const match = (configs ?? [])[0];
                 if (!match) return;
                 const json = match.onulipiJsonEN;
                 if (!json) return;

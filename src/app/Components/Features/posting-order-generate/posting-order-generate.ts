@@ -23,7 +23,7 @@ import { PostingService } from '@/services/posting.service';
 import { MasterBasicSetupService } from '@/Components/basic-setup/shared/services/MasterBasicSetupService';
 import { ApprovedNoteSheetItem, PostingOrderMasterDto } from '@/models/posting.model';
 import { PostingOrderNumberConfigModel } from '@/Components/basic-setup/shared/models/posting-order-number-config';
-import { NoteSheetType, CodeType, ApprovalStatus } from '@/models/enums';
+import { NoteSheetType, CodeType, ApprovalStatus, PostingType } from '@/models/enums';
 import { FlexibleDateDirective } from '@/shared/directives/flexible-date.directive';
 
 interface NoteSheetEmployee {
@@ -374,8 +374,9 @@ export class PostingOrderGenerateComponent implements OnInit {
                                 joiningDateInRAB: e.joiningDateInRAB
                             }));
                             this.loadingEmployees = false;
-                            // Reset footer paragraphs; pre-fill posting text from notesheet main text
+                            // Reset footer paragraphs; pre-fill from config
                             this.footerParagraphs = [];
+                            this.loadOnulipiFromConfig();
                             this.postingText = ns.mainText ?? '';
                             this.remarks = '';
                         },
@@ -413,6 +414,24 @@ export class PostingOrderGenerateComponent implements OnInit {
 
     // ─── Footer paragraphs ────────────────────────────────
 
+    private loadOnulipiFromConfig(): void {
+        const pt = this.selectedPostingType === NoteSheetType.InterPosting ? PostingType.InterPosting : PostingType.NewPosting;
+        this.masterBasicSetupService.getOnulipiConfigByPostingType(pt).subscribe({
+            next: (configs) => {
+                const match = (configs ?? [])[0];
+                if (!match) return;
+                const json = this.isBangla ? (match.onulipiJsonBN || match.onulipiJsonEN) : match.onulipiJsonEN;
+                if (!json) return;
+                try {
+                    const items: { serial: number; text: string }[] = JSON.parse(json);
+                    this.footerParagraphs = items
+                        .sort((a, b) => a.serial - b.serial)
+                        .map(item => ({ text: item.text, transferRabUnitId: null, transferRabUnitName: null }));
+                } catch { /* ignore parse errors */ }
+            }
+        });
+    }
+
     /** Add a new footer paragraph. If only one transfer unit exists, auto-link it. */
     addFooterParagraph(): void {
         const units = this.availableTransferUnits;
@@ -426,6 +445,18 @@ export class PostingOrderGenerateComponent implements OnInit {
 
     removeFooterParagraph(index: number): void {
         this.footerParagraphs.splice(index, 1);
+    }
+
+    moveFooterUp(index: number): void {
+        if (index <= 0) return;
+        [this.footerParagraphs[index - 1], this.footerParagraphs[index]] =
+            [this.footerParagraphs[index], this.footerParagraphs[index - 1]];
+    }
+
+    moveFooterDown(index: number): void {
+        if (index >= this.footerParagraphs.length - 1) return;
+        [this.footerParagraphs[index], this.footerParagraphs[index + 1]] =
+            [this.footerParagraphs[index + 1], this.footerParagraphs[index]];
     }
 
     /** Keep transferRabUnitName in sync when the user picks a unit from the dropdown. */

@@ -218,6 +218,10 @@
                             [style]="{ 'min-width': '160px' }"
                             (onChange)="onFooterUnitChange(i)"
                         ></p-select>
+                        <div class="flex flex-column gap-1">
+                            <p-button icon="pi pi-arrow-up" [rounded]="true" [text]="true" size="small" [disabled]="i === 0" pTooltip="Move up" (onClick)="moveFooterUp(i)"></p-button>
+                            <p-button icon="pi pi-arrow-down" [rounded]="true" [text]="true" size="small" [disabled]="i === footerParagraphs.length - 1" pTooltip="Move down" (onClick)="moveFooterDown(i)"></p-button>
+                        </div>
                         <p-button
                             icon="pi pi-times"
                             severity="danger"
