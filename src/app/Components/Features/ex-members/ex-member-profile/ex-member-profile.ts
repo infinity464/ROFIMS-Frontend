@@ -579,11 +579,21 @@ export class ExMemberProfile implements OnInit, OnDestroy {
     }
 
     /** Own addresses: one active Permanent and one active Present. */
+    /**
+     * Latest ACTIVE address of a given location type. Address edits deactivate the old
+     * row and insert a new active one, so the read view must skip inactive history rows —
+     * otherwise it shows a stale address that differs from what the Edit form loads.
+     */
+    private latestActiveAddress(type: string): AddressInfoByEmployeeView | undefined {
+        const matches = this.addressList.filter((a) => (a.locationType ?? '').trim() === type && a.active !== false);
+        return matches.length ? matches[matches.length - 1] : undefined;
+    }
+
     get ownAddressList(): AddressInfoByEmployeeView[] {
         if (!this.addressList?.length) return [];
         const result: AddressInfoByEmployeeView[] = [];
-        const permanent = this.addressList.find((a) => (a.locationType ?? '').trim() === LocationType.Permanent);
-        const present = this.addressList.find((a) => (a.locationType ?? '').trim() === LocationType.Present);
+        const permanent = this.latestActiveAddress(LocationType.Permanent);
+        const present = this.latestActiveAddress(LocationType.Present);
         if (permanent) result.push(permanent);
         if (present) result.push(present);
         return result;
@@ -591,11 +601,12 @@ export class ExMemberProfile implements OnInit, OnDestroy {
 
     get spouseAddressList(): AddressInfoByEmployeeView[] {
         if (!this.addressList?.length) return [];
-        const spouse = [LocationType.SpousePermanent, LocationType.SpousePresent];
-        return this.addressList.filter((a) => {
-            const t = (a.locationType ?? '').trim();
-            return spouse.some((type) => t === type);
-        });
+        const result: AddressInfoByEmployeeView[] = [];
+        const permanent = this.latestActiveAddress(LocationType.SpousePermanent);
+        const present = this.latestActiveAddress(LocationType.SpousePresent);
+        if (permanent) result.push(permanent);
+        if (present) result.push(present);
+        return result;
     }
 
     getAddressTypeLabel(addr: AddressInfoByEmployeeView): string {
