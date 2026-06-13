@@ -359,6 +359,20 @@ export class VacancyDistributionSummaryComponent implements OnInit {
         return row.locked;
     }
 
+    /** True when this office has at least one directly-entered (own) quantity. */
+    hasOwnEntry(row: DisplayRow): boolean {
+        return Object.values(row.ownByField).some((v) => (v ?? 0) > 0);
+    }
+
+    /**
+     * Show the lock control only on parent rows that have no own entry — once an office
+     * carries its own directly-entered quantity, the lock is hidden. Always show it for an
+     * already-locked row so it can still be unlocked.
+     */
+    canShowLock(row: DisplayRow): boolean {
+        return row.hasChildren && (row.locked || !this.hasOwnEntry(row));
+    }
+
     /** Toggle the backend entry-lock for an office (requires update permission). */
     toggleLock(row: DisplayRow, event: Event): void {
         event.stopPropagation();

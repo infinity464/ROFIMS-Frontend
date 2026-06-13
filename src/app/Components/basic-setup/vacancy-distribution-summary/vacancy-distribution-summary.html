@@ -100,7 +100,7 @@
                                             {{ row.hasChildren ? '▼' : '•' }}
                                         </span>
                                         <span class="tree-label">{{ row.officeName }}</span>
-                                        @if (row.hasChildren) {
+                                        @if (canShowLock(row)) {
                                             @if (canUpdate) {
                                                 <button type="button"
                                                         class="tree-lock-btn"
