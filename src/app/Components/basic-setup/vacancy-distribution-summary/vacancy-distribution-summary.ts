@@ -519,7 +519,14 @@ export class VacancyDistributionSummaryComponent implements OnInit {
                 unitList.forEach((u) => { this.rabNameById[u.codeId] = u.codeValueEN ?? ''; });
                 this.rabUnitOptions = unitList.map((u) => ({ codeId: u.codeId, label: u.codeValueEN ?? '' }));
                 this.buildOrderedRabIds(unitList).subscribe({
-                    next: (ordered) => { this.orderedRabIds = ordered; },
+                    next: (ordered) => {
+                        this.orderedRabIds = ordered;
+                        // The summary may have loaded before the tree finished (race): if rows
+                        // were built flat from a now-stale empty tree, rebuild them in tree order.
+                        if (this.lastDistributionList.length) {
+                            this.buildDisplayRows(this.lastDistributionList);
+                        }
+                    },
                     error: (err: any) => {}
                 });
             },
