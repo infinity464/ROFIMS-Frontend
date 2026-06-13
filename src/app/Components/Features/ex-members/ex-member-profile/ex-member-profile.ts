@@ -605,16 +605,17 @@ export class ExMemberProfile implements OnInit, OnDestroy {
         return t || this.L['addressType.address'];
     }
 
+    /** Matches "in-law" / "in law" / "inlaw" (any spacing/hyphen), case-insensitive. */
+    private readonly inLawPattern = /in[\s-]*law/i;
+
     get familyInfoList(): FamilyInfoByEmployeeView[] {
         if (!this.familyList?.length) return [];
-        const inLawPattern = /in-law/i;
-        return this.familyList.filter((f) => !inLawPattern.test((f.relation ?? '').trim()));
+        return this.familyList.filter((f) => !this.inLawPattern.test((f.relation ?? '').trim()));
     }
 
     get spouseFamilyInfoList(): FamilyInfoByEmployeeView[] {
         if (!this.familyList?.length) return [];
-        const inLawPattern = /in-law/i;
-        return this.familyList.filter((f) => inLawPattern.test((f.relation ?? '').trim()));
+        return this.familyList.filter((f) => this.inLawPattern.test((f.relation ?? '').trim()));
     }
 
     /** Ex-member: all RAB service records are "previous" (no present section). */
@@ -991,7 +992,12 @@ export class ExMemberProfile implements OnInit, OnDestroy {
         const deco = this.isBn ? (profile.gallantryAwardsDecorationBN ?? profile.gallantryAwardsDecoration) : profile.gallantryAwardsDecoration;
         const prof = this.isBn ? (profile.professionalQualificationBN ?? profile.professionalQualification) : profile.professionalQualification;
         const crps = this.isBn ? (profile.corpsBN ?? profile.corps) : profile.corps;
-        return [namePart, deco, prof, crps].filter((value) => value && String(value).trim() !== '' && String(value).trim() !== 'N/A').join(', ');
+        return [namePart, deco, prof, crps]
+            .filter((value) => {
+                const v = String(value ?? '').trim();
+                return v !== '' && v !== 'N/A' && v !== 'অপ্রযোজ্য';
+            })
+            .join(', ');
     }
 
     getDocumentSourceLabel(row: { sourceTable?: string; SourceTable?: string }): string {

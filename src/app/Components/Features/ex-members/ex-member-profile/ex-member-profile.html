@@ -947,13 +947,15 @@
         <!-- Leave (Current Year) -->
         <div class="sp-section">
             <div class="sp-section-header">
-                <span class="sp-section-heading">{{ L['section.leave'] }} ({{ currentYearDisplay }})</span>
-                <i
-                    class="pi pi-info-circle cursor-pointer text-primary"
-                    [pTooltip]="L['tooltip.viewPreviousYearLeaveSummary']"
-                    (click)="openPreviousYearLeaveSummary()"
-                    [attr.aria-label]="L['tooltip.viewPreviousYearLeaveSummary']"
-                ></i>
+                <span class="sp-section-heading inline-flex items-center gap-2">
+                    {{ L['section.leave'] }} ({{ currentYearDisplay }})
+                    <i
+                        class="pi pi-info-circle cursor-pointer text-primary"
+                        [pTooltip]="L['tooltip.viewPreviousYearLeaveSummary']"
+                        (click)="openPreviousYearLeaveSummary()"
+                        [attr.aria-label]="L['tooltip.viewPreviousYearLeaveSummary']"
+                    ></i>
+                </span>
                 @if (editingSection !== 'leave') {
                     <button type="button" class="sp-btn sp-btn-sm" (click)="setEditingSection('leave')"><i class="pi pi-pencil"></i> Edit</button>
                 } @else {
