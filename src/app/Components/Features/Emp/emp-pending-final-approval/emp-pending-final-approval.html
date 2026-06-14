@@ -1,7 +1,7 @@
 <p-toast position="top-center"></p-toast>
 <p-confirmDialog></p-confirmDialog>
 
-<!-- Send to Course - Course Details Modal -->
+<!-- Final approval - Course Details Modal -->
 <p-dialog header="Add Course" [(visible)]="showSendCourseModal" [modal]="true" [style]="{width: '640px'}" [closable]="true">
     <p class="text-500 mb-3">Enter course details for the selected members.</p>
     <form [formGroup]="courseForm" class="mt-3">
@@ -60,31 +60,26 @@
         <ng-template pTemplate="header">
             <div class="flex items-center justify-between gap-3 p-4 flex-wrap">
                 <div>
-                    <h2 class="text-2xl font-bold m-0">RFTS course drafts</h2>
-                    <small class="text-color-secondary">Manage course drafts and member assignments</small>
+                    <h2 class="text-2xl font-bold m-0">Pending for final approval</h2>
+                    <small class="text-color-secondary">Lists awaiting final approval to complete RFTS</small>
                 </div>
                 <div class="flex items-center gap-2">
-                    <p-button label="Pending final approval" icon="pi pi-clock" severity="secondary" [outlined]="true" [routerLink]="['/emp-pending-final-approval']"></p-button>
-                    <p-button label="New draft" icon="pi pi-plus" severity="secondary" [outlined]="true" [routerLink]="['/emp-send-to-course']"></p-button>
+                    <p-button label="Drafts" icon="pi pi-arrow-left" severity="secondary" [outlined]="true" [routerLink]="['/emp-draft-list']"></p-button>
                 </div>
             </div>
         </ng-template>
 
-        <!-- Drafts: count + sort hint -->
+        <!-- Count + sort hint -->
         <div class="flex items-center justify-between mb-3 flex-wrap gap-2">
-            <span class="text-color-secondary">{{ draftLists.length }} draft{{ draftLists.length === 1 ? '' : 's' }}</span>
+            <span class="text-color-secondary">{{ draftLists.length }} list{{ draftLists.length === 1 ? '' : 's' }}</span>
             <small class="text-color-secondary">Sorted by most recent</small>
         </div>
 
-        <!-- Drafts list — card-style rows. Click anywhere on the card to
-             toggle "open" (members panel below). Per user request the
-             "Selected" pill is intentionally not rendered — the members
-             panel + a left-border accent are the only signals. -->
         @if (isLoadingDrafts) {
-            <div class="text-center py-4 text-color-secondary"><i class="pi pi-spin pi-spinner mr-2"></i>Loading drafts…</div>
+            <div class="text-center py-4 text-color-secondary"><i class="pi pi-spin pi-spinner mr-2"></i>Loading…</div>
         } @else if (draftLists.length === 0) {
             <div class="rounded-lg border border-surface p-6 text-center text-color-secondary">
-                No drafts. Create one in the Select Member RFTS page.
+                Nothing pending final approval. Approve a draft to send it here.
             </div>
         } @else {
             <div class="flex flex-col gap-2">
@@ -115,7 +110,7 @@
                             </div>
                         </div>
 
-                        <!-- Row actions — always visible (no "Selected" pill per user request) -->
+                        <!-- Row actions -->
                         <div class="flex gap-1 shrink-0">
                             <p-button icon="pi pi-eye" [rounded]="true" [text]="true" severity="info" size="small"
                                 pTooltip="Show Members"
@@ -140,13 +135,10 @@
                             {{ selectedDraft.listNo }}
                         </span>
                     </div>
-                    <p-button label="Send for final approval" icon="pi pi-send" severity="success"
+                    <p-button label="Final approve" icon="pi pi-check-circle" severity="success"
                         [loading]="isSending" [disabled]="isSending" (onClick)="approveAndSave()"></p-button>
                 </div>
 
-                <!-- Member table — per-row X button replaces the
-                     bulk-select flow. Each row's red outlined X removes
-                     that single member via removeSingleMember(). -->
                 <p-table
                     [value]="selectedDraft.members"
                     styleClass="p-datatable-sm"
@@ -199,7 +191,7 @@
                     </ng-template>
                     <ng-template pTemplate="emptymessage">
                         <tr>
-                            <td [attr.colspan]="8" class="text-center py-4 text-color-secondary">No members in this draft.</td>
+                            <td [attr.colspan]="8" class="text-center py-4 text-color-secondary">No members in this list.</td>
                         </tr>
                     </ng-template>
                 </p-table>
@@ -216,15 +208,12 @@
                 </div>
             </div>
 
-            <!-- ============== Add members panel ==============
-                 Only renders after clicking "Add members" — separate
-                 card with dashed border so it visually reads as a
-                 transient overlay rather than part of the page. -->
+            <!-- ============== Add members panel ============== -->
             @if (showAddToDraftPanel) {
                 <div class="rounded-lg border border-dashed border-surface p-4 mt-3">
                     <div class="flex items-center gap-2 mb-3">
                         <i class="pi pi-user-plus text-color-secondary"></i>
-                        <span class="font-semibold">Add members to draft {{ selectedDraft?.listNo }}</span>
+                        <span class="font-semibold">Add members to {{ selectedDraft?.listNo }}</span>
                     </div>
                     <p-iconfield iconPosition="left" class="w-full block mb-3">
                         <p-inputicon styleClass="pi pi-search"></p-inputicon>

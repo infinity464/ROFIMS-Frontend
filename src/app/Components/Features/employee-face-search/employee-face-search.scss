@@ -77,6 +77,11 @@
     border-radius: 20px;
     padding: 0.35rem 0.85rem;
 }
+.fs-status.offline {
+    color: #ff6b6b;
+    background: rgba(255, 107, 107, 0.1);
+    border-color: rgba(255, 107, 107, 0.35);
+}
 .fs-status-dot {
     width: 8px;
     height: 8px;
@@ -84,6 +89,11 @@
     background: var(--fs-accent-2);
     box-shadow: 0 0 8px var(--fs-accent-2);
     animation: fs-pulse 1.8s infinite;
+}
+.fs-status.offline .fs-status-dot {
+    background: #ff6b6b;
+    box-shadow: 0 0 8px #ff6b6b;
+    animation: none;
 }
 @keyframes fs-pulse {
     0%, 100% { opacity: 1; }

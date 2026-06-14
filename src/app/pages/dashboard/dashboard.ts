@@ -109,7 +109,7 @@ type CalItem = { id: string; day: string; mon: string; dow: string; title: strin
             <div>
                 <h1 class="text-3xl font-semibold text-surface-900 dark:text-surface-0 m-0">Dashboard</h1>
             </div>
-            <p-tag severity="success" [rounded]="true" value="LIVE · Jun 12, 2026"></p-tag>
+            <p-tag severity="success" [rounded]="true" [value]="'LIVE · ' + liveDate"></p-tag>
         </div>
 
         <div class="grid grid-cols-12 gap-6">
@@ -596,6 +596,7 @@ type CalItem = { id: string; day: string; mon: string; dow: string; title: strin
     ]
 })
 export class Dashboard implements OnInit, OnDestroy {
+    readonly liveDate = new Date().toLocaleDateString('en-US', { day: '2-digit', month: 'short', year: 'numeric' });
     private themeObserver?: MutationObserver;
     private servingMembers = inject(ServingMembersService);
     private postedOutSvc = inject(PermanentPostingMORecordService);

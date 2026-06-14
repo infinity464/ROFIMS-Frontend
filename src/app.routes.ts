@@ -86,6 +86,7 @@ import { EmpEducationInfoComponent } from '@/Components/Features/Emp/emp-educati
 import { EmpCourseInfoComponent } from '@/Components/Features/Emp/emp-course-info/emp-course-info';
 import { EmpSendToCourseComponent } from '@/Components/Features/Emp/emp-send-to-course/emp-send-to-course';
 import { EmpDraftListComponent } from '@/Components/Features/Emp/emp-draft-list/emp-draft-list';
+import { EmpPendingFinalApprovalComponent } from '@/Components/Features/Emp/emp-pending-final-approval/emp-pending-final-approval';
 import { EmpRftsCompletedComponent } from '@/Components/Features/Emp/emp-rfts-completed/emp-rfts-completed';
 import { EmpDisciplineInfoComponent } from '@/Components/Features/Emp/emp-discipline-info/emp-discipline-info';
 import { EmpBankAccount } from '@/Components/Features/Emp/emp-bank-account/emp-bank-account.component';
@@ -369,6 +370,7 @@ export const appRoutes: Routes = [
             { path: 'emp-course-info', component: EmpCourseInfoComponent, canActivate: [MemberTypePermissionGuard] },
             { path: 'emp-send-to-course', component: EmpSendToCourseComponent, canActivate: [MemberTypePermissionGuard] },
             { path: 'emp-draft-list', component: EmpDraftListComponent, canActivate: [MemberTypePermissionGuard] },
+            { path: 'emp-pending-final-approval', component: EmpPendingFinalApprovalComponent, canActivate: [MemberTypePermissionGuard] },
             { path: 'emp-rfts-completed', component: EmpRftsCompletedComponent, canActivate: [MemberTypePermissionGuard] },
             { path: 'emp-discipline-info', component: EmpDisciplineInfoComponent, canActivate: [MemberTypePermissionGuard] },
             { path: 'emp-bank-account', component: EmpBankAccount, canActivate: [MemberTypePermissionGuard] },

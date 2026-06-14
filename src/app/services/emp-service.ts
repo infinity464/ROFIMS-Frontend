@@ -426,6 +426,11 @@ export class EmpService {
         return this.http.post<FaceRecognizeResult>(`${this.empApi}/EmployeeInfo/RecognizeFace`, form);
     }
 
+    /** Check whether the Face Recognition service is online. */
+    getFaceServiceHealth(): Observable<{ online: boolean }> {
+        return this.http.get<{ online: boolean }>(`${this.empApi}/EmployeeInfo/FaceServiceHealth`);
+    }
+
     /** List enrolled face photos (metadata) for an employee. */
     getEnrolledFacePhotos(employeeId: number): Observable<EnrolledFacePhoto[]> {
         return this.http.get<EnrolledFacePhoto[]>(
