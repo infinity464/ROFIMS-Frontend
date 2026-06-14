@@ -1,7 +1,8 @@
-import { Component, OnInit, inject } from '@angular/core';
+import { Component, OnInit, ViewChild, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
 import { FormBuilder, FormGroup, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
+import { forkJoin } from 'rxjs';
 import { TableModule } from 'primeng/table';
 import { ButtonModule } from 'primeng/button';
 import { Dialog } from 'primeng/dialog';
@@ -22,6 +23,8 @@ import { UserMenuService } from '@/services/user-menu.service';
 import { IdentityService } from '@/services/identity.service';
 import type { ApplicationUser } from '@/models/identity.model';
 import { NoticeService, NoticeListDto, NoticeSaveDto, NoticeAudienceType } from '@/services/notice.service';
+import { EmpService } from '@/services/emp-service';
+import { FileReferencesFormComponent, FileRowData } from '@components/Common/file-references-form/file-references-form';
 
 /** Notice-tag taxonomy: 5 priority bands, CRITICAL highest. Selecting drives chip colour + dashboard sort. */
 export interface NoticeTagOption {
@@ -118,7 +121,8 @@ export const NOTICE_TAG_BANDS: NoticeTagBand[] = [
         TagModule,
         TooltipModule,
         Toast,
-        ConfirmDialog
+        ConfirmDialog,
+        FileReferencesFormComponent
     ],
     providers: [MessageService, ConfirmationService],
     templateUrl: './notice-list.component.html',
@@ -129,6 +133,7 @@ export class NoticeListComponent implements OnInit {
     private router = inject(Router);
     private userMenuService = inject(UserMenuService);
     private noticeService = inject(NoticeService);
+    private empService = inject(EmpService);
     private identityService = inject(IdentityService);
     private messageService = inject(MessageService);
     private confirmationService = inject(ConfirmationService);
@@ -145,6 +150,10 @@ export class NoticeListComponent implements OnInit {
     changingCompleteIds = new Set<number>();
 
     form!: FormGroup;
+
+    /** Attached-file rows for the dialog's file-references sub-form. */
+    @ViewChild('fileReferencesForm') fileReferencesForm!: FileReferencesFormComponent;
+    fileRows: FileRowData[] = [];
 
     /** Identity users for the "Specific" recipient multi-select. */
     userOptions: { label: string; value: string }[] = [];
@@ -170,7 +179,8 @@ export class NoticeListComponent implements OnInit {
             audienceType: ['All' as NoticeAudienceType],
             recipientUserIds: [[] as string[]],
             tags: [[] as string[]],
-            isComplete: [false]
+            isComplete: [false],
+            sendNotification: [true]
         });
     }
 
@@ -242,7 +252,8 @@ export class NoticeListComponent implements OnInit {
             audienceType: row.audienceType,
             tags: Array.isArray(row.tags) ? row.tags : [],
             isComplete: nextValue,
-            recipientUserIds: Array.isArray(row.recipientUserIds) ? row.recipientUserIds : []
+            recipientUserIds: Array.isArray(row.recipientUserIds) ? row.recipientUserIds : [],
+            filesReferences: row.filesReferences ?? null
         };
 
         this.noticeService.update(payload).subscribe({
@@ -303,8 +314,46 @@ export class NoticeListComponent implements OnInit {
         this.form.get('tags')?.markAsDirty();
     }
 
+    /** Parse a FilesReferences JSON string into file-row data for the sub-form. */
+    private parseFileRows(refsJson: string | null | undefined): FileRowData[] {
+        if (!refsJson || typeof refsJson !== 'string') return [];
+        try {
+            const refs = JSON.parse(refsJson) as { FileId?: number; fileName?: string }[];
+            if (!Array.isArray(refs)) return [];
+            return refs.map((r) => ({ displayName: r.fileName ?? '', file: null, fileId: r.FileId }));
+        } catch {
+            return [];
+        }
+    }
+
+    /** Parsed file references for a list row (for the table's Files column). */
+    getFileRefs(row: NoticeListDto): { fileId: number; fileName: string }[] {
+        if (!row.filesReferences || typeof row.filesReferences !== 'string') return [];
+        try {
+            const refs = JSON.parse(row.filesReferences) as { FileId?: number; fileName?: string }[];
+            if (!Array.isArray(refs)) return [];
+            return refs
+                .filter((r) => r.FileId != null)
+                .map((r) => ({ fileId: r.FileId!, fileName: r.fileName ?? 'file' }));
+        } catch {
+            return [];
+        }
+    }
+
+    onFileRowsChange(event: FileRowData[]): void {
+        if (event && Array.isArray(event)) this.fileRows = event;
+    }
+
+    onDownloadFile(payload: { fileId: number; fileName: string }): void {
+        this.empService.downloadFile(payload.fileId).subscribe({
+            next: (blob) => this.empService.triggerFileDownload(blob, payload.fileName || 'download'),
+            error: () => this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to download file' })
+        });
+    }
+
     openCreate(): void {
         this.editingId = 0;
+        this.fileRows = [];
         this.form.reset({
             topic: '',
             details: '',
@@ -312,13 +361,15 @@ export class NoticeListComponent implements OnInit {
             audienceType: 'All',
             recipientUserIds: [],
             tags: [],
-            isComplete: false
+            isComplete: false,
+            sendNotification: true
         });
         this.dialogVisible = true;
     }
 
     openEdit(row: NoticeListDto): void {
         this.editingId = row.noticeId;
+        this.fileRows = this.parseFileRows(row.filesReferences);
         this.form.reset({
             topic: row.topic,
             details: row.details,
@@ -326,7 +377,8 @@ export class NoticeListComponent implements OnInit {
             audienceType: row.audienceType,
             recipientUserIds: row.recipientUserIds ?? [],
             tags: row.tags ?? [],
-            isComplete: row.isComplete
+            isComplete: row.isComplete,
+            sendNotification: true
         });
         this.dialogVisible = true;
     }
@@ -340,36 +392,65 @@ export class NoticeListComponent implements OnInit {
         const v = this.form.getRawValue();
         // Expire date always lands at 23:59 (end of day), regardless of the time spinner.
         const expire: Date | null = v.expireDate ? this.endOfDay(v.expireDate) : null;
-        const payload: NoticeSaveDto = {
-            noticeId: this.editingId,
-            topic: (v.topic || '').trim(),
-            details: (v.details || '').trim(),
-            expireDate: expire ? expire.toISOString() : null,
-            audienceType: v.audienceType,
-            tags: Array.isArray(v.tags) ? v.tags : [],
-            isComplete: !!v.isComplete,
-            recipientUserIds: v.audienceType === 'Specific' && Array.isArray(v.recipientUserIds) ? v.recipientUserIds : []
+
+        const existingRefs = this.fileReferencesForm?.getExistingFileReferences() ?? [];
+        const filesToUpload = this.fileReferencesForm?.getFilesToUpload() ?? [];
+
+        const doSave = (filesReferencesJson: string | null) => {
+            const payload: NoticeSaveDto = {
+                noticeId: this.editingId,
+                topic: (v.topic || '').trim(),
+                details: (v.details || '').trim(),
+                expireDate: expire ? expire.toISOString() : null,
+                audienceType: v.audienceType,
+                tags: Array.isArray(v.tags) ? v.tags : [],
+                isComplete: !!v.isComplete,
+                recipientUserIds: v.audienceType === 'Specific' && Array.isArray(v.recipientUserIds) ? v.recipientUserIds : [],
+                filesReferences: filesReferencesJson,
+                sendNotification: !!v.sendNotification
+            };
+
+            this.isSubmitting = true;
+            const req = this.editingId > 0 ? this.noticeService.update(payload) : this.noticeService.save(payload);
+            req.subscribe({
+                next: (res) => {
+                    this.isSubmitting = false;
+                    const code = res.statusCode ?? res.StatusCode;
+                    if (code === 200) {
+                        this.messageService.add({ severity: 'success', summary: 'Success', detail: this.editingId > 0 ? 'Notice updated' : 'Notice created' });
+                        this.dialogVisible = false;
+                        this.loadNotices();
+                    } else {
+                        this.messageService.add({ severity: 'error', summary: 'Error', detail: res.description ?? res.Description ?? 'Save failed' });
+                    }
+                },
+                error: () => {
+                    this.isSubmitting = false;
+                    this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Save failed' });
+                }
+            });
         };
 
-        this.isSubmitting = true;
-        const req = this.editingId > 0 ? this.noticeService.update(payload) : this.noticeService.save(payload);
-        req.subscribe({
-            next: (res) => {
-                this.isSubmitting = false;
-                const code = res.statusCode ?? res.StatusCode;
-                if (code === 200) {
-                    this.messageService.add({ severity: 'success', summary: 'Success', detail: this.editingId > 0 ? 'Notice updated' : 'Notice created' });
-                    this.dialogVisible = false;
-                    this.loadNotices();
-                } else {
-                    this.messageService.add({ severity: 'error', summary: 'Error', detail: res.description ?? res.Description ?? 'Save failed' });
+        if (filesToUpload.length > 0) {
+            this.isSubmitting = true;
+            const uploads = filesToUpload.map((r) =>
+                this.empService.uploadEmployeeFile(r.file!, r.displayName?.trim() || r.file!.name)
+            );
+            forkJoin(uploads).subscribe({
+                next: (results) => {
+                    const newRefs = (results as { fileId: number; fileName: string }[]).map((r) => ({ FileId: r.fileId, fileName: r.fileName }));
+                    const allRefs = [...existingRefs, ...newRefs];
+                    doSave(allRefs.length > 0 ? JSON.stringify(allRefs) : null);
+                },
+                error: () => {
+                    this.isSubmitting = false;
+                    this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to upload one or more files' });
                 }
-            },
-            error: () => {
-                this.isSubmitting = false;
-                this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Save failed' });
-            }
-        });
+            });
+            return;
+        }
+
+        doSave(existingRefs.length > 0 ? JSON.stringify(existingRefs) : null);
     }
 
     confirmDeactivate(row: NoticeListDto): void {
