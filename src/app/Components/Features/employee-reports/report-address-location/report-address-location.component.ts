@@ -166,13 +166,18 @@ export class ReportAddressLocationComponent implements OnInit {
         defaultVisible: boolean;
     }[] = [
         { key: 'ser',          labelEN: 'Ser',           labelBN: 'ক্রঃ',           hint: 'Serial',             defaultVisible: true },
+        { key: 'serviceId',    labelEN: 'Service ID',    labelBN: 'সার্ভিস আইডি',     hint: 'Plain',              defaultVisible: true },
+        { key: 'armyRank',     labelEN: 'Rank',          labelBN: 'র‍্যাঙ্ক',         hint: 'Plain',              defaultVisible: true },
+        { key: 'corps',        labelEN: 'Corps',         labelBN: 'কোর',             hint: 'Plain',              defaultVisible: true },
+        { key: 'trade',        labelEN: 'Trade',         labelBN: 'ট্রেড',            hint: 'Plain',              defaultVisible: true },
+        { key: 'name',         labelEN: 'Name',          labelBN: 'নাম',             hint: 'Plain',              defaultVisible: true },
         // Personnel composite (name + SVC·Rank·Org meta) — opt-in only now;
         // the identity renders as separate plain columns (serviceId/rank/corps/
         // trade/name) by default instead.
         { key: 'personnel',    labelEN: 'Personnel',     labelBN: 'সদস্য',          hint: 'PersonnelComposite', defaultVisible: false },
-        { key: 'rabId',        labelEN: 'RAB ID',        labelBN: 'র‍্যাব আইডি',     hint: 'RabId',              defaultVisible: true },
+        { key: 'rabId',        labelEN: 'RAB ID',        labelBN: 'র‍্যাব আইডি',     hint: 'RabId',              defaultVisible: false },
         { key: 'addressOwner', labelEN: 'Address Owner', labelBN: 'ঠিকানার মালিক',   hint: 'AddressOwner',       defaultVisible: false },
-        { key: 'locationType', labelEN: 'Address Type',  labelBN: 'ঠিকানার ধরন',     hint: 'LocationType',       defaultVisible: true },
+        { key: 'locationType', labelEN: 'Address Type',  labelBN: 'ঠিকানার ধরন',     hint: 'LocationType',       defaultVisible: false },
         { key: 'address',      labelEN: 'Address',       labelBN: 'ঠিকানা',         hint: 'AddressComposite',   defaultVisible: true },
         { key: 'status',       labelEN: 'Status',        labelBN: 'অবস্থা',          hint: 'Status',             defaultVisible: false },
         { key: 'remarks',      labelEN: 'Remarks',       labelBN: 'মন্তব্য',         hint: 'Remarks',            defaultVisible: true },
@@ -181,8 +186,6 @@ export class ReportAddressLocationComponent implements OnInit {
         // Service-side extras (data comes from the dynamic backend via
         // vw_DynamicReportEmployee). Keys match the backend ReportFieldRegistry
         // so the request → response round-trip works without renames.
-        { key: 'serviceId',         labelEN: 'Service ID',       labelBN: 'সার্ভিস আইডি',       hint: 'Plain', defaultVisible: true },
-        { key: 'name',              labelEN: 'Name',             labelBN: 'নাম',               hint: 'Plain', defaultVisible: true },
         { key: 'nameEnglish',       labelEN: 'Name (EN)',        labelBN: 'নাম (ইংরেজি)',      hint: 'Plain', defaultVisible: false },
         { key: 'nameBangla',        labelEN: 'Name (BN)',        labelBN: 'নাম (বাংলা)',       hint: 'Plain', defaultVisible: false },
         { key: 'nid',               labelEN: 'NID',              "labelBN": 'এনআইডি',          hint: 'Plain', defaultVisible: false },
@@ -190,10 +193,7 @@ export class ReportAddressLocationComponent implements OnInit {
         { key: 'appointment',       labelEN: 'Appointment',      labelBN: 'নিয়োগ',            hint: 'Plain', defaultVisible: false },
         { key: 'memberType',        labelEN: 'Member Type',      labelBN: 'সদস্য ধরন',         hint: 'Plain', defaultVisible: false },
         { key: 'motherOrganization',labelEN: 'Mother Org',       labelBN: 'মাতৃ সংস্থা',       hint: 'Plain', defaultVisible: false },
-        { key: 'armyRank',          labelEN: 'Rank',             labelBN: 'র‍্যাঙ্ক',          hint: 'Plain', defaultVisible: true },
         { key: 'rabRank',           labelEN: 'RAB Rank',         labelBN: 'র‍্যাব র‍্যাঙ্ক',    hint: 'Plain', defaultVisible: false },
-        { key: 'corps',             labelEN: 'Corps',            labelBN: 'কোর',              hint: 'Plain', defaultVisible: true },
-        { key: 'trade',             labelEN: 'Trade',            labelBN: 'ট্রেড',             hint: 'Plain', defaultVisible: true },
         { key: 'tradeRemarks',      labelEN: 'Trade Remarks',    labelBN: 'ট্রেড মন্তব্য',      hint: 'Plain', defaultVisible: false },
         { key: 'gender',            labelEN: 'Gender',           labelBN: 'লিঙ্গ',             hint: 'Plain', defaultVisible: false },
         { key: 'motherUnit',        labelEN: 'Last Unit',        labelBN: 'শেষ ইউনিট',         hint: 'Plain', defaultVisible: false },

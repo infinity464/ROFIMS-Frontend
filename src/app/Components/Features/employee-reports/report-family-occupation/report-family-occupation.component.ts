@@ -147,7 +147,7 @@ export class ReportFamilyOccupationComponent implements OnInit {
         { key: 'name',               labelEN: 'Name',                 labelBN: 'নাম',               hint: 'Plain',                 defaultVisible: true  },
         // Composite: Name + (SVC · Rank · Mother Org) on a secondary line. Opt-in.
         { key: 'rabPersonnel',       labelEN: 'RAB Personnel',        labelBN: 'র‍্যাব সদস্য',        hint: 'RabPersonnelComposite', defaultVisible: false },
-        { key: 'rabId',              labelEN: 'RAB ID',               labelBN: 'র‍্যাব আইডি',         hint: 'RabId',                 defaultVisible: true  },
+        { key: 'rabId',              labelEN: 'RAB ID',               labelBN: 'র‍্যাব আইডি',         hint: 'RabId',                 defaultVisible: false },
         { key: 'familyMemberName',   labelEN: 'Family Member Name',   labelBN: 'পরিবারের সদস্যের নাম', hint: 'FamilyName',            defaultVisible: true  },
         { key: 'relation',           labelEN: 'Relation',             labelBN: 'সম্পর্ক',             hint: 'Relation',              defaultVisible: true  },
         { key: 'occupation',         labelEN: 'Occupation',           labelBN: 'পেশা',               hint: 'Occupation',            defaultVisible: true  },
