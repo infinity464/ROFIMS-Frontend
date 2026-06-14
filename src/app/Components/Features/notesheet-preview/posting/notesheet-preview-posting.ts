@@ -1295,6 +1295,7 @@ export class NotesheetPreviewPostingComponent extends NotesheetPreviewBase imple
     // ── Reload notesheet after save ──────────────────────────
     private reloadNoteSheet(): void {
         if (!this.noteSheetId) return;
+        this._lastLoadedId = null;
         this.initiatorDetails = null;
         this.approversDetails = [];
         this.preparedByDetails = null;
@@ -1511,6 +1512,19 @@ html, body { margin: 0; padding: 0; background: transparent; }
 .pdf-flow .ns-posting-table td,
 .pdf-flow .ns-ref-file-btn,
 .pdf-flow .ns-ref-file-btn i { font-size: 7pt !important; }
+
+/* Keep column widths (colgroup) identical to the on-screen preview */
+.pdf-flow .ns-posting-table table { table-layout: fixed; width: 100%; }
+.pdf-flow .ns-posting-table th,
+.pdf-flow .ns-posting-table td { word-break: break-word; overflow-wrap: anywhere; }
+
+/* Rich-text content keeps the crisp document Bangla font (no faint "japsa" text) */
+.pdf-flow .ns-para-text, .pdf-flow .ns-para-text *,
+.pdf-flow .ns-ref-content, .pdf-flow .ns-ref-content *,
+.pdf-flow .ns-note, .pdf-flow .ns-note * {
+    font-family: 'Times New Roman', 'SolaimanLipi', 'Noto Sans Bengali', 'Nirmala UI', 'Vrinda', 'Shonar Bangla', Times, serif !important;
+    color: #000 !important;
+}
 
 /* .ns-doc-box draws its own border that the frame replaces. */
 .pdf-flow .ns-doc-box { border: none !important; }

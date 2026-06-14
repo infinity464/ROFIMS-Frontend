@@ -16,7 +16,7 @@
                 </div>
                 <div class="field flex-1 min-w-200px">
                     <label class="font-semibold block mb-2 text-700">Draft Inter Posting List No <span class="text-red-500">*</span></label>
-                    <input pInputText class="w-full" [(ngModel)]="draftPostingListNo" placeholder="Auto Generated / Manual Input" />
+                    <input pInputText class="w-full" [(ngModel)]="draftPostingListNo" placeholder="Auto Generated" [readonly]="!isEditMode" />
                 </div>
                 <div *ngIf="isEditMode" class="field min-w-150px">
                     <label class="font-semibold block mb-2 text-700">Status</label>
@@ -117,7 +117,7 @@
             [value]="draftMastersList"
             [loading]="loadingMasters"
             dataKey="id"
-            [tableStyle]="{ 'min-width': '40rem' }"
+            [tableStyle]="{ 'min-width': '50rem' }"
             styleClass="p-datatable-striped p-datatable-gridlines"
             [paginator]="true"
             [rows]="10"
@@ -128,9 +128,10 @@
                     <th style="width: 60px">Ser</th>
                     <th style="min-width: 140px">Draft Inter Posting No</th>
                     <th style="min-width: 120px">Date</th>
-                    <th style="min-width: 120px">Status</th>
-                    <th style="min-width: 80px">Employees</th>
+                    <th style="min-width: 100px">Status</th>
+                    <th style="width: 80px">Employees</th>
                     <th style="min-width: 100px">Created By</th>
+                    <th style="min-width: 140px">Action</th>
                 </tr>
             </ng-template>
             <ng-template pTemplate="body" let-row let-rowIndex="rowIndex">
@@ -141,13 +142,66 @@
                     <td>{{ getDraftPostingStatusLabel(row.draftInterPostingStatus) }}</td>
                     <td>{{ row.detailCount }}</td>
                     <td>{{ row.createdBy || '-' }}</td>
+                    <td class="text-center">
+                        <p-button icon="pi pi-users" label="View Member" severity="primary" size="small"
+                                  (onClick)="viewEmployees(row)"></p-button>
+                    </td>
                 </tr>
             </ng-template>
             <ng-template pTemplate="emptymessage">
                 <tr>
-                    <td colspan="6" class="text-center p-4 text-500">No Draft Inter Posting saved yet. Select employees above and click Save.</td>
+                    <td colspan="7" class="text-center p-4 text-500">No Draft Inter Posting saved yet. Select employees above and click Save.</td>
                 </tr>
             </ng-template>
         </p-table>
     </div>
 </div>
+
+<!-- Employee Preview Modal -->
+<p-dialog [(visible)]="showEmployeeModal" [header]="employeeModalTitle" [modal]="true" [dismissableMask]="true" [style]="{ width: '70vw' }" [maximizable]="true">
+    <p-table
+        [value]="employeeModalList"
+        [loading]="employeeModalLoading"
+        dataKey="id"
+        [tableStyle]="{ 'min-width': '50rem' }"
+        styleClass="p-datatable-striped p-datatable-gridlines p-datatable-sm"
+        [paginator]="employeeModalList.length > 10"
+        [rows]="10"
+        [rowsPerPageOptions]="[10, 25, 50]">
+        <ng-template pTemplate="header">
+            <tr>
+                <th style="width: 50px">Ser</th>
+                <th>Service ID</th>
+                <th>Rank</th>
+                <th>Corps</th>
+                <th>Trade</th>
+                <th>Name</th>
+                <th>Mother Unit</th>
+                <th>RAB Unit</th>
+                <th>Date of Join in RAB</th>
+                <th>Transfer Unit</th>
+                <th>Remarks</th>
+            </tr>
+        </ng-template>
+        <ng-template pTemplate="body" let-row let-rowIndex="rowIndex">
+            <tr>
+                <td>{{ rowIndex + 1 }}</td>
+                <td class="font-semibold">{{ row.serviceId || '-' }}</td>
+                <td>{{ row.rank || '-' }}</td>
+                <td>{{ row.corps || '-' }}</td>
+                <td>{{ row.trade || '-' }}</td>
+                <td>{{ row.name || '-' }}</td>
+                <td>{{ row.motherUnit || '-' }}</td>
+                <td>{{ row.rabUnit || '-' }}</td>
+                <td>{{ formatDate(row.rabJoingdate) }}</td>
+                <td>{{ row.transferRabUnitName || '-' }}</td>
+                <td>{{ row.remarks || '-' }}</td>
+            </tr>
+        </ng-template>
+        <ng-template pTemplate="emptymessage">
+            <tr>
+                <td colspan="11" class="text-center p-4 text-500">No employees found.</td>
+            </tr>
+        </ng-template>
+    </p-table>
+</p-dialog>

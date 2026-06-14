@@ -142,12 +142,17 @@ export abstract class NotesheetPreviewBase implements OnInit {
     canUpdate = false;
     canDelete = false;
 
+    protected _lastLoadedId: number | null = null;
+
     ngOnInit(): void {
         this.loadLookups();
         this.route.queryParams.subscribe(params => {
             const id = params['id'];
             if (id) {
-                this.noteSheetId = +id;
+                const newId = +id;
+                if (newId === this._lastLoadedId) return;
+                this._lastLoadedId = newId;
+                this.noteSheetId = newId;
                 this.loadNoteSheet();
             } else {
                 this.error = true;
@@ -306,40 +311,38 @@ export abstract class NotesheetPreviewBase implements OnInit {
         if (allIds.length === 0) return;
 
         this.loadingApprovalChain = true;
-        let completed = 0;
-        const total = allIds.length;
 
-        allIds.forEach(({ empId, step }) => {
-            this.servingMembersService.getEmployeePersonalServiceOverview(empId)
-                .pipe(catchError(() => of(null)))
-                .subscribe({
-                    next: (emp) => {
-                        const detail: SignatoryDetail = {
-                            step,
-                            name:          emp?.nameEnglish  ?? '-',
-                            nameBN:        emp?.nameBN       ?? '',
-                            rabId:         emp?.rabId        ?? '-',
-                            rank:          emp?.armyRank     ?? '-',
-                            rankBN:        emp?.armyRankBN   ?? '',
-                            serviceRank:   emp?.armyRank     ?? '-',
-                            appointment:   emp?.appointment  ?? '',
-                            appointmentBN: emp?.appointmentBN ?? '',
-                            employeeId: empId
-                        };
+        forkJoin(
+            allIds.map(({ empId }) =>
+                this.servingMembersService.getEmployeePersonalServiceOverview(empId)
+                    .pipe(catchError(() => of(null)))
+            )
+        ).subscribe({
+            next: (results) => {
+                results.forEach((emp, idx) => {
+                    const { empId, step } = allIds[idx];
+                    const detail: SignatoryDetail = {
+                        step,
+                        name:          emp?.nameEnglish  ?? '-',
+                        nameBN:        emp?.nameBN       ?? '',
+                        rabId:         emp?.rabId        ?? '-',
+                        rank:          emp?.armyRank     ?? '-',
+                        rankBN:        emp?.armyRankBN   ?? '',
+                        serviceRank:   emp?.armyRank     ?? '-',
+                        appointment:   emp?.appointment  ?? '',
+                        appointmentBN: emp?.appointmentBN ?? '',
+                        employeeId: empId
+                    };
 
-                        if (step === ApprovalStep.PreparedBy) this.preparedByDetails = detail;
-                        else if (step === ApprovalStep.Initiator) this.initiatorDetails = detail;
-                        else this.approversDetails.push(detail);
+                    if (step === ApprovalStep.PreparedBy) this.preparedByDetails = detail;
+                    else if (step === ApprovalStep.Initiator) this.initiatorDetails = detail;
+                    else this.approversDetails.push(detail);
 
-                        this.loadSignature(detail);
-                        completed++;
-                        if (completed >= total) this.loadingApprovalChain = false;
-                    },
-                    error: () => {
-                        completed++;
-                        if (completed >= total) this.loadingApprovalChain = false;
-                    }
+                    this.loadSignature(detail);
                 });
+                this.loadingApprovalChain = false;
+            },
+            error: () => { this.loadingApprovalChain = false; }
         });
     }
 
@@ -594,13 +597,24 @@ export abstract class NotesheetPreviewBase implements OnInit {
             .subscribe({
                 next: (list) => {
                     this.backHistory = list ?? [];
-                    this.loadingBackHistory = false;
-                    // resolve employee names
-                    for (const row of this.backHistory) {
-                        this.servingMembersService.getEmployeePersonalServiceOverview(row.backedByEmployeeId)
-                            .pipe(catchError(() => of(null)))
-                            .subscribe({ next: (emp) => { row.backedByName = emp?.nameEnglish ?? 'Unknown'; } });
+                    if (this.backHistory.length === 0) {
+                        this.loadingBackHistory = false;
+                        return;
                     }
+                    const uniqueIds = [...new Set(this.backHistory.map(r => r.backedByEmployeeId))];
+                    forkJoin(
+                        uniqueIds.map(id => this.servingMembersService.getEmployeePersonalServiceOverview(id).pipe(catchError(() => of(null))))
+                    ).subscribe({
+                        next: (results) => {
+                            const nameMap = new Map<number, string>();
+                            results.forEach((emp, i) => { nameMap.set(uniqueIds[i], emp?.nameEnglish ?? 'Unknown'); });
+                            for (const row of this.backHistory) {
+                                row.backedByName = nameMap.get(row.backedByEmployeeId) ?? 'Unknown';
+                            }
+                            this.loadingBackHistory = false;
+                        },
+                        error: () => { this.loadingBackHistory = false; }
+                    });
                 },
                 error: (err: any) => { this.loadingBackHistory = false; }
             });

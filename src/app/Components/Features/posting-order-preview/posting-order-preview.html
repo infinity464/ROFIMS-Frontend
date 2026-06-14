@@ -464,6 +464,10 @@
                 <label for="chkPrevUnit" style="cursor:pointer;">{{ isBangla ? 'পূর্ববতী কর্মস্থল' : 'Previous Workplace' }}</label>
             </span>
             <span style="display:inline-flex; align-items:center; gap:0.4rem;">
+                <p-checkbox [(ngModel)]="showRemarks" [binary]="true" inputId="chkRemarks"></p-checkbox>
+                <label for="chkRemarks" style="cursor:pointer;">{{ isBangla ? 'মন্তব্য' : 'Remarks' }}</label>
+            </span>
+            <span style="display:inline-flex; align-items:center; gap:0.4rem;">
                 <p-checkbox [(ngModel)]="showUpperSignature" [binary]="true" inputId="chkUpperSig"></p-checkbox>
                 <label for="chkUpperSig" style="cursor:pointer;">{{ isBangla ? 'স্বাক্ষর' : 'Signature' }}</label>
             </span>
@@ -530,11 +534,11 @@
                             <th style="width:5%">{{ isBangla ? 'ক্রমিক' : 'Ser' }}</th>
                             <th style="width:10%">{{ isBangla ? 'ব্যক্তিগত নং' : 'Service ID' }}</th>
                             <th style="width:7%">{{ isBangla ? 'পদবি' : 'Rank' }}</th>
-                            <th style="width:13%">{{ isBangla ? 'নাম' : 'Name' }}</th>
+                            <th style="width:16%">{{ isBangla ? 'নাম' : 'Name' }}</th>
                             <th *ngIf="showOwnDistrict" style="width:10%">{{ isBangla ? 'নিজ জেলা' : 'Own District' }}</th>
                             <th *ngIf="showPrevWorkplaceUnit" style="width:14%">{{ isBangla ? 'পূর্ববতী কর্মস্থল' : 'Previous Workplace' }}</th>
                             <th style="width:14%">{{ isBangla ? 'বদলিকৃত কর্মস্থল' : 'Transfer Station' }}</th>
-                            <th style="width:18%">{{ isBangla ? 'মন্তব্য' : 'Remarks' }}</th>
+                            <th *ngIf="showRemarks" style="width:10%">{{ isBangla ? 'মন্তব্য' : 'Remarks' }}</th>
                             <th *ngIf="isApproved && showDeleteColumn" class="no-print" style="width:30px"></th>
                         </tr>
                     </ng-container>
@@ -546,24 +550,24 @@
                                 <th style="width:9%">ব্যক্তিগত নম্বর</th>
                                 <th style="width:6%">পদবি</th>
                                 <th style="width:6%">ট্রেড</th>
-                                <th style="width:10%">নাম</th>
+                                <th style="width:14%">নাম</th>
                                 <th *ngIf="showOwnDistrict" style="width:8%">নিজ জেলা</th>
                                 <th *ngIf="showPrevWorkplaceUnit" style="width:13%">পূর্ববতী কর্মস্থল</th>
                                 <th style="width:13%">বদলিকৃত কর্মস্থল</th>
                                 <th style="width:9%">র‌্যাব আইডি</th>
-                                <th style="width:15%">মন্তব্য</th>
+                                <th *ngIf="showRemarks" style="width:10%">মন্তব্য</th>
                             </ng-container>
                             <ng-container *ngIf="!isBangla">
                                 <th style="width:4%">Ser</th>
                                 <th style="width:9%">Service ID</th>
                                 <th style="width:6%">Rank</th>
                                 <th style="width:6%">Trade</th>
-                                <th style="width:10%">Name</th>
+                                <th style="width:14%">Name</th>
                                 <th *ngIf="showOwnDistrict" style="width:8%">Own District</th>
                                 <th *ngIf="showPrevWorkplaceUnit" style="width:13%">Previous Workplace</th>
                                 <th style="width:13%">Transfer Unit</th>
                                 <th style="width:9%">RAB ID</th>
-                                <th style="width:15%">Remarks</th>
+                                <th *ngIf="showRemarks" style="width:10%">Remarks</th>
                             </ng-container>
                             <th *ngIf="isApproved && showDeleteColumn" class="no-print" style="width:30px"></th>
                         </tr>
@@ -579,7 +583,7 @@
                             <td *ngIf="showOwnDistrict" style="white-space: pre-line;">{{ empDistrict(emp) }}</td>
                             <td *ngIf="showPrevWorkplaceUnit" style="white-space: pre-line;">{{ empPrevWorkplace(emp) }}</td>
                             <td>{{ empTransferUnit(emp) }}</td>
-                            <td style="white-space: pre-line; word-break: break-word; min-width: 150px;">{{ empCombinedRemarks(emp) }}</td>
+                            <td *ngIf="showRemarks" style="white-space: pre-line; word-break: break-word;">{{ empCombinedRemarks(emp) }}</td>
                             <td *ngIf="isApproved && showDeleteColumn" class="text-center no-print">
                                 <p-button
                                     [icon]="removingEmployeeId === emp.employeeId ? 'pi pi-spin pi-spinner' : 'pi pi-trash'"
@@ -605,7 +609,7 @@
                             <td *ngIf="showPrevWorkplaceUnit" style="white-space: pre-line;">{{ empPrevWorkplace(emp) }}</td>
                             <td>{{ empTransferUnit(emp) }}</td>
                             <td>{{ empRabId(emp) }}</td>
-                            <td>{{ getRemovalRemark(emp) }}</td>
+                            <td *ngIf="showRemarks">{{ getRemovalRemark(emp) }}</td>
                             <td *ngIf="isApproved && showDeleteColumn" class="text-center no-print">
                                 <p-button
                                     [icon]="removingEmployeeId === emp.employeeId ? 'pi pi-spin pi-spinner' : 'pi pi-trash'"

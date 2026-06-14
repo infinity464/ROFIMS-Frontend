@@ -116,6 +116,7 @@ export class PostingOrderPreviewPageComponent implements OnInit {
 
     // ── নিজ জেলা column visibility ───────────────────
     showOwnDistrict = true;
+    showRemarks = true;
     showDeleteColumn = false;
     showUpperSignature = true;
 
@@ -1434,21 +1435,40 @@ html, body { margin: 0; padding: 0; background: transparent; }
         const isInter = this.isInterPosting;
         const sd = this.showOwnDistrict;
         const sp = this.showPrevWorkplaceUnit;
+        const sr = this.showRemarks;
         const cols = isInter
-            ? (bn ? ['ক্রমিক', 'ব্যক্তিগত নং', 'পদবি', 'নাম', ...(sd ? ['নিজ জেলা'] : []), ...(sp ? ['পূর্ববতী কর্মস্থল'] : []), 'বদলিকৃত কর্মস্থল', 'মন্তব্য']
-                   : ['Ser', 'Service ID', 'Rank', 'Name', ...(sd ? ['Own District'] : []), ...(sp ? ['Previous Workplace'] : []), 'Transfer Station', 'Remarks'])
-            : (bn ? ['ক্রমিক', 'ব্যক্তিগত নম্বর', 'পদবি', 'ট্রেড', 'নাম', ...(sd ? ['নিজ জেলা'] : []), ...(sp ? ['পূর্ববতী কর্মস্থল'] : []), 'বদলিকৃত কর্মস্থল', 'র‌্যাব আইডি']
-                   : ['Ser', 'Service ID', 'Rank', 'Trade', 'Name', ...(sd ? ['Own District'] : []), ...(sp ? ['Previous Workplace'] : []), 'Transfer Unit', 'RAB ID']);
+            ? (bn ? ['ক্রমিক', 'ব্যক্তিগত নং', 'পদবি', 'নাম', ...(sd ? ['নিজ জেলা'] : []), ...(sp ? ['পূর্ববতী কর্মস্থল'] : []), 'বদলিকৃত কর্মস্থল', ...(sr ? ['মন্তব্য'] : [])]
+                   : ['Ser', 'Service ID', 'Rank', 'Name', ...(sd ? ['Own District'] : []), ...(sp ? ['Previous Workplace'] : []), 'Transfer Station', ...(sr ? ['Remarks'] : [])])
+            : (bn ? ['ক্রমিক', 'ব্যক্তিগত নম্বর', 'পদবি', 'ট্রেড', 'নাম', ...(sd ? ['নিজ জেলা'] : []), ...(sp ? ['পূর্ববতী কর্মস্থল'] : []), 'বদলিকৃত কর্মস্থল', 'র‌্যাব আইডি', ...(sr ? ['মন্তব্য'] : [])]
+                   : ['Ser', 'Service ID', 'Rank', 'Trade', 'Name', ...(sd ? ['Own District'] : []), ...(sp ? ['Previous Workplace'] : []), 'Transfer Unit', 'RAB ID', ...(sr ? ['Remarks'] : [])]);
         // Column widths in DXA – must sum to full content width (page 12240 - margins 567*2 = 11106)
-        const colW = isInter
-            ? (sd && sp ? [500, 1050, 900, 1800, 1200, 1500, 1500, 2656]
-              : sd ? [500, 1050, 900, 1800, 1200, 2000, 3656]
-              : sp ? [500, 1050, 900, 2100, 1700, 1700, 3156]
-              : [500, 1050, 900, 2500, 2200, 3956])
-            : (sd && sp ? [580, 1100, 860, 924, 2474, 1260, 1374, 1374, 1160]
-              : sd ? [580, 1100, 860, 924, 2474, 1260, 1774, 2134]
-              : sp ? [580, 1100, 860, 924, 2874, 1634, 1634, 1500]
-              : [580, 1100, 860, 924, 3474, 2034, 2134]);
+        const buildColW = (): number[] => {
+            if (isInter) {
+                const base = [500, 1050, 900];
+                const rem = 11106 - 500 - 1050 - 900;
+                const optCols = (sd ? 1 : 0) + (sp ? 1 : 0) + (sr ? 1 : 0);
+                const nameW = 2200;
+                const transferW = 1500;
+                const distW = sd ? 1200 : 0;
+                const prevW = sp ? 1500 : 0;
+                const remW = sr ? 1200 : 0;
+                const fixedW = nameW + transferW + distW + prevW + remW;
+                const adjust = rem - fixedW;
+                return [...base, nameW + adjust, ...(sd ? [distW] : []), ...(sp ? [prevW] : []), transferW, ...(sr ? [remW] : [])];
+            }
+            const base = [580, 1100, 860, 924];
+            const fixedSum = 580 + 1100 + 860 + 924;
+            const nameW = 2800;
+            const transferW = 1374;
+            const rabIdW = 1160;
+            const distW = sd ? 1200 : 0;
+            const prevW = sp ? 1374 : 0;
+            const remW = sr ? 1100 : 0;
+            const usedW = fixedSum + nameW + transferW + rabIdW + distW + prevW + remW;
+            const adjust = 11106 - usedW;
+            return [...base, nameW + adjust, ...(sd ? [distW] : []), ...(sp ? [prevW] : []), transferW, rabIdW, ...(sr ? [remW] : [])];
+        };
+        const colW = buildColW();
 
         const hdrPara = (text: string) => new Paragraph({ children: [new TextRun({ text, bold: true, size: tblSize, sizeComplexScript: tblCsSize, font, language: lang })], alignment: AlignmentType.CENTER });
         const hdrCell = (text: string, ci: number, extra?: Partial<ConstructorParameters<typeof TableCell>[0]>) => new TableCell({
@@ -1465,14 +1485,15 @@ html, body { margin: 0; padding: 0; background: transparent; }
                     ...(sd ? [this.empDistrict(emp)] : []),
                     ...(sp ? [this.empPrevWorkplace(emp)] : []),
                     this.empTransferUnit(emp),
-                    this.empCombinedRemarks(emp)
+                    ...(sr ? [this.empCombinedRemarks(emp)] : [])
                 ]
                 : [
                     serial, this.empServiceId(emp), this.empRank(emp), this.empTrade(emp), this.empName(emp),
                     ...(sd ? [this.empDistrict(emp)] : []),
                     ...(sp ? [this.empPrevWorkplace(emp)] : []),
                     this.empTransferUnit(emp),
-                    this.empRabId(emp)
+                    this.empRabId(emp),
+                    ...(sr ? [this.getRemovalRemark(emp)] : [])
                 ];
             return new TableRow({
                 children: vals.map((val, ci) => {
