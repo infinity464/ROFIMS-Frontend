@@ -262,22 +262,22 @@ export class NewJoiningPersonListComponent implements OnInit, OnDestroy {
         const t = LABELS[this.lang];
         const bn = this.lang === 'bn';
         const columns = [
-            t['col.ser'], t['col.motherOrg'], t['col.motherOrgUnit'], t['col.memberType'],
-            t['col.rank'], t['col.corps'], t['col.trade'],
-            t['col.serviceId'], t['col.name'],
+            t['col.ser'],
+            t['col.serviceId'], t['col.rank'], t['col.corps'], t['col.trade'], t['col.name'],
+            t['col.motherOrg'], t['col.motherOrgUnit'], t['col.memberType'],
             t['col.joiningOrderNo'], t['col.joiningDate'], t['col.possibleJoining'],
             t['col.added'],
         ];
         const rows = allRecords.map((r, i) => [
             String(i + 1),
-            (bn ? r.motherOrgNameBN : r.motherOrgName) ?? '-',
-            (bn ? r.motherOrgUnitNameBN : r.motherOrgUnitName) ?? '-',
-            (bn ? r.memberTypeNameBN : r.memberTypeName) ?? '-',
+            r.prefixName && r.serviceId ? r.prefixName + '-' + r.serviceId : r.serviceId ?? '-',
             (bn ? r.rankNameBN : r.rankName) ?? '-',
             (bn ? r.corpsNameBN : r.corpsName) ?? '-',
             (bn ? r.tradeNameBN : r.tradeName) ?? '-',
-            r.prefixName && r.serviceId ? r.prefixName + '-' + r.serviceId : r.serviceId ?? '-',
             r.nameBangla ?? '-',
+            (bn ? r.motherOrgNameBN : r.motherOrgName) ?? '-',
+            (bn ? r.motherOrgUnitNameBN : r.motherOrgUnitName) ?? '-',
+            (bn ? r.memberTypeNameBN : r.memberTypeName) ?? '-',
             r.joiningOrderNo ?? '-',
             this.formatDisplay(r.joiningOrderDate),
             this.formatDisplay(r.possibleJoiningDate),

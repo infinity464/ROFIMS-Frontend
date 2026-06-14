@@ -75,14 +75,14 @@
         <ng-template pTemplate="header">
             <tr>
                 <th style="width:50px">{{ L[lang]['col.ser'] }}</th>
-                <th>{{ L[lang]['col.motherOrg'] }}</th>
-                <th>{{ L[lang]['col.motherOrgUnit'] }}</th>
-                <th>{{ L[lang]['col.memberType'] }}</th>
+                <th>{{ L[lang]['col.serviceId'] }}</th>
                 <th>{{ L[lang]['col.rank'] }}</th>
                 <th>{{ L[lang]['col.corps'] }}</th>
                 <th>{{ L[lang]['col.trade'] }}</th>
-                <th>{{ L[lang]['col.serviceId'] }}</th>
                 <th>{{ L[lang]['col.name'] }}</th>
+                <th>{{ L[lang]['col.motherOrg'] }}</th>
+                <th>{{ L[lang]['col.motherOrgUnit'] }}</th>
+                <th>{{ L[lang]['col.memberType'] }}</th>
                 <th>{{ L[lang]['col.joiningOrderNo'] }}</th>
                 <th>{{ L[lang]['col.joiningDate'] }}</th>
                 <th>{{ L[lang]['col.possibleJoining'] }}</th>
@@ -93,14 +93,14 @@
         <ng-template pTemplate="body" let-row let-i="rowIndex">
             <tr>
                 <td>{{ first + i + 1 }}</td>
-                <td>{{ (lang === 'bn' ? row.motherOrgNameBN : row.motherOrgName) ?? '-' }}</td>
-                <td>{{ (lang === 'bn' ? row.motherOrgUnitNameBN : row.motherOrgUnitName) ?? '-' }}</td>
-                <td>{{ (lang === 'bn' ? row.memberTypeNameBN : row.memberTypeName) ?? '-' }}</td>
+                <td>{{ row.prefixName && row.serviceId ? row.prefixName + '-' + row.serviceId : row.serviceId ?? '-' }}</td>
                 <td>{{ (lang === 'bn' ? row.rankNameBN : row.rankName) ?? '-' }}</td>
                 <td>{{ (lang === 'bn' ? row.corpsNameBN : row.corpsName) ?? '-' }}</td>
                 <td>{{ (lang === 'bn' ? row.tradeNameBN : row.tradeName) ?? '-' }}</td>
-                <td>{{ row.prefixName && row.serviceId ? row.prefixName + '-' + row.serviceId : row.serviceId ?? '-' }}</td>
                 <td>{{ row.nameBangla ?? '-' }}</td>
+                <td>{{ (lang === 'bn' ? row.motherOrgNameBN : row.motherOrgName) ?? '-' }}</td>
+                <td>{{ (lang === 'bn' ? row.motherOrgUnitNameBN : row.motherOrgUnitName) ?? '-' }}</td>
+                <td>{{ (lang === 'bn' ? row.memberTypeNameBN : row.memberTypeName) ?? '-' }}</td>
                 <td>{{ row.joiningOrderNo ?? '-' }}</td>
                 <td>{{ formatDisplay(row.joiningOrderDate) }}</td>
                 <td>{{ formatDisplay(row.possibleJoiningDate) }}</td>

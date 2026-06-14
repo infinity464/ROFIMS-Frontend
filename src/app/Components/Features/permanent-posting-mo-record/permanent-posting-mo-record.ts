@@ -295,7 +295,15 @@ export class PermanentPostingMORecordComponent implements OnInit {
     // ── Employee search events ──────────────────────────────────────
     onPostedOutFound(employee: EmployeeBasicInfo): void {
         this.postedOutEmployee = employee;
-        this.isOfficer = (employee as any).officerType != null && (employee as any).officerType > 0;
+        const memberTypeName = (employee.memberTypeDisplay ?? '').toString().toLowerCase();
+        this.isOfficer = memberTypeName.includes('officer')
+            || ((employee as any).officerType != null && (employee as any).officerType > 0);
+        if (!this.isOfficer) {
+            this.noteSheetClearance = null;
+            this.nsClearanceDate = null;
+            this.clearanceGiven = null;
+            this.clearanceGivenDate = null;
+        }
 
         this.orgService.GetAllOrgUnit().subscribe({
             next: (units) => {
@@ -815,13 +823,15 @@ export class PermanentPostingMORecordComponent implements OnInit {
                 this.messageService.add({ severity: 'warn', summary: 'Validation', detail: 'Please select Posting Unit.' });
                 return;
             }
-            if (this.noteSheetClearance == null) {
-                this.messageService.add({ severity: 'warn', summary: 'Validation', detail: 'Please select Note-Sheet Clearance.' });
-                return;
-            }
-            if (this.clearanceGiven == null) {
-                this.messageService.add({ severity: 'warn', summary: 'Validation', detail: 'Please select Clearance Given.' });
-                return;
+            if (this.isOfficer) {
+                if (this.noteSheetClearance == null) {
+                    this.messageService.add({ severity: 'warn', summary: 'Validation', detail: 'Please select Note-Sheet Clearance.' });
+                    return;
+                }
+                if (this.clearanceGiven == null) {
+                    this.messageService.add({ severity: 'warn', summary: 'Validation', detail: 'Please select Clearance Given.' });
+                    return;
+                }
             }
             if (this.isReliever == null) {
                 this.messageService.add({ severity: 'warn', summary: 'Validation', detail: 'Please select Is Reliever Assigned.' });

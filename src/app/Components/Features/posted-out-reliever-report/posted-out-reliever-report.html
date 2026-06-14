@@ -86,13 +86,13 @@
                 <th>{{ L[lang]['col.postedOutSvcId'] }}</th>
                 <th>{{ L[lang]['col.postedOutName'] }}</th>
                 <th>{{ L[lang]['col.relieverSvcId'] }}</th>
+                <th>{{ L[lang]['col.rank'] }}</th>
+                <th>{{ L[lang]['col.corps'] }}</th>
+                <th>{{ L[lang]['col.trade'] }}</th>
                 <th>{{ L[lang]['col.relieverName'] }}</th>
                 <th>{{ L[lang]['col.motherOrg'] }}</th>
                 <th>{{ L[lang]['col.motherOrgUnit'] }}</th>
                 <th>{{ L[lang]['col.memberType'] }}</th>
-                <th>{{ L[lang]['col.rank'] }}</th>
-                <th>{{ L[lang]['col.corps'] }}</th>
-                <th>{{ L[lang]['col.trade'] }}</th>
                 <th>{{ L[lang]['col.postingOrderDate'] }}</th>
                 <th style="width:90px">{{ L[lang]['col.entryStatus'] }}</th>
             </tr>
@@ -103,13 +103,13 @@
                 <td>{{ postedOutSvcId(row) }}</td>
                 <td>{{ (lang === 'bn' ? row.postedOutNameBN : row.postedOutName) ?? '-' }}</td>
                 <td>{{ relieverSvcId(row) }}</td>
+                <td>{{ (lang === 'bn' ? row.rankNameBN : row.rankName) ?? '-' }}</td>
+                <td>{{ (lang === 'bn' ? row.corpsNameBN : row.corpsName) ?? '-' }}</td>
+                <td>{{ (lang === 'bn' ? row.tradeNameBN : row.tradeName) ?? '-' }}</td>
                 <td>{{ row.relieverNameBangla ?? '-' }}</td>
                 <td>{{ (lang === 'bn' ? row.motherOrgNameBN : row.motherOrgName) ?? '-' }}</td>
                 <td>{{ (lang === 'bn' ? row.motherOrgUnitNameBN : row.motherOrgUnitName) ?? '-' }}</td>
                 <td>{{ (lang === 'bn' ? row.memberTypeNameBN : row.memberTypeName) ?? '-' }}</td>
-                <td>{{ (lang === 'bn' ? row.rankNameBN : row.rankName) ?? '-' }}</td>
-                <td>{{ (lang === 'bn' ? row.corpsNameBN : row.corpsName) ?? '-' }}</td>
-                <td>{{ (lang === 'bn' ? row.tradeNameBN : row.tradeName) ?? '-' }}</td>
                 <td>{{ formatDisplay(row.postingOrderDate) }}</td>
                 <td>
                     <span [class]="row.isAddedInNewJoineeDataEntry === true ? 'status-badge status-yes' : row.isAddedInNewJoineeDataEntry === false ? 'status-badge status-pending' : ''">

@@ -150,18 +150,18 @@ export class PostedOutPersonListComponent implements OnInit {
 
     private buildExportData(allRecords: PermanentPostingMORecordModel[]): { columns: string[]; rows: string[][] } {
         const columns = [
-            '#', 'Name', 'Service ID', 'RAB ID',
-            'Posting Unit', 'Rank', 'Corps', 'Trade', 'Is Reliever Assigned?',
+            '#', 'Service ID', 'Rank', 'Corps', 'Trade', 'Name',
+            'RAB ID', 'Posting Unit', 'Is Reliever Assigned?',
         ];
         const rows = allRecords.map((r, i) => [
             String(i + 1),
-            r.postedOutName ?? '-',
             this.prefixServiceId(r),
-            r.postedOutRabId ?? '-',
-            r.postingUnitName ?? '-',
             r.postedOutRank ?? '-',
             r.postedOutCorps ?? '-',
             r.postedOutTrade ?? '-',
+            r.postedOutName ?? '-',
+            r.postedOutRabId ?? '-',
+            r.postingUnitName ?? '-',
             this.yesNo(r.isReliever),
         ]);
         return { columns, rows };

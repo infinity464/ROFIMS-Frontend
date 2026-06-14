@@ -71,13 +71,13 @@
         <ng-template pTemplate="header">
             <tr>
                 <th style="width:3rem">#</th>
-                <th>Name</th>
                 <th>Service ID</th>
-                <th>RAB ID</th>
-                <th>Posting Unit</th>
                 <th>Rank</th>
                 <th>Corps</th>
                 <th>Trade</th>
+                <th>Name</th>
+                <th>RAB ID</th>
+                <th>Posting Unit</th>
                 <th style="width:10rem">Is Reliever Assigned?</th>
                 <th style="width:5rem">Actions</th>
             </tr>
@@ -85,13 +85,13 @@
         <ng-template pTemplate="body" let-row let-i="rowIndex">
             <tr>
                 <td>{{ first + i + 1 }}</td>
-                <td>{{ row.postedOutName ?? '-' }}</td>
                 <td>{{ prefixServiceId(row) }}</td>
-                <td>{{ row.postedOutRabId ?? '-' }}</td>
-                <td>{{ row.postingUnitName ?? '-' }}</td>
                 <td>{{ row.postedOutRank ?? '-' }}</td>
                 <td>{{ row.postedOutCorps ?? '-' }}</td>
                 <td>{{ row.postedOutTrade ?? '-' }}</td>
+                <td>{{ row.postedOutName ?? '-' }}</td>
+                <td>{{ row.postedOutRabId ?? '-' }}</td>
+                <td>{{ row.postingUnitName ?? '-' }}</td>
                 <td>
                     <span [class]="row.isReliever === true ? 'text-green-600 font-semibold' : row.isReliever === false ? 'text-orange-500' : 'text-500'">
                         {{ yesNo(row.isReliever) }}
