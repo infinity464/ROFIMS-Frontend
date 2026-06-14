@@ -257,7 +257,7 @@ export class RabOrganogramMembersComponent implements OnInit {
             corpsId: this.filter.corps ?? undefined,
             tradeId: this.filter.trade ?? undefined,
             permanentDistrictType: this.filter.wonHomeDistrict ?? undefined,
-            spousePermanentDistrictType: this.filter.spouseHomeDistrict ?? undefined
+            wifePermanentDistrictType: this.filter.spouseHomeDistrict ?? undefined
         };
 
         this.servingMembersService

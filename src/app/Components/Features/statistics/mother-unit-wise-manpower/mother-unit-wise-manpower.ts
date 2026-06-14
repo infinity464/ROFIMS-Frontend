@@ -19,6 +19,8 @@ import {
     type MotherUnitRow,
     type MotherUnitWiseManpowerResponse
 } from '@/services/statistics.service';
+import { OrgTreeFilterComponent } from '../shared/org-tree-filter/org-tree-filter.component';
+import { RabReportPrintService } from '../shared/rab-report-print.service';
 
 type Lang = 'en' | 'bn';
 
@@ -28,7 +30,7 @@ type MotherUnitOrgBlock = MotherUnitWiseManpowerResponse;
 @Component({
     selector: 'app-mother-unit-wise-manpower',
     standalone: true,
-    imports: [CommonModule, FormsModule, MultiSelectModule],
+    imports: [CommonModule, FormsModule, MultiSelectModule, OrgTreeFilterComponent],
     templateUrl: './mother-unit-wise-manpower.html',
     styleUrl: './mother-unit-wise-manpower.scss'
 })
@@ -54,6 +56,10 @@ export class MotherUnitWiseManpowerComponent implements OnInit {
     /** Sum of every filtered org's grandTotal — single number because rank columns vary per org. */
     grandTotal = 0;
 
+    /** Org-tree node filter (Unit/Wing/Branch/…) — scopes Held server-side. */
+    filterRabCodeId: number | null = null;
+    filterLabel: string | null = null;
+
     /** Names of the RAB Units the user is restricted to. null/empty = full access. */
     accessibleRabUnitNames: string[] | null = null;
     accessibleRabUnitNamesBN: string[] | null = null;
@@ -76,11 +82,33 @@ export class MotherUnitWiseManpowerComponent implements OnInit {
         private _router: Router,
         private _userMenuService: UserMenuService,
         private statisticsService: StatisticsService,
-        private exportService: ExportService
+        private exportService: ExportService,
+        private rabPrint: RabReportPrintService
     ) {}
 
     @HostListener('document:click')
     onDocumentClick(): void { this.exportDropdownOpen = false; }
+
+    onOrgTreeFilter(e: { codeId: number | null; label: string | null }): void {
+        this.filterRabCodeId = e.codeId;
+        this.filterLabel = e.label;
+        this.onOrgFilterChange();
+    }
+
+    private buildCriteriaItems(): { label: string; value: string }[] {
+        const bn = this.lang === 'bn';
+        const items: { label: string; value: string }[] = [];
+        // Organization first.
+        const orgNames = this.filteredOrgs.map(o => this.orgLabel(o));
+        if (orgNames.length) items.push({ label: bn ? 'বাহিনী' : 'ORGANIZATION', value: orgNames.join(', ') });
+        if (this.filterLabel) items.push({ label: bn ? 'অফিস' : 'OFFICE', value: this.filterLabel });
+        const unitNames = (bn ? this.accessibleRabUnitNamesBN : this.accessibleRabUnitNames) ?? this.accessibleRabUnitNames;
+        if (unitNames && unitNames.length > 0) items.push({ label: bn ? 'ইউনিট' : 'UNITS', value: unitNames.join(', ') });
+        const mtNames = (bn ? this.accessibleMemberTypeNamesBN : this.accessibleMemberTypeNames) ?? this.accessibleMemberTypeNames;
+        if (mtNames && mtNames.length > 0) items.push({ label: bn ? 'সদস্য ধরণ' : 'MEMBER TYPES', value: mtNames.join(', ') });
+        if (items.length === 0) items.push({ label: bn ? 'পরিসর' : 'SCOPE', value: bn ? 'সকল ইউনিট' : 'All Unit' });
+        return items;
+    }
 
     ngOnInit(): void {
         const _perms = this._userMenuService.getPermissionsByRoute(this._router.url);
@@ -121,7 +149,7 @@ export class MotherUnitWiseManpowerComponent implements OnInit {
         this.loading = true;
         forkJoin(
             ids.map(id =>
-                this.statisticsService.getMotherUnitWiseManpower(id).pipe(
+                this.statisticsService.getMotherUnitWiseManpower(id, this.filterRabCodeId).pipe(
                     catchError(() => of(null as MotherUnitWiseManpowerResponse | null))
                 )
             )
@@ -211,8 +239,46 @@ export class MotherUnitWiseManpowerComponent implements OnInit {
             showPageNumbers: true,
             filename: 'mother-unit-wise-manpower',
             filterLines: scope ? [scope] : undefined,
-            landscape: true
+            landscape: true,
+            rabLetterhead: true,
+            criteriaItems: this.buildCriteriaItems()
         };
+
+        // Print uses the shared RAB letterhead (frontend only). Matrix mode: each
+        // org renders its own table (its rank columns differ).
+        if (type === 'print') {
+            this.rabPrint.print({
+                lang: this.lang,
+                reportTitle: this.titleLabel,
+                criteriaItems: this.buildCriteriaItems(),
+                columns: [],
+                sections: this.filteredOrgs.map(org => {
+                    const cols = [
+                        { label: this.serLabel, align: 'center' as const },
+                        { label: this.unitLabel, align: 'left' as const },
+                        ...org.ranks.map(r => ({ label: this.rankLabel(r), align: 'center' as const, mono: true })),
+                        { label: this.totalLabel, align: 'center' as const, mono: true }
+                    ];
+                    return {
+                        title: this.orgLabel(org),
+                        columns: cols,
+                        rows: org.units.map((unit, i) => [
+                            this.fmt(i + 1),
+                            this.unitNameLabel(unit),
+                            ...org.ranks.map(r => this.fmt(this.cellValue(unit, r.rankId))),
+                            this.fmt(unit.total)
+                        ]),
+                        totalRow: [
+                            '',
+                            this.totalLabel,
+                            ...org.ranks.map(r => this.fmt(this.columnTotal(org, r.rankId))),
+                            this.fmt(org.grandTotal)
+                        ]
+                    };
+                })
+            });
+            return;
+        }
 
         try {
             this.exporting = true;
@@ -223,18 +289,12 @@ export class MotherUnitWiseManpowerComponent implements OnInit {
                 case 'excel':
                     this.exportService.exportExcelSectioned(sectionedConfig);
                     break;
-                case 'pdf':
-                case 'print': {
-                    // Build the docx once, convert server-side, then either save or open.
+                case 'pdf': {
                     const doc = this.exportService.buildSectionedWordDoc(sectionedConfig);
                     const docxBlob = await Packer.toBlob(doc);
                     const pdfBlob = await this.convertDocxToPdf(docxBlob);
                     const filename = `${sectionedConfig.filename}_${this.lang}.pdf`;
-                    if (type === 'pdf') {
-                        saveAs(pdfBlob, filename);
-                    } else {
-                        window.open(URL.createObjectURL(pdfBlob), '_blank');
-                    }
+                    saveAs(pdfBlob, filename);
                     break;
                 }
             }

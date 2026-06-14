@@ -180,6 +180,13 @@
                         Send {{ selectedCount }} to Posting
                     </button>
                     <button type="button"
+                        class="report-btn-secondary report-btn-blue"
+                        [class.perm-hidden]="!canInsert"
+                        (click)="goToArticle47Takeover()">
+                        <i class="pi pi-file-edit" style="margin-right: 6px;"></i>
+                        Article 47 (Takeover) {{ selectedCount }}
+                    </button>
+                    <button type="button"
                         class="report-btn-secondary"
                         [disabled]="isSendingSelection"
                         (click)="clearSelection()">

@@ -3,7 +3,7 @@ import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { map } from 'rxjs/operators';
 import { environment } from '@/Core/Environments/environment';
-import { DraftCourseList, DraftCourseMemberRow, RftsTrainingRow, SendToCourseDetails } from '@/models/draft-course.model';
+import { DraftCourseList, DraftCourseMemberRow, RftsCourseSummary, RftsTrainingRow, SendToCourseDetails } from '@/models/draft-course.model';
 
 const API = `${environment.apis.core}/DraftCourse`;
 
@@ -150,6 +150,52 @@ export class DraftCourseService {
 
     getAllRftsTraining(): Observable<RftsTrainingRow[]> {
         return this.http.get<any[]>(`${API}/GetAllRftsTraining`).pipe(
+            map((list) =>
+                (list ?? []).map((r) => ({
+                    id: r.id ?? r.Id,
+                    employeeId: r.employeeId ?? r.EmployeeId,
+                    fullNameEN: r.fullNameEN ?? r.FullNameEN ?? null,
+                    rabId: r.rabId ?? r.RabId ?? null,
+                    serviceId: r.serviceId ?? r.ServiceId ?? null,
+                    rankName: r.rankName ?? r.RankName ?? null,
+                    corpsName: r.corpsName ?? r.CorpsName ?? null,
+                    tradeName: r.tradeName ?? r.TradeName ?? null,
+                    motherUnitName: r.motherUnitName ?? r.MotherUnitName ?? null,
+                    courseTypeName: r.courseTypeName ?? r.CourseTypeName ?? null,
+                    courseNameDisplay: r.courseNameDisplay ?? r.CourseNameDisplay ?? null,
+                    courseNo: r.courseNo ?? r.CourseNo ?? null,
+                    dateFrom: r.dateFrom ?? r.DateFrom ?? null,
+                    dateTo: r.dateTo ?? r.DateTo ?? null,
+                    result: r.result ?? r.Result ?? null,
+                    auth: r.auth ?? r.Auth ?? null,
+                    remarks: r.remarks ?? r.Remarks ?? null,
+                    createdBy: r.createdBy ?? r.CreatedBy ?? null,
+                    createdDate: r.createdDate ?? r.CreatedDate ?? null
+                }))
+            )
+        );
+    }
+
+    /** Course-group headers for /emp-rfts-completed (one row per courseNo, count only). */
+    getRftsCourseSummaries(): Observable<RftsCourseSummary[]> {
+        return this.http.get<any[]>(`${API}/GetRftsCourseSummaries`).pipe(
+            map((list) =>
+                (list ?? []).map((r) => ({
+                    courseNo: r.courseNo ?? r.CourseNo ?? null,
+                    courseTypeName: r.courseTypeName ?? r.CourseTypeName ?? null,
+                    courseNameDisplay: r.courseNameDisplay ?? r.CourseNameDisplay ?? null,
+                    dateFrom: r.dateFrom ?? r.DateFrom ?? null,
+                    dateTo: r.dateTo ?? r.DateTo ?? null,
+                    memberCount: r.memberCount ?? r.MemberCount ?? 0
+                }))
+            )
+        );
+    }
+
+    /** Members of one RFTS course group, loaded lazily when a course is clicked. */
+    getRftsTrainingByCourseNo(courseNo: string | null): Observable<RftsTrainingRow[]> {
+        const qs = courseNo ? `?courseNo=${encodeURIComponent(courseNo)}` : '';
+        return this.http.get<any[]>(`${API}/GetRftsTrainingByCourseNo${qs}`).pipe(
             map((list) =>
                 (list ?? []).map((r) => ({
                     id: r.id ?? r.Id,

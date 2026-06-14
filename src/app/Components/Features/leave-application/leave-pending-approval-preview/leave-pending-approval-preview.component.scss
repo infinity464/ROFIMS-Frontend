@@ -395,3 +395,38 @@
         padding: 12mm 8mm;
     }
 }
+
+/* ════════════════════════════════════════════════════════════════════
+   DARK MODE — backdrop + the cards below the sheet. The letter sheet
+   (.letter-card, which also holds the toolbar) stays WHITE.
+   ════════════════════════════════════════════════════════════════════ */
+:host-context(.app-dark) {
+
+    /* Backdrop — ROFIMS standard dark navy */
+    background: #2a2d35;
+
+    /* Letter sheet stays white; just a stronger shadow on the dark backdrop */
+    .letter-card {
+        box-shadow: 0 10px 40px rgba(0, 0, 0, 0.6);
+    }
+
+    /* Approval-flow + review cards sit on the dark backdrop → darken them */
+    .approval-card,
+    .review-card {
+        background: #1e2230;
+        border: 1px solid #3a3f4e;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+    }
+    .approval-card-title {
+        color: #e2e8f0;
+        border-bottom-color: #3a3f4e;
+    }
+    .review-label {
+        color: #cbd5e1;
+        .text-xs { color: #94a3b8; }
+    }
+    .step-name { color: #cbd5e1; }
+    .step-remark { color: #94a3b8; }
+
+    .preview-state { color: #94a3b8; }
+}

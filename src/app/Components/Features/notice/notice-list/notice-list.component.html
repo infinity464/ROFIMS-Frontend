@@ -1,0 +1,151 @@
+<p-toast></p-toast>
+<p-confirmDialog></p-confirmDialog>
+
+<div class="card">
+    <div class="flex items-center justify-between mb-4">
+        <h2 class="text-xl font-semibold m-0">Notices</h2>
+        @if (canInsert) {
+            <button pButton type="button" icon="pi pi-plus" label="New Notice" (click)="openCreate()"></button>
+        }
+    </div>
+
+    <p-table [value]="notices" [loading]="loading" [paginator]="true" [rows]="10" [rowsPerPageOptions]="[10, 25, 50]" responsiveLayout="scroll" dataKey="noticeId">
+        <ng-template pTemplate="header">
+            <tr>
+                <th style="width: 4rem">#</th>
+                <th>Topic</th>
+                <th>Tags</th>
+                <th style="width: 12rem">Expire Date</th>
+                <th style="width: 8rem">Audience</th>
+                <th style="width: 6rem">Active</th>
+                <th style="width: 18rem">Actions</th>
+            </tr>
+        </ng-template>
+        <ng-template pTemplate="body" let-row let-rowIndex="rowIndex">
+            <tr>
+                <td>{{ rowIndex + 1 }}</td>
+                <td>
+                    <span class="notice-topic-cell" [pTooltip]="row.topic" tooltipPosition="top" tooltipEvent="hover">
+                        {{ row.topic }}
+                    </span>
+                </td>
+                <td>
+                    @for (tag of row.tags; track tag) {
+                        <span class="inline-flex items-center gap-1 px-2 py-0.5 mr-1 mb-1 rounded border text-xs font-semibold uppercase" [ngClass]="tagDisplay(tag).classes">
+                            <i class="pi {{ tagDisplay(tag).icon }} text-[0.7rem]"></i>{{ tag }}
+                        </span>
+                    }
+                </td>
+                <td>{{ row.expireDate ? (row.expireDate | date: 'dd/MM/yyyy HH:mm') : '—' }}</td>
+                <td>{{ row.audienceType }}</td>
+                <td>
+                    <p-tag [value]="row.isActive ? 'Active' : 'Inactive'" [severity]="row.isActive ? 'success' : 'secondary'"></p-tag>
+                </td>
+                <td>
+                    <div class="flex items-center gap-2">
+                        <span class="inline-flex items-center gap-2" [pTooltip]="row.isComplete ? 'Complete' : 'Pending'" tooltipPosition="top">
+                            <p-toggleswitch [(ngModel)]="row.isComplete" (onChange)="toggleComplete(row)" [disabled]="isTogglingComplete(row)"></p-toggleswitch>
+                            <span class="text-sm text-muted-color">{{ row.isComplete ? 'Complete' : 'Pending' }}</span>
+                        </span>
+                        @if (canUpdate) {
+                            <button pButton type="button" icon="pi pi-pencil" class="p-button-text p-button-sm" pTooltip="Edit" (click)="openEdit(row)"></button>
+                        }
+                        @if (canDelete) {
+                            <button pButton type="button" icon="pi pi-trash" class="p-button-text p-button-sm p-button-danger" pTooltip="Delete" (click)="confirmDelete(row)"></button>
+                        }
+                    </div>
+                </td>
+            </tr>
+        </ng-template>
+        <ng-template pTemplate="emptymessage">
+            <tr>
+                <td colspan="7" class="text-center">No notices found.</td>
+            </tr>
+        </ng-template>
+    </p-table>
+</div>
+
+<p-dialog [(visible)]="dialogVisible" [modal]="true" [style]="{ width: '56rem' }" [breakpoints]="{ '960px': '90vw' }" [header]="editingId > 0 ? 'Edit Notice' : 'New Notice'" [draggable]="false">
+    <form [formGroup]="form" (ngSubmit)="onSubmit()" class="flex flex-col gap-4">
+        <div class="flex flex-col gap-1">
+            <label for="topic">Topic <span class="text-red-500">*</span></label>
+            <input pInputText id="topic" formControlName="topic" maxlength="300" placeholder="Notice topic" />
+        </div>
+
+        <div class="flex flex-col gap-1">
+            <label for="details">Details <span class="text-red-500">*</span></label>
+            <textarea pTextarea id="details" formControlName="details" rows="4" autoResize="true" placeholder="Notice details"></textarea>
+        </div>
+
+        <div class="flex flex-col gap-1">
+            <label for="expireDate">Expire Date <span class="text-gray-400 text-sm">(optional — leave empty to keep active until manually deactivated)</span></label>
+            <p-datepicker id="expireDate" formControlName="expireDate" [showIcon]="true" [defaultDate]="defaultExpireDate" dateFormat="dd/mm/yy" appendTo="body" styleClass="w-full"></p-datepicker>
+        </div>
+
+        <div class="flex flex-col gap-2">
+            <label>Audience</label>
+            <div class="flex gap-4">
+                <div class="flex items-center gap-2">
+                    <p-radioButton inputId="aud-all" value="All" formControlName="audienceType"></p-radioButton>
+                    <label for="aud-all">All users</label>
+                </div>
+                <div class="flex items-center gap-2">
+                    <p-radioButton inputId="aud-spec" value="Specific" formControlName="audienceType"></p-radioButton>
+                    <label for="aud-spec">Specific users</label>
+                </div>
+            </div>
+        </div>
+
+        @if (isSpecific) {
+            <div class="flex flex-col gap-1">
+                <label for="recipients">Recipients</label>
+                <p-multiSelect
+                    id="recipients"
+                    formControlName="recipientUserIds"
+                    [options]="userOptions"
+                    optionLabel="label"
+                    optionValue="value"
+                    [filter]="true"
+                    display="chip"
+                    placeholder="Select users"
+                    appendTo="body"
+                    styleClass="w-full"
+                ></p-multiSelect>
+            </div>
+        }
+
+        <div class="flex flex-col gap-3">
+            <label>Tag <span class="text-color-secondary text-sm font-normal">— pick one; CRITICAL is highest priority</span></label>
+            @for (b of tagBands; track b.band) {
+                <div class="notice-tag-band">
+                    <div class="text-xs uppercase tracking-wide mb-2" [ngClass]="b.classes">{{ b.label }}</div>
+                    <div class="flex flex-wrap gap-2">
+                        @for (t of b.tags; track t.name) {
+                            <button
+                                type="button"
+                                class="inline-flex items-center gap-2 px-3 py-1.5 rounded-md border text-sm font-semibold uppercase transition-colors"
+                                [ngClass]="isTagSelected(t.name) ? b.selectedClasses : b.classes + ' opacity-70 hover:opacity-100'"
+                                (click)="toggleTag(t.name)"
+                            >
+                                <i class="pi {{ t.icon }}"></i>{{ t.name }}
+                                @if (isTagSelected(t.name)) {
+                                    <i class="pi pi-check text-xs"></i>
+                                }
+                            </button>
+                        }
+                    </div>
+                </div>
+            }
+        </div>
+
+        <div class="flex items-center gap-2">
+            <p-toggleSwitch inputId="isComplete" formControlName="isComplete"></p-toggleSwitch>
+            <label for="isComplete">Mark as complete</label>
+        </div>
+
+        <div class="flex justify-end gap-2 mt-2">
+            <button pButton type="button" label="Cancel" class="p-button-text" (click)="dialogVisible = false"></button>
+            <button pButton type="submit" label="Save" [disabled]="isSubmitting"></button>
+        </div>
+    </form>
+</p-dialog>

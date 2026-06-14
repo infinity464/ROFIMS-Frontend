@@ -10,16 +10,18 @@ import { TooltipModule } from 'primeng/tooltip';
 import { MessageService } from 'primeng/api';
 
 import { DraftCourseService } from '@/services/draft-course.service';
-import { RftsTrainingRow } from '@/models/draft-course.model';
+import { RftsCourseSummary, RftsTrainingRow } from '@/models/draft-course.model';
 
 interface RftsGroup {
-    courseNo: string;
+    courseNo: string | null;
     courseTypeName: string | null;
     courseNameDisplay: string | null;
     dateFrom: string | null;
     dateTo: string | null;
     memberCount: number;
+    /** Lazily loaded when the course card is expanded. */
     members: RftsTrainingRow[];
+    membersLoaded: boolean;
 }
 
 @Component({
@@ -38,55 +40,74 @@ interface RftsGroup {
     templateUrl: './emp-rfts-completed.html'
 })
 export class EmpRftsCompletedComponent implements OnInit {
-    rftsCompletedList: RftsTrainingRow[] = [];
     rftsGroupedList: RftsGroup[] = [];
     isLoadingCompleted = false;
+    /** True while the expanded course's members are being fetched. */
+    isLoadingMembers = false;
 
     /** The currently expanded course card. Click the same card again to collapse. */
     selectedGroup: RftsGroup | null = null;
 
-    constructor(private draftCourseService: DraftCourseService) {}
+    constructor(
+        private draftCourseService: DraftCourseService,
+        private messageService: MessageService
+    ) {}
 
     ngOnInit(): void {
-        this.loadRftsCompleted();
+        this.loadCourseSummaries();
     }
 
-    loadRftsCompleted(): void {
+    /** Loads only the course-group headers (no members) — fast even with many courses. */
+    loadCourseSummaries(): void {
         this.isLoadingCompleted = true;
-        this.draftCourseService.getAllRftsTraining().subscribe({
-            next: (list) => {
-                this.rftsCompletedList = list ?? [];
-                this.groupRftsCompleted();
+        this.draftCourseService.getRftsCourseSummaries().subscribe({
+            next: (list: RftsCourseSummary[]) => {
+                this.rftsGroupedList = (list ?? []).map((s) => ({
+                    courseNo: s.courseNo,
+                    courseTypeName: s.courseTypeName,
+                    courseNameDisplay: s.courseNameDisplay,
+                    dateFrom: s.dateFrom,
+                    dateTo: s.dateTo,
+                    memberCount: s.memberCount,
+                    members: [],
+                    membersLoaded: false
+                }));
+                this.selectedGroup = null;
                 this.isLoadingCompleted = false;
             },
             error: () => {
-                this.rftsCompletedList = [];
                 this.rftsGroupedList = [];
+                this.selectedGroup = null;
                 this.isLoadingCompleted = false;
             }
         });
     }
 
-    private groupRftsCompleted(): void {
-        const map = new Map<string, RftsTrainingRow[]>();
-        for (const row of this.rftsCompletedList) {
-            const key = row.courseNo || 'N/A';
-            if (!map.has(key)) map.set(key, []);
-            map.get(key)!.push(row);
+    /** Expand/collapse a course. On first expand, fetch that course's members. */
+    toggleGroup(group: RftsGroup): void {
+        if (this.selectedGroup?.courseNo === group.courseNo) {
+            this.selectedGroup = null;
+            return;
         }
-        this.rftsGroupedList = Array.from(map.entries()).map(([courseNo, members]) => ({
-            courseNo,
-            courseTypeName: members[0].courseTypeName,
-            courseNameDisplay: members[0].courseNameDisplay,
-            dateFrom: members[0].dateFrom,
-            dateTo: members[0].dateTo,
-            memberCount: members.length,
-            members
-        }));
+        this.selectedGroup = group;
+        if (!group.membersLoaded) {
+            this.loadMembers(group);
+        }
     }
 
-    toggleGroup(group: RftsGroup): void {
-        this.selectedGroup = this.selectedGroup?.courseNo === group.courseNo ? null : group;
+    private loadMembers(group: RftsGroup): void {
+        this.isLoadingMembers = true;
+        this.draftCourseService.getRftsTrainingByCourseNo(group.courseNo).subscribe({
+            next: (members) => {
+                group.members = members ?? [];
+                group.membersLoaded = true;
+                this.isLoadingMembers = false;
+            },
+            error: () => {
+                this.isLoadingMembers = false;
+                this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to load members for this course.' });
+            }
+        });
     }
 
     /**

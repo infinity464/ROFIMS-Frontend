@@ -18,6 +18,8 @@ import {
     type TradeRow,
     type TradeWiseManpowerResponse
 } from '@/services/statistics.service';
+import { OrgTreeFilterComponent } from '../shared/org-tree-filter/org-tree-filter.component';
+import { RabReportPrintService } from '../shared/rab-report-print.service';
 
 type Lang = 'en' | 'bn';
 
@@ -27,7 +29,7 @@ type TradeOrgBlock = TradeWiseManpowerResponse;
 @Component({
     selector: 'app-trade-wise-manpower',
     standalone: true,
-    imports: [CommonModule, FormsModule, MultiSelectModule],
+    imports: [CommonModule, FormsModule, MultiSelectModule, OrgTreeFilterComponent],
     templateUrl: './trade-wise-manpower.html',
     styleUrl: './trade-wise-manpower.scss'
 })
@@ -53,6 +55,10 @@ export class TradeWiseManpowerComponent implements OnInit {
     /** Sum of every filtered org's grandTotal — single number because rank columns vary per org. */
     grandTotal = 0;
 
+    /** Org-tree node filter (Unit/Wing/Branch/…) — scopes Held server-side. */
+    filterRabCodeId: number | null = null;
+    filterLabel: string | null = null;
+
     /** Names of the RAB Units the user is restricted to. null/empty = full access. */
     accessibleRabUnitNames: string[] | null = null;
     accessibleRabUnitNamesBN: string[] | null = null;
@@ -75,8 +81,30 @@ export class TradeWiseManpowerComponent implements OnInit {
         private _router: Router,
         private _userMenuService: UserMenuService,
         private statisticsService: StatisticsService,
-        private exportService: ExportService
+        private exportService: ExportService,
+        private rabPrint: RabReportPrintService
     ) {}
+
+    onOrgTreeFilter(e: { codeId: number | null; label: string | null }): void {
+        this.filterRabCodeId = e.codeId;
+        this.filterLabel = e.label;
+        this.onOrgFilterChange();
+    }
+
+    private buildCriteriaItems(): { label: string; value: string }[] {
+        const bn = this.lang === 'bn';
+        const items: { label: string; value: string }[] = [];
+        // Organization first.
+        const orgNames = this.filteredOrgs.map(o => this.orgLabel(o));
+        if (orgNames.length) items.push({ label: bn ? 'বাহিনী' : 'ORGANIZATION', value: orgNames.join(', ') });
+        if (this.filterLabel) items.push({ label: bn ? 'অফিস' : 'OFFICE', value: this.filterLabel });
+        const unitNames = (bn ? this.accessibleRabUnitNamesBN : this.accessibleRabUnitNames) ?? this.accessibleRabUnitNames;
+        if (unitNames && unitNames.length > 0) items.push({ label: bn ? 'ইউনিট' : 'UNITS', value: unitNames.join(', ') });
+        const mtNames = (bn ? this.accessibleMemberTypeNamesBN : this.accessibleMemberTypeNames) ?? this.accessibleMemberTypeNames;
+        if (mtNames && mtNames.length > 0) items.push({ label: bn ? 'সদস্য ধরণ' : 'MEMBER TYPES', value: mtNames.join(', ') });
+        if (items.length === 0) items.push({ label: bn ? 'পরিসর' : 'SCOPE', value: bn ? 'সকল ইউনিট' : 'All Unit' });
+        return items;
+    }
 
     @HostListener('document:click')
     onDocumentClick(): void { this.exportDropdownOpen = false; }
@@ -120,7 +148,7 @@ export class TradeWiseManpowerComponent implements OnInit {
         this.loading = true;
         forkJoin(
             ids.map(id =>
-                this.statisticsService.getTradeWiseManpower(id).pipe(
+                this.statisticsService.getTradeWiseManpower(id, undefined, this.filterRabCodeId).pipe(
                     catchError(() => of(null as TradeWiseManpowerResponse | null))
                 )
             )
@@ -206,8 +234,46 @@ export class TradeWiseManpowerComponent implements OnInit {
             showPageNumbers: true,
             filename: 'trade-wise-manpower',
             filterLines: scope ? [scope] : undefined,
-            landscape: true
+            landscape: true,
+            rabLetterhead: true,
+            criteriaItems: this.buildCriteriaItems()
         };
+
+        // Print uses the shared RAB letterhead (frontend only). Matrix mode: each
+        // org renders its own table (its rank columns differ).
+        if (type === 'print') {
+            this.rabPrint.print({
+                lang: this.lang,
+                reportTitle: this.titleLabel,
+                criteriaItems: this.buildCriteriaItems(),
+                columns: [],
+                sections: this.filteredOrgs.map(org => {
+                    const cols = [
+                        { label: this.serLabel, align: 'center' as const },
+                        { label: this.tradeColLabel, align: 'left' as const },
+                        ...org.ranks.map(r => ({ label: this.rankLabel(r), align: 'center' as const, mono: true })),
+                        { label: this.totalLabel, align: 'center' as const, mono: true }
+                    ];
+                    return {
+                        title: this.orgLabel(org),
+                        columns: cols,
+                        rows: org.trades.map((t, i) => [
+                            this.fmt(i + 1),
+                            this.tradeNameLabel(t),
+                            ...org.ranks.map(r => this.fmt(this.cellValue(t, r.rankId))),
+                            this.fmt(t.total)
+                        ]),
+                        totalRow: [
+                            '',
+                            this.totalLabel,
+                            ...org.ranks.map(r => this.fmt(this.columnTotal(org, r.rankId))),
+                            this.fmt(org.grandTotal)
+                        ]
+                    };
+                })
+            });
+            return;
+        }
 
         try {
             this.exporting = true;
@@ -218,20 +284,12 @@ export class TradeWiseManpowerComponent implements OnInit {
                 case 'excel':
                     this.exportService.exportExcelSectioned(sectionedConfig);
                     break;
-                case 'pdf':
-                case 'print': {
-                    // One docx → one PDF for both buttons. PDF opens as a preview tab;
-                    // Print opens a popup with the PDF in an iframe and auto-triggers
-                    // the browser's print dialog (mirroring unit-rank-wise's UX).
+                case 'pdf': {
                     const doc = this.exportService.buildSectionedWordDoc(sectionedConfig);
                     const docxBlob = await Packer.toBlob(doc);
                     const pdfBlob = await this.convertDocxToPdf(docxBlob);
                     const pdfUrl = URL.createObjectURL(pdfBlob);
-                    if (type === 'pdf') {
-                        window.open(pdfUrl, '_blank');
-                    } else {
-                        this.exportService.openPdfPrintPopup(pdfUrl);
-                    }
+                    window.open(pdfUrl, '_blank');
                     break;
                 }
             }

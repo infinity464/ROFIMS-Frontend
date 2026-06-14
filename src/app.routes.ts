@@ -19,6 +19,7 @@ import { BloodGroup } from '@/Components/basic-setup/blood-group/blood-group';
 import { MovementReason } from '@/Components/basic-setup/movement-reason/movement-reason';
 import { MovementInfoComponent } from '@/Components/Features/movement-info/movement-info';
 import { MovementListComponent } from '@/Components/Features/movement-list/movement-list';
+import { Article47TakeoverBulkComponent } from '@/Components/Features/article-47-takeover-bulk/article-47-takeover-bulk';
 import { NotesheetPreviewArticle47TakeoverComponent } from '@/Components/Features/notesheet-preview/article-47-takeover/notesheet-preview-article-47-takeover';
 import { NotesheetPreviewArticle47HandoverComponent } from '@/Components/Features/notesheet-preview/article-47-handover/notesheet-preview-article-47-handover';
 import { NotesheetPreviewMOComponent } from '@/Components/Features/notesheet-preview/mo/notesheet-preview-mo';
@@ -94,9 +95,11 @@ import { EmpAdditionalRemarks } from '@/Components/Features/Emp/emp-additional-r
 import { EmpConfidentialRemarks } from '@/Components/Features/Emp/emp-confidential-remarks/emp-confidential-remarks.component';
 import { EmpPermPostingMotherOrg } from '@/Components/Features/Emp/emp-perm-posting-mother-org/emp-perm-posting-mother-org.component';
 import { PermanentPostingMORecordComponent } from '@/Components/Features/permanent-posting-mo-record/permanent-posting-mo-record';
+import { TemporaryMovementReturnComponent } from '@/Components/Features/temporary-movement-return/temporary-movement-return';
 import { PostedOutPersonListComponent } from '@/Components/Features/posted-out-person-list/posted-out-person-list';
 import { NewJoiningPersonListComponent } from '@/Components/Features/new-joining-person-list/new-joining-person-list';
 import { PostedOutRelieverReportComponent } from '@/Components/Features/posted-out-reliever-report/posted-out-reliever-report';
+import { PostedOutServedReportComponent } from '@/Components/Features/posted-out-served-report/posted-out-served-report';
 import { EmpPresentStatus } from '@/Components/Features/Emp/emp-present-status/emp-present-status';
 import { EmpPersonalServiceInfoComponent } from '@/Components/Features/Emp/emp-personal-service-info/emp-personal-service-info';
 import { EmpPresentMemberCheckComponent } from '@/Components/Features/Emp/emp-present-member-check/emp-present-member-check.component';
@@ -113,6 +116,8 @@ import { PostingOrderGenerateComponent } from '@/Components/Features/posting-ord
 import { PostingOrderListComponent } from '@/Components/Features/posting-order-list/posting-order-list';
 import { PostingOrderPreviewPageComponent } from '@/Components/Features/posting-order-preview/posting-order-preview';
 import { EmployeeSignatureUploadComponent } from '@/Components/Features/employee-signature-upload/employee-signature-upload';
+import { EmployeeFaceSearchComponent } from '@/Components/Features/employee-face-search/employee-face-search';
+import { EmployeeFaceSearchHistoryComponent } from '@/Components/Features/employee-face-search-history/employee-face-search-history';
 import { AddDraftInterPostingComponent } from '@/Components/Features/add-draft-inter-posting/add-draft-inter-posting';
 import { InterPostingNotesheetGenerateComponent } from '@/Components/Features/inter-posting-notesheet-generate/inter-posting-notesheet-generate';
 import { PresentlyServingMembers } from '@/Components/Features/presently-serving-members/presently-serving-members';
@@ -159,6 +164,7 @@ import { TaskEventListComponent } from '@/Components/Features/calendar/task-even
 import { ChatContainerComponent } from '@/Components/Features/chat/chat-container.component';
 import { IdentityUserCreateComponent } from '@/Components/Features/identity/identity-user-create/identity-user-create.component';
 import { RoleListComponent } from '@/Components/Features/identity/role-list/role-list.component';
+import { NoticeListComponent } from '@/Components/Features/notice/notice-list/notice-list.component';
 import { MenuManagement } from '@/Components/Features/menu-management/menu-management';
 import { RoleMenuPermission } from '@/Components/Features/role-menu-permission/role-menu-permission';
 import { LoginAuditComponent } from '@/Components/Features/login-audit/login-audit.component';
@@ -168,6 +174,7 @@ import { EmployeeReportsComponent } from '@/Components/Features/employee-reports
 import { ReportFamilyOccupationComponent } from '@/Components/Features/employee-reports/report-family-occupation/report-family-occupation.component';
 import { ReportRftsCompletionComponent } from '@/Components/Features/employee-reports/report-rfts-completion/report-rfts-completion.component';
 import { ReportAddressLocationComponent } from '@/Components/Features/employee-reports/report-address-location/report-address-location.component';
+import { ReportDynamicComponent } from '@/Components/Features/employee-reports/report-dynamic/report-dynamic.component';
 import { ReportMemberTypeServingComponent } from '@/Components/Features/employee-reports/report-member-type-serving/report-member-type-serving.component';
 import { ReportPendingInterPostingComponent } from '@/Components/Features/employee-reports/report-pending-inter-posting/report-pending-inter-posting.component';
 import { ReportSupernumeraryComponent } from '@/Components/Features/employee-reports/report-supernumerary/report-supernumerary.component';
@@ -176,7 +183,13 @@ import { ReportPresentStatusUnitWiseComponent } from '@/Components/Features/empl
 import { ReportUnitDurationNominalRollComponent } from '@/Components/Features/employee-reports/report-unit-duration-nominal-roll/report-unit-duration-nominal-roll.component';
 import { ReportLongStayNominalRollComponent } from '@/Components/Features/employee-reports/report-long-stay-nominal-roll/report-long-stay-nominal-roll.component';
 import { ReportStayAfterRelieverJoinedComponent } from '@/Components/Features/employee-reports/report-stay-after-reliever-joined/report-stay-after-reliever-joined.component';
+import { ReportNearHomeDistrictComponent } from '@/Components/Features/employee-reports/report-near-home-district/report-near-home-district.component';
+import { ReportJoiningLeaveComponent } from '@/Components/Features/employee-reports/report-joining-leave/report-joining-leave.component';
+import { ReportPunishmentComponent } from '@/Components/Features/employee-reports/report-punishment/report-punishment.component';
+import { ReportPresentStatusComponent } from '@/Components/Features/employee-reports/report-present-status/report-present-status.component';
+import { ReportRankWiseComponent } from '@/Components/Features/employee-reports/report-rank-wise/report-rank-wise.component';
 import { ReportDeceasedComponent } from '@/Components/Features/employee-reports/report-deceased/report-deceased.component';
+import { IndividualReportsComponent } from '@/Components/Features/individual-reports/individual-reports.component';
 import { RabUnitAor } from '@/Components/basic-setup/rab-unit-aor/rab-unit-aor';
 import { RabUnitAorMap } from '@/Components/basic-setup/rab-unit-aor-map/rab-unit-aor-map';
 import { ManpowerSummaryComponent } from '@/Components/Features/statistics/manpower-summary/manpower-summary';
@@ -213,6 +226,7 @@ export const appRoutes: Routes = [
             { path: 'chat', component: ChatContainerComponent },
             { path: 'identity/user-create', component: IdentityUserCreateComponent },
             { path: 'identity/roles', component: RoleListComponent },
+            { path: 'notice/list', component: NoticeListComponent },
             { path: 'employee-info', component: Employeeinfo },
             { path: 'basic-setup/division', component: Division },
             { path: 'basic-setup/district', component: District },
@@ -221,6 +235,7 @@ export const appRoutes: Routes = [
             { path: 'basic-setup/movement-reason', component: MovementReason },
             { path: 'basic-setup/movement-letter-number-config', component: MovementLetterNumberConfigComponent },
             { path: 'movement-info', component: MovementInfoComponent },
+            { path: 'movement/article-47-takeover-bulk', component: Article47TakeoverBulkComponent },
             { path: 'movement-list', component: MovementListComponent },
             { path: 'movement-preview/article-47-takeover', component: NotesheetPreviewArticle47TakeoverComponent },
             { path: 'movement-preview/article-47-handover', component: NotesheetPreviewArticle47HandoverComponent },
@@ -363,9 +378,11 @@ export const appRoutes: Routes = [
             { path: 'supernumerary-profile/:id', component: SupernumeraryProfile },
             { path: 'new-joinee-sending-notesheet', component: NewJoineeSendingNotesheet },
             { path: 'posting/permanent-posting-mo-record', component: PermanentPostingMORecordComponent },
+            { path: 'movement/temporary-movement-return', component: TemporaryMovementReturnComponent },
             { path: 'posting/posted-out-person-list', component: PostedOutPersonListComponent },
             { path: 'posting/new-joining-person-list', component: NewJoiningPersonListComponent },
             { path: 'posting/posted-out-reliever-report', component: PostedOutRelieverReportComponent },
+            { path: 'posting/posted-out-served-report', component: PostedOutServedReportComponent },
             { path: 'posting/add-draft-new-posting', component: AddDraftNewPostingComponent },
             { path: 'posting/notesheet-generate', component: PostingNotesheetGenerateComponent },
             { path: 'posting/add-draft-inter-posting', component: AddDraftInterPostingComponent },
@@ -383,6 +400,8 @@ export const appRoutes: Routes = [
             { path: 'office-order-ex-bd-leave/list', component: OfficeOrderExBdLeavePreviewComponent },
             { path: 'office-order-ex-bd-leave/preview', component: OfficeOrderExBdLeavePreviewComponent },
             { path: 'employee-signature-upload', component: EmployeeSignatureUploadComponent },
+            { path: 'employee-face-search', component: EmployeeFaceSearchComponent },
+            { path: 'employee-face-search-history', component: EmployeeFaceSearchHistoryComponent },
             { path: 'presently-serving-members', component: PresentlyServingMembers },
             { path: 'serving-members-for-inter-posting', component: PresentlyServingMembers, data: { mode: 'interPosting' } },
             { path: 'presently-serving-members/organogram', component: OrgTreeServingComponent },
@@ -398,6 +417,7 @@ export const appRoutes: Routes = [
             { path: 'report-family-occupation', component: ReportFamilyOccupationComponent },
             { path: 'report-rfts-completion', component: ReportRftsCompletionComponent },
             { path: 'report-address-location', component: ReportAddressLocationComponent },
+            { path: 'report-dynamic', component: ReportDynamicComponent },
             { path: 'member-type-reporting', component: ReportMemberTypeServingComponent },
             { path: 'report-pending-inter-posting', component: ReportPendingInterPostingComponent },
             { path: 'report-supernumerary', component: ReportSupernumeraryComponent },
@@ -406,7 +426,15 @@ export const appRoutes: Routes = [
             { path: 'report-unit-duration-nominal-roll', component: ReportUnitDurationNominalRollComponent },
             { path: 'report-long-stay-nominal-roll', component: ReportLongStayNominalRollComponent },
             { path: 'report-stay-after-reliever-joined', component: ReportStayAfterRelieverJoinedComponent },
+            { path: 'report-near-home-district', component: ReportNearHomeDistrictComponent },
+            { path: 'report-joining-leave', component: ReportJoiningLeaveComponent },
+            { path: 'report-punishment', component: ReportPunishmentComponent },
+            { path: 'report-present-status', component: ReportPresentStatusComponent },
+            { path: 'report-rank-wise', component: ReportRankWiseComponent },
             { path: 'report-deceased', component: ReportDeceasedComponent },
+
+            // Individual Personnel Report (parent with dropdown — Course, then more)
+            { path: 'individual-reports', component: IndividualReportsComponent },
 
             // Statistics
             { path: 'statistics/manpower-summary', component: ManpowerSummaryComponent },

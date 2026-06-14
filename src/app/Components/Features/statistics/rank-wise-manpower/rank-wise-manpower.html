@@ -63,10 +63,6 @@
                                     (click)="exportAs('print')">
                                 <i class="pi pi-print" style="font-size:0.75rem"></i> Print
                             </button>
-                            <button type="button" class="report-export-item report-export-pdf"
-                                    (click)="exportAs('pdf')">
-                                <span class="report-export-icon">⬇</span> PDF
-                            </button>
                             <button type="button" class="report-export-item report-export-word"
                                     (click)="exportAs('word')">
                                 <span class="report-export-icon">⬇</span> Word
@@ -80,6 +76,9 @@
                 </div>
             </div>
         </div>
+
+        <!-- RAB org-tree cascade filter (collapsible) -->
+        <app-org-tree-filter (filterChange)="onOrgTreeFilter($event)"></app-org-tree-filter>
 
         <!-- Row 2: centered title -->
         <div class="report-header-title-block">

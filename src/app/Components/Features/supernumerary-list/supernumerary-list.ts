@@ -445,6 +445,36 @@ export class SupernumeraryList implements OnInit {
         this.selectedIds.clear();
     }
 
+    /**
+     * Navigate to the bulk Article 47 (Takeover) form with the selected members.
+     * One Article 47 (Takeover) record is created per member there, using the same
+     * common details entered on that page.
+     */
+    goToArticle47Takeover(): void {
+        if (!this.canInsert) {
+            this.messageService.add({ severity: 'warn', summary: 'Permission Denied', detail: 'You do not have permission to perform this action.' });
+            return;
+        }
+        const ids = Array.from(this.selectedIds);
+        if (ids.length === 0) return;
+
+        const employees = ids
+            .map((id) => this.list.find((r) => r.employeeID === id))
+            .filter((r): r is EmployeeList => !!r)
+            .map((r) => ({
+                employeeID: r.employeeID,
+                rabid: this.rabIdOf(r),
+                serviceId: r.serviceId ?? '',
+                fullNameEN: r.fullNameEN ?? '',
+                rankDisplay: r.rankName,
+                corpsDisplay: r.corpsName,
+                tradeDisplay: r.tradeName,
+                motherUnitDisplay: r.motherUnitName
+            }));
+
+        this._router.navigate(['/movement/article-47-takeover-bulk'], { state: { employees } });
+    }
+
     /** Bulk send: fire SetIsSendingNotesheetStatus=Draft for every selected ID in parallel. */
     sendSelectedToPosting(): void {
         if (!this.canUpdate) {

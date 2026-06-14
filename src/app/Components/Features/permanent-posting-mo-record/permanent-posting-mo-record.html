@@ -118,6 +118,7 @@
                 </div>
             </div>
 
+            @if (isOfficer) {
             <div class="form-row">
                 <div class="form-field">
                     <label class="form-label">Note-Sheet Clearance <span class="form-label-required">*</span></label>
@@ -145,6 +146,7 @@
                         placeholder="dd-mm-yyyy" appendTo="body" class="w-full" [inputStyle]="{'width':'100%'}"></p-datepicker>
                 </div>
             </div>
+            }
 
             <div class="form-row" style="align-items:flex-end;">
                 <div class="form-field" style="flex:0 0 calc(50% - 0.5rem);">

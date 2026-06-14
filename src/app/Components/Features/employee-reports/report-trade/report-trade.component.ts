@@ -4,24 +4,67 @@ import { FormsModule } from '@angular/forms';
 import { TableModule } from 'primeng/table';
 import { ButtonModule } from 'primeng/button';
 import { SelectModule } from 'primeng/select';
+import { MultiSelectModule } from 'primeng/multiselect';
+import { PaginatorModule } from 'primeng/paginator';
 import { Toast } from 'primeng/toast';
 import { MessageService } from 'primeng/api';
+import { forkJoin } from 'rxjs';
 import { ReportService } from '@/services/report.service';
 import { CommonCodeService } from '@/services/common-code-service';
 import { Router } from '@angular/router';
-import { ExportService } from '@/services/export.service';
 import { UserMenuService } from '@/services/user-menu.service';
 import { REPORT_LABELS, type ReportLang } from '@/Core/i18n/report-labels';
 import { BanglaNumerals } from '@/Core/i18n/bangla-numerals';
-import type { GenericReportRow, ReportAccessibleScope } from '@/models/report.model';
-import type { MotherOrganizationModel } from '@/models/mother-org-model';
+import type {
+    MemberAppointmentReportRow,
+    ReportAccessibleScope,
+    DynamicReportCriterion,
+    DynamicReportRow,
+} from '@/models/report.model';
 import type { CommonCodeModel } from '@/models/common-code-model';
-import { unitScopeLine, memberTypeScopeLine, statusLocked, buildScopeExportLines } from '../report-scope.helper';
+import type { MotherOrganizationModel } from '@/models/mother-org-model';
+import {
+    unitScopeLine,
+    memberTypeScopeLine,
+    statusLocked,
+} from '../report-scope.helper';
+import { personnelMeta as personnelMetaHelper } from '../formal-rab-render.helper';
+import {
+    AlignmentType,
+    BorderStyle,
+    Document,
+    Footer,
+    Packer,
+    PageNumber,
+    PageOrientation,
+    Paragraph,
+    Table,
+    TableCell,
+    TableLayoutType,
+    TableRow,
+    TextRun,
+    WidthType,
+} from 'docx';
+import { saveAs } from 'file-saver';
+import * as XLSX from 'xlsx';
 
+/**
+ * Trade Report — parent's `commonCodeIds` is the picked Trade (single-pick)
+ * or the N/A bundle (multiple Trade CodeIds collapsed under one UI option).
+ *
+ * Filter panel intentionally OMITS Trade (parent locks it) AND Mother Org
+ * / Corps (both are implicit — Trade.ParentCodeId points at Corps, and
+ * Corps.OrgId points at MotherOrg). The only user-pickable filter is Rank,
+ * scoped to the picked Trade's mother org via the chain
+ *   Trade → ParentCodeId → Corps → OrgId → MotherOrg.
+ *
+ * Rank stays disabled in the N/A-bundle case (multi-org → scoping
+ * ambiguous).
+ */
 @Component({
     selector: 'app-report-trade',
     standalone: true,
-    imports: [CommonModule, FormsModule, TableModule, ButtonModule, SelectModule, Toast],
+    imports: [CommonModule, FormsModule, TableModule, ButtonModule, SelectModule, MultiSelectModule, PaginatorModule, Toast],
     providers: [MessageService],
     templateUrl: './report-trade.component.html',
     styleUrls: ['../report-theme.scss', '../report-card-mtr.scss', './report-trade.component.scss'],
@@ -29,7 +72,7 @@ import { unitScopeLine, memberTypeScopeLine, statusLocked, buildScopeExportLines
 export class ReportTradeComponent implements OnInit, OnChanges {
     L = REPORT_LABELS;
     @Input() lang: ReportLang = 'en';
-    /** Either a single CommonCode ID or the N/A group's ID list (sent verbatim to the backend). */
+    /** Parent-locked Trade CodeId(s). Single-pick = one element; N/A bundle = many. */
     @Input() commonCodeIds: number[] = [];
     @Input() reportTypeLabel = '';
     @Input() commonCodeLabel = '';
@@ -37,39 +80,302 @@ export class ReportTradeComponent implements OnInit, OnChanges {
     @Input() statusLabel = '';
     @Input() statusLabelBn = '';
     @Output() langToggle = new EventEmitter<void>();
-    @Output() scopeChange = new EventEmitter<ReportAccessibleScope | null>();
 
-    accessibleScope: ReportAccessibleScope | null = null;
-    get unitScopeLine(): string | null { return unitScopeLine(this.accessibleScope, this.lang); }
-    get memberTypeScopeLine(): string | null { return memberTypeScopeLine(this.accessibleScope, this.lang); }
-    get statusLocked(): boolean { return statusLocked(this.accessibleScope); }
+    /** Full Trade list (with parentCodeId → Corps) and full Corps list
+        (with orgId → MotherOrg). Cached once so we can walk
+        Trade → Corps → MotherOrg without extra round-trips when the
+        parent's pick changes. */
+    private allTradeCodes: CommonCodeModel[] = [];
+    private allCorpsCodes: CommonCodeModel[] = [];
+    /** MotherOrg list with SortOrder — used to sort the all-ranks list by
+        org sort order first, then rank sort order, in the N/A-bundle case. */
+    private allMotherOrgs: MotherOrganizationModel[] = [];
 
-    orgOptions: MotherOrganizationModel[] = [];
-    selectedOrgId: number | null = null;
     rankOptions: { label: string; labelBn: string; value: number }[] = [];
-    tradeOptions: { label: string; labelBn: string; value: number }[] = [];
-    selectedRankId: number | null = null;
-    selectedTradeId: number | null = null;
+    selectedRankIds: number[] = [];
+    /** Loaded rank rows for the picked Trade's org (with parentCodeId →
+        Member Type), re-filtered client-side by selected Member Types. */
+    private allRanksForTrade: { label: string; labelBn: string; value: number; parentCodeId: number | null }[] = [];
 
-    list: GenericReportRow[] = [];
+    memberTypeOptions: { label: string; labelBn: string; value: number }[] = [];
+    selectedMemberTypeIds: number[] = [];
+    rabUnitOptions: { label: string; labelBn: string; value: number }[] = [];
+    selectedRabUnitIds: number[] = [];
+
+    list: MemberAppointmentReportRow[] = [];
     loading = false;
     first = 0;
     rows = 20;
+    rowsPerPageOptions = [20, 50, 100];
     totalRecords = 0;
+    searched = false;
 
     exportDropdownOpen = false;
     exporting = false;
     appliedFilterLines: string[] = [];
 
+    accessibleScope: ReportAccessibleScope | null = null;
+    @Output() scopeChange = new EventEmitter<ReportAccessibleScope | null>();
+
+    get unitScopeLine(): string | null { return unitScopeLine(this.accessibleScope, this.lang); }
+    get memberTypeScopeLine(): string | null { return memberTypeScopeLine(this.accessibleScope, this.lang); }
+    get statusLocked(): boolean { return statusLocked(this.accessibleScope); }
+
     canInsert = true;
     canUpdate = true;
     canDelete = true;
+
+    /** True only when EXACTLY ONE Trade is picked. N/A bundle (length > 1)
+        may cross mother-org boundaries — Rank scoping would be ambiguous. */
+    get isSingleTradePicked(): boolean {
+        return Array.isArray(this.commonCodeIds) && this.commonCodeIds.length === 1;
+    }
+    get pickedTradeId(): number | null {
+        return this.isSingleTradePicked ? this.commonCodeIds[0] : null;
+    }
+
+    columnCatalog: { key: string; labelEN: string; labelBN: string; hint: string; defaultVisible: boolean }[] = [
+        { key: 'ser',          labelEN: 'Ser',           labelBN: 'ক্রঃ',          hint: 'Serial',                defaultVisible: true  },
+        { key: 'serviceId',    labelEN: 'Service ID',    labelBN: 'সার্ভিস আইডি',  hint: 'Plain',                 defaultVisible: true  },
+        { key: 'armyRank',     labelEN: 'Rank',          labelBN: 'র‍্যাঙ্ক',       hint: 'Plain',                 defaultVisible: true  },
+        { key: 'rabRank',      labelEN: 'RAB Rank',      labelBN: 'র‍্যাব র‍্যাঙ্ক', hint: 'Plain',                 defaultVisible: false },
+        { key: 'corps',        labelEN: 'Corps',         labelBN: 'কোর',           hint: 'Plain',                 defaultVisible: true  },
+        { key: 'trade',        labelEN: 'Trade',         labelBN: 'ট্রেড',         hint: 'Plain',                 defaultVisible: true  },
+        { key: 'name',         labelEN: 'Name',          labelBN: 'নাম',           hint: 'Name',                  defaultVisible: true  },
+        // Selected-value column: header mirrors the chosen report type
+        // (e.g. "Education") and every cell shows the picked CommonCode
+        // value (e.g. "SSC") — the filter context surfaced per row.
+        { key: 'selectedValue',labelEN: 'Selected Value',labelBN: 'নির্বাচিত মান',  hint: 'SelectedValue',         defaultVisible: true  },
+        // Member-status column — opt-in only (hidden by default). The user can
+        // add it via the column picker; most useful when the Status filter is
+        // "All" and rows are of mixed statuses. When selected, backendColumnKeys()
+        // requests the raw `status` field so memberStatusText() can localize it.
+        { key: 'memberStatus', labelEN: 'Member Status',  labelBN: 'সদস্য অবস্থা',   hint: 'MemberStatus',          defaultVisible: false },
+        { key: 'blankRemark',  labelEN: 'Remark',        labelBN: 'মন্তব্য',       hint: 'BlankRemark',           defaultVisible: true  },
+        { key: 'personnel',    labelEN: 'RAB Personnel', labelBN: 'র‍্যাব সদস্য',   hint: 'RabPersonnelComposite', defaultVisible: false },
+        { key: 'rabId',        labelEN: 'RAB ID',        labelBN: 'র‍্যাব আইডি',    hint: 'RabId',                 defaultVisible: false },
+        { key: 'motherOrganization',labelEN: 'Mother Org', labelBN: 'মাতৃ সংস্থা',  hint: 'Plain',                 defaultVisible: false },
+        { key: 'joiningDate',  labelEN: 'Joining Date',  labelBN: 'যোগদান তারিখ',   hint: 'JoiningDate',          defaultVisible: false },
+        { key: 'rmks',         labelEN: 'Remarks',       labelBN: 'মন্তব্য',       hint: 'Remarks',               defaultVisible: false },
+        { key: 'nameEnglish',       labelEN: 'Name (EN)',        labelBN: 'নাম (ইংরেজি)',       hint: 'Plain', defaultVisible: false },
+        { key: 'nameEnglish',       labelEN: 'Name (EN)',        labelBN: 'নাম (ইংরেজি)',       hint: 'Plain', defaultVisible: false },
+        { key: 'nameBangla',        labelEN: 'Name (BN)',        labelBN: 'নাম (বাংলা)',        hint: 'Plain', defaultVisible: false },
+        { key: 'nid',               labelEN: 'NID',              labelBN: 'এনআইডি',            hint: 'Plain', defaultVisible: false },
+        { key: 'prefix',            labelEN: 'Prefix',           labelBN: 'প্রিফিক্স',          hint: 'Plain', defaultVisible: false },
+        { key: 'appointment',       labelEN: 'Appointment',      labelBN: 'নিয়োগ',             hint: 'Plain', defaultVisible: false },
+        { key: 'memberType',        labelEN: 'Member Type',      labelBN: 'সদস্য ধরন',          hint: 'Plain', defaultVisible: false },
+        { key: 'tradeRemarks',      labelEN: 'Trade Remarks',    labelBN: 'ট্রেড মন্তব্য',       hint: 'Plain', defaultVisible: false },
+        { key: 'gender',            labelEN: 'Gender',           labelBN: 'লিঙ্গ',              hint: 'Plain', defaultVisible: false },
+        { key: 'motherUnit',        labelEN: 'Last Unit',        labelBN: 'শেষ ইউনিট',          hint: 'Plain', defaultVisible: false },
+        { key: 'rabUnit',           labelEN: 'RAB Unit',         labelBN: 'র‍্যাব ইউনিট',       hint: 'Plain', defaultVisible: false },
+        { key: 'dateOfCommission',  labelEN: 'Commission Date',  labelBN: 'কমিশন তারিখ',         hint: 'Plain', defaultVisible: false },
+        { key: 'rabServiceFrom',    labelEN: 'RAB Joining Date', labelBN: 'র‍্যাবে যোগদান তারিখ',hint: 'Plain', defaultVisible: false },
+        { key: 'rabServiceTo',      labelEN: 'RAB End Date',     labelBN: 'র‍্যাব শেষ তারিখ',   hint: 'Plain', defaultVisible: false },
+        { key: 'officerType',       labelEN: 'Officer Type',     labelBN: 'অফিসার ধরণ',        hint: 'Plain', defaultVisible: false },
+        { key: 'division',          labelEN: 'Division',         labelBN: 'বিভাগ',              hint: 'Plain', defaultVisible: false },
+        { key: 'district',          labelEN: 'District',         labelBN: 'জেলা',               hint: 'Plain', defaultVisible: false },
+        { key: 'upazila',           labelEN: 'Upazila',          labelBN: 'উপজেলা',             hint: 'Plain', defaultVisible: false },
+        { key: 'postOffice',        labelEN: 'Post Office',      labelBN: 'ডাকঘর',              hint: 'Plain', defaultVisible: false },
+        { key: 'dob',               labelEN: 'Date of Birth',    labelBN: 'জন্ম তারিখ',          hint: 'Plain', defaultVisible: false },
+        { key: 'religion',          labelEN: 'Religion',         labelBN: 'ধর্ম',               hint: 'Plain', defaultVisible: false },
+        { key: 'bloodGroup',        labelEN: 'Blood Group',      labelBN: 'রক্তের গ্রুপ',        hint: 'Plain', defaultVisible: false },
+        { key: 'maritalStatus',     labelEN: 'Marital Status',   labelBN: 'বৈবাহিক অবস্থা',      hint: 'Plain', defaultVisible: false },
+        { key: 'mobileNo',          labelEN: 'Mobile',           labelBN: 'মোবাইল',             hint: 'Plain', defaultVisible: false },
+        { key: 'email',             labelEN: 'Email',            labelBN: 'ইমেইল',              hint: 'Plain', defaultVisible: false },
+    ];
+
+    private static readonly plainColumnPropertyMap: Record<string, { en: string; bn?: string }> = {
+        serviceId:           { en: 'serviceId' },
+        nameEnglish:         { en: 'name' },
+        nameBangla:          { en: 'nameBN' },
+        nid:                 { en: 'nid' },
+        prefix:              { en: 'prefix',              bn: 'prefixBN' },
+        appointment:         { en: 'appointment',         bn: 'appointmentBN' },
+        memberType:          { en: 'memberType',          bn: 'memberTypeBN' },
+        motherOrganization:  { en: 'orgName',             bn: 'orgNameBN' },
+        armyRank:            { en: 'rank',                bn: 'rankBN' },
+        rabRank:             { en: 'rabRank',             bn: 'rabRankBN' },
+        tradeRemarks:        { en: 'tradeRemarks' },
+        gender:              { en: 'gender',              bn: 'genderBN' },
+        motherUnit:          { en: 'motherUnit',          bn: 'motherUnitBN' },
+        rabUnit:             { en: 'rabUnit',             bn: 'rabUnitBN' },
+        dateOfCommission:    { en: 'dateOfCommission' },
+        rabServiceFrom:      { en: 'rabServiceFrom' },
+        rabServiceTo:        { en: 'rabServiceTo' },
+        division:            { en: 'division',            bn: 'divisionBN' },
+        district:            { en: 'district',            bn: 'districtBN' },
+        upazila:             { en: 'upazila',             bn: 'upazilaBN' },
+        postOffice:          { en: 'postOffice',          bn: 'postOfficeBN' },
+        corps:               { en: 'corps',               bn: 'corpsBN' },
+        trade:               { en: 'trade',               bn: 'tradeBN' },
+        officerType:         { en: 'officerType',         bn: 'officerTypeBN' },
+        dob:                 { en: 'dob' },
+        religion:            { en: 'religion' },
+        bloodGroup:          { en: 'bloodGroup' },
+        maritalStatus:       { en: 'maritalStatus' },
+        mobileNo:            { en: 'mobileNo' },
+        email:               { en: 'email' },
+    };
+
+    plainCellValue(row: MemberAppointmentReportRow, key: string): string {
+        const map = ReportTradeComponent.plainColumnPropertyMap[key];
+        if (!map) return '—';
+        const en = (row as any)[map.en] as string | null | undefined;
+        const bn = map.bn ? (row as any)[map.bn] as string | null | undefined : undefined;
+        return this.codeValue(en, bn);
+    }
+
+    selectedColumnKeys: string[] = this.columnCatalog.filter(c => c.defaultVisible).map(c => c.key);
+
+    get columnPickerOptions(): { label: string; value: string }[] {
+        return this.columnCatalog.map(c => ({ label: this.lang === 'bn' ? c.labelBN : c.labelEN, value: c.key }));
+    }
+
+    get visibleColumns(): typeof this.columnCatalog {
+        const map = new Map(this.columnCatalog.map(c => [c.key, c]));
+        return this.selectedColumnKeys
+            .map(k => map.get(k))
+            .filter((c): c is typeof this.columnCatalog[number] => c != null);
+    }
+
+    draggingColumnKey: string | null = null;
+
+    onColumnDragStart(key: string, event: DragEvent): void {
+        this.draggingColumnKey = key;
+        event.dataTransfer?.setData('text/plain', key);
+        if (event.dataTransfer) event.dataTransfer.effectAllowed = 'move';
+    }
+    onColumnDragOver(event: DragEvent): void {
+        event.preventDefault();
+        if (event.dataTransfer) event.dataTransfer.dropEffect = 'move';
+    }
+    onColumnDrop(targetKey: string, event: DragEvent): void {
+        event.preventDefault();
+        const sourceKey = this.draggingColumnKey;
+        this.draggingColumnKey = null;
+        if (!sourceKey || sourceKey === targetKey) return;
+        const arr = [...this.selectedColumnKeys];
+        const fromIdx = arr.indexOf(sourceKey);
+        const toIdx   = arr.indexOf(targetKey);
+        if (fromIdx === -1 || toIdx === -1) return;
+        const [moved] = arr.splice(fromIdx, 1);
+        arr.splice(toIdx, 0, moved);
+        this.selectedColumnKeys = arr;
+    }
+    onColumnDragEnd(): void { this.draggingColumnKey = null; }
+    removeColumn(key: string): void {
+        this.selectedColumnKeys = this.selectedColumnKeys.filter(k => k !== key);
+        this.onColumnsChange();
+    }
+
+    /** Column selection changed — re-fetch so newly added columns are populated
+        (the backend only returns requested columns). Reloads only after a search. */
+    onColumnsChange(): void {
+        if (this.searched) this.load();
+    }
+
+    paddedSer(n: number | string | null | undefined): string {
+        const s = n == null ? '' : String(n);
+        return this.lang === 'bn' ? BanglaNumerals.toBangla(s.padStart(2, '0')) : s.padStart(2, '0');
+    }
+
+    personnelMeta(row: MemberAppointmentReportRow): string {
+        return personnelMetaHelper(row as any, this.lang);
+    }
+
+    get criteriaItems(): { label: string; value: string }[] {
+        const L = this.L[this.lang];
+        const items: { label: string; value: string }[] = [];
+        // Status (Member Status) leads the criteria list — always surfaced
+        // (including "All Member"); it used to render as the header subtitle.
+        {
+            const sLabel = this.lang === 'bn' ? this.statusLabelBn : this.statusLabel;
+            if (sLabel) items.push({ label: L['report.search.rabMemberStatus'], value: sLabel });
+        }
+        const multi = (ids: number[], opts: { label: string; labelBn: string; value: number }[], label: string) => {
+            if (!ids.length) return;
+            const names = ids
+                .map((id) => opts.find((o) => o.value === id))
+                .filter((o): o is (typeof opts)[number] => o != null)
+                .map((o) => (this.lang === 'bn' ? o.labelBn : o.label));
+            if (names.length) items.push({ label, value: names.join(', ') });
+        };
+        multi(this.selectedMemberTypeIds, this.memberTypeOptions, this.lang === 'bn' ? 'সদস্য ধরন' : 'Member Type');
+        multi(this.selectedRankIds, this.rankOptions, L['report.search.rank']);
+        multi(this.selectedRabUnitIds, this.rabUnitOptions, this.lang === 'bn' ? 'র‍্যাব ইউনিট' : 'RAB Unit');
+        return items;
+    }
+
+    /** Cell text for the synthetic "Selected Value" column — the picked CommonCode value (e.g. "SSC"), identical for every row. */
+    get selectedValueCellText(): string {
+        return this.commonCodeLabel?.trim() ? this.commonCodeLabel.trim() : '—';
+    }
+
+    /** Localized labels for the raw PostingStatus passthrough values (matches the parent Status dropdown wording). */
+    private static readonly MEMBER_STATUS_LABELS: Record<string, { en: string; bn: string }> = {
+        Servings:          { en: 'Presently Serving',  bn: 'কর্মরত' },
+        ExMember:          { en: 'Ex Member',          bn: 'সাবেক সদস্য' },
+        Supernumerary:     { en: 'Supernumerary',      bn: 'সুপারনিউমারারি' },
+        Pending:           { en: 'Pending for Joining',bn: 'যোগদানের অপেক্ষায়' },
+        PendingForJoining: { en: 'Pending for Joining',bn: 'যোগদানের অপেক্ষায়' },
+    };
+
+    /** Per-row member-status cell text, localized; falls back to the raw value. */
+    memberStatusText(row: MemberAppointmentReportRow): string {
+        const raw = (row as any).status as string | null | undefined;
+        if (!raw) return '—';
+        const m = ReportTradeComponent.MEMBER_STATUS_LABELS[raw];
+        return m ? (this.lang === 'bn' ? m.bn : m.en) : raw;
+    }
+
+    /** Keep the "Selected Value" column header mirroring the chosen report type (e.g. "Education"). */
+    private syncSelectedValueColumnLabel(): void {
+        const col = this.columnCatalog.find((c) => c.key === 'selectedValue');
+        if (!col) return;
+        const label = this.reportTypeLabel?.trim();
+        col.labelEN = label || 'Selected Value';
+        col.labelBN = label || 'নির্বাচিত মান';
+    }
+
+    get rabOverlineText(): string {
+        return this.lang === 'bn'
+            ? 'গণপ্রজাতন্ত্রী বাংলাদেশ সরকার'
+            : "GOVERNMENT OF THE PEOPLE'S REPUBLIC OF BANGLADESH";
+    }
+    get rabOrgTitle(): string { return this.lang === 'bn' ? 'র‍্যাপিড অ্যাকশন ব্যাটালিয়ন' : 'RAPID ACTION BATTALION'; }
+    get rabOrgSubtitle(): string {
+        return this.lang === 'bn'
+            ? 'বাংলাদেশ পুলিশ · সদর দপ্তর, কুর্মিটোলা, ঢাকা'
+            : 'Bangladesh Police · Headquarters, Kurmitola, Dhaka';
+    }
+    get rabSectionTitle(): string {
+        if (this.reportTypeLabel && this.commonCodeLabel) {
+            const suffix = this.lang === 'bn' ? 'প্রতিবেদন' : 'Report';
+            return `${this.reportTypeLabel}: ${this.commonCodeLabel} ${suffix}`;
+        }
+        return this.L[this.lang]['report.title.trade'];
+    }
+    get rabSubtitleText(): string {
+        // Status moved into the Selection Criteria block (see criteriaItems);
+        // the header no longer carries it as a subtitle.
+        return '';
+    }
+    get rabCriteriaTitle(): string { return this.lang === 'bn' ? 'নির্বাচন মানদণ্ড' : 'SELECTION CRITERIA'; }
+    get rabGeneratedLabel(): string { return this.lang === 'bn' ? 'তারিখ' : 'GENERATED'; }
+    get rabFormattedDate(): string {
+        const now = new Date();
+        return this.lang === 'bn'
+            ? now.toLocaleDateString('bn-BD', { day: 'numeric', month: 'long', year: 'numeric' }).toUpperCase()
+            : now.toLocaleDateString('en-US', { day: 'numeric', month: 'long', year: 'numeric' }).toUpperCase();
+    }
+    get rabConfidentialLabel(): string { return this.lang === 'bn' ? 'গোপনীয়' : 'CONFIDENTIAL'; }
+    get rabWarningLabel(): string { return this.lang === 'bn' ? 'অননুমোদিত প্রকাশ নিষিদ্ধ' : 'UNAUTHORIZED DISCLOSURE PROHIBITED'; }
+    get rabPageOfLabel(): string { return this.lang === 'bn' ? 'পৃষ্ঠা ১ / ১' : 'PAGE 1 OF 1'; }
 
     constructor(
         private reportService: ReportService,
         private commonCodeService: CommonCodeService,
         private messageService: MessageService,
-        private exportService: ExportService,
         private _router: Router,
         private _userMenuService: UserMenuService
     ) {}
@@ -86,7 +392,7 @@ export class ReportTradeComponent implements OnInit, OnChanges {
             const suffix = this.lang === 'bn' ? 'প্রতিবেদন' : 'Report';
             return `${this.reportTypeLabel}: ${this.commonCodeLabel} ${suffix}${statusSuffix}`;
         }
-        return (this.lang === 'bn' ? 'ট্রেড প্রতিবেদন' : 'Trade Report') + statusSuffix;
+        return this.L[this.lang]['report.title.trade'] + statusSuffix;
     }
 
     get dateLine(): string {
@@ -100,49 +406,18 @@ export class ReportTradeComponent implements OnInit, OnChanges {
     buildFilterLines(): string[] {
         const L = this.L[this.lang];
         const lines: string[] = [];
-        if (this.selectedOrgId != null) {
-            const org = this.orgOptions.find((o) => o.orgId === this.selectedOrgId);
-            const val = this.lang === 'bn' ? (org?.orgNameBN || org?.orgNameEN) : org?.orgNameEN;
-            if (val) lines.push(`${L['report.search.motherOrg']}: ${val}`);
-        }
-        if (this.selectedRankId != null) {
-            const rank = this.rankOptions.find((o) => o.value === this.selectedRankId);
-            const val = this.lang === 'bn' ? rank?.labelBn : rank?.label;
-            if (val) lines.push(`${L['report.search.rank']}: ${val}`);
-        }
-        if (this.selectedTradeId != null) {
-            const trade = this.tradeOptions.find((o) => o.value === this.selectedTradeId);
-            const val = this.lang === 'bn' ? trade?.labelBn : trade?.label;
-            if (val) lines.push(`${L['report.search.trade']}: ${val}`);
-        }
+        const multi = (ids: number[], opts: { label: string; labelBn: string; value: number }[], label: string) => {
+            if (!ids.length) return;
+            const names = ids
+                .map((id) => opts.find((o) => o.value === id))
+                .filter((o): o is (typeof opts)[number] => o != null)
+                .map((o) => (this.lang === 'bn' ? o.labelBn : o.label));
+            if (names.length) lines.push(`${label}: ${names.join(', ')}`);
+        };
+        multi(this.selectedMemberTypeIds, this.memberTypeOptions, this.lang === 'bn' ? 'সদস্য ধরন' : 'Member Type');
+        multi(this.selectedRankIds, this.rankOptions, L['report.search.rank']);
+        multi(this.selectedRabUnitIds, this.rabUnitOptions, this.lang === 'bn' ? 'র‍্যাব ইউনিট' : 'RAB Unit');
         return lines;
-    }
-
-    getExportData(): { columns: string[]; rows: string[][] } {
-        const L = this.L[this.lang];
-        const columns = [
-            L['report.table.ser'],
-            L['report.table.orgName'],
-            L['report.table.serviceId'],
-            L['report.table.rank'],
-            L['report.table.corps'],
-            L['report.table.trade'],
-            L['report.table.name'],
-            L['report.table.presentUnit'],
-            L['report.table.rmks'],
-        ];
-        const rows = this.list.map((row) => [
-            this.displayNum(row.ser),
-            this.codeValue(row.orgName, row.orgNameBN),
-            this.displayNum(row.serviceId),
-            this.codeValue(row.rank, row.rankBN),
-            this.codeValue(row.corps, row.corpsBN),
-            this.codeValue(row.trade, row.tradeBN),
-            this.codeValue(row.name, row.nameBN),
-            this.codeValue(row.presentUnit, row.presentUnitBN),
-            row.rmks ?? '—',
-        ]);
-        return { columns, rows };
     }
 
     toggleExportDropdown(event: Event): void {
@@ -150,30 +425,278 @@ export class ReportTradeComponent implements OnInit, OnChanges {
         this.exportDropdownOpen = !this.exportDropdownOpen;
     }
 
-    async exportAs(type: 'print' | 'pdf' | 'word' | 'excel'): Promise<void> {
+    async exportAs(type: 'print' | 'word' | 'excel'): Promise<void> {
         this.exportDropdownOpen = false;
-        const { columns, rows } = this.getExportData();
-        const { preDateLines, filterLines } = buildScopeExportLines(this.accessibleScope, this.lang, this.appliedFilterLines);
-        const config = {
-            title: this.reportTitle,
-            lang: this.lang,
-            columns,
-            rows,
-            showPageNumbers: true,
-            landscape: true,
-            preDateLines,
-            filterLines,
-        };
-        if (type === 'pdf') {
-            this.exporting = true;
-            try { await this.exportService.generatePDF(config); } finally { this.exporting = false; }
-        } else if (type === 'print') {
-            this.exportService.exportPDF(config);
-        } else if (type === 'word') {
-            await this.exportService.exportWord(config);
-        } else {
-            this.exportService.exportExcel(config);
+        if (!this.list?.length) return;
+        if (type === 'print') {
+            this.openRabPrintWindow();
+            return;
         }
+        if (type === 'word') {
+            await this.exportRabWord();
+        } else {
+            this.exportRabExcel();
+        }
+    }
+
+    private async exportRabWord(): Promise<void> {
+        const isBn = this.lang === 'bn';
+        const bnFont = { ascii: 'Nirmala UI', hAnsi: 'Nirmala UI', cs: 'Nirmala UI', hint: 'cs' as const };
+        const bnLang = { value: 'bn-BD', bidirectional: 'bn-BD' } as any;
+        const sans = isBn ? (bnFont as any) : 'Calibri';
+        const serif = isBn ? (bnFont as any) : 'Cambria';
+        const mono = isBn ? (bnFont as any) : 'Consolas';
+        const bnRunExtras = (size: number) => isBn ? { language: bnLang, sizeComplexScript: size } : {};
+        const wsafe = (s: string | null | undefined): string => s ?? '';
+
+        const S = { overline: 15, title: 44, subtitle: 20, sectionTitle: 26, sectionSub: 20, stripLabel: 16, stripDate: 16, critLabel: 14, critValue: 20, tableHeader: 14, name: 20, meta: 14, body: 16, footer: 13 };
+        const C = { black: '0B0B0B', mutedText: '555555', gray: '6B6B6B', labelGray: '8A8A8A', zebra: 'FAFAF6', border: 'BFBFBF', innerBorder: 'D9D9D9' };
+        const innerCellBorder = { top: { style: BorderStyle.SINGLE, size: 2, color: C.innerBorder }, bottom: { style: BorderStyle.SINGLE, size: 2, color: C.innerBorder }, left: { style: BorderStyle.SINGLE, size: 2, color: C.innerBorder }, right: { style: BorderStyle.SINGLE, size: 2, color: C.innerBorder } };
+        const headerCellBorder = { top: { style: BorderStyle.SINGLE, size: 8, color: C.black }, bottom: { style: BorderStyle.SINGLE, size: 8, color: C.black }, left: { style: BorderStyle.SINGLE, size: 4, color: C.border }, right: { style: BorderStyle.SINGLE, size: 4, color: C.border } };
+
+        const headerPars: Paragraph[] = [];
+        headerPars.push(new Paragraph({ alignment: AlignmentType.CENTER, spacing: { after: 80 }, children: [new TextRun({ text: wsafe(this.rabOverlineText), font: sans, size: S.overline, ...bnRunExtras(S.overline), color: C.mutedText, characterSpacing: isBn ? 0 : 60, allCaps: !isBn })] }));
+        headerPars.push(new Paragraph({ alignment: AlignmentType.CENTER, spacing: { after: 40 }, children: [new TextRun({ text: wsafe(this.rabOrgTitle), font: serif, size: S.title, ...bnRunExtras(S.title), bold: true, color: C.black, characterSpacing: isBn ? 0 : 24 })] }));
+        headerPars.push(new Paragraph({ alignment: AlignmentType.CENTER, spacing: { after: 200 }, children: [new TextRun({ text: wsafe(this.rabOrgSubtitle), font: serif, size: S.subtitle, ...bnRunExtras(S.subtitle), italics: true, color: C.mutedText })] }));
+        headerPars.push(new Paragraph({ alignment: AlignmentType.CENTER, spacing: { after: this.rabSubtitleText ? 40 : 200 }, children: [new TextRun({ text: wsafe(this.rabSectionTitle), font: serif, size: S.sectionTitle, ...bnRunExtras(S.sectionTitle), bold: true, color: C.black, characterSpacing: isBn ? 0 : 32, allCaps: !isBn })] }));
+        if (this.rabSubtitleText) headerPars.push(new Paragraph({ alignment: AlignmentType.CENTER, spacing: { after: 200 }, children: [new TextRun({ text: wsafe(this.rabSubtitleText), font: serif, size: S.sectionSub, ...bnRunExtras(S.sectionSub), italics: true, color: C.mutedText })] }));
+
+        const colsPerCritRow = 4;
+        const critCellPct = 100 / colsPerCritRow;
+        const stripCell = (runs: TextRun[], alignment: typeof AlignmentType.LEFT | typeof AlignmentType.RIGHT) =>
+            new TableCell({ columnSpan: 2, borders: { top: { style: BorderStyle.SINGLE, size: 4, color: C.border }, bottom: { style: BorderStyle.SINGLE, size: 4, color: C.border }, left: { style: BorderStyle.SINGLE, size: 4, color: C.border }, right: { style: BorderStyle.SINGLE, size: 4, color: C.border } }, margins: { top: 80, bottom: 80, left: 140, right: 140 }, width: { size: 50, type: WidthType.PERCENTAGE }, children: [new Paragraph({ alignment, children: runs })] });
+        const stripRow = new TableRow({ cantSplit: true, children: [stripCell([new TextRun({ text: wsafe(this.rabCriteriaTitle), font: sans, size: S.stripLabel, ...bnRunExtras(S.stripLabel), bold: true, color: C.black, characterSpacing: isBn ? 0 : 40, allCaps: !isBn })], AlignmentType.LEFT), stripCell([new TextRun({ text: wsafe(`${this.rabGeneratedLabel} · ${this.rabFormattedDate}`), font: sans, size: S.stripDate, ...bnRunExtras(S.stripDate), bold: true, color: C.mutedText, characterSpacing: isBn ? 0 : 30, allCaps: !isBn })], AlignmentType.RIGHT)] });
+        const items = this.criteriaItems;
+        const critRows: TableRow[] = [stripRow];
+        for (let i = 0; i < items.length; i += colsPerCritRow) {
+            const cells: TableCell[] = [];
+            for (let j = 0; j < colsPerCritRow; j++) {
+                const it = items[i + j];
+                cells.push(new TableCell({ borders: innerCellBorder, margins: { top: 100, bottom: 100, left: 140, right: 140 }, width: { size: critCellPct, type: WidthType.PERCENTAGE }, children: it ? [new Paragraph({ spacing: { after: 40 }, children: [new TextRun({ text: wsafe(it.label), font: sans, size: S.critLabel, ...bnRunExtras(S.critLabel), bold: true, color: C.labelGray, characterSpacing: isBn ? 0 : 32, allCaps: !isBn })] }), new Paragraph({ children: [new TextRun({ text: wsafe(it.value), font: serif, size: S.critValue, ...bnRunExtras(S.critValue), bold: true, color: C.black })] })] : [new Paragraph({ children: [new TextRun({ text: ' ', font: sans, size: S.critValue, ...bnRunExtras(S.critValue) })] })] }));
+            }
+            critRows.push(new TableRow({ cantSplit: true, children: cells }));
+        }
+        const criteriaTable = new Table({ width: { size: 100, type: WidthType.PERCENTAGE }, layout: TableLayoutType.AUTOFIT, rows: critRows });
+
+        const visibleCols = this.visibleColumns;
+        const headerLabels = visibleCols.map(c => this.lang === 'bn' ? c.labelBN : c.labelEN);
+        const dataColPct = visibleCols.length > 0 ? (100 / visibleCols.length) : 100;
+        const headerCells: TableCell[] = headerLabels.map(label => new TableCell({ borders: headerCellBorder, margins: { top: 120, bottom: 120, left: 140, right: 140 }, width: { size: dataColPct, type: WidthType.PERCENTAGE }, children: [new Paragraph({ alignment: AlignmentType.LEFT, children: [new TextRun({ text: wsafe(label), font: sans, size: S.tableHeader, ...bnRunExtras(S.tableHeader), bold: true, color: C.black, characterSpacing: isBn ? 0 : 30, allCaps: !isBn })] })] }));
+        const headerRow = new TableRow({ tableHeader: true, cantSplit: true, children: headerCells });
+
+        const codeValue = (en?: string | null, bn?: string | null): string => (isBn && bn) ? bn.trim() : (en ?? bn ?? '—');
+
+        const dataRows: TableRow[] = this.list.map((row, idx) => {
+            const isEven = idx % 2 === 1;
+            const shading = isEven ? { type: 'clear' as const, fill: C.zebra, color: 'auto' } : undefined;
+            const cellOpts = { borders: innerCellBorder, margins: { top: 100, bottom: 100, left: 140, right: 140 }, width: { size: dataColPct, type: WidthType.PERCENTAGE }, shading };
+            const cells: TableCell[] = visibleCols.map(col => {
+                const run = (text: string, opts: { fontKey?: any; sz?: number; bold?: boolean; color?: string; chSp?: number } = {}) => new TextRun({ text: wsafe(text), font: opts.fontKey ?? sans, size: opts.sz ?? S.body, ...bnRunExtras(opts.sz ?? S.body), bold: opts.bold ?? false, color: opts.color ?? C.black, ...(opts.chSp != null ? { characterSpacing: opts.chSp } : {}) });
+                switch (col.hint) {
+                    case 'Serial': return new TableCell({ ...cellOpts, children: [new Paragraph({ alignment: AlignmentType.LEFT, children: [run(this.paddedSer((row as any).ser ?? idx + 1), { fontKey: mono, sz: S.name, bold: true, color: C.gray, chSp: isBn ? 0 : 8 })] })] });
+                    case 'RabPersonnelComposite': {
+                        const meta = this.personnelMeta(row);
+                        const children: Paragraph[] = [new Paragraph({ spacing: { after: meta ? 40 : 0 }, children: [run(codeValue(row.name, row.nameBN), { sz: S.name, bold: true })] })];
+                        if (meta) children.push(new Paragraph({ children: [new TextRun({ text: meta, font: mono, size: S.meta, ...bnRunExtras(S.meta), color: C.gray, characterSpacing: isBn ? 0 : 16, allCaps: !isBn })] }));
+                        return new TableCell({ ...cellOpts, children });
+                    }
+                    case 'RabId': return new TableCell({ ...cellOpts, children: [new Paragraph({ children: [run((row as any).rabid ? this.displayNum((row as any).rabid) : '—', { fontKey: mono, chSp: isBn ? 0 : 4 })] })] });
+                    case 'JoiningDate': return new TableCell({ ...cellOpts, children: [new Paragraph({ children: [run(this.formatDate(row.joiningDate), { fontKey: mono, chSp: isBn ? 0 : 4 })] })] });
+                    case 'Remarks': return new TableCell({ ...cellOpts, children: [new Paragraph({ children: [run(row.rmks || '', { color: C.gray })] })] });
+                    case 'Name':
+                        return new TableCell({ ...cellOpts, children: [new Paragraph({ children: [run(codeValue(row.name, row.nameBN), { sz: S.name, bold: true })] })] });
+                    case 'SelectedValue':
+                        return new TableCell({ ...cellOpts, children: [new Paragraph({ children: [run(this.selectedValueCellText)] })] });
+                    case 'MemberStatus':
+                        return new TableCell({ ...cellOpts, children: [new Paragraph({ children: [run(this.memberStatusText(row))] })] });
+                    case 'BlankRemark':
+                        // Always-empty cell — for handwritten notes after printing.
+                        return new TableCell({ ...cellOpts, children: [new Paragraph({ children: [run('')] })] });
+                    case 'Plain':
+                    default: return new TableCell({ ...cellOpts, children: [new Paragraph({ children: [run(this.plainCellValue(row, col.key))] })] });
+                }
+            });
+            return new TableRow({ cantSplit: true, children: cells });
+        });
+        const dataTable = new Table({ width: { size: 100, type: WidthType.PERCENTAGE }, layout: TableLayoutType.AUTOFIT, rows: [headerRow, ...dataRows] });
+
+        const footerCellBorder = { top: { style: BorderStyle.SINGLE, size: 6, color: C.black }, bottom: { style: BorderStyle.NONE, size: 0, color: 'FFFFFF' }, left: { style: BorderStyle.NONE, size: 0, color: 'FFFFFF' }, right: { style: BorderStyle.NONE, size: 0, color: 'FFFFFF' } };
+        const footerCellMargins = { top: 80, bottom: 0, left: 0, right: 0 };
+        const footer = new Footer({ children: [new Table({ width: { size: 100, type: WidthType.PERCENTAGE }, layout: TableLayoutType.FIXED, columnWidths: [3000, 3000, 3000], rows: [new TableRow({ cantSplit: true, children: [new TableCell({ borders: footerCellBorder, margins: footerCellMargins, children: [new Paragraph({ alignment: AlignmentType.LEFT, children: [new TextRun({ text: wsafe(this.rabConfidentialLabel), font: mono, size: S.footer, ...bnRunExtras(S.footer), bold: true, color: C.black, characterSpacing: isBn ? 0 : 30, allCaps: !isBn })] })] }), new TableCell({ borders: footerCellBorder, margins: footerCellMargins, children: [new Paragraph({ children: [] })] }), new TableCell({ borders: footerCellBorder, margins: footerCellMargins, children: [new Paragraph({ alignment: AlignmentType.RIGHT, children: [new TextRun({ children: [`${isBn ? 'পৃষ্ঠা' : 'PAGE'} `, PageNumber.CURRENT, ` ${isBn ? '/' : 'OF'} `, PageNumber.TOTAL_PAGES], font: mono, size: S.footer, ...bnRunExtras(S.footer), bold: true, color: C.black, characterSpacing: isBn ? 0 : 24, allCaps: !isBn })] })] })] })] })] });
+
+        const doc = new Document({ sections: [{ properties: { page: { size: { orientation: PageOrientation.LANDSCAPE }, margin: { top: 680, bottom: 1247, left: 680, right: 680 } } }, footers: { default: footer }, children: [...headerPars, criteriaTable, new Paragraph({ spacing: { before: 0, after: 200 }, children: [new TextRun({ text: '', font: sans, size: 4 })] }), dataTable] }] });
+        const blob = await Packer.toBlob(doc);
+        saveAs(blob, `trade-report_${this.lang}.docx`);
+    }
+
+    private exportRabExcel(): void {
+        const isBn = this.lang === 'bn';
+        const wsafe = (s: string | null | undefined): string => s ?? '';
+        const visibleCols = this.visibleColumns;
+        const headers: string[] = visibleCols.map(c => isBn ? c.labelBN : c.labelEN);
+        const totalCols = headers.length || 1;
+        const codeValue = (en?: string | null, bn?: string | null): string => (isBn && bn) ? bn.trim() : (en ?? bn ?? '—');
+
+        const aoa: any[][] = [];
+        const pad = (n: number) => Array.from({ length: n }, () => '');
+        aoa.push([wsafe(this.rabOverlineText), ...pad(totalCols - 1)]);
+        aoa.push([wsafe(this.rabOrgTitle), ...pad(totalCols - 1)]);
+        aoa.push([wsafe(this.rabOrgSubtitle), ...pad(totalCols - 1)]);
+        aoa.push([wsafe(this.rabSectionTitle), ...pad(totalCols - 1)]);
+        if (this.rabSubtitleText) aoa.push([wsafe(this.rabSubtitleText), ...pad(totalCols - 1)]);
+        aoa.push(pad(totalCols));
+        aoa.push([`${this.rabCriteriaTitle}  ·  ${this.rabGeneratedLabel}: ${this.rabFormattedDate}`, ...pad(totalCols - 1)]);
+        for (const it of this.criteriaItems) aoa.push([`${it.label}: ${it.value}`, ...pad(totalCols - 1)]);
+        aoa.push(pad(totalCols));
+        aoa.push(headers);
+        for (let i = 0; i < this.list.length; i++) {
+            const row = this.list[i];
+            const cells = visibleCols.map(col => {
+                switch (col.hint) {
+                    case 'Serial': return this.paddedSer((row as any).ser ?? i + 1);
+                    case 'RabPersonnelComposite': {
+                        const name = codeValue(row.name, row.nameBN);
+                        const meta = this.personnelMeta(row);
+                        return meta ? `${name}\n${meta}` : name;
+                    }
+                    case 'RabId': return (row as any).rabid ? this.displayNum((row as any).rabid) : '';
+                    case 'JoiningDate': return this.formatDate(row.joiningDate);
+                    case 'Remarks': return row.rmks || '';
+                    case 'Name':                  return codeValue(row.name, row.nameBN);
+                    case 'SelectedValue':         return this.selectedValueCellText;
+                    case 'MemberStatus':          return this.memberStatusText(row);
+                    case 'BlankRemark':           return '';
+                    case 'Plain':
+                    default: return this.plainCellValue(row, col.key);
+                }
+            });
+            aoa.push(cells);
+        }
+        aoa.push(pad(totalCols));
+        aoa.push([`${this.rabConfidentialLabel}  ·  ${this.rabWarningLabel}`, ...pad(totalCols - 1)]);
+
+        const ws = XLSX.utils.aoa_to_sheet(aoa);
+        ws['!merges'] = ws['!merges'] ?? [];
+        const titleRows = [0, 1, 2, 3, ...(this.rabSubtitleText ? [4] : []), 5 + (this.rabSubtitleText ? 1 : 0)];
+        for (const r of titleRows) ws['!merges'].push({ s: { r, c: 0 }, e: { r, c: totalCols - 1 } });
+        const lastRow = aoa.length - 1;
+        ws['!merges'].push({ s: { r: lastRow, c: 0 }, e: { r: lastRow, c: totalCols - 1 } });
+
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, isBn ? 'প্রতিবেদন' : 'Report');
+        XLSX.writeFile(wb, `trade-report_${this.lang}.xlsx`);
+    }
+
+    private openRabPrintWindow(): void {
+        const win = window.open('', '_blank', 'width=1200,height=900');
+        if (!win) { this.messageService.add({ severity: 'warn', summary: 'Popup blocked', detail: 'Allow popups for this site to use Print.', life: 6000 }); return; }
+        const html = this.buildRabPrintHtml();
+        win.document.open();
+        win.document.write(html);
+        win.document.close();
+        setTimeout(() => { try { win.focus(); win.print(); } catch { /* user can Ctrl+P from the open window */ } }, 700);
+    }
+
+    private buildRabPrintHtml(): string {
+        const esc = (s: unknown) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;');
+        const isBn = this.lang === 'bn';
+        const serif = isBn ? "'Nirmala UI', 'Hind Siliguri', 'SolaimanLipi', serif" : "'Playfair Display', Georgia, 'Times New Roman', serif";
+        const sans = isBn ? "'Nirmala UI', 'Hind Siliguri', 'SolaimanLipi', sans-serif" : "'DM Sans', 'Segoe UI', Arial, sans-serif";
+        const mono = "'JetBrains Mono', 'Consolas', 'Courier New', monospace";
+
+        const visibleCols = this.visibleColumns;
+        const tableHeaderHtml = `<tr>${visibleCols.map(c => `<th>${esc(this.lang === 'bn' ? c.labelBN : c.labelEN)}</th>`).join('')}</tr>`;
+        const codeValue = (en?: string | null, bn?: string | null): string => (this.lang === 'bn' && bn) ? bn.trim() : (en ?? bn ?? '—');
+
+        const renderCell = (row: MemberAppointmentReportRow, col: { key: string; hint: string }, idx: number): string => {
+            switch (col.hint) {
+                case 'Serial': return `<td class="td-ser"><span class="ser">${esc(this.paddedSer((row as any).ser ?? idx + 1))}</span></td>`;
+                case 'RabPersonnelComposite': {
+                    const meta = this.personnelMeta(row);
+                    const metaHtml = meta ? `<div class="personnel-meta">${esc(meta)}</div>` : '';
+                    return `<td class="td-personnel"><div class="personnel-name">${esc(codeValue(row.name, row.nameBN))}</div>${metaHtml}</td>`;
+                }
+                case 'RabId': return `<td class="td-date">${esc((row as any).rabid ? this.displayNum((row as any).rabid) : '—')}</td>`;
+                case 'JoiningDate': return `<td class="td-date">${esc(this.formatDate(row.joiningDate))}</td>`;
+                case 'Remarks': return `<td class="td-rmks">${esc(row.rmks || '')}</td>`;
+                case 'Name': return `<td class="td-personnel"><div class="personnel-name">${esc(codeValue(row.name, row.nameBN))}</div></td>`;
+                case 'SelectedValue': return `<td>${esc(this.selectedValueCellText)}</td>`;
+                case 'MemberStatus': return `<td>${esc(this.memberStatusText(row))}</td>`;
+                case 'BlankRemark': return `<td class="td-blank-remark"></td>`;
+                case 'Plain':
+                default: return `<td>${esc(this.plainCellValue(row, col.key))}</td>`;
+            }
+        };
+
+        const tableBodyHtml = this.list.map((row, i) => `<tr>${visibleCols.map(c => renderCell(row, c, i)).join('')}</tr>`).join('');
+        const items = this.criteriaItems;
+        const criteriaGridHtml = items.length ? `<div class="criteria-grid">${items.map(item => `<div class="cell"><div class="cell-label">${esc(item.label)}</div><div class="cell-value">${esc(item.value)}</div></div>`).join('')}</div>` : '';
+        const subtitleHtml = this.rabSubtitleText ? `<div class="paper-section-sub"><em>${esc(this.rabSubtitleText)}</em></div>` : '';
+        const confidential = this.rabConfidentialLabel;
+        const warning = this.rabWarningLabel;
+        const pageWord = isBn ? 'পৃষ্ঠা' : 'PAGE';
+        const ofWord = isBn ? '/' : 'OF';
+        const cssStr = (s: string) => s.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
+
+        return `<!DOCTYPE html><html lang="${isBn ? 'bn' : 'en'}"><head><meta charset="UTF-8" /><title>${esc(this.rabSectionTitle)}</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" /><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=DM+Sans:wght@400;500;600&family=Hind+Siliguri:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<style>
+    @counter-style bn-digits { system: numeric; symbols: '\\09E6' '\\09E7' '\\09E8' '\\09E9' '\\09EA' '\\09EB' '\\09EC' '\\09ED' '\\09EE' '\\09EF'; }
+    @page {
+        margin: 12mm 5mm 22mm 5mm;
+        @bottom-left { content: "● " "${cssStr(confidential)}"; font-family: ${mono}; font-size: 6.5pt; font-weight: 600; letter-spacing: 0.3em; text-transform: uppercase; color: #b03a3a; padding: 5mm 0 0 8mm; background-image: linear-gradient(rgba(176, 58, 58, 0.5), rgba(176, 58, 58, 0.5)); background-position: 8mm 1.5mm; background-size: calc(100% - 8mm) 0.7mm; background-repeat: no-repeat; vertical-align: top; ${isBn ? 'letter-spacing:0.05em;text-transform:none;font-family:' + sans + ';' : ''} }
+        @bottom-center { content: "${cssStr(pageWord)} " counter(page${isBn ? ', bn-digits' : ''}) " ${cssStr(ofWord)} " counter(pages${isBn ? ', bn-digits' : ''}); font-family: ${mono}; font-size: 6.5pt; font-weight: 600; letter-spacing: 0.25em; text-transform: uppercase; color: #4a4a4a; padding-top: 5mm; background-image: linear-gradient(rgba(176, 58, 58, 0.5), rgba(176, 58, 58, 0.5)); background-position: 0 1.5mm; background-size: 100% 0.7mm; background-repeat: no-repeat; vertical-align: top; ${isBn ? 'letter-spacing:0.05em;text-transform:none;font-family:' + sans + ';' : ''} }
+        @bottom-right { content: "${cssStr(warning)}"; font-family: ${mono}; font-size: 6.5pt; font-weight: 600; letter-spacing: 0.3em; text-transform: uppercase; color: #b03a3a; padding: 5mm 8mm 0 0; background-image: linear-gradient(rgba(176, 58, 58, 0.5), rgba(176, 58, 58, 0.5)); background-position: 0 1.5mm; background-size: calc(100% - 8mm) 0.7mm; background-repeat: no-repeat; vertical-align: top; ${isBn ? 'letter-spacing:0.05em;text-transform:none;font-family:' + sans + ';' : ''} }
+    }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; padding: 0; background: #fff; color: #0b0b0b; font-family: ${sans}; font-size: 10pt; line-height: 1.35; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    .paper { padding: 4mm 8mm; }
+    .paper-head { text-align: center; margin-bottom: 6mm; }
+    .overline { font-size: 7.5pt; letter-spacing: 0.3em; color: #555; text-transform: uppercase; margin-bottom: 3mm; font-weight: 500; ${isBn ? 'letter-spacing:0;text-transform:none;font-family:' + sans + ';font-size:9pt;' : ''} }
+    .paper-title { font-family: ${serif}; font-weight: 700; font-size: 22pt; margin: 0 0 2mm 0; letter-spacing: 0.12em; color: #0b0b0b; ${isBn ? 'letter-spacing:0;' : ''} }
+    .paper-sub { font-family: ${serif}; font-style: italic; color: #555; font-size: 10pt; margin-bottom: 4mm; }
+    .orn-divider { display: flex; justify-content: center; align-items: center; gap: 6mm; margin: 4mm auto; max-width: 65%; }
+    .orn-line { flex: 1; height: 1px; background: linear-gradient(to right, transparent, #b78b3b, transparent); }
+    .orn-diamond { color: #b78b3b; font-size: 9pt; }
+    .paper-section { font-family: ${serif}; font-size: 13pt; font-weight: 700; letter-spacing: 0.16em; color: #0b0b0b; margin: 0 0 1mm 0; text-transform: uppercase; ${isBn ? 'letter-spacing:0;' : ''} }
+    .paper-section-sub { font-family: ${serif}; font-style: italic; color: #555; font-size: 10pt; }
+    .criteria { margin: 5mm 0 6mm; border: 1px solid #d8d6d0; border-radius: 1mm; overflow: hidden; }
+    .criteria-strip { display: flex; justify-content: space-between; align-items: center; padding: 1.5mm 3mm; background: #f4f4f2; border-bottom: 1px solid #d8d6d0; font-size: 8pt; letter-spacing: 0.2em; text-transform: uppercase; color: #4a4a4a; font-weight: 600; ${isBn ? 'letter-spacing:0.04em;text-transform:none;' : ''} }
+    .criteria-strip-title { display: inline-flex; gap: 1.5mm; align-items: center; color: #0b0b0b; }
+    .diamond-bullet { color: #b78b3b; }
+    .criteria-strip-date { opacity: 0.75; font-weight: 500; }
+    .criteria-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(38mm, 1fr)); }
+    .cell { padding: 2mm 3mm; border-right: 1px solid #e6e4de; border-top: 1px solid #e6e4de; }
+    .cell-label { font-size: 7pt; letter-spacing: 0.16em; text-transform: uppercase; color: #8a8a8a; margin-bottom: 1mm; font-weight: 600; ${isBn ? 'letter-spacing:0.04em;text-transform:none;' : ''} }
+    .cell-value { font-family: ${serif}; font-size: 10pt; font-weight: 700; color: #0b0b0b; line-height: 1.2; ${isBn ? 'font-family:' + sans + ';' : ''} }
+    table { width: 100%; border-collapse: collapse; table-layout: auto; font-family: ${sans}; font-size: 8pt; }
+    thead { display: table-header-group; }
+    thead th { background: #0b0b0b; color: #d9c79a; font-family: ${mono}; font-size: 6.5pt; font-weight: 600; letter-spacing: 0.15em; text-transform: uppercase; padding: 1.8mm 2mm; text-align: left; vertical-align: middle; white-space: nowrap; border: 1px solid rgba(11,11,11,0.05); ${isBn ? 'letter-spacing:0.04em;font-family:' + sans + ';' : ''} }
+    tbody td { padding: 2mm 2mm; font-size: 8pt; color: #0b0b0b; border: 1px solid rgba(11,11,11,0.05); vertical-align: top; background: #fff; word-break: break-word; overflow-wrap: anywhere; }
+    tbody tr:nth-child(even) td { background: #fafaf6; }
+    tbody tr { page-break-inside: avoid; }
+    .td-ser { white-space: nowrap; }
+    .ser { font-family: ${mono}; font-size: 9pt; font-weight: 600; color: #6b6b6b; letter-spacing: 0.04em; white-space: nowrap; }
+    .td-personnel { min-width: 56mm; }
+    .personnel-name { font-family: ${sans}; font-weight: 600; font-size: 10pt; color: #0b0b0b; line-height: 1.2; }
+    .personnel-meta { margin-top: 0.7mm; font-family: ${mono}; font-size: 7pt; letter-spacing: 0.08em; text-transform: uppercase; color: #6b6b6b; ${isBn ? 'letter-spacing:0;text-transform:none;font-family:' + sans + ';' : ''} }
+    .td-date { font-family: ${mono}; letter-spacing: 0.02em; white-space: nowrap; }
+</style></head><body><div class="paper">
+    <header class="paper-head">
+        <div class="overline">${esc(this.rabOverlineText)}</div>
+        <h1 class="paper-title">${esc(this.rabOrgTitle)}</h1>
+        <div class="paper-sub"><em>${esc(this.rabOrgSubtitle)}</em></div>
+        <div class="orn-divider"><span class="orn-line"></span><span class="orn-diamond">&#9670;</span><span class="orn-line"></span></div>
+        <h2 class="paper-section">${esc(this.rabSectionTitle)}</h2>
+        ${subtitleHtml}
+    </header>
+    <div class="criteria">
+        <div class="criteria-strip"><span class="criteria-strip-title"><span class="diamond-bullet">&#9670;</span> ${esc(this.rabCriteriaTitle)}</span><span class="criteria-strip-date">${esc(this.rabGeneratedLabel)} &middot; ${esc(this.rabFormattedDate)}</span></div>
+        ${criteriaGridHtml}
+    </div>
+    <table><thead>${tableHeaderHtml}</thead><tbody>${tableBodyHtml}</tbody></table>
+</div></body></html>`;
     }
 
     ngOnInit(): void {
@@ -182,14 +705,79 @@ export class ReportTradeComponent implements OnInit, OnChanges {
         this.canUpdate = _perms.canUpdate;
         this.canDelete = _perms.canDelete;
 
-        this.loadOrgOptions();
+        this.syncSelectedValueColumnLabel();
+
+        // Cache the Trade + Corps lists so we can walk
+        //   Trade.parentCodeId → Corps  →  Corps.orgId → MotherOrg
+        // and the MotherOrg list (for SortOrder) so the N/A-bundle case
+        // can order ranks by org sort order then rank sort order.
+        forkJoin({
+            trades: this.commonCodeService.getAllActiveCommonCodesType('Trade'),
+            corps:  this.commonCodeService.getAllActiveCommonCodesType('Corps'),
+            orgs:   this.commonCodeService.getAllActiveMotherOrgs(),
+        }).subscribe({
+            next: ({ trades, corps, orgs }) => {
+                this.allTradeCodes = trades ?? [];
+                this.allCorpsCodes = corps ?? [];
+                this.allMotherOrgs = orgs ?? [];
+                this.refreshDependentOptions();
+            },
+            error: () => { this.allTradeCodes = []; this.allCorpsCodes = []; this.allMotherOrgs = []; },
+        });
+
+        this.loadMemberTypeOptions();
+        this.loadRabUnitOptions();
+
         this.load();
     }
 
+    loadMemberTypeOptions(): void {
+        this.commonCodeService.getAccessibleMemberTypes().subscribe({
+            next: (codes) => (this.memberTypeOptions = (codes || []).map((c) => ({
+                label: c.codeValueEN || String(c.codeId),
+                labelBn: c.codeValueBN || c.codeValueEN || String(c.codeId),
+                value: c.codeId,
+            }))),
+            error: () => (this.memberTypeOptions = []),
+        });
+    }
+
+    loadRabUnitOptions(): void {
+        this.commonCodeService.getAllActiveCommonCodesType('RabUnit').subscribe({
+            next: (codes) => (this.rabUnitOptions = (codes || []).map((c) => ({
+                label: c.codeValueEN || String(c.codeId),
+                labelBn: c.codeValueBN || c.codeValueEN || String(c.codeId),
+                value: c.codeId,
+            }))),
+            error: () => (this.rabUnitOptions = []),
+        });
+    }
+
+    /** Member Type changed → re-filter the trade-scoped ranks by parentCodeId. */
+    onMemberTypeChange(): void {
+        this.applyRankMemberTypeFilter();
+    }
+
+    /** Rank = loaded trade-scoped rows whose parentCodeId is a selected Member Type. */
+    private applyRankMemberTypeFilter(): void {
+        let rows = this.allRanksForTrade;
+        if (this.selectedMemberTypeIds.length) {
+            rows = rows.filter((r) => r.parentCodeId != null && this.selectedMemberTypeIds.includes(r.parentCodeId));
+        }
+        this.rankOptions = rows.map((r) => ({ label: r.label, labelBn: r.labelBn, value: r.value }));
+        this.selectedRankIds = this.selectedRankIds.filter((id) => this.rankOptions.some((o) => o.value === id));
+    }
+
     ngOnChanges(changes: SimpleChanges): void {
-        if (changes['commonCodeIds'] && !changes['commonCodeIds'].firstChange) {
-            this.first = 0;
-            this.load();
+        if (changes['commonCodeIds']) {
+            this.selectedRankIds = [];
+            this.rankOptions = [];
+            this.allRanksForTrade = [];
+            this.refreshDependentOptions();
+            if (!changes['commonCodeIds'].firstChange) {
+                this.first = 0;
+                this.load();
+            }
         } else if (changes['postingStatus'] && !changes['postingStatus'].firstChange) {
             this.first = 0;
             this.load();
@@ -197,34 +785,82 @@ export class ReportTradeComponent implements OnInit, OnChanges {
         if (changes['lang']) {
             this.appliedFilterLines = this.buildFilterLines();
         }
+        if (changes['reportTypeLabel']) {
+            this.syncSelectedValueColumnLabel();
+        }
     }
 
-    loadOrgOptions(): void {
-        this.commonCodeService.getAllActiveMotherOrgs().subscribe({
-            next: (orgs) => (this.orgOptions = orgs),
-            error: (err) => {
-                console.error(err);
-                this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.message || 'Failed to load organizations' });
-            },
-        });
-    }
-
-    onOrgChange(): void {
-        this.rankOptions = [];
-        this.tradeOptions = [];
-        this.selectedRankId = null;
-        this.selectedTradeId = null;
-        const orgId = this.selectedOrgId;
-        if (orgId != null) {
+    /** Load Rank options.
+        - Single Trade picked: walk Trade → Corps → MotherOrg and scope ranks
+          to that mother org.
+        - N/A bundle (length > 1): scoping by a single org doesn't apply —
+          load EVERY active MotherOrgRank across all orgs so the user can
+          still filter inside the bundle.
+        - Nothing picked: no-op (the dropdown stays empty + disabled). */
+    private refreshDependentOptions(): void {
+        if (this.isSingleTradePicked) {
+            const tradeId = this.pickedTradeId!;
+            const trade = this.allTradeCodes.find(t => t.codeId === tradeId);
+            const corpsId = trade?.parentCodeId ?? null;
+            if (corpsId == null) return;
+            const corps = this.allCorpsCodes.find(c => c.codeId === corpsId);
+            const orgId = corps?.orgId ?? null;
+            if (orgId == null || orgId <= 0) return;
             this.commonCodeService.getAllActiveCommonCodesByOrgIdAndType(orgId, 'MotherOrgRank').subscribe({
-                next: (codes: CommonCodeModel[]) =>
-                    (this.rankOptions = codes.map((c) => ({ label: c.codeValueEN || String(c.codeId), labelBn: c.codeValueBN || c.codeValueEN || String(c.codeId), value: c.codeId }))),
+                next: (codes: CommonCodeModel[]) => {
+                    // Single org — only the rank's own sort order matters.
+                    const sorted = [...(codes ?? [])].sort((a, b) =>
+                        this.cmpNum(a.sortOrder, b.sortOrder) ||
+                        (a.codeValueEN ?? '').localeCompare(b.codeValueEN ?? ''));
+                    this.cacheRanks(sorted);
+                },
             });
-            this.commonCodeService.getAllActiveCommonCodesByOrgIdAndType(orgId, 'Trade').subscribe({
-                next: (codes: CommonCodeModel[]) =>
-                    (this.tradeOptions = codes.map((c) => ({ label: c.codeValueEN || String(c.codeId), labelBn: c.codeValueBN || c.codeValueEN || String(c.codeId), value: c.codeId }))),
+            return;
+        }
+        // N/A bundle (multi-org) — flat list of every active rank, sorted by
+        // MotherOrg.SortOrder first, then the rank's own sort order, so the
+        // dropdown groups ranks by org in the user's preferred org order.
+        if (Array.isArray(this.commonCodeIds) && this.commonCodeIds.length > 1) {
+            this.commonCodeService.getAllActiveCommonCodesType('MotherOrgRank').subscribe({
+                next: (codes: CommonCodeModel[]) => {
+                    const orgSortOrderById = new Map(
+                        this.allMotherOrgs.map(o => [o.orgId, o.sortOrder ?? null] as [number, number | null]),
+                    );
+                    const sorted = [...(codes ?? [])].sort((a, b) =>
+                        this.cmpNum(orgSortOrderById.get(a.orgId) ?? null, orgSortOrderById.get(b.orgId) ?? null) ||
+                        this.cmpNum(a.sortOrder, b.sortOrder) ||
+                        (a.codeValueEN ?? '').localeCompare(b.codeValueEN ?? ''));
+                    this.cacheRanks(sorted);
+                },
             });
         }
+    }
+
+    /** Cache the loaded rank rows (with parentCodeId → Member Type) and
+        derive rankOptions via the current Member Type selection. */
+    private cacheRanks(codes: CommonCodeModel[]): void {
+        this.allRanksForTrade = (codes ?? []).map((c) => ({
+            label: c.codeValueEN || String(c.codeId),
+            labelBn: c.codeValueBN || c.codeValueEN || String(c.codeId),
+            value: c.codeId,
+            parentCodeId: c.parentCodeId ?? null,
+        }));
+        this.applyRankMemberTypeFilter();
+    }
+
+    /** Nulls-last numeric compare. Used so codes without an explicit
+        SortOrder sink to the bottom rather than colliding with sortOrder=0. */
+    private cmpNum(a: number | null | undefined, b: number | null | undefined): number {
+        const ax = a == null ? Number.POSITIVE_INFINITY : a;
+        const bx = b == null ? Number.POSITIVE_INFINITY : b;
+        return ax - bx;
+    }
+
+    /** Rank picker is usable whenever the parent passed at least one Trade
+        — single pick OR N/A bundle. Only stays disabled when no Trade is
+        picked at all. */
+    get isRankPickerEnabled(): boolean {
+        return Array.isArray(this.commonCodeIds) && this.commonCodeIds.length > 0;
     }
 
     onFilterChange(): void {}
@@ -233,15 +869,13 @@ export class ReportTradeComponent implements OnInit, OnChanges {
 
     get activeFilterCount(): number {
         let c = 0;
-        if (this.selectedOrgId != null) c++;
-        if (this.selectedRankId != null) c++;
-        if (this.selectedTradeId != null) c++;
+        if (this.selectedMemberTypeIds.length > 0) c++;
+        if (this.selectedRankIds.length > 0) c++;
+        if (this.selectedRabUnitIds.length > 0) c++;
         return c;
     }
 
-    toggleFilter(): void {
-        this.filterOpen = !this.filterOpen;
-    }
+    toggleFilter(): void { this.filterOpen = !this.filterOpen; }
 
     filterSubtitle(): string {
         const L = this.L['en'];
@@ -251,51 +885,126 @@ export class ReportTradeComponent implements OnInit, OnChanges {
     }
 
     clearFilters(): void {
-        this.selectedOrgId = null;
-        this.selectedRankId = null;
-        this.selectedTradeId = null;
-        this.rankOptions = [];
-        this.tradeOptions = [];
+        this.selectedMemberTypeIds = [];
+        this.selectedRankIds = [];
+        this.selectedRabUnitIds = [];
+        this.allRanksForTrade = [];
         this.first = 0;
     }
 
-    onPage(event: { first: number; rows: number }): void {
-        this.first = event.first;
-        this.rows = event.rows;
+    onPage(event: { first?: number; rows?: number }): void {
+        this.first = event.first ?? 0;
+        this.rows = event.rows ?? this.rows;
         this.load();
+    }
+
+    /**
+     * Translate the display column keys into backend field keys. The synthetic
+     * "name" column maps to the registry's nameEnglish/nameBangla fields so the
+     * server projects the name data; "selectedValue" is frontend-only (filled
+     * from commonCodeLabel) and needs no server field. ser/blankRemark are
+     * synthetic too and are simply ignored server-side.
+     */
+    private backendColumnKeys(): string[] {
+        const out: string[] = [];
+        const seen = new Set<string>();
+        const push = (k: string) => { if (!seen.has(k)) { seen.add(k); out.push(k); } };
+        for (const key of this.selectedColumnKeys) {
+            if (key === 'name') { push('nameEnglish'); push('nameBangla'); continue; }
+            if (key === 'memberStatus') { push('status'); continue; }
+            if (key === 'selectedValue') continue;
+            push(key);
+        }
+        return out;
     }
 
     load(): void {
         this.loading = true;
         this.appliedFilterLines = this.buildFilterLines();
         const page_no = Math.floor(this.first / this.rows) + 1;
-        this.reportService
-            .getTradeReport({
-                orgId: this.selectedOrgId ?? undefined,
-                rankId: this.selectedRankId ?? undefined,
-                tradeId: this.selectedTradeId ?? undefined,
-                commonCodeIds: this.commonCodeIds?.length ? this.commonCodeIds : undefined,
-                postingStatus: this.postingStatus || undefined,
-                pagination: { page_no, row_per_page: this.rows },
-            })
-            .subscribe({
-                next: (res) => {
-                    this.list = res.datalist ?? [];
-                    this.totalRecords = res.pages?.rows ?? 0;
-                    this.accessibleScope = res.accessibleScope ?? null;
-                    this.scopeChange.emit(this.accessibleScope);
-                    this.loading = false;
-                },
-                error: (err) => {
-                    console.error(err);
-                    this.messageService.add({
-                        severity: 'error',
-                        summary: 'Error',
-                        detail: err?.error?.message || 'Failed to load report',
-                    });
-                    this.loading = false;
-                },
-            });
+
+        // ── Dynamic-backend criteria ────────────────────────────────
+        // The parent-locked Trade drives the `trade` filter. Single pick →
+        // idValue; N/A bundle (multi-org) → idValues so the backend does
+        // an IN match.
+        const criteria: DynamicReportCriterion[] = [];
+        if (Array.isArray(this.commonCodeIds) && this.commonCodeIds.length > 0) {
+            if (this.commonCodeIds.length === 1) {
+                criteria.push({ fieldKey: 'trade', idValue: this.commonCodeIds[0] });
+            } else {
+                criteria.push({ fieldKey: 'trade', idValues: [...this.commonCodeIds] });
+            }
+        }
+        if (this.selectedMemberTypeIds.length > 0)
+            criteria.push({ fieldKey: 'memberType', idValues: [...this.selectedMemberTypeIds] });
+        if (this.selectedRankIds.length > 0)
+            criteria.push({ fieldKey: 'armyRank', idValues: [...this.selectedRankIds] });
+        if (this.selectedRabUnitIds.length > 0)
+            criteria.push({ fieldKey: 'rabUnit', idValues: [...this.selectedRabUnitIds] });
+
+        this.reportService.runDynamicEmployeeBaseReport({
+            columns: this.backendColumnKeys(),
+            criteria,
+            postingStatusFilter: this.postingStatus || null,
+            pagination: { page_no, row_per_page: this.rows },
+        }).subscribe({
+            next: (res) => {
+                const startSer = (page_no - 1) * this.rows + 1;
+                this.list = (res.datalist ?? []).map((d, i) => this.adaptDynamicRow(d, startSer + i));
+                this.totalRecords = res.pages?.Rows ?? res.pages?.rows ?? 0;
+                this.accessibleScope = res.accessibleScope ? {
+                    rabUnitNames: null,
+                    rabUnitNamesBN: null,
+                    memberTypeNames: null,
+                    memberTypeNamesBN: null,
+                    orgScopeRestricted: res.accessibleScope.orgScopeRestricted,
+                } as ReportAccessibleScope : null;
+                this.scopeChange.emit(this.accessibleScope);
+                this.searched = true;
+                this.loading = false;
+            },
+            error: (err) => {
+                console.error(err);
+                this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.message || 'Failed to load report' });
+                this.loading = false;
+            },
+        });
+    }
+
+    private adaptDynamicRow(d: DynamicReportRow, ser: number): MemberAppointmentReportRow {
+        return {
+            ...d,
+            ser,
+            serviceId:     d['serviceId']             as string,
+            name:          d['nameEnglish']           as string,
+            nameBN:        d['nameBangla']            as string,
+            rank:          d['armyRank']              as string,
+            rankBN:        d['armyRankBN']            as string,
+            orgName:       d['motherOrganization']    as string,
+            orgNameBN:     d['motherOrganizationBN']  as string,
+            corps:         d['corps']                 as string,
+            corpsBN:       d['corpsBN']               as string,
+            trade:         d['trade']                 as string,
+            tradeBN:       d['tradeBN']               as string,
+            presentUnit:   d['rabUnit']               as string,
+            presentUnitBN: d['rabUnitBN']             as string,
+            joiningDate:   d['joiningDate']           as string,
+            rmks:          (d['rmks'] ?? d['remarks'])as string,
+            ...(d['rabId'] ? { rabid: d['rabId'] as string } : {}),
+        } as MemberAppointmentReportRow & { rabid?: string };
+    }
+
+    formatDate(v: string | null | undefined): string {
+        if (v == null || v === '') return '-';
+        try {
+            const d = new Date(v);
+            if (isNaN(d.getTime())) return v;
+            const day = String(d.getDate()).padStart(2, '0');
+            const month = String(d.getMonth() + 1).padStart(2, '0');
+            const year = String(d.getFullYear());
+            const s = `${day}-${month}-${year}`;
+            return this.lang === 'bn' ? BanglaNumerals.toBangla(s) : s;
+        } catch { return v; }
     }
 
     displayNum(v: number | string | null | undefined): string {

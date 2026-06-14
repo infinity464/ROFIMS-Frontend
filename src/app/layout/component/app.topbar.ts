@@ -2,8 +2,8 @@ import { Component, OnInit, OnDestroy, ViewChild, ElementRef } from '@angular/co
 import { MenuItem } from 'primeng/api';
 import { Router, RouterModule } from '@angular/router';
 import { CommonModule } from '@angular/common';
-import { map, tap, switchMap, catchError } from 'rxjs/operators';
-import { Observable, of, EMPTY } from 'rxjs';
+import { map, switchMap, catchError } from 'rxjs/operators';
+import { Observable, of, EMPTY, Subscription } from 'rxjs';
 import { FormsModule } from '@angular/forms';
 import { StyleClassModule } from 'primeng/styleclass';
 import { PopoverModule } from 'primeng/popover';
@@ -179,6 +179,7 @@ export class AppTopbar implements OnInit, OnDestroy {
     userInitials = '?';
     private readonly DARK_MODE_KEY = 'darkMode';
     private closeBound: ((e: MouseEvent) => void) | null = null;
+    private noticeSub?: Subscription;
     @ViewChild('notificationContainer') notificationContainer?: ElementRef<HTMLElement>;
 
     constructor(
@@ -193,25 +194,28 @@ export class AppTopbar implements OnInit, OnDestroy {
         this.loadProfile();
         this.loadEmployeeProfile();
         this.loadDarkModePreference();
-        // #region agent log
-        const _log = (m: string, d: Record<string, unknown>) =>
-            fetch('http://127.0.0.1:7682/ingest/24c52934-7935-4f35-a09e-2dbd51502872', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'X-Debug-Session-Id': '3a6509' },
-                body: JSON.stringify({ sessionId: '3a6509', location: 'app.topbar', message: m, data: d, timestamp: Date.now(), hypothesisId: d['h'] as string })
-            }).catch(() => {});
-        // #endregion
         this.unreadCount$ = this.notificationService.notifications$.pipe(
-            map(() => this.notificationService.getUnreadCount()),
-            tap((c) => _log('unreadCount$ emitted', { h: 'H3', count: c }))
+            map(() => this.notificationService.getUnreadCount())
         );
     }
 
     ngOnInit(): void {
         this.chatService.connectToHub().catch(() => {});
+
+        // Live bell update when a notice is published to me.
+        this.noticeSub = this.chatService.noticePublished$.subscribe((p) => {
+            this.notificationService.add({
+                type: 'notice',
+                title: 'New Notice',
+                message: p?.message || 'A new notice was published.',
+                link: p?.link || '/dashboard',
+                serverId: p?.notificationId
+            });
+        });
     }
 
     ngOnDestroy(): void {
+        this.noticeSub?.unsubscribe();
         if (this.profileImageUrl) {
             URL.revokeObjectURL(this.profileImageUrl);
             this.profileImageUrl = null;

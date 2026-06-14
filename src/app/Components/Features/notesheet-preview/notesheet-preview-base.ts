@@ -3,7 +3,7 @@ import { HttpClient } from '@angular/common/http';
 import { ActivatedRoute, Router } from '@angular/router';
 import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
 import { MessageService } from 'primeng/api';
-import { catchError, firstValueFrom, forkJoin, of } from 'rxjs';
+import { catchError, forkJoin, of } from 'rxjs';
 import { environment } from '@/Core/Environments/environment';
 import { EmpService } from '@/services/emp-service';
 import { UserMenuService } from '@/services/user-menu.service';
@@ -913,37 +913,6 @@ export abstract class NotesheetPreviewBase implements OnInit {
         });
 
         saveAs(await Packer.toBlob(doc), `NoteSheet_${this.noteSheet.noteSheetNo ?? 'export'}.docx`);
-    }
-
-    /** Send a DOCX blob to backend for conversion, then download the resulting PDF. */
-    protected async convertWordToPdf(docxBlob: Blob, fileName: string): Promise<void> {
-        this.exportingPdf = true;
-        try {
-            const form = new FormData();
-            form.append('file', docxBlob, 'document.docx');
-            const pdfBlob = await firstValueFrom(
-                this.http.post(`${environment.apis.core}/Document/ConvertToPdf`, form, { responseType: 'blob' })
-            );
-            saveAs(pdfBlob, fileName);
-        } finally {
-            this.exportingPdf = false;
-        }
-    }
-
-    /** Send a DOCX blob to backend for conversion, then open the PDF in a new browser tab. */
-    protected async openPdfPreview(docxBlob: Blob): Promise<void> {
-        this.printingPreview = true;
-        try {
-            const form = new FormData();
-            form.append('file', docxBlob, 'document.docx');
-            const pdfBlob = await firstValueFrom(
-                this.http.post(`${environment.apis.core}/Document/ConvertToPdf`, form, { responseType: 'blob' })
-            );
-            const url = URL.createObjectURL(pdfBlob);
-            window.open(url, '_blank');
-        } finally {
-            this.printingPreview = false;
-        }
     }
 
     exportPdf(): void {

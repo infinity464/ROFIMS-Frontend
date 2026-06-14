@@ -31,6 +31,49 @@ export interface EmployeeDocumentReferenceItem {
     fileName: string;
 }
 
+/** One candidate from a face-recognition search. */
+export interface FaceCandidate {
+    employee_id: number | null;
+    confidence: number;
+}
+
+/** One row of the face-search history (from GetFaceSearchHistory). */
+export interface FaceSearchHistoryItem {
+    id: number;
+    searchedAt: string;
+    isMatched: boolean;
+    confidence: number;
+    hasImage: boolean;
+    matchedEmployeeId: number | null;
+    matchedName: string | null;
+    matchedRank: string | null;
+    matchedServiceId: string | null;
+    matchedRabId: string | null;
+    searchedByName: string | null;
+    searchedByRank: string | null;
+    searchedByServiceId: string | null;
+}
+
+/** One enrolled face photo's metadata (from GetEnrolledFacePhotos). */
+export interface EnrolledFacePhoto {
+    photo_id: string;
+    quality_score: number;
+    source: string;
+    created_at: string;
+}
+
+/** Result of POST /EmployeeInfo/RecognizeFace. */
+export interface FaceRecognizeResult {
+    matched: boolean;
+    employee_id: number | null;
+    confidence: number;
+    matched_photo_path?: string | null;
+    processing_ms?: number;
+    threshold?: number;
+    log_id?: string | null;
+    candidates: FaceCandidate[];
+}
+
 @Injectable({
     providedIn: 'root'
 })
@@ -91,6 +134,19 @@ export class EmpService {
         if (excludeEmployeeId != null && excludeEmployeeId > 0) params.excludeEmployeeId = String(excludeEmployeeId);
 
         return this.http.get<EmpModel[]>(`${this.empApi}/EmployeeInfo/SearchByIdAsyn`, { params }).pipe(map((data) => data ?? []));
+    }
+
+    /**
+     * Single-box personnel lookup — matches the term against any unique identifier
+     * (RAB ID, Service ID, Service ID Card No, NID / Old NID, Mobile, Office Mobile,
+     * Passport, Email). Returns all matches (Service ID can repeat).
+     */
+    searchByUniqueIdentifier(term: string, presentMemberOnly = false): Observable<EmpModel[]> {
+        const params: any = { term };
+        if (presentMemberOnly) params.presentMemberOnly = 'true';
+        return this.http
+            .get<EmpModel[]>(`${this.empApi}/EmployeeInfo/SearchByUniqueIdentifierAsyn`, { params })
+            .pipe(map((data) => data ?? []));
     }
 
     /** Gets display info from vw_EmployeeSearchInfo (Rank, Corps, Trade, MotherOrganization, MemberType). Call after search when employee is found. */
@@ -326,6 +382,76 @@ export class EmpService {
         form.append('employeeId', String(employeeId));
         form.append('file', file, 'signature.png');
         return this.http.post(`${this.empApi}/EmployeeInfo/UploadSignature`, form);
+    }
+
+    /**
+     * Enroll one or more face images for an employee into the Face Recognition
+     * service (proxied through the .NET backend). Used for later face search.
+     */
+    enrollFaces(employeeId: number, files: File[], source: string = 'enrollment'): Observable<any> {
+        const form = new FormData();
+        form.append('employeeId', String(employeeId));
+        files.forEach((f) => form.append('files', f, f.name));
+        form.append('source', source);
+        return this.http.post(`${this.empApi}/EmployeeInfo/EnrollFaces`, form);
+    }
+
+    /** Get the number of face images currently enrolled for an employee. */
+    getEnrolledFaceCount(employeeId: number): Observable<{ employeeId: number; photoCount: number }> {
+        return this.http.get<{ employeeId: number; photoCount: number }>(
+            `${this.empApi}/EmployeeInfo/GetEnrolledFaceCount/${employeeId}`
+        );
+    }
+
+    /** Remove all enrolled face images (and search vectors) for an employee. */
+    deleteEnrolledFaces(employeeId: number): Observable<any> {
+        return this.http.delete(`${this.empApi}/EmployeeInfo/DeleteEnrolledFaces/${employeeId}`);
+    }
+
+    /** Remove a single enrolled face image (and its search vector). */
+    deleteEnrolledFace(employeeId: number, photoId: string): Observable<any> {
+        return this.http.delete(`${this.empApi}/EmployeeInfo/DeleteEnrolledFace`, {
+            params: { employeeId: String(employeeId), photoId }
+        });
+    }
+
+    /**
+     * Recognize the most prominent face in an image against enrolled employees.
+     * Returns { matched, employee_id, confidence, candidates, ... }.
+     */
+    recognizeFace(file: File, sourceType: string = 'portal'): Observable<FaceRecognizeResult> {
+        const form = new FormData();
+        form.append('file', file, file.name);
+        form.append('sourceType', sourceType);
+        return this.http.post<FaceRecognizeResult>(`${this.empApi}/EmployeeInfo/RecognizeFace`, form);
+    }
+
+    /** List enrolled face photos (metadata) for an employee. */
+    getEnrolledFacePhotos(employeeId: number): Observable<EnrolledFacePhoto[]> {
+        return this.http.get<EnrolledFacePhoto[]>(
+            `${this.empApi}/EmployeeInfo/GetEnrolledFacePhotos/${employeeId}`
+        );
+    }
+
+    /** Fetch a single enrolled face image as a Blob (auth header via interceptor). */
+    getEnrolledFaceImageBlob(employeeId: number, photoId: string): Observable<Blob> {
+        return this.http.get(`${this.empApi}/EmployeeInfo/GetEnrolledFaceImage`, {
+            params: { employeeId: String(employeeId), photoId },
+            responseType: 'blob'
+        });
+    }
+
+    /** Paginated global face-search history. */
+    getFaceSearchHistory(pageNo: number, rowPerPage: number): Observable<{ datalist: FaceSearchHistoryItem[]; pages: { rows: number; totalPages: number }; retentionDays: number }> {
+        return this.http.get<{ datalist: FaceSearchHistoryItem[]; pages: { rows: number; totalPages: number }; retentionDays: number }>(
+            `${this.empApi}/EmployeeInfo/GetFaceSearchHistory`,
+            { params: { page_no: String(pageNo), row_per_page: String(rowPerPage) } }
+        );
+    }
+
+    /** The query image for a single history row, as a Blob. */
+    getFaceSearchImageBlob(id: number): Observable<Blob> {
+        return this.http.get(`${this.empApi}/EmployeeInfo/GetFaceSearchImage/${id}`, { responseType: 'blob' });
     }
 
     /** Get signature image URL for an employee. Returns the API URL string (not an Observable). */

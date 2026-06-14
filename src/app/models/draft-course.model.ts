@@ -63,3 +63,13 @@ export interface RftsTrainingRow {
     createdBy: string | null;
     createdDate: string | null;
 }
+
+/** Course-group header for /emp-rfts-completed — members loaded lazily on click. */
+export interface RftsCourseSummary {
+    courseNo: string | null;
+    courseTypeName: string | null;
+    courseNameDisplay: string | null;
+    dateFrom: string | null;
+    dateTo: string | null;
+    memberCount: number;
+}

@@ -122,12 +122,14 @@ export class EmpBasicInfo implements OnInit {
         employeeId: this.employeeId
     };
 
-    // Spouse Present address config (with "Same as Spouse Permanent" option)
+    // Spouse Present address config (with "Same As Member Present" option)
     spousePresentAddressConfig: AddressFormConfig = {
         title: 'Spouse Present Address',
         addressType: 'spousePresent',
         showSameAsPresent: true,
-        sameAsLabel: 'Same as Permanent Address',
+        sameAsLabel: 'Same As Member Present Address',
+        showSameAsSecondary: true,
+        sameAsSecondaryLabel: 'Same As Spouse Permanent Address',
         employeeId: this.employeeId
     };
 
@@ -530,6 +532,14 @@ export class EmpBasicInfo implements OnInit {
         }
     }
 
+    // Copy member present address data to spouse present address form
+    copyMemberPresentToSpousePresent(): void {
+        const presentData = this.presentAddressForm?.getFormData();
+        if (presentData?.data) {
+            this.spousePresentAddressForm?.populateFromSourceAddress(presentData.data);
+        }
+    }
+
     // Copy member permanent address data to spouse permanent address form
     copyMemberPermanentToSpousePermanent(): void {
         const permanentData = this.permanentAddressForm?.getFormData();
@@ -655,6 +665,68 @@ export class EmpBasicInfo implements OnInit {
         return null;
     }
 
+    /**
+     * When a (new) profile image is uploaded/updated, also enroll it into the
+     * face-recognition DB so the employee can be identified by face. Best-effort:
+     * a face-service failure (no face detected, low quality, photo limit, service
+     * down) must never block saving the employee — it only shows a toast.
+     */
+    private enrollProfileFace(employeeId: number, file: File | null): void {
+        if (!employeeId || !file) return;
+
+        // Validate the per-employee photo limit first so we don't blindly hit a
+        // 409 from the face service when the employee is already at the cap.
+        this.empService.getEnrolledFaceCount(employeeId).subscribe({
+            next: (res) => {
+                const count = res?.photoCount ?? 0;
+                if (count >= this.MAX_FACES_PER_EMPLOYEE) {
+                    this.messageService.add({
+                        severity: 'warn',
+                        summary: 'Face Limit Reached',
+                        detail: `This employee already has the maximum of ${this.MAX_FACES_PER_EMPLOYEE} face images. The profile photo was not added to face recognition — remove some from the Face Images screen first.`,
+                        life: 7000
+                    });
+                    return;
+                }
+                this.doEnrollProfileFace(employeeId, file);
+            },
+            // If the count check itself fails (service down), skip silently.
+            error: () => {}
+        });
+    }
+
+    private doEnrollProfileFace(employeeId: number, file: File): void {
+        this.empService.enrollFaces(employeeId, [file], 'id_card').subscribe({
+            next: (res: any) => {
+                if ((res?.photos_enrolled ?? 0) > 0) {
+                    this.messageService.add({
+                        severity: 'info',
+                        summary: 'Face Enrolled',
+                        detail: 'Profile photo was also added to the face-recognition database.'
+                    });
+                } else {
+                    this.messageService.add({
+                        severity: 'warn',
+                        summary: 'Face Not Enrolled',
+                        detail: 'Profile photo was saved but could not be used for face recognition (no clear face detected).'
+                    });
+                }
+            },
+            error: (err: any) => {
+                // Surface the cap explicitly if the service still reports it (race);
+                // otherwise stay silent — the employee is already saved.
+                if (err?.status === 409) {
+                    this.messageService.add({
+                        severity: 'warn',
+                        summary: 'Face Limit Reached',
+                        detail: `This employee already has the maximum of ${this.MAX_FACES_PER_EMPLOYEE} face images. The profile photo was not added to face recognition.`,
+                        life: 7000
+                    });
+                }
+            }
+        });
+    }
+
     private saveEmployeeWithFilesRefs(
         formattedData: any,
         filesReferencesJson: string | null,
@@ -671,6 +743,10 @@ export class EmpBasicInfo implements OnInit {
             formattedData.profileImages = profileImagesJson;
         }
 
+        // Capture the newly chosen profile image (if any) so we can also enroll
+        // it into the face-recognition DB after the employee is saved.
+        const profileFaceFile: File | null = this.selectedFile;
+
         // Determine whether to save or update
         const employeeRequest = this.isEditMode ? this.empService.updateEmployee(formattedData) : this.empService.saveEmployee(formattedData);
 
@@ -681,6 +757,8 @@ export class EmpBasicInfo implements OnInit {
 
                 if (employeeId) {
                     this.generatedEmployeeId = employeeId;
+                    // Mirror the profile image into the face-recognition DB (best-effort).
+                    this.enrollProfileFace(employeeId, profileFaceFile);
                     this.presentAddressConfig.employeeId = employeeId;
                     this.permanentAddressConfig.employeeId = employeeId;
                     this.spousePermanentAddressConfig.employeeId = employeeId;
@@ -876,6 +954,8 @@ export class EmpBasicInfo implements OnInit {
     postingForm!: FormGroup;
     imagePreview: string | null = null;
     selectedFile: File | null = null;
+    /** Per-employee face-image cap (mirrors the Face Images screen + face API). */
+    private readonly MAX_FACES_PER_EMPLOYEE = 10;
 
     // File references (for FilesReferences JSON). fileId set when loading existing refs.
     fileRows: { displayName: string; file: File | null; fileId?: number }[] = [];
@@ -1721,18 +1801,28 @@ export class EmpBasicInfo implements OnInit {
         return (selected.codeValueEN || '').toLowerCase() !== 'unmarried';
     }
 
+    /**
+     * Officer Types come from basic-setup/officer-type, stored as CommonCode rows with
+     * codeType="OfficerType", orgId=mother org and parentCodeId=member type (EmployeeType).
+     * So we fetch the org's OfficerType rows and filter them by the selected member type.
+     */
     loadOfficerType(codeId: number, orgId?: number | null) {
-        this.commonCodeService.getAllActiveCommonCodesByParentId(codeId).subscribe({
-            next: (res) => {
-                if (orgId == null) {
-                    this.officerTypes = res;
-                    return;
-                }
-                this.officerTypes = res.filter((item) => item.orgId === orgId || item.orgId === 0);
-            },
-            error: (err) => {
-                console.error(err);
-            }
+        const filterByMemberType = (res: CommonCodeModel[]) => {
+            this.officerTypes = (res ?? []).filter((item) => item.parentCodeId === codeId);
+        };
+
+        if (orgId == null) {
+            // No org yet — fall back to all OfficerType rows for this member type.
+            this.commonCodeService.getAllActiveCommonCodesType('OfficerType').subscribe({
+                next: filterByMemberType,
+                error: (err) => console.error(err)
+            });
+            return;
+        }
+
+        this.commonCodeService.getAllActiveCommonCodesByOrgIdAndType(orgId, 'OfficerType').subscribe({
+            next: filterByMemberType,
+            error: (err) => console.error(err)
         });
     }
     loadAppointment() {
@@ -1958,6 +2048,23 @@ export class EmpBasicInfo implements OnInit {
     /**
      * Check if a field is invalid
      */
+    /**
+     * Capitalize the first letter of each word in the given text field (fixes
+     * casing mistakes like "john doe" → "John Doe"). Runs on blur.
+     */
+    capitalizeWords(fieldName: string): void {
+        const field = this.postingForm.get(fieldName);
+        const value = field?.value;
+        if (typeof value !== 'string' || !value.trim()) return;
+        const formatted = value
+            .replace(/\s+/g, ' ')
+            .trim()
+            .replace(/\b\p{L}/gu, (ch) => ch.toUpperCase());
+        if (formatted !== value) {
+            field!.setValue(formatted);
+        }
+    }
+
     isFieldInvalid(fieldName: string): boolean {
         const field = this.postingForm.get(fieldName);
         return !!(field && field.invalid && (field.dirty || field.touched));

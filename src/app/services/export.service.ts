@@ -47,6 +47,14 @@ export interface ReportConfig {
     landscape?: boolean;
     /** Page margin in mm (default 20). */
     marginMm?: number;
+    /**
+     * Render the RAB letterhead (Government overline, "RAPID ACTION BATTALION"
+     * title, subtitle, and a SELECTION CRITERIA grid) so Word matches the
+     * frontend print design. Used by the statistics reports.
+     */
+    rabLetterhead?: boolean;
+    /** Label/value pairs shown in the SELECTION CRITERIA grid (letterhead mode). */
+    criteriaItems?: { label: string; value: string }[];
 }
 
 /** One section in a sectioned report: org-style heading + its own table. */
@@ -824,34 +832,112 @@ export class ExportService {
             return { makeHeaderRow, makeBodyRow, makeTable };
         };
 
-        const children: (Paragraph | Table)[] = [
-            new Paragraph({
-                children: [new TextRun({ text: config.title, bold: true, size: sizePageHeader, color: '1e3a5f', font })],
-                alignment: AlignmentType.CENTER,
-                spacing: { after: 200 },
-            }),
-            new Paragraph({
-                children: [new TextRun({ text: dateStr, size: sizePageHeader, color: '666666', font })],
-                alignment: AlignmentType.CENTER,
-                spacing: { after: (config.filterLines?.length) ? 150 : 300 },
-            }),
-            ...(config.filterLines?.length ? [new Paragraph({
-                children: config.filterLines.map((line, i) => new TextRun({
-                    text: (i > 0 ? '  |  ' : '') + line, size: 20, color: '333333', font,
-                })),
-                alignment: AlignmentType.CENTER,
-                spacing: { after: 300 },
-            })] : []),
-        ];
+        let children: (Paragraph | Table)[];
+
+        if (config.rabLetterhead) {
+            const isBn = config.lang === 'bn';
+            const overline = isBn ? 'গণপ্রজাতন্ত্রী বাংলাদেশ সরকার' : "GOVERNMENT OF THE PEOPLE'S REPUBLIC OF BANGLADESH";
+            const orgTitle = isBn ? 'র‍্যাপিড অ্যাকশন ব্যাটালিয়ন' : 'RAPID ACTION BATTALION';
+            const orgSubtitle = isBn ? 'বাংলাদেশ পুলিশ · সদর দপ্তর, কুর্মিটোলা, ঢাকা' : 'Bangladesh Police · Headquarters, Kurmitola, Dhaka';
+            const criteriaTitle = isBn ? 'নির্বাচন মানদণ্ড' : 'SELECTION CRITERIA';
+            const generatedLabel = isBn ? 'তারিখ' : 'GENERATED';
+            const items = config.criteriaItems ?? [];
+
+            children = [
+                new Paragraph({
+                    children: [new TextRun({ text: overline, size: 15, color: '555555', font, allCaps: !isBn })],
+                    alignment: AlignmentType.CENTER, spacing: { after: 60 },
+                }),
+                new Paragraph({
+                    children: [new TextRun({ text: orgTitle, bold: true, size: 40, color: '0b0b0b', font })],
+                    alignment: AlignmentType.CENTER, spacing: { after: 40 },
+                }),
+                new Paragraph({
+                    children: [new TextRun({ text: orgSubtitle, italics: true, size: 18, color: '555555', font })],
+                    alignment: AlignmentType.CENTER, spacing: { after: 80 },
+                }),
+                new Paragraph({
+                    children: [new TextRun({ text: '◆', size: 18, color: 'b78b3b', font })],
+                    alignment: AlignmentType.CENTER, spacing: { after: 120 },
+                }),
+                new Paragraph({
+                    children: [new TextRun({ text: config.title, bold: true, size: 26, color: '0b0b0b', font, allCaps: !isBn })],
+                    alignment: AlignmentType.CENTER, spacing: { after: 160 },
+                }),
+                new Paragraph({
+                    children: [new TextRun({ text: `◆ ${criteriaTitle}`, bold: true, size: 16, color: '4a4a4a', font, allCaps: !isBn }),
+                               new TextRun({ text: `        ${generatedLabel} · ${dateStr.toUpperCase()}`, size: 14, color: '888888', font })],
+                    spacing: { after: 100 },
+                }),
+            ];
+
+            // SELECTION CRITERIA grid: a bordered table, up to 3 label/value cells per row.
+            if (items.length > 0) {
+                const cellBorders = {
+                    top:    { style: BorderStyle.SINGLE, size: 1, color: 'e6e4de' },
+                    bottom: { style: BorderStyle.SINGLE, size: 1, color: 'e6e4de' },
+                    left:   { style: BorderStyle.SINGLE, size: 1, color: 'e6e4de' },
+                    right:  { style: BorderStyle.SINGLE, size: 1, color: 'e6e4de' },
+                };
+                const perRow = 3;
+                const cellW = Math.floor(totalDxa / perRow);
+                const critRows: TableRow[] = [];
+                for (let i = 0; i < items.length; i += perRow) {
+                    const slice = items.slice(i, i + perRow);
+                    while (slice.length < perRow) slice.push({ label: '', value: '' });
+                    critRows.push(new TableRow({
+                        cantSplit: true,
+                        children: slice.map(it => new TableCell({
+                            children: [
+                                new Paragraph({ children: [new TextRun({ text: it.label, size: 13, color: '8a8a8a', font, allCaps: !isBn })], spacing: { after: 20 } }),
+                                new Paragraph({ children: [new TextRun({ text: it.value, bold: true, size: 18, color: '0b0b0b', font })] }),
+                            ],
+                            borders: cellBorders,
+                            width: { size: cellW, type: WidthType.DXA },
+                        })),
+                    }));
+                }
+                children.push(new Table({
+                    width: { size: totalDxa, type: WidthType.DXA },
+                    layout: TableLayoutType.FIXED,
+                    columnWidths: Array.from({ length: perRow }, () => cellW),
+                    rows: critRows,
+                }));
+            }
+            children.push(new Paragraph({ children: [], spacing: { after: 200 } }));
+        } else {
+            children = [
+                new Paragraph({
+                    children: [new TextRun({ text: config.title, bold: true, size: sizePageHeader, color: '1e3a5f', font })],
+                    alignment: AlignmentType.CENTER,
+                    spacing: { after: 200 },
+                }),
+                new Paragraph({
+                    children: [new TextRun({ text: dateStr, size: sizePageHeader, color: '666666', font })],
+                    alignment: AlignmentType.CENTER,
+                    spacing: { after: (config.filterLines?.length) ? 150 : 300 },
+                }),
+                ...(config.filterLines?.length ? [new Paragraph({
+                    children: config.filterLines.map((line, i) => new TextRun({
+                        text: (i > 0 ? '  |  ' : '') + line, size: 20, color: '333333', font,
+                    })),
+                    alignment: AlignmentType.CENTER,
+                    spacing: { after: 300 },
+                })] : []),
+            ];
+        }
 
         const lastSectionIdx = config.sections.length - 1;
         config.sections.forEach((sec, idx) => {
-            children.push(new Paragraph({
-                children: [new TextRun({ text: sec.title, bold: true, size: sizeSectionHeader, font })],
-                spacing: { before: idx > 0 ? 200 : 0, after: 120 },
-                keepNext: true,
-                keepLines: true,
-            }));
+            // Skip the heading paragraph for untitled sections (e.g. a single-table report).
+            if (sec.title) {
+                children.push(new Paragraph({
+                    children: [new TextRun({ text: sec.title, bold: true, size: sizeSectionHeader, font })],
+                    spacing: { before: idx > 0 ? 200 : 0, after: 120 },
+                    keepNext: true,
+                    keepLines: true,
+                }));
+            }
             // Section-level columns override top-level columns when present.
             const cols = sec.columns ?? config.columns;
             const { makeHeaderRow, makeBodyRow, makeTable } = makeHelpers(cols);

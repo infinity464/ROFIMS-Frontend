@@ -329,7 +329,7 @@
                             Name English <span class="form-label-required">*</span>
                         </label>
                         <input pInputText class="w-full" placeholder="Enter name in English"
-                            formControlName="fullNameEN" />
+                            formControlName="fullNameEN" (blur)="capitalizeWords('fullNameEN')" />
                         @if (isFieldInvalid('fullNameEN')) {
                         <small class="form-error">{{ getErrorMessage('fullNameEN') }}</small>
                         }
@@ -368,7 +368,7 @@
                     <div class="form-field">
                         <label class="form-label">Spouse Name English</label>
                         <input pInputText class="w-full" placeholder="Enter spouse name"
-                            formControlName="spouseName" />
+                            formControlName="spouseName" (blur)="capitalizeWords('spouseName')" />
                     </div>
                 </div>
                 }
@@ -438,7 +438,8 @@
             [initialAddressData]="spousePresentAddress"
             (onSave)="saveSpousePresentAddress($event)"
             (onCancel)="cancelAddress()"
-            (onSameAsPresentRequest)="copySpousePermanentToSpousePresent()">
+            (onSameAsPresentRequest)="copyMemberPresentToSpousePresent()"
+            (onSameAsSecondaryRequest)="copySpousePermanentToSpousePresent()">
           </app-address-form>
         </div>
         }

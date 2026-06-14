@@ -16,8 +16,16 @@
     top: 0;
     z-index: 100;
 }
-.preview-actions { display: flex; gap: 0.5rem; }
-.preview-status-actions { display: flex; gap: 0.5rem; align-items: center; margin-left: auto; }
+.preview-actions {
+    display: flex;
+    gap: 0.5rem;
+}
+.preview-status-actions {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+    margin-left: auto;
+}
 
 .ns-status-badge {
     display: inline-flex;
@@ -31,7 +39,10 @@
     background: var(--surface-200);
     color: var(--text-color);
 }
-.ns-status-badge--pending { background: #fff3cd; color: #664d03; }
+.ns-status-badge--pending {
+    background: #fff3cd;
+    color: #664d03;
+}
 
 /* ── Loading / Error ──────────────────────────────── */
 .preview-loading,
@@ -71,8 +82,7 @@
     box-sizing: border-box;
     /* Bangla-friendly fallback list ensures Bangla glyphs render consistently
        across previews. Times New Roman remains the primary for Latin text. */
-    font-family: 'Times New Roman', 'SolaimanLipi', 'Noto Sans Bengali',
-                 'Nirmala UI', 'Vrinda', 'Shonar Bangla', Times, serif;
+    font-family: 'Times New Roman', 'SolaimanLipi', 'Noto Sans Bengali', 'Nirmala UI', 'Vrinda', 'Shonar Bangla', Times, serif;
     font-size: 10pt;
     color: #000;
     line-height: 1.7;
@@ -109,8 +119,12 @@
         background: #fff;
         z-index: 2;
     }
-    &::before { top: 0; }
-    &::after  { bottom: 0; }
+    &::before {
+        top: 0;
+    }
+    &::after {
+        bottom: 0;
+    }
 }
 
 .page-inner {
@@ -139,7 +153,7 @@
     left: -9999px;
     top: 0;
     width: 215.9mm;
-    padding: 0 10mm;            /* horizontal only – keeps inner width = 195.9mm (same as .a4-paper) */
+    padding: 0 10mm; /* horizontal only – keeps inner width = 195.9mm (same as .a4-paper) */
     box-sizing: border-box;
     font-family: 'Times New Roman', Times, serif;
     font-size: 10pt;
@@ -230,7 +244,8 @@
     font-size: 7pt;
     margin: 4px 0 4px 8px;
     table-layout: fixed;
-    th, td {
+    th,
+    td {
         border: 1px solid #000;
         padding: 4px 6px;
         text-align: center;
@@ -244,7 +259,8 @@
         text-transform: uppercase;
     }
     // Serial column stays narrow
-    th:first-child, td:first-child {
+    th:first-child,
+    td:first-child {
         width: 30px;
         min-width: 30px;
     }
@@ -257,34 +273,104 @@
     font-weight: bold;
     text-decoration: underline;
 }
-@counter-style ns-bangla-alpha { system: alphabetic; symbols: "অ" "আ" "ই" "ঈ" "উ" "ঊ" "ঋ" "এ" "ঐ" "ও" "ঔ" "ক" "খ" "গ" "ঘ" "ঙ" "চ" "ছ" "জ" "ঝ" "ঞ" "ট" "ঠ" "ড" "ঢ" "ণ" "ত" "থ" "দ" "ধ" "ন" "প" "ফ" "ব" "ভ" "ম" "য" "র" "ল" "শ" "ষ" "স" "হ"; suffix: " "; }
-@counter-style ns-bangla-ka { system: alphabetic; symbols: "ক" "খ" "গ" "ঘ" "ঙ" "চ" "ছ" "জ" "ঝ" "ঞ" "ট" "ঠ" "ড" "ঢ" "ণ" "ত" "থ" "দ" "ধ" "ন" "প" "ফ" "ব" "ভ" "ম" "য" "র" "ল" "শ" "ষ" "স" "হ"; suffix: " "; }
+@counter-style ns-bangla-alpha {
+    system: alphabetic;
+    symbols: 'অ' 'আ' 'ই' 'ঈ' 'উ' 'ঊ' 'ঋ' 'এ' 'ঐ' 'ও' 'ঔ' 'ক' 'খ' 'গ' 'ঘ' 'ঙ' 'চ' 'ছ' 'জ' 'ঝ' 'ঞ' 'ট' 'ঠ' 'ড' 'ঢ' 'ণ' 'ত' 'থ' 'দ' 'ধ' 'ন' 'প' 'ফ' 'ব' 'ভ' 'ম' 'য' 'র' 'ল' 'শ' 'ষ' 'স' 'হ';
+    suffix: ' ';
+}
+@counter-style ns-bangla-ka {
+    system: alphabetic;
+    symbols: 'ক' 'খ' 'গ' 'ঘ' 'ঙ' 'চ' 'ছ' 'জ' 'ঝ' 'ঞ' 'ট' 'ঠ' 'ড' 'ঢ' 'ণ' 'ত' 'থ' 'দ' 'ধ' 'ন' 'প' 'ফ' 'ব' 'ভ' 'ম' 'য' 'র' 'ল' 'শ' 'ষ' 'স' 'হ';
+    suffix: ' ';
+}
 
 @mixin ns-rich-list-styles() {
-    ::ng-deep ol, ::ng-deep ul { padding-left: 1.5em; margin: 0.4rem 0; }
-    ::ng-deep ol > li, ::ng-deep ul > li { list-style: none !important; }
-    ::ng-deep ol { counter-reset: ns-list-0; }
-    ::ng-deep li[data-list="ordered"] { counter-increment: ns-list-0; }
-    ::ng-deep li[data-list="ordered"]::before { content: counter(ns-list-0, decimal) '. '; margin-right: 0.3em; }
-    ::ng-deep li[data-list="upper-roman"] { counter-increment: ns-list-0; }
-    ::ng-deep li[data-list="upper-roman"]::before { content: counter(ns-list-0, upper-roman) '. '; margin-right: 0.3em; }
-    ::ng-deep li[data-list="lower-roman"] { counter-increment: ns-list-0; }
-    ::ng-deep li[data-list="lower-roman"]::before { content: counter(ns-list-0, lower-roman) '. '; margin-right: 0.3em; }
-    ::ng-deep li[data-list="upper-alpha"] { counter-increment: ns-list-0; }
-    ::ng-deep li[data-list="upper-alpha"]::before { content: counter(ns-list-0, upper-alpha) '. '; margin-right: 0.3em; }
-    ::ng-deep li[data-list="lower-alpha"] { counter-increment: ns-list-0; }
-    ::ng-deep li[data-list="lower-alpha"]::before { content: counter(ns-list-0, lower-alpha) '. '; margin-right: 0.3em; }
-    ::ng-deep li[data-list="bangla-number"] { counter-increment: ns-list-0; }
-    ::ng-deep li[data-list="bangla-number"]::before { content: counter(ns-list-0, bengali) '. '; margin-right: 0.3em; }
-    ::ng-deep li[data-list="bullet"]::before { content: '• '; margin-right: 0.3em; }
-    ::ng-deep li[data-list="bangla-alpha"] { counter-increment: ns-list-0; }
-    ::ng-deep li[data-list="bangla-alpha"]::before { content: counter(ns-list-0, ns-bangla-alpha); margin-right: 0.3em; }
-    ::ng-deep li[data-list="bangla-ka"] { counter-increment: ns-list-0; }
-    ::ng-deep li[data-list="bangla-ka"]::before { content: counter(ns-list-0, ns-bangla-ka); margin-right: 0.3em; }
+    ::ng-deep ol,
+    ::ng-deep ul {
+        padding-left: 1.5em;
+        margin: 0.4rem 0;
+    }
+    ::ng-deep ol > li,
+    ::ng-deep ul > li {
+        list-style: none !important;
+    }
+    ::ng-deep ol {
+        counter-reset: ns-list-0;
+    }
+    ::ng-deep li[data-list='ordered'] {
+        counter-increment: ns-list-0;
+    }
+    ::ng-deep li[data-list='ordered']::before {
+        content: counter(ns-list-0, decimal) '. ';
+        margin-right: 0.3em;
+    }
+    ::ng-deep li[data-list='upper-roman'] {
+        counter-increment: ns-list-0;
+    }
+    ::ng-deep li[data-list='upper-roman']::before {
+        content: counter(ns-list-0, upper-roman) '. ';
+        margin-right: 0.3em;
+    }
+    ::ng-deep li[data-list='lower-roman'] {
+        counter-increment: ns-list-0;
+    }
+    ::ng-deep li[data-list='lower-roman']::before {
+        content: counter(ns-list-0, lower-roman) '. ';
+        margin-right: 0.3em;
+    }
+    ::ng-deep li[data-list='upper-alpha'] {
+        counter-increment: ns-list-0;
+    }
+    ::ng-deep li[data-list='upper-alpha']::before {
+        content: counter(ns-list-0, upper-alpha) '. ';
+        margin-right: 0.3em;
+    }
+    ::ng-deep li[data-list='lower-alpha'] {
+        counter-increment: ns-list-0;
+    }
+    ::ng-deep li[data-list='lower-alpha']::before {
+        content: counter(ns-list-0, lower-alpha) '. ';
+        margin-right: 0.3em;
+    }
+    ::ng-deep li[data-list='bangla-number'] {
+        counter-increment: ns-list-0;
+    }
+    ::ng-deep li[data-list='bangla-number']::before {
+        content: counter(ns-list-0, bengali) '. ';
+        margin-right: 0.3em;
+    }
+    ::ng-deep li[data-list='bullet']::before {
+        content: '• ';
+        margin-right: 0.3em;
+    }
+    ::ng-deep li[data-list='bangla-alpha'] {
+        counter-increment: ns-list-0;
+    }
+    ::ng-deep li[data-list='bangla-alpha']::before {
+        content: counter(ns-list-0, ns-bangla-alpha);
+        margin-right: 0.3em;
+    }
+    ::ng-deep li[data-list='bangla-ka'] {
+        counter-increment: ns-list-0;
+    }
+    ::ng-deep li[data-list='bangla-ka']::before {
+        content: counter(ns-list-0, ns-bangla-ka);
+        margin-right: 0.3em;
+    }
     /* Fallback: ol/ul li without data-list (Quill default) */
-    ::ng-deep ol > li:not([data-list]) { counter-increment: ns-list-0; }
-    ::ng-deep ol > li:not([data-list])::before { content: counter(ns-list-0, decimal) '. ' !important; margin-right: 0.3em; display: inline; }
-    ::ng-deep ul > li:not([data-list])::before { content: '• ' !important; margin-right: 0.3em; display: inline; }
+    ::ng-deep ol > li:not([data-list]) {
+        counter-increment: ns-list-0;
+    }
+    ::ng-deep ol > li:not([data-list])::before {
+        content: counter(ns-list-0, decimal) '. ' !important;
+        margin-right: 0.3em;
+        display: inline;
+    }
+    ::ng-deep ul > li:not([data-list])::before {
+        content: '• ' !important;
+        margin-right: 0.3em;
+        display: inline;
+    }
 }
 
 .ns-cell-ref {
@@ -295,9 +381,16 @@
     flex-wrap: wrap;
     gap: 0 4px;
 
-    .ns-ref-content { flex: 1; min-width: 0; }
-    ::ng-deep .ns-ref-content p { margin: 0 0 0.2rem; }
-    ::ng-deep .ns-ref-content p:last-child { margin-bottom: 0; }
+    .ns-ref-content {
+        flex: 1;
+        min-width: 0;
+    }
+    ::ng-deep .ns-ref-content p {
+        margin: 0 0 0.2rem;
+    }
+    ::ng-deep .ns-ref-content p:last-child {
+        margin-bottom: 0;
+    }
     @include ns-rich-list-styles();
 }
 .ns-ref-key {
@@ -323,8 +416,12 @@
     align-items: center;
     gap: 3px;
     white-space: nowrap;
-    &:hover { background: #eff6ff; }
-    i { font-size: 7pt; }
+    &:hover {
+        background: #eff6ff;
+    }
+    i {
+        font-size: 7pt;
+    }
 }
 
 /* Body paragraph (serial + text) */
@@ -381,13 +478,23 @@
         hyphens: none;
         white-space: normal;
     }
-    ::ng-deep p          { margin: 0 0 0.4rem; }
-    ::ng-deep p:last-child { margin-bottom: 0; }
+    ::ng-deep p {
+        margin: 0 0 0.4rem;
+    }
+    ::ng-deep p:last-child {
+        margin-bottom: 0;
+    }
 
     /* Preserve rich editor alignment (Quill classes + inline styles) */
-    ::ng-deep .ql-align-justify { text-align: justify !important; }
-    ::ng-deep .ql-align-center { text-align: center !important; }
-    ::ng-deep .ql-align-right { text-align: right !important; }
+    ::ng-deep .ql-align-justify {
+        text-align: justify !important;
+    }
+    ::ng-deep .ql-align-center {
+        text-align: center !important;
+    }
+    ::ng-deep .ql-align-right {
+        text-align: right !important;
+    }
 
     @include ns-rich-list-styles();
 }
@@ -419,7 +526,8 @@
         font-size: 7pt;
         line-height: 1.2;
     }
-    th, td {
+    th,
+    td {
         border: 1px solid #000;
         padding: 1px 2px;
         text-align: center;
@@ -433,8 +541,13 @@
         text-transform: uppercase;
     }
     // Make Name column (5th) wider
-    th:nth-child(5), td:nth-child(5) { min-width: 120px; }
-    tr:nth-child(even) { background: #fafafa; }
+    th:nth-child(5),
+    td:nth-child(5) {
+        min-width: 120px;
+    }
+    tr:nth-child(even) {
+        background: #fafafa;
+    }
 
     .ns-posting-note {
         font-size: 10pt;
@@ -555,7 +668,8 @@
         letter-spacing: 0.5px;
     }
 
-    input, textarea {
+    input,
+    textarea {
         font-size: 10pt;
         font-family: 'Times New Roman', Times, serif;
     }
@@ -738,7 +852,9 @@
 }
 
 @media print {
-    .no-print { display: none !important; }
+    .no-print {
+        display: none !important;
+    }
 
     :host {
         background: #fff !important;
@@ -792,7 +908,9 @@
 
 /* ── Responsive ───────────────────────────────────── */
 @media screen and (max-width: 1200px) {
-    .a4-paper-container { padding: 1rem; }
+    .a4-paper-container {
+        padding: 1rem;
+    }
     .a4-paper {
         width: 100%;
         min-height: auto;
@@ -832,7 +950,9 @@
         align-items: center;
         gap: 0.5rem;
 
-        i { color: var(--primary-color); }
+        i {
+            color: var(--primary-color);
+        }
     }
 }
 
@@ -906,8 +1026,12 @@
         background: rgba(255, 255, 255, 0.06);
     }
 
-    .ns-back-from { color: #fca5a5; }
-    .ns-back-to   { color: #93c5fd; }
+    .ns-back-from {
+        color: #fca5a5;
+    }
+    .ns-back-to {
+        color: #93c5fd;
+    }
 }
 
 /* ── File Attachments (view mode, outside page) ──────── */
@@ -929,7 +1053,9 @@
         align-items: center;
         gap: 6px;
 
-        i { font-size: 1rem; }
+        i {
+            font-size: 1rem;
+        }
     }
 
     .ns-file-list {
@@ -972,7 +1098,170 @@
                 background: #eff6ff;
             }
 
-            i { font-size: 0.9rem; }
+            i {
+                font-size: 0.9rem;
+            }
         }
+    }
+}
+
+/* ════════════════════════════════════════════════════════════════════
+   DARK MODE  (active when an ancestor carries .app-dark)
+   The note-sheet paper itself stays WHITE — only the surrounding
+   chrome (toolbar, filter bar, preview backdrop) is darkened.
+   ════════════════════════════════════════════════════════════════════ */
+:host-context(.app-dark) {
+    /* Preview backdrop — ROFIMS standard dark navy */
+    background: #2a2d35;
+
+    /* ── Top toolbar ───────────────────────────────────────── */
+    .preview-header {
+        background: #12151a;
+        border-bottom: 1px solid #3a3f4e;
+    }
+
+    /* Icon / outlined buttons in the toolbar: subtle bordered chips */
+    .preview-header ::ng-deep .p-button.p-button-outlined,
+    .preview-header ::ng-deep .p-button.p-button-text {
+        border: 1px solid #3a3f4e;
+        background: #1a1e27;
+        color: #cbd5e1;
+
+        &:hover {
+            background: #232838;
+            border-color: #4a5062;
+        }
+    }
+
+    /* ── Action buttons — clearly distinguishable dark tints ── */
+    // Approve / Submit / Save → dark green
+    .preview-header ::ng-deep .p-button.p-button-success {
+        background: rgba(34, 197, 94, 0.14);
+        border: 1px solid #2e7d32;
+        color: #4ade80;
+        &:hover {
+            background: rgba(34, 197, 94, 0.24);
+            border-color: #388e3c;
+        }
+    }
+    // Decline → dark red
+    .preview-header ::ng-deep .p-button.p-button-danger {
+        background: rgba(239, 68, 68, 0.14);
+        border: 1px solid #b71c1c;
+        color: #f87171;
+        &:hover {
+            background: rgba(239, 68, 68, 0.24);
+            border-color: #c62828;
+        }
+    }
+    // Back → dark slate
+    .preview-header ::ng-deep .p-button.p-button-secondary {
+        background: #232834;
+        border: 1px solid #3a3f4e;
+        color: #cbd5e1;
+        &:hover {
+            background: #2c3340;
+            border-color: #4a5062;
+        }
+    }
+    // Edit → dark amber
+    .preview-header ::ng-deep .p-button.p-button-warning {
+        background: rgba(245, 158, 11, 0.14);
+        border: 1px solid #b45309;
+        color: #fbbf24;
+        &:hover {
+            background: rgba(245, 158, 11, 0.24);
+            border-color: #d97706;
+        }
+    }
+    // Print Preview (info) → dark blue
+    .preview-header ::ng-deep .p-button.p-button-info {
+        background: rgba(59, 130, 246, 0.14);
+        border: 1px solid #1d4ed8;
+        color: #60a5fa;
+        &:hover {
+            background: rgba(59, 130, 246, 0.24);
+            border-color: #2563eb;
+        }
+    }
+
+    /* Status / step chips in the toolbar */
+    .ns-status-badge {
+        background: #1e2230;
+        color: #cbd5e1;
+        border: 1px solid #3a3f4e;
+    }
+    .ns-status-badge--pending {
+        background: rgba(234, 179, 8, 0.16);
+        color: #fcd34d;
+        border-color: #92670c;
+    }
+    .ns-status-badge--step {
+        background: rgba(34, 197, 94, 0.14);
+        color: #4ade80;
+        border-color: #2e7d32;
+    }
+
+    /* ── Filter / export bar ───────────────────────────────── */
+    .export-options-bar {
+        background: #1e2230 !important;
+        border: 1px solid #3a3f4e;
+        color: #cbd5e1;
+
+        span,
+        label {
+            color: #cbd5e1;
+        }
+
+        /* Selected checkboxes → green chips with dark green border */
+        ::ng-deep .p-checkbox.p-checkbox-checked .p-checkbox-box {
+            background: rgba(34, 197, 94, 0.18);
+            border-color: #2e7d32;
+        }
+        ::ng-deep .p-checkbox.p-checkbox-checked .p-checkbox-icon {
+            color: #4ade80;
+        }
+    }
+
+    /* ── Loading / error states on the dark backdrop ───────── */
+    .preview-loading,
+    .preview-error {
+        color: #94a3b8;
+    }
+
+    /* ── Supporting Documents section ──────────────────────── */
+    .ns-supporting-docs {
+        background: #1e2230;
+        border: 1px solid #3a3f4e;
+
+        h3 {
+            color: #e2e8f0;
+        }
+    }
+    .ns-doc-item {
+        background: #12151a;
+        border: 1px solid #3a3f4e;
+
+        .ns-doc-name {
+            color: #cbd5e1;
+        }
+        i {
+            color: #94a3b8;
+        }
+
+        &:hover {
+            background: #232838;
+            border-color: #4a5062;
+        }
+    }
+
+    /* ════════════════════════════════════════════════════════
+       Note-sheet paper: stays WHITE. Just a stronger drop shadow
+       so it reads clearly against the dark backdrop.
+       ════════════════════════════════════════════════════════ */
+    .a4-paper {
+        background: #fff;
+        color: #000;
+        box-shadow: 0 10px 40px rgba(0, 0, 0, 0.6);
     }
 }

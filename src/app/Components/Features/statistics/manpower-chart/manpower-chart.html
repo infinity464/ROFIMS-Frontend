@@ -31,6 +31,9 @@
             </button>
         </div>
 
+        <!-- RAB org-tree cascade filter (collapsible) -->
+        <app-org-tree-filter (filterChange)="onOrgTreeFilter($event)"></app-org-tree-filter>
+
         <!-- Row 2: centered title -->
         <div class="chart-header-title-block">
             <div class="chart-main-title">MANPOWER DISTRIBUTION CHARTS</div>

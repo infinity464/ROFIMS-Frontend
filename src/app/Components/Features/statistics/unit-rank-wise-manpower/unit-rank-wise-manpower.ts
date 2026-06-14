@@ -20,6 +20,7 @@ import {
     type UnitRankCell,
     type UnitRankWiseManpowerResponse
 } from '@/services/statistics.service';
+import { RabReportPrintService } from '../shared/rab-report-print.service';
 
 /** One block in the report — wings of a selected RAB Unit, or top-level units
  *  when nothing is selected. The banner is rendered only when titleEN is non-empty. */
@@ -86,8 +87,27 @@ export class UnitRankWiseManpowerComponent implements OnInit {
         private _userMenuService: UserMenuService,
         private statisticsService: StatisticsService,
         private exportService: ExportService,
-        private masterBasicSetup: MasterBasicSetupService
+        private masterBasicSetup: MasterBasicSetupService,
+        private rabPrint: RabReportPrintService
     ) {}
+
+    /** Label/value pairs for the print letterhead's SELECTION CRITERIA grid. */
+    private buildCriteriaItems(): { label: string; value: string }[] {
+        const bn = this.lang === 'bn';
+        const items: { label: string; value: string }[] = [];
+        if (this.selectedRabUnitIds.length > 0) {
+            const names = this.rabUnitOptions.filter(o => this.selectedRabUnitIds.includes(o.value)).map(o => o.label);
+            if (names.length) items.push({ label: bn ? 'ইউনিট' : 'UNIT', value: names.join(', ') });
+        }
+        const accessNames = (bn ? this.accessibleRabUnitNamesBN : this.accessibleRabUnitNames) ?? this.accessibleRabUnitNames;
+        if (accessNames && accessNames.length > 0) items.push({ label: bn ? 'এক্সেস ইউনিট' : 'ACCESS UNITS', value: accessNames.join(', ') });
+        if (this.selectedMergeMemberTypeIds.length > 0) {
+            const names = this.memberTypeOptions.filter(o => this.selectedMergeMemberTypeIds.includes(o.value)).map(o => o.label);
+            if (names.length) items.push({ label: bn ? 'একীভূত সদস্য ধরণ' : 'MERGED MEMBER TYPES', value: names.join(', ') });
+        }
+        if (items.length === 0) items.push({ label: bn ? 'পরিসর' : 'SCOPE', value: bn ? 'সকল ইউনিট' : 'All Unit' });
+        return items;
+    }
 
     @HostListener('document:click')
     onDocumentClick(): void {
@@ -342,6 +362,25 @@ export class UnitRankWiseManpowerComponent implements OnInit {
             showPageNumbers: true
         };
 
+        // Print uses the shared RAB letterhead (frontend only), landscape, with the
+        // two-row grouped header (each rank → Auth/Held).
+        if (type === 'print') {
+            this.rabPrint.print({
+                lang: this.lang,
+                reportTitle: this.titleLabel,
+                landscape: true,
+                criteriaItems: this.buildCriteriaItems(),
+                columns: [],
+                groupedHeader: {
+                    leading: [{ label: this.unitHeader, align: 'left' }],
+                    groups: [...this.ranks.map(c => this.rankLabel(c)), this.totalHeader],
+                    subHeaders: [this.authHeader, this.heldHeader]
+                },
+                sections: matrixSections
+            });
+            return;
+        }
+
         try {
             this.exporting = true;
             switch (type) {
@@ -351,19 +390,12 @@ export class UnitRankWiseManpowerComponent implements OnInit {
                 case 'excel':
                     this.exportService.exportExcelMatrix(matrixConfig);
                     break;
-                case 'pdf':
-                case 'print': {
-                    // PDF opens as a preview tab; Print opens a popup with the PDF
-                    // in an iframe and auto-triggers the browser's print dialog.
+                case 'pdf': {
                     const doc = this.exportService.buildMatrixWordDoc(matrixConfig);
                     const docxBlob = await Packer.toBlob(doc);
                     const pdfBlob = await this.convertDocxToPdf(docxBlob);
                     const pdfUrl = URL.createObjectURL(pdfBlob);
-                    if (type === 'pdf') {
-                        window.open(pdfUrl, '_blank');
-                    } else {
-                        this.exportService.openPdfPrintPopup(pdfUrl);
-                    }
+                    window.open(pdfUrl, '_blank');
                     break;
                 }
             }

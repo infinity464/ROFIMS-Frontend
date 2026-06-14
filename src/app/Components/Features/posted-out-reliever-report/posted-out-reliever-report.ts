@@ -231,9 +231,8 @@ export class PostedOutRelieverReportComponent implements OnInit, OnDestroy {
         const bn = this.lang === 'bn';
         const columns = [
             t['col.ser'], t['col.postedOutSvcId'], t['col.postedOutName'],
-            t['col.relieverSvcId'], t['col.relieverName'],
+            t['col.relieverSvcId'], t['col.rank'], t['col.corps'], t['col.trade'], t['col.relieverName'],
             t['col.motherOrg'], t['col.motherOrgUnit'], t['col.memberType'],
-            t['col.rank'], t['col.corps'], t['col.trade'],
             t['col.postingOrderDate'], t['col.entryStatus'],
         ];
         const rows = this.records.map((r, i) => [
@@ -241,13 +240,13 @@ export class PostedOutRelieverReportComponent implements OnInit, OnDestroy {
             this.postedOutSvcId(r),
             (bn ? r.postedOutNameBN : r.postedOutName) ?? '-',
             this.relieverSvcId(r),
+            (bn ? r.rankNameBN : r.rankName) ?? '-',
+            (bn ? r.corpsNameBN : r.corpsName) ?? '-',
+            (bn ? r.tradeNameBN : r.tradeName) ?? '-',
             r.relieverNameBangla ?? '-',
             (bn ? r.motherOrgNameBN : r.motherOrgName) ?? '-',
             (bn ? r.motherOrgUnitNameBN : r.motherOrgUnitName) ?? '-',
             (bn ? r.memberTypeNameBN : r.memberTypeName) ?? '-',
-            (bn ? r.rankNameBN : r.rankName) ?? '-',
-            (bn ? r.corpsNameBN : r.corpsName) ?? '-',
-            (bn ? r.tradeNameBN : r.tradeName) ?? '-',
             this.formatDisplay(r.postingOrderDate),
             this.entryStatusText(r),
         ]);

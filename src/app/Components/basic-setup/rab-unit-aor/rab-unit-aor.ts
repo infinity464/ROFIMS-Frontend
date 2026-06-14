@@ -4,6 +4,7 @@ import { Router } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { forkJoin } from 'rxjs';
+import { defaultIfEmpty } from 'rxjs/operators';
 import { ConfirmationService, MessageService } from 'primeng/api';
 
 import { FluidModule } from 'primeng/fluid';
@@ -257,7 +258,7 @@ export class RabUnitAor implements OnInit {
 
     private loadDistrictsForDivisions(divisionIds: number[]): void {
         const calls = divisionIds.map((id) => this.master.getByParentId(id));
-        forkJoin(calls).subscribe({
+        forkJoin(calls).pipe(defaultIfEmpty([] as CommonCode[][])).subscribe({
             next: (districtLists) => {
                 const seen = new Set<number>();
                 const options: Option[] = [];
@@ -292,7 +293,7 @@ export class RabUnitAor implements OnInit {
 
     private loadUpazilasForDistricts(districtIds: number[]): void {
         const calls = districtIds.map((id) => this.master.getByParentId(id));
-        forkJoin(calls).subscribe({
+        forkJoin(calls).pipe(defaultIfEmpty([] as CommonCode[][])).subscribe({
             next: (upazilaLists) => {
                 const owned = this.upazilaOwnership();
                 const seen = new Set<number>();
@@ -606,7 +607,7 @@ export class RabUnitAor implements OnInit {
                     next: (divs) => {
                         const divisionMap: Record<number, string> = Object.fromEntries((divs ?? []).map((d) => [d.codeId, d.codeValueEN ?? '']));
                         const districtCalls = [...allDivisionIds].map((id) => this.master.getByParentId(id));
-                        forkJoin(districtCalls).subscribe({
+                        forkJoin(districtCalls).pipe(defaultIfEmpty([] as CommonCode[][])).subscribe({
                             next: (districtLists) => {
                                 const districtMap: Record<number, string> = {};
                                 (districtLists ?? []).forEach((dl) => {
@@ -615,7 +616,7 @@ export class RabUnitAor implements OnInit {
                                     });
                                 });
                                 const upazilaCalls = [...allDistrictIds].map((id) => this.master.getByParentId(id));
-                                forkJoin(upazilaCalls).subscribe({
+                                forkJoin(upazilaCalls).pipe(defaultIfEmpty([] as CommonCode[][])).subscribe({
                                     next: (upazilaLists) => {
                                         const upazilaMap: Record<number, string> = {};
                                         (upazilaLists ?? []).forEach((ul) => {

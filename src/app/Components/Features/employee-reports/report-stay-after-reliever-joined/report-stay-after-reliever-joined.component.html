@@ -1,209 +1,263 @@
 <p-toast position="top-center"></p-toast>
 
 <div class="employee-reports-page">
-    <div class="report-filter-card">
-        <div class="report-filter-card-title">
-            <h1 class="report-page-title">Nominal Roll of Stay in RAB after Reliever Joined</h1>
-        </div>
-
-        <div class="report-filter-header" [class.open]="filterOpen" (click)="toggleFilter()" role="button" tabindex="0" (keydown.enter)="toggleFilter()" (keydown.space)="toggleFilter()">
-            <div class="report-filter-header-left">
-                <div class="report-filter-icon">
-                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-                        <path d="M2 4h12M4 8h8M6 12h4" stroke="var(--primary-color)" stroke-width="1.8" stroke-linecap="round"/>
-                    </svg>
-                </div>
-                <div>
-                    <div class="report-filter-title">Search &amp; filter</div>
-                    <div class="report-filter-subtitle">{{ filterSubtitle() }}</div>
-                </div>
+<div class="report-filter-card">
+    <div class="report-filter-card-title">
+        <h1 class="report-page-title">Posted Out/In Person Report</h1>
+    </div>
+    <div class="report-filter-header" [class.open]="filterOpen" (click)="toggleFilter()" role="button" tabindex="0" (keydown.enter)="toggleFilter()" (keydown.space)="toggleFilter()">
+        <div class="report-filter-header-left">
+            <div class="report-filter-icon">
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                    <path d="M2 4h12M4 8h8M6 12h4" stroke="var(--primary-color)" stroke-width="1.8" stroke-linecap="round"/>
+                </svg>
             </div>
-            <div class="report-filter-header-right">
-                @if (activeFilterCount > 0) {
-                    <span class="ds-field-count">{{ activeFilterCount }} active</span>
-                }
-                <div class="report-chevron">
-                    <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
-                        <path d="M2 4l4 4 4-4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
-                    </svg>
-                </div>
+            <div>
+                <div class="report-filter-title">{{ lang === 'en' ? 'Search' : 'অনুসন্ধান' }}</div>
+                <div class="report-filter-subtitle">{{ filterSubtitle() }}</div>
             </div>
         </div>
-
-        <div class="report-filter-body" [class.open]="filterOpen">
-            <div class="report-filter-body-inner">
-                <div class="ds-criteria-section">
-                    <div class="ds-field-group">
-                        <div class="ds-group-divider">
-                            <span class="ds-group-label">Filters</span>
-                            <span class="ds-group-line"></span>
-                        </div>
-                        <div class="ds-criteria-grid">
-                            <div class="ds-field">
-                                <label class="ds-field-label">Mother Organization</label>
-                                <p-select
-                                    [options]="orgOptions"
-                                    [(ngModel)]="selectedOrgId"
-                                    (onChange)="onOrgChange()"
-                                    [optionLabel]="lang === 'bn' ? 'labelBn' : 'label'"
-                                    optionValue="value"
-                                    placeholder="All Mother Organizations"
-                                    styleClass="w-full"
-                                    [filter]="true"
-                                    [showClear]="true"
-                                    appendTo="body">
-                                </p-select>
-                            </div>
-                            <div class="ds-field">
-                                <label class="ds-field-label">Rank</label>
-                                <p-select
-                                    [options]="rankOptions"
-                                    [(ngModel)]="selectedRankId"
-                                    [optionLabel]="lang === 'bn' ? 'labelBn' : 'label'"
-                                    optionValue="value"
-                                    [placeholder]="selectedOrgId ? 'All Ranks' : 'Select a Mother Org first'"
-                                    [disabled]="selectedOrgId == null"
-                                    styleClass="w-full"
-                                    [filter]="true"
-                                    [showClear]="true"
-                                    appendTo="body">
-                                </p-select>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="ds-actions">
-                    <button type="button" class="ds-btn-clear" (click)="clearFilters()">
-                        <i class="pi pi-times"></i>
-                        Clear All
-                    </button>
-                    <button type="button" class="ds-btn-search" (click)="search()" [disabled]="loading">
-                        <i class="pi pi-search"></i>
-                        Search
-                    </button>
-                </div>
+        <div class="report-filter-header-right">
+            <span class="report-filters-badge" [class.show]="activeFilterCount > 0">{{ activeFilterCount }} active</span>
+            <div class="report-chevron">
+                <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+                    <path d="M2 4l4 4 4-4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
             </div>
         </div>
     </div>
 
-    @if (searched) {
-    <div class="report-results-card">
-        <div class="report-results-header">
-            <div class="report-toolbar-row">
-                <div class="report-results-actions">
-                    <button type="button" class="report-lang-toggle" (click)="toggleLang()">
-                        {{ lang === 'en' ? 'বাংলা' : 'English' }}
-                    </button>
-                    <div class="report-export-wrap">
-                        <button type="button" class="report-btn-export"
-                                (click)="toggleExportDropdown($event)"
-                                [disabled]="loading || exporting || list.length === 0">
-                            @if (exporting) {
-                                <i class="pi pi-spin pi-spinner" style="font-size:13px"></i>
-                                Generating...
-                            } @else {
-                                <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
-                                    <path d="M6.5 1v7M3.5 5.5l3 3 3-3M1.5 10.5h10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-                                </svg>
-                                Export
-                            }
-                        </button>
-                        @if (exportDropdownOpen) {
-                        <div class="report-export-dropdown" (click)="$event.stopPropagation()">
-                            <button type="button" class="report-export-item report-export-print" (click)="exportAs('print')">
-                                <i class="pi pi-print" style="font-size:0.75rem"></i> Print
-                            </button>
-                            <button type="button" class="report-export-item report-export-pdf" (click)="exportAs('pdf')">
-                                <span class="report-export-icon">&#11015;</span> PDF
-                            </button>
-                            <button type="button" class="report-export-item report-export-word" (click)="exportAs('word')">
-                                <span class="report-export-icon">&#11015;</span> Word
-                            </button>
-                            <button type="button" class="report-export-item report-export-excel" (click)="exportAs('excel')">
-                                <span class="report-export-icon">&#11015;</span> Excel
-                            </button>
-                        </div>
-                        }
-                    </div>
+    <div class="report-filter-body" [class.open]="filterOpen">
+        <div class="report-filter-body-inner">
+            <div class="report-fields-row">
+                <div class="report-filter-field" style="flex: 1 1 100%; max-width: 100%;">
+                    <label>{{ lang === 'en' ? 'Report Type' : 'প্রতিবেদনের ধরন' }}</label>
+                    <p-select [options]="relieverModeOptions" [(ngModel)]="relieverMode" (ngModelChange)="onModeChange()"
+                        optionLabel="label" optionValue="value" placeholder="Select" styleClass="w-full"
+                        appendTo="body"></p-select>
                 </div>
             </div>
-
-            <div class="report-header-title-block">
-                <div class="report-main-title">{{ reportTitle }}</div>
-                <div class="report-date-line">{{ dateLine }}</div>
-                @if (appliedFilterLines.length > 0) {
-                    <div class="report-filter-summary">
-                        @for (line of appliedFilterLines; track line) {
-                            <span class="report-filter-tag">{{ line }}</span>
-                        }
+            <div class="report-fields-row">
+                @if (relieverMode !== 'newPosting') {
+                    <div class="report-filter-field">
+                        <label>{{ lang === 'en' ? 'Mother Org' : 'মাতৃ সংস্থা' }}</label>
+                        <p-multiSelect [options]="orgOptions" [(ngModel)]="selectedOrgIds" (ngModelChange)="onOrgChange()"
+                            optionLabel="label" optionValue="value" display="chip" [filter]="true"
+                            placeholder="Select" styleClass="w-full" appendTo="body"></p-multiSelect>
+                    </div>
+                    <div class="report-filter-field">
+                        <label>{{ lang === 'en' ? 'Member Type' : 'সদস্য ধরন' }}</label>
+                        <p-multiSelect [options]="memberTypeOptions" [(ngModel)]="selectedMemberTypeIds" (ngModelChange)="onMemberTypeChange()"
+                            optionLabel="label" optionValue="value" display="chip" [filter]="true"
+                            placeholder="Select" styleClass="w-full" appendTo="body"></p-multiSelect>
+                    </div>
+                    <div class="report-filter-field">
+                        <label>{{ lang === 'en' ? 'Rank' : 'পদবী' }}</label>
+                        <p-select [options]="rankOptions" [(ngModel)]="selectedRankId" (ngModelChange)="onFilterChange()"
+                            optionLabel="label" optionValue="value" placeholder="Select" styleClass="w-full"
+                            [disabled]="selectedOrgIds.length === 0" [filter]="true" [showClear]="true" appendTo="body"></p-select>
+                    </div>
+                    <div class="report-filter-field">
+                        <label>{{ lang === 'en' ? 'Corps' : 'কোর' }}</label>
+                        <p-multiSelect [options]="corpsOptions" [(ngModel)]="selectedCorpsIds" (ngModelChange)="onCorpsChange()"
+                            optionLabel="label" optionValue="value" display="chip" [filter]="true"
+                            [disabled]="selectedOrgIds.length === 0"
+                            placeholder="Select" styleClass="w-full" appendTo="body"></p-multiSelect>
+                    </div>
+                    <div class="report-filter-field">
+                        <label>{{ lang === 'en' ? 'Trade' : 'ট্রেড' }}</label>
+                        <p-multiSelect [options]="tradeOptions" [(ngModel)]="selectedTradeIds"
+                            optionLabel="label" optionValue="value" display="chip" [filter]="true"
+                            [disabled]="selectedCorpsIds.length === 0"
+                            placeholder="Select" styleClass="w-full" appendTo="body"></p-multiSelect>
+                    </div>
+                    <div class="report-filter-field">
+                        <label>{{ lang === 'en' ? 'RAB Unit' : 'র‍্যাব ইউনিট' }}</label>
+                        <p-multiSelect [options]="rabUnitOptions" [(ngModel)]="selectedRabUnitIds"
+                            optionLabel="label" optionValue="value" display="chip" [filter]="true"
+                            placeholder="Select" styleClass="w-full" appendTo="body"></p-multiSelect>
+                    </div>
+                }
+                @if (relieverMode === 'standRelease') {
+                    <div class="report-filter-field">
+                        <label>{{ lang === 'en' ? 'Possible Release From' : 'সম্ভাব্য রিলিজ হইতে' }}</label>
+                        <p-datepicker [(ngModel)]="releaseFrom" dateFormat="dd-mm-yy" placeholder="Select" [showIcon]="true" appendTo="body"></p-datepicker>
+                    </div>
+                    <div class="report-filter-field">
+                        <label>{{ lang === 'en' ? 'Possible Release To' : 'সম্ভাব্য রিলিজ পর্যন্ত' }}</label>
+                        <p-datepicker [(ngModel)]="releaseTo" dateFormat="dd-mm-yy" placeholder="Select" [showIcon]="true" appendTo="body"></p-datepicker>
+                    </div>
+                }
+                @if (relieverMode === 'newPosting') {
+                    <div class="report-filter-field">
+                        <label>{{ lang === 'en' ? 'Possible Joining From' : 'সম্ভাব্য যোগদান হইতে' }}</label>
+                        <p-datepicker [(ngModel)]="joiningFrom" dateFormat="dd-mm-yy" placeholder="Select" [showIcon]="true" appendTo="body"></p-datepicker>
+                    </div>
+                    <div class="report-filter-field">
+                        <label>{{ lang === 'en' ? 'Possible Joining To' : 'সম্ভাব্য যোগদান পর্যন্ত' }}</label>
+                        <p-datepicker [(ngModel)]="joiningTo" dateFormat="dd-mm-yy" placeholder="Select" [showIcon]="true" appendTo="body"></p-datepicker>
                     </div>
                 }
             </div>
-        </div>
 
-        <div class="report-table-wrap">
-            <p-table
-                [value]="list"
-                [loading]="loading"
-                [rows]="rows"
-                [paginator]="true"
-                [lazy]="true"
-                (onLazyLoad)="onLazyLoad($event)"
-                [totalRecords]="totalRecords"
-                [rowsPerPageOptions]="rowsPerPageOptions"
-                paginatorDropdownAppendTo="body"
-                [tableStyle]="{ 'min-width': '80rem' }"
-                styleClass="p-datatable-sm"
-                [showCurrentPageReport]="true"
-                currentPageReportTemplate="{first} - {last} of {totalRecords}">
+            @if (searched) {
+                <div class="ds-field-group">
+                    <div class="ds-group-divider"><span class="ds-group-label">Columns</span><span class="ds-group-line"></span></div>
+                    <div class="ds-field">
+                        <label class="ds-field-label">Visible columns</label>
+                        <p-multiSelect [options]="columnPickerOptions" [(ngModel)]="activeColumnKeys"
+                            (ngModelChange)="onColumnsChange()"
+                            optionLabel="label" optionValue="value" display="chip" [filter]="true"
+                            placeholder="Pick columns…" styleClass="w-full" appendTo="body"></p-multiSelect>
+                    </div>
+                    <div class="ds-field">
+                        <label class="ds-field-label column-order-label">Column order — drag to rearrange</label>
+                        <div class="column-order-strip" (dragover)="onColumnDragOver($event)">
+                            @for (col of visibleColumns; track col.key) {
+                                <span class="column-order-chip" [class.dragging]="draggingColumnKey === col.key"
+                                    draggable="true" (dragstart)="onColumnDragStart(col.key, $event)"
+                                    (dragend)="onColumnDragEnd()" (dragover)="onColumnDragOver($event)"
+                                    (drop)="onColumnDrop(col.key, $event)">
+                                    <i class="pi pi-bars chip-handle" aria-hidden="true"></i>
+                                    <span class="chip-label">{{ lang === 'bn' ? col.labelBN : col.labelEN }}</span>
+                                    <button type="button" class="chip-remove" (click)="removeColumn(col.key)" title="Remove column">
+                                        <i class="pi pi-times" aria-hidden="true"></i>
+                                    </button>
+                                </span>
+                            }
+                            @if (visibleColumns.length === 0) {
+                                <span class="column-order-empty">Pick columns above to populate the table.</span>
+                            }
+                        </div>
+                    </div>
+                </div>
+            }
+
+            <div class="report-filter-actions">
+                <button type="button" class="report-btn-clear" (click)="clearFilters()">
+                    <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M1 1l10 10M11 1L1 11" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+                    {{ lang === 'en' ? 'Clear' : 'মুছে ফেলুন' }}
+                </button>
+                <button type="button" class="report-btn-search" (click)="search()">
+                    <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><circle cx="6" cy="6" r="4.5" stroke="white" stroke-width="1.6"/><path d="M10 10l2.5 2.5" stroke="white" stroke-width="1.6" stroke-linecap="round"/></svg>
+                    {{ lang === 'en' ? 'Search' : 'অনুসন্ধান' }}
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@if (searched) {
+<div class="rab-report-document">
+    <div class="rab-toolbar">
+        <button type="button" class="report-lang-toggle" (click)="toggleLang()">{{ lang === 'en' ? 'বাংলা' : 'English' }}</button>
+        <div class="report-export-wrap">
+            <button type="button" class="report-btn-export" (click)="toggleExportDropdown($event)"
+                [disabled]="loading || exporting || list.length === 0">
+                @if (exporting) {
+                    <i class="pi pi-spin pi-spinner" style="font-size:13px"></i> Generating...
+                } @else {
+                    <svg width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M6.5 1v7M3.5 5.5l3 3 3-3M1.5 10.5h10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                    {{ lang === 'en' ? 'Export' : 'এক্সপোর্ট' }}
+                }
+            </button>
+            @if (exportDropdownOpen) {
+                <div class="report-export-dropdown" (click)="$event.stopPropagation()">
+                    <button type="button" class="report-export-item report-export-print" (click)="exportAs('print')"><i class="pi pi-print" style="font-size:0.75rem"></i> Print</button>
+                    <button type="button" class="report-export-item report-export-word" (click)="exportAs('word')"><span class="report-export-icon">⬇</span> Word</button>
+                    <button type="button" class="report-export-item report-export-excel" (click)="exportAs('excel')"><span class="report-export-icon">⬇</span> Excel</button>
+                </div>
+            }
+        </div>
+    </div>
+
+    <div class="rab-paper" [class.rab-lang-bn]="lang === 'bn'">
+        <header class="rab-paper-head">
+            <div class="rab-overline">{{ rabOverlineText }}</div>
+            <h1 class="rab-paper-title">{{ rabOrgTitle }}</h1>
+            <div class="rab-paper-sub"><em>{{ rabOrgSubtitle }}</em></div>
+            <div class="rab-orn-divider"><span class="rab-orn-line"></span><span class="rab-orn-diamond">&#9670;</span><span class="rab-orn-line"></span></div>
+            <h2 class="rab-paper-section">{{ rabSectionTitle }}</h2>
+            @if (unitScopeLine) { <div class="report-scope-line">{{ unitScopeLine }}</div> }
+            @if (memberTypeScopeLine) { <div class="report-scope-line">{{ memberTypeScopeLine }}</div> }
+        </header>
+
+        @if (criteriaItems.length > 0) {
+            <div class="rab-criteria">
+                <div class="rab-criteria-strip">
+                    <span class="rab-criteria-strip-title"><span class="rab-diamond-bullet">&#9670;</span> {{ rabCriteriaTitle }}</span>
+                    <span class="rab-criteria-strip-date">{{ rabGeneratedLabel }} &middot; {{ rabFormattedDate }}</span>
+                </div>
+                <div class="rab-criteria-grid">
+                    @for (item of criteriaItems; track item.label) {
+                        <div class="rab-criteria-cell">
+                            <div class="rab-criteria-cell-label">{{ item.label }}</div>
+                            <div class="rab-criteria-cell-value">{{ item.value }}</div>
+                        </div>
+                    }
+                </div>
+            </div>
+        } @else {
+            <div class="rab-criteria rab-criteria-stamp-only">
+                <div class="rab-criteria-strip">
+                    <span class="rab-criteria-strip-title"><span class="rab-diamond-bullet">&#9670;</span> {{ rabCriteriaTitle }}</span>
+                    <span class="rab-criteria-strip-date">{{ rabGeneratedLabel }} &middot; {{ rabFormattedDate }}</span>
+                </div>
+            </div>
+        }
+
+        <div class="rab-paper-table-wrap" [class.is-loading]="loading">
+            <p-table [value]="list" [loading]="loading" [lazy]="true" [first]="first" [rows]="rows"
+                [totalRecords]="totalRecords" [paginator]="false" styleClass="rab-data-table p-datatable-sm">
                 <ng-template pTemplate="header">
                     <tr>
-                        <th>{{ lang === 'en' ? 'Ser' : 'ক্রমিক' }}</th>
-                        <th>{{ lang === 'en' ? 'Service ID' : 'ব্যক্তিগত নম্বর' }}</th>
-                        <th>{{ lang === 'en' ? 'Rank' : 'পদবী' }}</th>
-                        <th>{{ lang === 'en' ? 'Name' : 'নাম' }}</th>
-                        <th>{{ lang === 'en' ? 'Date of Joining in RAB' : 'র‍্যাবে যোগদানের তারিখ' }}</th>
-                        <th>{{ lang === 'en' ? 'Duration of Stay' : 'অবস্থানের মেয়াদকাল' }}</th>
-                        <th>{{ lang === 'en' ? 'Battalion' : 'উইং/ব্যাটালিয়ন' }}</th>
-                        <th>{{ lang === 'en' ? 'Posted-out Unit' : 'বদলিকৃত ইউনিট' }}</th>
-                        <th>{{ lang === 'en' ? 'Reliever Joining Date' : 'প্রতিস্থাপক যোগদানের তারিখ' }}</th>
-                        <th>{{ lang === 'en' ? 'Rmks' : 'মন্তব্য' }}</th>
+                        @for (col of visibleColumns; track col.key) {
+                            <th [class]="'rab-th-' + col.key">{{ lang === 'bn' ? col.labelBN : col.labelEN }}</th>
+                        }
                     </tr>
                 </ng-template>
-                <ng-template pTemplate="body" let-row let-rowIndex="rowIndex">
+                <ng-template pTemplate="body" let-row let-i="rowIndex">
                     <tr>
-                        <td><span class="report-ser-num">{{ displayNum(rowIndex + 1) }}</span></td>
-                        <td>{{ displayNum(row.serviceId) }}</td>
-                        <td>{{ codeValue(row.rank, row.rankBN) }}</td>
-                        <td>{{ codeValue(row.name, row.nameBN) }}</td>
-                        <td>{{ formatDateLabel(row.joiningInRab) }}</td>
-                        <td>{{ formatDuration(row.durationOfStay) }}</td>
-                        <td>
-                            @if (codeValue(row.presentUnit, row.presentUnitBN) !== '—') {
-                                <span class="report-badge-unit">{{ codeValue(row.presentUnit, row.presentUnitBN) }}</span>
-                            } @else {
-                                <span class="report-dash">—</span>
+                        @for (col of visibleColumns; track col.key) {
+                            @switch (col.hint) {
+                                @case ('Serial') { <td class="rab-td-ser"><span class="rab-ser">{{ paddedSer(first + i + 1) }}</span></td> }
+                                @case ('Personnel') {
+                                    <td class="rab-td-personnel">
+                                        <div class="rab-personnel-name">{{ cellValue(row, 'name') }}</div>
+                                        @if (personnelMetaText(row); as meta) { @if (meta) { <div class="rab-personnel-meta">{{ meta }}</div> } }
+                                    </td>
+                                }
+                                @case ('Date') { <td class="rab-td-date">{{ cellValue(row, col.key) }}</td> }
+                                @case ('Duration') { <td class="rab-td-date">{{ cellValue(row, col.key) }}</td> }
+                                @case ('Remarks') { <td class="rab-td-rmks">{{ row.rmks || '' }}</td> }
+                                @case ('Plain') { <td>{{ cellValue(row, col.key) }}</td> }
+                                @default { <td>{{ cellValue(row, col.key) }}</td> }
                             }
-                        </td>
-                        <td>
-                            @if (codeValue(row.postedOutUnit, row.postedOutUnitBN) !== '—') {
-                                <span class="report-badge-unit">{{ codeValue(row.postedOutUnit, row.postedOutUnitBN) }}</span>
-                            } @else {
-                                <span class="report-dash">—</span>
-                            }
-                        </td>
-                        <td>{{ formatDateLabel(row.relieverJoiningDate) }}</td>
-                        <td>{{ row.rmks ?? '' }}</td>
+                        }
                     </tr>
                 </ng-template>
                 <ng-template pTemplate="emptymessage">
-                    <tr>
-                        <td colspan="10" class="text-center p-4">{{ lang === 'en' ? 'No data found.' : 'কোনো তথ্য পাওয়া যায়নি।' }}</td>
-                    </tr>
+                    <tr><td [attr.colspan]="visibleColumns.length || 1" class="text-center p-4">{{ lang === 'en' ? 'No records found.' : 'কোন তথ্য পাওয়া যায়নি।' }}</td></tr>
                 </ng-template>
             </p-table>
         </div>
+
+        <footer class="rab-paper-foot">
+            <div class="rab-foot-line"></div>
+            <div class="rab-foot-row">
+                <span class="rab-foot-confidential"><span class="rab-foot-dot"></span>{{ rabConfidentialLabel }}</span>
+                <span class="rab-foot-page">{{ rabPageOfLabel }}</span>
+                <span class="rab-foot-warning">{{ rabWarningLabel }}</span>
+            </div>
+        </footer>
     </div>
+
+    @if (totalRecords > 0) {
+        <div class="rab-paginator-bar">
+            <p-paginator [first]="first" [rows]="rows" [totalRecords]="totalRecords"
+                [rowsPerPageOptions]="rowsPerPageOptions" (onPageChange)="onPage($event)" dropdownAppendTo="body"></p-paginator>
+        </div>
     }
+</div>
+}
 </div>

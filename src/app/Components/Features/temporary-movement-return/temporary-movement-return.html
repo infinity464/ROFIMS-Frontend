@@ -1,0 +1,106 @@
+<p-toast></p-toast>
+
+<div class="tmr-page">
+    <section class="tmr-section tmr-header-card">
+        <header class="tmr-header">
+            <div>
+                <h2><i class="pi pi-replay"></i> Temporary Movement Return From Mother Unit</h2>
+                <p class="tmr-sub">Record the return of personnel who went out on a Temporary movement to a Mother Org.</p>
+            </div>
+            <div class="tmr-toggle">
+                <button pButton type="button" label="Form" icon="pi pi-pencil"
+                    [class.p-button-outlined]="mode !== 'form'" (click)="showForm()"></button>
+                <button pButton type="button" label="List" icon="pi pi-list"
+                    [class.p-button-outlined]="mode !== 'list'" (click)="showList()"></button>
+            </div>
+        </header>
+    </section>
+
+    <!-- ── Form view ────────────────────────────────────────────── -->
+    <form *ngIf="mode === 'form'" [formGroup]="form" (ngSubmit)="submit()" class="tmr-form">
+        <section class="tmr-section">
+            <h3 class="tmr-section-title">Return details</h3>
+
+            <div class="tmr-grid">
+                <div class="tmr-field">
+                    <label>Personnel <span class="req">*</span></label>
+                    <p-select
+                        [options]="personnelOptions"
+                        optionLabel="label"
+                        optionValue="value"
+                        formControlName="employeeId"
+                        [filter]="true"
+                        filterBy="label"
+                        placeholder="Select a person on temporary movement"
+                        appendTo="body"
+                        (onChange)="onPersonnelChange($event.value)"
+                        styleClass="w-full">
+                    </p-select>
+                </div>
+
+                <div class="tmr-field">
+                    <label>Where he went (Mother Unit)</label>
+                    <input pInputText formControlName="destinedMotherUnitName" placeholder="Auto-filled" readonly />
+                </div>
+
+                <div class="tmr-field">
+                    <label>Letter No</label>
+                    <input pInputText formControlName="letterNo" placeholder="Return letter number" />
+                </div>
+
+                <div class="tmr-field">
+                    <label>Letter Issue Date</label>
+                    <p-datepicker formControlName="letterIssueDate" appFlexibleDate dateFormat="dd-mm-yy"
+                        [showIcon]="true" appendTo="body" styleClass="w-full"></p-datepicker>
+                </div>
+
+                <div class="tmr-field">
+                    <label>Return Date</label>
+                    <p-datepicker formControlName="returnDate" appFlexibleDate dateFormat="dd-mm-yy"
+                        [showIcon]="true" appendTo="body" styleClass="w-full"></p-datepicker>
+                </div>
+
+                <div class="tmr-field tmr-col-span">
+                    <label>Auth</label>
+                    <app-rich-editor formControlName="auth" height="140px" placeholder="Enter authorization..."></app-rich-editor>
+                </div>
+
+                <div class="tmr-field tmr-col-span">
+                    <label>Details</label>
+                    <app-rich-editor formControlName="detailsInformation" height="180px"
+                        placeholder="Enter details, special instructions, or context..."></app-rich-editor>
+                </div>
+
+                <div class="tmr-field tmr-col-span">
+                    <label>Remarks</label>
+                    <app-rich-editor formControlName="remarks" height="140px" placeholder="Enter remarks..."></app-rich-editor>
+                </div>
+            </div>
+        </section>
+
+        <section class="tmr-section">
+            <h3 class="tmr-section-title">Attachments</h3>
+            <app-file-references-form
+                #filesForm
+                [fileRows]="fileRows"
+                namePlaceholder="e.g. Return letter, Annexure"
+                (fileRowsChange)="onFilesChange($event)"
+                (onDownloadFile)="onDownloadFile($event)">
+            </app-file-references-form>
+        </section>
+
+        <div class="tmr-actions">
+            <button pButton type="button" label="Reset" class="p-button-text" (click)="resetForm()"></button>
+            <button pButton type="submit" [label]="editingId ? 'Update' : 'Save'"
+                [disabled]="saving || (!canInsert && !editingId) || (!!editingId && !canUpdate)"
+                [loading]="saving"></button>
+        </div>
+    </form>
+
+    <!-- ── List view ────────────────────────────────────────────── -->
+    <app-temporary-movement-return-list
+        *ngIf="mode === 'list'"
+        (editRecord)="onEditFromList($event)"
+        (changed)="onListChanged()">
+    </app-temporary-movement-return-list>
+</div>

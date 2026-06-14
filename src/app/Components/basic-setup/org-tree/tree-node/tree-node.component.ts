@@ -1,4 +1,4 @@
-import { Component, Input, Output, EventEmitter, ChangeDetectionStrategy } from '@angular/core';
+import { Component, Input, Output, EventEmitter, ChangeDetectionStrategy, HostBinding } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { OrgNode } from '../models/org-node.model';
 import { LEVELS, LEVEL_COLORS } from '../models/org-node.model';
@@ -54,6 +54,12 @@ export class TreeNodeComponent {
 
     get badgeColor(): string {
         return this.LEVEL_COLORS[this.node.codeType as keyof typeof LEVEL_COLORS] ?? '#666';
+    }
+
+    /** Tints this node's tree connector (spine + elbow) to match its level color. */
+    @HostBinding('style.--level-color')
+    get levelColor(): string {
+        return this.badgeColor;
     }
 
     get isSelected(): boolean {

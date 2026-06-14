@@ -44,6 +44,7 @@
                             <p-select
                                 [options]="addressOwnerOptions"
                                 [(ngModel)]="selectedAddressOwner"
+                                (ngModelChange)="onAddressOwnerFilterChange()"
                                 optionLabel="label"
                                 optionValue="value"
                                 styleClass="w-full"
@@ -63,21 +64,11 @@
                             </p-select>
                         </div>
                         <div class="ds-field">
-                            <label class="ds-field-label">{{ L['en']['report.search.addressStatus'] }}</label>
-                            <p-select
-                                [options]="addressStatusOptions"
-                                [(ngModel)]="activeOnly"
-                                optionLabel="label"
-                                optionValue="value"
-                                styleClass="w-full"
-                                appendTo="body">
-                            </p-select>
-                        </div>
-                        <div class="ds-field">
                             <label class="ds-field-label">{{ L['en']['report.search.rabMemberStatus'] }}</label>
                             <p-select
                                 [options]="statusOptions"
                                 [(ngModel)]="selectedPostingStatus"
+                                (ngModelChange)="onPostingStatusFilterChange()"
                                 optionLabel="label"
                                 optionValue="value"
                                 placeholder="Select Status"
@@ -165,27 +156,166 @@
                     </div>
                 </div>
 
-                <!-- Group 3: Identification -->
+                <!-- Group 0: Organization & Rank (cascading multi-select) -->
                 <div class="ds-field-group">
                     <div class="ds-group-divider">
-                        <span class="ds-group-label">Identification</span>
+                        <span class="ds-group-label">Organization &amp; Rank</span>
                         <span class="ds-group-line"></span>
                     </div>
                     <div class="ds-criteria-grid">
                         <div class="ds-field">
-                            <label class="ds-field-label">RAB ID</label>
-                            <input pInputText type="text" [(ngModel)]="searchRabId" placeholder="Enter RAB ID" class="w-full" />
+                            <label class="ds-field-label">{{ L['en']['report.search.motherOrg'] }}</label>
+                            <p-multiSelect
+                                [options]="orgOptions"
+                                [(ngModel)]="selectedOrgIds"
+                                (ngModelChange)="onOrgChange()"
+                                optionLabel="label"
+                                optionValue="value"
+                                display="chip"
+                                [filter]="true"
+                                placeholder="Select Mother Org"
+                                styleClass="w-full"
+                                appendTo="body">
+                            </p-multiSelect>
                         </div>
                         <div class="ds-field">
-                            <label class="ds-field-label">Service ID</label>
-                            <input pInputText type="text" [(ngModel)]="searchServiceId" placeholder="Enter Service ID" class="w-full" />
+                            <label class="ds-field-label">Member Type</label>
+                            <p-multiSelect
+                                [options]="memberTypeOptions"
+                                [(ngModel)]="selectedMemberTypeIds"
+                                (ngModelChange)="onMemberTypeChange()"
+                                optionLabel="label"
+                                optionValue="value"
+                                display="chip"
+                                [filter]="true"
+                                placeholder="Select Member Type"
+                                styleClass="w-full"
+                                appendTo="body">
+                            </p-multiSelect>
                         </div>
                         <div class="ds-field">
-                            <label class="ds-field-label">NID</label>
-                            <input pInputText type="text" [(ngModel)]="searchNid" placeholder="Enter NID" class="w-full" />
+                            <label class="ds-field-label">{{ L['en']['report.search.rank'] }}</label>
+                            <p-multiSelect
+                                [options]="rankOptions"
+                                [(ngModel)]="selectedRankIds"
+                                optionLabel="label"
+                                optionValue="value"
+                                display="chip"
+                                [filter]="true"
+                                placeholder="Select Rank"
+                                styleClass="w-full"
+                                [disabled]="selectedOrgIds.length === 0"
+                                appendTo="body">
+                            </p-multiSelect>
+                        </div>
+                        <div class="ds-field">
+                            <label class="ds-field-label">{{ L['en']['report.table.corps'] }}</label>
+                            <p-multiSelect
+                                [options]="corpsOptions"
+                                [(ngModel)]="selectedCorpsIds"
+                                (ngModelChange)="onCorpsChange()"
+                                optionLabel="label"
+                                optionValue="value"
+                                display="chip"
+                                [filter]="true"
+                                placeholder="Select Corps"
+                                styleClass="w-full"
+                                [disabled]="selectedOrgIds.length === 0"
+                                appendTo="body">
+                            </p-multiSelect>
+                        </div>
+                        <div class="ds-field">
+                            <label class="ds-field-label">{{ L['en']['report.search.trade'] }}</label>
+                            <p-multiSelect
+                                [options]="tradeOptions"
+                                [(ngModel)]="selectedTradeIds"
+                                optionLabel="label"
+                                optionValue="value"
+                                display="chip"
+                                [filter]="true"
+                                placeholder="Select Trade"
+                                styleClass="w-full"
+                                [disabled]="selectedCorpsIds.length === 0"
+                                appendTo="body">
+                            </p-multiSelect>
+                        </div>
+                        <div class="ds-field">
+                            <label class="ds-field-label">RAB Unit</label>
+                            <p-multiSelect
+                                [options]="rabUnitOptions"
+                                [(ngModel)]="selectedRabUnitIds"
+                                optionLabel="label"
+                                optionValue="value"
+                                display="chip"
+                                [filter]="true"
+                                placeholder="Select RAB Unit"
+                                styleClass="w-full"
+                                appendTo="body">
+                            </p-multiSelect>
                         </div>
                     </div>
                 </div>
+
+                <!-- Group 3: Column picker — toggles which columns appear in
+                     the table + Word/Excel/Print exports. Pre-ticked with the
+                     existing default-visible set; auto-managed for Address
+                     Owner / Status based on the filter dropdowns above.
+                     Hidden until the first search — the picker has nothing
+                     useful to do before there are any rows to render. -->
+                <div class="ds-field-group">
+                    <div class="ds-group-divider">
+                        <span class="ds-group-label">Columns</span>
+                        <span class="ds-group-line"></span>
+                    </div>
+                    <div class="ds-field">
+                        <label class="ds-field-label">Visible columns</label>
+                        <p-multiSelect
+                            [options]="columnPickerOptions"
+                            [(ngModel)]="selectedColumnKeys"
+                            (ngModelChange)="onColumnsChange()"
+                            optionLabel="label"
+                            optionValue="value"
+                            display="chip"
+                            [filter]="true"
+                            placeholder="Pick columns…"
+                            styleClass="w-full"
+                            appendTo="body">
+                        </p-multiSelect>
+                    </div>
+
+                    <!-- Drag-reorder strip — drag any chip to change column
+                         order in the table + exports. The "×" removes the
+                         column (same as unticking it in the MultiSelect). -->
+                    <div class="ds-field">
+                        <label class="ds-field-label column-order-label">Column order — drag to rearrange</label>
+                        <div class="column-order-strip" (dragover)="onColumnDragOver($event)">
+                            @for (col of visibleColumns; track col.key) {
+                                <span
+                                    class="column-order-chip"
+                                    [class.dragging]="draggingColumnKey === col.key"
+                                    draggable="true"
+                                    (dragstart)="onColumnDragStart(col.key, $event)"
+                                    (dragend)="onColumnDragEnd()"
+                                    (dragover)="onColumnDragOver($event)"
+                                    (drop)="onColumnDrop(col.key, $event)">
+                                    <i class="pi pi-bars chip-handle" aria-hidden="true"></i>
+                                    <span class="chip-label">{{ lang === 'bn' ? col.labelBN : col.labelEN }}</span>
+                                    <button
+                                        type="button"
+                                        class="chip-remove"
+                                        (click)="removeColumn(col.key)"
+                                        title="Remove column">
+                                        <i class="pi pi-times" aria-hidden="true"></i>
+                                    </button>
+                                </span>
+                            }
+                            @if (visibleColumns.length === 0) {
+                                <span class="column-order-empty">Pick columns above to populate the table.</span>
+                            }
+                        </div>
+                    </div>
+                </div>
+
             </div>
 
             <div class="ds-actions">
@@ -203,136 +333,192 @@
 </div>
 
 @if (searched) {
-<div class="report-results-card">
-    <div class="report-results-header">
-        <div class="report-toolbar-row">
-            <div class="report-results-actions">
-                <button type="button" class="report-lang-toggle" (click)="toggleLang()">
-                    {{ lang === 'en' ? 'বাংলা' : 'English' }}
+<div class="rab-report-document">
+    <!-- Screen-only toolbar: language toggle + export. -->
+    <div class="rab-toolbar">
+        <button type="button" class="report-lang-toggle" (click)="toggleLang()">
+            {{ lang === 'en' ? 'বাংলা' : 'English' }}
+        </button>
+        <div class="report-export-wrap">
+            <button type="button" class="report-btn-export"
+                    (click)="toggleExportDropdown($event)"
+                    [disabled]="loading || exporting || list.length === 0">
+                @if (exporting) {
+                    <i class="pi pi-spin pi-spinner" style="font-size:13px"></i>
+                    Generating...
+                } @else {
+                    <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
+                        <path d="M6.5 1v7M3.5 5.5l3 3 3-3M1.5 10.5h10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                    {{ L['en']['report.search.export'] }}
+                }
+            </button>
+            @if (exportDropdownOpen) {
+            <div class="report-export-dropdown" (click)="$event.stopPropagation()">
+                <button type="button" class="report-export-item report-export-print" (click)="exportAs('print')">
+                    <i class="pi pi-print" style="font-size:0.75rem"></i> Print
                 </button>
-                <div class="report-export-wrap">
-                    <button type="button" class="report-btn-export"
-                            (click)="toggleExportDropdown($event)"
-                            [disabled]="loading || exporting || list.length === 0">
-                        @if (exporting) {
-                            <i class="pi pi-spin pi-spinner" style="font-size:13px"></i>
-                            Generating...
-                        } @else {
-                            <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
-                                <path d="M6.5 1v7M3.5 5.5l3 3 3-3M1.5 10.5h10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-                            </svg>
-                            {{ L['en']['report.search.export'] }}
-                        }
-                    </button>
-                    @if (exportDropdownOpen) {
-                    <div class="report-export-dropdown" (click)="$event.stopPropagation()">
-                        <button type="button" class="report-export-item report-export-print" (click)="exportAs('print')">
-                            <i class="pi pi-print" style="font-size:0.75rem"></i> Print
-                        </button>
-                        <button type="button" class="report-export-item report-export-pdf" (click)="exportAs('pdf')">
-                            <span class="report-export-icon">⬇</span> PDF
-                        </button>
-                        <button type="button" class="report-export-item report-export-word" (click)="exportAs('word')">
-                            <span class="report-export-icon">⬇</span> Word
-                        </button>
-                        <button type="button" class="report-export-item report-export-excel" (click)="exportAs('excel')">
-                            <span class="report-export-icon">⬇</span> Excel
-                        </button>
-                    </div>
+                <button type="button" class="report-export-item report-export-word" (click)="exportAs('word')">
+                    <span class="report-export-icon">⬇</span> Word
+                </button>
+                <button type="button" class="report-export-item report-export-excel" (click)="exportAs('excel')">
+                    <span class="report-export-icon">⬇</span> Excel
+                </button>
+            </div>
+            }
+        </div>
+    </div>
+
+    <!-- Formal report paper -->
+    <div class="rab-paper" [class.rab-lang-bn]="lang === 'bn'">
+        <header class="rab-paper-head">
+            <div class="rab-overline">{{ rabOverlineText }}</div>
+            <h1 class="rab-paper-title">{{ rabOrgTitle }}</h1>
+            <div class="rab-paper-sub"><em>{{ rabOrgSubtitle }}</em></div>
+            <div class="rab-orn-divider">
+                <span class="rab-orn-line"></span>
+                <span class="rab-orn-diamond">&#9670;</span>
+                <span class="rab-orn-line"></span>
+            </div>
+            <h2 class="rab-paper-section">{{ rabSectionTitle }}</h2>
+            @if (rabSubtitleText) {
+                <div class="rab-paper-section-sub"><em>{{ rabSubtitleText }}</em></div>
+            }
+        </header>
+
+        <!-- Selection Criteria — only rendered when the user applied filters. -->
+        @if (criteriaItems.length > 0) {
+            <div class="rab-criteria">
+                <div class="rab-criteria-strip">
+                    <span class="rab-criteria-strip-title"><span class="rab-diamond-bullet">&#9670;</span> {{ rabCriteriaTitle }}</span>
+                    <span class="rab-criteria-strip-date">{{ rabGeneratedLabel }} &middot; {{ rabFormattedDate }}</span>
+                </div>
+                <div class="rab-criteria-grid">
+                    @for (item of criteriaItems; track item.label) {
+                        <div class="rab-criteria-cell">
+                            <div class="rab-criteria-cell-label">{{ item.label }}</div>
+                            <div class="rab-criteria-cell-value">{{ item.value }}</div>
+                        </div>
                     }
                 </div>
             </div>
-        </div>
-
-        <div class="report-header-title-block">
-            <div class="report-main-title">{{ reportTitle }}</div>
-            @if (unitScopeLine) {
-                <div class="report-scope-line">{{ unitScopeLine }}</div>
-            }
-            <div class="report-date-line">{{ dateLine }}</div>
-            @if (memberTypeScopeLine) {
-                <div class="report-scope-line">{{ memberTypeScopeLine }}</div>
-            }
-            @if (appliedFilterLines.length > 0) {
-                <div class="report-filter-summary">
-                    @for (line of appliedFilterLines; track line) {
-                        <span class="report-filter-tag">{{ line }}</span>
-                    }
+        } @else {
+            <!-- No filters applied — keep the "generated" stamp visible so the
+                 paper still looks complete without an empty criteria table. -->
+            <div class="rab-criteria rab-criteria-stamp-only">
+                <div class="rab-criteria-strip">
+                    <span class="rab-criteria-strip-title"><span class="rab-diamond-bullet">&#9670;</span> {{ rabCriteriaTitle }}</span>
+                    <span class="rab-criteria-strip-date">{{ rabGeneratedLabel }} &middot; {{ rabFormattedDate }}</span>
                 </div>
-            }
+            </div>
+        }
+
+        <!-- Data table -->
+        <div class="rab-paper-table-wrap">
+            <p-table
+                [value]="list"
+                [loading]="loading"
+                [lazy]="true"
+                [first]="first"
+                [rows]="rows"
+                [totalRecords]="totalRecords"
+                [paginator]="false"
+                styleClass="rab-data-table p-datatable-sm">
+                <ng-template pTemplate="header">
+                    <tr>
+                        @for (col of visibleColumns; track col.key) {
+                            <th [class]="'rab-th-' + col.key">{{ lang === 'bn' ? col.labelBN : col.labelEN }}</th>
+                        }
+                    </tr>
+                </ng-template>
+                <ng-template pTemplate="body" let-row>
+                    <tr>
+                        @for (col of visibleColumns; track col.key) {
+                            @switch (col.hint) {
+                                @case ('Serial') {
+                                    <td class="rab-td-ser"><span class="rab-ser">{{ paddedSer(row.ser) }}</span></td>
+                                }
+                                @case ('PersonnelComposite') {
+                                    <td class="rab-td-personnel">
+                                        <div class="rab-personnel-name">{{ codeValue(row.name, row.nameBN) }}</div>
+                                        <div class="rab-personnel-meta">{{ personnelMeta(row) }}</div>
+                                    </td>
+                                }
+                                @case ('RabId') {
+                                    <td class="rab-td-rabid">{{ row.rabid ? displayNum(row.rabid) : '—' }}</td>
+                                }
+                                @case ('LocationType') {
+                                    <td class="rab-td-loctype">
+                                        <span class="rab-loc-text">{{ displayLocationTypeUpper(row.locationType) }}</span>
+                                    </td>
+                                }
+                                @case ('AddressComposite') {
+                                    <td class="rab-td-address">
+                                        <div class="rab-addr-crumb">
+                                            @for (part of addressCrumbParts(row); track $index; let last = $last) {
+                                                <span class="rab-addr-part">
+                                                    <span class="rab-addr-part-label">{{ part.label }}:</span>
+                                                    <span class="rab-addr-part-value">{{ part.value }}</span>
+                                                </span>
+                                                @if (!last) {
+                                                    <span class="rab-addr-sep">&rsaquo;</span>
+                                                }
+                                            }
+                                        </div>
+                                        @if (addressDetail(row)) {
+                                            <div class="rab-addr-detail">{{ addressDetail(row) }}</div>
+                                        }
+                                    </td>
+                                }
+                                @case ('AddressOwner') {
+                                    <td class="rab-td-owner">{{ codeValue(row.addressOwner, row.addressOwnerBN) }}</td>
+                                }
+                                @case ('Status') {
+                                    <td class="rab-td-status">{{ displayMemberStatus(row) }}</td>
+                                }
+                                @case ('Remarks') {
+                                    <td class="rab-td-remarks">{{ row.rmks || '' }}</td>
+                                }
+                                @default {
+                                    <td>{{ plainCellValue(row, col.key) }}</td>
+                                }
+                            }
+                        }
+                    </tr>
+                </ng-template>
+                <ng-template pTemplate="emptymessage">
+                    <tr>
+                        <td [attr.colspan]="visibleColumns.length || 1" class="text-center p-4">{{ L['en']['report.empty'] }}</td>
+                    </tr>
+                </ng-template>
+            </p-table>
         </div>
+
+        <!-- Confidential footer -->
+        <footer class="rab-paper-foot">
+            <div class="rab-foot-line"></div>
+            <div class="rab-foot-row">
+                <span class="rab-foot-confidential"><span class="rab-foot-dot"></span>{{ rabConfidentialLabel }}</span>
+                <span class="rab-foot-page">{{ rabPageOfLabel }}</span>
+                <span class="rab-foot-warning">{{ rabWarningLabel }}</span>
+            </div>
+        </footer>
     </div>
 
-    <div class="report-table-wrap">
-        <p-table
-            [value]="list"
-            [loading]="loading"
-            [lazy]="true"
-            [first]="first"
-            [rows]="rows"
-            [totalRecords]="totalRecords"
-            [paginator]="true"
-            (onPage)="onPage($event)"
-            [rowsPerPageOptions]="[20, 50, 100]"
-            paginatorDropdownAppendTo="body"
-            [tableStyle]="{ 'min-width': '100rem' }"
-            styleClass="p-datatable-sm"
-            [showCurrentPageReport]="false">
-            <ng-template pTemplate="header">
-                <tr>
-                    <th>{{ L[lang]['report.table.ser'] }}</th>
-                    <th>{{ L[lang]['report.table.orgName'] }}</th>
-                    <th>{{ L[lang]['report.table.serviceId'] }}</th>
-                    <th>{{ L[lang]['report.table.rabId'] }}</th>
-                    <th>{{ L[lang]['report.table.rank'] }}</th>
-                    <th>{{ L[lang]['report.table.name'] }}</th>
-                    @if (showRabUnit) {
-                        <th>{{ L[lang]['report.table.rabUnit'] }}</th>
-                    }
-                    <th>{{ L[lang]['report.table.locationType'] }}</th>
-                    <th>{{ L[lang]['report.table.addressOwner'] }}</th>
-                    <th>{{ L[lang]['report.table.division'] }}</th>
-                    <th>{{ L[lang]['report.table.district'] }}</th>
-                    <th>{{ L[lang]['report.table.upazila'] }}</th>
-                    <th>{{ L[lang]['report.table.postOffice'] }}</th>
-                    <th>{{ L[lang]['report.table.address'] }}</th>
-                    <th>{{ L[lang]['report.table.rmks'] }}</th>
-                </tr>
-            </ng-template>
-            <ng-template pTemplate="body" let-row>
-                <tr>
-                    <td><span class="report-ser-num">{{ displayNum(row.ser) }}</span></td>
-                    <td>{{ codeValue(row.orgName, row.orgNameBN) }}</td>
-                    <td>{{ displayNum(row.serviceId) }}</td>
-                    <td>{{ row.rabid ?? '—' }}</td>
-                    <td>{{ codeValue(row.rank, row.rankBN) }}</td>
-                    <td>{{ codeValue(row.name, row.nameBN) }}</td>
-                    @if (showRabUnit) {
-                        <td>
-                            @if (codeValue(row.rabUnit, row.rabUnitBN) !== '—') {
-                                <span class="report-badge-unit">{{ codeValue(row.rabUnit, row.rabUnitBN) }}</span>
-                            } @else {
-                                <span class="report-dash">—</span>
-                            }
-                        </td>
-                    }
-                    <td>{{ displayLocationType(row.locationType) }}</td>
-                    <td>{{ codeValue(row.addressOwner, row.addressOwnerBN) }}</td>
-                    <td>{{ codeValue(row.division, row.divisionBN) }}</td>
-                    <td>{{ codeValue(row.district, row.districtBN) }}</td>
-                    <td>{{ codeValue(row.upazila, row.upazilaBN) }}</td>
-                    <td>{{ codeValue(row.postOffice, row.postOfficeBN) }}</td>
-                    <td>{{ codeValue(row.address, row.addressBN) }}</td>
-                    <td><span class="report-dash">{{ row.rmks ?? '—' }}</span></td>
-                </tr>
-            </ng-template>
-            <ng-template pTemplate="emptymessage">
-                <tr>
-                    <td [attr.colspan]="showRabUnit ? 15 : 14" class="text-center p-4">{{ L['en']['report.empty'] }}</td>
-                </tr>
-            </ng-template>
-        </p-table>
-    </div>
+    <!-- Page navigation lives outside the paper, below the confidential strip,
+         so the document footer reads as the document's end. -->
+    @if (totalRecords > 0) {
+        <div class="rab-paginator-bar">
+            <p-paginator
+                [first]="first"
+                [rows]="rows"
+                [totalRecords]="totalRecords"
+                [rowsPerPageOptions]="rowsPerPageOptions"
+                (onPageChange)="onPage($event)"
+                dropdownAppendTo="body">
+            </p-paginator>
+        </div>
+    }
 </div>
 }
 </div>
