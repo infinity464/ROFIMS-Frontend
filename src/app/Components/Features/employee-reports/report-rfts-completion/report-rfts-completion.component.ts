@@ -83,15 +83,15 @@ export class ReportRftsCompletionComponent implements OnInit {
 
     columnCatalog: { key: string; labelEN: string; labelBN: string; hint: 'Serial' | 'Name' | 'Date' | 'Plain'; defaultVisible: boolean; courseOnly?: boolean }[] = [
         { key: 'ser',                  labelEN: 'Ser',              labelBN: 'ক্রঃ',            hint: 'Serial', defaultVisible: true  },
-        { key: 'name',                 labelEN: 'Name',             labelBN: 'নাম',             hint: 'Name',   defaultVisible: true  },
-        { key: 'rabId',                labelEN: 'RAB ID',           labelBN: 'র‍্যাব আইডি',     hint: 'Plain',  defaultVisible: true  },
         { key: 'serviceId',            labelEN: 'Service ID',       labelBN: 'সার্ভিস আইডি',    hint: 'Plain',  defaultVisible: true  },
         { key: 'rank',                 labelEN: 'Rank',             labelBN: 'পদবী',            hint: 'Plain',  defaultVisible: true  },
-        { key: 'rabRank',              labelEN: 'RAB Rank',         labelBN: 'র‍্যাব র‍্যাঙ্ক',  hint: 'Plain',  defaultVisible: false },
         { key: 'corps',                labelEN: 'Corps',            labelBN: 'কোর',             hint: 'Plain',  defaultVisible: true  },
         { key: 'trade',                labelEN: 'Trade',            labelBN: 'ট্রেড',           hint: 'Plain',  defaultVisible: true  },
+        { key: 'name',                 labelEN: 'Name',             labelBN: 'নাম',             hint: 'Name',   defaultVisible: true  },
+        { key: 'rabId',                labelEN: 'RAB ID',           labelBN: 'র‍্যাব আইডি',     hint: 'Plain',  defaultVisible: false },
+        { key: 'rabRank',              labelEN: 'RAB Rank',         labelBN: 'র‍্যাব র‍্যাঙ্ক',  hint: 'Plain',  defaultVisible: false },
         { key: 'orgName',              labelEN: 'Mother Org',       labelBN: 'মাতৃ সংস্থা',     hint: 'Plain',  defaultVisible: true  },
-        { key: 'latestCourseNo',       labelEN: 'Latest Course No', labelBN: 'সর্বশেষ কোর্স নং', hint: 'Plain', defaultVisible: true,  courseOnly: true },
+        { key: 'latestCourseNo',       labelEN: 'Course No',        labelBN: 'কোর্স নং',         hint: 'Plain', defaultVisible: true,  courseOnly: true },
         { key: 'latestCourseDateFrom', labelEN: 'From',             labelBN: 'হইতে',            hint: 'Date',   defaultVisible: true,  courseOnly: true },
         { key: 'latestCourseDateTo',   labelEN: 'To',               labelBN: 'পর্যন্ত',         hint: 'Date',   defaultVisible: true,  courseOnly: true },
         // ── Opt-in extras (registry FieldKeys) ────────────────────────────

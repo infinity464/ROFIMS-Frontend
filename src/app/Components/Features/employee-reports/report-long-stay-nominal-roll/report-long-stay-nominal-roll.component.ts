@@ -99,7 +99,7 @@ export class ReportLongStayNominalRollComponent implements OnInit {
         { key: 'serviceId',          labelEN: 'Service ID',         labelBN: 'ব্যক্তিগত নম্বর',         hint: 'Plain',     defaultVisible: true  },
         { key: 'rank',               labelEN: 'Rank',               labelBN: 'পদবী',                   hint: 'Plain',     defaultVisible: true  },
         { key: 'name',               labelEN: 'Name',               labelBN: 'নাম',                    hint: 'Plain',     defaultVisible: true  },
-        { key: 'motherUnit',         labelEN: 'Mother Unit',        labelBN: 'মাতৃ ইউনিট',             hint: 'Plain',     defaultVisible: true  },
+        { key: 'motherUnit',         labelEN: 'Mother Unit',        labelBN: 'মাতৃ ইউনিট',             hint: 'Plain',     defaultVisible: false },
         { key: 'joiningInRab',       labelEN: 'RAB Joining Date',   labelBN: 'র‍্যাবে যোগদানের তারিখ',  hint: 'Date',      defaultVisible: true  },
         { key: 'durationOfStay',     labelEN: 'Duration of Stay',   labelBN: 'অবস্থানের মেয়াদকাল',     hint: 'Duration',  defaultVisible: true  },
         { key: 'presentUnit',        labelEN: 'Battalion',          labelBN: 'ব্যাটালিয়ন',             hint: 'Plain',     defaultVisible: true  },
@@ -140,7 +140,7 @@ export class ReportLongStayNominalRollComponent implements OnInit {
     ];
     /** Default visible columns in display order — Corps/Trade slotted after Rank. */
     selectedColumnKeys: string[] = [
-        'ser', 'serviceId', 'rank', 'corps', 'trade', 'name', 'motherUnit', 'joiningInRab',
+        'ser', 'serviceId', 'rank', 'corps', 'trade', 'name', 'joiningInRab',
         'durationOfStay', 'presentUnit', 'postedOutUnit', 'postingOrderDate', 'relieverJoiningDate', 'rmks',
     ];
     draggingColumnKey: string | null = null;

@@ -93,7 +93,7 @@ export class ReportUnitDurationNominalRollComponent implements OnInit {
 
     columnCatalog: { key: string; labelEN: string; labelBN: string; hint: 'Serial' | 'Personnel' | 'Date' | 'Plain' | 'Remarks'; defaultVisible: boolean }[] = [
         { key: 'ser',            labelEN: 'Ser',                 labelBN: 'ক্রঃ',                   hint: 'Serial',    defaultVisible: true  },
-        { key: 'orgName',        labelEN: 'Org Name',            labelBN: 'বাহিনীর নাম',            hint: 'Plain',     defaultVisible: true  },
+        { key: 'orgName',        labelEN: 'Org Name',            labelBN: 'বাহিনীর নাম',            hint: 'Plain',     defaultVisible: false },
         { key: 'serviceId',      labelEN: 'Service ID',          labelBN: 'ব্যক্তিগত নম্বর',         hint: 'Plain',     defaultVisible: true  },
         { key: 'rank',           labelEN: 'Rank',                labelBN: 'পদবি',                   hint: 'Plain',     defaultVisible: true  },
         { key: 'corps',          labelEN: 'Corps',               labelBN: 'কোর',                    hint: 'Plain',     defaultVisible: true  },
@@ -485,12 +485,10 @@ export class ReportUnitDurationNominalRollComponent implements OnInit {
         const s = n == null ? '' : String(n);
         return this.lang === 'bn' ? BanglaNumerals.toBangla(s.padStart(2, '0')) : s.padStart(2, '0');
     }
-    personnelMetaText(row: UnitDurationNominalRollReportRow): string {
-        const bits: string[] = [];
-        if (row.serviceId) bits.push(`SVC ${this.displayNum(row.serviceId)}`);
-        const rank = this.codeValue(row.rank, row.rankBN);
-        if (rank && rank !== '—') bits.push(rank);
-        return bits.join(' · ');
+    personnelMetaText(_row: UnitDurationNominalRollReportRow): string {
+        // Name column shows the name only — Service ID and Rank already have
+        // their own columns, so the meta sub-line is intentionally empty.
+        return '';
     }
     cellValue(row: UnitDurationNominalRollReportRow, key: string): string {
         switch (key) {

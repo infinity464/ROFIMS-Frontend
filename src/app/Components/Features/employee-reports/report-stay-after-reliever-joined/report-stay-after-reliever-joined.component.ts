@@ -682,12 +682,10 @@ export class ReportStayAfterRelieverJoinedComponent implements OnInit {
         const s = n == null ? '' : String(n);
         return this.lang === 'bn' ? BanglaNumerals.toBangla(s.padStart(2, '0')) : s.padStart(2, '0');
     }
-    personnelMetaText(row: StayAfterRelieverJoinedReportRow): string {
-        const bits: string[] = [];
-        if (row.serviceId) bits.push(`SVC ${this.displayNum(row.serviceId)}`);
-        const rank = this.codeValue(row.rank, row.rankBN);
-        if (rank && rank !== '—') bits.push(rank);
-        return bits.join(' · ');
+    personnelMetaText(_row: StayAfterRelieverJoinedReportRow): string {
+        // Name column shows the name only — Service ID and Rank already have
+        // their own columns, so the meta sub-line is intentionally empty.
+        return '';
     }
     cellValue(row: StayAfterRelieverJoinedReportRow, key: string): string {
         if (this.appliedMode === 'newPosting') return this.joineeCellValue(row as any, key);
