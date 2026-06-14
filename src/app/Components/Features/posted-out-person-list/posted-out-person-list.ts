@@ -2,9 +2,10 @@ import { Component, OnInit, inject, HostListener } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
-import { TableModule, TableLazyLoadEvent } from 'primeng/table';
+import { TableModule } from 'primeng/table';
 import { ButtonModule } from 'primeng/button';
 import { TooltipModule } from 'primeng/tooltip';
+import { SelectModule } from 'primeng/select';
 import { Toast } from 'primeng/toast';
 import { ConfirmDialog } from 'primeng/confirmdialog';
 import { MessageService, ConfirmationService } from 'primeng/api';
@@ -15,12 +16,11 @@ import { InputIconModule } from 'primeng/inputicon';
 import { UserMenuService } from '@/services/user-menu.service';
 import { PermanentPostingMORecordService, PermanentPostingMORecordModel } from '@/services/permanent-posting-mo-record.service';
 import { ExportService, ReportConfig } from '@/services/export.service';
-import { firstValueFrom } from 'rxjs';
 
 @Component({
     selector: 'app-posted-out-person-list',
     standalone: true,
-    imports: [CommonModule, FormsModule, TableModule, ButtonModule, TooltipModule, Toast, ConfirmDialog, DatePickerModule, InputTextModule, IconFieldModule, InputIconModule],
+    imports: [CommonModule, FormsModule, TableModule, ButtonModule, TooltipModule, SelectModule, Toast, ConfirmDialog, DatePickerModule, InputTextModule, IconFieldModule, InputIconModule],
     providers: [MessageService, ConfirmationService],
     templateUrl: './posted-out-person-list.html',
     styleUrl: './posted-out-person-list.scss'
@@ -31,16 +31,31 @@ export class PostedOutPersonListComponent implements OnInit {
     canUpdate = true;
     canDelete = true;
 
-    records: PermanentPostingMORecordModel[] = [];
-    totalRecords = 0;
+    /** Full dataset loaded once; filtering + pagination happen client-side. */
+    allRecords: PermanentPostingMORecordModel[] = [];
     loading = false;
     rows = 10;
-    first = 0;
 
-    filterDateFrom: Date | null = null;
-    filterDateTo: Date | null = null;
+    // ── Filters ──────────────────────────────────────────────────
     searchText = '';
+    filterRank: string | null = null;
+    filterCorps: string | null = null;
+    filterTrade: string | null = null;
+    filterPostingUnitId: number | null = null;
+    filterIsReliever: boolean | null = null;
+    releaseDateFrom: Date | null = null;
+    releaseDateTo: Date | null = null;
     private _searchTimer: any;
+
+    // Dropdown options (built from loaded data)
+    rankOptions: { label: string; value: string }[] = [];
+    corpsOptions: { label: string; value: string }[] = [];
+    tradeOptions: { label: string; value: string }[] = [];
+    postingUnitOptions: { label: string; value: number }[] = [];
+    relieverOptions = [
+        { label: 'Yes', value: true },
+        { label: 'No', value: false },
+    ];
 
     exportDropdownOpen = false;
     exporting = false;
@@ -56,49 +71,85 @@ export class PostedOutPersonListComponent implements OnInit {
         const perms = this._userMenuService.getPermissionsByRoute(this._router.url);
         this.canUpdate = perms.canUpdate;
         this.canDelete = perms.canDelete;
+        this.loadRecords();
     }
 
-    loadRecords(event?: TableLazyLoadEvent): void {
+    loadRecords(): void {
         this.loading = true;
-        const page = event ? Math.floor((event.first ?? 0) / (event.rows ?? this.rows)) + 1 : 1;
-        const rowPerPage = event?.rows ?? this.rows;
-        if (event) {
-            this.first = event.first ?? 0;
-            this.rows = event.rows ?? this.rows;
-        }
-
-        const dateFrom = this.filterDateFrom ? this.formatDateParam(this.filterDateFrom) : undefined;
-        const dateTo = this.filterDateTo ? this.formatDateParam(this.filterDateTo) : undefined;
-
-        this.recordSvc.getAllPaginated(page, rowPerPage, this.searchText || undefined, dateFrom, dateTo).subscribe({
-            next: (res) => {
-                this.records = res.datalist ?? [];
-                this.totalRecords = res.pages?.Rows ?? 0;
+        this.recordSvc.getAll().subscribe({
+            next: (d) => {
+                this.allRecords = d ?? [];
+                this.buildFilterOptions();
                 this.loading = false;
             },
-            error: () => { this.records = []; this.totalRecords = 0; this.loading = false; }
+            error: () => { this.allRecords = []; this.loading = false; }
+        });
+    }
+
+    private buildFilterOptions(): void {
+        const distinct = (vals: (string | null)[]) =>
+            Array.from(new Set(vals.filter((v): v is string => !!v && v.trim() !== '')))
+                .sort((a, b) => a.localeCompare(b))
+                .map(v => ({ label: v, value: v }));
+
+        this.rankOptions = distinct(this.allRecords.map(r => r.postedOutRank));
+        this.corpsOptions = distinct(this.allRecords.map(r => r.postedOutCorps));
+        this.tradeOptions = distinct(this.allRecords.map(r => r.postedOutTrade));
+
+        const unitMap = new Map<number, string>();
+        for (const r of this.allRecords) {
+            if (r.postingUnitId != null && r.postingUnitName) unitMap.set(r.postingUnitId, r.postingUnitName);
+        }
+        this.postingUnitOptions = Array.from(unitMap, ([value, label]) => ({ label, value }))
+            .sort((a, b) => a.label.localeCompare(b.label));
+    }
+
+    /** Records after all active filters are applied. */
+    get filteredRecords(): PermanentPostingMORecordModel[] {
+        const term = this.searchText.trim().toLowerCase();
+        const from = this.releaseDateFrom ? this.dateOnly(this.releaseDateFrom) : null;
+        const to = this.releaseDateTo ? this.dateOnly(this.releaseDateTo) : null;
+
+        return this.allRecords.filter(r => {
+            if (this.filterRank && r.postedOutRank !== this.filterRank) return false;
+            if (this.filterCorps && r.postedOutCorps !== this.filterCorps) return false;
+            if (this.filterTrade && r.postedOutTrade !== this.filterTrade) return false;
+            if (this.filterPostingUnitId != null && r.postingUnitId !== this.filterPostingUnitId) return false;
+            if (this.filterIsReliever != null && r.isReliever !== this.filterIsReliever) return false;
+
+            if (from || to) {
+                if (!r.possibleReleaseDate) return false;
+                const d = this.dateOnly(new Date(r.possibleReleaseDate));
+                if (from && d < from) return false;
+                if (to && d > to) return false;
+            }
+
+            if (term) {
+                const hay = [
+                    r.postedOutName, r.serviceId, r.postedOutRabId, r.postingUnitName,
+                    r.postedOutRank, r.postedOutCorps, r.postedOutTrade, r.postedOutPrefix
+                ].filter(Boolean).join(' ').toLowerCase();
+                if (!hay.includes(term)) return false;
+            }
+            return true;
         });
     }
 
     onSearch(event: Event): void {
-        this.searchText = (event.target as HTMLInputElement).value;
+        const value = (event.target as HTMLInputElement).value;
         clearTimeout(this._searchTimer);
-        this._searchTimer = setTimeout(() => {
-            this.first = 0;
-            this.loadRecords();
-        }, 400);
+        this._searchTimer = setTimeout(() => { this.searchText = value; }, 300);
     }
 
-    applyDateFilter(): void {
-        this.first = 0;
-        this.loadRecords();
-    }
-
-    clearDateFilter(): void {
-        this.filterDateFrom = null;
-        this.filterDateTo = null;
-        this.first = 0;
-        this.loadRecords();
+    clearFilters(): void {
+        this.searchText = '';
+        this.filterRank = null;
+        this.filterCorps = null;
+        this.filterTrade = null;
+        this.filterPostingUnitId = null;
+        this.filterIsReliever = null;
+        this.releaseDateFrom = null;
+        this.releaseDateTo = null;
     }
 
     onEdit(row: PermanentPostingMORecordModel): void {
@@ -148,12 +199,12 @@ export class PostedOutPersonListComponent implements OnInit {
         this.exportDropdownOpen = false;
     }
 
-    private buildExportData(allRecords: PermanentPostingMORecordModel[]): { columns: string[]; rows: string[][] } {
+    private buildExportData(records: PermanentPostingMORecordModel[]): { columns: string[]; rows: string[][] } {
         const columns = [
             '#', 'Service ID', 'Rank', 'Corps', 'Trade', 'Name',
             'RAB ID', 'Posting Unit', 'Is Reliever Assigned?',
         ];
-        const rows = allRecords.map((r, i) => [
+        const rows = records.map((r, i) => [
             String(i + 1),
             this.prefixServiceId(r),
             r.postedOutRank ?? '-',
@@ -171,8 +222,7 @@ export class PostedOutPersonListComponent implements OnInit {
         this.exportDropdownOpen = false;
         this.exporting = true;
         try {
-            const allRecords = await firstValueFrom(this.recordSvc.getAll());
-            const { columns, rows } = this.buildExportData(allRecords);
+            const { columns, rows } = this.buildExportData(this.filteredRecords);
             const now = new Date();
             const generated = now.toLocaleString('en-GB', {
                 day: '2-digit', month: 'short', year: 'numeric',
@@ -208,7 +258,7 @@ export class PostedOutPersonListComponent implements OnInit {
         return v === true ? 'Yes' : v === false ? 'No' : '-';
     }
 
-    private formatDateParam(d: Date): string {
+    private dateOnly(d: Date): string {
         const y = d.getFullYear();
         const m = String(d.getMonth() + 1).padStart(2, '0');
         const day = String(d.getDate()).padStart(2, '0');

@@ -2,9 +2,9 @@ import { Component, OnInit, OnDestroy, inject, HostListener } from '@angular/cor
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
-import { Subject, Subscription, firstValueFrom } from 'rxjs';
+import { Subject, Subscription } from 'rxjs';
 import { debounceTime } from 'rxjs/operators';
-import { TableModule, TableLazyLoadEvent } from 'primeng/table';
+import { TableModule } from 'primeng/table';
 import { ButtonModule } from 'primeng/button';
 import { TooltipModule } from 'primeng/tooltip';
 import { SelectModule } from 'primeng/select';
@@ -16,7 +16,7 @@ import { InputTextModule } from 'primeng/inputtext';
 import { IconFieldModule } from 'primeng/iconfield';
 import { InputIconModule } from 'primeng/inputicon';
 import { UserMenuService } from '@/services/user-menu.service';
-import { PermanentPostingJoineeDetailService, PermanentPostingJoineeDetailListModel, PermanentPostingJoineeDetailFilterRequest } from '@/services/permanent-posting-joinee-detail.service';
+import { PermanentPostingJoineeDetailService, PermanentPostingJoineeDetailListModel } from '@/services/permanent-posting-joinee-detail.service';
 import { EmpService } from '@/services/emp-service';
 import { ExportService, ReportConfig } from '@/services/export.service';
 import { FlexibleDateDirective } from '@/shared/directives/flexible-date.directive';
@@ -98,19 +98,34 @@ export class NewJoiningPersonListComponent implements OnInit, OnDestroy {
     canUpdate = true;
     canDelete = true;
 
-    records: PermanentPostingJoineeDetailListModel[] = [];
-    totalRecords = 0;
+    /** Full dataset loaded once; filtering + pagination happen client-side. */
+    allRecords: PermanentPostingJoineeDetailListModel[] = [];
     loading = false;
 
     /** Pagination */
-    first = 0;
     pageSize = 10;
-    pageNumber = 1;
 
     /** Filters */
     searchText = '';
     filterDateFrom: Date | null = null;
     filterDateTo: Date | null = null;
+    filterMotherOrg: string | null = null;
+    filterRank: string | null = null;
+    filterCorps: string | null = null;
+    filterTrade: string | null = null;
+    possibleJoiningFrom: Date | null = null;
+    possibleJoiningTo: Date | null = null;
+    filterIsReplace: boolean | null = null;
+
+    // Dropdown options (built from loaded data)
+    motherOrgOptions: { label: string; value: string }[] = [];
+    rankOptions: { label: string; value: string }[] = [];
+    corpsOptions: { label: string; value: string }[] = [];
+    tradeOptions: { label: string; value: string }[] = [];
+    isReplaceOptions = [
+        { label: 'Yes', value: true },
+        { label: 'No', value: false },
+    ];
 
     readonly JoineeFilter = JoineeFilter;
     joineeFilter = JoineeFilter.NotAdded;
@@ -127,7 +142,6 @@ export class NewJoiningPersonListComponent implements OnInit, OnDestroy {
 
     private searchSubject = new Subject<string>();
     private searchSub?: Subscription;
-    private firstLazyLoadHandled = false;
 
     constructor(
         private detailSvc: PermanentPostingJoineeDetailService,
@@ -141,79 +155,64 @@ export class NewJoiningPersonListComponent implements OnInit, OnDestroy {
         const perms = this._userMenuService.getPermissionsByRoute(this._router.url);
         this.canUpdate = perms.canUpdate;
         this.canDelete = perms.canDelete;
-        this.searchSub = this.searchSubject.pipe(debounceTime(300)).subscribe(() => this.reload());
+        this.searchSub = this.searchSubject.pipe(debounceTime(300)).subscribe(v => this.searchText = v);
+        this.loadList();
     }
 
     ngOnDestroy(): void {
         this.searchSub?.unsubscribe();
     }
 
-    onLazyLoad(event: TableLazyLoadEvent): void {
-        const rows = event.rows ?? this.pageSize;
-        const first = event.first ?? 0;
-        this.pageSize = rows;
-        this.first = first;
-        this.pageNumber = Math.floor(first / rows) + 1;
-        this.firstLazyLoadHandled = true;
-        this.loadList();
-    }
-
-    private toDateOnly(d: Date | null): string | null {
-        if (!d) return null;
-        return new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
-    }
-
-    private buildFilter(): PermanentPostingJoineeDetailFilterRequest {
-        const filter: PermanentPostingJoineeDetailFilterRequest = {};
-        if (this.searchText?.trim()) filter.searchText = this.searchText.trim();
-        if (this.joineeFilter === JoineeFilter.Added) filter.isAddedInNewJoineeDataEntry = true;
-        else if (this.joineeFilter === JoineeFilter.NotAdded) filter.isAddedInNewJoineeDataEntry = false;
-        if (this.filterDateFrom) filter.dateFrom = this.toDateOnly(this.filterDateFrom);
-        if (this.filterDateTo) filter.dateTo = this.toDateOnly(this.filterDateTo);
-        return filter;
-    }
-
     private loadList(): void {
         this.loading = true;
-        this.detailSvc.getPaginatedFiltered({
-            pagination: { page_no: this.pageNumber, row_per_page: this.pageSize },
-            filter: this.buildFilter()
-        }).subscribe({
-            next: (res) => {
-                this.records = res.datalist ?? [];
-                this.totalRecords = res.pages?.rows ?? 0;
+        this.detailSvc.getAllList().subscribe({
+            next: (d) => {
+                this.allRecords = d ?? [];
+                this.buildFilterOptions();
                 this.loading = false;
             },
-            error: () => {
-                this.records = [];
-                this.totalRecords = 0;
-                this.loading = false;
-            }
+            error: () => { this.allRecords = []; this.loading = false; }
         });
     }
 
-    private reload(): void {
-        this.pageNumber = 1;
-        this.first = 0;
-        if (!this.firstLazyLoadHandled) return;
-        this.loadList();
+    private buildFilterOptions(): void {
+        const bn = this.lang === 'bn';
+        const distinct = (vals: (string | null)[]) =>
+            Array.from(new Set(vals.filter((v): v is string => !!v && v.trim() !== '')))
+                .sort((a, b) => a.localeCompare(b))
+                .map(v => ({ label: v, value: v }));
+
+        this.motherOrgOptions = distinct(this.allRecords.map(r => bn ? r.motherOrgNameBN : r.motherOrgName));
+        this.rankOptions = distinct(this.allRecords.map(r => bn ? r.rankNameBN : r.rankName));
+        this.corpsOptions = distinct(this.allRecords.map(r => bn ? r.corpsNameBN : r.corpsName));
+        this.tradeOptions = distinct(this.allRecords.map(r => bn ? r.tradeNameBN : r.tradeName));
+    }
+
+    /** Records after all active filters are applied. */
+    get filteredRecords(): PermanentPostingJoineeDetailListModel[] {
+        return this.applyClientFilter(this.allRecords);
     }
 
     onSearch(event: Event): void {
-        this.searchText = (event.target as HTMLInputElement).value || '';
-        this.searchSubject.next(this.searchText);
+        this.searchSubject.next((event.target as HTMLInputElement).value || '');
     }
 
     onFilterChange(): void {
-        this.reload();
+        // filtering is reactive via the getter; nothing to reload
     }
 
     clearFilters(): void {
         this.searchText = '';
         this.filterDateFrom = null;
         this.filterDateTo = null;
+        this.filterMotherOrg = null;
+        this.filterRank = null;
+        this.filterCorps = null;
+        this.filterTrade = null;
+        this.possibleJoiningFrom = null;
+        this.possibleJoiningTo = null;
+        this.filterIsReplace = null;
         this.joineeFilter = JoineeFilter.NotAdded;
-        this.reload();
     }
 
     onEdit(row: PermanentPostingJoineeDetailListModel): void {
@@ -246,6 +245,12 @@ export class NewJoiningPersonListComponent implements OnInit, OnDestroy {
 
     toggleLang(): void {
         this.lang = this.lang === 'en' ? 'bn' : 'en';
+        // Option values are language-specific; rebuild and clear stale selections.
+        this.filterMotherOrg = null;
+        this.filterRank = null;
+        this.filterCorps = null;
+        this.filterTrade = null;
+        this.buildFilterOptions();
     }
 
     toggleExportDropdown(event: Event): void {
@@ -298,10 +303,7 @@ export class NewJoiningPersonListComponent implements OnInit, OnDestroy {
         this.exportDropdownOpen = false;
         this.exporting = true;
         try {
-            // Fetch ALL records from server, then apply current filters client-side
-            const allData = await firstValueFrom(this.detailSvc.getAllList());
-            const allRecords = this.applyClientFilter(allData);
-            const { columns, rows } = this.buildExportData(allRecords);
+            const { columns, rows } = this.buildExportData(this.filteredRecords);
             const config: ReportConfig = {
                 title: LABELS[this.lang]['title'],
                 lang: this.lang,
@@ -327,9 +329,17 @@ export class NewJoiningPersonListComponent implements OnInit, OnDestroy {
     }
 
     private applyClientFilter(data: PermanentPostingJoineeDetailListModel[]): PermanentPostingJoineeDetailListModel[] {
+        const bn = this.lang === 'bn';
         let list = data;
         if (this.joineeFilter === JoineeFilter.Added) list = list.filter(r => r.isAddedInNewJoineeDataEntry);
         else if (this.joineeFilter === JoineeFilter.NotAdded) list = list.filter(r => !r.isAddedInNewJoineeDataEntry);
+
+        if (this.filterMotherOrg) list = list.filter(r => (bn ? r.motherOrgNameBN : r.motherOrgName) === this.filterMotherOrg);
+        if (this.filterRank) list = list.filter(r => (bn ? r.rankNameBN : r.rankName) === this.filterRank);
+        if (this.filterCorps) list = list.filter(r => (bn ? r.corpsNameBN : r.corpsName) === this.filterCorps);
+        if (this.filterTrade) list = list.filter(r => (bn ? r.tradeNameBN : r.tradeName) === this.filterTrade);
+        if (this.filterIsReplace != null) list = list.filter(r => (r.permanentPostingMORecordId != null) === this.filterIsReplace);
+
         if (this.filterDateFrom) {
             const from = new Date(this.filterDateFrom); from.setHours(0, 0, 0, 0);
             list = list.filter(r => r.joiningOrderDate && new Date(r.joiningOrderDate) >= from);
@@ -337,6 +347,14 @@ export class NewJoiningPersonListComponent implements OnInit, OnDestroy {
         if (this.filterDateTo) {
             const to = new Date(this.filterDateTo); to.setHours(23, 59, 59, 999);
             list = list.filter(r => r.joiningOrderDate && new Date(r.joiningOrderDate) <= to);
+        }
+        if (this.possibleJoiningFrom) {
+            const from = new Date(this.possibleJoiningFrom); from.setHours(0, 0, 0, 0);
+            list = list.filter(r => r.possibleJoiningDate && new Date(r.possibleJoiningDate) >= from);
+        }
+        if (this.possibleJoiningTo) {
+            const to = new Date(this.possibleJoiningTo); to.setHours(23, 59, 59, 999);
+            list = list.filter(r => r.possibleJoiningDate && new Date(r.possibleJoiningDate) <= to);
         }
         if (this.searchText?.trim()) {
             const term = this.searchText.trim().toLowerCase();
