@@ -389,6 +389,27 @@ export class EmpAddressInfo implements OnInit {
                     const existingAddress = addresses.find((addr) => (addr.addressId || addr.AddressId) === existingAddressId);
 
                     if (existingAddress) {
+                        // If the edit only fills in fields that were previously null/empty
+                        // (e.g. adding Upazila to a Division+District-only record), update the
+                        // existing row in place so NO history entry is created. History (deactivate
+                        // old + create new) is only kept when an already-populated field changes.
+                        if (this.isPureAddition(existingAddress, data)) {
+                            const updatePayload = {
+                                ...newAddressPayload,
+                                AddressId: existingAddressId,
+                                CreatedBy: existingAddress.createdBy || existingAddress.CreatedBy || 'system',
+                                CreatedDate: existingAddress.createdDate || existingAddress.CreatedDate
+                            };
+                            this.empService.updateAddress(updatePayload).subscribe({
+                                next: () => onSuccess(),
+                                error: (err) => {
+                                    console.error('Failed to update address in place', err);
+                                    onError();
+                                }
+                            });
+                            return;
+                        }
+
                         // Create full deactivate payload with all fields
                         const deactivatePayload = {
                             EmployeeID: existingAddress.employeeID || existingAddress.EmployeeID,
@@ -454,6 +475,40 @@ export class EmpAddressInfo implements OnInit {
                 }
             });
         }
+    }
+
+    private isNullOrEmpty(value: any): boolean {
+        return value === null || value === undefined || value === '';
+    }
+
+    /**
+     * Returns true when the new data only fills in fields that were previously
+     * null/empty (a pure addition) and leaves every already-populated field
+     * unchanged. In that case the record can be updated in place with no history.
+     * Returns false if any previously non-null field was changed or cleared,
+     * which requires keeping history (deactivate old + create new).
+     */
+    private isPureAddition(existing: any, data: AddressData): boolean {
+        const pairs: Array<[any, any]> = [
+            [existing.divisionType ?? existing.DivisionType, data.division],
+            [existing.districtType ?? existing.DistrictType, data.district],
+            [existing.thanaType ?? existing.ThanaType, data.upazila],
+            [existing.postOfficeType ?? existing.PostOfficeType, data.postOffice],
+            [existing.postCode ?? existing.PostCode, data.postCode],
+            [existing.addressAreaEN ?? existing.AddressAreaEN, data.villageEnglish],
+            [existing.addressAreaBN ?? existing.AddressAreaBN, data.villageBangla],
+            [existing.houseRoad ?? existing.HouseRoad, data.houseRoad]
+        ];
+
+        for (const [oldVal, newVal] of pairs) {
+            // Field was empty before -> any new value is a pure addition (allowed).
+            if (this.isNullOrEmpty(oldVal)) continue;
+            // Field had a value before -> it must stay exactly the same.
+            if (String(oldVal) !== String(this.isNullOrEmpty(newVal) ? '' : newVal)) {
+                return false;
+            }
+        }
+        return true;
     }
 
     resetForm(): void {

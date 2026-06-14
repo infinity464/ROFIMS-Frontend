@@ -1057,6 +1057,31 @@ export class ExMemberProfile implements OnInit, OnDestroy {
         return row?.fileName ?? row?.FileName ?? '-';
     }
 
+    parseDocRefs(json: string | null | undefined): { fileId: number; fileName: string }[] {
+        if (!json || typeof json !== 'string') return [];
+        let refs: { FileId?: number; fileId?: number; fileName?: string; FileName?: string }[];
+        try {
+            refs = JSON.parse(json);
+        } catch {
+            return [];
+        }
+        if (!Array.isArray(refs)) return [];
+        return refs
+            .map((r) => ({
+                fileId: r.FileId ?? r.fileId ?? 0,
+                fileName: r.fileName ?? r.FileName ?? 'download',
+            }))
+            .filter((r) => r.fileId > 0);
+    }
+
+    downloadDocRef(doc: { fileId: number; fileName: string }): void {
+        if (doc?.fileId == null || doc.fileId <= 0) return;
+        this.empService.downloadFile(doc.fileId).subscribe({
+            next: (blob) => this.empService.triggerFileDownload(blob, doc.fileName || 'download'),
+            error: (err: any) => this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.message || 'Failed to download file.' })
+        });
+    }
+
     downloadDocument(item: EmployeeDocumentReferenceItem): void {
         const fileId = item.fileId ?? (item as { FileId?: number }).FileId;
         const fileName = item.fileName ?? (item as { FileName?: string }).FileName ?? 'download';
