@@ -1,6 +1,7 @@
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
+import { map } from 'rxjs/operators';
 import { environment } from '@/Core/Environments/environment';
 import { EmployeeServiceOverview } from '@/models/employee-service-overview.model';
 import { EmployeePersonalServiceOverview } from '@/models/employee-personal-service-overview.model';
@@ -9,6 +10,10 @@ import { PagedResponse } from '@/Core/Models/Pagination';
 export interface ServingMemberFilterOptionsItem {
     codeId: number;
     codeValueEN: string;
+    /** Owning Mother Organization (set for ranks/corps/trades; drives the cascade). */
+    orgId?: number | null;
+    /** Parent CommonCode (set for trades = Corps CodeId; drives the Trade-by-Corps cascade). */
+    parentCodeId?: number | null;
 }
 
 export interface ServingMemberFilterOptions {
@@ -26,6 +31,7 @@ export interface ServingMemberFilterRequest {
     nidId?: string;
     nameBangla?: string;
     nameEnglish?: string;
+    motherOrganizationId?: number | null;
     rabUnitId?: number | null;
     rankId?: number | null;
     corpsId?: number | null;
@@ -33,7 +39,7 @@ export interface ServingMemberFilterRequest {
     joiningDateFrom?: string | null;
     joiningDateTo?: string | null;
     permanentDistrictType?: number | null;
-    spousePermanentDistrictType?: number | null;
+    wifePermanentDistrictType?: number | null;
     appointmentId?: number | null;
     /** Subtree filter: placement under this CommonCode org node (inclusive). */
     organogramNodeCodeId?: number | null;
@@ -65,6 +71,13 @@ export class ServingMembersService {
     getPresentlyServingMembersPaginated(pageNo: number, rowPerPage: number): Observable<PagedResponse<EmployeeServiceOverview>> {
         const params = new HttpParams().set('page_no', String(pageNo)).set('row_per_page', String(rowPerPage));
         return this.http.get<PagedResponse<EmployeeServiceOverview>>(`${this.apiUrl}/GetBasicServiceInformationOfServingMemberPaginated`, { params });
+    }
+
+    /** Lightweight count of presently-serving members (dashboard KPI) — no row payload, fast load. */
+    getPresentlyServingCount(): Observable<number> {
+        return this.http
+            .get<{ count: number }>(`${this.apiUrl}/GetBasicServiceInformationOfServingMemberCount`)
+            .pipe(map((r) => r?.count ?? 0));
     }
 
     /** Gets filter dropdown options for presently serving members (RAB units, ranks, corps, trades, districts, appointments). */

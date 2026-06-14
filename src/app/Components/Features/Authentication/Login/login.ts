@@ -74,9 +74,26 @@ export class Login implements OnInit {
 
   onLogin(): void {
     if (this.isLoading) return;
+
+    const email = (this.email || '').trim();
+    const password = this.password || '';
+    if (!email || !password) {
+      this.messageService.add({
+        severity: 'warn',
+        summary: 'Required',
+        detail: !email && !password
+          ? 'Please enter your email/username and password.'
+          : !email
+            ? 'Please enter your email or username.'
+            : 'Please enter your password.',
+        life: 3000
+      });
+      return;
+    }
+
     this.isLoading = true;
 
-    this.auth.login(this.email, this.password).subscribe({
+    this.auth.login(email, password).subscribe({
       next: (res) => {
         if (!res?.token) {
           this.isLoading = false;

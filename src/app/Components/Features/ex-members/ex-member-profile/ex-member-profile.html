@@ -283,7 +283,7 @@
                         <div class="sp-field"><span class="sp-field-label">{{ L['field.professionalQualification'] }}</span> <span class="sp-field-value">{{ codeValue(profile.professionalQualification, profile.professionalQualificationBN) }}</span></div>
                         <div class="sp-field"><span class="sp-field-label">{{ L['field.personalQualification'] }}</span> <span class="sp-field-value">{{ codeValue(profile.personalQualification, profile.personalQualificationBN) }}</span></div>
                         <div class="sp-field"><span class="sp-field-label">{{ L['field.gallantryAwards'] }}</span> <span class="sp-field-value">{{ codeValue(profile.gallantryAwardsDecoration, profile.gallantryAwardsDecorationBN) }}</span></div>
-                        <div class="sp-field"><span class="sp-field-label">{{ L['field.bloodGroup'] }}</span> <span class="sp-field-value">{{ val(profile.bloodGroup) }}</span></div>
+                        <div class="sp-field"><span class="sp-field-label">{{ L['field.bloodGroup'] }}</span> <span class="sp-field-value">{{ bloodGroupDisplay(profile.bloodGroup) }}</span></div>
                         <div class="sp-field"><span class="sp-field-label">{{ L['field.nid'] }}</span> <span class="sp-field-value">{{ valDisplay(profile.nid) }}</span></div>
                         <div class="sp-field"><span class="sp-field-label">{{ L['field.nidOld'] }}</span> <span class="sp-field-value">{{ valDisplay(profile.nidOld) }}</span></div>
                         <div class="sp-field"><span class="sp-field-label">{{ L['field.passportNo'] }}</span> <span class="sp-field-value">{{ valDisplay(profile.passportNo) }}</span></div>
@@ -430,8 +430,8 @@
                         <tr>
                             <td>{{ rowNum(rowIndex) }}.</td>
                             <td>{{ codeValue(row.rabUnitName, row.rabUnitNameBN) }}</td>
-                            <td>{{ row.serviceFrom | partialDate: row.serviceFromPrecision }}</td>
-                            <td>{{ row.serviceTo | partialDate: row.serviceToPrecision }}</td>
+                            <td>{{ row.serviceFrom | partialDate: row.serviceFromPrecision : (isBn ? 'bn' : 'en') }}</td>
+                            <td>{{ row.serviceTo | partialDate: row.serviceToPrecision : (isBn ? 'bn' : 'en') }}</td>
                             <td>{{ codeValue(row.appointmentName, row.appointmentNameBN) }}</td>
                             <td>{{ val(row.postingAuth) }}</td>
                             <td>{{ val(row.remarks) }}</td>
@@ -453,7 +453,7 @@
         <!-- Permanent Movement History -->
         <div class="sp-section">
             <div class="sp-section-header">
-                <span class="sp-section-heading">Permanent Movement History</span>
+                <span class="sp-section-heading">{{ L['section.permanentMovementHistory'] }}</span>
             </div>
             <div class="sp-table-wrap">
                 <p-table
@@ -464,11 +464,11 @@
                     <ng-template pTemplate="header">
                         <tr>
                             <th style="width: 5%">{{ L['table.ser'] }}</th>
-                            <th style="width: 17%">Order Type</th>
-                            <th style="width: 20%">Destined Unit</th>
-                            <th style="width: 28%">Reason</th>
-                            <th style="width: 15%">Date of Release</th>
-                            <th style="width: 15%">Date of Reduce from RAB Strength</th>
+                            <th style="width: 17%">{{ L['table.orderType'] }}</th>
+                            <th style="width: 20%">{{ L['table.destinedUnit'] }}</th>
+                            <th style="width: 28%">{{ L['table.reason'] }}</th>
+                            <th style="width: 15%">{{ L['table.dateOfRelease'] }}</th>
+                            <th style="width: 15%">{{ L['table.dateOfReduce'] }}</th>
                         </tr>
                     </ng-template>
                     <ng-template pTemplate="body" let-row let-rowIndex="rowIndex">
@@ -483,7 +483,7 @@
                     </ng-template>
                     <ng-template pTemplate="emptymessage">
                         <tr>
-                            <td colspan="6" class="text-center text-500 py-3">No permanent movement records.</td>
+                            <td colspan="6" class="text-center text-500 py-3">{{ L['empty.noPermanentMovement'] }}</td>
                         </tr>
                     </ng-template>
                 </p-table>
@@ -493,7 +493,7 @@
         <!-- Temporary Movement History -->
         <div class="sp-section">
             <div class="sp-section-header">
-                <span class="sp-section-heading">Temporary Movement History</span>
+                <span class="sp-section-heading">{{ L['section.temporaryMovementHistory'] }}</span>
             </div>
             <div class="sp-table-wrap">
                 <p-table
@@ -504,11 +504,11 @@
                     <ng-template pTemplate="header">
                         <tr>
                             <th style="width: 5%">{{ L['table.ser'] }}</th>
-                            <th style="width: 17%">Order Type</th>
-                            <th style="width: 20%">Destined Unit</th>
-                            <th style="width: 28%">Reason</th>
-                            <th style="width: 15%">Date of Release</th>
-                            <th style="width: 15%">Date of Reduce from RAB Strength</th>
+                            <th style="width: 17%">{{ L['table.orderType'] }}</th>
+                            <th style="width: 20%">{{ L['table.destinedUnit'] }}</th>
+                            <th style="width: 28%">{{ L['table.reason'] }}</th>
+                            <th style="width: 15%">{{ L['table.dateOfRelease'] }}</th>
+                            <th style="width: 15%">{{ L['table.dateOfReduce'] }}</th>
                         </tr>
                     </ng-template>
                     <ng-template pTemplate="body" let-row let-rowIndex="rowIndex">
@@ -523,7 +523,7 @@
                     </ng-template>
                     <ng-template pTemplate="emptymessage">
                         <tr>
-                            <td colspan="6" class="text-center text-500 py-3">No temporary movement records.</td>
+                            <td colspan="6" class="text-center text-500 py-3">{{ L['empty.noTemporaryMovement'] }}</td>
                         </tr>
                     </ng-template>
                 </p-table>
@@ -562,10 +562,10 @@
                     <ng-template pTemplate="body" let-row let-rowIndex="rowIndex">
                         <tr>
                             <td>{{ rowNum(rowIndex) }}.</td>
-                            <td>{{ val(row.organizationName) }}</td>
-                            <td>{{ val(row.locationName) }}</td>
-                            <td>{{ row.serviceFrom | partialDate: row.serviceFromPrecision }}</td>
-                            <td>{{ row.serviceTo | partialDate: row.serviceToPrecision }}</td>
+                            <td>{{ codeValue(row.organizationName, row.organizationNameBN) }}</td>
+                            <td>{{ codeValue(row.locationName, row.locationNameBN) }}</td>
+                            <td>{{ row.serviceFrom | partialDate: row.serviceFromPrecision : (isBn ? 'bn' : 'en') }}</td>
+                            <td>{{ row.serviceTo | partialDate: row.serviceToPrecision : (isBn ? 'bn' : 'en') }}</td>
                             <td>{{ codeValue(row.appointment, row.appointmentBN) }}</td>
                             <td>{{ val(row.auth) }}</td>
                             <td>{{ val(row.remarks) }}</td>
@@ -734,7 +734,7 @@
                             <td>{{ rowNum(rowIndex) }}.</td>
                             <td>{{ codeValue(row.courseType, row.courseTypeBN) }}</td>
                             <td>{{ codeValue(row.courseName, row.courseNameBN) }}</td>
-                            <td>{{ val(row.trainingInstituteName) }}</td>
+                            <td>{{ codeValue(row.trainingInstituteName, row.trainingInstituteNameBN) }}</td>
                             <td>{{ formatDateOnly(row.dateFrom) }}</td>
                             <td>{{ formatDateOnly(row.dateTo) }}</td>
                             <td>{{ val(row.result) }}</td>
@@ -757,7 +757,7 @@
 
         <!-- RFTS Training -->
         <div class="sp-section">
-            <div class="sp-section-header"><span class="sp-section-heading">RFTS</span></div>
+            <div class="sp-section-header"><span class="sp-section-heading">{{ L['section.rfts'] }}</span></div>
             <div class="sp-table-wrap">
                 <p-table
                     [value]="rftsTrainingList"
@@ -766,25 +766,25 @@
                 >
                     <ng-template pTemplate="header">
                         <tr>
-                            <th style="width: 4rem">Ser</th>
-                            <th>Course No</th>
-                            <th>From</th>
-                            <th>To</th>
-                            <th>Remark</th>
+                            <th style="width: 4rem">{{ L['table.ser'] }}</th>
+                            <th>{{ L['table.courseNo'] }}</th>
+                            <th>{{ L['table.from'] }}</th>
+                            <th>{{ L['table.to'] }}</th>
+                            <th>{{ L['table.remarks'] }}</th>
                         </tr>
                     </ng-template>
                     <ng-template pTemplate="body" let-row let-rowIndex="rowIndex">
                         <tr>
-                            <td>{{ rowIndex + 1 }}.</td>
-                            <td>{{ row.courseNo || '-' }}</td>
+                            <td>{{ rowNum(rowIndex) }}.</td>
+                            <td>{{ val(row.courseNo) }}</td>
                             <td>{{ formatDateOnly(row.dateFrom) }}</td>
                             <td>{{ formatDateOnly(row.dateTo) }}</td>
-                            <td>{{ row.remarks || '-' }}</td>
+                            <td>{{ val(row.remarks) }}</td>
                         </tr>
                     </ng-template>
                     <ng-template pTemplate="emptymessage">
                         <tr>
-                            <td colspan="5" class="text-center text-500 py-3">No RFTS records found.</td>
+                            <td colspan="5" class="text-center text-500 py-3">{{ L['empty.noRftsRecords'] }}</td>
                         </tr>
                     </ng-template>
                 </p-table>
@@ -818,7 +818,7 @@
             <!-- ExBD Leave Application Progress -->
             @if (exBdLeaveProgressList.length > 0) {
             <div style="margin-top: 1.25rem">
-                <div class="sp-addr-type">ExBD Leave Application Status</div>
+                <div class="sp-addr-type">{{ L['exbd.leaveStatusTitle'] }}</div>
                 <div class="sp-table-wrap">
                     <p-table
                         [value]="exBdLeaveProgressList"
@@ -827,14 +827,14 @@
                     >
                         <ng-template pTemplate="header">
                             <tr>
-                                <th style="width: 3rem">Ser</th>
-                                <th>Purpose of Visit</th>
-                                <th>Country</th>
-                                <th>From</th>
-                                <th>To</th>
-                                <th style="width: 4rem; text-align: center">Days</th>
-                                <th>Family Members</th>
-                                <th>Status</th>
+                                <th style="width: 3rem">{{ L['table.ser'] }}</th>
+                                <th>{{ L['table.purposeOfVisit'] }}</th>
+                                <th>{{ L['table.country'] }}</th>
+                                <th>{{ L['table.from'] }}</th>
+                                <th>{{ L['table.to'] }}</th>
+                                <th style="width: 4rem; text-align: center">{{ L['table.days'] }}</th>
+                                <th>{{ L['table.familyMembers'] }}</th>
+                                <th>{{ L['table.status'] }}</th>
                             </tr>
                         </ng-template>
                         <ng-template pTemplate="body" let-row let-rowIndex="rowIndex">
@@ -889,7 +889,28 @@
                                 <td>{{ formatDateOnly(row.durationFrom) }}</td>
                                 <td>{{ formatDateOnly(row.durationTo) }}</td>
                                 <td>{{ codeValue(row.reasonForVisiting, row.reasonForVisitingBN) }}</td>
-                                <td>{{ val(row.relatedDocuments) }}</td>
+                                <td>
+                                    @if (parseDocRefs(row.relatedDocuments).length > 0) {
+                                        <div class="flex flex-column gap-1">
+                                            @for (doc of parseDocRefs(row.relatedDocuments); track doc.fileId) {
+                                                <div class="flex align-items-center gap-2">
+                                                    <span class="text-sm">{{ doc.fileName }}</span>
+                                                    <p-button
+                                                        icon="pi pi-download"
+                                                        [rounded]="true"
+                                                        [text]="true"
+                                                        severity="secondary"
+                                                        size="small"
+                                                        (onClick)="downloadDocRef(doc)"
+                                                        [pTooltip]="L['tooltip.downloadFile']"
+                                                    ></p-button>
+                                                </div>
+                                            }
+                                        </div>
+                                    } @else {
+                                        {{ val(row.relatedDocuments) }}
+                                    }
+                                </td>
                             </tr>
                         </ng-template>
                         <ng-template pTemplate="emptymessage">
@@ -927,7 +948,28 @@
                                 <td>{{ formatDateOnly(row.durationFrom) }}</td>
                                 <td>{{ formatDateOnly(row.durationTo) }}</td>
                                 <td>{{ codeValue(row.reasonForVisiting, row.reasonForVisitingBN) }}</td>
-                                <td>{{ val(row.relatedDocuments) }}</td>
+                                <td>
+                                    @if (parseDocRefs(row.relatedDocuments).length > 0) {
+                                        <div class="flex flex-column gap-1">
+                                            @for (doc of parseDocRefs(row.relatedDocuments); track doc.fileId) {
+                                                <div class="flex align-items-center gap-2">
+                                                    <span class="text-sm">{{ doc.fileName }}</span>
+                                                    <p-button
+                                                        icon="pi pi-download"
+                                                        [rounded]="true"
+                                                        [text]="true"
+                                                        severity="secondary"
+                                                        size="small"
+                                                        (onClick)="downloadDocRef(doc)"
+                                                        [pTooltip]="L['tooltip.downloadFile']"
+                                                    ></p-button>
+                                                </div>
+                                            }
+                                        </div>
+                                    } @else {
+                                        {{ val(row.relatedDocuments) }}
+                                    }
+                                </td>
                             </tr>
                         </ng-template>
                         <ng-template pTemplate="emptymessage">
@@ -947,13 +989,15 @@
         <!-- Leave (Current Year) -->
         <div class="sp-section">
             <div class="sp-section-header">
-                <span class="sp-section-heading">{{ L['section.leave'] }} ({{ currentYearDisplay }})</span>
-                <i
-                    class="pi pi-info-circle cursor-pointer text-primary"
-                    [pTooltip]="L['tooltip.viewPreviousYearLeaveSummary']"
-                    (click)="openPreviousYearLeaveSummary()"
-                    [attr.aria-label]="L['tooltip.viewPreviousYearLeaveSummary']"
-                ></i>
+                <span class="sp-section-heading inline-flex items-center gap-2">
+                    {{ L['section.leave'] }} ({{ currentYearDisplay }})
+                    <i
+                        class="pi pi-info-circle cursor-pointer text-primary"
+                        [pTooltip]="L['tooltip.viewPreviousYearLeaveSummary']"
+                        (click)="openPreviousYearLeaveSummary()"
+                        [attr.aria-label]="L['tooltip.viewPreviousYearLeaveSummary']"
+                    ></i>
+                </span>
                 @if (editingSection !== 'leave') {
                     <button type="button" class="sp-btn sp-btn-sm" (click)="setEditingSection('leave')"><i class="pi pi-pencil"></i> Edit</button>
                 } @else {

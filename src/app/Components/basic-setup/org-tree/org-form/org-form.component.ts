@@ -117,13 +117,31 @@ export class OrgFormComponent implements OnInit, OnChanges {
         });
     }
 
+    /** Parent's hierarchy depth from its codeType (level NAME); falls back to numeric level. */
+    private parentLevelIndex(parent: OrgNode): number {
+        const idx = LEVELS.indexOf(parent.codeType as (typeof LEVELS)[number]);
+        return idx >= 0 ? idx : (parent.level ?? 0);
+    }
+
     resetForm(): void {
         if (!this.form) return;
         const parent = this.parentNode;
         const siblings = this.siblingCount;
-        const codeType = this.mode === 'add-unit' ? 'Unit' : this.mode === 'add-child' && parent ? LEVELS[parent.level + 1] : this.editNode?.codeType ?? '';
+        // Derive the child's depth from the parent's codeType (reliable level NAME),
+        // NOT the parent's numeric `level` column — that DB field is inconsistent and
+        // would otherwise create children at the wrong level (e.g. Wing under a Wing).
+        const childLevelIdx =
+            this.mode === 'add-child' && parent
+                ? Math.min(this.parentLevelIndex(parent) + 1, LEVELS.length - 1)
+                : this.editNode?.level ?? 0;
+        const codeType =
+            this.mode === 'add-unit'
+                ? 'Unit'
+                : this.mode === 'add-child' && parent
+                  ? LEVELS[childLevelIdx]
+                  : this.editNode?.codeType ?? '';
         const parentCodeId = this.mode === 'add-unit' ? null : (parent?.id ?? this.editNode?.parentId ?? null);
-        const level = this.mode === 'add-unit' ? 0 : (parent ? parent.level + 1 : this.editNode?.level ?? 0);
+        const level = this.mode === 'add-unit' ? 0 : (parent ? childLevelIdx : this.editNode?.level ?? 0);
         this.form.reset({
             codeValueEN: '',
             codeValueBN: '',

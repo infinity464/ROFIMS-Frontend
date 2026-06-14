@@ -137,11 +137,16 @@ export class RabOrganogramComponent implements OnInit {
                         authorizedCount: acm.get(n.id) ?? 0
                     }));
 
-                    // Compute totals from all held/auth counts
+                    // Grand totals: sum only the root nodes' rolled-up counts. Roots are
+                    // disjoint subtrees, so their roll-ups already cover every descendant
+                    // exactly once. Summing the full rolled list would count each member
+                    // once per ancestor level (over-count).
                     let totalH = 0;
                     let totalA = 0;
-                    for (const h of heldCounts ?? []) totalH += h?.servingCount ?? 0;
-                    for (const a of authCounts ?? []) totalA += a?.authorizedCount ?? 0;
+                    for (const n of orgNodes) {
+                        totalH += n.servingCount ?? 0;
+                        totalA += n.authorizedCount ?? 0;
+                    }
                     this.totalHeld.set(totalH || 0);
                     this.totalAuthorized.set(totalA || 0);
 
@@ -419,7 +424,7 @@ export class RabOrganogramComponent implements OnInit {
         while (current) {
             parts.unshift(current.nameEN || current.commCode || '');
             if (current.parentId == null) break;
-            current = flat.find(n => n.id === current!.parentId);
+            current = flat.find((n) => n.id === current!.parentId);
         }
 
         return parts.join(' → ');

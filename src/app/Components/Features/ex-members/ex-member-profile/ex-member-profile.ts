@@ -246,7 +246,7 @@ export class ExMemberProfile implements OnInit, OnDestroy {
             kv(L['field.professionalQualification'], this.codeValue(p.professionalQualification, p.professionalQualificationBN)),
             kv(L['field.personalQualification'], this.codeValue(p.personalQualification, p.personalQualificationBN)),
             kv(L['field.gallantryAwards'], this.codeValue(p.gallantryAwardsDecoration, p.gallantryAwardsDecorationBN)),
-            kv(L['field.bloodGroup'], this.val(p.bloodGroup)),
+            kv(L['field.bloodGroup'], this.bloodGroupDisplay(p.bloodGroup)),
             kv(L['field.nid'], this.valDisplay(p.nid)),
             kv(L['field.nidOld'], this.valDisplay(p.nidOld)),
             kv(L['field.emailAddress'], this.val(p.emailAddress)),
@@ -579,11 +579,21 @@ export class ExMemberProfile implements OnInit, OnDestroy {
     }
 
     /** Own addresses: one active Permanent and one active Present. */
+    /**
+     * Latest ACTIVE address of a given location type. Address edits deactivate the old
+     * row and insert a new active one, so the read view must skip inactive history rows —
+     * otherwise it shows a stale address that differs from what the Edit form loads.
+     */
+    private latestActiveAddress(type: string): AddressInfoByEmployeeView | undefined {
+        const matches = this.addressList.filter((a) => (a.locationType ?? '').trim() === type && a.active !== false);
+        return matches.length ? matches[matches.length - 1] : undefined;
+    }
+
     get ownAddressList(): AddressInfoByEmployeeView[] {
         if (!this.addressList?.length) return [];
         const result: AddressInfoByEmployeeView[] = [];
-        const permanent = this.addressList.find((a) => (a.locationType ?? '').trim() === LocationType.Permanent);
-        const present = this.addressList.find((a) => (a.locationType ?? '').trim() === LocationType.Present);
+        const permanent = this.latestActiveAddress(LocationType.Permanent);
+        const present = this.latestActiveAddress(LocationType.Present);
         if (permanent) result.push(permanent);
         if (present) result.push(present);
         return result;
@@ -591,11 +601,12 @@ export class ExMemberProfile implements OnInit, OnDestroy {
 
     get spouseAddressList(): AddressInfoByEmployeeView[] {
         if (!this.addressList?.length) return [];
-        const spouse = [LocationType.SpousePermanent, LocationType.SpousePresent];
-        return this.addressList.filter((a) => {
-            const t = (a.locationType ?? '').trim();
-            return spouse.some((type) => t === type);
-        });
+        const result: AddressInfoByEmployeeView[] = [];
+        const permanent = this.latestActiveAddress(LocationType.SpousePermanent);
+        const present = this.latestActiveAddress(LocationType.SpousePresent);
+        if (permanent) result.push(permanent);
+        if (present) result.push(present);
+        return result;
     }
 
     getAddressTypeLabel(addr: AddressInfoByEmployeeView): string {
@@ -605,16 +616,17 @@ export class ExMemberProfile implements OnInit, OnDestroy {
         return t || this.L['addressType.address'];
     }
 
+    /** Matches "in-law" / "in law" / "inlaw" (any spacing/hyphen), case-insensitive. */
+    private readonly inLawPattern = /in[\s-]*law/i;
+
     get familyInfoList(): FamilyInfoByEmployeeView[] {
         if (!this.familyList?.length) return [];
-        const inLawPattern = /in-law/i;
-        return this.familyList.filter((f) => !inLawPattern.test((f.relation ?? '').trim()));
+        return this.familyList.filter((f) => !this.inLawPattern.test((f.relation ?? '').trim()));
     }
 
     get spouseFamilyInfoList(): FamilyInfoByEmployeeView[] {
         if (!this.familyList?.length) return [];
-        const inLawPattern = /in-law/i;
-        return this.familyList.filter((f) => inLawPattern.test((f.relation ?? '').trim()));
+        return this.familyList.filter((f) => this.inLawPattern.test((f.relation ?? '').trim()));
     }
 
     /** Ex-member: all RAB service records are "previous" (no present section). */
@@ -920,16 +932,38 @@ export class ExMemberProfile implements OnInit, OnDestroy {
         return '-';
     }
 
+    /** Blood group shown in Bangla words when in BN mode (e.g. AB+ → এবি পজিটিভ). */
+    bloodGroupDisplay(value: string | null | undefined): string {
+        const v = (value ?? '').toString().trim();
+        if (!v) return '-';
+        if (!this.isBn) return v;
+        const m = v.toUpperCase().match(/^(AB|A|B|O)\s*([+-]|POS(?:ITIVE)?|NEG(?:ATIVE)?)?$/);
+        if (!m) return v;
+        const letterMap: Record<string, string> = { A: 'এ', B: 'বি', AB: 'এবি', O: 'ও' };
+        const sign = m[2] ?? '';
+        const signBn = sign === '+' || sign.startsWith('POS') ? ' পজিটিভ' : sign === '-' || sign.startsWith('NEG') ? ' নেগেটিভ' : '';
+        return `${letterMap[m[1]]}${signBn}`;
+    }
+
     heightDisplay(p: EmployeePersonalServiceOverview | null): string {
         if (!p || p.height == null) return '-';
-        const h = this.isBn ? BanglaNumerals.toBangla(String(p.height)) : String(p.height);
-        return `${h} Inch`;
+        // Stored height is in inches → show as feet + inches.
+        const totalInches = Number(p.height);
+        if (isNaN(totalInches)) return '-';
+        const feet = Math.floor(totalInches / 12);
+        const inches = totalInches % 12;
+        if (this.isBn) {
+            const f = BanglaNumerals.toBangla(String(feet));
+            const i = BanglaNumerals.toBangla(String(inches));
+            return `${f} ফুট ${i} ইঞ্চি`;
+        }
+        return `${feet} ft ${inches} in`;
     }
 
     weightDisplay(p: EmployeePersonalServiceOverview | null): string {
         if (!p || p.weight == null) return '-';
         const w = this.isBn ? BanglaNumerals.toBangla(String(p.weight)) : String(p.weight);
-        return `${w} lbs`;
+        return this.isBn ? `${w} কেজি` : `${w} kg`;
     }
 
     formatFamilyDob(value: string | null | undefined): string {
@@ -991,7 +1025,12 @@ export class ExMemberProfile implements OnInit, OnDestroy {
         const deco = this.isBn ? (profile.gallantryAwardsDecorationBN ?? profile.gallantryAwardsDecoration) : profile.gallantryAwardsDecoration;
         const prof = this.isBn ? (profile.professionalQualificationBN ?? profile.professionalQualification) : profile.professionalQualification;
         const crps = this.isBn ? (profile.corpsBN ?? profile.corps) : profile.corps;
-        return [namePart, deco, prof, crps].filter((value) => value && String(value).trim() !== '' && String(value).trim() !== 'N/A').join(', ');
+        return [namePart, deco, prof, crps]
+            .filter((value) => {
+                const v = String(value ?? '').trim();
+                return v !== '' && v !== 'N/A' && v !== 'অপ্রযোজ্য';
+            })
+            .join(', ');
     }
 
     getDocumentSourceLabel(row: { sourceTable?: string; SourceTable?: string }): string {
@@ -1016,6 +1055,31 @@ export class ExMemberProfile implements OnInit, OnDestroy {
 
     getDocumentFileName(row: { fileName?: string; FileName?: string }): string {
         return row?.fileName ?? row?.FileName ?? '-';
+    }
+
+    parseDocRefs(json: string | null | undefined): { fileId: number; fileName: string }[] {
+        if (!json || typeof json !== 'string') return [];
+        let refs: { FileId?: number; fileId?: number; fileName?: string; FileName?: string }[];
+        try {
+            refs = JSON.parse(json);
+        } catch {
+            return [];
+        }
+        if (!Array.isArray(refs)) return [];
+        return refs
+            .map((r) => ({
+                fileId: r.FileId ?? r.fileId ?? 0,
+                fileName: r.fileName ?? r.FileName ?? 'download',
+            }))
+            .filter((r) => r.fileId > 0);
+    }
+
+    downloadDocRef(doc: { fileId: number; fileName: string }): void {
+        if (doc?.fileId == null || doc.fileId <= 0) return;
+        this.empService.downloadFile(doc.fileId).subscribe({
+            next: (blob) => this.empService.triggerFileDownload(blob, doc.fileName || 'download'),
+            error: (err: any) => this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.message || 'Failed to download file.' })
+        });
     }
 
     downloadDocument(item: EmployeeDocumentReferenceItem): void {

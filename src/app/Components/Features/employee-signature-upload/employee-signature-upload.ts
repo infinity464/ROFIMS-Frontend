@@ -1,4 +1,4 @@
-import { Component, OnInit, ViewChild } from '@angular/core';
+import { Component, ElementRef, OnDestroy, OnInit, ViewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
@@ -9,9 +9,17 @@ import { ToggleSwitchModule } from 'primeng/toggleswitch';
 import { TooltipModule } from 'primeng/tooltip';
 import { ImageCropperComponent, ImageCroppedEvent, ImageTransform } from 'ngx-image-cropper';
 import { FileUploadModule } from 'primeng/fileupload';
-import { MessageService } from 'primeng/api';
+import { ConfirmDialogModule } from 'primeng/confirmdialog';
+import { ConfirmationService, MessageService } from 'primeng/api';
+import { forkJoin, of } from 'rxjs';
+import { catchError } from 'rxjs/operators';
 import { EmpService } from '@/services/emp-service';
 import { EmployeeSearchComponent, EmployeeBasicInfo } from '@/Components/Shared/employee-search/employee-search';
+
+interface EnrolledFace {
+    photoId: string;
+    url: string;
+}
 
 @Component({
     selector: 'app-employee-signature-upload',
@@ -24,14 +32,15 @@ import { EmployeeSearchComponent, EmployeeBasicInfo } from '@/Components/Shared/
         ToggleSwitchModule,
         TooltipModule,
         FileUploadModule,
+        ConfirmDialogModule,
         ImageCropperComponent,
         EmployeeSearchComponent
     ],
     templateUrl: './employee-signature-upload.html',
     styleUrl: './employee-signature-upload.scss',
-    providers: [MessageService]
+    providers: [MessageService, ConfirmationService]
 })
-export class EmployeeSignatureUploadComponent implements OnInit {
+export class EmployeeSignatureUploadComponent implements OnInit, OnDestroy {
     employeeId: number | null = null;
     employeeInfo: EmployeeBasicInfo | null = null;
 
@@ -65,9 +74,33 @@ export class EmployeeSignatureUploadComponent implements OnInit {
     // Current saved signature
     currentSignatureUrl: string = '';
 
+    // ---- Face recognition enrollment ----
+    faceFiles: File[] = [];
+    facePreviewUrls: string[] = [];
+    enrolledFaceCount = 0;
+    enrollingFaces = false;
+    dragOverFace = false;
+
+    // Inline enrolled-images gallery (toggled by "Show All Images")
+    showEnrolled = false;
+    loadingEnrolled = false;
+    enrolledFaces: EnrolledFace[] = [];
+    deletingPhotoId: string | null = null;
+
+    /** Hard cap on total enrolled faces per employee. */
+    readonly MAX_FACES_PER_EMPLOYEE = 10;
+    private readonly MAX_FACE_SIZE_MB = 10;
+    @ViewChild('faceInput') faceInput!: ElementRef<HTMLInputElement>;
+
+    /** Remaining slots = cap − already-enrolled − currently-selected. */
+    get faceSlotsLeft(): number {
+        return Math.max(0, this.MAX_FACES_PER_EMPLOYEE - this.enrolledFaceCount - this.faceFiles.length);
+    }
+
     constructor(
         private empService: EmpService,
         private messageService: MessageService,
+        private confirmationService: ConfirmationService,
         private _router: Router,
         private _userMenuService: UserMenuService
     ) {}
@@ -79,11 +112,20 @@ export class EmployeeSignatureUploadComponent implements OnInit {
         this.canDelete = _perms.canDelete;
     }
 
+    ngOnDestroy(): void {
+        this.clearFaceSelection();
+        this.clearEnrolledGallery();
+    }
+
     onEmployeeFound(emp: EmployeeBasicInfo): void {
         this.employeeId = emp.employeeID;
         this.employeeInfo = emp;
         this.loadCurrentSignature();
+        this.loadFaceCount();
         this.resetSelection();
+        this.clearFaceSelection();
+        this.showEnrolled = false;
+        this.clearEnrolledGallery();
     }
 
     onSearchReset(): void {
@@ -93,7 +135,11 @@ export class EmployeeSignatureUploadComponent implements OnInit {
             URL.revokeObjectURL(this.currentSignatureUrl);
             this.currentSignatureUrl = '';
         }
+        this.enrolledFaceCount = 0;
         this.resetSelection();
+        this.clearFaceSelection();
+        this.showEnrolled = false;
+        this.clearEnrolledGallery();
     }
 
     onCropToggleChange(): void {
@@ -416,5 +462,254 @@ export class EmployeeSignatureUploadComponent implements OnInit {
 
     onSignatureLoadError(): void {
         this.currentSignatureUrl = '';
+    }
+
+    // ---------------------------------------------------------------- Face enrollment
+
+    /** Open the native face-image file picker. */
+    triggerFaceInput(): void {
+        this.faceInput?.nativeElement.click();
+    }
+
+    onFaceInputChange(event: Event): void {
+        const input = event.target as HTMLInputElement;
+        this.addFaceFiles(input.files ? Array.from(input.files) : []);
+        input.value = ''; // allow re-selecting the same file
+    }
+
+    onFaceDragOver(event: DragEvent): void {
+        event.preventDefault();
+        this.dragOverFace = true;
+    }
+
+    onFaceDragLeave(event: DragEvent): void {
+        event.preventDefault();
+        this.dragOverFace = false;
+    }
+
+    onFaceDrop(event: DragEvent): void {
+        event.preventDefault();
+        this.dragOverFace = false;
+        const files = event.dataTransfer?.files ? Array.from(event.dataTransfer.files) : [];
+        this.addFaceFiles(files);
+    }
+
+    /** Add selected images to the pending list (type/size/dedup + 10-per-employee cap). */
+    private addFaceFiles(incoming: File[]): void {
+        for (const file of incoming) {
+            if (!/^image\/(png|jpe?g)$/i.test(file.type)) {
+                this.messageService.add({ severity: 'warn', summary: 'Warning', detail: `"${file.name}" is not a PNG/JPG image.` });
+                continue;
+            }
+            if (file.size > this.MAX_FACE_SIZE_MB * 1024 * 1024) {
+                this.messageService.add({ severity: 'warn', summary: 'Warning', detail: `"${file.name}" exceeds ${this.MAX_FACE_SIZE_MB} MB.` });
+                continue;
+            }
+            // Skip exact duplicates (same name + size).
+            if (this.faceFiles.some((f) => f.name === file.name && f.size === file.size)) {
+                continue;
+            }
+            // Hard cap: total enrolled + pending must not exceed the per-employee limit.
+            if (this.faceSlotsLeft <= 0) {
+                this.messageService.add({
+                    severity: 'warn',
+                    summary: 'Limit reached',
+                    detail: `An employee can have at most ${this.MAX_FACES_PER_EMPLOYEE} enrolled face images (${this.enrolledFaceCount} already enrolled).`
+                });
+                break;
+            }
+            this.faceFiles.push(file);
+            this.facePreviewUrls.push(URL.createObjectURL(file));
+        }
+    }
+
+    /** Remove one pending face image by index. */
+    removeFaceFile(index: number): void {
+        if (this.facePreviewUrls[index]) {
+            URL.revokeObjectURL(this.facePreviewUrls[index]);
+        }
+        this.faceFiles.splice(index, 1);
+        this.facePreviewUrls.splice(index, 1);
+    }
+
+    /** Upload all pending face images to the recognition service. */
+    enrollFaces(): void {
+        if (!this.canUpdate) {
+            this.messageService.add({ severity: 'warn', summary: 'Permission Denied', detail: 'You do not have permission to upload face images.' });
+            return;
+        }
+        if (!this.employeeId) {
+            this.messageService.add({ severity: 'warn', summary: 'Warning', detail: 'Please select an employee.' });
+            return;
+        }
+        if (this.faceFiles.length === 0) {
+            this.messageService.add({ severity: 'warn', summary: 'Warning', detail: 'Please select at least one face image.' });
+            return;
+        }
+        if (this.enrolledFaceCount + this.faceFiles.length > this.MAX_FACES_PER_EMPLOYEE) {
+            this.messageService.add({
+                severity: 'warn',
+                summary: 'Limit reached',
+                detail: `An employee can have at most ${this.MAX_FACES_PER_EMPLOYEE} enrolled face images.`
+            });
+            return;
+        }
+
+        this.enrollingFaces = true;
+        this.empService.enrollFaces(this.employeeId, this.faceFiles).subscribe({
+            next: (res: any) => {
+                const enrolled = res?.photos_enrolled ?? 0;
+                const rejected = res?.photos_rejected ?? 0;
+                if (enrolled > 0) {
+                    this.messageService.add({
+                        severity: rejected > 0 ? 'warn' : 'success',
+                        summary: 'Face Enrollment',
+                        detail: `${enrolled} image(s) enrolled${rejected > 0 ? `, ${rejected} rejected (no/low-quality face).` : '.'}`
+                    });
+                } else {
+                    this.messageService.add({ severity: 'error', summary: 'Face Enrollment', detail: 'No images were enrolled. Ensure each image shows a clear, well-lit face.' });
+                }
+                this.enrollingFaces = false;
+                this.clearFaceSelection();
+                this.loadFaceCount();
+                if (this.showEnrolled) this.loadEnrolledImages();
+            },
+            error: (err: any) => {
+                this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.message || 'Failed to enroll face images.' });
+                this.enrollingFaces = false;
+            }
+        });
+    }
+
+    /** Delete all enrolled face images for the current employee (with confirm). */
+    deleteEnrolledFaces(): void {
+        if (!this.canDelete) {
+            this.messageService.add({ severity: 'warn', summary: 'Permission Denied', detail: 'You do not have permission to delete face images.' });
+            return;
+        }
+        if (!this.employeeId) return;
+
+        this.confirmationService.confirm({
+            header: 'Delete All Enrolled Faces',
+            message: `Delete all ${this.enrolledFaceCount} enrolled face image(s) for this employee? This cannot be undone.`,
+            icon: 'pi pi-exclamation-triangle',
+            rejectButtonProps: { label: 'No', severity: 'secondary', outlined: true },
+            acceptButtonProps: { label: 'Yes, delete all', severity: 'danger' },
+            accept: () => this.doDeleteAllEnrolled()
+        });
+    }
+
+    private doDeleteAllEnrolled(): void {
+        if (!this.employeeId) return;
+        this.empService.deleteEnrolledFaces(this.employeeId).subscribe({
+            next: () => {
+                this.messageService.add({ severity: 'success', summary: 'Success', detail: 'All enrolled face images removed.' });
+                this.clearEnrolledGallery();
+                this.loadFaceCount();
+            },
+            error: (err: any) => {
+                this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.message || 'Failed to remove face images.' });
+            }
+        });
+    }
+
+    /** Toggle the inline enrolled-images gallery. */
+    toggleEnrolledImages(): void {
+        this.showEnrolled = !this.showEnrolled;
+        if (this.showEnrolled) {
+            this.loadEnrolledImages();
+        } else {
+            this.clearEnrolledGallery();
+        }
+    }
+
+    /** Delete a single enrolled face image by its photo id (with confirm). */
+    deleteEnrolledFace(photoId: string): void {
+        if (!this.canDelete) {
+            this.messageService.add({ severity: 'warn', summary: 'Permission Denied', detail: 'You do not have permission to delete face images.' });
+            return;
+        }
+        if (!this.employeeId || this.deletingPhotoId) return;
+
+        this.confirmationService.confirm({
+            header: 'Delete Face Image',
+            message: 'Delete this enrolled face image? This cannot be undone.',
+            icon: 'pi pi-exclamation-triangle',
+            rejectButtonProps: { label: 'No', severity: 'secondary', outlined: true },
+            acceptButtonProps: { label: 'Yes, delete', severity: 'danger' },
+            accept: () => this.doDeleteEnrolledFace(photoId)
+        });
+    }
+
+    private doDeleteEnrolledFace(photoId: string): void {
+        if (!this.employeeId) return;
+        this.deletingPhotoId = photoId;
+        this.empService.deleteEnrolledFace(this.employeeId, photoId).subscribe({
+            next: () => {
+                const idx = this.enrolledFaces.findIndex((f) => f.photoId === photoId);
+                if (idx >= 0) {
+                    URL.revokeObjectURL(this.enrolledFaces[idx].url);
+                    this.enrolledFaces.splice(idx, 1);
+                }
+                this.enrolledFaceCount = Math.max(0, this.enrolledFaceCount - 1);
+                this.deletingPhotoId = null;
+                this.messageService.add({ severity: 'success', summary: 'Removed', detail: 'Face image deleted.' });
+            },
+            error: (err: any) => {
+                this.deletingPhotoId = null;
+                this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.message || 'Failed to delete face image.' });
+            }
+        });
+    }
+
+    private loadEnrolledImages(): void {
+        if (!this.employeeId) return;
+        this.loadingEnrolled = true;
+        this.clearEnrolledGallery();
+        this.empService.getEnrolledFacePhotos(this.employeeId).subscribe({
+            next: (photos) => {
+                const list = photos ?? [];
+                this.enrolledFaceCount = list.length;
+                if (list.length === 0) {
+                    this.loadingEnrolled = false;
+                    return;
+                }
+                const eid = this.employeeId!;
+                forkJoin(
+                    list.map((p) =>
+                        this.empService.getEnrolledFaceImageBlob(eid, p.photo_id).pipe(catchError(() => of(null)))
+                    )
+                ).subscribe((blobs) => {
+                    this.enrolledFaces = list
+                        .map((p, i) => ({ photoId: p.photo_id, blob: blobs[i] }))
+                        .filter((x) => !!x.blob && x.blob!.size > 0)
+                        .map((x) => ({ photoId: x.photoId, url: URL.createObjectURL(x.blob as Blob) }));
+                    this.loadingEnrolled = false;
+                });
+            },
+            error: () => {
+                this.loadingEnrolled = false;
+                this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to load enrolled images.' });
+            }
+        });
+    }
+
+    private loadFaceCount(): void {
+        if (!this.employeeId) return;
+        this.empService.getEnrolledFaceCount(this.employeeId).subscribe({
+            next: (res) => { this.enrolledFaceCount = res?.photoCount ?? 0; },
+            error: () => { this.enrolledFaceCount = 0; }
+        });
+    }
+
+    private clearFaceSelection(): void {
+        this.facePreviewUrls.forEach((url) => URL.revokeObjectURL(url));
+        this.faceFiles = [];
+        this.facePreviewUrls = [];
+    }
+
+    private clearEnrolledGallery(): void {
+        this.enrolledFaces.forEach((f) => URL.revokeObjectURL(f.url));
+        this.enrolledFaces = [];
     }
 }

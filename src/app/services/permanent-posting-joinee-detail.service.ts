@@ -52,6 +52,10 @@ export interface PermanentPostingJoineeDetailListModel {
     postedOutServiceId: string | null;
     postedOutNameBN: string | null;
     postedOutNameEN: string | null;
+    postedOutRank: string | null;
+    postedOutRankBN: string | null;
+    postedOutRabUnit: string | null;
+    postedOutRabUnitBN: string | null;
     motherOrgName: string | null;
     motherOrgNameBN: string | null;
     motherOrgUnitName: string | null;
@@ -73,6 +77,8 @@ export interface PermanentPostingJoineeDetailFilterRequest {
     isAddedInNewJoineeDataEntry?: boolean | null;
     dateFrom?: string | null;
     dateTo?: string | null;
+    possibleJoiningDateFrom?: string | null;
+    possibleJoiningDateTo?: string | null;
 }
 
 export interface PermanentPostingJoineeDetailPaginatedFilterRequest {
@@ -96,6 +102,13 @@ export class PermanentPostingJoineeDetailService {
 
     getPaginatedFiltered(request: PermanentPostingJoineeDetailPaginatedFilterRequest): Observable<PagedResponse<PermanentPostingJoineeDetailListModel>> {
         return this.http.post<PagedResponse<PermanentPostingJoineeDetailListModel>>(`${this.baseUrl}/GetPaginatedFiltered`, request);
+    }
+
+    /** Lightweight total count for a given filter (dashboard KPI) — no row payload, fast load. */
+    getCountFiltered(filter: PermanentPostingJoineeDetailFilterRequest): Observable<number> {
+        return this.http
+            .post<{ count: number }>(`${this.baseUrl}/GetCountFiltered`, filter)
+            .pipe(map((r) => r?.count ?? 0));
     }
 
     getByRecordId(recordId: number): Observable<PermanentPostingJoineeDetailModel | null> {

@@ -9,7 +9,7 @@
         </h3>
         <div class="flex gap-2 align-items-center">
             <div class="report-export-wrap" (click)="$event.stopPropagation()">
-                <button class="export-btn" [disabled]="!records.length || exporting" (click)="toggleExportDropdown($event)">
+                <button class="export-btn" [disabled]="!allRecords.length || exporting" (click)="toggleExportDropdown($event)">
                     @if (exporting) {
                         <i class="pi pi-spin pi-spinner" style="font-size:0.8rem"></i> Generating...
                     } @else {
@@ -36,12 +36,10 @@
         </div>
     </div>
 
-    <p-table [value]="records" [loading]="loading" dataKey="id"
-             [lazy]="true" (onLazyLoad)="onLazyLoad($event)"
+    <p-table [value]="filteredRecords" [loading]="loading" dataKey="id"
              styleClass="p-datatable-striped p-datatable-gridlines themed-table"
              [tableStyle]="{'min-width':'100rem'}"
-             [paginator]="true" [rows]="pageSize" [totalRecords]="totalRecords"
-             [first]="first" [rowsPerPageOptions]="[10,25,50]">
+             [paginator]="true" [rows]="pageSize" [rowsPerPageOptions]="[10,25,50]">
         <ng-template pTemplate="caption">
             <div class="filter-bar">
                 <div class="filter-group">
@@ -49,25 +47,56 @@
                     <p-select [options]="joineeFilterOptions" [(ngModel)]="joineeFilter"
                         optionLabel="label" optionValue="value"
                         placeholder="Filter by Entry Status"
-                        styleClass="text-sm" [style]="{'min-width':'12rem'}"
-                        (onChange)="onFilterChange()"></p-select>
+                        styleClass="text-sm" [style]="{'min-width':'12rem'}"></p-select>
                 </div>
                 <div class="filter-group">
-                    <label>{{ L[lang]['fromDate'] }}</label>
-                    <p-datepicker [(ngModel)]="filterDateFrom" dateFormat="dd-mm-yy" placeholder="dd-mm-yyyy" [showIcon]="true" appendTo="body" class="w-full" [inputStyle]="{'width':'100%'}" (onSelect)="onFilterChange()" (onClear)="onFilterChange()" [showClear]="true"></p-datepicker>
+                    <label>{{ L[lang]['col.motherOrg'] }}</label>
+                    <p-select [options]="motherOrgOptions" [(ngModel)]="filterMotherOrg" optionLabel="label" optionValue="value"
+                        placeholder="All" [filter]="true" filterBy="label" [showClear]="true" appendTo="body"
+                        styleClass="text-sm" [style]="{'min-width':'11rem'}"></p-select>
                 </div>
                 <div class="filter-group">
-                    <label>{{ L[lang]['toDate'] }}</label>
-                    <p-datepicker [(ngModel)]="filterDateTo" dateFormat="dd-mm-yy" placeholder="dd-mm-yyyy" [showIcon]="true" appendTo="body" class="w-full" [inputStyle]="{'width':'100%'}" (onSelect)="onFilterChange()" (onClear)="onFilterChange()" [showClear]="true"></p-datepicker>
+                    <label>{{ L[lang]['col.rank'] }}</label>
+                    <p-select [options]="rankOptions" [(ngModel)]="filterRank" optionLabel="label" optionValue="value"
+                        placeholder="All" [filter]="true" filterBy="label" [showClear]="true" appendTo="body"
+                        styleClass="text-sm" [style]="{'min-width':'9rem'}"></p-select>
+                </div>
+                <div class="filter-group">
+                    <label>{{ L[lang]['col.corps'] }}</label>
+                    <p-select [options]="corpsOptions" [(ngModel)]="filterCorps" optionLabel="label" optionValue="value"
+                        placeholder="All" [filter]="true" filterBy="label" [showClear]="true" appendTo="body"
+                        styleClass="text-sm" [style]="{'min-width':'9rem'}"></p-select>
+                </div>
+                <div class="filter-group">
+                    <label>{{ L[lang]['col.trade'] }}</label>
+                    <p-select [options]="tradeOptions" [(ngModel)]="filterTrade" optionLabel="label" optionValue="value"
+                        placeholder="All" [filter]="true" filterBy="label" [showClear]="true" appendTo="body"
+                        styleClass="text-sm" [style]="{'min-width':'9rem'}"></p-select>
+                </div>
+                <div class="filter-group">
+                    <label>Is Replace</label>
+                    <p-select [options]="isReplaceOptions" [(ngModel)]="filterIsReplace" optionLabel="label" optionValue="value"
+                        placeholder="All" [showClear]="true" appendTo="body"
+                        styleClass="text-sm" [style]="{'min-width':'7rem'}"></p-select>
+                </div>
+                <div class="filter-group">
+                    <label>Possible Joining (From)</label>
+                    <p-datepicker [(ngModel)]="possibleJoiningFrom" dateFormat="dd-mm-yy" placeholder="dd-mm-yyyy" [showIcon]="true" appendTo="body" class="w-full" [inputStyle]="{'width':'100%'}" [showClear]="true"></p-datepicker>
+                </div>
+                <div class="filter-group">
+                    <label>Possible Joining (To)</label>
+                    <p-datepicker [(ngModel)]="possibleJoiningTo" dateFormat="dd-mm-yy" placeholder="dd-mm-yyyy" [showIcon]="true" appendTo="body" class="w-full" [inputStyle]="{'width':'100%'}" [showClear]="true"></p-datepicker>
                 </div>
                 <div class="filter-btn">
                     <p-button icon="pi pi-filter-slash" label="Clear" severity="secondary" [outlined]="true" size="small" (onClick)="clearFilters()"></p-button>
                 </div>
+            </div>
+            <div class="filter-bar" style="padding-top:0; justify-content:flex-end;">
                 <div class="filter-search">
                     <label>Search</label>
-                    <p-iconfield>
+                    <p-iconfield styleClass="w-full">
                         <p-inputicon styleClass="pi pi-search"></p-inputicon>
-                        <input pInputText type="text" placeholder="Search..." [value]="searchText" (input)="onSearch($event)" />
+                        <input pInputText type="text" class="w-full" placeholder="Search..." [value]="searchText" (input)="onSearch($event)" />
                     </p-iconfield>
                 </div>
             </div>
@@ -75,14 +104,14 @@
         <ng-template pTemplate="header">
             <tr>
                 <th style="width:50px">{{ L[lang]['col.ser'] }}</th>
-                <th>{{ L[lang]['col.motherOrg'] }}</th>
-                <th>{{ L[lang]['col.motherOrgUnit'] }}</th>
-                <th>{{ L[lang]['col.memberType'] }}</th>
+                <th>{{ L[lang]['col.serviceId'] }}</th>
                 <th>{{ L[lang]['col.rank'] }}</th>
                 <th>{{ L[lang]['col.corps'] }}</th>
                 <th>{{ L[lang]['col.trade'] }}</th>
-                <th>{{ L[lang]['col.serviceId'] }}</th>
                 <th>{{ L[lang]['col.name'] }}</th>
+                <th>{{ L[lang]['col.motherOrg'] }}</th>
+                <th>{{ L[lang]['col.motherOrgUnit'] }}</th>
+                <th>{{ L[lang]['col.memberType'] }}</th>
                 <th>{{ L[lang]['col.joiningOrderNo'] }}</th>
                 <th>{{ L[lang]['col.joiningDate'] }}</th>
                 <th>{{ L[lang]['col.possibleJoining'] }}</th>
@@ -92,15 +121,15 @@
         </ng-template>
         <ng-template pTemplate="body" let-row let-i="rowIndex">
             <tr>
-                <td>{{ first + i + 1 }}</td>
-                <td>{{ (lang === 'bn' ? row.motherOrgNameBN : row.motherOrgName) ?? '-' }}</td>
-                <td>{{ (lang === 'bn' ? row.motherOrgUnitNameBN : row.motherOrgUnitName) ?? '-' }}</td>
-                <td>{{ (lang === 'bn' ? row.memberTypeNameBN : row.memberTypeName) ?? '-' }}</td>
+                <td>{{ i + 1 }}</td>
+                <td>{{ row.prefixName && row.serviceId ? row.prefixName + '-' + row.serviceId : row.serviceId ?? '-' }}</td>
                 <td>{{ (lang === 'bn' ? row.rankNameBN : row.rankName) ?? '-' }}</td>
                 <td>{{ (lang === 'bn' ? row.corpsNameBN : row.corpsName) ?? '-' }}</td>
                 <td>{{ (lang === 'bn' ? row.tradeNameBN : row.tradeName) ?? '-' }}</td>
-                <td>{{ row.prefixName && row.serviceId ? row.prefixName + '-' + row.serviceId : row.serviceId ?? '-' }}</td>
                 <td>{{ row.nameBangla ?? '-' }}</td>
+                <td>{{ (lang === 'bn' ? row.motherOrgNameBN : row.motherOrgName) ?? '-' }}</td>
+                <td>{{ (lang === 'bn' ? row.motherOrgUnitNameBN : row.motherOrgUnitName) ?? '-' }}</td>
+                <td>{{ (lang === 'bn' ? row.memberTypeNameBN : row.memberTypeName) ?? '-' }}</td>
                 <td>{{ row.joiningOrderNo ?? '-' }}</td>
                 <td>{{ formatDisplay(row.joiningOrderDate) }}</td>
                 <td>{{ formatDisplay(row.possibleJoiningDate) }}</td>

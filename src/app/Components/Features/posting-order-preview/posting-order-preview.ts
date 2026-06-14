@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, ViewChild, ElementRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
@@ -26,6 +26,7 @@ import { PostingOrderEmployeeRow, EmployeeRemovalInfo } from '@/models/posting.m
 import { EmployeeList } from '@/models/employee-list.model';
 import { NoteSheetType, IsSendingNotesheetStatus, ApprovalStatus } from '@/models/enums';
 import { HttpClient } from '@angular/common/http';
+import { JsReportService } from '@/services/jsreport.service';
 import { environment } from '@/Core/Environments/environment';
 import { firstValueFrom } from 'rxjs';
 import {
@@ -240,6 +241,8 @@ export class PostingOrderPreviewPageComponent implements OnInit {
     initiatorPhone = '';
     initiatorSignatureUrl = '';
 
+    @ViewChild('legalPaper') legalPaper!: ElementRef<HTMLDivElement>;
+
     constructor(
         private route: ActivatedRoute,
         private router: Router,
@@ -250,7 +253,8 @@ export class PostingOrderPreviewPageComponent implements OnInit {
         private employeeListService: EmployeeListService,
         private http: HttpClient,
         private messageService: MessageService,
-        private confirmationService: ConfirmationService
+        private confirmationService: ConfirmationService,
+        private jsreportService: JsReportService
     ) {}
 
     ngOnInit(): void {
@@ -1256,45 +1260,121 @@ export class PostingOrderPreviewPageComponent implements OnInit {
 
     // ─── Export PDF (backend Word-to-PDF conversion) ──────
 
+    // ─── PDF download via JsReport (chrome-pdf, exact web view) ──
     async exportPdf(): Promise<void> {
-        if (this.filteredEmployees.length === 0) return;
+        if (this.filteredEmployees.length === 0 || !this.legalPaper) return;
         this.exportingPdf = true;
         try {
-            const doc = this.buildWordDocument();
-            const docxBlob = await Packer.toBlob(doc);
-            const form = new FormData();
-            form.append('file', docxBlob, 'document.docx');
-            const pdfBlob = await firstValueFrom(
-                this.http.post(`${environment.apis.core}/Document/ConvertToPdf`, form, { responseType: 'blob' })
+            const { html, chrome } = this.buildJsReportPdf();
+            await this.jsreportService.downloadPdf(
+                html, {}, `PostingOrder_${this.postingOrderNo || 'export'}${this.exportFileSuffix}.pdf`, chrome,
             );
-            saveAs(pdfBlob, `PostingOrder_${this.postingOrderNo || 'export'}${this.exportFileSuffix}.pdf`);
-        } catch {
-            this.messageService.add({ severity: 'error', summary: 'Export Error', detail: 'Failed to generate PDF.' });
+        } catch (err: any) {
+            this.messageService.add({
+                severity: 'error', summary: 'JsReport error',
+                detail: err?.message || 'Failed to render PDF via JsReport. Is the server reachable?'
+            });
         } finally {
             this.exportingPdf = false;
         }
     }
 
-    // ─── Print Preview (backend Word-to-PDF, open in new tab) ──
-
+    // ─── Print Preview via JsReport (chrome-pdf, open in new tab) ──
     async printPreview(): Promise<void> {
-        if (this.filteredEmployees.length === 0) return;
+        if (this.filteredEmployees.length === 0 || !this.legalPaper) return;
         this.printingPreview = true;
         try {
-            const doc = this.buildWordDocument();
-            const docxBlob = await Packer.toBlob(doc);
-            const form = new FormData();
-            form.append('file', docxBlob, 'document.docx');
-            const pdfBlob = await firstValueFrom(
-                this.http.post(`${environment.apis.core}/Document/ConvertToPdf`, form, { responseType: 'blob' })
+            const { html, chrome } = this.buildJsReportPdf();
+            await this.jsreportService.previewPdfInNewTab(
+                html, {}, `PostingOrder_${this.postingOrderNo || 'export'}`, chrome,
             );
-            const url = URL.createObjectURL(pdfBlob);
-            window.open(url, '_blank');
-        } catch {
-            this.messageService.add({ severity: 'error', summary: 'Preview Error', detail: 'Failed to generate print preview.' });
+        } catch (err: any) {
+            this.messageService.add({
+                severity: 'error', summary: 'JsReport error',
+                detail: err?.message || 'Failed to render PDF via JsReport. Is the server reachable?'
+            });
         } finally {
             this.printingPreview = false;
         }
+    }
+
+    /**
+     * Build the chrome-pdf HTML + chrome options shared by the PDF download and
+     * the Print Preview, so both produce output identical to the on-screen
+     * `.legal-paper`. Snapshots the rendered paper's inner HTML and ships every
+     * same-origin stylesheet so Chromium reproduces the exact styling; @page
+     * insets mirror `.legal-paper`'s padding so the text column matches the web
+     * view (A4 210 − 2×10 = 190mm).
+     */
+    private buildJsReportPdf(): { html: string; chrome: Record<string, unknown> } {
+        const styles = this.collectDocumentStyles();
+        const body = this.legalPaper.nativeElement.innerHTML;
+        const isLegal = this.selectedPageSize === 'Legal';
+        const pageWidth = isLegal ? '215.9mm' : '210mm';
+        const pageHeight = isLegal ? '355.6mm' : '297mm';
+        const colWidth = isLegal ? '195.9mm' : '190mm';
+        const padX = 10;     // mm — .legal-paper horizontal padding
+        const padTop = 14;   // mm — .legal-paper top padding
+        const padBottom = 20; // mm — .legal-paper bottom padding
+
+        const html = `<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+${styles}
+
+/* @page insets mirror .legal-paper's padding so the text column width matches
+   the web view exactly. */
+@page { size: ${pageWidth} ${pageHeight}; margin: ${padTop}mm ${padX}mm ${padBottom}mm ${padX}mm; }
+html, body { margin: 0; padding: 0; background: transparent; }
+
+/* Hide app chrome that may sneak through the global styles */
+.no-print, .preview-header, .preview-actions, .approval-header-right, .unit-filter-bar { display: none !important; }
+
+/* Source container — lock the exact .legal-paper text column + typography so
+   Chromium wraps lines identically to the screen. */
+.pdf-flow {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    width: ${colWidth};
+    font-family: 'Times New Roman', 'Noto Sans Bengali', 'SolaimanLipi', Times, serif;
+    font-size: 10pt;
+    line-height: 1.7;
+    color: #000;
+}
+</style>
+</head>
+<body>
+<div class="pdf-flow">${body}</div>
+</body>
+</html>`;
+
+        const chrome: Record<string, unknown> = {
+            format: null,
+            width: pageWidth,
+            height: pageHeight,
+            landscape: false,
+            marginTop: '0', marginBottom: '0', marginLeft: '0', marginRight: '0',
+            printBackground: true,
+            displayHeaderFooter: false,
+            headerTemplate: '', footerTemplate: ''
+        };
+
+        return { html, chrome };
+    }
+
+    /** Concatenate every same-origin stylesheet loaded into the page (cross-origin
+     *  sheets throw on cssRules access and are skipped). */
+    private collectDocumentStyles(): string {
+        const out: string[] = [];
+        for (const sheet of Array.from(document.styleSheets)) {
+            try {
+                for (const rule of Array.from(sheet.cssRules)) out.push(rule.cssText);
+            } catch { /* cross-origin — skip */ }
+        }
+        return out.join('\n');
     }
 
     // ─── Shared Word Document Builder ─────────────────────

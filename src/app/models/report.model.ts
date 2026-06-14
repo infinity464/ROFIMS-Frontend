@@ -185,23 +185,6 @@ export interface RftsCompletionReportRow {
   latestCourseDateTo?: string | null;
 }
 
-export interface RftsCompletionReportParams {
-  /** "Completed" or "NotCompleted" (defaults to "Completed" on the server). */
-  completionStatus: 'Completed' | 'NotCompleted';
-  postingStatus?: string | null;
-  rabId?: string | null;
-  serviceId?: string | null;
-  motherOrgId?: number | null;
-  memberTypeId?: number | null;
-  rankId?: number | null;
-  /** Course no — when set, the completion filter pivots on this specific RFTS course. */
-  courseNo?: string | null;
-  /** Duration filters — yyyy-MM-dd (server expects ISO date strings). */
-  dateFrom?: string | null;
-  dateTo?: string | null;
-  pagination: ReportPagination;
-}
-
 /** Report H: Address Location – Division, District, Upazila, Post Office, Address details, RAB Unit. */
 export interface AddressLocationReportRow extends ReportRowBase {
   rabid?: string | null;
@@ -220,6 +203,13 @@ export interface AddressLocationReportRow extends ReportRowBase {
   postOfficeBN?: string | null;
   address?: string | null;
   addressBN?: string | null;
+  /**
+   * Member-status code (e.g. "Servings", "ExMember", "PendingForJoining",
+   * "Supernumerary"). Frontend maps the code to a localized label. Only
+   * meaningful when the Status filter is "All" — otherwise every row carries
+   * the same value and the column is hidden.
+   */
+  status?: string | null;
   rmks?: string | null;
 }
 
@@ -371,21 +361,6 @@ export interface PresentStatusUnitWiseReportResponse {
 
 // ── Unit & Specific Duration wise Nominal Roll ──────────────────────────
 
-/**
- * Request for the Unit + Duration nominal roll. RabUnitId is required for a meaningful result.
- * DurationFrom/DurationTo are ISO "yyyy-MM-dd"; backend treats them as an inclusive overlap window
- * against PreviousRABServiceInfo stints. PostingStatus defaults to "Servings" server-side.
- */
-export interface UnitDurationNominalRollReportParams {
-  rabUnitId?: number | null;
-  durationFrom?: string | null;
-  durationTo?: string | null;
-  orgId?: number | null;
-  rankId?: number | null;
-  postingStatus?: string | null;
-  pagination: ReportPagination;
-}
-
 /** One row of the Unit + Duration nominal roll (one per matching PreviousRABServiceInfo stint). */
 export interface UnitDurationNominalRollReportRow extends ReportRowBase {
   /** Stint start date (ISO "yyyy-MM-dd") — RAB Service "From" column. */
@@ -397,29 +372,7 @@ export interface UnitDurationNominalRollReportRow extends ReportRowBase {
 
 // ── Nominal Roll of Stay in RAB Above N Years ───────────────────────────
 
-/**
- * Request for the long-stay nominal roll. MinDuration + Unit ("Years" | "Months") select the
- * threshold; both default to 2 / "Years" server-side. PostingStatus defaults to "Servings".
- */
-export interface LongStayNominalRollReportParams {
-  minDuration?: number | null;
-  unit?: 'Years' | 'Months' | null;
-  orgId?: number | null;
-  rankId?: number | null;
-  postingStatus?: string | null;
-  pagination: ReportPagination;
-}
-
 // ── Nominal Roll of Deceased Members ───────────────────────────────────
-
-/** Filter on Date of Death (PresentStatusInfo.Dated); both bounds optional. Mother Org + Rank optional. */
-export interface DeceasedReportParams {
-  dateFrom?: string | null;
-  dateTo?: string | null;
-  orgId?: number | null;
-  rankId?: number | null;
-  pagination: ReportPagination;
-}
 
 export interface DeceasedReportRow {
   ser?: number;
@@ -442,13 +395,6 @@ export interface DeceasedReportRow {
 
 // ── Nominal Roll of Stay in RAB after Reliever Joined ──────────────────
 
-export interface StayAfterRelieverJoinedReportParams {
-  orgId?: number | null;
-  rankId?: number | null;
-  postingStatus?: string | null;
-  pagination: ReportPagination;
-}
-
 /** One row — subset of the long-stay row, minus Mother Unit / Posting Order Date. */
 export interface StayAfterRelieverJoinedReportRow {
   ser?: number;
@@ -465,6 +411,121 @@ export interface StayAfterRelieverJoinedReportRow {
   postedOutUnitBN?: string | null;
   relieverServiceId?: string | null;
   relieverJoiningDate?: string | null;
+  rmks?: string | null;
+}
+
+/** One row of the "Members Posted Near Home / Wife District" report (#10). */
+export interface NearHomeReportRow {
+  ser?: number;
+  serviceId?: string | null;
+  rank?: string | null;
+  rankBN?: string | null;
+  corps?: string | null;
+  corpsBN?: string | null;
+  trade?: string | null;
+  tradeBN?: string | null;
+  name?: string | null;
+  nameBN?: string | null;
+  /** ISO "yyyy-MM-dd" — EmployeeInfo.JoiningDate (joining in RAB). */
+  joiningInRab?: string | null;
+  presentUnit?: string | null;
+  presentUnitBN?: string | null;
+  /** ISO "yyyy-MM-dd" — active placement ServiceFrom (joining in present Bn/Wg). */
+  currentUnitFrom?: string | null;
+  ownHomeDistrict?: string | null;
+  ownHomeDistrictBN?: string | null;
+  spouseHomeDistrict?: string | null;
+  spouseHomeDistrictBN?: string | null;
+  rmks?: string | null;
+}
+
+/** One row of the "Members on Joining Leave" report (#15). */
+export interface JoiningLeaveReportRow {
+  ser?: number;
+  serviceId?: string | null;
+  rank?: string | null;
+  rankBN?: string | null;
+  corps?: string | null;
+  corpsBN?: string | null;
+  trade?: string | null;
+  tradeBN?: string | null;
+  name?: string | null;
+  nameBN?: string | null;
+  presentBnWg?: string | null;
+  presentBnWgBN?: string | null;
+  postedBnWg?: string | null;
+  postedBnWgBN?: string | null;
+  /** ISO "yyyy-MM-dd" — JoiningLeaveTo (date of joining the new unit). */
+  joiningDate?: string | null;
+  /** Inclusive leave length in days. */
+  leaveDuration?: number | null;
+  rmks?: string | null;
+}
+
+/** One row of the "Punishment Report" (#23). */
+export interface PunishmentReportRow {
+  ser?: number;
+  serviceId?: string | null;
+  rank?: string | null;
+  rankBN?: string | null;
+  corps?: string | null;
+  corpsBN?: string | null;
+  trade?: string | null;
+  tradeBN?: string | null;
+  name?: string | null;
+  nameBN?: string | null;
+  offenceDetails?: string | null;
+  /** ISO "yyyy-MM-dd" — RAB punishment date. */
+  punishmentDate?: string | null;
+  punishment?: string | null;
+  punishmentBN?: string | null;
+  rmks?: string | null;
+}
+
+/** One row of the overall "Employee Present-Status Report". */
+export interface PresentStatusReportRow {
+  ser?: number;
+  serviceId?: string | null;
+  rank?: string | null;
+  rankBN?: string | null;
+  corps?: string | null;
+  corpsBN?: string | null;
+  trade?: string | null;
+  tradeBN?: string | null;
+  name?: string | null;
+  nameBN?: string | null;
+  motherOrganization?: string | null;
+  motherOrganizationBN?: string | null;
+  presentUnit?: string | null;
+  presentUnitBN?: string | null;
+  /** Raw present-status enum ('OnDuty'…'Arrested'); mapped to a label client-side. */
+  presentStatus?: string | null;
+  /** ISO "yyyy-MM-dd" — status date. */
+  statusDate?: string | null;
+  statusDetails?: string | null;
+  rmks?: string | null;
+}
+
+/** One row of the "Rank-wise Report". */
+export interface RankWiseReportRow {
+  ser?: number;
+  serviceId?: string | null;
+  rank?: string | null;
+  rankBN?: string | null;
+  name?: string | null;
+  nameBN?: string | null;
+  ownHomeDistrict?: string | null;
+  ownHomeDistrictBN?: string | null;
+  spouseHomeDistrict?: string | null;
+  spouseHomeDistrictBN?: string | null;
+  motherUnit?: string | null;
+  motherUnitBN?: string | null;
+  /** ISO "yyyy-MM-dd". */
+  dob?: string | null;
+  joiningInRab?: string | null;
+  joiningPresentUnit?: string | null;
+  presentWorkplace?: string | null;
+  presentWorkplaceBN?: string | null;
   rmks?: string | null;
 }
 
@@ -491,4 +552,130 @@ export interface LongStayNominalRollReportRow {
   /** ISO "yyyy-MM-dd" — Reliever EmployeeInfo.JoiningDate (when reliever's ServiceId exists in EmployeeInfo). */
   relieverJoiningDate?: string | null;
   rmks?: string | null;
+}
+
+// ── Dynamic Employee Report ───────────────────────────────────────────────
+
+/**
+ * Field metadata returned by GET /rab/api/DynamicReport/GetFields.
+ * Mirrors the backend ReportFieldDefinition shape (camelCased on the wire).
+ * Drives the column picker and per-field filter UI on the report-dynamic
+ * component.
+ */
+export interface DynamicReportFieldMeta {
+  fieldKey: string;
+  displayLabel: string;
+  displayLabelBN: string;
+  /** "Text" | "ExactId" | "DateRange" | "Boolean" | "Composite" | "Synthetic" */
+  fieldType: string;
+  /** "Composite" | "Service" | "Personal" — drives MultiSelect grouping. */
+  group: string;
+  /** "Plain" | "PersonnelComposite" | "AddressComposite" | "Serial" */
+  renderHint: string;
+  /** CommonCode CodeType for ExactId fields — frontend feeds CommonCodeService. */
+  codeType?: string | null;
+  /** For composite columns: atomic field keys the SQL projection includes. */
+  underlyingFields?: string[] | null;
+  defaultVisible: boolean;
+  sortOrder: number;
+}
+
+/** One filter clause. Matches the backend DynamicSearchCriterion envelope. */
+export interface DynamicReportCriterion {
+  fieldKey: string;
+  textValue?: string | null;
+  idValue?: number | null;
+  /** Multi-value variant of idValue: match if the row's FK is IN this list.
+      Used by the Corps / Trade "N/A" bundle where one UI option collapses
+      several CommonCode rows. When set, takes precedence over idValue. */
+  idValues?: number[] | null;
+  stringIdValue?: string | null;
+  /** ISO "yyyy-MM-dd". */
+  dateFrom?: string | null;
+  /** ISO "yyyy-MM-dd". */
+  dateTo?: string | null;
+}
+
+export interface DynamicReportSort {
+  fieldKey: string;
+  /** "asc" | "desc" */
+  direction: 'asc' | 'desc';
+}
+
+export interface DynamicReportRequest {
+  columns: string[];
+  criteria: DynamicReportCriterion[];
+  sort?: DynamicReportSort[];
+  /** "Servings" / "ExMember" / "Supernumerary" / "Pending" / "" (All). */
+  postingStatusFilter?: string | null;
+  /** "Permanent" / "Present" / "" (All). Matches base + Spouse* server-side. */
+  locationTypeFilter?: string | null;
+  /** "Self" / "<relationCodeId>" / "" (All). */
+  addressOwnerFilter?: string | null;
+  /** True = active addresses only (default UI value). */
+  activeOnly?: boolean | null;
+  // ── Report-specific filter slots (nominal-roll family) ──────────────
+  /** Stay-After-Reliever: keep only members whose reliever has joined RAB. */
+  relieverJoinedOnly?: boolean | null;
+  /** Stay-After-Reliever (inverse): posted out but reliever has NOT yet joined. */
+  relieverNotJoinedOnly?: boolean | null;
+  /** Stay-After-Reliever (Stand Release): every member in the posted-out list. */
+  postedOutAllOnly?: boolean | null;
+  /** Stay-After-Reliever (New Posting Person List): joinee-detail entry still pending. */
+  newPostingPendingOnly?: boolean | null;
+  /** Long-Stay: minimum RAB tenure threshold value (paired with minStayUnit). */
+  minStayValue?: number | null;
+  /** "Years" (default) | "Months" — unit for minStayValue. */
+  minStayUnit?: string | null;
+  /** Unit-Duration: REQUIRED RAB Unit (stint unit) for the per-stint view. */
+  stintUnitId?: number | null;
+  /** Unit-Duration: one or more RAB Units (takes precedence over stintUnitId). */
+  stintUnitIds?: number[];
+  /** Unit-Duration overlap window start, ISO "yyyy-MM-dd". */
+  stintOverlapFrom?: string | null;
+  /** Unit-Duration overlap window end, ISO "yyyy-MM-dd". */
+  stintOverlapTo?: string | null;
+  /** RFTS: "Completed" (default) | "NotCompleted". */
+  rftsCompletionStatus?: string | null;
+  /** RFTS course-no filter. */
+  rftsCourseNo?: string | null;
+  /** RFTS course-window start, ISO "yyyy-MM-dd". */
+  rftsDateFrom?: string | null;
+  /** RFTS course-window end, ISO "yyyy-MM-dd". */
+  rftsDateTo?: string | null;
+  /** Joining-Leave: leave-window lower bound, ISO "yyyy-MM-dd". Null+null = currently on leave. */
+  joiningLeaveDateFrom?: string | null;
+  /** Joining-Leave: leave-window upper bound, ISO "yyyy-MM-dd". */
+  joiningLeaveDateTo?: string | null;
+  /** Present-Status: selected status type ('OnDuty'…'Arrested'). "" = all. */
+  presentStatusTypeFilter?: string | null;
+  pagination: ReportPagination;
+}
+
+/**
+ * Each row is a property bag keyed by ReportFieldRegistry field keys —
+ * the backend only projects the columns the caller asked for (plus the
+ * underlying atomics any selected composite needs).
+ */
+export type DynamicReportRow = Record<string, unknown>;
+
+export interface DynamicReportAccessibleScope {
+  rabUnitIds: number[];
+  memberTypeIds: number[];
+  orgScopeRestricted: boolean;
+  /**
+   * True when the same user-supplied criteria would match at least one
+   * row IF access filters were not applied. Lets the frontend tell
+   * "no permission" apart from "not found" on a filtered-empty result.
+   * Optional — only EmployeeBaseOverview currently emits this flag.
+   */
+  unrestrictedHasMatches?: boolean;
+}
+
+export interface DynamicReportResponse {
+  datalist: DynamicReportRow[];
+  /** Echo of the columns the backend projected, in caller order. */
+  columns: string[];
+  pages: { Rows?: number; TotalPages?: number; rows?: number; totalPages?: number };
+  accessibleScope: DynamicReportAccessibleScope;
 }

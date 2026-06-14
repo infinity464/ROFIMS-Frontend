@@ -326,18 +326,28 @@ export interface PendingPostingJoiningDto {
     transferRabUnitId: number | null;
     transferToHierarchy: string | null;
     transferRabUnitName: string | null;
+    fromRabUnitId: number | null;
     fromRabUnitName: string | null;
 
     serviceId: string | null;
     fullNameEN: string | null;
     fullNameBN?: string | null;
     rabID: string | null;
+    rankId?: number | null;
     rankName: string | null;
     rankNameBN?: string | null;
+    corpsId?: number | null;
     corps?: string | null;
     corpsBN?: string | null;
+    tradeId?: number | null;
     trade?: string | null;
     tradeBN?: string | null;
+    motherOrganizationId?: number | null;
+    memberTypeId?: number | null;
+    memberType?: string | null;
+    memberTypeBN?: string | null;
+    rabRank?: string | null;
+    rabRankBN?: string | null;
     motherOrganization: string | null;
     motherUnitName: string | null;
 }

@@ -18,6 +18,7 @@ import { FileReferencesFormComponent, FileRowData } from '@/Components/Common/fi
 import { FieldsetModule } from 'primeng/fieldset';
 import { NotesheetPreviewBase } from '../notesheet-preview-base';
 import { CommonCodeService } from '@/services/common-code-service';
+import { JsReportService } from '@/services/jsreport.service';
 import { ExBdLeaveApplicationService, ExBdLeaveApplicationModel, DestinationCountryItem, FamilyMemberItem } from '@/services/ex-bd-leave-application.service';
 import { EmployeePersonalServiceOverview } from '@/models/employee-personal-service-overview.model';
 import {
@@ -73,6 +74,14 @@ export class NotesheetPreviewExbdComponent extends NotesheetPreviewBase implemen
     private readonly sharedService = inject(SharedService);
     private readonly exBdLeaveAppService = inject(ExBdLeaveApplicationService);
     private cdr = inject(ChangeDetectorRef);
+    private jsreportService = inject(JsReportService);
+
+    // ── Page size for jsReport export (Legal default, A4 optional) ──
+    selectedPageSize = 'Legal';
+    pageSizeOptions = [
+        { label: 'Legal', value: 'Legal' },
+        { label: 'A4', value: 'A4' }
+    ];
 
     // ── Pagination ────────────────────────────────────────────
     pageOffsets: number[] = [0];
@@ -920,27 +929,134 @@ export class NotesheetPreviewExbdComponent extends NotesheetPreviewBase implemen
     // ── Export: shared document model (follows general notesheet)
     // ═══════════════════════════════════════════════════════════
 
-    // ── Print Preview ───────────────────────────────────────
+    // ── Print Preview via JsReport (chrome-pdf, opens in new tab) ──
     async printPreview(): Promise<void> {
-        if (!this.noteSheet) return;
+        if (!this.noteSheet || !this.contentMeasure) return;
+        this.printingPreview = true;
         try {
-            const doc = await this.buildWordDocument();
-            const docxBlob = await Packer.toBlob(doc);
-            await this.openPdfPreview(docxBlob);
-        } catch {
-            this.messageService.add({ severity: 'error', summary: 'Preview Error', detail: 'Failed to generate print preview.' });
+            const { html, chrome } = this.buildJsReportPdf();
+            await this.jsreportService.previewPdfInNewTab(
+                html, {}, `NoteSheet_${this.noteSheet.noteSheetNo ?? 'export'}`, chrome,
+            );
+        } catch (err: any) {
+            this.messageService.add({
+                severity: 'error', summary: 'JsReport error',
+                detail: err?.message || 'Failed to render PDF via JsReport. Is the server reachable?'
+            });
+        } finally {
+            this.printingPreview = false;
         }
     }
 
+    /** Export PDF via JsReport (chrome-pdf) — same render as Print Preview, downloaded. */
     override async exportPdf(): Promise<void> {
-        if (!this.noteSheet) return;
+        if (!this.noteSheet || !this.contentMeasure) return;
+        this.exportingPdf = true;
         try {
-            const doc = await this.buildWordDocument();
-            const docxBlob = await Packer.toBlob(doc);
-            await this.convertWordToPdf(docxBlob, `NoteSheet_${this.noteSheet.noteSheetNo ?? 'export'}.pdf`);
-        } catch {
-            this.messageService.add({ severity: 'error', summary: 'Export Error', detail: 'Failed to generate PDF.' });
+            const { html, chrome } = this.buildJsReportPdf();
+            await this.jsreportService.downloadPdf(
+                html, {}, `NoteSheet_${this.noteSheet.noteSheetNo ?? 'export'}.pdf`, chrome,
+            );
+        } catch (err: any) {
+            this.messageService.add({
+                severity: 'error', summary: 'JsReport error',
+                detail: err?.message || 'Failed to render PDF via JsReport. Is the server reachable?'
+            });
+        } finally {
+            this.exportingPdf = false;
         }
+    }
+
+    /**
+     * Build the chrome-pdf HTML + chrome options shared by the PDF download and
+     * Print Preview, reproducing the on-screen `.a4-paper` exactly. Snapshots the
+     * UNPAGINATED source (hidden .page-measure div) so Chromium paginates the full
+     * flow via @page rules; @page insets mirror .a4-paper's padding so the text
+     * column matches the web view (Legal 215.9−2×10 = 195.9mm; A4 = 190mm).
+     */
+    private buildJsReportPdf(): { html: string; chrome: Record<string, unknown> } {
+        const styles = this.collectDocumentStyles();
+        const body = this.contentMeasure.nativeElement.innerHTML;
+        const isLegal = this.selectedPageSize === 'Legal';
+        const pageWidth = isLegal ? '215.9mm' : '210mm';
+        const pageHeight = isLegal ? '355.6mm' : '297mm';
+        const colWidth = isLegal ? '195.9mm' : '190mm';
+        const padX = 10, padTop = 14, padBottom = 20; // mm — .a4-paper padding
+
+        const html = `<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+${styles}
+
+@page { size: ${pageWidth} ${pageHeight}; margin: ${padTop}mm ${padX}mm ${padBottom}mm ${padX}mm; }
+html, body { margin: 0; padding: 0; background: transparent; }
+
+.no-print, .preview-header, .export-options-bar, .preview-actions, .preview-status-actions { display: none !important; }
+
+/* Page frame: Chromium repeats position:fixed elements on every printed page,
+   filling the printable area (page minus @page margin) on every page. */
+.pdf-page-frame {
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    border: 1.5px solid #000;
+    pointer-events: none;
+    z-index: 9999;
+}
+
+/* Source container — lock the exact .a4-paper text column + typography. */
+.pdf-flow {
+    position: static !important;
+    left: auto !important;
+    top: auto !important;
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    width: ${colWidth};
+    font-family: 'Times New Roman', 'SolaimanLipi', 'Noto Sans Bengali', 'Nirmala UI', 'Vrinda', 'Shonar Bangla', Times, serif;
+    font-size: 10pt;
+    line-height: 1.7;
+    color: #000;
+}
+
+.pdf-flow .ns-doc-box { border: none !important; }
+
+.ns-posting-table tr,
+.ns-approver-section,
+.ns-org-header,
+.ns-title-block { page-break-inside: avoid; }
+</style>
+</head>
+<body>
+<div class="pdf-page-frame"></div>
+<div class="pdf-flow">${body}</div>
+</body>
+</html>`;
+
+        const chrome: Record<string, unknown> = {
+            format: null,
+            width: pageWidth,
+            height: pageHeight,
+            landscape: false,
+            marginTop: '0', marginBottom: '0', marginLeft: '0', marginRight: '0',
+            printBackground: true,
+            displayHeaderFooter: false,
+            headerTemplate: '', footerTemplate: ''
+        };
+
+        return { html, chrome };
+    }
+
+    /** Concatenate every same-origin stylesheet loaded into the page. */
+    private collectDocumentStyles(): string {
+        const out: string[] = [];
+        for (const sheet of Array.from(document.styleSheets)) {
+            try {
+                for (const rule of Array.from(sheet.cssRules)) out.push(rule.cssText);
+            } catch { /* cross-origin — skip */ }
+        }
+        return out.join('\n');
     }
 
     override async exportWord(): Promise<void> {

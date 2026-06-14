@@ -16,13 +16,15 @@ import {
     type MemberTypeWiseRow,
     type MemberTypeWiseManpowerResponse
 } from '@/services/statistics.service';
+import { OrgTreeFilterComponent } from '../shared/org-tree-filter/org-tree-filter.component';
+import { RabReportPrintService } from '../shared/rab-report-print.service';
 
 type Lang = 'en' | 'bn';
 
 @Component({
     selector: 'app-member-type-wise-manpower',
     standalone: true,
-    imports: [CommonModule, FormsModule, MultiSelectModule],
+    imports: [CommonModule, FormsModule, MultiSelectModule, OrgTreeFilterComponent],
     templateUrl: './member-type-wise-manpower.html',
     styleUrl: './member-type-wise-manpower.scss'
 })
@@ -51,6 +53,10 @@ export class MemberTypeWiseManpowerComponent implements OnInit {
     orgOptions: { label: string; value: number }[] = [];
     selectedOrgIds: number[] = [];
 
+    /** Org-tree node filter (Unit/Wing/Branch/…) — scopes Auth + Held server-side. */
+    filterRabCodeId: number | null = null;
+    filterLabel: string | null = null;
+
     private static readonly EN_MONTHS = [
         'JANUARY','FEBRUARY','MARCH','APRIL','MAY','JUNE',
         'JULY','AUGUST','SEPTEMBER','OCTOBER','NOVEMBER','DECEMBER'
@@ -66,11 +72,35 @@ export class MemberTypeWiseManpowerComponent implements OnInit {
         private _router: Router,
         private _userMenuService: UserMenuService,
         private statisticsService: StatisticsService,
-        private exportService: ExportService
+        private exportService: ExportService,
+        private rabPrint: RabReportPrintService
     ) {}
 
     @HostListener('document:click')
     onDocumentClick(): void { this.exportDropdownOpen = false; }
+
+    onOrgTreeFilter(e: { codeId: number | null; label: string | null }): void {
+        this.filterRabCodeId = e.codeId;
+        this.filterLabel = e.label;
+        this.loadData();
+    }
+
+    private buildCriteriaItems(): { label: string; value: string }[] {
+        const bn = this.lang === 'bn';
+        const items: { label: string; value: string }[] = [];
+        // Organization first.
+        if (this.selectedOrgIds.length > 0) {
+            const names = this.orgOptions.filter(o => this.selectedOrgIds.includes(o.value)).map(o => o.label);
+            if (names.length) items.push({ label: bn ? 'বাহিনী' : 'ORGANIZATION', value: names.join(', ') });
+        }
+        if (this.filterLabel) items.push({ label: bn ? 'অফিস' : 'OFFICE', value: this.filterLabel });
+        const unitNames = (bn ? this.accessibleRabUnitNamesBN : this.accessibleRabUnitNames) ?? this.accessibleRabUnitNames;
+        if (unitNames && unitNames.length > 0) items.push({ label: bn ? 'ইউনিট' : 'UNITS', value: unitNames.join(', ') });
+        const mtNames = (bn ? this.accessibleMemberTypeNamesBN : this.accessibleMemberTypeNames) ?? this.accessibleMemberTypeNames;
+        if (mtNames && mtNames.length > 0) items.push({ label: bn ? 'সদস্য ধরণ' : 'MEMBER TYPES', value: mtNames.join(', ') });
+        if (items.length === 0) items.push({ label: bn ? 'পরিসর' : 'SCOPE', value: bn ? 'সকল ইউনিট' : 'All Unit' });
+        return items;
+    }
 
     ngOnInit(): void {
         const _perms = this._userMenuService.getPermissionsByRoute(this._router.url);
@@ -83,7 +113,7 @@ export class MemberTypeWiseManpowerComponent implements OnInit {
 
     loadData(): void {
         this.loading = true;
-        this.statisticsService.getMemberTypeWiseManpower().subscribe({
+        this.statisticsService.getMemberTypeWiseManpower(this.filterRabCodeId).subscribe({
             next: (res: MemberTypeWiseManpowerResponse) => {
                 this.allOrgs = res.orgs ?? [];
                 this.filteredOrgs = [...this.allOrgs];
@@ -185,8 +215,28 @@ export class MemberTypeWiseManpowerComponent implements OnInit {
             showPageNumbers: true,
             filename: 'org-member-type-wise-manpower',
             filterLines: scope ? [scope] : undefined,
-            landscape: true
+            landscape: true,
+            rabLetterhead: true,
+            criteriaItems: this.buildCriteriaItems()
         };
+
+        // Print uses the shared RAB letterhead (frontend only). Cols: Ser, MemberType,
+        // Auth, Held, Def, Sur, PostedOut, Remarks — numerics at indices 2..6.
+        if (type === 'print') {
+            this.rabPrint.print({
+                lang: this.lang,
+                reportTitle: this.titleLabel,
+                criteriaItems: this.buildCriteriaItems(),
+                columns: sectionedConfig.columns.map((label, i) => ({
+                    label, align: (i <= 1 || i === 7) ? 'left' : 'center', mono: i >= 2 && i <= 6
+                })),
+                sections: sectionedConfig.sections.map(s => ({
+                    title: s.title, rows: s.rows, totalRow: s.subtotalRow
+                })),
+                grandTotalRow: sectionedConfig.grandTotalRow
+            });
+            return;
+        }
 
         try {
             this.exporting = true;
@@ -197,19 +247,12 @@ export class MemberTypeWiseManpowerComponent implements OnInit {
                 case 'excel':
                     this.exportService.exportExcelSectioned(sectionedConfig);
                     break;
-                case 'pdf':
-                case 'print': {
-                    // PDF opens as a preview tab; Print opens a popup with the PDF
-                    // in an iframe and auto-triggers the browser's print dialog.
+                case 'pdf': {
                     const doc = this.exportService.buildSectionedWordDoc(sectionedConfig);
                     const docxBlob = await Packer.toBlob(doc);
                     const pdfBlob = await this.convertDocxToPdf(docxBlob);
                     const pdfUrl = URL.createObjectURL(pdfBlob);
-                    if (type === 'pdf') {
-                        window.open(pdfUrl, '_blank');
-                    } else {
-                        this.exportService.openPdfPrintPopup(pdfUrl);
-                    }
+                    window.open(pdfUrl, '_blank');
                     break;
                 }
             }

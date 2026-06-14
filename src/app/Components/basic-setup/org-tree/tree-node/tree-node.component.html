@@ -8,7 +8,7 @@
             </span>
             <span class="expand-placeholder" *ngIf="!hasChildrenOrCanExpand"></span>
             <div class="node-readonly-label" (click)="onReadOnlyLabelClick($event)">
-                <span class="level-badge" [style.background-color]="badgeColor">{{ node.id === -1 ? 'S' : (node.id === -2 ? 'P' : (node.codeType === 'MT' ? (node.nameEN ? node.nameEN.charAt(0) : 'M') : node.codeType)) }}</span>
+                <span class="level-badge" [style.background-color]="badgeColor">{{ node.id === -1 ? 'S' : node.id === -2 ? 'P' : node.codeType === 'MT' ? (node.nameEN ? node.nameEN.charAt(0) : 'M') : node.codeType }}</span>
 
                 <span class="node-name">{{ node.nameEN || node.commCode }}</span>
                 <ng-container *ngIf="node.id < 0">
@@ -32,17 +32,18 @@
     <ng-container *ngIf="!readOnly">
         <div class="tree-node-content" (click)="toggleExpand()">
             <span class="expand-toggle" *ngIf="hasChildrenOrCanExpand">
-                <i class="pi pi-spin pi-spinner" *ngIf="loadingParentId === node.id"></i>
-                <i class="pi pi-chevron-right expand-icon" [class.expanded]="node.expanded" *ngIf="loadingParentId !== node.id"></i>
+                <i class="ti ti-loader-2 ti-spin" *ngIf="loadingParentId === node.id"></i>
+                <i class="ti ti-chevron-right expand-icon" [class.expanded]="node.expanded" *ngIf="loadingParentId !== node.id"></i>
             </span>
             <span class="expand-placeholder" *ngIf="!hasChildrenOrCanExpand"></span>
             <span class="level-badge" [style.background-color]="badgeColor">{{ node.codeType }}</span>
             <span class="node-name">{{ node.nameEN || node.commCode }}</span>
             <span class="node-comm" *ngIf="node.commCode">({{ node.commCode }})</span>
+            <span class="row-leader"></span>
             <div class="node-actions" (click)="$event.stopPropagation()">
-                <button *ngIf="canAddChild" pButton type="button" icon="pi pi-plus" class="p-button-text p-button-sm p-button-success" pTooltip="Add Child" (click)="onAddChild($event)"></button>
-                <button pButton type="button" icon="pi pi-pencil" [class.perm-hidden]="!canUpdate" class="p-button-text p-button-sm p-button-info" pTooltip="Edit" (click)="onEdit($event)"></button>
-                <button pButton type="button" icon="pi pi-trash" [class.perm-hidden]="!canDelete" class="p-button-text p-button-sm p-button-danger" pTooltip="Delete" (click)="onDelete($event)"></button>
+                <button *ngIf="canAddChild" type="button" class="action-btn action-add" pTooltip="Add Child" (click)="onAddChild($event)"><i class="ti ti-plus"></i></button>
+                <button type="button" class="action-btn action-edit" [class.perm-hidden]="!canUpdate" pTooltip="Edit" (click)="onEdit($event)"><i class="ti ti-pencil"></i></button>
+                <button type="button" class="action-btn action-delete" [class.perm-hidden]="!canDelete" pTooltip="Delete" (click)="onDelete($event)"><i class="ti ti-trash"></i></button>
             </div>
         </div>
     </ng-container>

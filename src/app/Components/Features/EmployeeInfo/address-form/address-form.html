@@ -18,17 +18,34 @@
         <h3 class="m-0 text-xl font-bold text-900">{{ formTitle }}</h3>
       </div>
 
-      <!-- Same as Permanent Address Checkbox (below title) - hidden in readonly mode -->
-      @if (showSameAsPresentCheckbox && !isReadonly) {
-        <div class="flex align-items-center">
-          <p-checkbox
-            formControlName="sameAsPresent"
-            [binary]="true"
-            [inputId]="'sameAsPresent_' + config.addressType">
-          </p-checkbox>
-          <label [for]="'sameAsPresent_' + config.addressType" class="ml-2 cursor-pointer font-semibold text-700">
-            {{ sameAsCheckboxLabel }}
-          </label>
+      <!-- "Same as" Checkboxes (secondary rendered before the primary) - hidden in readonly mode -->
+      @if ((showSameAsSecondaryCheckbox || showSameAsPresentCheckbox) && !isReadonly) {
+        <div class="flex flex-wrap align-items-center gap-4">
+          @if (showSameAsSecondaryCheckbox) {
+            <div class="flex align-items-center">
+              <p-checkbox
+                formControlName="sameAsSecondary"
+                [binary]="true"
+                [inputId]="'sameAsSecondary_' + config.addressType">
+              </p-checkbox>
+              <label [for]="'sameAsSecondary_' + config.addressType" class="ml-2 cursor-pointer font-semibold text-700">
+                {{ sameAsSecondaryCheckboxLabel }}
+              </label>
+            </div>
+          }
+
+          @if (showSameAsPresentCheckbox) {
+            <div class="flex align-items-center">
+              <p-checkbox
+                formControlName="sameAsPresent"
+                [binary]="true"
+                [inputId]="'sameAsPresent_' + config.addressType">
+              </p-checkbox>
+              <label [for]="'sameAsPresent_' + config.addressType" class="ml-2 cursor-pointer font-semibold text-700">
+                {{ sameAsCheckboxLabel }}
+              </label>
+            </div>
+          }
         </div>
       }
     </div>

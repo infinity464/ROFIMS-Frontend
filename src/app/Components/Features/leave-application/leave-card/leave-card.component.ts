@@ -8,8 +8,7 @@ import { LeaveApplicationService, LeaveApplicationModel, LeaveApplicationDetailM
 import { EmpService } from '@/services/emp-service';
 import { MasterBasicSetupService } from '@/Components/basic-setup/shared/services/MasterBasicSetupService';
 import { ServingMembersService } from '@/services/serving-members.service';
-import html2canvas from 'html2canvas';
-import jsPDF from 'jspdf';
+import { JsReportService } from '@/services/jsreport.service';
 import { Document, Packer, Paragraph, TextRun, AlignmentType, BorderStyle, Table, TableRow, TableCell, WidthType, TableBorders } from 'docx';
 import { saveAs } from 'file-saver';
 
@@ -129,7 +128,8 @@ export class LeaveCardComponent implements OnInit {
         private empService: EmpService,
         private masterBasicSetup: MasterBasicSetupService,
         private servingMembersService: ServingMembersService,
-        private _userMenuService: UserMenuService
+        private _userMenuService: UserMenuService,
+        private jsreportService: JsReportService
     ) {}
 
     ngOnInit(): void {
@@ -800,47 +800,61 @@ export class LeaveCardComponent implements OnInit {
         }
     }
 
-    private printCard(): void {
+    // Print Preview via JsReport (chrome-pdf) — opens the PDF in a new tab.
+    private async printCard(): Promise<void> {
+        try {
+            const html = this.buildJsReportHtml();
+            if (!html) return;
+            await this.jsreportService.previewPdfInNewTab(html, {}, this.exportFileStem(), this.jsReportChrome());
+        } catch (err: any) {
+            console.error('JsReport error: ' + (err?.message || 'Failed to render PDF via JsReport. Is the server reachable?'));
+        } finally {
+            this.exporting = false;
+        }
+    }
+
+    // PDF download via JsReport (chrome-pdf) — same render as Print Preview.
+    private async exportPDF(): Promise<void> {
+        try {
+            const html = this.buildJsReportHtml();
+            if (!html) return;
+            await this.jsreportService.downloadPdf(html, {}, `${this.exportFileStem()}.pdf`, this.jsReportChrome());
+        } catch (err: any) {
+            console.error('JsReport error: ' + (err?.message || 'Failed to render PDF via JsReport. Is the server reachable?'));
+        } finally {
+            this.exporting = false;
+        }
+    }
+
+    /** Wrap the rendered letter element + its print CSS into a standalone HTML
+     *  document for jsReport's chrome-pdf recipe. */
+    private buildJsReportHtml(): string | null {
         const el = document.getElementById('leave-card-print');
-        if (!el) return;
-        const title = this.lang === 'bn' ? 'ছুটির সনদপত্র/অফিস আদেশ' : 'Leave Certificate / Office Order';
-        const w = window.open('', '_blank', 'width=800,height=600');
-        if (!w) return;
-        w.document.write(`<html><head><title>${title}</title><style>${this.getPrintStyles()}</style></head><body>${el.outerHTML}</body></html>`);
-        w.document.close();
-        w.onload = () => {
-            w.focus();
-            w.print();
+        if (!el) return null;
+        return `<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>${this.getPrintStyles()}</style>
+</head>
+<body>${el.outerHTML}</body>
+</html>`;
+    }
+
+    /** Chrome-pdf options: A4 portrait with the same margins as the print CSS. */
+    private jsReportChrome(): Record<string, unknown> {
+        return {
+            format: 'A4',
+            landscape: false,
+            marginTop: '18mm', marginBottom: '18mm', marginLeft: '16mm', marginRight: '16mm',
+            printBackground: true,
+            displayHeaderFooter: false,
+            headerTemplate: '', footerTemplate: ''
         };
     }
 
-    private async exportPDF(): Promise<void> {
-        const el = document.getElementById('leave-card-print');
-        if (!el) return;
-        const origBorder = (el as HTMLElement).style.border;
-        const origBoxShadow = (el as HTMLElement).style.boxShadow;
-        (el as HTMLElement).style.border = 'none';
-        (el as HTMLElement).style.boxShadow = 'none';
-        try {
-            const canvas = await html2canvas(el, {
-                scale: 2,
-                useCORS: true,
-                backgroundColor: '#ffffff',
-                logging: false
-            });
-            const pdf = new jsPDF('p', 'mm', 'a4');
-            const marginMm = 10;
-            const pdfWidth = pdf.internal.pageSize.getWidth() - marginMm * 2;
-            const imgHeight = (canvas.height * pdfWidth) / canvas.width;
-            pdf.addImage(canvas.toDataURL('image/jpeg', 0.92), 'JPEG', marginMm, marginMm, pdfWidth, imgHeight);
-            const pdfBlob = pdf.output('blob');
-            const pdfUrl = URL.createObjectURL(pdfBlob);
-            window.open(pdfUrl, '_blank');
-        } finally {
-            (el as HTMLElement).style.border = origBorder;
-            (el as HTMLElement).style.boxShadow = origBoxShadow;
-            this.exporting = false;
-        }
+    private exportFileStem(): string {
+        return `LeaveCard_${this.row?.applicantEmployeeId ?? 'export'}`;
     }
 
     private async exportWord(): Promise<void> {

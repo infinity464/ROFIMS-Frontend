@@ -10,8 +10,10 @@ export interface MOServHistoryByEmployeeView {
     ser: number;
     orgId?: number | null;
     organizationName: string | null;
+    organizationNameBN?: string | null;
     orgUnitId?: number | null;
     locationName: string | null;
+    locationNameBN?: string | null;
     serviceFrom: string | null;
     serviceTo: string | null;
     serviceFromPrecision?: 'D' | 'M' | 'Y' | null;

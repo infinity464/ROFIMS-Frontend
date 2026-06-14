@@ -12,7 +12,7 @@ import { TrainingInstituteModel } from '../models/training-institution';
 import { RabIdSerialModel } from '../models/rab-id-serial';
 import { LeaveCardNumberConfigModel } from '../models/leave-card-number-config';
 import { EquivalentRankModel } from '../models/equivalent-rank';
-import { MotherOrgRankVacancyDistributionModel } from '../models/mother-org-rank-vacancy';
+import { MotherOrgRankVacancyDistributionModel, MotherOrgVacancyLockModel } from '../models/mother-org-rank-vacancy';
 
 import { NoteSheetTemplateModel } from '../models/notesheet-template';
 import { NoteSheetNumberConfigModel } from '../models/notesheet-number-config';
@@ -41,6 +41,7 @@ export class MasterBasicSetupService {
     private apiUrlLeaveCardNumberConfig = `${environment.apis.core}/LeaveCardNumberConfig`;
     private apiUrlRankEquivalent = `${environment.apis.core}/RankEquivalent`;
     private apiUrlMotherOrgRankVacancyDistribution = `${environment.apis.core}/MotherOrgRankVacancyDistribution`;
+    private apiUrlMotherOrgVacancyLock = `${environment.apis.core}/MotherOrgVacancyLock`;
     private apiUrlNoteSheetTemplate = `${environment.apis.core}/NoteSheetTemplate`;
     private apiUrlNoteSheetNumberConfig = `${environment.apis.core}/NoteSheetNumberConfig`;
     private apiUrlNoteSheetApproverConfig = `${environment.apis.core}/NoteSheetApproverConfig`;
@@ -122,6 +123,14 @@ export class MasterBasicSetupService {
     }
     deleteMotherOrgRankVacancyDistribution(id: number): Observable<{ statusCode: number; description?: string }> {
         return this.http.delete<{ statusCode: number; description?: string }>(`${this.apiUrlMotherOrgRankVacancyDistribution}/Delete/${id}`);
+    }
+
+    // MotherOrgVacancyLock — per-office entry lock
+    getMotherOrgVacancyLocksByOrg(orgId: number): Observable<MotherOrgVacancyLockModel[]> {
+        return this.http.get<MotherOrgVacancyLockModel[]>(`${this.apiUrlMotherOrgVacancyLock}/GetByOrg/${orgId}`);
+    }
+    setMotherOrgVacancyLock(model: MotherOrgVacancyLockModel): Observable<{ statusCode: number; description?: string }> {
+        return this.http.post<{ statusCode: number; description?: string }>(`${this.apiUrlMotherOrgVacancyLock}/Set`, model);
     }
 
     getAuthorizedOrganogramCounts(): Observable<AuthorizedCountItem[]> {

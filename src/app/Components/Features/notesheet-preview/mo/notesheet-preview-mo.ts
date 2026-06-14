@@ -1,4 +1,4 @@
-import { Component, OnInit, inject } from '@angular/core';
+import { Component, OnInit, ViewChild, ElementRef, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
@@ -7,14 +7,13 @@ import { ButtonModule } from 'primeng/button';
 import { SelectModule } from 'primeng/select';
 import { Toast } from 'primeng/toast';
 import { MessageService } from 'primeng/api';
-import { firstValueFrom } from 'rxjs';
 import {
     Document, Packer, Paragraph, TextRun, Table, TableRow, TableCell,
     WidthType, BorderStyle, AlignmentType, PageOrientation, TableLayoutType,
     HeightRule
 } from 'docx';
 import { saveAs } from 'file-saver';
-import { environment } from '@/Core/Environments/environment';
+import { JsReportService } from '@/services/jsreport.service';
 
 import { MovementInfoService } from '@/services/movement-info.service';
 import { MovementInfoModel } from '@/models/movement-info.model';
@@ -44,6 +43,9 @@ export class NotesheetPreviewMOComponent implements OnInit {
     private organizationService = inject(OrganizationService);
     private messageService = inject(MessageService);
     private http = inject(HttpClient);
+    private jsreportService = inject(JsReportService);
+
+    @ViewChild('paper') paper!: ElementRef<HTMLDivElement>;
 
     loading = true;
     error: string | null = null;
@@ -465,45 +467,107 @@ export class NotesheetPreviewMOComponent implements OnInit {
         }
     }
 
+    // ─── PDF download via JsReport (chrome-pdf, exact web view) ──
     async exportPdf(): Promise<void> {
-        if (!this.movement) return;
+        if (!this.movement || !this.paper) return;
         this.exportingPdf = true;
         try {
-            const doc = this.buildWordDocument();
-            const docxBlob = await Packer.toBlob(doc);
-            const pdfBlob = await this.convertDocxToPdf(docxBlob);
-            saveAs(pdfBlob, `${this.exportFileStem()}.pdf`);
-        } catch (err) {
-            console.error('PDF export failed', err);
-            this.messageService.add({ severity: 'error', summary: 'Export Error', detail: 'Failed to generate PDF.' });
+            const { html, chrome } = this.buildJsReportPdf();
+            await this.jsreportService.downloadPdf(html, {}, `${this.exportFileStem()}.pdf`, chrome);
+        } catch (err: any) {
+            this.messageService.add({
+                severity: 'error', summary: 'JsReport error',
+                detail: err?.message || 'Failed to render PDF via JsReport. Is the server reachable?'
+            });
         } finally {
             this.exportingPdf = false;
         }
     }
 
+    // ─── Print Preview via JsReport (chrome-pdf, new tab) ──
     async printPreview(): Promise<void> {
-        if (!this.movement) return;
+        if (!this.movement || !this.paper) return;
         this.printingPreview = true;
         try {
-            const doc = this.buildWordDocument();
-            const docxBlob = await Packer.toBlob(doc);
-            const pdfBlob = await this.convertDocxToPdf(docxBlob);
-            const url = URL.createObjectURL(pdfBlob);
-            window.open(url, '_blank');
-        } catch (err) {
-            console.error('Print preview failed', err);
-            this.messageService.add({ severity: 'error', summary: 'Preview Error', detail: 'Failed to generate print preview.' });
+            const { html, chrome } = this.buildJsReportPdf();
+            await this.jsreportService.previewPdfInNewTab(html, {}, this.exportFileStem(), chrome);
+        } catch (err: any) {
+            this.messageService.add({
+                severity: 'error', summary: 'JsReport error',
+                detail: err?.message || 'Failed to render PDF via JsReport. Is the server reachable?'
+            });
         } finally {
             this.printingPreview = false;
         }
     }
 
-    private async convertDocxToPdf(docxBlob: Blob): Promise<Blob> {
-        const form = new FormData();
-        form.append('file', docxBlob, 'document.docx');
-        return await firstValueFrom(
-            this.http.post(`${environment.apis.core}/Document/ConvertToPdf`, form, { responseType: 'blob' })
-        );
+    /**
+     * Build chrome-pdf HTML + chrome options reproducing the on-screen
+     * `.a4-paper` exactly. Ships every same-origin stylesheet so Chromium
+     * applies the scoped CSS; @page insets mirror .a4-paper's padding so the
+     * text column matches the web view.
+     */
+    private buildJsReportPdf(): { html: string; chrome: Record<string, unknown> } {
+        const styles = this.collectDocumentStyles();
+        const body = this.paper.nativeElement.innerHTML;
+        const sz = this.selectedPageSize;
+        const pageWidth = sz === 'A4' ? '210mm' : '215.9mm';
+        const pageHeight = sz === 'A4' ? '297mm' : sz === 'Letter' ? '279.4mm' : '355.6mm';
+        const colWidth = sz === 'A4' ? '190mm' : '195.9mm';
+        const padX = 10, padTop = 14, padBottom = 20; // mm — .a4-paper padding
+
+        const html = `<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+${styles}
+
+@page { size: ${pageWidth} ${pageHeight}; margin: ${padTop}mm ${padX}mm ${padBottom}mm ${padX}mm; }
+html, body { margin: 0; padding: 0; background: transparent; }
+
+.no-print, .preview-header, .preview-actions { display: none !important; }
+
+.pdf-flow {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    width: ${colWidth};
+    font-family: 'Times New Roman', 'SolaimanLipi', 'Noto Sans Bengali', 'Nirmala UI', 'Vrinda', 'Shonar Bangla', Times, serif;
+    font-size: 10pt;
+    line-height: 1.7;
+    color: #000;
+}
+</style>
+</head>
+<body>
+<div class="pdf-flow">${body}</div>
+</body>
+</html>`;
+
+        const chrome: Record<string, unknown> = {
+            format: null,
+            width: pageWidth,
+            height: pageHeight,
+            landscape: false,
+            marginTop: '0', marginBottom: '0', marginLeft: '0', marginRight: '0',
+            printBackground: true,
+            displayHeaderFooter: false,
+            headerTemplate: '', footerTemplate: ''
+        };
+
+        return { html, chrome };
+    }
+
+    /** Concatenate every same-origin stylesheet loaded into the page. */
+    private collectDocumentStyles(): string {
+        const out: string[] = [];
+        for (const sheet of Array.from(document.styleSheets)) {
+            try {
+                for (const rule of Array.from(sheet.cssRules)) out.push(rule.cssText);
+            } catch { /* cross-origin — skip */ }
+        }
+        return out.join('\n');
     }
 
     /** Twentieths of a point (twips) for the selected page size — portrait. */
