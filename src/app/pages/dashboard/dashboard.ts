@@ -436,6 +436,25 @@ type CalItem = { id: string; day: string; mon: string; dow: string; title: strin
                         <div class="text-muted-color text-xs uppercase mb-1">Details</div>
                         <div class="text-surface-900 dark:text-surface-0 whitespace-pre-line">{{ n.details || 'No details provided.' }}</div>
                     </div>
+                    @if (noticeFiles(n).length) {
+                        <div>
+                            <div class="text-muted-color text-xs uppercase mb-1">Files</div>
+                            <div class="flex flex-col items-start gap-1">
+                                @for (f of noticeFiles(n); track f.fileId) {
+                                    <button
+                                        type="button"
+                                        pButton
+                                        text
+                                        size="small"
+                                        class="justify-start"
+                                        icon="pi pi-paperclip"
+                                        [label]="f.fileName"
+                                        (click)="downloadNoticeFile(f)"
+                                    ></button>
+                                }
+                            </div>
+                        </div>
+                    }
                     <div>
                         <div class="text-muted-color text-xs uppercase mb-1">Published by</div>
                         <div class="text-surface-900 dark:text-surface-0">{{ n.createdByName || n.createdBy || 'Unknown' }}</div>
@@ -814,6 +833,27 @@ export class Dashboard implements OnInit, OnDestroy {
     openNotice(n: NoticeListDto): void {
         this.selectedNotice = n;
         this.noticeDialogVisible = true;
+    }
+
+    /** Parsed file references for a notice (FilesReferences JSON → { fileId, fileName }[]). */
+    noticeFiles(n: NoticeListDto): { fileId: number; fileName: string }[] {
+        if (!n?.filesReferences || typeof n.filesReferences !== 'string') return [];
+        try {
+            const refs = JSON.parse(n.filesReferences) as { FileId?: number; fileId?: number; fileName?: string }[];
+            if (!Array.isArray(refs)) return [];
+            return refs
+                .map((r) => ({ fileId: (r.FileId ?? r.fileId) as number, fileName: r.fileName ?? 'file' }))
+                .filter((r) => r.fileId != null);
+        } catch {
+            return [];
+        }
+    }
+
+    downloadNoticeFile(f: { fileId: number; fileName: string }): void {
+        this.empService.downloadFile(f.fileId).subscribe({
+            next: (blob) => this.empService.triggerFileDownload(blob, f.fileName || 'download'),
+            error: () => {}
+        });
     }
 
     private loadNotices(): void {
