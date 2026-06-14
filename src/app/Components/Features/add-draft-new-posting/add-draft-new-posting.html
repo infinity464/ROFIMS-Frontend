@@ -16,7 +16,7 @@
                 </div>
                 <div class="field flex-1 min-w-200px">
                     <label class="font-semibold block mb-2 text-700">Draft Posting List No <span class="text-red-500">*</span></label>
-                    <input pInputText class="w-full" [(ngModel)]="draftPostingListNo" placeholder="Auto Generated / Manual Input" />
+                    <input pInputText class="w-full" [(ngModel)]="draftPostingListNo" [readonly]="!isEditMode" placeholder="Auto Generated" />
                 </div>
                 <div *ngIf="isEditMode" class="field min-w-150px">
                     <label class="font-semibold block mb-2 text-700">Status</label>

@@ -1,0 +1,16 @@
+.onulipi-table {
+    border-collapse: collapse;
+
+    th,
+    td {
+        padding: 0.5rem;
+        vertical-align: middle;
+        border-bottom: 1px solid var(--surface-border, #e5e7eb);
+    }
+
+    th {
+        text-align: left;
+        font-weight: 600;
+        background: var(--surface-100, #f3f4f6);
+    }
+}

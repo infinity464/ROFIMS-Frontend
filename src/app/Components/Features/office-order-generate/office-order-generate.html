@@ -170,6 +170,10 @@
                             placeholder="Enter paragraph text..."
                             [autoResize]="true"
                         ></textarea>
+                        <div class="flex flex-column gap-1">
+                            <p-button icon="pi pi-arrow-up" [rounded]="true" [text]="true" size="small" [disabled]="i === 0" pTooltip="Move up" (onClick)="moveOnulipiUp(i)"></p-button>
+                            <p-button icon="pi pi-arrow-down" [rounded]="true" [text]="true" size="small" [disabled]="i === onulipiParagraphs.length - 1" pTooltip="Move down" (onClick)="moveOnulipiDown(i)"></p-button>
+                        </div>
                         <p-button
                             icon="pi pi-times"
                             severity="danger"

@@ -73,6 +73,7 @@ export class AddDraftNewPostingComponent implements OnInit {
         this.canDelete = _perms.canDelete;
         this.loadData();
         this.loadDraftMasters();
+        this.draftPostingDate = new Date();
     }
 
     get isEditMode(): boolean {
@@ -166,8 +167,7 @@ export class AddDraftNewPostingComponent implements OnInit {
                     this.loadData();
                     this.loadDraftMasters();
                     this.selectedRows = [];
-                    this.draftPostingDate = null;
-                    this.draftPostingListNo = '';
+                    this.draftPostingDate = new Date();
                 }
             },
             error: (err: { error?: { description?: string }; message?: string }) => {
@@ -183,11 +183,30 @@ export class AddDraftNewPostingComponent implements OnInit {
             next: (data: DraftPostingMasterDto[]) => {
                 this.draftMastersList = data ?? [];
                 this.loadingMasters = false;
+                if (!this.isEditMode) this.generateDraftPostingListNo();
             },
             error: (err: any) => {
                 this.loadingMasters = false;
             }
         });
+    }
+
+    private generateDraftPostingListNo(): void {
+        const now = new Date();
+        const year = now.getFullYear();
+        const month = String(now.getMonth() + 1).padStart(2, '0');
+        const prefix = `${year}/${month}`;
+
+        let maxSeq = 0;
+        for (const m of this.draftMastersList) {
+            const no = m.draftPostingNo ?? '';
+            if (!no.startsWith(prefix + '/')) continue;
+            const seqPart = no.substring(prefix.length + 1);
+            const seq = parseInt(seqPart, 10);
+            if (!isNaN(seq) && seq > maxSeq) maxSeq = seq;
+        }
+
+        this.draftPostingListNo = `${prefix}/${String(maxSeq + 1).padStart(3, '0')}`;
     }
 
     formatDateForApi(d: Date | null): string | null {

@@ -33,9 +33,9 @@ import { RouterLink } from '@angular/router';
 import { NoteSheetEditCacheService } from '@/services/note-sheet-edit-cache.service';
 import { IdentityUserMappingService } from '@/services/identity-user-mapping.service';
 import { PostingService } from '@/services/posting.service';
-import { ExBdLeaveApplicationService, ExBdLeaveApplicationListViewModel } from '@/services/ex-bd-leave-application.service';
+import { ExBdLeaveApplicationService, ExBdLeaveApplicationListViewModel, ExBdLeaveNoteSheetBodyData } from '@/services/ex-bd-leave-application.service';
 import { NoteSheetType, NoteSheetCurrentStatus, ApprovalStatus, NoteSheetOperationType, NoteSheetOperationTypeOptions, CodeType } from '@/models/enums';
-import { BanglaNumerals } from '@/Core/i18n/bangla-numerals';
+import { BanglaNumerals, toBanglaWords, toEnglishWords, formatDateBangla, formatDateEnglish } from '@/Core/i18n/bangla-numerals';
 import { NotesheetApproverSelectComponent } from '@/Components/Common/notesheet-approver-select/notesheet-approver-select';
 import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
 import { NotesheetSignatoryComponent, SignatoryDetail } from '@/Components/Common/notesheet-signatory/notesheet-signatory';
@@ -117,7 +117,7 @@ export class NotesheetExBdLeaveComponent implements OnInit {
     purposeOfLeaveOptions: { label: string; labelBn: string | null; value: number }[] = [];
     countryOptions: { label: string; labelBn: string | null; value: number }[] = [];
     preparedByOptions: { label: string; value: number }[] = [];
-    familyMemberOptions: { label: string; labelBn?: string; value: number; fmid: number; employeeId: number; relationLabel?: string }[] = [];
+    familyMemberOptions: { label: string; labelBn?: string; value: number; fmid: number; employeeId: number; relationLabel?: string; nameRaw?: string; nameBnRaw?: string; relationLabelBn?: string }[] = [];
     relationshipOptions: { label: string; labelBn: string | null; value: number }[] = [];
     subjectTypeOptions: { label: string; value: number }[] = [];
     showSubjectDialog = false;
@@ -145,6 +145,9 @@ export class NotesheetExBdLeaveComponent implements OnInit {
     editExBdLeaveSubjectId: number | null = null;
     editMainText = '';
     editReferenceNumber = '';
+
+    private generatedMainTextBN = '';
+    private generatedMainTextEN = '';
 
     private readonly defaultMainTextBN =
         'ছুটি মঞ্জুরের নিমিত্তে সিনিয়র সচিব, জননিরাপত্তা বিভাগ, স্বরাষ্ট্র মন্ত্রণালয়, বাংলাদেশ সচিবালয়, ঢাকা বরাবর আবেদন করেছেন। তার স্বাক্ষ্যায়িত আবেদন সংশ্লিষ্ট নথিপত্র সূত্র স্মারক মোতাবেক অত্র কার্যালয়ে গৃহীত হয়েছে।' +
@@ -295,7 +298,11 @@ export class NotesheetExBdLeaveComponent implements OnInit {
             this.form.get('textType')?.valueChanges.subscribe((val) => {
                 if (!this.editMode) {
                     const currentText = this.form.get('mainText')?.value ?? '';
-                    if (!currentText || currentText === this.defaultMainTextBN || currentText === this.defaultMainTextEN) {
+                    const isDefault = !currentText || currentText === this.defaultMainTextBN || currentText === this.defaultMainTextEN;
+                    const isGenerated = currentText === this.generatedMainTextBN || currentText === this.generatedMainTextEN;
+                    if (isGenerated && (this.generatedMainTextBN || this.generatedMainTextEN)) {
+                        this.form.patchValue({ mainText: val === 'en' ? this.generatedMainTextEN : this.generatedMainTextBN });
+                    } else if (isDefault) {
                         this.form.patchValue({ mainText: val === 'en' ? this.defaultMainTextEN : this.defaultMainTextBN });
                     }
                 }
@@ -696,7 +703,32 @@ export class NotesheetExBdLeaveComponent implements OnInit {
             totalDays: app.totalDays ?? 0
         });
 
-        // Auto-fill family members
+        // Auto-fill unit/wing from employee lookup
+        const emp = this.allEmployees.find((e: any) => (e.employeeID ?? e.EmployeeID) === app.applicantEmployeeId);
+        const wingId = emp?.unit ?? emp?.Unit ?? null;
+        if (emp) {
+            this.form.patchValue({
+                wingBattalionId: wingId,
+                branchId: emp.branch ?? emp.Branch ?? null
+            });
+        }
+
+        // Fetch body data from backend API (has correct BN hierarchy from DB)
+        // and load family members in parallel
+        let bodyData: ExBdLeaveNoteSheetBodyData | null = null;
+        let bodyDataReady = false;
+        let familyReady = false;
+        const tryGenerate = () => {
+            if (bodyDataReady && familyReady && bodyData) this.generateMainText(app, emp, bodyData);
+        };
+
+        this.exBdLeaveAppService.getNoteSheetBodyData(appId).subscribe({
+            next: (data) => { bodyData = data; bodyDataReady = true; tryGenerate(); },
+            error: () => { bodyDataReady = true; tryGenerate(); }
+        });
+
+        // Auto-fill family members, then signal ready
+        const onFamilyLoaded = () => { familyReady = true; tryGenerate(); };
         try {
             if (app.familyMembersJson) {
                 const members = JSON.parse(app.familyMembersJson) as any[];
@@ -704,25 +736,57 @@ export class NotesheetExBdLeaveComponent implements OnInit {
                     const fmids = members
                         .map((m) => typeof m === 'number' ? m : (m.fmid ?? m.FMID ?? 0))
                         .filter((id) => id > 0);
-                    this.loadFamilyMembersForEmployee(app.applicantEmployeeId, fmids);
+                    this.loadFamilyMembersForEmployee(app.applicantEmployeeId, fmids, onFamilyLoaded);
                 } else {
-                    this.loadFamilyMembersForEmployee(app.applicantEmployeeId);
+                    this.loadFamilyMembersForEmployee(app.applicantEmployeeId, undefined, onFamilyLoaded);
                 }
             } else {
-                this.loadFamilyMembersForEmployee(app.applicantEmployeeId);
+                this.loadFamilyMembersForEmployee(app.applicantEmployeeId, undefined, onFamilyLoaded);
             }
         } catch {
-            this.loadFamilyMembersForEmployee(app.applicantEmployeeId);
+            this.loadFamilyMembersForEmployee(app.applicantEmployeeId, undefined, onFamilyLoaded);
+        }
+    }
+
+    /** Build the notesheet body text using backend-resolved bilingual data. */
+    private generateMainText(app: ExBdLeaveApplicationListViewModel, emp: any, bodyData: ExBdLeaveNoteSheetBodyData): void {
+        const textType = this.form.get('textType')?.value ?? 'bn';
+        const fromDate = this.parseDate(app.fromDate);
+        const toDate = this.parseDate(app.toDate);
+        const totalDays = bodyData.totalDays ?? app.totalDays ?? 0;
+
+        const nameBN = bodyData.empNameBN || app.applicantName || '';
+        const nameEN = bodyData.empNameEN || app.applicantName || '';
+        const rabId = bodyData.rabid || app.rabid || '';
+        const rabUnitBN = bodyData.placementBN || app.applicantPlacement || '';
+        const rabUnitEN = bodyData.placementEN || app.applicantPlacement || '';
+        const purposeBN = bodyData.visitTypeNameBN || '';
+        const purposeEN = bodyData.visitTypeNameEN || '';
+        const countriesBN = bodyData.countriesDisplayBN || '';
+        const countriesEN = bodyData.countriesDisplayEN || '';
+
+        const daysBN = BanglaNumerals.toBangla(String(totalDays));
+        const daysWordsBN = toBanglaWords(totalDays);
+        const daysWordsEN = toEnglishWords(totalDays);
+
+        // Family members from backend (DB-resolved with BN names/relations)
+        let familySectionBN = '';
+        let familySectionEN = '';
+        if (bodyData.familyMembersDisplayBN) {
+            familySectionBN = ` নিজ এবং পরিবারবর্গ (${bodyData.familyMembersDisplayBN})`;
+        }
+        if (bodyData.familyMembersDisplayEN) {
+            familySectionEN = ` self and family members (${bodyData.familyMembersDisplayEN})`;
         }
 
-        // Auto-fill unit/wing from employee lookup
-        const emp = this.allEmployees.find((e: any) => (e.employeeID ?? e.EmployeeID) === app.applicantEmployeeId);
-        if (emp) {
-            this.form.patchValue({
-                wingBattalionId: emp.unit ?? emp.Unit ?? null,
-                branchId: emp.branch ?? emp.Branch ?? null
-            });
-        }
+        const dynamicBN = `র‍্যাব প্রেষণে নিয়োজিত বর্তমানে ${rabUnitBN} এ কর্মরত ${BanglaNumerals.toBangla(rabId)} ${nameBN} এর ${purposeBN} জন্য${familySectionBN} আগামী ${formatDateBangla(fromDate)} হতে ${formatDateBangla(toDate)} তারিখ পর্যন্ত ${daysBN} (${daysWordsBN}) দিন অথবা উল্লিখিত সময়ের মধ্যে যাত্রার তারিখ হতে ${daysBN} (${daysWordsBN}) দিন ${countriesBN} গমনের জন্য অর্জিত `;
+
+        const dynamicEN = `Currently serving at ${rabUnitEN} under RAB deputation, ${rabId} ${nameEN} has applied for ${purposeEN}${familySectionEN}, for ${totalDays} (${daysWordsEN}) days from ${formatDateEnglish(fromDate)} to ${formatDateEnglish(toDate)}, or ${totalDays} (${daysWordsEN}) days from the date of journey within the aforementioned period, to ${countriesEN} for earned `;
+
+        this.generatedMainTextBN = dynamicBN + this.defaultMainTextBN;
+        this.generatedMainTextEN = dynamicEN + this.defaultMainTextEN;
+
+        this.form.patchValue({ mainText: textType === 'en' ? this.generatedMainTextEN : this.generatedMainTextBN });
     }
 
     /** Load NoteSheet Number Config for ExBDLeave type (same pattern as notesheet-generate) */
@@ -879,36 +943,42 @@ export class NotesheetExBdLeaveComponent implements OnInit {
         return forBangla && o.labelBn ? o.labelBn : o.label;
     }
 
-    loadFamilyMembersForEmployee(employeeId: number, restoreSelectedIds?: number[]): void {
+    loadFamilyMembersForEmployee(employeeId: number, restoreSelectedIds?: number[], onLoaded?: () => void): void {
         this.familyInfoService.getByEmployeeId(employeeId).subscribe({
             next: (data: FamilyInfoModel[] | any) => {
                 const list = Array.isArray(data) ? data : (data?.data ?? data?.value ?? []);
                 this.familyMemberOptions = (list || []).map((item: any) => {
                     const fmid = item.fmid ?? item.FMID ?? 0;
-                    const name = (item.nameEN ?? item.NameEN ?? item.nameBN ?? item.NameBN ?? `FM ${fmid}`) || `FM ${fmid}`;
+                    const nameEN = (item.nameEN ?? item.NameEN ?? item.nameBN ?? item.NameBN ?? `FM ${fmid}`) || `FM ${fmid}`;
+                    const nameBN = item.nameBN ?? item.NameBN ?? nameEN;
                     const relationId = item.relation ?? item.Relation;
                     const relationEn = this.getRelationLabel(relationId, false);
                     const relationBn = this.getRelationLabel(relationId, true);
                     const relationPart = relationEn ? ` (${relationEn})` : '';
                     const relationPartBn = relationBn ? ` (${relationBn})` : '';
-                    const label = String(name).trim() + relationPart;
-                    const labelBn = relationPartBn ? String(name).trim() + relationPartBn : undefined;
+                    const label = String(nameEN).trim() + relationPart;
+                    const labelBn = relationPartBn ? String(nameEN).trim() + relationPartBn : undefined;
                     return {
                         label,
                         labelBn,
                         value: fmid,
                         fmid,
                         employeeId: item.employeeId ?? item.EmployeeId ?? employeeId,
-                        relationLabel: relationEn || relationBn || undefined
+                        relationLabel: relationEn || relationBn || undefined,
+                        nameRaw: String(nameEN).trim(),
+                        nameBnRaw: String(nameBN).trim(),
+                        relationLabelBn: relationBn || undefined,
                     };
                 });
                 const ids = restoreSelectedIds ?? this.form.get('familyMemberIds')?.value ?? [];
                 const toSet = Array.isArray(ids) ? ids : [];
                 this.form.patchValue({ familyMemberIds: toSet });
                 setTimeout(() => this.form.patchValue({ familyMemberIds: toSet }), 0);
+                onLoaded?.();
             },
             error: (err: any) => {
                 this.familyMemberOptions = [];
+                onLoaded?.();
             }
         });
     }
@@ -998,7 +1068,7 @@ export class NotesheetExBdLeaveComponent implements OnInit {
                             : 'Ex-BD Leave Note Sheet generated successfully.'
                     });
                     this.isSubmitting = false;
-                    if (this.editMode) this.router.navigate(['/notesheet-list/draft-ex-bd-leave']);
+                    this.router.navigate(['/notesheet-list/draft-ex-bd-leave']);
                 },
                 error: (err) => {
                     const detail = err?.error?.message || err?.message || 'Failed to generate note sheet.';

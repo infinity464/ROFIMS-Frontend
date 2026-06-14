@@ -142,6 +142,7 @@ import { NoteSheetNumberConfigComponent } from '@/Components/basic-setup/noteshe
 import { LeaveCardNumberConfigComponent } from '@/Components/basic-setup/leave-card-number-config/leave-card-number-config';
 import { NoteSheetApproverConfigComponent } from '@/Components/basic-setup/notesheet-approver-config/notesheet-approver-config';
 import { PostingOrderNumberConfigComponent } from '@/Components/basic-setup/posting-order-number-config/posting-order-number-config';
+import { OnulipiConfigComponent } from '@/Components/basic-setup/onulipi-config/onulipi-config';
 import { NotesheetGenerateComponent } from '@/Components/Features/notesheet-generate/notesheet-generate';
 import { NotesheetExBdLeaveComponent } from '@/Components/Features/notesheet-ex-bd-leave/notesheet-ex-bd-leave';
 import { ExBdLeaveApplyComponent } from '@/Components/Features/ex-bd-leave-application/ex-bd-leave-apply/ex-bd-leave-apply.component';
@@ -207,6 +208,9 @@ import { OfficeOrderGenerateComponent } from '@/Components/Features/office-order
 import { OfficeOrderPreviewComponent } from '@/Components/Features/office-order-preview/office-order-preview';
 import { OfficeOrderExBdLeaveGenerateComponent } from '@/Components/Features/office-order-ex-bd-leave-generate/office-order-ex-bd-leave-generate';
 import { OfficeOrderExBdLeavePreviewComponent } from '@/Components/Features/office-order-ex-bd-leave-preview/office-order-ex-bd-leave-preview';
+import { ClearanceExBdLeaveGenerateComponent } from '@/Components/Features/clearance-ex-bd-leave-generate/clearance-ex-bd-leave-generate';
+import { ClearanceExBdLeavePreviewComponent } from '@/Components/Features/clearance-ex-bd-leave-preview/clearance-ex-bd-leave-preview';
+import { ClearanceExBdLeaveListComponent } from '@/Components/Features/clearance-ex-bd-leave-list/clearance-ex-bd-leave-list';
 
 export const appRoutes: Routes = [
     // Public routes
@@ -305,6 +309,7 @@ export const appRoutes: Routes = [
             { path: 'basic-setup/leave-card-number-config', component: LeaveCardNumberConfigComponent },
             { path: 'basic-setup/notesheet-approver-config', component: NoteSheetApproverConfigComponent },
             { path: 'basic-setup/posting-order-number-config', component: PostingOrderNumberConfigComponent },
+            { path: 'basic-setup/onulipi-config', component: OnulipiConfigComponent },
             { path: 'notesheet-generate', component: NotesheetGenerateComponent },
             { path: 'notesheet-ex-bd-leave', component: NotesheetExBdLeaveComponent },
             { path: 'ex-bd-leave/apply', component: ExBdLeaveApplyComponent },
@@ -401,6 +406,9 @@ export const appRoutes: Routes = [
             { path: 'office-order-ex-bd-leave/generate', component: OfficeOrderExBdLeaveGenerateComponent },
             { path: 'office-order-ex-bd-leave/list', component: OfficeOrderExBdLeavePreviewComponent },
             { path: 'office-order-ex-bd-leave/preview', component: OfficeOrderExBdLeavePreviewComponent },
+            { path: 'clearance-ex-bd-leave/generate', component: ClearanceExBdLeaveGenerateComponent },
+            { path: 'clearance-ex-bd-leave/preview', component: ClearanceExBdLeavePreviewComponent },
+            { path: 'clearance-ex-bd-leave-list', component: ClearanceExBdLeaveListComponent },
             { path: 'employee-signature-upload', component: EmployeeSignatureUploadComponent },
             { path: 'employee-face-search', component: EmployeeFaceSearchComponent },
             { path: 'employee-face-search-history', component: EmployeeFaceSearchHistoryComponent },

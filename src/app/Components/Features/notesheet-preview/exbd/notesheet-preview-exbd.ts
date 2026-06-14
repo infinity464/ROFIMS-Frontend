@@ -404,104 +404,7 @@ export class NotesheetPreviewExbdComponent extends NotesheetPreviewBase implemen
     private buildParagraphHtml(): string {
         const ns = this.noteSheet;
         if (!ns) return '';
-        const bn = !this.isEnglish();
-        const emp = this.leaveEmployee;
-
-        // Unit name: prefer employee's own rabUnitBN/rabUnit, then fall back to the
-        // RabUnit lookup map (which is populated from CommonCode and has BN values).
-        const unitFromMap = emp?.rabUnitId
-            ? (bn ? (this.unitLabelMapBN[emp.rabUnitId] || this.unitLabelMap[emp.rabUnitId]) : this.unitLabelMap[emp.rabUnitId])
-            : '';
-        const unitName = emp
-            ? ((bn ? (emp.rabUnitBN || emp.rabUnit) : emp.rabUnit) || unitFromMap || '')
-            : '';
-        const wing = bn ? (this.wingNameBN || this.wingName) : this.wingName;
-        const rawServiceId = emp?.serviceId || '';
-        const prefixStr = emp ? (bn ? (emp.prefixBN || emp.prefix) : emp.prefix) || '' : '';
-        const serviceIdDisplay = bn ? this.toBanglaDigits(rawServiceId) : rawServiceId;
-        const rabId = prefixStr && serviceIdDisplay ? `${prefixStr}-${serviceIdDisplay}` : (serviceIdDisplay || '');
-        const empName = emp ? (bn ? (emp.nameBN || emp.nameEnglish) : emp.nameEnglish) || '' : '';
-        const rank = emp ? (bn ? (emp.armyRankBN || emp.armyRank) : emp.armyRank) || '' : '';
-
-        // ── Data from ExBdLeaveApplication (prefer pre-resolved view data) ──
-        const app = this.exBdApplication;
-
-        // Family: prefer pre-resolved from view (language-aware)
-        const familyText = bn
-            ? (this._viewFamilyDisplayBN || this._viewFamilyDisplay
-                || this.appFamilyMembers.map(f => {
-                    const rel = f.relation || '';
-                    const name = f.nameEN || '';
-                    return rel && name ? `${rel}-${name}` : (name || rel || '');
-                }).filter(Boolean).join(', '))
-            : (this._viewFamilyDisplay
-                || this.appFamilyMembers.map(f => {
-                    const rel = f.relation || '';
-                    const name = f.nameEN || '';
-                    return rel && name ? `${rel}-${name}` : (name || rel || '');
-                }).filter(Boolean).join(', '));
-
-        // Countries: prefer pre-resolved from view
-        const countryText = bn
-            ? (this._viewCountriesDisplayBN || this._viewCountriesDisplay || this.appCountries.map(c => c.countryName).filter(Boolean).join(', '))
-            : (this._viewCountriesDisplay || this.appCountries.map(c => c.countryName).filter(Boolean).join(', '));
-
-        // Purpose: prefer pre-resolved from view
-        const purpose = bn
-            ? (this._viewPurposeNameBN || this._viewPurposeName || (app?.visitTypeId != null ? this.getPurposeLabel(app.visitTypeId) : ''))
-            : (this._viewPurposeName || (app?.visitTypeId != null ? this.getPurposeLabel(app.visitTypeId) : ''));
-
-        // Dates from application
-        const visitFrom = app?.fromDate ?? null;
-        const visitTo = app?.toDate ?? null;
-        const fromDate = visitFrom ? this.formatMonthYear(visitFrom) : '';
-        const toDate = visitTo ? this.formatMonthYear(visitTo) : '';
-        let totalDays = app?.totalDays ?? 0;
-        if (!totalDays && visitFrom && visitTo) {
-            try {
-                const f = new Date(visitFrom), t = new Date(visitTo);
-                if (!isNaN(f.getTime()) && !isNaN(t.getTime())) {
-                    totalDays = Math.max(0, Math.ceil((t.getTime() - f.getTime()) / (1000 * 60 * 60 * 24)) + 1);
-                }
-            } catch { /* ignore */ }
-        }
-        const totalDaysBN = bn ? this.toBanglaDigits(totalDays) : String(totalDays);
-        const totalDaysWord = bn ? this.numberToBanglaWord(totalDays) : '';
-
-        let text = '';
-        if (bn) {
-            text = 'র‍্যাব প্রেষণে নিয়োজিত বর্তমানে';
-            if (unitName) text += ` ${unitName}`;
-            text += ` এ কর্মরত ${rabId} ${empName}`;
-            if (purpose) text += ` এর নিজের ${purpose}র জন্য`;
-            if (familyText) text += ` নিজ এবং পরিবারবর্গ (${familyText})`;
-            if (fromDate && toDate) text += ` আগামী ${fromDate} হতে ${toDate} তারিখ পর্যন্ত`;
-            if (totalDays > 0) {
-                const daysDisplay = totalDaysWord ? `${totalDaysBN} (${totalDaysWord})` : totalDaysBN;
-                text += ` ${daysDisplay} দিন অথবা উল্লিখিত সময়ের মধ্যে যাত্রার তারিখ হতে ${daysDisplay} দিন`;
-            }
-            if (countryText) text += ` ${countryText} গমনের জন্য`;
-            text += ' অর্জিত';
-        } else {
-            text = `Currently serving at ${unitName}`;
-            if (wing) text += `, ${wing}`;
-            text += `, ${rabId}: ${rank} ${empName}`;
-            text += `, has submitted a request for security clearance`;
-            if (familyText) text += ` along with family member(s) (${familyText})`;
-            if (countryText) text += ` to travel to ${countryText}`;
-            if (purpose) text += ` for ${purpose.toLowerCase()} purpose`;
-            if (fromDate && toDate) text += ` from ${fromDate} to ${toDate}`;
-            if (totalDays > 0) text += `, or within ${totalDays} days from the date of travel`;
-            text += '.';
-        }
-
-        const mainText = ns.mainText?.trim();
-        if (mainText) {
-            const inline = mainText.replace(/^<p[^>]*>/i, '').replace(/<\/p>\s*$/i, '');
-            text += ' ' + inline;
-        }
-
-        return text;
+        return ns.mainText?.trim() || '';
     }
 
     // ── Edit info panel display helpers ────────────────────────
@@ -1331,45 +1234,22 @@ html, body { margin: 0; padding: 0; background: transparent; }
             }));
         }
 
-        // Reference / Date — label + first content block merged inline
+        // Reference / Date — label on its own line, ref items below at same alignment
         if (model.referenceBlocks.length > 0) {
-            const labelRun = new TextRun({ text: `${model.referenceLabel} `, bold: true, size: contentSize, sizeComplexScript: csContent, font, language: lang });
-            const firstRefBlock = model.referenceBlocks[0];
-            if (firstRefBlock.type === 'paragraph' && (firstRefBlock.text || (firstRefBlock.runs && firstRefBlock.runs.length > 0))) {
-                const contentRuns = (firstRefBlock.runs && firstRefBlock.runs.length > 0)
-                    ? firstRefBlock.runs.map(r => new TextRun({
-                        text: r.text,
-                        bold: r.bold,
-                        italics: r.italic,
-                        underline: r.underline ? {} : undefined,
-                        size: contentSize,
-                        sizeComplexScript: csContent,
-                        font,
-                        language: lang
-                    }))
-                    : [new TextRun({ text: firstRefBlock.text!, bold: firstRefBlock.bold, italics: firstRefBlock.italic, size: contentSize, sizeComplexScript: csContent, font, language: lang })];
-                mainChildren.push(new Paragraph({
-                    children: [labelRun, ...contentRuns],
-                    indent: { left: 240 }, spacing: { after: 80 }, alignment: AlignmentType.JUSTIFIED
-                }));
-                if (model.referenceBlocks.length > 1) {
-                    mainChildren.push(...this.contentBlocksToDocx(model.referenceBlocks.slice(1), font, bn));
-                }
-            } else {
-                mainChildren.push(new Paragraph({
-                    children: [labelRun],
-                    indent: { left: 240 }, spacing: { after: 40 }
-                }));
-                mainChildren.push(...this.contentBlocksToDocx(model.referenceBlocks, font, bn));
-            }
+            mainChildren.push(new Paragraph({
+                children: [new TextRun({ text: model.referenceLabel.trim(), bold: true, size: contentSize, sizeComplexScript: csContent, font, language: lang })],
+                indent: { left: 240 }, spacing: { after: 0 }
+            }));
+            mainChildren.push(...this.contentBlocksToDocx(model.referenceBlocks, font, bn));
         } else if (this.noteSheet?.referenceNumber) {
             const plain = this.stripHtml(this.noteSheet.referenceNumber ?? '');
             mainChildren.push(new Paragraph({
-                children: [
-                    new TextRun({ text: `${model.referenceLabel} `, bold: true, size: contentSize, sizeComplexScript: csContent, font, language: lang }),
-                    new TextRun({ text: plain, size: contentSize, sizeComplexScript: csContent, font, language: lang })
-                ],
-                indent: { left: 240 }, spacing: { after: 80 }, alignment: AlignmentType.JUSTIFIED
+                children: [new TextRun({ text: model.referenceLabel.trim(), bold: true, size: contentSize, sizeComplexScript: csContent, font, language: lang })],
+                indent: { left: 240 }, spacing: { after: 0 }
+            }));
+            mainChildren.push(new Paragraph({
+                children: [new TextRun({ text: plain, size: contentSize, sizeComplexScript: csContent, font, language: lang })],
+                indent: { left: 240 }, spacing: { after: 80 }
             }));
         } else if (this.noteSheet?.noteSheetDate) {
             mainChildren.push(new Paragraph({
@@ -1511,11 +1391,11 @@ html, body { margin: 0; padding: 0; background: transparent; }
         // Title paragraphs — placed at top of the main cell, INSIDE the outer border
         const titleChildren: Paragraph[] = [
             new Paragraph({
-                children: [new TextRun({ text: 'NOTE SHEET', bold: true, underline: {}, size: hdrSize, font: 'Times New Roman' })],
+                children: [new TextRun({ text: 'NOTE SHEET', bold: true, size: hdrSize, font: 'Times New Roman' })],
                 alignment: AlignmentType.CENTER, spacing: { before: 80, after: 40 }, keepNext: true
             }),
             new Paragraph({
-                children: [new TextRun({ text: 'মন্তব্য পত্র', underline: {}, size: hdrSize, font: 'Nirmala UI' })],
+                children: [new TextRun({ text: 'মন্তব্য পত্র', size: hdrSize, font: 'Nirmala UI' })],
                 alignment: AlignmentType.CENTER, spacing: { after: 100 }, keepNext: true
             }),
         ];

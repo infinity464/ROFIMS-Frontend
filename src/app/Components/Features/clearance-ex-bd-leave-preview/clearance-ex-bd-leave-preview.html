@@ -4,7 +4,7 @@
 <div class="office-order-list" *ngIf="viewMode === 'list'">
     <div class="form-card">
         <div class="form-card-header">
-            <h3 class="form-card-title">Ex-BD Leave Office Order List</h3>
+            <h3 class="form-card-title">Ex-BD Leave Clearance List</h3>
         </div>
 
         <p-table
@@ -17,7 +17,7 @@
             [paginator]="true"
             [rows]="10"
             [rowsPerPageOptions]="[10, 25, 50]"
-            [globalFilterFields]="['letterNo', 'noteSheetNo', 'subject', 'approvalStatus', 'applicantName', 'applicantServiceId']"
+            [globalFilterFields]="['letterNo', 'noteSheetNo', 'subject', 'approvalStatus']"
         >
             <ng-template pTemplate="caption">
                 <div class="flex justify-content-end">
@@ -30,8 +30,7 @@
             <ng-template pTemplate="header">
                 <tr>
                     <th style="width: 50px">SL</th>
-                    <th style="min-width: 200px">Applicant</th>
-                    <th style="min-width: 160px">Letter No</th>
+                    <th style="min-width: 160px">Reference No</th>
                     <th style="min-width: 110px">Date</th>
                     <th style="min-width: 200px">Subject</th>
                     <th style="min-width: 140px">NoteSheet No</th>
@@ -43,7 +42,6 @@
             <ng-template pTemplate="body" let-row let-rowIndex="rowIndex">
                 <tr>
                     <td>{{ rowIndex + 1 }}</td>
-                    <td>{{ (row.applicantPrefix && row.applicantServiceId ? row.applicantPrefix + '-' + row.applicantServiceId : row.applicantPrefix || row.applicantServiceId || '') }} {{ row.applicantName || '' }}</td>
                     <td><span class="font-semibold">{{ row.letterNo || '-' }}</span></td>
                     <td>{{ formatDate(row.letterDate) }}</td>
                     <td>{{ row.subject || '-' }}</td>
@@ -60,10 +58,10 @@
             </ng-template>
             <ng-template pTemplate="emptymessage">
                 <tr>
-                    <td colspan="9" class="text-center p-4">
+                    <td colspan="8" class="text-center p-4">
                         <div class="flex flex-column align-items-center gap-3 py-5">
                             <i class="pi pi-inbox text-5xl text-400"></i>
-                            <span class="text-lg text-500">No office orders found.</span>
+                            <span class="text-lg text-500">No clearances found.</span>
                         </div>
                     </td>
                 </tr>
@@ -116,47 +114,47 @@
     <!-- ─── Loading ─── -->
     <div class="preview-loading" *ngIf="loading">
         <i class="pi pi-spin pi-spinner" style="font-size:2rem"></i>
-        <p>Loading office order...</p>
+        <p>Loading clearance...</p>
     </div>
 
     <!-- ─── Error ─── -->
     <div class="preview-error" *ngIf="error && !loading">
         <i class="pi pi-exclamation-circle" style="font-size:3rem; color:var(--red-500)"></i>
-        <p>Failed to load office order.</p>
+        <p>Failed to load clearance.</p>
         <p-button label="Go Back" icon="pi pi-arrow-left" (onClick)="goBack()"></p-button>
     </div>
 
-    <!-- ─── Onulipi Filter ─── -->
+    <!-- ─── Copy Filter ─── -->
     <div class="oo-onulipi-filter no-print" *ngIf="!loading && !error && order && onulipiEntries.length > 0">
         <span class="oo-onulipi-filter-toggle" (click)="showOnulipiFilter = !showOnulipiFilter">
             <i class="pi" [ngClass]="showOnulipiFilter ? 'pi-chevron-down' : 'pi-chevron-right'"></i>
-            {{ isBangla ? 'অনুলিপি ফিল্টার' : 'Copy Filter' }}
+            Copy Filter
         </span>
         <div class="oo-onulipi-filter-list" *ngIf="showOnulipiFilter">
             <div *ngFor="let entry of onulipiEntries; let i = index" class="oo-onulipi-filter-item">
                 <p-checkbox [(ngModel)]="onulipiChecked[i]" [binary]="true" [inputId]="'onulipiChk' + i"></p-checkbox>
-                <label [for]="'onulipiChk' + i">{{ isBangla ? toBanglaDigits('' + (i + 1)) : (i + 1) }}। {{ entry.text }}</label>
+                <label [for]="'onulipiChk' + i">{{ i + 1 }}. {{ entry.text }}</label>
             </div>
         </div>
     </div>
 
     <!-- ─── A4 Paper Preview ─── -->
     <div class="legal-paper-container" *ngIf="!loading && !error && order">
-        <div class="legal-paper" #legalPaper>
+        <div class="legal-paper">
             <div class="oo-doc-box">
 
                 <!-- Government Header -->
                 <div class="oo-doc-header">
-                    <div class="oo-doc-header-line">{{ isBangla ? 'গণপ্রজাতন্ত্রী বাংলাদেশ সরকার' : "People's Republic of Bangladesh" }}</div>
-                    <div class="oo-doc-header-line">{{ isBangla ? 'বাংলাদেশ পুলিশ' : 'Bangladesh Police' }}</div>
-                    <div class="oo-doc-header-line">{{ isBangla ? 'র‍্যাব ফোর্সেস সদর দপ্তর' : 'RAB Forces Headquarters' }}</div>
-                    <div class="oo-doc-header-line">{{ isBangla ? 'কুর্মিটোলা, ঢাকা।' : 'Kurmitola, Dhaka.' }}</div>
+                    <div class="oo-doc-header-line">Government of the People's Republic of Bangladesh</div>
+                    <div class="oo-doc-header-line">Bangladesh Police</div>
+                    <div class="oo-doc-header-line">Rapid Action Battalion Forces Headquarters</div>
+                    <div class="oo-doc-header-line">Kurmitola, Dhaka.</div>
                 </div>
 
-                <!-- Letter No & Date -->
+                <!-- Reference number & Date -->
                 <div class="oo-doc-meta">
-                    <span><strong>{{ isBangla ? 'স্মারক নং' : 'Letter No' }}:</strong> {{ order.letterNo || '.............' }}</span>
-                    <span><strong>{{ isBangla ? 'তারিখ' : 'Date' }}:</strong> {{ formatDate(order.letterDate) }}</span>
+                    <span><strong>Reference number:</strong> {{ order.letterNo || '.............' }}</span>
+                    <span><strong>Date:</strong> {{ formatDate(order.letterDate) }}</span>
                 </div>
 
                 <!-- Address To -->
@@ -166,15 +164,15 @@
 
                 <!-- Subject -->
                 <div class="oo-doc-subject" *ngIf="order.subject">
-                    <span class="oo-doc-subject-label">{{ isBangla ? 'বিষয়: ' : 'Subject: ' }}</span>
+                    <span class="oo-doc-subject-label">SUBJ: </span>
                     <span class="oo-doc-subject-text">{{ order.subject }}</span>
                 </div>
 
                 <!-- Reference No -->
                 <div class="oo-doc-section" *ngIf="referenceEntries.length > 0">
-                    <div class="oo-doc-section-label">{{ isBangla ? 'সূত্র:' : 'Reference:' }}</div>
+                    <div class="oo-doc-section-label">References:</div>
                     <div class="oo-doc-list">
-                        <p *ngFor="let ref of referenceEntries">{{ ref.serial }}। {{ ref.text }}</p>
+                        <p *ngFor="let ref of referenceEntries; let i = index">{{ referenceSerial(i) }} {{ ref.text }}</p>
                     </div>
                 </div>
 
@@ -187,32 +185,31 @@
                 <div class="oo-doc-signature-area" *ngIf="order.approvalEmployeeName">
                     <div class="oo-doc-signature-block">
                         <div class="oo-doc-sig-name">
-                            {{ isBangla ? (order.approvalEmployeeNameBN || order.approvalEmployeeName) : order.approvalEmployeeName }}
+                            {{ order.approvalEmployeeName }}
                         </div>
                         <div class="oo-doc-sig-rank" *ngIf="order.approvalEmployeeRank">
-                            {{ isBangla ? (order.approvalEmployeeRankBN || order.approvalEmployeeRank) : order.approvalEmployeeRank }}
+                            {{ order.approvalEmployeeRank }}
                         </div>
                         <div class="oo-doc-sig-appointment" *ngIf="order.approvalEmployeeAppointment">
-                            {{ isBangla ? (order.approvalEmployeeAppointmentBN || order.approvalEmployeeAppointment) : order.approvalEmployeeAppointment }}
+                            {{ order.approvalEmployeeAppointment }}
                         </div>
                         <div class="oo-doc-sig-unit" *ngIf="order.approvalEmployeeRabUnit">
-                            {{ isBangla ? (order.approvalEmployeeRabUnitBN || order.approvalEmployeeRabUnit) : order.approvalEmployeeRabUnit }}
+                            {{ order.approvalEmployeeRabUnit }}
                         </div>
                         <div class="oo-doc-sig-date" *ngIf="isApproved && order.approvalDate">
-                            {{ isBangla ? 'তারিখ: ' : 'Date: ' }}{{ formatDate(order.approvalDate) }}
+                            Date: {{ formatDate(order.approvalDate) }}
                         </div>
                     </div>
                 </div>
 
-                <!-- ═══ Onulipi (Copy Distribution) ═══ -->
+                <!-- ═══ Information (Copy Distribution) ═══ -->
                 <div class="oo-doc-section oo-doc-onulipi" *ngIf="exportOnulipiEntries.length > 0">
                     <div class="oo-doc-onulipi-header">
-                        <div class="oo-doc-onulipi-ns-no" *ngIf="order.noteSheetNo">{{ order.noteSheetNo }}</div>
-                        <div class="oo-doc-section-label">{{ isBangla ? 'অনুলিপি (জ্যেষ্ঠতার ভিত্তিতে নহে):' : 'Copy (not in order of seniority):' }}</div>
+                        <div class="oo-doc-section-label">Information:</div>
                     </div>
                     <div class="oo-doc-list">
                         <p *ngFor="let entry of exportOnulipiEntries; let i = index">
-                            {{ isBangla ? toBanglaDigits('' + (i + 1)) : (i + 1) }}। {{ entry.text }}
+                            {{ i + 1 }}. {{ entry.text }}
                         </p>
                     </div>
                 </div>
@@ -224,7 +221,7 @@
         <div class="oo-file-attachments no-print" *ngIf="viewFileAttachments.length > 0">
             <div class="oo-file-attachments-label">
                 <i class="pi pi-paperclip"></i>
-                {{ isBangla ? 'সংযুক্তি ডাউনলোড' : 'Download Attachments' }} ({{ viewFileAttachments.length }})
+                Download Attachments ({{ viewFileAttachments.length }})
             </div>
             <div class="oo-file-list">
                 <div class="oo-file-item" *ngFor="let file of viewFileAttachments; let fi = index">
@@ -243,8 +240,8 @@
 <!-- ─── Approval Modal ─── -->
 <p-dialog
     [header]="approvalAction === ApprovalStatus.Approve
-        ? (isBangla ? 'অফিস আদেশ অনুমোদন' : 'Approve Office Order')
-        : (isBangla ? 'অফিস আদেশ বাতিল' : 'Cancel Office Order')"
+        ? 'Approve Clearance'
+        : 'Cancel Clearance'"
     [(visible)]="showApprovalModal"
     [modal]="true"
     [style]="{ width: '500px' }"
@@ -252,11 +249,11 @@
 >
     <div class="mb-3" *ngIf="order">
         <div class="flex gap-3 mb-2">
-            <span class="text-600">{{ isBangla ? 'স্মারক নং:' : 'Letter No:' }}</span>
+            <span class="text-600">Reference No:</span>
             <strong>{{ order.letterNo }}</strong>
         </div>
         <div class="flex gap-3 mb-3">
-            <span class="text-600">{{ isBangla ? 'তারিখ:' : 'Date:' }}</span>
+            <span class="text-600">Date:</span>
             <strong>{{ formatDate(order.letterDate) }}</strong>
         </div>
 
@@ -264,8 +261,8 @@
             <div class="field">
                 <label class="font-semibold block mb-2 text-700">
                     {{ approvalAction === ApprovalStatus.Approve
-                        ? (isBangla ? 'অনুমোদন মন্তব্য' : 'Approval Note')
-                        : (isBangla ? 'বাতিলের কারণ' : 'Cancel Reason') }}
+                        ? 'Approval Note'
+                        : 'Cancel Reason' }}
                 </label>
                 <textarea
                     pTextarea
@@ -273,8 +270,8 @@
                     rows="4"
                     class="w-full"
                     [placeholder]="approvalAction === ApprovalStatus.Approve
-                        ? (isBangla ? 'অনুমোদন মন্তব্য লিখুন...' : 'Enter approval note...')
-                        : (isBangla ? 'বাতিলের কারণ লিখুন...' : 'Enter cancel reason...')"
+                        ? 'Enter approval note...'
+                        : 'Enter cancel reason...'"
                     [autoResize]="true"
                 ></textarea>
             </div>
@@ -282,8 +279,8 @@
             <div class="flex justify-content-end mt-3">
                 <p-button
                     [label]="approvalAction === ApprovalStatus.Approve
-                        ? (isBangla ? 'অনুমোদন' : 'Approve')
-                        : (isBangla ? 'বাতিল করুন' : 'Cancel Order')"
+                        ? 'Approve'
+                        : 'Cancel Order'"
                     [icon]="approvalAction === ApprovalStatus.Approve ? 'pi pi-check' : 'pi pi-times'"
                     [severity]="approvalAction === ApprovalStatus.Approve ? 'success' : 'danger'"
                     [loading]="savingApproval"

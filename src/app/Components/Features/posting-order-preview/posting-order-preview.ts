@@ -115,6 +115,7 @@ export class PostingOrderPreviewPageComponent implements OnInit {
 
     // ── নিজ জেলা column visibility ───────────────────
     showOwnDistrict = true;
+    showDeleteColumn = false;
 
     private syncParagraphChecked(): void {
         const paras = this.filteredFooterParagraphs;

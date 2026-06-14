@@ -4,9 +4,9 @@ import { Observable } from 'rxjs';
 import { environment } from '@/Core/Environments/environment';
 import { ApprovedNoteSheetItem } from '@/models/posting.model';
 
-const API = `${environment.apis.core}/ExBdLeaveOfficeOrder`;
+const API = `${environment.apis.core}/ExBdLeaveClearance`;
 
-export interface ExBdLeaveOfficeOrderDto {
+export interface ExBdLeaveClearanceDto {
     id: number;
     letterNo: string;
     letterDate: string;
@@ -29,7 +29,7 @@ export interface ExBdLeaveOfficeOrderDto {
     applicantServiceId: string | null;
 }
 
-export interface ExBdLeaveOfficeOrderWithDetailsDto {
+export interface ExBdLeaveClearanceWithDetailsDto {
     id: number;
     letterNo: string;
     letterDate: string;
@@ -47,61 +47,33 @@ export interface ExBdLeaveOfficeOrderWithDetailsDto {
     createdBy: string;
     createdDate: string;
     approvalEmployeeId: number | null;
-    approvalEmployeeName: string | null;
     approvalStatus: string | null;
     approvalNote: string | null;
     cancelReason: string | null;
     approvalDate: string | null;
-    nsMainText: string;
-    nsNote: string;
-    nsParagraphText: string;
-    // Application info (from ExBdLeaveApplication via NoteSheet)
-    appEmployeeName: string | null;
-    appEmployeeNameBN: string | null;
-    appEmployeeRabId: string | null;
-    appEmployeeServiceId: string | null;
-    appEmployeeRank: string | null;
-    appEmployeeRankBN: string | null;
-    appVisitTypeName: string | null;
-    appVisitTypeNameBN: string | null;
-    appFromDate: string | null;
-    appToDate: string | null;
-    appTotalDays: number | null;
-    appCountriesDisplay: string | null;
-    appCountriesDisplayBN: string | null;
-    appFamilyMembersDisplay: string | null;
-    appEmployeeRabUnit: string | null;
-    appEmployeeRabUnitBN: string | null;
-    approvalEmployeeNameBN: string;
+    approvalEmployeeName: string;
     approvalEmployeeRank: string;
-    approvalEmployeeRankBN: string;
     approvalEmployeeAppointment: string;
-    approvalEmployeeAppointmentBN: string;
     approvalEmployeeRabUnit: string;
-    approvalEmployeeRabUnitBN: string;
 }
 
 @Injectable({ providedIn: 'root' })
-export class ExBdLeaveOfficeOrderService {
+export class ExBdLeaveClearanceService {
     constructor(private http: HttpClient) {}
 
-    /** Get approved Ex-BD Leave notesheets that don't yet have a generated Office Order. */
     getApprovedExBdLeaveNoteSheets(): Observable<ApprovedNoteSheetItem[]> {
-        return this.http.get<ApprovedNoteSheetItem[]>(`${API}/GetApprovedExBdLeaveNoteSheetsForOfficeOrder`);
+        return this.http.get<ApprovedNoteSheetItem[]>(`${API}/GetApprovedExBdLeaveNoteSheetsForClearance`);
     }
 
-    /** List all Ex-BD Leave Office Orders. */
-    getOfficeOrderMasters(): Observable<ExBdLeaveOfficeOrderDto[]> {
-        return this.http.get<ExBdLeaveOfficeOrderDto[]>(`${API}/GetOfficeOrderMasters`);
+    getClearanceMasters(): Observable<ExBdLeaveClearanceDto[]> {
+        return this.http.get<ExBdLeaveClearanceDto[]>(`${API}/GetClearanceMasters`);
     }
 
-    /** Get single Office Order by id with full details. */
-    getOfficeOrderById(id: number): Observable<ExBdLeaveOfficeOrderWithDetailsDto> {
-        return this.http.get<ExBdLeaveOfficeOrderWithDetailsDto>(`${API}/GetOfficeOrderById/${id}`);
+    getClearanceById(id: number): Observable<ExBdLeaveClearanceWithDetailsDto> {
+        return this.http.get<ExBdLeaveClearanceWithDetailsDto>(`${API}/GetClearanceById/${id}`);
     }
 
-    /** Create a new Office Order. */
-    createOfficeOrder(body: {
+    createClearance(body: {
         letterNo: string;
         letterDate: string;
         noteSheetId: number;
@@ -117,11 +89,10 @@ export class ExBdLeaveOfficeOrderService {
         postingOrderNumberConfigId?: number | null;
         approvalEmployeeId?: number | null;
     }): Observable<{ statusCode: number; description: string; data?: any }> {
-        return this.http.post<{ statusCode: number; description: string; data?: any }>(`${API}/CreateOfficeOrder`, body);
+        return this.http.post<{ statusCode: number; description: string; data?: any }>(`${API}/CreateClearance`, body);
     }
 
-    /** Update an existing Office Order (blocked if already approved). */
-    updateOfficeOrder(body: {
+    updateClearance(body: {
         id: number;
         letterNo: string;
         letterDate: string;
@@ -137,20 +108,17 @@ export class ExBdLeaveOfficeOrderService {
         updatedBy: string;
         approvalEmployeeId?: number | null;
     }): Observable<{ statusCode: number; description: string }> {
-        return this.http.post<{ statusCode: number; description: string }>(`${API}/UpdateOfficeOrder`, body);
+        return this.http.post<{ statusCode: number; description: string }>(`${API}/UpdateClearance`, body);
     }
 
-    /** Approve an Office Order. */
-    approveOfficeOrder(id: number, approvalNote: string, approvedBy: string): Observable<{ statusCode: number; description: string }> {
-        return this.http.post<{ statusCode: number; description: string }>(`${API}/ApproveOfficeOrder`, { id, approvalNote, approvedBy });
+    approveClearance(id: number, approvalNote: string, approvedBy: string): Observable<{ statusCode: number; description: string }> {
+        return this.http.post<{ statusCode: number; description: string }>(`${API}/ApproveClearance`, { id, approvalNote, approvedBy });
     }
 
-    /** Cancel an Office Order. */
-    cancelOfficeOrder(id: number, cancelReason: string, cancelledBy: string): Observable<{ statusCode: number; description: string }> {
-        return this.http.post<{ statusCode: number; description: string }>(`${API}/CancelOfficeOrder`, { id, cancelReason, cancelledBy });
+    cancelClearance(id: number, cancelReason: string, cancelledBy: string): Observable<{ statusCode: number; description: string }> {
+        return this.http.post<{ statusCode: number; description: string }>(`${API}/CancelClearance`, { id, cancelReason, cancelledBy });
     }
 
-    /** Get employees for approval person dropdown. */
     getApprovalEmployees(): Observable<{ value: number; label: string }[]> {
         return this.http.get<{ value: number; label: string }[]>(`${API}/GetApprovalEmployees`);
     }
