@@ -7,7 +7,6 @@ import { UserMenuModel } from '@/models/role-menu-permission.model';
 import { MenuType } from '@/models/enums';
 
 const STORAGE_KEY = 'user_menus';
-
 @Injectable({ providedIn: 'root' })
 export class UserMenuService {
     private http = inject(HttpClient);

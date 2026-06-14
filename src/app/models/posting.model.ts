@@ -242,14 +242,10 @@ export interface DraftPostingEmployeeRow {
     motherOrgSortOrder: number | null;
     permanentDistrictName: string | null;
     permanentDistrictNameBN: string | null;
-    presentDistrictName: string | null;
-    presentDistrictNameBN: string | null;
-    spousePresentDistrictName: string | null;
-    spousePresentDistrictNameBN: string | null;
+    spousePermanentDistrictName: string | null;
+    spousePermanentDistrictNameBN: string | null;
     motherOrgLocationName: string | null;
     motherOrgLocationNameBN: string | null;
-    previousMotherOrgName: string | null;
-    previousMotherOrgNameBN: string | null;
     /** Previous RAB service units (comma-separated). Inter-posting only. */
     previousRabUnits?: string | null;
     previousRabUnitsBN?: string | null;

@@ -242,6 +242,7 @@ export abstract class NotesheetPreviewBase implements OnInit {
             next: (list) => {
                 this.postingEmployees = list ?? [];
                 this.loadingEmployees = false;
+                this.onPostingEmployeesLoaded(this.postingEmployees);
             },
             error: (err: any) => { this.loadingEmployees = false; }
         });
@@ -258,10 +259,13 @@ export abstract class NotesheetPreviewBase implements OnInit {
                     draftPostingMasterId: e.draftInterPostingMasterId,
                 }));
                 this.loadingEmployees = false;
+                this.onPostingEmployeesLoaded(this.postingEmployees);
             },
             error: (err: any) => { this.loadingEmployees = false; }
         });
     }
+
+    protected onPostingEmployeesLoaded(_employees: DraftPostingEmployeeRow[]): void { }
 
     protected loadApprovalChain(): void {
         if (!this.noteSheet) return;
@@ -821,8 +825,8 @@ export abstract class NotesheetPreviewBase implements OnInit {
                 bn?(emp.rankNameBN||emp.rankName||''):(emp.rankName??''),
                 bn?(emp.tradeNameBN||emp.tradeName||''):(emp.tradeName??''),
                 bn?(emp.fullNameBN||emp.fullNameEN||''):(emp.fullNameEN??''),
-                bn?(emp.presentDistrictNameBN||emp.presentDistrictName||''):(emp.presentDistrictName??''),
-                bn?(emp.spousePresentDistrictNameBN||emp.spousePresentDistrictName||''):(emp.spousePresentDistrictName??''),
+                bn?(emp.permanentDistrictNameBN||emp.permanentDistrictName||''):(emp.permanentDistrictName??''),
+                bn?(emp.spousePermanentDistrictNameBN||emp.spousePermanentDistrictName||''):(emp.spousePermanentDistrictName??''),
                 bn?(emp.motherOrgLocationNameBN||emp.motherOrgLocationName||''):(emp.motherOrgLocationName??''),
                 emp.transferRabUnitName??'', emp.remarks??''
             ].map(v => {
@@ -896,7 +900,7 @@ export abstract class NotesheetPreviewBase implements OnInit {
                 : ['Ser','Service ID','Rank','Trade','Name','Own District (Responsible Area)','Spouse District (Responsible Area)','Previous Workplace (Responsible Area)','Transfer Unit','Remarks'];
             const headerCells = cols.map(c => `<th>${this.escapeHtml(c)}</th>`).join('');
             const bodyRows = this.postingEmployees.map((emp, i) => {
-                const vals = [String(i+1), emp.serviceId??'', bn?(emp.rankNameBN||emp.rankName||''):(emp.rankName??''), bn?(emp.tradeNameBN||emp.tradeName||''):(emp.tradeName??''), bn?(emp.fullNameBN||emp.fullNameEN||''):(emp.fullNameEN??''), bn?(emp.presentDistrictNameBN||emp.presentDistrictName||''):(emp.presentDistrictName??''), bn?(emp.spousePresentDistrictNameBN||emp.spousePresentDistrictName||''):(emp.spousePresentDistrictName??''), bn?(emp.motherOrgLocationNameBN||emp.motherOrgLocationName||''):(emp.motherOrgLocationName??''), emp.transferRabUnitName??'', emp.remarks??''];
+                const vals = [String(i+1), emp.serviceId??'', bn?(emp.rankNameBN||emp.rankName||''):(emp.rankName??''), bn?(emp.tradeNameBN||emp.tradeName||''):(emp.tradeName??''), bn?(emp.fullNameBN||emp.fullNameEN||''):(emp.fullNameEN??''), bn?(emp.permanentDistrictNameBN||emp.permanentDistrictName||''):(emp.permanentDistrictName??''), bn?(emp.spousePermanentDistrictNameBN||emp.spousePermanentDistrictName||''):(emp.spousePermanentDistrictName??''), bn?(emp.motherOrgLocationNameBN||emp.motherOrgLocationName||''):(emp.motherOrgLocationName??''), emp.transferRabUnitName??'', emp.remarks??''];
                 return `<tr>${vals.map(v => `<td>${this.escapeHtml(v)}</td>`).join('')}</tr>`;
             }).join('');
             extraHtml += `<table><thead><tr>${headerCells}</tr></thead><tbody>${bodyRows}</tbody></table>`;

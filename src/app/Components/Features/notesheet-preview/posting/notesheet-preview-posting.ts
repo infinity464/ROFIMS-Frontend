@@ -159,21 +159,8 @@ export class NotesheetPreviewPostingComponent extends NotesheetPreviewBase imple
     // ── Removal history (previous posting order info) ──
     removalHistoryMap: Record<number, EmployeeRemovalInfo> = {};
 
-    protected override loadPostingEmployees(): void {
-        super.loadPostingEmployees();
-        // After base finishes loading, fetch removal history
-        if (!this.noteSheet?.draftPostingMasterId) return;
-        this.postingService.getDraftPostingEmployees(this.noteSheet.draftPostingMasterId).subscribe({
-            next: (list) => { this.loadRemovalHistory(list ?? []); }
-        });
-    }
-
-    protected override loadInterPostingEmployees(): void {
-        super.loadInterPostingEmployees();
-        if (!this.noteSheet?.draftPostingMasterId) return;
-        this.postingService.getDraftInterPostingEmployees(this.noteSheet.draftPostingMasterId).subscribe({
-            next: (list: any[]) => { this.loadRemovalHistory(list ?? []); }
-        });
+    protected override onPostingEmployeesLoaded(employees: DraftPostingEmployeeRow[]): void {
+        this.loadRemovalHistory(employees);
     }
 
     private loadRemovalHistory(emps: { employeeId: number }[]): void {
@@ -1071,8 +1058,8 @@ export class NotesheetPreviewPostingComponent extends NotesheetPreviewBase imple
             ? (bn ? (emp.motherOrgLocationNameBN || emp.motherOrgLocationName || '') : (emp.motherOrgLocationName || ''))
             : '';
         const motherOrg = bn
-            ? (emp.previousMotherOrgNameBN || emp.previousMotherOrgName || '')
-            : (emp.previousMotherOrgName || '');
+            ? (emp.motherUnitNameBN || emp.motherUnitName || '')
+            : (emp.motherUnitName || '');
         if (motherOrg && rabUnit) return motherOrg + '\n(' + rabUnit + ')';
         if (motherOrg) return motherOrg;
         if (rabUnit) return rabUnit;
@@ -1151,7 +1138,7 @@ export class NotesheetPreviewPostingComponent extends NotesheetPreviewBase imple
     onTransferUnitChange(emp: DraftPostingEmployeeRow): void {
         if (!emp.transferRabUnitId) return;
         const unitId = emp.transferRabUnitId;
-        const empDistrictName = (emp.presentDistrictName || emp.presentDistrictNameBN || '').split('\n')[0].trim().toLowerCase();
+        const empDistrictName = (emp.permanentDistrictName || emp.permanentDistrictNameBN || '').split('\n')[0].trim().toLowerCase();
         if (!empDistrictName) return;
         const empDistrictId = this.districtNameToId[empDistrictName];
         if (!empDistrictId) return;
@@ -1927,8 +1914,8 @@ html, body { margin: 0; padding: 0; background: transparent; }
                         this.getServiceIdDisplay(emp),
                         (bn?(emp.rankNameBN||emp.rankName||''):(emp.rankName??'')) + (this.showRankQualifications && this.getRankQualifications(emp) ? '\n(' + this.getRankQualifications(emp) + ')' : ''),
                         bn?(emp.fullNameBN||emp.fullNameEN||''):(emp.fullNameEN??''),
-                        bn?(emp.presentDistrictNameBN||emp.presentDistrictName||''):(emp.presentDistrictName??''),
-                        bn?(emp.spousePresentDistrictNameBN||emp.spousePresentDistrictName||''):(emp.spousePresentDistrictName??''),
+                        bn?(emp.permanentDistrictNameBN||emp.permanentDistrictName||''):(emp.permanentDistrictName??''),
+                        bn?(emp.spousePermanentDistrictNameBN||emp.spousePermanentDistrictName||''):(emp.spousePermanentDistrictName??''),
                         bn ? this.toBnDigits(this.formatJoiningDate(emp.joiningDateInRAB)) : this.formatJoiningDate(emp.joiningDateInRAB),
                         bn ? this.toBnDigits(String(t.y)) : String(t.y),
                         bn ? this.toBnDigits(String(t.m)) : String(t.m),
@@ -1972,11 +1959,11 @@ html, body { margin: 0; padding: 0; background: transparent; }
                     (bn?(emp.tradeNameBN||emp.tradeName||''):(emp.tradeName??'')) + (this.showTradeRemarks && emp.tradeRemarks ? '\n(' + emp.tradeRemarks + ')' : ''),
                     bn?(emp.fullNameBN||emp.fullNameEN||''):(emp.fullNameEN??''),
                     this.showOwnDistrictDetail
-                        ? (bn?(emp.presentDistrictNameBN||emp.presentDistrictName||''):(emp.presentDistrictName??''))
-                        : (bn?(emp.presentDistrictNameBN||emp.presentDistrictName||''):(emp.presentDistrictName??'')).split('\n')[0].replace(/\s*\(.*$/, ''),
+                        ? (bn?(emp.permanentDistrictNameBN||emp.permanentDistrictName||''):(emp.permanentDistrictName??''))
+                        : (bn?(emp.permanentDistrictNameBN||emp.permanentDistrictName||''):(emp.permanentDistrictName??'')).split('\n')[0].replace(/\s*\(.*$/, ''),
                     this.showSpouseDistrictDetail
-                        ? (bn?(emp.spousePresentDistrictNameBN||emp.spousePresentDistrictName||''):(emp.spousePresentDistrictName??''))
-                        : (bn?(emp.spousePresentDistrictNameBN||emp.spousePresentDistrictName||''):(emp.spousePresentDistrictName??'')).split('\n')[0].replace(/\s*\(.*$/, ''),
+                        ? (bn?(emp.spousePermanentDistrictNameBN||emp.spousePermanentDistrictName||''):(emp.spousePermanentDistrictName??''))
+                        : (bn?(emp.spousePermanentDistrictNameBN||emp.spousePermanentDistrictName||''):(emp.spousePermanentDistrictName??'')).split('\n')[0].replace(/\s*\(.*$/, ''),
                     this.getPreviousWorkplace(emp),
                     this.getTransferUnitShort(emp),
                     this.getCombinedRemarks(emp)

@@ -44,8 +44,8 @@ interface NoteSheetEmployee {
     motherUnitNameBN: string | null;
     permanentDistrictName: string | null;
     permanentDistrictNameBN: string | null;
-    spousePresentDistrictName: string | null;
-    spousePresentDistrictNameBN: string | null;
+    spousePermanentDistrictName: string | null;
+    spousePermanentDistrictNameBN: string | null;
     motherOrgLocationName: string | null;
     motherOrgLocationNameBN: string | null;
     previousRabUnits: string | null;
@@ -361,8 +361,8 @@ export class PostingOrderGenerateComponent implements OnInit {
                                 motherUnitNameBN: e.motherUnitNameBN,
                                 permanentDistrictName: e.permanentDistrictName,
                                 permanentDistrictNameBN: e.permanentDistrictNameBN,
-                                spousePresentDistrictName: e.spousePresentDistrictName,
-                                spousePresentDistrictNameBN: e.spousePresentDistrictNameBN,
+                                spousePermanentDistrictName: e.spousePermanentDistrictName,
+                                spousePermanentDistrictNameBN: e.spousePermanentDistrictNameBN,
                                 motherOrgLocationName: e.motherOrgLocationName,
                                 motherOrgLocationNameBN: e.motherOrgLocationNameBN,
                                 previousRabUnits: e.previousRabUnits ?? null,
