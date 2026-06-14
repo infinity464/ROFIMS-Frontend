@@ -72,6 +72,7 @@ import { Country } from '@/Components/basic-setup/country/country';
 import { RabBranch } from '@/Components/basic-setup/rab-branch/rab-branch';
 import { CourseName } from '@/Components/basic-setup/course-name/course-name';
 import { EmpBasicInfo } from '@/Components/Features/Emp/emp-basic-info/emp-basic-info';
+import { EmpBulkImport } from '@/Components/Features/Emp/emp-bulk-import/emp-bulk-import';
 import { EmpList } from '@/Components/Features/Emp/emp-list/emp-list';
 import { EmpPersonalInfo } from '@/Components/Features/Emp/emp-personal-info/emp-personal-info';
 import { EmpAddressInfo } from '@/Components/Features/Emp/emp-address-info/emp-address-info';
@@ -349,6 +350,7 @@ export const appRoutes: Routes = [
             // EMP
             { path: 'emp-list', component: EmpList },
             { path: 'emp-basic-info', component: EmpBasicInfo, canActivate: [MemberTypePermissionGuard] },
+            { path: 'emp-bulk-import', component: EmpBulkImport, canActivate: [MemberTypePermissionGuard] },
             { path: 'emp-personal-service-info', component: EmpPersonalServiceInfoComponent, canActivate: [MemberTypePermissionGuard] },
             { path: 'emp-personal-info', component: EmpPersonalInfo, canActivate: [MemberTypePermissionGuard] },
             { path: 'emp-address-info', component: EmpAddressInfo, canActivate: [MemberTypePermissionGuard] },
