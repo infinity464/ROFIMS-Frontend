@@ -438,7 +438,8 @@
             [initialAddressData]="spousePresentAddress"
             (onSave)="saveSpousePresentAddress($event)"
             (onCancel)="cancelAddress()"
-            (onSameAsPresentRequest)="copyMemberPresentToSpousePresent()">
+            (onSameAsPresentRequest)="copyMemberPresentToSpousePresent()"
+            (onSameAsSecondaryRequest)="copySpousePermanentToSpousePresent()">
           </app-address-form>
         </div>
         }

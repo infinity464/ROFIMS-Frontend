@@ -31,6 +31,8 @@ export interface AddressFormConfig {
     addressType: 'permanent' | 'present' | 'spouse' | 'father' | 'mother' | 'emergency' | 'spousePresent';
     showSameAsPresent?: boolean;
     sameAsLabel?: string; // Custom label for "Same as" checkbox
+    showSameAsSecondary?: boolean; // Show an additional "Same as" checkbox (rendered before the primary one)
+    sameAsSecondaryLabel?: string; // Custom label for the secondary "Same as" checkbox
     employeeId?: number;
     initialData?: Partial<AddressData>;
 }
@@ -56,6 +58,7 @@ export class AddressFormComponent implements OnInit, OnChanges {
     @Output() onSave = new EventEmitter<AddressData>();
     @Output() onCancel = new EventEmitter<void>();
     @Output() onSameAsPresentRequest = new EventEmitter<void>(); // Request parent for source address data
+    @Output() onSameAsSecondaryRequest = new EventEmitter<void>(); // Request parent for secondary source address data
 
     addressForm!: FormGroup;
 
@@ -89,6 +92,7 @@ export class AddressFormComponent implements OnInit, OnChanges {
 
         this.loadDivisions();
         this.addressForm.get('sameAsPresent')!.valueChanges.subscribe((checked) => this.onSameAsPresentChange(checked));
+        this.addressForm.get('sameAsSecondary')!.valueChanges.subscribe((checked) => this.onSameAsSecondaryChange(checked));
 
         // If initial data is provided, load it (for view/edit mode)
         if (this.initialAddressData) {
@@ -124,6 +128,7 @@ export class AddressFormComponent implements OnInit, OnChanges {
         const requiredValidator = this.isOptional ? [] : [Validators.required];
         this.addressForm = this.fb.group({
             sameAsPresent: [false],
+            sameAsSecondary: [false],
             division: [null, requiredValidator],
             district: [null, requiredValidator],
             upazila: [null],
@@ -265,8 +270,39 @@ export class AddressFormComponent implements OnInit, OnChanges {
 
     onSameAsPresentChange(checked: boolean): void {
         if (checked) {
+            // Uncheck the secondary checkbox to avoid conflicting sources
+            if (this.addressForm.get('sameAsSecondary')?.value) {
+                this.addressForm.get('sameAsSecondary')!.setValue(false, { emitEvent: false });
+            }
             // Emit event to request source address data from parent
             this.onSameAsPresentRequest.emit();
+        } else {
+            this.enableAddressFields();
+            // Reset form when unchecked
+            this.addressForm.patchValue({
+                division: null,
+                district: null,
+                upazila: null,
+                postOffice: null,
+                postCode: '',
+                villageEnglish: '',
+                villageBangla: '',
+                houseRoad: ''
+            });
+            this.districts = [];
+            this.upazilas = [];
+            this.postOffices = [];
+        }
+    }
+
+    onSameAsSecondaryChange(checked: boolean): void {
+        if (checked) {
+            // Uncheck the primary checkbox to avoid conflicting sources
+            if (this.addressForm.get('sameAsPresent')?.value) {
+                this.addressForm.get('sameAsPresent')!.setValue(false, { emitEvent: false });
+            }
+            // Emit event to request secondary source address data from parent
+            this.onSameAsSecondaryRequest.emit();
         } else {
             this.enableAddressFields();
             // Reset form when unchecked
@@ -294,7 +330,7 @@ export class AddressFormComponent implements OnInit, OnChanges {
                 summary: 'Warning',
                 detail: 'Please fill Permanent Address first'
             });
-            this.addressForm.patchValue({ sameAsPresent: false });
+            this.addressForm.patchValue({ sameAsPresent: false, sameAsSecondary: false });
             return;
         }
 
@@ -341,7 +377,7 @@ export class AddressFormComponent implements OnInit, OnChanges {
                         summary: 'Error',
                         detail: err?.error?.message || 'Failed to load address data'
                     });
-                    this.addressForm.patchValue({ sameAsPresent: false });
+                    this.addressForm.patchValue({ sameAsPresent: false, sameAsSecondary: false });
                 }
             });
         } else {
@@ -426,6 +462,14 @@ export class AddressFormComponent implements OnInit, OnChanges {
         return this.config.sameAsLabel || 'Same as Permanent Address';
     }
 
+    get showSameAsSecondaryCheckbox(): boolean {
+        return this.config.showSameAsSecondary === true;
+    }
+
+    get sameAsSecondaryCheckboxLabel(): string {
+        return this.config.sameAsSecondaryLabel || 'Same As Permanent';
+    }
+
     // Check if form has meaningful data (division is selected)
     hasData(): boolean {
         const division = this.addressForm.get('division')?.value;
@@ -437,6 +481,7 @@ export class AddressFormComponent implements OnInit, OnChanges {
         this.enableAddressFields();
         this.addressForm.reset({
             sameAsPresent: false,
+            sameAsSecondary: false,
             division: null,
             district: null,
             upazila: null,

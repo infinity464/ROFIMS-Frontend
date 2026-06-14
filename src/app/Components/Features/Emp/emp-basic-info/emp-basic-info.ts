@@ -128,6 +128,8 @@ export class EmpBasicInfo implements OnInit {
         addressType: 'spousePresent',
         showSameAsPresent: true,
         sameAsLabel: 'Same As Member Present Address',
+        showSameAsSecondary: true,
+        sameAsSecondaryLabel: 'Same As Spouse Permanent Address',
         employeeId: this.employeeId
     };
 
