@@ -111,11 +111,13 @@ export class PostingOrderPreviewPageComponent implements OnInit {
 
     // ── পূর্ববতী কর্মস্থল unit visibility ───────────────────
     showPrevWorkplaceFilter = false;
-    showPrevWorkplaceUnit = false;
+    showPrevWorkplaceUnit = true;
+    showTransferUnitsCopy = true;
 
     // ── নিজ জেলা column visibility ───────────────────
     showOwnDistrict = true;
     showDeleteColumn = false;
+    showUpperSignature = true;
 
     private syncParagraphChecked(): void {
         const paras = this.filteredFooterParagraphs;
@@ -336,8 +338,13 @@ export class PostingOrderPreviewPageComponent implements OnInit {
                     // Load removal history for মন্তব্য column
                     this.loadRemovalHistory(this.employees);
 
-                    // Load approval fields from master DTO
-                    this.loadApprovalInfo(id);
+                    // Approval fields from the view
+                    this.approvalEmployeeId = first.approvalEmployeeId ?? null;
+                    this.approvalStatus = first.approvalStatus ?? null;
+                    this.approvalNote = first.approvalNote ?? null;
+                    this.cancelReason = first.cancelReason ?? null;
+                    this.approvalDate = first.approvalDate ?? null;
+                    this.loadApprovalPerson(this.approvalEmployeeId);
 
                     // Load final approver info from notesheet
                     if (first.noteSheetId) {
@@ -392,6 +399,11 @@ export class PostingOrderPreviewPageComponent implements OnInit {
                                         footerText:       null,
                                         createdBy:        master.createdBy ?? '',
                                         createdDate:      master.createdDate ?? '',
+                                        approvalEmployeeId: master.approvalEmployeeId ?? null,
+                                        approvalStatus:   master.approvalStatus ?? null,
+                                        approvalNote:     master.approvalNote ?? null,
+                                        cancelReason:     master.cancelReason ?? null,
+                                        approvalDate:     master.approvalDate ?? null,
                                         nsTextType:       null,
                                         draftPostingMasterId: null,
                                         postingOrderDetailId: d.id,
@@ -415,38 +427,27 @@ export class PostingOrderPreviewPageComponent implements OnInit {
                                         tradeName:        d.trade ?? null,
                                         tradeNameBN:      null,
                                         tradeRemarks:     null,
-                                        specialQualifications: null,
-                                        specialQualificationsBN: null,
                                         motherUnitName:   d.motherUnit ?? null,
                                         motherUnitNameBN: null,
                                         joiningDateInRAB: d.rabJoingdate ?? null,
                                         rankSortOrder:    null,
                                         motherOrgSortOrder: null,
                                         permanentDistrictName: null,
-                                        permanentDistrictNameBN: null,
-                                        presentDistrictName: null,
-                                        presentDistrictNameBN: null,
-                                        spousePresentDistrictName: null,
-                                        spousePresentDistrictNameBN: null,
-                                        motherOrgLocationName: null,
-                                        motherOrgLocationNameBN: null,
-                                        previousMotherOrgName: null,
-                                        previousMotherOrgNameBN: null,
-                                        previousRabUnits: null,
-                                        previousRabUnitsBN: null
+                                        permanentDistrictNameBN: null
                                     } as PostingOrderEmployeeRow));
 
                                     this.availableTransferUnits = this.computeTransferUnits(this.employees);
                                     this.applyFilter();
                                 }
 
-                                // Set approval fields from master DTO
+                                // Set approval fields from master DTO (fallback path)
                                 this.approvalEmployeeId = master.approvalEmployeeId ?? null;
                                 this.approvalEmployeeName = master.approvalEmployeeName ?? null;
                                 this.approvalStatus = master.approvalStatus ?? null;
                                 this.approvalNote = master.approvalNote ?? null;
                                 this.cancelReason = master.cancelReason ?? null;
                                 this.approvalDate = master.approvalDate ?? null;
+                                this.loadApprovalPerson(this.approvalEmployeeId);
 
                                 if (master.noteSheetId) {
                                     this.loadApproverInfo(master.noteSheetId);
@@ -468,42 +469,26 @@ export class PostingOrderPreviewPageComponent implements OnInit {
         });
     }
 
-    /** Fetch approval fields from master DTO and load approval person's full details. */
-    private loadApprovalInfo(orderId: number): void {
-        this.postingService.getPostingOrderById(orderId).subscribe({
-            next: (master) => {
-                if (master) {
-                    this.approvalEmployeeId = master.approvalEmployeeId ?? null;
-                    this.approvalEmployeeName = master.approvalEmployeeName ?? null;
-                    this.approvalStatus = master.approvalStatus ?? null;
-                    this.approvalNote = master.approvalNote ?? null;
-                    this.cancelReason = master.cancelReason ?? null;
-                    this.approvalDate = master.approvalDate ?? null;
-
-                    if (master.approvalEmployeeId) {
-                        this.servingMembersService.getEmployeePersonalServiceOverview(master.approvalEmployeeId).subscribe({
-                            next: (emp) => {
-                                if (emp) {
-                                    this.approvalPersonName = emp.nameEnglish ?? '';
-                                    this.approvalPersonNameBN = emp.nameBN ?? '';
-                                    this.approvalPersonRank = emp.armyRank ?? '';
-                                    this.approvalPersonRankBN = emp.armyRankBN ?? '';
-                                    this.approvalPersonAppointment = emp.appointment ?? '';
-                                    this.approvalPersonAppointmentBN = emp.appointmentBN ?? '';
-                                }
-                            }
-                        });
-                        this.empService.getSignatureBlob(master.approvalEmployeeId).subscribe({
-                            next: (blob) => {
-                                if (blob && blob.size > 0) {
-                                    const reader = new FileReader();
-                                    reader.onloadend = () => { this.approvalPersonSignatureUrl = reader.result as string; };
-                                    reader.readAsDataURL(blob);
-                                }
-                            },
-                            error: () => {}
-                        });
-                    }
+    private loadApprovalPerson(employeeId: number | null): void {
+        if (!employeeId) return;
+        this.servingMembersService.getEmployeeBriefProfile(employeeId).subscribe({
+            next: (emp) => {
+                if (emp) {
+                    this.approvalPersonName = emp.nameEN ?? '';
+                    this.approvalPersonNameBN = emp.nameBN ?? '';
+                    this.approvalPersonRank = emp.rankEN ?? '';
+                    this.approvalPersonRankBN = emp.rankBN ?? '';
+                    this.approvalPersonAppointment = emp.appointmentEN ?? '';
+                    this.approvalPersonAppointmentBN = emp.appointmentBN ?? '';
+                }
+            }
+        });
+        this.empService.getSignatureBlob(employeeId).subscribe({
+            next: (blob) => {
+                if (blob && blob.size > 0) {
+                    const reader = new FileReader();
+                    reader.onloadend = () => { this.approvalPersonSignatureUrl = reader.result as string; };
+                    reader.readAsDataURL(blob);
                 }
             },
             error: () => {}
@@ -514,9 +499,9 @@ export class PostingOrderPreviewPageComponent implements OnInit {
         const bn = this.isBangla;
         switch (status) {
             case ApprovalStatus.Approve: return 'Approved';
-            case ApprovalStatus.Cancel: return bn ? 'বাতিল' : 'Cancelled';
+            case ApprovalStatus.Cancel: return 'Cancelled';
             case ApprovalStatus.Pending:
-            default: return bn ? 'অপেক্ষমাণ' : 'Pending';
+            default: return 'Pending';
         }
     }
 
@@ -577,7 +562,6 @@ export class PostingOrderPreviewPageComponent implements OnInit {
                         this.showApprovalModal = false;
                         this.editing = false;
                         this.loadOrder(id);
-                        this.loadApprovalInfo(id);
                     } else {
                         this.messageService.add({ severity: 'error', summary: bn ? 'ত্রুটি' : 'Error', detail: res.description ?? (bn ? 'অনুমোদন ব্যর্থ হয়েছে।' : 'Failed to approve.') });
                     }
@@ -596,7 +580,6 @@ export class PostingOrderPreviewPageComponent implements OnInit {
                         this.showApprovalModal = false;
                         this.editing = false;
                         this.loadOrder(id);
-                        this.loadApprovalInfo(id);
                     } else {
                         this.messageService.add({ severity: 'error', summary: bn ? 'ত্রুটি' : 'Error', detail: res.description ?? (bn ? 'বাতিল ব্যর্থ হয়েছে।' : 'Failed to cancel.') });
                     }
@@ -621,14 +604,14 @@ export class PostingOrderPreviewPageComponent implements OnInit {
                 this.noteSheetApprovalDate = ns?.finalApprovalApprovedDate ?? null;
                 // Load initiator info
                 if (ns?.initiatorId) {
-                    this.servingMembersService.getEmployeePersonalServiceOverview(ns.initiatorId).subscribe({
+                    this.servingMembersService.getEmployeeBriefProfile(ns.initiatorId).subscribe({
                         next: (emp) => {
                             if (emp) {
-                                this.initiatorName = emp.nameEnglish ?? '';
+                                this.initiatorName = emp.nameEN ?? '';
                                 this.initiatorNameBN = emp.nameBN ?? '';
-                                this.initiatorRank = emp.armyRank ?? '';
-                                this.initiatorRankBN = emp.armyRankBN ?? '';
-                                this.initiatorAppointment = emp.appointment ?? '';
+                                this.initiatorRank = emp.rankEN ?? '';
+                                this.initiatorRankBN = emp.rankBN ?? '';
+                                this.initiatorAppointment = emp.appointmentEN ?? '';
                                 this.initiatorAppointmentBN = emp.appointmentBN ?? '';
                                 this.initiatorPhone = emp.mobileNo ?? '';
                             }
@@ -647,14 +630,14 @@ export class PostingOrderPreviewPageComponent implements OnInit {
                 }
 
                 if (ns?.finalApprovalId) {
-                    this.servingMembersService.getEmployeePersonalServiceOverview(ns.finalApprovalId).subscribe({
+                    this.servingMembersService.getEmployeeBriefProfile(ns.finalApprovalId).subscribe({
                         next: (emp) => {
                             if (emp) {
-                                this.approverName = emp.nameEnglish ?? '';
+                                this.approverName = emp.nameEN ?? '';
                                 this.approverNameBN = emp.nameBN ?? '';
-                                this.approverRank = emp.armyRank ?? '';
-                                this.approverRankBN = emp.armyRankBN ?? '';
-                                this.approverAppointment = emp.appointment ?? '';
+                                this.approverRank = emp.rankEN ?? '';
+                                this.approverRankBN = emp.rankBN ?? '';
+                                this.approverAppointment = emp.appointmentEN ?? '';
                                 this.approverAppointmentBN = emp.appointmentBN ?? '';
                                 this.approverPhone = emp.mobileNoOfficial ?? '';
                             }
@@ -786,33 +769,18 @@ export class PostingOrderPreviewPageComponent implements OnInit {
     }
 
     empDistrict(emp: PostingOrderEmployeeRow): string {
-        return (this.isBangla ? (emp.presentDistrictNameBN || emp.presentDistrictName) : emp.presentDistrictName) || '';
+        return (this.isBangla ? (emp.permanentDistrictNameBN || emp.permanentDistrictName) : emp.permanentDistrictName) || '';
     }
 
     empPrevWorkplace(emp: PostingOrderEmployeeRow): string {
-        if (this.postingType === NoteSheetType.InterPosting) {
-            const bn = this.isBangla;
-            const parts = [
-                (bn ? (emp.motherUnitNameBN || emp.motherUnitName) : emp.motherUnitName) || '',
-                (bn ? (emp.presentRabUnitNameBN || emp.presentRabUnitName) : emp.presentRabUnitName) || '',
-                (bn ? (emp.presentRabWingNameBN || emp.presentRabWingName) : emp.presentRabWingName) || '',
-                (bn ? (emp.presentRabBranchNameBN || emp.presentRabBranchName) : emp.presentRabBranchName) || '',
-                (bn ? (emp.presentRabSubBranchNameBN || emp.presentRabSubBranchName) : emp.presentRabSubBranchName) || '',
-                (bn ? (emp.presentRabSectionNameBN || emp.presentRabSectionName) : emp.presentRabSectionName) || '',
-                (bn ? (emp.presentRabSubSectionNameBN || emp.presentRabSubSectionName) : emp.presentRabSubSectionName) || '',
-            ];
-            return parts.filter(p => p).join('/ ') || '';
-        }
-        const rabUnit = (this.isBangla ? (emp.motherOrgLocationNameBN || emp.motherOrgLocationName) : emp.motherOrgLocationName) || '';
-        const motherOrg = (this.isBangla ? (emp.previousMotherOrgNameBN || emp.previousMotherOrgName) : emp.previousMotherOrgName) || '';
-        if (motherOrg && rabUnit && this.showPrevWorkplaceUnit) return motherOrg + '\n(' + rabUnit + ')';
-        if (motherOrg) return motherOrg;
-        if (rabUnit) return rabUnit;
-        return '';
+        return (this.isBangla ? (emp.motherUnitNameBN || emp.motherUnitName) : emp.motherUnitName) || '';
     }
 
     empTransferUnit(emp: PostingOrderEmployeeRow): string {
-        return (this.isBangla ? (emp.transferRabUnitNameBN || emp.transferRabUnitName) : emp.transferRabUnitName) || '-';
+        const full = (this.isBangla ? (emp.transferRabUnitNameBN || emp.transferRabUnitName) : emp.transferRabUnitName) || '';
+        if (!full) return '-';
+        const parts = full.split(',');
+        return parts[parts.length - 1].trim();
     }
 
     empRabId(emp: PostingOrderEmployeeRow): string {
@@ -838,6 +806,20 @@ export class PostingOrderPreviewPageComponent implements OnInit {
 
     get hasMultipleTransferUnits(): boolean {
         return this.availableTransferUnits.length > 1;
+    }
+
+    get transferUnitsCopyText(): string {
+        const bn = this.isBangla;
+        const seen = new Set<string>();
+        for (const emp of this.filteredEmployees) {
+            const full = bn
+                ? (emp.transferRabUnitNameBN || emp.transferRabUnitName || '')
+                : (emp.transferRabUnitName || '');
+            if (!full) continue;
+            const first = full.split(',')[0].trim();
+            if (first) seen.add(first);
+        }
+        return Array.from(seen).join(', ');
     }
 
     /** Recompute `filteredEmployees` and `filteredFooterParagraphs` from the current filter. */
@@ -1451,18 +1433,22 @@ html, body { margin: 0; padding: 0; background: transparent; }
         // ── Employee Table (header 8.5pt, data 9pt) ──
         const isInter = this.isInterPosting;
         const sd = this.showOwnDistrict;
+        const sp = this.showPrevWorkplaceUnit;
         const cols = isInter
-            ? (bn ? ['ক্রমিক', 'ব্যক্তিগত নং', 'পদবি', 'নাম', ...(sd ? ['নিজ জেলা'] : []), 'পূর্ববতী কর্মস্থল', 'বদলিকৃত কর্মস্থল', 'মন্তব্য']
-                   : ['Ser', 'Service ID', 'Rank', 'Name', ...(sd ? ['Own District'] : []), 'Previous Workplace', 'Transfer Station', 'Remarks'])
-            : (bn ? ['ক্রমিক', 'ব্যক্তিগত নম্বর', 'পদবি', 'ট্রেড', 'নাম', ...(sd ? ['নিজ জেলা'] : []), 'পূর্ববতী কর্মস্থল', 'বদলিকৃত কর্মস্থল', 'র‌্যাব আইডি']
-                   : ['Ser', 'Service ID', 'Rank', 'Trade', 'Name', ...(sd ? ['Own District'] : []), 'Previous Workplace', 'Transfer Unit', 'RAB ID']);
+            ? (bn ? ['ক্রমিক', 'ব্যক্তিগত নং', 'পদবি', 'নাম', ...(sd ? ['নিজ জেলা'] : []), ...(sp ? ['পূর্ববতী কর্মস্থল'] : []), 'বদলিকৃত কর্মস্থল', 'মন্তব্য']
+                   : ['Ser', 'Service ID', 'Rank', 'Name', ...(sd ? ['Own District'] : []), ...(sp ? ['Previous Workplace'] : []), 'Transfer Station', 'Remarks'])
+            : (bn ? ['ক্রমিক', 'ব্যক্তিগত নম্বর', 'পদবি', 'ট্রেড', 'নাম', ...(sd ? ['নিজ জেলা'] : []), ...(sp ? ['পূর্ববতী কর্মস্থল'] : []), 'বদলিকৃত কর্মস্থল', 'র‌্যাব আইডি']
+                   : ['Ser', 'Service ID', 'Rank', 'Trade', 'Name', ...(sd ? ['Own District'] : []), ...(sp ? ['Previous Workplace'] : []), 'Transfer Unit', 'RAB ID']);
         // Column widths in DXA – must sum to full content width (page 12240 - margins 567*2 = 11106)
-        // Remarks column gets extra width to fit removal remark text
         const colW = isInter
-            ? (sd ? [500, 1050, 900, 1800, 1200, 1500, 1500, 2656]
-                  : [500, 1050, 900, 2100, 1700, 1700, 3156])
-            : (sd ? [580, 1100, 860, 924, 2474, 1260, 1374, 1374, 1160]
-                  : [580, 1100, 860, 924, 2874, 1634, 1634, 1500]);
+            ? (sd && sp ? [500, 1050, 900, 1800, 1200, 1500, 1500, 2656]
+              : sd ? [500, 1050, 900, 1800, 1200, 2000, 3656]
+              : sp ? [500, 1050, 900, 2100, 1700, 1700, 3156]
+              : [500, 1050, 900, 2500, 2200, 3956])
+            : (sd && sp ? [580, 1100, 860, 924, 2474, 1260, 1374, 1374, 1160]
+              : sd ? [580, 1100, 860, 924, 2474, 1260, 1774, 2134]
+              : sp ? [580, 1100, 860, 924, 2874, 1634, 1634, 1500]
+              : [580, 1100, 860, 924, 3474, 2034, 2134]);
 
         const hdrPara = (text: string) => new Paragraph({ children: [new TextRun({ text, bold: true, size: tblSize, sizeComplexScript: tblCsSize, font, language: lang })], alignment: AlignmentType.CENTER });
         const hdrCell = (text: string, ci: number, extra?: Partial<ConstructorParameters<typeof TableCell>[0]>) => new TableCell({
@@ -1477,13 +1463,15 @@ html, body { margin: 0; padding: 0; background: transparent; }
                 ? [
                     serial, this.empServiceId(emp), this.empRank(emp), this.empName(emp),
                     ...(sd ? [this.empDistrict(emp)] : []),
-                    this.empPrevWorkplace(emp), this.empTransferUnit(emp),
+                    ...(sp ? [this.empPrevWorkplace(emp)] : []),
+                    this.empTransferUnit(emp),
                     this.empCombinedRemarks(emp)
                 ]
                 : [
                     serial, this.empServiceId(emp), this.empRank(emp), this.empTrade(emp), this.empName(emp),
                     ...(sd ? [this.empDistrict(emp)] : []),
-                    this.empPrevWorkplace(emp), this.empTransferUnit(emp),
+                    ...(sp ? [this.empPrevWorkplace(emp)] : []),
+                    this.empTransferUnit(emp),
                     this.empRabId(emp)
                 ];
             return new TableRow({
@@ -1655,9 +1643,18 @@ html, body { margin: 0; padding: 0; background: transparent; }
             children: [new TextRun({ text: bn ? 'অনুলিপি (জ্যেষ্ঠতার ভিত্তিতে নহে)' : 'Copy (not in order of seniority):', bold: true, size: ctxSize, sizeComplexScript: csSize, font, language: lang })],
             spacing: { before: nsPrefix ? 0 : 200 }
         }));
-        this.exportFooterParagraphs.forEach((p, i) => {
+        const tuCopy = this.transferUnitsCopyText;
+        const hasTuCopy = tuCopy && this.showTransferUnitsCopy;
+        if (hasTuCopy) {
             leftCellChildren.push(new Paragraph({
-                children: [new TextRun({ text: `${bn ? this.toBanglaDigits(String(i + 1)) : (i + 1)}। ${p.text}`, size: ctxSize, sizeComplexScript: csSize, font, language: lang })],
+                children: [new TextRun({ text: `${bn ? '১' : '1'}। ${tuCopy}`, size: ctxSize, sizeComplexScript: csSize, font, language: lang })],
+                spacing: { after: 100 }
+            }));
+        }
+        this.exportFooterParagraphs.forEach((p, i) => {
+            const serial = i + (hasTuCopy ? 2 : 1);
+            leftCellChildren.push(new Paragraph({
+                children: [new TextRun({ text: `${bn ? this.toBanglaDigits(String(serial)) : serial}। ${p.text}`, size: ctxSize, sizeComplexScript: csSize, font, language: lang })],
                 spacing: { after: 100 }
             }));
         });

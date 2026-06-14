@@ -103,7 +103,7 @@
             [value]="rows"
             [loading]="loading"
             dataKey="postingReceiveId"
-            [tableStyle]="{ 'min-width': '85rem' }"
+            [tableStyle]="{ 'min-width': '95rem' }"
             styleClass="p-datatable-striped p-datatable-gridlines"
             [paginator]="true"
             [rows]="15"
@@ -145,16 +145,16 @@
                         <p-tableHeaderCheckbox></p-tableHeaderCheckbox>
                     </th>
                     <th style="width: 50px">Ser</th>
-                    <th style="min-width: 160px">Posting Order No</th>
-                    <th style="min-width: 110px">Order Date</th>
-                    <th style="min-width: 140px">NoteSheet No</th>
-                    <th style="min-width: 120px">Service ID</th>
-                    <th style="min-width: 110px">RAB ID</th>
-                    <th style="min-width: 110px">Rank</th>
-                    <th style="min-width: 180px">Full Name</th>
-                    <th style="min-width: 150px">Mother Organization</th>
-                    <th style="min-width: 150px">Mother Unit</th>
-                    <th style="min-width: 150px">Transfer To</th>
+                    <th style="min-width: 300px">Posting Order No</th>
+                    <th style="min-width: 110px; white-space: nowrap">Order Date</th>
+                    <th style="min-width: 300px; white-space: nowrap">NoteSheet No</th>
+                    <th style="min-width: 90px">Service ID</th>
+                    <th style="min-width: 80px">RAB ID</th>
+                    <th style="min-width: 80px">Rank</th>
+                    <th style="min-width: 140px">Full Name</th>
+                    <th style="min-width: 120px">Mother Organization</th>
+                    <th style="min-width: 120px">Mother Unit</th>
+                    <th style="min-width: 120px">Transfer To</th>
                     <th style="width: 120px">Action</th>
                 </tr>
             </ng-template>
@@ -165,10 +165,10 @@
                     </td>
                     <td>{{ rowIndex + 1 }}</td>
                     <td>
-                        <span class="font-semibold">{{ row.postingOrderNo || '-' }}</span>
+                        {{ row.postingOrderNo || '-' }}
                     </td>
                     <td>{{ formatDate(row.postingOrderDate) }}</td>
-                    <td>{{ row.noteSheetNo || '-' }}</td>
+                    <td style="white-space: nowrap">{{ row.noteSheetNo || '-' }}</td>
                     <td>{{ row.serviceId || '-' }}</td>
                     <td>{{ row.rabID || '-' }}</td>
                     <td>{{ row.rankName || '-' }}</td>

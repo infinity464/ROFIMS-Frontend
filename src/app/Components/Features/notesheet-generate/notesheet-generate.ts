@@ -1279,7 +1279,7 @@ export class NotesheetGenerateComponent implements OnInit {
             recommenderIds: [],
             finalApproverId: null,
             isSecret: false,
-            noteSheetOperationType: null,
+            noteSheetOperationType: 'manual',
             referenceEmployeeIds: []
         });
         this.referenceParagraphs = [{ text: '', fileRows: [] }];
@@ -1291,6 +1291,7 @@ export class NotesheetGenerateComponent implements OnInit {
     // ── Submit ───────────────────────────────────────────────────────────
 
     submit(): void {
+        if (this.isSubmitting) return;
         if (this.editMode ? !this.canUpdate : !this.canInsert) {
             this.messageService.add({ severity: 'warn', summary: 'Permission Denied', detail: 'You do not have permission to perform this action.' });
             return;

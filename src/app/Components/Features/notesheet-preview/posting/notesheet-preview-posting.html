@@ -78,6 +78,8 @@
             <span style="display:inline-flex; align-items:center; gap:0.3rem;"><p-checkbox [(ngModel)]="showSpouseDistrictDetail" [binary]="true" inputId="chkSpDist"></p-checkbox><label for="chkSpDist" style="cursor:pointer;">স্পাউস জেলা বিবরণ</label></span>
             <span style="display:inline-flex; align-items:center; gap:0.3rem;"><p-checkbox [(ngModel)]="showPrevWorkplaceDetail" [binary]="true" inputId="chkPrevWp"></p-checkbox><label for="chkPrevWp" style="cursor:pointer;">পূর্ববতী কর্মস্থল বিবরণ</label></span>
             <span style="display:inline-flex; align-items:center; gap:0.3rem;"><p-checkbox [(ngModel)]="showRemarks" [binary]="true" inputId="chkRemarks"></p-checkbox><label for="chkRemarks" style="cursor:pointer;">মন্তব্য</label></span>
+            <span style="border-left:1px solid var(--surface-border); height:1.5rem;"></span>
+            <span style="display:inline-flex; align-items:center; gap:0.3rem;"><p-checkbox [(ngModel)]="showSignatureImage" [binary]="true" inputId="chkSigImg"></p-checkbox><label for="chkSigImg" style="cursor:pointer;">স্বাক্ষর ছবি</label></span>
         </ng-container>
     </div>
 
@@ -385,7 +387,7 @@
                                     <th colspan="4">{{ isEnglish() ? 'Tenure in RAB' : 'র‌্যাবে অবস্থানকাল' }}</th>
                                     <th rowspan="3">{{ isEnglish() ? 'Previous Workplace' : 'পূর্ববতী কর্মস্থল' }}</th>
                                     <th rowspan="3">{{ isEnglish() ? 'Transfer Station' : 'বদলিকৃত কর্মস্থল' }}</th>
-                                    <th rowspan="3">{{ isEnglish() ? 'Remarks' : 'মন্তব্য' }}</th>
+                                    <th *ngIf="showRemarks" rowspan="3" style="min-width:90px">{{ isEnglish() ? 'Remarks' : 'মন্তব্য' }}</th>
                                 </tr>
                                 <tr>
                                     <th rowspan="2">{{ isEnglish() ? 'Joining Date' : 'যোগদানের তারিখ' }}</th>
@@ -408,7 +410,7 @@
                                     <th>{{ isEnglish() ? 'Spouse District (Responsible Area)' : 'স্পাউস জেলা (দায়িত্বপূর্ণ এলাকা)' }}</th>
                                     <th>{{ isEnglish() ? 'Previous Workplace' : 'পূর্ববতী কর্মস্থল' }}</th>
                                     <th>{{ isEnglish() ? 'Transfer Unit' : 'বদলি ইউনিট' }}</th>
-                                    <th>{{ isEnglish() ? 'Remarks' : 'মন্তব্য' }}</th>
+                                    <th *ngIf="showRemarks" style="min-width:90px">{{ isEnglish() ? 'Remarks' : 'মন্তব্য' }}</th>
                                 </tr>
                             </ng-container>
                         </thead>
@@ -426,8 +428,8 @@
                                     <td>{{ tenure(emp.joiningDateInRAB, 'm') }}</td>
                                     <td>{{ tenure(emp.joiningDateInRAB, 'd') }}</td>
                                     <td style="white-space: pre-line;">{{ getInterPrevWorkplace(emp) }}</td>
-                                    <td>{{ isEnglish() ? (emp.transferRabUnitName || '') : (emp.transferRabUnitNameBN || emp.transferRabUnitName || '') }}</td>
-                                    <td>{{ getCombinedRemarks(emp) }}</td>
+                                    <td>{{ getTransferUnitShort(emp) }}</td>
+                                    <td *ngIf="showRemarks">{{ getCombinedRemarks(emp) }}</td>
                                 </tr>
                             </ng-container>
                             <ng-container *ngIf="!isInterPosting()">
@@ -440,8 +442,8 @@
                                     <td style="white-space: pre-line;">{{ isEnglish() ? (emp.presentDistrictName || '') : (emp.presentDistrictNameBN || emp.presentDistrictName || '') }}</td>
                                     <td style="white-space: pre-line;">{{ isEnglish() ? (emp.spousePresentDistrictName || '') : (emp.spousePresentDistrictNameBN || emp.spousePresentDistrictName || '') }}</td>
                                     <td style="white-space: pre-line;">{{ getPreviousWorkplace(emp) }}</td>
-                                    <td>{{ isEnglish() ? (emp.transferRabUnitName || '') : (emp.transferRabUnitNameBN || emp.transferRabUnitName || '') }}</td>
-                                    <td>{{ getCombinedRemarks(emp) }}</td>
+                                    <td>{{ getTransferUnitShort(emp) }}</td>
+                                    <td *ngIf="showRemarks">{{ getCombinedRemarks(emp) }}</td>
                                 </tr>
                             </ng-container>
                         </tbody>
@@ -465,7 +467,7 @@
                 <!-- ── Initiator area ── -->
                 <div class="ns-initiator-area">
                     <div class="ns-initiator-sig" *ngIf="initiatorDetails">
-                        <img *ngIf="isInitiatorApproved() && shouldShowSignature(initiatorDetails.step) && initiatorDetails.signatureDataUrl"
+                        <img *ngIf="showSignatureImage && isInitiatorApproved() && shouldShowSignature(initiatorDetails.step) && initiatorDetails.signatureDataUrl"
                              [src]="initiatorDetails.signatureDataUrl" class="ns-sig-img" alt="Signature" />
                         <div class="ns-sig-name">
                             {{ isEnglish() ? initiatorDetails.name : (initiatorDetails.nameBN || initiatorDetails.name) }}
@@ -491,7 +493,7 @@
                             <span class="ns-approver-remark" *ngIf="getApproverRemark(approver.step)">{{ getApproverRemark(approver.step) }}</span>
                         </div>
                         <div class="ns-approver-sig-area">
-                            <img *ngIf="shouldShowSignature(approver.step) && approver.signatureDataUrl"
+                            <img *ngIf="showSignatureImage && shouldShowSignature(approver.step) && approver.signatureDataUrl"
                                  [src]="approver.signatureDataUrl" class="ns-sig-img" alt="Signature" />
                             <div class="ns-sig-date" *ngIf="getApproverDate(approver.step)">{{ getApproverDate(approver.step) }}</div>
                         </div>

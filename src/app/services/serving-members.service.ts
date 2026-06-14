@@ -4,7 +4,7 @@ import { Observable } from 'rxjs';
 import { map } from 'rxjs/operators';
 import { environment } from '@/Core/Environments/environment';
 import { EmployeeServiceOverview } from '@/models/employee-service-overview.model';
-import { EmployeePersonalServiceOverview } from '@/models/employee-personal-service-overview.model';
+import { EmployeePersonalServiceOverview, EmployeeBriefProfile } from '@/models/employee-personal-service-overview.model';
 import { PagedResponse } from '@/Core/Models/Pagination';
 
 export interface ServingMemberFilterOptionsItem {
@@ -98,6 +98,10 @@ export class ServingMembersService {
     /** Gets employee profile (Basic Service + Other Personal Information) from vw_EmployeePersonalServiceOverview. */
     getEmployeePersonalServiceOverview(employeeId: number): Observable<EmployeePersonalServiceOverview> {
         return this.http.get<EmployeePersonalServiceOverview>(`${this.apiUrl}/GetEmployeePersonalServiceOverview/${employeeId}`);
+    }
+
+    getEmployeeBriefProfile(employeeId: number): Observable<EmployeeBriefProfile> {
+        return this.http.get<EmployeeBriefProfile>(`${this.apiUrl}/GetEmployeeBriefProfile/${employeeId}`);
     }
 
     // --- Ex-Members (PostingStatus = ExMember; RAB Unit from Top 1 PreviousRABServiceInfo ORDER BY ServiceFrom DESC) ---

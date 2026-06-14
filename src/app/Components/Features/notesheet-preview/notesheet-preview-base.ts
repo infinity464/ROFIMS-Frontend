@@ -241,28 +241,9 @@ export abstract class NotesheetPreviewBase implements OnInit {
         this.postingService.getDraftPostingEmployees(this.noteSheet.draftPostingMasterId).subscribe({
             next: (list) => {
                 this.postingEmployees = list ?? [];
-                this.enrichEmployeePrefixes();
-                this.resolveTransferUnitNames();
                 this.loadingEmployees = false;
             },
             error: (err: any) => { this.loadingEmployees = false; }
-        });
-    }
-
-    /** Fetch correct prefix (EN/BN) from employee overview API for each employee. */
-    private enrichEmployeePrefixes(): void {
-        if (!this.postingEmployees.length) return;
-        const api = `${environment.apis.core}/EmployeeInfo`;
-        const calls = this.postingEmployees.map(emp =>
-            this.http.get<any>(`${api}/GetEmployeePersonalServiceOverview/${emp.employeeId}`).pipe(catchError(() => of(null)))
-        );
-        forkJoin(calls).subscribe(results => {
-            results.forEach((res, i) => {
-                if (!res) return;
-                const data = res?.data ?? res;
-                if (data?.prefix) this.postingEmployees[i].prefixName = data.prefix;
-                if (data?.prefixBN) this.postingEmployees[i].prefixNameBN = data.prefixBN;
-            });
         });
     }
 
@@ -271,33 +252,15 @@ export abstract class NotesheetPreviewBase implements OnInit {
         this.loadingEmployees = true;
         this.postingService.getDraftInterPostingEmployees(this.noteSheet.draftPostingMasterId).subscribe({
             next: (list: any[]) => {
-                // Map inter-posting fields to match DraftPostingEmployeeRow shape
                 this.postingEmployees = (list ?? []).map(e => ({
                     ...e,
                     draftPostingDetailId: e.draftInterPostingDetailId,
                     draftPostingMasterId: e.draftInterPostingMasterId,
                 }));
-                this.resolveTransferUnitNames();
                 this.loadingEmployees = false;
             },
             error: (err: any) => { this.loadingEmployees = false; }
         });
-    }
-
-    /** Resolve the full hierarchical path for each employee's transfer unit (e.g. "RAB HQ, Admin Wing, Section A"). */
-    private resolveTransferUnitNames(): void {
-        for (const emp of this.postingEmployees) {
-            if (!emp.transferRabUnitId) continue;
-            this.masterBasicSetup.getAncestorsOfCommonCode(emp.transferRabUnitId).subscribe({
-                next: (ancestors) => {
-                    if (!ancestors?.length) return;
-                    const sorted = [...ancestors].sort((a, b) => (a.level ?? 0) - (b.level ?? 0));
-                    const parts = sorted.map(a => (a.codeValueEN ?? '').trim()).filter(Boolean);
-                    if (parts.length > 0) emp.transferRabUnitName = parts.join(', ');
-                },
-                error: () => {}
-            });
-        }
     }
 
     protected loadApprovalChain(): void {

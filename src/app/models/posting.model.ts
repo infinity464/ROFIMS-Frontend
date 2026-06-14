@@ -447,6 +447,11 @@ export interface PostingOrderEmployeeRow {
     footerText: string | null;
     createdBy: string;
     createdDate: string;
+    approvalEmployeeId: number | null;
+    approvalStatus: string | null;
+    approvalNote: string | null;
+    cancelReason: string | null;
+    approvalDate: string | null;
     postingOrderDetailId: number;
     employeeId: number;
     detailRemarks: string | null;
@@ -468,8 +473,6 @@ export interface PostingOrderEmployeeRow {
     tradeName: string | null;
     tradeNameBN: string | null;
     tradeRemarks: string | null;
-    specialQualifications: string | null;
-    specialQualificationsBN: string | null;
     motherUnitName: string | null;
     motherUnitNameBN: string | null;
     joiningDateInRAB: string | null;
@@ -477,29 +480,6 @@ export interface PostingOrderEmployeeRow {
     motherOrgSortOrder: number | null;
     permanentDistrictName: string | null;
     permanentDistrictNameBN: string | null;
-    presentDistrictName: string | null;
-    presentDistrictNameBN: string | null;
-    spousePresentDistrictName: string | null;
-    spousePresentDistrictNameBN: string | null;
-    motherOrgLocationName: string | null;
-    motherOrgLocationNameBN: string | null;
-    previousMotherOrgName: string | null;
-    previousMotherOrgNameBN: string | null;
-    previousRabUnits: string | null;
-    previousRabUnitsBN: string | null;
-    presentRabUnitId?: number | null;
-    presentRabUnitName?: string | null;
-    presentRabUnitNameBN?: string | null;
-    presentRabWingName?: string | null;
-    presentRabWingNameBN?: string | null;
-    presentRabBranchName?: string | null;
-    presentRabBranchNameBN?: string | null;
-    presentRabSubBranchName?: string | null;
-    presentRabSubBranchNameBN?: string | null;
-    presentRabSectionName?: string | null;
-    presentRabSectionNameBN?: string | null;
-    presentRabSubSectionName?: string | null;
-    presentRabSubSectionNameBN?: string | null;
     receiveStatus?: string | null;
 }
 

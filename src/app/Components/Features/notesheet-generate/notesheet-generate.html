@@ -355,7 +355,7 @@
 
       <!-- Actions -->
       <div class="form-actions">
-        <p-button type="submit" [label]="editMode ? 'Update Note Sheet' : 'Generate Note Sheet'" [icon]="editMode ? 'pi pi-check' : 'pi pi-file-edit'" [loading]="isSubmitting" [disabled]="form.invalid" [class.perm-hidden]="editMode ? !canUpdate : !canInsert" />
+        <p-button type="submit" [label]="editMode ? 'Update Note Sheet' : 'Generate Note Sheet'" [icon]="editMode ? 'pi pi-check' : 'pi pi-file-edit'" [loading]="isSubmitting" [disabled]="isSubmitting || form.invalid" [class.perm-hidden]="editMode ? !canUpdate : !canInsert" />
       </div>
     </form>
 
