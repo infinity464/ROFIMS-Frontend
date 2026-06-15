@@ -5,7 +5,6 @@ export interface BankModel {
   bankNameBN: string;
 
   branchName: string;
-  routingNumber: string;
   swiftCode: string;
 
   createdBy: string;

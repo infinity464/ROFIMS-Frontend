@@ -54,6 +54,17 @@
                            class="w-full" />
                 </div>
 
+                <!-- Routing No -->
+                <div class="field">
+                    <label for="routingNumber" class="block mb-2">
+                        Routing No
+                    </label>
+                    <input pInputText id="routingNumber"
+                           formControlName="routingNumber"
+                           placeholder="Enter routing number"
+                           class="w-full" />
+                </div>
+
                 <!-- Location -->
                 <div class="field md:col-span-2">
                     <label for="location" class="block mb-2">
@@ -116,6 +127,7 @@
                 <th>Bank</th>
                 <th>Branch Name (English)</th>
                 <th>Branch Name (Bangla)</th>
+                <th>Routing No</th>
                 <th>Location</th>
                 <th style="width:15%">Action</th>
             </tr>
@@ -127,6 +139,7 @@
                 <td>{{ getBankName(row.bankId) || '-' }}</td>
                 <td>{{ row.branchNameEN }}</td>
                 <td>{{ row.branchNameBN || '-' }}</td>
+                <td>{{ row.routingNumber || '-' }}</td>
                 <td>{{ row.location || '-' }}</td>
 
                 <td>
