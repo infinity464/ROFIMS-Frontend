@@ -1,4 +1,4 @@
-import { Component, OnInit, inject } from '@angular/core';
+import { Component, OnInit, Input, Output, EventEmitter, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
@@ -88,6 +88,21 @@ export class Article47TakeoverBulkComponent implements OnInit {
     canInsert = true;
     saving = false;
 
+    /**
+     * When used as a modal, the host supplies the selected employees via this
+     * input (instead of router navigation state) and listens to {@link closed}
+     * / {@link saved}. When `asModal` is true the component emits events instead
+     * of navigating away.
+     */
+    @Input() asModal = false;
+    @Input() set employeesInput(rows: TakeoverEmployeeRow[] | null | undefined) {
+        if (Array.isArray(rows)) this.employees = rows;
+    }
+    /** Emitted when the user cancels (modal host should close the dialog). */
+    @Output() closed = new EventEmitter<void>();
+    /** Emitted after a successful (or partially successful) generation. */
+    @Output() saved = new EventEmitter<void>();
+
     form!: FormGroup;
     employees: TakeoverEmployeeRow[] = [];
 
@@ -136,6 +151,14 @@ export class Article47TakeoverBulkComponent implements OnInit {
         }
 
         this.initForm();
+
+        // In modal mode the Effective dates and Destination sections are hidden:
+        // takeover date defaults to today (release/reduce stay null) and the
+        // destination is forced to RAB Unit (first option, set once loaded).
+        if (this.asModal) {
+            this.form.patchValue({ takeoverDate: new Date(), destinedUnitTarget: 'rab' });
+        }
+
         this.loadDropdowns();
         this.hydrateUnits();
 
@@ -221,6 +244,10 @@ export class Article47TakeoverBulkComponent implements OnInit {
                     label: r.codeValueEN,
                     value: r.codeId
                 }));
+                // Modal mode hides the Destination picker: default to the first RAB unit.
+                if (this.asModal && this.rabUnitOptions.length > 0 && this.form.get('destinedRABUnitId')!.value == null) {
+                    this.form.patchValue({ destinedRABUnitId: this.rabUnitOptions[0].value });
+                }
             }
         });
 
@@ -372,6 +399,10 @@ export class Article47TakeoverBulkComponent implements OnInit {
         const finalApproverIds: number[] = (v.finalApproverIds as number[] | null) ?? [];
         const letterRecipients = this.serialiseLetterRecipients();
 
+        // In modal mode the Remarks field is hidden; persist the standard Bengali
+        // Article 47 takeover declaration (with today's date and AM/PM) behind the scenes.
+        const remarks = this.asModal && !v.remarks ? this.buildDefaultRemark() : (v.remarks ?? null);
+
         // Build one payload per employee, sharing the common given input.
         const payloads: MovementInfoModel[] = this.employees.map((emp) => ({
             movementId: 0,
@@ -402,7 +433,7 @@ export class Article47TakeoverBulkComponent implements OnInit {
             railwayWarrant: null,
             auth: v.auth ?? null,
             detailsInformation: v.detailsInformation ?? null,
-            remarks: v.remarks ?? null,
+            remarks,
             filesReferences: null,
             status: true,
             createdBy: currentUser,
@@ -418,8 +449,13 @@ export class Article47TakeoverBulkComponent implements OnInit {
         from(payloads).pipe(
             concatMap((p) =>
                 this.movementService.save(p).pipe(
-                    map(() => ({ ok: true })),
-                    catchError(() => of({ ok: false }))
+                    map((res: any) => {
+                        const code = res?.statusCode ?? 200;
+                        const ok = code >= 200 && code < 300;
+                        const id = res?.data?.movementId ?? res?.Data?.MovementId ?? null;
+                        return { ok, id: ok ? id : null };
+                    }),
+                    catchError(() => of({ ok: false, id: null as number | null }))
                 )
             ),
             toArray()
@@ -428,6 +464,10 @@ export class Article47TakeoverBulkComponent implements OnInit {
             const okCount = results.filter((r) => r.ok).length;
             const failCount = total - okCount;
             this.saving = false;
+
+            // Open each newly-created Article 47 (Takeover) preview in its own tab.
+            const createdIds = results.filter((r) => r.ok && r.id != null).map((r) => r.id as number);
+            this.openTakeoverPreviews(createdIds);
 
             if (okCount === total) {
                 // All succeeded.
@@ -455,14 +495,59 @@ export class Article47TakeoverBulkComponent implements OnInit {
                 });
                 return;
             }
-            // On (at least partial) success, return to the list — but delay so the
-            // success toast is visible before this component (and its toast) is destroyed.
-            setTimeout(() => this.router.navigate(['/supernumerary-list']), 1500);
+            // On (at least partial) success: as a modal, notify the host so it can
+            // refresh and close; as a route, return to the list. Delay so the
+            // success toast is visible before this component is destroyed.
+            if (this.asModal) {
+                setTimeout(() => this.saved.emit(), 1500);
+            } else {
+                setTimeout(() => this.router.navigate(['/supernumerary-list']), 1500);
+            }
         });
     }
 
+    /** Opens each created movement's Article 47 (Takeover) preview in a new browser tab. */
+    private openTakeoverPreviews(ids: number[]): void {
+        for (const id of ids) {
+            const url = this.router.serializeUrl(
+                this.router.createUrlTree(['/movement-preview/article-47-takeover'], { queryParams: { id } })
+            );
+            window.open(url, '_blank');
+        }
+    }
+
     cancel(): void {
+        if (this.asModal) {
+            this.closed.emit();
+            return;
+        }
         this.router.navigate(['/supernumerary-list']);
+    }
+
+    /**
+     * Standard Bengali Article 47 (Takeover) declaration saved silently in modal
+     * mode. The date is today's date in Bengali; the time-of-day word is
+     * "পূর্বাহ্নে" before 12 PM and "অপরাহ্ণে" from 12 PM onwards.
+     */
+    private buildDefaultRemark(): string {
+        const now = new Date();
+        const dateBn = this.toBengaliDate(now);
+        const timeOfDay = now.getHours() < 12 ? 'পূর্বাহ্নে' : 'অপরাহ্ণে';
+        return `বেসামরিক হিসাব পদ্ধতির ৪৭ নং অনুচ্ছেদের বিধি অনুযায়ী আমি নিম্নস্বাক্ষরকারী এই মর্মে বিবরণ দিচ্ছি যে, অদ্য ${dateBn} তারিখ (${timeOfDay}) র‍্যাব ফোর্সেস সদর দপ্তর, কুর্মিটোলা, ঢাকায় উপপরিচালক হিসেবে কার্যভার গ্রহণ করিলাম।`;
+    }
+
+    /** Formats a date as Bengali "dd MonthName yyyy" with Bengali digits. */
+    private toBengaliDate(d: Date): string {
+        const months = ['জানুয়ারি', 'ফেব্রুয়ারি', 'মার্চ', 'এপ্রিল', 'মে', 'জুন', 'জুলাই', 'আগস্ট', 'সেপ্টেম্বর', 'অক্টোবর', 'নভেম্বর', 'ডিসেম্বর'];
+        const day = this.toBengaliDigits(String(d.getDate()).padStart(2, '0'));
+        const year = this.toBengaliDigits(String(d.getFullYear()));
+        return `${day} ${months[d.getMonth()]} ${year}`;
+    }
+
+    /** Converts ASCII digits in a string to Bengali digits. */
+    private toBengaliDigits(s: string): string {
+        const map = ['০', '১', '২', '৩', '৪', '৫', '৬', '৭', '৮', '৯'];
+        return s.replace(/[0-9]/g, (ch) => map[Number(ch)]);
     }
 
     private toIsoDate(d: Date | string | null | undefined): string | null {

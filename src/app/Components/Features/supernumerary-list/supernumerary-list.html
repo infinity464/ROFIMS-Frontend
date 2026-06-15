@@ -306,3 +306,23 @@
         </div>
     </div>
 </div>
+
+<!-- Article 47 (Takeover) modal — hosts the bulk form -->
+<p-dialog
+    [(visible)]="showArticle47Modal"
+    [modal]="true"
+    [draggable]="false"
+    [resizable]="false"
+    [dismissableMask]="false"
+    [style]="{ width: '90vw', maxWidth: '1100px' }"
+    header="Article 47 (Takeover)"
+    styleClass="sup-article47-dialog">
+    @if (showArticle47Modal) {
+        <app-article-47-takeover-bulk
+            [asModal]="true"
+            [employeesInput]="article47Employees"
+            (closed)="onArticle47Closed()"
+            (saved)="onArticle47Saved()">
+        </app-article-47-takeover-bulk>
+    }
+</p-dialog>

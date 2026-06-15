@@ -255,12 +255,22 @@ export class NotesheetPreviewArticle47TakeoverComponent implements OnInit {
         const o = this.overview as any;
         const corpsId: number | undefined =
             o?.corpsId ?? o?.CorpsId ?? e?.branchId ?? e?.BranchId;
+        let value = '';
         if (corpsId != null) {
             const labels = this.corpsLabels.get(corpsId);
-            if (labels?.bn) return labels.bn;
-            if (labels?.en) return labels.en;
+            value = labels?.bn || labels?.en || '';
         }
-        return (e?.corps ?? e?.Corps ?? o?.corps ?? o?.Corps ?? '') as string;
+        if (!value) {
+            value = (e?.corps ?? e?.Corps ?? o?.corps ?? o?.Corps ?? '') as string;
+        }
+        // Don't render a "not applicable" placeholder as a corps name.
+        return this.isNotApplicable(value) ? '' : value;
+    }
+
+    /** True when a label is an N/A placeholder (in either language) and shouldn't be shown. */
+    private isNotApplicable(value: string | null | undefined): boolean {
+        const v = (value ?? '').trim().toLowerCase();
+        return v === '' || v === 'n/a' || v === 'na' || v === 'অপ্রযোজ্য';
     }
     get employeeUnitBn(): string {
         const o = this.overview as any;
