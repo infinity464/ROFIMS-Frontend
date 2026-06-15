@@ -54,6 +54,7 @@ export class AddressFormComponent implements OnInit, OnChanges {
     @Input() isReadonly: boolean = false; // Control readonly mode
     @Input() initialAddressData?: AddressData; // Initial data for view/edit mode
     @Input() isOptional: boolean = false; // When true, fields are not required
+    @Input() sameAsInline: boolean = false; // When true, render the "Same as" checkbox on the title line
 
     @Output() onSave = new EventEmitter<AddressData>();
     @Output() onCancel = new EventEmitter<void>();
