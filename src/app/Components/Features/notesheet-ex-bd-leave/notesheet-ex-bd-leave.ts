@@ -1343,6 +1343,9 @@ export class NotesheetExBdLeaveComponent implements OnInit {
     getEmployeeDisplayName(): string {
         const id = this.form?.get('rabIdEmployeeId')?.value;
         if (id == null) return '—';
+        const emp = this.allEmployees.find((e: any) => (e.employeeID ?? e.EmployeeID) === id);
+        const name = emp?.fullNameEN ?? emp?.FullNameEN ?? null;
+        if (name) return name;
         const o = this.preparedByOptions.find((opt) => opt.value === id);
         return o ? o.label : String(id);
     }

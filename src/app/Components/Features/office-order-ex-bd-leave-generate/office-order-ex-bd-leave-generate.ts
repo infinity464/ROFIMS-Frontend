@@ -459,10 +459,6 @@ export class OfficeOrderExBdLeaveGenerateComponent implements OnInit {
             this.messageService.add({ severity: 'warn', summary: 'Warning', detail: 'Address To is required.' });
             return;
         }
-        if (this.referenceEntries.filter(e => e.text.trim()).length === 0) {
-            this.messageService.add({ severity: 'warn', summary: 'Warning', detail: 'At least one Reference No is required.' });
-            return;
-        }
         if (!this.subject?.trim()) {
             this.messageService.add({ severity: 'warn', summary: 'Warning', detail: 'Subject is required.' });
             return;
