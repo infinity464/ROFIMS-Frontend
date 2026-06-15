@@ -44,8 +44,8 @@ interface NoteSheetEmployee {
     motherUnitNameBN: string | null;
     permanentDistrictName: string | null;
     permanentDistrictNameBN: string | null;
-    spousePresentDistrictName: string | null;
-    spousePresentDistrictNameBN: string | null;
+    spousePermanentDistrictName: string | null;
+    spousePermanentDistrictNameBN: string | null;
     motherOrgLocationName: string | null;
     motherOrgLocationNameBN: string | null;
     previousRabUnits: string | null;
@@ -217,7 +217,7 @@ export class PostingOrderGenerateComponent implements OnInit {
         this.loadPostingOrderNumberConfigs();
 
         if (this.fixedPostingType) {
-            this.onPostingTypeChange(false);
+            this.onPostingTypeChange(false, true);
         }
     }
 
@@ -237,12 +237,12 @@ export class PostingOrderGenerateComponent implements OnInit {
 
     /** When posting type dropdown changes, load approved notesheets of that type
      *  (backend already excludes notesheets with a generated Posting Order). */
-    onPostingTypeChange(showEmptyToast = true): void {
+    onPostingTypeChange(showEmptyToast = true, skipConfigReload = false): void {
         this.approvedNoteSheets = [];
         this.selectedNoteSheetId = null;
         this.employees = [];
         this.postingOrderNumberConfigId = null;
-        this.loadPostingOrderNumberConfigs();
+        if (!skipConfigReload) this.loadPostingOrderNumberConfigs();
 
         if (!this.selectedPostingType) return;
 
@@ -361,8 +361,8 @@ export class PostingOrderGenerateComponent implements OnInit {
                                 motherUnitNameBN: e.motherUnitNameBN,
                                 permanentDistrictName: e.permanentDistrictName,
                                 permanentDistrictNameBN: e.permanentDistrictNameBN,
-                                spousePresentDistrictName: e.spousePresentDistrictName,
-                                spousePresentDistrictNameBN: e.spousePresentDistrictNameBN,
+                                spousePermanentDistrictName: e.spousePermanentDistrictName,
+                                spousePermanentDistrictNameBN: e.spousePermanentDistrictNameBN,
                                 motherOrgLocationName: e.motherOrgLocationName,
                                 motherOrgLocationNameBN: e.motherOrgLocationNameBN,
                                 previousRabUnits: e.previousRabUnits ?? null,
@@ -374,9 +374,9 @@ export class PostingOrderGenerateComponent implements OnInit {
                                 joiningDateInRAB: e.joiningDateInRAB
                             }));
                             this.loadingEmployees = false;
-                            // Reset footer paragraphs; pre-fill from config
+                            // Auto-generate onulipi from unique transfer units
                             this.footerParagraphs = [];
-                            this.loadOnulipiFromConfig();
+                            this.autoGenerateOnulipiFromTransferUnits();
                             this.postingText = ns.mainText ?? '';
                             this.remarks = '';
                         },
@@ -414,21 +414,27 @@ export class PostingOrderGenerateComponent implements OnInit {
 
     // ─── Footer paragraphs ────────────────────────────────
 
-    private loadOnulipiFromConfig(): void {
-        const pt = this.selectedPostingType === NoteSheetType.InterPosting ? PostingType.InterPosting : PostingType.NewPosting;
-        this.masterBasicSetupService.getOnulipiConfigByPostingType(pt).subscribe({
-            next: (configs) => {
-                const match = (configs ?? [])[0];
-                if (!match) return;
-                const json = this.isBangla ? (match.onulipiJsonBN || match.onulipiJsonEN) : match.onulipiJsonEN;
-                if (!json) return;
-                try {
-                    const items: { serial: number; text: string }[] = JSON.parse(json);
-                    this.footerParagraphs = items
-                        .sort((a, b) => a.serial - b.serial)
-                        .map(item => ({ text: item.text, transferRabUnitId: null, transferRabUnitName: null }));
-                } catch { /* ignore parse errors */ }
+    private autoGenerateOnulipiFromTransferUnits(): void {
+        const map = new Map<number, { name: string; nameBN: string | null }>();
+        for (const emp of this.employees) {
+            if (emp.transferRabUnitId != null && !map.has(emp.transferRabUnitId)) {
+                map.set(emp.transferRabUnitId, {
+                    name: emp.transferRabUnitName ?? '',
+                    nameBN: emp.transferRabUnitNameBN ?? null
+                });
             }
+        }
+        this.footerParagraphs = Array.from(map, ([id, unit]) => {
+            const full = this.isBangla
+                ? (unit.nameBN || unit.name)
+                : unit.name;
+            const parts = full.split(',');
+            const shortName = parts[parts.length - 1].trim();
+            return {
+                text: shortName,
+                transferRabUnitId: id,
+                transferRabUnitName: unit.name
+            };
         });
     }
 
@@ -483,6 +489,7 @@ export class PostingOrderGenerateComponent implements OnInit {
     }
 
     onGeneratePostingOrder(): void {
+        if (this.saving) return;
         if (!this.selectedPostingType || !this.selectedNoteSheetId || this.employees.length === 0) {
             this.messageService.add({ severity: 'warn', summary: this.isBangla ? 'সতর্কতা' : 'Warning', detail: this.isBangla ? 'পোস্টিং ধরন, নোটশীট নির্বাচন করুন এবং কর্মচারী আছে কিনা নিশ্চিত করুন।' : 'Select posting type, notesheet and ensure employees exist.' });
             return;
@@ -567,7 +574,10 @@ export class PostingOrderGenerateComponent implements OnInit {
         if (value == null || value === '') return '-';
         try {
             const d = new Date(value);
-            return isNaN(d.getTime()) ? String(value) : d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+            if (isNaN(d.getTime())) return String(value);
+            const dd = String(d.getDate()).padStart(2, '0');
+            const mm = String(d.getMonth() + 1).padStart(2, '0');
+            return `${dd}-${mm}-${d.getFullYear()}`;
         } catch {
             return String(value);
         }
@@ -659,6 +669,7 @@ export class PostingOrderGenerateComponent implements OnInit {
     }
 
     saveApproval(): void {
+        if (this.savingApproval) return;
         if (!this.approvalModalOrder || !this.approvalModalAction) return;
 
         this.savingApproval = true;

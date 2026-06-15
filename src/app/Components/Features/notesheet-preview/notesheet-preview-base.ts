@@ -142,12 +142,17 @@ export abstract class NotesheetPreviewBase implements OnInit {
     canUpdate = false;
     canDelete = false;
 
+    protected _lastLoadedId: number | null = null;
+
     ngOnInit(): void {
         this.loadLookups();
         this.route.queryParams.subscribe(params => {
             const id = params['id'];
             if (id) {
-                this.noteSheetId = +id;
+                const newId = +id;
+                if (newId === this._lastLoadedId) return;
+                this._lastLoadedId = newId;
+                this.noteSheetId = newId;
                 this.loadNoteSheet();
             } else {
                 this.error = true;
@@ -241,28 +246,10 @@ export abstract class NotesheetPreviewBase implements OnInit {
         this.postingService.getDraftPostingEmployees(this.noteSheet.draftPostingMasterId).subscribe({
             next: (list) => {
                 this.postingEmployees = list ?? [];
-                this.enrichEmployeePrefixes();
-                this.resolveTransferUnitNames();
                 this.loadingEmployees = false;
+                this.onPostingEmployeesLoaded(this.postingEmployees);
             },
             error: (err: any) => { this.loadingEmployees = false; }
-        });
-    }
-
-    /** Fetch correct prefix (EN/BN) from employee overview API for each employee. */
-    private enrichEmployeePrefixes(): void {
-        if (!this.postingEmployees.length) return;
-        const api = `${environment.apis.core}/EmployeeInfo`;
-        const calls = this.postingEmployees.map(emp =>
-            this.http.get<any>(`${api}/GetEmployeePersonalServiceOverview/${emp.employeeId}`).pipe(catchError(() => of(null)))
-        );
-        forkJoin(calls).subscribe(results => {
-            results.forEach((res, i) => {
-                if (!res) return;
-                const data = res?.data ?? res;
-                if (data?.prefix) this.postingEmployees[i].prefixName = data.prefix;
-                if (data?.prefixBN) this.postingEmployees[i].prefixNameBN = data.prefixBN;
-            });
         });
     }
 
@@ -271,34 +258,19 @@ export abstract class NotesheetPreviewBase implements OnInit {
         this.loadingEmployees = true;
         this.postingService.getDraftInterPostingEmployees(this.noteSheet.draftPostingMasterId).subscribe({
             next: (list: any[]) => {
-                // Map inter-posting fields to match DraftPostingEmployeeRow shape
                 this.postingEmployees = (list ?? []).map(e => ({
                     ...e,
                     draftPostingDetailId: e.draftInterPostingDetailId,
                     draftPostingMasterId: e.draftInterPostingMasterId,
                 }));
-                this.resolveTransferUnitNames();
                 this.loadingEmployees = false;
+                this.onPostingEmployeesLoaded(this.postingEmployees);
             },
             error: (err: any) => { this.loadingEmployees = false; }
         });
     }
 
-    /** Resolve the full hierarchical path for each employee's transfer unit (e.g. "RAB HQ, Admin Wing, Section A"). */
-    private resolveTransferUnitNames(): void {
-        for (const emp of this.postingEmployees) {
-            if (!emp.transferRabUnitId) continue;
-            this.masterBasicSetup.getAncestorsOfCommonCode(emp.transferRabUnitId).subscribe({
-                next: (ancestors) => {
-                    if (!ancestors?.length) return;
-                    const sorted = [...ancestors].sort((a, b) => (a.level ?? 0) - (b.level ?? 0));
-                    const parts = sorted.map(a => (a.codeValueEN ?? '').trim()).filter(Boolean);
-                    if (parts.length > 0) emp.transferRabUnitName = parts.join(', ');
-                },
-                error: () => {}
-            });
-        }
-    }
+    protected onPostingEmployeesLoaded(_employees: DraftPostingEmployeeRow[]): void { }
 
     protected loadApprovalChain(): void {
         if (!this.noteSheet) return;
@@ -339,40 +311,38 @@ export abstract class NotesheetPreviewBase implements OnInit {
         if (allIds.length === 0) return;
 
         this.loadingApprovalChain = true;
-        let completed = 0;
-        const total = allIds.length;
 
-        allIds.forEach(({ empId, step }) => {
-            this.servingMembersService.getEmployeePersonalServiceOverview(empId)
-                .pipe(catchError(() => of(null)))
-                .subscribe({
-                    next: (emp) => {
-                        const detail: SignatoryDetail = {
-                            step,
-                            name:          emp?.nameEnglish  ?? '-',
-                            nameBN:        emp?.nameBN       ?? '',
-                            rabId:         emp?.rabId        ?? '-',
-                            rank:          emp?.armyRank     ?? '-',
-                            rankBN:        emp?.armyRankBN   ?? '',
-                            serviceRank:   emp?.armyRank     ?? '-',
-                            appointment:   emp?.appointment  ?? '',
-                            appointmentBN: emp?.appointmentBN ?? '',
-                            employeeId: empId
-                        };
+        forkJoin(
+            allIds.map(({ empId }) =>
+                this.servingMembersService.getEmployeePersonalServiceOverview(empId)
+                    .pipe(catchError(() => of(null)))
+            )
+        ).subscribe({
+            next: (results) => {
+                results.forEach((emp, idx) => {
+                    const { empId, step } = allIds[idx];
+                    const detail: SignatoryDetail = {
+                        step,
+                        name:          emp?.nameEnglish  ?? '-',
+                        nameBN:        emp?.nameBN       ?? '',
+                        rabId:         emp?.rabId        ?? '-',
+                        rank:          emp?.armyRank     ?? '-',
+                        rankBN:        emp?.armyRankBN   ?? '',
+                        serviceRank:   emp?.armyRank     ?? '-',
+                        appointment:   emp?.appointment  ?? '',
+                        appointmentBN: emp?.appointmentBN ?? '',
+                        employeeId: empId
+                    };
 
-                        if (step === ApprovalStep.PreparedBy) this.preparedByDetails = detail;
-                        else if (step === ApprovalStep.Initiator) this.initiatorDetails = detail;
-                        else this.approversDetails.push(detail);
+                    if (step === ApprovalStep.PreparedBy) this.preparedByDetails = detail;
+                    else if (step === ApprovalStep.Initiator) this.initiatorDetails = detail;
+                    else this.approversDetails.push(detail);
 
-                        this.loadSignature(detail);
-                        completed++;
-                        if (completed >= total) this.loadingApprovalChain = false;
-                    },
-                    error: () => {
-                        completed++;
-                        if (completed >= total) this.loadingApprovalChain = false;
-                    }
+                    this.loadSignature(detail);
                 });
+                this.loadingApprovalChain = false;
+            },
+            error: () => { this.loadingApprovalChain = false; }
         });
     }
 
@@ -627,13 +597,24 @@ export abstract class NotesheetPreviewBase implements OnInit {
             .subscribe({
                 next: (list) => {
                     this.backHistory = list ?? [];
-                    this.loadingBackHistory = false;
-                    // resolve employee names
-                    for (const row of this.backHistory) {
-                        this.servingMembersService.getEmployeePersonalServiceOverview(row.backedByEmployeeId)
-                            .pipe(catchError(() => of(null)))
-                            .subscribe({ next: (emp) => { row.backedByName = emp?.nameEnglish ?? 'Unknown'; } });
+                    if (this.backHistory.length === 0) {
+                        this.loadingBackHistory = false;
+                        return;
                     }
+                    const uniqueIds = [...new Set(this.backHistory.map(r => r.backedByEmployeeId))];
+                    forkJoin(
+                        uniqueIds.map(id => this.servingMembersService.getEmployeePersonalServiceOverview(id).pipe(catchError(() => of(null))))
+                    ).subscribe({
+                        next: (results) => {
+                            const nameMap = new Map<number, string>();
+                            results.forEach((emp, i) => { nameMap.set(uniqueIds[i], emp?.nameEnglish ?? 'Unknown'); });
+                            for (const row of this.backHistory) {
+                                row.backedByName = nameMap.get(row.backedByEmployeeId) ?? 'Unknown';
+                            }
+                            this.loadingBackHistory = false;
+                        },
+                        error: () => { this.loadingBackHistory = false; }
+                    });
                 },
                 error: (err: any) => { this.loadingBackHistory = false; }
             });
@@ -858,8 +839,8 @@ export abstract class NotesheetPreviewBase implements OnInit {
                 bn?(emp.rankNameBN||emp.rankName||''):(emp.rankName??''),
                 bn?(emp.tradeNameBN||emp.tradeName||''):(emp.tradeName??''),
                 bn?(emp.fullNameBN||emp.fullNameEN||''):(emp.fullNameEN??''),
-                bn?(emp.presentDistrictNameBN||emp.presentDistrictName||''):(emp.presentDistrictName??''),
-                bn?(emp.spousePresentDistrictNameBN||emp.spousePresentDistrictName||''):(emp.spousePresentDistrictName??''),
+                bn?(emp.permanentDistrictNameBN||emp.permanentDistrictName||''):(emp.permanentDistrictName??''),
+                bn?(emp.spousePermanentDistrictNameBN||emp.spousePermanentDistrictName||''):(emp.spousePermanentDistrictName??''),
                 bn?(emp.motherOrgLocationNameBN||emp.motherOrgLocationName||''):(emp.motherOrgLocationName??''),
                 emp.transferRabUnitName??'', emp.remarks??''
             ].map(v => {
@@ -933,7 +914,7 @@ export abstract class NotesheetPreviewBase implements OnInit {
                 : ['Ser','Service ID','Rank','Trade','Name','Own District (Responsible Area)','Spouse District (Responsible Area)','Previous Workplace (Responsible Area)','Transfer Unit','Remarks'];
             const headerCells = cols.map(c => `<th>${this.escapeHtml(c)}</th>`).join('');
             const bodyRows = this.postingEmployees.map((emp, i) => {
-                const vals = [String(i+1), emp.serviceId??'', bn?(emp.rankNameBN||emp.rankName||''):(emp.rankName??''), bn?(emp.tradeNameBN||emp.tradeName||''):(emp.tradeName??''), bn?(emp.fullNameBN||emp.fullNameEN||''):(emp.fullNameEN??''), bn?(emp.presentDistrictNameBN||emp.presentDistrictName||''):(emp.presentDistrictName??''), bn?(emp.spousePresentDistrictNameBN||emp.spousePresentDistrictName||''):(emp.spousePresentDistrictName??''), bn?(emp.motherOrgLocationNameBN||emp.motherOrgLocationName||''):(emp.motherOrgLocationName??''), emp.transferRabUnitName??'', emp.remarks??''];
+                const vals = [String(i+1), emp.serviceId??'', bn?(emp.rankNameBN||emp.rankName||''):(emp.rankName??''), bn?(emp.tradeNameBN||emp.tradeName||''):(emp.tradeName??''), bn?(emp.fullNameBN||emp.fullNameEN||''):(emp.fullNameEN??''), bn?(emp.permanentDistrictNameBN||emp.permanentDistrictName||''):(emp.permanentDistrictName??''), bn?(emp.spousePermanentDistrictNameBN||emp.spousePermanentDistrictName||''):(emp.spousePermanentDistrictName??''), bn?(emp.motherOrgLocationNameBN||emp.motherOrgLocationName||''):(emp.motherOrgLocationName??''), emp.transferRabUnitName??'', emp.remarks??''];
                 return `<tr>${vals.map(v => `<td>${this.escapeHtml(v)}</td>`).join('')}</tr>`;
             }).join('');
             extraHtml += `<table><thead><tr>${headerCells}</tr></thead><tbody>${bodyRows}</tbody></table>`;

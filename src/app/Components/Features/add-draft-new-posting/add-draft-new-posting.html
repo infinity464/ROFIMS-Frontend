@@ -127,8 +127,9 @@
                     <th style="min-width: 140px">Draft Posting No</th>
                     <th style="min-width: 120px">Date</th>
                     <th style="min-width: 120px">Status</th>
-                    <th style="min-width: 80px">Employees</th>
+                    <th style="width: 80px">Employees</th>
                     <th style="min-width: 100px">Created By</th>
+                    <th style="min-width: 140px">Action</th>
                 </tr>
             </ng-template>
             <ng-template pTemplate="body" let-row let-rowIndex="rowIndex">
@@ -137,17 +138,17 @@
                     <td>{{ row.draftPostingNo }}</td>
                     <td>{{ row.draftPostingDate }}</td>
                     <td>{{ getDraftPostingStatusLabel(row.draftPostingStatus) }}</td>
-                    <td>
-                        <a class="cursor-pointer text-primary font-semibold" (click)="viewEmployees(row)" pTooltip="View employees" tooltipPosition="top">
-                            {{ row.detailCount }}
-                        </a>
-                    </td>
+                    <td>{{ row.detailCount }}</td>
                     <td>{{ row.createdBy || '-' }}</td>
+                    <td class="text-center">
+                        <p-button icon="pi pi-users" label="View Member" severity="primary" size="small"
+                                  (onClick)="viewEmployees(row)"></p-button>
+                    </td>
                 </tr>
             </ng-template>
             <ng-template pTemplate="emptymessage">
                 <tr>
-                    <td colspan="6" class="text-center p-4 text-500">No Draft New Posting saved yet. Select employees above and click Save.</td>
+                    <td colspan="7" class="text-center p-4 text-500">No Draft New Posting saved yet. Select employees above and click Save.</td>
                 </tr>
             </ng-template>
         </p-table>

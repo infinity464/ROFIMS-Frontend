@@ -137,6 +137,7 @@ export class NotesheetPreviewPostingComponent extends NotesheetPreviewBase imple
     showSpouseDistrictDetail = true;
     showPrevWorkplaceDetail = true;
     showRemarks = true;
+    showSignatureImage = true;
 
     // ── Edit state ───────────────────────────────────────────
     editing = false;
@@ -158,21 +159,8 @@ export class NotesheetPreviewPostingComponent extends NotesheetPreviewBase imple
     // ── Removal history (previous posting order info) ──
     removalHistoryMap: Record<number, EmployeeRemovalInfo> = {};
 
-    protected override loadPostingEmployees(): void {
-        super.loadPostingEmployees();
-        // After base finishes loading, fetch removal history
-        if (!this.noteSheet?.draftPostingMasterId) return;
-        this.postingService.getDraftPostingEmployees(this.noteSheet.draftPostingMasterId).subscribe({
-            next: (list) => { this.loadRemovalHistory(list ?? []); }
-        });
-    }
-
-    protected override loadInterPostingEmployees(): void {
-        super.loadInterPostingEmployees();
-        if (!this.noteSheet?.draftPostingMasterId) return;
-        this.postingService.getDraftInterPostingEmployees(this.noteSheet.draftPostingMasterId).subscribe({
-            next: (list: any[]) => { this.loadRemovalHistory(list ?? []); }
-        });
+    protected override onPostingEmployeesLoaded(employees: DraftPostingEmployeeRow[]): void {
+        this.loadRemovalHistory(employees);
     }
 
     private loadRemovalHistory(emps: { employeeId: number }[]): void {
@@ -1044,6 +1032,15 @@ export class NotesheetPreviewPostingComponent extends NotesheetPreviewBase imple
         this.selectedUnitNodes[emp.employeeId] = null;
     }
 
+    getTransferUnitShort(emp: DraftPostingEmployeeRow): string {
+        const full = this.isEnglish()
+            ? (emp.transferRabUnitName || '')
+            : (emp.transferRabUnitNameBN || emp.transferRabUnitName || '');
+        if (!full) return '';
+        const parts = full.split(',');
+        return parts[parts.length - 1].trim();
+    }
+
     getCombinedRemarks(emp: DraftPostingEmployeeRow): string {
         const history = this.removalHistoryMap[emp.employeeId];
         const removalRemark = this.isEnglish()
@@ -1061,8 +1058,8 @@ export class NotesheetPreviewPostingComponent extends NotesheetPreviewBase imple
             ? (bn ? (emp.motherOrgLocationNameBN || emp.motherOrgLocationName || '') : (emp.motherOrgLocationName || ''))
             : '';
         const motherOrg = bn
-            ? (emp.previousMotherOrgNameBN || emp.previousMotherOrgName || '')
-            : (emp.previousMotherOrgName || '');
+            ? (emp.motherUnitNameBN || emp.motherUnitName || '')
+            : (emp.motherUnitName || '');
         if (motherOrg && rabUnit) return motherOrg + '\n(' + rabUnit + ')';
         if (motherOrg) return motherOrg;
         if (rabUnit) return rabUnit;
@@ -1141,7 +1138,7 @@ export class NotesheetPreviewPostingComponent extends NotesheetPreviewBase imple
     onTransferUnitChange(emp: DraftPostingEmployeeRow): void {
         if (!emp.transferRabUnitId) return;
         const unitId = emp.transferRabUnitId;
-        const empDistrictName = (emp.presentDistrictName || emp.presentDistrictNameBN || '').split('\n')[0].trim().toLowerCase();
+        const empDistrictName = (emp.permanentDistrictName || emp.permanentDistrictNameBN || '').split('\n')[0].trim().toLowerCase();
         if (!empDistrictName) return;
         const empDistrictId = this.districtNameToId[empDistrictName];
         if (!empDistrictId) return;
@@ -1298,6 +1295,7 @@ export class NotesheetPreviewPostingComponent extends NotesheetPreviewBase imple
     // ── Reload notesheet after save ──────────────────────────
     private reloadNoteSheet(): void {
         if (!this.noteSheetId) return;
+        this._lastLoadedId = null;
         this.initiatorDetails = null;
         this.approversDetails = [];
         this.preparedByDetails = null;
@@ -1515,6 +1513,19 @@ html, body { margin: 0; padding: 0; background: transparent; }
 .pdf-flow .ns-ref-file-btn,
 .pdf-flow .ns-ref-file-btn i { font-size: 7pt !important; }
 
+/* Keep column widths (colgroup) identical to the on-screen preview */
+.pdf-flow .ns-posting-table table { table-layout: fixed; width: 100%; }
+.pdf-flow .ns-posting-table th,
+.pdf-flow .ns-posting-table td { word-break: break-word; overflow-wrap: anywhere; }
+
+/* Rich-text content keeps the crisp document Bangla font (no faint "japsa" text) */
+.pdf-flow .ns-para-text, .pdf-flow .ns-para-text *,
+.pdf-flow .ns-ref-content, .pdf-flow .ns-ref-content *,
+.pdf-flow .ns-note, .pdf-flow .ns-note * {
+    font-family: 'Times New Roman', 'SolaimanLipi', 'Noto Sans Bengali', 'Nirmala UI', 'Vrinda', 'Shonar Bangla', Times, serif !important;
+    color: #000 !important;
+}
+
 /* .ns-doc-box draws its own border that the frame replaces. */
 .pdf-flow .ns-doc-box { border: none !important; }
 
@@ -1612,7 +1623,7 @@ html, body { margin: 0; padding: 0; background: transparent; }
                 appointment: bn ? (d.appointmentBN || d.appointment) : d.appointment,
                 date: approved && this.noteSheet.noteSheetDate ? this.formatMonthYear(this.noteSheet.noteSheetDate) : undefined,
                 align: 'right',
-                signatureDataUrl: approved && this.shouldShowSignature(d.step) ? d.signatureDataUrl : undefined
+                signatureDataUrl: approved && this.showSignatureImage && this.shouldShowSignature(d.step) ? d.signatureDataUrl : undefined
             };
         }
 
@@ -1626,7 +1637,7 @@ html, body { margin: 0; padding: 0; background: transparent; }
                 role,
                 serialText: this.serial(i + 2 + paraOffset),
                 remark: remark || undefined,
-                signatureDataUrl: this.shouldShowSignature(a.step) ? a.signatureDataUrl : undefined,
+                signatureDataUrl: this.showSignatureImage && this.shouldShowSignature(a.step) ? a.signatureDataUrl : undefined,
                 nameLine: '',
                 date: approverDate || undefined,
                 align: 'center'
@@ -1779,7 +1790,7 @@ html, body { margin: 0; padding: 0; background: transparent; }
             mainChildren.push(new Paragraph({
                 children: nsRuns,
                 tabStops: [{ type: 'right' as any, position: 10800 }],
-                indent: { left: 240 }, spacing: { before: 60, after: 40 }
+                indent: { left: 100 }, spacing: { before: 60, after: 40 }
             }));
         }
 
@@ -1789,13 +1800,13 @@ html, body { margin: 0; padding: 0; background: transparent; }
                 children: [
                     new TextRun({ text: this.noteSheet.subject, bold: true, underline: {}, size: BODY_SZ, sizeComplexScript: csSize, font, language: lang })
                 ],
-                indent: { left: 240 }, spacing: { before: 20, after: 60 }
+                indent: { left: 100 }, spacing: { before: 20, after: 60 }
             }));
         }
 
         // Reference
         if (this.noteSheet?.referenceNumber) {
-            const refLabel = bn ? 'সূত্রঃ ' : 'Reference: ';
+            const refLabel = bn ? 'সূত্রঃ' : 'Reference:';
             const refHtml = this.fixBanglaWordBreaks(this.noteSheet.referenceNumber);
             const refBlocks = this.parseHtmlToContentBlocks(refHtml);
             const validBlocks = refBlocks.filter(b => b.text);
@@ -1805,7 +1816,7 @@ html, body { margin: 0; padding: 0; background: transparent; }
                     children: [
                         new TextRun({ text: refLabel, bold: true, size: BODY_SZ, sizeComplexScript: csSize, font, language: lang })
                     ],
-                    indent: { left: 240 }, spacing: { before: 40, after: 20 }
+                    indent: { left: 100 }, spacing: { before: 40, after: 20 }
                 }));
                 // Content blocks as separate paragraphs below, preserving bold/italic
                 for (let ri = 0; ri < validBlocks.length; ri++) {
@@ -1815,7 +1826,7 @@ html, body { margin: 0; padding: 0; background: transparent; }
                         : [new TextRun({ text: rb.text!, bold: rb.bold, italics: rb.italic, size: BODY_SZ, sizeComplexScript: csSize, font, language: lang })];
                     mainChildren.push(new Paragraph({
                         children,
-                        indent: { left: 480 }, spacing: { before: 20, after: ri === validBlocks.length - 1 ? 60 : 20 }
+                        indent: { left: 100 }, spacing: { before: 20, after: ri === validBlocks.length - 1 ? 60 : 20 }
                     }));
                 }
             }
@@ -1832,7 +1843,7 @@ html, body { margin: 0; padding: 0; background: transparent; }
                     new TextRun({ text: `${model.mainSerialText}  `, bold: true, size: BODY_SZ, sizeComplexScript: csSize, font, language: lang }),
                     ...firstBlockRuns
                 ],
-                indent: { left: 240 }, spacing: { before: 160, after: 80 }, alignment: AlignmentType.JUSTIFIED
+                indent: { left: 100 }, spacing: { before: 160, after: 80 }, alignment: AlignmentType.JUSTIFIED
             }));
             if (model.mainBlocks.length > 1) {
                 mainChildren.push(...this.contentBlocksToDocx(model.mainBlocks.slice(1), font, bn));
@@ -1840,7 +1851,7 @@ html, body { margin: 0; padding: 0; background: transparent; }
         } else {
             mainChildren.push(new Paragraph({
                 children: [new TextRun({ text: model.mainSerialText, bold: true, size: BODY_SZ, sizeComplexScript: csSize, font, language: lang })],
-                indent: { left: 240 }, spacing: { before: 160, after: 40 }
+                indent: { left: 100 }, spacing: { before: 160, after: 40 }
             }));
             mainChildren.push(...this.contentBlocksToDocx(model.mainBlocks, font, bn));
         }
@@ -1917,14 +1928,14 @@ html, body { margin: 0; padding: 0; background: transparent; }
                         this.getServiceIdDisplay(emp),
                         (bn?(emp.rankNameBN||emp.rankName||''):(emp.rankName??'')) + (this.showRankQualifications && this.getRankQualifications(emp) ? '\n(' + this.getRankQualifications(emp) + ')' : ''),
                         bn?(emp.fullNameBN||emp.fullNameEN||''):(emp.fullNameEN??''),
-                        bn?(emp.presentDistrictNameBN||emp.presentDistrictName||''):(emp.presentDistrictName??''),
-                        bn?(emp.spousePresentDistrictNameBN||emp.spousePresentDistrictName||''):(emp.spousePresentDistrictName??''),
+                        bn?(emp.permanentDistrictNameBN||emp.permanentDistrictName||''):(emp.permanentDistrictName??''),
+                        bn?(emp.spousePermanentDistrictNameBN||emp.spousePermanentDistrictName||''):(emp.spousePermanentDistrictName??''),
                         bn ? this.toBnDigits(this.formatJoiningDate(emp.joiningDateInRAB)) : this.formatJoiningDate(emp.joiningDateInRAB),
                         bn ? this.toBnDigits(String(t.y)) : String(t.y),
                         bn ? this.toBnDigits(String(t.m)) : String(t.m),
                         bn ? this.toBnDigits(String(t.d)) : String(t.d),
                         this.getInterPrevWorkplace(emp),
-                        bn?(emp.transferRabUnitNameBN||emp.transferRabUnitName||''):(emp.transferRabUnitName??''),
+                        this.getTransferUnitShort(emp),
                         this.getCombinedRemarks(emp)
                     ];
                     return new TableRow({ children: iVisIdx.map(oi => dataCellFn(allV[oi], iW[oi])) });
@@ -1932,7 +1943,7 @@ html, body { margin: 0; padding: 0; background: transparent; }
 
                 const iTotalW = iVisIdx.reduce((a, oi) => a + iW[oi], 0);
                 mainChildren.push(new Paragraph({ spacing: { before: 200 }, children: [] }));
-                mainChildren.push(new Table({ width: { size: iTotalW, type: WidthType.DXA }, rows: [...iHdrRows, ...iDataRows], columnWidths: iVisIdx.map(oi => iW[oi]), alignment: AlignmentType.CENTER }));
+                mainChildren.push(new Table({ width: { size: iTotalW, type: WidthType.DXA }, rows: [...iHdrRows, ...iDataRows], columnWidths: iVisIdx.map(oi => iW[oi]), alignment: AlignmentType.LEFT, indent: { size: 100, type: WidthType.DXA } }));
 
             } else {
                 // ── New posting: 10-column, single-row header ──
@@ -1962,13 +1973,13 @@ html, body { margin: 0; padding: 0; background: transparent; }
                     (bn?(emp.tradeNameBN||emp.tradeName||''):(emp.tradeName??'')) + (this.showTradeRemarks && emp.tradeRemarks ? '\n(' + emp.tradeRemarks + ')' : ''),
                     bn?(emp.fullNameBN||emp.fullNameEN||''):(emp.fullNameEN??''),
                     this.showOwnDistrictDetail
-                        ? (bn?(emp.presentDistrictNameBN||emp.presentDistrictName||''):(emp.presentDistrictName??''))
-                        : (bn?(emp.presentDistrictNameBN||emp.presentDistrictName||''):(emp.presentDistrictName??'')).split('\n')[0].replace(/\s*\(.*$/, ''),
+                        ? (bn?(emp.permanentDistrictNameBN||emp.permanentDistrictName||''):(emp.permanentDistrictName??''))
+                        : (bn?(emp.permanentDistrictNameBN||emp.permanentDistrictName||''):(emp.permanentDistrictName??'')).split('\n')[0].replace(/\s*\(.*$/, ''),
                     this.showSpouseDistrictDetail
-                        ? (bn?(emp.spousePresentDistrictNameBN||emp.spousePresentDistrictName||''):(emp.spousePresentDistrictName??''))
-                        : (bn?(emp.spousePresentDistrictNameBN||emp.spousePresentDistrictName||''):(emp.spousePresentDistrictName??'')).split('\n')[0].replace(/\s*\(.*$/, ''),
+                        ? (bn?(emp.spousePermanentDistrictNameBN||emp.spousePermanentDistrictName||''):(emp.spousePermanentDistrictName??''))
+                        : (bn?(emp.spousePermanentDistrictNameBN||emp.spousePermanentDistrictName||''):(emp.spousePermanentDistrictName??'')).split('\n')[0].replace(/\s*\(.*$/, ''),
                     this.getPreviousWorkplace(emp),
-                    bn ? (emp.transferRabUnitNameBN || emp.transferRabUnitName || '') : (emp.transferRabUnitName ?? ''),
+                    this.getTransferUnitShort(emp),
                     this.getCombinedRemarks(emp)
                 ];
 
@@ -1981,7 +1992,7 @@ html, body { margin: 0; padding: 0; background: transparent; }
                 const tableRows = [...headerRows, ...dataRows];
                 mainChildren.push(new Paragraph({ spacing: { before: 200 }, children: [] }));
                 const totalColW = colWidths.reduce((a, b) => a + b, 0);
-                mainChildren.push(new Table({ width: { size: totalColW, type: WidthType.DXA }, rows: tableRows, columnWidths: colWidths, alignment: AlignmentType.CENTER }));
+                mainChildren.push(new Table({ width: { size: totalColW, type: WidthType.DXA }, rows: tableRows, columnWidths: colWidths, alignment: AlignmentType.LEFT, indent: { size: 100, type: WidthType.DXA } }));
             }
         }
 
@@ -1991,7 +2002,7 @@ html, body { margin: 0; padding: 0; background: transparent; }
             for (const line of noteLines) {
                 mainChildren.push(new Paragraph({
                     children: [new TextRun({ text: line, size: BODY_SZ, sizeComplexScript: csSize, font, language: lang })],
-                    indent: { left: 240 }, spacing: { before: 40, after: 40 }
+                    indent: { left: 100 }, spacing: { before: 40, after: 40 }
                 }));
             }
         }
@@ -2004,7 +2015,7 @@ html, body { margin: 0; padding: 0; background: transparent; }
                     new TextRun({ text: `${this.serial(pi + 2)}  `, bold: true, size: BODY_SZ, sizeComplexScript: csSize, font, language: lang }),
                     new TextRun({ text: para, size: BODY_SZ, sizeComplexScript: csSize, font, language: lang })
                 ],
-                indent: { left: 240 }, spacing: { before: 120, after: 80 }, alignment: AlignmentType.JUSTIFIED
+                indent: { left: 100 }, spacing: { before: 120, after: 80 }, alignment: AlignmentType.JUSTIFIED
             }));
         });
 
@@ -2070,11 +2081,11 @@ html, body { margin: 0; padding: 0; background: transparent; }
         for (const ap of model.approvers) {
             mainChildren.push(new Paragraph({
                 children: [new TextRun({ text: ap.role, underline: {}, size: SIG_SZ, sizeComplexScript: bn ? SIG_SZ : undefined, font, language: lang })],
-                indent: { left: 240 }, spacing: { before: 280 }, keepNext: true, keepLines: true
+                indent: { left: 100 }, spacing: { before: 280 }, keepNext: true, keepLines: true
             }));
             const runs: TextRun[] = [new TextRun({ text: ap.serialText, bold: true, size: SIG_SZ, sizeComplexScript: bn ? SIG_SZ : undefined, font, language: lang })];
             if (ap.remark) runs.push(new TextRun({ text: ` ${ap.remark}`, size: SIG_SZ, sizeComplexScript: bn ? SIG_SZ : undefined, font, language: lang }));
-            mainChildren.push(new Paragraph({ children: runs, indent: { left: 240 }, keepNext: true }));
+            mainChildren.push(new Paragraph({ children: runs, indent: { left: 100 }, keepNext: true }));
             if (ap.signatureDataUrl) {
                 try {
                     mainChildren.push(new Paragraph({
@@ -2101,11 +2112,11 @@ html, body { margin: 0; padding: 0; background: transparent; }
         // Title paragraphs — inside the page border at the top
         const titleChildren: (Paragraph | Table)[] = [
             new Paragraph({
-                children: [new TextRun({ text: 'NOTE SHEET', bold: true, underline: {}, size: 22, font: 'Times New Roman' })],
+                children: [new TextRun({ text: 'NOTE SHEET', bold: true, size: 22, font: 'Times New Roman' })],
                 alignment: AlignmentType.CENTER, spacing: { before: 80, after: 40 }
             }),
             new Paragraph({
-                children: [new TextRun({ text: 'মন্তব্য পত্র', underline: {}, size: 22, font: 'Nirmala UI' })],
+                children: [new TextRun({ text: 'মন্তব্য পত্র', size: 22, font: 'Nirmala UI' })],
                 alignment: AlignmentType.CENTER, spacing: { after: 100 }
             }),
         ];

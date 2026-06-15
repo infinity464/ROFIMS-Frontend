@@ -8,6 +8,8 @@ import { ButtonModule } from 'primeng/button';
 import { InputTextModule } from 'primeng/inputtext';
 import { DatePickerModule } from 'primeng/datepicker';
 import { SelectModule } from 'primeng/select';
+import { DialogModule } from 'primeng/dialog';
+import { TooltipModule } from 'primeng/tooltip';
 import { Toast } from 'primeng/toast';
 import { MessageService } from 'primeng/api';
 import { EmployeeListService } from '@/services/employee-list.service';
@@ -29,6 +31,8 @@ import { DraftPostingStatusOptions } from '@/models/enums';
         InputTextModule,
         DatePickerModule, FlexibleDateDirective,
         SelectModule,
+        DialogModule,
+        TooltipModule,
         Toast
     ],
     providers: [MessageService],
@@ -52,6 +56,11 @@ export class AddDraftInterPostingComponent implements OnInit {
     canInsert = true;
     canUpdate = true;
     canDelete = true;
+
+    showEmployeeModal = false;
+    employeeModalTitle = '';
+    employeeModalList: DraftInterPostingDetailDto[] = [];
+    employeeModalLoading = false;
 
     constructor(
         private employeeListService: EmployeeListService,
@@ -175,9 +184,46 @@ export class AddDraftInterPostingComponent implements OnInit {
             next: (data: DraftInterPostingMasterDto[]) => {
                 this.draftMastersList = data ?? [];
                 this.loadingMasters = false;
+                if (!this.isEditMode) this.generateDraftPostingListNo();
             },
             error: (err: any) => {
                 this.loadingMasters = false;
+            }
+        });
+    }
+
+    private generateDraftPostingListNo(): void {
+        const now = new Date();
+        const datePrefix = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}`;
+
+        let maxSeq = 0;
+        for (const m of this.draftMastersList) {
+            const no = m.draftInterPostingNo ?? '';
+            if (!no.startsWith(datePrefix + '/')) continue;
+            const parts = no.substring(datePrefix.length + 1).split('/');
+            const seq = parseInt(parts[0], 10);
+            if (!isNaN(seq) && seq > maxSeq) maxSeq = seq;
+        }
+
+        const seq = String(maxSeq + 1).padStart(3, '0');
+        const rand = String(Math.floor(1000 + Math.random() * 9000));
+        this.draftPostingListNo = `${datePrefix}/${seq}/${rand}`;
+    }
+
+    viewEmployees(row: DraftInterPostingMasterDto): void {
+        this.employeeModalTitle = `Employees — ${row.draftInterPostingNo}`;
+        this.employeeModalLoading = true;
+        this.showEmployeeModal = true;
+        this.employeeModalList = [];
+
+        this.postingService.getDraftInterPostingById(row.id).subscribe({
+            next: (data: DraftInterPostingMasterWithDetailsDto) => {
+                this.employeeModalList = data?.details ?? [];
+                this.employeeModalLoading = false;
+            },
+            error: () => {
+                this.employeeModalLoading = false;
+                this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to load employees.' });
             }
         });
     }
