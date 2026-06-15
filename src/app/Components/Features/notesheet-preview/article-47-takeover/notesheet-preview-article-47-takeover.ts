@@ -63,6 +63,8 @@ export class NotesheetPreviewArticle47TakeoverComponent implements OnInit {
     employee: EmployeeSearchInfoModel | null = null;
     /** EmployeeServiceOverview row — same source as /presently-serving-members. */
     overview: EmployeeServiceOverview | null = null;
+    /** Per-employee personal overview — reliable prefix source (CommonCode label + id). */
+    personalOverview: any | null = null;
     /** MotherOrgRank id → labels map (English + Bangla). */
     private rankLabels = new Map<number, { en: string; bn: string }>();
     /** RabUnit id → labels map (English + Bangla). */
@@ -134,6 +136,14 @@ export class NotesheetPreviewArticle47TakeoverComponent implements OnInit {
                 this.loadOverview();
             },
             error: () => { this.employee = null; }
+        });
+
+        // EmployeeInfo.Prefix is a CommonCode id; the personal overview carries
+        // both the id and the resolved CommonCode label for every employee
+        // (serving or not), so use it as the prefix source.
+        this.servingMembersService.getEmployeePersonalServiceOverview(firstId).subscribe({
+            next: (po: any) => { this.personalOverview = po ?? null; },
+            error: () => { this.personalOverview = null; }
         });
     }
 
@@ -229,9 +239,18 @@ export class NotesheetPreviewArticle47TakeoverComponent implements OnInit {
     /** Field accessors for the signature block. Fall back to placeholders when empty. */
     get employeeIdLineBn(): string {
         const e = this.employee as any;
-        if (!e) return 'বিডি/-----';
-        const id = e.rabID ?? e.RABID ?? e.serviceId ?? e.ServiceId ?? '';
-        return id ? `বিডি/${this.toBn(id)}` : 'বিডি/-----';
+        const o = this.overview as any;
+        const po = this.personalOverview as any;
+        const id = e ? (e.rabID ?? e.RABID ?? e.serviceId ?? e.ServiceId ?? '') : '';
+
+        // Prefix is the CommonCode label behind EmployeeInfo.Prefix (an id), not a
+        // fixed "বিডি". Resolve from the personal overview, then the serving-members
+        // overview, falling back to '' when genuinely absent.
+        const prefix = (po?.prefixBN || po?.PrefixBN || po?.prefixEN || po?.PrefixEN || po?.prefix || po?.Prefix
+            || o?.prefixBN || o?.PrefixBN || o?.prefix || o?.Prefix || '') as string;
+
+        if (!id) return prefix ? `${prefix}/-----` : '-----';
+        return prefix ? `${prefix}/${this.toBn(id)}` : this.toBn(id);
     }
     get employeeRankBn(): string {
         const e = this.employee as any;
@@ -255,12 +274,22 @@ export class NotesheetPreviewArticle47TakeoverComponent implements OnInit {
         const o = this.overview as any;
         const corpsId: number | undefined =
             o?.corpsId ?? o?.CorpsId ?? e?.branchId ?? e?.BranchId;
+        let value = '';
         if (corpsId != null) {
             const labels = this.corpsLabels.get(corpsId);
-            if (labels?.bn) return labels.bn;
-            if (labels?.en) return labels.en;
+            value = labels?.bn || labels?.en || '';
         }
-        return (e?.corps ?? e?.Corps ?? o?.corps ?? o?.Corps ?? '') as string;
+        if (!value) {
+            value = (e?.corps ?? e?.Corps ?? o?.corps ?? o?.Corps ?? '') as string;
+        }
+        // Don't render a "not applicable" placeholder as a corps name.
+        return this.isNotApplicable(value) ? '' : value;
+    }
+
+    /** True when a label is an N/A placeholder (in either language) and shouldn't be shown. */
+    private isNotApplicable(value: string | null | undefined): boolean {
+        const v = (value ?? '').trim().toLowerCase();
+        return v === '' || v === 'n/a' || v === 'na' || v === 'অপ্রযোজ্য';
     }
     get employeeUnitBn(): string {
         const o = this.overview as any;

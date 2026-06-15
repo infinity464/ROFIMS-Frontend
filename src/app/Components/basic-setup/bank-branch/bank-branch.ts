@@ -98,6 +98,7 @@ export class BankBranchComponent implements OnInit {
             bankId: [null],
             branchNameEN: ['', Validators.required],
             branchNameBN: [''],
+            routingNumber: [''],
             location: [''],
             createdBy: [this.currentUser],
             createdDate: [new Date()],

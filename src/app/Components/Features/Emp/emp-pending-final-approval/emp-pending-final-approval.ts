@@ -39,7 +39,7 @@ interface TrainingInstituteOption extends DropdownOption {
 }
 
 @Component({
-    selector: 'app-emp-draft-list',
+    selector: 'app-emp-pending-final-approval',
     standalone: true,
     imports: [
         CommonModule,
@@ -63,9 +63,9 @@ interface TrainingInstituteOption extends DropdownOption {
         InputIconModule
     ],
     providers: [MessageService, ConfirmationService],
-    templateUrl: './emp-draft-list.html'
+    templateUrl: './emp-pending-final-approval.html'
 })
-export class EmpDraftListComponent implements OnInit {
+export class EmpPendingFinalApprovalComponent implements OnInit {
     private _router = inject(Router);
     private _userMenuService = inject(UserMenuService);
     canInsert = true;
@@ -110,10 +110,9 @@ export class EmpDraftListComponent implements OnInit {
     }
 
     ngOnInit(): void {
-        // /emp-draft-list and /emp-rfts-completed were split out of
-        // /emp-send-to-course. Until they're added to the user_menu
-        // permissions table, fall back to the parent route's perms so
-        // the action buttons (Remove from Draft, Delete) stay usable.
+        // Until /emp-pending-final-approval is added to the user_menu
+        // permissions table, fall back to the /emp-send-to-course perms
+        // (same pattern as /emp-draft-list) so the action buttons stay usable.
         const own = this._userMenuService.getPermissionsByRoute(this._router.url);
         const parent = this._userMenuService.getPermissionsByRoute('/emp-send-to-course');
         const _perms = own.canView ? own : parent;
@@ -210,7 +209,7 @@ export class EmpDraftListComponent implements OnInit {
 
     loadDraftLists(): void {
         this.isLoadingDrafts = true;
-        this.draftCourseService.getDraftCourseLists().subscribe({
+        this.draftCourseService.getPendingApprovalLists().subscribe({
             next: (lists) => {
                 this.draftLists = lists ?? [];
                 this.isLoadingDrafts = false;
@@ -242,24 +241,28 @@ export class EmpDraftListComponent implements OnInit {
     }
 
     /**
-     * First approval. Instead of completing the list to RFTS, this moves it to
-     * "Pending for Final Approval" — it then disappears from this Draft screen
-     * and shows up on /emp-pending-final-approval, where the final approval
-     * completes it to course/RFTS.
+     * Final approval. This is the real completion (same behaviour the draft
+     * approval used to have): creates the RftsTraining records, marks members
+     * RFTS-complete, and removes the list.
      */
     approveAndSave(): void {
         if (!this.selectedDraft) {
-            this.messageService.add({ severity: 'warn', summary: 'Warning', detail: 'Please select a draft.' });
+            this.messageService.add({ severity: 'warn', summary: 'Warning', detail: 'Please select a list.' });
             return;
         }
         this.isSending = true;
-        this.draftCourseService.moveDraftToPending(this.selectedDraft.id, 'User').subscribe({
+        const details = { courseNo: this.selectedDraft.listNo ?? null };
+        const memberRemarks: { employeeId: number; remarks: string }[] = [];
+        this.memberRemarksMap.forEach((remarks, employeeId) => {
+            if (remarks?.trim()) memberRemarks.push({ employeeId, remarks: remarks.trim() });
+        });
+        this.draftCourseService.sendFromDraftToCourse(this.selectedDraft.id, 'User', details, memberRemarks).subscribe({
             next: (res) => {
                 if (res.statusCode === 200) {
                     this.messageService.add({
                         severity: 'success',
                         summary: 'Success',
-                        detail: res.description ?? 'Draft sent for final approval.'
+                        detail: res.description ?? `${res.recordsCreated} member(s) approved.`
                     });
                     this.selectedDraft = null;
                     this.memberRemarksMap.clear();
@@ -278,7 +281,7 @@ export class EmpDraftListComponent implements OnInit {
 
     openSendCourseModal(): void {
         if (!this.selectedDraft) {
-            this.messageService.add({ severity: 'warn', summary: 'Warning', detail: 'Please select a draft.' });
+            this.messageService.add({ severity: 'warn', summary: 'Warning', detail: 'Please select a list.' });
             return;
         }
         this.courseForm.patchValue({
@@ -294,8 +297,6 @@ export class EmpDraftListComponent implements OnInit {
         const v = this.courseForm.value;
         const resultVal = v.result;
         const resultStr = typeof resultVal === 'string' ? resultVal : (resultVal?.value ?? (resultVal ? String(resultVal) : null));
-        // Build YYYY-MM-DD from local date components — toISOString() would
-        // shift the day for timezones off UTC. See toLocalDateStr().
         const details = {
             courseNo: this.selectedDraft?.listNo ?? null,
             courseType: v.courseType ?? null,
@@ -332,21 +333,18 @@ export class EmpDraftListComponent implements OnInit {
     }
 
     deleteDraftRow(row: DraftCourseList): void {
-        // Backend rejects deletion of drafts with members. Surface that
-        // up-front with a clear instruction instead of waiting for the
-        // raw API error to come back.
         const memberCount = row.members?.length ?? 0;
         if (memberCount > 0) {
             this.messageService.add({
                 severity: 'warn',
                 summary: 'Cannot delete',
-                detail: `Draft "${row.listNo}" has ${memberCount} member(s). Remove all members from the draft first, then delete.`,
+                detail: `List "${row.listNo}" has ${memberCount} member(s). Remove all members first, then delete.`,
                 life: 6000
             });
             return;
         }
         this.confirmationService.confirm({
-            message: `Delete draft "${row.listNo}"? This cannot be undone.`,
+            message: `Delete list "${row.listNo}"? This cannot be undone.`,
             header: 'Delete Confirmation',
             icon: 'pi pi-exclamation-triangle',
             rejectButtonProps: { label: 'Cancel', severity: 'secondary', outlined: true },
@@ -356,7 +354,7 @@ export class EmpDraftListComponent implements OnInit {
                 this.draftCourseService.deleteDraft(row.id).subscribe({
                     next: (res) => {
                         if (res.statusCode === 200) {
-                            this.messageService.add({ severity: 'success', summary: 'Success', detail: 'Draft deleted.' });
+                            this.messageService.add({ severity: 'success', summary: 'Success', detail: 'List deleted.' });
                             if (this.selectedDraft?.id === row.id) {
                                 this.selectedDraft = null;
                                 this.selectedDraftMembers = [];
@@ -369,7 +367,7 @@ export class EmpDraftListComponent implements OnInit {
                         this.isDeletingDraft = false;
                     },
                     error: (err) => {
-                        const msg = err?.error?.description ?? err?.error?.message ?? 'Failed to delete draft.';
+                        const msg = err?.error?.description ?? err?.error?.message ?? 'Failed to delete list.';
                         this.messageService.add({ severity: 'error', summary: 'Error', detail: msg });
                         this.isDeletingDraft = false;
                     }
@@ -382,7 +380,7 @@ export class EmpDraftListComponent implements OnInit {
     removeSingleMember(member: DraftCourseMemberRow): void {
         if (!this.selectedDraft) return;
         this.confirmationService.confirm({
-            message: `Remove ${member.fullNameEN ?? 'this member'} from draft?`,
+            message: `Remove ${member.fullNameEN ?? 'this member'} from list?`,
             header: 'Delete Confirmation',
             icon: 'pi pi-exclamation-triangle',
             rejectButtonProps: { label: 'Cancel', severity: 'secondary', outlined: true },
@@ -411,7 +409,7 @@ export class EmpDraftListComponent implements OnInit {
     removeFromDraft(): void {
         if (!this.selectedDraft || !this.selectedDraftMembers?.length) return;
         this.confirmationService.confirm({
-            message: `Remove ${this.selectedDraftMembers.length} member(s) from draft?`,
+            message: `Remove ${this.selectedDraftMembers.length} member(s) from list?`,
             header: 'Delete Confirmation',
             icon: 'pi pi-exclamation-triangle',
             rejectButtonProps: { label: 'Cancel', severity: 'secondary', outlined: true },
@@ -490,7 +488,7 @@ export class EmpDraftListComponent implements OnInit {
         this.draftCourseService.addMembersToDraft(this.selectedDraft.id, members).subscribe({
             next: (res) => {
                 if (res.statusCode === 200) {
-                    this.messageService.add({ severity: 'success', summary: 'Success', detail: `Added ${members.length} member(s) to draft.` });
+                    this.messageService.add({ severity: 'success', summary: 'Success', detail: `Added ${members.length} member(s).` });
                     this.showAddToDraftPanel = false;
                     this.addToDraftSelectedRows = [];
                     this.addToDraftEmployeeList = [];
@@ -501,7 +499,7 @@ export class EmpDraftListComponent implements OnInit {
                 this.isAddingToDraft = false;
             },
             error: (err: any) => {
-                this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.message || 'Failed to add to draft.' });
+                this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.message || 'Failed to add member(s).' });
                 this.isAddingToDraft = false;
             }
         });
@@ -541,11 +539,6 @@ export class EmpDraftListComponent implements OnInit {
         return `${yyyy}-${mm}-${dd}`;
     }
 
-    /**
-     * Inclusive day count between two ISO date strings — both start and
-     * end days count, so 01 May → 22 May is 22 days, not 21.
-     * Returns 0 when either is missing or invalid.
-     */
     daysBetween(fromIso: string | null | undefined, toIso: string | null | undefined): number {
         if (!fromIso || !toIso) return 0;
         const a = new Date(fromIso).getTime();
@@ -555,7 +548,6 @@ export class EmpDraftListComponent implements OnInit {
         return Math.max(0, diff + 1);
     }
 
-    /** Card-style member rows manage their own checkbox state — pTableCheckbox is table-bound only. */
     isMemberSelected(row: DraftCourseMemberRow): boolean {
         return this.selectedDraftMembers.some((m) => m.employeeId === row.employeeId);
     }

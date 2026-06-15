@@ -23,11 +23,25 @@ import { MotherOrganizationModel } from '@/models/mother-org-model';
 import { CommonCodeModel } from '@/models/common-code-model';
 import { IsSendingNotesheetStatus } from '@/models/enums';
 import { FlexibleDateDirective } from '@/shared/directives/flexible-date.directive';
+import { DialogModule } from 'primeng/dialog';
+import { Article47TakeoverBulkComponent } from '@/Components/Features/article-47-takeover-bulk/article-47-takeover-bulk';
+
+/** Minimal employee shape handed to the Article 47 (Takeover) modal. */
+interface Article47TakeoverEmployee {
+    employeeID: number;
+    rabid: string;
+    serviceId: string;
+    fullNameEN: string;
+    rankDisplay?: string | null;
+    corpsDisplay?: string | null;
+    tradeDisplay?: string | null;
+    motherUnitDisplay?: string | null;
+}
 
 @Component({
     selector: 'app-supernumerary-list',
     standalone: true,
-    imports: [CommonModule, FormsModule, RouterModule, TableModule, ButtonModule, SelectModule, InputTextModule, DatePickerModule, CheckboxModule, Toast, TooltipModule, FlexibleDateDirective],
+    imports: [CommonModule, FormsModule, RouterModule, TableModule, ButtonModule, SelectModule, InputTextModule, DatePickerModule, CheckboxModule, Toast, TooltipModule, FlexibleDateDirective, DialogModule, Article47TakeoverBulkComponent],
     providers: [MessageService],
     templateUrl: './supernumerary-list.html',
     styleUrls: ['../employee-reports/report-theme-common.scss', './supernumerary-list.scss'],
@@ -445,10 +459,14 @@ export class SupernumeraryList implements OnInit {
         this.selectedIds.clear();
     }
 
+    /** Article 47 (Takeover) modal state. */
+    showArticle47Modal = false;
+    article47Employees: Article47TakeoverEmployee[] = [];
+
     /**
-     * Navigate to the bulk Article 47 (Takeover) form with the selected members.
-     * One Article 47 (Takeover) record is created per member there, using the same
-     * common details entered on that page.
+     * Open the bulk Article 47 (Takeover) form as a modal with the selected
+     * members. One Article 47 (Takeover) record is created per member there,
+     * using the same common details entered in the dialog.
      */
     goToArticle47Takeover(): void {
         if (!this.canInsert) {
@@ -458,7 +476,7 @@ export class SupernumeraryList implements OnInit {
         const ids = Array.from(this.selectedIds);
         if (ids.length === 0) return;
 
-        const employees = ids
+        this.article47Employees = ids
             .map((id) => this.list.find((r) => r.employeeID === id))
             .filter((r): r is EmployeeList => !!r)
             .map((r) => ({
@@ -472,7 +490,19 @@ export class SupernumeraryList implements OnInit {
                 motherUnitDisplay: r.motherUnitName
             }));
 
-        this._router.navigate(['/movement/article-47-takeover-bulk'], { state: { employees } });
+        this.showArticle47Modal = true;
+    }
+
+    /** Dialog cancelled — just close. */
+    onArticle47Closed(): void {
+        this.showArticle47Modal = false;
+    }
+
+    /** Generation succeeded — close, clear selection and reload the list. */
+    onArticle47Saved(): void {
+        this.showArticle47Modal = false;
+        this.clearSelection();
+        this.loadData();
     }
 
     /** Bulk send: fire SetIsSendingNotesheetStatus=Draft for every selected ID in parallel. */

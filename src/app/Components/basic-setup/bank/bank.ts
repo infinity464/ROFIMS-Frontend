@@ -70,7 +70,6 @@ export class Bank implements OnInit {
             bankNameBN: ['', Validators.required],
 
             branchName: [''],
-            routingNumber: [''],
             swiftCode: [''],
 
             createdBy: [this.currentUser],

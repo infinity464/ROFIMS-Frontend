@@ -21,6 +21,8 @@ export interface NoticeListDto {
     /** Publisher display name (Rank + English name), resolved server-side. */
     createdByName?: string;
     recipientUserIds?: string[];
+    /** Attached files as a JSON array string of { FileId, fileName }. */
+    filesReferences?: string | null;
 }
 
 /** Create/update payload (mirrors backend NoticeSaveDto). */
@@ -33,6 +35,10 @@ export interface NoticeSaveDto {
     tags: string[];
     isComplete: boolean;
     recipientUserIds: string[];
+    /** Attached files as a JSON array string of { FileId, fileName }. */
+    filesReferences?: string | null;
+    /** When true (default), publishing notifies the audience; when false, saved silently. */
+    sendNotification?: boolean;
 }
 
 export interface ResultViewModel {
@@ -61,7 +67,8 @@ export class NoticeService {
             createdDate: r.createdDate ?? r.CreatedDate,
             createdBy: r.createdBy ?? r.CreatedBy,
             createdByName: r.createdByName ?? r.CreatedByName,
-            recipientUserIds: r.recipientUserIds ?? r.RecipientUserIds ?? []
+            recipientUserIds: r.recipientUserIds ?? r.RecipientUserIds ?? [],
+            filesReferences: r.filesReferences ?? r.FilesReferences ?? null
         };
     }
 

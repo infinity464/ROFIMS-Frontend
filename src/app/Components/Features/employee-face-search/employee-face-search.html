@@ -12,7 +12,10 @@
                 <div class="fs-subtitle">ROFIMS · BIOMETRIC IDENTIFICATION MODULE</div>
             </div>
         </div>
-        <span class="fs-status"><span class="fs-status-dot"></span> System Online</span>
+        <span class="fs-status" [class.offline]="serviceOnline === false">
+            <span class="fs-status-dot"></span>
+            {{ serviceOnline === false ? 'System Offline' : (serviceOnline === null ? 'Checking…' : 'System Online') }}
+        </span>
     </div>
 
     <div class="fs-body">

@@ -11,32 +11,48 @@ const API = `${environment.apis.core}/DraftCourse`;
 export class DraftCourseService {
     constructor(private http: HttpClient) {}
 
+    private mapList(l: any): DraftCourseList {
+        return {
+            id: l.id ?? l.Id,
+            listNo: l.listNo ?? l.ListNo ?? '',
+            listDate: l.listDate ?? l.ListDate ?? '',
+            courseNameId: l.courseNameId ?? l.CourseNameId ?? null,
+            courseName: l.courseName ?? l.CourseName ?? null,
+            dateFrom: l.dateFrom ?? l.DateFrom ?? null,
+            dateTo: l.dateTo ?? l.DateTo ?? null,
+            members: (l.members ?? []).map((m: any) => ({
+                employeeId: m.employeeId ?? m.EmployeeId,
+                serviceId: m.serviceId ?? m.ServiceId ?? null,
+                rabId: m.rabid ?? m.rabId ?? m.RabId ?? m.rabID ?? m.RABID ?? null,
+                fullNameEN: m.fullNameEN ?? m.FullNameEN ?? null,
+                rankName: m.rankName ?? m.RankName ?? null,
+                corpsName: m.corpsName ?? m.CorpsName ?? null,
+                tradeName: m.tradeName ?? m.TradeName ?? null,
+                motherUnitName: m.motherUnitName ?? m.MotherUnitName ?? null
+            })),
+            createdBy: l.createdBy ?? l.CreatedBy ?? '',
+            createdDate: l.createdDate ?? l.CreatedDate ?? ''
+        };
+    }
+
     getDraftCourseLists(): Observable<DraftCourseList[]> {
         return this.http.get<any[]>(`${API}/GetDraftCourseLists`).pipe(
-            map((list) =>
-                (list ?? []).map((l) => ({
-                    id: l.id ?? l.Id,
-                    listNo: l.listNo ?? l.ListNo ?? '',
-                    listDate: l.listDate ?? l.ListDate ?? '',
-                    courseNameId: l.courseNameId ?? l.CourseNameId ?? null,
-                    courseName: l.courseName ?? l.CourseName ?? null,
-                    dateFrom: l.dateFrom ?? l.DateFrom ?? null,
-                    dateTo: l.dateTo ?? l.DateTo ?? null,
-                    members: (l.members ?? []).map((m: any) => ({
-                        employeeId: m.employeeId ?? m.EmployeeId,
-                        serviceId: m.serviceId ?? m.ServiceId ?? null,
-                        rabId: m.rabid ?? m.rabId ?? m.RabId ?? m.rabID ?? m.RABID ?? null,
-                        fullNameEN: m.fullNameEN ?? m.FullNameEN ?? null,
-                        rankName: m.rankName ?? m.RankName ?? null,
-                        corpsName: m.corpsName ?? m.CorpsName ?? null,
-                        tradeName: m.tradeName ?? m.TradeName ?? null,
-                        motherUnitName: m.motherUnitName ?? m.MotherUnitName ?? null
-                    })),
-                    createdBy: l.createdBy ?? l.CreatedBy ?? '',
-                    createdDate: l.createdDate ?? l.CreatedDate ?? ''
-                }))
-            )
+            map((list) => (list ?? []).map((l) => this.mapList(l)))
         );
+    }
+
+    /** Lists that passed first approval and await final approval. */
+    getPendingApprovalLists(): Observable<DraftCourseList[]> {
+        return this.http.get<any[]>(`${API}/GetPendingApprovalLists`).pipe(
+            map((list) => (list ?? []).map((l) => this.mapList(l)))
+        );
+    }
+
+    /** First approval: move a Draft list to "Pending for Final Approval". */
+    moveDraftToPending(draftListId: number, updatedBy: string): Observable<{ statusCode: number; description: string }> {
+        return this.http
+            .post<{ statusCode: number; description: string }>(`${API}/MoveDraftToPending`, { draftListId, updatedBy })
+            .pipe(map((r) => ({ statusCode: r?.statusCode ?? 500, description: r?.description ?? 'Unknown error' })));
     }
 
     getDraftCourseListById(id: number): Observable<DraftCourseList | null> {

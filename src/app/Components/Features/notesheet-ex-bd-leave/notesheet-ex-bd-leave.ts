@@ -757,7 +757,7 @@ export class NotesheetExBdLeaveComponent implements OnInit {
 
         const nameBN = bodyData.empNameBN || app.applicantName || '';
         const nameEN = bodyData.empNameEN || app.applicantName || '';
-        const rabId = bodyData.rabid || app.rabid || '';
+        const serviceId = bodyData.serviceId || app.applicantServiceId || '';
         const rabUnitBN = bodyData.placementBN || app.applicantPlacement || '';
         const rabUnitEN = bodyData.placementEN || app.applicantPlacement || '';
         const purposeBN = bodyData.visitTypeNameBN || '';
@@ -779,9 +779,9 @@ export class NotesheetExBdLeaveComponent implements OnInit {
             familySectionEN = ` self and family members (${bodyData.familyMembersDisplayEN})`;
         }
 
-        const dynamicBN = `র‍্যাব প্রেষণে নিয়োজিত বর্তমানে ${rabUnitBN} এ কর্মরত ${BanglaNumerals.toBangla(rabId)} ${nameBN} এর ${purposeBN} জন্য${familySectionBN} আগামী ${formatDateBangla(fromDate)} হতে ${formatDateBangla(toDate)} তারিখ পর্যন্ত ${daysBN} (${daysWordsBN}) দিন অথবা উল্লিখিত সময়ের মধ্যে যাত্রার তারিখ হতে ${daysBN} (${daysWordsBN}) দিন ${countriesBN} গমনের জন্য অর্জিত `;
+        const dynamicBN = `র‍্যাব প্রেষণে নিয়োজিত বর্তমানে ${rabUnitBN} এ কর্মরত ${BanglaNumerals.toBangla(serviceId)} ${nameBN} এর ${purposeBN} জন্য${familySectionBN} আগামী ${formatDateBangla(fromDate)} হতে ${formatDateBangla(toDate)} তারিখ পর্যন্ত ${daysBN} (${daysWordsBN}) দিন অথবা উল্লিখিত সময়ের মধ্যে যাত্রার তারিখ হতে ${daysBN} (${daysWordsBN}) দিন ${countriesBN} গমনের জন্য অর্জিত `;
 
-        const dynamicEN = `Currently serving at ${rabUnitEN} under RAB deputation, ${rabId} ${nameEN} has applied for ${purposeEN}${familySectionEN}, for ${totalDays} (${daysWordsEN}) days from ${formatDateEnglish(fromDate)} to ${formatDateEnglish(toDate)}, or ${totalDays} (${daysWordsEN}) days from the date of journey within the aforementioned period, to ${countriesEN} for earned `;
+        const dynamicEN = `Currently serving at ${rabUnitEN} under RAB deputation, ${serviceId} ${nameEN} has applied for ${purposeEN}${familySectionEN}, for ${totalDays} (${daysWordsEN}) days from ${formatDateEnglish(fromDate)} to ${formatDateEnglish(toDate)}, or ${totalDays} (${daysWordsEN}) days from the date of journey within the aforementioned period, to ${countriesEN} for earned `;
 
         this.generatedMainTextBN = dynamicBN + this.defaultMainTextBN;
         this.generatedMainTextEN = dynamicEN + this.defaultMainTextEN;
@@ -1343,6 +1343,9 @@ export class NotesheetExBdLeaveComponent implements OnInit {
     getEmployeeDisplayName(): string {
         const id = this.form?.get('rabIdEmployeeId')?.value;
         if (id == null) return '—';
+        const emp = this.allEmployees.find((e: any) => (e.employeeID ?? e.EmployeeID) === id);
+        const name = emp?.fullNameEN ?? emp?.FullNameEN ?? null;
+        if (name) return name;
         const o = this.preparedByOptions.find((opt) => opt.value === id);
         return o ? o.label : String(id);
     }

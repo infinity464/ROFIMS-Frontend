@@ -14,12 +14,43 @@
   <form [formGroup]="addressForm">
     <!-- Header -->
     <div class="mb-2">
-      <div class="flex align-items-center gap-3 mb-2">
-        <h3 class="m-0 text-xl font-bold text-900">{{ formTitle }}</h3>
+      <div class="flex flex-wrap align-items-center gap-3 mb-2">
+        <h3 class="m-0 text-xl font-bold text-900" style="line-height: 1;">{{ formTitle }}</h3>
+
+        <!-- Inline "Same as" checkboxes: rendered on the title line (right-aligned) when sameAsInline is set -->
+        @if (sameAsInline && (showSameAsSecondaryCheckbox || showSameAsPresentCheckbox) && !isReadonly) {
+          <div class="flex flex-wrap align-items-center gap-4 ml-auto align-self-center">
+            @if (showSameAsSecondaryCheckbox) {
+              <div class="flex align-items-center">
+                <p-checkbox
+                  formControlName="sameAsSecondary"
+                  [binary]="true"
+                  [inputId]="'sameAsSecondary_' + config.addressType">
+                </p-checkbox>
+                <label [for]="'sameAsSecondary_' + config.addressType" class="ml-2 cursor-pointer font-semibold text-700">
+                  {{ sameAsSecondaryCheckboxLabel }}
+                </label>
+              </div>
+            }
+
+            @if (showSameAsPresentCheckbox) {
+              <div class="flex align-items-center">
+                <p-checkbox
+                  formControlName="sameAsPresent"
+                  [binary]="true"
+                  [inputId]="'sameAsPresent_' + config.addressType">
+                </p-checkbox>
+                <label [for]="'sameAsPresent_' + config.addressType" class="ml-2 cursor-pointer font-semibold text-700">
+                  {{ sameAsCheckboxLabel }}
+                </label>
+              </div>
+            }
+          </div>
+        }
       </div>
 
       <!-- "Same as" Checkboxes (secondary rendered before the primary) - hidden in readonly mode -->
-      @if ((showSameAsSecondaryCheckbox || showSameAsPresentCheckbox) && !isReadonly) {
+      @if (!sameAsInline && (showSameAsSecondaryCheckbox || showSameAsPresentCheckbox) && !isReadonly) {
         <div class="flex flex-wrap align-items-center gap-4">
           @if (showSameAsSecondaryCheckbox) {
             <div class="flex align-items-center">

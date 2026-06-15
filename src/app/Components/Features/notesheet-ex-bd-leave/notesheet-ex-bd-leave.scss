@@ -104,6 +104,29 @@
   font-weight: 500;
 }
 
+// Dark mode: the panel background falls back to a light surface (the
+// --surface-* tokens are undefined under the PrimeNG Aura theme), so force
+// a dark-appropriate background and legible text colors here.
+:host-context(.app-dark) {
+  .ns-app-info-panel {
+    background: rgba(255, 255, 255, 0.04);
+    border-color: rgba(255, 255, 255, 0.1);
+  }
+
+  .ns-app-info-label {
+    color: rgba(255, 255, 255, 0.6);
+  }
+
+  .ns-app-info-value {
+    color: rgba(255, 255, 255, 0.92);
+  }
+
+  .ref-paragraph-row {
+    background: rgba(255, 255, 255, 0.04);
+    border-color: rgba(255, 255, 255, 0.1);
+  }
+}
+
 // ═══ Reference Paragraph Rows ═══
 .ref-paragraph-row {
   display: flex;

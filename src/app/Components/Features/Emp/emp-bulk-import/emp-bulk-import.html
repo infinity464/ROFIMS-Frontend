@@ -1,0 +1,73 @@
+<p-fluid>
+    <div class="card">
+        <div class="flex items-center justify-between mb-4 flex-wrap gap-2">
+            <h5 class="m-0">Bulk Employee Entry (Excel)</h5>
+        </div>
+
+        <p class="text-muted-color mb-4">
+            Download the template, fill one row per member (basic info + one current service record),
+            then upload it. Dropdown cells show <b>Name [id]</b> — keep the value as picked.
+            <b>Service ID + RAB ID</b> together must be unique; duplicates are skipped.
+        </p>
+
+        <!-- Step 1: Download template -->
+        <div class="mb-5">
+            <span class="font-semibold block mb-2">Step 1 — Download template</span>
+            <p-button label="Download Excel Template" icon="pi pi-download"
+                      [loading]="isDownloading" (onClick)="downloadTemplate()"></p-button>
+        </div>
+
+        <!-- Step 2: Upload -->
+        <div class="mb-3">
+            <span class="font-semibold block mb-2">Step 2 — Upload completed file</span>
+            <div class="flex items-center gap-3 flex-wrap">
+                <input type="file" accept=".xlsx"
+                       (change)="onFileSelected($event)"
+                       class="p-2 border-1 surface-border border-round" />
+                <p-button label="Import" icon="pi pi-upload"
+                          [disabled]="!selectedFile" [loading]="isUploading"
+                          (onClick)="upload()"></p-button>
+            </div>
+            <small class="text-muted-color" *ngIf="selectedFile">Selected: {{ selectedFile.name }}</small>
+        </div>
+
+        <!-- Result report -->
+        <div *ngIf="result" class="mt-5">
+            <div class="flex gap-4 mb-3 flex-wrap">
+                <p-tag severity="info" [value]="'Total: ' + result.totalRows"></p-tag>
+                <p-tag severity="success" [value]="'Inserted: ' + result.insertedCount"></p-tag>
+                <p-tag severity="warn" [value]="'Skipped: ' + result.skippedCount"></p-tag>
+                <p-tag severity="danger" [value]="'Failed: ' + result.failedCount"></p-tag>
+            </div>
+
+            <p-table [value]="result.rows" [paginator]="result.rows.length > 10" [rows]="10"
+                     styleClass="p-datatable-sm p-datatable-gridlines">
+                <ng-template pTemplate="header">
+                    <tr>
+                        <th style="width:5rem">Row</th>
+                        <th>Service ID</th>
+                        <th>RAB ID</th>
+                        <th>Name (EN)</th>
+                        <th style="width:7rem">Status</th>
+                        <th style="width:7rem">Emp ID</th>
+                        <th>Message</th>
+                    </tr>
+                </ng-template>
+                <ng-template pTemplate="body" let-row>
+                    <tr>
+                        <td>{{ row.rowNumber }}</td>
+                        <td>{{ row.serviceId }}</td>
+                        <td>{{ row.rabid }}</td>
+                        <td>{{ row.fullNameEN }}</td>
+                        <td><p-tag [severity]="statusSeverity(row.status)" [value]="row.status"></p-tag></td>
+                        <td>{{ row.employeeID }}</td>
+                        <td class="text-sm">{{ row.message }}</td>
+                    </tr>
+                </ng-template>
+                <ng-template pTemplate="emptymessage">
+                    <tr><td colspan="7" class="text-center">No rows processed.</td></tr>
+                </ng-template>
+            </p-table>
+        </div>
+    </div>
+</p-fluid>

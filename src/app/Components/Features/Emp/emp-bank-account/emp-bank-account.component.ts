@@ -72,7 +72,6 @@ export class EmpBankAccount implements OnInit {
     showAddBankDialog = false;
     newBankNameEN = '';
     newBankNameBN = '';
-    newBankRoutingNumber = '';
     newBankSwiftCode = '';
     isSavingBank = false;
 
@@ -81,6 +80,7 @@ export class EmpBankAccount implements OnInit {
     addBranchBankId: number | null = null;
     newBranchNameEN = '';
     newBranchNameBN = '';
+    newBranchRoutingNumber = '';
     newBranchLocation = '';
     isSavingBranch = false;
 
@@ -397,7 +397,6 @@ export class EmpBankAccount implements OnInit {
     openAddBankDialog(): void {
         this.newBankNameEN = '';
         this.newBankNameBN = '';
-        this.newBankRoutingNumber = '';
         this.newBankSwiftCode = '';
         this.showAddBankDialog = true;
     }
@@ -411,7 +410,6 @@ export class EmpBankAccount implements OnInit {
             bankNameEN: this.newBankNameEN.trim(),
             bankNameBN: this.newBankNameBN?.trim() || '',
             branchName: '',
-            routingNumber: this.newBankRoutingNumber?.trim() || '',
             swiftCode: this.newBankSwiftCode?.trim() || '',
             createdBy: 'system',
             createdDate: now,
@@ -452,6 +450,7 @@ export class EmpBankAccount implements OnInit {
         this.addBranchBankId = bankId;
         this.newBranchNameEN = '';
         this.newBranchNameBN = '';
+        this.newBranchRoutingNumber = '';
         this.newBranchLocation = '';
         this.showAddBranchDialog = true;
     }
@@ -465,6 +464,7 @@ export class EmpBankAccount implements OnInit {
             bankId: this.addBranchBankId,
             branchNameEN: this.newBranchNameEN.trim(),
             branchNameBN: this.newBranchNameBN?.trim() || '',
+            routingNumber: this.newBranchRoutingNumber?.trim() || '',
             location: this.newBranchLocation?.trim() || '',
             createdBy: 'system',
             createdDate: now,

@@ -72,6 +72,8 @@ import { Country } from '@/Components/basic-setup/country/country';
 import { RabBranch } from '@/Components/basic-setup/rab-branch/rab-branch';
 import { CourseName } from '@/Components/basic-setup/course-name/course-name';
 import { EmpBasicInfo } from '@/Components/Features/Emp/emp-basic-info/emp-basic-info';
+import { ServingMemberEntry } from '@/Components/Features/Emp/serving-member-entry/serving-member-entry';
+import { EmpBulkImport } from '@/Components/Features/Emp/emp-bulk-import/emp-bulk-import';
 import { EmpList } from '@/Components/Features/Emp/emp-list/emp-list';
 import { EmpPersonalInfo } from '@/Components/Features/Emp/emp-personal-info/emp-personal-info';
 import { EmpAddressInfo } from '@/Components/Features/Emp/emp-address-info/emp-address-info';
@@ -85,6 +87,7 @@ import { EmpEducationInfoComponent } from '@/Components/Features/Emp/emp-educati
 import { EmpCourseInfoComponent } from '@/Components/Features/Emp/emp-course-info/emp-course-info';
 import { EmpSendToCourseComponent } from '@/Components/Features/Emp/emp-send-to-course/emp-send-to-course';
 import { EmpDraftListComponent } from '@/Components/Features/Emp/emp-draft-list/emp-draft-list';
+import { EmpPendingFinalApprovalComponent } from '@/Components/Features/Emp/emp-pending-final-approval/emp-pending-final-approval';
 import { EmpRftsCompletedComponent } from '@/Components/Features/Emp/emp-rfts-completed/emp-rfts-completed';
 import { EmpDisciplineInfoComponent } from '@/Components/Features/Emp/emp-discipline-info/emp-discipline-info';
 import { EmpBankAccount } from '@/Components/Features/Emp/emp-bank-account/emp-bank-account.component';
@@ -166,6 +169,7 @@ import { ChatContainerComponent } from '@/Components/Features/chat/chat-containe
 import { IdentityUserCreateComponent } from '@/Components/Features/identity/identity-user-create/identity-user-create.component';
 import { RoleListComponent } from '@/Components/Features/identity/role-list/role-list.component';
 import { NoticeListComponent } from '@/Components/Features/notice/notice-list/notice-list.component';
+import { AuditTimelineComponent } from '@/Components/Features/audit/audit-timeline.component';
 import { MenuManagement } from '@/Components/Features/menu-management/menu-management';
 import { RoleMenuPermission } from '@/Components/Features/role-menu-permission/role-menu-permission';
 import { LoginAuditComponent } from '@/Components/Features/login-audit/login-audit.component';
@@ -231,6 +235,7 @@ export const appRoutes: Routes = [
             { path: 'identity/user-create', component: IdentityUserCreateComponent },
             { path: 'identity/roles', component: RoleListComponent },
             { path: 'notice/list', component: NoticeListComponent },
+            { path: 'admin/audit', component: AuditTimelineComponent },
             { path: 'employee-info', component: Employeeinfo },
             { path: 'basic-setup/division', component: Division },
             { path: 'basic-setup/district', component: District },
@@ -354,6 +359,8 @@ export const appRoutes: Routes = [
             // EMP
             { path: 'emp-list', component: EmpList },
             { path: 'emp-basic-info', component: EmpBasicInfo, canActivate: [MemberTypePermissionGuard] },
+            { path: 'serving-member-entry', component: ServingMemberEntry, canActivate: [MemberTypePermissionGuard] },
+            { path: 'emp-bulk-import', component: EmpBulkImport, canActivate: [MemberTypePermissionGuard] },
             { path: 'emp-personal-service-info', component: EmpPersonalServiceInfoComponent, canActivate: [MemberTypePermissionGuard] },
             { path: 'emp-personal-info', component: EmpPersonalInfo, canActivate: [MemberTypePermissionGuard] },
             { path: 'emp-address-info', component: EmpAddressInfo, canActivate: [MemberTypePermissionGuard] },
@@ -367,6 +374,7 @@ export const appRoutes: Routes = [
             { path: 'emp-course-info', component: EmpCourseInfoComponent, canActivate: [MemberTypePermissionGuard] },
             { path: 'emp-send-to-course', component: EmpSendToCourseComponent, canActivate: [MemberTypePermissionGuard] },
             { path: 'emp-draft-list', component: EmpDraftListComponent, canActivate: [MemberTypePermissionGuard] },
+            { path: 'emp-pending-final-approval', component: EmpPendingFinalApprovalComponent, canActivate: [MemberTypePermissionGuard] },
             { path: 'emp-rfts-completed', component: EmpRftsCompletedComponent, canActivate: [MemberTypePermissionGuard] },
             { path: 'emp-discipline-info', component: EmpDisciplineInfoComponent, canActivate: [MemberTypePermissionGuard] },
             { path: 'emp-bank-account', component: EmpBankAccount, canActivate: [MemberTypePermissionGuard] },

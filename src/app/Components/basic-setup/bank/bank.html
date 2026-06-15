@@ -48,17 +48,6 @@
                            class="w-full" />
                 </div>
 
-                <!-- Routing Number -->
-                <div class="field">
-                    <label for="routingNumber" class="block mb-2">
-                        Routing Number
-                    </label>
-                    <input pInputText id="routingNumber"
-                           formControlName="routingNumber"
-                           placeholder="Enter routing number"
-                           class="w-full" />
-                </div>
-
                 <!-- Swift Code -->
                 <div class="field">
                     <label for="swiftCode" class="block mb-2">
@@ -121,7 +110,6 @@
                 <th>Bank Name (English)</th>
                 <th>Bank Name (Bangla)</th>
                 <th>Branch</th>
-                <th>Routing No</th>
                 <th style="width:15%">Action</th>
             </tr>
         </ng-template>
@@ -132,7 +120,6 @@
                 <td>{{ row.bankNameEN }}</td>
                 <td>{{ row.bankNameBN }}</td>
                 <td>{{ row.branchName || '-' }}</td>
-                <td>{{ row.routingNumber || '-' }}</td>
 
                 <td>
                     <div class="flex gap-2">

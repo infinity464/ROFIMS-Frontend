@@ -15,6 +15,7 @@
                 <th style="width: 4rem">#</th>
                 <th>Topic</th>
                 <th>Tags</th>
+                <th style="width: 14rem">Files</th>
                 <th style="width: 12rem">Expire Date</th>
                 <th style="width: 8rem">Audience</th>
                 <th style="width: 6rem">Active</th>
@@ -34,6 +35,22 @@
                         <span class="inline-flex items-center gap-1 px-2 py-0.5 mr-1 mb-1 rounded border text-xs font-semibold uppercase" [ngClass]="tagDisplay(tag).classes">
                             <i class="pi {{ tagDisplay(tag).icon }} text-[0.7rem]"></i>{{ tag }}
                         </span>
+                    }
+                </td>
+                <td>
+                    @for (f of getFileRefs(row); track f.fileId) {
+                        <button
+                            pButton
+                            type="button"
+                            class="p-button-text p-button-sm block text-left"
+                            icon="pi pi-paperclip"
+                            [label]="f.fileName"
+                            [pTooltip]="'Download ' + f.fileName"
+                            (click)="onDownloadFile(f)"
+                        ></button>
+                    }
+                    @if (getFileRefs(row).length === 0) {
+                        <span class="text-muted-color">—</span>
                     }
                 </td>
                 <td>{{ row.expireDate ? (row.expireDate | date: 'dd/MM/yyyy HH:mm') : '—' }}</td>
@@ -59,7 +76,7 @@
         </ng-template>
         <ng-template pTemplate="emptymessage">
             <tr>
-                <td colspan="7" class="text-center">No notices found.</td>
+                <td colspan="8" class="text-center">No notices found.</td>
             </tr>
         </ng-template>
     </p-table>
@@ -137,6 +154,22 @@
                 </div>
             }
         </div>
+
+        <app-file-references-form
+            #fileReferencesForm
+            [fileRows]="fileRows"
+            title="Attachments"
+            namePlaceholder="e.g. Circular copy"
+            (fileRowsChange)="onFileRowsChange($event)"
+            (onDownloadFile)="onDownloadFile($event)"
+        ></app-file-references-form>
+
+        @if (editingId === 0) {
+            <div class="flex items-center gap-2">
+                <p-toggleSwitch inputId="sendNotification" formControlName="sendNotification"></p-toggleSwitch>
+                <label for="sendNotification">Send notification to audience on publish</label>
+            </div>
+        }
 
         <div class="flex items-center gap-2">
             <p-toggleSwitch inputId="isComplete" formControlName="isComplete"></p-toggleSwitch>

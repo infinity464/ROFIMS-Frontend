@@ -1,4 +1,4 @@
-import { Component, ElementRef, OnDestroy, ViewChild } from '@angular/core';
+import { Component, ElementRef, OnDestroy, OnInit, ViewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
@@ -6,8 +6,8 @@ import { ButtonModule } from 'primeng/button';
 import { ToastModule } from 'primeng/toast';
 import { DialogModule } from 'primeng/dialog';
 import { MessageService } from 'primeng/api';
-import { forkJoin, of } from 'rxjs';
-import { catchError } from 'rxjs/operators';
+import { forkJoin, of, Subscription, timer } from 'rxjs';
+import { catchError, switchMap } from 'rxjs/operators';
 
 import { EmpService, FaceRecognizeResult } from '@/services/emp-service';
 
@@ -38,11 +38,16 @@ interface MatchedEmployee {
     styleUrl: './employee-face-search.scss',
     providers: [MessageService]
 })
-export class EmployeeFaceSearchComponent implements OnDestroy {
+export class EmployeeFaceSearchComponent implements OnInit, OnDestroy {
     selectedFile: File | null = null;
     previewUrl: string = '';
     searching = false;
     dragOver = false;
+
+    /** Face service availability; null = unknown (initial check pending). */
+    serviceOnline: boolean | null = null;
+    private healthSub?: Subscription;
+    private static readonly HEALTH_POLL_MS = 30000;
 
     result: FaceRecognizeResult | null = null;
     matched: MatchedEmployee | null = null;
@@ -63,7 +68,21 @@ export class EmployeeFaceSearchComponent implements OnDestroy {
         private _router: Router
     ) {}
 
+    ngOnInit(): void {
+        // Poll the face service so the header reflects live availability.
+        this.healthSub = timer(0, EmployeeFaceSearchComponent.HEALTH_POLL_MS)
+            .pipe(
+                switchMap(() =>
+                    this.empService.getFaceServiceHealth().pipe(catchError(() => of({ online: false })))
+                )
+            )
+            .subscribe((res) => {
+                this.serviceOnline = !!res?.online;
+            });
+    }
+
     ngOnDestroy(): void {
+        this.healthSub?.unsubscribe();
         this.clearPreview();
         this.clearProfileImage();
         this.clearGallery();
