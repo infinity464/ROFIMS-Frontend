@@ -1,3 +1,17 @@
+export interface EmployeeBriefProfile {
+    employeeID: number;
+    nameEN: string | null;
+    nameBN: string | null;
+    prefixEN: string | null;
+    prefixBN: string | null;
+    rankEN: string | null;
+    rankBN: string | null;
+    appointmentEN: string | null;
+    appointmentBN: string | null;
+    mobileNo: string | null;
+    mobileNoOfficial: string | null;
+}
+
 /**
  * Single row from vw_EmployeePersonalServiceOverview (Basic Service + Other Personal Information).
  * API: GET EmployeeInfo/GetEmployeePersonalServiceOverview/{employeeID}

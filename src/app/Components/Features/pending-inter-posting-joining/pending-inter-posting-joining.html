@@ -146,19 +146,19 @@
                     <th style="width: 3rem">
                         <p-tableHeaderCheckbox></p-tableHeaderCheckbox>
                     </th>
-                    <th style="width: 50px">Ser</th>
-                    <th style="min-width: 160px">Posting Order No</th>
-                    <th style="min-width: 110px">Order Date</th>
-                    <th style="min-width: 140px">NoteSheet No</th>
-                    <th style="min-width: 120px">Service ID</th>
-                    <th style="min-width: 110px">RAB ID</th>
-                    <th style="min-width: 110px">Rank</th>
-                    <th style="min-width: 180px">Full Name</th>
-                    <th style="min-width: 150px">Mother Organization</th>
-                    <th style="min-width: 150px">Mother Unit</th>
-                    <th style="min-width: 150px">From RAB Unit</th>
-                    <th style="min-width: 200px">Transfer To</th>
-                    <th style="width: 120px">Action</th>
+                    <th style="width: 45px">Ser</th>
+                    <th style="min-width: 260px">Posting Order No</th>
+                    <th style="min-width: 95px">Order Date</th>
+                    <th style="min-width: 240px">NoteSheet No</th>
+                    <th style="min-width: 100px">Service ID</th>
+                    <th style="min-width: 90px">RAB ID</th>
+                    <th style="min-width: 90px">Rank</th>
+                    <th style="min-width: 150px">Full Name</th>
+                    <th style="min-width: 120px">Mother Organization</th>
+                    <th style="min-width: 120px">Mother Unit</th>
+                    <th style="min-width: 120px">From RAB Unit</th>
+                    <th style="min-width: 230px">Transfer To</th>
+                    <th style="width: 100px">Action</th>
                 </tr>
             </ng-template>
             <ng-template pTemplate="body" let-row let-rowIndex="rowIndex">
@@ -168,7 +168,7 @@
                     </td>
                     <td>{{ rowIndex + 1 }}</td>
                     <td>
-                        <span class="font-semibold">{{ row.postingOrderNo || '-' }}</span>
+                        {{ row.postingOrderNo || '-' }}
                     </td>
                     <td>{{ formatDate(row.postingOrderDate) }}</td>
                     <td>{{ row.noteSheetNo || '-' }}</td>

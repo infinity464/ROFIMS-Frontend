@@ -145,7 +145,7 @@
                         <td>{{ (isBangla ? row.tradeNameBN : row.tradeName) || row.tradeName || '-' }}</td>
                         <td>{{ (isBangla ? row.fullNameBN : row.fullNameEN) || row.fullNameEN || '-' }}</td>
                         <td>{{ (isBangla ? row.permanentDistrictNameBN : row.permanentDistrictName) || row.permanentDistrictName || '-' }}</td>
-                        <td>{{ (isBangla ? row.spousePresentDistrictNameBN : row.spousePresentDistrictName) || row.spousePresentDistrictName || '-' }}</td>
+                        <td>{{ (isBangla ? row.spousePermanentDistrictNameBN : row.spousePermanentDistrictName) || row.spousePermanentDistrictName || '-' }}</td>
                         <td>{{ selectedPostingType === 'InterPosting' ? ((isBangla ? row.previousRabUnitsBN || row.previousRabUnits : row.previousRabUnits) || '-') : ((isBangla ? row.motherOrgLocationNameBN : row.motherOrgLocationName) || row.motherOrgLocationName || '-') }}</td>
                         <td>{{ (isBangla ? row.transferRabUnitNameBN || row.transferRabUnitName : row.transferRabUnitName) || '-' }}</td>
                         <td>{{ row.remarks || '-' }}</td>
@@ -247,7 +247,7 @@
                     label="Generate Posting Order"
                     icon="pi pi-file-export"
                     [loading]="saving"
-                    [disabled]="employees.length === 0"
+                    [disabled]="saving || employees.length === 0"
                     (onClick)="onGeneratePostingOrder()"
                 ></p-button>
             </div>
@@ -280,30 +280,23 @@
                     <ng-template pTemplate="header">
                         <tr>
                             <th style="width: 60px">#</th>
-                            <th style="min-width: 180px">Posting Order No</th>
-                            <th style="min-width: 130px">Order Date</th>
-                            <th style="min-width: 130px">Posting Type</th>
-                            <th style="min-width: 180px">NoteSheet No</th>
-                            <th style="min-width: 80px">Members</th>
-                            <th style="min-width: 110px">Status</th>
+                            <th style="min-width: 320px">Posting Order No</th>
+                            <th style="min-width: 90px">Date</th>
+                            <th style="min-width: 300px">NoteSheet No</th>
+                            <th style="width: 55px">Members</th>
                             <th style="min-width: 160px">Approver</th>
-                            <th style="min-width: 130px">Approval Status</th>
-                            <th style="min-width: 180px">Approval Remarks</th>
-                            <th style="min-width: 150px">Created</th>
+                            <th style="min-width: 100px">Approval</th>
+                            <th style="min-width: 100px">Created</th>
                             <th style="width: 140px" class="text-center">Action</th>
                         </tr>
                     </ng-template>
                     <ng-template pTemplate="body" let-row let-rowIndex="rowIndex">
                         <tr>
                             <td>{{ rowIndex + 1 }}</td>
-                            <td><span class="font-semibold">{{ row.postingOrderNo || '-' }}</span></td>
+                            <td>{{ row.postingOrderNo || '-' }}</td>
                             <td>{{ formatDate(row.postingOrderDate) }}</td>
-                            <td>{{ postingTypeLabel(row.postingType) }}</td>
                             <td>{{ row.noteSheetNo || '-' }}</td>
                             <td class="text-center">{{ row.detailCount }}</td>
-                            <td>
-                                <p-tag [value]="row.status || '-'" [severity]="statusSeverity(row.status)"></p-tag>
-                            </td>
                             <td>{{ row.approvalEmployeeName || '-' }}</td>
                             <td>
                                 @if (row.approvalStatus) {
@@ -311,11 +304,6 @@
                                 } @else {
                                     <span class="text-500">-</span>
                                 }
-                            </td>
-                            <td>
-                                <span [pTooltip]="row.approvalNote || row.cancelReason || ''" tooltipPosition="top">
-                                    {{ (row.approvalNote || row.cancelReason) ? ((row.approvalNote || row.cancelReason)!.length > 40 ? (row.approvalNote || row.cancelReason)!.slice(0, 40) + '...' : (row.approvalNote || row.cancelReason)) : '-' }}
-                                </span>
                             </td>
                             <td>{{ formatDate(row.createdDate) }}</td>
                             <td class="text-center">
@@ -407,6 +395,7 @@
                         label="Save"
                         icon="pi pi-save"
                         [loading]="savingApproval"
+                        [disabled]="savingApproval"
                         (onClick)="saveApproval()"
                     ></p-button>
                 </div>

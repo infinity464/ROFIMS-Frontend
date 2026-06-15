@@ -14,21 +14,14 @@
         </div>
         <div class="preview-status-actions" *ngIf="noteSheet && isFullyLoaded && !error && !editing">
             @if (isDraftStatus) {
-                <p-button type="button" icon="pi pi-users" [rounded]="true" [text]="true" size="small" severity="info"
-                          pTooltip="View Members" (onClick)="openViewMembers()"
-                          *ngIf="noteSheet.draftPostingMasterId"></p-button>
                 <p-button icon="pi pi-send" label="Submit" severity="success" [outlined]="true" [loading]="submitting"
                           pTooltip="Submit for approval" (onClick)="submitForApproval()"></p-button>
             } @else if (fromPending) {
-                <!-- Inline pending-list actions: Approve / Decline / Back / View Members / Approval Log -->
                 @if (currentApproverLabel) {
                     <span class="ns-status-badge ns-status-badge--step">
                         <i class="pi pi-user-edit"></i> Acting as: {{ currentApproverLabel }}
                     </span>
                 }
-                <p-button type="button" icon="pi pi-users" [rounded]="true" [text]="true" size="small" severity="info"
-                          pTooltip="View Members" (onClick)="openViewMembers()"
-                          *ngIf="noteSheet.draftPostingMasterId"></p-button>
                 <p-button type="button" icon="pi pi-list" [rounded]="true" [text]="true" size="small" severity="info"
                           pTooltip="Approval Log" (onClick)="openApprovalLog()"></p-button>
                 <p-button type="button" icon="pi pi-check"
@@ -78,6 +71,8 @@
             <span style="display:inline-flex; align-items:center; gap:0.3rem;"><p-checkbox [(ngModel)]="showSpouseDistrictDetail" [binary]="true" inputId="chkSpDist"></p-checkbox><label for="chkSpDist" style="cursor:pointer;">স্পাউস জেলা বিবরণ</label></span>
             <span style="display:inline-flex; align-items:center; gap:0.3rem;"><p-checkbox [(ngModel)]="showPrevWorkplaceDetail" [binary]="true" inputId="chkPrevWp"></p-checkbox><label for="chkPrevWp" style="cursor:pointer;">পূর্ববতী কর্মস্থল বিবরণ</label></span>
             <span style="display:inline-flex; align-items:center; gap:0.3rem;"><p-checkbox [(ngModel)]="showRemarks" [binary]="true" inputId="chkRemarks"></p-checkbox><label for="chkRemarks" style="cursor:pointer;">মন্তব্য</label></span>
+            <span style="border-left:1px solid var(--surface-border); height:1.5rem;"></span>
+            <span style="display:inline-flex; align-items:center; gap:0.3rem;"><p-checkbox [(ngModel)]="showSignatureImage" [binary]="true" inputId="chkSigImg"></p-checkbox><label for="chkSigImg" style="cursor:pointer;">স্বাক্ষর ছবি</label></span>
         </ng-container>
     </div>
 
@@ -183,40 +178,67 @@
                     <!-- ── Posting: employee table (edit) ── -->
                     <div class="ns-posting-table" *ngIf="postingEmployees.length > 0">
                         <table>
+                            <colgroup *ngIf="isInterPosting()">
+                                <col style="width:30px">   <!-- ক্রমিক -->
+                                <col style="width:60px">   <!-- ব্যক্তিগত নং -->
+                                <col>                       <!-- পদবি -->
+                                <col>                       <!-- নাম -->
+                                <col style="width:50px">   <!-- নিজ জেলা -->
+                                <col style="width:60px">   <!-- স্বামী/স্ত্রীর জেলা -->
+                                <col style="width:74px">   <!-- যোগদানের তারিখ -->
+                                <col style="width:34px">   <!-- বছর -->
+                                <col style="width:26px">   <!-- মাস -->
+                                <col style="width:26px">   <!-- দিন -->
+                                <col style="width:110px">  <!-- পূর্ববতী কর্মস্থল -->
+                                <col style="width:130px">  <!-- বদলিকৃত কর্মস্থল (treeselect) -->
+                                <col style="width:130px">  <!-- মন্তব্য (input) -->
+                            </colgroup>
+                            <colgroup *ngIf="!isInterPosting()">
+                                <col style="width:30px">   <!-- ক্রমিক -->
+                                <col style="width:60px">   <!-- ব্যক্তিগত নম্বর -->
+                                <col>                       <!-- পদবি -->
+                                <col>                       <!-- ট্রেড -->
+                                <col>                       <!-- নাম -->
+                                <col style="width:50px">   <!-- নিজ জেলা -->
+                                <col style="width:60px">   <!-- স্পাউস জেলা -->
+                                <col style="width:110px">  <!-- পূর্ববতী কর্মস্থল -->
+                                <col style="width:130px">  <!-- বদলি ইউনিট (treeselect) -->
+                                <col style="width:130px">  <!-- মন্তব্য (input) -->
+                            </colgroup>
                             <thead>
                                 <ng-container *ngIf="isInterPosting()">
                                     <tr>
-                                        <th rowspan="3">{{ isEnglish() ? 'Ser' : 'ক্রমিক' }}</th>
+                                        <th rowspan="3" style="width:28px">{{ isEnglish() ? 'Ser' : 'ক্রমিক' }}</th>
                                         <th rowspan="3">{{ isEnglish() ? 'Service ID' : 'ব্যক্তিগত নং' }}</th>
                                         <th rowspan="3">{{ isEnglish() ? 'Rank' : 'পদবি' }}</th>
                                         <th rowspan="3">{{ isEnglish() ? 'Name' : 'নাম' }}</th>
-                                        <th rowspan="3">{{ isEnglish() ? 'Own District (Responsible Area)' : 'নিজ জেলা (দায়িত্বপূর্ণ এলাকা)' }}</th>
+                                        <th rowspan="3" style="width:45px; max-width:45px; word-break:break-word">{{ isEnglish() ? 'Own District (Responsible Area)' : 'নিজ জেলা (দায়িত্বপূর্ণ এলাকা)' }}</th>
                                         <th rowspan="3">{{ isEnglish() ? "Husband/Wife's District (Responsible Area)" : 'স্বামী/স্ত্রীর জেলা (দায়িত্বপূর্ণ এলাকা)' }}</th>
                                         <th colspan="4">{{ isEnglish() ? 'Tenure in RAB' : 'র‌্যাবে অবস্থানকাল' }}</th>
-                                        <th rowspan="3">{{ isEnglish() ? 'Previous Workplace' : 'পূর্ববতী কর্মস্থল' }}</th>
+                                        <th rowspan="3" style="width:100px">{{ isEnglish() ? 'Previous Workplace' : 'পূর্ববতী কর্মস্থল' }}</th>
                                         <th rowspan="3">{{ isEnglish() ? 'Transfer Station' : 'বদলিকৃত কর্মস্থল' }}</th>
                                         <th rowspan="3" style="min-width:200px">{{ isEnglish() ? 'Remarks' : 'মন্তব্য' }}</th>
                                     </tr>
                                     <tr>
-                                        <th rowspan="2">{{ isEnglish() ? 'Joining Date' : 'যোগদানের তারিখ' }}</th>
+                                        <th rowspan="2" style="width:82px">{{ isEnglish() ? 'Joining Date' : 'যোগদানের তারিখ' }}</th>
                                         <th colspan="3">{{ isEnglish() ? 'Duration' : 'অবস্থানকাল' }}</th>
                                     </tr>
                                     <tr>
-                                        <th>{{ isEnglish() ? 'Year' : 'বছর' }}</th>
-                                        <th>{{ isEnglish() ? 'Month' : 'মাস' }}</th>
-                                        <th>{{ isEnglish() ? 'Day' : 'দিন' }}</th>
+                                        <th style="width:22px">{{ isEnglish() ? 'Year' : 'বছর' }}</th>
+                                        <th style="width:22px">{{ isEnglish() ? 'Month' : 'মাস' }}</th>
+                                        <th style="width:22px">{{ isEnglish() ? 'Day' : 'দিন' }}</th>
                                     </tr>
                                 </ng-container>
                                 <ng-container *ngIf="!isInterPosting()">
                                     <tr>
-                                        <th>{{ isEnglish() ? 'Ser' : 'ক্রমিক' }}</th>
+                                        <th style="width:28px">{{ isEnglish() ? 'Ser' : 'ক্রমিক' }}</th>
                                         <th>{{ isEnglish() ? 'Service ID' : 'ব্যক্তিগত নম্বর' }}</th>
                                         <th>{{ isEnglish() ? 'Rank' : 'পদবি' }}</th>
                                         <th>{{ isEnglish() ? 'Trade' : 'ট্রেড' }}</th>
                                         <th>{{ isEnglish() ? 'Name' : 'নাম' }}</th>
-                                        <th>{{ isEnglish() ? 'Own District (Responsible Area)' : 'নিজ জেলা (দায়িত্বপূর্ণ এলাকা)' }}</th>
+                                        <th style="width:45px; max-width:45px; word-break:break-word">{{ isEnglish() ? 'Own District (Responsible Area)' : 'নিজ জেলা (দায়িত্বপূর্ণ এলাকা)' }}</th>
                                         <th>{{ isEnglish() ? 'Spouse District (Responsible Area)' : 'স্পাউস জেলা (দায়িত্বপূর্ণ এলাকা)' }}</th>
-                                        <th>{{ isEnglish() ? 'Previous Workplace' : 'পূর্ববতী কর্মস্থল' }}</th>
+                                        <th style="width:100px">{{ isEnglish() ? 'Previous Workplace' : 'পূর্ববতী কর্মস্থল' }}</th>
                                         <th>{{ isEnglish() ? 'Transfer Unit' : 'বদলি ইউনিট' }}</th>
                                         <th style="min-width:200px">{{ isEnglish() ? 'Remarks' : 'মন্তব্য' }}</th>
                                     </tr>
@@ -229,8 +251,8 @@
                                         <td>{{ getServiceIdDisplay(emp) }}</td>
                                         <td>{{ isEnglish() ? (emp.rankName || '-') : (emp.rankNameBN || emp.rankName || '-') }}<span *ngIf="getRankQualifications(emp)"><br>({{ getRankQualifications(emp) }})</span></td>
                                         <td>{{ isEnglish() ? (emp.fullNameEN || '-') : (emp.fullNameBN || emp.fullNameEN || '-') }}</td>
-                                        <td style="white-space: pre-line;">{{ isEnglish() ? (emp.presentDistrictName || '-') : (emp.presentDistrictNameBN || emp.presentDistrictName || '-') }}</td>
-                                        <td style="white-space: pre-line;">{{ isEnglish() ? (emp.spousePresentDistrictName || '-') : (emp.spousePresentDistrictNameBN || emp.spousePresentDistrictName || '-') }}</td>
+                                        <td style="white-space: pre-line;">{{ isEnglish() ? (emp.permanentDistrictName || '-') : (emp.permanentDistrictNameBN || emp.permanentDistrictName || '-') }}</td>
+                                        <td style="white-space: pre-line;">{{ isEnglish() ? (emp.spousePermanentDistrictName || '-') : (emp.spousePermanentDistrictNameBN || emp.spousePermanentDistrictName || '-') }}</td>
                                         <td>{{ isEnglish() ? formatJoiningDate(emp.joiningDateInRAB) : toBnDigits(formatJoiningDate(emp.joiningDateInRAB)) }}</td>
                                         <td>{{ tenure(emp.joiningDateInRAB, 'y') }}</td>
                                         <td>{{ tenure(emp.joiningDateInRAB, 'm') }}</td>
@@ -265,8 +287,8 @@
                                         <td>{{ isEnglish() ? (emp.rankName || '-') : (emp.rankNameBN || emp.rankName || '-') }}<span *ngIf="getRankQualifications(emp)"><br>({{ getRankQualifications(emp) }})</span></td>
                                         <td>{{ isEnglish() ? (emp.tradeName || '-') : (emp.tradeNameBN || emp.tradeName || '-') }}<span *ngIf="emp.tradeRemarks"><br>({{ emp.tradeRemarks }})</span></td>
                                         <td>{{ isEnglish() ? (emp.fullNameEN || '-') : (emp.fullNameBN || emp.fullNameEN || '-') }}</td>
-                                        <td style="white-space: pre-line;">{{ isEnglish() ? (emp.presentDistrictName || '-') : (emp.presentDistrictNameBN || emp.presentDistrictName || '-') }}</td>
-                                        <td style="white-space: pre-line;">{{ isEnglish() ? (emp.spousePresentDistrictName || '-') : (emp.spousePresentDistrictNameBN || emp.spousePresentDistrictName || '-') }}</td>
+                                        <td style="white-space: pre-line;">{{ isEnglish() ? (emp.permanentDistrictName || '-') : (emp.permanentDistrictNameBN || emp.permanentDistrictName || '-') }}</td>
+                                        <td style="white-space: pre-line;">{{ isEnglish() ? (emp.spousePermanentDistrictName || '-') : (emp.spousePermanentDistrictNameBN || emp.spousePermanentDistrictName || '-') }}</td>
                                         <td style="white-space: pre-line;">{{ isEnglish() ? (emp.motherOrgLocationName || '-') : (emp.motherOrgLocationNameBN || emp.motherOrgLocationName || '-') }}</td>
                                         <td>
                                             <p-treeSelect [(ngModel)]="selectedUnitNodes[emp.employeeId]"
@@ -373,42 +395,69 @@
                 <!-- ── Posting: employee table ── -->
                 <div class="ns-posting-table" *ngIf="postingEmployees.length > 0">
                     <table>
+                        <colgroup *ngIf="isInterPosting()">
+                            <col style="width:30px">   <!-- ক্রমিক -->
+                            <col style="width:58px">   <!-- ব্যক্তিগত নং -->
+                            <col>                       <!-- পদবি -->
+                            <col>                       <!-- নাম -->
+                            <col style="width:48px">   <!-- নিজ জেলা -->
+                            <col style="width:56px">   <!-- স্বামী/স্ত্রীর জেলা -->
+                            <col style="width:74px">   <!-- যোগদানের তারিখ -->
+                            <col style="width:32px">   <!-- বছর -->
+                            <col style="width:24px">   <!-- মাস -->
+                            <col style="width:24px">   <!-- দিন -->
+                            <col style="width:105px">  <!-- পূর্ববতী কর্মস্থল -->
+                            <col>                       <!-- বদলিকৃত কর্মস্থল -->
+                            <col *ngIf="showRemarks" style="width:90px"> <!-- মন্তব্য -->
+                        </colgroup>
+                        <colgroup *ngIf="!isInterPosting()">
+                            <col style="width:30px">   <!-- ক্রমিক -->
+                            <col style="width:58px">   <!-- ব্যক্তিগত নম্বর -->
+                            <col>                       <!-- পদবি -->
+                            <col>                       <!-- ট্রেড -->
+                            <col>                       <!-- নাম -->
+                            <col style="width:48px">   <!-- নিজ জেলা -->
+                            <col style="width:56px">   <!-- স্পাউস জেলা -->
+                            <col style="width:105px">  <!-- পূর্ববতী কর্মস্থল -->
+                            <col>                       <!-- বদলি ইউনিট -->
+                            <col *ngIf="showRemarks" style="width:90px"> <!-- মন্তব্য -->
+                        </colgroup>
                         <thead>
                             <ng-container *ngIf="isInterPosting()">
                                 <tr>
-                                    <th rowspan="3">{{ isEnglish() ? 'Ser' : 'ক্রমিক' }}</th>
+                                    <th rowspan="3" style="width:28px">{{ isEnglish() ? 'Ser' : 'ক্রমিক' }}</th>
                                     <th rowspan="3">{{ isEnglish() ? 'Service ID' : 'ব্যক্তিগত নং' }}</th>
                                     <th rowspan="3">{{ isEnglish() ? 'Rank' : 'পদবি' }}</th>
                                     <th rowspan="3">{{ isEnglish() ? 'Name' : 'নাম' }}</th>
-                                    <th rowspan="3">{{ isEnglish() ? 'Own District (Responsible Area)' : 'নিজ জেলা (দায়িত্বপূর্ণ এলাকা)' }}</th>
+                                    <th rowspan="3" style="width:45px; max-width:45px; word-break:break-word">{{ isEnglish() ? 'Own District (Responsible Area)' : 'নিজ জেলা (দায়িত্বপূর্ণ এলাকা)' }}</th>
                                     <th rowspan="3">{{ isEnglish() ? "Husband/Wife's District (Responsible Area)" : 'স্বামী/স্ত্রীর জেলা (দায়িত্বপূর্ণ এলাকা)' }}</th>
                                     <th colspan="4">{{ isEnglish() ? 'Tenure in RAB' : 'র‌্যাবে অবস্থানকাল' }}</th>
-                                    <th rowspan="3">{{ isEnglish() ? 'Previous Workplace' : 'পূর্ববতী কর্মস্থল' }}</th>
+                                    <th rowspan="3" style="width:100px">{{ isEnglish() ? 'Previous Workplace' : 'পূর্ববতী কর্মস্থল' }}</th>
                                     <th rowspan="3">{{ isEnglish() ? 'Transfer Station' : 'বদলিকৃত কর্মস্থল' }}</th>
-                                    <th rowspan="3">{{ isEnglish() ? 'Remarks' : 'মন্তব্য' }}</th>
+                                    <th *ngIf="showRemarks" rowspan="3" style="min-width:90px">{{ isEnglish() ? 'Remarks' : 'মন্তব্য' }}</th>
                                 </tr>
                                 <tr>
-                                    <th rowspan="2">{{ isEnglish() ? 'Joining Date' : 'যোগদানের তারিখ' }}</th>
+                                    <th rowspan="2" style="width:82px">{{ isEnglish() ? 'Joining Date' : 'যোগদানের তারিখ' }}</th>
                                     <th colspan="3">{{ isEnglish() ? 'Duration' : 'অবস্থানকাল' }}</th>
                                 </tr>
                                 <tr>
-                                    <th>{{ isEnglish() ? 'Year' : 'বছর' }}</th>
-                                    <th>{{ isEnglish() ? 'Month' : 'মাস' }}</th>
-                                    <th>{{ isEnglish() ? 'Day' : 'দিন' }}</th>
+                                    <th style="width:22px">{{ isEnglish() ? 'Year' : 'বছর' }}</th>
+                                    <th style="width:22px">{{ isEnglish() ? 'Month' : 'মাস' }}</th>
+                                    <th style="width:22px">{{ isEnglish() ? 'Day' : 'দিন' }}</th>
                                 </tr>
                             </ng-container>
                             <ng-container *ngIf="!isInterPosting()">
                                 <tr>
-                                    <th>{{ isEnglish() ? 'Ser' : 'ক্রমিক' }}</th>
+                                    <th style="width:28px">{{ isEnglish() ? 'Ser' : 'ক্রমিক' }}</th>
                                     <th>{{ isEnglish() ? 'Service ID' : 'ব্যক্তিগত নম্বর' }}</th>
                                     <th>{{ isEnglish() ? 'Rank' : 'পদবি' }}</th>
                                     <th>{{ isEnglish() ? 'Trade' : 'ট্রেড' }}</th>
                                     <th>{{ isEnglish() ? 'Name' : 'নাম' }}</th>
-                                    <th>{{ isEnglish() ? 'Own District (Responsible Area)' : 'নিজ জেলা (দায়িত্বপূর্ণ এলাকা)' }}</th>
+                                    <th style="width:45px; max-width:45px; word-break:break-word">{{ isEnglish() ? 'Own District (Responsible Area)' : 'নিজ জেলা (দায়িত্বপূর্ণ এলাকা)' }}</th>
                                     <th>{{ isEnglish() ? 'Spouse District (Responsible Area)' : 'স্পাউস জেলা (দায়িত্বপূর্ণ এলাকা)' }}</th>
-                                    <th>{{ isEnglish() ? 'Previous Workplace' : 'পূর্ববতী কর্মস্থল' }}</th>
+                                    <th style="width:100px">{{ isEnglish() ? 'Previous Workplace' : 'পূর্ববতী কর্মস্থল' }}</th>
                                     <th>{{ isEnglish() ? 'Transfer Unit' : 'বদলি ইউনিট' }}</th>
-                                    <th>{{ isEnglish() ? 'Remarks' : 'মন্তব্য' }}</th>
+                                    <th *ngIf="showRemarks" style="min-width:90px">{{ isEnglish() ? 'Remarks' : 'মন্তব্য' }}</th>
                                 </tr>
                             </ng-container>
                         </thead>
@@ -419,15 +468,15 @@
                                     <td>{{ getServiceIdDisplay(emp) }}</td>
                                     <td>{{ isEnglish() ? (emp.rankName || '') : (emp.rankNameBN || emp.rankName || '') }}<span *ngIf="getRankQualifications(emp)"><br>({{ getRankQualifications(emp) }})</span></td>
                                     <td>{{ isEnglish() ? (emp.fullNameEN || '') : (emp.fullNameBN || emp.fullNameEN || '') }}</td>
-                                    <td style="white-space: pre-line;">{{ isEnglish() ? (emp.presentDistrictName || '') : (emp.presentDistrictNameBN || emp.presentDistrictName || '') }}</td>
-                                    <td style="white-space: pre-line;">{{ isEnglish() ? (emp.spousePresentDistrictName || '') : (emp.spousePresentDistrictNameBN || emp.spousePresentDistrictName || '') }}</td>
+                                    <td style="white-space: pre-line;">{{ isEnglish() ? (emp.permanentDistrictName || '') : (emp.permanentDistrictNameBN || emp.permanentDistrictName || '') }}</td>
+                                    <td style="white-space: pre-line;">{{ isEnglish() ? (emp.spousePermanentDistrictName || '') : (emp.spousePermanentDistrictNameBN || emp.spousePermanentDistrictName || '') }}</td>
                                     <td>{{ isEnglish() ? formatJoiningDate(emp.joiningDateInRAB) : toBnDigits(formatJoiningDate(emp.joiningDateInRAB)) }}</td>
                                     <td>{{ tenure(emp.joiningDateInRAB, 'y') }}</td>
                                     <td>{{ tenure(emp.joiningDateInRAB, 'm') }}</td>
                                     <td>{{ tenure(emp.joiningDateInRAB, 'd') }}</td>
                                     <td style="white-space: pre-line;">{{ getInterPrevWorkplace(emp) }}</td>
-                                    <td>{{ isEnglish() ? (emp.transferRabUnitName || '') : (emp.transferRabUnitNameBN || emp.transferRabUnitName || '') }}</td>
-                                    <td>{{ getCombinedRemarks(emp) }}</td>
+                                    <td>{{ getTransferUnitShort(emp) }}</td>
+                                    <td *ngIf="showRemarks">{{ getCombinedRemarks(emp) }}</td>
                                 </tr>
                             </ng-container>
                             <ng-container *ngIf="!isInterPosting()">
@@ -437,11 +486,11 @@
                                     <td>{{ isEnglish() ? (emp.rankName || '') : (emp.rankNameBN || emp.rankName || '') }}<span *ngIf="getRankQualifications(emp)"><br>({{ getRankQualifications(emp) }})</span></td>
                                     <td>{{ isEnglish() ? (emp.tradeName || '') : (emp.tradeNameBN || emp.tradeName || '') }}<span *ngIf="emp.tradeRemarks"><br>({{ emp.tradeRemarks }})</span></td>
                                     <td>{{ isEnglish() ? (emp.fullNameEN || '') : (emp.fullNameBN || emp.fullNameEN || '') }}</td>
-                                    <td style="white-space: pre-line;">{{ isEnglish() ? (emp.presentDistrictName || '') : (emp.presentDistrictNameBN || emp.presentDistrictName || '') }}</td>
-                                    <td style="white-space: pre-line;">{{ isEnglish() ? (emp.spousePresentDistrictName || '') : (emp.spousePresentDistrictNameBN || emp.spousePresentDistrictName || '') }}</td>
+                                    <td style="white-space: pre-line;">{{ isEnglish() ? (emp.permanentDistrictName || '') : (emp.permanentDistrictNameBN || emp.permanentDistrictName || '') }}</td>
+                                    <td style="white-space: pre-line;">{{ isEnglish() ? (emp.spousePermanentDistrictName || '') : (emp.spousePermanentDistrictNameBN || emp.spousePermanentDistrictName || '') }}</td>
                                     <td style="white-space: pre-line;">{{ getPreviousWorkplace(emp) }}</td>
-                                    <td>{{ isEnglish() ? (emp.transferRabUnitName || '') : (emp.transferRabUnitNameBN || emp.transferRabUnitName || '') }}</td>
-                                    <td>{{ getCombinedRemarks(emp) }}</td>
+                                    <td>{{ getTransferUnitShort(emp) }}</td>
+                                    <td *ngIf="showRemarks">{{ getCombinedRemarks(emp) }}</td>
                                 </tr>
                             </ng-container>
                         </tbody>
@@ -465,7 +514,7 @@
                 <!-- ── Initiator area ── -->
                 <div class="ns-initiator-area">
                     <div class="ns-initiator-sig" *ngIf="initiatorDetails">
-                        <img *ngIf="isInitiatorApproved() && shouldShowSignature(initiatorDetails.step) && initiatorDetails.signatureDataUrl"
+                        <img *ngIf="showSignatureImage && isInitiatorApproved() && shouldShowSignature(initiatorDetails.step) && initiatorDetails.signatureDataUrl"
                              [src]="initiatorDetails.signatureDataUrl" class="ns-sig-img" alt="Signature" />
                         <div class="ns-sig-name">
                             {{ isEnglish() ? initiatorDetails.name : (initiatorDetails.nameBN || initiatorDetails.name) }}
@@ -491,7 +540,7 @@
                             <span class="ns-approver-remark" *ngIf="getApproverRemark(approver.step)">{{ getApproverRemark(approver.step) }}</span>
                         </div>
                         <div class="ns-approver-sig-area">
-                            <img *ngIf="shouldShowSignature(approver.step) && approver.signatureDataUrl"
+                            <img *ngIf="showSignatureImage && shouldShowSignature(approver.step) && approver.signatureDataUrl"
                                  [src]="approver.signatureDataUrl" class="ns-sig-img" alt="Signature" />
                             <div class="ns-sig-date" *ngIf="getApproverDate(approver.step)">{{ getApproverDate(approver.step) }}</div>
                         </div>

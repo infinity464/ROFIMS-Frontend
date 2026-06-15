@@ -1,10 +1,10 @@
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
-import { map } from 'rxjs/operators';
+import { map, shareReplay } from 'rxjs/operators';
 import { environment } from '@/Core/Environments/environment';
 import { EmployeeServiceOverview } from '@/models/employee-service-overview.model';
-import { EmployeePersonalServiceOverview } from '@/models/employee-personal-service-overview.model';
+import { EmployeePersonalServiceOverview, EmployeeBriefProfile } from '@/models/employee-personal-service-overview.model';
 import { PagedResponse } from '@/Core/Models/Pagination';
 
 export interface ServingMemberFilterOptionsItem {
@@ -61,6 +61,7 @@ export interface ServingMemberPaginatedFilterRequest {
 })
 export class ServingMembersService {
     private readonly apiUrl = `${environment.apis.core}/EmployeeInfo`;
+    private overviewCache = new Map<number, Observable<EmployeePersonalServiceOverview>>();
 
     constructor(private http: HttpClient) {}
 
@@ -97,7 +98,17 @@ export class ServingMembersService {
 
     /** Gets employee profile (Basic Service + Other Personal Information) from vw_EmployeePersonalServiceOverview. */
     getEmployeePersonalServiceOverview(employeeId: number): Observable<EmployeePersonalServiceOverview> {
-        return this.http.get<EmployeePersonalServiceOverview>(`${this.apiUrl}/GetEmployeePersonalServiceOverview/${employeeId}`);
+        if (!this.overviewCache.has(employeeId)) {
+            this.overviewCache.set(employeeId,
+                this.http.get<EmployeePersonalServiceOverview>(`${this.apiUrl}/GetEmployeePersonalServiceOverview/${employeeId}`)
+                    .pipe(shareReplay(1))
+            );
+        }
+        return this.overviewCache.get(employeeId)!;
+    }
+
+    getEmployeeBriefProfile(employeeId: number): Observable<EmployeeBriefProfile> {
+        return this.http.get<EmployeeBriefProfile>(`${this.apiUrl}/GetEmployeeBriefProfile/${employeeId}`);
     }
 
     // --- Ex-Members (PostingStatus = ExMember; RAB Unit from Top 1 PreviousRABServiceInfo ORDER BY ServiceFrom DESC) ---

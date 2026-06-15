@@ -193,20 +193,20 @@ export class AddDraftNewPostingComponent implements OnInit {
 
     private generateDraftPostingListNo(): void {
         const now = new Date();
-        const year = now.getFullYear();
-        const month = String(now.getMonth() + 1).padStart(2, '0');
-        const prefix = `${year}/${month}`;
+        const datePrefix = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}`;
 
         let maxSeq = 0;
         for (const m of this.draftMastersList) {
             const no = m.draftPostingNo ?? '';
-            if (!no.startsWith(prefix + '/')) continue;
-            const seqPart = no.substring(prefix.length + 1);
-            const seq = parseInt(seqPart, 10);
+            if (!no.startsWith(datePrefix + '/')) continue;
+            const parts = no.substring(datePrefix.length + 1).split('/');
+            const seq = parseInt(parts[0], 10);
             if (!isNaN(seq) && seq > maxSeq) maxSeq = seq;
         }
 
-        this.draftPostingListNo = `${prefix}/${String(maxSeq + 1).padStart(3, '0')}`;
+        const seq = String(maxSeq + 1).padStart(3, '0');
+        const rand = String(Math.floor(1000 + Math.random() * 9000));
+        this.draftPostingListNo = `${datePrefix}/${seq}/${rand}`;
     }
 
     formatDateForApi(d: Date | null): string | null {

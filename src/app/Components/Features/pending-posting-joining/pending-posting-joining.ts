@@ -171,6 +171,7 @@ export class PendingPostingJoiningComponent implements OnInit {
     }
 
     confirmReceive(): void {
+        if (this.saving) return;
         if (!this.canUpdate) {
             this.messageService.add({ severity: 'warn', summary: 'Permission Denied', detail: 'You do not have permission to perform this action.' });
             return;
@@ -249,9 +250,11 @@ export class PendingPostingJoiningComponent implements OnInit {
     formatDate(value: string | null | undefined): string {
         if (value == null || value === '') return '-';
         const d = new Date(value);
-        return isNaN(d.getTime())
-            ? String(value)
-            : d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+        if (isNaN(d.getTime())) return String(value);
+        const dd = String(d.getDate()).padStart(2, '0');
+        const mm = String(d.getMonth() + 1).padStart(2, '0');
+        const yyyy = d.getFullYear();
+        return `${dd}-${mm}-${yyyy}`;
     }
 
     onGlobalFilter(table: Table, event: Event): void {
