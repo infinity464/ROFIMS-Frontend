@@ -32,6 +32,8 @@ import { ExportService, type ProfileExportConfig, type ProfileExportSection } fr
 import { ExBdLeaveApplicationService, ExBdLeaveApplicationProgressView } from '@/services/ex-bd-leave-application.service';
 import { PartialDatePipe } from '@/shared/pipes/partial-date.pipe';
 import { formatPartialDate } from '@/shared/utils/partial-date.util';
+import { TemporaryMovementHistoryService } from '@/services/temporary-movement-history.service';
+import { TemporaryMovementOnMovement } from '@/models/temporary-movement-history.model';
 
 @Component({
     selector: 'app-serving-member-profile',
@@ -62,6 +64,8 @@ export class ServingMemberProfile implements OnInit, OnDestroy {
     disciplineList: DisciplineInfoByEmployeeView[] = [];
     courseList: CourseInfoByEmployeeView[] = [];
     promotionList: PromotionInfoByEmployeeView[] = [];
+    /** Open Temporary-movement rows (IsReturn = 0). Non-empty → member is currently on movement. */
+    onMovementList: TemporaryMovementOnMovement[] = [];
     documentList: EmployeeDocumentReferenceItem[] = [];
     exBdLeaveProgressList: ExBdLeaveApplicationProgressView[] = [];
     previousYearSummary: LeaveInfoSummaryItem[] = [];
@@ -92,8 +96,26 @@ export class ServingMemberProfile implements OnInit, OnDestroy {
         private empService: EmpService,
         private exportService: ExportService,
         private exBdLeaveService: ExBdLeaveApplicationService,
+        private tempMovementHistoryService: TemporaryMovementHistoryService,
         private _userMenuService: UserMenuService
     ) {}
+
+    /** True when the member is currently out on a Temporary movement (not yet returned). */
+    get isOnMovement(): boolean {
+        return this.onMovementList.length > 0;
+    }
+
+    /** The current temporary-movement row to display in the banner (most recent). */
+    get currentMovement(): TemporaryMovementOnMovement | null {
+        return this.onMovementList.length ? this.onMovementList[0] : null;
+    }
+
+    /** Destined unit name in the active profile language. */
+    get currentMovementUnitName(): string {
+        const m = this.currentMovement;
+        if (!m) return '';
+        return (this.isBn ? m.destinedUnitNameBN : m.destinedUnitName) || m.destinedUnitName || '';
+    }
 
     exportDropdownOpen = false;
 
@@ -618,9 +640,10 @@ export class ServingMemberProfile implements OnInit, OnDestroy {
             course: this.courseInfoService.getViewByEmployeeId(id),
             promotion: this.promotionInfoService.getViewByEmployeeId(id),
             documents: this.empService.getEmployeeDocumentReferences(id).pipe(catchError(() => of([]))),
-            exBdLeaveProgress: this.exBdLeaveService.getProgressByEmployee(id).pipe(catchError(() => of([])))
+            exBdLeaveProgress: this.exBdLeaveService.getProgressByEmployee(id).pipe(catchError(() => of([]))),
+            onMovement: this.tempMovementHistoryService.getCurrentByEmployee(id).pipe(catchError(() => of([])))
         }).subscribe({
-            next: ({ family, previousRab, bankAcc, education, foreignVisit, leaveCurrentYear, additionalRemarks, address, moServHistory, discipline, course, promotion, documents, exBdLeaveProgress }) => {
+            next: ({ family, previousRab, bankAcc, education, foreignVisit, leaveCurrentYear, additionalRemarks, address, moServHistory, discipline, course, promotion, documents, exBdLeaveProgress, onMovement }) => {
                 this.familyList = family ?? [];
                 this.previousRabList = previousRab ?? [];
                 this.bankAccList = bankAcc ?? [];
@@ -635,6 +658,7 @@ export class ServingMemberProfile implements OnInit, OnDestroy {
                 this.promotionList = promotion ?? [];
                 this.documentList = documents ?? [];
                 this.exBdLeaveProgressList = exBdLeaveProgress ?? [];
+                this.onMovementList = onMovement ?? [];
                 this.loading = false;
             },
             error: (err) => {

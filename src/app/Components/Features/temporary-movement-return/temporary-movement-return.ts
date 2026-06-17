@@ -99,7 +99,11 @@ export class TemporaryMovementReturnComponent implements OnInit {
         this.form = this.fb.group({
             employeeId: [null, Validators.required],
             // Auto-filled (read-only) from the chosen person's movement.
+            // destinationType: 1 = Mother Unit, 2 = RAB Unit. Exactly one of the two
+            // destined-unit ids is set; destinedUnitName is the display for whichever.
+            destinationType: [1],
             destinedMotherUnitId: [null],
+            destinedRABUnitId: [null],
             destinedMotherUnitName: [{ value: '', disabled: true }],
             movementId: [null],
             letterNo: [null],
@@ -134,9 +138,12 @@ export class TemporaryMovementReturnComponent implements OnInit {
     /** When a person is picked, auto-fill destination + originating movement. */
     onPersonnelChange(employeeId: number | null): void {
         const p = employeeId != null ? this.personnelById.get(employeeId) : undefined;
+        const isRab = p?.destinationType === 2;
         this.form.patchValue({
-            destinedMotherUnitId: p?.destinedMotherUnitId ?? null,
-            destinedMotherUnitName: p?.destinedMotherUnitName ?? '',
+            destinationType: p?.destinationType ?? 1,
+            destinedMotherUnitId: isRab ? null : p?.destinedMotherUnitId ?? null,
+            destinedRABUnitId: isRab ? p?.destinedRABUnitId ?? null : null,
+            destinedMotherUnitName: (isRab ? p?.destinedRABUnitName : p?.destinedMotherUnitName) ?? '',
             movementId: p?.movementId ?? null
         });
     }
@@ -175,6 +182,7 @@ export class TemporaryMovementReturnComponent implements OnInit {
                 movementId: v.movementId ?? null,
                 employeeId: v.employeeId,
                 destinedMotherUnitId: v.destinedMotherUnitId ?? null,
+                destinedRABUnitId: v.destinedRABUnitId ?? null,
                 letterNo: v.letterNo ?? null,
                 letterIssueDate: this.toIsoDate(v.letterIssueDate),
                 auth: v.auth ?? null,
@@ -220,6 +228,7 @@ export class TemporaryMovementReturnComponent implements OnInit {
     /** Edit triggered from the list — load into form and switch to the form view. */
     onEditFromList(row: TemporaryMovementReturnModel): void {
         this.editingId = row.id;
+        const isRab = (row.destinedRABUnitId ?? null) != null;
         // The person may no longer be in the eligible list — add a transient option so it displays.
         if (!this.personnelById.has(row.employeeId)) {
             const transient: TemporaryMovementEligiblePersonnel = {
@@ -230,9 +239,13 @@ export class TemporaryMovementReturnComponent implements OnInit {
                 rabId: row.rabId ?? null,
                 fullNameEN: row.fullNameEN ?? null,
                 fullNameBN: row.fullNameBN ?? null,
+                destinationType: isRab ? 2 : 1,
                 destinedMotherUnitId: row.destinedMotherUnitId ?? null,
                 destinedMotherUnitName: row.destinedMotherUnitName ?? null,
-                destinedMotherUnitNameBN: row.destinedMotherUnitNameBN ?? null
+                destinedMotherUnitNameBN: row.destinedMotherUnitNameBN ?? null,
+                destinedRABUnitId: row.destinedRABUnitId ?? null,
+                destinedRABUnitName: null,
+                destinedRABUnitNameBN: null
             };
             this.personnelById.set(row.employeeId, transient);
             this.personnelOptions = [
@@ -242,7 +255,9 @@ export class TemporaryMovementReturnComponent implements OnInit {
         }
         this.form.patchValue({
             employeeId: row.employeeId,
+            destinationType: isRab ? 2 : 1,
             destinedMotherUnitId: row.destinedMotherUnitId ?? null,
+            destinedRABUnitId: row.destinedRABUnitId ?? null,
             destinedMotherUnitName: row.destinedMotherUnitName ?? '',
             movementId: row.movementId ?? null,
             letterNo: row.letterNo ?? null,
@@ -266,7 +281,9 @@ export class TemporaryMovementReturnComponent implements OnInit {
         this.fileRows = [];
         this.form.reset({
             employeeId: null,
+            destinationType: 1,
             destinedMotherUnitId: null,
+            destinedRABUnitId: null,
             destinedMotherUnitName: '',
             movementId: null,
             letterNo: null,

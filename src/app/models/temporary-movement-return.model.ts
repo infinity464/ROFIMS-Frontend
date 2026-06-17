@@ -4,6 +4,8 @@ export interface TemporaryMovementReturnModel {
     movementId: number | null;
     employeeId: number;
     destinedMotherUnitId: number | null;
+    /** Set instead of destinedMotherUnitId when the temporary movement was to a RAB unit. */
+    destinedRABUnitId?: number | null;
     letterNo: string | null;
     /** ISO date (yyyy-MM-dd). */
     letterIssueDate: string | null;
@@ -33,7 +35,10 @@ export interface TemporaryMovementReturnModel {
     movementLetterNo?: string | null;
 }
 
-/** A person currently out on a Temporary movement to a Mother Unit, not yet returned. */
+/** Destination kind for a temporary movement: 1 = Mother Unit, 2 = RAB Unit. */
+export type TemporaryMovementDestinationType = 1 | 2;
+
+/** A person currently out on a Temporary movement (Mother or RAB unit), not yet returned. */
 export interface TemporaryMovementEligiblePersonnel {
     employeeId: number;
     movementId: number;
@@ -42,7 +47,11 @@ export interface TemporaryMovementEligiblePersonnel {
     rabId: string | null;
     fullNameEN: string | null;
     fullNameBN: string | null;
+    destinationType: TemporaryMovementDestinationType;
     destinedMotherUnitId: number | null;
     destinedMotherUnitName: string | null;
     destinedMotherUnitNameBN: string | null;
+    destinedRABUnitId: number | null;
+    destinedRABUnitName: string | null;
+    destinedRABUnitNameBN: string | null;
 }

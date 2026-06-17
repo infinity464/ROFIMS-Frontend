@@ -42,6 +42,7 @@ export class TemporaryMovementReturnService {
             movementId: model.movementId ?? null,
             employeeId: model.employeeId,
             destinedMotherUnitId: model.destinedMotherUnitId ?? null,
+            destinedRABUnitId: model.destinedRABUnitId ?? null,
             letterNo: model.letterNo ?? null,
             letterIssueDate: model.letterIssueDate ?? null,
             auth: model.auth ?? null,

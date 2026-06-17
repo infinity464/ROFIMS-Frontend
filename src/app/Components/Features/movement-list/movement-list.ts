@@ -278,10 +278,12 @@ export class MovementListComponent implements OnInit, OnDestroy {
                     },
                     error: (err) => {
                         console.error('Delete failed', err);
+                        // 409 = blocked because a return movement still references this one.
+                        const blocked = err?.status === 409;
                         this.messageService.add({
-                            severity: 'error',
-                            summary: 'Error',
-                            detail: err?.error?.message || 'Failed to delete movement'
+                            severity: blocked ? 'warn' : 'error',
+                            summary: blocked ? 'Cannot delete' : 'Error',
+                            detail: err?.error?.description || err?.error?.message || 'Failed to delete movement'
                         });
                     }
                 });
