@@ -35,7 +35,7 @@ import { SafeHtml } from '@angular/platform-browser';
 import {
     Document, Packer, Paragraph, TextRun, Table, TableRow, TableCell,
     WidthType, BorderStyle, AlignmentType, ImageRun,
-    VerticalAlign, TableLayoutType, HeightRule, PageOrientation
+    VerticalAlign, TableLayoutType, HeightRule, PageOrientation, TabStopType, TabStopPosition
 } from 'docx';
 import { saveAs } from 'file-saver';
 import type { NotesheetDocumentModel, ContentBlock } from '../notesheet-document-model';
@@ -1081,7 +1081,7 @@ html, body { margin: 0; padding: 0; background: transparent; }
                         const text = (item.text ?? item.Text ?? '').trim();
                         if (text) {
                             const serial = this.refSerialLabel(i);
-                            refBlocks.push({ type: 'paragraph', text: `${serial} ${text}`, runs: [{ text: `${serial} ${text}` }], indent: 'normal', alignment: 'justify' });
+                            refBlocks.push({ type: 'paragraph', text: `${serial}\t${text}`, runs: [{ text: `${serial}\t${text}` }], indent: 'normal', alignment: 'justify' });
                         }
                     }
                 }
@@ -1140,7 +1140,7 @@ html, body { margin: 0; padding: 0; background: transparent; }
             const approverDate = this.getApproverDate(a.step);
             model.approvers.push({
                 role,
-                serialText: this.serial(i + 2),
+                serialText: this.serial(this.approverStartSerial + i),
                 remark: remark || undefined,
                 signatureDataUrl: this.shouldShowSignature(a.step) ? a.signatureDataUrl : undefined,
                 nameLine: '',
@@ -1205,23 +1205,21 @@ html, body { margin: 0; padding: 0; background: transparent; }
 
         const mainChildren: (Paragraph | Table)[] = [];
 
-        // Org header
-        mainChildren.push(new Paragraph({
-            children: [new TextRun({ text: this.getOrgHeaderLine1(), bold: true, size: 20, sizeComplexScript: 20, font, language: lang })],
-            alignment: AlignmentType.CENTER, spacing: { before: 80, after: 0 }
-        }));
-        mainChildren.push(new Paragraph({
-            children: [new TextRun({ text: this.getOrgHeaderLine2(), bold: true, size: 20, sizeComplexScript: 20, font, language: lang, underline: {} })],
-            alignment: AlignmentType.CENTER, spacing: { before: 0, after: 100 }
-        }));
-
-        // Notesheet number
-        if (this.noteSheet?.noteSheetNo) {
+        // Notesheet number (left) + Date (right) on same line via tab stop
+        if (this.noteSheet?.noteSheetNo || this.noteSheet?.noteSheetDate) {
+            const runs: TextRun[] = [];
+            if (this.noteSheet?.noteSheetNo) {
+                runs.push(new TextRun({ text: this.noteSheet.noteSheetNo, size: contentSize, sizeComplexScript: csContent, font, language: lang }));
+            }
+            if (this.noteSheet?.noteSheetDate) {
+                runs.push(new TextRun({ text: '\t', size: contentSize, font }));
+                const datePrefix = bn ? 'তারিখ : ' : 'Date: ';
+                runs.push(new TextRun({ text: `${datePrefix}${model.dateValue}`, size: contentSize, sizeComplexScript: csContent, font, language: lang }));
+            }
             mainChildren.push(new Paragraph({
-                children: [
-                    new TextRun({ text: this.noteSheet.noteSheetNo, size: contentSize, sizeComplexScript: csContent, font, language: lang })
-                ],
-                indent: { left: 240 }, spacing: { before: 60, after: 40 }
+                children: runs,
+                tabStops: [{ type: TabStopType.RIGHT, position: 10800 }],
+                spacing: { before: 60, after: 40 }
             }));
         }
 
@@ -1229,35 +1227,26 @@ html, body { margin: 0; padding: 0; background: transparent; }
         if (model.subject) {
             mainChildren.push(new Paragraph({
                 children: [new TextRun({ text: model.subject, bold: true, underline: {}, size: contentSize, sizeComplexScript: csContent, font, language: lang })],
-                spacing: { before: 20, after: 60 },
-                indent: { left: 240 }
+                spacing: { before: 20, after: 60 }
             }));
         }
 
-        // Reference / Date — label on its own line, ref items below at same alignment
+        // Reference — label on its own line, ref items below
         if (model.referenceBlocks.length > 0) {
             mainChildren.push(new Paragraph({
                 children: [new TextRun({ text: model.referenceLabel.trim(), bold: true, size: contentSize, sizeComplexScript: csContent, font, language: lang })],
-                indent: { left: 240 }, spacing: { after: 0 }
+                spacing: { after: 0 }
             }));
             mainChildren.push(...this.contentBlocksToDocx(model.referenceBlocks, font, bn));
         } else if (this.noteSheet?.referenceNumber) {
             const plain = this.stripHtml(this.noteSheet.referenceNumber ?? '');
             mainChildren.push(new Paragraph({
                 children: [new TextRun({ text: model.referenceLabel.trim(), bold: true, size: contentSize, sizeComplexScript: csContent, font, language: lang })],
-                indent: { left: 240 }, spacing: { after: 0 }
+                spacing: { after: 0 }
             }));
             mainChildren.push(new Paragraph({
                 children: [new TextRun({ text: plain, size: contentSize, sizeComplexScript: csContent, font, language: lang })],
-                indent: { left: 240 }, spacing: { after: 80 }
-            }));
-        } else if (this.noteSheet?.noteSheetDate) {
-            mainChildren.push(new Paragraph({
-                children: [
-                    new TextRun({ text: model.dateLabel, bold: true, size: contentSize, sizeComplexScript: csContent, font, language: lang }),
-                    new TextRun({ text: model.dateValue, size: contentSize, sizeComplexScript: csContent, font, language: lang })
-                ],
-                indent: { left: 240 }, spacing: { after: 80 }
+                spacing: { after: 80 }
             }));
         }
 
@@ -1279,7 +1268,7 @@ html, body { margin: 0; padding: 0; background: transparent; }
                 : [new TextRun({ text: firstBlock.text!, bold: firstBlock.bold, italics: firstBlock.italic, size: contentSize, sizeComplexScript: csContent, font, language: lang })];
             mainChildren.push(new Paragraph({
                 children: [serialRun, ...contentRuns],
-                indent: { left: 240 }, spacing: { before: 160, after: 80 }, alignment: AlignmentType.JUSTIFIED
+                spacing: { before: 160, after: 80 }, alignment: AlignmentType.JUSTIFIED
             }));
             if (model.mainBlocks.length > 1) {
                 mainChildren.push(...this.contentBlocksToDocx(model.mainBlocks.slice(1), font, bn));
@@ -1287,19 +1276,19 @@ html, body { margin: 0; padding: 0; background: transparent; }
         } else {
             mainChildren.push(new Paragraph({
                 children: [new TextRun({ text: model.mainSerialText, bold: true, size: contentSize, sizeComplexScript: csContent, font, language: lang })],
-                indent: { left: 240 }, spacing: { before: 160, after: 40 }
+                spacing: { before: 160, after: 40 }
             }));
             mainChildren.push(...this.contentBlocksToDocx(model.mainBlocks, font, bn));
         }
 
-        // Note
+        // Note (২।)
         if (model.note) {
             mainChildren.push(new Paragraph({
                 children: [
-                    new TextRun({ text: bn ? 'নোটঃ ' : 'Note: ', bold: true, size: contentSize, sizeComplexScript: csContent, font, language: lang }),
+                    new TextRun({ text: `${this.serial(2)}  `, bold: true, size: contentSize, sizeComplexScript: csContent, font, language: lang }),
                     new TextRun({ text: model.note, size: contentSize, sizeComplexScript: csContent, font, language: lang })
                 ],
-                indent: { left: 240 }, spacing: { before: 80, after: 80 }
+                spacing: { before: 80, after: 80 }
             }));
         }
 
@@ -1307,7 +1296,7 @@ html, body { margin: 0; padding: 0; background: transparent; }
         if (model.closingText) {
             mainChildren.push(new Paragraph({
                 children: [new TextRun({ text: model.closingText, size: contentSize, sizeComplexScript: csContent, font, language: lang })],
-                indent: { left: 240, firstLine: 480 }, spacing: { before: 200 }
+                indent: { firstLine: 480 }, spacing: { before: 200 }
             }));
         }
 
@@ -1360,11 +1349,11 @@ html, body { margin: 0; padding: 0; background: transparent; }
         for (const ap of model.approvers) {
             mainChildren.push(new Paragraph({
                 children: [new TextRun({ text: ap.role, underline: {}, size: sigSize, sizeComplexScript: csSig, font, language: lang })],
-                indent: { left: 240 }, spacing: { before: 280 }, keepNext: true, keepLines: true
+                spacing: { before: 280 }, keepNext: true, keepLines: true
             }));
             const runs: TextRun[] = [new TextRun({ text: ap.serialText, bold: true, size: sigSize, sizeComplexScript: csSig, font, language: lang })];
             if (ap.remark) runs.push(new TextRun({ text: ` ${ap.remark}`, size: sigSize, sizeComplexScript: csSig, font, language: lang }));
-            mainChildren.push(new Paragraph({ children: runs, indent: { left: 240 }, keepNext: true }));
+            mainChildren.push(new Paragraph({ children: runs, keepNext: true }));
             if (ap.signatureDataUrl) {
                 try {
                     mainChildren.push(new Paragraph({
@@ -1391,11 +1380,11 @@ html, body { margin: 0; padding: 0; background: transparent; }
         // Title paragraphs — placed at top of the main cell, INSIDE the outer border
         const titleChildren: Paragraph[] = [
             new Paragraph({
-                children: [new TextRun({ text: 'NOTE SHEET', bold: true, size: hdrSize, font: 'Times New Roman' })],
+                children: [new TextRun({ text: 'NOTE SHEET', bold: true, underline: {}, size: hdrSize, font: 'Times New Roman' })],
                 alignment: AlignmentType.CENTER, spacing: { before: 80, after: 40 }, keepNext: true
             }),
             new Paragraph({
-                children: [new TextRun({ text: 'মন্তব্য পত্র', size: hdrSize, font: 'Nirmala UI' })],
+                children: [new TextRun({ text: 'মন্তব্য পত্র', bold: true, underline: {}, size: hdrSize, font: 'Nirmala UI' })],
                 alignment: AlignmentType.CENTER, spacing: { after: 100 }, keepNext: true
             }),
         ];
@@ -1415,7 +1404,7 @@ html, body { margin: 0; padding: 0; background: transparent; }
                     new TableCell({
                         width: { size: 11440, type: WidthType.DXA },
                         borders: { top: thickBorder, bottom: thickBorder, left: thickBorder, right: thickBorder },
-                        margins: { top: 60, bottom: 60, left: 120, right: 120 },
+                        margins: { top: 60, bottom: 60, left: 0, right: 0 },
                         verticalAlign: VerticalAlign.TOP,
                         children: [...titleChildren, ...mainChildren]
                     })
@@ -1471,7 +1460,7 @@ html, body { margin: 0; padding: 0; background: transparent; }
                 else if (b.alignment === 'right') align = AlignmentType.RIGHT;
                 else if (b.alignment === 'justify') align = AlignmentType.JUSTIFIED;
                 else align = b.indent === 'list' ? AlignmentType.LEFT : AlignmentType.JUSTIFIED;
-                const indent = b.indent === 'list' ? { left: 480 } : { left: 240 };
+                const indent = b.indent === 'list' ? { left: 240 } : undefined;
                 const children = (b.runs && b.runs.length > 0)
                     ? b.runs.map(r => new TextRun({
                         text: r.text,

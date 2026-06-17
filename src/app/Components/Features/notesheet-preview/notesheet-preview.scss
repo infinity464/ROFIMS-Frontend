@@ -76,7 +76,7 @@
 .a4-paper {
     width: 215.9mm;
     min-height: 355.6mm;
-    padding: 14mm 10mm 20mm;
+    padding: 14mm 6mm 20mm;
     background: #fff;
     box-shadow: 0 6px 24px rgba(0, 0, 0, 0.25);
     box-sizing: border-box;
@@ -173,7 +173,7 @@
     left: -9999px;
     top: 0;
     width: 215.9mm;
-    padding: 0 10mm; /* horizontal only – keeps inner width = 195.9mm (same as .a4-paper) */
+    padding: 0 6mm;
     box-sizing: border-box;
     font-family: 'Times New Roman', Times, serif;
     font-size: 10pt;
@@ -198,7 +198,7 @@
 /* ── Title area (general – rendered INSIDE the box, above org header) ── */
 .ns-title-area {
     text-align: center;
-    padding: 8px 16px 4px;
+    padding: 8px 2px 4px;
 }
 .ns-title-en {
     font-size: 9pt;
@@ -288,7 +288,7 @@
 
 /* Header rows (subject + reference) */
 .ns-cell-subject {
-    padding: 7px 16px 7px 20px;
+    padding: 7px 2px 7px 4px;
     font-size: 10pt;
     font-weight: bold;
     text-decoration: underline;
@@ -394,7 +394,7 @@
 }
 
 .ns-cell-ref {
-    padding: 5px 16px 0 20px;
+    padding: 5px 2px 0 4px;
     font-size: 8pt;
 
     .ns-ref-content { margin-left: 0; }
@@ -415,11 +415,9 @@
 .ns-ref-key {
     font-weight: 700;
 }
-.ns-ref-item {
-    .ns-ref-serial {
-        font-weight: 600;
-        margin-right: 4px;
-    }
+.ns-ref-serial {
+    font-weight: 600;
+    margin-right: 1em;
 }
 .ns-ref-file-btn {
     background: none;
@@ -443,34 +441,32 @@
 
 /* Body paragraph (serial + text) */
 .ns-para {
-    display: flex;
-    gap: 4px;
-    padding: 10px 16px 10px 20px;
+    padding: 10px 2px 10px 1px;
     font-size: 8pt;
     line-height: 1.85;
+    text-align: justify;
 }
 .ns-para-no {
-    flex-shrink: 0;
     font-weight: 700;
+    margin-right: 2em;
 }
 .ns-para-text {
-    flex: 1;
-    min-width: 0;
+    display: inline;
     text-align: justify;
-    // Only break words as a last resort; never split mid-glyph
     overflow-wrap: break-word;
+
     word-break: normal;
     hyphens: none;
 
-    // Do NOT set overflow-wrap/word-break on ::ng-deep * — it forces breaks
-    // at inline-element (<span>) boundaries within a single Bangla word.
-    // Only reset white-space to ensure editor markup renders normally.
     ::ng-deep * {
-        white-space: normal;
+        white-space: pre-wrap;
         hyphens: none;
     }
 
-    // Block containers that may carry long text can break safely
+    ::ng-deep p:first-child {
+        display: inline;
+    }
+
     ::ng-deep p,
     ::ng-deep li,
     ::ng-deep div {
@@ -571,13 +567,13 @@
 
 /* ── Note ─────────────────────────────────────────── */
 .ns-note {
-    padding: 6px 16px 6px 20px;
+    padding: 6px 2px 6px 4px;
     font-size: 8pt;
 }
 
 /* ── Closing + Initiator signature ───────────────── */
 .ns-initiator-area {
-    padding: 14px 16px 18px 20px;
+    padding: 14px 2px 18px 4px;
     display: flex;
     flex-direction: column;
     gap: 10px;
@@ -601,7 +597,7 @@
 /* ── Approver sections ────────────────────────────── */
 /* First signature (initiator) stays right-aligned; approver signatures (২।, ৩।, …) are centered. */
 .ns-approver-section {
-    padding: 10px 16px 24px 20px;
+    padding: 10px 2px 24px 4px;
     min-height: 90px;
 }
 .ns-approver-role {

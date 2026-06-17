@@ -22,7 +22,7 @@ import { EmpService } from '@/services/emp-service';
 import { ReferenceNoEntry, OnulipiEntry } from '@/models/office-order.model';
 import { ApprovalStatus } from '@/models/enums';
 import { NotesheetMembersTableComponent } from '@/Components/Shared/notesheet-members-table/notesheet-members-table';
-import { Document, Packer, Paragraph, TextRun, AlignmentType, BorderStyle, Table, TableRow, TableCell, WidthType, VerticalAlign, TableLayoutType } from 'docx';
+import { Document, Packer, Paragraph, TextRun, AlignmentType, BorderStyle, Table, TableRow, TableCell, WidthType, VerticalAlign, TableLayoutType, TabStopType } from 'docx';
 import { saveAs } from 'file-saver';
 import { firstValueFrom } from 'rxjs';
 import { JsReportService } from '@/services/jsreport.service';
@@ -512,9 +512,18 @@ export class OfficeOrderExBdLeavePreviewComponent implements OnInit {
         }
         children.push(new Paragraph({ text: '', spacing: { after: 100 } }));
 
-        // Letter No & Date
-        children.push(new Paragraph({ children: [new TextRun({ text: `${this.isBangla ? 'স্মারক নং: ' : 'Letter No: '}`, font, size: contentSize, bold: true }), new TextRun({ text: this.order.letterNo || '.............', font, size: contentSize })], spacing: { after: 40 } }));
-        children.push(new Paragraph({ children: [new TextRun({ text: `${this.isBangla ? 'তারিখ: ' : 'Date: '}`, font, size: contentSize, bold: true }), new TextRun({ text: this.formatDate(this.order.letterDate), font, size: contentSize })], alignment: AlignmentType.RIGHT, spacing: { after: 100 } }));
+        // Letter No (left) & Date (right) — same line
+        children.push(new Paragraph({
+            children: [
+                new TextRun({ text: `${this.isBangla ? 'স্মারক নং: ' : 'Letter No: '}`, font, size: contentSize, bold: true }),
+                new TextRun({ text: this.order.letterNo || '.............', font, size: contentSize }),
+                new TextRun({ text: '\t', font, size: contentSize }),
+                new TextRun({ text: `${this.isBangla ? 'তারিখ: ' : 'Date: '}`, font, size: contentSize, bold: true }),
+                new TextRun({ text: this.formatDate(this.order.letterDate), font, size: contentSize })
+            ],
+            tabStops: [{ type: TabStopType.RIGHT, position: (pageSize.width - 720 - 720) }],
+            spacing: { after: 100 }
+        }));
 
         if (this.order.addressTo) {
             const plainText = this.htmlToPlainText(this.order.addressTo);
@@ -533,7 +542,7 @@ export class OfficeOrderExBdLeavePreviewComponent implements OnInit {
         if (this.referenceEntries.length > 0) {
             children.push(new Paragraph({ children: [new TextRun({ text: this.isBangla ? 'সূত্র:' : 'Reference:', font, size: contentSize, bold: true })], spacing: { before: 80, after: 0 } }));
             for (const ref of this.referenceEntries) {
-                children.push(new Paragraph({ children: [new TextRun({ text: `${ref.serial}। ${ref.text}`, font, size: contentSize })], spacing: { after: 20 } }));
+                children.push(new Paragraph({ children: [new TextRun({ text: `${ref.serial}।\t${ref.text}`, font, size: contentSize })], spacing: { after: 20 } }));
             }
             children.push(new Paragraph({ text: '', spacing: { after: 60 } }));
         }
@@ -541,14 +550,29 @@ export class OfficeOrderExBdLeavePreviewComponent implements OnInit {
         if (this.order.body) {
             const plainBody = this.htmlToPlainText(this.order.body);
             if (plainBody) {
-                for (const line of plainBody.split('\n').filter(l => l.trim())) {
-                    children.push(new Paragraph({ children: [new TextRun({ text: line.trim(), font, size: contentSize })], alignment: AlignmentType.JUSTIFIED, spacing: { after: 60 } }));
-                }
+                const bodyLines = plainBody.split('\n').filter(l => l.trim());
+                bodyLines.forEach((line, i) => {
+                    const runs: TextRun[] = [];
+                    if (i === 0) {
+                        runs.push(new TextRun({ text: `${this.serial(1)}\t`, font, size: contentSize, bold: true }));
+                    }
+                    runs.push(new TextRun({ text: line.trim(), font, size: contentSize }));
+                    children.push(new Paragraph({ children: runs, alignment: AlignmentType.JUSTIFIED, spacing: { after: 60 } }));
+                });
             }
+            const approvalText = this.isBangla ? 'সদয় অনুমোদনের জন্য উপস্থাপন করা হলো।' : 'Presented for kind approval.';
+            children.push(new Paragraph({
+                children: [
+                    new TextRun({ text: `${this.serial(2)}\t`, font, size: contentSize, bold: true }),
+                    new TextRun({ text: approvalText, font, size: contentSize })
+                ],
+                alignment: AlignmentType.JUSTIFIED, spacing: { after: 60 }
+            }));
         }
 
-        if (this.order.approvalEmployeeName) {
-            const sigIndent = 8500;
+        const sigIndent = 8500;
+        const addSignatureBlock = (includeEmail = true) => {
+            if (!this.order?.approvalEmployeeName) return;
             children.push(new Paragraph({ text: '', spacing: { before: 400 } }));
             const sigName = this.isBangla ? (this.order.approvalEmployeeNameBN || this.order.approvalEmployeeName) : this.order.approvalEmployeeName;
             children.push(new Paragraph({ children: [new TextRun({ text: sigName, font, size: contentSize, bold: true })], alignment: AlignmentType.LEFT, indent: { left: sigIndent } }));
@@ -560,26 +584,36 @@ export class OfficeOrderExBdLeavePreviewComponent implements OnInit {
                 const appt = this.isBangla ? (this.order.approvalEmployeeAppointmentBN || this.order.approvalEmployeeAppointment) : this.order.approvalEmployeeAppointment;
                 children.push(new Paragraph({ children: [new TextRun({ text: appt, font, size: contentSize })], alignment: AlignmentType.LEFT, indent: { left: sigIndent } }));
             }
-            if (this.order.approvalEmployeeRabUnit) {
-                const unit = this.isBangla ? (this.order.approvalEmployeeRabUnitBN || this.order.approvalEmployeeRabUnit) : this.order.approvalEmployeeRabUnit;
-                children.push(new Paragraph({ children: [new TextRun({ text: unit, font, size: contentSize })], alignment: AlignmentType.LEFT, indent: { left: sigIndent } }));
+            const onBehalfText = this.isBangla ? 'পক্ষে মহাপরিচালক' : 'On behalf of Director General';
+            children.push(new Paragraph({ children: [new TextRun({ text: onBehalfText, font, size: contentSize })], alignment: AlignmentType.LEFT, indent: { left: sigIndent } }));
+            if (includeEmail && this.order.approvalEmployeeEmail) {
+                children.push(new Paragraph({ children: [new TextRun({ text: `E-mail: ${this.order.approvalEmployeeEmail}`, font, size: contentSize })], alignment: AlignmentType.LEFT, indent: { left: sigIndent } }));
             }
-            if (this.isApproved && this.order.approvalDate) {
-                const dateLabel = this.isBangla ? 'তারিখ: ' : 'Date: ';
-                children.push(new Paragraph({ children: [new TextRun({ text: `${dateLabel}${this.formatDate(this.order.approvalDate)}`, font, size: contentSize })], alignment: AlignmentType.LEFT, indent: { left: sigIndent }, spacing: { before: 40 } }));
-            }
-        }
+        };
+
+        addSignatureBlock(true);
 
         const exportOnulipi = this.exportOnulipiEntries;
         if (exportOnulipi.length > 0) {
             if (this.order.noteSheetNo) {
-                children.push(new Paragraph({ children: [new TextRun({ text: this.order.noteSheetNo, font, size: contentSize })], spacing: { before: 300 } }));
+                const nsNoRuns: TextRun[] = [new TextRun({ text: this.order.noteSheetNo, font, size: contentSize })];
+                if (this.isApproved && this.order.approvalDate) {
+                    nsNoRuns.push(new TextRun({ text: '\t', font, size: contentSize }));
+                    nsNoRuns.push(new TextRun({ text: `${this.isBangla ? 'তারিখ: ' : 'Date: '}${this.formatDate(this.order.approvalDate)}`, font, size: contentSize }));
+                }
+                children.push(new Paragraph({
+                    children: nsNoRuns,
+                    tabStops: [{ type: TabStopType.RIGHT, position: (pageSize.width - 720 - 720) }],
+                    spacing: { before: 300 }
+                }));
             }
             children.push(new Paragraph({ children: [new TextRun({ text: this.isBangla ? 'অনুলিপি (জ্যেষ্ঠতার ভিত্তিতে নহে):' : 'Copy (not in order of seniority):', font, size: contentSize, bold: true })], spacing: { before: this.order.noteSheetNo ? 80 : 300 } }));
             exportOnulipi.forEach((entry, idx) => {
                 const ser = this.isBangla ? this.toBanglaDigits(String(idx + 1)) : String(idx + 1);
                 children.push(new Paragraph({ children: [new TextRun({ text: `${ser}। ${entry.text}`, font, size: contentSize })], indent: { left: 360 }, spacing: { after: 20 } }));
             });
+
+            addSignatureBlock(false);
         }
 
         return new Document({ sections: [{ properties: { page: { size: pageSize, margin: { top: 720, bottom: 720, left: 720, right: 720 } } }, children }] });

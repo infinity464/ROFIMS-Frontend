@@ -355,13 +355,9 @@ export class ClearanceExBdLeaveGenerateComponent implements OnInit {
                         let family = '';
                         if (bd.familyMembersDisplayEN) family = ` self and family members (${bd.familyMembersDisplayEN})`;
 
-                        const dynamic = `Currently serving at ${unit} under RAB deputation, ${identity} ${name} has applied for ${purpose}${family}, for ${totalDays} (${daysWords}) days from ${fromDate} to ${toDate}, or ${totalDays} (${daysWords}) days from the date of journey within the aforementioned period, to ${countries} for earned `;
+                        const dynamic = `Pursuant to the letter at reference B Security Clearance of currently serving at ${unit} under RAB deputation, ${identity} ${name} has applied for ${purpose}${family}, for ${totalDays} (${daysWords}) days from ${fromDate} to ${toDate}, or ${totalDays} (${daysWords}) days from the date of journey within the aforementioned period, to ${countries} for earned leave. `;
                         const suffix = 'Has applied to the Senior Secretary, Public Security Division, Ministry of Home Affairs, Bangladesh Secretariat, Dhaka, for the grant of leave. ' +
-                            'His/Her attested application, along with the relevant documents, has been received in this office in accordance with the reference memo.' +
-                            '<br><br>' +
-                            'In these circumstances, the attested application and relevant documents of the aforementioned police officer may be forwarded to the Police Headquarters, Dhaka.' +
-                            '<br>' +
-                            'Presented for kind approval.';
+                            'His/Her attested application, along with the relevant documents, has been received in this office in accordance with the reference memo.';
                         this.bodyText = dynamic + suffix;
                     }
                 });
@@ -478,10 +474,6 @@ export class ClearanceExBdLeaveGenerateComponent implements OnInit {
         }
         if (!this.addressTo?.trim()) {
             this.messageService.add({ severity: 'warn', summary: 'Warning', detail: 'Address To is required.' });
-            return;
-        }
-        if (this.referenceEntries.filter(e => e.text.trim()).length === 0) {
-            this.messageService.add({ severity: 'warn', summary: 'Warning', detail: 'At least one Reference No is required.' });
             return;
         }
         if (!this.subject?.trim()) {

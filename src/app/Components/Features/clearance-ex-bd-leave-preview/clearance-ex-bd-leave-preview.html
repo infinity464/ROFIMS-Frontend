@@ -140,7 +140,7 @@
 
     <!-- ─── A4 Paper Preview ─── -->
     <div class="legal-paper-container" *ngIf="!loading && !error && order">
-        <div class="legal-paper">
+        <div class="legal-paper" #legalPaper>
             <div class="oo-doc-box">
 
                 <!-- Government Header -->
@@ -172,13 +172,28 @@
                 <div class="oo-doc-section" *ngIf="referenceEntries.length > 0">
                     <div class="oo-doc-section-label">References:</div>
                     <div class="oo-doc-list">
-                        <p *ngFor="let ref of referenceEntries; let i = index">{{ referenceSerial(i) }} {{ ref.text }}</p>
+                        <p *ngFor="let ref of referenceEntries; let i = index"><span class="oo-ref-serial">{{ referenceSerial(i) }}</span>{{ ref.text }}</p>
                     </div>
                 </div>
 
                 <!-- ═══ Body (exactly what is stored in DB) ═══ -->
                 <div class="oo-doc-body" *ngIf="order.body">
-                    <div class="oo-doc-rich-content" [innerHTML]="getBodySafe()"></div>
+                    <span class="oo-body-serial">1.</span><span class="oo-doc-rich-content oo-doc-rich-content--inline" [innerHTML]="getBodySafe()"></span>
+                </div>
+                <div class="oo-doc-body" *ngIf="order.body">
+                    <span class="oo-body-serial">2.</span>Forward for your kind information and further necessary action please.
+                </div>
+
+                <!-- ═══ Information (Copy Distribution) ═══ -->
+                <div class="oo-doc-section oo-doc-onulipi" *ngIf="exportOnulipiEntries.length > 0">
+                    <div class="oo-doc-onulipi-header">
+                        <div class="oo-doc-section-label">Information:</div>
+                    </div>
+                    <div class="oo-doc-list">
+                        <p *ngFor="let entry of exportOnulipiEntries; let i = index">
+                            <span class="oo-ref-serial">{{ i + 1 }}.</span>{{ entry.text }}
+                        </p>
+                    </div>
                 </div>
 
                 <!-- ═══ Approval Person Signature ═══ -->
@@ -193,24 +208,7 @@
                         <div class="oo-doc-sig-appointment" *ngIf="order.approvalEmployeeAppointment">
                             {{ order.approvalEmployeeAppointment }}
                         </div>
-                        <div class="oo-doc-sig-unit" *ngIf="order.approvalEmployeeRabUnit">
-                            {{ order.approvalEmployeeRabUnit }}
-                        </div>
-                        <div class="oo-doc-sig-date" *ngIf="isApproved && order.approvalDate">
-                            Date: {{ formatDate(order.approvalDate) }}
-                        </div>
-                    </div>
-                </div>
-
-                <!-- ═══ Information (Copy Distribution) ═══ -->
-                <div class="oo-doc-section oo-doc-onulipi" *ngIf="exportOnulipiEntries.length > 0">
-                    <div class="oo-doc-onulipi-header">
-                        <div class="oo-doc-section-label">Information:</div>
-                    </div>
-                    <div class="oo-doc-list">
-                        <p *ngFor="let entry of exportOnulipiEntries; let i = index">
-                            {{ i + 1 }}. {{ entry.text }}
-                        </p>
+                        <div class="oo-doc-sig-onbehalf">For Director General</div>
                     </div>
                 </div>
 

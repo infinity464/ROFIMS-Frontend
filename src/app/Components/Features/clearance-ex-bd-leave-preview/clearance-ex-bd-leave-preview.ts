@@ -1,4 +1,4 @@
-import { Component, OnInit, inject } from '@angular/core';
+import { Component, OnInit, ViewChild, ElementRef, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
@@ -22,7 +22,8 @@ import { EmpService } from '@/services/emp-service';
 import { ReferenceNoEntry, OnulipiEntry } from '@/models/office-order.model';
 import { ApprovalStatus } from '@/models/enums';
 import { NotesheetMembersTableComponent } from '@/Components/Shared/notesheet-members-table/notesheet-members-table';
-import { Document, Packer, Paragraph, TextRun, AlignmentType, BorderStyle, Table, TableRow, TableCell, WidthType, VerticalAlign, TableLayoutType } from 'docx';
+import { Document, Packer, Paragraph, TextRun, AlignmentType, BorderStyle, Table, TableRow, TableCell, WidthType, VerticalAlign, TableLayoutType, TabStopType } from 'docx';
+import { JsReportService } from '@/services/jsreport.service';
 import { saveAs } from 'file-saver';
 import { firstValueFrom } from 'rxjs';
 
@@ -57,6 +58,9 @@ export class ClearanceExBdLeavePreviewComponent implements OnInit {
     private empService = inject(EmpService);
     private messageService = inject(MessageService);
     private sanitizer = inject(DomSanitizer);
+    private jsreportService = inject(JsReportService);
+
+    @ViewChild('legalPaper') legalPaper!: ElementRef<HTMLDivElement>;
 
     readonly ApprovalStatus = ApprovalStatus;
 
@@ -371,8 +375,17 @@ export class ClearanceExBdLeavePreviewComponent implements OnInit {
         }
         children.push(new Paragraph({ text: '', spacing: { after: 100 } }));
 
-        children.push(new Paragraph({ children: [new TextRun({ text: 'Reference number: ', font, size: contentSize, bold: true }), new TextRun({ text: this.order.letterNo || '.............', font, size: contentSize })], spacing: { after: 40 } }));
-        children.push(new Paragraph({ children: [new TextRun({ text: 'Date: ', font, size: contentSize, bold: true }), new TextRun({ text: this.formatDate(this.order.letterDate), font, size: contentSize })], alignment: AlignmentType.RIGHT, spacing: { after: 100 } }));
+        children.push(new Paragraph({
+            children: [
+                new TextRun({ text: 'Reference number: ', font, size: contentSize, bold: true }),
+                new TextRun({ text: this.order.letterNo || '.............', font, size: contentSize }),
+                new TextRun({ text: '\t', font, size: contentSize }),
+                new TextRun({ text: 'Date: ', font, size: contentSize, bold: true }),
+                new TextRun({ text: this.formatDate(this.order.letterDate), font, size: contentSize })
+            ],
+            tabStops: [{ type: TabStopType.RIGHT, position: (pageSize.width - 720 - 720) }],
+            spacing: { after: 100 }
+        }));
 
         if (this.order.addressTo) {
             const plainText = this.htmlToPlainText(this.order.addressTo);
@@ -385,7 +398,7 @@ export class ClearanceExBdLeavePreviewComponent implements OnInit {
         }
 
         if (this.order.subject) {
-            children.push(new Paragraph({ children: [new TextRun({ text: 'SUBJ: ', font, size: contentSize, bold: true }), new TextRun({ text: this.order.subject, font, size: contentSize, bold: true, underline: {} })], spacing: { after: 100 } }));
+            children.push(new Paragraph({ children: [new TextRun({ text: 'SUBJ: ', font, size: contentSize, bold: true }), new TextRun({ text: this.order.subject.toUpperCase(), font, size: contentSize, bold: true, underline: {} })], spacing: { after: 100 } }));
         }
 
         if (this.referenceEntries.length > 0) {
@@ -393,7 +406,7 @@ export class ClearanceExBdLeavePreviewComponent implements OnInit {
             for (let i = 0; i < this.referenceEntries.length; i++) {
                 const ref = this.referenceEntries[i];
                 const letter = String.fromCharCode(65 + i);
-                children.push(new Paragraph({ children: [new TextRun({ text: `${letter}. ${ref.text}`, font, size: contentSize })], spacing: { after: 20 } }));
+                children.push(new Paragraph({ children: [new TextRun({ text: `${letter}.\t${ref.text}`, font, size: contentSize })], spacing: { after: 20 } }));
             }
             children.push(new Paragraph({ text: '', spacing: { after: 60 } }));
         }
@@ -401,10 +414,32 @@ export class ClearanceExBdLeavePreviewComponent implements OnInit {
         if (this.order.body) {
             const plainBody = this.htmlToPlainText(this.order.body);
             if (plainBody) {
-                for (const line of plainBody.split('\n').filter(l => l.trim())) {
-                    children.push(new Paragraph({ children: [new TextRun({ text: line.trim(), font, size: contentSize })], alignment: AlignmentType.JUSTIFIED, spacing: { after: 60 } }));
-                }
+                const bodyLines = plainBody.split('\n').filter(l => l.trim());
+                bodyLines.forEach((line, i) => {
+                    const runs: TextRun[] = [];
+                    if (i === 0) {
+                        runs.push(new TextRun({ text: '1.\t', font, size: contentSize, bold: true }));
+                    }
+                    runs.push(new TextRun({ text: line.trim(), font, size: contentSize }));
+                    children.push(new Paragraph({ children: runs, alignment: AlignmentType.JUSTIFIED, spacing: { after: 60 } }));
+                });
             }
+            children.push(new Paragraph({
+                children: [
+                    new TextRun({ text: '2.\t', font, size: contentSize, bold: true }),
+                    new TextRun({ text: 'Forward for your kind information and further necessary action please.', font, size: contentSize })
+                ],
+                alignment: AlignmentType.JUSTIFIED, spacing: { after: 60 }
+            }));
+        }
+
+        const exportOnulipi = this.exportOnulipiEntries;
+        if (exportOnulipi.length > 0) {
+            children.push(new Paragraph({ children: [new TextRun({ text: 'Information:', font, size: contentSize, bold: true })], spacing: { before: 300 } }));
+            exportOnulipi.forEach((entry, idx) => {
+                const ser = String(idx + 1);
+                children.push(new Paragraph({ children: [new TextRun({ text: `${ser}.\t${entry.text}`, font, size: contentSize })], spacing: { after: 20 } }));
+            });
         }
 
         if (this.order.approvalEmployeeName) {
@@ -417,21 +452,7 @@ export class ClearanceExBdLeavePreviewComponent implements OnInit {
             if (this.order.approvalEmployeeAppointment) {
                 children.push(new Paragraph({ children: [new TextRun({ text: this.order.approvalEmployeeAppointment, font, size: contentSize })], alignment: AlignmentType.LEFT, indent: { left: sigIndent } }));
             }
-            if (this.order.approvalEmployeeRabUnit) {
-                children.push(new Paragraph({ children: [new TextRun({ text: this.order.approvalEmployeeRabUnit, font, size: contentSize })], alignment: AlignmentType.LEFT, indent: { left: sigIndent } }));
-            }
-            if (this.isApproved && this.order.approvalDate) {
-                children.push(new Paragraph({ children: [new TextRun({ text: `Date: ${this.formatDate(this.order.approvalDate)}`, font, size: contentSize })], alignment: AlignmentType.LEFT, indent: { left: sigIndent }, spacing: { before: 40 } }));
-            }
-        }
-
-        const exportOnulipi = this.exportOnulipiEntries;
-        if (exportOnulipi.length > 0) {
-            children.push(new Paragraph({ children: [new TextRun({ text: 'Information:', font, size: contentSize, bold: true })], spacing: { before: 300 } }));
-            exportOnulipi.forEach((entry, idx) => {
-                const ser = String(idx + 1);
-                children.push(new Paragraph({ children: [new TextRun({ text: `${ser}. ${entry.text}`, font, size: contentSize })], indent: { left: 360 }, spacing: { after: 20 } }));
-            });
+            children.push(new Paragraph({ children: [new TextRun({ text: 'For Director General', font, size: contentSize })], alignment: AlignmentType.LEFT, indent: { left: sigIndent } }));
         }
 
         return new Document({ sections: [{ properties: { page: { size: pageSize, margin: { top: 720, bottom: 720, left: 720, right: 720 } } }, children }] });
@@ -448,32 +469,97 @@ export class ClearanceExBdLeavePreviewComponent implements OnInit {
     }
 
     async exportPdf(): Promise<void> {
+        if (!this.order || !this.legalPaper) return;
         this.exportingPdf = true;
         try {
-            const doc = await this.buildWordDocument();
-            const docxBlob = await Packer.toBlob(doc);
-            const form = new FormData();
-            form.append('file', docxBlob, 'document.docx');
-            const pdfBlob = await firstValueFrom(this.http.post(`${environment.apis.core}/Document/ConvertToPdf`, form, { responseType: 'blob' }));
-            saveAs(pdfBlob, `ExBdLeaveClearance_${this.order?.letterNo ?? 'export'}.pdf`);
-        } catch {
-            this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to export PDF.' });
+            const { html, chrome } = this.buildJsReportPdf();
+            await this.jsreportService.downloadPdf(
+                html, {}, `ExBdLeaveClearance_${this.order?.letterNo ?? 'export'}.pdf`, chrome,
+            );
+        } catch (err: any) {
+            this.messageService.add({
+                severity: 'error', summary: 'JsReport error',
+                detail: err?.message || 'Failed to render PDF via JsReport. Is the server reachable?'
+            });
         } finally { this.exportingPdf = false; }
     }
 
     async printPreview(): Promise<void> {
+        if (!this.order || !this.legalPaper) return;
         this.printingPreview = true;
         try {
-            const doc = await this.buildWordDocument();
-            const docxBlob = await Packer.toBlob(doc);
-            const form = new FormData();
-            form.append('file', docxBlob, 'document.docx');
-            const pdfBlob = await firstValueFrom(this.http.post(`${environment.apis.core}/Document/ConvertToPdf`, form, { responseType: 'blob' }));
-            const url = URL.createObjectURL(pdfBlob);
-            window.open(url, '_blank');
-        } catch {
-            this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to generate print preview.' });
+            const { html, chrome } = this.buildJsReportPdf();
+            await this.jsreportService.previewPdfInNewTab(
+                html, {}, `ExBdLeaveClearance_${this.order?.letterNo ?? 'export'}`, chrome,
+            );
+        } catch (err: any) {
+            this.messageService.add({
+                severity: 'error', summary: 'JsReport error',
+                detail: err?.message || 'Failed to render PDF via JsReport. Is the server reachable?'
+            });
         } finally { this.printingPreview = false; }
+    }
+
+    private buildJsReportPdf(): { html: string; chrome: Record<string, unknown> } {
+        const styles = this.collectDocumentStyles();
+        const body = this.legalPaper.nativeElement.innerHTML;
+        const isLetter = this.selectedPageSize === 'letter';
+        const pageWidth = isLetter ? '215.9mm' : '210mm';
+        const pageHeight = isLetter ? '279.4mm' : '297mm';
+        const colWidth = isLetter ? '195.9mm' : '190mm';
+        const padX = 10, padTop = 14, padBottom = 20;
+
+        const html = `<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+${styles}
+
+@page { size: ${pageWidth} ${pageHeight}; margin: ${padTop}mm ${padX}mm ${padBottom}mm ${padX}mm; }
+html, body { margin: 0; padding: 0; background: transparent; }
+
+.no-print, .preview-header, .preview-actions, .approval-header-right, .oo-onulipi-filter, .oo-file-attachments { display: none !important; }
+
+.pdf-flow {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    width: ${colWidth};
+    font-family: 'Times New Roman', 'Noto Sans Bengali', 'SolaimanLipi', Times, serif;
+    font-size: 10pt;
+    line-height: 1.7;
+    color: #000;
+}
+</style>
+</head>
+<body>
+<div class="pdf-flow">${body}</div>
+</body>
+</html>`;
+
+        const chrome: Record<string, unknown> = {
+            format: null,
+            width: pageWidth,
+            height: pageHeight,
+            landscape: false,
+            marginTop: '0', marginBottom: '0', marginLeft: '0', marginRight: '0',
+            printBackground: true,
+            displayHeaderFooter: false,
+            headerTemplate: '', footerTemplate: ''
+        };
+
+        return { html, chrome };
+    }
+
+    private collectDocumentStyles(): string {
+        const out: string[] = [];
+        for (const sheet of Array.from(document.styleSheets)) {
+            try {
+                for (const rule of Array.from(sheet.cssRules)) out.push(rule.cssText);
+            } catch { /* cross-origin — skip */ }
+        }
+        return out.join('\n');
     }
 
     // ─── Approval ───────────────────────────────────────

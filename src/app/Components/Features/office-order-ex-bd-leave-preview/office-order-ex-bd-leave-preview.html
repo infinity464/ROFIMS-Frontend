@@ -174,13 +174,16 @@
                 <div class="oo-doc-section" *ngIf="referenceEntries.length > 0">
                     <div class="oo-doc-section-label">{{ isBangla ? 'সূত্র:' : 'Reference:' }}</div>
                     <div class="oo-doc-list">
-                        <p *ngFor="let ref of referenceEntries">{{ ref.serial }}। {{ ref.text }}</p>
+                        <p *ngFor="let ref of referenceEntries"><span class="oo-ref-serial">{{ ref.serial }}।</span>{{ ref.text }}</p>
                     </div>
                 </div>
 
                 <!-- ═══ Body (exactly what is stored in DB) ═══ -->
                 <div class="oo-doc-body" *ngIf="order.body">
-                    <div class="oo-doc-rich-content" [innerHTML]="getBodySafe()"></div>
+                    <span class="oo-body-serial">{{ serial(1) }}</span><span class="oo-doc-rich-content oo-doc-rich-content--inline" [innerHTML]="getBodySafe()"></span>
+                </div>
+                <div class="oo-doc-body" *ngIf="order.body">
+                    <span class="oo-body-serial">{{ serial(2) }}</span>{{ isBangla ? 'সদয় অনুমোদনের জন্য উপস্থাপন করা হলো।' : 'Presented for kind approval.' }}
                 </div>
 
                 <!-- ═══ Approval Person Signature ═══ -->
@@ -195,11 +198,11 @@
                         <div class="oo-doc-sig-appointment" *ngIf="order.approvalEmployeeAppointment">
                             {{ isBangla ? (order.approvalEmployeeAppointmentBN || order.approvalEmployeeAppointment) : order.approvalEmployeeAppointment }}
                         </div>
-                        <div class="oo-doc-sig-unit" *ngIf="order.approvalEmployeeRabUnit">
-                            {{ isBangla ? (order.approvalEmployeeRabUnitBN || order.approvalEmployeeRabUnit) : order.approvalEmployeeRabUnit }}
+                        <div class="oo-doc-sig-onbehalf">
+                            {{ isBangla ? 'পক্ষে মহাপরিচালক' : 'On behalf of Director General' }}
                         </div>
-                        <div class="oo-doc-sig-date" *ngIf="isApproved && order.approvalDate">
-                            {{ isBangla ? 'তারিখ: ' : 'Date: ' }}{{ formatDate(order.approvalDate) }}
+                        <div class="oo-doc-sig-email" *ngIf="order.approvalEmployeeEmail">
+                            E-mail: {{ order.approvalEmployeeEmail }}
                         </div>
                     </div>
                 </div>
@@ -207,13 +210,36 @@
                 <!-- ═══ Onulipi (Copy Distribution) ═══ -->
                 <div class="oo-doc-section oo-doc-onulipi" *ngIf="exportOnulipiEntries.length > 0">
                     <div class="oo-doc-onulipi-header">
-                        <div class="oo-doc-onulipi-ns-no" *ngIf="order.noteSheetNo">{{ order.noteSheetNo }}</div>
+                        <div class="oo-doc-onulipi-top">
+                            <div class="oo-doc-onulipi-ns-no" *ngIf="order.noteSheetNo">{{ order.noteSheetNo }}</div>
+                            <div class="oo-doc-onulipi-date" *ngIf="isApproved && order.approvalDate">
+                                {{ isBangla ? 'তারিখ: ' : 'Date: ' }}{{ formatDate(order.approvalDate) }}
+                            </div>
+                        </div>
                         <div class="oo-doc-section-label">{{ isBangla ? 'অনুলিপি (জ্যেষ্ঠতার ভিত্তিতে নহে):' : 'Copy (not in order of seniority):' }}</div>
                     </div>
                     <div class="oo-doc-list">
                         <p *ngFor="let entry of exportOnulipiEntries; let i = index">
                             {{ isBangla ? toBanglaDigits('' + (i + 1)) : (i + 1) }}। {{ entry.text }}
                         </p>
+                    </div>
+
+                    <!-- ═══ Signature after Onulipi ═══ -->
+                    <div class="oo-doc-signature-area" *ngIf="order.approvalEmployeeName">
+                        <div class="oo-doc-signature-block">
+                            <div class="oo-doc-sig-name">
+                                {{ isBangla ? (order.approvalEmployeeNameBN || order.approvalEmployeeName) : order.approvalEmployeeName }}
+                            </div>
+                            <div class="oo-doc-sig-rank" *ngIf="order.approvalEmployeeRank">
+                                {{ isBangla ? (order.approvalEmployeeRankBN || order.approvalEmployeeRank) : order.approvalEmployeeRank }}
+                            </div>
+                            <div class="oo-doc-sig-appointment" *ngIf="order.approvalEmployeeAppointment">
+                                {{ isBangla ? (order.approvalEmployeeAppointmentBN || order.approvalEmployeeAppointment) : order.approvalEmployeeAppointment }}
+                            </div>
+                            <div class="oo-doc-sig-onbehalf">
+                                {{ isBangla ? 'পক্ষে মহাপরিচালক' : 'On behalf of Director General' }}
+                            </div>
+                        </div>
                     </div>
                 </div>
 

@@ -79,6 +79,7 @@ export interface ExBdLeaveOfficeOrderWithDetailsDto {
     approvalEmployeeAppointmentBN: string;
     approvalEmployeeRabUnit: string;
     approvalEmployeeRabUnitBN: string;
+    approvalEmployeeEmail: string;
 }
 
 @Injectable({ providedIn: 'root' })

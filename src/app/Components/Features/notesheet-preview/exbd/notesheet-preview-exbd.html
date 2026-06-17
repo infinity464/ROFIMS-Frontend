@@ -97,13 +97,8 @@
 
                     <!-- Title INSIDE the border -->
                     <div class="ns-title-area">
-                        <div class="ns-title-en">NOTE SHEET</div>
-                        <div class="ns-title-bn">মন্তব্য পত্র</div>
-                    </div>
-
-                    <div class="ns-org-header" style="text-align:center; padding:8px 16px 4px; font-weight:700; font-size:10pt; line-height:1.5;">
-                        <div>{{ getOrgHeaderLine1() }}</div>
-                        <div style="border-bottom:1.5px solid #000; display:inline-block; padding-bottom:2px;">{{ getOrgHeaderLine2() }}</div>
+                        <div class="ns-title-en" style="font-size:12pt; text-decoration:underline; font-weight:bold;">NOTE SHEET</div>
+                        <div class="ns-title-bn" style="font-size:12pt; text-decoration:underline; font-weight:bold;">মন্তব্য পত্র</div>
                     </div>
 
                     <div class="ns-edit-field">
@@ -233,24 +228,19 @@
 
                 <!-- Title INSIDE the border -->
                 <div class="ns-title-area">
-                    <div class="ns-title-en">NOTE SHEET</div>
-                    <div class="ns-title-bn">মন্তব্য পত্র</div>
-                </div>
-
-                <div class="ns-org-header" style="text-align:center; padding:8px 16px 4px; font-weight:700; font-size:10pt; line-height:1.5;">
-                    <div>{{ getOrgHeaderLine1() }}</div>
-                    <div style="border-bottom:1.5px solid #000; display:inline-block; padding-bottom:2px;">{{ getOrgHeaderLine2() }}</div>
+                    <div class="ns-title-en" style="font-size:12pt; text-decoration:underline; font-weight:bold;">NOTE SHEET</div>
+                    <div class="ns-title-bn" style="font-size:12pt; text-decoration:underline; font-weight:bold;">মন্তব্য পত্র</div>
                 </div>
 
                 <!-- ── Notesheet No & Date ── -->
-                <div style="display:flex; justify-content:space-between; padding:4px 16px 2px; font-size:10pt;">
+                <div style="display:flex; justify-content:space-between; padding:4px 2px 2px; font-size:10pt;">
                     <span *ngIf="noteSheet.noteSheetNo">{{ noteSheet.noteSheetNo }}</span>
                     <span *ngIf="!noteSheet.noteSheetNo"></span>
                     <span *ngIf="noteSheet.noteSheetDate">{{ isEnglish() ? 'Date:' : 'তারিখ :' }} {{ formatDate(noteSheet.noteSheetDate) }}</span>
                 </div>
 
                 <!-- ── Subject ── -->
-                <div *ngIf="getSubjectLabel(noteSheet.exBdLeaveSubjectId) || noteSheet.subject" style="padding:2px 16px 4px; font-size:10pt;">
+                <div *ngIf="getSubjectLabel(noteSheet.exBdLeaveSubjectId) || noteSheet.subject" style="padding:2px 2px 4px; font-size:10pt;">
                     <strong><u>{{ getSubjectLabel(noteSheet.exBdLeaveSubjectId) || noteSheet.subject }}</u></strong>
                 </div>
 
@@ -259,7 +249,7 @@
                     <span class="ns-ref-key">{{ isEnglish() ? 'Reference:' : 'সূত্রঃ' }}</span>
                     <div class="ns-ref-content">
                         <ng-container *ngIf="parsedReferences.length === 1 && !parsedReferenceFiles[0]?.length">
-                            {{ parsedReferences[0] }}
+                            <span class="ns-ref-serial">{{ refSerialLabel(0) }}</span> {{ parsedReferences[0] }}
                         </ng-container>
                         <ng-container *ngIf="parsedReferences.length > 1 || parsedReferenceFiles[0]?.length">
                             <div *ngFor="let ref of parsedReferences; let ri = index" class="ns-ref-item" style="display:flex; align-items:center; gap:6px;">

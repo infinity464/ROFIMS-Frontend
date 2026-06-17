@@ -63,7 +63,7 @@ interface ApprovalLogEntry {
     ],
     providers: [MessageService, ConfirmationService],
     templateUrl: './notesheet-preview-posting.html',
-    styleUrl: '../notesheet-preview.scss'
+    styleUrls: ['../notesheet-preview.scss', './notesheet-preview-posting.scss']
 })
 export class NotesheetPreviewPostingComponent extends NotesheetPreviewBase implements AfterViewChecked {
 
