@@ -14,36 +14,12 @@ import { Router } from '@angular/router';
 import { UserMenuService } from '@/services/user-menu.service';
 import { REPORT_LABELS, type ReportLang } from '@/Core/i18n/report-labels';
 import { BanglaNumerals } from '@/Core/i18n/bangla-numerals';
-import type {
-    EducationReportRow,
-    ReportAccessibleScope,
-    DynamicReportCriterion,
-    DynamicReportRow,
-} from '@/models/report.model';
+import type { EducationReportRow, ReportAccessibleScope, DynamicReportCriterion, DynamicReportRow } from '@/models/report.model';
 import type { MotherOrganizationModel } from '@/models/mother-org-model';
 import type { CommonCodeModel } from '@/models/common-code-model';
-import {
-    unitScopeLine,
-    memberTypeScopeLine,
-    statusLocked,
-} from '../report-scope.helper';
+import { unitScopeLine, memberTypeScopeLine, statusLocked } from '../report-scope.helper';
 import { personnelMeta as personnelMetaHelper } from '../formal-rab-render.helper';
-import {
-    AlignmentType,
-    BorderStyle,
-    Document,
-    Footer,
-    Packer,
-    PageNumber,
-    PageOrientation,
-    Paragraph,
-    Table,
-    TableCell,
-    TableLayoutType,
-    TableRow,
-    TextRun,
-    WidthType,
-} from 'docx';
+import { AlignmentType, BorderStyle, Document, Footer, Packer, PageNumber, PageOrientation, Paragraph, Table, TableCell, TableLayoutType, TableRow, TextRun, WidthType } from 'docx';
 import { saveAs } from 'file-saver';
 import * as XLSX from 'xlsx';
 import { forkJoin } from 'rxjs';
@@ -51,19 +27,10 @@ import { forkJoin } from 'rxjs';
 @Component({
     selector: 'app-report-education',
     standalone: true,
-    imports: [
-        CommonModule,
-        FormsModule,
-        TableModule,
-        ButtonModule,
-        SelectModule,
-        MultiSelectModule,
-        PaginatorModule,
-        Toast,
-    ],
+    imports: [CommonModule, FormsModule, TableModule, ButtonModule, SelectModule, MultiSelectModule, PaginatorModule, Toast],
     providers: [MessageService],
     templateUrl: './report-education.component.html',
-    styleUrls: ['../report-theme.scss', '../report-card-mtr.scss', './report-education.component.scss'],
+    styleUrls: ['../report-theme.scss', '../report-card-mtr.scss', './report-education.component.scss']
 })
 export class ReportEducationComponent implements OnInit, OnChanges {
     L = REPORT_LABELS;
@@ -83,6 +50,8 @@ export class ReportEducationComponent implements OnInit, OnChanges {
     selectedMemberTypeIds: number[] = [];
     rabUnitOptions: { label: string; labelBn: string; value: number }[] = [];
     selectedRabUnitIds: number[] = [];
+    subjectOptions: { label: string; labelBn: string; value: number }[] = [];
+    selectedSubjectIds: number[] = [];
     rankOptions: { label: string; labelBn: string; value: number }[] = [];
     corpsOptions: { label: string; labelBn: string; value: number }[] = [];
     tradeOptions: { label: string; labelBn: string; value: number }[] = [];
@@ -107,9 +76,15 @@ export class ReportEducationComponent implements OnInit, OnChanges {
     accessibleScope: ReportAccessibleScope | null = null;
     @Output() scopeChange = new EventEmitter<ReportAccessibleScope | null>();
 
-    get unitScopeLine(): string | null { return unitScopeLine(this.accessibleScope, this.lang); }
-    get memberTypeScopeLine(): string | null { return memberTypeScopeLine(this.accessibleScope, this.lang); }
-    get statusLocked(): boolean { return statusLocked(this.accessibleScope); }
+    get unitScopeLine(): string | null {
+        return unitScopeLine(this.accessibleScope, this.lang);
+    }
+    get memberTypeScopeLine(): string | null {
+        return memberTypeScopeLine(this.accessibleScope, this.lang);
+    }
+    get statusLocked(): boolean {
+        return statusLocked(this.accessibleScope);
+    }
 
     canInsert = true;
     canUpdate = true;
@@ -123,109 +98,111 @@ export class ReportEducationComponent implements OnInit, OnChanges {
      * EducationInfo via the educationAnyMatch sentinel field key).
      */
     columnCatalog: { key: string; labelEN: string; labelBN: string; hint: string; defaultVisible: boolean }[] = [
-        { key: 'ser',          labelEN: 'Ser',           labelBN: 'ক্রঃ',          hint: 'Serial',                defaultVisible: true  },
-        { key: 'serviceId',    labelEN: 'Service ID',    labelBN: 'সার্ভিস আইডি',  hint: 'Plain',                 defaultVisible: true  },
-        { key: 'armyRank',     labelEN: 'Rank',          labelBN: 'র‍্যাঙ্ক',       hint: 'Plain',                 defaultVisible: true  },
-        { key: 'rabRank',      labelEN: 'RAB Rank',      labelBN: 'র‍্যাব র‍্যাঙ্ক', hint: 'Plain',                 defaultVisible: false },
-        { key: 'corps',        labelEN: 'Corps',         labelBN: 'কোর',           hint: 'Plain',                 defaultVisible: true  },
-        { key: 'trade',        labelEN: 'Trade',         labelBN: 'ট্রেড',         hint: 'Plain',                 defaultVisible: true  },
-        { key: 'name',         labelEN: 'Name',          labelBN: 'নাম',           hint: 'Name',                  defaultVisible: true  },
+        { key: 'ser', labelEN: 'Ser', labelBN: 'ক্রঃ', hint: 'Serial', defaultVisible: true },
+        { key: 'serviceId', labelEN: 'Service ID', labelBN: 'সার্ভিস আইডি', hint: 'Plain', defaultVisible: true },
+        { key: 'armyRank', labelEN: 'Rank', labelBN: 'র‍্যাঙ্ক', hint: 'Plain', defaultVisible: true },
+        { key: 'rabRank', labelEN: 'RAB Rank', labelBN: 'র‍্যাব র‍্যাঙ্ক', hint: 'Plain', defaultVisible: false },
+        { key: 'corps', labelEN: 'Corps', labelBN: 'কোর', hint: 'Plain', defaultVisible: true },
+        { key: 'trade', labelEN: 'Trade', labelBN: 'ট্রেড', hint: 'Plain', defaultVisible: true },
+        { key: 'name', labelEN: 'Name', labelBN: 'নাম', hint: 'Name', defaultVisible: true },
         // Selected-value column: header mirrors the chosen report type
         // (e.g. "Education") and every cell shows the picked CommonCode
         // value (e.g. "SSC") — the filter context surfaced per row.
-        { key: 'selectedValue',labelEN: 'Selected Value',labelBN: 'নির্বাচিত মান',  hint: 'SelectedValue',         defaultVisible: true  },
+        { key: 'selectedValue', labelEN: 'Selected Value', labelBN: 'নির্বাচিত মান', hint: 'SelectedValue', defaultVisible: true },
+        // Subject column — mirrors the picked Subject filter value(s). Like
+        // selectedValue, it's frontend-only (the base report doesn't project
+        // per-row subject data) and shows the same value for every row.
+        { key: 'subjectValue', labelEN: 'Subject', labelBN: 'বিষয়', hint: 'SubjectSelected', defaultVisible: true },
         // Member-status column — opt-in only (hidden by default). The user can
         // add it via the column picker; most useful when the Status filter is
         // "All" and rows are of mixed statuses. When selected, backendColumnKeys()
         // requests the raw `status` field so memberStatusText() can localize it.
-        { key: 'memberStatus', labelEN: 'Member Status',  labelBN: 'সদস্য অবস্থা',   hint: 'MemberStatus',          defaultVisible: false },
+        { key: 'memberStatus', labelEN: 'Member Status', labelBN: 'সদস্য অবস্থা', hint: 'MemberStatus', defaultVisible: false },
         // Blank "Remark" column — always renders an empty cell so the
         // printed roster has a writable space for handwritten notes.
         // Default-visible; users can hide via the column picker.
-        { key: 'blankRemark',  labelEN: 'Remark',        labelBN: 'মন্তব্য',       hint: 'BlankRemark',           defaultVisible: true  },
+        { key: 'blankRemark', labelEN: 'Remark', labelBN: 'মন্তব্য', hint: 'BlankRemark', defaultVisible: true },
         // Opt-in extras (same as member-appointment / batch-course catalog).
-        { key: 'personnel',    labelEN: 'RAB Personnel', labelBN: 'র‍্যাব সদস্য',   hint: 'RabPersonnelComposite', defaultVisible: false },
-        { key: 'rabId',        labelEN: 'RAB ID',        labelBN: 'র‍্যাব আইডি',    hint: 'RabId',                 defaultVisible: false },
-        { key: 'nameEnglish',       labelEN: 'Name (EN)',        labelBN: 'নাম (ইংরেজি)',       hint: 'Plain', defaultVisible: false },
-        { key: 'nameBangla',        labelEN: 'Name (BN)',        labelBN: 'নাম (বাংলা)',        hint: 'Plain', defaultVisible: false },
-        { key: 'nid',               labelEN: 'NID',              labelBN: 'এনআইডি',            hint: 'Plain', defaultVisible: false },
-        { key: 'prefix',            labelEN: 'Prefix',           labelBN: 'প্রিফিক্স',          hint: 'Plain', defaultVisible: false },
-        { key: 'appointment',       labelEN: 'Appointment',      labelBN: 'নিয়োগ',             hint: 'Plain', defaultVisible: false },
-        { key: 'memberType',        labelEN: 'Member Type',      labelBN: 'সদস্য ধরন',          hint: 'Plain', defaultVisible: false },
-        { key: 'motherOrganization',labelEN: 'Mother Org',       labelBN: 'মাতৃ সংস্থা',        hint: 'Plain', defaultVisible: false },
-        { key: 'tradeRemarks',      labelEN: 'Trade Remarks',    labelBN: 'ট্রেড মন্তব্য',       hint: 'Plain', defaultVisible: false },
-        { key: 'gender',            labelEN: 'Gender',           labelBN: 'লিঙ্গ',              hint: 'Plain', defaultVisible: false },
-        { key: 'motherUnit',        labelEN: 'Last Unit',        labelBN: 'শেষ ইউনিট',          hint: 'Plain', defaultVisible: false },
-        { key: 'rabUnit',           labelEN: 'RAB Unit',         labelBN: 'র‍্যাব ইউনিট',       hint: 'Plain', defaultVisible: false },
-        { key: 'dateOfCommission',  labelEN: 'Commission Date',  labelBN: 'কমিশন তারিখ',         hint: 'Plain', defaultVisible: false },
-        { key: 'joiningDate',       labelEN: 'Joining Date',     labelBN: 'যোগদান তারিখ',       hint: 'Plain', defaultVisible: false },
-        { key: 'rabServiceFrom',    labelEN: 'RAB Joining Date', labelBN: 'র‍্যাবে যোগদান তারিখ',hint: 'Plain', defaultVisible: false },
-        { key: 'rabServiceTo',      labelEN: 'RAB End Date',     labelBN: 'র‍্যাব শেষ তারিখ',   hint: 'Plain', defaultVisible: false },
-        { key: 'division',          labelEN: 'Division',         labelBN: 'বিভাগ',              hint: 'Plain', defaultVisible: false },
-        { key: 'district',          labelEN: 'District',         labelBN: 'জেলা',               hint: 'Plain', defaultVisible: false },
-        { key: 'upazila',           labelEN: 'Upazila',          labelBN: 'উপজেলা',             hint: 'Plain', defaultVisible: false },
-        { key: 'postOffice',        labelEN: 'Post Office',      labelBN: 'ডাকঘর',              hint: 'Plain', defaultVisible: false },
-        { key: 'dob',               labelEN: 'Date of Birth',    labelBN: 'জন্ম তারিখ',          hint: 'Plain', defaultVisible: false },
-        { key: 'religion',          labelEN: 'Religion',         labelBN: 'ধর্ম',               hint: 'Plain', defaultVisible: false },
-        { key: 'bloodGroup',        labelEN: 'Blood Group',      labelBN: 'রক্তের গ্রুপ',        hint: 'Plain', defaultVisible: false },
-        { key: 'maritalStatus',     labelEN: 'Marital Status',   labelBN: 'বৈবাহিক অবস্থা',      hint: 'Plain', defaultVisible: false },
-        { key: 'mobileNo',          labelEN: 'Mobile',           labelBN: 'মোবাইল',             hint: 'Plain', defaultVisible: false },
-        { key: 'email',             labelEN: 'Email',            labelBN: 'ইমেইল',              hint: 'Plain', defaultVisible: false },
+        { key: 'personnel', labelEN: 'RAB Personnel', labelBN: 'র‍্যাব সদস্য', hint: 'RabPersonnelComposite', defaultVisible: false },
+        { key: 'rabId', labelEN: 'RAB ID', labelBN: 'র‍্যাব আইডি', hint: 'RabId', defaultVisible: false },
+        { key: 'nameEnglish', labelEN: 'Name (EN)', labelBN: 'নাম (ইংরেজি)', hint: 'Plain', defaultVisible: false },
+        { key: 'nameBangla', labelEN: 'Name (BN)', labelBN: 'নাম (বাংলা)', hint: 'Plain', defaultVisible: false },
+        { key: 'nid', labelEN: 'NID', labelBN: 'এনআইডি', hint: 'Plain', defaultVisible: false },
+        { key: 'prefix', labelEN: 'Prefix', labelBN: 'প্রিফিক্স', hint: 'Plain', defaultVisible: false },
+        { key: 'appointment', labelEN: 'Appointment', labelBN: 'নিয়োগ', hint: 'Plain', defaultVisible: false },
+        { key: 'memberType', labelEN: 'Member Type', labelBN: 'সদস্য ধরন', hint: 'Plain', defaultVisible: false },
+        { key: 'motherOrganization', labelEN: 'Mother Org', labelBN: 'মাতৃ সংস্থা', hint: 'Plain', defaultVisible: false },
+        { key: 'tradeRemarks', labelEN: 'Trade Remarks', labelBN: 'ট্রেড মন্তব্য', hint: 'Plain', defaultVisible: false },
+        { key: 'gender', labelEN: 'Gender', labelBN: 'লিঙ্গ', hint: 'Plain', defaultVisible: false },
+        { key: 'motherUnit', labelEN: 'Last Unit', labelBN: 'শেষ ইউনিট', hint: 'Plain', defaultVisible: false },
+        { key: 'rabUnit', labelEN: 'RAB Unit', labelBN: 'র‍্যাব ইউনিট', hint: 'Plain', defaultVisible: false },
+        { key: 'dateOfCommission', labelEN: 'Commission Date', labelBN: 'কমিশন তারিখ', hint: 'Plain', defaultVisible: false },
+        { key: 'joiningDate', labelEN: 'Joining Date', labelBN: 'যোগদান তারিখ', hint: 'Plain', defaultVisible: false },
+        { key: 'rabServiceFrom', labelEN: 'RAB Joining Date', labelBN: 'র‍্যাবে যোগদান তারিখ', hint: 'Plain', defaultVisible: false },
+        { key: 'rabServiceTo', labelEN: 'RAB End Date', labelBN: 'র‍্যাব শেষ তারিখ', hint: 'Plain', defaultVisible: false },
+        { key: 'division', labelEN: 'Division', labelBN: 'বিভাগ', hint: 'Plain', defaultVisible: false },
+        { key: 'district', labelEN: 'District', labelBN: 'জেলা', hint: 'Plain', defaultVisible: false },
+        { key: 'upazila', labelEN: 'Upazila', labelBN: 'উপজেলা', hint: 'Plain', defaultVisible: false },
+        { key: 'postOffice', labelEN: 'Post Office', labelBN: 'ডাকঘর', hint: 'Plain', defaultVisible: false },
+        { key: 'dob', labelEN: 'Date of Birth', labelBN: 'জন্ম তারিখ', hint: 'Plain', defaultVisible: false },
+        { key: 'religion', labelEN: 'Religion', labelBN: 'ধর্ম', hint: 'Plain', defaultVisible: false },
+        { key: 'bloodGroup', labelEN: 'Blood Group', labelBN: 'রক্তের গ্রুপ', hint: 'Plain', defaultVisible: false },
+        { key: 'maritalStatus', labelEN: 'Marital Status', labelBN: 'বৈবাহিক অবস্থা', hint: 'Plain', defaultVisible: false },
+        { key: 'mobileNo', labelEN: 'Mobile', labelBN: 'মোবাইল', hint: 'Plain', defaultVisible: false },
+        { key: 'email', labelEN: 'Email', labelBN: 'ইমেইল', hint: 'Plain', defaultVisible: false }
     ];
 
     /** Same plainColumnPropertyMap as report-batch-course. */
     private static readonly plainColumnPropertyMap: Record<string, { en: string; bn?: string }> = {
-        serviceId:           { en: 'serviceId' },
-        nameEnglish:         { en: 'name' },
-        nameBangla:          { en: 'nameBN' },
-        nid:                 { en: 'nid' },
-        prefix:              { en: 'prefix',              bn: 'prefixBN' },
-        appointment:         { en: 'appointment',         bn: 'appointmentBN' },
-        memberType:          { en: 'memberType',          bn: 'memberTypeBN' },
-        motherOrganization:  { en: 'orgName',             bn: 'orgNameBN' },
-        armyRank:            { en: 'rank',                bn: 'rankBN' },
-        rabRank:             { en: 'rabRank',             bn: 'rabRankBN' },
-        tradeRemarks:        { en: 'tradeRemarks' },
-        gender:              { en: 'gender',              bn: 'genderBN' },
-        motherUnit:          { en: 'motherUnit',          bn: 'motherUnitBN' },
-        rabUnit:             { en: 'rabUnit',             bn: 'rabUnitBN' },
-        dateOfCommission:    { en: 'dateOfCommission' },
-        joiningDate:         { en: 'joiningDate' },
-        rabServiceFrom:      { en: 'rabServiceFrom' },
-        rabServiceTo:        { en: 'rabServiceTo' },
-        division:            { en: 'division',            bn: 'divisionBN' },
-        district:            { en: 'district',            bn: 'districtBN' },
-        upazila:             { en: 'upazila',             bn: 'upazilaBN' },
-        postOffice:          { en: 'postOffice',          bn: 'postOfficeBN' },
-        corps:               { en: 'corps',               bn: 'corpsBN' },
-        trade:               { en: 'trade',               bn: 'tradeBN' },
-        dob:                 { en: 'dob' },
-        religion:            { en: 'religion' },
-        bloodGroup:          { en: 'bloodGroup' },
-        maritalStatus:       { en: 'maritalStatus' },
-        mobileNo:            { en: 'mobileNo' },
-        email:               { en: 'email' },
+        serviceId: { en: 'serviceId' },
+        nameEnglish: { en: 'name' },
+        nameBangla: { en: 'nameBN' },
+        nid: { en: 'nid' },
+        prefix: { en: 'prefix', bn: 'prefixBN' },
+        appointment: { en: 'appointment', bn: 'appointmentBN' },
+        memberType: { en: 'memberType', bn: 'memberTypeBN' },
+        motherOrganization: { en: 'orgName', bn: 'orgNameBN' },
+        armyRank: { en: 'rank', bn: 'rankBN' },
+        rabRank: { en: 'rabRank', bn: 'rabRankBN' },
+        tradeRemarks: { en: 'tradeRemarks' },
+        gender: { en: 'gender', bn: 'genderBN' },
+        motherUnit: { en: 'motherUnit', bn: 'motherUnitBN' },
+        rabUnit: { en: 'rabUnit', bn: 'rabUnitBN' },
+        dateOfCommission: { en: 'dateOfCommission' },
+        joiningDate: { en: 'joiningDate' },
+        rabServiceFrom: { en: 'rabServiceFrom' },
+        rabServiceTo: { en: 'rabServiceTo' },
+        division: { en: 'division', bn: 'divisionBN' },
+        district: { en: 'district', bn: 'districtBN' },
+        upazila: { en: 'upazila', bn: 'upazilaBN' },
+        postOffice: { en: 'postOffice', bn: 'postOfficeBN' },
+        corps: { en: 'corps', bn: 'corpsBN' },
+        trade: { en: 'trade', bn: 'tradeBN' },
+        dob: { en: 'dob' },
+        religion: { en: 'religion' },
+        bloodGroup: { en: 'bloodGroup' },
+        maritalStatus: { en: 'maritalStatus' },
+        mobileNo: { en: 'mobileNo' },
+        email: { en: 'email' }
     };
 
     plainCellValue(row: EducationReportRow, key: string): string {
         const map = ReportEducationComponent.plainColumnPropertyMap[key];
         if (!map) return '-';
         const en = (row as any)[map.en] as string | null | undefined;
-        const bn = map.bn ? (row as any)[map.bn] as string | null | undefined : undefined;
+        const bn = map.bn ? ((row as any)[map.bn] as string | null | undefined) : undefined;
         return this.codeValue(en, bn);
     }
 
-    selectedColumnKeys: string[] = this.columnCatalog.filter(c => c.defaultVisible).map(c => c.key);
+    selectedColumnKeys: string[] = this.columnCatalog.filter((c) => c.defaultVisible).map((c) => c.key);
 
     get columnPickerOptions(): { label: string; value: string }[] {
-        return this.columnCatalog.map(c => ({ label: this.lang === 'bn' ? c.labelBN : c.labelEN, value: c.key }));
+        return this.columnCatalog.map((c) => ({ label: this.lang === 'bn' ? c.labelBN : c.labelEN, value: c.key }));
     }
 
     get visibleColumns(): typeof this.columnCatalog {
-        const map = new Map(this.columnCatalog.map(c => [c.key, c]));
-        return this.selectedColumnKeys
-            .map(k => map.get(k))
-            .filter((c): c is typeof this.columnCatalog[number] => c != null);
+        const map = new Map(this.columnCatalog.map((c) => [c.key, c]));
+        return this.selectedColumnKeys.map((k) => map.get(k)).filter((c): c is (typeof this.columnCatalog)[number] => c != null);
     }
 
     draggingColumnKey: string | null = null;
@@ -245,15 +222,17 @@ export class ReportEducationComponent implements OnInit, OnChanges {
         if (!sourceKey || sourceKey === targetKey) return;
         const arr = [...this.selectedColumnKeys];
         const fromIdx = arr.indexOf(sourceKey);
-        const toIdx   = arr.indexOf(targetKey);
+        const toIdx = arr.indexOf(targetKey);
         if (fromIdx === -1 || toIdx === -1) return;
         const [moved] = arr.splice(fromIdx, 1);
         arr.splice(toIdx, 0, moved);
         this.selectedColumnKeys = arr;
     }
-    onColumnDragEnd(): void { this.draggingColumnKey = null; }
+    onColumnDragEnd(): void {
+        this.draggingColumnKey = null;
+    }
     removeColumn(key: string): void {
-        this.selectedColumnKeys = this.selectedColumnKeys.filter(k => k !== key);
+        this.selectedColumnKeys = this.selectedColumnKeys.filter((k) => k !== key);
         this.onColumnsChange();
     }
 
@@ -296,20 +275,19 @@ export class ReportEducationComponent implements OnInit, OnChanges {
         multi(this.selectedCorpsIds, this.corpsOptions, L['report.table.corps'] ?? 'Corps');
         multi(this.selectedTradeIds, this.tradeOptions, L['report.search.trade']);
         multi(this.selectedRabUnitIds, this.rabUnitOptions, this.lang === 'bn' ? 'র‍্যাব ইউনিট' : 'RAB Unit');
+        multi(this.selectedSubjectIds, this.subjectOptions, this.lang === 'bn' ? 'বিষয়' : 'Subject');
         return items;
     }
 
     // ── RAB paper getters ─────────────────────────────────────────────
     get rabOverlineText(): string {
-        return this.lang === 'bn'
-            ? 'গণপ্রজাতন্ত্রী বাংলাদেশ সরকার'
-            : "GOVERNMENT OF THE PEOPLE'S REPUBLIC OF BANGLADESH";
+        return this.lang === 'bn' ? 'গণপ্রজাতন্ত্রী বাংলাদেশ সরকার' : "GOVERNMENT OF THE PEOPLE'S REPUBLIC OF BANGLADESH";
     }
-    get rabOrgTitle(): string { return this.lang === 'bn' ? 'র‍্যাপিড অ্যাকশন ব্যাটালিয়ন' : 'RAPID ACTION BATTALION'; }
+    get rabOrgTitle(): string {
+        return this.lang === 'bn' ? 'র‍্যাপিড অ্যাকশন ব্যাটালিয়ন' : 'RAPID ACTION BATTALION';
+    }
     get rabOrgSubtitle(): string {
-        return this.lang === 'bn'
-            ? 'বাংলাদেশ পুলিশ · সদর দপ্তর, কুর্মিটোলা, ঢাকা'
-            : 'Bangladesh Police · Headquarters, Kurmitola, Dhaka';
+        return this.lang === 'bn' ? 'বাংলাদেশ পুলিশ · সদর দপ্তর, কুর্মিটোলা, ঢাকা' : 'Bangladesh Police · Headquarters, Kurmitola, Dhaka';
     }
     get rabSectionTitle(): string {
         if (this.reportTypeLabel && this.commonCodeLabel) {
@@ -323,17 +301,25 @@ export class ReportEducationComponent implements OnInit, OnChanges {
         // the header no longer carries it as a subtitle.
         return '';
     }
-    get rabCriteriaTitle(): string { return this.lang === 'bn' ? 'নির্বাচন মানদণ্ড' : 'SELECTION CRITERIA'; }
-    get rabGeneratedLabel(): string { return this.lang === 'bn' ? 'তারিখ' : 'GENERATED'; }
+    get rabCriteriaTitle(): string {
+        return this.lang === 'bn' ? 'নির্বাচন মানদণ্ড' : 'SELECTION CRITERIA';
+    }
+    get rabGeneratedLabel(): string {
+        return this.lang === 'bn' ? 'তারিখ' : 'GENERATED';
+    }
     get rabFormattedDate(): string {
         const now = new Date();
-        return this.lang === 'bn'
-            ? now.toLocaleDateString('bn-BD', { day: 'numeric', month: 'long', year: 'numeric' }).toUpperCase()
-            : now.toLocaleDateString('en-US', { day: 'numeric', month: 'long', year: 'numeric' }).toUpperCase();
+        return this.lang === 'bn' ? now.toLocaleDateString('bn-BD', { day: 'numeric', month: 'long', year: 'numeric' }).toUpperCase() : now.toLocaleDateString('en-US', { day: 'numeric', month: 'long', year: 'numeric' }).toUpperCase();
     }
-    get rabConfidentialLabel(): string { return this.lang === 'bn' ? 'গোপনীয়' : 'CONFIDENTIAL'; }
-    get rabWarningLabel(): string { return this.lang === 'bn' ? 'অননুমোদিত প্রকাশ নিষিদ্ধ' : 'UNAUTHORIZED DISCLOSURE PROHIBITED'; }
-    get rabPageOfLabel(): string { return this.lang === 'bn' ? 'পৃষ্ঠা ১ / ১' : 'PAGE 1 OF 1'; }
+    get rabConfidentialLabel(): string {
+        return this.lang === 'bn' ? 'গোপনীয়' : 'CONFIDENTIAL';
+    }
+    get rabWarningLabel(): string {
+        return this.lang === 'bn' ? 'অননুমোদিত প্রকাশ নিষিদ্ধ' : 'UNAUTHORIZED DISCLOSURE PROHIBITED';
+    }
+    get rabPageOfLabel(): string {
+        return this.lang === 'bn' ? 'পৃষ্ঠা ১ / ১' : 'PAGE 1 OF 1';
+    }
 
     constructor(
         private reportService: ReportService,
@@ -344,7 +330,9 @@ export class ReportEducationComponent implements OnInit, OnChanges {
     ) {}
 
     @HostListener('document:click')
-    onDocumentClick(): void { this.exportDropdownOpen = false; }
+    onDocumentClick(): void {
+        this.exportDropdownOpen = false;
+    }
 
     get reportTitle(): string {
         const sLabel = this.lang === 'bn' ? this.statusLabelBn : this.statusLabel;
@@ -381,6 +369,7 @@ export class ReportEducationComponent implements OnInit, OnChanges {
         multi(this.selectedCorpsIds, this.corpsOptions, L['report.table.corps'] ?? 'Corps');
         multi(this.selectedTradeIds, this.tradeOptions, L['report.search.trade']);
         multi(this.selectedRabUnitIds, this.rabUnitOptions, this.lang === 'bn' ? 'র‍্যাব ইউনিট' : 'RAB Unit');
+        multi(this.selectedSubjectIds, this.subjectOptions, this.lang === 'bn' ? 'বিষয়' : 'Subject');
         return lines;
     }
 
@@ -413,20 +402,28 @@ export class ReportEducationComponent implements OnInit, OnChanges {
         this.loadOrgOptions();
         this.loadMemberTypeOptions();
         this.loadRabUnitOptions();
+        this.loadSubjectOptions();
         this.load();
+    }
+
+    loadSubjectOptions(): void {
+        this.commonCodeService.getAllActiveCommonCodesType('EducationSubject').subscribe({
+            next: (codes) => (this.subjectOptions = this.mapCodes(codes || [])),
+            error: () => (this.subjectOptions = [])
+        });
     }
 
     loadMemberTypeOptions(): void {
         this.commonCodeService.getAccessibleMemberTypes().subscribe({
             next: (codes) => (this.memberTypeOptions = this.mapCodes(codes || [])),
-            error: () => (this.memberTypeOptions = []),
+            error: () => (this.memberTypeOptions = [])
         });
     }
 
     loadRabUnitOptions(): void {
         this.commonCodeService.getAllActiveCommonCodesType('RabUnit').subscribe({
             next: (codes) => (this.rabUnitOptions = this.mapCodes(codes || [])),
-            error: () => (this.rabUnitOptions = []),
+            error: () => (this.rabUnitOptions = [])
         });
     }
 
@@ -451,13 +448,23 @@ export class ReportEducationComponent implements OnInit, OnChanges {
         return this.commonCodeLabel?.trim() ? this.commonCodeLabel.trim() : '—';
     }
 
+    /** Cell text for the synthetic "Subject" column — the picked subject filter value(s), identical for every row. */
+    get selectedSubjectCellText(): string {
+        if (!this.selectedSubjectIds.length) return '—';
+        const names = this.selectedSubjectIds
+            .map((id) => this.subjectOptions.find((o) => o.value === id))
+            .filter((o): o is (typeof this.subjectOptions)[number] => o != null)
+            .map((o) => (this.lang === 'bn' ? o.labelBn : o.label));
+        return names.length ? names.join(', ') : '—';
+    }
+
     /** Localized labels for the raw PostingStatus passthrough values (matches the parent Status dropdown wording). */
     private static readonly MEMBER_STATUS_LABELS: Record<string, { en: string; bn: string }> = {
-        Servings:          { en: 'Presently Serving',  bn: 'কর্মরত' },
-        ExMember:          { en: 'Ex Member',          bn: 'সাবেক সদস্য' },
-        Supernumerary:     { en: 'Supernumerary',      bn: 'সুপারনিউমারারি' },
-        Pending:           { en: 'Pending for Joining',bn: 'যোগদানের অপেক্ষায়' },
-        PendingForJoining: { en: 'Pending for Joining',bn: 'যোগদানের অপেক্ষায়' },
+        Servings: { en: 'Presently Serving', bn: 'কর্মরত' },
+        ExMember: { en: 'Ex Member', bn: 'সাবেক সদস্য' },
+        Supernumerary: { en: 'Supernumerary', bn: 'সুপারনিউমারারি' },
+        Pending: { en: 'Pending for Joining', bn: 'যোগদানের অপেক্ষায়' },
+        PendingForJoining: { en: 'Pending for Joining', bn: 'যোগদানের অপেক্ষায়' }
     };
 
     /** Per-row member-status cell text, localized; falls back to the raw value. */
@@ -487,10 +494,13 @@ export class ReportEducationComponent implements OnInit, OnChanges {
         if (this.selectedTradeIds.length > 0) c++;
         if (this.selectedMemberTypeIds.length > 0) c++;
         if (this.selectedRabUnitIds.length > 0) c++;
+        if (this.selectedSubjectIds.length > 0) c++;
         return c;
     }
 
-    toggleFilter(): void { this.filterOpen = !this.filterOpen; }
+    toggleFilter(): void {
+        this.filterOpen = !this.filterOpen;
+    }
 
     filterSubtitle(): string {
         const L = this.L['en'];
@@ -506,6 +516,7 @@ export class ReportEducationComponent implements OnInit, OnChanges {
         this.selectedTradeIds = [];
         this.selectedMemberTypeIds = [];
         this.selectedRabUnitIds = [];
+        this.selectedSubjectIds = [];
         this.rankOptions = [];
         this.corpsOptions = [];
         this.tradeOptions = [];
@@ -518,7 +529,7 @@ export class ReportEducationComponent implements OnInit, OnChanges {
         return (codes || []).map((c) => ({
             label: c.codeValueEN || String(c.codeId),
             labelBn: c.codeValueBN || c.codeValueEN || String(c.codeId),
-            value: c.codeId,
+            value: c.codeId
         }));
     }
 
@@ -535,12 +546,12 @@ export class ReportEducationComponent implements OnInit, OnChanges {
                 (this.orgOptions = (orgs || []).map((o) => ({
                     label: o.orgNameEN || String(o.orgId),
                     labelBn: o.orgNameBN || o.orgNameEN || String(o.orgId),
-                    value: o.orgId,
+                    value: o.orgId
                 }))),
             error: (err) => {
                 console.error(err);
                 this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.message || 'Failed to load organizations' });
-            },
+            }
         });
     }
 
@@ -562,13 +573,13 @@ export class ReportEducationComponent implements OnInit, OnChanges {
             error: () => {
                 this.allRanksForOrg = [];
                 this.rankOptions = [];
-            },
+            }
         });
         forkJoin(this.selectedOrgIds.map((orgId) => this.commonCodeService.getAllActiveCommonCodesByOrgIdAndType(orgId, 'Corps'))).subscribe({
             next: (results: CommonCodeModel[][]) => {
                 this.corpsOptions = this.mapCodes(this.dedupeByCodeId(results.flat()));
             },
-            error: () => (this.corpsOptions = []),
+            error: () => (this.corpsOptions = [])
         });
     }
 
@@ -594,11 +605,13 @@ export class ReportEducationComponent implements OnInit, OnChanges {
             next: (results: CommonCodeModel[][]) => {
                 this.tradeOptions = this.mapCodes(this.dedupeByCodeId(results.flat()));
             },
-            error: () => (this.tradeOptions = []),
+            error: () => (this.tradeOptions = [])
         });
     }
 
-    onFilterChange(): void { /* Search applies on click */ }
+    onFilterChange(): void {
+        /* Search applies on click */
+    }
 
     onPage(event: { first?: number; rows?: number }): void {
         this.first = event.first ?? 0;
@@ -616,11 +629,24 @@ export class ReportEducationComponent implements OnInit, OnChanges {
     private backendColumnKeys(): string[] {
         const out: string[] = [];
         const seen = new Set<string>();
-        const push = (k: string) => { if (!seen.has(k)) { seen.add(k); out.push(k); } };
+        const push = (k: string) => {
+            if (!seen.has(k)) {
+                seen.add(k);
+                out.push(k);
+            }
+        };
         for (const key of this.selectedColumnKeys) {
-            if (key === 'name') { push('nameEnglish'); push('nameBangla'); continue; }
-            if (key === 'memberStatus') { push('status'); continue; }
+            if (key === 'name') {
+                push('nameEnglish');
+                push('nameBangla');
+                continue;
+            }
+            if (key === 'memberStatus') {
+                push('status');
+                continue;
+            }
             if (key === 'selectedValue') continue;
+            if (key === 'subjectValue') continue;
             push(key);
         }
         return out;
@@ -632,75 +658,73 @@ export class ReportEducationComponent implements OnInit, OnChanges {
         const page_no = Math.floor(this.first / this.rows) + 1;
 
         const criteria: DynamicReportCriterion[] = [];
-        if (this.selectedOrgIds.length > 0)
-            criteria.push({ fieldKey: 'motherOrganization', idValues: this.selectedOrgIds });
-        if (this.selectedMemberTypeIds.length > 0)
-            criteria.push({ fieldKey: 'memberType', idValues: this.selectedMemberTypeIds });
-        if (this.selectedRankIds.length > 0)
-            criteria.push({ fieldKey: 'armyRank', idValues: this.selectedRankIds });
-        if (this.selectedCorpsIds.length > 0)
-            criteria.push({ fieldKey: 'corps', idValues: this.selectedCorpsIds });
-        if (this.selectedTradeIds.length > 0)
-            criteria.push({ fieldKey: 'trade', idValues: this.selectedTradeIds });
-        if (this.selectedRabUnitIds.length > 0)
-            criteria.push({ fieldKey: 'rabUnit', idValues: this.selectedRabUnitIds });
+        if (this.selectedOrgIds.length > 0) criteria.push({ fieldKey: 'motherOrganization', idValues: this.selectedOrgIds });
+        if (this.selectedMemberTypeIds.length > 0) criteria.push({ fieldKey: 'memberType', idValues: this.selectedMemberTypeIds });
+        if (this.selectedRankIds.length > 0) criteria.push({ fieldKey: 'armyRank', idValues: this.selectedRankIds });
+        if (this.selectedCorpsIds.length > 0) criteria.push({ fieldKey: 'corps', idValues: this.selectedCorpsIds });
+        if (this.selectedTradeIds.length > 0) criteria.push({ fieldKey: 'trade', idValues: this.selectedTradeIds });
+        if (this.selectedRabUnitIds.length > 0) criteria.push({ fieldKey: 'rabUnit', idValues: this.selectedRabUnitIds });
+        if (this.selectedSubjectIds.length > 0) criteria.push({ fieldKey: 'educationSubjectMatch', idValues: this.selectedSubjectIds });
         // Parent's commonCodeId is the picked Higher Education Qualification.
         // Filter is "employees who have completed this qualification at any
         // time" (server-side EXISTS against EducationInfo via educationAnyMatch).
-        if (this.commonCodeId != null && this.commonCodeId > 0)
-            criteria.push({ fieldKey: 'educationAnyMatch', idValue: this.commonCodeId });
+        if (this.commonCodeId != null && this.commonCodeId > 0) criteria.push({ fieldKey: 'educationAnyMatch', idValue: this.commonCodeId });
 
-        this.reportService.runDynamicEmployeeBaseReport({
-            columns: this.backendColumnKeys(),
-            criteria,
-            postingStatusFilter: this.postingStatus || null,
-            pagination: { page_no, row_per_page: this.rows },
-        }).subscribe({
-            next: (res) => {
-                const startSer = (page_no - 1) * this.rows + 1;
-                this.list = (res.datalist ?? []).map((d, i) => this.adaptDynamicRow(d, startSer + i));
-                this.totalRecords = res.pages?.Rows ?? res.pages?.rows ?? 0;
-                this.accessibleScope = res.accessibleScope ? {
-                    rabUnitNames: null,
-                    rabUnitNamesBN: null,
-                    memberTypeNames: null,
-                    memberTypeNamesBN: null,
-                    orgScopeRestricted: res.accessibleScope.orgScopeRestricted,
-                } as ReportAccessibleScope : null;
-                this.scopeChange.emit(this.accessibleScope);
-                this.searched = true;
-                this.loading = false;
-            },
-            error: (err) => {
-                console.error(err);
-                this.messageService.add({
-                    severity: 'error',
-                    summary: 'Error',
-                    detail: err?.error?.message || 'Failed to load report',
-                });
-                this.loading = false;
-            },
-        });
+        this.reportService
+            .runDynamicEmployeeBaseReport({
+                columns: this.backendColumnKeys(),
+                criteria,
+                postingStatusFilter: this.postingStatus || null,
+                pagination: { page_no, row_per_page: this.rows }
+            })
+            .subscribe({
+                next: (res) => {
+                    const startSer = (page_no - 1) * this.rows + 1;
+                    this.list = (res.datalist ?? []).map((d, i) => this.adaptDynamicRow(d, startSer + i));
+                    this.totalRecords = res.pages?.Rows ?? res.pages?.rows ?? 0;
+                    this.accessibleScope = res.accessibleScope
+                        ? ({
+                              rabUnitNames: null,
+                              rabUnitNamesBN: null,
+                              memberTypeNames: null,
+                              memberTypeNamesBN: null,
+                              orgScopeRestricted: res.accessibleScope.orgScopeRestricted
+                          } as ReportAccessibleScope)
+                        : null;
+                    this.scopeChange.emit(this.accessibleScope);
+                    this.searched = true;
+                    this.loading = false;
+                },
+                error: (err) => {
+                    console.error(err);
+                    this.messageService.add({
+                        severity: 'error',
+                        summary: 'Error',
+                        detail: err?.error?.message || 'Failed to load report'
+                    });
+                    this.loading = false;
+                }
+            });
     }
 
     private adaptDynamicRow(d: DynamicReportRow, ser: number): EducationReportRow {
         return {
             ...d,
             ser,
-            serviceId:     d['serviceId']             as string,
-            name:          d['nameEnglish']           as string,
-            nameBN:        d['nameBangla']            as string,
-            rank:          d['armyRank']              as string,
-            rankBN:        d['armyRankBN']            as string,
-            orgName:       d['motherOrganization']    as string,
-            orgNameBN:     d['motherOrganizationBN']  as string,
-            corps:         d['corps']                 as string,
-            corpsBN:       d['corpsBN']               as string,
-            trade:         d['trade']                 as string,
-            tradeBN:       d['tradeBN']               as string,
-            presentUnit:   d['rabUnit']               as string,
-            presentUnitBN: d['rabUnitBN']             as string,
-            ...(d['rabId'] ? { rabid: d['rabId'] as string } : {}),
+            serviceId: d['serviceId'] as string,
+            name: d['nameEnglish'] as string,
+            nameBN: d['nameBangla'] as string,
+            rank: d['armyRank'] as string,
+            rankBN: d['armyRankBN'] as string,
+            orgName: d['motherOrganization'] as string,
+            orgNameBN: d['motherOrganizationBN'] as string,
+            corps: d['corps'] as string,
+            corpsBN: d['corpsBN'] as string,
+            trade: d['trade'] as string,
+            tradeBN: d['tradeBN'] as string,
+            presentUnit: d['rabUnit'] as string,
+            presentUnitBN: d['rabUnitBN'] as string,
+            ...(d['rabId'] ? { rabid: d['rabId'] as string } : {})
         } as EducationReportRow & { rabid?: string };
     }
 
@@ -742,71 +766,146 @@ export class ReportEducationComponent implements OnInit, OnChanges {
         const sans = isBn ? (bnFont as any) : 'Calibri';
         const serif = isBn ? (bnFont as any) : 'Cambria';
         const mono = isBn ? (bnFont as any) : 'Consolas';
-        const bnRunExtras = (size: number) => isBn ? { language: bnLang, sizeComplexScript: size } : {};
+        const bnRunExtras = (size: number) => (isBn ? { language: bnLang, sizeComplexScript: size } : {});
         const wsafe = (s: string | null | undefined): string => s ?? '';
 
         const S = { overline: 15, title: 44, subtitle: 20, sectionTitle: 26, sectionSub: 20, stripLabel: 16, stripDate: 16, critLabel: 14, critValue: 20, tableHeader: 14, name: 20, meta: 14, body: 16, footer: 13 };
         const C = { black: '0B0B0B', mutedText: '555555', gray: '6B6B6B', labelGray: '8A8A8A', zebra: 'FAFAF6', border: 'BFBFBF', innerBorder: 'D9D9D9' };
-        const innerCellBorder = { top: { style: BorderStyle.SINGLE, size: 2, color: C.innerBorder }, bottom: { style: BorderStyle.SINGLE, size: 2, color: C.innerBorder }, left: { style: BorderStyle.SINGLE, size: 2, color: C.innerBorder }, right: { style: BorderStyle.SINGLE, size: 2, color: C.innerBorder } };
-        const headerCellBorder = { top: { style: BorderStyle.SINGLE, size: 8, color: C.black }, bottom: { style: BorderStyle.SINGLE, size: 8, color: C.black }, left: { style: BorderStyle.SINGLE, size: 4, color: C.border }, right: { style: BorderStyle.SINGLE, size: 4, color: C.border } };
+        const innerCellBorder = {
+            top: { style: BorderStyle.SINGLE, size: 2, color: C.innerBorder },
+            bottom: { style: BorderStyle.SINGLE, size: 2, color: C.innerBorder },
+            left: { style: BorderStyle.SINGLE, size: 2, color: C.innerBorder },
+            right: { style: BorderStyle.SINGLE, size: 2, color: C.innerBorder }
+        };
+        const headerCellBorder = {
+            top: { style: BorderStyle.SINGLE, size: 8, color: C.black },
+            bottom: { style: BorderStyle.SINGLE, size: 8, color: C.black },
+            left: { style: BorderStyle.SINGLE, size: 4, color: C.border },
+            right: { style: BorderStyle.SINGLE, size: 4, color: C.border }
+        };
 
         const headerPars: Paragraph[] = [
-            new Paragraph({ alignment: AlignmentType.CENTER, spacing: { after: 80 }, children: [new TextRun({ text: wsafe(this.rabOverlineText), font: sans, size: S.overline, ...bnRunExtras(S.overline), color: C.mutedText, characterSpacing: isBn ? 0 : 60, allCaps: !isBn })] }),
-            new Paragraph({ alignment: AlignmentType.CENTER, spacing: { after: 40 }, children: [new TextRun({ text: wsafe(this.rabOrgTitle), font: serif, size: S.title, ...bnRunExtras(S.title), bold: true, color: C.black, characterSpacing: isBn ? 0 : 24 })] }),
+            new Paragraph({
+                alignment: AlignmentType.CENTER,
+                spacing: { after: 80 },
+                children: [new TextRun({ text: wsafe(this.rabOverlineText), font: sans, size: S.overline, ...bnRunExtras(S.overline), color: C.mutedText, characterSpacing: isBn ? 0 : 60, allCaps: !isBn })]
+            }),
+            new Paragraph({
+                alignment: AlignmentType.CENTER,
+                spacing: { after: 40 },
+                children: [new TextRun({ text: wsafe(this.rabOrgTitle), font: serif, size: S.title, ...bnRunExtras(S.title), bold: true, color: C.black, characterSpacing: isBn ? 0 : 24 })]
+            }),
             new Paragraph({ alignment: AlignmentType.CENTER, spacing: { after: 200 }, children: [new TextRun({ text: wsafe(this.rabOrgSubtitle), font: serif, size: S.subtitle, ...bnRunExtras(S.subtitle), italics: true, color: C.mutedText })] }),
-            new Paragraph({ alignment: AlignmentType.CENTER, spacing: { after: this.rabSubtitleText ? 40 : 200 }, children: [new TextRun({ text: wsafe(this.rabSectionTitle), font: serif, size: S.sectionTitle, ...bnRunExtras(S.sectionTitle), bold: true, color: C.black, characterSpacing: isBn ? 0 : 32, allCaps: !isBn })] }),
+            new Paragraph({
+                alignment: AlignmentType.CENTER,
+                spacing: { after: this.rabSubtitleText ? 40 : 200 },
+                children: [new TextRun({ text: wsafe(this.rabSectionTitle), font: serif, size: S.sectionTitle, ...bnRunExtras(S.sectionTitle), bold: true, color: C.black, characterSpacing: isBn ? 0 : 32, allCaps: !isBn })]
+            })
         ];
         if (this.rabSubtitleText) {
-            headerPars.push(new Paragraph({ alignment: AlignmentType.CENTER, spacing: { after: 200 }, children: [new TextRun({ text: wsafe(this.rabSubtitleText), font: serif, size: S.sectionSub, ...bnRunExtras(S.sectionSub), italics: true, color: C.mutedText })] }));
+            headerPars.push(
+                new Paragraph({
+                    alignment: AlignmentType.CENTER,
+                    spacing: { after: 200 },
+                    children: [new TextRun({ text: wsafe(this.rabSubtitleText), font: serif, size: S.sectionSub, ...bnRunExtras(S.sectionSub), italics: true, color: C.mutedText })]
+                })
+            );
         }
 
         const colsPerCritRow = 4;
         const critCellPct = 100 / colsPerCritRow;
         const stripCell = (runs: TextRun[], alignment: typeof AlignmentType.LEFT | typeof AlignmentType.RIGHT) =>
-            new TableCell({ columnSpan: 2, borders: { top: { style: BorderStyle.SINGLE, size: 4, color: C.border }, bottom: { style: BorderStyle.SINGLE, size: 4, color: C.border }, left: { style: BorderStyle.SINGLE, size: 4, color: C.border }, right: { style: BorderStyle.SINGLE, size: 4, color: C.border } }, margins: { top: 80, bottom: 80, left: 140, right: 140 }, width: { size: 50, type: WidthType.PERCENTAGE }, children: [new Paragraph({ alignment, children: runs })] });
-        const stripRow = new TableRow({ cantSplit: true, children: [
-            stripCell([new TextRun({ text: wsafe(this.rabCriteriaTitle), font: sans, size: S.stripLabel, ...bnRunExtras(S.stripLabel), bold: true, color: C.black, characterSpacing: isBn ? 0 : 40, allCaps: !isBn })], AlignmentType.LEFT),
-            stripCell([new TextRun({ text: wsafe(`${this.rabGeneratedLabel} · ${this.rabFormattedDate}`), font: sans, size: S.stripDate, ...bnRunExtras(S.stripDate), bold: true, color: C.mutedText, characterSpacing: isBn ? 0 : 30, allCaps: !isBn })], AlignmentType.RIGHT),
-        ] });
+            new TableCell({
+                columnSpan: 2,
+                borders: {
+                    top: { style: BorderStyle.SINGLE, size: 4, color: C.border },
+                    bottom: { style: BorderStyle.SINGLE, size: 4, color: C.border },
+                    left: { style: BorderStyle.SINGLE, size: 4, color: C.border },
+                    right: { style: BorderStyle.SINGLE, size: 4, color: C.border }
+                },
+                margins: { top: 80, bottom: 80, left: 140, right: 140 },
+                width: { size: 50, type: WidthType.PERCENTAGE },
+                children: [new Paragraph({ alignment, children: runs })]
+            });
+        const stripRow = new TableRow({
+            cantSplit: true,
+            children: [
+                stripCell([new TextRun({ text: wsafe(this.rabCriteriaTitle), font: sans, size: S.stripLabel, ...bnRunExtras(S.stripLabel), bold: true, color: C.black, characterSpacing: isBn ? 0 : 40, allCaps: !isBn })], AlignmentType.LEFT),
+                stripCell(
+                    [new TextRun({ text: wsafe(`${this.rabGeneratedLabel} · ${this.rabFormattedDate}`), font: sans, size: S.stripDate, ...bnRunExtras(S.stripDate), bold: true, color: C.mutedText, characterSpacing: isBn ? 0 : 30, allCaps: !isBn })],
+                    AlignmentType.RIGHT
+                )
+            ]
+        });
         const items = this.criteriaItems;
         const critRows: TableRow[] = [stripRow];
         for (let i = 0; i < items.length; i += colsPerCritRow) {
             const cells: TableCell[] = [];
             for (let j = 0; j < colsPerCritRow; j++) {
                 const it = items[i + j];
-                cells.push(new TableCell({
-                    borders: innerCellBorder, margins: { top: 100, bottom: 100, left: 140, right: 140 }, width: { size: critCellPct, type: WidthType.PERCENTAGE },
-                    children: it ? [
-                        new Paragraph({ spacing: { after: 40 }, children: [new TextRun({ text: wsafe(it.label), font: sans, size: S.critLabel, ...bnRunExtras(S.critLabel), bold: true, color: C.labelGray, characterSpacing: isBn ? 0 : 32, allCaps: !isBn })] }),
-                        new Paragraph({ children: [new TextRun({ text: wsafe(it.value), font: serif, size: S.critValue, ...bnRunExtras(S.critValue), bold: true, color: C.black })] }),
-                    ] : [new Paragraph({ children: [new TextRun({ text: ' ', font: sans, size: S.critValue, ...bnRunExtras(S.critValue) })] })],
-                }));
+                cells.push(
+                    new TableCell({
+                        borders: innerCellBorder,
+                        margins: { top: 100, bottom: 100, left: 140, right: 140 },
+                        width: { size: critCellPct, type: WidthType.PERCENTAGE },
+                        children: it
+                            ? [
+                                  new Paragraph({
+                                      spacing: { after: 40 },
+                                      children: [new TextRun({ text: wsafe(it.label), font: sans, size: S.critLabel, ...bnRunExtras(S.critLabel), bold: true, color: C.labelGray, characterSpacing: isBn ? 0 : 32, allCaps: !isBn })]
+                                  }),
+                                  new Paragraph({ children: [new TextRun({ text: wsafe(it.value), font: serif, size: S.critValue, ...bnRunExtras(S.critValue), bold: true, color: C.black })] })
+                              ]
+                            : [new Paragraph({ children: [new TextRun({ text: ' ', font: sans, size: S.critValue, ...bnRunExtras(S.critValue) })] })]
+                    })
+                );
             }
             critRows.push(new TableRow({ cantSplit: true, children: cells }));
         }
         const criteriaTable = new Table({ width: { size: 100, type: WidthType.PERCENTAGE }, layout: TableLayoutType.AUTOFIT, rows: critRows });
 
         const visibleCols = this.visibleColumns;
-        const headerLabels = visibleCols.map(c => this.lang === 'bn' ? c.labelBN : c.labelEN);
-        const dataColPct = visibleCols.length > 0 ? (100 / visibleCols.length) : 100;
-        const headerCells: TableCell[] = headerLabels.map(label => new TableCell({
-            borders: headerCellBorder, margins: { top: 120, bottom: 120, left: 140, right: 140 }, width: { size: dataColPct, type: WidthType.PERCENTAGE },
-            children: [new Paragraph({ alignment: AlignmentType.LEFT, children: [new TextRun({ text: wsafe(label), font: sans, size: S.tableHeader, ...bnRunExtras(S.tableHeader), bold: true, color: C.black, characterSpacing: isBn ? 0 : 30, allCaps: !isBn })] })],
-        }));
+        const headerLabels = visibleCols.map((c) => (this.lang === 'bn' ? c.labelBN : c.labelEN));
+        const dataColPct = visibleCols.length > 0 ? 100 / visibleCols.length : 100;
+        const headerCells: TableCell[] = headerLabels.map(
+            (label) =>
+                new TableCell({
+                    borders: headerCellBorder,
+                    margins: { top: 120, bottom: 120, left: 140, right: 140 },
+                    width: { size: dataColPct, type: WidthType.PERCENTAGE },
+                    children: [
+                        new Paragraph({
+                            alignment: AlignmentType.LEFT,
+                            children: [new TextRun({ text: wsafe(label), font: sans, size: S.tableHeader, ...bnRunExtras(S.tableHeader), bold: true, color: C.black, characterSpacing: isBn ? 0 : 30, allCaps: !isBn })]
+                        })
+                    ]
+                })
+        );
         const headerRow = new TableRow({ tableHeader: true, cantSplit: true, children: headerCells });
 
-        const codeValue = (en?: string | null, bn?: string | null): string => (isBn && bn) ? bn.trim() : (en ?? bn ?? '-');
+        const codeValue = (en?: string | null, bn?: string | null): string => (isBn && bn ? bn.trim() : (en ?? bn ?? '-'));
 
         const dataRows: TableRow[] = this.list.map((row, idx) => {
             const isEven = idx % 2 === 1;
             const shading = isEven ? { type: 'clear' as const, fill: C.zebra, color: 'auto' } : undefined;
             const cellOpts = { borders: innerCellBorder, margins: { top: 100, bottom: 100, left: 140, right: 140 }, width: { size: dataColPct, type: WidthType.PERCENTAGE }, shading };
-            const cells: TableCell[] = visibleCols.map(col => {
+            const cells: TableCell[] = visibleCols.map((col) => {
                 const run = (text: string, opts: { fontKey?: any; sz?: number; bold?: boolean; color?: string; chSp?: number } = {}) =>
-                    new TextRun({ text: wsafe(text), font: opts.fontKey ?? sans, size: opts.sz ?? S.body, ...bnRunExtras(opts.sz ?? S.body), bold: opts.bold ?? false, color: opts.color ?? C.black, ...(opts.chSp != null ? { characterSpacing: opts.chSp } : {}) });
+                    new TextRun({
+                        text: wsafe(text),
+                        font: opts.fontKey ?? sans,
+                        size: opts.sz ?? S.body,
+                        ...bnRunExtras(opts.sz ?? S.body),
+                        bold: opts.bold ?? false,
+                        color: opts.color ?? C.black,
+                        ...(opts.chSp != null ? { characterSpacing: opts.chSp } : {})
+                    });
                 switch (col.hint) {
                     case 'Serial':
-                        return new TableCell({ ...cellOpts, children: [new Paragraph({ alignment: AlignmentType.LEFT, children: [run(this.paddedSer((row as any).ser ?? idx + 1), { fontKey: mono, sz: S.name, bold: true, color: C.gray, chSp: isBn ? 0 : 8 })] })] });
+                        return new TableCell({
+                            ...cellOpts,
+                            children: [new Paragraph({ alignment: AlignmentType.LEFT, children: [run(this.paddedSer((row as any).ser ?? idx + 1), { fontKey: mono, sz: S.name, bold: true, color: C.gray, chSp: isBn ? 0 : 8 })] })]
+                        });
                     case 'RabPersonnelComposite': {
                         const meta = this.personnelMeta(row);
                         const children: Paragraph[] = [new Paragraph({ spacing: { after: meta ? 40 : 0 }, children: [run(codeValue(row.name, row.nameBN), { sz: S.name, bold: true })] })];
@@ -819,6 +918,8 @@ export class ReportEducationComponent implements OnInit, OnChanges {
                         return new TableCell({ ...cellOpts, children: [new Paragraph({ children: [run(codeValue(row.name, row.nameBN), { sz: S.name, bold: true })] })] });
                     case 'SelectedValue':
                         return new TableCell({ ...cellOpts, children: [new Paragraph({ children: [run(this.selectedValueCellText)] })] });
+                    case 'SubjectSelected':
+                        return new TableCell({ ...cellOpts, children: [new Paragraph({ children: [run(this.selectedSubjectCellText)] })] });
                     case 'MemberStatus':
                         return new TableCell({ ...cellOpts, children: [new Paragraph({ children: [run(this.memberStatusText(row))] })] });
                     case 'BlankRemark':
@@ -833,20 +934,70 @@ export class ReportEducationComponent implements OnInit, OnChanges {
         });
         const dataTable = new Table({ width: { size: 100, type: WidthType.PERCENTAGE }, layout: TableLayoutType.AUTOFIT, rows: [headerRow, ...dataRows] });
 
-        const footerCellBorder = { top: { style: BorderStyle.SINGLE, size: 6, color: C.black }, bottom: { style: BorderStyle.NONE, size: 0, color: 'FFFFFF' }, left: { style: BorderStyle.NONE, size: 0, color: 'FFFFFF' }, right: { style: BorderStyle.NONE, size: 0, color: 'FFFFFF' } };
+        const footerCellBorder = {
+            top: { style: BorderStyle.SINGLE, size: 6, color: C.black },
+            bottom: { style: BorderStyle.NONE, size: 0, color: 'FFFFFF' },
+            left: { style: BorderStyle.NONE, size: 0, color: 'FFFFFF' },
+            right: { style: BorderStyle.NONE, size: 0, color: 'FFFFFF' }
+        };
         const footerCellMargins = { top: 80, bottom: 0, left: 0, right: 0 };
-        const footer = new Footer({ children: [new Table({ width: { size: 100, type: WidthType.PERCENTAGE }, layout: TableLayoutType.FIXED, columnWidths: [3000, 3000, 3000], rows: [new TableRow({ cantSplit: true, children: [
-            new TableCell({ borders: footerCellBorder, margins: footerCellMargins, children: [new Paragraph({ alignment: AlignmentType.LEFT, children: [new TextRun({ text: wsafe(this.rabConfidentialLabel), font: mono, size: S.footer, ...bnRunExtras(S.footer), bold: true, color: C.black, characterSpacing: isBn ? 0 : 30, allCaps: !isBn })] })] }),
-            new TableCell({ borders: footerCellBorder, margins: footerCellMargins, children: [new Paragraph({ children: [] })] }),
-            new TableCell({ borders: footerCellBorder, margins: footerCellMargins, children: [new Paragraph({ alignment: AlignmentType.RIGHT, children: [new TextRun({ children: [`${isBn ? 'পৃষ্ঠা' : 'PAGE'} `, PageNumber.CURRENT, ` ${isBn ? '/' : 'OF'} `, PageNumber.TOTAL_PAGES], font: mono, size: S.footer, ...bnRunExtras(S.footer), bold: true, color: C.black, characterSpacing: isBn ? 0 : 24, allCaps: !isBn })] })] }),
-        ] })] })] });
+        const footer = new Footer({
+            children: [
+                new Table({
+                    width: { size: 100, type: WidthType.PERCENTAGE },
+                    layout: TableLayoutType.FIXED,
+                    columnWidths: [3000, 3000, 3000],
+                    rows: [
+                        new TableRow({
+                            cantSplit: true,
+                            children: [
+                                new TableCell({
+                                    borders: footerCellBorder,
+                                    margins: footerCellMargins,
+                                    children: [
+                                        new Paragraph({
+                                            alignment: AlignmentType.LEFT,
+                                            children: [new TextRun({ text: wsafe(this.rabConfidentialLabel), font: mono, size: S.footer, ...bnRunExtras(S.footer), bold: true, color: C.black, characterSpacing: isBn ? 0 : 30, allCaps: !isBn })]
+                                        })
+                                    ]
+                                }),
+                                new TableCell({ borders: footerCellBorder, margins: footerCellMargins, children: [new Paragraph({ children: [] })] }),
+                                new TableCell({
+                                    borders: footerCellBorder,
+                                    margins: footerCellMargins,
+                                    children: [
+                                        new Paragraph({
+                                            alignment: AlignmentType.RIGHT,
+                                            children: [
+                                                new TextRun({
+                                                    children: [`${isBn ? 'পৃষ্ঠা' : 'PAGE'} `, PageNumber.CURRENT, ` ${isBn ? '/' : 'OF'} `, PageNumber.TOTAL_PAGES],
+                                                    font: mono,
+                                                    size: S.footer,
+                                                    ...bnRunExtras(S.footer),
+                                                    bold: true,
+                                                    color: C.black,
+                                                    characterSpacing: isBn ? 0 : 24,
+                                                    allCaps: !isBn
+                                                })
+                                            ]
+                                        })
+                                    ]
+                                })
+                            ]
+                        })
+                    ]
+                })
+            ]
+        });
 
         const doc = new Document({
-            sections: [{
-                properties: { page: { size: { orientation: PageOrientation.LANDSCAPE }, margin: { top: 680, bottom: 1247, left: 680, right: 680 } } },
-                footers: { default: footer },
-                children: [...headerPars, criteriaTable, new Paragraph({ spacing: { before: 0, after: 200 }, children: [new TextRun({ text: '', font: sans, size: 4 })] }), dataTable],
-            }],
+            sections: [
+                {
+                    properties: { page: { size: { orientation: PageOrientation.LANDSCAPE }, margin: { top: 680, bottom: 1247, left: 680, right: 680 } } },
+                    footers: { default: footer },
+                    children: [...headerPars, criteriaTable, new Paragraph({ spacing: { before: 0, after: 200 }, children: [new TextRun({ text: '', font: sans, size: 4 })] }), dataTable]
+                }
+            ]
         });
         const blob = await Packer.toBlob(doc);
         saveAs(blob, `education-report_${this.lang}.docx`);
@@ -856,9 +1007,9 @@ export class ReportEducationComponent implements OnInit, OnChanges {
         const isBn = this.lang === 'bn';
         const wsafe = (s: string | null | undefined): string => s ?? '';
         const visibleCols = this.visibleColumns;
-        const headers: string[] = visibleCols.map(c => isBn ? c.labelBN : c.labelEN);
+        const headers: string[] = visibleCols.map((c) => (isBn ? c.labelBN : c.labelEN));
         const totalCols = headers.length || 1;
-        const codeValue = (en?: string | null, bn?: string | null): string => (isBn && bn) ? bn.trim() : (en ?? bn ?? '-');
+        const codeValue = (en?: string | null, bn?: string | null): string => (isBn && bn ? bn.trim() : (en ?? bn ?? '-'));
 
         const aoa: any[][] = [];
         const pad = (n: number) => Array.from({ length: n }, () => '');
@@ -874,21 +1025,30 @@ export class ReportEducationComponent implements OnInit, OnChanges {
         aoa.push(headers);
         for (let i = 0; i < this.list.length; i++) {
             const row = this.list[i];
-            const cells = visibleCols.map(col => {
+            const cells = visibleCols.map((col) => {
                 switch (col.hint) {
-                    case 'Serial':                return this.paddedSer((row as any).ser ?? i + 1);
+                    case 'Serial':
+                        return this.paddedSer((row as any).ser ?? i + 1);
                     case 'RabPersonnelComposite': {
                         const name = codeValue(row.name, row.nameBN);
                         const meta = this.personnelMeta(row);
                         return meta ? `${name}\n${meta}` : name;
                     }
-                    case 'RabId':                 return (row as any).rabid ? this.displayNum((row as any).rabid) : '';
-                    case 'Name':                  return codeValue(row.name, row.nameBN);
-                    case 'SelectedValue':         return this.selectedValueCellText;
-                    case 'MemberStatus':          return this.memberStatusText(row);
-                    case 'BlankRemark':           return '';
+                    case 'RabId':
+                        return (row as any).rabid ? this.displayNum((row as any).rabid) : '';
+                    case 'Name':
+                        return codeValue(row.name, row.nameBN);
+                    case 'SelectedValue':
+                        return this.selectedValueCellText;
+                    case 'SubjectSelected':
+                        return this.selectedSubjectCellText;
+                    case 'MemberStatus':
+                        return this.memberStatusText(row);
+                    case 'BlankRemark':
+                        return '';
                     case 'Plain':
-                    default:                      return this.plainCellValue(row, col.key);
+                    default:
+                        return this.plainCellValue(row, col.key);
                 }
             });
             aoa.push(cells);
@@ -921,7 +1081,7 @@ export class ReportEducationComponent implements OnInit, OnChanges {
                 severity: 'warn',
                 summary: 'Popup blocked',
                 detail: 'Allow popups for this site to use Print.',
-                life: 6000,
+                life: 6000
             });
             return;
         }
@@ -930,8 +1090,12 @@ export class ReportEducationComponent implements OnInit, OnChanges {
         win.document.write(html);
         win.document.close();
         setTimeout(() => {
-            try { win.focus(); win.print(); }
-            catch { /* user can still Ctrl+P from the open window */ }
+            try {
+                win.focus();
+                win.print();
+            } catch {
+                /* user can still Ctrl+P from the open window */
+            }
         }, 700);
     }
 
@@ -939,15 +1103,21 @@ export class ReportEducationComponent implements OnInit, OnChanges {
         // Coerce to string before HTML-escaping — some backend fields
         // (e.g. numeric IDs spread in via `...d` in adaptDynamicRow) reach
         // esc() as numbers and would throw "replace is not a function".
-        const esc = (s: unknown) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;');
+        const esc = (s: unknown) =>
+            String(s ?? '')
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#039;');
         const isBn = this.lang === 'bn';
         const serif = isBn ? "'Nirmala UI', 'Hind Siliguri', 'SolaimanLipi', serif" : "'Playfair Display', Georgia, 'Times New Roman', serif";
         const sans = isBn ? "'Nirmala UI', 'Hind Siliguri', 'SolaimanLipi', sans-serif" : "'DM Sans', 'Segoe UI', Arial, sans-serif";
         const mono = "'JetBrains Mono', 'Consolas', 'Courier New', monospace";
 
         const visibleCols = this.visibleColumns;
-        const tableHeaderHtml = `<tr>${visibleCols.map(c => `<th>${esc(this.lang === 'bn' ? c.labelBN : c.labelEN)}</th>`).join('')}</tr>`;
-        const codeValue = (en?: string | null, bn?: string | null): string => (this.lang === 'bn' && bn) ? bn.trim() : (en ?? bn ?? '-');
+        const tableHeaderHtml = `<tr>${visibleCols.map((c) => `<th>${esc(this.lang === 'bn' ? c.labelBN : c.labelEN)}</th>`).join('')}</tr>`;
+        const codeValue = (en?: string | null, bn?: string | null): string => (this.lang === 'bn' && bn ? bn.trim() : (en ?? bn ?? '-'));
 
         const renderCell = (row: EducationReportRow, col: { key: string; hint: string }, idx: number): string => {
             switch (col.hint) {
@@ -964,6 +1134,8 @@ export class ReportEducationComponent implements OnInit, OnChanges {
                     return `<td class="td-personnel"><div class="personnel-name">${esc(codeValue(row.name, row.nameBN))}</div></td>`;
                 case 'SelectedValue':
                     return `<td>${esc(this.selectedValueCellText)}</td>`;
+                case 'SubjectSelected':
+                    return `<td>${esc(this.selectedSubjectCellText)}</td>`;
                 case 'MemberStatus':
                     return `<td>${esc(this.memberStatusText(row))}</td>`;
                 case 'BlankRemark':
@@ -974,13 +1146,19 @@ export class ReportEducationComponent implements OnInit, OnChanges {
             }
         };
 
-        const tableBodyHtml = this.list.map((row, i) => `<tr>${visibleCols.map(c => renderCell(row, c, i)).join('')}</tr>`).join('');
+        const tableBodyHtml = this.list.map((row, i) => `<tr>${visibleCols.map((c) => renderCell(row, c, i)).join('')}</tr>`).join('');
         const items = this.criteriaItems;
-        const criteriaGridHtml = items.length ? `<div class="criteria-grid">${items.map(item => `
+        const criteriaGridHtml = items.length
+            ? `<div class="criteria-grid">${items
+                  .map(
+                      (item) => `
                 <div class="cell">
                     <div class="cell-label">${esc(item.label)}</div>
                     <div class="cell-value">${esc(item.value)}</div>
-                </div>`).join('')}</div>` : '';
+                </div>`
+                  )
+                  .join('')}</div>`
+            : '';
         const subtitleHtml = this.rabSubtitleText ? `<div class="paper-section-sub"><em>${esc(this.rabSubtitleText)}</em></div>` : '';
         const confidential = this.rabConfidentialLabel;
         const warning = this.rabWarningLabel;
