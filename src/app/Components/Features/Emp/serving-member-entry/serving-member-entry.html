@@ -546,12 +546,6 @@
                         <label class="form-label">Date of Commission</label>
                         <p-datepicker formControlName="dateOfCommission" dateFormat="dd-mm-yy" placeholder="Select Date" styleClass="w-full"></p-datepicker>
                     </div>
-                    <div class="form-field">
-                        <label class="form-label">Marital Status</label>
-                        <p-select [options]="personalMaritalStatuses" formControlName="maritalStatus" optionLabel="label" optionValue="value"
-                            placeholder="Select Marital Status" styleClass="w-full" [filter]="true" filterPlaceholder="Search" [showClear]="true">
-                        </p-select>
-                    </div>
                 </div>
 
                 <!-- Row 4: Investigation Experience -->
@@ -629,7 +623,7 @@
                         <label class="form-label">Height</label>
                         <div class="flex gap-2">
                             <p-inputNumber formControlName="heightFeet" placeholder="Feet" [min]="0" [max]="8" styleClass="w-full"></p-inputNumber>
-                            <p-inputNumber formControlName="heightInch" placeholder="Inch" [min]="0" [max]="11" styleClass="w-full"></p-inputNumber>
+                            <p-inputNumber formControlName="heightInch" placeholder="Inch" [min]="0" [max]="11.5" [minFractionDigits]="0" [maxFractionDigits]="1" styleClass="w-full"></p-inputNumber>
                         </div>
                     </div>
                 </div>

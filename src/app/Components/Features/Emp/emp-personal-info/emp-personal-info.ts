@@ -274,7 +274,7 @@ export class EmpPersonalInfo implements OnInit {
             tribal: [null],
             freedomFighter: [null],
             heightFeet: [null, [Validators.min(0), Validators.max(8)]],
-            heightInch: [null, [Validators.min(0), Validators.max(11)]],
+            heightInch: [null, [Validators.min(0), Validators.max(11.5)]],
             weightKg: [null, [Validators.min(0), Validators.max(200)]],
             weightLbs: [null, [Validators.min(0), Validators.max(440)]],
             leavingStatus: [null],
