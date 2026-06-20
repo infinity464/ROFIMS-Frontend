@@ -116,7 +116,7 @@ export class ServingMemberEntry implements OnInit {
         showSameAsPresent: true,
         sameAsLabel: 'Same As Member Present Address',
         showSameAsSecondary: true,
-        sameAsSecondaryLabel: 'Same As Spouse Permanent Address',
+        sameAsSecondaryLabel: 'Same As Permanent Address',
         employeeId: this.employeeId
     };
 
