@@ -26,7 +26,7 @@ import { CommonCodeService } from '@/services/common-code-service';
 import { OrganizationService } from '@/Components/basic-setup/organization-setup/services/organization-service';
 import { EmployeeSearchComponent, EmployeeBasicInfo } from '@/Components/Shared/employee-search/employee-search';
 import { FileReferencesFormComponent, FileRowData } from '@components/Common/file-references-form/file-references-form';
-import { PresentStatusType, PresentStatusTypeOptions } from '@/models/enums';
+import { PresentStatusType, PresentStatusTypeOptions, PostingStatus } from '@/models/enums';
 import { FlexibleDateDirective } from '@/shared/directives/flexible-date.directive';
 
 @Component({
@@ -68,6 +68,7 @@ export class EmpPresentStatus implements OnInit {
     employeeFound: boolean = false;
     selectedEmployeeId: number | null = null;
     employeeBasicInfo: any = null;
+    employeePostingStatus: string | null = null;
 
     // Mode
     mode: 'search' | 'view' | 'edit' = 'search';
@@ -82,6 +83,11 @@ export class EmpPresentStatus implements OnInit {
     isEditMode: boolean = false;
     isSaving: boolean = false;
     editingRecordId: number | null = null;
+
+    // View (read-only) dialog
+    displayViewDialog: boolean = false;
+    viewRecord: any = null;
+    viewFileRows: { fileName: string; fileId?: number }[] = [];
 
     // Form
     presentStatusForm!: FormGroup;
@@ -154,6 +160,8 @@ export class EmpPresentStatus implements OnInit {
                     this.employeeFound = true;
                     this.selectedEmployeeId = employee.employeeID || employee.EmployeeID;
                     this.employeeBasicInfo = employee;
+                    this.employeePostingStatus = employee.PostingStatus ?? employee.postingStatus ?? null;
+                    this.loadEmployeeOrgUnits(this.selectedEmployeeId!);
                     this.loadRecordList();
                 }
             },
@@ -245,6 +253,22 @@ export class EmpPresentStatus implements OnInit {
         return this.recordList.some((r) => r.presentStatusType === PresentStatusType.Deceased);
     }
 
+    /**
+     * A present status may be added ONLY while the employee is presently serving.
+     * Any other posting status (Ex Member, Supernumerary, Pending, …) blocks it.
+     */
+    get canAddStatus(): boolean {
+        return this.employeePostingStatus === PostingStatus.Servings;
+    }
+
+    /** Fetch the employee's current posting status (gates whether a status can be added). */
+    private loadPostingStatus(employeeId: number): void {
+        this.empService.getEmployeeById(employeeId).subscribe({
+            next: (emp: any) => (this.employeePostingStatus = emp?.PostingStatus ?? emp?.postingStatus ?? null),
+            error: () => (this.employeePostingStatus = null)
+        });
+    }
+
     /** The employee's current (active) status type, or null if none. */
     get currentActiveStatusType(): string | null {
         return this.recordList.find((r) => r.isActive)?.presentStatusType ?? null;
@@ -316,17 +340,23 @@ export class EmpPresentStatus implements OnInit {
             next: (data) => (this.absentTypes = data.map((d) => ({ label: d.codeValueEN, value: d.codeId }))),
             error: (err) => console.error('Failed to load absent types', err)
         });
+        // Transferred-unit options are employee-specific (their own mother org's
+        // units) and loaded once an employee is selected — see loadEmployeeOrgUnits.
+    }
 
-        // Load RAB Units for Transferred Unit dropdown (used by RTU on Discipline Issue)
-        this.commonCodeService.getAllActiveCommonCodesType('RabUnit').subscribe({
-            next: (data) => (this.transferredUnits = data.map((d) => ({ label: d.codeValueEN, value: d.codeId }))),
-            error: (err) => console.error('Failed to load RAB units', err)
-        });
-
-        // Load Mother-Org Units (basic-setup/mother-org child rows) for the Regular Posting Out dropdown
-        this.organizationService.GetAllOrgUnit().subscribe({
-            next: (data) => (this.motherOrgUnits = (data || []).map((d: any) => ({ label: d.orgNameEN ?? d.OrgNameEN, value: d.orgId ?? d.OrgId }))),
-            error: (err) => console.error('Failed to load mother-org units', err)
+    /**
+     * Load the units of THIS employee's mother organization (e.g. if the member
+     * belongs to the Army, only Army units load). Both Regular Posting Out and RTU
+     * on Discipline Issue transfer the member to a unit of their own mother org.
+     */
+    loadEmployeeOrgUnits(employeeId: number): void {
+        this.organizationService.getOrgUnitsByEmployeeId(employeeId).subscribe({
+            next: (data: any[]) => {
+                const units = (data || []).map((d: any) => ({ label: d.orgNameEN ?? d.OrgNameEN, value: d.orgId ?? d.OrgId }));
+                this.motherOrgUnits = units;
+                this.transferredUnits = units;
+            },
+            error: (err) => console.error('Failed to load employee mother-org units', err)
         });
     }
 
@@ -335,6 +365,8 @@ export class EmpPresentStatus implements OnInit {
         this.employeeFound = true;
         this.selectedEmployeeId = employee.employeeID;
         this.employeeBasicInfo = employee;
+        this.loadPostingStatus(employee.employeeID);
+        this.loadEmployeeOrgUnits(employee.employeeID);
         this.loadRecordList();
     }
 
@@ -342,7 +374,10 @@ export class EmpPresentStatus implements OnInit {
         this.employeeFound = false;
         this.selectedEmployeeId = null;
         this.employeeBasicInfo = null;
+        this.employeePostingStatus = null;
         this.recordList = [];
+        this.motherOrgUnits = [];
+        this.transferredUnits = [];
     }
 
     // ========== Table Data ==========
@@ -385,12 +420,12 @@ export class EmpPresentStatus implements OnInit {
     // ========== Dialog: Add / Edit ==========
 
     openAddDialog(): void {
-        // Once an employee is Deceased, their lifecycle is closed — block all new records.
-        if (this.hasDeceasedRecord) {
+        // A present status can be added only while the employee is presently serving.
+        if (!this.canAddStatus) {
             this.messageService.add({
                 severity: 'warn',
                 summary: 'Not Allowed',
-                detail: 'This employee is marked as Deceased. No further present status can be added.'
+                detail: 'Only presently serving employees can have a present status added.'
             });
             return;
         }
@@ -449,7 +484,9 @@ export class EmpPresentStatus implements OnInit {
             formValues.rpoProfileShift = record.profileShift;
         } else if (st === PresentStatusType.RTUOnDisciplineIssue) {
             formValues.rtuDate = dated;
-            formValues.rtuTransferredUnit = record.transferredUnitID;
+            // RTU destination now lives in MotherOrgTransferredUnitID (mother-org unit);
+            // fall back to legacy TransferredUnitID for rows saved before this change.
+            formValues.rtuTransferredUnit = record.motherOrgTransferredUnitID ?? record.transferredUnitID;
             formValues.rtuCause = record.rtuCause || '';
             formValues.rtuProfileShift = record.profileShift;
         } else if (st === PresentStatusType.Deceased) {
@@ -490,6 +527,26 @@ export class EmpPresentStatus implements OnInit {
 
     closeDialog(): void {
         this.displayDialog = false;
+    }
+
+    // ========== Dialog: View (read-only) ==========
+
+    openViewDialog(record: any): void {
+        this.viewRecord = record;
+
+        // Parse supporting-document references for display.
+        this.viewFileRows = [];
+        const refsJson = record.supportingDocFilesReferences;
+        if (refsJson && typeof refsJson === 'string') {
+            try {
+                const refs = JSON.parse(refsJson) as { FileId?: number; fileName?: string }[];
+                this.viewFileRows = Array.isArray(refs) ? refs.map((r) => ({ fileName: r.fileName || '', fileId: r.FileId })) : [];
+            } catch {
+                this.viewFileRows = [];
+            }
+        }
+
+        this.displayViewDialog = true;
     }
 
     // ========== Save ==========
@@ -642,12 +699,13 @@ export class EmpPresentStatus implements OnInit {
         else if (st === PresentStatusType.Absent) profileShift = f.absentProfileShift || false;
         else if (st === PresentStatusType.Arrested) profileShift = f.arrestedProfileShift || false;
 
-        // Regular Posting Out destination → MotherOrgTransferredUnitID (mother-org unit).
-        // RTU on Discipline Issue destination → TransferredUnitID (RAB unit).
+        // Both Regular Posting Out and RTU on Discipline Issue transfer the member
+        // to a unit of their own mother organization, stored in MotherOrgTransferredUnitID.
+        // (TransferredUnitID — the legacy RAB-unit FK — is no longer written here.)
         let transferredUnitID: number | null = null;
         let motherOrgTransferredUnitID: number | null = null;
         if (st === PresentStatusType.RegularPostingOut) motherOrgTransferredUnitID = f.transferredUnit;
-        else if (st === PresentStatusType.RTUOnDisciplineIssue) transferredUnitID = f.rtuTransferredUnit;
+        else if (st === PresentStatusType.RTUOnDisciplineIssue) motherOrgTransferredUnitID = f.rtuTransferredUnit;
 
         // Pick inquiry report
         let inquiryReport: string | null = null;
@@ -736,6 +794,30 @@ export class EmpPresentStatus implements OnInit {
     getStatusLabel(value: string): string {
         const option = PresentStatusTypeOptions.find((o) => o.value === value);
         return option ? option.label : value || 'N/A';
+    }
+
+    getStatusIcon(type: string): string {
+        switch (type) {
+            case PresentStatusType.OnDuty: return 'pi-check-circle';
+            case PresentStatusType.RegularPostingOut: return 'pi-sign-out';
+            case PresentStatusType.RTUOnDisciplineIssue: return 'pi-replay';
+            case PresentStatusType.Deceased: return 'pi-info-circle';
+            case PresentStatusType.Absent: return 'pi-user-minus';
+            case PresentStatusType.Arrested: return 'pi-lock';
+            default: return 'pi-flag';
+        }
+    }
+
+    getUnitLabel(value: number | null | undefined): string {
+        if (value == null) return 'N/A';
+        const opt = this.motherOrgUnits.find((o) => o.value === value) ?? this.transferredUnits.find((o) => o.value === value);
+        return opt ? opt.label : String(value);
+    }
+
+    getAbsentTypeLabel(value: number | null | undefined): string {
+        if (value == null) return 'N/A';
+        const opt = this.absentTypes.find((o) => o.value === value);
+        return opt ? opt.label : String(value);
     }
 
     formatDate(dateStr: string | null): string {

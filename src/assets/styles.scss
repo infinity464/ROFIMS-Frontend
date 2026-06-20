@@ -34,3 +34,16 @@
         counter-set: none !important;
     }
 }
+
+/* Readable button tooltips (e.g. emp-present-status "Add New" disabled hint) */
+.p-tooltip.ps-tip {
+    max-width: 16rem;
+
+    .p-tooltip-text {
+        white-space: normal;
+        text-align: left;
+        line-height: 1.45;
+        font-size: 0.8125rem;
+        padding: 0.5rem 0.65rem;
+    }
+}
