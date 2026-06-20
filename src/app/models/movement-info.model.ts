@@ -44,6 +44,13 @@ export interface MovementInfoModel {
     /** JSON-serialised array of { fileId, fileName } attached files (optional). */
     filesReferences: string | null;
     status: boolean;
+    /** Temporary-movement return tracking. */
+    isReturned?: boolean;
+    returnDate?: string | null;
+    returnDetails?: string | null;
+    returnRemark?: string | null;
+    /** JSON-serialised array of { fileId, fileName } attached return files. */
+    returnFiles?: string | null;
     createdBy: string;
     createdDate?: string;
     lastUpdatedBy?: string;

@@ -43,6 +43,18 @@ export interface MovementInfoByEmployeeDto {
     takeoverDate: string | null;
 }
 
+/** Payload for recording the return of a Temporary movement. */
+export interface RecordMovementReturnRequest {
+    movementId: number;
+    /** ISO date (yyyy-MM-dd). */
+    returnDate?: string | null;
+    returnDetails?: string | null;
+    returnRemark?: string | null;
+    /** JSON-serialised array of { fileId, fileName } attached return files. */
+    returnFiles?: string | null;
+    lastUpdatedBy?: string;
+}
+
 @Injectable({ providedIn: 'root' })
 export class MovementInfoService {
     private http = inject(HttpClient);
@@ -82,5 +94,9 @@ export class MovementInfoService {
 
     delete(movementId: number): Observable<any> {
         return this.http.delete(`${this.baseUrl}/DeleteAsyn/${movementId}`);
+    }
+
+    recordReturn(request: RecordMovementReturnRequest): Observable<any> {
+        return this.http.post(`${this.baseUrl}/RecordReturn`, request);
     }
 }

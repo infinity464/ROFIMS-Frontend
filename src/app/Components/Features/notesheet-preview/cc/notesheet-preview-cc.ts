@@ -28,6 +28,8 @@ import { OrganizationService } from '@/Components/basic-setup/organization-setup
 import { BanglaNumerals } from '@/Core/i18n/bangla-numerals';
 import { MovementVehicleOptions } from '@/models/enums';
 import { JsReportService } from '@/services/jsreport.service';
+import { MovementReturnButtonComponent } from '../shared/movement-return-button';
+import { MovementFilesInfoComponent } from '../shared/movement-files-info';
 
 interface EmployeeLine {
     serial: string;          // ১। ২। … in Bangla
@@ -41,7 +43,7 @@ interface ApproverBlock {
 @Component({
     selector: 'app-notesheet-preview-cc',
     standalone: true,
-    imports: [CommonModule, FormsModule, ButtonModule, SelectModule, Toast],
+    imports: [CommonModule, FormsModule, ButtonModule, SelectModule, Toast, MovementReturnButtonComponent, MovementFilesInfoComponent],
     providers: [MessageService],
     templateUrl: './notesheet-preview-cc.html',
     styleUrls: [

@@ -1,4 +1,4 @@
-import { Component, OnDestroy, OnInit, inject } from '@angular/core';
+import { Component, OnDestroy, OnInit, ViewChild, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
@@ -14,12 +14,18 @@ import { DatePickerModule } from 'primeng/datepicker';
 import { SelectModule } from 'primeng/select';
 import { IconFieldModule } from 'primeng/iconfield';
 import { InputIconModule } from 'primeng/inputicon';
+import { DialogModule } from 'primeng/dialog';
+import { TextareaModule } from 'primeng/textarea';
 import { Toast } from 'primeng/toast';
 import { ConfirmDialog } from 'primeng/confirmdialog';
 import { MessageService, ConfirmationService } from 'primeng/api';
 
+import { forkJoin } from 'rxjs';
+
 import { MovementInfoService, MovementInfoFilterRequest } from '@/services/movement-info.service';
 import { MovementInfoModel } from '@/models/movement-info.model';
+import { EmpService } from '@/services/emp-service';
+import { FileReferencesFormComponent, FileRowData } from '@/Components/Common/file-references-form/file-references-form';
 import { UserMenuService } from '@/services/user-menu.service';
 import { CommonCodeService } from '@/services/common-code-service';
 import { CommonCodeModel } from '@/models/common-code-model';
@@ -42,9 +48,12 @@ import { LeaveListLookupsService } from '@/Components/Features/leave-application
         SelectModule,
         IconFieldModule,
         InputIconModule,
+        DialogModule,
+        TextareaModule,
         Toast,
         ConfirmDialog,
-        FlexibleDateDirective
+        FlexibleDateDirective,
+        FileReferencesFormComponent
     ],
     providers: [MessageService, ConfirmationService],
     templateUrl: './movement-list.html',
@@ -59,6 +68,7 @@ export class MovementListComponent implements OnInit, OnDestroy {
     private commonCodeService = inject(CommonCodeService);
     /** Shared employee/prefix/rank cache; getApplicantName() composes the BJO-62827 WO Md Mehedi Hasan string. */
     private empLookups = inject(LeaveListLookupsService);
+    private empService = inject(EmpService);
 
     canInsert = true;
     canUpdate = true;
@@ -256,6 +266,127 @@ export class MovementListComponent implements OnInit, OnDestroy {
 
     onEdit(row: MovementInfoModel) {
         this.router.navigate(['/movement-info'], { queryParams: { id: row.movementId } });
+    }
+
+    /** True for Temporary-type movements (which support a return action). */
+    isTemporary(row: MovementInfoModel): boolean {
+        return row.movementType === MovementType.Temporary;
+    }
+
+    /** Return modal state. */
+    @ViewChild('returnFilesForm') returnFilesForm?: FileReferencesFormComponent;
+    returnDialogVisible = false;
+    returnSaving = false;
+    returnRow: MovementInfoModel | null = null;
+    returnDate: Date | null = null;
+    returnDetails = '';
+    returnRemark = '';
+    returnFileRows: FileRowData[] = [];
+
+    /** Count of attached return files (for the table column). */
+    returnFileCount(row: MovementInfoModel): number {
+        return this.parseFileReferences(row.returnFiles).length;
+    }
+
+    onReturn(row: MovementInfoModel) {
+        this.returnRow = row;
+        this.returnDate = row.returnDate ? new Date(row.returnDate) : new Date();
+        this.returnDetails = row.returnDetails ?? '';
+        this.returnRemark = row.returnRemark ?? '';
+        this.returnFileRows = this.parseFileReferences(row.returnFiles);
+        this.returnDialogVisible = true;
+    }
+
+    onReturnFilesChange(rows: FileRowData[]): void {
+        this.returnFileRows = rows;
+    }
+
+    onDownloadFile(payload: { fileId: number; fileName: string }): void {
+        this.empService.downloadFile(payload.fileId).subscribe({
+            next: (blob) => this.empService.triggerFileDownload(blob, payload.fileName || 'download')
+        });
+    }
+
+    /** Parse a JSON array of { fileId, fileName } (any casing) into FileRowData rows. */
+    private parseFileReferences(json: string | null | undefined): FileRowData[] {
+        if (!json) return [];
+        try {
+            const parsed = JSON.parse(json);
+            if (!Array.isArray(parsed)) return [];
+            return parsed
+                .map((r: any) => {
+                    const fileId = r?.fileId ?? r?.FileId;
+                    const fileName = r?.fileName ?? r?.FileName ?? '';
+                    if (fileId == null) return null;
+                    return { displayName: fileName, file: null, fileId } as FileRowData;
+                })
+                .filter((r): r is FileRowData => r != null);
+        } catch {
+            return [];
+        }
+    }
+
+    saveReturn(): void {
+        if (!this.returnRow) return;
+        const toDateOnly = (d: Date | null): string | null =>
+            d ? new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 10) : null;
+
+        const movementId = this.returnRow.movementId;
+        const newFileRows: FileRowData[] = this.returnFilesForm?.getFilesToUpload() ?? [];
+        const existingRefs = this.returnFilesForm?.getExistingFileReferences() ?? [];
+
+        const proceed = (uploaded: { fileId: number; fileName: string }[]) => {
+            const refs = [
+                ...existingRefs.map((r) => ({ fileId: r.FileId, fileName: r.fileName })),
+                ...uploaded
+            ];
+            this.movementService
+                .recordReturn({
+                    movementId,
+                    returnDate: toDateOnly(this.returnDate),
+                    returnDetails: this.returnDetails?.trim() || null,
+                    returnRemark: this.returnRemark?.trim() || null,
+                    returnFiles: refs.length ? JSON.stringify(refs) : null
+                })
+                .subscribe({
+                    next: () => {
+                        this.messageService.add({
+                            severity: 'success',
+                            summary: 'Success',
+                            detail: 'Return recorded successfully'
+                        });
+                        this.returnSaving = false;
+                        this.returnDialogVisible = false;
+                        this.returnRow = null;
+                        this.loadList();
+                    },
+                    error: (err) => {
+                        this.returnSaving = false;
+                        this.messageService.add({
+                            severity: 'error',
+                            summary: 'Error',
+                            detail: err?.error?.description || err?.error?.message || 'Failed to record return'
+                        });
+                    }
+                });
+        };
+
+        this.returnSaving = true;
+        if (newFileRows.length > 0) {
+            forkJoin(newFileRows.map((r) => this.empService.uploadEmployeeFile(r.file!))).subscribe({
+                next: (results: any[]) => proceed(results as { fileId: number; fileName: string }[]),
+                error: () => {
+                    this.returnSaving = false;
+                    this.messageService.add({
+                        severity: 'error',
+                        summary: 'Error',
+                        detail: 'Failed to upload return files.'
+                    });
+                }
+            });
+        } else {
+            proceed([]);
+        }
     }
 
     onDelete(row: MovementInfoModel, event: Event) {

@@ -6,6 +6,7 @@
                 severity="secondary" [outlined]="true" (click)="onBack()"></button>
     </div>
     <div class="preview-status-actions">
+        <app-movement-return-button [movement]="movement"></app-movement-return-button>
         <button type="button" pButton label="Edit" icon="pi pi-pencil"
                 [outlined]="true"
                 (click)="onEdit()" [disabled]="loading || !!error || !movement"></button>
@@ -209,4 +210,8 @@
         }
         <span>PDF</span>
     </button>
+}
+
+@if (!loading && !error && movement) {
+    <app-movement-files-info [movement]="movement"></app-movement-files-info>
 }
