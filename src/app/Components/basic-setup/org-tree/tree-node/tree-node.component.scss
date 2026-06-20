@@ -209,19 +209,6 @@
     }
 }
 
-// Tabler webfont has no built-in spin utility — define one for the loading chevron.
-.ti-spin {
-    animation: ti-spin 0.8s linear infinite;
-}
-@keyframes ti-spin {
-    from {
-        transform: rotate(0deg);
-    }
-    to {
-        transform: rotate(360deg);
-    }
-}
-
 /* ============================================================
    DARK MODE — the .dark-mode class lives on an ancestor
    (.org-tree-shell in app-org-tree), so reach it with

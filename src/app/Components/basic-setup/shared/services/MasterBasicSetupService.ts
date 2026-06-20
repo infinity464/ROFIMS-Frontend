@@ -49,6 +49,7 @@ export class MasterBasicSetupService {
     private apiUrlPostingOrderNumberConfig = `${environment.apis.core}/PostingOrderNumberConfig`;
     private apiUrlMovementLetterNumberConfig = `${environment.apis.core}/MovementLetterNumberConfig`;
     private apiUrlOnulipiConfig = `${environment.apis.core}/OnulipiConfig`;
+    private apiUrlEduQualDept = `${environment.apis.core}/EducationQualificationDepartment`;
 
 
     getAllByType(codeType: string): Observable<CommonCode[]> {
@@ -453,5 +454,26 @@ export class MasterBasicSetupService {
 
     deleteOnulipiConfig(id: number): Observable<any> {
         return this.http.delete(`${this.apiUrlOnulipiConfig}/DeleteAsyn/${id}`);
+    }
+
+    // EducationQualificationDepartment (join table — qualification ⇄ departments)
+
+    getAllQualificationDepartments(): Observable<any[]> {
+        return this.http.get<any[]>(`${this.apiUrlEduQualDept}/GetAll`);
+    }
+
+    getQualificationDepartments(qualificationCodeId: number): Observable<any[]> {
+        return this.http.get<any[]>(`${this.apiUrlEduQualDept}/GetByQualification/${qualificationCodeId}`);
+    }
+
+    saveQualificationDepartments(payload: {
+        qualificationCodeId: number;
+        departmentCodeIds: number[];
+        orgId: number;
+        status: boolean;
+        createdBy: string;
+        lastUpdatedBy: string;
+    }): Observable<{ statusCode: number; description?: string }> {
+        return this.http.post<{ statusCode: number; description?: string }>(`${this.apiUrlEduQualDept}/SaveAsyn`, payload);
     }
 }

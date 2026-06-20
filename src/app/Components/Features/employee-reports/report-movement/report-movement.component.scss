@@ -5,6 +5,29 @@
     min-width: 160px;
 }
 
+/* ── Stop the loader "shake" + auto-scroll while data loads ──────────
+   Reserve table height so the row swap doesn't collapse/grow the page,
+   disable scroll anchoring (the browser's jump-correction that fights
+   the height change), and keep the loading overlay calm & top-aligned. */
+:host ::ng-deep .rab-paper-table-wrap {
+    overflow-anchor: none;
+}
+/* Reserve room for the loading overlay ONLY while loading (no blank space after). */
+:host ::ng-deep .rab-paper-table-wrap.is-loading {
+    min-height: 240px;
+}
+:host ::ng-deep .rab-data-table .p-datatable-mask,
+:host ::ng-deep .rab-data-table .p-datatable-loading-overlay {
+    align-items: flex-start;
+    padding-top: 3rem;
+    background: rgba(255, 255, 255, 0.55);
+    overflow-anchor: none;
+}
+:host-context(.app-dark) ::ng-deep .rab-data-table .p-datatable-mask,
+:host-context(.app-dark) ::ng-deep .rab-data-table .p-datatable-loading-overlay {
+    background: rgba(13, 15, 19, 0.55);
+}
+
 /* ── Match report-address-location's page + title chrome ──────────── */
 .employee-reports-page {
     background: transparent;
@@ -194,7 +217,10 @@
         letter-spacing: 0.18em;
         text-transform: uppercase;
         box-shadow: none;
-        transition: border-color 0.15s, color 0.15s, background 0.15s;
+        transition:
+            border-color 0.15s,
+            color 0.15s,
+            background 0.15s;
 
         &:hover:not(:disabled) {
             border-color: var(--rab-accent);
@@ -272,7 +298,9 @@
     color: var(--rab-muted-strong);
     font-style: italic;
     margin-bottom: 1rem;
-    em { font-style: italic; }
+    em {
+        font-style: italic;
+    }
 }
 
 .rab-orn-divider {
@@ -312,7 +340,9 @@
     font-size: 0.92rem;
     font-style: italic;
     color: var(--rab-muted-strong);
-    em { font-style: italic; }
+    em {
+        font-style: italic;
+    }
 }
 
 /* Scope-chip line below the paper section title (unit/member-type access). */
@@ -363,6 +393,19 @@
     color: var(--rab-text-strong);
     opacity: 0.75;
     font-weight: 500;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 0.1rem;
+    text-align: right;
+}
+
+.rab-criteria-strip-total {
+    color: var(--rab-accent);
+    opacity: 1;
+    font-weight: 700;
+    text-transform: none;
+    letter-spacing: normal;
 }
 
 .rab-criteria-grid {
@@ -421,9 +464,13 @@
         text-transform: none;
     }
 
-    .rab-personnel-meta { text-transform: none; }
+    .rab-personnel-meta {
+        text-transform: none;
+    }
 
-    .rab-paper-title { font-size: 1.85rem; }
+    .rab-paper-title {
+        font-size: 1.85rem;
+    }
 }
 
 :host ::ng-deep .rab-paper.rab-lang-bn .rab-data-table .p-datatable-thead > tr > th {
@@ -474,12 +521,16 @@
 
         &:nth-child(even) {
             background: var(--rab-body-bg-alt);
-            > td { background: var(--rab-body-bg-alt); }
+            > td {
+                background: var(--rab-body-bg-alt);
+            }
         }
 
         &:hover {
             background: var(--rab-body-hover);
-            > td { background: var(--rab-body-hover); }
+            > td {
+                background: var(--rab-body-hover);
+            }
         }
 
         &:last-child > td {
@@ -514,15 +565,26 @@
 
 /* Column-width hints */
 :host ::ng-deep .rab-data-table {
-    .rab-th-ser, .rab-td-ser { width: 56px; text-align: left; }
-    .rab-th-personnel, .rab-td-personnel { min-width: 220px; }
-    .rab-th-joiningDate, .rab-td-date {
+    .rab-th-ser,
+    .rab-td-ser {
+        width: 56px;
+        text-align: left;
+    }
+    .rab-th-personnel,
+    .rab-td-personnel {
+        min-width: 220px;
+    }
+    .rab-th-dateOfRelease,
+    .rab-td-date {
         width: 110px;
         font-family: var(--rab-mono);
         letter-spacing: 0.02em;
         white-space: nowrap;
     }
-    .rab-th-rmks, .rab-td-rmks { min-width: 140px; }
+    .rab-th-rmks,
+    .rab-td-rmks {
+        min-width: 140px;
+    }
 }
 
 /* Composite RAB-Personnel cell — name on top, mono-uppercase meta line under. */
@@ -614,10 +676,7 @@
 
 .rab-foot-line {
     height: 2px;
-    background: linear-gradient(to right,
-        var(--rab-red) 0%, var(--rab-red) 25%,
-        transparent 50%,
-        var(--rab-red) 75%, var(--rab-red) 100%);
+    background: linear-gradient(to right, var(--rab-red) 0%, var(--rab-red) 25%, transparent 50%, var(--rab-red) 75%, var(--rab-red) 100%);
     border-radius: 1px;
     margin-bottom: 0.6rem;
     opacity: 0.85;
@@ -660,9 +719,18 @@
 }
 
 @media (max-width: 720px) {
-    .rab-paper { padding: 1.5rem 1rem 1rem; }
-    .rab-paper-title { font-size: 1.5rem; letter-spacing: 0.08em; }
-    .rab-foot-row { flex-direction: column; align-items: flex-start; gap: 0.35rem; }
+    .rab-paper {
+        padding: 1.5rem 1rem 1rem;
+    }
+    .rab-paper-title {
+        font-size: 1.5rem;
+        letter-spacing: 0.08em;
+    }
+    .rab-foot-row {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.35rem;
+    }
 }
 
 /* ── Drag-reorder chip strip for the column picker ───────────────── */
@@ -690,31 +758,54 @@
     color: #333;
     cursor: grab;
     user-select: none;
-    transition: box-shadow 120ms ease, transform 120ms ease, opacity 120ms ease, background 120ms ease;
+    transition:
+        box-shadow 120ms ease,
+        transform 120ms ease,
+        opacity 120ms ease,
+        background 120ms ease;
 
     &:hover {
         background: #f0f0f0;
         box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
     }
-    &:active { cursor: grabbing; }
-    &.dragging { opacity: 0.4; transform: scale(0.97); }
+    &:active {
+        cursor: grabbing;
+    }
+    &.dragging {
+        opacity: 0.4;
+        transform: scale(0.97);
+    }
 
-    .chip-handle { color: #888; font-size: 0.65rem; }
-    .chip-label  { font-weight: 500; color: inherit; }
+    .chip-handle {
+        color: #888;
+        font-size: 0.65rem;
+    }
+    .chip-label {
+        font-weight: 500;
+        color: inherit;
+    }
     .chip-remove {
         all: unset;
         cursor: pointer;
         display: inline-flex;
         align-items: center;
         justify-content: center;
-        width: 16px; height: 16px;
+        width: 16px;
+        height: 16px;
         margin-left: 0.15rem;
         border-radius: 50%;
         color: #888;
-        transition: background 120ms ease, color 120ms ease;
+        transition:
+            background 120ms ease,
+            color 120ms ease;
 
-        &:hover { background: #eee; color: #d32f2f; }
-        i { font-size: 0.65rem; }
+        &:hover {
+            background: #eee;
+            color: #d32f2f;
+        }
+        i {
+            font-size: 0.65rem;
+        }
     }
 }
 
@@ -741,18 +832,19 @@
         color: rgba(255, 255, 255, 0.92);
 
         .chip-handle,
-        .chip-remove { color: rgba(255, 255, 255, 0.55); }
+        .chip-remove {
+            color: rgba(255, 255, 255, 0.55);
+        }
         &:hover {
             background: rgba(255, 255, 255, 0.13);
             box-shadow: 0 1px 4px rgba(0, 0, 0, 0.35);
         }
-        .chip-remove:hover { background: rgba(255, 255, 255, 0.13); color: #ef4444; }
+        .chip-remove:hover {
+            background: rgba(255, 255, 255, 0.13);
+            color: #ef4444;
+        }
     }
-    .column-order-empty { color: rgba(255, 255, 255, 0.55); }
-}
-
-:host ::ng-deep .rab-td-history {
-    vertical-align: top;
-    white-space: nowrap;
-    line-height: 1.4;
+    .column-order-empty {
+        color: rgba(255, 255, 255, 0.55);
+    }
 }

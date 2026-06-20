@@ -49,7 +49,7 @@
                                     <label class="font-semibold block mb-2 text-700">Education Qualification <span class="text-red-500">*</span></label>
                                     <div style="display: flex; align-items: center; gap: 0.35rem;">
                                         <div style="flex: 1; min-width: 0;">
-                                            <p-select formControlName="examName" [options]="qualificationOptions" optionLabel="label" optionValue="value" placeholder="Select Qualification" styleClass="w-full" [filter]="true" [showClear]="true" appendTo="body"></p-select>
+                                            <p-select formControlName="examName" [options]="qualificationOptions" optionLabel="label" optionValue="value" placeholder="Select Qualification" styleClass="w-full" [filter]="true" [showClear]="true" appendTo="body" (onChange)="onQualificationChange($event.value)"></p-select>
                                         </div>
                                         <button type="button" pButton icon="pi pi-plus"
                                             class="p-button-sm p-button-outlined p-button-success"
@@ -101,7 +101,7 @@
                                     <label class="font-semibold block mb-2 text-700">{{ departmentLabel }}</label>
                                     <div style="display: flex; align-items: center; gap: 0.35rem;">
                                         <div style="flex: 1; min-width: 0;">
-                                            <p-select formControlName="departmentName" [options]="departmentOptions" optionLabel="label" optionValue="value" [placeholder]="departmentPlaceholder" styleClass="w-full" [filter]="true" [showClear]="true" appendTo="body"></p-select>
+                                            <p-select formControlName="departmentName" [options]="filteredDepartmentOptions" optionLabel="label" optionValue="value" [placeholder]="departmentPlaceholder" styleClass="w-full" [filter]="true" [showClear]="true" appendTo="body"></p-select>
                                         </div>
                                         <button type="button" pButton icon="pi pi-plus"
                                             class="p-button-sm p-button-outlined p-button-success"

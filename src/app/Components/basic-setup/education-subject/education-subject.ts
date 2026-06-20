@@ -46,14 +46,6 @@ export class EducationSubject {
     formConfig: FormConfig = {
         formFields: [
             {
-                name: 'educationalDepartmentId',
-                label: 'Department',
-                type: 'select',
-                required: false,
-                default: null,
-                options: []
-            },
-            {
                 name: 'codeValueEN',
                 label: 'EducationSubject Name (English)',
                 type: 'text',
@@ -115,8 +107,14 @@ export class EducationSubject {
     }
 
     private setupFormFilterListeners() {
-        this.commonForm.get('educationalDepartmentId')?.valueChanges.subscribe(() => { this.first = 0; this.buildTableData(); });
-        this.commonForm.get('status')?.valueChanges.subscribe(() => { this.first = 0; this.buildTableData(); });
+        this.commonForm.get('educationalDepartmentId')?.valueChanges.subscribe(() => {
+            this.first = 0;
+            this.buildTableData();
+        });
+        this.commonForm.get('status')?.valueChanges.subscribe(() => {
+            this.first = 0;
+            this.buildTableData();
+        });
     }
 
     initForm() {
@@ -197,12 +195,7 @@ export class EducationSubject {
     }
 
     submit(data: any) {
-        const deptId = this.commonForm.get('educationalDepartmentId')?.value;
         const status = this.commonForm.get('status')?.value;
-        if (deptId == null || deptId === '') {
-            this.messageService.add({ severity: 'warn', summary: 'Validation', detail: 'Please select Department' });
-            return;
-        }
         if (status == null) {
             this.messageService.add({ severity: 'warn', summary: 'Validation', detail: 'Please select Status' });
             return;
@@ -214,7 +207,6 @@ export class EducationSubject {
 
         const currentUser = this.getCurrentUser();
         const currentDateTime = this.shareService.getCurrentDateTime();
-        this.commonForm.patchValue({ parentCodeId: this.commonForm.value.educationalDepartmentId });
 
         if (this.editingId) {
             this.updateSubject(currentUser, currentDateTime);

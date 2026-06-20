@@ -93,13 +93,14 @@
                 <th>Movement Type</th>
                 <th>Move Order Type</th>
                 <th>Reason</th>
-                <th style="width:160px">Actions</th>
+                <th>Is Return</th>
+                <th style="width:200px; text-align:right">Actions</th>
             </tr>
         </ng-template>
 
         <ng-template pTemplate="body" let-row let-rowIndex="rowIndex">
             <tr>
-                <td>{{ first + rowIndex + 1 }}</td>
+                <td>{{ rowIndex + 1 }}</td>
                 <td>{{ row.letterNo || '—' }}</td>
                 <td>{{ (row.letterDate | date: 'dd-MM-yyyy') || '—' }}</td>
                 <td style="white-space:pre-line">{{ getEmployeesDisplay(row.employeeIds) }}</td>
@@ -107,7 +108,25 @@
                 <td>{{ moveOrderTypeLabel(row.moveOrderType) }}</td>
                 <td>{{ movementReasonLabel(row.movementReasonId) }}</td>
                 <td>
-                    <div class="flex gap-1">
+                    @if (isTemporary(row)) {
+                        <p-tag [value]="row.isReturned ? 'Returned' : 'Pending'"
+                               [severity]="row.isReturned ? 'success' : 'warn'"></p-tag>
+                    } @else {
+                        —
+                    }
+                </td>
+                <td>
+                    <div class="flex gap-1 justify-end">
+                        @if (isTemporary(row)) {
+                            <button type="button" pButton
+                                    icon="pi pi-replay"
+                                    severity="success"
+                                    [text]="true" [rounded]="true" size="small"
+                                    pTooltip="Return"
+                                    (click)="onReturn(row)"></button>
+                        } @else {
+                            <span class="action-btn-spacer"></span>
+                        }
                         <button type="button" pButton
                                 icon="pi pi-eye"
                                 severity="info"
@@ -137,7 +156,7 @@
 
         <ng-template pTemplate="emptymessage">
             <tr>
-                <td colspan="8" class="text-center py-4">
+                <td colspan="9" class="text-center py-4">
                     @if (loading) {
                         Loading...
                     } @else {
@@ -148,3 +167,54 @@
         </ng-template>
     </p-table>
 </div>
+
+<!-- Record Return modal (Temporary movements) -->
+<p-dialog
+    header="Record Return"
+    [(visible)]="returnDialogVisible"
+    [modal]="true"
+    [style]="{ width: '40rem' }"
+    [draggable]="false"
+    [resizable]="false"
+    [focusOnShow]="false">
+    <div class="flex flex-col gap-4">
+        <div>
+            <label class="block mb-2 text-sm font-medium">Return Date</label>
+            <p-datepicker
+                [(ngModel)]="returnDate"
+                appendTo="body" dateFormat="dd/mm/yy"
+                [showIcon]="true" iconDisplay="input"
+                [showOnFocus]="false"
+                placeholder="dd/mm/yyyy" [inputStyle]="{ width: '100%' }"
+                class="w-full"></p-datepicker>
+        </div>
+        <div>
+            <label class="block mb-2 text-sm font-medium">Return Details</label>
+            <textarea pTextarea [(ngModel)]="returnDetails" rows="3" class="w-full"
+                      placeholder="Return details..."></textarea>
+        </div>
+        <div>
+            <label class="block mb-2 text-sm font-medium">Return Remark</label>
+            <textarea pTextarea [(ngModel)]="returnRemark" rows="3" class="w-full"
+                      placeholder="Return remark..."></textarea>
+        </div>
+        <div>
+            <label class="block mb-2 text-sm font-medium">Return Files</label>
+            <app-file-references-form
+                #returnFilesForm
+                [fileRows]="returnFileRows"
+                namePlaceholder="e.g. Return order, Annexure"
+                (fileRowsChange)="onReturnFilesChange($event)"
+                (onDownloadFile)="onDownloadFile($event)">
+            </app-file-references-form>
+        </div>
+    </div>
+    <ng-template pTemplate="footer">
+        <button type="button" pButton label="Cancel" icon="pi pi-times"
+                severity="secondary" [text]="true"
+                (click)="returnDialogVisible = false"></button>
+        <button type="button" pButton label="Save" icon="pi pi-check"
+                [loading]="returnSaving"
+                (click)="saveReturn()"></button>
+    </ng-template>
+</p-dialog>

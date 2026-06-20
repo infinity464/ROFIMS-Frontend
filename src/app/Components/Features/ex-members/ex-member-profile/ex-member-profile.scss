@@ -151,7 +151,7 @@ $section-margin: 1rem;
 }
 
 .sp-section-heading {
-    font-size: 0.9rem;
+    font-size: 1.07rem;
     font-weight: 700;
     letter-spacing: 0.06em;
     color: var(--text-color-secondary);
@@ -198,18 +198,18 @@ $section-margin: 1rem;
 .sp-field-label {
     font-weight: 400;
     color: var(--text-color-secondary);
-    font-size: 0.85rem;
+    font-size: 1.02rem;
 }
 
 .sp-field-value {
     font-weight: 700;
-    font-size: 0.85rem;
+    font-size: 1.02rem;
     color: var(--text-color);
 }
 
 /* ═══ Address type heading ═══ */
 .sp-addr-type {
-    font-size: 0.72rem;
+    font-size: 0.89rem;
     font-weight: 700;
     letter-spacing: 0.07em;
     color: var(--text-color-secondary);
@@ -558,4 +558,69 @@ $section-margin: 1rem;
 
 .sp-posting-sep {
     opacity: 0.4;
+}
+
+// ── +2pt font bump for remaining profile text ─────────────────────
+.section-heading {
+    font-size: 1.32rem;
+}
+
+.subsection-heading {
+    font-size: 1.17rem;
+}
+
+.core-row {
+    .detail-label,
+    .detail-value {
+        font-size: 1.02rem;
+    }
+}
+
+.address-field {
+    .address-label,
+    .address-value {
+        font-size: 1.02rem;
+    }
+}
+
+// ── Text color: black in light mode, theme color in dark mode ──────
+.ex-member-profile-page {
+    .sp-field-label,
+    .sp-field-value,
+    .sp-section-heading,
+    .sp-addr-type,
+    .sp-id-label,
+    .sp-id-value,
+    .sp-hero-name,
+    .section-heading,
+    .subsection-heading,
+    .detail-label,
+    .detail-value,
+    .address-block-type,
+    .address-label,
+    .address-value {
+        color: #000;
+    }
+}
+
+:host-context(.app-dark) .ex-member-profile-page {
+    .sp-field-label,
+    .sp-section-heading,
+    .sp-addr-type,
+    .sp-id-label,
+    .subsection-heading {
+        color: var(--text-color-secondary);
+    }
+
+    .sp-field-value,
+    .sp-id-value,
+    .sp-hero-name,
+    .section-heading,
+    .detail-label,
+    .detail-value,
+    .address-block-type,
+    .address-label,
+    .address-value {
+        color: var(--text-color);
+    }
 }

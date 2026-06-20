@@ -363,10 +363,13 @@ export interface PresentStatusUnitWiseReportResponse {
 
 /** One row of the Unit + Duration nominal roll (one per matching PreviousRABServiceInfo stint). */
 export interface UnitDurationNominalRollReportRow extends ReportRowBase {
-  /** Stint start date (ISO "yyyy-MM-dd") — RAB Service "From" column. */
-  rabServiceFrom?: string | null;
-  /** Stint end date (ISO "yyyy-MM-dd"). Null when still serving in that unit. */
-  rabServiceTo?: string | null;
+  /**
+   * Full-career RAB posting history collapsed into one string, e.g.
+   * "01-05-2026 to 03-08-2026 (RAB-4), 04-08-2026-Present (RAB HQ)".
+   * Built server-side; the report emits one row per member.
+   */
+  serviceHistory?: string | null;
+  serviceHistoryBN?: string | null;
   rmks?: string | null;
 }
 
@@ -459,6 +462,58 @@ export interface JoiningLeaveReportRow {
   joiningDate?: string | null;
   /** Inclusive leave length in days. */
   leaveDuration?: number | null;
+  rmks?: string | null;
+}
+
+/** One row of the "Members on Movement" report (one row per movement × member). */
+export interface MovementReportRow {
+  ser?: number;
+  serviceId?: string | null;
+  rank?: string | null;
+  rankBN?: string | null;
+  corps?: string | null;
+  corpsBN?: string | null;
+  trade?: string | null;
+  tradeBN?: string | null;
+  name?: string | null;
+  nameBN?: string | null;
+  movementType?: string | null;
+  movementTypeBN?: string | null;
+  moveOrderType?: string | null;
+  moveOrderTypeBN?: string | null;
+  movementReason?: string | null;
+  movementReasonBN?: string | null;
+  currentUnit?: string | null;
+  currentUnitBN?: string | null;
+  destinedUnit?: string | null;
+  destinedUnitBN?: string | null;
+  /** ISO "yyyy-MM-dd" — DateOfRelease. */
+  dateOfRelease?: string | null;
+  /** Returned flag (true once a temporary movement's return is recorded). */
+  isReturned?: boolean | null;
+  rmks?: string | null;
+}
+
+/** One row of the "Members on Leave" report (leave-application / history). */
+export interface LeaveReportRow {
+  ser?: number;
+  serviceId?: string | null;
+  rank?: string | null;
+  rankBN?: string | null;
+  corps?: string | null;
+  corpsBN?: string | null;
+  trade?: string | null;
+  tradeBN?: string | null;
+  name?: string | null;
+  nameBN?: string | null;
+  leaveType?: string | null;
+  leaveTypeBN?: string | null;
+  /** ISO "yyyy-MM-dd" — leave start date. */
+  leaveFrom?: string | null;
+  /** ISO "yyyy-MM-dd" — leave end date. */
+  leaveTo?: string | null;
+  /** Inclusive leave length in days. */
+  leaveDays?: number | null;
   rmks?: string | null;
 }
 
@@ -647,8 +702,27 @@ export interface DynamicReportRequest {
   joiningLeaveDateFrom?: string | null;
   /** Joining-Leave: leave-window upper bound, ISO "yyyy-MM-dd". */
   joiningLeaveDateTo?: string | null;
+  /** Leave (leave-application/history): leave-window lower bound, ISO "yyyy-MM-dd". Null+null = currently on leave. */
+  leaveDateFrom?: string | null;
+  /** Leave: leave-window upper bound, ISO "yyyy-MM-dd". */
+  leaveDateTo?: string | null;
   /** Present-Status: selected status type ('OnDuty'…'Arrested'). "" = all. */
   presentStatusTypeFilter?: string | null;
+  // ── Movement report ("Members on Movement") ───────────────────────────
+  /** Movement: MovementType enum (1 Permanent | 2 Temporary). Null = all. */
+  movementType?: number | null;
+  /** Movement: MoveOrderType enum (1 CC | 2 MO | 3 Art.47 Handover | 4 Art.47 Takeover). Null = all. */
+  moveOrderType?: number | null;
+  /** Movement: MovementReasonId (CommonCode 'MovementReason'). Null = all. */
+  movementReasonId?: number | null;
+  /** Movement: DestinedRABUnitId (unit being moved to). Null = all. */
+  destinedRabUnitId?: number | null;
+  /** Movement: "NotReturned" (default — currently on movement) | "Returned" | "All". */
+  movementReturnedFilter?: string | null;
+  /** Movement: DateOfRelease window lower bound, ISO "yyyy-MM-dd". */
+  movementDateFrom?: string | null;
+  /** Movement: DateOfRelease window upper bound, ISO "yyyy-MM-dd". */
+  movementDateTo?: string | null;
   pagination: ReportPagination;
 }
 
