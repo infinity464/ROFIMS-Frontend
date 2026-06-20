@@ -52,6 +52,12 @@ export class ReportEducationComponent implements OnInit, OnChanges {
     selectedRabUnitIds: number[] = [];
     subjectOptions: { label: string; labelBn: string; value: number }[] = [];
     selectedSubjectIds: number[] = [];
+    boardTypeOptions: { label: string; labelBn: string; value: number }[] = [];
+    selectedBoardTypeIds: number[] = [];
+    institutionOptions: { label: string; labelBn: string; value: number }[] = [];
+    selectedInstitutionIds: number[] = [];
+    departmentOptions: { label: string; labelBn: string; value: number }[] = [];
+    selectedDepartmentIds: number[] = [];
     rankOptions: { label: string; labelBn: string; value: number }[] = [];
     corpsOptions: { label: string; labelBn: string; value: number }[] = [];
     tradeOptions: { label: string; labelBn: string; value: number }[] = [];
@@ -109,10 +115,11 @@ export class ReportEducationComponent implements OnInit, OnChanges {
         // (e.g. "Education") and every cell shows the picked CommonCode
         // value (e.g. "SSC") — the filter context surfaced per row.
         { key: 'selectedValue', labelEN: 'Selected Value', labelBN: 'নির্বাচিত মান', hint: 'SelectedValue', defaultVisible: true },
-        // Subject column — mirrors the picked Subject filter value(s). Like
-        // selectedValue, it's frontend-only (the base report doesn't project
-        // per-row subject data) and shows the same value for every row.
-        { key: 'subjectValue', labelEN: 'Subject', labelBN: 'বিষয়', hint: 'SubjectSelected', defaultVisible: true },
+        // Subject column — each employee's actual studied subjects, aggregated
+        // (comma-joined) from EducationInfo. Backed by the server's projection-
+        // only `educationSubjects` field (filled by a dedicated enrichment query
+        // that runs only for this report), so it shows real per-row data.
+        { key: 'subjectValue', labelEN: 'Subject', labelBN: 'বিষয়', hint: 'Plain', defaultVisible: true },
         // Member-status column — opt-in only (hidden by default). The user can
         // add it via the column picker; most useful when the Status filter is
         // "All" and rows are of mixed statuses. When selected, backendColumnKeys()
@@ -178,6 +185,7 @@ export class ReportEducationComponent implements OnInit, OnChanges {
         postOffice: { en: 'postOffice', bn: 'postOfficeBN' },
         corps: { en: 'corps', bn: 'corpsBN' },
         trade: { en: 'trade', bn: 'tradeBN' },
+        subjectValue: { en: 'educationSubjects', bn: 'educationSubjectsBN' },
         dob: { en: 'dob' },
         religion: { en: 'religion' },
         bloodGroup: { en: 'bloodGroup' },
@@ -275,6 +283,9 @@ export class ReportEducationComponent implements OnInit, OnChanges {
         multi(this.selectedCorpsIds, this.corpsOptions, L['report.table.corps'] ?? 'Corps');
         multi(this.selectedTradeIds, this.tradeOptions, L['report.search.trade']);
         multi(this.selectedRabUnitIds, this.rabUnitOptions, this.lang === 'bn' ? 'র‍্যাব ইউনিট' : 'RAB Unit');
+        multi(this.selectedBoardTypeIds, this.boardTypeOptions, this.lang === 'bn' ? 'বোর্ড/বিশ্ববিদ্যালয়' : 'Board/University');
+        multi(this.selectedInstitutionIds, this.institutionOptions, this.lang === 'bn' ? 'প্রতিষ্ঠানের নাম' : 'Institution Name');
+        multi(this.selectedDepartmentIds, this.departmentOptions, this.lang === 'bn' ? 'বিভাগ/গ্রুপ' : 'Department/Group');
         multi(this.selectedSubjectIds, this.subjectOptions, this.lang === 'bn' ? 'বিষয়' : 'Subject');
         return items;
     }
@@ -369,6 +380,9 @@ export class ReportEducationComponent implements OnInit, OnChanges {
         multi(this.selectedCorpsIds, this.corpsOptions, L['report.table.corps'] ?? 'Corps');
         multi(this.selectedTradeIds, this.tradeOptions, L['report.search.trade']);
         multi(this.selectedRabUnitIds, this.rabUnitOptions, this.lang === 'bn' ? 'র‍্যাব ইউনিট' : 'RAB Unit');
+        multi(this.selectedBoardTypeIds, this.boardTypeOptions, this.lang === 'bn' ? 'বোর্ড/বিশ্ববিদ্যালয়' : 'Board/University');
+        multi(this.selectedInstitutionIds, this.institutionOptions, this.lang === 'bn' ? 'প্রতিষ্ঠানের নাম' : 'Institution Name');
+        multi(this.selectedDepartmentIds, this.departmentOptions, this.lang === 'bn' ? 'বিভাগ/গ্রুপ' : 'Department/Group');
         multi(this.selectedSubjectIds, this.subjectOptions, this.lang === 'bn' ? 'বিষয়' : 'Subject');
         return lines;
     }
@@ -403,6 +417,9 @@ export class ReportEducationComponent implements OnInit, OnChanges {
         this.loadMemberTypeOptions();
         this.loadRabUnitOptions();
         this.loadSubjectOptions();
+        this.loadBoardTypeOptions();
+        this.loadInstitutionOptions();
+        this.loadDepartmentOptions();
         this.load();
     }
 
@@ -410,6 +427,27 @@ export class ReportEducationComponent implements OnInit, OnChanges {
         this.commonCodeService.getAllActiveCommonCodesType('EducationSubject').subscribe({
             next: (codes) => (this.subjectOptions = this.mapCodes(codes || [])),
             error: () => (this.subjectOptions = [])
+        });
+    }
+
+    loadBoardTypeOptions(): void {
+        this.commonCodeService.getAllActiveCommonCodesType('EducationInstitutionType').subscribe({
+            next: (codes) => (this.boardTypeOptions = this.mapCodes(codes || [])),
+            error: () => (this.boardTypeOptions = [])
+        });
+    }
+
+    loadInstitutionOptions(): void {
+        this.commonCodeService.getAllActiveCommonCodesType('EducationInstitution').subscribe({
+            next: (codes) => (this.institutionOptions = this.mapCodes(codes || [])),
+            error: () => (this.institutionOptions = [])
+        });
+    }
+
+    loadDepartmentOptions(): void {
+        this.commonCodeService.getAllActiveCommonCodesType('EducationalDepartment').subscribe({
+            next: (codes) => (this.departmentOptions = this.mapCodes(codes || [])),
+            error: () => (this.departmentOptions = [])
         });
     }
 
@@ -495,6 +533,9 @@ export class ReportEducationComponent implements OnInit, OnChanges {
         if (this.selectedMemberTypeIds.length > 0) c++;
         if (this.selectedRabUnitIds.length > 0) c++;
         if (this.selectedSubjectIds.length > 0) c++;
+        if (this.selectedBoardTypeIds.length > 0) c++;
+        if (this.selectedInstitutionIds.length > 0) c++;
+        if (this.selectedDepartmentIds.length > 0) c++;
         return c;
     }
 
@@ -517,6 +558,9 @@ export class ReportEducationComponent implements OnInit, OnChanges {
         this.selectedMemberTypeIds = [];
         this.selectedRabUnitIds = [];
         this.selectedSubjectIds = [];
+        this.selectedBoardTypeIds = [];
+        this.selectedInstitutionIds = [];
+        this.selectedDepartmentIds = [];
         this.rankOptions = [];
         this.corpsOptions = [];
         this.tradeOptions = [];
@@ -646,7 +690,10 @@ export class ReportEducationComponent implements OnInit, OnChanges {
                 continue;
             }
             if (key === 'selectedValue') continue;
-            if (key === 'subjectValue') continue;
+            if (key === 'subjectValue') {
+                push('educationSubjects');
+                continue;
+            }
             push(key);
         }
         return out;
@@ -665,6 +712,9 @@ export class ReportEducationComponent implements OnInit, OnChanges {
         if (this.selectedTradeIds.length > 0) criteria.push({ fieldKey: 'trade', idValues: this.selectedTradeIds });
         if (this.selectedRabUnitIds.length > 0) criteria.push({ fieldKey: 'rabUnit', idValues: this.selectedRabUnitIds });
         if (this.selectedSubjectIds.length > 0) criteria.push({ fieldKey: 'educationSubjectMatch', idValues: this.selectedSubjectIds });
+        if (this.selectedBoardTypeIds.length > 0) criteria.push({ fieldKey: 'educationBoardMatch', idValues: this.selectedBoardTypeIds });
+        if (this.selectedInstitutionIds.length > 0) criteria.push({ fieldKey: 'educationInstitutionMatch', idValues: this.selectedInstitutionIds });
+        if (this.selectedDepartmentIds.length > 0) criteria.push({ fieldKey: 'educationDepartmentMatch', idValues: this.selectedDepartmentIds });
         // Parent's commonCodeId is the picked Higher Education Qualification.
         // Filter is "employees who have completed this qualification at any
         // time" (server-side EXISTS against EducationInfo via educationAnyMatch).

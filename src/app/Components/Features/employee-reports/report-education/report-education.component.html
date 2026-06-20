@@ -25,21 +25,72 @@
 
     <div class="report-filter-body" [class.open]="filterOpen">
         <div class="report-filter-body-inner">
-            <div class="report-fields-row">
-                <div class="report-filter-field">
-                    <label>{{ lang === 'bn' ? 'বিষয়' : 'Subject' }}</label>
-                    <p-multiSelect
-                        [options]="subjectOptions"
-                        [(ngModel)]="selectedSubjectIds"
-                        (ngModelChange)="onFilterChange()"
-                        optionLabel="label"
-                        optionValue="value"
-                        display="chip"
-                        placeholder="Select"
-                        styleClass="w-full"
-                        [filter]="true"
-                        appendTo="body">
-                    </p-multiSelect>
+            <div class="ds-field-group">
+                <div class="ds-group-divider">
+                    <span class="ds-group-label">Education section</span>
+                    <span class="ds-group-line"></span>
+                </div>
+                <div class="report-fields-row">
+                    <div class="report-filter-field">
+                        <label>Board/University</label>
+                        <p-multiSelect
+                            [options]="boardTypeOptions"
+                            [(ngModel)]="selectedBoardTypeIds"
+                            (ngModelChange)="onFilterChange()"
+                            optionLabel="label"
+                            optionValue="value"
+                            display="chip"
+                            placeholder="Select"
+                            styleClass="w-full"
+                            [filter]="true"
+                            appendTo="body">
+                        </p-multiSelect>
+                    </div>
+                    <div class="report-filter-field">
+                        <label>Institution Name</label>
+                        <p-multiSelect
+                            [options]="institutionOptions"
+                            [(ngModel)]="selectedInstitutionIds"
+                            (ngModelChange)="onFilterChange()"
+                            optionLabel="label"
+                            optionValue="value"
+                            display="chip"
+                            placeholder="Select"
+                            styleClass="w-full"
+                            [filter]="true"
+                            appendTo="body">
+                        </p-multiSelect>
+                    </div>
+                    <div class="report-filter-field">
+                        <label>Department/Group</label>
+                        <p-multiSelect
+                            [options]="departmentOptions"
+                            [(ngModel)]="selectedDepartmentIds"
+                            (ngModelChange)="onFilterChange()"
+                            optionLabel="label"
+                            optionValue="value"
+                            display="chip"
+                            placeholder="Select"
+                            styleClass="w-full"
+                            [filter]="true"
+                            appendTo="body">
+                        </p-multiSelect>
+                    </div>
+                    <div class="report-filter-field">
+                        <label>Subject</label>
+                        <p-multiSelect
+                            [options]="subjectOptions"
+                            [(ngModel)]="selectedSubjectIds"
+                            (ngModelChange)="onFilterChange()"
+                            optionLabel="label"
+                            optionValue="value"
+                            display="chip"
+                            placeholder="Select"
+                            styleClass="w-full"
+                            [filter]="true"
+                            appendTo="body">
+                        </p-multiSelect>
+                    </div>
                 </div>
             </div>
             <div class="report-fields-row">
@@ -49,7 +100,7 @@
                     </p-multiSelect>
                 </div>
                 <div class="report-filter-field">
-                    <label>{{ lang === 'bn' ? 'সদস্য ধরন' : 'Member Type' }}</label>
+                    <label>Member Type</label>
                     <p-multiSelect
                         [options]="memberTypeOptions"
                         [(ngModel)]="selectedMemberTypeIds"
@@ -116,7 +167,7 @@
                     </p-multiSelect>
                 </div>
                 <div class="report-filter-field">
-                    <label>{{ lang === 'bn' ? 'র‍্যাব ইউনিট' : 'RAB Unit' }}</label>
+                    <label>RAB Unit</label>
                     <p-multiSelect
                         [options]="rabUnitOptions"
                         [(ngModel)]="selectedRabUnitIds"
