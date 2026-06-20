@@ -59,7 +59,9 @@
                     <h3 class="form-subtitle m-0 white-space-nowrap">Present Status Records</h3>
                     @if (!isReadonly) {
                         <div class="ml-auto">
-                            <p-button label="Add New" icon="pi pi-plus" (onClick)="openAddDialog()"></p-button>
+                            <p-button label="Add New" icon="pi pi-plus" [disabled]="hasDeceasedRecord"
+                                [pTooltip]="hasDeceasedRecord ? 'Employee is marked as Deceased — no further status can be added.' : ''"
+                                (onClick)="openAddDialog()"></p-button>
                         </div>
                     }
                 </div>
@@ -83,10 +85,10 @@
                             <td>{{ record.isActive ? 'Yes' : 'No' }}</td>
                             <td>
                                 <div class="flex gap-2">
-                                    <p-button icon="pi pi-pencil" [class.perm-hidden]="!canUpdate" [rounded]="true" [text]="true" severity="info" pTooltip="Edit" (onClick)="openEditDialog(record)"></p-button>
-                                    @if (!isReadonly) {
-                                        <p-button icon="pi pi-trash" [class.perm-hidden]="!canDelete" [rounded]="true" [text]="true" severity="danger" pTooltip="Delete" (onClick)="deleteRecord(record, $event)"></p-button>
-                                    }
+                                    <p-button icon="pi pi-pencil" [class.perm-hidden]="!canUpdate" [rounded]="true" [text]="true" severity="info"
+                                        [disabled]="!record.isActive"
+                                        [pTooltip]="record.isActive ? 'Edit' : 'Inactive records cannot be edited'"
+                                        (onClick)="openEditDialog(record)"></p-button>
                                 </div>
                             </td>
                         </tr>
@@ -244,12 +246,6 @@
                 </div>
             }
 
-            <!-- Is Active -->
-            <div class="col-span-2 flex align-items-center gap-2">
-                <p-checkbox formControlName="isActive" [binary]="true" inputId="isActive"></p-checkbox>
-                <label for="isActive" class="font-semibold text-700">Is Active</label>
-            </div>
-
             <!-- File Upload -->
             <div class="col-span-2 file-section-compact">
                 <app-file-references-form
@@ -267,7 +263,7 @@
 
     <ng-template pTemplate="footer">
         <p-button label="Cancel" icon="pi pi-times" severity="secondary" [outlined]="true" (onClick)="closeDialog()" [disabled]="isSaving"></p-button>
-        <p-button [label]="isEditMode ? 'Update' : 'Save'" icon="pi pi-check" (onClick)="saveRecord()" [loading]="isSaving" [disabled]="isSaving"></p-button>
+        <p-button [label]="isEditMode ? 'Update' : 'Save'" icon="pi pi-check" (onClick)="saveRecord()" [loading]="isSaving" [disabled]="isSaving || isUpdateDisabled"></p-button>
     </ng-template>
 </p-dialog>
 

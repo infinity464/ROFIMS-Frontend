@@ -64,11 +64,6 @@ interface FooterParagraph {
     transferRabUnitName: string | null;
 }
 
-interface TransferUnitOption {
-    id: number;
-    name: string;
-}
-
 @Component({
     selector: 'app-posting-order-generate',
     standalone: true,
@@ -170,22 +165,6 @@ export class PostingOrderGenerateComponent implements OnInit {
         const id = row.rabID || '';
         if (!id) return '-';
         return this.isBangla ? this.toBanglaDigits(id) : id;
-    }
-
-    /** Unique transfer (RAB) units derived from currently loaded employees. */
-    get availableTransferUnits(): TransferUnitOption[] {
-        const map = new Map<number, string>();
-        for (const e of this.employees) {
-            if (e.transferRabUnitId != null && !map.has(e.transferRabUnitId)) {
-                map.set(e.transferRabUnitId, e.transferRabUnitName ?? '');
-            }
-        }
-        return Array.from(map, ([id, name]) => ({ id, name }));
-    }
-
-    /** True when more than one unique transfer unit exists across employees. */
-    get hasMultipleTransferUnits(): boolean {
-        return this.availableTransferUnits.length > 1;
     }
 
     constructor(
@@ -374,9 +353,9 @@ export class PostingOrderGenerateComponent implements OnInit {
                                 joiningDateInRAB: e.joiningDateInRAB
                             }));
                             this.loadingEmployees = false;
-                            // Auto-generate onulipi from unique transfer units
+                            // Pre-fill onulipi from the New Posting onulipi-config
                             this.footerParagraphs = [];
-                            this.autoGenerateOnulipiFromTransferUnits();
+                            this.loadOnulipiFromConfig();
                             this.postingText = ns.mainText ?? '';
                             this.remarks = '';
                         },
@@ -414,39 +393,28 @@ export class PostingOrderGenerateComponent implements OnInit {
 
     // ─── Footer paragraphs ────────────────────────────────
 
-    private autoGenerateOnulipiFromTransferUnits(): void {
-        const map = new Map<number, { name: string; nameBN: string | null }>();
-        for (const emp of this.employees) {
-            if (emp.transferRabUnitId != null && !map.has(emp.transferRabUnitId)) {
-                map.set(emp.transferRabUnitId, {
-                    name: emp.transferRabUnitName ?? '',
-                    nameBN: emp.transferRabUnitNameBN ?? null
-                });
-            }
-        }
-        this.footerParagraphs = Array.from(map, ([id, unit]) => {
-            const full = this.isBangla
-                ? (unit.nameBN || unit.name)
-                : unit.name;
-            const parts = full.split(',');
-            const shortName = parts[parts.length - 1].trim();
-            return {
-                text: shortName,
-                transferRabUnitId: id,
-                transferRabUnitName: unit.name
-            };
+    /** Pre-fill onulipi paragraphs from the New Posting onulipi-config (language-aware). */
+    private loadOnulipiFromConfig(): void {
+        this.masterBasicSetupService.getOnulipiConfigByPostingType(PostingType.NewPosting).subscribe({
+            next: (configs) => {
+                const match = (configs ?? [])[0];
+                if (!match) { this.footerParagraphs = []; return; }
+                const json = this.isBangla ? (match.onulipiJsonBN || match.onulipiJsonEN) : match.onulipiJsonEN;
+                if (!json) { this.footerParagraphs = []; return; }
+                try {
+                    const items: { serial: number; text: string }[] = JSON.parse(json);
+                    this.footerParagraphs = items
+                        .sort((a, b) => a.serial - b.serial)
+                        .map(item => ({ text: item.text, transferRabUnitId: null, transferRabUnitName: null }));
+                } catch { this.footerParagraphs = []; }
+            },
+            error: () => { this.footerParagraphs = []; }
         });
     }
 
-    /** Add a new footer paragraph. If only one transfer unit exists, auto-link it. */
+    /** Add a new (empty) footer paragraph. */
     addFooterParagraph(): void {
-        const units = this.availableTransferUnits;
-        const onlyUnit = units.length === 1 ? units[0] : null;
-        this.footerParagraphs.push({
-            text: '',
-            transferRabUnitId: onlyUnit ? onlyUnit.id : null,
-            transferRabUnitName: onlyUnit ? onlyUnit.name : null
-        });
+        this.footerParagraphs.push({ text: '', transferRabUnitId: null, transferRabUnitName: null });
     }
 
     removeFooterParagraph(index: number): void {
@@ -463,14 +431,6 @@ export class PostingOrderGenerateComponent implements OnInit {
         if (index >= this.footerParagraphs.length - 1) return;
         [this.footerParagraphs[index], this.footerParagraphs[index + 1]] =
             [this.footerParagraphs[index + 1], this.footerParagraphs[index]];
-    }
-
-    /** Keep transferRabUnitName in sync when the user picks a unit from the dropdown. */
-    onFooterUnitChange(index: number): void {
-        const para = this.footerParagraphs[index];
-        if (!para) return;
-        const match = this.availableTransferUnits.find(u => u.id === para.transferRabUnitId);
-        para.transferRabUnitName = match ? match.name : null;
     }
 
     trackByIndex(index: number): number {

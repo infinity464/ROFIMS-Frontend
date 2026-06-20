@@ -257,7 +257,7 @@ export enum PresentStatusType {
 export const PresentStatusTypeOptions = [
     { label: 'On Duty', value: PresentStatusType.OnDuty },
     { label: 'Regular Posting Out', value: PresentStatusType.RegularPostingOut },
-    { label: 'RTU on Discipline Issue', value: PresentStatusType.RTUOnDisciplineIssue },
+    { label: 'RTU', value: PresentStatusType.RTUOnDisciplineIssue },
     { label: 'Deceased', value: PresentStatusType.Deceased },
     { label: 'Absent', value: PresentStatusType.Absent },
     { label: 'Arrested', value: PresentStatusType.Arrested }

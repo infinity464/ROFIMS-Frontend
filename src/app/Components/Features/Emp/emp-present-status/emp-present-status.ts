@@ -90,6 +90,15 @@ export class EmpPresentStatus implements OnInit {
     // Enum for template access
     PresentStatusType = PresentStatusType;
 
+    // Status types allowed only once per employee (one-time lifecycle events).
+    // Absent and Arrested are intentionally excluded — they may recur.
+    private readonly singleInstanceStatusTypes: string[] = [
+        PresentStatusType.OnDuty,
+        PresentStatusType.RegularPostingOut,
+        PresentStatusType.RTUOnDisciplineIssue,
+        PresentStatusType.Deceased
+    ];
+
     // Selected status type (for conditional rendering in dialog)
     selectedStatusType: string | null = null;
 
@@ -213,7 +222,53 @@ export class EmpPresentStatus implements OnInit {
         this.presentStatusForm.get('presentStatusType')?.valueChanges.subscribe((value) => {
             this.selectedStatusType = value;
             this.updateValidators(value);
+            this.applyDeceasedRules(value);
         });
+    }
+
+    /**
+     * Deceased is an irreversible "Present to Ex Member" event: the profile-shift
+     * flag must always be ticked and the user must not be able to untick it.
+     */
+    applyDeceasedRules(statusType: string | null): void {
+        const shiftCtrl = this.presentStatusForm.get('deceasedProfileShift');
+        if (statusType === PresentStatusType.Deceased) {
+            shiftCtrl?.setValue(true, { emitEvent: false });
+            shiftCtrl?.disable({ emitEvent: false });
+        } else {
+            shiftCtrl?.enable({ emitEvent: false });
+        }
+    }
+
+    /** True once this employee has a Deceased record — no further status may be added. */
+    get hasDeceasedRecord(): boolean {
+        return this.recordList.some((r) => r.presentStatusType === PresentStatusType.Deceased);
+    }
+
+    /** The employee's current (active) status type, or null if none. */
+    get currentActiveStatusType(): string | null {
+        return this.recordList.find((r) => r.isActive)?.presentStatusType ?? null;
+    }
+
+    /**
+     * Update is blocked for one-time lifecycle types (On Duty, RTU, Regular Posting
+     * Out, Deceased) — these records must not be edited once saved.
+     */
+    get isUpdateDisabled(): boolean {
+        return this.isEditMode && this.singleInstanceStatusTypes.includes(this.selectedStatusType ?? '');
+    }
+
+    /** Profile-shift flag for the currently selected status type (mirrors buildPayload). */
+    private isProfileShiftChecked(statusType: string | null): boolean {
+        const f = this.presentStatusForm.getRawValue();
+        switch (statusType) {
+            case PresentStatusType.RegularPostingOut: return !!f.rpoProfileShift;
+            case PresentStatusType.RTUOnDisciplineIssue: return !!f.rtuProfileShift;
+            case PresentStatusType.Deceased: return !!f.deceasedProfileShift;
+            case PresentStatusType.Absent: return !!f.absentProfileShift;
+            case PresentStatusType.Arrested: return !!f.arrestedProfileShift;
+            default: return false;
+        }
     }
 
     updateValidators(statusType: string | null): void {
@@ -330,6 +385,15 @@ export class EmpPresentStatus implements OnInit {
     // ========== Dialog: Add / Edit ==========
 
     openAddDialog(): void {
+        // Once an employee is Deceased, their lifecycle is closed — block all new records.
+        if (this.hasDeceasedRecord) {
+            this.messageService.add({
+                severity: 'warn',
+                summary: 'Not Allowed',
+                detail: 'This employee is marked as Deceased. No further present status can be added.'
+            });
+            return;
+        }
         this.isEditMode = false;
         this.editingRecordId = null;
         this.presentStatusForm.reset({
@@ -347,6 +411,15 @@ export class EmpPresentStatus implements OnInit {
     }
 
     openEditDialog(record: any): void {
+        // Inactive (superseded) records are historical — they can never be edited.
+        if (!record.isActive) {
+            this.messageService.add({
+                severity: 'warn',
+                summary: 'Not Allowed',
+                detail: 'Inactive status records cannot be edited.'
+            });
+            return;
+        }
         this.isEditMode = true;
         this.editingRecordId = record.presentStatusID;
         this.selectedStatusType = record.presentStatusType;
@@ -431,6 +504,66 @@ export class EmpPresentStatus implements OnInit {
             return;
         }
 
+        // These status types are one-time lifecycle events — an employee may have
+        // only one record of each. (Absent / Arrested may repeat, so are excluded.)
+        const selectedType = this.presentStatusForm.get('presentStatusType')?.value;
+        if (this.singleInstanceStatusTypes.includes(selectedType)) {
+            const duplicate = this.recordList.some(
+                (r) => r.presentStatusType === selectedType && r.presentStatusID !== this.editingRecordId
+            );
+            if (duplicate) {
+                this.messageService.add({
+                    severity: 'warn',
+                    summary: 'Duplicate Not Allowed',
+                    detail: `A "${this.getStatusLabel(selectedType)}" record already exists for this employee.`
+                });
+                return;
+            }
+        }
+
+        // The new status must differ from the employee's current active status —
+        // e.g. an already-Absent employee cannot be marked Absent again. Applies to
+        // every status type. (Edit keeps the same record, so add-mode only.)
+        if (!this.isEditMode && selectedType === this.currentActiveStatusType) {
+            this.messageService.add({
+                severity: 'warn',
+                summary: 'Same Status Not Allowed',
+                detail: `This employee's current status is already "${this.getStatusLabel(selectedType)}". The same status cannot be added again.`
+            });
+            return;
+        }
+
+        // Deceased is irreversible — confirm again before persisting.
+        if (selectedType === PresentStatusType.Deceased) {
+            this.confirmationService.confirm({
+                header: 'Confirm Deceased Status',
+                message: 'Adding a "Deceased" status will automatically move this employee to the Ex Member list. This action cannot be reverted. Do you want to continue?',
+                icon: 'pi pi-exclamation-triangle',
+                acceptButtonProps: { label: 'Yes, Continue', severity: 'danger' },
+                rejectButtonProps: { label: 'Cancel', severity: 'secondary', outlined: true },
+                accept: () => this.proceedSave()
+            });
+            return;
+        }
+
+        // Any other status with "Profile Shift (Present to Ex Member)" ticked is also
+        // irreversible — it moves the employee to the Ex Member list. Confirm first.
+        if (this.isProfileShiftChecked(selectedType)) {
+            this.confirmationService.confirm({
+                header: 'Confirm Profile Shift',
+                message: 'The "Profile Shift (Present to Ex Member)" option is ticked. Saving will move this employee to the Ex Member list and this action cannot be reverted. Do you want to continue?',
+                icon: 'pi pi-exclamation-triangle',
+                acceptButtonProps: { label: 'Yes, Continue', severity: 'danger' },
+                rejectButtonProps: { label: 'Cancel', severity: 'secondary', outlined: true },
+                accept: () => this.proceedSave()
+            });
+            return;
+        }
+
+        this.proceedSave();
+    }
+
+    private proceedSave(): void {
         this.isSaving = true;
 
         const existingRefs = this.fileReferencesForm?.getExistingFileReferences() || [];
@@ -454,7 +587,7 @@ export class EmpPresentStatus implements OnInit {
                 error: (err) => {
                     this.isSaving = false;
                     console.error('Failed to save/update', err);
-                    this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.message || 'Failed to save record' });
+                    this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.message || err?.error?.Description || 'Failed to save record' });
                 }
             });
         };
@@ -538,7 +671,9 @@ export class EmpPresentStatus implements OnInit {
             DeceasedPlace: f.deceasedPlace || null,
             DeceasedReason: f.deceasedReason || null,
             SupportingDocFilesReferences: filesReferencesJson ?? null,
-            IsActive: f.isActive ?? true,
+            // A newly saved status is always the active one; the backend deactivates
+            // the employee's other rows. (The frontend no longer exposes this flag.)
+            IsActive: true,
             CreatedBy: 'system',
             CreatedDate: new Date().toISOString(),
             LastUpdatedBy: 'system',
