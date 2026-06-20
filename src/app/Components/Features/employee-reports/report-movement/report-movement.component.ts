@@ -94,8 +94,8 @@ export class ReportMovementComponent implements OnInit {
     releaseToDate: Date | null = null;
 
     first = 0;
-    rows = 20;
-    rowsPerPageOptions = [20, 50, 100];
+    rows = 100;
+    rowsPerPageOptions = [100, 500, 1000, 5000];
     totalRecords = 0;
 
     exportDropdownOpen = false;
@@ -119,9 +119,9 @@ export class ReportMovementComponent implements OnInit {
         { key: 'corps', labelEN: 'Corps', labelBN: 'কোর', hint: 'Plain', defaultVisible: true },
         { key: 'trade', labelEN: 'Trade', labelBN: 'ট্রেড', hint: 'Plain', defaultVisible: true },
         { key: 'name', labelEN: 'Name', labelBN: 'নাম', hint: 'Plain', defaultVisible: true },
-        { key: 'movementType', labelEN: 'Movement Type', labelBN: 'মুভমেন্টের ধরন', hint: 'Plain', defaultVisible: true },
+        { key: 'movementType', labelEN: 'Movement Type', labelBN: 'মুভমেন্টের ধরন', hint: 'Plain', defaultVisible: false },
         { key: 'moveOrderType', labelEN: 'Order Type', labelBN: 'আদেশের ধরন', hint: 'Plain', defaultVisible: true },
-        { key: 'movementReason', labelEN: 'Reason', labelBN: 'কারণ', hint: 'Plain', defaultVisible: true },
+        { key: 'movementReason', labelEN: 'Reason', labelBN: 'কারণ', hint: 'Plain', defaultVisible: false },
         { key: 'currentUnit', labelEN: 'Current Unit', labelBN: 'বর্তমান ইউনিট', hint: 'Plain', defaultVisible: true },
         { key: 'destinedUnit', labelEN: 'Destination', labelBN: 'গন্তব্য ইউনিট', hint: 'Plain', defaultVisible: true },
         { key: 'dateOfRelease', labelEN: 'Release Date', labelBN: 'অবমুক্তির তারিখ', hint: 'Date', defaultVisible: true },
@@ -389,9 +389,8 @@ export class ReportMovementComponent implements OnInit {
         return c;
     }
     filterSubtitle(): string {
-        if (this.activeFilterCount === 0) return this.lang === 'en' ? 'Select fields to search on' : 'খোঁজার জন্য ক্ষেত্র নির্বাচন করুন';
-        const n = this.lang === 'bn' ? BanglaNumerals.toBangla(String(this.activeFilterCount)) : String(this.activeFilterCount);
-        return this.lang === 'en' ? `${n} filters applied` : `${n} ফিল্টার প্রয়োগকৃত`;
+        if (this.activeFilterCount === 0) return 'Select fields to search on';
+        return `${this.activeFilterCount} filters applied`;
     }
 
     get criteriaItems(): { label: string; value: string }[] {
