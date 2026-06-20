@@ -245,6 +245,18 @@ export class ReportService {
         return this.http.post<DynamicReportResponse>(`${environment.apis.core}/DynamicReport/JoiningLeaveOverview`, req);
     }
 
+    /** Field catalog for the Leave report (leave-application / history). */
+    getLeaveReportFields(): Observable<DynamicReportFieldMeta[]> {
+        return this.http.get<DynamicReportFieldMeta[]>(`${environment.apis.core}/DynamicReport/GetLeaveFields`);
+    }
+
+    /** Leave variant (one row per approved LeaveApplication). Lists members on
+      leave (defaults to those currently on leave); the request's leaveDateFrom /
+      leaveDateTo narrow the leave window. */
+    runDynamicLeaveReport(req: DynamicReportRequest): Observable<DynamicReportResponse> {
+        return this.http.post<DynamicReportResponse>(`${environment.apis.core}/DynamicReport/LeaveOverview`, req);
+    }
+
     /** Field catalog for the Punishment report (#23). */
     getPunishmentReportFields(): Observable<DynamicReportFieldMeta[]> {
         return this.http.get<DynamicReportFieldMeta[]>(`${environment.apis.core}/DynamicReport/GetPunishmentFields`);

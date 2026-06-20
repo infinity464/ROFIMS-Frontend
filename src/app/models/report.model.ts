@@ -465,6 +465,29 @@ export interface JoiningLeaveReportRow {
   rmks?: string | null;
 }
 
+/** One row of the "Members on Leave" report (leave-application / history). */
+export interface LeaveReportRow {
+  ser?: number;
+  serviceId?: string | null;
+  rank?: string | null;
+  rankBN?: string | null;
+  corps?: string | null;
+  corpsBN?: string | null;
+  trade?: string | null;
+  tradeBN?: string | null;
+  name?: string | null;
+  nameBN?: string | null;
+  leaveType?: string | null;
+  leaveTypeBN?: string | null;
+  /** ISO "yyyy-MM-dd" — leave start date. */
+  leaveFrom?: string | null;
+  /** ISO "yyyy-MM-dd" — leave end date. */
+  leaveTo?: string | null;
+  /** Inclusive leave length in days. */
+  leaveDays?: number | null;
+  rmks?: string | null;
+}
+
 /** One row of the "Punishment Report" (#23). */
 export interface PunishmentReportRow {
   ser?: number;
@@ -650,6 +673,10 @@ export interface DynamicReportRequest {
   joiningLeaveDateFrom?: string | null;
   /** Joining-Leave: leave-window upper bound, ISO "yyyy-MM-dd". */
   joiningLeaveDateTo?: string | null;
+  /** Leave (leave-application/history): leave-window lower bound, ISO "yyyy-MM-dd". Null+null = currently on leave. */
+  leaveDateFrom?: string | null;
+  /** Leave: leave-window upper bound, ISO "yyyy-MM-dd". */
+  leaveDateTo?: string | null;
   /** Present-Status: selected status type ('OnDuty'…'Arrested'). "" = all. */
   presentStatusTypeFilter?: string | null;
   pagination: ReportPagination;

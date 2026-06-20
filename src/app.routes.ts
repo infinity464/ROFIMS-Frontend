@@ -189,6 +189,7 @@ import { ReportLongStayNominalRollComponent } from '@/Components/Features/employ
 import { ReportStayAfterRelieverJoinedComponent } from '@/Components/Features/employee-reports/report-stay-after-reliever-joined/report-stay-after-reliever-joined.component';
 import { ReportNearHomeDistrictComponent } from '@/Components/Features/employee-reports/report-near-home-district/report-near-home-district.component';
 import { ReportJoiningLeaveComponent } from '@/Components/Features/employee-reports/report-joining-leave/report-joining-leave.component';
+import { ReportLeaveComponent } from '@/Components/Features/employee-reports/report-leave/report-leave.component';
 import { ReportPunishmentComponent } from '@/Components/Features/employee-reports/report-punishment/report-punishment.component';
 import { ReportPresentStatusComponent } from '@/Components/Features/employee-reports/report-present-status/report-present-status.component';
 import { ReportRankWiseComponent } from '@/Components/Features/employee-reports/report-rank-wise/report-rank-wise.component';
@@ -442,6 +443,7 @@ export const appRoutes: Routes = [
             { path: 'report-stay-after-reliever-joined', component: ReportStayAfterRelieverJoinedComponent },
             { path: 'report-near-home-district', component: ReportNearHomeDistrictComponent },
             { path: 'report-joining-leave', component: ReportJoiningLeaveComponent },
+            { path: 'report-leave', component: ReportLeaveComponent },
             { path: 'report-punishment', component: ReportPunishmentComponent },
             { path: 'report-present-status', component: ReportPresentStatusComponent },
             { path: 'report-rank-wise', component: ReportRankWiseComponent },
