@@ -31,7 +31,7 @@ import { environment } from '@/Core/Environments/environment';
 import { firstValueFrom } from 'rxjs';
 import {
     Document, Packer, Paragraph, TextRun, Table, TableRow, TableCell, ImageRun,
-    WidthType, BorderStyle, AlignmentType, PageOrientation, TabStopType, TabStopPosition, TableLayoutType
+    WidthType, BorderStyle, AlignmentType, PageOrientation, TabStopType, TabStopPosition, TableLayoutType, VerticalAlign
 } from 'docx';
 import { saveAs } from 'file-saver';
 import { FlexibleDateDirective } from '@/shared/directives/flexible-date.directive';
@@ -113,12 +113,6 @@ export class PostingOrderPreviewPageComponent implements OnInit {
     showPrevWorkplaceFilter = false;
     showPrevWorkplaceUnit = true;
     showTransferUnitsCopy = true;
-
-    // RAB Headquarters unit name, resolved dynamically as the top-level unit with the
-    // smallest Sort Order (from the org-tree). Used to detect HQ destinations in the
-    // অনুলিপি list instead of a hard-coded name.
-    private hqUnitNameEN: string | null = null;
-    private hqUnitNameBN: string | null = null;
 
     // ── নিজ জেলা column visibility ───────────────────
     showOwnDistrict = true;
@@ -267,7 +261,6 @@ export class PostingOrderPreviewPageComponent implements OnInit {
     ) {}
 
     ngOnInit(): void {
-        this.loadHqUnit();
         this.route.queryParams.subscribe(params => {
             const id = params['id'];
             if (id) {
@@ -284,19 +277,6 @@ export class PostingOrderPreviewPageComponent implements OnInit {
         this.router.navigate(['/posting/posting-order-list']);
     }
 
-    /** Resolve RAB HQ as the top-level org unit with the smallest Sort Order. */
-    private loadHqUnit(): void {
-        this.orgService.getAll(0).subscribe({
-            next: (units) => {
-                const top = (units ?? []).filter((u) => u && u.nameEN);
-                if (!top.length) return;
-                const hq = top.reduce((min, u) => (u.sortOrder < min.sortOrder ? u : min), top[0]);
-                this.hqUnitNameEN = hq.nameEN || null;
-                this.hqUnitNameBN = hq.nameBN || null;
-            },
-            error: () => { /* fall back to the name heuristic in isRabHq */ }
-        });
-    }
 
     private loadOrder(id: number): void {
         this.loading = true;
@@ -836,14 +816,11 @@ export class PostingOrderPreviewPageComponent implements OnInit {
     }
 
     /**
-     * True if the top-level unit segment is RAB Headquarters. Primary check matches the
-     * org unit with the smallest Sort Order (resolved in loadHqUnit); the name heuristic
-     * is only a fallback for when that hasn't loaded.
+     * Name-heuristic fallback for HQ detection, used only when the view's TransferIsHq
+     * flag is unavailable (e.g. before the updated view is deployed).
      */
     private isRabHq(name: string): boolean {
         const n = this.stripZeroWidth(name);
-        if (this.hqUnitNameEN && n === this.stripZeroWidth(this.hqUnitNameEN)) return true;
-        if (this.hqUnitNameBN && n === this.stripZeroWidth(this.hqUnitNameBN)) return true;
         return n.includes('সদর দপ্তর') || /head\s*quarter/i.test(n) || /\bHQ\b/i.test(n);
     }
 
@@ -878,7 +855,9 @@ export class PostingOrderPreviewPageComponent implements OnInit {
             if (!parts.length) continue;
             const top = parts[0];
 
-            if (this.isRabHq(top)) {
+            // HQ comes straight from the view (TransferIsHq); name heuristic is only a
+            // fallback if the view hasn't been refreshed with the flag yet.
+            if (emp.transferIsHq ?? this.isRabHq(top)) {
                 const wing = parts[1] || top; // segment directly under HQ
                 if (!hqSeen.has(wing)) { hqSeen.add(wing); hqWings.push(wing); }
             } else if (this.isRabBattalion(top)) {
@@ -889,7 +868,7 @@ export class PostingOrderPreviewPageComponent implements OnInit {
         }
 
         const lines: string[] = [];
-        if (hqWings.length) lines.push(`${bn ? 'পরিচালক' : 'Director'}/ ${hqWings.join(', ')}`);
+        if (hqWings.length) lines.push(`${bn ? 'পরিচালক' : 'Director'}/ ${hqWings.join('/ ')}`);
         if (rabUnits.length) lines.push(`${bn ? 'অধিনায়ক' : 'Commanding Officer'}/ ${rabUnits.join('/ ')}`);
         if (others.length) lines.push(others.join(', '));
         return lines;
@@ -1554,6 +1533,7 @@ html, body { margin: 0; padding: 0; background: transparent; }
 
         const headerRows = [new TableRow({ tableHeader: true, children: cols.map((col, ci) => hdrCell(col, ci)) })];
 
+        const nameIdx = isInter ? 3 : 4;   // নাম column index (left-aligned)
         const dataRows = this.filteredEmployees.map((emp, i) => {
             const serial = bn ? this.toBanglaDigits(String(i + 1)) : String(i + 1);
             const vals = isInter
@@ -1577,7 +1557,7 @@ html, body { margin: 0; padding: 0; background: transparent; }
                     const lines = val.split('\n');
                     const cellParas = lines.map(line => new Paragraph({
                         children: [new TextRun({ text: line, size: tblSize, sizeComplexScript: tblCsSize, font, language: lang })],
-                        alignment: AlignmentType.CENTER,
+                        alignment: ci === nameIdx ? AlignmentType.LEFT : AlignmentType.CENTER,
                         spacing: { after: 20 }
                     }));
                     return new TableCell({
@@ -1704,8 +1684,7 @@ html, body { margin: 0; padding: 0; background: transparent; }
             new Paragraph({ children: [new TextRun({ text: approverNameText, size: ctxSize, sizeComplexScript: csSize, font, language: lang })], keepNext: true, keepLines: true }),
             new Paragraph({ children: [new TextRun({ text: approverRankText, size: ctxSize, sizeComplexScript: csSize, font, language: lang })], keepNext: true, keepLines: true }),
             new Paragraph({ children: [new TextRun({ text: approverApptText, size: ctxSize, sizeComplexScript: csSize, font, language: lang })], keepNext: true, keepLines: true }),
-            new Paragraph({ children: [new TextRun({ text: `${bn ? 'টেলিঃ' : 'Tel:'} ${approverPhoneText}`, size: ctxSize, sizeComplexScript: csSize, font, language: lang })], keepNext: true, keepLines: true }),
-            new Paragraph({ children: [new TextRun({ text: bn ? `তারিখঃ ${this.previewDate}` : `Date: ${this.previewDate}`, size: ctxSize, sizeComplexScript: csSize, font, language: lang })], spacing: { before: 100 }, keepLines: true })
+            new Paragraph({ children: [new TextRun({ text: `${bn ? 'টেলিঃ' : 'Tel:'} ${approverPhoneText}`, size: ctxSize, sizeComplexScript: csSize, font, language: lang })], keepNext: true, keepLines: true })
         ];
         // DXA widths: both tables are identical 100%-wide structures → exact same column positions
         // contentWidth = page width − left margin − right margin (DXA units)
@@ -1727,20 +1706,38 @@ html, body { margin: 0; padding: 0; background: transparent; }
         });
         const sigParas = [new Paragraph({ spacing: { before: 600 }, keepNext: true }), sigTable] as any[];
 
-        // ── Copy + Signature (two-column borderless table next to অনুলিপি) ──
-        // Left cell: notesheet prefix + অনুলিপি title + footer paragraphs
-        const leftCellChildren: Paragraph[] = [];
+        // ── অনুলিপি head: prefix + title (left) and তারিখ (right, bottom-aligned) ──
+        // The signature block above keeps its place; only the তারিখ line drops down
+        // here so it lands exactly level with the অনুলিপি title (mirrors the preview).
         const nsPrefix = this.noteSheetPrefix;
+        const headLeftChildren: Paragraph[] = [];
         if (nsPrefix) {
-            leftCellChildren.push(new Paragraph({
+            headLeftChildren.push(new Paragraph({
                 children: [new TextRun({ text: nsPrefix, size: ctxSize, sizeComplexScript: csSize, font, language: lang })],
                 spacing: { before: 200, after: 60 }
             }));
         }
-        leftCellChildren.push(new Paragraph({
+        headLeftChildren.push(new Paragraph({
             children: [new TextRun({ text: bn ? 'অনুলিপি (জ্যেষ্ঠতার ভিত্তিতে নহে)' : 'Copy (not in order of seniority):', bold: true, size: ctxSize, sizeComplexScript: csSize, font, language: lang })],
             spacing: { before: nsPrefix ? 0 : 200 }
         }));
+        const headDateChildren: Paragraph[] = [
+            new Paragraph({ children: [new TextRun({ text: bn ? `তারিখঃ ${this.previewDate}` : `Date: ${this.previewDate}`, size: ctxSize, sizeComplexScript: csSize, font, language: lang })], keepLines: true })
+        ];
+        const copyHeadTable = new Table({
+            width: { size: contentWidth, type: WidthType.DXA },
+            layout: TableLayoutType.FIXED,
+            columnWidths: [leftWidth, sigWidth],
+            borders: { top: noBorder, bottom: noBorder, left: noBorder, right: noBorder, insideHorizontal: noBorder, insideVertical: noBorder },
+            rows: [new TableRow({ cantSplit: true, children: [
+                new TableCell({ borders: noBorders, width: { size: leftWidth, type: WidthType.DXA }, margins: zeroMargins, children: headLeftChildren }),
+                new TableCell({ borders: noBorders, width: { size: sigWidth, type: WidthType.DXA }, margins: sigCellMargins, verticalAlign: VerticalAlign.BOTTOM, children: headDateChildren })
+            ] })]
+        });
+
+        // ── Copy list + approval-person signature (two-column borderless table) ──
+        // Left cell: অনুলিপি list only (prefix + title moved to the head above).
+        const leftCellChildren: Paragraph[] = [];
         const autoLines = this.showTransferUnitsCopy ? this.autoCopyLines : [];
         autoLines.forEach((line, i) => {
             const serial = i + 1;
@@ -1794,7 +1791,7 @@ html, body { margin: 0; padding: 0; background: transparent; }
             borders: { top: noBorder, bottom: noBorder, left: noBorder, right: noBorder, insideHorizontal: noBorder, insideVertical: noBorder },
             rows: [new TableRow({ cantSplit: true, children: [
                 new TableCell({ borders: noBorders, width: { size: leftWidth, type: WidthType.DXA }, margins: zeroMargins, children: leftCellChildren }),
-                new TableCell({ borders: noBorders, width: { size: sigWidth,  type: WidthType.DXA }, margins: sigCellMargins, children: sigCellChildren })
+                new TableCell({ borders: noBorders, width: { size: sigWidth,  type: WidthType.DXA }, margins: sigCellMargins, verticalAlign: VerticalAlign.BOTTOM, children: sigCellChildren })
             ] })]
         });
 
@@ -1821,7 +1818,7 @@ html, body { margin: 0; padding: 0; background: transparent; }
                         ? [new Paragraph({ spacing: { before: 100 } })]
                         : []),
                     ...subTextParas,
-                    ...sigParas, new Paragraph({ spacing: { before: 300 }, keepNext: true }), copySigTable
+                    ...sigParas, new Paragraph({ spacing: { before: 300 }, keepNext: true }), copyHeadTable, copySigTable
                 ]
             }]
         });

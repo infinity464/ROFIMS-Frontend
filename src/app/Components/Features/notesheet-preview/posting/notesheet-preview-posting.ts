@@ -1073,6 +1073,22 @@ export class NotesheetPreviewPostingComponent extends NotesheetPreviewBase imple
         return q.trim();
     }
 
+    /** Permanent (own) district display; drops the parenthetical detail when the toggle is off. */
+    getOwnDistrict(emp: DraftPostingEmployeeRow): string {
+        const full = this.isEnglish()
+            ? (emp.permanentDistrictName || '')
+            : (emp.permanentDistrictNameBN || emp.permanentDistrictName || '');
+        return this.showOwnDistrictDetail ? full : full.split('\n')[0].replace(/\s*\(.*$/, '');
+    }
+
+    /** Spouse district display; drops the parenthetical detail when the toggle is off. */
+    getSpouseDistrict(emp: DraftPostingEmployeeRow): string {
+        const full = this.isEnglish()
+            ? (emp.spousePermanentDistrictName || '')
+            : (emp.spousePermanentDistrictNameBN || emp.spousePermanentDistrictName || '');
+        return this.showSpouseDistrictDetail ? full : full.split('\n')[0].replace(/\s*\(.*$/, '');
+    }
+
     getUnitFullPath(node: TreeNode | null, bn: boolean = false): string {
         if (!node) return '';
         const parts: string[] = [];
@@ -1863,9 +1879,9 @@ html, body { margin: 0; padding: 0; background: transparent; }
             const cellMargins = { top: 30, bottom: 30, left: 0, right: 0 };
             const cellSpacing = { before: 0, after: 0, line: 220 };
             const hdrParaFn = (text: string) => new Paragraph({ children: [new TextRun({ text, size: TBL_SZ, sizeComplexScript: bn ? TBL_SZ : undefined, font, language: lang })], alignment: AlignmentType.CENTER, spacing: cellSpacing });
-            const dataCellFn = (v: string, w: number) => {
+            const dataCellFn = (v: string, w: number, align: (typeof AlignmentType)[keyof typeof AlignmentType] = AlignmentType.CENTER) => {
                 const lines = v.split('\n');
-                const cellParas = lines.map(line => new Paragraph({ children: [new TextRun({ text: line, size: TBL_SZ, sizeComplexScript: bn ? TBL_SZ : undefined, font, language: lang })], alignment: AlignmentType.CENTER, spacing: cellSpacing }));
+                const cellParas = lines.map(line => new Paragraph({ children: [new TextRun({ text: line, size: TBL_SZ, sizeComplexScript: bn ? TBL_SZ : undefined, font, language: lang })], alignment: align, spacing: cellSpacing }));
                 return new TableCell({ children: cellParas, borders: cellBorders, width: { size: w, type: WidthType.DXA }, margins: cellMargins });
             };
 
@@ -1938,7 +1954,7 @@ html, body { margin: 0; padding: 0; background: transparent; }
                         this.getTransferUnitShort(emp),
                         this.getCombinedRemarks(emp)
                     ];
-                    return new TableRow({ children: iVisIdx.map(oi => dataCellFn(allV[oi], iW[oi])) });
+                    return new TableRow({ children: iVisIdx.map(oi => dataCellFn(allV[oi], iW[oi], oi === 3 ? AlignmentType.LEFT : AlignmentType.CENTER)) });
                 });
 
                 const iTotalW = iVisIdx.reduce((a, oi) => a + iW[oi], 0);
@@ -1986,8 +2002,7 @@ html, body { margin: 0; padding: 0; background: transparent; }
                 const headerRows = [new TableRow({ tableHeader: true, children: cols.map((c, vi) => hdrCell(c, vi)) })];
                 const dataRows = this.postingEmployees.map((emp, i) => {
                     const allVals = buildAllCellValues(emp, i);
-                    const visVals = visibleIndices.map(oi => allVals[oi]);
-                    return new TableRow({ children: visVals.map((v, vi) => dataCellFn(v, colWidths[vi])) });
+                    return new TableRow({ children: visibleIndices.map((oi, vi) => dataCellFn(allVals[oi], colWidths[vi], oi === 4 ? AlignmentType.LEFT : AlignmentType.CENTER)) });
                 });
                 const tableRows = [...headerRows, ...dataRows];
                 mainChildren.push(new Paragraph({ spacing: { before: 200 }, children: [] }));

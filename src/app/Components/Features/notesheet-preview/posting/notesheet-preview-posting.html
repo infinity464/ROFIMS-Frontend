@@ -122,8 +122,8 @@
     <!-- ══════════════════════════════════════════════════════════ -->
     <!-- EDIT MODE: single page, no pagination                     -->
     <!-- ══════════════════════════════════════════════════════════ -->
-    <div class="a4-paper-container" *ngIf="noteSheet && isFullyLoaded && !error && editing">
-        <div class="a4-paper">
+    <div class="a4-paper-container ns-edit-container" *ngIf="noteSheet && isFullyLoaded && !error && editing">
+        <div class="a4-paper ns-edit-paper">
 
             <div class="ns-doc-box">
                 <div class="ns-main-col">
@@ -249,10 +249,10 @@
                                     <tr *ngFor="let emp of postingEmployees; let i = index">
                                         <td>{{ isEnglish() ? (i + 1) : serial(i + 1) }}</td>
                                         <td>{{ getServiceIdDisplay(emp) }}</td>
-                                        <td>{{ isEnglish() ? (emp.rankName || '-') : (emp.rankNameBN || emp.rankName || '-') }}<span *ngIf="getRankQualifications(emp)"><br>({{ getRankQualifications(emp) }})</span></td>
-                                        <td>{{ isEnglish() ? (emp.fullNameEN || '-') : (emp.fullNameBN || emp.fullNameEN || '-') }}</td>
-                                        <td style="white-space: pre-line;">{{ isEnglish() ? (emp.permanentDistrictName || '-') : (emp.permanentDistrictNameBN || emp.permanentDistrictName || '-') }}</td>
-                                        <td style="white-space: pre-line;">{{ isEnglish() ? (emp.spousePermanentDistrictName || '-') : (emp.spousePermanentDistrictNameBN || emp.spousePermanentDistrictName || '-') }}</td>
+                                        <td>{{ isEnglish() ? (emp.rankName || '-') : (emp.rankNameBN || emp.rankName || '-') }}<span *ngIf="showRankQualifications && getRankQualifications(emp)"><br>({{ getRankQualifications(emp) }})</span></td>
+                                        <td class="ns-name-cell">{{ isEnglish() ? (emp.fullNameEN || '-') : (emp.fullNameBN || emp.fullNameEN || '-') }}</td>
+                                        <td style="white-space: pre-line;">{{ getOwnDistrict(emp) || '-' }}</td>
+                                        <td style="white-space: pre-line;">{{ getSpouseDistrict(emp) || '-' }}</td>
                                         <td>{{ isEnglish() ? formatJoiningDate(emp.joiningDateInRAB) : toBnDigits(formatJoiningDate(emp.joiningDateInRAB)) }}</td>
                                         <td>{{ tenure(emp.joiningDateInRAB, 'y') }}</td>
                                         <td>{{ tenure(emp.joiningDateInRAB, 'm') }}</td>
@@ -284,12 +284,12 @@
                                     <tr *ngFor="let emp of postingEmployees; let i = index">
                                         <td>{{ isEnglish() ? (i + 1) : serial(i + 1) }}</td>
                                         <td>{{ getServiceIdDisplay(emp) }}</td>
-                                        <td>{{ isEnglish() ? (emp.rankName || '-') : (emp.rankNameBN || emp.rankName || '-') }}<span *ngIf="getRankQualifications(emp)"><br>({{ getRankQualifications(emp) }})</span></td>
-                                        <td>{{ isEnglish() ? (emp.tradeName || '-') : (emp.tradeNameBN || emp.tradeName || '-') }}<span *ngIf="emp.tradeRemarks"><br>({{ emp.tradeRemarks }})</span></td>
-                                        <td>{{ isEnglish() ? (emp.fullNameEN || '-') : (emp.fullNameBN || emp.fullNameEN || '-') }}</td>
-                                        <td style="white-space: pre-line;">{{ isEnglish() ? (emp.permanentDistrictName || '-') : (emp.permanentDistrictNameBN || emp.permanentDistrictName || '-') }}</td>
-                                        <td style="white-space: pre-line;">{{ isEnglish() ? (emp.spousePermanentDistrictName || '-') : (emp.spousePermanentDistrictNameBN || emp.spousePermanentDistrictName || '-') }}</td>
-                                        <td style="white-space: pre-line;">{{ isEnglish() ? (emp.motherOrgLocationName || '-') : (emp.motherOrgLocationNameBN || emp.motherOrgLocationName || '-') }}</td>
+                                        <td>{{ isEnglish() ? (emp.rankName || '-') : (emp.rankNameBN || emp.rankName || '-') }}<span *ngIf="showRankQualifications && getRankQualifications(emp)"><br>({{ getRankQualifications(emp) }})</span></td>
+                                        <td>{{ isEnglish() ? (emp.tradeName || '-') : (emp.tradeNameBN || emp.tradeName || '-') }}<span *ngIf="showTradeRemarks && emp.tradeRemarks"><br>({{ emp.tradeRemarks }})</span></td>
+                                        <td class="ns-name-cell">{{ isEnglish() ? (emp.fullNameEN || '-') : (emp.fullNameBN || emp.fullNameEN || '-') }}</td>
+                                        <td style="white-space: pre-line;">{{ getOwnDistrict(emp) || '-' }}</td>
+                                        <td style="white-space: pre-line;">{{ getSpouseDistrict(emp) || '-' }}</td>
+                                        <td style="white-space: pre-line;">{{ getPreviousWorkplace(emp) || '-' }}</td>
                                         <td>
                                             <p-treeSelect [(ngModel)]="selectedUnitNodes[emp.employeeId]"
                                                           [options]="unitTreeNodes" placeholder="Select Unit"
@@ -466,10 +466,10 @@
                                 <tr *ngFor="let emp of postingEmployees; let i = index">
                                     <td>{{ isEnglish() ? (i + 1) : serial(i + 1) }}</td>
                                     <td>{{ getServiceIdDisplay(emp) }}</td>
-                                    <td>{{ isEnglish() ? (emp.rankName || '') : (emp.rankNameBN || emp.rankName || '') }}<span *ngIf="getRankQualifications(emp)"><br>({{ getRankQualifications(emp) }})</span></td>
-                                    <td>{{ isEnglish() ? (emp.fullNameEN || '') : (emp.fullNameBN || emp.fullNameEN || '') }}</td>
-                                    <td style="white-space: pre-line;">{{ isEnglish() ? (emp.permanentDistrictName || '') : (emp.permanentDistrictNameBN || emp.permanentDistrictName || '') }}</td>
-                                    <td style="white-space: pre-line;">{{ isEnglish() ? (emp.spousePermanentDistrictName || '') : (emp.spousePermanentDistrictNameBN || emp.spousePermanentDistrictName || '') }}</td>
+                                    <td>{{ isEnglish() ? (emp.rankName || '') : (emp.rankNameBN || emp.rankName || '') }}<span *ngIf="showRankQualifications && getRankQualifications(emp)"><br>({{ getRankQualifications(emp) }})</span></td>
+                                    <td class="ns-name-cell">{{ isEnglish() ? (emp.fullNameEN || '') : (emp.fullNameBN || emp.fullNameEN || '') }}</td>
+                                    <td style="white-space: pre-line;">{{ getOwnDistrict(emp) }}</td>
+                                    <td style="white-space: pre-line;">{{ getSpouseDistrict(emp) }}</td>
                                     <td>{{ isEnglish() ? formatJoiningDate(emp.joiningDateInRAB) : toBnDigits(formatJoiningDate(emp.joiningDateInRAB)) }}</td>
                                     <td>{{ tenure(emp.joiningDateInRAB, 'y') }}</td>
                                     <td>{{ tenure(emp.joiningDateInRAB, 'm') }}</td>
@@ -483,11 +483,11 @@
                                 <tr *ngFor="let emp of postingEmployees; let i = index">
                                     <td>{{ isEnglish() ? (i + 1) : serial(i + 1) }}</td>
                                     <td>{{ getServiceIdDisplay(emp) }}</td>
-                                    <td>{{ isEnglish() ? (emp.rankName || '') : (emp.rankNameBN || emp.rankName || '') }}<span *ngIf="getRankQualifications(emp)"><br>({{ getRankQualifications(emp) }})</span></td>
-                                    <td>{{ isEnglish() ? (emp.tradeName || '') : (emp.tradeNameBN || emp.tradeName || '') }}<span *ngIf="emp.tradeRemarks"><br>({{ emp.tradeRemarks }})</span></td>
-                                    <td>{{ isEnglish() ? (emp.fullNameEN || '') : (emp.fullNameBN || emp.fullNameEN || '') }}</td>
-                                    <td style="white-space: pre-line;">{{ isEnglish() ? (emp.permanentDistrictName || '') : (emp.permanentDistrictNameBN || emp.permanentDistrictName || '') }}</td>
-                                    <td style="white-space: pre-line;">{{ isEnglish() ? (emp.spousePermanentDistrictName || '') : (emp.spousePermanentDistrictNameBN || emp.spousePermanentDistrictName || '') }}</td>
+                                    <td>{{ isEnglish() ? (emp.rankName || '') : (emp.rankNameBN || emp.rankName || '') }}<span *ngIf="showRankQualifications && getRankQualifications(emp)"><br>({{ getRankQualifications(emp) }})</span></td>
+                                    <td>{{ isEnglish() ? (emp.tradeName || '') : (emp.tradeNameBN || emp.tradeName || '') }}<span *ngIf="showTradeRemarks && emp.tradeRemarks"><br>({{ emp.tradeRemarks }})</span></td>
+                                    <td class="ns-name-cell">{{ isEnglish() ? (emp.fullNameEN || '') : (emp.fullNameBN || emp.fullNameEN || '') }}</td>
+                                    <td style="white-space: pre-line;">{{ getOwnDistrict(emp) }}</td>
+                                    <td style="white-space: pre-line;">{{ getSpouseDistrict(emp) }}</td>
                                     <td style="white-space: pre-line;">{{ getPreviousWorkplace(emp) }}</td>
                                     <td>{{ getTransferUnitShort(emp) }}</td>
                                     <td *ngIf="showRemarks">{{ getCombinedRemarks(emp) }}</td>

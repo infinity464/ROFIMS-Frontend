@@ -140,7 +140,7 @@ $section-margin: 1rem;
 /* ═══ Sections ═══ */
 .sp-section {
     padding: 1.25rem 0;
-    border-top: 1px solid var(--surface-border);
+    border-top: 1px solid var(--p-primary-200);
 }
 
 .sp-section-header {
@@ -156,6 +156,8 @@ $section-margin: 1rem;
     letter-spacing: 0.06em;
     color: var(--text-color-secondary);
     text-transform: uppercase;
+    padding-left: 0.6rem;
+    border-left: 3px solid var(--primary-color);
 }
 
 /* ═══ Two-column grid ═══ */
@@ -167,7 +169,7 @@ $section-margin: 1rem;
 
     > *:first-child {
         padding-right: 1.5rem;
-        border-right: 1px solid var(--surface-border);
+        border-right: 1px solid var(--p-primary-100);
     }
 
     > *:last-child {
@@ -188,7 +190,7 @@ $section-margin: 1rem;
     gap: 1rem;
     align-items: baseline;
     padding: 0.45rem 0;
-    border-bottom: 1px solid var(--surface-100, rgba(128, 128, 128, 0.08));
+    border-bottom: 1px solid var(--p-primary-100);
 
     &:last-child {
         border-bottom: none;
@@ -216,7 +218,7 @@ $section-margin: 1rem;
     text-transform: uppercase;
     padding-bottom: 0.35rem;
     margin-bottom: 0.1rem;
-    border-bottom: 1px solid var(--surface-100, rgba(128, 128, 128, 0.08));
+    border-bottom: 1px solid var(--p-primary-100);
 }
 
 /* ═══ Responsive ═══ */
@@ -386,19 +388,22 @@ $section-margin: 1rem;
     overflow-x: auto;
 }
 
+// ── Tables: theme-colored border + header ──────────────────────
 .family-info-table {
     ::ng-deep .p-datatable-table {
-        border: 1px solid var(--surface-border);
+        border: 1px solid var(--p-primary-200);
     }
     ::ng-deep th {
-        border: 1px solid var(--surface-border);
+        border: 1px solid var(--p-primary-200);
         padding: 0.5rem 0.75rem;
         font-weight: 700;
+        background: var(--p-primary-50);
+        color: var(--text-color);
     }
     ::ng-deep td {
-        border: 1px solid var(--surface-border);
+        border: 1px solid var(--p-primary-200);
         padding: 0.5rem 0.75rem;
-        color: #000;
+        color: var(--text-color);
     }
 }
 
@@ -519,12 +524,12 @@ $section-margin: 1rem;
     border-radius: 10px;
     font-size: 0.72rem;
     font-weight: 600;
-    background: #e2e3e5;
-    color: #555;
+    background: var(--p-surface-200);
+    color: var(--text-color-secondary);
 
     &--active {
-        background: #d4edda;
-        color: #155724;
+        background: var(--p-green-50, #d4edda);
+        color: var(--p-green-700, #155724);
     }
 }
 
@@ -539,28 +544,28 @@ $section-margin: 1rem;
 }
 
 .sp-status-success {
-    background-color: #d4edda;
-    color: #155724;
+    background-color: var(--p-green-50, #d4edda);
+    color: var(--p-green-700, #155724);
 }
 
 .sp-status-info {
-    background-color: #d1ecf1;
-    color: #0c5460;
+    background-color: var(--p-cyan-50, #d1ecf1);
+    color: var(--p-cyan-700, #0c5460);
 }
 
 .sp-status-warn {
-    background-color: #fff3cd;
-    color: #856404;
+    background-color: var(--p-yellow-50, #fff3cd);
+    color: var(--p-yellow-700, #856404);
 }
 
 .sp-status-danger {
-    background-color: #f8d7da;
-    color: #721c24;
+    background-color: var(--p-red-50, #f8d7da);
+    color: var(--p-red-700, #721c24);
 }
 
 .sp-status-secondary {
-    background-color: #e2e3e5;
-    color: #383d41;
+    background-color: var(--p-surface-200);
+    color: var(--text-color-secondary);
 }
 
 // ── Posting Processing Status Badge ──────────────────────────────
@@ -604,27 +609,8 @@ $section-margin: 1rem;
     }
 }
 
-// ── Text color: black in light mode, theme color in dark mode ──────
+// ── Text colors: use theme defaults ──────
 .ex-member-profile-page {
-    .sp-field-label,
-    .sp-field-value,
-    .sp-section-heading,
-    .sp-addr-type,
-    .sp-id-label,
-    .sp-id-value,
-    .sp-hero-name,
-    .section-heading,
-    .subsection-heading,
-    .detail-label,
-    .detail-value,
-    .address-block-type,
-    .address-label,
-    .address-value {
-        color: #000;
-    }
-}
-
-:host-context(.app-dark) .ex-member-profile-page {
     .sp-field-label,
     .sp-section-heading,
     .sp-addr-type,
@@ -644,14 +630,47 @@ $section-margin: 1rem;
     .address-value {
         color: var(--text-color);
     }
+}
+
+// ── Dark mode: table header + pill adjustments ──────
+:host-context(.app-dark) .ex-member-profile-page {
+    .sp-section {
+        border-top-color: var(--p-primary-800);
+    }
+
+    .sp-field {
+        border-bottom-color: var(--p-primary-900);
+    }
+
+    .sp-grid > *:first-child {
+        border-right-color: var(--p-primary-900);
+    }
+
+    .sp-addr-type {
+        border-bottom-color: var(--p-primary-900);
+    }
+
+    .family-info-table {
+        ::ng-deep th {
+            background: var(--p-primary-900);
+            border-color: var(--p-primary-700);
+            color: var(--text-color);
+        }
+        ::ng-deep td {
+            border-color: var(--p-primary-800);
+        }
+        ::ng-deep .p-datatable-table {
+            border-color: var(--p-primary-700);
+        }
+    }
 
     .sp-status-pill {
-        background: rgba(255, 255, 255, 0.08);
+        background: var(--p-surface-300);
         color: var(--text-color-secondary);
 
         &--active {
-            background: rgba(76, 175, 80, 0.2);
-            color: #81c784;
+            background: var(--p-green-900, rgba(76, 175, 80, 0.2));
+            color: var(--p-green-300, #81c784);
         }
     }
 }

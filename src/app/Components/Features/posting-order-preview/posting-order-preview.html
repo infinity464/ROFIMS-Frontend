@@ -581,7 +581,7 @@
                             <td class="text-center">{{ isBangla ? toBanglaDigits('' + (i + 1)) : (i + 1) }}</td>
                             <td class="font-semibold">{{ empServiceId(emp) }}</td>
                             <td>{{ empRank(emp) }}</td>
-                            <td>{{ empName(emp) }}</td>
+                            <td class="po-doc-name-cell">{{ empName(emp) }}</td>
                             <td *ngIf="showOwnDistrict" style="white-space: pre-line;">{{ empDistrict(emp) }}</td>
                             <td *ngIf="showPrevWorkplaceUnit" style="white-space: pre-line;">{{ empPrevWorkplace(emp) }}</td>
                             <td>{{ empTransferUnit(emp) }}</td>
@@ -606,7 +606,7 @@
                             <td class="font-semibold">{{ empServiceId(emp) }}</td>
                             <td>{{ empRank(emp) }}</td>
                             <td>{{ empTrade(emp) }}</td>
-                            <td>{{ empName(emp) }}</td>
+                            <td class="po-doc-name-cell">{{ empName(emp) }}</td>
                             <td *ngIf="showOwnDistrict" style="white-space: pre-line;">{{ empDistrict(emp) }}</td>
                             <td *ngIf="showPrevWorkplaceUnit" style="white-space: pre-line;">{{ empPrevWorkplace(emp) }}</td>
                             <td>{{ empTransferUnit(emp) }}</td>
@@ -635,23 +635,32 @@
             <!-- Sub Text (rich HTML from editor) -->
             <div class="po-doc-sub-text" *ngIf="subText" [innerHTML]="subText"></div>
 
-            <!-- Signature Block (top right, standalone) -->
+            <!-- Signature Block (top right, standalone). Date is omitted here; it is
+                 rendered separately on the অনুলিপি title line below. -->
             <div class="po-doc-signature">
                 <div>স্বাক্ষরিত/-</div>
                 <div>{{ (isBangla ? approverNameBN : approverName) || approverName || '...................................' }}</div>
                 <div>{{ (isBangla ? approverRankBN : approverRank) || approverRank || '............................' }}</div>
                 <div>{{ (isBangla ? approverAppointmentBN : approverAppointment) || approverAppointment || '............................' }}</div>
                 <div>{{ isBangla ? 'টেলিঃ' : 'Tel:' }} {{ approverPhone || '...............' }}</div>
-                <div>{{ isBangla ? 'তারিখঃ' : 'Date:' }} {{ previewDate }}</div>
             </div>
 
             <!-- Copy Distribution + Footer - mirrors Word two-column table exactly -->
             <div class="po-doc-copy">
+                <!-- Head: prefix + অনুলিপি title (left); only the তারিখ line (right) sits
+                     here, bottom-aligned so it is exactly level with the অনুলিপি title. -->
+                <div class="po-doc-copy-head">
+                    <div class="po-doc-copy-head-left">
+                        <div *ngIf="noteSheetPrefix" style="margin-bottom:0.3rem;">{{ noteSheetPrefix }}</div>
+                        <div class="po-doc-copy-title">{{ isBangla ? 'অনুলিপি (জ্যেষ্ঠতার ভিত্তিতে নহে)' : 'Copy (not in order of seniority):' }}</div>
+                    </div>
+                    <div class="po-doc-signature-date">
+                        <div>{{ isBangla ? 'তারিখঃ' : 'Date:' }} {{ previewDate }}</div>
+                    </div>
+                </div>
                 <table class="po-doc-copy-table">
                     <tr>
                         <td class="po-doc-copy-left">
-                            <div *ngIf="noteSheetPrefix" style="margin-bottom:0.3rem;">{{ noteSheetPrefix }}</div>
-                            <div class="po-doc-copy-title">{{ isBangla ? 'অনুলিপি (জ্যেষ্ঠতার ভিত্তিতে নহে)' : 'Copy (not in order of seniority):' }}</div>
                             <div class="po-doc-copy-list">
                                 <ng-container *ngIf="showTransferUnitsCopy">
                                     <p *ngFor="let line of autoCopyLines; let i = index">{{ isBangla ? toBanglaDigits('' + (i + 1)) : (i + 1) }}। {{ line }}</p>
