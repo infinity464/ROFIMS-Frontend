@@ -465,6 +465,35 @@ export interface JoiningLeaveReportRow {
   rmks?: string | null;
 }
 
+/** One row of the "Members on Movement" report (one row per movement × member). */
+export interface MovementReportRow {
+  ser?: number;
+  serviceId?: string | null;
+  rank?: string | null;
+  rankBN?: string | null;
+  corps?: string | null;
+  corpsBN?: string | null;
+  trade?: string | null;
+  tradeBN?: string | null;
+  name?: string | null;
+  nameBN?: string | null;
+  movementType?: string | null;
+  movementTypeBN?: string | null;
+  moveOrderType?: string | null;
+  moveOrderTypeBN?: string | null;
+  movementReason?: string | null;
+  movementReasonBN?: string | null;
+  currentUnit?: string | null;
+  currentUnitBN?: string | null;
+  destinedUnit?: string | null;
+  destinedUnitBN?: string | null;
+  /** ISO "yyyy-MM-dd" — DateOfRelease. */
+  dateOfRelease?: string | null;
+  /** Returned flag (true once a temporary movement's return is recorded). */
+  isReturned?: boolean | null;
+  rmks?: string | null;
+}
+
 /** One row of the "Members on Leave" report (leave-application / history). */
 export interface LeaveReportRow {
   ser?: number;
@@ -679,6 +708,21 @@ export interface DynamicReportRequest {
   leaveDateTo?: string | null;
   /** Present-Status: selected status type ('OnDuty'…'Arrested'). "" = all. */
   presentStatusTypeFilter?: string | null;
+  // ── Movement report ("Members on Movement") ───────────────────────────
+  /** Movement: MovementType enum (1 Permanent | 2 Temporary). Null = all. */
+  movementType?: number | null;
+  /** Movement: MoveOrderType enum (1 CC | 2 MO | 3 Art.47 Handover | 4 Art.47 Takeover). Null = all. */
+  moveOrderType?: number | null;
+  /** Movement: MovementReasonId (CommonCode 'MovementReason'). Null = all. */
+  movementReasonId?: number | null;
+  /** Movement: DestinedRABUnitId (unit being moved to). Null = all. */
+  destinedRabUnitId?: number | null;
+  /** Movement: "NotReturned" (default — currently on movement) | "Returned" | "All". */
+  movementReturnedFilter?: string | null;
+  /** Movement: DateOfRelease window lower bound, ISO "yyyy-MM-dd". */
+  movementDateFrom?: string | null;
+  /** Movement: DateOfRelease window upper bound, ISO "yyyy-MM-dd". */
+  movementDateTo?: string | null;
   pagination: ReportPagination;
 }
 
