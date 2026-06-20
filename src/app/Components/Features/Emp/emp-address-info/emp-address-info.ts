@@ -31,6 +31,8 @@ export class EmpAddressInfo implements OnInit {
 
     @ViewChild('permanentAddressForm') permanentAddressForm!: AddressFormComponent;
     @ViewChild('presentAddressForm') presentAddressForm!: AddressFormComponent;
+    @ViewChild('spousePermanentAddressForm') spousePermanentAddressForm!: AddressFormComponent;
+    @ViewChild('spousePresentAddressForm') spousePresentAddressForm!: AddressFormComponent;
 
     /** When true (e.g. inside tab view), the "Employee Address Information" title and header actions are hidden. */
     @Input() hideTitle = false;
@@ -57,10 +59,17 @@ export class EmpAddressInfo implements OnInit {
     // Address data for forms
     permanentAddressData: AddressData | undefined = undefined;
     presentAddressData: AddressData | undefined = undefined;
+    spousePermanentAddressData: AddressData | undefined = undefined;
+    spousePresentAddressData: AddressData | undefined = undefined;
 
     // Address IDs for updates
     permanentAddressId: number | null = null;
     presentAddressId: number | null = null;
+    spousePermanentAddressId: number | null = null;
+    spousePresentAddressId: number | null = null;
+
+    // FMID carried on existing spouse address rows; preserved when saving spouse addresses.
+    spouseFmid: number | null = null;
 
     // Mode: 'search' (default), 'view' (readonly), 'edit'
     mode: 'search' | 'view' | 'edit' = 'search';
@@ -84,6 +93,27 @@ export class EmpAddressInfo implements OnInit {
         showSameAsPresent: true,
         sameAsLabel: 'Same as Permanent Address'
     };
+
+    spousePermanentAddressConfig: AddressFormConfig = {
+        title: 'Spouse Permanent Address',
+        addressType: 'spouse',
+        employeeId: 0,
+        showSameAsPresent: true,
+        sameAsLabel: 'Same As Member Permanent Address'
+    };
+
+    spousePresentAddressConfig: AddressFormConfig = {
+        title: 'Spouse Present Address',
+        addressType: 'spousePresent',
+        employeeId: 0,
+        showSameAsPresent: true,
+        sameAsLabel: 'Same As Spouse Permanent Address'
+    };
+
+    /** Spouse forms are shown only in the member's own-address scope (not in spouse embed mode). */
+    get showSpouseAddresses(): boolean {
+        return this.addressScope === 'own';
+    }
 
     constructor(
         private empService: EmpService,
@@ -165,6 +195,8 @@ export class EmpAddressInfo implements OnInit {
         if (this.selectedEmployeeId) {
             this.permanentAddressConfig.employeeId = this.selectedEmployeeId;
             this.presentAddressConfig.employeeId = this.selectedEmployeeId;
+            this.spousePermanentAddressConfig.employeeId = this.selectedEmployeeId;
+            this.spousePresentAddressConfig.employeeId = this.selectedEmployeeId;
         }
         const permType = this.addressScope === 'spouse' ? LocationType.SpousePermanent : LocationType.Permanent;
         const presType = this.addressScope === 'spouse' ? LocationType.SpousePresent : LocationType.Present;
@@ -220,6 +252,14 @@ export class EmpAddressInfo implements OnInit {
                         } else if (presMatch) {
                             this.presentAddressData = addressData;
                             this.presentAddressId = addr.addressId || addr.AddressId;
+                        } else if (this.showSpouseAddresses && locationType === LocationType.SpousePermanent.toLowerCase()) {
+                            this.spousePermanentAddressData = addressData;
+                            this.spousePermanentAddressId = addr.addressId || addr.AddressId;
+                            this.spouseFmid = addr.fmid ?? addr.FMID ?? this.spouseFmid;
+                        } else if (this.showSpouseAddresses && locationType === LocationType.SpousePresent.toLowerCase()) {
+                            this.spousePresentAddressData = addressData;
+                            this.spousePresentAddressId = addr.addressId || addr.AddressId;
+                            this.spouseFmid = addr.fmid ?? addr.FMID ?? this.spouseFmid;
                         }
                     }
                 });
@@ -227,7 +267,8 @@ export class EmpAddressInfo implements OnInit {
                 // When a record already exists, start in view (readonly) mode so the user
                 // explicitly opts into editing via the Edit button. Skip for embedMode and
                 // for the standalone search flow (which uses its own search-mode readonly).
-                const hasAddress = !!this.permanentAddressData || !!this.presentAddressData;
+                const hasAddress = !!this.permanentAddressData || !!this.presentAddressData
+                    || !!this.spousePermanentAddressData || !!this.spousePresentAddressData;
                 if (hasAddress && !this.embedMode && this.mode !== 'search') {
                     this.mode = 'view';
                     this.isReadonly = true;
@@ -278,6 +319,20 @@ export class EmpAddressInfo implements OnInit {
         }
     }
 
+    copyMemberPermanentToSpousePermanent(): void {
+        const permanentData = this.permanentAddressForm?.getFormData();
+        if (permanentData?.data) {
+            this.spousePermanentAddressForm?.populateFromSourceAddress(permanentData.data);
+        }
+    }
+
+    copySpousePermanentToSpousePresent(): void {
+        const spousePermanentData = this.spousePermanentAddressForm?.getFormData();
+        if (spousePermanentData?.data) {
+            this.spousePresentAddressForm?.populateFromSourceAddress(spousePermanentData.data);
+        }
+    }
+
     saveAllAddresses(): void {
         if (!this.selectedEmployeeId) {
             this.messageService.add({
@@ -288,11 +343,14 @@ export class EmpAddressInfo implements OnInit {
             return;
         }
 
-        // Get form data from both forms
+        // Get form data from all forms
         const permanentData = this.permanentAddressForm?.getFormData();
         const presentData = this.presentAddressForm?.getFormData();
+        const spousePermanentData = this.showSpouseAddresses ? this.spousePermanentAddressForm?.getFormData() : undefined;
+        const spousePresentData = this.showSpouseAddresses ? this.spousePresentAddressForm?.getFormData() : undefined;
 
-        if (!permanentData?.data?.division && !presentData?.data?.division) {
+        if (!permanentData?.data?.division && !presentData?.data?.division
+            && !spousePermanentData?.data?.division && !spousePresentData?.data?.division) {
             this.messageService.add({
                 severity: 'warn',
                 summary: 'Warning',
@@ -308,6 +366,8 @@ export class EmpAddressInfo implements OnInit {
         // Count total operations needed
         if (permanentData?.data?.division) totalOperations++;
         if (presentData?.data?.division) totalOperations++;
+        if (spousePermanentData?.data?.division) totalOperations++;
+        if (spousePresentData?.data?.division) totalOperations++;
 
         const checkComplete = () => {
             completedOperations++;
@@ -354,16 +414,40 @@ export class EmpAddressInfo implements OnInit {
                 }
             );
         }
+
+        // Save spouse permanent address (FMID preserved from the existing spouse row).
+        if (spousePermanentData?.data?.division) {
+            this.deactivateAndCreateNew(
+                spousePermanentData.data,
+                LocationType.SpousePermanent,
+                this.spousePermanentAddressId,
+                () => checkComplete(),
+                () => { errorCount++; checkComplete(); },
+                this.spouseFmid ?? 0
+            );
+        }
+
+        // Save spouse present address (FMID preserved from the existing spouse row).
+        if (spousePresentData?.data?.division) {
+            this.deactivateAndCreateNew(
+                spousePresentData.data,
+                LocationType.SpousePresent,
+                this.spousePresentAddressId,
+                () => checkComplete(),
+                () => { errorCount++; checkComplete(); },
+                this.spouseFmid ?? 0
+            );
+        }
     }
 
     // Deactivate old address and create new one
-    private deactivateAndCreateNew(data: AddressData, locationType: string, existingAddressId: number | null, onSuccess: () => void, onError: () => void): void {
+    private deactivateAndCreateNew(data: AddressData, locationType: string, existingAddressId: number | null, onSuccess: () => void, onError: () => void, fmid: number = 0): void {
         // New address payload (always create new with Active = true)
         const newAddressPayload = {
             EmployeeID: this.selectedEmployeeId,
             AddressId: 0, // New record
-            fmid: 0,
-            FMID: 0,
+            fmid: fmid,
+            FMID: fmid,
             LocationType: locationType,
             LocationCode: `${data.division}-${data.district}-${data.upazila}`,
             PostCode: data.postCode || '',
@@ -517,7 +601,12 @@ export class EmpAddressInfo implements OnInit {
         this.employeeBasicInfo = null;
         this.permanentAddressData = undefined;
         this.presentAddressData = undefined;
+        this.spousePermanentAddressData = undefined;
+        this.spousePresentAddressData = undefined;
         this.permanentAddressId = null;
         this.presentAddressId = null;
+        this.spousePermanentAddressId = null;
+        this.spousePresentAddressId = null;
+        this.spouseFmid = null;
     }
 }
