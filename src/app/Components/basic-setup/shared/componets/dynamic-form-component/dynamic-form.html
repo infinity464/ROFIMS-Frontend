@@ -30,6 +30,19 @@
             </small>
             }
             }
+            @else if (field.type === 'multiselect') {
+            <p-multiSelect [options]="field.options || []" optionLabel="label" optionValue="value"
+                [formControlName]="field.name" display="chip" [filter]="true"
+                [placeholder]="'Select ' + field.label" styleClass="w-full"
+                (onChange)="onFieldChange(field.name, form.get(field.name)?.value)">
+            </p-multiSelect>
+            <!-- Validation message for multiselect -->
+            @if (form.get(field.name)?.invalid && form.get(field.name)?.touched) {
+            <small class="text-red-500 block mt-1">
+                {{ field.label }} is required
+            </small>
+            }
+            }
             @else if (field.type === 'select') {
             <p-select [options]="field.options || []" optionLabel="label" optionValue="value"
                 [formControlName]="field.name"

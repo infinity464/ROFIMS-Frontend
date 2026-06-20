@@ -31,7 +31,7 @@
                  and re-filtered client-side by Member Type. -->
             <div class="report-fields-row">
                 <div class="report-filter-field">
-                    <label>{{ lang === 'bn' ? 'সদস্য ধরন' : 'Member Type' }}</label>
+                    <label>Member Type</label>
                     <p-multiSelect
                         [options]="memberTypeOptions"
                         [(ngModel)]="selectedMemberTypeIds"
@@ -62,7 +62,7 @@
                     </p-multiSelect>
                 </div>
                 <div class="report-filter-field">
-                    <label>{{ lang === 'bn' ? 'র‍্যাব ইউনিট' : 'RAB Unit' }}</label>
+                    <label>RAB Unit</label>
                     <p-multiSelect
                         [options]="rabUnitOptions"
                         [(ngModel)]="selectedRabUnitIds"

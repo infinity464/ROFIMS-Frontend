@@ -365,22 +365,48 @@ export class EmpFamilyInfo implements OnInit {
         this.showInlineForm = true;
     }
 
+    /** Relation codeId that represents "Spouse", resolved from the loaded relation options. */
+    private get spouseRelationCodeId(): number | null {
+        const opt = this.relationOptions.find((o) => (o.label || '').toLowerCase().trim() === 'spouse');
+        return opt ? opt.value : null;
+    }
+
+    /** True when this family member is the spouse (so spouse-typed addresses belong to them). */
+    private isSpouseMember(member: FamilyMember): boolean {
+        const spouseId = this.spouseRelationCodeId;
+        return spouseId != null && member.relation === spouseId;
+    }
+
+    /**
+     * Picks the permanent/present address rows for a family member.
+     * Normal members match by FMID. The spouse's address is stored with dedicated
+     * Spouse* location types and may be unlinked (FMID 0/mismatched) when seeded from
+     * the Serving Member / Basic Info forms, so for the spouse we also accept those
+     * spouse-typed rows by location type alone.
+     */
+    private pickMemberAddresses(addresses: any[], member: FamilyMember): { permanent: any | undefined; present: any | undefined } {
+        const isSpouse = this.isSpouseMember(member);
+        const relevant = (addresses || []).filter((addr) => {
+            const isActive = addr.active !== false && addr.Active !== false;
+            if (!isActive) return false;
+            const fmidMatch = (addr.fmid || addr.FMID) === member.fmid;
+            if (fmidMatch) return true;
+            if (!isSpouse) return false;
+            const lt = (addr.locationType || addr.LocationType || '').toLowerCase();
+            return lt === LocationType.SpousePermanent.toLowerCase() || lt === LocationType.SpousePresent.toLowerCase();
+        });
+
+        const permanent = relevant.find((addr) => (addr.locationType || addr.LocationType || '').toLowerCase().includes('permanent'));
+        const present = relevant.find((addr) => (addr.locationType || addr.LocationType || '').toLowerCase().includes('present'));
+        return { permanent, present };
+    }
+
     loadDialogAddresses(member: FamilyMember): void {
         if (!member.employeeId || !member.fmid) return;
 
         this.empService.getAddressesByEmployeeId(member.employeeId).subscribe({
             next: (addresses: any[]) => {
-                const familyAddresses = addresses.filter((addr) => (addr.fmid || addr.FMID) === member.fmid && addr.active !== false && addr.Active !== false);
-
-                const permanentAddr = familyAddresses.find((addr) => {
-                    const locationType = (addr.locationType || addr.LocationType || '').toLowerCase();
-                    return locationType === LocationType.Permanent.toLowerCase() || locationType.includes('permanent');
-                });
-
-                const presentAddr = familyAddresses.find((addr) => {
-                    const locationType = (addr.locationType || addr.LocationType || '').toLowerCase();
-                    return locationType === LocationType.Present.toLowerCase() || locationType.includes('present');
-                });
+                const { permanent: permanentAddr, present: presentAddr } = this.pickMemberAddresses(addresses, member);
 
                 if (permanentAddr) {
                     this.dialogPermanentAddressData = this.mapAddressToFormData(permanentAddr);
@@ -576,19 +602,8 @@ export class EmpFamilyInfo implements OnInit {
         // Get addresses filtered by EmployeeId and FMID
         this.empService.getAddressesByEmployeeId(member.employeeId).subscribe({
             next: (addresses: any[]) => {
-                // Filter addresses by FMID for this family member
-                const familyAddresses = addresses.filter((addr) => (addr.fmid || addr.FMID) === member.fmid && addr.active !== false && addr.Active !== false);
-
-                // Find permanent and present addresses
-                const permanentAddr = familyAddresses.find((addr) => {
-                    const locationType = (addr.locationType || addr.LocationType || '').toLowerCase();
-                    return locationType === LocationType.Permanent.toLowerCase() || locationType.includes('permanent');
-                });
-
-                const presentAddr = familyAddresses.find((addr) => {
-                    const locationType = (addr.locationType || addr.LocationType || '').toLowerCase();
-                    return locationType === LocationType.Present.toLowerCase() || locationType.includes('present');
-                });
+                // Find permanent and present addresses (spouse-typed rows included for the spouse)
+                const { permanent: permanentAddr, present: presentAddr } = this.pickMemberAddresses(addresses, member);
 
                 if (permanentAddr) {
                     this.permanentAddressData = this.mapAddressToFormData(permanentAddr);
@@ -656,13 +671,16 @@ export class EmpFamilyInfo implements OnInit {
 
         this.isSavingAddresses = true;
         const savePromises: Promise<any>[] = [];
+        const isSpouse = this.isSpouseMember(this.selectedFamilyMember);
+        const permType = isSpouse ? LocationType.SpousePermanent : LocationType.Permanent;
+        const presType = isSpouse ? LocationType.SpousePresent : LocationType.Present;
 
         // Save permanent address if filled
         if (permanentFormData?.data?.division) {
             savePromises.push(
                 this.saveFamilyAddress(
                     permanentFormData.data,
-                    LocationType.Permanent,
+                    permType,
                     this.selectedFamilyMember.employeeId,
                     this.selectedFamilyMember.fmid,
                     this.permanentAddressId // Pass existing AddressId for update
@@ -675,7 +693,7 @@ export class EmpFamilyInfo implements OnInit {
             savePromises.push(
                 this.saveFamilyAddress(
                     presentFormData.data,
-                    LocationType.Present,
+                    presType,
                     this.selectedFamilyMember.employeeId,
                     this.selectedFamilyMember.fmid,
                     this.presentAddressId // Pass existing AddressId for update
@@ -822,15 +840,18 @@ export class EmpFamilyInfo implements OnInit {
         const presentFormData = this.dialogPresentAddressForm?.getFormData();
 
         const savePromises: Promise<any>[] = [];
+        const isSpouse = this.spouseRelationCodeId != null && this.familyForm.get('relation')?.value === this.spouseRelationCodeId;
+        const permType = isSpouse ? LocationType.SpousePermanent : LocationType.Permanent;
+        const presType = isSpouse ? LocationType.SpousePresent : LocationType.Present;
 
         // Save permanent address if filled
         if (permanentFormData?.data?.division) {
-            savePromises.push(this.saveFamilyAddress(permanentFormData.data, LocationType.Permanent, employeeId, fmid, this.dialogPermanentAddressId).toPromise());
+            savePromises.push(this.saveFamilyAddress(permanentFormData.data, permType, employeeId, fmid, this.dialogPermanentAddressId).toPromise());
         }
 
         // Save present address if filled
         if (presentFormData?.data?.division) {
-            savePromises.push(this.saveFamilyAddress(presentFormData.data, LocationType.Present, employeeId, fmid, this.dialogPresentAddressId).toPromise());
+            savePromises.push(this.saveFamilyAddress(presentFormData.data, presType, employeeId, fmid, this.dialogPresentAddressId).toPromise());
         }
 
         if (savePromises.length > 0) {

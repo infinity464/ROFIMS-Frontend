@@ -73,6 +73,7 @@ export class AddressFormComponent implements OnInit, OnChanges {
     showPostOfficeDialog: boolean = false;
     newPostOfficeNameEN: string = '';
     newPostOfficeNameBN: string = '';
+    newPostOfficePostCode: string = '';
     isSavingPostOffice: boolean = false;
 
     constructor(
@@ -267,6 +268,16 @@ export class AddressFormComponent implements OnInit, OnChanges {
         });
 
         this.loadPO(upazilaId)
+    }
+
+    onPostOfficeChange(postOfficeId: number): void {
+        // Auto-fill Post Code from the selected post office's commCode (postal code).
+        // The field stays editable — the user can override the prefilled value.
+        const selected = this.postOffices.find((p: any) => (p.codeId ?? p.CodeId) === postOfficeId);
+        const postalCode = selected?.commCode ?? selected?.CommCode ?? null;
+        if (postalCode != null && postalCode !== '') {
+            this.addressForm.patchValue({ postCode: String(postalCode) });
+        }
     }
 
     onSameAsPresentChange(checked: boolean): void {
@@ -502,6 +513,7 @@ export class AddressFormComponent implements OnInit, OnChanges {
     openAddPostOfficeDialog(): void {
         this.newPostOfficeNameEN = '';
         this.newPostOfficeNameBN = '';
+        this.newPostOfficePostCode = '';
         this.showPostOfficeDialog = true;
     }
 
@@ -536,7 +548,7 @@ export class AddressFormComponent implements OnInit, OnChanges {
             codeType: 'PostOffice',
             codeValueEN: this.newPostOfficeNameEN.trim(),
             codeValueBN: this.newPostOfficeNameBN?.trim() || null,
-            commCode: null,
+            commCode: this.newPostOfficePostCode?.trim() || null,
             displayCodeValueEN: null,
             displayCodeValueBN: null,
             status: true,
@@ -565,6 +577,7 @@ export class AddressFormComponent implements OnInit, OnChanges {
                         this.postOffices = postOffices;
                         if (res?.codeId) {
                             this.addressForm.patchValue({ postOffice: res.codeId });
+                            this.onPostOfficeChange(res.codeId);
                         }
                     }
                 });

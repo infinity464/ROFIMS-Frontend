@@ -92,6 +92,12 @@ export class PostOffice {
                 required: true
             },
             {
+                name: 'commCode',
+                label: 'Postal Code',
+                type: 'text',
+                required: false
+            },
+            {
                 name: 'status',
                 label: 'Status',
                 type: 'select',
@@ -112,6 +118,7 @@ export class PostOffice {
             { field: 'upazilaNameDisplay', header: 'Upazila' },
             { field: 'codeValueEN', header: 'PostOffice Name (EN)' },
             { field: 'codeValueBN', header: 'PostOffice Name (BN)' },
+            { field: 'commCode', header: 'Postal Code' },
             {
                 field: 'status',
                 header: 'Status',
@@ -399,6 +406,7 @@ export class PostOffice {
                                 divisionId, districtId, upazilaId,
                                 codeValueEN: row.codeValueEN,
                                 codeValueBN: row.codeValueBN,
+                                commCode: row.commCode,
                                 status: row.status
                             });
                         }, 100);

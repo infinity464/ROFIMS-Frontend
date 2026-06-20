@@ -4,115 +4,56 @@
 
         <form [formGroup]="configForm" (ngSubmit)="onSubmit()">
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
-
                 <!-- Move Order Type -->
                 <div class="field">
-                    <label for="moveOrderType" class="block mb-2">
-                        Move Order Type <span class="text-red-500">*</span>
-                    </label>
-                    <p-select
-                        id="moveOrderType"
-                        formControlName="moveOrderType"
-                        [options]="moveOrderTypeOptions"
-                        optionLabel="label"
-                        optionValue="value"
-                        placeholder="Select Move Order Type"
-                        class="w-full">
-                    </p-select>
+                    <label for="moveOrderType" class="block mb-2"> Move Order Type <span class="text-red-500">*</span> </label>
+                    <p-select id="moveOrderType" formControlName="moveOrderType" [options]="moveOrderTypeOptions" optionLabel="label" optionValue="value" placeholder="Select Move Order Type" class="w-full"> </p-select>
                     @if (configForm.get('moveOrderType')?.invalid && configForm.get('moveOrderType')?.touched) {
-                        <small class="text-red-500 block mt-1">
-                            Move Order Type is required
-                        </small>
+                    <small class="text-red-500 block mt-1"> Move Order Type is required </small>
                     }
                 </div>
 
                 <!-- Prefix (English) -->
                 <div class="field">
-                    <label for="prefix" class="block mb-2">
-                        Prefix (English) <span class="text-red-500">*</span>
-                    </label>
-                    <input
-                        pInputText
-                        id="prefix"
-                        formControlName="prefix"
-                        placeholder="e.g. MV, MVMT"
-                        class="w-full" />
-                    @if (configForm.get('prefix')?.invalid && configForm.get('prefix')?.touched) {
-                        <small class="text-red-500 block mt-1">
-                            Prefix is required
-                        </small>
-                    }
+                    <label for="prefix" class="block mb-2"> Prefix (English) </label>
+                    <input pInputText id="prefix" formControlName="prefix" placeholder="e.g. MV, MVMT" class="w-full" />
                 </div>
 
                 <!-- Prefix (Bangla) -->
                 <div class="field">
-                    <label for="prefixBN" class="block mb-2">
-                        Prefix (Bangla) <span class="text-red-500">*</span>
-                    </label>
-                    <input
-                        pInputText
-                        id="prefixBN"
-                        formControlName="prefixBN"
-                        placeholder="e.g. মুভমেন্ট"
-                        class="w-full" />
-                    @if (configForm.get('prefixBN')?.invalid && configForm.get('prefixBN')?.touched) {
-                        <small class="text-red-500 block mt-1">
-                            Prefix (Bangla) is required
-                        </small>
-                    }
+                    <label for="prefixBN" class="block mb-2"> Prefix (Bangla) </label>
+                    <input pInputText id="prefixBN" formControlName="prefixBN" placeholder="e.g. মুভমেন্ট" class="w-full" />
                 </div>
 
                 <!-- Start Number -->
                 <div class="field">
-                    <label for="startNumber" class="block mb-2">
-                        Start Number <span class="text-red-500">*</span>
-                    </label>
-                    <p-inputnumber
-                        id="startNumber"
-                        formControlName="startNumber"
-                        placeholder="e.g. 10001"
-                        [useGrouping]="false"
-                        class="w-full">
-                    </p-inputnumber>
+                    <label for="startNumber" class="block mb-2"> Start Number <span class="text-red-500">*</span> </label>
+                    <p-inputnumber id="startNumber" formControlName="startNumber" placeholder="e.g. 10001" [useGrouping]="false" class="w-full"> </p-inputnumber>
                     @if (configForm.get('startNumber')?.invalid && configForm.get('startNumber')?.touched) {
-                        <small class="text-red-500 block mt-1">
-                            Start Number is required and must be greater than 0
-                        </small>
+                    <small class="text-red-500 block mt-1"> Start Number is required and must be greater than 0 </small>
                     }
                 </div>
 
                 <!-- Include Date in Number -->
-                <div class="field" style="display: flex; align-items: end; padding-bottom: 0.5rem;">
+                <div class="field" style="display: flex; align-items: end; padding-bottom: 0.5rem">
                     <p-checkbox formControlName="includeDateInNumber" [binary]="true" inputId="includeDateInNumber"></p-checkbox>
                     <label for="includeDateInNumber" class="ml-2">Include Date (Year/Month)</label>
                 </div>
-
             </div>
 
             <!-- Preview -->
-            @if (configForm.get('prefix')?.value && configForm.get('startNumber')?.value) {
-                <div class="mb-4 p-3 surface-100 border-round">
-                    <span class="font-medium">Preview: </span>
-                    <span class="text-primary font-bold">{{ getPreview() }}</span>
-                </div>
+            @if (configForm.get('startNumber')?.value) {
+            <div class="mb-4 p-3 surface-100 border-round">
+                <span class="font-medium">Preview: </span>
+                <span class="text-primary font-bold">{{ getPreview() }}</span>
+            </div>
             }
 
             <!-- Buttons -->
             <div class="flex justify-end gap-2">
-                <p-button
-                    label="Save"
-                    type="submit"
-                    [disabled]="configForm.invalid || isSubmitting">
-                </p-button>
+                <p-button label="Save" type="submit" [disabled]="configForm.invalid || isSubmitting"> </p-button>
 
-                <p-button
-                    label="Reset"
-                    icon="pi pi-refresh"
-                    severity="secondary"
-                    type="button"
-                    (onClick)="onReset()"
-                    [disabled]="isSubmitting">
-                </p-button>
+                <p-button label="Reset" icon="pi pi-refresh" severity="secondary" type="button" (onClick)="onReset()" [disabled]="isSubmitting"> </p-button>
             </div>
         </form>
     </div>
@@ -124,25 +65,14 @@
             <p-inputicon>
                 <i class="pi pi-search"></i>
             </p-inputicon>
-            <input
-                pInputText
-                type="text"
-                placeholder="Search configurations"
-                (input)="onSearch($event)" />
+            <input pInputText type="text" placeholder="Search configurations" (input)="onSearch($event)" />
         </p-iconfield>
     </div>
 
-    <p-table
-        [value]="filteredConfigs"
-        [paginator]="true"
-        [first]="first"
-        [rows]="rows"
-        [totalRecords]="totalRecords"
-        [rowsPerPageOptions]="[10, 25, 50]">
-
+    <p-table [value]="filteredConfigs" [paginator]="true" [first]="first" [rows]="rows" [totalRecords]="totalRecords" [rowsPerPageOptions]="[10, 25, 50]">
         <ng-template pTemplate="header">
             <tr>
-                <th style="width:5%">#</th>
+                <th style="width: 5%">#</th>
                 <th>Move Order Type</th>
                 <th>Prefix (EN)</th>
                 <th>Prefix (BN)</th>
@@ -150,7 +80,7 @@
                 <th>Current Number</th>
                 <th>Include Date</th>
                 <th>Status</th>
-                <th style="width:10%">Actions</th>
+                <th style="width: 10%">Actions</th>
             </tr>
         </ng-template>
 
@@ -164,18 +94,10 @@
                 <td>{{ row.currentNumber }}</td>
                 <td>{{ row.includeDateInNumber ? 'Yes' : 'No' }}</td>
                 <td>
-                    <span [class]="row.status ? 'text-green-500' : 'text-red-500'">
-                        {{ row.status ? 'Active' : 'Inactive' }}
-                    </span>
+                    <span [class]="row.status ? 'text-green-500' : 'text-red-500'"> {{ row.status ? 'Active' : 'Inactive' }} </span>
                 </td>
                 <td>
-                    <p-button
-                        icon="pi pi-pencil" [class.perm-hidden]="!canUpdate"
-                        severity="info"
-                        [text]="true"
-                        [rounded]="true"
-                        (onClick)="onEdit(row)">
-                    </p-button>
+                    <p-button icon="pi pi-pencil" [class.perm-hidden]="!canUpdate" severity="info" [text]="true" [rounded]="true" (onClick)="onEdit(row)"> </p-button>
                 </td>
             </tr>
         </ng-template>
@@ -185,6 +107,5 @@
                 <td colspan="9" class="text-center">No configurations found.</td>
             </tr>
         </ng-template>
-
     </p-table>
 </div>

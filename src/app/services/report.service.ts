@@ -245,6 +245,31 @@ export class ReportService {
         return this.http.post<DynamicReportResponse>(`${environment.apis.core}/DynamicReport/JoiningLeaveOverview`, req);
     }
 
+    /** Field catalog for the Movement report ("Members on Movement"). */
+    getMovementReportFields(): Observable<DynamicReportFieldMeta[]> {
+        return this.http.get<DynamicReportFieldMeta[]>(`${environment.apis.core}/DynamicReport/GetMovementFields`);
+    }
+
+    /** Movement variant (one row per movement × member). Lists members on
+      movement (defaults to those not yet returned); MovementType / MoveOrderType
+      / MovementReasonId / DestinedRabUnitId / MovementReturnedFilter narrow the
+      set and movementDateFrom / movementDateTo bound the release-date window. */
+    runDynamicMovementReport(req: DynamicReportRequest): Observable<DynamicReportResponse> {
+        return this.http.post<DynamicReportResponse>(`${environment.apis.core}/DynamicReport/MovementOverview`, req);
+    }
+
+    /** Field catalog for the Leave report (leave-application / history). */
+    getLeaveReportFields(): Observable<DynamicReportFieldMeta[]> {
+        return this.http.get<DynamicReportFieldMeta[]>(`${environment.apis.core}/DynamicReport/GetLeaveFields`);
+    }
+
+    /** Leave variant (one row per approved LeaveApplication). Lists members on
+      leave (defaults to those currently on leave); the request's leaveDateFrom /
+      leaveDateTo narrow the leave window. */
+    runDynamicLeaveReport(req: DynamicReportRequest): Observable<DynamicReportResponse> {
+        return this.http.post<DynamicReportResponse>(`${environment.apis.core}/DynamicReport/LeaveOverview`, req);
+    }
+
     /** Field catalog for the Punishment report (#23). */
     getPunishmentReportFields(): Observable<DynamicReportFieldMeta[]> {
         return this.http.get<DynamicReportFieldMeta[]>(`${environment.apis.core}/DynamicReport/GetPunishmentFields`);

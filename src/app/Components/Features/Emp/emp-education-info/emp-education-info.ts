@@ -90,6 +90,10 @@ export class EmpEducationInfoComponent implements OnInit {
     allInstitutionData: any[] = [];
     filteredInstitutionNameOptions: DropdownOption[] = [];
 
+    // Cascading department filtering (department depends on selected qualification)
+    allDepartmentMappings: { qualificationCodeId: number; departmentCodeId: number }[] = [];
+    filteredDepartmentOptions: DropdownOption[] = [];
+
     // Add Department/Group dialog
     showDepartmentDialog = false;
     newDepartmentNameEN = '';
@@ -194,6 +198,8 @@ export class EmpEducationInfoComponent implements OnInit {
                             break;
                         case 'EducationalDepartment':
                             this.departmentOptions = opts;
+                            // Re-apply qualification filter once department options arrive
+                            this.onQualificationChange(this.educationForm.get('examName')?.value ?? null);
                             break;
                         case 'EducationSubject':
                             this.subjectOptions = opts;
@@ -205,6 +211,39 @@ export class EmpEducationInfoComponent implements OnInit {
                 }
             });
         });
+
+        // Qualification → Department mappings (join table)
+        this.masterBasicSetupService.getAllQualificationDepartments().subscribe({
+            next: (rows: any[]) => {
+                this.allDepartmentMappings = (Array.isArray(rows) ? rows : []).map((r) => ({
+                    qualificationCodeId: r.qualificationCodeId ?? r.QualificationCodeId,
+                    departmentCodeId: r.departmentCodeId ?? r.DepartmentCodeId
+                }));
+                this.onQualificationChange(this.educationForm.get('examName')?.value ?? null);
+            },
+            error: () => { this.allDepartmentMappings = []; }
+        });
+    }
+
+    /** Filter Department options to those mapped to the selected qualification. */
+    onQualificationChange(qualificationId: number | null): void {
+        if (!qualificationId) {
+            this.filteredDepartmentOptions = this.departmentOptions;
+            return;
+        }
+        const mappedIds = new Set(
+            this.allDepartmentMappings
+                .filter((m) => m.qualificationCodeId === qualificationId)
+                .map((m) => m.departmentCodeId)
+        );
+        const filtered = this.departmentOptions.filter((o) => mappedIds.has(o.value));
+        // Fallback to all when no mapping is configured for this qualification.
+        this.filteredDepartmentOptions = filtered.length > 0 ? filtered : this.departmentOptions;
+        // Clear department if current value is not valid for the new qualification.
+        const current = this.educationForm.get('departmentName')?.value;
+        if (current && !this.filteredDepartmentOptions.find((o) => o.value === current)) {
+            this.educationForm.patchValue({ departmentName: null });
+        }
     }
 
     checkRouteParams(): void {
@@ -309,6 +348,7 @@ export class EmpEducationInfoComponent implements OnInit {
         this.editingEducationId = null;
         this.fileRows = [];
         this.filteredInstitutionNameOptions = this.institutionNameOptions;
+        this.filteredDepartmentOptions = this.departmentOptions;
         this.educationForm.reset({
             employeeId: this.selectedEmployeeId ?? 0,
             educationId: 0,
@@ -333,8 +373,9 @@ export class EmpEducationInfoComponent implements OnInit {
         this.fileRows = this.parseFileRowsFromReferences(row.filesReferences);
         const dateFrom = row.dateFrom ? new Date(row.dateFrom) : null;
         const dateTo = row.dateTo ? new Date(row.dateTo) : null;
-        // Trigger institution filtering for edit mode
+        // Trigger institution + department filtering for edit mode
         this.onInstitutionTypeChange(row.instituteType);
+        this.onQualificationChange(row.examName);
         this.educationForm.patchValue({
             employeeId: row.employeeId,
             educationId: row.educationId,
@@ -545,6 +586,8 @@ export class EmpEducationInfoComponent implements OnInit {
                         this.departmentOptions = (data || []).map((d: any) => ({
                             label: d.codeValueEN || d.displayCodeValueEN || String(d.codeId), value: d.codeId
                         }));
+                        // The new department isn't mapped yet — show full list so it can be picked.
+                        this.filteredDepartmentOptions = this.departmentOptions;
                         const newId = res?.codeId || res?.CodeId;
                         if (newId) this.educationForm.patchValue({ departmentName: newId });
                     }

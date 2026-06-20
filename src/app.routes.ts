@@ -98,7 +98,6 @@ import { EmpAdditionalRemarks } from '@/Components/Features/Emp/emp-additional-r
 import { EmpConfidentialRemarks } from '@/Components/Features/Emp/emp-confidential-remarks/emp-confidential-remarks.component';
 import { EmpPermPostingMotherOrg } from '@/Components/Features/Emp/emp-perm-posting-mother-org/emp-perm-posting-mother-org.component';
 import { PermanentPostingMORecordComponent } from '@/Components/Features/permanent-posting-mo-record/permanent-posting-mo-record';
-import { TemporaryMovementReturnComponent } from '@/Components/Features/temporary-movement-return/temporary-movement-return';
 import { PostedOutPersonListComponent } from '@/Components/Features/posted-out-person-list/posted-out-person-list';
 import { NewJoiningPersonListComponent } from '@/Components/Features/new-joining-person-list/new-joining-person-list';
 import { PostedOutRelieverReportComponent } from '@/Components/Features/posted-out-reliever-report/posted-out-reliever-report';
@@ -190,6 +189,8 @@ import { ReportLongStayNominalRollComponent } from '@/Components/Features/employ
 import { ReportStayAfterRelieverJoinedComponent } from '@/Components/Features/employee-reports/report-stay-after-reliever-joined/report-stay-after-reliever-joined.component';
 import { ReportNearHomeDistrictComponent } from '@/Components/Features/employee-reports/report-near-home-district/report-near-home-district.component';
 import { ReportJoiningLeaveComponent } from '@/Components/Features/employee-reports/report-joining-leave/report-joining-leave.component';
+import { ReportMovementComponent } from '@/Components/Features/employee-reports/report-movement/report-movement.component';
+import { ReportLeaveComponent } from '@/Components/Features/employee-reports/report-leave/report-leave.component';
 import { ReportPunishmentComponent } from '@/Components/Features/employee-reports/report-punishment/report-punishment.component';
 import { ReportPresentStatusComponent } from '@/Components/Features/employee-reports/report-present-status/report-present-status.component';
 import { ReportRankWiseComponent } from '@/Components/Features/employee-reports/report-rank-wise/report-rank-wise.component';
@@ -391,7 +392,6 @@ export const appRoutes: Routes = [
             { path: 'supernumerary-profile/:id', component: SupernumeraryProfile },
             { path: 'new-joinee-sending-notesheet', component: NewJoineeSendingNotesheet },
             { path: 'posting/permanent-posting-mo-record', component: PermanentPostingMORecordComponent },
-            { path: 'movement/temporary-movement-return', component: TemporaryMovementReturnComponent },
             { path: 'posting/posted-out-person-list', component: PostedOutPersonListComponent },
             { path: 'posting/new-joining-person-list', component: NewJoiningPersonListComponent },
             { path: 'posting/posted-out-reliever-report', component: PostedOutRelieverReportComponent },
@@ -444,6 +444,8 @@ export const appRoutes: Routes = [
             { path: 'report-stay-after-reliever-joined', component: ReportStayAfterRelieverJoinedComponent },
             { path: 'report-near-home-district', component: ReportNearHomeDistrictComponent },
             { path: 'report-joining-leave', component: ReportJoiningLeaveComponent },
+            { path: 'report-movement', component: ReportMovementComponent },
+            { path: 'report-leave', component: ReportLeaveComponent },
             { path: 'report-punishment', component: ReportPunishmentComponent },
             { path: 'report-present-status', component: ReportPresentStatusComponent },
             { path: 'report-rank-wise', component: ReportRankWiseComponent },

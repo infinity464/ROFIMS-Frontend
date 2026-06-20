@@ -23,11 +23,13 @@ import { ServingMembersService } from '@/services/serving-members.service';
 import { EmployeeServiceOverview } from '@/models/employee-service-overview.model';
 import { MasterBasicSetupService } from '@/Components/basic-setup/shared/services/MasterBasicSetupService';
 import { BanglaNumerals } from '@/Core/i18n/bangla-numerals';
+import { MovementReturnButtonComponent } from '../shared/movement-return-button';
+import { MovementFilesInfoComponent } from '../shared/movement-files-info';
 
 @Component({
     selector: 'app-notesheet-preview-article-47-handover',
     standalone: true,
-    imports: [CommonModule, FormsModule, ButtonModule, SelectModule, Toast],
+    imports: [CommonModule, FormsModule, ButtonModule, SelectModule, Toast, MovementReturnButtonComponent, MovementFilesInfoComponent],
     providers: [MessageService],
     templateUrl: './notesheet-preview-article-47-handover.html',
     styleUrls: ['../notesheet-preview.scss', '../notesheet-preview-toolbar-dark.scss']

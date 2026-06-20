@@ -116,7 +116,7 @@ export class ServingMemberEntry implements OnInit {
         showSameAsPresent: true,
         sameAsLabel: 'Same As Member Present Address',
         showSameAsSecondary: true,
-        sameAsSecondaryLabel: 'Same As Spouse Permanent Address',
+        sameAsSecondaryLabel: 'Same As Permanent Address',
         employeeId: this.employeeId
     };
 
@@ -605,7 +605,6 @@ export class ServingMemberEntry implements OnInit {
     showInvestigationExperience = false;
     bloodGroups: { label: string; value: string }[] = [];
     religions: { label: string; value: number }[] = [];
-    personalMaritalStatuses: { label: string; value: number }[] = [];
     professionalQualifications: { label: string; value: number }[] = [];
     personalQualifications: { label: string; value: number }[] = [];
     gallantryAwards: { label: string; value: number }[] = [];
@@ -837,7 +836,6 @@ export class ServingMemberEntry implements OnInit {
             religion: [null],
             passportNo: [''],
             identificationMark: [''],
-            maritalStatus: [null],
             emergencyContactNo: ['', [Validators.pattern('^01[3-9][0-9]{8}$')]],
             dateOfJoining: [null],
             dateOfCommission: [null],
@@ -851,7 +849,7 @@ export class ServingMemberEntry implements OnInit {
             tribal: [null],
             freedomFighter: [null],
             heightFeet: [null, [Validators.min(0), Validators.max(8)]],
-            heightInch: [null, [Validators.min(0), Validators.max(11)]],
+            heightInch: [null, [Validators.min(0), Validators.max(11.5)]],
             weightKg: [null, [Validators.min(0), Validators.max(200)]],
             leavingStatus: [null],
             drivingLicenseNo: [''],
@@ -875,10 +873,6 @@ export class ServingMemberEntry implements OnInit {
         });
         this.commonCodeService.getAllActiveCommonCodesType('Religion').subscribe({
             next: (res) => (this.religions = (res ?? []).map(map)),
-            error: (err) => console.error(err)
-        });
-        this.commonCodeService.getAllActiveCommonCodesType('MaritalStatus').subscribe({
-            next: (res) => (this.personalMaritalStatuses = (res ?? []).map(map)),
             error: (err) => console.error(err)
         });
         this.commonCodeService.getAllActiveCommonCodesType('ProfessionalQualification').subscribe({
@@ -925,7 +919,6 @@ export class ServingMemberEntry implements OnInit {
             Religion: formValue.religion ? formValue.religion.toString() : null,
             PassportNo: formValue.passportNo,
             IdentificationMark: formValue.identificationMark,
-            MaritalStatus: formValue.maritalStatus ? formValue.maritalStatus.toString() : null,
             EmergencyContact: formValue.emergencyContactNo,
             JoiningDate: toIso(formValue.dateOfJoining),
             CommissionDate: toIso(formValue.dateOfCommission),
@@ -1398,6 +1391,7 @@ export class ServingMemberEntry implements OnInit {
             tradeMark: [''],
             gender: [null, Validators.required],
             maritalStatus: [null],
+            isRFTSComplted: [null],
             relationship: [null],
             spouseName: [''],
             prefix: [null, Validators.required],

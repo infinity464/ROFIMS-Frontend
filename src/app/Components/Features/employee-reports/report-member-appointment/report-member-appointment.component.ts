@@ -95,8 +95,8 @@ export class ReportMemberAppointmentComponent implements OnInit, OnChanges {
     list: MemberAppointmentReportRow[] = [];
     loading = false;
     first = 0;
-    rows = 20;
-    rowsPerPageOptions = [20, 50, 100];
+    rows = 100;
+    rowsPerPageOptions = [20, 50, 100, 1000, 5000];
     totalRecords = 0;
     /** Hide the column picker until the user has run a search. */
     searched = false;
@@ -375,6 +375,8 @@ export class ReportMemberAppointmentComponent implements OnInit, OnChanges {
             ? now.toLocaleDateString('bn-BD', { day: 'numeric', month: 'long', year: 'numeric' }).toUpperCase()
             : now.toLocaleDateString('en-US', { day: 'numeric', month: 'long', year: 'numeric' }).toUpperCase();
     }
+    get rabTotalLabel(): string { return this.lang === 'bn' ? 'মোট রেকর্ড' : 'TOTAL RECORDS'; }
+    get rabTotalText(): string { return `${this.rabTotalLabel}: ${this.displayNum(this.totalRecords)}`; }
     get rabConfidentialLabel(): string { return this.lang === 'bn' ? 'গোপনীয়' : 'CONFIDENTIAL'; }
     get rabWarningLabel(): string { return this.lang === 'bn' ? 'অননুমোদিত প্রকাশ নিষিদ্ধ' : 'UNAUTHORIZED DISCLOSURE PROHIBITED'; }
     get rabPageOfLabel(): string { return this.lang === 'bn' ? 'পৃষ্ঠা ১ / ১' : 'PAGE 1 OF 1'; }
@@ -525,11 +527,21 @@ export class ReportMemberAppointmentComponent implements OnInit, OnChanges {
                 width: { size: 50, type: WidthType.PERCENTAGE },
                 children: [new Paragraph({ alignment, children: runs })],
             });
+        const stripMetaCell = new TableCell({
+            columnSpan: 2,
+            borders: { top: { style: BorderStyle.SINGLE, size: 4, color: C.border }, bottom: { style: BorderStyle.SINGLE, size: 4, color: C.border }, left: { style: BorderStyle.SINGLE, size: 4, color: C.border }, right: { style: BorderStyle.SINGLE, size: 4, color: C.border } },
+            margins: { top: 80, bottom: 80, left: 140, right: 140 },
+            width: { size: 50, type: WidthType.PERCENTAGE },
+            children: [
+                new Paragraph({ alignment: AlignmentType.RIGHT, children: [new TextRun({ text: wsafe(this.rabTotalText), font: sans, size: S.stripDate, ...bnRunExtras(S.stripDate), bold: true, color: C.black, characterSpacing: isBn ? 0 : 30, allCaps: !isBn })] }),
+                new Paragraph({ alignment: AlignmentType.RIGHT, children: [new TextRun({ text: wsafe(`${this.rabGeneratedLabel} · ${this.rabFormattedDate}`), font: sans, size: S.stripDate, ...bnRunExtras(S.stripDate), bold: true, color: C.mutedText, characterSpacing: isBn ? 0 : 30, allCaps: !isBn })] }),
+            ],
+        });
         const stripRow = new TableRow({
             cantSplit: true,
             children: [
                 stripCell([new TextRun({ text: wsafe(this.rabCriteriaTitle), font: sans, size: S.stripLabel, ...bnRunExtras(S.stripLabel), bold: true, color: C.black, characterSpacing: isBn ? 0 : 40, allCaps: !isBn })], AlignmentType.LEFT),
-                stripCell([new TextRun({ text: wsafe(`${this.rabGeneratedLabel} · ${this.rabFormattedDate}`), font: sans, size: S.stripDate, ...bnRunExtras(S.stripDate), bold: true, color: C.mutedText, characterSpacing: isBn ? 0 : 30, allCaps: !isBn })], AlignmentType.RIGHT),
+                stripMetaCell,
             ],
         });
         const items = this.criteriaItems;
@@ -670,7 +682,7 @@ export class ReportMemberAppointmentComponent implements OnInit, OnChanges {
         if (this.rabSubtitleText) aoa.push([wsafe(this.rabSubtitleText), ...pad(totalCols - 1)]);
         aoa.push(pad(totalCols));
 
-        aoa.push([`${this.rabCriteriaTitle}  ·  ${this.rabGeneratedLabel}: ${this.rabFormattedDate}`, ...pad(totalCols - 1)]);
+        aoa.push([`${this.rabCriteriaTitle}  ·  ${this.rabTotalText}  ·  ${this.rabGeneratedLabel}: ${this.rabFormattedDate}`, ...pad(totalCols - 1)]);
         for (const it of this.criteriaItems) {
             aoa.push([`${it.label}: ${it.value}`, ...pad(totalCols - 1)]);
         }
@@ -869,6 +881,8 @@ export class ReportMemberAppointmentComponent implements OnInit, OnChanges {
     .criteria-strip { display: flex; justify-content: space-between; align-items: center; padding: 1.5mm 3mm; background: #f4f4f2; border-bottom: 1px solid #d8d6d0; font-size: 8pt; letter-spacing: 0.2em; text-transform: uppercase; color: #4a4a4a; font-weight: 600; ${isBn ? 'letter-spacing:0.04em;text-transform:none;' : ''} }
     .criteria-strip-title { display: inline-flex; gap: 1.5mm; align-items: center; color: #0b0b0b; }
     .diamond-bullet { color: #b78b3b; }
+    .criteria-strip-meta { display: inline-flex; flex-direction: column; align-items: flex-end; gap: 0.5mm; text-align: right; }
+    .criteria-strip-total { color: #0b0b0b; font-weight: 700; }
     .criteria-strip-date { opacity: 0.75; font-weight: 500; }
     .criteria-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(38mm, 1fr)); }
     .cell { padding: 2mm 3mm; border-right: 1px solid #e6e4de; border-top: 1px solid #e6e4de; }
@@ -902,7 +916,7 @@ export class ReportMemberAppointmentComponent implements OnInit, OnChanges {
         <div class="criteria">
             <div class="criteria-strip">
                 <span class="criteria-strip-title"><span class="diamond-bullet">&#9670;</span> ${esc(this.rabCriteriaTitle)}</span>
-                <span class="criteria-strip-date">${esc(this.rabGeneratedLabel)} &middot; ${esc(this.rabFormattedDate)}</span>
+                <span class="criteria-strip-meta"><span class="criteria-strip-total">${esc(this.rabTotalText)}</span><span class="criteria-strip-date">${esc(this.rabGeneratedLabel)} &middot; ${esc(this.rabFormattedDate)}</span></span>
             </div>
             ${criteriaGridHtml}
         </div>

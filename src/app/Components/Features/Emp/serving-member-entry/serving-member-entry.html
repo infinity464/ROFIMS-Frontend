@@ -2,7 +2,6 @@
     <div class="form-card">
         <div class="form-card-header">
             <h3 class="form-card-title">{{ pageTitle }}</h3>
-            <span class="serving-badge">Posting Status: Serving</span>
         </div>
 
         <form [formGroup]="postingForm" (ngSubmit)="saveAll()">
@@ -72,6 +71,15 @@
                             styleClass="w-full" [filter]="true" filterPlaceholder="Search">
                         </p-select>
                     </div>
+
+                    <div class="form-field">
+                        <label class="form-label">Date of Joining in RAB <span class="form-label-required">*</span></label>
+                        <p-datepicker formControlName="joiningDate" dateFormat="dd-mm-yy" placeholder="Select Date" styleClass="w-full">
+                        </p-datepicker>
+                        @if (isFieldInvalid('joiningDate')) {
+                        <small class="form-error">{{ getErrorMessage('joiningDate') }}</small>
+                        }
+                    </div>
                 </div>
 
                 <!-- Row 2 -->
@@ -114,22 +122,6 @@
                         </p-select>
                     </div>
 
-                    <div class="form-field">
-                        <label class="form-label">RAB Rank</label>
-                        <p-select [options]="rabRankDropdownOptions" optionLabel="label" optionValue="value"
-                            placeholder="Auto" styleClass="w-full" [(ngModel)]="selectedRabEquivalentNameId"
-                            [ngModelOptions]="{ standalone: true }" [disabled]="true" [filter]="true" filterPlaceholder="Search">
-                        </p-select>
-                    </div>
-
-                    <div class="form-field">
-                        <label class="form-label">Date of Joining in RAB <span class="form-label-required">*</span></label>
-                        <p-datepicker formControlName="joiningDate" dateFormat="dd-mm-yy" placeholder="Select Date" styleClass="w-full">
-                        </p-datepicker>
-                        @if (isFieldInvalid('joiningDate')) {
-                        <small class="form-error">{{ getErrorMessage('joiningDate') }}</small>
-                        }
-                    </div>
                 </div>
 
                 <!-- Row 3 -->
@@ -143,6 +135,14 @@
                         @if (isFieldInvalid('rank')) {
                         <small class="form-error">{{ getErrorMessage('rank') }}</small>
                         }
+                    </div>
+
+                    <div class="form-field">
+                        <label class="form-label">RAB Rank</label>
+                        <p-select [options]="rabRankDropdownOptions" optionLabel="label" optionValue="value"
+                            placeholder="Auto" styleClass="w-full" [(ngModel)]="selectedRabEquivalentNameId"
+                            [ngModelOptions]="{ standalone: true }" [disabled]="true" [filter]="true" filterPlaceholder="Search">
+                        </p-select>
                     </div>
 
                     <div class="form-field">
@@ -265,6 +265,14 @@
                             (onChange)="onMaritalStatusChange($event.value)" [filter]="true" filterPlaceholder="Search">
                         </p-select>
                     </div>
+
+                    <div class="form-field">
+                        <label class="form-label">Is RFTS Complete?</label>
+                        <p-select [options]="yesNoOptions" optionLabel="label" optionValue="value"
+                            placeholder="Select" styleClass="w-full" formControlName="isRFTSComplted"
+                            [showClear]="true">
+                        </p-select>
+                    </div>
                 </div>
 
                 @if (isMaritalStatusNotUnmarried) {
@@ -287,7 +295,7 @@
 
         <!-- Member Addresses: Permanent and Present side by side -->
         <div class="form-section form-section-spacer-first">
-            <h3 class="form-subtitle">Member Address</h3>
+            <h3 class="form-subtitle" style="font-size: calc(1.25rem + 4pt);">Member Address</h3>
             <div class="address-pair">
                 <div class="address-col">
                     <app-address-form
@@ -322,7 +330,7 @@
         @if (isMaritalStatusNotUnmarried) {
         <!-- Spouse Addresses: Permanent and Present side by side -->
         <div class="form-section">
-            <h3 class="form-subtitle">Spouse Address</h3>
+            <h3 class="form-subtitle" style="font-size: calc(1.25rem + 4pt);">Spouse Address</h3>
             <div class="address-pair">
                 <div class="address-col">
                     <app-address-form
@@ -539,12 +547,6 @@
                         <label class="form-label">Date of Commission</label>
                         <p-datepicker formControlName="dateOfCommission" dateFormat="dd-mm-yy" placeholder="Select Date" styleClass="w-full"></p-datepicker>
                     </div>
-                    <div class="form-field">
-                        <label class="form-label">Marital Status</label>
-                        <p-select [options]="personalMaritalStatuses" formControlName="maritalStatus" optionLabel="label" optionValue="value"
-                            placeholder="Select Marital Status" styleClass="w-full" [filter]="true" filterPlaceholder="Search" [showClear]="true">
-                        </p-select>
-                    </div>
                 </div>
 
                 <!-- Row 4: Investigation Experience -->
@@ -622,7 +624,7 @@
                         <label class="form-label">Height</label>
                         <div class="flex gap-2">
                             <p-inputNumber formControlName="heightFeet" placeholder="Feet" [min]="0" [max]="8" styleClass="w-full"></p-inputNumber>
-                            <p-inputNumber formControlName="heightInch" placeholder="Inch" [min]="0" [max]="11" styleClass="w-full"></p-inputNumber>
+                            <p-inputNumber formControlName="heightInch" placeholder="Inch" [min]="0" [max]="11.5" [minFractionDigits]="0" [maxFractionDigits]="1" styleClass="w-full"></p-inputNumber>
                         </div>
                     </div>
                 </div>
