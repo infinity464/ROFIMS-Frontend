@@ -353,7 +353,7 @@ export class PostingOrderGenerateComponent implements OnInit {
                                 joiningDateInRAB: e.joiningDateInRAB
                             }));
                             this.loadingEmployees = false;
-                            // Pre-fill onulipi from the New Posting onulipi-config
+                            // Pre-fill onulipi from this page's posting-type onulipi-config
                             this.footerParagraphs = [];
                             this.loadOnulipiFromConfig();
                             this.postingText = ns.mainText ?? '';
@@ -393,9 +393,11 @@ export class PostingOrderGenerateComponent implements OnInit {
 
     // ─── Footer paragraphs ────────────────────────────────
 
-    /** Pre-fill onulipi paragraphs from the New Posting onulipi-config (language-aware). */
+    /** Pre-fill onulipi paragraphs from this page's posting-type onulipi-config (language-aware).
+     *  Inter Posting → 'InterPosting' config, New Posting → 'NewPosting' config. */
     private loadOnulipiFromConfig(): void {
-        this.masterBasicSetupService.getOnulipiConfigByPostingType(PostingType.NewPosting).subscribe({
+        const onulipiPostingType = this.fixedPostingType ?? this.selectedPostingType ?? PostingType.NewPosting;
+        this.masterBasicSetupService.getOnulipiConfigByPostingType(onulipiPostingType).subscribe({
             next: (configs) => {
                 const match = (configs ?? [])[0];
                 if (!match) { this.footerParagraphs = []; return; }

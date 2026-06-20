@@ -1,5 +1,4 @@
-import { Component, OnInit, ViewChild , inject } from '@angular/core';
-import { UserMenuService } from '@/services/user-menu.service';
+import { Component, OnInit, ViewChild } from '@angular/core';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { FormsModule } from '@angular/forms';
 import { CommonModule } from '@angular/common';
@@ -20,6 +19,7 @@ import { DialogModule } from 'primeng/dialog';
 import { ConfirmDialogModule } from 'primeng/confirmdialog';
 import { ToastModule } from 'primeng/toast';
 
+import { UserMenuService } from '@/services/user-menu.service';
 import { EmpService } from '@/services/emp-service';
 import { PresentStatusInfoService } from '@/services/present-status-info.service';
 import { CommonCodeService } from '@/services/common-code-service';
@@ -33,71 +33,62 @@ import { FlexibleDateDirective } from '@/shared/directives/flexible-date.directi
     selector: 'app-emp-present-status',
     standalone: true,
     imports: [
-        CommonModule,
-        FormsModule,
-        ReactiveFormsModule,
-        InputTextModule,
-        ButtonModule,
-        Fluid,
-        SelectModule,
-        DatePickerModule, FlexibleDateDirective,
-        TextareaModule,
-        CheckboxModule,
-        TooltipModule,
-        TableModule,
-        DialogModule,
-        ConfirmDialogModule,
-        ToastModule,
-        EmployeeSearchComponent,
-        FileReferencesFormComponent
+        CommonModule, FormsModule, ReactiveFormsModule,
+        InputTextModule, ButtonModule, Fluid, SelectModule,
+        DatePickerModule, FlexibleDateDirective, TextareaModule,
+        CheckboxModule, TooltipModule, TableModule, DialogModule,
+        ConfirmDialogModule, ToastModule,
+        EmployeeSearchComponent, FileReferencesFormComponent
     ],
     providers: [ConfirmationService, MessageService],
     templateUrl: './emp-present-status.html',
     styleUrl: './emp-present-status.scss'
 })
 export class EmpPresentStatus implements OnInit {
-    private _router = inject(Router);
-    private _userMenuService = inject(UserMenuService);
     canInsert = true;
     canUpdate = true;
-    canDelete = true;
 
     @ViewChild('fileReferencesForm') fileReferencesForm!: any;
+    @ViewChild('bfaFileReferencesForm') bfaFileReferencesForm!: any;
 
-    // Employee lookup
-    employeeFound: boolean = false;
+    employeeFound = false;
     selectedEmployeeId: number | null = null;
     employeeBasicInfo: any = null;
     employeePostingStatus: string | null = null;
 
-    // Mode
     mode: 'search' | 'view' | 'edit' = 'search';
-    isReadonly: boolean = false;
+    isReadonly = false;
 
-    // Table data
     recordList: any[] = [];
-    isLoading: boolean = false;
+    isLoading = false;
 
-    // Dialog
-    displayDialog: boolean = false;
-    isEditMode: boolean = false;
-    isSaving: boolean = false;
+    // Add/Edit dialog
+    displayDialog = false;
+    isEditMode = false;
+    isSaving = false;
     editingRecordId: number | null = null;
+    presentStatusForm!: FormGroup;
+    fileRows: FileRowData[] = [];
+    selectedStatusType: string | null = null;
 
-    // View (read-only) dialog
-    displayViewDialog: boolean = false;
+    // View dialog
+    displayViewDialog = false;
     viewRecord: any = null;
     viewFileRows: { fileName: string; fileId?: number }[] = [];
 
-    // Form
-    presentStatusForm!: FormGroup;
-    fileRows: FileRowData[] = [];
+    // Back From Arrested dialog
+    displayBfaDialog = false;
+    bfaForm!: FormGroup;
+    bfaEditMode = false;
+    bfaEditingRecordId: number | null = null;
+    bfaLinkedArrestedId: number | null = null;
+    bfaLinkedArrestedLabel = '';
+    bfaStatusType: string = PresentStatusType.BackFromArrested;
+    bfaSaving = false;
+    bfaFileRows: FileRowData[] = [];
 
-    // Enum for template access
     PresentStatusType = PresentStatusType;
 
-    // Status types allowed only once per employee (one-time lifecycle events).
-    // Absent and Arrested are intentionally excluded — they may recur.
     private readonly singleInstanceStatusTypes: string[] = [
         PresentStatusType.OnDuty,
         PresentStatusType.RegularPostingOut,
@@ -105,45 +96,134 @@ export class EmpPresentStatus implements OnInit {
         PresentStatusType.Deceased
     ];
 
-    // Selected status type (for conditional rendering in dialog)
-    selectedStatusType: string | null = null;
-
-    // Dropdown options
-    statusTypes: any[] = PresentStatusTypeOptions;
+    statusTypes = PresentStatusTypeOptions;
     transferredUnits: any[] = [];
     motherOrgUnits: any[] = [];
     absentTypes: any[] = [];
 
     constructor(
         private fb: FormBuilder,
+        private router: Router,
+        private route: ActivatedRoute,
         private empService: EmpService,
         private presentStatusService: PresentStatusInfoService,
         private commonCodeService: CommonCodeService,
         private organizationService: OrganizationService,
+        private userMenuService: UserMenuService,
         private messageService: MessageService,
-        private confirmationService: ConfirmationService,
-        private route: ActivatedRoute,
-        private router: Router
+        private confirmationService: ConfirmationService
     ) {}
 
     ngOnInit(): void {
-        const _perms = this._userMenuService.getPermissionsByRoute(this._router.url);
-        this.canInsert = _perms.canInsert;
-        this.canUpdate = _perms.canUpdate;
-        this.canDelete = _perms.canDelete;
+        const perms = this.userMenuService.getPermissionsByRoute(this.router.url);
+        this.canInsert = perms.canInsert;
+        this.canUpdate = perms.canUpdate;
 
         this.initializeForm();
+        this.initBfaForm();
         this.loadDropdownData();
         this.checkRouteParams();
     }
 
+    // ========== Initialization ==========
+
+    private initializeForm(): void {
+        this.presentStatusForm = this.fb.group({
+            presentStatusType: [null],
+            rpoDate: [null], transferredUnit: [null], dateOfRelease: [null], dateOfReduceFromRabStrength: [null], rpoProfileShift: [false],
+            rtuDate: [null], rtuTransferredUnit: [null], rtuCause: [''], rtuProfileShift: [false],
+            deceasedDate: [null], deceasedPlace: [''], deceasedReason: [''], deceasedProfileShift: [false],
+            absentDate: [null], absentType: [null], incidentAbsentReport: [''], absentCourtOfInquiryReport: [''], absentProfileShift: [false],
+            arrestedDate: [null], incidentDetails: [''], arrestedCourtOfInquiryReport: [''], arrestedProfileShift: [false]
+        });
+
+        this.presentStatusForm.get('presentStatusType')?.valueChanges.subscribe((value) => {
+            this.selectedStatusType = value;
+            this.updateValidators(value);
+            this.applyDeceasedRules(value);
+        });
+    }
+
+    private initBfaForm(): void {
+        this.bfaForm = this.fb.group({
+            backFromArrestedDate: [null, Validators.required],
+            backFromArrestedReason: [''],
+            courtOrderReference: ['']
+        });
+    }
+
+    private applyDeceasedRules(statusType: string | null): void {
+        const shiftCtrl = this.presentStatusForm.get('deceasedProfileShift');
+        if (statusType === PresentStatusType.Deceased) {
+            shiftCtrl?.setValue(true, { emitEvent: false });
+            shiftCtrl?.disable({ emitEvent: false });
+        } else {
+            shiftCtrl?.enable({ emitEvent: false });
+        }
+    }
+
+    private updateValidators(statusType: string | null): void {
+        const fieldsToReset = [
+            'rpoDate', 'transferredUnit',
+            'rtuDate', 'rtuTransferredUnit',
+            'deceasedDate', 'deceasedPlace',
+            'absentDate', 'absentType',
+            'arrestedDate'
+        ];
+
+        fieldsToReset.forEach(field => {
+            this.presentStatusForm.get(field)?.clearValidators();
+            this.presentStatusForm.get(field)?.updateValueAndValidity({ emitEvent: false });
+        });
+
+        const setRequired = (...fields: string[]) =>
+            fields.forEach(f => this.presentStatusForm.get(f)?.setValidators(Validators.required));
+
+        if (statusType === PresentStatusType.RegularPostingOut) setRequired('rpoDate', 'transferredUnit');
+        else if (statusType === PresentStatusType.RTUOnDisciplineIssue) setRequired('rtuDate', 'rtuTransferredUnit');
+        else if (statusType === PresentStatusType.Deceased) setRequired('deceasedDate', 'deceasedPlace');
+        else if (statusType === PresentStatusType.Absent) setRequired('absentDate', 'absentType');
+        else if (statusType === PresentStatusType.Arrested) setRequired('arrestedDate');
+
+        fieldsToReset.forEach(field => {
+            this.presentStatusForm.get(field)?.updateValueAndValidity({ emitEvent: false });
+        });
+    }
+
+    // ========== Computed Properties ==========
+
+    get hasDeceasedRecord(): boolean {
+        return this.recordList.some(r => r.presentStatusType === PresentStatusType.Deceased);
+    }
+
+    get canAddStatus(): boolean {
+        return this.employeePostingStatus === PostingStatus.Servings;
+    }
+
+    get currentActiveStatusType(): string | null {
+        return this.recordList.find(r => r.isActive)?.presentStatusType ?? null;
+    }
+
+    get isUpdateDisabled(): boolean {
+        return this.isEditMode && this.singleInstanceStatusTypes.includes(this.selectedStatusType ?? '');
+    }
+
+    get bfaDialogHeader(): string {
+        const label = this.bfaStatusType === PresentStatusType.BackFromAbsent ? 'Back From Absent' : 'Back From Arrested';
+        return this.bfaEditMode ? `Edit ${label}` : label;
+    }
+
+    get bfaSourceLabel(): string {
+        return this.bfaStatusType === PresentStatusType.BackFromAbsent ? 'Absent' : 'Arrested';
+    }
+
+    // ========== Route & Employee ==========
+
     checkRouteParams(): void {
         this.route.queryParams.subscribe((params) => {
             const employeeId = params['id'];
-            const mode = params['mode'];
-
             if (employeeId) {
-                this.mode = mode === 'edit' ? 'edit' : 'view';
+                this.mode = params['mode'] === 'edit' ? 'edit' : 'view';
                 this.isReadonly = this.mode === 'view';
                 this.loadEmployeeById(parseInt(employeeId, 10));
             } else {
@@ -165,10 +245,7 @@ export class EmpPresentStatus implements OnInit {
                     this.loadRecordList();
                 }
             },
-            error: (err) => {
-                console.error('Failed to load employee', err);
-                this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.message || 'Failed to load employee data' });
-            }
+            error: (err) => this.showError(err?.error?.message || 'Failed to load employee data')
         });
     }
 
@@ -186,181 +263,6 @@ export class EmpPresentStatus implements OnInit {
         this.router.navigate(['/emp-list']);
     }
 
-    initializeForm(): void {
-        this.presentStatusForm = this.fb.group({
-            presentStatusType: [null],
-
-            // Regular Posting Out
-            rpoDate: [null],
-            transferredUnit: [null],
-            dateOfRelease: [null],
-            dateOfReduceFromRabStrength: [null],
-            rpoProfileShift: [false],
-
-            // RTU on Discipline Issue
-            rtuDate: [null],
-            rtuTransferredUnit: [null],
-            rtuCause: [''],
-            rtuProfileShift: [false],
-
-            // Deceased
-            deceasedDate: [null],
-            deceasedPlace: [''],
-            deceasedReason: [''],
-            deceasedProfileShift: [false],
-
-            // Absent
-            absentDate: [null],
-            absentType: [null],
-            incidentAbsentReport: [''],
-            absentCourtOfInquiryReport: [''],
-            absentProfileShift: [false],
-
-            // Arrested
-            arrestedDate: [null],
-            incidentDetails: [''],
-            arrestedCourtOfInquiryReport: [''],
-            arrestedProfileShift: [false],
-
-            // Common
-            isActive: [true]
-        });
-
-        // Watch status type changes for conditional rendering & validation
-        this.presentStatusForm.get('presentStatusType')?.valueChanges.subscribe((value) => {
-            this.selectedStatusType = value;
-            this.updateValidators(value);
-            this.applyDeceasedRules(value);
-        });
-    }
-
-    /**
-     * Deceased is an irreversible "Present to Ex Member" event: the profile-shift
-     * flag must always be ticked and the user must not be able to untick it.
-     */
-    applyDeceasedRules(statusType: string | null): void {
-        const shiftCtrl = this.presentStatusForm.get('deceasedProfileShift');
-        if (statusType === PresentStatusType.Deceased) {
-            shiftCtrl?.setValue(true, { emitEvent: false });
-            shiftCtrl?.disable({ emitEvent: false });
-        } else {
-            shiftCtrl?.enable({ emitEvent: false });
-        }
-    }
-
-    /** True once this employee has a Deceased record — no further status may be added. */
-    get hasDeceasedRecord(): boolean {
-        return this.recordList.some((r) => r.presentStatusType === PresentStatusType.Deceased);
-    }
-
-    /**
-     * A present status may be added ONLY while the employee is presently serving.
-     * Any other posting status (Ex Member, Supernumerary, Pending, …) blocks it.
-     */
-    get canAddStatus(): boolean {
-        return this.employeePostingStatus === PostingStatus.Servings;
-    }
-
-    /** Fetch the employee's current posting status (gates whether a status can be added). */
-    private loadPostingStatus(employeeId: number): void {
-        this.empService.getEmployeeById(employeeId).subscribe({
-            next: (emp: any) => (this.employeePostingStatus = emp?.PostingStatus ?? emp?.postingStatus ?? null),
-            error: () => (this.employeePostingStatus = null)
-        });
-    }
-
-    /** The employee's current (active) status type, or null if none. */
-    get currentActiveStatusType(): string | null {
-        return this.recordList.find((r) => r.isActive)?.presentStatusType ?? null;
-    }
-
-    /**
-     * Update is blocked for one-time lifecycle types (On Duty, RTU, Regular Posting
-     * Out, Deceased) — these records must not be edited once saved.
-     */
-    get isUpdateDisabled(): boolean {
-        return this.isEditMode && this.singleInstanceStatusTypes.includes(this.selectedStatusType ?? '');
-    }
-
-    /** Profile-shift flag for the currently selected status type (mirrors buildPayload). */
-    private isProfileShiftChecked(statusType: string | null): boolean {
-        const f = this.presentStatusForm.getRawValue();
-        switch (statusType) {
-            case PresentStatusType.RegularPostingOut: return !!f.rpoProfileShift;
-            case PresentStatusType.RTUOnDisciplineIssue: return !!f.rtuProfileShift;
-            case PresentStatusType.Deceased: return !!f.deceasedProfileShift;
-            case PresentStatusType.Absent: return !!f.absentProfileShift;
-            case PresentStatusType.Arrested: return !!f.arrestedProfileShift;
-            default: return false;
-        }
-    }
-
-    updateValidators(statusType: string | null): void {
-        // Fields that can be required depending on status type
-        const fieldsToReset = [
-            'rpoDate', 'transferredUnit',
-            'rtuDate', 'rtuTransferredUnit',
-            'deceasedDate', 'deceasedPlace',
-            'absentDate', 'absentType',
-            'arrestedDate'
-        ];
-
-        // Clear all validators first
-        fieldsToReset.forEach(field => {
-            this.presentStatusForm.get(field)?.clearValidators();
-            this.presentStatusForm.get(field)?.updateValueAndValidity({ emitEvent: false });
-        });
-
-        // Set required validators based on status type
-        if (statusType === PresentStatusType.RegularPostingOut) {
-            this.presentStatusForm.get('rpoDate')?.setValidators(Validators.required);
-            this.presentStatusForm.get('transferredUnit')?.setValidators(Validators.required);
-        } else if (statusType === PresentStatusType.RTUOnDisciplineIssue) {
-            this.presentStatusForm.get('rtuDate')?.setValidators(Validators.required);
-            this.presentStatusForm.get('rtuTransferredUnit')?.setValidators(Validators.required);
-        } else if (statusType === PresentStatusType.Deceased) {
-            this.presentStatusForm.get('deceasedDate')?.setValidators(Validators.required);
-            this.presentStatusForm.get('deceasedPlace')?.setValidators(Validators.required);
-        } else if (statusType === PresentStatusType.Absent) {
-            this.presentStatusForm.get('absentDate')?.setValidators(Validators.required);
-            this.presentStatusForm.get('absentType')?.setValidators(Validators.required);
-        } else if (statusType === PresentStatusType.Arrested) {
-            this.presentStatusForm.get('arrestedDate')?.setValidators(Validators.required);
-        }
-
-        // Update validity
-        fieldsToReset.forEach(field => {
-            this.presentStatusForm.get(field)?.updateValueAndValidity({ emitEvent: false });
-        });
-    }
-
-    loadDropdownData(): void {
-        // Load Absent Types
-        this.commonCodeService.getAllActiveCommonCodesType('AbsentType').subscribe({
-            next: (data) => (this.absentTypes = data.map((d) => ({ label: d.codeValueEN, value: d.codeId }))),
-            error: (err) => console.error('Failed to load absent types', err)
-        });
-        // Transferred-unit options are employee-specific (their own mother org's
-        // units) and loaded once an employee is selected — see loadEmployeeOrgUnits.
-    }
-
-    /**
-     * Load the units of THIS employee's mother organization (e.g. if the member
-     * belongs to the Army, only Army units load). Both Regular Posting Out and RTU
-     * on Discipline Issue transfer the member to a unit of their own mother org.
-     */
-    loadEmployeeOrgUnits(employeeId: number): void {
-        this.organizationService.getOrgUnitsByEmployeeId(employeeId).subscribe({
-            next: (data: any[]) => {
-                const units = (data || []).map((d: any) => ({ label: d.orgNameEN ?? d.OrgNameEN, value: d.orgId ?? d.OrgId }));
-                this.motherOrgUnits = units;
-                this.transferredUnits = units;
-            },
-            error: (err) => console.error('Failed to load employee mother-org units', err)
-        });
-    }
-
-    // Handle employee search events
     onEmployeeSearchFound(employee: EmployeeBasicInfo): void {
         this.employeeFound = true;
         this.selectedEmployeeId = employee.employeeID;
@@ -380,7 +282,32 @@ export class EmpPresentStatus implements OnInit {
         this.transferredUnits = [];
     }
 
-    // ========== Table Data ==========
+    // ========== Data Loading ==========
+
+    private loadPostingStatus(employeeId: number): void {
+        this.empService.getEmployeeById(employeeId).subscribe({
+            next: (emp: any) => (this.employeePostingStatus = emp?.PostingStatus ?? emp?.postingStatus ?? null),
+            error: () => (this.employeePostingStatus = null)
+        });
+    }
+
+    loadDropdownData(): void {
+        this.commonCodeService.getAllActiveCommonCodesType('AbsentType').subscribe({
+            next: (data) => (this.absentTypes = data.map(d => ({ label: d.codeValueEN, value: d.codeId }))),
+            error: (err) => console.error('Failed to load absent types', err)
+        });
+    }
+
+    loadEmployeeOrgUnits(employeeId: number): void {
+        this.organizationService.getOrgUnitsByEmployeeId(employeeId).subscribe({
+            next: (data: any[]) => {
+                const units = (data || []).map((d: any) => ({ label: d.orgNameEN ?? d.OrgNameEN, value: d.orgId ?? d.OrgId }));
+                this.motherOrgUnits = units;
+                this.transferredUnits = units;
+            },
+            error: (err) => console.error('Failed to load employee mother-org units', err)
+        });
+    }
 
     loadRecordList(): void {
         if (!this.selectedEmployeeId) return;
@@ -388,7 +315,7 @@ export class EmpPresentStatus implements OnInit {
 
         this.presentStatusService.getAllByEmployeeId(this.selectedEmployeeId).subscribe({
             next: (data: any[]) => {
-                this.recordList = data.map((d) => ({
+                this.recordList = data.map(d => ({
                     presentStatusID: d.PresentStatusID ?? d.presentStatusID,
                     employeeID: d.EmployeeID ?? d.employeeID,
                     presentStatusType: d.PresentStatusType ?? d.presentStatusType,
@@ -405,6 +332,13 @@ export class EmpPresentStatus implements OnInit {
                     incidentDetails: d.IncidentDetails ?? d.incidentDetails,
                     deceasedPlace: d.DeceasedPlace ?? d.deceasedPlace,
                     deceasedReason: d.DeceasedReason ?? d.deceasedReason,
+                    arrestedPresentStatusID: d.ArrestedPresentStatusID ?? d.arrestedPresentStatusID,
+                    backFromArrestedReason: d.BackFromArrestedReason ?? d.backFromArrestedReason,
+                    backFromArrestedDate: d.BackFromArrestedDate ?? d.backFromArrestedDate,
+                    courtOrderReference: d.CourtOrderReference ?? d.courtOrderReference,
+                    absentPresentStatusID: d.AbsentPresentStatusID ?? d.absentPresentStatusID,
+                    backFromAbsentReason: d.BackFromAbsentReason ?? d.backFromAbsentReason,
+                    backFromAbsentDate: d.BackFromAbsentDate ?? d.backFromAbsentDate,
                     supportingDocFilesReferences: d.SupportingDocFilesReferences ?? d.supportingDocFilesReferences,
                     isActive: d.IsActive ?? d.isActive
                 }));
@@ -417,28 +351,19 @@ export class EmpPresentStatus implements OnInit {
         });
     }
 
-    // ========== Dialog: Add / Edit ==========
+    // ========== Add/Edit Dialog ==========
 
     openAddDialog(): void {
-        // A present status can be added only while the employee is presently serving.
         if (!this.canAddStatus) {
-            this.messageService.add({
-                severity: 'warn',
-                summary: 'Not Allowed',
-                detail: 'Only presently serving employees can have a present status added.'
-            });
+            this.showWarn('Not Allowed', 'Only presently serving employees can have a present status added.');
             return;
         }
         this.isEditMode = false;
         this.editingRecordId = null;
         this.presentStatusForm.reset({
             presentStatusType: PresentStatusType.OnDuty,
-            rpoProfileShift: false,
-            rtuProfileShift: false,
-            deceasedProfileShift: false,
-            absentProfileShift: false,
-            arrestedProfileShift: false,
-            isActive: true
+            rpoProfileShift: false, rtuProfileShift: false,
+            deceasedProfileShift: false, absentProfileShift: false, arrestedProfileShift: false
         });
         this.selectedStatusType = PresentStatusType.OnDuty;
         this.fileRows = [];
@@ -446,15 +371,16 @@ export class EmpPresentStatus implements OnInit {
     }
 
     openEditDialog(record: any): void {
-        // Inactive (superseded) records are historical — they can never be edited.
         if (!record.isActive) {
-            this.messageService.add({
-                severity: 'warn',
-                summary: 'Not Allowed',
-                detail: 'Inactive status records cannot be edited.'
-            });
+            this.showWarn('Not Allowed', 'Inactive status records cannot be edited.');
             return;
         }
+
+        if (record.presentStatusType === PresentStatusType.BackFromArrested || record.presentStatusType === PresentStatusType.BackFromAbsent) {
+            this.openEditBackFrom(record);
+            return;
+        }
+
         this.isEditMode = true;
         this.editingRecordId = record.presentStatusID;
         this.selectedStatusType = record.presentStatusType;
@@ -463,29 +389,22 @@ export class EmpPresentStatus implements OnInit {
         const dated = record.dated ? new Date(record.dated) : null;
 
         const formValues: any = {
-            presentStatusType: record.presentStatusType,
-            // Reset all per-type fields first
+            presentStatusType: st,
             rpoDate: null, transferredUnit: null, dateOfRelease: null, dateOfReduceFromRabStrength: null, rpoProfileShift: false,
             rtuDate: null, rtuTransferredUnit: null, rtuCause: '', rtuProfileShift: false,
             deceasedDate: null, deceasedPlace: '', deceasedReason: '', deceasedProfileShift: false,
             absentDate: null, absentType: null, incidentAbsentReport: '', absentCourtOfInquiryReport: '', absentProfileShift: false,
-            arrestedDate: null, incidentDetails: '', arrestedCourtOfInquiryReport: '', arrestedProfileShift: false,
-            isActive: record.isActive ?? true
+            arrestedDate: null, incidentDetails: '', arrestedCourtOfInquiryReport: '', arrestedProfileShift: false
         };
 
-        // Map backend unified fields to per-type form fields
         if (st === PresentStatusType.RegularPostingOut) {
             formValues.rpoDate = dated;
-            // Regular Posting Out destination lives in MotherOrgTransferredUnitID;
-            // fall back to legacy TransferredUnitID for rows saved before the schema change.
             formValues.transferredUnit = record.motherOrgTransferredUnitID ?? record.transferredUnitID;
             formValues.dateOfRelease = record.dateOfRelease ? new Date(record.dateOfRelease) : null;
             formValues.dateOfReduceFromRabStrength = record.reduceFromRABStrength ? new Date(record.reduceFromRABStrength) : null;
             formValues.rpoProfileShift = record.profileShift;
         } else if (st === PresentStatusType.RTUOnDisciplineIssue) {
             formValues.rtuDate = dated;
-            // RTU destination now lives in MotherOrgTransferredUnitID (mother-org unit);
-            // fall back to legacy TransferredUnitID for rows saved before this change.
             formValues.rtuTransferredUnit = record.motherOrgTransferredUnitID ?? record.transferredUnitID;
             formValues.rtuCause = record.rtuCause || '';
             formValues.rtuProfileShift = record.profileShift;
@@ -508,20 +427,7 @@ export class EmpPresentStatus implements OnInit {
         }
 
         this.presentStatusForm.patchValue(formValues);
-
-        // Parse file references
-        const refsJson = record.supportingDocFilesReferences;
-        if (refsJson && typeof refsJson === 'string') {
-            try {
-                const refs = JSON.parse(refsJson) as { FileId?: number; fileName?: string }[];
-                this.fileRows = Array.isArray(refs) ? refs.map((r) => ({ displayName: r.fileName || '', file: null, fileId: r.FileId })) : [];
-            } catch {
-                this.fileRows = [];
-            }
-        } else {
-            this.fileRows = [];
-        }
-
+        this.fileRows = this.parseFileRefs(record.supportingDocFilesReferences);
         this.displayDialog = true;
     }
 
@@ -529,68 +435,43 @@ export class EmpPresentStatus implements OnInit {
         this.displayDialog = false;
     }
 
-    // ========== Dialog: View (read-only) ==========
+    // ========== View Dialog ==========
 
     openViewDialog(record: any): void {
         this.viewRecord = record;
-
-        // Parse supporting-document references for display.
-        this.viewFileRows = [];
-        const refsJson = record.supportingDocFilesReferences;
-        if (refsJson && typeof refsJson === 'string') {
-            try {
-                const refs = JSON.parse(refsJson) as { FileId?: number; fileName?: string }[];
-                this.viewFileRows = Array.isArray(refs) ? refs.map((r) => ({ fileName: r.fileName || '', fileId: r.FileId })) : [];
-            } catch {
-                this.viewFileRows = [];
-            }
-        }
-
+        this.viewFileRows = this.parseFileRefs(record.supportingDocFilesReferences)
+            .map(r => ({ fileName: r.displayName || '', fileId: r.fileId }));
         this.displayViewDialog = true;
     }
 
-    // ========== Save ==========
+    // ========== Save (Add/Edit Dialog) ==========
 
     saveRecord(): void {
         if (!this.selectedEmployeeId) return;
 
-        // Mark all fields as touched to show validation errors
         this.presentStatusForm.markAllAsTouched();
         if (this.presentStatusForm.invalid) {
-            this.messageService.add({ severity: 'warn', summary: 'Validation', detail: 'Please fill all required fields.' });
+            this.showWarn('Validation', 'Please fill all required fields.');
             return;
         }
 
-        // These status types are one-time lifecycle events — an employee may have
-        // only one record of each. (Absent / Arrested may repeat, so are excluded.)
         const selectedType = this.presentStatusForm.get('presentStatusType')?.value;
+
         if (this.singleInstanceStatusTypes.includes(selectedType)) {
             const duplicate = this.recordList.some(
-                (r) => r.presentStatusType === selectedType && r.presentStatusID !== this.editingRecordId
+                r => r.presentStatusType === selectedType && r.presentStatusID !== this.editingRecordId
             );
             if (duplicate) {
-                this.messageService.add({
-                    severity: 'warn',
-                    summary: 'Duplicate Not Allowed',
-                    detail: `A "${this.getStatusLabel(selectedType)}" record already exists for this employee.`
-                });
+                this.showWarn('Duplicate Not Allowed', `A "${this.getStatusLabel(selectedType)}" record already exists for this employee.`);
                 return;
             }
         }
 
-        // The new status must differ from the employee's current active status —
-        // e.g. an already-Absent employee cannot be marked Absent again. Applies to
-        // every status type. (Edit keeps the same record, so add-mode only.)
         if (!this.isEditMode && selectedType === this.currentActiveStatusType) {
-            this.messageService.add({
-                severity: 'warn',
-                summary: 'Same Status Not Allowed',
-                detail: `This employee's current status is already "${this.getStatusLabel(selectedType)}". The same status cannot be added again.`
-            });
+            this.showWarn('Same Status Not Allowed', `This employee's current status is already "${this.getStatusLabel(selectedType)}". The same status cannot be added again.`);
             return;
         }
 
-        // Deceased is irreversible — confirm again before persisting.
         if (selectedType === PresentStatusType.Deceased) {
             this.confirmationService.confirm({
                 header: 'Confirm Deceased Status',
@@ -603,8 +484,6 @@ export class EmpPresentStatus implements OnInit {
             return;
         }
 
-        // Any other status with "Profile Shift (Present to Ex Member)" ticked is also
-        // irreversible — it moves the employee to the Ex Member list. Confirm first.
         if (this.isProfileShiftChecked(selectedType)) {
             this.confirmationService.confirm({
                 header: 'Confirm Profile Shift',
@@ -622,105 +501,59 @@ export class EmpPresentStatus implements OnInit {
 
     private proceedSave(): void {
         this.isSaving = true;
-
-        const existingRefs = this.fileReferencesForm?.getExistingFileReferences() || [];
-        const filesToUpload = this.fileReferencesForm?.getFilesToUpload() || [];
-
-        const doSave = (filesReferencesJson: string | null) => {
-            const payload = this.buildPayload(filesReferencesJson);
-            const saveOrUpdate$ = this.isEditMode ? this.presentStatusService.update(payload) : this.presentStatusService.save(payload);
-
-            saveOrUpdate$.subscribe({
+        this.saveWithFiles(this.fileReferencesForm, (filesJson) => {
+            const payload = this.buildPayload(filesJson);
+            const save$ = this.isEditMode ? this.presentStatusService.update(payload) : this.presentStatusService.save(payload);
+            save$.subscribe({
                 next: () => {
                     this.isSaving = false;
                     this.displayDialog = false;
-                    this.messageService.add({
-                        severity: 'success',
-                        summary: 'Success',
-                        detail: this.isEditMode ? 'Record updated successfully!' : 'Record saved successfully!'
-                    });
+                    this.showSuccess(this.isEditMode ? 'Record updated successfully!' : 'Record saved successfully!');
                     this.loadRecordList();
                 },
                 error: (err) => {
                     this.isSaving = false;
-                    console.error('Failed to save/update', err);
-                    this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.message || err?.error?.Description || 'Failed to save record' });
+                    this.showError(err?.error?.message || err?.error?.Description || 'Failed to save record');
                 }
             });
-        };
-
-        if (filesToUpload.length > 0) {
-            const uploads = filesToUpload.map((r: FileRowData) => this.empService.uploadEmployeeFile(r.file!, r.displayName?.trim() || r.file!.name));
-            forkJoin(uploads).subscribe({
-                next: (results: unknown) => {
-                    const resultsArray = Array.isArray(results) ? results : [];
-                    const newRefs = (resultsArray as { fileId: number; fileName: string }[]).map((r) => ({ FileId: r.fileId, fileName: r.fileName }));
-                    const allRefs = [...existingRefs.map((r: { FileId: number; fileName: string }) => ({ FileId: r.FileId, fileName: r.fileName })), ...newRefs];
-                    doSave(allRefs.length > 0 ? JSON.stringify(allRefs) : null);
-                },
-                error: (err) => {
-                    this.isSaving = false;
-                    console.error('Error uploading files', err);
-                    this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.message || 'Failed to upload files' });
-                }
-            });
-            return;
-        }
-
-        const filesReferencesJson = existingRefs.length > 0 ? JSON.stringify(existingRefs) : null;
-        doSave(filesReferencesJson);
+        }, () => this.isSaving = false);
     }
 
-    buildPayload(filesReferencesJson?: string | null): any {
+    private buildPayload(filesReferencesJson?: string | null): any {
         const f = this.presentStatusForm.getRawValue();
-        const toDateStr = (val: any) => {
-            if (!val) return null;
-            const d = new Date(val);
-            const year = d.getFullYear();
-            const month = String(d.getMonth() + 1).padStart(2, '0');
-            const day = String(d.getDate()).padStart(2, '0');
-            return `${year}-${month}-${day}`;
-        };
         const st = f.presentStatusType;
 
-        // Pick the date field based on selected status type (Dated is non-nullable in backend)
-        let dated: string | null = toDateStr(new Date()); // default to today
-        if (st === PresentStatusType.RegularPostingOut) dated = toDateStr(f.rpoDate) || dated;
-        else if (st === PresentStatusType.RTUOnDisciplineIssue) dated = toDateStr(f.rtuDate) || dated;
-        else if (st === PresentStatusType.Deceased) dated = toDateStr(f.deceasedDate) || dated;
-        else if (st === PresentStatusType.Absent) dated = toDateStr(f.absentDate) || dated;
-        else if (st === PresentStatusType.Arrested) dated = toDateStr(f.arrestedDate) || dated;
+        let dated = this.toDateStr(new Date())!;
+        if (st === PresentStatusType.RegularPostingOut) dated = this.toDateStr(f.rpoDate) || dated;
+        else if (st === PresentStatusType.RTUOnDisciplineIssue) dated = this.toDateStr(f.rtuDate) || dated;
+        else if (st === PresentStatusType.Deceased) dated = this.toDateStr(f.deceasedDate) || dated;
+        else if (st === PresentStatusType.Absent) dated = this.toDateStr(f.absentDate) || dated;
+        else if (st === PresentStatusType.Arrested) dated = this.toDateStr(f.arrestedDate) || dated;
 
-        // Pick profile shift based on selected status type
         let profileShift = false;
-        if (st === PresentStatusType.RegularPostingOut) profileShift = f.rpoProfileShift || false;
-        else if (st === PresentStatusType.RTUOnDisciplineIssue) profileShift = f.rtuProfileShift || false;
-        else if (st === PresentStatusType.Deceased) profileShift = f.deceasedProfileShift || false;
-        else if (st === PresentStatusType.Absent) profileShift = f.absentProfileShift || false;
-        else if (st === PresentStatusType.Arrested) profileShift = f.arrestedProfileShift || false;
+        if (st === PresentStatusType.RegularPostingOut) profileShift = !!f.rpoProfileShift;
+        else if (st === PresentStatusType.RTUOnDisciplineIssue) profileShift = !!f.rtuProfileShift;
+        else if (st === PresentStatusType.Deceased) profileShift = !!f.deceasedProfileShift;
+        else if (st === PresentStatusType.Absent) profileShift = !!f.absentProfileShift;
+        else if (st === PresentStatusType.Arrested) profileShift = !!f.arrestedProfileShift;
 
-        // Both Regular Posting Out and RTU on Discipline Issue transfer the member
-        // to a unit of their own mother organization, stored in MotherOrgTransferredUnitID.
-        // (TransferredUnitID — the legacy RAB-unit FK — is no longer written here.)
-        let transferredUnitID: number | null = null;
         let motherOrgTransferredUnitID: number | null = null;
         if (st === PresentStatusType.RegularPostingOut) motherOrgTransferredUnitID = f.transferredUnit;
         else if (st === PresentStatusType.RTUOnDisciplineIssue) motherOrgTransferredUnitID = f.rtuTransferredUnit;
 
-        // Pick inquiry report
         let inquiryReport: string | null = null;
         if (st === PresentStatusType.Absent) inquiryReport = f.absentCourtOfInquiryReport;
         else if (st === PresentStatusType.Arrested) inquiryReport = f.arrestedCourtOfInquiryReport;
 
         const payload: any = {
             EmployeeID: this.selectedEmployeeId,
-            PresentStatusType: f.presentStatusType,
+            PresentStatusType: st,
             Dated: dated,
             ProfileShift: profileShift,
-            TransferredUnitID: transferredUnitID,
+            TransferredUnitID: null,
             MotherOrgTransferredUnitID: motherOrgTransferredUnitID,
-            DateOfRelease: toDateStr(f.dateOfRelease),
-            ReduceFromRABStrength: toDateStr(f.dateOfReduceFromRabStrength),
+            DateOfRelease: this.toDateStr(f.dateOfRelease),
+            ReduceFromRABStrength: this.toDateStr(f.dateOfReduceFromRabStrength),
             RTUCause: f.rtuCause || null,
             AbsentTypeID: f.absentType || null,
             AbsentReport: f.incidentAbsentReport || null,
@@ -728,113 +561,359 @@ export class EmpPresentStatus implements OnInit {
             IncidentDetails: f.incidentDetails || null,
             DeceasedPlace: f.deceasedPlace || null,
             DeceasedReason: f.deceasedReason || null,
+            ArrestedPresentStatusID: null,
+            BackFromArrestedReason: null,
+            BackFromArrestedDate: null,
+            CourtOrderReference: null,
+            AbsentPresentStatusID: null,
+            BackFromAbsentReason: null,
+            BackFromAbsentDate: null,
             SupportingDocFilesReferences: filesReferencesJson ?? null,
-            // A newly saved status is always the active one; the backend deactivates
-            // the employee's other rows. (The frontend no longer exposes this flag.)
             IsActive: true,
-            CreatedBy: 'system',
-            CreatedDate: new Date().toISOString(),
-            LastUpdatedBy: 'system',
-            Lastupdate: new Date().toISOString()
+            ...this.auditFields()
         };
 
-        // Only include PresentStatusID for updates (identity column)
         if (this.isEditMode && this.editingRecordId) {
             payload.PresentStatusID = this.editingRecordId;
         }
-
         return payload;
     }
 
-    // ========== Delete ==========
+    // ========== Back From Arrested Dialog ==========
 
-    deleteRecord(record: any, event: Event): void {
-        this.confirmationService.confirm({
-            target: event.target as EventTarget,
-            message: 'Are you sure you want to delete this record?',
-            header: 'Delete Confirmation',
-            icon: 'pi pi-exclamation-triangle',
-            rejectButtonProps: { label: 'Cancel', severity: 'secondary', outlined: true },
-            acceptButtonProps: { label: 'Delete', severity: 'danger' },
-            accept: () => {
-                this.presentStatusService.delete(record.presentStatusID, this.selectedEmployeeId!).subscribe({
-                    next: () => {
-                        this.messageService.add({ severity: 'success', summary: 'Success', detail: 'Record deleted successfully' });
+    openBackFromArrestedDialog(record: any): void {
+        this.openBackFromDialog(record, PresentStatusType.BackFromArrested, 'Arrested');
+    }
+
+    openBackFromAbsentDialog(record: any): void {
+        this.openBackFromDialog(record, PresentStatusType.BackFromAbsent, 'Absent');
+    }
+
+    private openBackFromDialog(sourceRecord: any, backFromType: string, sourceLabel: string): void {
+        if (!this.canAddStatus) {
+            this.showWarn('Not Allowed', 'Only presently serving employees can have a present status added.');
+            return;
+        }
+        this.bfaEditMode = false;
+        this.bfaEditingRecordId = null;
+        this.bfaStatusType = backFromType;
+        this.bfaLinkedArrestedId = sourceRecord.presentStatusID;
+        this.bfaLinkedArrestedLabel = `${sourceLabel} — ${this.formatDate(sourceRecord.dated)}`;
+        this.bfaForm.reset({ backFromArrestedDate: null, backFromArrestedReason: '', courtOrderReference: '' });
+        this.bfaFileRows = [];
+        this.displayBfaDialog = true;
+    }
+
+    private openEditBackFrom(record: any): void {
+        const isArrested = record.presentStatusType === PresentStatusType.BackFromArrested;
+        const sourceType = isArrested ? PresentStatusType.Arrested : PresentStatusType.Absent;
+        const sourceLabel = isArrested ? 'Arrested' : 'Absent';
+
+        const linkedId = isArrested ? record.arrestedPresentStatusID : record.absentPresentStatusID;
+
+        this.bfaEditMode = true;
+        this.bfaEditingRecordId = record.presentStatusID;
+        this.bfaStatusType = record.presentStatusType;
+        this.bfaLinkedArrestedId = linkedId;
+
+        const linked = this.recordList.find(r => r.presentStatusID === linkedId && r.presentStatusType === sourceType);
+        this.bfaLinkedArrestedLabel = linked
+            ? `${sourceLabel} — ${this.formatDate(linked.dated)}`
+            : (linkedId ? `${sourceLabel} Record #${linkedId}` : 'N/A');
+
+        const reason = isArrested ? (record.backFromArrestedReason || '') : (record.backFromAbsentReason || '');
+
+        this.bfaForm.patchValue({
+            backFromArrestedDate: record.dated ? new Date(record.dated) : null,
+            backFromArrestedReason: reason,
+            courtOrderReference: isArrested ? (record.courtOrderReference || '') : ''
+        });
+        this.bfaFileRows = this.parseFileRefs(record.supportingDocFilesReferences);
+        this.displayBfaDialog = true;
+    }
+
+    saveBfa(): void {
+        if (!this.selectedEmployeeId) return;
+        this.bfaForm.markAllAsTouched();
+        if (this.bfaForm.invalid) {
+            this.showWarn('Validation', 'Please fill all required fields.');
+            return;
+        }
+
+        if (!this.bfaEditMode) {
+            const label = this.bfaStatusType === PresentStatusType.BackFromAbsent ? 'Back From Absent' : 'Back From Arrested';
+            this.confirmationService.confirm({
+                header: `Confirm ${label}`,
+                message: 'This employee will be shown as "On Duty" after saving. Are you sure you want to continue?',
+                icon: 'pi pi-exclamation-triangle',
+                acceptButtonProps: { label: 'Yes, Continue', severity: 'success' },
+                rejectButtonProps: { label: 'Cancel', severity: 'secondary', outlined: true },
+                accept: () => this.proceedBfaSave()
+            });
+            return;
+        }
+
+        this.proceedBfaSave();
+    }
+
+    private proceedBfaSave(): void {
+        this.bfaSaving = true;
+
+        this.saveWithFiles(this.bfaFileReferencesForm, (filesJson) => {
+            const payload = this.buildBfaPayload(filesJson);
+            const save$ = this.bfaEditMode ? this.presentStatusService.update(payload) : this.presentStatusService.save(payload);
+            save$.subscribe({
+                next: () => {
+                    if (this.bfaEditMode) {
+                        this.bfaSaving = false;
+                        this.displayBfaDialog = false;
+                        this.showSuccess('Record updated successfully!');
                         this.loadRecordList();
-                    },
-                    error: (err) => {
-                        console.error('Failed to delete', err);
-                        this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.message || 'Failed to delete record' });
+                        return;
                     }
-                });
+                    this.reactivateOnDuty();
+                },
+                error: (err) => {
+                    this.bfaSaving = false;
+                    this.showError(err?.error?.message || err?.error?.Description || 'Failed to save record');
+                }
+            });
+        }, () => this.bfaSaving = false);
+    }
+
+    private buildBfaPayload(filesReferencesJson?: string | null): any {
+        const f = this.bfaForm.value;
+        const dated = this.toDateStr(f.backFromArrestedDate) || this.toDateStr(new Date());
+        const isArrested = this.bfaStatusType === PresentStatusType.BackFromArrested;
+
+        const payload: any = {
+            EmployeeID: this.selectedEmployeeId,
+            PresentStatusType: this.bfaStatusType,
+            Dated: dated,
+            ProfileShift: false,
+            TransferredUnitID: null,
+            MotherOrgTransferredUnitID: null,
+            DateOfRelease: null,
+            ReduceFromRABStrength: null,
+            RTUCause: null,
+            AbsentTypeID: null,
+            AbsentReport: null,
+            InquiryReport: null,
+            IncidentDetails: null,
+            DeceasedPlace: null,
+            DeceasedReason: null,
+            ArrestedPresentStatusID: isArrested ? this.bfaLinkedArrestedId : null,
+            BackFromArrestedReason: isArrested ? (f.backFromArrestedReason || null) : null,
+            BackFromArrestedDate: isArrested ? this.toDateStr(f.backFromArrestedDate) : null,
+            CourtOrderReference: isArrested ? (f.courtOrderReference || null) : null,
+            AbsentPresentStatusID: !isArrested ? this.bfaLinkedArrestedId : null,
+            BackFromAbsentReason: !isArrested ? (f.backFromArrestedReason || null) : null,
+            BackFromAbsentDate: !isArrested ? this.toDateStr(f.backFromArrestedDate) : null,
+            SupportingDocFilesReferences: filesReferencesJson ?? null,
+            IsActive: false,
+            ...this.auditFields()
+        };
+
+        if (this.bfaEditMode && this.bfaEditingRecordId) {
+            payload.PresentStatusID = this.bfaEditingRecordId;
+        }
+        return payload;
+    }
+
+    private reactivateOnDuty(): void {
+        const onDutyRecord = this.recordList.find(
+            r => r.presentStatusType === PresentStatusType.OnDuty && !r.isActive
+        );
+        const bfaLabel = this.bfaStatusType === PresentStatusType.BackFromAbsent ? 'Back From Absent' : 'Back From Arrested';
+        if (!onDutyRecord) {
+            this.bfaSaving = false;
+            this.displayBfaDialog = false;
+            this.showWarn('Partial Success', `${bfaLabel} saved but no inactive On Duty record found to reactivate.`);
+            this.loadRecordList();
+            return;
+        }
+
+        const payload: any = {
+            PresentStatusID: onDutyRecord.presentStatusID,
+            EmployeeID: this.selectedEmployeeId,
+            PresentStatusType: PresentStatusType.OnDuty,
+            Dated: onDutyRecord.dated,
+            ProfileShift: onDutyRecord.profileShift || false,
+            TransferredUnitID: onDutyRecord.transferredUnitID || null,
+            MotherOrgTransferredUnitID: onDutyRecord.motherOrgTransferredUnitID || null,
+            DateOfRelease: onDutyRecord.dateOfRelease || null,
+            ReduceFromRABStrength: onDutyRecord.reduceFromRABStrength || null,
+            RTUCause: onDutyRecord.rtuCause || null,
+            AbsentTypeID: onDutyRecord.absentTypeID || null,
+            AbsentReport: onDutyRecord.absentReport || null,
+            InquiryReport: onDutyRecord.inquiryReport || null,
+            IncidentDetails: onDutyRecord.incidentDetails || null,
+            DeceasedPlace: null,
+            DeceasedReason: null,
+            ArrestedPresentStatusID: null,
+            BackFromArrestedReason: null,
+            BackFromArrestedDate: null,
+            CourtOrderReference: null,
+            AbsentPresentStatusID: null,
+            BackFromAbsentReason: null,
+            BackFromAbsentDate: null,
+            SupportingDocFilesReferences: onDutyRecord.supportingDocFilesReferences || null,
+            IsActive: true,
+            ...this.auditFields()
+        };
+
+        this.presentStatusService.update(payload).subscribe({
+            next: () => {
+                this.bfaSaving = false;
+                this.displayBfaDialog = false;
+                this.showSuccess(`${bfaLabel} saved and On Duty status reactivated.`);
+                this.loadRecordList();
+            },
+            error: () => {
+                this.bfaSaving = false;
+                this.displayBfaDialog = false;
+                this.showWarn('Partial Success', `${bfaLabel} saved but failed to reactivate On Duty status.`);
+                this.loadRecordList();
             }
         });
     }
 
     // ========== File Handlers ==========
 
-    onFileRowsChange(event: FileRowData[]): void {
-        if (event && Array.isArray(event)) {
-            this.fileRows = event;
-        }
+    onFileRowsChange(rows: FileRowData[]): void {
+        if (Array.isArray(rows)) this.fileRows = rows;
+    }
+
+    onBfaFileRowsChange(rows: FileRowData[]): void {
+        if (Array.isArray(rows)) this.bfaFileRows = rows;
     }
 
     onDownloadFile(payload: { fileId: number; fileName: string }): void {
         this.empService.downloadFile(payload.fileId).subscribe({
             next: (blob) => this.empService.triggerFileDownload(blob, payload.fileName || 'download'),
-            error: (err) => {
-                console.error('Download failed', err);
-                this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.message || 'Failed to download file' });
-            }
+            error: (err) => this.showError(err?.error?.message || 'Failed to download file')
         });
     }
 
     // ========== Helpers ==========
 
+    hasBackFromRecord(record: any): boolean {
+        if (record.presentStatusType === PresentStatusType.Arrested) {
+            return this.recordList.some(r => r.presentStatusType === PresentStatusType.BackFromArrested && r.arrestedPresentStatusID === record.presentStatusID);
+        }
+        if (record.presentStatusType === PresentStatusType.Absent) {
+            return this.recordList.some(r => r.presentStatusType === PresentStatusType.BackFromAbsent && r.absentPresentStatusID === record.presentStatusID);
+        }
+        return false;
+    }
+
     getStatusLabel(value: string): string {
-        const option = PresentStatusTypeOptions.find((o) => o.value === value);
-        return option ? option.label : value || 'N/A';
+        if (value === PresentStatusType.BackFromArrested) return 'Back From Arrested';
+        if (value === PresentStatusType.BackFromAbsent) return 'Back From Absent';
+        return PresentStatusTypeOptions.find(o => o.value === value)?.label ?? value ?? 'N/A';
     }
 
     getStatusIcon(type: string): string {
-        switch (type) {
-            case PresentStatusType.OnDuty: return 'pi-check-circle';
-            case PresentStatusType.RegularPostingOut: return 'pi-sign-out';
-            case PresentStatusType.RTUOnDisciplineIssue: return 'pi-replay';
-            case PresentStatusType.Deceased: return 'pi-info-circle';
-            case PresentStatusType.Absent: return 'pi-user-minus';
-            case PresentStatusType.Arrested: return 'pi-lock';
-            default: return 'pi-flag';
-        }
+        const icons: Record<string, string> = {
+            [PresentStatusType.OnDuty]: 'pi-check-circle',
+            [PresentStatusType.RegularPostingOut]: 'pi-sign-out',
+            [PresentStatusType.RTUOnDisciplineIssue]: 'pi-replay',
+            [PresentStatusType.Deceased]: 'pi-info-circle',
+            [PresentStatusType.Absent]: 'pi-user-minus',
+            [PresentStatusType.Arrested]: 'pi-lock',
+            [PresentStatusType.BackFromArrested]: 'pi-unlock',
+            [PresentStatusType.BackFromAbsent]: 'pi-user-plus'
+        };
+        return icons[type] ?? 'pi-flag';
     }
 
     getUnitLabel(value: number | null | undefined): string {
         if (value == null) return 'N/A';
-        const opt = this.motherOrgUnits.find((o) => o.value === value) ?? this.transferredUnits.find((o) => o.value === value);
-        return opt ? opt.label : String(value);
+        return (this.motherOrgUnits.find(o => o.value === value) ?? this.transferredUnits.find(o => o.value === value))?.label ?? String(value);
     }
 
     getAbsentTypeLabel(value: number | null | undefined): string {
         if (value == null) return 'N/A';
-        const opt = this.absentTypes.find((o) => o.value === value);
-        return opt ? opt.label : String(value);
+        return this.absentTypes.find(o => o.value === value)?.label ?? String(value);
     }
 
     formatDate(dateStr: string | null): string {
         if (!dateStr) return 'N/A';
-        try {
-            const d = new Date(dateStr);
-            return d.toLocaleDateString('en-GB');
-        } catch {
-            return dateStr;
+        try { return new Date(dateStr).toLocaleDateString('en-GB'); }
+        catch { return dateStr; }
+    }
+
+    // ========== Private Utilities ==========
+
+    private isProfileShiftChecked(statusType: string | null): boolean {
+        const f = this.presentStatusForm.getRawValue();
+        switch (statusType) {
+            case PresentStatusType.RegularPostingOut: return !!f.rpoProfileShift;
+            case PresentStatusType.RTUOnDisciplineIssue: return !!f.rtuProfileShift;
+            case PresentStatusType.Deceased: return !!f.deceasedProfileShift;
+            case PresentStatusType.Absent: return !!f.absentProfileShift;
+            case PresentStatusType.Arrested: return !!f.arrestedProfileShift;
+            default: return false;
         }
     }
 
-    getRecordDate(record: any): string {
-        return this.formatDate(record.dated);
+    private toDateStr(val: any): string | null {
+        if (!val) return null;
+        const d = new Date(val);
+        return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
     }
 
-    getProfileShift(record: any): boolean {
-        return record.profileShift || false;
+    private auditFields(): any {
+        const now = new Date().toISOString();
+        return { CreatedBy: 'system', CreatedDate: now, LastUpdatedBy: 'system', Lastupdate: now };
+    }
+
+    private parseFileRefs(refsJson: string | null | undefined): FileRowData[] {
+        if (!refsJson || typeof refsJson !== 'string') return [];
+        try {
+            const refs = JSON.parse(refsJson) as { FileId?: number; fileName?: string }[];
+            return Array.isArray(refs) ? refs.map(r => ({ displayName: r.fileName || '', file: null, fileId: r.FileId })) : [];
+        } catch { return []; }
+    }
+
+    private saveWithFiles(
+        fileForm: any,
+        onSave: (filesJson: string | null) => void,
+        onError: () => void
+    ): void {
+        const existingRefs = fileForm?.getExistingFileReferences() || [];
+        const filesToUpload = fileForm?.getFilesToUpload() || [];
+
+        if (filesToUpload.length > 0) {
+            const uploads = filesToUpload.map((r: FileRowData) =>
+                this.empService.uploadEmployeeFile(r.file!, r.displayName?.trim() || r.file!.name)
+            );
+            forkJoin(uploads).subscribe({
+                next: (results: unknown) => {
+                    const arr = Array.isArray(results) ? results : [];
+                    const newRefs = (arr as { fileId: number; fileName: string }[]).map(r => ({ FileId: r.fileId, fileName: r.fileName }));
+                    const allRefs = [...existingRefs.map((r: any) => ({ FileId: r.FileId, fileName: r.fileName })), ...newRefs];
+                    onSave(allRefs.length > 0 ? JSON.stringify(allRefs) : null);
+                },
+                error: (err) => {
+                    onError();
+                    this.showError(err?.error?.message || 'Failed to upload files');
+                }
+            });
+            return;
+        }
+        onSave(existingRefs.length > 0 ? JSON.stringify(existingRefs) : null);
+    }
+
+    private showSuccess(detail: string): void {
+        this.messageService.add({ severity: 'success', summary: 'Success', detail });
+    }
+
+    private showWarn(summary: string, detail: string): void {
+        this.messageService.add({ severity: 'warn', summary, detail });
+    }
+
+    private showError(detail: string): void {
+        this.messageService.add({ severity: 'error', summary: 'Error', detail });
     }
 }

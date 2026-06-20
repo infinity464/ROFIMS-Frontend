@@ -74,15 +74,15 @@
                             <th>Date</th>
                             <th>Profile Shift</th>
                             <th>Active</th>
-                            <th style="width: 120px">Actions</th>
+                            <th style="width: 280px">Actions</th>
                         </tr>
                     </ng-template>
 
                     <ng-template pTemplate="body" let-record>
                         <tr>
                             <td>{{ getStatusLabel(record.presentStatusType) }}</td>
-                            <td>{{ getRecordDate(record) }}</td>
-                            <td>{{ getProfileShift(record) ? 'Yes' : 'No' }}</td>
+                            <td>{{ formatDate(record.dated) }}</td>
+                            <td>{{ record.profileShift ? 'Yes' : 'No' }}</td>
                             <td>{{ record.isActive ? 'Yes' : 'No' }}</td>
                             <td>
                                 <div class="flex gap-2">
@@ -91,6 +91,16 @@
                                         [disabled]="!record.isActive"
                                         [pTooltip]="record.isActive ? 'Edit' : 'Inactive records cannot be edited'"
                                         (onClick)="openEditDialog(record)"></p-button>
+                                    @if (record.presentStatusType === PresentStatusType.Arrested && !isReadonly && !record.profileShift && !hasBackFromRecord(record)) {
+                                        <p-button label="Back From Arrested" icon="pi pi-arrow-circle-left" [class.perm-hidden]="!canInsert"
+                                            severity="success" size="small" [outlined]="true"
+                                            (onClick)="openBackFromArrestedDialog(record)"></p-button>
+                                    }
+                                    @if (record.presentStatusType === PresentStatusType.Absent && !isReadonly && !record.profileShift && !hasBackFromRecord(record)) {
+                                        <p-button label="Back From Absent" icon="pi pi-arrow-circle-left" [class.perm-hidden]="!canInsert"
+                                            severity="success" size="small" [outlined]="true"
+                                            (onClick)="openBackFromAbsentDialog(record)"></p-button>
+                                    }
                                 </div>
                             </td>
                         </tr>
@@ -365,8 +375,33 @@
                     </div>
                 }
 
-                <!-- Profile Shift (only where it applies) -->
-                @if (viewRecord.presentStatusType !== PresentStatusType.OnDuty) {
+                @if (viewRecord.presentStatusType === PresentStatusType.BackFromArrested) {
+                    <div class="ps-field">
+                        <span class="ps-field__label">Arrested Record ID</span>
+                        <span class="ps-field__value">{{ viewRecord.arrestedPresentStatusID || 'N/A' }}</span>
+                    </div>
+                    <div class="ps-field">
+                        <span class="ps-field__label">Reason of Back</span>
+                        <span class="ps-field__value">{{ viewRecord.backFromArrestedReason || 'N/A' }}</span>
+                    </div>
+                    <div class="ps-field">
+                        <span class="ps-field__label">Court Order Reference</span>
+                        <span class="ps-field__value">{{ viewRecord.courtOrderReference || 'N/A' }}</span>
+                    </div>
+                }
+
+                @if (viewRecord.presentStatusType === PresentStatusType.BackFromAbsent) {
+                    <div class="ps-field">
+                        <span class="ps-field__label">Absent Record ID</span>
+                        <span class="ps-field__value">{{ viewRecord.absentPresentStatusID || 'N/A' }}</span>
+                    </div>
+                    <div class="ps-field">
+                        <span class="ps-field__label">Reason of Back</span>
+                        <span class="ps-field__value">{{ viewRecord.backFromAbsentReason || 'N/A' }}</span>
+                    </div>
+                }
+
+                @if (viewRecord.presentStatusType !== PresentStatusType.OnDuty && viewRecord.presentStatusType !== PresentStatusType.BackFromArrested && viewRecord.presentStatusType !== PresentStatusType.BackFromAbsent) {
                     <div class="ps-field ps-field--full">
                         <span class="ps-field__label">Profile Shift (Present to Ex Member)</span>
                         <span class="ps-field__value">
@@ -403,6 +438,57 @@
 
     <ng-template pTemplate="footer">
         <p-button label="Close" icon="pi pi-times" severity="secondary" [outlined]="true" (onClick)="displayViewDialog = false"></p-button>
+    </ng-template>
+</p-dialog>
+
+<!-- ========== Back From Arrested Dialog ========== -->
+<p-dialog
+    [header]="bfaDialogHeader"
+    [(visible)]="displayBfaDialog"
+    [modal]="true"
+    [style]="{width: '640px', maxHeight: '90vh'}"
+    [closable]="true"
+    [focusOnShow]="false"
+    [contentStyle]="{'overflow-y': 'auto', 'border-top': '2px solid var(--primary-color)'}">
+
+    <p-fluid>
+    <form [formGroup]="bfaForm">
+        <div class="grid grid-cols-2 gap-4 p-2">
+            <div class="col-span-2">
+                <label class="font-semibold block mb-2 text-700">{{ bfaSourceLabel }} Record</label>
+                <span class="text-900">{{ bfaLinkedArrestedLabel }}</span>
+            </div>
+            <div>
+                <label class="font-semibold block mb-2 text-700">Back Date <span class="text-red-500">*</span></label>
+                <p-datepicker formControlName="backFromArrestedDate" dateFormat="dd-mm-yy" placeholder="Select Date" appendTo="body" styleClass="w-full"></p-datepicker>
+            </div>
+            <div>
+                <label class="font-semibold block mb-2 text-700">Reason of Back</label>
+                <input pInputText class="w-full" placeholder="Enter Reason" formControlName="backFromArrestedReason" />
+            </div>
+            @if (bfaStatusType === PresentStatusType.BackFromArrested) {
+                <div class="col-span-2">
+                    <label class="font-semibold block mb-2 text-700">Court Order Reference</label>
+                    <input pInputText class="w-full" placeholder="Enter Court Order Reference" formControlName="courtOrderReference" />
+                </div>
+            }
+            <div class="col-span-2 file-section-compact">
+                <app-file-references-form
+                    #bfaFileReferencesForm
+                    [fileRows]="bfaFileRows"
+                    [isViewMode]="false"
+                    title="Supporting Documents"
+                    (fileRowsChange)="onBfaFileRowsChange($event)"
+                    (onDownloadFile)="onDownloadFile($event)">
+                </app-file-references-form>
+            </div>
+        </div>
+    </form>
+    </p-fluid>
+
+    <ng-template pTemplate="footer">
+        <p-button label="Cancel" icon="pi pi-times" severity="secondary" [outlined]="true" (onClick)="displayBfaDialog = false" [disabled]="bfaSaving"></p-button>
+        <p-button [label]="bfaEditMode ? 'Update' : 'Save'" icon="pi pi-check" (onClick)="saveBfa()" [loading]="bfaSaving" [disabled]="bfaSaving"></p-button>
     </ng-template>
 </p-dialog>
 

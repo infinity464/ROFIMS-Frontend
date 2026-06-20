@@ -114,6 +114,12 @@ export class PostingOrderPreviewPageComponent implements OnInit {
     showPrevWorkplaceUnit = true;
     showTransferUnitsCopy = true;
 
+    // RAB Headquarters unit name, resolved dynamically as the top-level unit with the
+    // smallest Sort Order (from the org-tree). Used to detect HQ destinations in the
+    // অনুলিপি list instead of a hard-coded name.
+    private hqUnitNameEN: string | null = null;
+    private hqUnitNameBN: string | null = null;
+
     // ── নিজ জেলা column visibility ───────────────────
     showOwnDistrict = true;
     showRemarks = true;
@@ -261,6 +267,7 @@ export class PostingOrderPreviewPageComponent implements OnInit {
     ) {}
 
     ngOnInit(): void {
+        this.loadHqUnit();
         this.route.queryParams.subscribe(params => {
             const id = params['id'];
             if (id) {
@@ -275,6 +282,20 @@ export class PostingOrderPreviewPageComponent implements OnInit {
 
     goBack(): void {
         this.router.navigate(['/posting/posting-order-list']);
+    }
+
+    /** Resolve RAB HQ as the top-level org unit with the smallest Sort Order. */
+    private loadHqUnit(): void {
+        this.orgService.getAll(0).subscribe({
+            next: (units) => {
+                const top = (units ?? []).filter((u) => u && u.nameEN);
+                if (!top.length) return;
+                const hq = top.reduce((min, u) => (u.sortOrder < min.sortOrder ? u : min), top[0]);
+                this.hqUnitNameEN = hq.nameEN || null;
+                this.hqUnitNameBN = hq.nameBN || null;
+            },
+            error: () => { /* fall back to the name heuristic in isRabHq */ }
+        });
     }
 
     private loadOrder(id: number): void {
@@ -809,18 +830,74 @@ export class PostingOrderPreviewPageComponent implements OnInit {
         return this.availableTransferUnits.length > 1;
     }
 
-    get transferUnitsCopyText(): string {
+    /** Strip zero-width joiners/spaces so Bangla unit names match reliably. */
+    private stripZeroWidth(s: string): string {
+        return (s || '').replace(/[​‌‍﻿]/g, '').trim();
+    }
+
+    /**
+     * True if the top-level unit segment is RAB Headquarters. Primary check matches the
+     * org unit with the smallest Sort Order (resolved in loadHqUnit); the name heuristic
+     * is only a fallback for when that hasn't loaded.
+     */
+    private isRabHq(name: string): boolean {
+        const n = this.stripZeroWidth(name);
+        if (this.hqUnitNameEN && n === this.stripZeroWidth(this.hqUnitNameEN)) return true;
+        if (this.hqUnitNameBN && n === this.stripZeroWidth(this.hqUnitNameBN)) return true;
+        return n.includes('সদর দপ্তর') || /head\s*quarter/i.test(n) || /\bHQ\b/i.test(n);
+    }
+
+    /** True if the top-level unit segment is a RAB battalion (র‍্যাব-১ … / RAB-1 …). */
+    private isRabBattalion(name: string): boolean {
+        const n = this.stripZeroWidth(name);
+        return /যাব\s*[-–—]\s*[০-৯0-9]/.test(n) || /^RAB\s*[-–—]\s*\d+/i.test(n);
+    }
+
+    /**
+     * Auto-generated অনুলিপি (copy-to) lines derived from the employees' transfer
+     * destination units. Hard-coded RAB rules:
+     *   • র‍্যাব সদর দপ্তর (HQ) → show the WING name (segment under HQ), not "সদর দপ্তর",
+     *     prefixed "পরিচালক/" — this line comes FIRST.
+     *   • র‍্যাব-N battalions → prefixed "অধিনায়ক/", slash-joined — comes next.
+     *   • Any other unit → shown plainly (top-level name), comma-joined.
+     * Each group is de-duplicated; empty groups are omitted.
+     */
+    get autoCopyLines(): string[] {
         const bn = this.isBangla;
-        const seen = new Set<string>();
+        const hqWings: string[] = [];
+        const hqSeen = new Set<string>();
+        const rabUnits: string[] = [];
+        const rabSeen = new Set<string>();
+        const others: string[] = [];
+        const otherSeen = new Set<string>();
+
         for (const emp of this.filteredEmployees) {
-            const full = bn
-                ? (emp.transferRabUnitNameBN || emp.transferRabUnitName || '')
-                : (emp.transferRabUnitName || '');
+            const full = (bn ? (emp.transferRabUnitNameBN || emp.transferRabUnitName) : emp.transferRabUnitName) || '';
             if (!full) continue;
-            const first = full.split(',')[0].trim();
-            if (first) seen.add(first);
+            const parts = full.split(',').map((s) => s.trim()).filter(Boolean);
+            if (!parts.length) continue;
+            const top = parts[0];
+
+            if (this.isRabHq(top)) {
+                const wing = parts[1] || top; // segment directly under HQ
+                if (!hqSeen.has(wing)) { hqSeen.add(wing); hqWings.push(wing); }
+            } else if (this.isRabBattalion(top)) {
+                if (!rabSeen.has(top)) { rabSeen.add(top); rabUnits.push(top); }
+            } else {
+                if (!otherSeen.has(top)) { otherSeen.add(top); others.push(top); }
+            }
         }
-        return Array.from(seen).join(', ');
+
+        const lines: string[] = [];
+        if (hqWings.length) lines.push(`${bn ? 'পরিচালক' : 'Director'}/ ${hqWings.join(', ')}`);
+        if (rabUnits.length) lines.push(`${bn ? 'অধিনায়ক' : 'Commanding Officer'}/ ${rabUnits.join('/ ')}`);
+        if (others.length) lines.push(others.join(', '));
+        return lines;
+    }
+
+    /** Number of auto copy-lines actually rendered (0 when hidden) — footer paragraphs continue after this. */
+    get autoCopyOffset(): number {
+        return this.showTransferUnitsCopy ? this.autoCopyLines.length : 0;
     }
 
     /** Recompute `filteredEmployees` and `filteredFooterParagraphs` from the current filter. */
@@ -1664,16 +1741,16 @@ html, body { margin: 0; padding: 0; background: transparent; }
             children: [new TextRun({ text: bn ? 'অনুলিপি (জ্যেষ্ঠতার ভিত্তিতে নহে)' : 'Copy (not in order of seniority):', bold: true, size: ctxSize, sizeComplexScript: csSize, font, language: lang })],
             spacing: { before: nsPrefix ? 0 : 200 }
         }));
-        const tuCopy = this.transferUnitsCopyText;
-        const hasTuCopy = tuCopy && this.showTransferUnitsCopy;
-        if (hasTuCopy) {
+        const autoLines = this.showTransferUnitsCopy ? this.autoCopyLines : [];
+        autoLines.forEach((line, i) => {
+            const serial = i + 1;
             leftCellChildren.push(new Paragraph({
-                children: [new TextRun({ text: `${bn ? '১' : '1'}। ${tuCopy}`, size: ctxSize, sizeComplexScript: csSize, font, language: lang })],
+                children: [new TextRun({ text: `${bn ? this.toBanglaDigits(String(serial)) : serial}। ${line}`, size: ctxSize, sizeComplexScript: csSize, font, language: lang })],
                 spacing: { after: 100 }
             }));
-        }
+        });
         this.exportFooterParagraphs.forEach((p, i) => {
-            const serial = i + (hasTuCopy ? 2 : 1);
+            const serial = i + 1 + autoLines.length;
             leftCellChildren.push(new Paragraph({
                 children: [new TextRun({ text: `${bn ? this.toBanglaDigits(String(serial)) : serial}। ${p.text}`, size: ctxSize, sizeComplexScript: csSize, font, language: lang })],
                 spacing: { after: 100 }

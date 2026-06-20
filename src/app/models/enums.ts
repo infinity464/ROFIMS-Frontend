@@ -251,7 +251,9 @@ export enum PresentStatusType {
     RTUOnDisciplineIssue = 'RTUOnDisciplineIssue',
     Deceased = 'Deceased',
     Absent = 'Absent',
-    Arrested = 'Arrested'
+    Arrested = 'Arrested',
+    BackFromArrested = 'BackFromArrested',
+    BackFromAbsent = 'BackFromAbsent'
 }
 
 export const PresentStatusTypeOptions = [
