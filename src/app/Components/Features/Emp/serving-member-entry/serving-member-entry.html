@@ -265,6 +265,14 @@
                             (onChange)="onMaritalStatusChange($event.value)" [filter]="true" filterPlaceholder="Search">
                         </p-select>
                     </div>
+
+                    <div class="form-field">
+                        <label class="form-label">Is RFTS Complete?</label>
+                        <p-select [options]="yesNoOptions" optionLabel="label" optionValue="value"
+                            placeholder="Select" styleClass="w-full" formControlName="isRFTSComplted"
+                            [showClear]="true">
+                        </p-select>
+                    </div>
                 </div>
 
                 @if (isMaritalStatusNotUnmarried) {

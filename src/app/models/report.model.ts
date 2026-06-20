@@ -363,10 +363,13 @@ export interface PresentStatusUnitWiseReportResponse {
 
 /** One row of the Unit + Duration nominal roll (one per matching PreviousRABServiceInfo stint). */
 export interface UnitDurationNominalRollReportRow extends ReportRowBase {
-  /** Stint start date (ISO "yyyy-MM-dd") — RAB Service "From" column. */
-  rabServiceFrom?: string | null;
-  /** Stint end date (ISO "yyyy-MM-dd"). Null when still serving in that unit. */
-  rabServiceTo?: string | null;
+  /**
+   * Full-career RAB posting history collapsed into one string, e.g.
+   * "01-05-2026 to 03-08-2026 (RAB-4), 04-08-2026-Present (RAB HQ)".
+   * Built server-side; the report emits one row per member.
+   */
+  serviceHistory?: string | null;
+  serviceHistoryBN?: string | null;
   rmks?: string | null;
 }
 

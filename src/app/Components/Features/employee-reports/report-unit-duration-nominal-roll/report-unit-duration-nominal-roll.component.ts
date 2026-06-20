@@ -91,7 +91,7 @@ export class ReportUnitDurationNominalRollComponent implements OnInit {
     get unitScopeLine(): string | null { return unitScopeLine(this.accessibleScope, this.lang); }
     get memberTypeScopeLine(): string | null { return memberTypeScopeLine(this.accessibleScope, this.lang); }
 
-    columnCatalog: { key: string; labelEN: string; labelBN: string; hint: 'Serial' | 'Personnel' | 'Date' | 'Plain' | 'Remarks'; defaultVisible: boolean }[] = [
+    columnCatalog: { key: string; labelEN: string; labelBN: string; hint: 'Serial' | 'Personnel' | 'Date' | 'Plain' | 'Remarks' | 'Multiline'; defaultVisible: boolean }[] = [
         { key: 'ser',            labelEN: 'Ser',                 labelBN: 'ক্রঃ',                   hint: 'Serial',    defaultVisible: true  },
         { key: 'orgName',        labelEN: 'Org Name',            labelBN: 'বাহিনীর নাম',            hint: 'Plain',     defaultVisible: false },
         { key: 'serviceId',      labelEN: 'Service ID',          labelBN: 'ব্যক্তিগত নম্বর',         hint: 'Plain',     defaultVisible: true  },
@@ -101,8 +101,7 @@ export class ReportUnitDurationNominalRollComponent implements OnInit {
         { key: 'trade',          labelEN: 'Trade',               labelBN: 'ট্রেড',                  hint: 'Plain',     defaultVisible: true  },
         { key: 'name',           labelEN: 'Name',                labelBN: 'নাম',                    hint: 'Personnel', defaultVisible: true  },
         { key: 'presentUnit',    labelEN: 'Present Unit',        labelBN: 'বর্তমান ইউনিট',          hint: 'Plain',     defaultVisible: true  },
-        { key: 'rabServiceFrom', labelEN: 'RAB Service From',    labelBN: 'র‍্যাব স্থিতিকাল হইতে',  hint: 'Date',      defaultVisible: true  },
-        { key: 'rabServiceTo',   labelEN: 'RAB Service To',      labelBN: 'র‍্যাব স্থিতিকাল পর্যন্ত', hint: 'Date',      defaultVisible: true  },
+        { key: 'serviceHistory', labelEN: 'Service History',     labelBN: 'চাকরির ইতিহাস',          hint: 'Multiline', defaultVisible: true  },
         { key: 'rmks',           labelEN: 'Remarks',             labelBN: 'মন্তব্য',                hint: 'Remarks',   defaultVisible: true  },
         // ── Opt-in extras (registry FieldKeys) — hidden by default ────────
         { key: 'relieverServiceId',  labelEN: 'Reliever Service ID',labelBN: 'প্রতিস্থাপক সার্ভিস আইডি', hint: 'Plain', defaultVisible: false },
@@ -112,7 +111,6 @@ export class ReportUnitDurationNominalRollComponent implements OnInit {
         { key: 'relieverTrade',      labelEN: 'Reliever Trade',     labelBN: 'প্রতিস্থাপক ট্রেড',       hint: 'Plain',    defaultVisible: false },
         { key: 'relieverJoiningDate',labelEN: 'Reliever Joining Date',labelBN: 'প্রতিস্থাপক যোগদানের তারিখ', hint: 'Date', defaultVisible: false },
         { key: 'possibleJoiningDate',labelEN: 'Possible Joining Date',labelBN: 'সম্ভাব্য যোগদানের তারিখ', hint: 'Date',  defaultVisible: false },
-        { key: 'stintUnit',      labelEN: 'Stint Unit',          labelBN: 'স্টিন্ট ইউনিট',          hint: 'Plain',     defaultVisible: false },
         { key: 'rabId',          labelEN: 'RAB ID',              labelBN: 'র‍্যাব আইডি',            hint: 'Plain',     defaultVisible: false },
         { key: 'nameBangla',     labelEN: 'Name (Bangla)',       labelBN: 'নাম (বাংলা)',            hint: 'Plain',     defaultVisible: false },
         { key: 'nid',            labelEN: 'NID',                 labelBN: 'এনআইডি',                hint: 'Plain',     defaultVisible: false },
@@ -140,7 +138,7 @@ export class ReportUnitDurationNominalRollComponent implements OnInit {
     private static readonly colKeyToBackend: Record<string, string> = {
         ser: 'ser', name: 'personnel', rank: 'armyRank', orgName: 'orgName',
         serviceId: 'serviceId', corps: 'corps', trade: 'trade', presentUnit: 'presentUnit',
-        rabServiceFrom: 'rabServiceFrom', rabServiceTo: 'rabServiceTo', rmks: 'rmks',
+        serviceHistory: 'serviceHistory', rmks: 'rmks',
     };
     /** Extra (registry-keyed) columns rendered as formatted dates. */
     private static readonly extraDateKeys = new Set([
@@ -437,7 +435,12 @@ export class ReportUnitDurationNominalRollComponent implements OnInit {
         this.reportService.runDynamicUnitDurationReport({
             columns,
             criteria,
-            postingStatusFilter: 'Servings',
+            // Leave null so the backend applies the access-based rule:
+            // full-access users see ex + serving members who served the unit
+            // during the period; org-scope-restricted users are forced to
+            // "Servings" server-side. (Hardcoding "Servings" here wrongly hid
+            // ex-members from full-access admins.)
+            postingStatusFilter: null,
             stintUnitIds: this.selectedRabUnitIds,
             stintOverlapFrom: this.fmtDate(this.fromDate),
             stintOverlapTo: this.fmtDate(this.toDate),
@@ -499,11 +502,16 @@ export class ReportUnitDurationNominalRollComponent implements OnInit {
             case 'trade':          return this.codeValue(row.trade, row.tradeBN);
             case 'name':           return this.codeValue(row.name, row.nameBN);
             case 'presentUnit':    return this.codeValue(row.presentUnit, row.presentUnitBN);
-            case 'rabServiceFrom': return this.formatDateLabel(row.rabServiceFrom);
-            case 'rabServiceTo':   return this.formatDateLabel(row.rabServiceTo);
+            case 'serviceHistory': return this.codeValue(row.serviceHistory, row.serviceHistoryBN);
             case 'rmks':           return row.rmks ?? '';
             default:               return this.extraCellValue(row, key);
         }
+    }
+
+    /** Split a multiline cell (e.g. Service History) into its per-stint lines. */
+    historyLines(row: UnitDurationNominalRollReportRow, key: string): string[] {
+        const v = this.cellValue(row, key);
+        return v ? v.split('\n') : [];
     }
 
     /** Resolve an opt-in (registry-keyed) column from the spread property bag. */
@@ -533,8 +541,8 @@ export class ReportUnitDurationNominalRollComponent implements OnInit {
             nameBN:         d['nameBangla']     as string,
             presentUnit:    d['presentUnit']    as string,
             presentUnitBN:  d['presentUnitBN']  as string,
-            rabServiceFrom: d['rabServiceFrom'] as string,
-            rabServiceTo:   d['rabServiceTo']   as string,
+            serviceHistory:   d['serviceHistory']   as string,
+            serviceHistoryBN: d['serviceHistoryBN'] as string,
             rmks:           null,
         } as UnitDurationNominalRollReportRow;
     }
@@ -603,6 +611,12 @@ export class ReportUnitDurationNominalRollComponent implements OnInit {
                         return new TableCell({ ...cellOpts, children });
                     }
                     case 'Date': return new TableCell({ ...cellOpts, children: [new Paragraph({ children: [run(this.cellValue(row, col.key), { fontKey: mono, chSp: isBn ? 0 : 4 })] })] });
+                    case 'Multiline': {
+                        const lines = this.historyLines(row, col.key);
+                        const paras = (lines.length ? lines : ['']).map((ln, k) =>
+                            new Paragraph({ spacing: { after: k < lines.length - 1 ? 40 : 0 }, children: [run(ln)] }));
+                        return new TableCell({ ...cellOpts, children: paras });
+                    }
                     case 'Remarks': return new TableCell({ ...cellOpts, children: [new Paragraph({ children: [run(row.rmks || '', { color: C.gray })] })] });
                     case 'Plain':
                     default: return new TableCell({ ...cellOpts, children: [new Paragraph({ children: [run(this.cellValue(row, col.key))] })] });
@@ -694,6 +708,10 @@ export class ReportUnitDurationNominalRollComponent implements OnInit {
                     return `<td class="td-personnel"><div class="personnel-name">${esc(this.cellValue(row, 'name'))}</div>${metaHtml}</td>`;
                 }
                 case 'Date': return `<td class="td-date">${esc(this.cellValue(row, col.key))}</td>`;
+                case 'Multiline': {
+                    const lines = this.historyLines(row, col.key);
+                    return `<td class="td-history">${lines.map(ln => `<div>${esc(ln)}</div>`).join('')}</td>`;
+                }
                 case 'Remarks': return `<td class="td-rmks">${esc(row.rmks || '')}</td>`;
                 case 'Plain':
                 default: return `<td>${esc(this.cellValue(row, col.key))}</td>`;
@@ -750,6 +768,8 @@ export class ReportUnitDurationNominalRollComponent implements OnInit {
     .personnel-name { font-family: ${sans}; font-weight: 600; font-size: 10pt; color: #0b0b0b; line-height: 1.2; }
     .personnel-meta { margin-top: 0.7mm; font-family: ${mono}; font-size: 7pt; letter-spacing: 0.08em; text-transform: uppercase; color: #6b6b6b; ${isBn ? 'letter-spacing:0;text-transform:none;font-family:' + sans + ';' : ''} }
     .td-date { font-family: ${mono}; letter-spacing: 0.02em; white-space: nowrap; }
+    .td-history { vertical-align: top; min-width: 48mm; }
+    .td-history > div { white-space: nowrap; line-height: 1.35; }
 </style></head><body><div class="paper">
     <header class="paper-head">
         <div class="overline">${esc(this.rabOverlineText)}</div>

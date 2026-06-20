@@ -1398,6 +1398,7 @@ export class ServingMemberEntry implements OnInit {
             tradeMark: [''],
             gender: [null, Validators.required],
             maritalStatus: [null],
+            isRFTSComplted: [null],
             relationship: [null],
             spouseName: [''],
             prefix: [null, Validators.required],

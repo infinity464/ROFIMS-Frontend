@@ -750,3 +750,9 @@
     }
     .column-order-empty { color: rgba(255, 255, 255, 0.55); }
 }
+
+:host ::ng-deep .rab-td-history {
+    vertical-align: top;
+    white-space: nowrap;
+    line-height: 1.4;
+}

@@ -22,7 +22,6 @@ export const environment = {
 //     jsreportUrl: '/jsreport-api'
 // };
 
-
 // export const environment = {
 //     production: true,
 //     apis: {

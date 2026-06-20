@@ -3,7 +3,7 @@
 <div class="employee-reports-page">
 <div class="report-filter-card">
     <div class="report-filter-card-title">
-        <h1 class="report-page-title">Unit &amp; Specific Duration wise Nominal Roll</h1>
+        <h1 class="report-page-title">{{ reportTitle }}</h1>
     </div>
     <div class="report-filter-header" [class.open]="filterOpen" (click)="toggleFilter()" role="button" tabindex="0" (keydown.enter)="toggleFilter()" (keydown.space)="toggleFilter()">
         <div class="report-filter-header-left">
@@ -14,7 +14,7 @@
             </div>
         </div>
         <div class="report-filter-header-right">
-            <span class="report-filters-badge" [class.show]="activeFilterCount > 0">{{ activeFilterCount }} active</span>
+            <span class="report-filters-badge" [class.show]="activeFilterCount > 0">{{ activeFilterCount }} {{ lang === 'en' ? 'active' : 'সক্রিয়' }}</span>
             <div class="report-chevron"><svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M2 4l4 4 4-4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
         </div>
     </div>
@@ -26,62 +26,62 @@
                     <label>{{ lang === 'en' ? 'RAB Unit' : 'র‍্যাব ইউনিট' }} <span style="color:#b03a3a">*</span></label>
                     <p-multiSelect [options]="rabUnitOptions" [(ngModel)]="selectedRabUnitIds" (ngModelChange)="onFilterChange()"
                         optionLabel="label" optionValue="value" display="chip" [filter]="true"
-                        placeholder="Select" styleClass="w-full" appendTo="body"></p-multiSelect>
+                        [placeholder]="lang === 'en' ? 'Select' : 'নির্বাচন করুন'" styleClass="w-full" appendTo="body"></p-multiSelect>
                 </div>
                 <div class="report-filter-field">
                     <label>{{ lang === 'en' ? 'Mother Org' : 'মাতৃ সংস্থা' }}</label>
                     <p-multiSelect [options]="orgOptions" [(ngModel)]="selectedOrgIds" (ngModelChange)="onOrgChange()"
                         optionLabel="label" optionValue="value" display="chip" [filter]="true"
-                        placeholder="Select" styleClass="w-full" appendTo="body"></p-multiSelect>
+                        [placeholder]="lang === 'en' ? 'Select' : 'নির্বাচন করুন'" styleClass="w-full" appendTo="body"></p-multiSelect>
                 </div>
                 <div class="report-filter-field">
                     <label>{{ lang === 'en' ? 'Member Type' : 'সদস্য ধরন' }}</label>
                     <p-multiSelect [options]="memberTypeOptions" [(ngModel)]="selectedMemberTypeIds" (ngModelChange)="onMemberTypeChange()"
                         optionLabel="label" optionValue="value" display="chip" [filter]="true"
-                        placeholder="Select" styleClass="w-full" appendTo="body"></p-multiSelect>
+                        [placeholder]="lang === 'en' ? 'Select' : 'নির্বাচন করুন'" styleClass="w-full" appendTo="body"></p-multiSelect>
                 </div>
                 <div class="report-filter-field">
                     <label>{{ lang === 'en' ? 'Rank' : 'পদবী' }}</label>
                     <p-multiSelect [options]="rankOptions" [(ngModel)]="selectedRankIds" (ngModelChange)="onFilterChange()"
                         optionLabel="label" optionValue="value" display="chip" [filter]="true"
-                        [disabled]="selectedOrgIds.length === 0" placeholder="Select" styleClass="w-full" appendTo="body"></p-multiSelect>
+                        [disabled]="selectedOrgIds.length === 0" [placeholder]="lang === 'en' ? 'Select' : 'নির্বাচন করুন'" styleClass="w-full" appendTo="body"></p-multiSelect>
                 </div>
                 <div class="report-filter-field">
                     <label>{{ lang === 'en' ? 'Corps' : 'কোর' }}</label>
                     <p-multiSelect [options]="corpsOptions" [(ngModel)]="selectedCorpsIds" (ngModelChange)="onCorpsChange()"
                         optionLabel="label" optionValue="value" display="chip" [filter]="true"
                         [disabled]="selectedOrgIds.length === 0"
-                        placeholder="Select" styleClass="w-full" appendTo="body"></p-multiSelect>
+                        [placeholder]="lang === 'en' ? 'Select' : 'নির্বাচন করুন'" styleClass="w-full" appendTo="body"></p-multiSelect>
                 </div>
                 <div class="report-filter-field">
                     <label>{{ lang === 'en' ? 'Trade' : 'ট্রেড' }}</label>
                     <p-multiSelect [options]="tradeOptions" [(ngModel)]="selectedTradeIds"
                         optionLabel="label" optionValue="value" display="chip" [filter]="true"
                         [disabled]="selectedCorpsIds.length === 0"
-                        placeholder="Select" styleClass="w-full" appendTo="body"></p-multiSelect>
+                        [placeholder]="lang === 'en' ? 'Select' : 'নির্বাচন করুন'" styleClass="w-full" appendTo="body"></p-multiSelect>
                 </div>
                 <div class="report-filter-field">
                     <label>{{ lang === 'en' ? 'Duration From' : 'সময়কাল হইতে' }}</label>
-                    <p-datepicker [(ngModel)]="fromDate" dateFormat="dd-mm-yy" placeholder="Select" [showIcon]="true" appendTo="body"></p-datepicker>
+                    <p-datepicker [(ngModel)]="fromDate" dateFormat="dd-mm-yy" [placeholder]="lang === 'en' ? 'Select' : 'নির্বাচন করুন'" [showIcon]="true" appendTo="body"></p-datepicker>
                 </div>
                 <div class="report-filter-field">
                     <label>{{ lang === 'en' ? 'Duration To' : 'সময়কাল পর্যন্ত' }}</label>
-                    <p-datepicker [(ngModel)]="toDate" dateFormat="dd-mm-yy" placeholder="Select" [showIcon]="true" appendTo="body"></p-datepicker>
+                    <p-datepicker [(ngModel)]="toDate" dateFormat="dd-mm-yy" [placeholder]="lang === 'en' ? 'Select' : 'নির্বাচন করুন'" [showIcon]="true" appendTo="body"></p-datepicker>
                 </div>
             </div>
 
             @if (searched) {
                 <div class="ds-field-group">
-                    <div class="ds-group-divider"><span class="ds-group-label">Columns</span><span class="ds-group-line"></span></div>
+                    <div class="ds-group-divider"><span class="ds-group-label">{{ lang === 'en' ? 'Columns' : 'কলামসমূহ' }}</span><span class="ds-group-line"></span></div>
                     <div class="ds-field">
-                        <label class="ds-field-label">Visible columns</label>
+                        <label class="ds-field-label">{{ lang === 'en' ? 'Visible columns' : 'দৃশ্যমান কলাম' }}</label>
                         <p-multiSelect [options]="columnPickerOptions" [(ngModel)]="selectedColumnKeys"
                             (ngModelChange)="onColumnsChange()"
                             optionLabel="label" optionValue="value" display="chip" [filter]="true"
-                            placeholder="Pick columns…" styleClass="w-full" appendTo="body"></p-multiSelect>
+                            [placeholder]="lang === 'en' ? 'Pick columns…' : 'কলাম নির্বাচন করুন…'" styleClass="w-full" appendTo="body"></p-multiSelect>
                     </div>
                     <div class="ds-field">
-                        <label class="ds-field-label column-order-label">Column order — drag to rearrange</label>
+                        <label class="ds-field-label column-order-label">{{ lang === 'en' ? 'Column order — drag to rearrange' : 'কলামের ক্রম — টেনে সাজান' }}</label>
                         <div class="column-order-strip" (dragover)="onColumnDragOver($event)">
                             @for (col of visibleColumns; track col.key) {
                                 <span class="column-order-chip" [class.dragging]="draggingColumnKey === col.key"
@@ -90,13 +90,13 @@
                                     (drop)="onColumnDrop(col.key, $event)">
                                     <i class="pi pi-bars chip-handle" aria-hidden="true"></i>
                                     <span class="chip-label">{{ lang === 'bn' ? col.labelBN : col.labelEN }}</span>
-                                    <button type="button" class="chip-remove" (click)="removeColumn(col.key)" title="Remove column">
+                                    <button type="button" class="chip-remove" (click)="removeColumn(col.key)" [title]="lang === 'en' ? 'Remove column' : 'কলাম সরান'">
                                         <i class="pi pi-times" aria-hidden="true"></i>
                                     </button>
                                 </span>
                             }
                             @if (visibleColumns.length === 0) {
-                                <span class="column-order-empty">Pick columns above to populate the table.</span>
+                                <span class="column-order-empty">{{ lang === 'en' ? 'Pick columns above to populate the table.' : 'টেবিল পূরণ করতে উপরে কলাম নির্বাচন করুন।' }}</span>
                             }
                         </div>
                     </div>
@@ -125,7 +125,7 @@
             <button type="button" class="report-btn-export" (click)="toggleExportDropdown($event)"
                 [disabled]="loading || exporting || list.length === 0">
                 @if (exporting) {
-                    <i class="pi pi-spin pi-spinner" style="font-size:13px"></i> Generating...
+                    <i class="pi pi-spin pi-spinner" style="font-size:13px"></i> {{ lang === 'en' ? 'Generating...' : 'তৈরি হচ্ছে...' }}
                 } @else {
                     <svg width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M6.5 1v7M3.5 5.5l3 3 3-3M1.5 10.5h10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
                     {{ lang === 'en' ? 'Export' : 'এক্সপোর্ট' }}
@@ -133,9 +133,9 @@
             </button>
             @if (exportDropdownOpen) {
                 <div class="report-export-dropdown" (click)="$event.stopPropagation()">
-                    <button type="button" class="report-export-item report-export-print" (click)="exportAs('print')"><i class="pi pi-print" style="font-size:0.75rem"></i> Print</button>
-                    <button type="button" class="report-export-item report-export-word" (click)="exportAs('word')"><span class="report-export-icon">⬇</span> Word</button>
-                    <button type="button" class="report-export-item report-export-excel" (click)="exportAs('excel')"><span class="report-export-icon">⬇</span> Excel</button>
+                    <button type="button" class="report-export-item report-export-print" (click)="exportAs('print')"><i class="pi pi-print" style="font-size:0.75rem"></i> {{ lang === 'en' ? 'Print' : 'প্রিন্ট' }}</button>
+                    <button type="button" class="report-export-item report-export-word" (click)="exportAs('word')"><span class="report-export-icon">⬇</span> {{ lang === 'en' ? 'Word' : 'ওয়ার্ড' }}</button>
+                    <button type="button" class="report-export-item report-export-excel" (click)="exportAs('excel')"><span class="report-export-icon">⬇</span> {{ lang === 'en' ? 'Excel' : 'এক্সেল' }}</button>
                 </div>
             }
         </div>
@@ -198,6 +198,11 @@
                                     </td>
                                 }
                                 @case ('Date') { <td class="rab-td-date">{{ cellValue(row, col.key) }}</td> }
+                                @case ('Multiline') {
+                                    <td class="rab-td-history">
+                                        @for (line of historyLines(row, col.key); track $index) { <div>{{ line }}</div> }
+                                    </td>
+                                }
                                 @case ('Remarks') { <td class="rab-td-rmks">{{ row.rmks || '' }}</td> }
                                 @case ('Plain') { <td>{{ cellValue(row, col.key) }}</td> }
                                 @default { <td>{{ cellValue(row, col.key) }}</td> }
