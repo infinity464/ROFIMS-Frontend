@@ -390,10 +390,15 @@ $section-margin: 1rem;
     ::ng-deep .p-datatable-table {
         border: 1px solid var(--surface-border);
     }
-    ::ng-deep th,
+    ::ng-deep th {
+        border: 1px solid var(--surface-border);
+        padding: 0.5rem 0.75rem;
+        font-weight: 700;
+    }
     ::ng-deep td {
         border: 1px solid var(--surface-border);
         padding: 0.5rem 0.75rem;
+        color: #000;
     }
 }
 
@@ -504,6 +509,22 @@ $section-margin: 1rem;
     .core-row-three {
         flex-direction: column;
         gap: 0.25rem;
+    }
+}
+
+// ── Status pill (Present Status table) ──────────────────────────
+.sp-status-pill {
+    display: inline-block;
+    padding: 0.15rem 0.55rem;
+    border-radius: 10px;
+    font-size: 0.72rem;
+    font-weight: 600;
+    background: #e2e3e5;
+    color: #555;
+
+    &--active {
+        background: #d4edda;
+        color: #155724;
     }
 }
 
@@ -622,5 +643,15 @@ $section-margin: 1rem;
     .address-label,
     .address-value {
         color: var(--text-color);
+    }
+
+    .sp-status-pill {
+        background: rgba(255, 255, 255, 0.08);
+        color: var(--text-color-secondary);
+
+        &--active {
+            background: rgba(76, 175, 80, 0.2);
+            color: #81c784;
+        }
     }
 }
