@@ -45,19 +45,6 @@
             <i class="pi pi-spin pi-spinner text-4xl text-500"></i>
         </div>
     } @else if (profile) {
-        <!-- On-Movement banner: member is currently out on a Temporary movement -->
-        @if (isOnMovement && currentMovement) {
-            <div class="on-movement-banner" role="status">
-                <i class="pi pi-send"></i>
-                <span class="on-movement-text">
-                    {{ profileLang === 'en' ? 'Currently on temporary movement at' : 'বর্তমানে সাময়িক মুভমেন্টে আছেন' }}
-                    <strong>{{ currentMovementUnitName }}</strong>
-                    @if (currentMovement.movementLetterNo) {
-                        <span class="on-movement-meta">({{ profileLang === 'en' ? 'Letter' : 'পত্র' }}: {{ currentMovement.movementLetterNo }})</span>
-                    }
-                </span>
-            </div>
-        }
         <!-- Basic Service Information -->
         <div class="content-section text-900">
             <div class="section-heading">{{ L['section.basicService'] }}</div>

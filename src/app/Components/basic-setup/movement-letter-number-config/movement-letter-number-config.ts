@@ -72,8 +72,8 @@ export class MovementLetterNumberConfigComponent implements OnInit {
         this.configForm = this.fb.group({
             configId: [0],
             moveOrderType: [null as MoveOrderType | null, Validators.required],
-            prefix: [null, Validators.required],
-            prefixBN: [null, Validators.required],
+            prefix: [null],
+            prefixBN: [null],
             startNumber: [null, [Validators.required, Validators.min(1)]],
             includeDateInNumber: [false]
         });
@@ -101,16 +101,26 @@ export class MovementLetterNumberConfigComponent implements OnInit {
     }
 
     getPreview(): string {
-        const prefix = this.configForm.get('prefix')?.value || 'PREFIX';
+        const rawPrefix = (this.configForm.get('prefix')?.value ?? '').toString().trim();
         const startNumber = this.configForm.get('startNumber')?.value || '10001';
-        const sep = prefix.endsWith('/') || prefix.endsWith('-') ? '' : '-';
-        if (this.configForm.get('includeDateInNumber')?.value) {
-            const now = new Date();
-            const year = now.getFullYear();
-            const month = String(now.getMonth() + 1).padStart(2, '0');
-            return `${prefix}${sep}${year}/${month}/${startNumber}`;
+        const includeDate = this.configForm.get('includeDateInNumber')?.value;
+        const now = new Date();
+        const year = now.getFullYear();
+        const month = String(now.getMonth() + 1).padStart(2, '0');
+
+        // No prefix → number leads. CC drops the month ("StartNo/Year");
+        // other types keep "StartNo/Year/Month". Without date, just "StartNo".
+        if (!rawPrefix) {
+            if (!includeDate) return `${startNumber}`;
+            const isCC = this.configForm.get('moveOrderType')?.value === MoveOrderType.CC;
+            return isCC ? `${startNumber}/${year}` : `${startNumber}/${year}/${month}`;
         }
-        return `${prefix}${sep}${startNumber}`;
+
+        const sep = rawPrefix.endsWith('/') || rawPrefix.endsWith('-') ? '' : '-';
+        if (includeDate) {
+            return `${rawPrefix}${sep}${year}/${month}/${startNumber}`;
+        }
+        return `${rawPrefix}${sep}${startNumber}`;
     }
 
     onSearch(event: Event) {
@@ -152,6 +162,8 @@ export class MovementLetterNumberConfigComponent implements OnInit {
         const payload: any = {
             ...this.configForm.value,
             configId: 0,
+            prefix: this.configForm.value.prefix ?? '',
+            prefixBN: this.configForm.value.prefixBN ?? '',
             currentNumber: 0,
             currentYear: 0,
             currentMonth: 0,
@@ -194,7 +206,7 @@ export class MovementLetterNumberConfigComponent implements OnInit {
         const formVal = this.configForm.getRawValue();
         const payload: any = {
             ...existing,
-            prefix: formVal.prefix,
+            prefix: formVal.prefix ?? '',
             prefixBN: formVal.prefixBN ?? '',
             includeDateInNumber: formVal.includeDateInNumber ?? false,
             lastUpdatedBy: this.currentUser,

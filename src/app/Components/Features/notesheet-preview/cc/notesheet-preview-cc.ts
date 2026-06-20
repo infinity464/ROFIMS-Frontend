@@ -807,7 +807,7 @@ html, body { margin: 0; padding: 0; background: transparent; }
                         new TableCell({
                             width: { size: secondLeftW, type: WidthType.DXA },
                             borders: noBorder,
-                            children: [para('এম সিসি নং ৪১৭০/২০২৬', { size: SZ_BODY })]
+                            children: [para(`এম সিসি নং ${this.letterNoBn}`, { size: SZ_BODY })]
                         }),
                         new TableCell({
                             width: { size: secondRightW, type: WidthType.DXA },
