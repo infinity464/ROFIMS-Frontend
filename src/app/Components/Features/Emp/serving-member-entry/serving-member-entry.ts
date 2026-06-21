@@ -846,8 +846,8 @@ export class ServingMemberEntry implements OnInit {
             gallantryAward: [null],
             lastEducationQualification: [null],
             medicalCategory: [null],
-            tribal: [null],
-            freedomFighter: [null],
+            tribal: [0],
+            freedomFighter: [0],
             heightFeet: [null, [Validators.min(0), Validators.max(8)]],
             heightInch: [null, [Validators.min(0), Validators.max(11.5)]],
             weightKg: [null, [Validators.min(0), Validators.max(200)]],
@@ -892,7 +892,15 @@ export class ServingMemberEntry implements OnInit {
             error: (err) => console.error(err)
         });
         this.commonCodeService.getAllActiveCommonCodesType('MedicalCategoryType').subscribe({
-            next: (res) => (this.medicalCategories = (res ?? []).map((d: any) => ({ label: d.codeValueEN ?? String(d.codeId), value: d.codeId }))),
+            next: (res) => {
+                this.medicalCategories = (res ?? []).map((d: any) => ({ label: d.codeValueEN ?? String(d.codeId), value: d.codeId }));
+                // Default-select "A (AYEE)" (case-insensitive match on label).
+                const ctrl = this.personalInfoForm.get('medicalCategory');
+                if (ctrl && ctrl.value == null) {
+                    const defaultCat = this.medicalCategories.find((c) => (c.label ?? '').trim().toLowerCase() === 'a (ayee)');
+                    if (defaultCat) ctrl.setValue(defaultCat.value);
+                }
+            },
             error: (err) => console.error(err)
         });
     }
