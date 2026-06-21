@@ -41,6 +41,9 @@ export interface MovementInfoByEmployeeDto {
     dateOfReduce: string | null;
     handoverDate: string | null;
     takeoverDate: string | null;
+    /** True once a Temporary movement's return has been recorded. */
+    isReturned: boolean;
+    returnDate: string | null;
 }
 
 /** Payload for recording the return of a Temporary movement. */

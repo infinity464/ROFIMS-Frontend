@@ -70,8 +70,8 @@ export class ReportEducationComponent implements OnInit, OnChanges {
     list: EducationReportRow[] = [];
     loading = false;
     first = 0;
-    rows = 20;
-    rowsPerPageOptions = [20, 50, 100];
+    rows = 100;
+    rowsPerPageOptions = [100, 500, 1000, 5000];
     totalRecords = 0;
     searched = false;
 
@@ -330,6 +330,10 @@ export class ReportEducationComponent implements OnInit, OnChanges {
     }
     get rabPageOfLabel(): string {
         return this.lang === 'bn' ? 'পৃষ্ঠা ১ / ১' : 'PAGE 1 OF 1';
+    }
+    get rabTotalText(): string {
+        const n = this.lang === 'bn' ? BanglaNumerals.toBangla(String(this.totalRecords)) : String(this.totalRecords);
+        return this.lang === 'bn' ? `মোট · ${n} রেকর্ড` : `Total · ${n} records`;
     }
 
     constructor(
@@ -882,7 +886,10 @@ export class ReportEducationComponent implements OnInit, OnChanges {
             children: [
                 stripCell([new TextRun({ text: wsafe(this.rabCriteriaTitle), font: sans, size: S.stripLabel, ...bnRunExtras(S.stripLabel), bold: true, color: C.black, characterSpacing: isBn ? 0 : 40, allCaps: !isBn })], AlignmentType.LEFT),
                 stripCell(
-                    [new TextRun({ text: wsafe(`${this.rabGeneratedLabel} · ${this.rabFormattedDate}`), font: sans, size: S.stripDate, ...bnRunExtras(S.stripDate), bold: true, color: C.mutedText, characterSpacing: isBn ? 0 : 30, allCaps: !isBn })],
+                    [
+                        new TextRun({ text: wsafe(this.rabTotalText), font: sans, size: S.stripDate, ...bnRunExtras(S.stripDate), bold: true, color: C.black, characterSpacing: isBn ? 0 : 30, allCaps: !isBn }),
+                        new TextRun({ text: wsafe(`${this.rabGeneratedLabel} · ${this.rabFormattedDate}`), font: sans, size: S.stripDate, ...bnRunExtras(S.stripDate), bold: true, color: C.mutedText, characterSpacing: isBn ? 0 : 30, allCaps: !isBn, break: 1 })
+                    ],
                     AlignmentType.RIGHT
                 )
             ]
@@ -1069,7 +1076,7 @@ export class ReportEducationComponent implements OnInit, OnChanges {
         aoa.push([wsafe(this.rabSectionTitle), ...pad(totalCols - 1)]);
         if (this.rabSubtitleText) aoa.push([wsafe(this.rabSubtitleText), ...pad(totalCols - 1)]);
         aoa.push(pad(totalCols));
-        aoa.push([`${this.rabCriteriaTitle}  ·  ${this.rabGeneratedLabel}: ${this.rabFormattedDate}`, ...pad(totalCols - 1)]);
+        aoa.push([`${this.rabCriteriaTitle}  ·  ${this.rabTotalText}  ·  ${this.rabGeneratedLabel}: ${this.rabFormattedDate}`, ...pad(totalCols - 1)]);
         for (const it of this.criteriaItems) aoa.push([`${it.label}: ${it.value}`, ...pad(totalCols - 1)]);
         aoa.push(pad(totalCols));
         aoa.push(headers);
@@ -1269,6 +1276,8 @@ export class ReportEducationComponent implements OnInit, OnChanges {
     .paper-section-sub { font-family: ${serif}; font-style: italic; color: #555; font-size: 10pt; }
     .criteria { margin: 5mm 0 6mm; border: 1px solid #d8d6d0; border-radius: 1mm; overflow: hidden; }
     .criteria-strip { display: flex; justify-content: space-between; align-items: center; padding: 1.5mm 3mm; background: #f4f4f2; border-bottom: 1px solid #d8d6d0; font-size: 8pt; letter-spacing: 0.2em; text-transform: uppercase; color: #4a4a4a; font-weight: 600; }
+    .criteria-strip-date { opacity: 0.9; font-weight: 500; display: flex; flex-direction: column; align-items: flex-end; gap: 0.4mm; text-align: right; }
+    .criteria-strip-total { color: #b78b3b; font-weight: 700; text-transform: none; letter-spacing: normal; }
     .criteria-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(38mm, 1fr)); }
     .cell { padding: 2mm 3mm; border-right: 1px solid #e6e4de; border-top: 1px solid #e6e4de; }
     .cell-label { font-size: 7pt; letter-spacing: 0.16em; text-transform: uppercase; color: #8a8a8a; margin-bottom: 1mm; font-weight: 600; }
@@ -1303,7 +1312,7 @@ export class ReportEducationComponent implements OnInit, OnChanges {
         <div class="criteria">
             <div class="criteria-strip">
                 <span>${esc(this.rabCriteriaTitle)}</span>
-                <span>${esc(this.rabGeneratedLabel)} &middot; ${esc(this.rabFormattedDate)}</span>
+                <span class="criteria-strip-date"><span class="criteria-strip-total">${esc(this.rabTotalText)}</span><span class="criteria-strip-gen">${esc(this.rabGeneratedLabel)} &middot; ${esc(this.rabFormattedDate)}</span></span>
             </div>
             ${criteriaGridHtml}
         </div>

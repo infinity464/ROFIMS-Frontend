@@ -13,6 +13,10 @@ import { ChatService } from '@/services/chat.service';
 import { Router } from '@angular/router';
 import { RabUnitAorMap } from '../../Components/basic-setup/rab-unit-aor-map/rab-unit-aor-map';
 import { ServingMembersService } from '@/services/serving-members.service';
+import { LeaveInfoService } from '@/services/leave-info.service';
+import { MovementInfoService } from '@/services/movement-info.service';
+import { PostingService } from '@/services/posting.service';
+import type { EmployeePostingProcessingStatusDto } from '@/models/posting.model';
 import { PermanentPostingMORecordService } from '@/services/permanent-posting-mo-record.service';
 import { PermanentPostingJoineeDetailService } from '@/services/permanent-posting-joinee-detail.service';
 import { StatisticsService, type ManpowerSummaryResponse } from '@/services/statistics.service';
@@ -95,8 +99,33 @@ type LookupCard = {
     corps: string;
     trade: string;
     motherOrg: string;
+    motherUnit: string;
+    rabUnit: string;
     profileImages: string | null;
     photoUrl: string | null;
+    /** Presently on leave (today within an approved leave window). */
+    onLeave: boolean;
+    leaveType: string;
+    leaveFrom: string | null;
+    leaveTo: string | null;
+    /** On a temporary movement whose return has not been recorded. */
+    onMovement: boolean;
+    movementDestination: string;
+    /** In-progress posting line, e.g. "New Posting: Notesheet - Draft" (empty when none). */
+    postingStatus: string;
+};
+
+/** Posting-step code → display label (mirrors profile-labels.ts 'posting.step.*'). */
+const POSTING_STEP_LABELS: Record<string, string> = {
+    DraftPosting: 'Draft Posting',
+    DraftInterPosting: 'Draft Inter Posting',
+    NoteSheetDraft: 'Notesheet - Draft',
+    NoteSheetInitiator: 'Notesheet - Pending Initiator',
+    NoteSheetRecommender: 'Notesheet - Pending Recommender',
+    NoteSheetFinalApproval: 'Notesheet - Pending Final Approval',
+    NoteSheetApproved: 'Notesheet Approved',
+    PostingOrderGenerated: 'Posting Order Generated',
+    PostingOrderApproved: 'Posting Order Approved'
 };
 type CalItem = { id: string; day: string; mon: string; dow: string; title: string; description: string; type: 'task' | 'event'; sev: Severity; tag: string; sortTs: number };
 
@@ -340,6 +369,9 @@ type CalItem = { id: string; day: string; mon: string; dow: string; title: strin
                                     @if (r.nameBn) {
                                         <div class="text-muted-color truncate">{{ r.nameBn }}</div>
                                     }
+                                    @if (r.postingStatus) {
+                                        <div class="text-primary font-medium text-sm mt-1 truncate" [title]="r.postingStatus">{{ r.postingStatus }}</div>
+                                    }
                                     <div class="flex flex-wrap gap-2 mt-3">
                                         <span class="inline-flex items-center gap-2 px-3 py-1 rounded-md bg-surface-100 dark:bg-surface-800 border border-surface-200 dark:border-surface-700 text-sm">
                                             <span class="text-muted-color uppercase text-xs">RAB ID</span>
@@ -352,6 +384,36 @@ type CalItem = { id: string; day: string; mon: string; dow: string; title: strin
                                     </div>
                                 </div>
                             </div>
+
+                            <!-- present status: on leave / on temporary movement -->
+                            @if (r.onLeave || r.onMovement) {
+                                <div class="flex flex-wrap gap-2 px-4 pb-4">
+                                    @if (r.onLeave) {
+                                        <button
+                                            type="button"
+                                            class="inline-flex items-center gap-2 px-3 py-1.5 rounded-md bg-amber-100 dark:bg-amber-400/10 border border-amber-300 dark:border-amber-700 text-amber-800 dark:text-amber-300 text-sm cursor-pointer"
+                                            (click)="goToLeaveHistory()"
+                                            title="View leave history"
+                                        >
+                                            <i class="pi pi-calendar-times"></i>
+                                            <span class="font-medium">On Leave</span>
+                                            <span class="opacity-80">{{ r.leaveType ? '(' + r.leaveType + ') ' : '' }}{{ fmtDate(r.leaveFrom) }} – {{ fmtDate(r.leaveTo) }}</span>
+                                        </button>
+                                    }
+                                    @if (r.onMovement) {
+                                        <button
+                                            type="button"
+                                            class="inline-flex items-center gap-2 px-3 py-1.5 rounded-md bg-blue-100 dark:bg-blue-400/10 border border-blue-300 dark:border-blue-700 text-blue-800 dark:text-blue-300 text-sm cursor-pointer"
+                                            (click)="goToMovementList()"
+                                            title="View movement list"
+                                        >
+                                            <i class="pi pi-map-marker"></i>
+                                            <span class="font-medium">Present Location</span>
+                                            <span class="opacity-80">{{ r.movementDestination || 'On temporary movement' }}</span>
+                                        </button>
+                                    }
+                                </div>
+                            }
 
                             <!-- attribute boxes -->
                             <div class="grid grid-cols-2 sm:grid-cols-4 border-t border-surface-200 dark:border-surface-700">
@@ -370,6 +432,18 @@ type CalItem = { id: string; day: string; mon: string; dow: string; title: strin
                                 <div class="p-3">
                                     <div class="flex items-center gap-2 text-muted-color text-xs uppercase mb-1"><i class="pi pi-building"></i> Mother Org</div>
                                     <div class="text-surface-900 dark:text-surface-0 truncate" [class.text-muted-color]="!r.motherOrg" [class.italic]="!r.motherOrg">{{ r.motherOrg || 'Not assigned' }}</div>
+                                </div>
+                            </div>
+
+                            <!-- mother unit + RAB unit -->
+                            <div class="grid grid-cols-2 border-t border-surface-200 dark:border-surface-700">
+                                <div class="p-3 border-r border-surface-200 dark:border-surface-700">
+                                    <div class="flex items-center gap-2 text-muted-color text-xs uppercase mb-1"><i class="pi pi-sitemap"></i> Mother Unit</div>
+                                    <div class="text-surface-900 dark:text-surface-0 truncate" [class.text-muted-color]="!r.motherUnit" [class.italic]="!r.motherUnit">{{ r.motherUnit || 'Not assigned' }}</div>
+                                </div>
+                                <div class="p-3">
+                                    <div class="flex items-center gap-2 text-muted-color text-xs uppercase mb-1"><i class="pi pi-map-marker"></i> RAB Unit</div>
+                                    <div class="text-surface-900 dark:text-surface-0 truncate" [class.text-muted-color]="!r.rabUnit" [class.italic]="!r.rabUnit">{{ r.rabUnit || 'Not assigned' }}</div>
                                 </div>
                             </div>
 
@@ -441,16 +515,7 @@ type CalItem = { id: string; day: string; mon: string; dow: string; title: strin
                             <div class="text-muted-color text-xs uppercase mb-1">Files</div>
                             <div class="flex flex-col items-start gap-1">
                                 @for (f of noticeFiles(n); track f.fileId) {
-                                    <button
-                                        type="button"
-                                        pButton
-                                        text
-                                        size="small"
-                                        class="justify-start"
-                                        icon="pi pi-paperclip"
-                                        [label]="f.fileName"
-                                        (click)="downloadNoticeFile(f)"
-                                    ></button>
+                                    <button type="button" pButton text size="small" class="justify-start" icon="pi pi-paperclip" [label]="f.fileName" (click)="downloadNoticeFile(f)"></button>
                                 }
                             </div>
                         </div>
@@ -623,6 +688,9 @@ export class Dashboard implements OnInit, OnDestroy {
     private statisticsSvc = inject(StatisticsService);
     private calendarSvc = inject(CalendarService);
     private empService = inject(EmpService);
+    private leaveInfoService = inject(LeaveInfoService);
+    private movementInfoService = inject(MovementInfoService);
+    private postingService = inject(PostingService);
     private noticeService = inject(NoticeService);
     notificationService = inject(NotificationService);
     private chatService = inject(ChatService);
@@ -692,7 +760,95 @@ export class Dashboard implements OnInit, OnDestroy {
             card.motherOrg = (this.ci(info, 'MotherOrganization') ?? card.motherOrg ?? '').toString();
             if (!card.name) card.name = (this.ci(info, 'FullNameEN') ?? '').toString();
         });
+        // Present RAB unit — same source the profile page uses (overview.rabUnit).
+        this.servingMembers.getEmployeePersonalServiceOverview(card.employeeId).subscribe((overview) => {
+            if (this.lookupResult !== card || !overview) return;
+            card.rabUnit = (overview.rabUnit ?? '').toString();
+            card.motherUnit = (overview.motherUnit ?? '').toString();
+        });
         this.loadLookupPhoto(card);
+        this.loadLeaveStatus(card);
+        this.loadMovementStatus(card);
+        this.loadPostingStatus(card);
+    }
+
+    /** Builds the in-progress posting line shown on the member profile (New / Inter posting). */
+    private loadPostingStatus(card: LookupCard): void {
+        this.postingService.getEmployeePostingProcessingStatus(card.employeeId).subscribe({
+            next: (dto) => {
+                if (this.lookupResult !== card || !dto) return;
+                card.postingStatus = this.buildPostingStatus(dto);
+            },
+            error: () => {}
+        });
+    }
+
+    private buildPostingStatus(dto: EmployeePostingProcessingStatusDto): string {
+        const parts: string[] = [];
+        if (dto.newPostingStep && !dto.newPostingOrderReceived) {
+            parts.push(`New Posting: ${this.postingStepLabel(dto.newPostingStep)}`);
+        }
+        if (dto.interPostingStep && !dto.interPostingOrderReceived) {
+            parts.push(`Inter Posting: ${this.postingStepLabel(dto.interPostingStep)}`);
+        }
+        return parts.join(' • ');
+    }
+
+    private postingStepLabel(step: string): string {
+        return POSTING_STEP_LABELS[step] ?? step;
+    }
+
+    /** Flags the card as on-leave when today falls inside one of this year's leave windows. */
+    private loadLeaveStatus(card: LookupCard): void {
+        const year = new Date().getFullYear();
+        this.leaveInfoService.getViewByEmployeeIdAndYear(card.employeeId, year).subscribe((rows) => {
+            if (this.lookupResult !== card || !rows?.length) return;
+            const today = this.toDateOnly(new Date());
+            const current = rows.find((r) => {
+                const from = r.durationFrom ? this.toDateOnly(new Date(r.durationFrom)) : null;
+                const to = r.durationTo ? this.toDateOnly(new Date(r.durationTo)) : null;
+                return from !== null && to !== null && from <= today && today <= to;
+            });
+            if (!current) return;
+            card.onLeave = true;
+            card.leaveType = (current.typeOfLeave ?? '').toString();
+            card.leaveFrom = current.durationFrom;
+            card.leaveTo = current.durationTo;
+        });
+    }
+
+    /** Flags the card as on temporary movement when an un-returned temporary movement exists. */
+    private loadMovementStatus(card: LookupCard): void {
+        this.movementInfoService.getByEmployeeId(card.employeeId).subscribe((rows) => {
+            if (this.lookupResult !== card || !rows?.length) return;
+            // Rows are ordered newest-first; pick the latest temporary movement not yet returned.
+            const active = rows.find((m) => m.movementType === 2 && !m.isReturned);
+            if (!active) return;
+            card.onMovement = true;
+            card.movementDestination = (active.destinedRABUnit || active.destinedMotherUnit || '').toString();
+        });
+    }
+
+    /** Local YYYY-MM-DD string for date-only comparison (avoids UTC drift). */
+    private toDateOnly(d: Date): string {
+        const m = `${d.getMonth() + 1}`.padStart(2, '0');
+        const day = `${d.getDate()}`.padStart(2, '0');
+        return `${d.getFullYear()}-${m}-${day}`;
+    }
+
+    goToLeaveHistory(): void {
+        this.router.navigate(['/leave-application/history']);
+    }
+
+    goToMovementList(): void {
+        this.router.navigate(['/movement-list']);
+    }
+
+    /** "21 Jun 2026" for a date-only/ISO string; falls back to the raw value. */
+    fmtDate(value: string | null): string {
+        if (!value) return '';
+        const d = new Date(value);
+        return isNaN(d.getTime()) ? value : d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
     }
 
     /** Case-insensitive property read — the API serializes camelCase but field casing varies. */
@@ -716,8 +872,17 @@ export class Dashboard implements OnInit, OnDestroy {
             corps: '',
             trade: '',
             motherOrg: '',
+            motherUnit: '',
+            rabUnit: '',
             profileImages: (this.ci(e, 'ProfileImages') ?? null) as string | null,
-            photoUrl: null
+            photoUrl: null,
+            onLeave: false,
+            leaveType: '',
+            leaveFrom: null,
+            leaveTo: null,
+            onMovement: false,
+            movementDestination: '',
+            postingStatus: ''
         };
     }
 
@@ -841,9 +1006,7 @@ export class Dashboard implements OnInit, OnDestroy {
         try {
             const refs = JSON.parse(n.filesReferences) as { FileId?: number; fileId?: number; fileName?: string }[];
             if (!Array.isArray(refs)) return [];
-            return refs
-                .map((r) => ({ fileId: (r.FileId ?? r.fileId) as number, fileName: r.fileName ?? 'file' }))
-                .filter((r) => r.fileId != null);
+            return refs.map((r) => ({ fileId: (r.FileId ?? r.fileId) as number, fileName: r.fileName ?? 'file' })).filter((r) => r.fileId != null);
         } catch {
             return [];
         }

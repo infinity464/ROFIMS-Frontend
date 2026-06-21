@@ -750,8 +750,15 @@ export class ServingMemberProfile implements OnInit, OnDestroy {
 
     heightDisplay(p: EmployeePersonalServiceOverview | null): string {
         if (!p || p.height == null) return '-';
-        const h = this.isBn ? BanglaNumerals.toBangla(String(p.height)) : String(p.height);
-        return `${h} Inch`;
+        const totalInches = Number(p.height);
+        if (isNaN(totalInches)) return '-';
+        // Stored as total inches; render as feet + inches (e.g. 65.5 -> "5ft 5.5").
+        const feet = Math.floor(totalInches / 12);
+        // Inches remainder to 1 decimal, dropping a trailing ".0".
+        const inches = Math.round((totalInches - feet * 12) * 10) / 10;
+        const feetStr = this.isBn ? BanglaNumerals.toBangla(String(feet)) : String(feet);
+        const inchStr = this.isBn ? BanglaNumerals.toBangla(String(inches)) : String(inches);
+        return `${feetStr}ft ${inchStr}`;
     }
 
     weightDisplay(p: EmployeePersonalServiceOverview | null): string {

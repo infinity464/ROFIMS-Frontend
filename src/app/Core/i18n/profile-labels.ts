@@ -251,6 +251,10 @@ export const PROFILE_LABELS = {
     'posting.notApproved': 'Not Approved',
     'posting.received': 'Received',
     'posting.notReceived': 'Not Received',
+
+    // Present (live) leave / movement status
+    'status.onLeave': 'On Leave',
+    'status.presentLocation': 'Present Location',
   } as const,
 
   bn: {
@@ -488,6 +492,10 @@ export const PROFILE_LABELS = {
     'posting.notApproved': 'অনুমোদিত নয়',
     'posting.received': 'গৃহীত',
     'posting.notReceived': 'গৃহীত নয়',
+
+    // Present (live) leave / movement status
+    'status.onLeave': 'ছুটিতে আছেন',
+    'status.presentLocation': 'বর্তমান অবস্থান',
   } as const,
 } as const;
 

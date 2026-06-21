@@ -798,12 +798,21 @@
 }
 
 .rab-criteria-strip-date {
-    /* Metadata, but it should be readable without squinting. Lock to the
-       primary ink color at 75% opacity so the contrast stays high in both
-       themes without making the timestamp shout. */
     color: var(--rab-text-strong);
     opacity: 0.75;
     font-weight: 500;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 0.1rem;
+    text-align: right;
+}
+.rab-criteria-strip-total {
+    color: var(--rab-accent);
+    opacity: 1;
+    font-weight: 700;
+    text-transform: none;
+    letter-spacing: normal;
 }
 
 .rab-criteria-grid {
