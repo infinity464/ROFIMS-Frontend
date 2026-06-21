@@ -73,7 +73,6 @@ export class EducationSubject {
 
     tableConfig: TableConfig = {
         tableColumns: [
-            { field: 'departmentNameDisplay', header: 'Department' },
             { field: 'codeValueEN', header: 'EducationSubject Name (EN)' },
             { field: 'codeValueBN', header: 'EducationSubject Name (BN)' },
             {

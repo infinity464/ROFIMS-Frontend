@@ -56,12 +56,14 @@
 
                 @if (canUpdate || canDelete) {
                     <td>
-                        @if (canUpdate) {
-                            <button class="mx-2" pButton icon="pi pi-pencil" (click)="onEdit(row)"></button>
-                        }
-                        @if (canDelete) {
-                            <button pButton icon="pi pi-trash" (click)="onDelete(row, $event)" class="p-button-danger"></button>
-                        }
+                        <div class="flex items-center gap-2">
+                            @if (canUpdate) {
+                                <button pButton icon="pi pi-pencil" (click)="onEdit(row)"></button>
+                            }
+                            @if (canDelete) {
+                                <button pButton icon="pi pi-trash" (click)="onDelete(row, $event)" class="p-button-danger"></button>
+                            }
+                        </div>
                     </td>
                 }
             </tr>
