@@ -490,6 +490,14 @@ export class ExMemberProfile implements OnInit, OnDestroy {
         return this.L[key] ?? this.activePresentStatus;
     }
 
+    /** Employee status from the EmployeeInfo table (PostingStatus), translated. */
+    get translatedEmployeeStatus(): string | null {
+        const status = this.profile?.postingStatus;
+        if (!status) return null;
+        const key = `employeeStatus.${status}` as ProfileLabelKey;
+        return this.L[key] ?? status;
+    }
+
     toggleProfileLang(): void {
         this.profileLang = this.profileLang === 'en' ? 'bn' : 'en';
     }

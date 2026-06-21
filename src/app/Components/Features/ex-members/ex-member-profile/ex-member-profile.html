@@ -52,6 +52,9 @@
                 @if (activePresentStatus) {
                     <div style="font-size: 0.95rem; font-weight: 700; margin-top: 0.25rem; color: var(--text-color);">{{ L['field.presentStatus'] }}: {{ translatedPresentStatus }}</div>
                 }
+                @if (translatedEmployeeStatus) {
+                    <div style="font-size: 0.95rem; font-weight: 700; margin-top: 0.25rem; color: var(--text-color);">{{ L['field.employeeStatus'] }}: {{ translatedEmployeeStatus }}</div>
+                }
                 @if (postingProcessingStatus?.newPostingStep && !postingProcessingStatus!.newPostingOrderReceived) {
                     <div class="sp-posting-status-line">
                         <span>{{ L['posting.newPosting'] }}: {{ getPostingStepLabel(postingProcessingStatus!.newPostingStep!) }}</span>

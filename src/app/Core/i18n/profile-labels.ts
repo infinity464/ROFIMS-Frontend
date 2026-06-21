@@ -225,6 +225,15 @@ export const PROFILE_LABELS = {
     'presentStatus.Absent': 'Absent',
     'presentStatus.Arrested': 'Arrested',
 
+    // Employee Status (EmployeeInfo.PostingStatus)
+    'field.employeeStatus': 'Employee Status',
+    'employeeStatus.Servings': 'Serving',
+    'employeeStatus.ExMember': 'Ex-Member',
+    'employeeStatus.Supernumerary': 'Supernumerary',
+    'employeeStatus.Pending': 'Pending',
+    'employeeStatus.NewPosting': 'New Posting',
+    'employeeStatus.PendingForJoining': 'Pending for Joining',
+
     // Posting Processing Status
     'posting.newPosting': 'New Posting',
     'posting.interPosting': 'Inter Posting',
@@ -452,6 +461,15 @@ export const PROFILE_LABELS = {
     'presentStatus.Deceased': 'মৃত',
     'presentStatus.Absent': 'অনুপস্থিত',
     'presentStatus.Arrested': 'গ্রেফতার',
+
+    // Employee Status (EmployeeInfo.PostingStatus)
+    'field.employeeStatus': 'কর্মচারীর অবস্থা',
+    'employeeStatus.Servings': 'কর্মরত',
+    'employeeStatus.ExMember': 'প্রাক্তন সদস্য',
+    'employeeStatus.Supernumerary': 'অতিরিক্ত',
+    'employeeStatus.Pending': 'অপেক্ষমাণ',
+    'employeeStatus.NewPosting': 'নতুন পোস্টিং',
+    'employeeStatus.PendingForJoining': 'যোগদানের অপেক্ষায়',
 
     // Posting Processing Status
     'posting.newPosting': 'নতুন পোস্টিং',
