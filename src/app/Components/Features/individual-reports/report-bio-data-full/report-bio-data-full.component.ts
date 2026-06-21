@@ -125,7 +125,7 @@ export class ReportBioDataFullIndividualComponent implements OnInit, OnDestroy {
             columns: [
                 { key: 'orgUnitLocation', labelEN: 'Mother Organization, Unit & Location', labelBN: 'মাতৃ সংস্থা, ইউনিট ও অবস্থান', defaultVisible: true },
                 { key: 'appointment', labelEN: 'Appointment', labelBN: 'নিয়োগ', defaultVisible: true },
-                { key: 'memberType', labelEN: 'Member Type', labelBN: 'সদস্যের ধরন', defaultVisible: true },
+                { key: 'memberType', labelEN: 'Member Type', labelBN: 'সদস্যের ধরণ', defaultVisible: true },
                 { key: 'rank', labelEN: 'Rank', labelBN: 'পদবি', defaultVisible: true },
                 { key: 'corps', labelEN: 'Corps / Regiment', labelBN: 'কোর / রেজিমেন্ট', defaultVisible: true },
                 { key: 'trade', labelEN: 'Trade', labelBN: 'ট্রেড', defaultVisible: true },
@@ -133,8 +133,8 @@ export class ReportBioDataFullIndividualComponent implements OnInit, OnDestroy {
                 { key: 'dateOfCommission', labelEN: 'Date of Commission', labelBN: 'কমিশনের তারিখ', defaultVisible: true },
                 { key: 'enrolment', labelEN: 'Enrolment in Service', labelBN: 'চাকরিতে যোগদান', defaultVisible: true },
                 { key: 'promotionPresent', labelEN: 'Promotion in Present Rank', labelBN: 'বর্তমান পদবিতে পদোন্নতি', defaultVisible: true },
-                { key: 'joiningRab', labelEN: 'Joining in RAB', labelBN: 'র‍্যাবে যোগদান', defaultVisible: true },
-                { key: 'rabUnit', labelEN: 'RAB Present Unit', labelBN: 'র‍্যাব বর্তমান ইউনিট', defaultVisible: true },
+                { key: 'joiningRab', labelEN: 'Joining in RAB', labelBN: 'র‌্যাবে যোগদান', defaultVisible: true },
+                { key: 'rabUnit', labelEN: 'RAB Present Unit', labelBN: 'র‌্যাব বর্তমান ইউনিট', defaultVisible: true },
                 { key: 'motherUnit', labelEN: 'Mother Unit', labelBN: 'মাতৃ ইউনিট', defaultVisible: false },
                 { key: 'location', labelEN: 'Location', labelBN: 'অবস্থান', defaultVisible: false },
             ],
@@ -157,18 +157,18 @@ export class ReportBioDataFullIndividualComponent implements OnInit, OnDestroy {
                 { key: 'medicalCategory', labelEN: 'Medical Category', labelBN: 'মেডিকেল ক্যাটাগরি', defaultVisible: false },
                 { key: 'mobileNo', labelEN: 'Mobile No', labelBN: 'মোবাইল নম্বর', defaultVisible: true },
                 { key: 'officeMobile', labelEN: 'Office Mobile No', labelBN: 'অফিস মোবাইল নম্বর', defaultVisible: true },
-                { key: 'email', labelEN: 'Email Address', labelBN: 'ইমেইল', defaultVisible: true },
+                { key: 'email', labelEN: 'Email Address', labelBN: 'ইমেইল ঠিকানা', defaultVisible: true },
                 { key: 'emergencyContact', labelEN: 'Emergency Contact', labelBN: 'জরুরি যোগাযোগ', defaultVisible: false },
-                { key: 'nid', labelEN: 'NID', labelBN: 'এনআইডি', defaultVisible: true },
-                { key: 'nidOld', labelEN: 'NID (Old)', labelBN: 'পুরাতন এনআইডি', defaultVisible: false },
+                { key: 'nid', labelEN: 'NID', labelBN: 'জাতীয় পরিচয়পত্র', defaultVisible: true },
+                { key: 'nidOld', labelEN: 'NID (Old)', labelBN: 'পুরাতন জাতীয় পরিচয়পত্র', defaultVisible: false },
                 { key: 'passport', labelEN: 'Passport No', labelBN: 'পাসপোর্ট নম্বর', defaultVisible: false },
-                { key: 'identificationMark', labelEN: 'Identification Marks', labelBN: 'সনাক্তকরণ চিহ্ন', defaultVisible: true },
+                { key: 'identificationMark', labelEN: 'Identification Marks', labelBN: 'শনাক্তকরণ চিহ্ন', defaultVisible: true },
             ],
         },
         {
             id: 'address', titleEN: 'Address', titleBN: 'ঠিকানা', type: 'table',
             columns: [
-                { key: 'typeLabel', labelEN: 'Type', labelBN: 'ধরন', kind: 'text', defaultVisible: true },
+                { key: 'typeLabel', labelEN: 'Type', labelBN: 'ধরণ', kind: 'text', defaultVisible: true },
                 { key: 'houseRoad', labelEN: 'House / Road', labelBN: 'বাসা / রোড', kind: 'text', defaultVisible: true },
                 { key: 'addressAreaEN', labelEN: 'Village / Area', labelBN: 'গ্রাম / এলাকা', kind: 'text', defaultVisible: true },
                 { key: 'postOffice', bnKey: 'postOfficeBN', labelEN: 'Post Office', labelBN: 'ডাকঘর', kind: 'code', defaultVisible: true },
@@ -185,24 +185,24 @@ export class ReportBioDataFullIndividualComponent implements OnInit, OnDestroy {
                 { key: 'relation', bnKey: 'relationBN', labelEN: 'Relation', labelBN: 'সম্পর্ক', kind: 'code', defaultVisible: true },
                 { key: 'dateOfBirth', labelEN: 'Date of Birth', labelBN: 'জন্ম তারিখ', kind: 'date', defaultVisible: true },
                 { key: 'occupation', bnKey: 'occupationBN', labelEN: 'Occupation', labelBN: 'পেশা', kind: 'code', defaultVisible: true },
-                { key: 'mobileNo', labelEN: 'Mobile No', labelBN: 'মোবাইল', kind: 'text', defaultVisible: true },
+                { key: 'mobileNo', labelEN: 'Mobile No', labelBN: 'মোবাইল নম্বর', kind: 'text', defaultVisible: true },
             ],
         },
         {
-            id: 'spouseFamily', titleEN: 'Spouse Family Info', titleBN: 'স্ত্রী/পতির পরিবারের তথ্য', type: 'table',
+            id: 'spouseFamily', titleEN: 'Spouse Family Info', titleBN: 'স্বামী/স্ত্রীর পরিবারের তথ্য', type: 'table',
             columns: [
                 { key: 'name', bnKey: 'nameBN', labelEN: 'Name', labelBN: 'নাম', kind: 'code', defaultVisible: true },
                 { key: 'relation', bnKey: 'relationBN', labelEN: 'Relation', labelBN: 'সম্পর্ক', kind: 'code', defaultVisible: true },
                 { key: 'dateOfBirth', labelEN: 'Date of Birth', labelBN: 'জন্ম তারিখ', kind: 'date', defaultVisible: true },
                 { key: 'occupation', bnKey: 'occupationBN', labelEN: 'Occupation', labelBN: 'পেশা', kind: 'code', defaultVisible: true },
-                { key: 'mobileNo', labelEN: 'Mobile No', labelBN: 'মোবাইল', kind: 'text', defaultVisible: true },
+                { key: 'mobileNo', labelEN: 'Mobile No', labelBN: 'মোবাইল নম্বর', kind: 'text', defaultVisible: true },
             ],
         },
         {
-            id: 'previousRab', titleEN: 'Service in RAB', titleBN: 'র‍্যাবে চাকরি', type: 'table',
+            id: 'previousRab', titleEN: 'Service in RAB', titleBN: 'র‌্যাবে চাকরি', type: 'table',
             columns: [
-                { key: 'rabUnitName', bnKey: 'rabUnitNameBN', labelEN: 'RAB Unit', labelBN: 'র‍্যাব ইউনিট', kind: 'code', defaultVisible: true },
-                { key: 'serviceFrom', labelEN: 'From', labelBN: 'হতে', kind: 'date', defaultVisible: true },
+                { key: 'rabUnitName', bnKey: 'rabUnitNameBN', labelEN: 'RAB Unit', labelBN: 'র‌্যাব ইউনিট', kind: 'code', defaultVisible: true },
+                { key: 'serviceFrom', labelEN: 'From', labelBN: 'হইতে', kind: 'date', defaultVisible: true },
                 { key: 'serviceTo', labelEN: 'To', labelBN: 'পর্যন্ত', kind: 'date', defaultVisible: true },
                 { key: 'appointmentName', bnKey: 'appointmentNameBN', labelEN: 'Appointment', labelBN: 'নিয়োগ', kind: 'code', defaultVisible: true },
                 { key: 'postingAuth', labelEN: 'Posting Auth', labelBN: 'পদায়ন কর্তৃপক্ষ', kind: 'text', defaultVisible: false },
@@ -212,29 +212,29 @@ export class ReportBioDataFullIndividualComponent implements OnInit, OnDestroy {
         {
             id: 'permanentMovement', titleEN: 'Permanent Movement History', titleBN: 'স্থায়ী মুভমেন্ট ইতিহাস', type: 'table',
             columns: [
-                { key: 'orderType', labelEN: 'Order Type', labelBN: 'আদেশের ধরন', kind: 'text', defaultVisible: true },
+                { key: 'orderType', bnKey: 'orderTypeBN', labelEN: 'Order Type', labelBN: 'আদেশের ধরণ', kind: 'code', defaultVisible: true },
                 { key: 'destinedUnit', bnKey: 'destinedUnitBN', labelEN: 'Destined Unit', labelBN: 'গন্তব্য ইউনিট', kind: 'code', defaultVisible: true },
-                { key: 'reason', labelEN: 'Reason', labelBN: 'কারণ', kind: 'text', defaultVisible: true },
+                { key: 'reason', bnKey: 'reasonBN', labelEN: 'Reason', labelBN: 'কারণ', kind: 'code', defaultVisible: true },
                 { key: 'dateOfRelease', labelEN: 'Date of Release', labelBN: 'অবমুক্তির তারিখ', kind: 'date', defaultVisible: true },
-                { key: 'dateOfReduce', labelEN: 'Date of Reduce from RAB', labelBN: 'র‍্যাব শক্তি হ্রাসের তারিখ', kind: 'date', defaultVisible: true },
+                { key: 'dateOfReduce', labelEN: 'Date of Reduce from RAB', labelBN: 'র‌্যাব শক্তি হ্রাসের তারিখ', kind: 'date', defaultVisible: true },
             ],
         },
         {
             id: 'temporaryMovement', titleEN: 'Temporary Movement History', titleBN: 'অস্থায়ী মুভমেন্ট ইতিহাস', type: 'table',
             columns: [
-                { key: 'orderType', labelEN: 'Order Type', labelBN: 'আদেশের ধরন', kind: 'text', defaultVisible: true },
+                { key: 'orderType', bnKey: 'orderTypeBN', labelEN: 'Order Type', labelBN: 'আদেশের ধরণ', kind: 'code', defaultVisible: true },
                 { key: 'destinedUnit', bnKey: 'destinedUnitBN', labelEN: 'Destined Unit', labelBN: 'গন্তব্য ইউনিট', kind: 'code', defaultVisible: true },
-                { key: 'reason', labelEN: 'Reason', labelBN: 'কারণ', kind: 'text', defaultVisible: true },
+                { key: 'reason', bnKey: 'reasonBN', labelEN: 'Reason', labelBN: 'কারণ', kind: 'code', defaultVisible: true },
                 { key: 'dateOfRelease', labelEN: 'Date of Release', labelBN: 'অবমুক্তির তারিখ', kind: 'date', defaultVisible: true },
-                { key: 'dateOfReduce', labelEN: 'Date of Reduce from RAB', labelBN: 'র‍্যাব শক্তি হ্রাসের তারিখ', kind: 'date', defaultVisible: true },
+                { key: 'dateOfReduce', labelEN: 'Date of Reduce from RAB', labelBN: 'র‌্যাব শক্তি হ্রাসের তারিখ', kind: 'date', defaultVisible: true },
             ],
         },
         {
             id: 'moService', titleEN: 'Service History (Mother Org)', titleBN: 'মাতৃ সংস্থায় চাকরির ইতিহাস', type: 'table',
             columns: [
-                { key: 'organizationName', labelEN: 'Organization', labelBN: 'সংস্থা/ইউনিট', kind: 'text', defaultVisible: true },
-                { key: 'locationName', labelEN: 'Location', labelBN: 'অবস্থান', kind: 'text', defaultVisible: true },
-                { key: 'serviceFrom', labelEN: 'From', labelBN: 'হতে', kind: 'date', defaultVisible: true },
+                { key: 'organizationName', bnKey: 'organizationNameBN', labelEN: 'Organization', labelBN: 'সংস্থা/ইউনিট', kind: 'code', defaultVisible: true },
+                { key: 'locationName', bnKey: 'locationNameBN', labelEN: 'District', labelBN: 'জেলা', kind: 'code', defaultVisible: true },
+                { key: 'serviceFrom', labelEN: 'From', labelBN: 'হইতে', kind: 'date', defaultVisible: true },
                 { key: 'serviceTo', labelEN: 'To', labelBN: 'পর্যন্ত', kind: 'date', defaultVisible: true },
                 { key: 'appointment', bnKey: 'appointmentBN', labelEN: 'Appointment', labelBN: 'নিয়োগ', kind: 'code', defaultVisible: true },
                 { key: 'auth', labelEN: 'Auth', labelBN: 'কর্তৃপক্ষ', kind: 'text', defaultVisible: false },
@@ -247,7 +247,7 @@ export class ReportBioDataFullIndividualComponent implements OnInit, OnDestroy {
                 { key: 'previousRank', bnKey: 'previousRankBN', labelEN: 'Previous Rank', labelBN: 'পূর্বের পদবি', kind: 'code', defaultVisible: true },
                 { key: 'promotedRank', bnKey: 'promotedRankBN', labelEN: 'Promoted Rank', labelBN: 'পদোন্নত পদবি', kind: 'code', defaultVisible: true },
                 { key: 'promotedDate', labelEN: 'Promotion Date', labelBN: 'পদোন্নতির তারিখ', kind: 'date', defaultVisible: true },
-                { key: 'fromDate', labelEN: 'From', labelBN: 'হতে', kind: 'date', defaultVisible: false },
+                { key: 'fromDate', labelEN: 'From', labelBN: 'হইতে', kind: 'date', defaultVisible: false },
                 { key: 'toDate', labelEN: 'To', labelBN: 'পর্যন্ত', kind: 'date', defaultVisible: false },
                 { key: 'probationaryPeriod', labelEN: 'Probation', labelBN: 'প্রবেশনকাল', kind: 'text', defaultVisible: false },
                 { key: 'auth', labelEN: 'Authority', labelBN: 'কর্তৃপক্ষ', kind: 'text', defaultVisible: false },
@@ -263,17 +263,17 @@ export class ReportBioDataFullIndividualComponent implements OnInit, OnDestroy {
                 { key: 'result', bnKey: 'resultBN', labelEN: 'Result', labelBN: 'ফলাফল', kind: 'code', defaultVisible: true },
                 { key: 'gradePoint', labelEN: 'Grade Point', labelBN: 'গ্রেড পয়েন্ট', kind: 'text', defaultVisible: false },
                 { key: 'passingYear', labelEN: 'Passing Year', labelBN: 'পাসের বছর', kind: 'text', defaultVisible: true },
-                { key: 'durationFrom', labelEN: 'From', labelBN: 'হতে', kind: 'date', defaultVisible: false },
+                { key: 'durationFrom', labelEN: 'From', labelBN: 'হইতে', kind: 'date', defaultVisible: false },
                 { key: 'durationTo', labelEN: 'To', labelBN: 'পর্যন্ত', kind: 'date', defaultVisible: false },
             ],
         },
         {
             id: 'course', titleEN: 'Course / Training', titleBN: 'কোর্স / প্রশিক্ষণ', type: 'table',
             columns: [
-                { key: 'courseType', bnKey: 'courseTypeBN', labelEN: 'Course Type', labelBN: 'কোর্সের ধরন', kind: 'code', defaultVisible: true },
+                { key: 'courseType', bnKey: 'courseTypeBN', labelEN: 'Course Type', labelBN: 'কোর্সের ধরণ', kind: 'code', defaultVisible: true },
                 { key: 'courseName', bnKey: 'courseNameBN', labelEN: 'Course Name', labelBN: 'কোর্সের নাম', kind: 'code', defaultVisible: true },
                 { key: 'trainingInstituteName', labelEN: 'Institute', labelBN: 'প্রতিষ্ঠান', kind: 'text', defaultVisible: true },
-                { key: 'dateFrom', labelEN: 'From', labelBN: 'হতে', kind: 'date', defaultVisible: true },
+                { key: 'dateFrom', labelEN: 'From', labelBN: 'হইতে', kind: 'date', defaultVisible: true },
                 { key: 'dateTo', labelEN: 'To', labelBN: 'পর্যন্ত', kind: 'date', defaultVisible: true },
                 { key: 'result', labelEN: 'Result', labelBN: 'ফলাফল', kind: 'text', defaultVisible: false },
                 { key: 'auth', labelEN: 'Auth', labelBN: 'কর্তৃপক্ষ', kind: 'text', defaultVisible: false },
@@ -284,7 +284,7 @@ export class ReportBioDataFullIndividualComponent implements OnInit, OnDestroy {
             id: 'rfts', titleEN: 'RFTS', titleBN: 'আরএফটিএস', type: 'table',
             columns: [
                 { key: 'courseNo', labelEN: 'Course No', labelBN: 'কোর্স নং', kind: 'text', defaultVisible: true },
-                { key: 'dateFrom', labelEN: 'From', labelBN: 'হতে', kind: 'date', defaultVisible: true },
+                { key: 'dateFrom', labelEN: 'From', labelBN: 'হইতে', kind: 'date', defaultVisible: true },
                 { key: 'dateTo', labelEN: 'To', labelBN: 'পর্যন্ত', kind: 'date', defaultVisible: true },
                 { key: 'remarks', labelEN: 'Remark', labelBN: 'মন্তব্য', kind: 'text', defaultVisible: true },
             ],
@@ -293,8 +293,8 @@ export class ReportBioDataFullIndividualComponent implements OnInit, OnDestroy {
             id: 'foreignVisit', titleEN: 'Foreign Visit', titleBN: 'বিদেশ ভ্রমণ', type: 'table',
             columns: [
                 { key: 'nameOfCountry', bnKey: 'nameOfCountryBN', labelEN: 'Country', labelBN: 'দেশ', kind: 'code', defaultVisible: true },
-                { key: 'visitType', bnKey: 'visitTypeBN', labelEN: 'Visit Type', labelBN: 'ভ্রমণের ধরন', kind: 'code', defaultVisible: true },
-                { key: 'durationFrom', labelEN: 'From', labelBN: 'হতে', kind: 'date', defaultVisible: true },
+                { key: 'visitType', bnKey: 'visitTypeBN', labelEN: 'Visit Type', labelBN: 'ভ্রমণের ধরণ', kind: 'code', defaultVisible: true },
+                { key: 'durationFrom', labelEN: 'From', labelBN: 'হইতে', kind: 'date', defaultVisible: true },
                 { key: 'durationTo', labelEN: 'To', labelBN: 'পর্যন্ত', kind: 'date', defaultVisible: true },
                 { key: 'reasonForVisiting', bnKey: 'reasonForVisitingBN', labelEN: 'Reason', labelBN: 'কারণ', kind: 'code', defaultVisible: true },
                 { key: 'relatedDocuments', labelEN: 'Documents', labelBN: 'নথি', kind: 'text', defaultVisible: false },
@@ -305,7 +305,7 @@ export class ReportBioDataFullIndividualComponent implements OnInit, OnDestroy {
             columns: [
                 { key: 'visitType', bnKey: 'visitTypeBN', labelEN: 'Purpose of Visit', labelBN: 'ভ্রমণের উদ্দেশ্য', kind: 'code', defaultVisible: true },
                 { key: 'country', bnKey: 'countryBN', labelEN: 'Country', labelBN: 'দেশ', kind: 'code', defaultVisible: true },
-                { key: 'fromDate', labelEN: 'From', labelBN: 'হতে', kind: 'date', defaultVisible: true },
+                { key: 'fromDate', labelEN: 'From', labelBN: 'হইতে', kind: 'date', defaultVisible: true },
                 { key: 'toDate', labelEN: 'To', labelBN: 'পর্যন্ত', kind: 'date', defaultVisible: true },
                 { key: 'totalDays', labelEN: 'Days', labelBN: 'দিন', kind: 'text', defaultVisible: true },
                 { key: 'familyMembers', bnKey: 'familyMembersBN', labelEN: 'Family Members', labelBN: 'পরিবারের সদস্য', kind: 'code', defaultVisible: false },
@@ -316,9 +316,9 @@ export class ReportBioDataFullIndividualComponent implements OnInit, OnDestroy {
             id: 'discipline', titleEN: 'Discipline', titleBN: 'শৃঙ্খলা', type: 'table',
             columns: [
                 { key: 'offenseDate', labelEN: 'Offence Date', labelBN: 'অপরাধের তারিখ', kind: 'date', defaultVisible: true },
-                { key: 'offenseType', bnKey: 'offenseTypeBN', labelEN: 'Offence Type', labelBN: 'অপরাধের ধরন', kind: 'code', defaultVisible: true },
+                { key: 'offenseType', bnKey: 'offenseTypeBN', labelEN: 'Offence Type', labelBN: 'অপরাধের ধরণ', kind: 'code', defaultVisible: true },
                 { key: 'briefStatementOfOffence', bnKey: 'briefStatementOfOffenceBN', labelEN: 'Brief Statement', labelBN: 'সংক্ষিপ্ত বিবরণ', kind: 'code', defaultVisible: true },
-                { key: 'punishmentTypeRAB', bnKey: 'punishmentTypeRABBN', labelEN: 'Punishment (RAB)', labelBN: 'শাস্তি (র‍্যাব)', kind: 'code', defaultVisible: true },
+                { key: 'punishmentTypeRAB', bnKey: 'punishmentTypeRABBN', labelEN: 'Punishment (RAB)', labelBN: 'শাস্তি (র‌্যাব)', kind: 'code', defaultVisible: true },
                 { key: 'punishmentDate', labelEN: 'Punishment Date', labelBN: 'শাস্তির তারিখ', kind: 'date', defaultVisible: false },
                 { key: 'punishmentTypeMotherOrg', bnKey: 'punishmentTypeMotherOrgBN', labelEN: 'Punishment (Org)', labelBN: 'শাস্তি (সংস্থা)', kind: 'code', defaultVisible: false },
                 { key: 'offenseDetails', labelEN: 'Details', labelBN: 'বিবরণ', kind: 'text', defaultVisible: false },
@@ -329,8 +329,8 @@ export class ReportBioDataFullIndividualComponent implements OnInit, OnDestroy {
         {
             id: 'leave', titleEN: 'Leave (Current Year)', titleBN: 'ছুটি (বর্তমান বছর)', type: 'table',
             columns: [
-                { key: 'typeOfLeave', bnKey: 'typeOfLeaveBN', labelEN: 'Type of Leave', labelBN: 'ছুটির ধরন', kind: 'code', defaultVisible: true },
-                { key: 'durationFrom', labelEN: 'From', labelBN: 'হতে', kind: 'date', defaultVisible: true },
+                { key: 'typeOfLeave', bnKey: 'typeOfLeaveBN', labelEN: 'Type of Leave', labelBN: 'ছুটির ধরণ', kind: 'code', defaultVisible: true },
+                { key: 'durationFrom', labelEN: 'From', labelBN: 'হইতে', kind: 'date', defaultVisible: true },
                 { key: 'durationTo', labelEN: 'To', labelBN: 'পর্যন্ত', kind: 'date', defaultVisible: true },
             ],
         },
@@ -515,7 +515,7 @@ export class ReportBioDataFullIndividualComponent implements OnInit, OnDestroy {
         if (!p) return [];
         return [
             { k: this.lx('Personal No', 'ব্যক্তিগত নম্বর'), v: this.personalNoDisplay },
-            { k: this.lx('RAB ID', 'র‍্যাব আইডি'), v: this.displayNum(p.rabId) },
+            { k: this.lx('RAB ID', 'র‌্যাব আইডি'), v: this.displayNum(p.rabId) },
         ];
     }
 
@@ -865,6 +865,12 @@ export class ReportBioDataFullIndividualComponent implements OnInit, OnDestroy {
         [MoveOrderType.Article47Handover]: 'Article 47 (Handover)',
         [MoveOrderType.Article47Takeover]: 'Article 47 (Takeover)',
     };
+    private readonly moveOrderTypeMapBN: Record<number, string> = {
+        [MoveOrderType.CC]: 'সিসি',
+        [MoveOrderType.MO]: 'এমও',
+        [MoveOrderType.Article47Handover]: '৪৭ ধারা (হস্তান্তর)',
+        [MoveOrderType.Article47Takeover]: '৪৭ ধারা (গ্রহণ)',
+    };
     private readonly progressStatusMap: Record<string, { en: string; bn: string }> = {
         Submitted: { en: 'Submitted', bn: 'জমা দেওয়া হয়েছে' },
         UnderRecommendation: { en: 'Under Recommendation', bn: 'সুপারিশাধীন' },
@@ -885,11 +891,14 @@ export class ReportBioDataFullIndividualComponent implements OnInit, OnDestroy {
             : ((m as any).destinedRABUnitId != null
                 ? { en: (m as any).destinedRABUnit, bn: (m as any).destinedRABUnitBN }
                 : { en: null, bn: null });
+        const ot = (m as any).moveOrderType;
         return {
-            orderType: this.moveOrderTypeMap[(m as any).moveOrderType] ?? '-',
+            orderType: this.moveOrderTypeMap[ot] ?? '-',
+            orderTypeBN: this.moveOrderTypeMapBN[ot] ?? null,
             destinedUnit: dest.en,
             destinedUnitBN: dest.bn,
-            reason: (m as any).movementReasonBN ?? null,
+            reason: (m as any).movementReason ?? null,
+            reasonBN: (m as any).movementReasonBN ?? null,
             dateOfRelease: (m as any).dateOfRelease ?? null,
             dateOfReduce: (m as any).dateOfReduce ?? null,
         };
