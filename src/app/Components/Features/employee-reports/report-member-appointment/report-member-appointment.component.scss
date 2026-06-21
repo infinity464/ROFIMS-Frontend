@@ -326,8 +326,11 @@
 }
 
 .rab-criteria-strip-total {
-    color: var(--rab-text-strong);
+    color: var(--rab-accent);
+    opacity: 1;
     font-weight: 700;
+    text-transform: none;
+    letter-spacing: normal;
 }
 
 .rab-criteria-strip-date {

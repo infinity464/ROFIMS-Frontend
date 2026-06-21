@@ -46,7 +46,7 @@ export class ReportWingsComponent implements OnInit, OnChanges {
     list: GenericReportRow[] = [];
     loading = false;
     first = 0;
-    rows = 20;
+    rows = 100;
     totalRecords = 0;
 
     exportDropdownOpen = false;
