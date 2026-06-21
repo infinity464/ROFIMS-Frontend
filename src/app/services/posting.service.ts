@@ -524,11 +524,25 @@ export class PostingService {
         return this.http.get<PostingReceiveViewDto[]>(`${API}/GetPostingReceiveHistory`, { params });
     }
 
-    /** "Pending List for Joining — New Posting": employees whose posting order is generated but who haven't joined yet. */
-    getPendingPostingJoining(postingType?: string): Observable<PendingPostingJoiningDto[]> {
+    /** "Pending List for Joining — New Posting": employees whose posting order is generated but who haven't joined yet.
+     *  Pass onlyCancelled = true to fetch the cancelled-joinings list instead. */
+    getPendingPostingJoining(postingType?: string, onlyCancelled = false): Observable<PendingPostingJoiningDto[]> {
         const params: Record<string, string> = {};
         if (postingType) params['postingType'] = postingType;
+        if (onlyCancelled) params['onlyCancelled'] = 'true';
         return this.http.get<PendingPostingJoiningDto[]>(`${API}/GetPendingPostingJoining`, { params });
+    }
+
+    /** Server-side paginated cancelled joinings (JoinStatus = Cancel) for the collapsible section. */
+    getCancelledPostingJoiningPaged(
+        postingType: string,
+        pageNo: number,
+        rowPerPage: number
+    ): Observable<{ datalist: PendingPostingJoiningDto[]; pages: { Rows: number; TotalPages: number } }> {
+        return this.http.post<{ datalist: PendingPostingJoiningDto[]; pages: { Rows: number; TotalPages: number } }>(
+            `${API}/GetCancelledPostingJoiningPaginated`,
+            { postingType, pagination: { page_no: pageNo, row_per_page: rowPerPage } }
+        );
     }
 
     receivePostingMembers(

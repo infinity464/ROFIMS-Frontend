@@ -2,7 +2,7 @@ import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
-import { Table, TableModule } from 'primeng/table';
+import { Table, TableModule, TableLazyLoadEvent } from 'primeng/table';
 import { ButtonModule } from 'primeng/button';
 import { TooltipModule } from 'primeng/tooltip';
 import { InputTextModule } from 'primeng/inputtext';
@@ -72,6 +72,16 @@ export class PendingPostingJoiningComponent implements OnInit {
     cancelRemarks = '';
     cancelling = false;
 
+    // Cancelled-joinings list (collapsible section below the pending table).
+    // Loaded on demand (Load button) with server-side pagination so it stays fast.
+    cancelledRows: PendingPostingJoiningDto[] = [];
+    cancelledLoading = false;
+    cancelledLoaded = false;
+    showCancelled = false;
+    cancelledTotal = 0;
+    cancelledFirst = 0;
+    cancelledPageSize = 10;
+
     currentUser = '';
     canInsert = true;
     canUpdate = true;
@@ -92,6 +102,8 @@ export class PendingPostingJoiningComponent implements OnInit {
         this.canDelete = _perms.canDelete;
         this.currentUser = this.sharedService.getCurrentUser();
         this.loadPending();
+        // Cancelled joinings are NOT loaded here — they load on demand via the Load
+        // button so the initial page load isn't slowed by an extra request.
     }
 
     loadPending(): void {
@@ -113,6 +125,43 @@ export class PendingPostingJoiningComponent implements OnInit {
                 });
             }
         });
+    }
+
+    /** Reveal the cancelled-joinings section. The lazy table then fires onLazyLoad
+     *  to fetch the first page from the server. */
+    loadCancelled(): void {
+        this.showCancelled = true;
+        this.cancelledLoaded = true;
+    }
+
+    /** Server-side page fetch for the cancelled-joinings table (PrimeNG lazy load). */
+    loadCancelledLazy(event: TableLazyLoadEvent): void {
+        const size = event.rows ?? this.cancelledPageSize;
+        const first = event.first ?? 0;
+        this.cancelledPageSize = size;
+        this.cancelledFirst = first;
+        const pageNo = Math.floor(first / size) + 1;
+
+        this.cancelledLoading = true;
+        this.postingService.getCancelledPostingJoiningPaged('NewPosting', pageNo, size).subscribe({
+            next: (res) => {
+                this.cancelledRows = res?.datalist ?? [];
+                this.cancelledTotal = res?.pages?.Rows ?? 0;
+                this.cancelledLoading = false;
+            },
+            error: () => { this.cancelledLoading = false; }
+        });
+    }
+
+    /** Re-fetch the current cancelled page (e.g. after a new cancellation). */
+    reloadCancelled(): void {
+        if (!this.cancelledLoaded) return;
+        this.loadCancelledLazy({ first: this.cancelledFirst, rows: this.cancelledPageSize } as TableLazyLoadEvent);
+    }
+
+    /** Expand/collapse the cancelled-joinings section. */
+    toggleCancelled(): void {
+        this.showCancelled = !this.showCancelled;
     }
 
     private buildFilterOptions(): void {
@@ -266,6 +315,8 @@ export class PendingPostingJoiningComponent implements OnInit {
                     this.showCancelDialog = false;
                     this.cancelTarget = null;
                     this.loadPending();
+                    // Only refresh the cancelled list if the user has already loaded it.
+                    if (this.cancelledLoaded) this.reloadCancelled();
                 } else {
                     this.messageService.add({ severity: 'error', summary: 'Error', detail: res.description });
                 }

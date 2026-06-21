@@ -693,6 +693,9 @@
         @if (selectedEmployees.length > 0 && !isDialogRowPosted) {
           <p-button icon="pi pi-trash" label="Remove Selected ({{ selectedEmployees.length }})"
                     severity="danger" [outlined]="true" size="small" [loading]="removingEmployees"
+                    [disabled]="isDialogNoteSheetApproved || removingEmployees"
+                    [pTooltip]="isDialogNoteSheetApproved ? 'Note-sheet is approved — members can no longer be removed.' : ''"
+                    tooltipPosition="top"
                     (onClick)="removeSelectedEmployees()"></p-button>
         }
       </div>

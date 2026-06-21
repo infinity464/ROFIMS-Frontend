@@ -346,6 +346,12 @@ export interface PendingPostingJoiningDto {
     rabRankBN?: string | null;
     motherOrganization: string | null;
     motherUnitName: string | null;
+
+    // Per-member joining state + cancel audit ("Pending" | "Received" | "Cancel"; nullable).
+    joinStatus?: string | null;
+    cancelReason?: string | null;
+    cancelledBy?: string | null;
+    cancelledDate?: string | null;
 }
 
 // ── Posting Order DTOs ────────────────────────────────────────

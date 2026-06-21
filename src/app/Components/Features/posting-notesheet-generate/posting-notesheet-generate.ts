@@ -26,7 +26,7 @@ import { EmpService } from '@/services/emp-service';
 import { PostingService } from '@/services/posting.service';
 import { IdentityUserMappingService } from '@/services/identity-user-mapping.service';
 import { NoteSheetEditCacheService } from '@/services/note-sheet-edit-cache.service';
-import { NoteSheetType, NoteSheetOperationTypeOptions, ApprovalStatus, CodeType } from '@/models/enums';
+import { NoteSheetType, NoteSheetOperationType, NoteSheetOperationTypeOptions, ApprovalStatus, CodeType } from '@/models/enums';
 import { BanglaNumerals } from '@/Core/i18n/bangla-numerals';
 import { MasterBasicSetupService } from '@/Components/basic-setup/shared/services/MasterBasicSetupService';
 import { NotesheetApproverSelectComponent } from '@/Components/Common/notesheet-approver-select/notesheet-approver-select';
@@ -121,7 +121,7 @@ export class PostingNotesheetGenerateComponent implements OnInit {
             recommenderIds: [[] as number[]],
             finalApproverId: [null as number | null, Validators.required],
             subject: [''],
-            noteSheetOperationType: [null as string | null, Validators.required],
+            noteSheetOperationType: [NoteSheetOperationType.Manual as string | null, Validators.required],
             isSecret: [false]
         });
     }
@@ -351,7 +351,7 @@ export class PostingNotesheetGenerateComponent implements OnInit {
             initiatorId: null,
             recommenderIds: [],
             finalApproverId: null,
-            noteSheetOperationType: null,
+            noteSheetOperationType: NoteSheetOperationType.Manual,
             isSecret: false
         });
         this.fileRows = [];

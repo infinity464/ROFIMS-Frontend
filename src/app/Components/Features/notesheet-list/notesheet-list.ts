@@ -568,6 +568,12 @@ export class NotesheetListComponent implements OnInit {
     const row = this.employeesDialogRow;
     if (!row?.draftPostingMasterId || this.selectedEmployees.length === 0) return;
 
+    // Once the note-sheet is approved, its posting-list members can no longer be removed.
+    if (this.isDialogNoteSheetApproved) {
+      this.messageService.add({ severity: 'warn', summary: 'Not allowed', detail: 'This note-sheet is already approved — members can no longer be removed from the posting list.' });
+      return;
+    }
+
     const count = this.selectedEmployees.length;
     const isLastRemoval = count >= this.employeesList.length;
     this.confirmationService.confirm({
@@ -664,6 +670,11 @@ export class NotesheetListComponent implements OnInit {
   /** True when the current dialog row already has a generated posting order — add/remove locked. */
   get isDialogRowPosted(): boolean {
     return this.isApprovedPostingRoute && (this.employeesDialogRow?.hasPostingOrder === true);
+  }
+
+  /** True once the dialog's note-sheet is approved — members can no longer be removed from the posting list. */
+  get isDialogNoteSheetApproved(): boolean {
+    return this.employeesDialogRow?.finalApprovalStatus === ApprovalStatus.Approve;
   }
 
   get addMemberTransferUnitId(): number | null {

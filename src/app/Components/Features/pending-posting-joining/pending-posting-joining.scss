@@ -49,6 +49,59 @@
         color: var(--text-color-secondary);
         margin-bottom: 0.35rem;
     }
+
+    // ── Cancelled Joinings collapsible header ──────────────────
+    .cancelled-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        width: 100%;
+        gap: 1rem;
+        cursor: pointer;
+        user-select: none;
+
+        &__left {
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+            min-width: 0;
+
+            i {
+                font-size: 1rem;
+                line-height: 1;
+                color: var(--text-color-secondary);
+            }
+        }
+
+        &__title {
+            font-size: 1.25rem;
+            font-weight: 600;
+            line-height: 1;
+            color: var(--text-color);
+        }
+
+        &__right {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            flex: 0 0 auto;
+        }
+
+        &__badge {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 1.4rem;
+            height: 1.4rem;
+            padding: 0 0.45rem;
+            border-radius: 999px;
+            background: var(--primary-color);
+            color: var(--primary-color-text);
+            font-size: 0.72rem;
+            font-weight: 700;
+            line-height: 1;
+        }
+    }
 }
 
 // Receive Posting Order dialog – clean, simple, professional

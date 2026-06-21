@@ -921,7 +921,9 @@ export class PostingOrderPreviewPageComponent implements OnInit {
     // ─── Edit mode ────────────────────────────────────────
 
     get canEdit(): boolean {
-        return this.approvalStatus !== ApprovalStatus.Approve;
+        // Editable only while pending — approved or cancelled orders are locked.
+        return this.approvalStatus !== ApprovalStatus.Approve
+            && this.approvalStatus !== ApprovalStatus.Cancel;
     }
 
     /** Unique transfer (RAB) units from currently-loaded edit employees. */
