@@ -37,17 +37,6 @@
                     }
                 </div>
 
-                <!-- Branch Name -->
-                <div class="field">
-                    <label for="branchName" class="block mb-2">
-                        Branch Name
-                    </label>
-                    <input pInputText id="branchName"
-                           formControlName="branchName"
-                           placeholder="Enter branch name"
-                           class="w-full" />
-                </div>
-
                 <!-- Swift Code -->
                 <div class="field">
                     <label for="swiftCode" class="block mb-2">
@@ -109,7 +98,6 @@
                 <th style="width:5%">#</th>
                 <th>Bank Name (English)</th>
                 <th>Bank Name (Bangla)</th>
-                <th>Branch</th>
                 <th style="width:15%">Action</th>
             </tr>
         </ng-template>
@@ -119,7 +107,6 @@
                 <td>{{ first + rowIndex + 1 }}</td>
                 <td>{{ row.bankNameEN }}</td>
                 <td>{{ row.bankNameBN }}</td>
-                <td>{{ row.branchName || '-' }}</td>
 
                 <td>
                     <div class="flex gap-2">

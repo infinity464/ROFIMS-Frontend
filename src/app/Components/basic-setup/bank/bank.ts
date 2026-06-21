@@ -69,7 +69,6 @@ export class Bank implements OnInit {
             bankNameEN: ['', Validators.required],
             bankNameBN: ['', Validators.required],
 
-            branchName: [''],
             swiftCode: [''],
 
             createdBy: [this.currentUser],
@@ -103,8 +102,7 @@ export class Bank implements OnInit {
         if (this.searchValue) {
             this.filteredBanks = this.banks.filter(b =>
                 b.bankNameEN.toLowerCase().includes(this.searchValue) ||
-                b.bankNameBN.toLowerCase().includes(this.searchValue) ||
-                b.branchName.toLowerCase().includes(this.searchValue)
+                b.bankNameBN.toLowerCase().includes(this.searchValue)
             );
         } else {
             this.filteredBanks = [...this.banks];
