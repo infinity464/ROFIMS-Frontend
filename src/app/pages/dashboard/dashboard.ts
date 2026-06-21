@@ -95,6 +95,8 @@ type LookupCard = {
     corps: string;
     trade: string;
     motherOrg: string;
+    motherUnit: string;
+    rabUnit: string;
     profileImages: string | null;
     photoUrl: string | null;
 };
@@ -370,6 +372,18 @@ type CalItem = { id: string; day: string; mon: string; dow: string; title: strin
                                 <div class="p-3">
                                     <div class="flex items-center gap-2 text-muted-color text-xs uppercase mb-1"><i class="pi pi-building"></i> Mother Org</div>
                                     <div class="text-surface-900 dark:text-surface-0 truncate" [class.text-muted-color]="!r.motherOrg" [class.italic]="!r.motherOrg">{{ r.motherOrg || 'Not assigned' }}</div>
+                                </div>
+                            </div>
+
+                            <!-- mother unit + RAB unit -->
+                            <div class="grid grid-cols-2 border-t border-surface-200 dark:border-surface-700">
+                                <div class="p-3 border-r border-surface-200 dark:border-surface-700">
+                                    <div class="flex items-center gap-2 text-muted-color text-xs uppercase mb-1"><i class="pi pi-sitemap"></i> Mother Unit</div>
+                                    <div class="text-surface-900 dark:text-surface-0 truncate" [class.text-muted-color]="!r.motherUnit" [class.italic]="!r.motherUnit">{{ r.motherUnit || 'Not assigned' }}</div>
+                                </div>
+                                <div class="p-3">
+                                    <div class="flex items-center gap-2 text-muted-color text-xs uppercase mb-1"><i class="pi pi-map-marker"></i> RAB Unit</div>
+                                    <div class="text-surface-900 dark:text-surface-0 truncate" [class.text-muted-color]="!r.rabUnit" [class.italic]="!r.rabUnit">{{ r.rabUnit || 'Not assigned' }}</div>
                                 </div>
                             </div>
 
@@ -692,6 +706,12 @@ export class Dashboard implements OnInit, OnDestroy {
             card.motherOrg = (this.ci(info, 'MotherOrganization') ?? card.motherOrg ?? '').toString();
             if (!card.name) card.name = (this.ci(info, 'FullNameEN') ?? '').toString();
         });
+        // Present RAB unit — same source the profile page uses (overview.rabUnit).
+        this.servingMembers.getEmployeePersonalServiceOverview(card.employeeId).subscribe((overview) => {
+            if (this.lookupResult !== card || !overview) return;
+            card.rabUnit = (overview.rabUnit ?? '').toString();
+            card.motherUnit = (overview.motherUnit ?? '').toString();
+        });
         this.loadLookupPhoto(card);
     }
 
@@ -716,6 +736,8 @@ export class Dashboard implements OnInit, OnDestroy {
             corps: '',
             trade: '',
             motherOrg: '',
+            motherUnit: '',
+            rabUnit: '',
             profileImages: (this.ci(e, 'ProfileImages') ?? null) as string | null,
             photoUrl: null
         };

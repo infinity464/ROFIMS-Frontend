@@ -39,7 +39,8 @@ import {
     MoveOrderType, MoveOrderTypeOptions,
     Article47LetterRecipientOptions,
     MOLetterRecipientOptions,
-    MovementVehicleOptions
+    MovementVehicleOptions,
+    MovementPostOutTypeOptions
 } from '@/models/enums';
 
 interface MovementEmployeeRow {
@@ -141,6 +142,7 @@ export class MovementInfoComponent implements OnInit {
     movementTypeOptions = MovementTypeOptions;
     moveOrderTypeOptions = MoveOrderTypeOptions;
     movementVehicleOptions = MovementVehicleOptions;
+    postOutTypeOptions = MovementPostOutTypeOptions;
     movementReasonOptions: { label: string; value: number }[] = [];
     motherUnitOptions: { label: string; value: number }[] = [];
     rabUnitOptions: { label: string; value: number }[] = [];
@@ -248,6 +250,7 @@ export class MovementInfoComponent implements OnInit {
             destinedUnitTarget: target,
             destinedMotherUnitId: row.destinedMotherUnitId ?? null,
             destinedRABUnitId: row.destinedRABUnitId ?? null,
+            postOutStatusType: row.postOutStatusType ?? null,
             dateOfRelease: this.toDate(row.dateOfRelease),
             dateOfReduce: this.toDate(row.dateOfReduce),
             takeoverDate: this.toDate(row.takeoverDate),
@@ -390,6 +393,8 @@ export class MovementInfoComponent implements OnInit {
             destinedUnitTarget: ['mother'],
             destinedMotherUnitId: [null, Validators.required],
             destinedRABUnitId: [null],
+            // Permanent + Mother Unit only: which present-status posted-out members get.
+            postOutStatusType: [null],
             dateOfRelease: [null],
             dateOfReduce: [null],
             takeoverDate: [null],
@@ -672,6 +677,10 @@ export class MovementInfoComponent implements OnInit {
     get showDateOfReduce(): boolean {
         return this.isPermanent;
     }
+    /** Show the post-out status picker (RTU / Regular Posting Out) — Permanent + Mother Unit. */
+    get showPostOutType(): boolean {
+        return this.isPermanent && this.form?.get('destinedUnitTarget')!.value === 'mother';
+    }
     get showJoiningLeaveDates(): boolean {
         return !!this.form?.get('isJoiningLeave')!.value;
     }
@@ -761,6 +770,14 @@ export class MovementInfoComponent implements OnInit {
             });
             return;
         }
+        if (this.showPostOutType && !this.form.get('postOutStatusType')!.value) {
+            this.messageService.add({
+                severity: 'error',
+                summary: 'Validation',
+                detail: 'Please select a post-out status (RTU or Regular Posting Out).'
+            });
+            return;
+        }
 
 
         const finalApproverIds: number[] = (this.form.get('finalApproverIds')?.value as number[] | null) ?? [];
@@ -790,6 +807,8 @@ export class MovementInfoComponent implements OnInit {
             currentUnitId: v.currentUnitId ?? null,
             destinedMotherUnitId: v.destinedMotherUnitId ?? null,
             destinedRABUnitId: v.destinedRABUnitId ?? null,
+            // Only meaningful for Permanent + Mother Unit; null otherwise.
+            postOutStatusType: this.showPostOutType ? (v.postOutStatusType ?? null) : null,
             dateOfRelease: this.toIsoDate(v.dateOfRelease),
             dateOfReduce: this.toIsoDate(v.dateOfReduce),
             takeoverDate: this.toIsoDate(v.takeoverDate),
@@ -884,6 +903,7 @@ export class MovementInfoComponent implements OnInit {
             destinedUnitTarget: 'mother',
             destinedMotherUnitId: null,
             destinedRABUnitId: null,
+            postOutStatusType: null,
             dateOfRelease: null,
             dateOfReduce: null,
             takeoverDate: null,

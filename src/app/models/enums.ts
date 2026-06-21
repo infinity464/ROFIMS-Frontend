@@ -397,6 +397,13 @@ export const MovementTypeOptions = [
     { label: 'Temporary', value: MovementType.Temporary }
 ];
 
+// Post-out status options shown for a Permanent movement to a Mother Unit:
+// the present-status each posted-out member receives when the move takes effect.
+export const MovementPostOutTypeOptions = [
+    { label: 'Regular Posting Out', value: PresentStatusType.RegularPostingOut },
+    { label: 'RTU', value: PresentStatusType.RTUOnDisciplineIssue }
+];
+
 // MovementInfo: Move Order Type (CC / MO / Article 47 Handover / Article 47 Takeover)
 export enum MoveOrderType {
     CC = 1,
