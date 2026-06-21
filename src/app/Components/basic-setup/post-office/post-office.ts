@@ -310,7 +310,7 @@ export class PostOffice {
         }
         if (status != null) list = list.filter((r: any) => r.status === status);
         const q = (this.searchValue ?? '').toLowerCase().trim();
-        if (q) list = list.filter((r: any) => r.codeValueEN?.toLowerCase().includes(q) || r.codeValueBN?.toLowerCase().includes(q));
+        if (q) list = list.filter((r: any) => r.codeValueEN?.toLowerCase().includes(q) || r.codeValueBN?.toLowerCase().includes(q) || r.commCode?.toLowerCase().includes(q));
         this.postOfficeData = list;
         this.totalRecords = list.length;
         this.first = 0;

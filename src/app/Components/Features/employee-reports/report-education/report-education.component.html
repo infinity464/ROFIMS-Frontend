@@ -93,7 +93,12 @@
                     </div>
                 </div>
             </div>
-            <div class="report-fields-row">
+            <div class="ds-field-group">
+                <div class="ds-group-divider">
+                    <span class="ds-group-label">Organization &amp; Rank</span>
+                    <span class="ds-group-line"></span>
+                </div>
+                <div class="report-fields-row">
                 <div class="report-filter-field">
                     <label>{{ L['en']['report.search.motherOrg'] }}</label>
                     <p-multiSelect [options]="orgOptions" [(ngModel)]="selectedOrgIds" (ngModelChange)="onOrgChange()" optionLabel="label" optionValue="value" display="chip" placeholder="Select" styleClass="w-full" [filter]="true" appendTo="body">
@@ -181,6 +186,7 @@
                         appendTo="body"
                     >
                     </p-multiSelect>
+                </div>
                 </div>
             </div>
 

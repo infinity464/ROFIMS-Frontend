@@ -204,6 +204,7 @@
                                     </td>
                                 }
                                 @case ('Date') { <td class="rab-td-date">{{ cellValue(row, col.key) }}</td> }
+                                @case ('Duration') { <td class="rab-td-date">{{ cellValue(row, col.key) }}</td> }
                                 @case ('Multiline') {
                                     <td class="rab-td-history">
                                         @for (line of historyLines(row, col.key); track $index) { <div>{{ line }}</div> }

@@ -370,6 +370,11 @@ export interface UnitDurationNominalRollReportRow extends ReportRowBase {
    */
   serviceHistory?: string | null;
   serviceHistoryBN?: string | null;
+  /** RAB joining date — start of service; backs the "Duration of Stay" column. */
+  joiningInRab?: string | null;
+  /** RAB service end date (ex-members) — end of service for "Duration of Stay". */
+  rabServiceTo?: string | null;
+  postingStatus?: string | null;
   rmks?: string | null;
 }
 
