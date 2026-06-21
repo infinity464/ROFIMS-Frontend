@@ -2,7 +2,7 @@ import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
-import { Table, TableModule } from 'primeng/table';
+import { Table, TableModule, TableLazyLoadEvent } from 'primeng/table';
 import { ButtonModule } from 'primeng/button';
 import { TooltipModule } from 'primeng/tooltip';
 import { InputTextModule } from 'primeng/inputtext';
@@ -65,6 +65,23 @@ export class PendingInterPostingJoiningComponent implements OnInit {
     joiningDate: Date | null = null;
     remarks = '';
     saving = false;
+
+    // Cancel joining dialog
+    showCancelDialog = false;
+    cancelTarget: PendingPostingJoiningDto | null = null;
+    cancelRemarks = '';
+    cancelling = false;
+
+    // Cancelled-joinings list (collapsible section below the pending table).
+    // Loaded on demand (Load button) with server-side pagination so it stays fast.
+    cancelledRows: PendingPostingJoiningDto[] = [];
+    cancelledLoading = false;
+    cancelledLoaded = false;
+    showCancelled = false;
+    cancelledTotal = 0;
+    cancelledFirst = 0;
+    cancelledPageSize = 10;
+
     currentUser = '';
     canInsert = true;
     canUpdate = true;
@@ -106,6 +123,43 @@ export class PendingInterPostingJoiningComponent implements OnInit {
                 });
             }
         });
+    }
+
+    /** Reveal the cancelled-joinings section. The lazy table then fires onLazyLoad
+     *  to fetch the first page from the server. */
+    loadCancelled(): void {
+        this.showCancelled = true;
+        this.cancelledLoaded = true;
+    }
+
+    /** Server-side page fetch for the cancelled-joinings table (PrimeNG lazy load). */
+    loadCancelledLazy(event: TableLazyLoadEvent): void {
+        const size = event.rows ?? this.cancelledPageSize;
+        const first = event.first ?? 0;
+        this.cancelledPageSize = size;
+        this.cancelledFirst = first;
+        const pageNo = Math.floor(first / size) + 1;
+
+        this.cancelledLoading = true;
+        this.postingService.getCancelledPostingJoiningPaged('InterPosting', pageNo, size).subscribe({
+            next: (res) => {
+                this.cancelledRows = res?.datalist ?? [];
+                this.cancelledTotal = res?.pages?.Rows ?? 0;
+                this.cancelledLoading = false;
+            },
+            error: () => { this.cancelledLoading = false; }
+        });
+    }
+
+    /** Re-fetch the current cancelled page (e.g. after a new cancellation). */
+    reloadCancelled(): void {
+        if (!this.cancelledLoaded) return;
+        this.loadCancelledLazy({ first: this.cancelledFirst, rows: this.cancelledPageSize } as TableLazyLoadEvent);
+    }
+
+    /** Expand/collapse the cancelled-joinings section. */
+    toggleCancelled(): void {
+        this.showCancelled = !this.showCancelled;
     }
 
     private buildFilterOptions(): void {
@@ -219,6 +273,56 @@ export class PendingInterPostingJoiningComponent implements OnInit {
                     summary: 'Error',
                     detail: err?.error?.message || 'Failed to receive members.'
                 });
+            }
+        });
+    }
+
+    /** Open the cancel-joining confirmation dialog for a single member. */
+    openCancelDialog(row: PendingPostingJoiningDto): void {
+        if (!this.canDelete) {
+            this.messageService.add({ severity: 'warn', summary: 'Permission Denied', detail: 'You do not have permission to perform this action.' });
+            return;
+        }
+        this.cancelTarget = row;
+        this.cancelRemarks = '';
+        this.showCancelDialog = true;
+    }
+
+    closeCancelDialog(): void {
+        if (this.cancelling) return;
+        this.showCancelDialog = false;
+        this.cancelTarget = null;
+    }
+
+    /** Cancel the member's joining. Sets JoinStatus = Cancel (member stays in the
+     *  inter-posting notesheet AND the inter-posting order); employee status is reset
+     *  to presently serving and IsSendingNotesheetStatus is cleared (handled server-side). */
+    confirmCancel(): void {
+        if (this.cancelling || !this.cancelTarget) return;
+
+        this.cancelling = true;
+        this.postingService.cancelPostingJoining(
+            this.cancelTarget.postingOrderMasterId,
+            this.cancelTarget.employeeId,
+            this.currentUser,
+            this.cancelRemarks || null
+        ).subscribe({
+            next: (res) => {
+                this.cancelling = false;
+                if (res.statusCode === 200) {
+                    this.messageService.add({ severity: 'success', summary: 'Success', detail: res.description });
+                    this.showCancelDialog = false;
+                    this.cancelTarget = null;
+                    this.loadPending();
+                    // Only refresh the cancelled list if the user has already loaded it.
+                    if (this.cancelledLoaded) this.reloadCancelled();
+                } else {
+                    this.messageService.add({ severity: 'error', summary: 'Error', detail: res.description });
+                }
+            },
+            error: (err: any) => {
+                this.cancelling = false;
+                this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.message || 'Failed to cancel joining.' });
             }
         });
     }

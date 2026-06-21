@@ -46,7 +46,7 @@
             } @if (postingProcessingStatus?.newPostingStep && !postingProcessingStatus!.newPostingOrderReceived) {
             <div class="sp-posting-status-line">
                 <span>{{ L['posting.newPosting'] }}: {{ getPostingStepLabel(postingProcessingStatus!.newPostingStep!) }}</span>
-                @if (postingProcessingStatus!.newPostingForceOrderGenerated) {
+                @if (postingProcessingStatus!.newPostingForceOrderGenerated && !isPostingTerminalState(postingProcessingStatus!.newPostingStep)) {
                 <span class="sp-posting-sep">|</span>
                 <span>{{ L['posting.forceOrderGenerated'] }}</span>
                 @if (!postingProcessingStatus!.newPostingOrderReceived) {
@@ -60,7 +60,7 @@
             } @if (postingProcessingStatus?.interPostingStep && !postingProcessingStatus!.interPostingOrderReceived) {
             <div class="sp-posting-status-line">
                 <span>{{ L['posting.interPosting'] }}: {{ getPostingStepLabel(postingProcessingStatus!.interPostingStep!) }}</span>
-                @if (postingProcessingStatus!.interPostingForceOrderGenerated) {
+                @if (postingProcessingStatus!.interPostingForceOrderGenerated && !isPostingTerminalState(postingProcessingStatus!.interPostingStep)) {
                 <span class="sp-posting-sep">|</span>
                 <span>{{ L['posting.forceOrderGenerated'] }}</span>
                 @if (!postingProcessingStatus!.interPostingOrderReceived) {

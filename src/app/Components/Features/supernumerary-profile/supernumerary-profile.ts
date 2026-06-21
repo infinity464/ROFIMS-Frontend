@@ -512,6 +512,16 @@ export class SupernumeraryProfile implements OnInit, OnDestroy {
         return rows;
     }
 
+    /**
+     * Terminal "exit" states — the member left the posting flow (cancelled/removed).
+     * For these the Force Order / Received sub-flags are meaningless and hidden.
+     */
+    isPostingTerminalState(step: string | null | undefined): boolean {
+        return step === 'PostingOrderCancelled'
+            || step === 'JoiningCancelled'
+            || step === 'RemovedFromPosting';
+    }
+
     getPostingStepLabel(step: string): string {
         switch (step) {
             case 'DraftPosting': return 'Draft Posting';
@@ -523,6 +533,9 @@ export class SupernumeraryProfile implements OnInit, OnDestroy {
             case 'NoteSheetApproved': return 'Notesheet Approved';
             case 'PostingOrderGenerated': return 'Posting Order Generated';
             case 'PostingOrderApproved': return 'Posting Order Approved';
+            case 'PostingOrderCancelled': return 'Office Order Approval Rejected';
+            case 'JoiningCancelled': return 'Joining Cancelled';
+            case 'RemovedFromPosting': return 'Removed from Posting Order';
             default: return step;
         }
     }

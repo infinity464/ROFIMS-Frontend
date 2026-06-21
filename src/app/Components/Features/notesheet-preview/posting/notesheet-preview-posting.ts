@@ -1046,10 +1046,22 @@ export class NotesheetPreviewPostingComponent extends NotesheetPreviewBase imple
         const removalRemark = this.isEnglish()
             ? (history?.removalRemark || '')
             : (history?.removalRemarkBN || history?.removalRemark || '');
-        if (this.isInterPosting()) {
-            return [emp.interPostingRemark, emp.remarks, removalRemark].filter(s => s?.trim()).join(', ');
+        const sources = this.isInterPosting()
+            ? [emp.interPostingRemark, emp.remarks, removalRemark]
+            : [emp.sendingRemark, emp.remarks, removalRemark];
+        // De-duplicate: the same note often lives in more than one source
+        // (e.g. sendingRemark == remarks), which would otherwise repeat.
+        const seen = new Set<string>();
+        const parts: string[] = [];
+        for (const s of sources) {
+            const t = s?.trim();
+            if (!t) continue;
+            const key = t.toLowerCase();
+            if (seen.has(key)) continue;
+            seen.add(key);
+            parts.push(t);
         }
-        return [emp.sendingRemark, emp.remarks, removalRemark].filter(s => s?.trim()).join(', ');
+        return parts.join(', ');
     }
 
     getPreviousWorkplace(emp: DraftPostingEmployeeRow): string {

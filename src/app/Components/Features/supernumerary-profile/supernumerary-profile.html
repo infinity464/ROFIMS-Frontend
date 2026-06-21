@@ -68,10 +68,10 @@
                 </div>
                 @if (postingProcessingStatus?.newPostingStep && !postingProcessingStatus!.newPostingOrderReceived) {
                     <div class="sp-posting-status-group">
-                        <div class="sp-posting-status-badge sp-status-info">
+                        <div class="sp-posting-status-badge" [class.sp-status-info]="!isPostingTerminalState(postingProcessingStatus!.newPostingStep)" [class.sp-status-danger]="isPostingTerminalState(postingProcessingStatus!.newPostingStep)">
                             <i class="pi pi-arrows-h"></i> New Posting: {{ getPostingStepLabel(postingProcessingStatus!.newPostingStep!) }}
                         </div>
-                        @if (postingProcessingStatus!.newPostingForceOrderGenerated) {
+                        @if (postingProcessingStatus!.newPostingForceOrderGenerated && !isPostingTerminalState(postingProcessingStatus!.newPostingStep)) {
                             <div class="sp-posting-flags">
                                 <span class="sp-flag sp-flag-yes">Force Order: Generated</span>
                                 @if (!postingProcessingStatus!.newPostingOrderReceived) {
@@ -88,10 +88,10 @@
                 }
                 @if (postingProcessingStatus?.interPostingStep && !postingProcessingStatus!.interPostingOrderReceived) {
                     <div class="sp-posting-status-group">
-                        <div class="sp-posting-status-badge sp-status-warn">
+                        <div class="sp-posting-status-badge" [class.sp-status-warn]="!isPostingTerminalState(postingProcessingStatus!.interPostingStep)" [class.sp-status-danger]="isPostingTerminalState(postingProcessingStatus!.interPostingStep)">
                             <i class="pi pi-arrows-h"></i> Inter Posting: {{ getPostingStepLabel(postingProcessingStatus!.interPostingStep!) }}
                         </div>
-                        @if (postingProcessingStatus!.interPostingForceOrderGenerated) {
+                        @if (postingProcessingStatus!.interPostingForceOrderGenerated && !isPostingTerminalState(postingProcessingStatus!.interPostingStep)) {
                             <div class="sp-posting-flags">
                                 <span class="sp-flag sp-flag-yes">Force Order: Generated</span>
                                 @if (!postingProcessingStatus!.interPostingOrderReceived) {

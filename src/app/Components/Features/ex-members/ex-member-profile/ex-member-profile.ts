@@ -894,6 +894,13 @@ export class ExMemberProfile implements OnInit, OnDestroy {
         return (this.L as any)[key] ?? step;
     }
 
+    /** Terminal exit states (cancelled/removed) — hide the Force Order / Received sub-flags. */
+    isPostingTerminalState(step: string | null | undefined): boolean {
+        return step === 'PostingOrderCancelled'
+            || step === 'JoiningCancelled'
+            || step === 'RemovedFromPosting';
+    }
+
     /**
      * Derives the live "On Leave" / "Present Location" hero badges from the already-loaded
      * current-year leave list and temporary-movement list.
