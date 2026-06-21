@@ -118,3 +118,179 @@
         }
     }
 }
+
+// ── Cancel Joining dialog – polished, danger-themed ──────────────
+:host ::ng-deep .cancel-dialog {
+    border-radius: 16px;
+    overflow: hidden;
+
+    .p-dialog-content {
+        padding: 0;
+        border-radius: 16px 16px 0 0;
+    }
+
+    .p-dialog-footer {
+        padding: 1rem 1.5rem 1.25rem;
+        border-top: 1px solid var(--surface-200, #e5e7eb);
+    }
+
+    .cancel-body {
+        display: flex;
+        flex-direction: column;
+        gap: 1.1rem;
+        padding: 1.5rem 1.5rem 0.25rem;
+    }
+
+    // Hero
+    .cancel-hero {
+        display: flex;
+        align-items: center;
+        gap: 0.9rem;
+
+        .cancel-hero-icon {
+            flex: 0 0 auto;
+            width: 3rem;
+            height: 3rem;
+            border-radius: 50%;
+            display: grid;
+            place-items: center;
+            background: rgba(239, 68, 68, 0.12);
+            color: #ef4444;
+
+            i { font-size: 1.4rem; }
+        }
+
+        .cancel-hero-text {
+            h3 {
+                margin: 0 0 0.15rem;
+                font-size: 1.15rem;
+                font-weight: 700;
+                color: var(--text-color);
+            }
+            span {
+                font-size: 0.82rem;
+                color: var(--text-color-secondary, #6b7280);
+            }
+        }
+    }
+
+    // Member card
+    .cancel-member-card {
+        display: flex;
+        align-items: center;
+        gap: 0.9rem;
+        padding: 0.9rem 1rem;
+        background: var(--surface-50, #f9fafb);
+        border: 1px solid var(--surface-200, #e5e7eb);
+        border-radius: 12px;
+
+        .cancel-avatar {
+            flex: 0 0 auto;
+            width: 2.6rem;
+            height: 2.6rem;
+            border-radius: 50%;
+            display: grid;
+            place-items: center;
+            font-weight: 700;
+            font-size: 1.1rem;
+            color: #fff;
+            background: linear-gradient(135deg, #6366f1, #8b5cf6);
+            text-transform: uppercase;
+        }
+
+        .cancel-member-info {
+            display: flex;
+            flex-direction: column;
+            gap: 0.35rem;
+            min-width: 0;
+        }
+
+        .cancel-member-name {
+            font-weight: 700;
+            font-size: 0.98rem;
+            color: var(--text-color);
+        }
+
+        .cancel-member-meta {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.9rem;
+            font-size: 0.8rem;
+            color: var(--text-color-secondary, #6b7280);
+
+            span { display: inline-flex; align-items: center; gap: 0.3rem; }
+            i { font-size: 0.75rem; }
+        }
+
+        .cancel-route {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+            margin-top: 0.1rem;
+
+            .cancel-chip {
+                font-size: 0.78rem;
+                font-weight: 600;
+                padding: 0.15rem 0.6rem;
+                border-radius: 999px;
+
+                &.from {
+                    background: var(--surface-200, #e5e7eb);
+                    color: var(--text-color-secondary, #6b7280);
+                }
+                &.to {
+                    background: rgba(16, 185, 129, 0.14);
+                    color: #059669;
+                }
+            }
+            > i { font-size: 0.72rem; color: var(--text-color-secondary, #9ca3af); }
+        }
+    }
+
+    // Order reference
+    .cancel-order-ref {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        font-size: 0.85rem;
+        color: var(--text-color-secondary, #6b7280);
+
+        i { color: #ef4444; }
+        b { color: var(--text-color); }
+    }
+
+    // Remarks field
+    .cancel-field {
+        display: flex;
+        flex-direction: column;
+        gap: 0.45rem;
+
+        label {
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: var(--text-color);
+
+            .optional {
+                font-weight: 400;
+                color: var(--text-color-secondary, #9ca3af);
+            }
+        }
+
+        textarea {
+            width: 100%;
+            font-size: 0.92rem;
+            padding: 0.6rem 0.8rem;
+            line-height: 1.5;
+            resize: vertical;
+            border-radius: 8px;
+        }
+    }
+
+    .cancel-actions {
+        display: flex;
+        justify-content: flex-end;
+        gap: 0.6rem;
+        width: 100%;
+    }
+}

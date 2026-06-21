@@ -473,10 +473,6 @@
                 <p-checkbox [(ngModel)]="showUpperSignature" [binary]="true" inputId="chkUpperSig"></p-checkbox>
                 <label for="chkUpperSig" style="cursor:pointer;">{{ isBangla ? 'স্বাক্ষর' : 'Signature' }}</label>
             </span>
-            <span *ngIf="isApproved" style="display:inline-flex; align-items:center; gap:0.4rem;">
-                <p-checkbox [(ngModel)]="showDeleteColumn" [binary]="true" inputId="chkDeleteCol"></p-checkbox>
-                <label for="chkDeleteCol" style="cursor:pointer;">{{ isBangla ? 'মুছুন' : 'Delete' }}</label>
-            </span>
         </div>
     </div>
 
@@ -541,7 +537,6 @@
                             <th *ngIf="showPrevWorkplaceUnit" style="width:14%">{{ isBangla ? 'পূর্ববতী কর্মস্থল' : 'Previous Workplace' }}</th>
                             <th style="width:14%">{{ isBangla ? 'বদলিকৃত কর্মস্থল' : 'Transfer Station' }}</th>
                             <th *ngIf="showRemarks" style="width:10%">{{ isBangla ? 'মন্তব্য' : 'Remarks' }}</th>
-                            <th *ngIf="isApproved && showDeleteColumn" class="no-print" style="width:30px"></th>
                         </tr>
                     </ng-container>
                     <!-- Non-inter-posting: single header row -->
@@ -571,7 +566,6 @@
                                 <th style="width:9%">RAB ID</th>
                                 <th *ngIf="showRemarks" style="width:10%">Remarks</th>
                             </ng-container>
-                            <th *ngIf="isApproved && showDeleteColumn" class="no-print" style="width:30px"></th>
                         </tr>
                     </ng-container>
                 </thead>
@@ -586,18 +580,6 @@
                             <td *ngIf="showPrevWorkplaceUnit" style="white-space: pre-line;">{{ empPrevWorkplace(emp) }}</td>
                             <td>{{ empTransferUnit(emp) }}</td>
                             <td *ngIf="showRemarks" style="white-space: pre-line; word-break: break-word;">{{ empCombinedRemarks(emp) }}</td>
-                            <td *ngIf="isApproved && showDeleteColumn" class="text-center no-print">
-                                <p-button
-                                    [icon]="removingEmployeeId === emp.employeeId ? 'pi pi-spin pi-spinner' : 'pi pi-trash'"
-                                    severity="danger"
-                                    [rounded]="true"
-                                    [text]="true"
-                                    size="small"
-                                    [disabled]="isEmployeeReceived(emp) || removingEmployeeId !== null"
-                                    [pTooltip]="isEmployeeReceived(emp) ? 'Cannot remove — already received' : ''"
-                                    (onClick)="removeEditEmployee(emp)">
-                                </p-button>
-                            </td>
                         </tr>
                     </ng-container>
                     <ng-container *ngIf="!isInterPosting">
@@ -612,18 +594,6 @@
                             <td>{{ empTransferUnit(emp) }}</td>
                             <td>{{ empRabId(emp) }}</td>
                             <td *ngIf="showRemarks">{{ getRemovalRemark(emp) }}</td>
-                            <td *ngIf="isApproved && showDeleteColumn" class="text-center no-print">
-                                <p-button
-                                    [icon]="removingEmployeeId === emp.employeeId ? 'pi pi-spin pi-spinner' : 'pi pi-trash'"
-                                    severity="danger"
-                                    [rounded]="true"
-                                    [text]="true"
-                                    size="small"
-                                    [disabled]="isEmployeeReceived(emp) || removingEmployeeId !== null"
-                                    [pTooltip]="isEmployeeReceived(emp) ? 'Cannot remove — already received' : ''"
-                                    (onClick)="removeEditEmployee(emp)">
-                                </p-button>
-                            </td>
                         </tr>
                     </ng-container>
                 </tbody>

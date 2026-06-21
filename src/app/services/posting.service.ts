@@ -612,6 +612,11 @@ export class PostingService {
         return this.http.post<{ statusCode: number; description: string }>(`${API}/CancelPostingOrder`, { id, cancelReason, cancelledBy });
     }
 
+    /** Cancel a single member's joining on an approved posting order (sets JoinStatus = Cancel). */
+    cancelPostingJoining(postingOrderMasterId: number, employeeId: number, cancelledBy: string, remarks: string | null = null): Observable<{ statusCode: number; description: string }> {
+        return this.http.post<{ statusCode: number; description: string }>(`${API}/CancelPostingJoining`, { postingOrderMasterId, employeeId, cancelledBy, remarks });
+    }
+
     /** Get employees for approval person dropdown. */
     getApprovalEmployees(): Observable<{ value: number; label: string }[]> {
         return this.http.get<{ value: number; label: string }[]>(`${API}/GetApprovalEmployees`);

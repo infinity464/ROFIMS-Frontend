@@ -194,6 +194,16 @@
                                 pTooltip="View Posting Order"
                                 (onClick)="openPostingOrder(row)"
                             ></p-button>
+                            <p-button
+                                icon="pi pi-ban"
+                                severity="danger"
+                                [rounded]="true"
+                                [text]="true"
+                                size="small"
+                                pTooltip="Cancel Joining"
+                                [disabled]="!canDelete"
+                                (onClick)="openCancelDialog(row)"
+                            ></p-button>
                         </div>
                     </td>
                 </tr>
@@ -274,5 +284,89 @@
             [loading]="saving"
             (onClick)="confirmReceive()"
         ></p-button>
+    </ng-template>
+</p-dialog>
+
+<!-- Cancel Joining Dialog -->
+<p-dialog
+    [(visible)]="showCancelDialog"
+    [modal]="true"
+    [showHeader]="false"
+    styleClass="cancel-dialog"
+    [style]="{ width: '34rem' }"
+    [breakpoints]="{ '960px': '90vw', '640px': '95vw' }"
+    [draggable]="false"
+    [resizable]="false"
+    [closable]="!cancelling"
+    [dismissableMask]="!cancelling"
+>
+    <div class="cancel-body" *ngIf="cancelTarget">
+        <!-- Hero header -->
+        <div class="cancel-hero">
+            <div class="cancel-hero-icon">
+                <i class="pi pi-ban"></i>
+            </div>
+            <div class="cancel-hero-text">
+                <h3>Cancel Joining</h3>
+                <span>This member will be dropped from the pending joining list.</span>
+            </div>
+        </div>
+
+        <!-- Member card -->
+        <div class="cancel-member-card">
+            <div class="cancel-avatar">{{ (cancelTarget.fullNameEN || '?').charAt(0) }}</div>
+            <div class="cancel-member-info">
+                <div class="cancel-member-name">
+                    {{ cancelTarget.rankName ? cancelTarget.rankName + ' ' : '' }}{{ cancelTarget.fullNameEN || '-' }}
+                </div>
+                <div class="cancel-member-meta">
+                    <span><i class="pi pi-id-card"></i> {{ cancelTarget.serviceId || '-' }}</span>
+                    <span *ngIf="cancelTarget.rabID"><i class="pi pi-hashtag"></i> {{ cancelTarget.rabID }}</span>
+                </div>
+                <div class="cancel-route">
+                    <span class="cancel-chip from">{{ cancelTarget.fromRabUnitName || '—' }}</span>
+                    <i class="pi pi-arrow-right"></i>
+                    <span class="cancel-chip to">{{ cancelTarget.transferRabUnitName || cancelTarget.transferToHierarchy || '—' }}</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Order reference -->
+        <div class="cancel-order-ref">
+            <i class="pi pi-file"></i>
+            <span>Posting Order <b>{{ cancelTarget.postingOrderNo }}</b></span>
+        </div>
+
+        <!-- Remarks -->
+        <div class="cancel-field">
+            <label for="cancelRemarks">Reason <span class="optional">(optional)</span></label>
+            <textarea
+                id="cancelRemarks"
+                pTextarea
+                [(ngModel)]="cancelRemarks"
+                rows="3"
+                placeholder="Why is this joining being cancelled?"
+            ></textarea>
+        </div>
+    </div>
+
+    <ng-template pTemplate="footer">
+        <div class="cancel-actions">
+            <p-button
+                label="Keep"
+                icon="pi pi-arrow-left"
+                severity="secondary"
+                [text]="true"
+                [disabled]="cancelling"
+                (onClick)="closeCancelDialog()"
+            ></p-button>
+            <p-button
+                label="Cancel Joining"
+                icon="pi pi-ban"
+                severity="danger"
+                [loading]="cancelling"
+                (onClick)="confirmCancel()"
+            ></p-button>
+        </div>
     </ng-template>
 </p-dialog>

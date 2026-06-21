@@ -229,6 +229,25 @@ export const DraftPostingStatusOptions = [
     { label: 'Decline', value: DraftPostingStatus.Decline }
 ];
 
+/**
+ * PostingJoinStatus – per-member joining state on a Posting Order line
+ * (PostingOrderDetail.JoinStatus). Mirrors backend rab.Model.Enums.PostingJoinStatus.
+ *   Pending  – order generated, member not yet joined
+ *   Received – member joined the new unit
+ *   Cancel   – joining cancelled (approved order; member can't be removed)
+ */
+export enum PostingJoinStatus {
+    Pending  = 'Pending',
+    Received = 'Received',
+    Cancel   = 'Cancel'
+}
+
+export const PostingJoinStatusOptions = [
+    { label: 'Pending',   value: PostingJoinStatus.Pending },
+    { label: 'Received',  value: PostingJoinStatus.Received },
+    { label: 'Cancelled', value: PostingJoinStatus.Cancel }
+];
+
 /** ExBdLeaveStatus – Ex-BD Leave Application workflow status. */
 export enum ExBdLeaveStatus {
     Received   = 'Received',

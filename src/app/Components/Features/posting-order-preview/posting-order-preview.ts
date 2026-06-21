@@ -117,7 +117,6 @@ export class PostingOrderPreviewPageComponent implements OnInit {
     // ── নিজ জেলা column visibility ───────────────────
     showOwnDistrict = true;
     showRemarks = true;
-    showDeleteColumn = false;
     showUpperSignature = true;
 
     private syncParagraphChecked(): void {
@@ -915,14 +914,8 @@ export class PostingOrderPreviewPageComponent implements OnInit {
         return '_' + name.replace(/[^\p{L}\p{N}_-]+/gu, '_');
     }
 
-    // ─── Approved-mode removal ─────────────────────────────
-
     get isApproved(): boolean {
         return this.approvalStatus === ApprovalStatus.Approve;
-    }
-
-    isEmployeeReceived(emp: PostingOrderEmployeeRow): boolean {
-        return emp.receiveStatus === 'Received';
     }
 
     // ─── Edit mode ────────────────────────────────────────
