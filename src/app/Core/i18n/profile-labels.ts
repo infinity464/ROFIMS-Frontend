@@ -254,6 +254,10 @@ export const PROFILE_LABELS = {
     'posting.notApproved': 'Not Approved',
     'posting.received': 'Received',
     'posting.notReceived': 'Not Received',
+    'posting.postingNotReceived': 'Posting Not Received',
+    'posting.postingReceived': 'Posting Received',
+    'posting.postingApproved': 'Posting Approved',
+    'posting.postingNotApproved': 'Posting Not Approved',
 
     // Present (live) leave / movement status
     'status.onLeave': 'On Leave',
@@ -498,6 +502,10 @@ export const PROFILE_LABELS = {
     'posting.notApproved': 'অনুমোদিত নয়',
     'posting.received': 'গৃহীত',
     'posting.notReceived': 'গৃহীত নয়',
+    'posting.postingNotReceived': 'পোস্টিং গৃহীত হয়নি',
+    'posting.postingReceived': 'পোস্টিং গৃহীত',
+    'posting.postingApproved': 'পোস্টিং অনুমোদিত',
+    'posting.postingNotApproved': 'পোস্টিং অনুমোদিত নয়',
 
     // Present (live) leave / movement status
     'status.onLeave': 'ছুটিতে আছেন',

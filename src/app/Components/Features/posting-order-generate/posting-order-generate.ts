@@ -21,7 +21,7 @@ import { MessageService, ConfirmationService } from 'primeng/api';
 import { environment } from '@/Core/Environments/environment';
 import { PostingService } from '@/services/posting.service';
 import { MasterBasicSetupService } from '@/Components/basic-setup/shared/services/MasterBasicSetupService';
-import { ApprovedNoteSheetItem, PostingOrderMasterDto } from '@/models/posting.model';
+import { ApprovedNoteSheetItem, PostingOrderMasterDto, EmployeeRemovalInfo, CancelledInterPostingInfo } from '@/models/posting.model';
 import { PostingOrderNumberConfigModel } from '@/Components/basic-setup/shared/models/posting-order-number-config';
 import { NoteSheetType, CodeType, ApprovalStatus, PostingType } from '@/models/enums';
 import { FlexibleDateDirective } from '@/shared/directives/flexible-date.directive';
@@ -54,6 +54,8 @@ interface NoteSheetEmployee {
     transferRabUnitName: string | null;
     transferRabUnitNameBN: string | null;
     remarks: string | null;
+    interPostingRemark: string | null;
+    sendingRemark: string | null;
     joiningDateInRAB: string | null;
 }
 
@@ -107,6 +109,9 @@ export class PostingOrderGenerateComponent implements OnInit {
     approvedNoteSheets: ApprovedNoteSheetItem[] = [];
     selectedNoteSheetId: number | null = null;
     employees: NoteSheetEmployee[] = [];
+    /** Per-employee extras for the combined remark (same as note-sheet preview). */
+    removalHistoryMap: Record<number, EmployeeRemovalInfo> = {};
+    cancelledInterMap: Record<number, CancelledInterPostingInfo> = {};
     loadingNoteSheets = false;
     loadingEmployees = false;
     saving = false;
@@ -158,6 +163,46 @@ export class PostingOrderGenerateComponent implements OnInit {
     /** Convert ASCII digits in a string to Bangla digits. */
     toBanglaDigits(s: string): string {
         return s.replace(/\d/g, d => String.fromCharCode(0x09E6 + Number(d)));
+    }
+
+    /** Load removal history + last-cancelled-inter maps for the combined remark. */
+    private loadRemarkExtras(emps: NoteSheetEmployee[], isInter: boolean): void {
+        const ids = emps.map(e => e.employeeId).filter(Boolean);
+        if (!ids.length) return;
+        this.postingService.getRemovalHistoryByEmployeeIds(ids).subscribe({
+            next: (list) => {
+                this.removalHistoryMap = {};
+                for (const it of (list ?? [])) {
+                    if (it.postingOrderNo || it.draftPostingNo) this.removalHistoryMap[it.employeeId] = it;
+                }
+            },
+            error: () => {}
+        });
+        if (isInter) {
+            this.postingService.getLastCancelledInterPostingByEmployeeIds(ids).subscribe({
+                next: (list) => {
+                    this.cancelledInterMap = {};
+                    for (const it of (list ?? [])) {
+                        if (it.postingOrderNo) this.cancelledInterMap[it.employeeId] = it;
+                    }
+                },
+                error: () => {}
+            });
+        }
+    }
+
+    /** Combined remark — same content as the inter posting note-sheet preview. */
+    getEmployeeRemarks(emp: NoteSheetEmployee): string {
+        const isInter = this.selectedPostingType === NoteSheetType.InterPosting;
+        const history = this.removalHistoryMap[emp.employeeId];
+        const removalRemark = this.isBangla
+            ? (history?.removalRemarkBN || history?.removalRemark || '')
+            : (history?.removalRemark || '');
+        const base = isInter ? emp.interPostingRemark : emp.sendingRemark;
+        const cancelNote = (isInter && this.cancelledInterMap[emp.employeeId]?.postingOrderNo)
+            ? (this.isBangla ? 'পূর্ববর্তী বদলির আদেশ বাতিল করা হলো।' : 'Previous transfer order cancelled.')
+            : '';
+        return [base, emp.remarks, removalRemark, cancelNote].filter(s => s?.trim()).join(', ');
     }
 
     /** RAB ID — Bangla digits when text type is Bangla, else as-is. */
@@ -349,10 +394,15 @@ export class PostingOrderGenerateComponent implements OnInit {
                                 transferRabUnitId: e.transferRabUnitId,
                                 transferRabUnitName: e.transferRabUnitName,
                                 transferRabUnitNameBN: e.transferRabUnitNameBN ?? null,
-                                remarks: e.remarks,
+                                remarks: e.remarks ?? null,
+                                interPostingRemark: e.interPostingRemark ?? null,
+                                sendingRemark: e.sendingRemark ?? null,
                                 joiningDateInRAB: e.joiningDateInRAB
                             }));
                             this.loadingEmployees = false;
+                            // Same combined remark as the note-sheet preview (incl. removal +
+                            // "previous transfer order cancelled" note).
+                            this.loadRemarkExtras(this.employees, isInterPosting);
                             // Pre-fill onulipi from this page's posting-type onulipi-config
                             this.footerParagraphs = [];
                             this.loadOnulipiFromConfig();

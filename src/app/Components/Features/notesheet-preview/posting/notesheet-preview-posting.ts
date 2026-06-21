@@ -23,7 +23,7 @@ import { NotesheetPreviewBase } from '../notesheet-preview-base';
 import { NoteSheetCurrentStatus, NoteSheetCurrentStatusOptions, NoteSheetOperationTypeOptions, ApprovalStatus, NoteSheetRemarkAction, NoteSheetType, ApprovalLogAction, ApprovalLogActionOptions, DraftPostingStatus, PostingStatus, NoteSheetPreviewFrom } from '@/models/enums';
 import { SharedService } from '@/shared/services/shared-service';
 import { FlexibleDateDirective } from '@/shared/directives/flexible-date.directive';
-import { DraftPostingEmployeeRow, EmployeeRemovalInfo } from '@/models/posting.model';
+import { DraftPostingEmployeeRow, EmployeeRemovalInfo, CancelledInterPostingInfo } from '@/models/posting.model';
 import { OrgService } from '@/Components/basic-setup/org-tree/org.service';
 import { JsReportService } from '@/services/jsreport.service';
 import { environment } from '@/Core/Environments/environment';
@@ -158,9 +158,27 @@ export class NotesheetPreviewPostingComponent extends NotesheetPreviewBase imple
 
     // ── Removal history (previous posting order info) ──
     removalHistoryMap: Record<number, EmployeeRemovalInfo> = {};
+    /** Last cancelled inter posting per employee — drives the "previous transfer order may be cancelled" note. */
+    cancelledInterMap: Record<number, CancelledInterPostingInfo> = {};
 
     protected override onPostingEmployeesLoaded(employees: DraftPostingEmployeeRow[]): void {
         this.loadRemovalHistory(employees);
+        this.loadCancelledInterPosting(employees);
+    }
+
+    private loadCancelledInterPosting(emps: { employeeId: number }[]): void {
+        if (!this.isInterPosting()) return;
+        const ids = emps.map(e => e.employeeId).filter(Boolean);
+        if (ids.length === 0) return;
+        this.postingService.getLastCancelledInterPostingByEmployeeIds(ids).subscribe({
+            next: (list) => {
+                this.cancelledInterMap = {};
+                for (const item of (list ?? [])) {
+                    if (item.postingOrderNo) this.cancelledInterMap[item.employeeId] = item;
+                }
+            },
+            error: () => {}
+        });
     }
 
     private loadRemovalHistory(emps: { employeeId: number }[]): void {
@@ -1046,22 +1064,23 @@ export class NotesheetPreviewPostingComponent extends NotesheetPreviewBase imple
         const removalRemark = this.isEnglish()
             ? (history?.removalRemark || '')
             : (history?.removalRemarkBN || history?.removalRemark || '');
-        const sources = this.isInterPosting()
-            ? [emp.interPostingRemark, emp.remarks, removalRemark]
-            : [emp.sendingRemark, emp.remarks, removalRemark];
-        // De-duplicate: the same note often lives in more than one source
-        // (e.g. sendingRemark == remarks), which would otherwise repeat.
-        const seen = new Set<string>();
-        const parts: string[] = [];
-        for (const s of sources) {
-            const t = s?.trim();
-            if (!t) continue;
-            const key = t.toLowerCase();
-            if (seen.has(key)) continue;
-            seen.add(key);
-            parts.push(t);
+        if (this.isInterPosting()) {
+            // After the main remarks, append the "previous transfer order may be
+            // cancelled" note when this member's last inter posting was cancelled.
+            const cancelNote = this.getCancelledInterNote(emp);
+            return [emp.interPostingRemark, emp.remarks, removalRemark, cancelNote].filter(s => s?.trim()).join(', ');
         }
-        return parts.join(', ');
+        return [emp.sendingRemark, emp.remarks, removalRemark].filter(s => s?.trim()).join(', ');
+    }
+
+    /**
+     * Simple note when this member's last inter posting was cancelled.
+     * (cancelledInterMap is just the flag that a cancelled order exists.)
+     */
+    private getCancelledInterNote(emp: DraftPostingEmployeeRow): string {
+        const c = this.cancelledInterMap[emp.employeeId];
+        if (!c?.postingOrderNo) return '';
+        return this.isEnglish() ? 'Previous transfer order cancelled.' : 'পূর্ববর্তী বদলির আদেশ বাতিল করা হলো।';
     }
 
     getPreviousWorkplace(emp: DraftPostingEmployeeRow): string {

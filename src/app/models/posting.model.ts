@@ -49,6 +49,17 @@ export interface EmployeeRemovalInfo {
     removalRemarkBN: string | null;
 }
 
+/** Most recent cancelled inter posting (joining cancelled) per employee. */
+export interface CancelledInterPostingInfo {
+    employeeId: number;
+    postingOrderNo: string | null;
+    postingOrderDate: string | null;   // dd-MM-yyyy
+    transferRabUnitName: string | null;
+    transferRabUnitNameBN: string | null;
+    fromRabUnitName: string | null;
+    fromRabUnitNameBN: string | null;
+}
+
 /** Status of a posting note-sheet. */
 export type PostingNoteSheetStatus = 'Draft' | 'PendingFinalized' | 'PendingApproval' | 'Approved' | 'Declined';
 
@@ -459,6 +470,7 @@ export interface PostingOrderEmployeeRow {
     detailRemarks: string | null;
     noteSheetRemarks: string | null;
     sendingRemark: string | null;
+    interPostingRemark: string | null;
     transferRabUnitId: number | null;
     transferRabUnitName: string | null;
     transferRabUnitNameBN: string | null;

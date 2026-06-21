@@ -22,7 +22,7 @@ import { OrgService } from '@/Components/basic-setup/org-tree/org.service';
 import { ServingMembersService } from '@/services/serving-members.service';
 import { EmpService } from '@/services/emp-service';
 import { EmployeeListService } from '@/services/employee-list.service';
-import { PostingOrderEmployeeRow, EmployeeRemovalInfo } from '@/models/posting.model';
+import { PostingOrderEmployeeRow, EmployeeRemovalInfo, CancelledInterPostingInfo } from '@/models/posting.model';
 import { EmployeeList } from '@/models/employee-list.model';
 import { NoteSheetType, IsSendingNotesheetStatus, ApprovalStatus } from '@/models/enums';
 import { HttpClient } from '@angular/common/http';
@@ -173,6 +173,8 @@ export class PostingOrderPreviewPageComponent implements OnInit {
 
     // ─── Removal history (shows previous posting order no in remarks) ──
     removalHistoryMap: Record<number, EmployeeRemovalInfo> = {};
+    /** Last cancelled inter posting per employee — drives the "previous transfer order cancelled" note. */
+    cancelledInterMap: Record<number, CancelledInterPostingInfo> = {};
 
     get addMemberTransferUnitId(): number | null {
         return this.selectedAddUnitNode ? Number(this.selectedAddUnitNode.key) : null;
@@ -336,8 +338,9 @@ export class PostingOrderPreviewPageComponent implements OnInit {
 
                     this.draftPostingMasterId = first.draftPostingMasterId ?? null;
 
-                    // Load removal history for মন্তব্য column
+                    // Load removal history + last-cancelled-inter for মন্তব্য column
                     this.loadRemovalHistory(this.employees);
+                    this.loadCancelledInterPosting(this.employees);
 
                     // Approval fields from the view
                     this.approvalEmployeeId = first.approvalEmployeeId ?? null;
@@ -1195,6 +1198,21 @@ export class PostingOrderPreviewPageComponent implements OnInit {
         });
     }
 
+    private loadCancelledInterPosting(emps: PostingOrderEmployeeRow[]): void {
+        if (!this.isInterPosting) return;
+        const ids = emps.map(e => e.employeeId).filter(Boolean);
+        if (ids.length === 0) return;
+        this.postingService.getLastCancelledInterPostingByEmployeeIds(ids).subscribe({
+            next: (list) => {
+                this.cancelledInterMap = {};
+                for (const item of (list ?? [])) {
+                    if (item.postingOrderNo) this.cancelledInterMap[item.employeeId] = item;
+                }
+            },
+            error: () => {}
+        });
+    }
+
     getRemovalRemark(emp: PostingOrderEmployeeRow): string {
         const history = this.removalHistoryMap[emp.employeeId];
         if (!history) return '';
@@ -1203,8 +1221,18 @@ export class PostingOrderPreviewPageComponent implements OnInit {
             : (history.removalRemark || '');
     }
 
+    /** Combined remark — same content as the note-sheet preview / order generate. */
     empCombinedRemarks(emp: PostingOrderEmployeeRow): string {
-        return [emp.detailRemarks, this.getRemovalRemark(emp)].filter(s => !!s).join(', ');
+        const base = this.isInterPosting ? emp.interPostingRemark : emp.sendingRemark;
+        // The "previous transfer order cancelled" note refers to an EARLIER order, so
+        // skip it when the cancelled order is the one being previewed.
+        const cancelled = this.cancelledInterMap[emp.employeeId];
+        const cancelNote = (this.isInterPosting && cancelled?.postingOrderNo
+                            && cancelled.postingOrderNo !== this.postingOrderNo)
+            ? (this.isBangla ? 'পূর্ববর্তী বদলির আদেশ বাতিল করা হলো।' : 'Previous transfer order cancelled.')
+            : '';
+        return [base, emp.noteSheetRemarks, this.getRemovalRemark(emp), cancelNote]
+            .filter(s => s?.trim()).join(', ');
     }
 
     trackByIndex(index: number): number {

@@ -23,6 +23,7 @@ import {
     PostingNoteSheetStatus,
     PostingMemberRemovalHistoryDto,
     EmployeeRemovalInfo,
+    CancelledInterPostingInfo,
     EmployeePostingProcessingStatusDto
 } from '@/models/posting.model';
 
@@ -193,6 +194,13 @@ export class PostingService {
     getRemovalHistoryByEmployeeIds(employeeIds: number[]): Observable<EmployeeRemovalInfo[]> {
         return this.http.post<EmployeeRemovalInfo[]>(
             `${API}/GetRemovalHistoryByEmployeeIds`, employeeIds
+        );
+    }
+
+    /** Get the most recent cancelled inter posting (joining cancelled) per employee. */
+    getLastCancelledInterPostingByEmployeeIds(employeeIds: number[]): Observable<CancelledInterPostingInfo[]> {
+        return this.http.post<CancelledInterPostingInfo[]>(
+            `${API}/GetLastCancelledInterPostingByEmployeeIds`, employeeIds
         );
     }
 

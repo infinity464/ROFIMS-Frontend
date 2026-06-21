@@ -148,7 +148,7 @@
                         <td>{{ (isBangla ? row.spousePermanentDistrictNameBN : row.spousePermanentDistrictName) || row.spousePermanentDistrictName || '-' }}</td>
                         <td>{{ selectedPostingType === 'InterPosting' ? ((isBangla ? row.previousRabUnitsBN || row.previousRabUnits : row.previousRabUnits) || '-') : ((isBangla ? row.motherOrgLocationNameBN : row.motherOrgLocationName) || row.motherOrgLocationName || '-') }}</td>
                         <td>{{ (isBangla ? row.transferRabUnitNameBN || row.transferRabUnitName : row.transferRabUnitName) || '-' }}</td>
-                        <td>{{ row.remarks || '-' }}</td>
+                        <td>{{ getEmployeeRemarks(row) || '-' }}</td>
                     </tr>
                 </ng-template>
                 <ng-template pTemplate="emptymessage">

@@ -73,15 +73,14 @@
                         </div>
                         @if (postingProcessingStatus!.newPostingForceOrderGenerated && !isPostingTerminalState(postingProcessingStatus!.newPostingStep)) {
                             <div class="sp-posting-flags">
-                                <span class="sp-flag sp-flag-yes">Force Order: Generated</span>
-                                @if (!postingProcessingStatus!.newPostingOrderReceived) {
-                                    <span class="sp-flag" [class.sp-flag-yes]="postingProcessingStatus!.newPostingForceOrderApproved" [class.sp-flag-no]="!postingProcessingStatus!.newPostingForceOrderApproved">
-                                        {{ postingProcessingStatus!.newPostingForceOrderApproved ? 'Approved' : 'Not Approved' }}
+                                <span class="sp-flag" [class.sp-flag-yes]="postingProcessingStatus!.newPostingForceOrderApproved" [class.sp-flag-no]="!postingProcessingStatus!.newPostingForceOrderApproved">
+                                    {{ postingProcessingStatus!.newPostingForceOrderApproved ? 'Posting Approved' : 'Posting Not Approved' }}
+                                </span>
+                                @if (postingProcessingStatus!.newPostingForceOrderApproved) {
+                                    <span class="sp-flag" [class.sp-flag-yes]="postingProcessingStatus!.newPostingOrderReceived" [class.sp-flag-no]="!postingProcessingStatus!.newPostingOrderReceived">
+                                        {{ postingProcessingStatus!.newPostingOrderReceived ? 'Posting Received' : 'Posting Not Received' }}
                                     </span>
                                 }
-                                <span class="sp-flag" [class.sp-flag-yes]="postingProcessingStatus!.newPostingOrderReceived" [class.sp-flag-no]="!postingProcessingStatus!.newPostingOrderReceived">
-                                    {{ postingProcessingStatus!.newPostingOrderReceived ? 'Received' : 'Not Received' }}
-                                </span>
                             </div>
                         }
                     </div>
@@ -93,15 +92,14 @@
                         </div>
                         @if (postingProcessingStatus!.interPostingForceOrderGenerated && !isPostingTerminalState(postingProcessingStatus!.interPostingStep)) {
                             <div class="sp-posting-flags">
-                                <span class="sp-flag sp-flag-yes">Force Order: Generated</span>
-                                @if (!postingProcessingStatus!.interPostingOrderReceived) {
-                                    <span class="sp-flag" [class.sp-flag-yes]="postingProcessingStatus!.interPostingForceOrderApproved" [class.sp-flag-no]="!postingProcessingStatus!.interPostingForceOrderApproved">
-                                        {{ postingProcessingStatus!.interPostingForceOrderApproved ? 'Approved' : 'Not Approved' }}
+                                <span class="sp-flag" [class.sp-flag-yes]="postingProcessingStatus!.interPostingForceOrderApproved" [class.sp-flag-no]="!postingProcessingStatus!.interPostingForceOrderApproved">
+                                    {{ postingProcessingStatus!.interPostingForceOrderApproved ? 'Posting Approved' : 'Posting Not Approved' }}
+                                </span>
+                                @if (postingProcessingStatus!.interPostingForceOrderApproved) {
+                                    <span class="sp-flag" [class.sp-flag-yes]="postingProcessingStatus!.interPostingOrderReceived" [class.sp-flag-no]="!postingProcessingStatus!.interPostingOrderReceived">
+                                        {{ postingProcessingStatus!.interPostingOrderReceived ? 'Posting Received' : 'Posting Not Received' }}
                                     </span>
                                 }
-                                <span class="sp-flag" [class.sp-flag-yes]="postingProcessingStatus!.interPostingOrderReceived" [class.sp-flag-no]="!postingProcessingStatus!.interPostingOrderReceived">
-                                    {{ postingProcessingStatus!.interPostingOrderReceived ? 'Received' : 'Not Received' }}
-                                </span>
                             </div>
                         }
                     </div>
