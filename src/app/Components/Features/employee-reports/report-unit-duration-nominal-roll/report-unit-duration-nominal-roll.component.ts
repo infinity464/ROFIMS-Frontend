@@ -91,7 +91,7 @@ export class ReportUnitDurationNominalRollComponent implements OnInit {
     get unitScopeLine(): string | null { return unitScopeLine(this.accessibleScope, this.lang); }
     get memberTypeScopeLine(): string | null { return memberTypeScopeLine(this.accessibleScope, this.lang); }
 
-    columnCatalog: { key: string; labelEN: string; labelBN: string; hint: 'Serial' | 'Personnel' | 'Date' | 'Plain' | 'Remarks' | 'Multiline'; defaultVisible: boolean }[] = [
+    columnCatalog: { key: string; labelEN: string; labelBN: string; hint: 'Serial' | 'Personnel' | 'Date' | 'Plain' | 'Remarks' | 'Multiline' | 'Duration'; defaultVisible: boolean }[] = [
         { key: 'ser',            labelEN: 'Ser',                 labelBN: 'ক্রঃ',                   hint: 'Serial',    defaultVisible: true  },
         { key: 'orgName',        labelEN: 'Org Name',            labelBN: 'বাহিনীর নাম',            hint: 'Plain',     defaultVisible: false },
         { key: 'serviceId',      labelEN: 'Service ID',          labelBN: 'ব্যক্তিগত নম্বর',         hint: 'Plain',     defaultVisible: true  },
@@ -101,6 +101,7 @@ export class ReportUnitDurationNominalRollComponent implements OnInit {
         { key: 'trade',          labelEN: 'Trade',               labelBN: 'ট্রেড',                  hint: 'Plain',     defaultVisible: true  },
         { key: 'name',           labelEN: 'Name',                labelBN: 'নাম',                    hint: 'Personnel', defaultVisible: true  },
         { key: 'presentUnit',    labelEN: 'Present Unit',        labelBN: 'বর্তমান ইউনিট',          hint: 'Plain',     defaultVisible: true  },
+        { key: 'durationOfStay', labelEN: 'Duration of Stay',    labelBN: 'অবস্থানের মেয়াদকাল',     hint: 'Duration',  defaultVisible: true  },
         { key: 'serviceHistory', labelEN: 'Service History',     labelBN: 'চাকরির ইতিহাস',          hint: 'Multiline', defaultVisible: true  },
         { key: 'rmks',           labelEN: 'Remarks',             labelBN: 'মন্তব্য',                hint: 'Remarks',   defaultVisible: true  },
         // ── Opt-in extras (registry FieldKeys) — hidden by default ────────
@@ -138,7 +139,7 @@ export class ReportUnitDurationNominalRollComponent implements OnInit {
     private static readonly colKeyToBackend: Record<string, string> = {
         ser: 'ser', name: 'personnel', rank: 'armyRank', orgName: 'orgName',
         serviceId: 'serviceId', corps: 'corps', trade: 'trade', presentUnit: 'presentUnit',
-        serviceHistory: 'serviceHistory', rmks: 'rmks',
+        durationOfStay: 'durationOfStay', serviceHistory: 'serviceHistory', rmks: 'rmks',
     };
     /** Extra (registry-keyed) columns rendered as formatted dates. */
     private static readonly extraDateKeys = new Set([
@@ -428,9 +429,13 @@ export class ReportUnitDurationNominalRollComponent implements OnInit {
         if (this.selectedTradeIds.length > 0)
             criteria.push({ fieldKey: 'trade', idValues: this.selectedTradeIds });
 
-        const columns = this.selectedColumnKeys.map(
-            k => ReportUnitDurationNominalRollComponent.colKeyToBackend[k] ?? k,
-        );
+        // Force-include the backing columns the synthetic "Duration of Stay" is
+        // computed from: serving members use joiningInRab → today; ex-members use
+        // joiningInRab → rabServiceTo (start date to end date of service).
+        const columns = Array.from(new Set([
+            ...this.selectedColumnKeys.map(k => ReportUnitDurationNominalRollComponent.colKeyToBackend[k] ?? k),
+            'joiningInRab', 'rabServiceTo', 'postingStatus',
+        ]));
 
         this.reportService.runDynamicUnitDurationReport({
             columns,
@@ -507,9 +512,49 @@ export class ReportUnitDurationNominalRollComponent implements OnInit {
             case 'name':           return this.codeValue(row.name, row.nameBN);
             case 'presentUnit':    return this.codeValue(row.presentUnit, row.presentUnitBN);
             case 'serviceHistory': return this.codeValue(row.serviceHistory, row.serviceHistoryBN);
+            case 'durationOfStay': return this.formatDuration(this.computeDurationString(row));
             case 'rmks':           return row.rmks ?? '';
             default:               return this.extraCellValue(row, key);
         }
+    }
+
+    /** Total RAB tenure as a "Yy Mm" string. Serving members are measured from
+        joiningInRab to today; ex-members from joiningInRab (start of service) to
+        rabServiceTo (end of service). Empty when joiningInRab is missing. */
+    private computeDurationString(row: UnitDurationNominalRollReportRow): string {
+        const joining = (row as any).joiningInRab as string | null | undefined;
+        if (!joining) return '';
+        const f = new Date(joining);
+        if (isNaN(f.getTime())) return '';
+        const rabServiceTo = (row as any).rabServiceTo as string | null | undefined;
+        let end = new Date();
+        if (rabServiceTo) {
+            const t = new Date(rabServiceTo);
+            if (!isNaN(t.getTime())) end = t;
+        }
+        let years = end.getFullYear() - f.getFullYear();
+        let months = end.getMonth() - f.getMonth();
+        if (end.getDate() < f.getDate()) months--;
+        if (months < 0) { years--; months += 12; }
+        if (years < 0) { years = 0; months = 0; }
+        return `${years}y ${months}m`;
+    }
+
+    formatDuration(v: string | null | undefined): string {
+        if (!v) return '—';
+        const m = /^(\d+)y\s+(\d+)m$/.exec(v.trim());
+        if (!m) return v;
+        const y = Number(m[1]);
+        const mo = Number(m[2]);
+        if (this.lang === 'en') {
+            const parts: string[] = [];
+            if (y > 0) parts.push(`${y} ${y === 1 ? 'year' : 'years'}`);
+            parts.push(`${mo} ${mo === 1 ? 'month' : 'months'}`);
+            return parts.join(' ');
+        }
+        const yBn = BanglaNumerals.toBangla(String(y));
+        const mBn = BanglaNumerals.toBangla(String(mo));
+        return `${yBn} বছর ${mBn} মাস`;
     }
 
     /** Split a multiline cell (e.g. Service History) into its per-stint lines. */
@@ -547,6 +592,9 @@ export class ReportUnitDurationNominalRollComponent implements OnInit {
             presentUnitBN:  d['presentUnitBN']  as string,
             serviceHistory:   d['serviceHistory']   as string,
             serviceHistoryBN: d['serviceHistoryBN'] as string,
+            joiningInRab:   d['joiningInRab']   as string,
+            rabServiceTo:   d['rabServiceTo']   as string,
+            postingStatus:  d['postingStatus']  as string,
             rmks:           null,
         } as UnitDurationNominalRollReportRow;
     }
@@ -614,7 +662,8 @@ export class ReportUnitDurationNominalRollComponent implements OnInit {
                         if (meta) children.push(new Paragraph({ children: [new TextRun({ text: meta, font: mono, size: S.meta, ...bnRunExtras(S.meta), color: C.gray, characterSpacing: isBn ? 0 : 16, allCaps: !isBn })] }));
                         return new TableCell({ ...cellOpts, children });
                     }
-                    case 'Date': return new TableCell({ ...cellOpts, children: [new Paragraph({ children: [run(this.cellValue(row, col.key), { fontKey: mono, chSp: isBn ? 0 : 4 })] })] });
+                    case 'Date':
+                    case 'Duration': return new TableCell({ ...cellOpts, children: [new Paragraph({ children: [run(this.cellValue(row, col.key), { fontKey: mono, chSp: isBn ? 0 : 4 })] })] });
                     case 'Multiline': {
                         const lines = this.historyLines(row, col.key);
                         const paras = (lines.length ? lines : ['']).map((ln, k) =>
@@ -711,7 +760,8 @@ export class ReportUnitDurationNominalRollComponent implements OnInit {
                     const metaHtml = meta ? `<div class="personnel-meta">${esc(meta)}</div>` : '';
                     return `<td class="td-personnel"><div class="personnel-name">${esc(this.cellValue(row, 'name'))}</div>${metaHtml}</td>`;
                 }
-                case 'Date': return `<td class="td-date">${esc(this.cellValue(row, col.key))}</td>`;
+                case 'Date':
+                case 'Duration': return `<td class="td-date">${esc(this.cellValue(row, col.key))}</td>`;
                 case 'Multiline': {
                     const lines = this.historyLines(row, col.key);
                     return `<td class="td-history">${lines.map(ln => `<div>${esc(ln)}</div>`).join('')}</td>`;

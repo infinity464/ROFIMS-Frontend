@@ -92,6 +92,16 @@
                                     <small class="ds-field-hint">Locked to Presently Serving — your access scope is restricted.</small>
                                 }
                             </div>
+                        </div>
+                    </div>
+
+                    <!-- Group 2: Organization & Rank (cascading multi-select) -->
+                    <div class="ds-field-group">
+                        <div class="ds-group-divider">
+                            <span class="ds-group-label">Organization &amp; Rank</span>
+                            <span class="ds-group-line"></span>
+                        </div>
+                        <div class="ds-criteria-grid">
                             <div class="ds-field">
                                 <label class="ds-field-label">{{ L['en']['report.search.motherOrg'] }}</label>
                                 <p-multiSelect [options]="orgOptions" [(ngModel)]="selectedOrgIds" (ngModelChange)="onOrgChange()" optionLabel="label" optionValue="value" display="chip" placeholder="Select" styleClass="w-full" [filter]="true" appendTo="body">
@@ -125,7 +135,7 @@
                         </div>
                     </div>
 
-                    <!-- Group 2: Column picker — always visible so columns can be chosen before searching. -->
+                    <!-- Group 3: Column picker — always visible so columns can be chosen before searching. -->
                     <div class="ds-field-group">
                         <div class="ds-group-divider">
                             <span class="ds-group-label">Columns</span>
