@@ -967,7 +967,9 @@ export class ExMemberProfile implements OnInit, OnDestroy {
         const totalInches = Number(p.height);
         if (isNaN(totalInches)) return '-';
         const feet = Math.floor(totalInches / 12);
-        const inches = totalInches % 12;
+        // Round the remainder to 1 decimal (drops trailing ".0") — a raw
+        // modulo leaks float error, e.g. 65.4 % 12 -> 5.400000000000006.
+        const inches = Math.round((totalInches - feet * 12) * 10) / 10;
         if (this.isBn) {
             const f = BanglaNumerals.toBangla(String(feet));
             const i = BanglaNumerals.toBangla(String(inches));
