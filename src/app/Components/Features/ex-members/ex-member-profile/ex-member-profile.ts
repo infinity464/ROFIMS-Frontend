@@ -1,4 +1,4 @@
-import { Component, HostListener, OnDestroy, OnInit , inject } from '@angular/core';
+import { Component, HostListener, OnDestroy, OnInit, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { UserMenuService } from '@/services/user-menu.service';
 import { CommonModule, Location } from '@angular/common';
@@ -8,7 +8,7 @@ import { ButtonModule } from 'primeng/button';
 import { TableModule } from 'primeng/table';
 import { MessageService } from 'primeng/api';
 import { Toast } from 'primeng/toast';
-import { forkJoin, of } from 'rxjs';
+import { of, Observable } from 'rxjs';
 import { catchError } from 'rxjs/operators';
 import { ServingMembersService } from '@/services/serving-members.service';
 import { EmpService, EmployeeDocumentReferenceItem } from '@/services/emp-service';
@@ -129,6 +129,8 @@ export class ExMemberProfile implements OnInit, OnDestroy {
     previousYearSummaryDialogVisible = false;
     previousYearSummaryLoading = false;
     loading = false;
+    /** Per-section spinner flags so each detail table loads/independently shows its own loading state. */
+    sectionLoading: Record<string, boolean> = {};
     activePresentStatus: string | null = null;
     presentStatusList: any[] = [];
     postingProcessingStatus: EmployeePostingProcessingStatusDto | null = null;
@@ -187,33 +189,37 @@ export class ExMemberProfile implements OnInit, OnDestroy {
         const p = this.profile;
         const title = p ? `${L['pageTitle.exMember']} - ${this.getFormattedName(p)}` : L['pageTitle.exMember'];
         const sections: ProfileExportSection[] = [];
-        const addSection = (secTitle: string, columns: string[], rows: string[][], noTableHeader?: boolean, addressSection?: boolean, colsPerRow?: 2 | 3) =>
-            sections.push({ title: secTitle, columns, rows, noTableHeader, addressSection, colsPerRow });
+        const addSection = (secTitle: string, columns: string[], rows: string[][], noTableHeader?: boolean, addressSection?: boolean, colsPerRow?: 2 | 3) => sections.push({ title: secTitle, columns, rows, noTableHeader, addressSection, colsPerRow });
         const kv = (label: string, value: string): [string, string] => [label, value];
 
         if (!p) return { title, lang: this.profileLang, sections, showPageNumbers: true };
 
         // Basic Service (same as web: label-value block, no "Field"/"Value" header)
-        addSection(L['section.basicService'], [L['table.field'], L['table.value']], [
-            kv(this.isBn ? L['field.nameBangla'] : L['field.nameEnglish'], this.getFormattedName(p)),
-            kv(L['field.serviceId'], this.valDisplay(p.serviceId)),
-            kv(L['field.rabId'], this.valDisplay(p.rabId)),
-            kv(L['field.appointment'], this.codeValue(p.appointment, p.appointmentBN)),
-            kv(L['field.memberType'], this.codeValue(p.memberType, p.memberTypeBN)),
-            kv(L['field.motherOrganization'], this.codeValue(p.motherOrganization, p.motherOrganizationBN)),
-            kv(L['field.rank'], this.codeValue(p.armyRank, p.armyRankBN)),
-            kv(L['field.corps'], this.codeValue(p.corps, p.corpsBN)),
-            kv(L['field.trade'], this.tradeDisplay(p)),
-            kv(L['field.specialQualification'], this.codeValue(p.specialQualifications, p.specialQualificationsBN)),
-            kv(L['field.dateOfCommission'], this.formatDateDisplay(p.dateOfCommission)),
-            kv(L['field.dateOfJoiningInServiceTraining'], this.formatDateDisplay(p.dateOfJoiningInServiceTraining)),
-            kv(L['field.motherUnit'], this.codeValue(p.motherUnit, p.motherUnitBN)),
-            kv(L['field.location'], this.codeValue(p.location, p.locationBN)),
-            kv(this.rabUnitFieldLabel, this.displayRabUnit),
-            kv(L['field.joiningDate'], this.formatDateDisplay(p.joiningDate)),
-            kv(L['field.maritalStatus'], this.codeValue(p.maritalStatus, p.maritalStatusBN)),
-            ...this.getPostingStatusExportRows(L),
-        ], true);
+        addSection(
+            L['section.basicService'],
+            [L['table.field'], L['table.value']],
+            [
+                kv(this.isBn ? L['field.nameBangla'] : L['field.nameEnglish'], this.getFormattedName(p)),
+                kv(L['field.serviceId'], this.valDisplay(p.serviceId)),
+                kv(L['field.rabId'], this.valDisplay(p.rabId)),
+                kv(L['field.appointment'], this.codeValue(p.appointment, p.appointmentBN)),
+                kv(L['field.memberType'], this.codeValue(p.memberType, p.memberTypeBN)),
+                kv(L['field.motherOrganization'], this.codeValue(p.motherOrganization, p.motherOrganizationBN)),
+                kv(L['field.rank'], this.codeValue(p.armyRank, p.armyRankBN)),
+                kv(L['field.corps'], this.codeValue(p.corps, p.corpsBN)),
+                kv(L['field.trade'], this.tradeDisplay(p)),
+                kv(L['field.specialQualification'], this.codeValue(p.specialQualifications, p.specialQualificationsBN)),
+                kv(L['field.dateOfCommission'], this.formatDateDisplay(p.dateOfCommission)),
+                kv(L['field.dateOfJoiningInServiceTraining'], this.formatDateDisplay(p.dateOfJoiningInServiceTraining)),
+                kv(L['field.motherUnit'], this.codeValue(p.motherUnit, p.motherUnitBN)),
+                kv(L['field.location'], this.codeValue(p.location, p.locationBN)),
+                kv(this.rabUnitFieldLabel, this.displayRabUnit),
+                kv(L['field.joiningDate'], this.formatDateDisplay(p.joiningDate)),
+                kv(L['field.maritalStatus'], this.codeValue(p.maritalStatus, p.maritalStatusBN)),
+                ...this.getPostingStatusExportRows(L)
+            ],
+            true
+        );
 
         // Own Address (label-value; one block per address)
         const ownAddrRows: string[][] = [];
@@ -244,29 +250,36 @@ export class ExMemberProfile implements OnInit, OnDestroy {
         addSection(L['section.spouseAddress'], [L['table.field'], L['table.value']], spouseAddrRows, true, true);
 
         // Other Personal (label-value)
-        addSection(L['section.otherPersonal'], [L['table.field'], L['table.value']], [
-            kv(L['field.courseBatch'], this.codeValue(p.batch, p.batchBN)),
-            kv(L['field.dateOfJoinInService'], this.formatDateDisplay(p.dateOfJoiningInServiceTraining)),
-            kv(L['field.dateOfCommission'], this.formatDateDisplay(p.dateOfCommission)),
-            kv(L['field.educationQualification'], this.codeValue(p.educationQualification, p.educationQualificationBN)),
-            kv(L['field.professionalQualification'], this.codeValue(p.professionalQualification, p.professionalQualificationBN)),
-            kv(L['field.personalQualification'], this.codeValue(p.personalQualification, p.personalQualificationBN)),
-            kv(L['field.gallantryAwards'], this.codeValue(p.gallantryAwardsDecoration, p.gallantryAwardsDecorationBN)),
-            kv(L['field.bloodGroup'], this.bloodGroupDisplay(p.bloodGroup)),
-            kv(L['field.nid'], this.valDisplay(p.nid)),
-            kv(L['field.nidOld'], this.valDisplay(p.nidOld)),
-            kv(L['field.emailAddress'], this.val(p.emailAddress)),
-            kv(L['field.dateOfBirth'], this.formatDateDisplay(p.dateOfBirth)),
-            kv(L['field.passportNo'], this.valDisplay(p.passportNo)),
-            kv(L['field.height'], this.heightDisplay(p)),
-            kv(L['field.medicalCategory'], this.codeValue(p.medicalCategory, p.medicalCategoryBN)),
-            kv(L['field.mobileNo'], this.valDisplay(p.mobileNo)),
-            kv(L['field.mobileNoOfficial'], this.valDisplay(p.mobileNoOfficial)),
-            kv(L['field.emergencyContactNo'], this.valDisplay(p.emergencyContactNo)),
-            kv(L['field.religion'], this.codeValue(p.religion, p.religionBN)),
-            kv(L['field.weight'], this.weightDisplay(p)),
-            kv(L['field.identificationMark'], this.val(p.identificationMark)),
-        ], true, false, 2);
+        addSection(
+            L['section.otherPersonal'],
+            [L['table.field'], L['table.value']],
+            [
+                kv(L['field.courseBatch'], this.codeValue(p.batch, p.batchBN)),
+                kv(L['field.dateOfJoinInService'], this.formatDateDisplay(p.dateOfJoiningInServiceTraining)),
+                kv(L['field.dateOfCommission'], this.formatDateDisplay(p.dateOfCommission)),
+                kv(L['field.educationQualification'], this.codeValue(p.educationQualification, p.educationQualificationBN)),
+                kv(L['field.professionalQualification'], this.codeValue(p.professionalQualification, p.professionalQualificationBN)),
+                kv(L['field.personalQualification'], this.codeValue(p.personalQualification, p.personalQualificationBN)),
+                kv(L['field.gallantryAwards'], this.codeValue(p.gallantryAwardsDecoration, p.gallantryAwardsDecorationBN)),
+                kv(L['field.bloodGroup'], this.bloodGroupDisplay(p.bloodGroup)),
+                kv(L['field.nid'], this.valDisplay(p.nid)),
+                kv(L['field.nidOld'], this.valDisplay(p.nidOld)),
+                kv(L['field.emailAddress'], this.val(p.emailAddress)),
+                kv(L['field.dateOfBirth'], this.formatDateDisplay(p.dateOfBirth)),
+                kv(L['field.passportNo'], this.valDisplay(p.passportNo)),
+                kv(L['field.height'], this.heightDisplay(p)),
+                kv(L['field.medicalCategory'], this.codeValue(p.medicalCategory, p.medicalCategoryBN)),
+                kv(L['field.mobileNo'], this.valDisplay(p.mobileNo)),
+                kv(L['field.mobileNoOfficial'], this.valDisplay(p.mobileNoOfficial)),
+                kv(L['field.emergencyContactNo'], this.valDisplay(p.emergencyContactNo)),
+                kv(L['field.religion'], this.codeValue(p.religion, p.religionBN)),
+                kv(L['field.weight'], this.weightDisplay(p)),
+                kv(L['field.identificationMark'], this.val(p.identificationMark))
+            ],
+            true,
+            false,
+            2
+        );
 
         // Family Info (table: Ser, Name, Relation, DOB, Occupation, Mobile)
         const familyRows = this.familyInfoList.map((row, i) => [
@@ -275,7 +288,7 @@ export class ExMemberProfile implements OnInit, OnDestroy {
             this.codeValue(row.relation, row.relationBN),
             this.formatFamilyDob(row.dateOfBirth),
             this.codeValue(row.occupation, row.occupationBN),
-            this.familyMobile(row),
+            this.familyMobile(row)
         ]);
         if (familyRows.length === 0) familyRows.push([L['empty.noFamilyRecords']]);
         addSection(L['section.familyInfo'], [L['table.ser'], L['table.name'], L['table.relation'], L['table.dateOfBirth'], L['table.occupation'], L['table.mobileNo']], familyRows);
@@ -287,7 +300,7 @@ export class ExMemberProfile implements OnInit, OnDestroy {
             this.codeValue(row.relation, row.relationBN),
             this.formatFamilyDob(row.dateOfBirth),
             this.codeValue(row.occupation, row.occupationBN),
-            this.familyMobile(row),
+            this.familyMobile(row)
         ]);
         if (spouseFamilyRows.length === 0) spouseFamilyRows.push([L['empty.noSpouseFamilyRecords']]);
         addSection(L['section.spouseFamilyInfo'], [L['table.ser'], L['table.name'], L['table.relation'], L['table.dateOfBirth'], L['table.occupation'], L['table.mobileNo']], spouseFamilyRows);
@@ -300,7 +313,7 @@ export class ExMemberProfile implements OnInit, OnDestroy {
             formatPartialDate(row.serviceTo, row.serviceToPrecision),
             this.codeValue(row.appointmentName, row.appointmentNameBN),
             this.val(row.postingAuth),
-            this.val(row.remarks),
+            this.val(row.remarks)
         ]);
         if (prevRabRows.length === 0) prevRabRows.push([L['empty.noPreviousRabRecords']]);
         addSection(L['section.previousRabService'], [L['table.ser'], L['table.rabUnit'], L['table.serviceFrom'], L['table.serviceTo'], L['table.appointment'], L['table.postingAuth'], L['table.remarks']], prevRabRows);
@@ -314,7 +327,7 @@ export class ExMemberProfile implements OnInit, OnDestroy {
             formatPartialDate(row.serviceTo, (row as any).serviceToPrecision),
             this.codeValue(row.appointment, row.appointmentBN),
             this.val(row.auth),
-            this.val(row.remarks),
+            this.val(row.remarks)
         ]);
         if (moRows.length === 0) moRows.push([L['empty.noServiceHistoryRecords']]);
         addSection(L['section.serviceHistoryMo'], [L['table.ser'], L['table.organization'], L['table.location'], L['table.serviceFrom'], L['table.serviceTo'], L['table.appointment'], L['table.auth'], L['table.remarks']], moRows);
@@ -329,10 +342,14 @@ export class ExMemberProfile implements OnInit, OnDestroy {
             this.formatDateOnly(row.toDate),
             this.val(row.probationaryPeriod),
             this.val(row.auth),
-            this.val(row.remarks),
+            this.val(row.remarks)
         ]);
         if (promRows.length === 0) promRows.push([L['empty.noPromotionRecords']]);
-        addSection(L['section.promotion'], [L['table.ser'], L['table.previousRank'], L['table.promotedRank'], L['table.promotedDate'], L['table.fromDate'], L['table.toDate'], L['table.probationaryPeriod'], L['table.auth'], L['table.remarks']], promRows);
+        addSection(
+            L['section.promotion'],
+            [L['table.ser'], L['table.previousRank'], L['table.promotedRank'], L['table.promotedDate'], L['table.fromDate'], L['table.toDate'], L['table.probationaryPeriod'], L['table.auth'], L['table.remarks']],
+            promRows
+        );
 
         // Education
         const eduRows = this.educationList.map((row, i) => [
@@ -344,10 +361,14 @@ export class ExMemberProfile implements OnInit, OnDestroy {
             this.codeValue(row.subjectsDepartments, row.subjectsDepartmentsBN),
             this.codeValue(row.result, row.resultBN),
             this.valDisplay(row.gradePoint),
-            this.valDisplay(row.passingYear),
+            this.valDisplay(row.passingYear)
         ]);
         if (eduRows.length === 0) eduRows.push([L['empty.noEducationRecords']]);
-        addSection(L['section.education'], [L['table.ser'], L['table.durationFrom'], L['table.durationTo'], L['table.schoolCollegeUniversity'], L['table.examDegree'], L['table.subjectDepartment'], L['table.result'], L['table.gradePoint'], L['table.passingYear']], eduRows);
+        addSection(
+            L['section.education'],
+            [L['table.ser'], L['table.durationFrom'], L['table.durationTo'], L['table.schoolCollegeUniversity'], L['table.examDegree'], L['table.subjectDepartment'], L['table.result'], L['table.gradePoint'], L['table.passingYear']],
+            eduRows
+        );
 
         // Course
         const courseRows = this.courseList.map((row, i) => [
@@ -359,15 +380,13 @@ export class ExMemberProfile implements OnInit, OnDestroy {
             this.formatDateOnly(row.dateTo),
             this.val(row.result),
             this.val(row.auth),
-            this.val(row.remarks),
+            this.val(row.remarks)
         ]);
         if (courseRows.length === 0) courseRows.push([L['empty.noCourseRecords']]);
         addSection(L['section.course'], [L['table.ser'], L['table.courseType'], L['table.courseName'], L['table.trainingInstitute'], L['table.dateFrom'], L['table.dateTo'], L['table.result'], L['table.auth'], L['table.remarks']], courseRows);
 
         // Investigation (label-value, no header row)
-        addSection(L['section.investigation'], [L['table.field'], L['table.value']], [
-            p.hasInvestigationExp === true ? kv(L['field.details'], this.val(p.investigationExpDetails)) : [L['empty.noInvestigationRecorded'], ''],
-        ], true);
+        addSection(L['section.investigation'], [L['table.field'], L['table.value']], [p.hasInvestigationExp === true ? kv(L['field.details'], this.val(p.investigationExpDetails)) : [L['empty.noInvestigationRecorded'], '']], true);
 
         // Official Foreign Visit
         const offFvRows = this.officialForeignVisitList.map((row, i) => [
@@ -376,7 +395,7 @@ export class ExMemberProfile implements OnInit, OnDestroy {
             this.formatDateOnly(row.durationFrom),
             this.formatDateOnly(row.durationTo),
             this.codeValue(row.reasonForVisiting, row.reasonForVisitingBN),
-            this.val(row.relatedDocuments),
+            this.val(row.relatedDocuments)
         ]);
         if (offFvRows.length === 0) offFvRows.push([L['empty.noOfficialForeignVisit']]);
         addSection(L['section.officialForeignVisit'], [L['table.ser'], L['table.country'], L['table.durationFrom'], L['table.durationTo'], L['table.reasonForVisiting'], L['table.relatedDocuments']], offFvRows);
@@ -388,18 +407,13 @@ export class ExMemberProfile implements OnInit, OnDestroy {
             this.formatDateOnly(row.durationFrom),
             this.formatDateOnly(row.durationTo),
             this.codeValue(row.reasonForVisiting, row.reasonForVisitingBN),
-            this.val(row.relatedDocuments),
+            this.val(row.relatedDocuments)
         ]);
         if (unoffFvRows.length === 0) unoffFvRows.push([L['empty.noUnofficialForeignVisit']]);
         addSection(L['section.unofficialForeignVisit'], [L['table.ser'], L['table.country'], L['table.durationFrom'], L['table.durationTo'], L['table.reasonForVisiting'], L['table.relatedDocuments']], unoffFvRows);
 
         // Leave
-        const leaveRows = this.leaveList.map((row, i) => [
-            this.rowNum(i) + '.',
-            this.codeValue(row.typeOfLeave, row.typeOfLeaveBN),
-            this.formatDateOnly(row.durationFrom),
-            this.formatDateOnly(row.durationTo),
-        ]);
+        const leaveRows = this.leaveList.map((row, i) => [this.rowNum(i) + '.', this.codeValue(row.typeOfLeave, row.typeOfLeaveBN), this.formatDateOnly(row.durationFrom), this.formatDateOnly(row.durationTo)]);
         if (leaveRows.length === 0) leaveRows.push([L['empty.noLeaveCurrentYear']]);
         addSection(`${L['section.leave']} (${this.currentYearDisplay})`, [L['table.ser'], L['table.typeOfLeave'], L['table.durationFrom'], L['table.durationTo']], leaveRows);
 
@@ -415,10 +429,26 @@ export class ExMemberProfile implements OnInit, OnDestroy {
             this.codeValue(row.punishmentTypeMotherOrg, row.punishmentTypeMotherOrgBN),
             this.formatDateOnly(row.punishmentDateMotherOrg),
             this.val(row.auth),
-            this.val(row.remarks),
+            this.val(row.remarks)
         ]);
         if (discRows.length === 0) discRows.push([L['empty.noDisciplineRecords']]);
-        addSection(L['section.discipline'], [L['table.ser'], L['table.offenseDate'], L['table.offenseType'], L['table.briefStatement'], L['table.offenseDetails'], L['table.punishmentRab'], L['table.punishmentDate'], L['table.punishmentMo'], L['table.punishmentDateMo'], L['table.auth'], L['table.remarks']], discRows);
+        addSection(
+            L['section.discipline'],
+            [
+                L['table.ser'],
+                L['table.offenseDate'],
+                L['table.offenseType'],
+                L['table.briefStatement'],
+                L['table.offenseDetails'],
+                L['table.punishmentRab'],
+                L['table.punishmentDate'],
+                L['table.punishmentMo'],
+                L['table.punishmentDateMo'],
+                L['table.auth'],
+                L['table.remarks']
+            ],
+            discRows
+        );
 
         // Bank Account
         const bankRows = this.bankAccList.map((row, i) => [
@@ -427,7 +457,7 @@ export class ExMemberProfile implements OnInit, OnDestroy {
             this.codeValue(row.branchName, row.branchNameBN),
             this.codeValue(row.accountName, row.accountNameBN),
             this.valDisplay(row.accountNumber),
-            this.val(row.remarks),
+            this.val(row.remarks)
         ]);
         if (bankRows.length === 0) bankRows.push([L['empty.noBankAccountRecords']]);
         addSection(L['section.bankAccount'], [L['table.ser'], L['table.bankName'], L['table.branchName'], L['table.accountName'], L['table.accountNumber'], L['table.remarks']], bankRows);
@@ -445,7 +475,7 @@ export class ExMemberProfile implements OnInit, OnDestroy {
             row.subject || '—',
             this.formatDateOnly(row.finalApprovalApprovedDate),
             row.officeOrderLetterNo || '—',
-            row.officeOrderStatus || '—',
+            row.officeOrderStatus || '—'
         ]);
         if (nsRows.length === 0) nsRows.push([L['empty.noApprovedNoteSheets']]);
         addSection(L['section.approvedNoteSheets'], [L['table.ser'], L['table.noteSheetNo'], L['table.noteSheetDate'], L['table.subject'], L['table.approvedDate'], L['table.officeOrderNo'], L['table.officeOrderStatus']], nsRows);
@@ -508,7 +538,7 @@ export class ExMemberProfile implements OnInit, OnDestroy {
     }
 
     codeValue(enVal: string | null | undefined, bnVal: string | null | undefined): string {
-        if (this.isBn && (bnVal != null && bnVal !== '')) return bnVal;
+        if (this.isBn && bnVal != null && bnVal !== '') return bnVal;
         return enVal != null && enVal !== '' ? enVal : '-';
     }
 
@@ -542,11 +572,16 @@ export class ExMemberProfile implements OnInit, OnDestroy {
     /** Label for MoveOrderType (1=CC, 2=MO, 3=Article47Handover, 4=Article47Takeover). */
     moveOrderTypeLabel(value: number | null | undefined): string {
         switch (value) {
-            case MoveOrderType.CC: return 'CC';
-            case MoveOrderType.MO: return 'MO';
-            case MoveOrderType.Article47Handover: return 'Article 47 (Handover)';
-            case MoveOrderType.Article47Takeover: return 'Article 47 (Takeover)';
-            default: return '—';
+            case MoveOrderType.CC:
+                return 'CC';
+            case MoveOrderType.MO:
+                return 'MO';
+            case MoveOrderType.Article47Handover:
+                return 'Article 47 (Handover)';
+            case MoveOrderType.Article47Takeover:
+                return 'Article 47 (Takeover)';
+            default:
+                return '—';
         }
     }
 
@@ -659,20 +694,20 @@ export class ExMemberProfile implements OnInit, OnDestroy {
     }
 
     private readonly progressStatusMap: Record<string, { en: string; bn: string }> = {
-        'ApplicationReceived': { en: 'Application Received', bn: 'আবেদন গৃহীত' },
-        'NoteSheetDraft': { en: 'Notesheet Draft', bn: 'নোটশিট খসড়া' },
-        'Submitted': { en: 'Submitted (Initiator)', bn: 'জমা দেওয়া হয়েছে (উদ্যোক্তা)' },
-        'UnderRecommendation': { en: 'Under Recommendation', bn: 'সুপারিশাধীন' },
-        'FinalApprovalPending': { en: 'Final Approval Pending', bn: 'চূড়ান্ত অনুমোদন মুলতুবি' },
-        'NoteSheetApproved': { en: 'Notesheet Approved', bn: 'নোটশিট অনুমোদিত' },
-        'OfficeOrderGenerated': { en: 'Office Order Generated', bn: 'অফিস আদেশ তৈরি' },
-        'OfficeOrderApproved': { en: 'Office Order Approved', bn: 'অফিস আদেশ অনুমোদিত' },
-        'Cancelled': { en: 'Cancelled', bn: 'বাতিল' },
+        ApplicationReceived: { en: 'Application Received', bn: 'আবেদন গৃহীত' },
+        NoteSheetDraft: { en: 'Notesheet Draft', bn: 'নোটশিট খসড়া' },
+        Submitted: { en: 'Submitted (Initiator)', bn: 'জমা দেওয়া হয়েছে (উদ্যোক্তা)' },
+        UnderRecommendation: { en: 'Under Recommendation', bn: 'সুপারিশাধীন' },
+        FinalApprovalPending: { en: 'Final Approval Pending', bn: 'চূড়ান্ত অনুমোদন মুলতুবি' },
+        NoteSheetApproved: { en: 'Notesheet Approved', bn: 'নোটশিট অনুমোদিত' },
+        OfficeOrderGenerated: { en: 'Office Order Generated', bn: 'অফিস আদেশ তৈরি' },
+        OfficeOrderApproved: { en: 'Office Order Approved', bn: 'অফিস আদেশ অনুমোদিত' },
+        Cancelled: { en: 'Cancelled', bn: 'বাতিল' }
     };
 
     private readonly availStatusMap: Record<string, { en: string; bn: string }> = {
-        'Availed': { en: 'Availed', bn: 'গ্রহণকৃত' },
-        'NotAvailed': { en: 'Not Availed', bn: 'গ্রহণ করা হয়নি' },
+        Availed: { en: 'Availed', bn: 'গ্রহণকৃত' },
+        NotAvailed: { en: 'Not Availed', bn: 'গ্রহণ করা হয়নি' }
     };
 
     getProgressStatusLabel(status: string): string {
@@ -688,14 +723,19 @@ export class ExMemberProfile implements OnInit, OnDestroy {
 
     getProgressStatusSeverity(status: string): string {
         switch (status) {
-            case 'OfficeOrderApproved': return 'success';
+            case 'OfficeOrderApproved':
+                return 'success';
             case 'NoteSheetApproved':
-            case 'OfficeOrderGenerated': return 'info';
+            case 'OfficeOrderGenerated':
+                return 'info';
             case 'Submitted':
             case 'UnderRecommendation':
-            case 'FinalApprovalPending': return 'warn';
-            case 'Cancelled': return 'danger';
-            default: return 'secondary';
+            case 'FinalApprovalPending':
+                return 'warn';
+            case 'Cancelled':
+                return 'danger';
+            default:
+                return 'secondary';
         }
     }
 
@@ -756,88 +796,93 @@ export class ExMemberProfile implements OnInit, OnDestroy {
     /**
      * Stage-2: fan-out of per-employee detail endpoints, only after the
      * primary profile call (and its access check) succeeded.
+     *
+     * Each section loads independently so the hero/identity area is interactive
+     * immediately (loading is cleared as soon as the primary profile resolved)
+     * and a slow endpoint can no longer hold back the whole page. Every section
+     * carries its own spinner flag (sectionLoading) and its own error handling,
+     * so one failing call only blanks its own table.
      */
     private loadRelatedProfileData(id: number, onComplete?: () => void): void {
         const currentYear = this.currentYear;
-        forkJoin({
-            family: this.familyInfoService.getFamilyInfoByEmployeeView(id),
-            previousRab: this.previousRabService.getViewByEmployeeId(id),
-            bankAcc: this.bankAccInfoService.getViewByEmployeeId(id),
-            education: this.educationInfoService.getViewByEmployeeId(id),
-            foreignVisit: this.foreignVisitInfoService.getViewByEmployeeId(id),
-            leaveCurrentYear: this.leaveInfoService.getViewByEmployeeIdAndYear(id, currentYear),
-            additionalRemarks: this.additionalRemarksInfoService.getByEmployeeId(id),
-            address: this.addressInfoService.getViewByEmployeeId(id),
-            moServHistory: this.moServHistoryService.getViewByEmployeeId(id),
-            discipline: this.disciplineInfoService.getViewByEmployeeId(id),
-            course: this.courseInfoService.getViewByEmployeeId(id),
-            promotion: this.promotionInfoService.getViewByEmployeeId(id),
-            documents: this.empService.getEmployeeDocumentReferences(id).pipe(catchError(() => of([]))),
-            rftsTraining: this.draftCourseService.getRftsTrainingByEmployeeId(id).pipe(catchError(() => of([]))),
-            presentStatus: this.presentStatusInfoService.getAllByEmployeeId(id).pipe(catchError(() => of([]))),
-            approvedNoteSheets: this.http.get<EmployeeApprovedNoteSheetRow[]>(`${environment.apis.core}/NoteSheetReferenceEmployee/GetApprovedNoteSheetsByEmployeeId/${id}`).pipe(catchError(() => of([]))),
-            exBdLeaveProgress: this.exBdLeaveAppService.getProgressByEmployee(id).pipe(catchError(() => of([]))),
-            movements: this.movementInfoService.getByEmployeeId(id).pipe(catchError(() => of([] as MovementInfoByEmployeeDto[]))),
-            postingStatus: this.postingService.getEmployeePostingProcessingStatus(id).pipe(catchError(() => of(null as EmployeePostingProcessingStatusDto | null)))
-        }).subscribe({
-            next: ({ family, previousRab, bankAcc, education, foreignVisit, leaveCurrentYear, additionalRemarks, address, moServHistory, discipline, course, promotion, documents, rftsTraining, presentStatus, approvedNoteSheets, exBdLeaveProgress, movements, postingStatus }) => {
-                this.familyList = family ?? [];
-                this.previousRabList = previousRab ?? [];
-                this.bankAccList = bankAcc ?? [];
-                this.educationList = education ?? [];
-                this.foreignVisitList = foreignVisit ?? [];
-                this.leaveList = leaveCurrentYear ?? [];
-                this.additionalRemarksList = additionalRemarks ?? [];
-                this.addressList = address ?? [];
-                this.moServHistoryList = moServHistory ?? [];
-                this.disciplineList = discipline ?? [];
-                this.courseList = course ?? [];
-                this.promotionList = promotion ?? [];
-                this.documentList = documents ?? [];
-                this.approvedNoteSheetList = Array.isArray(approvedNoteSheets) ? approvedNoteSheets : [];
-                this.exBdLeaveProgressList = Array.isArray(exBdLeaveProgress) ? exBdLeaveProgress : [];
-                this.rftsTrainingList = rftsTraining ?? [];
-                const movementsArr = Array.isArray(movements) ? movements : [];
-                this.permanentMovementList = movementsArr.filter((m) => m.movementType === MovementType.Permanent);
-                this.temporaryMovementList = movementsArr.filter((m) => m.movementType === MovementType.Temporary);
-                const psList = (presentStatus ?? []).map((r: any) => ({
-                    presentStatusID: r.PresentStatusID ?? r.presentStatusID,
-                    presentStatusType: r.PresentStatusType ?? r.presentStatusType,
-                    dated: r.Dated ?? r.dated,
-                    profileShift: r.ProfileShift ?? r.profileShift ?? false,
-                    isActive: r.IsActive ?? r.isActive ?? false,
-                    dateOfRelease: r.DateOfRelease ?? r.dateOfRelease,
-                    reduceFromRABStrength: r.ReduceFromRABStrength ?? r.reduceFromRABStrength,
-                    rtuCause: r.RTUCause ?? r.rtuCause,
-                    absentReport: r.AbsentReport ?? r.absentReport,
-                    inquiryReport: r.InquiryReport ?? r.inquiryReport,
-                    incidentDetails: r.IncidentDetails ?? r.incidentDetails,
-                    deceasedPlace: r.DeceasedPlace ?? r.deceasedPlace,
-                    deceasedReason: r.DeceasedReason ?? r.deceasedReason,
-                    backFromArrestedReason: r.BackFromArrestedReason ?? r.backFromArrestedReason,
-                    courtOrderReference: r.CourtOrderReference ?? r.courtOrderReference,
-                    backFromAbsentReason: r.BackFromAbsentReason ?? r.backFromAbsentReason,
-                    supportingDocFilesReferences: r.SupportingDocFilesReferences ?? r.supportingDocFilesReferences
-                }));
-                this.presentStatusList = psList;
-                const activeRecord = psList.find((r: any) => r.isActive);
-                this.activePresentStatus = activeRecord?.presentStatusType || null;
-                this.postingProcessingStatus = postingStatus ?? null;
-                this.computePresentLeaveAndMovement();
-                this.loading = false;
-                onComplete?.();
-            },
-            error: (err) => {
-                console.error('Failed to load profile details', err);
-                this.messageService.add({
-                    severity: 'error',
-                    summary: 'Error',
-                    detail: err?.error?.message || 'Failed to load profile details'
-                });
-                this.loading = false;
-                onComplete?.();
-            }
+
+        // Hero/identity is already available from the stage-1 profile call — reveal it now
+        // instead of waiting for the detail tables below.
+        this.loading = false;
+        onComplete?.();
+
+        this.loadSection('family', this.familyInfoService.getFamilyInfoByEmployeeView(id), (v) => (this.familyList = v ?? []));
+        this.loadSection('previousRab', this.previousRabService.getViewByEmployeeId(id), (v) => (this.previousRabList = v ?? []));
+        this.loadSection('bankAcc', this.bankAccInfoService.getViewByEmployeeId(id), (v) => (this.bankAccList = v ?? []));
+        this.loadSection('education', this.educationInfoService.getViewByEmployeeId(id), (v) => (this.educationList = v ?? []));
+        this.loadSection('foreignVisit', this.foreignVisitInfoService.getViewByEmployeeId(id), (v) => (this.foreignVisitList = v ?? []));
+        this.loadSection('leave', this.leaveInfoService.getViewByEmployeeIdAndYear(id, currentYear), (v) => {
+            this.leaveList = v ?? [];
+            this.computePresentLeaveAndMovement();
         });
+        this.loadSection('additionalRemarks', this.additionalRemarksInfoService.getByEmployeeId(id), (v) => (this.additionalRemarksList = v ?? []));
+        this.loadSection('address', this.addressInfoService.getViewByEmployeeId(id), (v) => (this.addressList = v ?? []));
+        this.loadSection('moServHistory', this.moServHistoryService.getViewByEmployeeId(id), (v) => (this.moServHistoryList = v ?? []));
+        this.loadSection('discipline', this.disciplineInfoService.getViewByEmployeeId(id), (v) => (this.disciplineList = v ?? []));
+        this.loadSection('course', this.courseInfoService.getViewByEmployeeId(id), (v) => (this.courseList = v ?? []));
+        this.loadSection('promotion', this.promotionInfoService.getViewByEmployeeId(id), (v) => (this.promotionList = v ?? []));
+        this.loadSection('documents', this.empService.getEmployeeDocumentReferences(id), (v) => (this.documentList = v ?? []));
+        this.loadSection('rftsTraining', this.draftCourseService.getRftsTrainingByEmployeeId(id), (v) => (this.rftsTrainingList = v ?? []));
+        this.loadSection(
+            'approvedNoteSheets',
+            this.http.get<EmployeeApprovedNoteSheetRow[]>(`${environment.apis.core}/NoteSheetReferenceEmployee/GetApprovedNoteSheetsByEmployeeId/${id}`),
+            (v) => (this.approvedNoteSheetList = Array.isArray(v) ? v : [])
+        );
+        this.loadSection('exBdLeaveProgress', this.exBdLeaveAppService.getProgressByEmployee(id), (v) => (this.exBdLeaveProgressList = Array.isArray(v) ? v : []));
+        this.loadSection('movements', this.movementInfoService.getByEmployeeId(id), (v) => {
+            const movementsArr = Array.isArray(v) ? v : [];
+            this.permanentMovementList = movementsArr.filter((m) => m.movementType === MovementType.Permanent);
+            this.temporaryMovementList = movementsArr.filter((m) => m.movementType === MovementType.Temporary);
+            this.computePresentLeaveAndMovement();
+        });
+        this.loadSection('presentStatus', this.presentStatusInfoService.getAllByEmployeeId(id), (v) => {
+            const psList = (v ?? []).map((r: any) => ({
+                presentStatusID: r.PresentStatusID ?? r.presentStatusID,
+                presentStatusType: r.PresentStatusType ?? r.presentStatusType,
+                dated: r.Dated ?? r.dated,
+                profileShift: r.ProfileShift ?? r.profileShift ?? false,
+                isActive: r.IsActive ?? r.isActive ?? false,
+                dateOfRelease: r.DateOfRelease ?? r.dateOfRelease,
+                reduceFromRABStrength: r.ReduceFromRABStrength ?? r.reduceFromRABStrength,
+                rtuCause: r.RTUCause ?? r.rtuCause,
+                absentReport: r.AbsentReport ?? r.absentReport,
+                inquiryReport: r.InquiryReport ?? r.inquiryReport,
+                incidentDetails: r.IncidentDetails ?? r.incidentDetails,
+                deceasedPlace: r.DeceasedPlace ?? r.deceasedPlace,
+                deceasedReason: r.DeceasedReason ?? r.deceasedReason,
+                backFromArrestedReason: r.BackFromArrestedReason ?? r.backFromArrestedReason,
+                courtOrderReference: r.CourtOrderReference ?? r.courtOrderReference,
+                backFromAbsentReason: r.BackFromAbsentReason ?? r.backFromAbsentReason,
+                supportingDocFilesReferences: r.SupportingDocFilesReferences ?? r.supportingDocFilesReferences
+            }));
+            this.presentStatusList = psList;
+            this.activePresentStatus = psList.find((r: any) => r.isActive)?.presentStatusType || null;
+        });
+        this.loadSection('postingStatus', this.postingService.getEmployeePostingProcessingStatus(id), (v) => (this.postingProcessingStatus = v ?? null));
+    }
+
+    /**
+     * Subscribes to a single detail endpoint, toggling its sectionLoading flag and
+     * swallowing errors so a failure only affects that one section.
+     */
+    private loadSection<T>(key: string, source: Observable<T>, assign: (value: T | null) => void): void {
+        this.sectionLoading[key] = true;
+        source
+            .pipe(
+                catchError((err) => {
+                    console.error(`Failed to load profile section "${key}"`, err);
+                    return of(null as T | null);
+                })
+            )
+            .subscribe((value) => {
+                assign(value);
+                this.sectionLoading[key] = false;
+            });
     }
 
     goBack(): void {
@@ -1209,7 +1254,7 @@ export class ExMemberProfile implements OnInit, OnDestroy {
         return refs
             .map((r) => ({
                 fileId: r.FileId ?? r.fileId ?? 0,
-                fileName: r.fileName ?? r.FileName ?? 'download',
+                fileName: r.fileName ?? r.FileName ?? 'download'
             }))
             .filter((r) => r.fileId > 0);
     }

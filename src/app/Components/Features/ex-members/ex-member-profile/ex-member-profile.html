@@ -5,1354 +5,1204 @@
     <div class="sp-action-bar">
         <h1 class="sp-page-title">{{ L['pageTitle.exMember'] }}</h1>
         <div class="sp-action-right">
-            <button type="button" class="sp-btn" (click)="goBack()">
-                <i class="pi pi-chevron-left"></i> Back
-            </button>
-            <button type="button" class="sp-btn" (click)="toggleProfileLang()">
-                {{ profileLang === 'en' ? 'বাংলা' : 'English' }}
-            </button>
+            <button type="button" class="sp-btn" (click)="goBack()"><i class="pi pi-chevron-left"></i> Back</button>
+            <button type="button" class="sp-btn" (click)="toggleProfileLang()">{{ profileLang === 'en' ? 'বাংলা' : 'English' }}</button>
             @if (profile && !loading) {
-                <div class="profile-export-wrap">
-                    <button type="button" class="sp-btn sp-btn-export" (click)="toggleExportDropdown($event)">
-                        <i class="pi pi-download"></i> Export
-                    </button>
-                    @if (exportDropdownOpen) {
-                        <div class="profile-export-dropdown" (click)="$event.stopPropagation()">
-                            <button type="button" class="profile-export-item" (click)="exportAs('pdf')">
-                                <i class="pi pi-file-pdf"></i> PDF
-                            </button>
-                            <button type="button" class="profile-export-item" (click)="exportAs('word')">
-                                <i class="pi pi-file-word"></i> Word
-                            </button>
-                        </div>
-                    }
+            <div class="profile-export-wrap">
+                <button type="button" class="sp-btn sp-btn-export" (click)="toggleExportDropdown($event)"><i class="pi pi-download"></i> Export</button>
+                @if (exportDropdownOpen) {
+                <div class="profile-export-dropdown" (click)="$event.stopPropagation()">
+                    <button type="button" class="profile-export-item" (click)="exportAs('pdf')"><i class="pi pi-file-pdf"></i> PDF</button>
+                    <button type="button" class="profile-export-item" (click)="exportAs('word')"><i class="pi pi-file-word"></i> Word</button>
                 </div>
+                }
+            </div>
             }
         </div>
     </div>
 
     @if (loading) {
-        <div class="flex align-items-center justify-content-center p-5">
-            <i class="pi pi-spin pi-spinner text-4xl text-500"></i>
-        </div>
+    <div class="flex align-items-center justify-content-center p-5">
+        <i class="pi pi-spin pi-spinner text-4xl text-500"></i>
+    </div>
     } @else if (profile) {
-        <!-- Hero: Photo + Name + IDs -->
-        <div class="sp-hero">
-            <div class="sp-photo-box">
-                @if (profileImageUrl) {
-                    <img [src]="profileImageUrl" alt="Profile" class="sp-photo-img" />
-                } @else {
-                    <div class="sp-photo-placeholder">
-                        <i class="pi pi-user"></i>
-                    </div>
+    <!-- Hero: Photo + Name + IDs -->
+    <div class="sp-hero">
+        <div class="sp-photo-box">
+            @if (profileImageUrl) {
+            <img [src]="profileImageUrl" alt="Profile" class="sp-photo-img" />
+            } @else {
+            <div class="sp-photo-placeholder">
+                <i class="pi pi-user"></i>
+            </div>
+            }
+        </div>
+        <div style="flex: 1; min-width: 0">
+            <div class="sp-hero-name">{{ getFormattedName(profile) }}</div>
+            @if (activePresentStatus) {
+            <div style="font-size: 0.95rem; font-weight: 700; margin-top: 0.25rem; color: var(--text-color)">{{ L['field.presentStatus'] }}: {{ translatedPresentStatus }}</div>
+            } @if (translatedEmployeeStatus) {
+            <div style="font-size: 0.95rem; font-weight: 700; margin-top: 0.25rem; color: var(--text-color)">{{ L['field.employeeStatus'] }}: {{ translatedEmployeeStatus }}</div>
+            } @if (postingProcessingStatus?.newPostingStep && !postingProcessingStatus!.newPostingOrderReceived) {
+            <div class="sp-posting-status-line">
+                <span>{{ L['posting.newPosting'] }}: {{ getPostingStepLabel(postingProcessingStatus!.newPostingStep!) }}</span>
+                @if (postingProcessingStatus!.newPostingForceOrderGenerated) {
+                <span class="sp-posting-sep">|</span>
+                <span>{{ L['posting.forceOrderGenerated'] }}</span>
+                @if (!postingProcessingStatus!.newPostingOrderReceived) {
+                <span class="sp-posting-sep">·</span>
+                <span>{{ postingProcessingStatus!.newPostingForceOrderApproved ? L['posting.approved'] : L['posting.notApproved'] }}</span>
+                }
+                <span class="sp-posting-sep">·</span>
+                <span>{{ postingProcessingStatus!.newPostingOrderReceived ? L['posting.received'] : L['posting.notReceived'] }}</span>
                 }
             </div>
-            <div style="flex: 1; min-width: 0;">
-                <div class="sp-hero-name">{{ getFormattedName(profile) }}</div>
-                @if (activePresentStatus) {
-                    <div style="font-size: 0.95rem; font-weight: 700; margin-top: 0.25rem; color: var(--text-color);">{{ L['field.presentStatus'] }}: {{ translatedPresentStatus }}</div>
+            } @if (postingProcessingStatus?.interPostingStep && !postingProcessingStatus!.interPostingOrderReceived) {
+            <div class="sp-posting-status-line">
+                <span>{{ L['posting.interPosting'] }}: {{ getPostingStepLabel(postingProcessingStatus!.interPostingStep!) }}</span>
+                @if (postingProcessingStatus!.interPostingForceOrderGenerated) {
+                <span class="sp-posting-sep">|</span>
+                <span>{{ L['posting.forceOrderGenerated'] }}</span>
+                @if (!postingProcessingStatus!.interPostingOrderReceived) {
+                <span class="sp-posting-sep">·</span>
+                <span>{{ postingProcessingStatus!.interPostingForceOrderApproved ? L['posting.approved'] : L['posting.notApproved'] }}</span>
                 }
-                @if (translatedEmployeeStatus) {
-                    <div style="font-size: 0.95rem; font-weight: 700; margin-top: 0.25rem; color: var(--text-color);">{{ L['field.employeeStatus'] }}: {{ translatedEmployeeStatus }}</div>
-                }
-                @if (postingProcessingStatus?.newPostingStep && !postingProcessingStatus!.newPostingOrderReceived) {
-                    <div class="sp-posting-status-line">
-                        <span>{{ L['posting.newPosting'] }}: {{ getPostingStepLabel(postingProcessingStatus!.newPostingStep!) }}</span>
-                        @if (postingProcessingStatus!.newPostingForceOrderGenerated) {
-                            <span class="sp-posting-sep">|</span>
-                            <span>{{ L['posting.forceOrderGenerated'] }}</span>
-                            @if (!postingProcessingStatus!.newPostingOrderReceived) {
-                                <span class="sp-posting-sep">·</span>
-                                <span>{{ postingProcessingStatus!.newPostingForceOrderApproved ? L['posting.approved'] : L['posting.notApproved'] }}</span>
-                            }
-                            <span class="sp-posting-sep">·</span>
-                            <span>{{ postingProcessingStatus!.newPostingOrderReceived ? L['posting.received'] : L['posting.notReceived'] }}</span>
-                        }
-                    </div>
-                }
-                @if (postingProcessingStatus?.interPostingStep && !postingProcessingStatus!.interPostingOrderReceived) {
-                    <div class="sp-posting-status-line">
-                        <span>{{ L['posting.interPosting'] }}: {{ getPostingStepLabel(postingProcessingStatus!.interPostingStep!) }}</span>
-                        @if (postingProcessingStatus!.interPostingForceOrderGenerated) {
-                            <span class="sp-posting-sep">|</span>
-                            <span>{{ L['posting.forceOrderGenerated'] }}</span>
-                            @if (!postingProcessingStatus!.interPostingOrderReceived) {
-                                <span class="sp-posting-sep">·</span>
-                                <span>{{ postingProcessingStatus!.interPostingForceOrderApproved ? L['posting.approved'] : L['posting.notApproved'] }}</span>
-                            }
-                            <span class="sp-posting-sep">·</span>
-                            <span>{{ postingProcessingStatus!.interPostingOrderReceived ? L['posting.received'] : L['posting.notReceived'] }}</span>
-                        }
-                    </div>
-                }
-                @if (currentLeave) {
-                    <div class="sp-posting-status-line" style="cursor: pointer;" (click)="goToLeaveHistory()" [title]="L['status.onLeave']">
-                        <i class="pi pi-calendar-times" style="margin-right: 0.35rem;"></i>
-                        <span>{{ L['status.onLeave'] }}{{ currentLeave.type ? ' (' + currentLeave.type + ')' : '' }}: {{ formatDateOnly(currentLeave.from) }} – {{ formatDateOnly(currentLeave.to) }}</span>
-                    </div>
-                }
-                @if (currentMovementDestination !== null) {
-                    <div class="sp-posting-status-line" style="cursor: pointer;" (click)="goToMovementList()" [title]="L['status.presentLocation']">
-                        <i class="pi pi-map-marker" style="margin-right: 0.35rem;"></i>
-                        <span>{{ L['status.presentLocation'] }}: {{ currentMovementDestination || '-' }}</span>
-                    </div>
+                <span class="sp-posting-sep">·</span>
+                <span>{{ postingProcessingStatus!.interPostingOrderReceived ? L['posting.received'] : L['posting.notReceived'] }}</span>
                 }
             </div>
-            <div class="sp-hero-ids">
-                <div class="sp-id-block">
-                    <span class="sp-id-label">{{ L['field.serviceId'] }}</span>
-                    <span class="sp-id-value">{{ valDisplay(profile.serviceId) }}</span>
+            } @if (currentLeave) {
+            <div class="sp-posting-status-line" style="cursor: pointer" (click)="goToLeaveHistory()" [title]="L['status.onLeave']">
+                <i class="pi pi-calendar-times" style="margin-right: 0.35rem"></i>
+                <span>{{ L['status.onLeave'] }}{{ currentLeave.type ? ' (' + currentLeave.type + ')' : '' }}: {{ formatDateOnly(currentLeave.from) }} – {{ formatDateOnly(currentLeave.to) }}</span>
+            </div>
+            } @if (currentMovementDestination !== null) {
+            <div class="sp-posting-status-line" style="cursor: pointer" (click)="goToMovementList()" [title]="L['status.presentLocation']">
+                <i class="pi pi-map-marker" style="margin-right: 0.35rem"></i>
+                <span>{{ L['status.presentLocation'] }}: {{ currentMovementDestination || '-' }}</span>
+            </div>
+            }
+        </div>
+        <div class="sp-hero-ids">
+            <div class="sp-id-block">
+                <span class="sp-id-label">{{ L['field.serviceId'] }}</span>
+                <span class="sp-id-value">{{ valDisplay(profile.serviceId) }}</span>
+            </div>
+            <div class="sp-id-block">
+                <span class="sp-id-label">{{ L['field.rabId'] }}</span>
+                <span class="sp-id-value">{{ valDisplay(profile.rabId) }}</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Service Details -->
+    <div class="sp-section">
+        <div class="sp-grid">
+            <div class="sp-field-list">
+                <div class="sp-field">
+                    <span class="sp-field-label">{{ L['field.appointment'] }}</span>
+                    <span class="sp-field-value">{{ codeValue(profile.appointment, profile.appointmentBN) }}</span>
                 </div>
-                <div class="sp-id-block">
-                    <span class="sp-id-label">{{ L['field.rabId'] }}</span>
-                    <span class="sp-id-value">{{ valDisplay(profile.rabId) }}</span>
+                <div class="sp-field">
+                    <span class="sp-field-label">{{ L['field.memberType'] }}</span>
+                    <span class="sp-field-value">{{ codeValue(profile.memberType, profile.memberTypeBN) }}</span>
+                </div>
+                <div class="sp-field">
+                    <span class="sp-field-label">{{ L['field.motherOrganization'] }}</span>
+                    <span class="sp-field-value">{{ codeValue(profile.motherOrganization, profile.motherOrganizationBN) }}</span>
+                </div>
+                <div class="sp-field">
+                    <span class="sp-field-label">{{ L['field.rank'] }}</span>
+                    <span class="sp-field-value">{{ codeValue(profile.armyRank, profile.armyRankBN) }}</span>
+                </div>
+                <div class="sp-field">
+                    <span class="sp-field-label">{{ L['field.corps'] }}</span>
+                    <span class="sp-field-value">{{ codeValue(profile.corps, profile.corpsBN) }}</span>
+                </div>
+                <div class="sp-field">
+                    <span class="sp-field-label">{{ L['field.trade'] }}</span>
+                    <span class="sp-field-value">{{ tradeDisplay(profile) }}</span>
+                </div>
+                <div class="sp-field">
+                    <span class="sp-field-label">{{ L['field.specialQualification'] }}</span>
+                    <span class="sp-field-value">{{ codeValue(profile.specialQualifications, profile.specialQualificationsBN) }}</span>
+                </div>
+            </div>
+            <div class="sp-field-list">
+                <div class="sp-field">
+                    <span class="sp-field-label">{{ L['field.dateOfCommission'] }}</span>
+                    <span class="sp-field-value">{{ formatDateDisplay(profile.dateOfCommission) }}</span>
+                </div>
+                <div class="sp-field">
+                    <span class="sp-field-label">{{ L['field.dateOfJoiningInServiceTraining'] }}</span>
+                    <span class="sp-field-value">{{ formatDateDisplay(profile.dateOfJoiningInServiceTraining) }}</span>
+                </div>
+                <div class="sp-field">
+                    <span class="sp-field-label">{{ L['field.motherUnit'] }}</span>
+                    <span class="sp-field-value">{{ codeValue(profile.motherUnit, profile.motherUnitBN) }}</span>
+                </div>
+                <div class="sp-field">
+                    <span class="sp-field-label">{{ L['field.location'] }}</span>
+                    <span class="sp-field-value">{{ codeValue(profile.location, profile.locationBN) }}</span>
+                </div>
+                <div class="sp-field">
+                    <span class="sp-field-label">{{ rabUnitFieldLabel }}</span>
+                    <span class="sp-field-value">{{ displayRabUnit }}</span>
+                </div>
+                <div class="sp-field">
+                    <span class="sp-field-label">{{ L['field.joiningDate'] }}</span>
+                    <span class="sp-field-value">{{ formatDateDisplay(profile.joiningDate) }}</span>
+                </div>
+                <div class="sp-field">
+                    <span class="sp-field-label">{{ L['field.maritalStatus'] }}</span>
+                    <span class="sp-field-value">{{ codeValue(profile.maritalStatus, profile.maritalStatusBN) }}</span>
                 </div>
             </div>
         </div>
+    </div>
 
-        <!-- Service Details -->
-        <div class="sp-section">
-            <div class="sp-grid">
-                <div class="sp-field-list">
-                    <div class="sp-field">
-                        <span class="sp-field-label">{{ L['field.appointment'] }}</span>
-                        <span class="sp-field-value">{{ codeValue(profile.appointment, profile.appointmentBN) }}</span>
-                    </div>
-                    <div class="sp-field">
-                        <span class="sp-field-label">{{ L['field.memberType'] }}</span>
-                        <span class="sp-field-value">{{ codeValue(profile.memberType, profile.memberTypeBN) }}</span>
-                    </div>
-                    <div class="sp-field">
-                        <span class="sp-field-label">{{ L['field.motherOrganization'] }}</span>
-                        <span class="sp-field-value">{{ codeValue(profile.motherOrganization, profile.motherOrganizationBN) }}</span>
-                    </div>
-                    <div class="sp-field">
-                        <span class="sp-field-label">{{ L['field.rank'] }}</span>
-                        <span class="sp-field-value">{{ codeValue(profile.armyRank, profile.armyRankBN) }}</span>
-                    </div>
-                    <div class="sp-field">
-                        <span class="sp-field-label">{{ L['field.corps'] }}</span>
-                        <span class="sp-field-value">{{ codeValue(profile.corps, profile.corpsBN) }}</span>
-                    </div>
-                    <div class="sp-field">
-                        <span class="sp-field-label">{{ L['field.trade'] }}</span>
-                        <span class="sp-field-value">{{ tradeDisplay(profile) }}</span>
-                    </div>
-                    <div class="sp-field">
-                        <span class="sp-field-label">{{ L['field.specialQualification'] }}</span>
-                        <span class="sp-field-value">{{ codeValue(profile.specialQualifications, profile.specialQualificationsBN) }}</span>
-                    </div>
-                </div>
-                <div class="sp-field-list">
-                    <div class="sp-field">
-                        <span class="sp-field-label">{{ L['field.dateOfCommission'] }}</span>
-                        <span class="sp-field-value">{{ formatDateDisplay(profile.dateOfCommission) }}</span>
-                    </div>
-                    <div class="sp-field">
-                        <span class="sp-field-label">{{ L['field.dateOfJoiningInServiceTraining'] }}</span>
-                        <span class="sp-field-value">{{ formatDateDisplay(profile.dateOfJoiningInServiceTraining) }}</span>
-                    </div>
-                    <div class="sp-field">
-                        <span class="sp-field-label">{{ L['field.motherUnit'] }}</span>
-                        <span class="sp-field-value">{{ codeValue(profile.motherUnit, profile.motherUnitBN) }}</span>
-                    </div>
-                    <div class="sp-field">
-                        <span class="sp-field-label">{{ L['field.location'] }}</span>
-                        <span class="sp-field-value">{{ codeValue(profile.location, profile.locationBN) }}</span>
-                    </div>
-                    <div class="sp-field">
-                        <span class="sp-field-label">{{ rabUnitFieldLabel }}</span>
-                        <span class="sp-field-value">{{ displayRabUnit }}</span>
-                    </div>
-                    <div class="sp-field">
-                        <span class="sp-field-label">{{ L['field.joiningDate'] }}</span>
-                        <span class="sp-field-value">{{ formatDateDisplay(profile.joiningDate) }}</span>
-                    </div>
-                    <div class="sp-field">
-                        <span class="sp-field-label">{{ L['field.maritalStatus'] }}</span>
-                        <span class="sp-field-value">{{ codeValue(profile.maritalStatus, profile.maritalStatusBN) }}</span>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Own Address Information -->
-        <div class="sp-section">
-            <div class="sp-section-header">
-                <span class="sp-section-heading">{{ L['section.ownAddress'] }}</span>
-                @if (editingSection !== 'ownAddress') {
-                    <button type="button" class="sp-btn sp-btn-sm" (click)="setEditingSection('ownAddress')"><i class="pi pi-pencil"></i> Edit</button>
-                } @else {
-                    <button type="button" class="sp-btn sp-btn-sm" (click)="closeSectionAndRefresh()"><i class="pi pi-times"></i> Cancel</button>
-                }
-            </div>
+    <!-- Own Address Information -->
+    <div class="sp-section">
+        <div class="sp-section-header">
+            <span class="sp-section-heading">{{ L['section.ownAddress'] }}</span>
             @if (editingSection !== 'ownAddress') {
-                @if (ownAddressList.length === 0) {
-                    <div class="text-500 py-2" style="font-style: italic">{{ L['empty.noOwnAddress'] }}</div>
-                } @else {
-                    <div class="sp-grid">
-                        @for (addr of ownAddressList; track addr.ser) {
-                            <div class="sp-field-list">
-                                <div class="sp-addr-type">{{ getAddressTypeLabel(addr) }}</div>
-                                <div class="sp-field">
-                                    <span class="sp-field-label">{{ L['address.houseArea'] }}</span>
-                                    <span class="sp-field-value">{{ val(addr.houseRoad) }}</span>
-                                </div>
-                                <div class="sp-field">
-                                    <span class="sp-field-label">{{ L['address.village'] }}</span>
-                                    <span class="sp-field-value">{{ val(addr.addressAreaEN) }}</span>
-                                </div>
-                                <div class="sp-field">
-                                    <span class="sp-field-label">{{ L['address.postOffice'] }}</span>
-                                    <span class="sp-field-value">{{ codeValue(addr.postOffice, addr.postOfficeBN) }}</span>
-                                </div>
-                                <div class="sp-field">
-                                    <span class="sp-field-label">{{ L['address.thana'] }}</span>
-                                    <span class="sp-field-value">{{ codeValue(addr.thana, addr.thanaBN) }}</span>
-                                </div>
-                                <div class="sp-field">
-                                    <span class="sp-field-label">{{ L['address.district'] }}</span>
-                                    <span class="sp-field-value">{{ codeValue(addr.district, addr.districtBN) }}</span>
-                                </div>
-                                <div class="sp-field">
-                                    <span class="sp-field-label">{{ L['address.division'] }}</span>
-                                    <span class="sp-field-value">{{ codeValue(addr.division, addr.divisionBN) }}</span>
-                                </div>
-                            </div>
-                        }
-                    </div>
-                }
-            }
-            @if (editingSection === 'ownAddress' && employeeId != null) {
-                <app-emp-address-info [externalEmployeeId]="employeeId" [embedMode]="true" [hideTitle]="true" [addressScope]="'own'" (saved)="onSectionSaved('ownAddress')" (cancelled)="closeSectionAndRefresh()"></app-emp-address-info>
+            <button type="button" class="sp-btn sp-btn-sm" (click)="setEditingSection('ownAddress')"><i class="pi pi-pencil"></i> Edit</button>
+            } @else {
+            <button type="button" class="sp-btn sp-btn-sm" (click)="closeSectionAndRefresh()"><i class="pi pi-times"></i> Cancel</button>
             }
         </div>
-
-        <!-- Spouse Address Information -->
-        <div class="sp-section">
-            <div class="sp-section-header">
-                <span class="sp-section-heading">{{ L['section.spouseAddress'] }}</span>
-                @if (editingSection !== 'spouseAddress') {
-                    <button type="button" class="sp-btn sp-btn-sm" (click)="setEditingSection('spouseAddress')"><i class="pi pi-pencil"></i> Edit</button>
-                } @else {
-                    <button type="button" class="sp-btn sp-btn-sm" (click)="closeSectionAndRefresh()"><i class="pi pi-times"></i> Cancel</button>
-                }
-            </div>
-            @if (editingSection !== 'spouseAddress') {
-                @if (spouseAddressList.length === 0) {
-                    <div class="text-500 py-2" style="font-style: italic">{{ L['empty.noSpouseAddress'] }}</div>
-                } @else {
-                    <div class="sp-grid">
-                        @for (addr of spouseAddressList; track addr.ser) {
-                            <div class="sp-field-list">
-                                <div class="sp-addr-type">{{ getAddressTypeLabel(addr) }}</div>
-                                <div class="sp-field">
-                                    <span class="sp-field-label">{{ L['address.houseArea'] }}</span>
-                                    <span class="sp-field-value">{{ val(addr.houseRoad) }}</span>
-                                </div>
-                                <div class="sp-field">
-                                    <span class="sp-field-label">{{ L['address.village'] }}</span>
-                                    <span class="sp-field-value">{{ val(addr.addressAreaEN) }}</span>
-                                </div>
-                                <div class="sp-field">
-                                    <span class="sp-field-label">{{ L['address.postOffice'] }}</span>
-                                    <span class="sp-field-value">{{ codeValue(addr.postOffice, addr.postOfficeBN) }}</span>
-                                </div>
-                                <div class="sp-field">
-                                    <span class="sp-field-label">{{ L['address.thana'] }}</span>
-                                    <span class="sp-field-value">{{ codeValue(addr.thana, addr.thanaBN) }}</span>
-                                </div>
-                                <div class="sp-field">
-                                    <span class="sp-field-label">{{ L['address.district'] }}</span>
-                                    <span class="sp-field-value">{{ codeValue(addr.district, addr.districtBN) }}</span>
-                                </div>
-                                <div class="sp-field">
-                                    <span class="sp-field-label">{{ L['address.division'] }}</span>
-                                    <span class="sp-field-value">{{ codeValue(addr.division, addr.divisionBN) }}</span>
-                                </div>
-                            </div>
-                        }
-                    </div>
-                }
-            }
-            @if (editingSection === 'spouseAddress' && employeeId != null) {
-                <app-emp-address-info [externalEmployeeId]="employeeId" [embedMode]="true" [hideTitle]="true" [addressScope]="'spouse'" (saved)="onSectionSaved('spouseAddress')" (cancelled)="closeSectionAndRefresh()"></app-emp-address-info>
-            }
-        </div>
-
-        <!-- Other Personal Information -->
-        <div class="sp-section">
-            <div class="sp-section-header">
-                <span class="sp-section-heading">{{ L['section.otherPersonal'] }}</span>
-                @if (editingSection !== 'otherPersonal') {
-                    <button type="button" class="sp-btn sp-btn-sm" (click)="setEditingSection('otherPersonal')"><i class="pi pi-pencil"></i> Edit</button>
-                } @else {
-                    <button type="button" class="sp-btn sp-btn-sm" (click)="closeSectionAndRefresh()"><i class="pi pi-times"></i> Cancel</button>
-                }
-            </div>
-            @if (editingSection !== 'otherPersonal') {
-                <div class="sp-grid">
-                    <div class="sp-field-list">
-                        <div class="sp-field"><span class="sp-field-label">{{ L['field.courseBatch'] }}</span> <span class="sp-field-value">{{ codeValue(profile.batch, profile.batchBN) }}</span></div>
-                        <div class="sp-field"><span class="sp-field-label">{{ L['field.educationQualification'] }}</span> <span class="sp-field-value">{{ codeValue(profile.educationQualification, profile.educationQualificationBN) }}</span></div>
-                        <div class="sp-field"><span class="sp-field-label">{{ L['field.professionalQualification'] }}</span> <span class="sp-field-value">{{ codeValue(profile.professionalQualification, profile.professionalQualificationBN) }}</span></div>
-                        <div class="sp-field"><span class="sp-field-label">{{ L['field.personalQualification'] }}</span> <span class="sp-field-value">{{ codeValue(profile.personalQualification, profile.personalQualificationBN) }}</span></div>
-                        <div class="sp-field"><span class="sp-field-label">{{ L['field.gallantryAwards'] }}</span> <span class="sp-field-value">{{ codeValue(profile.gallantryAwardsDecoration, profile.gallantryAwardsDecorationBN) }}</span></div>
-                        <div class="sp-field"><span class="sp-field-label">{{ L['field.bloodGroup'] }}</span> <span class="sp-field-value">{{ bloodGroupDisplay(profile.bloodGroup) }}</span></div>
-                        <div class="sp-field"><span class="sp-field-label">{{ L['field.nid'] }}</span> <span class="sp-field-value">{{ valDisplay(profile.nid) }}</span></div>
-                        <div class="sp-field"><span class="sp-field-label">{{ L['field.nidOld'] }}</span> <span class="sp-field-value">{{ valDisplay(profile.nidOld) }}</span></div>
-                        <div class="sp-field"><span class="sp-field-label">{{ L['field.passportNo'] }}</span> <span class="sp-field-value">{{ valDisplay(profile.passportNo) }}</span></div>
-                        <div class="sp-field"><span class="sp-field-label">{{ L['field.identificationMark'] }}</span> <span class="sp-field-value">{{ val(profile.identificationMark) }}</span></div>
-                    </div>
-                    <div class="sp-field-list">
-                        <div class="sp-field"><span class="sp-field-label">{{ L['field.dateOfBirth'] }}</span> <span class="sp-field-value">{{ formatDateDisplay(profile.dateOfBirth) }}</span></div>
-                        <div class="sp-field"><span class="sp-field-label">{{ L['field.religion'] }}</span> <span class="sp-field-value">{{ codeValue(profile.religion, profile.religionBN) }}</span></div>
-                        <div class="sp-field"><span class="sp-field-label">{{ L['field.height'] }}</span> <span class="sp-field-value">{{ heightDisplay(profile) }}</span></div>
-                        <div class="sp-field"><span class="sp-field-label">{{ L['field.weight'] }}</span> <span class="sp-field-value">{{ weightDisplay(profile) }}</span></div>
-                        <div class="sp-field"><span class="sp-field-label">{{ L['field.medicalCategory'] }}</span> <span class="sp-field-value">{{ codeValue(profile.medicalCategory, profile.medicalCategoryBN) }}</span></div>
-                        <div class="sp-field"><span class="sp-field-label">{{ L['field.emailAddress'] }}</span> <span class="sp-field-value">{{ val(profile.emailAddress) }}</span></div>
-                        <div class="sp-field"><span class="sp-field-label">{{ L['field.mobileNo'] }}</span> <span class="sp-field-value">{{ valDisplay(profile.mobileNo) }}</span></div>
-                        <div class="sp-field"><span class="sp-field-label">{{ L['field.mobileNoOfficial'] }}</span> <span class="sp-field-value">{{ valDisplay(profile.mobileNoOfficial) }}</span></div>
-                        <div class="sp-field"><span class="sp-field-label">{{ L['field.emergencyContactNo'] }}</span> <span class="sp-field-value">{{ valDisplay(profile.emergencyContactNo) }}</span></div>
-                    </div>
+        @if (editingSection !== 'ownAddress') { @if (ownAddressList.length === 0) {
+        <div class="text-500 py-2" style="font-style: italic">{{ L['empty.noOwnAddress'] }}</div>
+        } @else {
+        <div class="sp-grid">
+            @for (addr of ownAddressList; track addr.ser) {
+            <div class="sp-field-list">
+                <div class="sp-addr-type">{{ getAddressTypeLabel(addr) }}</div>
+                <div class="sp-field">
+                    <span class="sp-field-label">{{ L['address.houseArea'] }}</span>
+                    <span class="sp-field-value">{{ val(addr.houseRoad) }}</span>
                 </div>
-            }
-            @if (editingSection === 'otherPersonal' && employeeId != null) {
-                <app-emp-personal-info
-                    [externalEmployeeId]="employeeId"
-                    [embedMode]="true"
-                    [hideTitle]="true"
-                    (saved)="onSectionSaved('otherPersonal')"
-                    (cancelled)="closeSectionAndRefresh()"
-                ></app-emp-personal-info>
+                <div class="sp-field">
+                    <span class="sp-field-label">{{ L['address.village'] }}</span>
+                    <span class="sp-field-value">{{ val(addr.addressAreaEN) }}</span>
+                </div>
+                <div class="sp-field">
+                    <span class="sp-field-label">{{ L['address.postOffice'] }}</span>
+                    <span class="sp-field-value">{{ codeValue(addr.postOffice, addr.postOfficeBN) }}</span>
+                </div>
+                <div class="sp-field">
+                    <span class="sp-field-label">{{ L['address.thana'] }}</span>
+                    <span class="sp-field-value">{{ codeValue(addr.thana, addr.thanaBN) }}</span>
+                </div>
+                <div class="sp-field">
+                    <span class="sp-field-label">{{ L['address.district'] }}</span>
+                    <span class="sp-field-value">{{ codeValue(addr.district, addr.districtBN) }}</span>
+                </div>
+                <div class="sp-field">
+                    <span class="sp-field-label">{{ L['address.division'] }}</span>
+                    <span class="sp-field-value">{{ codeValue(addr.division, addr.divisionBN) }}</span>
+                </div>
+            </div>
             }
         </div>
+        } } @if (editingSection === 'ownAddress' && employeeId != null) {
+        <app-emp-address-info [externalEmployeeId]="employeeId" [embedMode]="true" [hideTitle]="true" [addressScope]="'own'" (saved)="onSectionSaved('ownAddress')" (cancelled)="closeSectionAndRefresh()"></app-emp-address-info>
+        }
+    </div>
 
-        <!-- Present Status -->
-        <div class="sp-section">
-            <div class="sp-section-header">
-                <span class="sp-section-heading">Present Status</span>
+    <!-- Spouse Address Information -->
+    <div class="sp-section">
+        <div class="sp-section-header">
+            <span class="sp-section-heading">{{ L['section.spouseAddress'] }}</span>
+            @if (editingSection !== 'spouseAddress') {
+            <button type="button" class="sp-btn sp-btn-sm" (click)="setEditingSection('spouseAddress')"><i class="pi pi-pencil"></i> Edit</button>
+            } @else {
+            <button type="button" class="sp-btn sp-btn-sm" (click)="closeSectionAndRefresh()"><i class="pi pi-times"></i> Cancel</button>
+            }
+        </div>
+        @if (editingSection !== 'spouseAddress') { @if (spouseAddressList.length === 0) {
+        <div class="text-500 py-2" style="font-style: italic">{{ L['empty.noSpouseAddress'] }}</div>
+        } @else {
+        <div class="sp-grid">
+            @for (addr of spouseAddressList; track addr.ser) {
+            <div class="sp-field-list">
+                <div class="sp-addr-type">{{ getAddressTypeLabel(addr) }}</div>
+                <div class="sp-field">
+                    <span class="sp-field-label">{{ L['address.houseArea'] }}</span>
+                    <span class="sp-field-value">{{ val(addr.houseRoad) }}</span>
+                </div>
+                <div class="sp-field">
+                    <span class="sp-field-label">{{ L['address.village'] }}</span>
+                    <span class="sp-field-value">{{ val(addr.addressAreaEN) }}</span>
+                </div>
+                <div class="sp-field">
+                    <span class="sp-field-label">{{ L['address.postOffice'] }}</span>
+                    <span class="sp-field-value">{{ codeValue(addr.postOffice, addr.postOfficeBN) }}</span>
+                </div>
+                <div class="sp-field">
+                    <span class="sp-field-label">{{ L['address.thana'] }}</span>
+                    <span class="sp-field-value">{{ codeValue(addr.thana, addr.thanaBN) }}</span>
+                </div>
+                <div class="sp-field">
+                    <span class="sp-field-label">{{ L['address.district'] }}</span>
+                    <span class="sp-field-value">{{ codeValue(addr.district, addr.districtBN) }}</span>
+                </div>
+                <div class="sp-field">
+                    <span class="sp-field-label">{{ L['address.division'] }}</span>
+                    <span class="sp-field-value">{{ codeValue(addr.division, addr.divisionBN) }}</span>
+                </div>
             </div>
+            }
+        </div>
+        } } @if (editingSection === 'spouseAddress' && employeeId != null) {
+        <app-emp-address-info [externalEmployeeId]="employeeId" [embedMode]="true" [hideTitle]="true" [addressScope]="'spouse'" (saved)="onSectionSaved('spouseAddress')" (cancelled)="closeSectionAndRefresh()"></app-emp-address-info>
+        }
+    </div>
+
+    <!-- Other Personal Information -->
+    <div class="sp-section">
+        <div class="sp-section-header">
+            <span class="sp-section-heading">{{ L['section.otherPersonal'] }}</span>
+            @if (editingSection !== 'otherPersonal') {
+            <button type="button" class="sp-btn sp-btn-sm" (click)="setEditingSection('otherPersonal')"><i class="pi pi-pencil"></i> Edit</button>
+            } @else {
+            <button type="button" class="sp-btn sp-btn-sm" (click)="closeSectionAndRefresh()"><i class="pi pi-times"></i> Cancel</button>
+            }
+        </div>
+        @if (editingSection !== 'otherPersonal') {
+        <div class="sp-grid">
+            <div class="sp-field-list">
+                <div class="sp-field"><span class="sp-field-label">{{ L['field.courseBatch'] }}</span> <span class="sp-field-value">{{ codeValue(profile.batch, profile.batchBN) }}</span></div>
+                <div class="sp-field"><span class="sp-field-label">{{ L['field.educationQualification'] }}</span> <span class="sp-field-value">{{ codeValue(profile.educationQualification, profile.educationQualificationBN) }}</span></div>
+                <div class="sp-field"><span class="sp-field-label">{{ L['field.professionalQualification'] }}</span> <span class="sp-field-value">{{ codeValue(profile.professionalQualification, profile.professionalQualificationBN) }}</span></div>
+                <div class="sp-field"><span class="sp-field-label">{{ L['field.personalQualification'] }}</span> <span class="sp-field-value">{{ codeValue(profile.personalQualification, profile.personalQualificationBN) }}</span></div>
+                <div class="sp-field"><span class="sp-field-label">{{ L['field.gallantryAwards'] }}</span> <span class="sp-field-value">{{ codeValue(profile.gallantryAwardsDecoration, profile.gallantryAwardsDecorationBN) }}</span></div>
+                <div class="sp-field"><span class="sp-field-label">{{ L['field.bloodGroup'] }}</span> <span class="sp-field-value">{{ bloodGroupDisplay(profile.bloodGroup) }}</span></div>
+                <div class="sp-field"><span class="sp-field-label">{{ L['field.nid'] }}</span> <span class="sp-field-value">{{ valDisplay(profile.nid) }}</span></div>
+                <div class="sp-field"><span class="sp-field-label">{{ L['field.nidOld'] }}</span> <span class="sp-field-value">{{ valDisplay(profile.nidOld) }}</span></div>
+                <div class="sp-field"><span class="sp-field-label">{{ L['field.passportNo'] }}</span> <span class="sp-field-value">{{ valDisplay(profile.passportNo) }}</span></div>
+                <div class="sp-field"><span class="sp-field-label">{{ L['field.identificationMark'] }}</span> <span class="sp-field-value">{{ val(profile.identificationMark) }}</span></div>
+            </div>
+            <div class="sp-field-list">
+                <div class="sp-field"><span class="sp-field-label">{{ L['field.dateOfBirth'] }}</span> <span class="sp-field-value">{{ formatDateDisplay(profile.dateOfBirth) }}</span></div>
+                <div class="sp-field"><span class="sp-field-label">{{ L['field.religion'] }}</span> <span class="sp-field-value">{{ codeValue(profile.religion, profile.religionBN) }}</span></div>
+                <div class="sp-field"><span class="sp-field-label">{{ L['field.height'] }}</span> <span class="sp-field-value">{{ heightDisplay(profile) }}</span></div>
+                <div class="sp-field"><span class="sp-field-label">{{ L['field.weight'] }}</span> <span class="sp-field-value">{{ weightDisplay(profile) }}</span></div>
+                <div class="sp-field"><span class="sp-field-label">{{ L['field.medicalCategory'] }}</span> <span class="sp-field-value">{{ codeValue(profile.medicalCategory, profile.medicalCategoryBN) }}</span></div>
+                <div class="sp-field"><span class="sp-field-label">{{ L['field.emailAddress'] }}</span> <span class="sp-field-value">{{ val(profile.emailAddress) }}</span></div>
+                <div class="sp-field"><span class="sp-field-label">{{ L['field.mobileNo'] }}</span> <span class="sp-field-value">{{ valDisplay(profile.mobileNo) }}</span></div>
+                <div class="sp-field"><span class="sp-field-label">{{ L['field.mobileNoOfficial'] }}</span> <span class="sp-field-value">{{ valDisplay(profile.mobileNoOfficial) }}</span></div>
+                <div class="sp-field"><span class="sp-field-label">{{ L['field.emergencyContactNo'] }}</span> <span class="sp-field-value">{{ valDisplay(profile.emergencyContactNo) }}</span></div>
+            </div>
+        </div>
+        } @if (editingSection === 'otherPersonal' && employeeId != null) {
+        <app-emp-personal-info [externalEmployeeId]="employeeId" [embedMode]="true" [hideTitle]="true" (saved)="onSectionSaved('otherPersonal')" (cancelled)="closeSectionAndRefresh()"></app-emp-personal-info>
+        }
+    </div>
+
+    <!-- Present Status -->
+    <div class="sp-section">
+        <div class="sp-section-header">
+            <span class="sp-section-heading">Present Status</span>
+        </div>
+        <div class="sp-table-wrap">
+            <p-table [value]="presentStatusList" [loading]="sectionLoading['presentStatus']" [tableStyle]="{ 'min-width': '50rem' }" styleClass="p-datatable-sm p-datatable-gridlines family-info-table">
+                <ng-template pTemplate="header">
+                    <tr>
+                        <th style="width: 4rem">Ser</th>
+                        <th>Status Type</th>
+                        <th>Date</th>
+                        <th>Status Details</th>
+                        <th style="width: 8rem">Profile Shift</th>
+                        <th style="width: 7rem">Status</th>
+                        <th style="width: 7rem">Documents</th>
+                    </tr>
+                </ng-template>
+                <ng-template pTemplate="body" let-row let-rowIndex="rowIndex">
+                    <tr>
+                        <td>{{ rowNum(rowIndex) }}.</td>
+                        <td>{{ getPresentStatusLabel(row.presentStatusType) }}</td>
+                        <td>{{ formatDateOnly(row.dated) }}</td>
+                        <td>{{ getPresentStatusDetails(row) }}</td>
+                        <td>{{ row.profileShift ? 'Yes' : 'No' }}</td>
+                        <td>
+                            <span class="sp-status-pill" [class.sp-status-pill--active]="row.isActive"> {{ row.isActive ? 'Active' : 'Inactive' }} </span>
+                        </td>
+                        <td class="text-center">
+                            @if (parseDocRefs(row.supportingDocFilesReferences).length > 0) {
+                            <p-button icon="pi pi-download" [rounded]="true" [text]="true" severity="secondary" size="small" (onClick)="downloadAllDocs(row.supportingDocFilesReferences)" pTooltip="Download"></p-button>
+                            } @else {
+                            <span class="text-500">-</span>
+                            }
+                        </td>
+                    </tr>
+                </ng-template>
+                <ng-template pTemplate="emptymessage">
+                    <tr>
+                        <td colspan="7" class="text-center text-500 py-3">No present status records found.</td>
+                    </tr>
+                </ng-template>
+            </p-table>
+        </div>
+    </div>
+
+    <!-- Family Info (excludes in-law relations) -->
+    <div class="sp-section">
+        <div class="sp-section-header">
+            <span class="sp-section-heading">{{ L['section.familyInfo'] }}</span>
+            @if (editingSection !== 'familyInfo') {
+            <button type="button" class="sp-btn sp-btn-sm" (click)="setEditingSection('familyInfo')"><i class="pi pi-pencil"></i> Edit</button>
+            } @else {
+            <button type="button" class="sp-btn sp-btn-sm" (click)="closeSectionAndRefresh()"><i class="pi pi-times"></i> Cancel</button>
+            }
+        </div>
+        @if (editingSection !== 'familyInfo') {
+        <div class="sp-table-wrap">
+            <p-table [value]="familyInfoList" [loading]="sectionLoading['family']" [tableStyle]="{ 'min-width': '40rem' }" styleClass="p-datatable-sm p-datatable-gridlines family-info-table">
+                <ng-template pTemplate="header">
+                    <tr>
+                        <th style="width: 4rem">{{ L['table.ser'] }}</th>
+                        <th>{{ L['table.name'] }}</th>
+                        <th>{{ L['table.relation'] }}</th>
+                        <th>{{ L['table.dateOfBirth'] }}</th>
+                        <th>{{ L['table.occupation'] }}</th>
+                        <th>{{ L['table.mobileNo'] }}</th>
+                    </tr>
+                </ng-template>
+                <ng-template pTemplate="body" let-row let-rowIndex="rowIndex">
+                    <tr>
+                        <td>{{ rowNum(rowIndex) }}.</td>
+                        <td>{{ codeValue(row.name, row.nameBN) }}</td>
+                        <td>{{ codeValue(row.relation, row.relationBN) }}</td>
+                        <td>{{ formatFamilyDob(row.dateOfBirth) }}</td>
+                        <td>{{ codeValue(row.occupation, row.occupationBN) }}</td>
+                        <td>{{ familyMobile(row) }}</td>
+                    </tr>
+                </ng-template>
+                <ng-template pTemplate="emptymessage">
+                    <tr>
+                        <td colspan="6" class="text-center text-500 py-3">{{ L['empty.noFamilyRecords'] }}</td>
+                    </tr>
+                </ng-template>
+            </p-table>
+        </div>
+        } @if (editingSection === 'familyInfo' && employeeId != null) {
+        <app-emp-family-info [externalEmployeeId]="employeeId" [embedMode]="true" [hideTitle]="true" (saved)="onSectionSaved('familyInfo')" (cancelled)="closeSectionAndRefresh()"></app-emp-family-info>
+        }
+    </div>
+
+    <!-- Wife Family Info (relation contains "in-law") - same form as Family Info -->
+    <div class="sp-section">
+        <div class="sp-section-header">
+            <span class="sp-section-heading">{{ L['section.spouseFamilyInfo'] }}</span>
+            @if (editingSection !== 'familyInfo') {
+            <button type="button" class="sp-btn sp-btn-sm" (click)="setEditingSection('familyInfo')"><i class="pi pi-pencil"></i> Edit</button>
+            } @else {
+            <button type="button" class="sp-btn sp-btn-sm" (click)="closeSectionAndRefresh()"><i class="pi pi-times"></i> Cancel</button>
+            }
+        </div>
+        @if (editingSection !== 'familyInfo') {
+        <div class="sp-table-wrap">
+            <p-table [value]="spouseFamilyInfoList" [loading]="sectionLoading['family']" [tableStyle]="{ 'min-width': '40rem' }" styleClass="p-datatable-sm p-datatable-gridlines family-info-table">
+                <ng-template pTemplate="header">
+                    <tr>
+                        <th style="width: 4rem">{{ L['table.ser'] }}</th>
+                        <th>{{ L['table.name'] }}</th>
+                        <th>{{ L['table.relation'] }}</th>
+                        <th>{{ L['table.dateOfBirth'] }}</th>
+                        <th>{{ L['table.occupation'] }}</th>
+                        <th>{{ L['table.mobileNo'] }}</th>
+                    </tr>
+                </ng-template>
+                <ng-template pTemplate="body" let-row let-rowIndex="rowIndex">
+                    <tr>
+                        <td>{{ rowNum(rowIndex) }}.</td>
+                        <td>{{ codeValue(row.name, row.nameBN) }}</td>
+                        <td>{{ codeValue(row.relation, row.relationBN) }}</td>
+                        <td>{{ formatFamilyDob(row.dateOfBirth) }}</td>
+                        <td>{{ codeValue(row.occupation, row.occupationBN) }}</td>
+                        <td>{{ familyMobile(row) }}</td>
+                    </tr>
+                </ng-template>
+                <ng-template pTemplate="emptymessage">
+                    <tr>
+                        <td colspan="6" class="text-center text-500 py-3">{{ L['empty.noSpouseFamilyRecords'] }}</td>
+                    </tr>
+                </ng-template>
+            </p-table>
+        </div>
+        }
+    </div>
+
+    <!-- Previous RAB Service Information (ex-member: all postings are previous; Present RAB section is hidden) -->
+    <div class="sp-section">
+        <div class="sp-section-header">
+            <span class="sp-section-heading">{{ L['section.previousRabService'] }}</span>
+            @if (editingSection !== 'previousRabService') {
+            <button type="button" class="sp-btn sp-btn-sm" (click)="setEditingSection('previousRabService')"><i class="pi pi-pencil"></i> Edit</button>
+            } @else {
+            <button type="button" class="sp-btn sp-btn-sm" (click)="closeSectionAndRefresh()"><i class="pi pi-times"></i> Cancel</button>
+            }
+        </div>
+        @if (editingSection !== 'previousRabService') {
+        <div class="sp-table-wrap">
+            <p-table [value]="previousOnlyRabList" [loading]="sectionLoading['previousRab']" [tableStyle]="{ 'min-width': '50rem' }" styleClass="p-datatable-sm p-datatable-gridlines family-info-table">
+                <ng-template pTemplate="header">
+                    <tr>
+                        <th style="width: 4rem">{{ L['table.ser'] }}</th>
+                        <th>{{ L['table.rabUnit'] }}</th>
+                        <th>{{ L['table.serviceFrom'] }}</th>
+                        <th>{{ L['table.serviceTo'] }}</th>
+                        <th>{{ L['table.appointment'] }}</th>
+                        <th>{{ L['table.postingAuth'] }}</th>
+                        <th>{{ L['table.remarks'] }}</th>
+                    </tr>
+                </ng-template>
+                <ng-template pTemplate="body" let-row let-rowIndex="rowIndex">
+                    <tr>
+                        <td>{{ rowNum(rowIndex) }}.</td>
+                        <td>{{ codeValue(row.rabUnitName, row.rabUnitNameBN) }}</td>
+                        <td>{{ row.serviceFrom | partialDate: row.serviceFromPrecision : (isBn ? 'bn' : 'en') }}</td>
+                        <td>{{ row.serviceTo | partialDate: row.serviceToPrecision : (isBn ? 'bn' : 'en') }}</td>
+                        <td>{{ codeValue(row.appointmentName, row.appointmentNameBN) }}</td>
+                        <td>{{ val(row.postingAuth) }}</td>
+                        <td>{{ val(row.remarks) }}</td>
+                    </tr>
+                </ng-template>
+                <ng-template pTemplate="emptymessage">
+                    <tr>
+                        <td colspan="7" class="text-center text-500 py-3">{{ L['empty.noPreviousRabRecords'] }}</td>
+                    </tr>
+                </ng-template>
+            </p-table>
+        </div>
+        } @if (editingSection === 'previousRabService' && employeeId != null) {
+        <app-emp-previous-rab-service [externalEmployeeId]="employeeId" [embedMode]="true" [hideTitle]="true" (saved)="onSectionSaved('previousRabService')" (cancelled)="closeSectionAndRefresh()"></app-emp-previous-rab-service>
+        }
+    </div>
+
+    <!-- Permanent Movement History -->
+    <div class="sp-section">
+        <div class="sp-section-header">
+            <span class="sp-section-heading">{{ L['section.permanentMovementHistory'] }}</span>
+        </div>
+        <div class="sp-table-wrap">
+            <p-table [value]="permanentMovementList" [loading]="sectionLoading['movements']" [tableStyle]="{ 'min-width': '50rem' }" styleClass="p-datatable-sm p-datatable-gridlines family-info-table">
+                <ng-template pTemplate="header">
+                    <tr>
+                        <th style="width: 5%">{{ L['table.ser'] }}</th>
+                        <th style="width: 17%">{{ L['table.orderType'] }}</th>
+                        <th style="width: 20%">{{ L['table.destinedUnit'] }}</th>
+                        <th style="width: 28%">{{ L['table.reason'] }}</th>
+                        <th style="width: 15%">{{ L['table.dateOfRelease'] }}</th>
+                        <th style="width: 15%">{{ L['table.dateOfReduce'] }}</th>
+                    </tr>
+                </ng-template>
+                <ng-template pTemplate="body" let-row let-rowIndex="rowIndex">
+                    <tr>
+                        <td>{{ rowNum(rowIndex) }}.</td>
+                        <td>{{ moveOrderTypeLabel(row.moveOrderType) }}</td>
+                        <td>{{ movementDestination(row) }}</td>
+                        <td>{{ val(row.movementReasonBN) }}</td>
+                        <td>{{ formatDateOnly(row.dateOfRelease) }}</td>
+                        <td>{{ formatDateOnly(row.dateOfReduce) }}</td>
+                    </tr>
+                </ng-template>
+                <ng-template pTemplate="emptymessage">
+                    <tr>
+                        <td colspan="6" class="text-center text-500 py-3">{{ L['empty.noPermanentMovement'] }}</td>
+                    </tr>
+                </ng-template>
+            </p-table>
+        </div>
+    </div>
+
+    <!-- Temporary Movement History -->
+    <div class="sp-section">
+        <div class="sp-section-header">
+            <span class="sp-section-heading">{{ L['section.temporaryMovementHistory'] }}</span>
+        </div>
+        <div class="sp-table-wrap">
+            <p-table [value]="temporaryMovementList" [loading]="sectionLoading['movements']" [tableStyle]="{ 'min-width': '50rem' }" styleClass="p-datatable-sm p-datatable-gridlines family-info-table">
+                <ng-template pTemplate="header">
+                    <tr>
+                        <th style="width: 5%">{{ L['table.ser'] }}</th>
+                        <th style="width: 17%">{{ L['table.orderType'] }}</th>
+                        <th style="width: 20%">{{ L['table.destinedUnit'] }}</th>
+                        <th style="width: 28%">{{ L['table.reason'] }}</th>
+                        <th style="width: 15%">{{ L['table.dateOfRelease'] }}</th>
+                        <th style="width: 15%">{{ L['table.dateOfReduce'] }}</th>
+                    </tr>
+                </ng-template>
+                <ng-template pTemplate="body" let-row let-rowIndex="rowIndex">
+                    <tr>
+                        <td>{{ rowNum(rowIndex) }}.</td>
+                        <td>{{ moveOrderTypeLabel(row.moveOrderType) }}</td>
+                        <td>{{ movementDestination(row) }}</td>
+                        <td>{{ val(row.movementReasonBN) }}</td>
+                        <td>{{ formatDateOnly(row.dateOfRelease) }}</td>
+                        <td>{{ formatDateOnly(row.dateOfReduce) }}</td>
+                    </tr>
+                </ng-template>
+                <ng-template pTemplate="emptymessage">
+                    <tr>
+                        <td colspan="6" class="text-center text-500 py-3">{{ L['empty.noTemporaryMovement'] }}</td>
+                    </tr>
+                </ng-template>
+            </p-table>
+        </div>
+    </div>
+
+    <!-- Service History (Mother Organization) -->
+    <div class="sp-section">
+        <div class="sp-section-header">
+            <span class="sp-section-heading">{{ L['section.serviceHistoryMo'] }}</span>
+            @if (editingSection !== 'serviceHistoryMo') {
+            <button type="button" class="sp-btn sp-btn-sm" (click)="setEditingSection('serviceHistoryMo')"><i class="pi pi-pencil"></i> Edit</button>
+            } @else {
+            <button type="button" class="sp-btn sp-btn-sm" (click)="closeSectionAndRefresh()"><i class="pi pi-times"></i> Cancel</button>
+            }
+        </div>
+        @if (editingSection !== 'serviceHistoryMo') {
+        <div class="sp-table-wrap">
+            <p-table [value]="moServHistoryList" [loading]="sectionLoading['moServHistory']" [tableStyle]="{ 'min-width': '48rem' }" styleClass="p-datatable-sm p-datatable-gridlines family-info-table">
+                <ng-template pTemplate="header">
+                    <tr>
+                        <th style="width: 4rem">{{ L['table.ser'] }}</th>
+                        <th>{{ L['table.organization'] }}</th>
+                        <th>{{ L['table.location'] }}</th>
+                        <th>{{ L['table.serviceFrom'] }}</th>
+                        <th>{{ L['table.serviceTo'] }}</th>
+                        <th>{{ L['table.appointment'] }}</th>
+                        <th>{{ L['table.auth'] }}</th>
+                        <th>{{ L['table.remarks'] }}</th>
+                    </tr>
+                </ng-template>
+                <ng-template pTemplate="body" let-row let-rowIndex="rowIndex">
+                    <tr>
+                        <td>{{ rowNum(rowIndex) }}.</td>
+                        <td>{{ codeValue(row.organizationName, row.organizationNameBN) }}</td>
+                        <td>{{ codeValue(row.locationName, row.locationNameBN) }}</td>
+                        <td>{{ row.serviceFrom | partialDate: row.serviceFromPrecision : (isBn ? 'bn' : 'en') }}</td>
+                        <td>{{ row.serviceTo | partialDate: row.serviceToPrecision : (isBn ? 'bn' : 'en') }}</td>
+                        <td>{{ codeValue(row.appointment, row.appointmentBN) }}</td>
+                        <td>{{ val(row.auth) }}</td>
+                        <td>{{ val(row.remarks) }}</td>
+                    </tr>
+                </ng-template>
+                <ng-template pTemplate="emptymessage">
+                    <tr>
+                        <td colspan="8" class="text-center text-500 py-3">{{ L['empty.noServiceHistoryRecords'] }}</td>
+                    </tr>
+                </ng-template>
+            </p-table>
+        </div>
+        } @if (editingSection === 'serviceHistoryMo' && employeeId != null) {
+        <app-emp-service-history [externalEmployeeId]="employeeId" [embedMode]="true" [hideTitle]="true" (saved)="onSectionSaved('serviceHistoryMo')" (cancelled)="closeSectionAndRefresh()"></app-emp-service-history>
+        }
+    </div>
+
+    <!-- Promotion Information -->
+    <div class="sp-section">
+        <div class="sp-section-header">
+            <span class="sp-section-heading">{{ L['section.promotion'] }}</span>
+            @if (editingSection !== 'promotion') {
+            <button type="button" class="sp-btn sp-btn-sm" (click)="setEditingSection('promotion')"><i class="pi pi-pencil"></i> Edit</button>
+            } @else {
+            <button type="button" class="sp-btn sp-btn-sm" (click)="closeSectionAndRefresh()"><i class="pi pi-times"></i> Cancel</button>
+            }
+        </div>
+        @if (editingSection !== 'promotion') {
+        <div class="sp-table-wrap">
+            <p-table [value]="promotionList" [loading]="sectionLoading['promotion']" [tableStyle]="{ 'min-width': '52rem' }" styleClass="p-datatable-sm p-datatable-gridlines family-info-table">
+                <ng-template pTemplate="header">
+                    <tr>
+                        <th style="width: 4rem">{{ L['table.ser'] }}</th>
+                        <th>{{ L['table.previousRank'] }}</th>
+                        <th>{{ L['table.promotedRank'] }}</th>
+                        <th>{{ L['table.promotedDate'] }}</th>
+                        <th>{{ L['table.fromDate'] }}</th>
+                        <th>{{ L['table.toDate'] }}</th>
+                        <th>{{ L['table.probationaryPeriod'] }}</th>
+                        <th>{{ L['table.auth'] }}</th>
+                        <th>{{ L['table.remarks'] }}</th>
+                    </tr>
+                </ng-template>
+                <ng-template pTemplate="body" let-row let-rowIndex="rowIndex">
+                    <tr>
+                        <td>{{ rowNum(rowIndex) }}.</td>
+                        <td>{{ codeValue(row.previousRank, row.previousRankBN) }}</td>
+                        <td>{{ codeValue(row.promotedRank, row.promotedRankBN) }}</td>
+                        <td>{{ formatDateOnly(row.promotedDate) }}</td>
+                        <td>{{ formatDateOnly(row.fromDate) }}</td>
+                        <td>{{ formatDateOnly(row.toDate) }}</td>
+                        <td>{{ val(row.probationaryPeriod) }}</td>
+                        <td>{{ val(row.auth) }}</td>
+                        <td>{{ val(row.remarks) }}</td>
+                    </tr>
+                </ng-template>
+                <ng-template pTemplate="emptymessage">
+                    <tr>
+                        <td colspan="9" class="text-center text-500 py-3">{{ L['empty.noPromotionRecords'] }}</td>
+                    </tr>
+                </ng-template>
+            </p-table>
+        </div>
+        } @if (editingSection === 'promotion' && employeeId != null) {
+        <app-emp-promotion-info [externalEmployeeId]="employeeId" [embedMode]="true" [hideTitle]="true" (saved)="onSectionSaved('promotion')" (cancelled)="closeSectionAndRefresh()"></app-emp-promotion-info>
+        }
+    </div>
+
+    <!-- Education Information -->
+    <div class="sp-section">
+        <div class="sp-section-header">
+            <span class="sp-section-heading">{{ L['section.education'] }}</span>
+            @if (editingSection !== 'education') {
+            <button type="button" class="sp-btn sp-btn-sm" (click)="setEditingSection('education')"><i class="pi pi-pencil"></i> Edit</button>
+            } @else {
+            <button type="button" class="sp-btn sp-btn-sm" (click)="closeSectionAndRefresh()"><i class="pi pi-times"></i> Cancel</button>
+            }
+        </div>
+        @if (editingSection !== 'education') {
+        <div class="sp-table-wrap">
+            <p-table [value]="educationList" [loading]="sectionLoading['education']" [tableStyle]="{ 'min-width': '56rem' }" styleClass="p-datatable-sm p-datatable-gridlines family-info-table">
+                <ng-template pTemplate="header">
+                    <tr>
+                        <th style="width: 4rem">{{ L['table.ser'] }}</th>
+                        <th>{{ L['table.durationFrom'] }}</th>
+                        <th>{{ L['table.durationTo'] }}</th>
+                        <th>{{ L['table.schoolCollegeUniversity'] }}</th>
+                        <th>{{ L['table.examDegree'] }}</th>
+                        <th>{{ L['table.subjectDepartment'] }}</th>
+                        <th>{{ L['table.result'] }}</th>
+                        <th>{{ L['table.gradePoint'] }}</th>
+                        <th>{{ L['table.passingYear'] }}</th>
+                        <!-- Remarks column hidden in UI (backend still has remarks) -->
+                        <!-- <th>{{ L['table.remarks'] }}</th> -->
+                    </tr>
+                </ng-template>
+                <ng-template pTemplate="body" let-row let-rowIndex="rowIndex">
+                    <tr>
+                        <td>{{ rowNum(rowIndex) }}.</td>
+                        <td>{{ formatDateOnly(row.durationFrom) }}</td>
+                        <td>{{ formatDateOnly(row.durationTo) }}</td>
+                        <td>{{ codeValue(row.schoolCollegeUniversity, row.schoolCollegeUniversityBN) }}</td>
+                        <td>{{ codeValue(row.nameOfExamDegree, row.nameOfExamDegreeBN) }}</td>
+                        <td>{{ codeValue(row.subjectsDepartments, row.subjectsDepartmentsBN) }}</td>
+                        <td>{{ codeValue(row.result, row.resultBN) }}</td>
+                        <td>{{ valDisplay(row.gradePoint) }}</td>
+                        <td>{{ valDisplay(row.passingYear) }}</td>
+                        <!-- <td>{{ val(row.remarks) }}</td> -->
+                    </tr>
+                </ng-template>
+                <ng-template pTemplate="emptymessage">
+                    <tr>
+                        <td colspan="9" class="text-center text-500 py-3">{{ L['empty.noEducationRecords'] }}</td>
+                    </tr>
+                </ng-template>
+            </p-table>
+        </div>
+        } @if (editingSection === 'education' && employeeId != null) {
+        <app-emp-education-info [externalEmployeeId]="employeeId" [embedMode]="true" [hideTitle]="true" (saved)="onSectionSaved('education')" (cancelled)="closeSectionAndRefresh()"></app-emp-education-info>
+        }
+    </div>
+
+    <!-- Course Information -->
+    <div class="sp-section">
+        <div class="sp-section-header">
+            <span class="sp-section-heading">{{ L['section.course'] }}</span>
+            @if (editingSection !== 'course') {
+            <button type="button" class="sp-btn sp-btn-sm" (click)="setEditingSection('course')"><i class="pi pi-pencil"></i> Edit</button>
+            } @else {
+            <button type="button" class="sp-btn sp-btn-sm" (click)="closeSectionAndRefresh()"><i class="pi pi-times"></i> Cancel</button>
+            }
+        </div>
+        @if (editingSection !== 'course') {
+        <div class="sp-table-wrap">
+            <p-table [value]="courseList" [loading]="sectionLoading['course']" [tableStyle]="{ 'min-width': '44rem' }" styleClass="p-datatable-sm p-datatable-gridlines family-info-table">
+                <ng-template pTemplate="header">
+                    <tr>
+                        <th style="width: 4rem">{{ L['table.ser'] }}</th>
+                        <th>{{ L['table.courseType'] }}</th>
+                        <th>{{ L['table.courseName'] }}</th>
+                        <th>{{ L['table.trainingInstitute'] }}</th>
+                        <th>{{ L['table.dateFrom'] }}</th>
+                        <th>{{ L['table.dateTo'] }}</th>
+                        <th>{{ L['table.result'] }}</th>
+                        <th>{{ L['table.auth'] }}</th>
+                        <th>{{ L['table.remarks'] }}</th>
+                    </tr>
+                </ng-template>
+                <ng-template pTemplate="body" let-row let-rowIndex="rowIndex">
+                    <tr>
+                        <td>{{ rowNum(rowIndex) }}.</td>
+                        <td>{{ codeValue(row.courseType, row.courseTypeBN) }}</td>
+                        <td>{{ codeValue(row.courseName, row.courseNameBN) }}</td>
+                        <td>{{ codeValue(row.trainingInstituteName, row.trainingInstituteNameBN) }}</td>
+                        <td>{{ formatDateOnly(row.dateFrom) }}</td>
+                        <td>{{ formatDateOnly(row.dateTo) }}</td>
+                        <td>{{ val(row.result) }}</td>
+                        <td>{{ val(row.auth) }}</td>
+                        <td>{{ val(row.remarks) }}</td>
+                    </tr>
+                </ng-template>
+                <ng-template pTemplate="emptymessage">
+                    <tr>
+                        <td colspan="9" class="text-center text-500 py-3">{{ L['empty.noCourseRecords'] }}</td>
+                    </tr>
+                </ng-template>
+            </p-table>
+        </div>
+        } @if (editingSection === 'course' && employeeId != null) {
+        <app-emp-course-info [externalEmployeeId]="employeeId" [embedMode]="true" [hideTitle]="true" (saved)="onSectionSaved('course')" (cancelled)="closeSectionAndRefresh()"></app-emp-course-info>
+        }
+    </div>
+
+    <!-- RFTS Training -->
+    <div class="sp-section">
+        <div class="sp-section-header"><span class="sp-section-heading">{{ L['section.rfts'] }}</span></div>
+        <div class="sp-table-wrap">
+            <p-table [value]="rftsTrainingList" [loading]="sectionLoading['rftsTraining']" [tableStyle]="{ 'min-width': '30rem' }" styleClass="p-datatable-sm p-datatable-gridlines family-info-table">
+                <ng-template pTemplate="header">
+                    <tr>
+                        <th style="width: 4rem">{{ L['table.ser'] }}</th>
+                        <th>{{ L['table.courseNo'] }}</th>
+                        <th>{{ L['table.from'] }}</th>
+                        <th>{{ L['table.to'] }}</th>
+                        <th>{{ L['table.remarks'] }}</th>
+                    </tr>
+                </ng-template>
+                <ng-template pTemplate="body" let-row let-rowIndex="rowIndex">
+                    <tr>
+                        <td>{{ rowNum(rowIndex) }}.</td>
+                        <td>{{ val(row.courseNo) }}</td>
+                        <td>{{ formatDateOnly(row.dateFrom) }}</td>
+                        <td>{{ formatDateOnly(row.dateTo) }}</td>
+                        <td>{{ val(row.remarks) }}</td>
+                    </tr>
+                </ng-template>
+                <ng-template pTemplate="emptymessage">
+                    <tr>
+                        <td colspan="5" class="text-center text-500 py-3">{{ L['empty.noRftsRecords'] }}</td>
+                    </tr>
+                </ng-template>
+            </p-table>
+        </div>
+    </div>
+
+    <!-- Investigation Experience -->
+    <div class="sp-section">
+        <div class="sp-section-header"><span class="sp-section-heading">{{ L['section.investigation'] }}</span></div>
+        @if (profile?.hasInvestigationExp === true) {
+        <div class="sp-field">
+            <span class="sp-field-label">{{ L['field.details'] }}</span>
+            <span class="sp-field-value">{{ val(profile.investigationExpDetails) }}</span>
+        </div>
+        } @else {
+        <div class="text-500 py-1" style="font-style: italic">{{ L['empty.noInvestigationRecorded'] }}</div>
+        }
+    </div>
+
+    <!-- Foreign Visit Information -->
+    <div class="sp-section">
+        <div class="sp-section-header">
+            <span class="sp-section-heading">{{ L['section.foreignVisit'] }}</span>
+            @if (editingSection !== 'foreignVisit') {
+            <button type="button" class="sp-btn sp-btn-sm" (click)="setEditingSection('foreignVisit')"><i class="pi pi-pencil"></i> Edit</button>
+            } @else {
+            <button type="button" class="sp-btn sp-btn-sm" (click)="closeSectionAndRefresh()"><i class="pi pi-times"></i> Cancel</button>
+            }
+        </div>
+        @if (editingSection !== 'foreignVisit') {
+        <!-- ExBD Leave Application Progress -->
+        @if (exBdLeaveProgressList.length > 0) {
+        <div style="margin-top: 1.25rem">
+            <div class="sp-addr-type">{{ L['exbd.leaveStatusTitle'] }}</div>
             <div class="sp-table-wrap">
-                <p-table
-                    [value]="presentStatusList"
-                    [tableStyle]="{ 'min-width': '50rem' }"
-                    styleClass="p-datatable-sm p-datatable-gridlines family-info-table"
-                >
+                <p-table [value]="exBdLeaveProgressList" [loading]="sectionLoading['exBdLeaveProgress']" [tableStyle]="{ 'min-width': '50rem' }" styleClass="p-datatable-sm p-datatable-gridlines family-info-table">
                     <ng-template pTemplate="header">
                         <tr>
-                            <th style="width: 4rem">Ser</th>
-                            <th>Status Type</th>
-                            <th>Date</th>
-                            <th>Status Details</th>
-                            <th style="width: 8rem">Profile Shift</th>
-                            <th style="width: 7rem">Status</th>
-                            <th style="width: 7rem">Documents</th>
+                            <th style="width: 3rem">{{ L['table.ser'] }}</th>
+                            <th>{{ L['table.purposeOfVisit'] }}</th>
+                            <th>{{ L['table.country'] }}</th>
+                            <th>{{ L['table.from'] }}</th>
+                            <th>{{ L['table.to'] }}</th>
+                            <th style="width: 4rem; text-align: center">{{ L['table.days'] }}</th>
+                            <th>{{ L['table.familyMembers'] }}</th>
+                            <th>{{ L['table.status'] }}</th>
                         </tr>
                     </ng-template>
                     <ng-template pTemplate="body" let-row let-rowIndex="rowIndex">
                         <tr>
                             <td>{{ rowNum(rowIndex) }}.</td>
-                            <td>{{ getPresentStatusLabel(row.presentStatusType) }}</td>
-                            <td>{{ formatDateOnly(row.dated) }}</td>
-                            <td>{{ getPresentStatusDetails(row) }}</td>
-                            <td>{{ row.profileShift ? 'Yes' : 'No' }}</td>
+                            <td>{{ codeValue(row.visitTypeName, row.visitTypeNameBN) }}</td>
+                            <td>{{ codeValue(row.countriesDisplay, row.countriesDisplayBN) }}</td>
+                            <td>{{ formatDateOnly(row.fromDate) }}</td>
+                            <td>{{ formatDateOnly(row.toDate) }}</td>
+                            <td style="text-align: center">{{ valDisplay(row.totalDays) }}</td>
+                            <td>{{ codeValue(row.familyMembersDisplay, row.familyMembersDisplayBN) }}</td>
                             <td>
-                                <span class="sp-status-pill" [class.sp-status-pill--active]="row.isActive">
-                                    {{ row.isActive ? 'Active' : 'Inactive' }}
-                                </span>
-                            </td>
-                            <td class="text-center">
-                                @if (parseDocRefs(row.supportingDocFilesReferences).length > 0) {
-                                    <p-button icon="pi pi-download" [rounded]="true" [text]="true" severity="secondary" size="small"
-                                        (onClick)="downloadAllDocs(row.supportingDocFilesReferences)" pTooltip="Download"></p-button>
-                                } @else {
-                                    <span class="text-500">-</span>
+                                <span class="sp-status-badge sp-status-{{ getProgressStatusSeverity(row.progressStatus) }}"> {{ getProgressStatusLabel(row.progressStatus) }} </span>
+                                @if (row.availStatus === 'Availed') { , <span class="text-green-600 font-semibold">{{ getAvailStatusLabel(row.availStatus) }}</span> } @else if (row.availStatus === 'NotAvailed') { ,
+                                <span class="text-red-600 font-semibold">{{ getAvailStatusLabel(row.availStatus) }}</span>
                                 }
                             </td>
                         </tr>
                     </ng-template>
-                    <ng-template pTemplate="emptymessage">
-                        <tr>
-                            <td colspan="7" class="text-center text-500 py-3">No present status records found.</td>
-                        </tr>
-                    </ng-template>
                 </p-table>
             </div>
         </div>
+        }
 
-        <!-- Family Info (excludes in-law relations) -->
-        <div class="sp-section">
-            <div class="sp-section-header">
-                <span class="sp-section-heading">{{ L['section.familyInfo'] }}</span>
-                @if (editingSection !== 'familyInfo') {
-                    <button type="button" class="sp-btn sp-btn-sm" (click)="setEditingSection('familyInfo')"><i class="pi pi-pencil"></i> Edit</button>
-                } @else {
-                    <button type="button" class="sp-btn sp-btn-sm" (click)="closeSectionAndRefresh()"><i class="pi pi-times"></i> Cancel</button>
-                }
-            </div>
-            @if (editingSection !== 'familyInfo') {
-                <div class="sp-table-wrap">
-                    <p-table [value]="familyInfoList" [tableStyle]="{ 'min-width': '40rem' }" styleClass="p-datatable-sm p-datatable-gridlines family-info-table">
-                        <ng-template pTemplate="header">
-                            <tr>
-                                <th style="width: 4rem">{{ L['table.ser'] }}</th>
-                                <th>{{ L['table.name'] }}</th>
-                                <th>{{ L['table.relation'] }}</th>
-                                <th>{{ L['table.dateOfBirth'] }}</th>
-                                <th>{{ L['table.occupation'] }}</th>
-                                <th>{{ L['table.mobileNo'] }}</th>
-                            </tr>
-                        </ng-template>
-                        <ng-template pTemplate="body" let-row let-rowIndex="rowIndex">
-                            <tr>
-                                <td>{{ rowNum(rowIndex) }}.</td>
-                                <td>{{ codeValue(row.name, row.nameBN) }}</td>
-                                <td>{{ codeValue(row.relation, row.relationBN) }}</td>
-                                <td>{{ formatFamilyDob(row.dateOfBirth) }}</td>
-                                <td>{{ codeValue(row.occupation, row.occupationBN) }}</td>
-                                <td>{{ familyMobile(row) }}</td>
-                            </tr>
-                        </ng-template>
-                        <ng-template pTemplate="emptymessage">
-                            <tr><td colspan="6" class="text-center text-500 py-3">{{ L['empty.noFamilyRecords'] }}</td></tr>
-                        </ng-template>
-                    </p-table>
-                </div>
-            }
-            @if (editingSection === 'familyInfo' && employeeId != null) {
-                <app-emp-family-info [externalEmployeeId]="employeeId" [embedMode]="true" [hideTitle]="true" (saved)="onSectionSaved('familyInfo')" (cancelled)="closeSectionAndRefresh()"></app-emp-family-info>
-            }
-        </div>
-
-        <!-- Wife Family Info (relation contains "in-law") - same form as Family Info -->
-        <div class="sp-section">
-            <div class="sp-section-header">
-                <span class="sp-section-heading">{{ L['section.spouseFamilyInfo'] }}</span>
-                @if (editingSection !== 'familyInfo') {
-                    <button type="button" class="sp-btn sp-btn-sm" (click)="setEditingSection('familyInfo')"><i class="pi pi-pencil"></i> Edit</button>
-                } @else {
-                    <button type="button" class="sp-btn sp-btn-sm" (click)="closeSectionAndRefresh()"><i class="pi pi-times"></i> Cancel</button>
-                }
-            </div>
-            @if (editingSection !== 'familyInfo') {
-                <div class="sp-table-wrap">
-                    <p-table [value]="spouseFamilyInfoList" [tableStyle]="{ 'min-width': '40rem' }" styleClass="p-datatable-sm p-datatable-gridlines family-info-table">
-                        <ng-template pTemplate="header">
-                            <tr>
-                                <th style="width: 4rem">{{ L['table.ser'] }}</th>
-                                <th>{{ L['table.name'] }}</th>
-                                <th>{{ L['table.relation'] }}</th>
-                                <th>{{ L['table.dateOfBirth'] }}</th>
-                                <th>{{ L['table.occupation'] }}</th>
-                                <th>{{ L['table.mobileNo'] }}</th>
-                            </tr>
-                        </ng-template>
-                        <ng-template pTemplate="body" let-row let-rowIndex="rowIndex">
-                            <tr>
-                                <td>{{ rowNum(rowIndex) }}.</td>
-                                <td>{{ codeValue(row.name, row.nameBN) }}</td>
-                                <td>{{ codeValue(row.relation, row.relationBN) }}</td>
-                                <td>{{ formatFamilyDob(row.dateOfBirth) }}</td>
-                                <td>{{ codeValue(row.occupation, row.occupationBN) }}</td>
-                                <td>{{ familyMobile(row) }}</td>
-                            </tr>
-                        </ng-template>
-                        <ng-template pTemplate="emptymessage">
-                            <tr><td colspan="6" class="text-center text-500 py-3">{{ L['empty.noSpouseFamilyRecords'] }}</td></tr>
-                        </ng-template>
-                    </p-table>
-                </div>
-            }
-        </div>
-
-        <!-- Previous RAB Service Information (ex-member: all postings are previous; Present RAB section is hidden) -->
-        <div class="sp-section">
-            <div class="sp-section-header">
-                <span class="sp-section-heading">{{ L['section.previousRabService'] }}</span>
-                @if (editingSection !== 'previousRabService') {
-                    <button type="button" class="sp-btn sp-btn-sm" (click)="setEditingSection('previousRabService')"><i class="pi pi-pencil"></i> Edit</button>
-                } @else {
-                    <button type="button" class="sp-btn sp-btn-sm" (click)="closeSectionAndRefresh()"><i class="pi pi-times"></i> Cancel</button>
-                }
-            </div>
-            @if (editingSection !== 'previousRabService') {
+        <!-- Official Foreign Visit -->
+        <div style="margin-top: 1.25rem">
+            <div class="sp-addr-type">{{ L['section.officialForeignVisit'] }}</div>
             <div class="sp-table-wrap">
-                <p-table
-                    [value]="previousOnlyRabList"
-                    [tableStyle]="{ 'min-width': '50rem' }"
-                    styleClass="p-datatable-sm p-datatable-gridlines family-info-table"
-                >
+                <p-table [value]="officialForeignVisitList" [loading]="sectionLoading['foreignVisit']" [tableStyle]="{ 'min-width': '44rem' }" styleClass="p-datatable-sm p-datatable-gridlines family-info-table">
                     <ng-template pTemplate="header">
                         <tr>
                             <th style="width: 4rem">{{ L['table.ser'] }}</th>
-                            <th>{{ L['table.rabUnit'] }}</th>
-                            <th>{{ L['table.serviceFrom'] }}</th>
-                            <th>{{ L['table.serviceTo'] }}</th>
-                            <th>{{ L['table.appointment'] }}</th>
-                            <th>{{ L['table.postingAuth'] }}</th>
-                            <th>{{ L['table.remarks'] }}</th>
-                        </tr>
-                    </ng-template>
-                    <ng-template pTemplate="body" let-row let-rowIndex="rowIndex">
-                        <tr>
-                            <td>{{ rowNum(rowIndex) }}.</td>
-                            <td>{{ codeValue(row.rabUnitName, row.rabUnitNameBN) }}</td>
-                            <td>{{ row.serviceFrom | partialDate: row.serviceFromPrecision : (isBn ? 'bn' : 'en') }}</td>
-                            <td>{{ row.serviceTo | partialDate: row.serviceToPrecision : (isBn ? 'bn' : 'en') }}</td>
-                            <td>{{ codeValue(row.appointmentName, row.appointmentNameBN) }}</td>
-                            <td>{{ val(row.postingAuth) }}</td>
-                            <td>{{ val(row.remarks) }}</td>
-                        </tr>
-                    </ng-template>
-                    <ng-template pTemplate="emptymessage">
-                        <tr>
-                            <td colspan="7" class="text-center text-500 py-3">{{ L['empty.noPreviousRabRecords'] }}</td>
-                        </tr>
-                    </ng-template>
-                </p-table>
-            </div>
-            }
-            @if (editingSection === 'previousRabService' && employeeId != null) {
-                <app-emp-previous-rab-service [externalEmployeeId]="employeeId" [embedMode]="true" [hideTitle]="true" (saved)="onSectionSaved('previousRabService')" (cancelled)="closeSectionAndRefresh()"></app-emp-previous-rab-service>
-            }
-        </div>
-
-        <!-- Permanent Movement History -->
-        <div class="sp-section">
-            <div class="sp-section-header">
-                <span class="sp-section-heading">{{ L['section.permanentMovementHistory'] }}</span>
-            </div>
-            <div class="sp-table-wrap">
-                <p-table
-                    [value]="permanentMovementList"
-                    [tableStyle]="{ 'min-width': '50rem' }"
-                    styleClass="p-datatable-sm p-datatable-gridlines family-info-table"
-                >
-                    <ng-template pTemplate="header">
-                        <tr>
-                            <th style="width: 5%">{{ L['table.ser'] }}</th>
-                            <th style="width: 17%">{{ L['table.orderType'] }}</th>
-                            <th style="width: 20%">{{ L['table.destinedUnit'] }}</th>
-                            <th style="width: 28%">{{ L['table.reason'] }}</th>
-                            <th style="width: 15%">{{ L['table.dateOfRelease'] }}</th>
-                            <th style="width: 15%">{{ L['table.dateOfReduce'] }}</th>
-                        </tr>
-                    </ng-template>
-                    <ng-template pTemplate="body" let-row let-rowIndex="rowIndex">
-                        <tr>
-                            <td>{{ rowNum(rowIndex) }}.</td>
-                            <td>{{ moveOrderTypeLabel(row.moveOrderType) }}</td>
-                            <td>{{ movementDestination(row) }}</td>
-                            <td>{{ val(row.movementReasonBN) }}</td>
-                            <td>{{ formatDateOnly(row.dateOfRelease) }}</td>
-                            <td>{{ formatDateOnly(row.dateOfReduce) }}</td>
-                        </tr>
-                    </ng-template>
-                    <ng-template pTemplate="emptymessage">
-                        <tr>
-                            <td colspan="6" class="text-center text-500 py-3">{{ L['empty.noPermanentMovement'] }}</td>
-                        </tr>
-                    </ng-template>
-                </p-table>
-            </div>
-        </div>
-
-        <!-- Temporary Movement History -->
-        <div class="sp-section">
-            <div class="sp-section-header">
-                <span class="sp-section-heading">{{ L['section.temporaryMovementHistory'] }}</span>
-            </div>
-            <div class="sp-table-wrap">
-                <p-table
-                    [value]="temporaryMovementList"
-                    [tableStyle]="{ 'min-width': '50rem' }"
-                    styleClass="p-datatable-sm p-datatable-gridlines family-info-table"
-                >
-                    <ng-template pTemplate="header">
-                        <tr>
-                            <th style="width: 5%">{{ L['table.ser'] }}</th>
-                            <th style="width: 17%">{{ L['table.orderType'] }}</th>
-                            <th style="width: 20%">{{ L['table.destinedUnit'] }}</th>
-                            <th style="width: 28%">{{ L['table.reason'] }}</th>
-                            <th style="width: 15%">{{ L['table.dateOfRelease'] }}</th>
-                            <th style="width: 15%">{{ L['table.dateOfReduce'] }}</th>
-                        </tr>
-                    </ng-template>
-                    <ng-template pTemplate="body" let-row let-rowIndex="rowIndex">
-                        <tr>
-                            <td>{{ rowNum(rowIndex) }}.</td>
-                            <td>{{ moveOrderTypeLabel(row.moveOrderType) }}</td>
-                            <td>{{ movementDestination(row) }}</td>
-                            <td>{{ val(row.movementReasonBN) }}</td>
-                            <td>{{ formatDateOnly(row.dateOfRelease) }}</td>
-                            <td>{{ formatDateOnly(row.dateOfReduce) }}</td>
-                        </tr>
-                    </ng-template>
-                    <ng-template pTemplate="emptymessage">
-                        <tr>
-                            <td colspan="6" class="text-center text-500 py-3">{{ L['empty.noTemporaryMovement'] }}</td>
-                        </tr>
-                    </ng-template>
-                </p-table>
-            </div>
-        </div>
-
-         <!-- Service History (Mother Organization) -->
-         <div class="sp-section">
-            <div class="sp-section-header">
-                <span class="sp-section-heading">{{ L['section.serviceHistoryMo'] }}</span>
-                @if (editingSection !== 'serviceHistoryMo') {
-                    <button type="button" class="sp-btn sp-btn-sm" (click)="setEditingSection('serviceHistoryMo')"><i class="pi pi-pencil"></i> Edit</button>
-                } @else {
-                    <button type="button" class="sp-btn sp-btn-sm" (click)="closeSectionAndRefresh()"><i class="pi pi-times"></i> Cancel</button>
-                }
-            </div>
-            @if (editingSection !== 'serviceHistoryMo') {
-            <div class="sp-table-wrap">
-                <p-table
-                    [value]="moServHistoryList"
-                    [tableStyle]="{ 'min-width': '48rem' }"
-                    styleClass="p-datatable-sm p-datatable-gridlines family-info-table"
-                >
-                    <ng-template pTemplate="header">
-                        <tr>
-                            <th style="width: 4rem">{{ L['table.ser'] }}</th>
-                            <th>{{ L['table.organization'] }}</th>
-                            <th>{{ L['table.location'] }}</th>
-                            <th>{{ L['table.serviceFrom'] }}</th>
-                            <th>{{ L['table.serviceTo'] }}</th>
-                            <th>{{ L['table.appointment'] }}</th>
-                            <th>{{ L['table.auth'] }}</th>
-                            <th>{{ L['table.remarks'] }}</th>
-                        </tr>
-                    </ng-template>
-                    <ng-template pTemplate="body" let-row let-rowIndex="rowIndex">
-                        <tr>
-                            <td>{{ rowNum(rowIndex) }}.</td>
-                            <td>{{ codeValue(row.organizationName, row.organizationNameBN) }}</td>
-                            <td>{{ codeValue(row.locationName, row.locationNameBN) }}</td>
-                            <td>{{ row.serviceFrom | partialDate: row.serviceFromPrecision : (isBn ? 'bn' : 'en') }}</td>
-                            <td>{{ row.serviceTo | partialDate: row.serviceToPrecision : (isBn ? 'bn' : 'en') }}</td>
-                            <td>{{ codeValue(row.appointment, row.appointmentBN) }}</td>
-                            <td>{{ val(row.auth) }}</td>
-                            <td>{{ val(row.remarks) }}</td>
-                        </tr>
-                    </ng-template>
-                    <ng-template pTemplate="emptymessage">
-                        <tr>
-                            <td colspan="8" class="text-center text-500 py-3">{{ L['empty.noServiceHistoryRecords'] }}</td>
-                        </tr>
-                    </ng-template>
-                </p-table>
-            </div>
-            }
-            @if (editingSection === 'serviceHistoryMo' && employeeId != null) {
-                <app-emp-service-history [externalEmployeeId]="employeeId" [embedMode]="true" [hideTitle]="true" (saved)="onSectionSaved('serviceHistoryMo')" (cancelled)="closeSectionAndRefresh()"></app-emp-service-history>
-            }
-        </div>
-        
-        <!-- Promotion Information -->
-        <div class="sp-section">
-            <div class="sp-section-header">
-                <span class="sp-section-heading">{{ L['section.promotion'] }}</span>
-                @if (editingSection !== 'promotion') {
-                    <button type="button" class="sp-btn sp-btn-sm" (click)="setEditingSection('promotion')"><i class="pi pi-pencil"></i> Edit</button>
-                } @else {
-                    <button type="button" class="sp-btn sp-btn-sm" (click)="closeSectionAndRefresh()"><i class="pi pi-times"></i> Cancel</button>
-                }
-            </div>
-            @if (editingSection !== 'promotion') {
-            <div class="sp-table-wrap">
-                <p-table
-                    [value]="promotionList"
-                    [tableStyle]="{ 'min-width': '52rem' }"
-                    styleClass="p-datatable-sm p-datatable-gridlines family-info-table"
-                >
-                    <ng-template pTemplate="header">
-                        <tr>
-                            <th style="width: 4rem">{{ L['table.ser'] }}</th>
-                            <th>{{ L['table.previousRank'] }}</th>
-                            <th>{{ L['table.promotedRank'] }}</th>
-                            <th>{{ L['table.promotedDate'] }}</th>
-                            <th>{{ L['table.fromDate'] }}</th>
-                            <th>{{ L['table.toDate'] }}</th>
-                            <th>{{ L['table.probationaryPeriod'] }}</th>
-                            <th>{{ L['table.auth'] }}</th>
-                            <th>{{ L['table.remarks'] }}</th>
-                        </tr>
-                    </ng-template>
-                    <ng-template pTemplate="body" let-row let-rowIndex="rowIndex">
-                        <tr>
-                            <td>{{ rowNum(rowIndex) }}.</td>
-                            <td>{{ codeValue(row.previousRank, row.previousRankBN) }}</td>
-                            <td>{{ codeValue(row.promotedRank, row.promotedRankBN) }}</td>
-                            <td>{{ formatDateOnly(row.promotedDate) }}</td>
-                            <td>{{ formatDateOnly(row.fromDate) }}</td>
-                            <td>{{ formatDateOnly(row.toDate) }}</td>
-                            <td>{{ val(row.probationaryPeriod) }}</td>
-                            <td>{{ val(row.auth) }}</td>
-                            <td>{{ val(row.remarks) }}</td>
-                        </tr>
-                    </ng-template>
-                    <ng-template pTemplate="emptymessage">
-                        <tr>
-                            <td colspan="9" class="text-center text-500 py-3">{{ L['empty.noPromotionRecords'] }}</td>
-                        </tr>
-                    </ng-template>
-                </p-table>
-            </div>
-            }
-            @if (editingSection === 'promotion' && employeeId != null) {
-                <app-emp-promotion-info [externalEmployeeId]="employeeId" [embedMode]="true" [hideTitle]="true" (saved)="onSectionSaved('promotion')" (cancelled)="closeSectionAndRefresh()"></app-emp-promotion-info>
-            }
-        </div>
-
-         <!-- Education Information -->
-         <div class="sp-section">
-            <div class="sp-section-header">
-                <span class="sp-section-heading">{{ L['section.education'] }}</span>
-                @if (editingSection !== 'education') {
-                    <button type="button" class="sp-btn sp-btn-sm" (click)="setEditingSection('education')"><i class="pi pi-pencil"></i> Edit</button>
-                } @else {
-                    <button type="button" class="sp-btn sp-btn-sm" (click)="closeSectionAndRefresh()"><i class="pi pi-times"></i> Cancel</button>
-                }
-            </div>
-            @if (editingSection !== 'education') {
-            <div class="sp-table-wrap">
-                <p-table
-                    [value]="educationList"
-                    [tableStyle]="{ 'min-width': '56rem' }"
-                    styleClass="p-datatable-sm p-datatable-gridlines family-info-table"
-                >
-                    <ng-template pTemplate="header">
-                        <tr>
-                            <th style="width: 4rem">{{ L['table.ser'] }}</th>
+                            <th>{{ L['table.country'] }}</th>
                             <th>{{ L['table.durationFrom'] }}</th>
                             <th>{{ L['table.durationTo'] }}</th>
-                            <th>{{ L['table.schoolCollegeUniversity'] }}</th>
-                            <th>{{ L['table.examDegree'] }}</th>
-                            <th>{{ L['table.subjectDepartment'] }}</th>
-                            <th>{{ L['table.result'] }}</th>
-                            <th>{{ L['table.gradePoint'] }}</th>
-                            <th>{{ L['table.passingYear'] }}</th>
-                            <!-- Remarks column hidden in UI (backend still has remarks) -->
-                            <!-- <th>{{ L['table.remarks'] }}</th> -->
+                            <th>{{ L['table.reasonForVisiting'] }}</th>
+                            <th>{{ L['table.relatedDocuments'] }}</th>
                         </tr>
                     </ng-template>
                     <ng-template pTemplate="body" let-row let-rowIndex="rowIndex">
                         <tr>
                             <td>{{ rowNum(rowIndex) }}.</td>
+                            <td>{{ codeValue(row.nameOfCountry, row.nameOfCountryBN) }}</td>
                             <td>{{ formatDateOnly(row.durationFrom) }}</td>
                             <td>{{ formatDateOnly(row.durationTo) }}</td>
-                            <td>{{ codeValue(row.schoolCollegeUniversity, row.schoolCollegeUniversityBN) }}</td>
-                            <td>{{ codeValue(row.nameOfExamDegree, row.nameOfExamDegreeBN) }}</td>
-                            <td>{{ codeValue(row.subjectsDepartments, row.subjectsDepartmentsBN) }}</td>
-                            <td>{{ codeValue(row.result, row.resultBN) }}</td>
-                            <td>{{ valDisplay(row.gradePoint) }}</td>
-                            <td>{{ valDisplay(row.passingYear) }}</td>
-                            <!-- <td>{{ val(row.remarks) }}</td> -->
-                        </tr>
-                    </ng-template>
-                    <ng-template pTemplate="emptymessage">
-                        <tr>
-                            <td colspan="9" class="text-center text-500 py-3">{{ L['empty.noEducationRecords'] }}</td>
-                        </tr>
-                    </ng-template>
-                </p-table>
-            </div>
-            }
-            @if (editingSection === 'education' && employeeId != null) {
-                <app-emp-education-info [externalEmployeeId]="employeeId" [embedMode]="true" [hideTitle]="true" (saved)="onSectionSaved('education')" (cancelled)="closeSectionAndRefresh()"></app-emp-education-info>
-            }
-        </div>
-
-          <!-- Course Information -->
-          <div class="sp-section">
-            <div class="sp-section-header">
-                <span class="sp-section-heading">{{ L['section.course'] }}</span>
-                @if (editingSection !== 'course') {
-                    <button type="button" class="sp-btn sp-btn-sm" (click)="setEditingSection('course')"><i class="pi pi-pencil"></i> Edit</button>
-                } @else {
-                    <button type="button" class="sp-btn sp-btn-sm" (click)="closeSectionAndRefresh()"><i class="pi pi-times"></i> Cancel</button>
-                }
-            </div>
-            @if (editingSection !== 'course') {
-            <div class="sp-table-wrap">
-                <p-table
-                    [value]="courseList"
-                    [tableStyle]="{ 'min-width': '44rem' }"
-                    styleClass="p-datatable-sm p-datatable-gridlines family-info-table"
-                >
-                    <ng-template pTemplate="header">
-                        <tr>
-                            <th style="width: 4rem">{{ L['table.ser'] }}</th>
-                            <th>{{ L['table.courseType'] }}</th>
-                            <th>{{ L['table.courseName'] }}</th>
-                            <th>{{ L['table.trainingInstitute'] }}</th>
-                            <th>{{ L['table.dateFrom'] }}</th>
-                            <th>{{ L['table.dateTo'] }}</th>
-                            <th>{{ L['table.result'] }}</th>
-                            <th>{{ L['table.auth'] }}</th>
-                            <th>{{ L['table.remarks'] }}</th>
-                        </tr>
-                    </ng-template>
-                    <ng-template pTemplate="body" let-row let-rowIndex="rowIndex">
-                        <tr>
-                            <td>{{ rowNum(rowIndex) }}.</td>
-                            <td>{{ codeValue(row.courseType, row.courseTypeBN) }}</td>
-                            <td>{{ codeValue(row.courseName, row.courseNameBN) }}</td>
-                            <td>{{ codeValue(row.trainingInstituteName, row.trainingInstituteNameBN) }}</td>
-                            <td>{{ formatDateOnly(row.dateFrom) }}</td>
-                            <td>{{ formatDateOnly(row.dateTo) }}</td>
-                            <td>{{ val(row.result) }}</td>
-                            <td>{{ val(row.auth) }}</td>
-                            <td>{{ val(row.remarks) }}</td>
-                        </tr>
-                    </ng-template>
-                    <ng-template pTemplate="emptymessage">
-                        <tr>
-                            <td colspan="9" class="text-center text-500 py-3">{{ L['empty.noCourseRecords'] }}</td>
-                        </tr>
-                    </ng-template>
-                </p-table>
-            </div>
-            }
-            @if (editingSection === 'course' && employeeId != null) {
-                <app-emp-course-info [externalEmployeeId]="employeeId" [embedMode]="true" [hideTitle]="true" (saved)="onSectionSaved('course')" (cancelled)="closeSectionAndRefresh()"></app-emp-course-info>
-            }
-        </div>
-
-        <!-- RFTS Training -->
-        <div class="sp-section">
-            <div class="sp-section-header"><span class="sp-section-heading">{{ L['section.rfts'] }}</span></div>
-            <div class="sp-table-wrap">
-                <p-table
-                    [value]="rftsTrainingList"
-                    [tableStyle]="{ 'min-width': '30rem' }"
-                    styleClass="p-datatable-sm p-datatable-gridlines family-info-table"
-                >
-                    <ng-template pTemplate="header">
-                        <tr>
-                            <th style="width: 4rem">{{ L['table.ser'] }}</th>
-                            <th>{{ L['table.courseNo'] }}</th>
-                            <th>{{ L['table.from'] }}</th>
-                            <th>{{ L['table.to'] }}</th>
-                            <th>{{ L['table.remarks'] }}</th>
-                        </tr>
-                    </ng-template>
-                    <ng-template pTemplate="body" let-row let-rowIndex="rowIndex">
-                        <tr>
-                            <td>{{ rowNum(rowIndex) }}.</td>
-                            <td>{{ val(row.courseNo) }}</td>
-                            <td>{{ formatDateOnly(row.dateFrom) }}</td>
-                            <td>{{ formatDateOnly(row.dateTo) }}</td>
-                            <td>{{ val(row.remarks) }}</td>
-                        </tr>
-                    </ng-template>
-                    <ng-template pTemplate="emptymessage">
-                        <tr>
-                            <td colspan="5" class="text-center text-500 py-3">{{ L['empty.noRftsRecords'] }}</td>
-                        </tr>
-                    </ng-template>
-                </p-table>
-            </div>
-        </div>
-
-        <!-- Investigation Experience -->
-        <div class="sp-section">
-            <div class="sp-section-header"><span class="sp-section-heading">{{ L['section.investigation'] }}</span></div>
-            @if (profile?.hasInvestigationExp === true) {
-                <div class="sp-field">
-                    <span class="sp-field-label">{{ L['field.details'] }}</span>
-                    <span class="sp-field-value">{{ val(profile.investigationExpDetails) }}</span>
-                </div>
-            } @else {
-                <div class="text-500 py-1" style="font-style: italic">{{ L['empty.noInvestigationRecorded'] }}</div>
-            }
-        </div>
-
-        <!-- Foreign Visit Information -->
-        <div class="sp-section">
-            <div class="sp-section-header">
-                <span class="sp-section-heading">{{ L['section.foreignVisit'] }}</span>
-                @if (editingSection !== 'foreignVisit') {
-                    <button type="button" class="sp-btn sp-btn-sm" (click)="setEditingSection('foreignVisit')"><i class="pi pi-pencil"></i> Edit</button>
-                } @else {
-                    <button type="button" class="sp-btn sp-btn-sm" (click)="closeSectionAndRefresh()"><i class="pi pi-times"></i> Cancel</button>
-                }
-            </div>
-            @if (editingSection !== 'foreignVisit') {
-            <!-- ExBD Leave Application Progress -->
-            @if (exBdLeaveProgressList.length > 0) {
-            <div style="margin-top: 1.25rem">
-                <div class="sp-addr-type">{{ L['exbd.leaveStatusTitle'] }}</div>
-                <div class="sp-table-wrap">
-                    <p-table
-                        [value]="exBdLeaveProgressList"
-                        [tableStyle]="{ 'min-width': '50rem' }"
-                        styleClass="p-datatable-sm p-datatable-gridlines family-info-table"
-                    >
-                        <ng-template pTemplate="header">
-                            <tr>
-                                <th style="width: 3rem">{{ L['table.ser'] }}</th>
-                                <th>{{ L['table.purposeOfVisit'] }}</th>
-                                <th>{{ L['table.country'] }}</th>
-                                <th>{{ L['table.from'] }}</th>
-                                <th>{{ L['table.to'] }}</th>
-                                <th style="width: 4rem; text-align: center">{{ L['table.days'] }}</th>
-                                <th>{{ L['table.familyMembers'] }}</th>
-                                <th>{{ L['table.status'] }}</th>
-                            </tr>
-                        </ng-template>
-                        <ng-template pTemplate="body" let-row let-rowIndex="rowIndex">
-                            <tr>
-                                <td>{{ rowNum(rowIndex) }}.</td>
-                                <td>{{ codeValue(row.visitTypeName, row.visitTypeNameBN) }}</td>
-                                <td>{{ codeValue(row.countriesDisplay, row.countriesDisplayBN) }}</td>
-                                <td>{{ formatDateOnly(row.fromDate) }}</td>
-                                <td>{{ formatDateOnly(row.toDate) }}</td>
-                                <td style="text-align: center">{{ valDisplay(row.totalDays) }}</td>
-                                <td>{{ codeValue(row.familyMembersDisplay, row.familyMembersDisplayBN) }}</td>
-                                <td>
-                                    <span class="sp-status-badge sp-status-{{ getProgressStatusSeverity(row.progressStatus) }}">
-                                        {{ getProgressStatusLabel(row.progressStatus) }}
-                                    </span>
-                                    @if (row.availStatus === 'Availed') {
-                                        , <span class="text-green-600 font-semibold">{{ getAvailStatusLabel(row.availStatus) }}</span>
-                                    } @else if (row.availStatus === 'NotAvailed') {
-                                        , <span class="text-red-600 font-semibold">{{ getAvailStatusLabel(row.availStatus) }}</span>
-                                    }
-                                </td>
-                            </tr>
-                        </ng-template>
-                    </p-table>
-                </div>
-            </div>
-            }
-
-            <!-- Official Foreign Visit -->
-            <div style="margin-top: 1.25rem">
-                <div class="sp-addr-type">{{ L['section.officialForeignVisit'] }}</div>
-                <div class="sp-table-wrap">
-                    <p-table
-                        [value]="officialForeignVisitList"
-                        [tableStyle]="{ 'min-width': '44rem' }"
-                        styleClass="p-datatable-sm p-datatable-gridlines family-info-table"
-                    >
-                        <ng-template pTemplate="header">
-                            <tr>
-                                <th style="width: 4rem">{{ L['table.ser'] }}</th>
-                                <th>{{ L['table.country'] }}</th>
-                                <th>{{ L['table.durationFrom'] }}</th>
-                                <th>{{ L['table.durationTo'] }}</th>
-                                <th>{{ L['table.reasonForVisiting'] }}</th>
-                                <th>{{ L['table.relatedDocuments'] }}</th>
-                            </tr>
-                        </ng-template>
-                        <ng-template pTemplate="body" let-row let-rowIndex="rowIndex">
-                            <tr>
-                                <td>{{ rowNum(rowIndex) }}.</td>
-                                <td>{{ codeValue(row.nameOfCountry, row.nameOfCountryBN) }}</td>
-                                <td>{{ formatDateOnly(row.durationFrom) }}</td>
-                                <td>{{ formatDateOnly(row.durationTo) }}</td>
-                                <td>{{ codeValue(row.reasonForVisiting, row.reasonForVisitingBN) }}</td>
-                                <td>
-                                    @if (parseDocRefs(row.relatedDocuments).length > 0) {
-                                        <div class="flex flex-column gap-1">
-                                            @for (doc of parseDocRefs(row.relatedDocuments); track doc.fileId) {
-                                                <div class="flex align-items-center gap-2">
-                                                    <span class="text-sm">{{ doc.fileName }}</span>
-                                                    <p-button
-                                                        icon="pi pi-download"
-                                                        [rounded]="true"
-                                                        [text]="true"
-                                                        severity="secondary"
-                                                        size="small"
-                                                        (onClick)="downloadDocRef(doc)"
-                                                        [pTooltip]="L['tooltip.downloadFile']"
-                                                    ></p-button>
-                                                </div>
-                                            }
-                                        </div>
-                                    } @else {
-                                        {{ val(row.relatedDocuments) }}
-                                    }
-                                </td>
-                            </tr>
-                        </ng-template>
-                        <ng-template pTemplate="emptymessage">
-                            <tr>
-                                <td colspan="6" class="text-center text-500 py-3">{{ L['empty.noOfficialForeignVisit'] }}</td>
-                            </tr>
-                        </ng-template>
-                    </p-table>
-                </div>
-            </div>
-
-            <!-- Unofficial Foreign Visit -->
-            <div style="margin-top: 1.25rem">
-                <div class="sp-addr-type">{{ L['section.unofficialForeignVisit'] }}</div>
-                <div class="sp-table-wrap">
-                    <p-table
-                        [value]="unofficialForeignVisitList"
-                        [tableStyle]="{ 'min-width': '44rem' }"
-                        styleClass="p-datatable-sm p-datatable-gridlines family-info-table"
-                    >
-                        <ng-template pTemplate="header">
-                            <tr>
-                                <th style="width: 4rem">{{ L['table.ser'] }}</th>
-                                <th>{{ L['table.country'] }}</th>
-                                <th>{{ L['table.durationFrom'] }}</th>
-                                <th>{{ L['table.durationTo'] }}</th>
-                                <th>{{ L['table.reasonForVisiting'] }}</th>
-                                <th>{{ L['table.relatedDocuments'] }}</th>
-                            </tr>
-                        </ng-template>
-                        <ng-template pTemplate="body" let-row let-rowIndex="rowIndex">
-                            <tr>
-                                <td>{{ rowNum(rowIndex) }}.</td>
-                                <td>{{ codeValue(row.nameOfCountry, row.nameOfCountryBN) }}</td>
-                                <td>{{ formatDateOnly(row.durationFrom) }}</td>
-                                <td>{{ formatDateOnly(row.durationTo) }}</td>
-                                <td>{{ codeValue(row.reasonForVisiting, row.reasonForVisitingBN) }}</td>
-                                <td>
-                                    @if (parseDocRefs(row.relatedDocuments).length > 0) {
-                                        <div class="flex flex-column gap-1">
-                                            @for (doc of parseDocRefs(row.relatedDocuments); track doc.fileId) {
-                                                <div class="flex align-items-center gap-2">
-                                                    <span class="text-sm">{{ doc.fileName }}</span>
-                                                    <p-button
-                                                        icon="pi pi-download"
-                                                        [rounded]="true"
-                                                        [text]="true"
-                                                        severity="secondary"
-                                                        size="small"
-                                                        (onClick)="downloadDocRef(doc)"
-                                                        [pTooltip]="L['tooltip.downloadFile']"
-                                                    ></p-button>
-                                                </div>
-                                            }
-                                        </div>
-                                    } @else {
-                                        {{ val(row.relatedDocuments) }}
-                                    }
-                                </td>
-                            </tr>
-                        </ng-template>
-                        <ng-template pTemplate="emptymessage">
-                            <tr>
-                                <td colspan="6" class="text-center text-500 py-3">{{ L['empty.noUnofficialForeignVisit'] }}</td>
-                            </tr>
-                        </ng-template>
-                    </p-table>
-                </div>
-            </div>
-            }
-            @if (editingSection === 'foreignVisit' && employeeId != null) {
-                <app-emp-foreign-visit [externalEmployeeId]="employeeId" [embedMode]="true" [hideTitle]="true" (saved)="onSectionSaved('foreignVisit')" (cancelled)="closeSectionAndRefresh()"></app-emp-foreign-visit>
-            }
-        </div>
-
-        <!-- Leave (Current Year) -->
-        <div class="sp-section">
-            <div class="sp-section-header">
-                <span class="sp-section-heading inline-flex items-center gap-2">
-                    {{ L['section.leave'] }} ({{ currentYearDisplay }})
-                    <i
-                        class="pi pi-info-circle cursor-pointer text-primary"
-                        [pTooltip]="L['tooltip.viewPreviousYearLeaveSummary']"
-                        (click)="openPreviousYearLeaveSummary()"
-                        [attr.aria-label]="L['tooltip.viewPreviousYearLeaveSummary']"
-                    ></i>
-                </span>
-                @if (editingSection !== 'leave') {
-                    <button type="button" class="sp-btn sp-btn-sm" (click)="setEditingSection('leave')"><i class="pi pi-pencil"></i> Edit</button>
-                } @else {
-                    <button type="button" class="sp-btn sp-btn-sm" (click)="closeSectionAndRefresh()"><i class="pi pi-times"></i> Cancel</button>
-                }
-            </div>
-            @if (editingSection !== 'leave') {
-            <div class="sp-table-wrap">
-                <p-table
-                    [value]="leaveList"
-                    [tableStyle]="{ 'min-width': '36rem' }"
-                    styleClass="p-datatable-sm p-datatable-gridlines family-info-table"
-                >
-                    <ng-template pTemplate="header">
-                        <tr>
-                            <th style="width: 4rem">{{ L['table.ser'] }}</th>
-                            <th>{{ L['table.typeOfLeave'] }}</th>
-                            <th>{{ L['table.durationFrom'] }}</th>
-                            <th>{{ L['table.durationTo'] }}</th>
-                        </tr>
-                    </ng-template>
-                    <ng-template pTemplate="body" let-row let-rowIndex="rowIndex">
-                        <tr>
-                            <td>{{ rowNum(rowIndex) }}.</td>
-                            <td>{{ codeValue(row.typeOfLeave, row.typeOfLeaveBN) }}</td>
-                            <td>{{ formatDateOnly(row.durationFrom) }}</td>
-                            <td>{{ formatDateOnly(row.durationTo) }}</td>
-                        </tr>
-                    </ng-template>
-                    <ng-template pTemplate="emptymessage">
-                        <tr>
-                            <td colspan="4" class="text-center text-500 py-3">{{ L['empty.noLeaveCurrentYear'] }}</td>
-                        </tr>
-                    </ng-template>
-                </p-table>
-            </div>
-            }
-            @if (editingSection === 'leave' && employeeId != null) {
-                <app-emp-leave-info [externalEmployeeId]="employeeId" [embedMode]="true" [hideTitle]="true" (saved)="onSectionSaved('leave')" (cancelled)="closeSectionAndRefresh()"></app-emp-leave-info>
-            }
-        </div>
-
-        <!-- Discipline Information -->
-        <div class="sp-section">
-            <div class="sp-section-header">
-                <span class="sp-section-heading">{{ L['section.discipline'] }}</span>
-                @if (editingSection !== 'discipline') {
-                    <button type="button" class="sp-btn sp-btn-sm" (click)="setEditingSection('discipline')"><i class="pi pi-pencil"></i> Edit</button>
-                } @else {
-                    <button type="button" class="sp-btn sp-btn-sm" (click)="closeSectionAndRefresh()"><i class="pi pi-times"></i> Cancel</button>
-                }
-            </div>
-            @if (editingSection !== 'discipline') {
-            <div class="sp-table-wrap">
-                <p-table
-                    [value]="disciplineList"
-                    [tableStyle]="{ 'min-width': '56rem' }"
-                    styleClass="p-datatable-sm p-datatable-gridlines family-info-table"
-                >
-                    <ng-template pTemplate="header">
-                        <tr>
-                            <th style="width: 4rem">{{ L['table.ser'] }}</th>
-                            <th>{{ L['table.offenseDate'] }}</th>
-                            <th>{{ L['table.offenseType'] }}</th>
-                            <th>{{ L['table.briefStatement'] }}</th>
-                            <th>{{ L['table.offenseDetails'] }}</th>
-                            <th>{{ L['table.punishmentRab'] }}</th>
-                            <th>{{ L['table.punishmentDate'] }}</th>
-                            <th>{{ L['table.punishmentMo'] }}</th>
-                            <th>{{ L['table.punishmentDateMo'] }}</th>
-                            <th>{{ L['table.auth'] }}</th>
-                            <th>{{ L['table.remarks'] }}</th>
-                        </tr>
-                    </ng-template>
-                    <ng-template pTemplate="body" let-row let-rowIndex="rowIndex">
-                        <tr>
-                            <td>{{ rowNum(rowIndex) }}.</td>
-                            <td>{{ formatDateOnly(row.offenseDate) }}</td>
-                            <td>{{ codeValue(row.offenseType, row.offenseTypeBN) }}</td>
-                            <td>{{ codeValue(row.briefStatementOfOffence, row.briefStatementOfOffenceBN) }}</td>
-                            <td>{{ val(row.offenseDetails) }}</td>
-                            <td>{{ codeValue(row.punishmentTypeRAB, row.punishmentTypeRABBN) }}</td>
-                            <td>{{ formatDateOnly(row.punishmentDate) }}</td>
-                            <td>{{ codeValue(row.punishmentTypeMotherOrg, row.punishmentTypeMotherOrgBN) }}</td>
-                            <td>{{ formatDateOnly(row.punishmentDateMotherOrg) }}</td>
-                            <td>{{ val(row.auth) }}</td>
-                            <td>{{ val(row.remarks) }}</td>
-                        </tr>
-                    </ng-template>
-                    <ng-template pTemplate="emptymessage">
-                        <tr>
-                            <td colspan="11" class="text-center text-500 py-3">{{ L['empty.noDisciplineRecords'] }}</td>
-                        </tr>
-                    </ng-template>
-                </p-table>
-            </div>
-            }
-            @if (editingSection === 'discipline' && employeeId != null) {
-                <app-emp-discipline-info [externalEmployeeId]="employeeId" [embedMode]="true" [hideTitle]="true" (saved)="onSectionSaved('discipline')" (cancelled)="closeSectionAndRefresh()"></app-emp-discipline-info>
-            }
-        </div>
-
-          <!-- Bank Account Information -->
-          <div class="sp-section">
-            <div class="sp-section-header">
-                <span class="sp-section-heading">{{ L['section.bankAccount'] }}</span>
-                @if (editingSection !== 'bankAccount') {
-                    <button type="button" class="sp-btn sp-btn-sm" (click)="setEditingSection('bankAccount')"><i class="pi pi-pencil"></i> Edit</button>
-                } @else {
-                    <button type="button" class="sp-btn sp-btn-sm" (click)="closeSectionAndRefresh()"><i class="pi pi-times"></i> Cancel</button>
-                }
-            </div>
-            @if (editingSection !== 'bankAccount') {
-            <div class="sp-table-wrap">
-                <p-table
-                    [value]="bankAccList"
-                    [tableStyle]="{ 'min-width': '40rem' }"
-                    styleClass="p-datatable-sm p-datatable-gridlines family-info-table"
-                >
-                    <ng-template pTemplate="header">
-                        <tr>
-                            <th style="width: 4rem">{{ L['table.ser'] }}</th>
-                            <th>{{ L['table.bankName'] }}</th>
-                            <th>{{ L['table.branchName'] }}</th>
-                            <th>{{ L['table.accountName'] }}</th>
-                            <th>{{ L['table.accountNumber'] }}</th>
-                            <th>{{ L['table.remarks'] }}</th>
-                        </tr>
-                    </ng-template>
-                    <ng-template pTemplate="body" let-row let-rowIndex="rowIndex">
-                        <tr>
-                            <td>{{ rowNum(rowIndex) }}.</td>
-                            <td>{{ codeValue(row.bankName, row.bankNameBN) }}</td>
-                            <td>{{ codeValue(row.branchName, row.branchNameBN) }}</td>
-                            <td>{{ codeValue(row.accountName, row.accountNameBN) }}</td>
-                            <td>{{ valDisplay(row.accountNumber) }}</td>
-                            <td>{{ val(row.remarks) }}</td>
-                        </tr>
-                    </ng-template>
-                    <ng-template pTemplate="emptymessage">
-                        <tr>
-                            <td colspan="6" class="text-center text-500 py-3">{{ L['empty.noBankAccountRecords'] }}</td>
-                        </tr>
-                    </ng-template>
-                </p-table>
-            </div>
-            }
-            @if (editingSection === 'bankAccount' && employeeId != null) {
-                <app-emp-bank-account [externalEmployeeId]="employeeId" [embedMode]="true" [hideTitle]="true" (saved)="onSectionSaved('bankAccount')" (cancelled)="closeSectionAndRefresh()"></app-emp-bank-account>
-            }
-        </div>
-
-
-        <!-- Additional Remarks -->
-        <div class="sp-section">
-            <div class="sp-section-header">
-                <span class="sp-section-heading">{{ L['section.additionalRemarks'] }}</span>
-                @if (editingSection !== 'additionalRemarks') {
-                    <button type="button" class="sp-btn sp-btn-sm" (click)="setEditingSection('additionalRemarks')"><i class="pi pi-pencil"></i> Edit</button>
-                } @else {
-                    <button type="button" class="sp-btn sp-btn-sm" (click)="closeSectionAndRefresh()"><i class="pi pi-times"></i> Cancel</button>
-                }
-            </div>
-            @if (editingSection !== 'additionalRemarks') {
-            <div class="sp-table-wrap">
-                <p-table
-                    [value]="additionalRemarksList"
-                    [tableStyle]="{ 'min-width': '40rem' }"
-                    styleClass="p-datatable-sm p-datatable-gridlines family-info-table"
-                >
-                    <ng-template pTemplate="header">
-                        <tr>
-                            <th style="width: 4rem">{{ L['table.ser'] }}</th>
-                            <th>{{ L['table.additionalRemarks'] }}</th>
-                        </tr>
-                    </ng-template>
-                    <ng-template pTemplate="body" let-row let-rowIndex="rowIndex">
-                        <tr>
-                            <td>{{ rowNum(rowIndex) }}.</td>
-                            <td>{{ val(row.additionalRemarks) }}</td>
-                        </tr>
-                    </ng-template>
-                    <ng-template pTemplate="emptymessage">
-                        <tr>
-                            <td colspan="2" class="text-center text-500 py-3">{{ L['empty.noAdditionalRemarks'] }}</td>
-                        </tr>
-                    </ng-template>
-                </p-table>
-            </div>
-            }
-            @if (editingSection === 'additionalRemarks' && employeeId != null) {
-                <app-emp-additional-remarks [externalEmployeeId]="employeeId" [embedMode]="true" [hideTitle]="true" (saved)="onSectionSaved('additionalRemarks')" (cancelled)="closeSectionAndRefresh()"></app-emp-additional-remarks>
-            }
-        </div>
-
-        <!-- Approved Note Sheets -->
-        <div class="sp-section">
-            <div class="sp-section-header">
-                <span class="sp-section-heading">{{ L['section.approvedNoteSheets'] }}</span>
-            </div>
-            <div class="sp-table-wrap">
-                <p-table
-                    [value]="approvedNoteSheetList"
-                    [tableStyle]="{ 'min-width': '54rem' }"
-                    styleClass="p-datatable-sm p-datatable-gridlines family-info-table"
-                >
-                    <ng-template pTemplate="header">
-                        <tr>
-                            <th style="width: 4rem">{{ L['table.ser'] }}</th>
-                            <th>{{ L['table.noteSheetNo'] }}</th>
-                            <th>{{ L['table.noteSheetDate'] }}</th>
-                            <th>{{ L['table.subject'] }}</th>
-                            <th>{{ L['table.approvedDate'] }}</th>
-                            <th>{{ L['table.officeOrderNo'] }}</th>
-                            <th>{{ L['table.officeOrderStatus'] }}</th>
-                        </tr>
-                    </ng-template>
-                    <ng-template pTemplate="body" let-row let-rowIndex="rowIndex">
-                        <tr>
-                            <td>{{ rowNum(rowIndex) }}.</td>
-                            <td>{{ row.noteSheetNo || '—' }}</td>
-                            <td>{{ formatDateOnly(row.noteSheetDate) }}</td>
-                            <td>{{ row.subject || '—' }}</td>
-                            <td>{{ formatDateOnly(row.finalApprovalApprovedDate) }}</td>
-                            <td>{{ row.officeOrderLetterNo || '—' }}</td>
-                            <td>{{ row.officeOrderStatus || '—' }}</td>
-                        </tr>
-                    </ng-template>
-                    <ng-template pTemplate="emptymessage">
-                        <tr>
-                            <td colspan="7" class="text-center text-500 py-3">{{ L['empty.noApprovedNoteSheets'] }}</td>
-                        </tr>
-                    </ng-template>
-                </p-table>
-            </div>
-        </div>
-
-        <!-- Documents (files from PersonalInfo, EmployeeInfo, PreviousRABServiceInfo, etc.) -->
-        <div class="sp-section">
-            <div class="sp-section-header"><span class="sp-section-heading">{{ L['section.documents'] }}</span></div>
-            @if (documentList.length === 0) {
-                <div class="text-500 py-2">{{ L['empty.noDocuments'] }}</div>
-            } @else {
-                <p-table
-                    [value]="documentList"
-                    styleClass="p-datatable-sm p-datatable-gridlines"
-                    [tableStyle]="{ 'min-width': '24rem' }"
-                >
-                    <ng-template pTemplate="header">
-                        <tr>
-                            <th style="width: 2rem">{{ L['table.hash'] }}</th>
-                            <th>{{ L['table.section'] }}</th>
-                            <th>{{ L['table.fileName'] }}</th>
-                            <th style="width: 8rem">{{ L['table.action'] }}</th>
-                        </tr>
-                    </ng-template>
-                    <ng-template pTemplate="body" let-row let-rowIndex="rowIndex">
-                        <tr>
-                            <td>{{ rowNum(rowIndex) }}.</td>
-                            <td>{{ getDocumentSourceLabel(row) }}</td>
-                            <td>{{ getDocumentFileName(row) }}</td>
+                            <td>{{ codeValue(row.reasonForVisiting, row.reasonForVisitingBN) }}</td>
                             <td>
-                                <p-button
-                                    icon="pi pi-download"
-                                    [label]="L['button.download']"
-                                    [rounded]="true"
-                                    [text]="true"
-                                    severity="secondary"
-                                    size="small"
-                                    (onClick)="downloadDocument(row)"
-                                    [pTooltip]="L['tooltip.downloadFile']"
-                                ></p-button>
+                                @if (parseDocRefs(row.relatedDocuments).length > 0) {
+                                <div class="flex flex-column gap-1">
+                                    @for (doc of parseDocRefs(row.relatedDocuments); track doc.fileId) {
+                                    <div class="flex align-items-center gap-2">
+                                        <span class="text-sm">{{ doc.fileName }}</span>
+                                        <p-button icon="pi pi-download" [rounded]="true" [text]="true" severity="secondary" size="small" (onClick)="downloadDocRef(doc)" [pTooltip]="L['tooltip.downloadFile']"></p-button>
+                                    </div>
+                                    }
+                                </div>
+                                } @else { {{ val(row.relatedDocuments) }} }
                             </td>
                         </tr>
                     </ng-template>
                     <ng-template pTemplate="emptymessage">
                         <tr>
-                            <td colspan="4" class="text-center text-500 py-3">{{ L['empty.noDocuments'] }}</td>
+                            <td colspan="6" class="text-center text-500 py-3">{{ L['empty.noOfficialForeignVisit'] }}</td>
                         </tr>
                     </ng-template>
                 </p-table>
+            </div>
+        </div>
+
+        <!-- Unofficial Foreign Visit -->
+        <div style="margin-top: 1.25rem">
+            <div class="sp-addr-type">{{ L['section.unofficialForeignVisit'] }}</div>
+            <div class="sp-table-wrap">
+                <p-table [value]="unofficialForeignVisitList" [loading]="sectionLoading['foreignVisit']" [tableStyle]="{ 'min-width': '44rem' }" styleClass="p-datatable-sm p-datatable-gridlines family-info-table">
+                    <ng-template pTemplate="header">
+                        <tr>
+                            <th style="width: 4rem">{{ L['table.ser'] }}</th>
+                            <th>{{ L['table.country'] }}</th>
+                            <th>{{ L['table.durationFrom'] }}</th>
+                            <th>{{ L['table.durationTo'] }}</th>
+                            <th>{{ L['table.reasonForVisiting'] }}</th>
+                            <th>{{ L['table.relatedDocuments'] }}</th>
+                        </tr>
+                    </ng-template>
+                    <ng-template pTemplate="body" let-row let-rowIndex="rowIndex">
+                        <tr>
+                            <td>{{ rowNum(rowIndex) }}.</td>
+                            <td>{{ codeValue(row.nameOfCountry, row.nameOfCountryBN) }}</td>
+                            <td>{{ formatDateOnly(row.durationFrom) }}</td>
+                            <td>{{ formatDateOnly(row.durationTo) }}</td>
+                            <td>{{ codeValue(row.reasonForVisiting, row.reasonForVisitingBN) }}</td>
+                            <td>
+                                @if (parseDocRefs(row.relatedDocuments).length > 0) {
+                                <div class="flex flex-column gap-1">
+                                    @for (doc of parseDocRefs(row.relatedDocuments); track doc.fileId) {
+                                    <div class="flex align-items-center gap-2">
+                                        <span class="text-sm">{{ doc.fileName }}</span>
+                                        <p-button icon="pi pi-download" [rounded]="true" [text]="true" severity="secondary" size="small" (onClick)="downloadDocRef(doc)" [pTooltip]="L['tooltip.downloadFile']"></p-button>
+                                    </div>
+                                    }
+                                </div>
+                                } @else { {{ val(row.relatedDocuments) }} }
+                            </td>
+                        </tr>
+                    </ng-template>
+                    <ng-template pTemplate="emptymessage">
+                        <tr>
+                            <td colspan="6" class="text-center text-500 py-3">{{ L['empty.noUnofficialForeignVisit'] }}</td>
+                        </tr>
+                    </ng-template>
+                </p-table>
+            </div>
+        </div>
+        } @if (editingSection === 'foreignVisit' && employeeId != null) {
+        <app-emp-foreign-visit [externalEmployeeId]="employeeId" [embedMode]="true" [hideTitle]="true" (saved)="onSectionSaved('foreignVisit')" (cancelled)="closeSectionAndRefresh()"></app-emp-foreign-visit>
+        }
+    </div>
+
+    <!-- Leave (Current Year) -->
+    <div class="sp-section">
+        <div class="sp-section-header">
+            <span class="sp-section-heading inline-flex items-center gap-2">
+                {{ L['section.leave'] }} ({{ currentYearDisplay }})
+                <i class="pi pi-info-circle cursor-pointer text-primary" [pTooltip]="L['tooltip.viewPreviousYearLeaveSummary']" (click)="openPreviousYearLeaveSummary()" [attr.aria-label]="L['tooltip.viewPreviousYearLeaveSummary']"></i>
+            </span>
+            @if (editingSection !== 'leave') {
+            <button type="button" class="sp-btn sp-btn-sm" (click)="setEditingSection('leave')"><i class="pi pi-pencil"></i> Edit</button>
+            } @else {
+            <button type="button" class="sp-btn sp-btn-sm" (click)="closeSectionAndRefresh()"><i class="pi pi-times"></i> Cancel</button>
             }
         </div>
-        
-       
+        @if (editingSection !== 'leave') {
+        <div class="sp-table-wrap">
+            <p-table [value]="leaveList" [loading]="sectionLoading['leave']" [tableStyle]="{ 'min-width': '36rem' }" styleClass="p-datatable-sm p-datatable-gridlines family-info-table">
+                <ng-template pTemplate="header">
+                    <tr>
+                        <th style="width: 4rem">{{ L['table.ser'] }}</th>
+                        <th>{{ L['table.typeOfLeave'] }}</th>
+                        <th>{{ L['table.durationFrom'] }}</th>
+                        <th>{{ L['table.durationTo'] }}</th>
+                    </tr>
+                </ng-template>
+                <ng-template pTemplate="body" let-row let-rowIndex="rowIndex">
+                    <tr>
+                        <td>{{ rowNum(rowIndex) }}.</td>
+                        <td>{{ codeValue(row.typeOfLeave, row.typeOfLeaveBN) }}</td>
+                        <td>{{ formatDateOnly(row.durationFrom) }}</td>
+                        <td>{{ formatDateOnly(row.durationTo) }}</td>
+                    </tr>
+                </ng-template>
+                <ng-template pTemplate="emptymessage">
+                    <tr>
+                        <td colspan="4" class="text-center text-500 py-3">{{ L['empty.noLeaveCurrentYear'] }}</td>
+                    </tr>
+                </ng-template>
+            </p-table>
+        </div>
+        } @if (editingSection === 'leave' && employeeId != null) {
+        <app-emp-leave-info [externalEmployeeId]="employeeId" [embedMode]="true" [hideTitle]="true" (saved)="onSectionSaved('leave')" (cancelled)="closeSectionAndRefresh()"></app-emp-leave-info>
+        }
+    </div>
+
+    <!-- Discipline Information -->
+    <div class="sp-section">
+        <div class="sp-section-header">
+            <span class="sp-section-heading">{{ L['section.discipline'] }}</span>
+            @if (editingSection !== 'discipline') {
+            <button type="button" class="sp-btn sp-btn-sm" (click)="setEditingSection('discipline')"><i class="pi pi-pencil"></i> Edit</button>
+            } @else {
+            <button type="button" class="sp-btn sp-btn-sm" (click)="closeSectionAndRefresh()"><i class="pi pi-times"></i> Cancel</button>
+            }
+        </div>
+        @if (editingSection !== 'discipline') {
+        <div class="sp-table-wrap">
+            <p-table [value]="disciplineList" [loading]="sectionLoading['discipline']" [tableStyle]="{ 'min-width': '56rem' }" styleClass="p-datatable-sm p-datatable-gridlines family-info-table">
+                <ng-template pTemplate="header">
+                    <tr>
+                        <th style="width: 4rem">{{ L['table.ser'] }}</th>
+                        <th>{{ L['table.offenseDate'] }}</th>
+                        <th>{{ L['table.offenseType'] }}</th>
+                        <th>{{ L['table.briefStatement'] }}</th>
+                        <th>{{ L['table.offenseDetails'] }}</th>
+                        <th>{{ L['table.punishmentRab'] }}</th>
+                        <th>{{ L['table.punishmentDate'] }}</th>
+                        <th>{{ L['table.punishmentMo'] }}</th>
+                        <th>{{ L['table.punishmentDateMo'] }}</th>
+                        <th>{{ L['table.auth'] }}</th>
+                        <th>{{ L['table.remarks'] }}</th>
+                    </tr>
+                </ng-template>
+                <ng-template pTemplate="body" let-row let-rowIndex="rowIndex">
+                    <tr>
+                        <td>{{ rowNum(rowIndex) }}.</td>
+                        <td>{{ formatDateOnly(row.offenseDate) }}</td>
+                        <td>{{ codeValue(row.offenseType, row.offenseTypeBN) }}</td>
+                        <td>{{ codeValue(row.briefStatementOfOffence, row.briefStatementOfOffenceBN) }}</td>
+                        <td>{{ val(row.offenseDetails) }}</td>
+                        <td>{{ codeValue(row.punishmentTypeRAB, row.punishmentTypeRABBN) }}</td>
+                        <td>{{ formatDateOnly(row.punishmentDate) }}</td>
+                        <td>{{ codeValue(row.punishmentTypeMotherOrg, row.punishmentTypeMotherOrgBN) }}</td>
+                        <td>{{ formatDateOnly(row.punishmentDateMotherOrg) }}</td>
+                        <td>{{ val(row.auth) }}</td>
+                        <td>{{ val(row.remarks) }}</td>
+                    </tr>
+                </ng-template>
+                <ng-template pTemplate="emptymessage">
+                    <tr>
+                        <td colspan="11" class="text-center text-500 py-3">{{ L['empty.noDisciplineRecords'] }}</td>
+                    </tr>
+                </ng-template>
+            </p-table>
+        </div>
+        } @if (editingSection === 'discipline' && employeeId != null) {
+        <app-emp-discipline-info [externalEmployeeId]="employeeId" [embedMode]="true" [hideTitle]="true" (saved)="onSectionSaved('discipline')" (cancelled)="closeSectionAndRefresh()"></app-emp-discipline-info>
+        }
+    </div>
+
+    <!-- Bank Account Information -->
+    <div class="sp-section">
+        <div class="sp-section-header">
+            <span class="sp-section-heading">{{ L['section.bankAccount'] }}</span>
+            @if (editingSection !== 'bankAccount') {
+            <button type="button" class="sp-btn sp-btn-sm" (click)="setEditingSection('bankAccount')"><i class="pi pi-pencil"></i> Edit</button>
+            } @else {
+            <button type="button" class="sp-btn sp-btn-sm" (click)="closeSectionAndRefresh()"><i class="pi pi-times"></i> Cancel</button>
+            }
+        </div>
+        @if (editingSection !== 'bankAccount') {
+        <div class="sp-table-wrap">
+            <p-table [value]="bankAccList" [loading]="sectionLoading['bankAcc']" [tableStyle]="{ 'min-width': '40rem' }" styleClass="p-datatable-sm p-datatable-gridlines family-info-table">
+                <ng-template pTemplate="header">
+                    <tr>
+                        <th style="width: 4rem">{{ L['table.ser'] }}</th>
+                        <th>{{ L['table.bankName'] }}</th>
+                        <th>{{ L['table.branchName'] }}</th>
+                        <th>{{ L['table.accountName'] }}</th>
+                        <th>{{ L['table.accountNumber'] }}</th>
+                        <th>{{ L['table.remarks'] }}</th>
+                    </tr>
+                </ng-template>
+                <ng-template pTemplate="body" let-row let-rowIndex="rowIndex">
+                    <tr>
+                        <td>{{ rowNum(rowIndex) }}.</td>
+                        <td>{{ codeValue(row.bankName, row.bankNameBN) }}</td>
+                        <td>{{ codeValue(row.branchName, row.branchNameBN) }}</td>
+                        <td>{{ codeValue(row.accountName, row.accountNameBN) }}</td>
+                        <td>{{ valDisplay(row.accountNumber) }}</td>
+                        <td>{{ val(row.remarks) }}</td>
+                    </tr>
+                </ng-template>
+                <ng-template pTemplate="emptymessage">
+                    <tr>
+                        <td colspan="6" class="text-center text-500 py-3">{{ L['empty.noBankAccountRecords'] }}</td>
+                    </tr>
+                </ng-template>
+            </p-table>
+        </div>
+        } @if (editingSection === 'bankAccount' && employeeId != null) {
+        <app-emp-bank-account [externalEmployeeId]="employeeId" [embedMode]="true" [hideTitle]="true" (saved)="onSectionSaved('bankAccount')" (cancelled)="closeSectionAndRefresh()"></app-emp-bank-account>
+        }
+    </div>
+
+    <!-- Additional Remarks -->
+    <div class="sp-section">
+        <div class="sp-section-header">
+            <span class="sp-section-heading">{{ L['section.additionalRemarks'] }}</span>
+            @if (editingSection !== 'additionalRemarks') {
+            <button type="button" class="sp-btn sp-btn-sm" (click)="setEditingSection('additionalRemarks')"><i class="pi pi-pencil"></i> Edit</button>
+            } @else {
+            <button type="button" class="sp-btn sp-btn-sm" (click)="closeSectionAndRefresh()"><i class="pi pi-times"></i> Cancel</button>
+            }
+        </div>
+        @if (editingSection !== 'additionalRemarks') {
+        <div class="sp-table-wrap">
+            <p-table [value]="additionalRemarksList" [loading]="sectionLoading['additionalRemarks']" [tableStyle]="{ 'min-width': '40rem' }" styleClass="p-datatable-sm p-datatable-gridlines family-info-table">
+                <ng-template pTemplate="header">
+                    <tr>
+                        <th style="width: 4rem">{{ L['table.ser'] }}</th>
+                        <th>{{ L['table.additionalRemarks'] }}</th>
+                    </tr>
+                </ng-template>
+                <ng-template pTemplate="body" let-row let-rowIndex="rowIndex">
+                    <tr>
+                        <td>{{ rowNum(rowIndex) }}.</td>
+                        <td>{{ val(row.additionalRemarks) }}</td>
+                    </tr>
+                </ng-template>
+                <ng-template pTemplate="emptymessage">
+                    <tr>
+                        <td colspan="2" class="text-center text-500 py-3">{{ L['empty.noAdditionalRemarks'] }}</td>
+                    </tr>
+                </ng-template>
+            </p-table>
+        </div>
+        } @if (editingSection === 'additionalRemarks' && employeeId != null) {
+        <app-emp-additional-remarks [externalEmployeeId]="employeeId" [embedMode]="true" [hideTitle]="true" (saved)="onSectionSaved('additionalRemarks')" (cancelled)="closeSectionAndRefresh()"></app-emp-additional-remarks>
+        }
+    </div>
+
+    <!-- Approved Note Sheets -->
+    <div class="sp-section">
+        <div class="sp-section-header">
+            <span class="sp-section-heading">{{ L['section.approvedNoteSheets'] }}</span>
+        </div>
+        <div class="sp-table-wrap">
+            <p-table [value]="approvedNoteSheetList" [loading]="sectionLoading['approvedNoteSheets']" [tableStyle]="{ 'min-width': '54rem' }" styleClass="p-datatable-sm p-datatable-gridlines family-info-table">
+                <ng-template pTemplate="header">
+                    <tr>
+                        <th style="width: 4rem">{{ L['table.ser'] }}</th>
+                        <th>{{ L['table.noteSheetNo'] }}</th>
+                        <th>{{ L['table.noteSheetDate'] }}</th>
+                        <th>{{ L['table.subject'] }}</th>
+                        <th>{{ L['table.approvedDate'] }}</th>
+                        <th>{{ L['table.officeOrderNo'] }}</th>
+                        <th>{{ L['table.officeOrderStatus'] }}</th>
+                    </tr>
+                </ng-template>
+                <ng-template pTemplate="body" let-row let-rowIndex="rowIndex">
+                    <tr>
+                        <td>{{ rowNum(rowIndex) }}.</td>
+                        <td>{{ row.noteSheetNo || '—' }}</td>
+                        <td>{{ formatDateOnly(row.noteSheetDate) }}</td>
+                        <td>{{ row.subject || '—' }}</td>
+                        <td>{{ formatDateOnly(row.finalApprovalApprovedDate) }}</td>
+                        <td>{{ row.officeOrderLetterNo || '—' }}</td>
+                        <td>{{ row.officeOrderStatus || '—' }}</td>
+                    </tr>
+                </ng-template>
+                <ng-template pTemplate="emptymessage">
+                    <tr>
+                        <td colspan="7" class="text-center text-500 py-3">{{ L['empty.noApprovedNoteSheets'] }}</td>
+                    </tr>
+                </ng-template>
+            </p-table>
+        </div>
+    </div>
+
+    <!-- Documents (files from PersonalInfo, EmployeeInfo, PreviousRABServiceInfo, etc.) -->
+    <div class="sp-section">
+        <div class="sp-section-header"><span class="sp-section-heading">{{ L['section.documents'] }}</span></div>
+        @if (documentList.length === 0) {
+        <div class="text-500 py-2">{{ L['empty.noDocuments'] }}</div>
+        } @else {
+        <p-table [value]="documentList" [loading]="sectionLoading['documents']" styleClass="p-datatable-sm p-datatable-gridlines" [tableStyle]="{ 'min-width': '24rem' }">
+            <ng-template pTemplate="header">
+                <tr>
+                    <th style="width: 2rem">{{ L['table.hash'] }}</th>
+                    <th>{{ L['table.section'] }}</th>
+                    <th>{{ L['table.fileName'] }}</th>
+                    <th style="width: 8rem">{{ L['table.action'] }}</th>
+                </tr>
+            </ng-template>
+            <ng-template pTemplate="body" let-row let-rowIndex="rowIndex">
+                <tr>
+                    <td>{{ rowNum(rowIndex) }}.</td>
+                    <td>{{ getDocumentSourceLabel(row) }}</td>
+                    <td>{{ getDocumentFileName(row) }}</td>
+                    <td>
+                        <p-button icon="pi pi-download" [label]="L['button.download']" [rounded]="true" [text]="true" severity="secondary" size="small" (onClick)="downloadDocument(row)" [pTooltip]="L['tooltip.downloadFile']"></p-button>
+                    </td>
+                </tr>
+            </ng-template>
+            <ng-template pTemplate="emptymessage">
+                <tr>
+                    <td colspan="4" class="text-center text-500 py-3">{{ L['empty.noDocuments'] }}</td>
+                </tr>
+            </ng-template>
+        </p-table>
+        }
+    </div>
+
     } @else if (!loading) {
-        <p class="text-500 m-0">{{ L['empty.noProfileData'] }}</p>
+    <p class="text-500 m-0">{{ L['empty.noProfileData'] }}</p>
     }
 </div>
 
@@ -1367,32 +1217,28 @@
     styleClass="text-900"
 >
     @if (previousYearSummaryLoading) {
-        <div class="flex align-items-center justify-content-center py-4">
-            <i class="pi pi-spin pi-spinner text-2xl text-500"></i>
-        </div>
+    <div class="flex align-items-center justify-content-center py-4">
+        <i class="pi pi-spin pi-spinner text-2xl text-500"></i>
+    </div>
     } @else {
-        <p-table
-            [value]="previousYearSummary"
-            styleClass="p-datatable-sm p-datatable-gridlines"
-            [tableStyle]="{ 'min-width': '20rem' }"
-        >
-            <ng-template pTemplate="header">
-                <tr>
-                    <th>{{ L['table.typeOfLeave'] }}</th>
-                    <th style="width: 5rem">{{ L['table.count'] }}</th>
-                </tr>
-            </ng-template>
-            <ng-template pTemplate="body" let-row>
-                <tr>
-                    <td>{{ val(row.typeOfLeave) }}</td>
-                    <td>{{ valDisplay(row.count) }}</td>
-                </tr>
-            </ng-template>
-            <ng-template pTemplate="emptymessage">
-                <tr>
-                    <td colspan="2" class="text-center text-500 py-2">{{ L['empty.noLeavePreviousYear'] }}</td>
-                </tr>
-            </ng-template>
-        </p-table>
+    <p-table [value]="previousYearSummary" styleClass="p-datatable-sm p-datatable-gridlines" [tableStyle]="{ 'min-width': '20rem' }">
+        <ng-template pTemplate="header">
+            <tr>
+                <th>{{ L['table.typeOfLeave'] }}</th>
+                <th style="width: 5rem">{{ L['table.count'] }}</th>
+            </tr>
+        </ng-template>
+        <ng-template pTemplate="body" let-row>
+            <tr>
+                <td>{{ val(row.typeOfLeave) }}</td>
+                <td>{{ valDisplay(row.count) }}</td>
+            </tr>
+        </ng-template>
+        <ng-template pTemplate="emptymessage">
+            <tr>
+                <td colspan="2" class="text-center text-500 py-2">{{ L['empty.noLeavePreviousYear'] }}</td>
+            </tr>
+        </ng-template>
+    </p-table>
     }
 </p-dialog>
