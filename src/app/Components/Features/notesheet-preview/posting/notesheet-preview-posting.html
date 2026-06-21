@@ -374,16 +374,10 @@
                     <strong><u>{{ noteSheet.subject }}</u></strong>
                 </div>
 
-                <!-- ── Reference / Date ── -->
-                <div class="ns-cell-ref">
-                    <ng-container *ngIf="noteSheet.referenceNumber">
-                        <span class="ns-ref-key">{{ isEnglish() ? 'Reference:' : 'সূত্রঃ' }}</span>
-                        <div class="ns-ref-content" [innerHTML]="getReferenceNumberSafe()"></div>
-                    </ng-container>
-                    <ng-container *ngIf="!noteSheet.referenceNumber && noteSheet.noteSheetDate">
-                        <span class="ns-ref-key">{{ isEnglish() ? 'Date:' : 'তারিখঃ' }}</span>
-                        {{ formatDate(noteSheet.noteSheetDate) }}
-                    </ng-container>
+                <!-- ── Reference (nothing shown when no reference number) ── -->
+                <div class="ns-cell-ref" *ngIf="noteSheet.referenceNumber">
+                    <span class="ns-ref-key">{{ isEnglish() ? 'Reference:' : 'সূত্রঃ' }}</span>
+                    <div class="ns-ref-content" [innerHTML]="getReferenceNumberSafe()"></div>
                 </div>
 
                 <!-- ── Main Text ── -->
