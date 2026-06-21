@@ -330,7 +330,12 @@ export class LeaveApplicationApplyComponent implements OnInit {
                         const name = m.employeeName ?? m.EmployeeName ?? '';
                         const rabId = m.rabID ?? m.RABID ?? '';
                         const serviceId = m.serviceId ?? m.ServiceId ?? '';
-                        const parts = [name, rabId ? `RAB: ${rabId}` : '', serviceId ? `SVC: ${serviceId}` : ''].filter(Boolean);
+                        const rank = m.rank ?? m.Rank ?? '';
+                        const appointment = m.appointment ?? m.Appointment ?? '';
+                        // Rank Name (Appointment) | SVC | RAB
+                        let head = [rank, name].filter(Boolean).join(' ');
+                        if (appointment) head = head ? `${head} (${appointment})` : `(${appointment})`;
+                        const parts = [head, serviceId ? `SVC: ${serviceId}` : '', rabId ? `RAB: ${rabId}` : ''].filter(Boolean);
                         return {
                             label: parts.join(' | ') || `Employee #${empId}`,
                             value: empId as number

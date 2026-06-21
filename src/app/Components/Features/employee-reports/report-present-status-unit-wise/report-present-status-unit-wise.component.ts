@@ -5,6 +5,7 @@ import { SelectModule } from 'primeng/select';
 import { DatePickerModule } from 'primeng/datepicker';
 import { ReportService } from '@/services/report.service';
 import { ExportService, type ReportConfig } from '@/services/export.service';
+import { CommonCodeService } from '@/services/common-code-service';
 import { BanglaNumerals } from '@/Core/i18n/bangla-numerals';
 import type {
     PresentStatusUnitWiseMonthColumn,
@@ -41,26 +42,32 @@ export class ReportPresentStatusUnitWiseComponent implements OnInit {
     fromDate: Date = new Date(new Date().getFullYear(), 0, 1);
     toDate: Date = new Date(new Date().getFullYear(), 11, 31);
 
+    // Unit (Battalion) dropdown — CommonCode CodeType='RabUnit'
+    unitOptions: { label: string; labelBN: string; value: number | null }[] = [
+        { label: 'All Units', labelBN: 'সকল ইউনিট', value: null },
+    ];
+    selectedRabUnitId: number | null = null;
+
     postingStatusOptions: { label: string; value: string | null }[] = [
         { label: 'All', value: null },
         { label: 'Servings', value: 'Servings' },
         { label: 'Ex Member', value: 'ExMember' },
-        { label: 'Supernumerary', value: 'Supernumerary' },
     ];
     selectedPostingStatus: string | null = 'Servings';
 
     presentStatusTypeOptions: { label: string; value: string }[] = [
         { label: 'On Duty', value: 'OnDuty' },
         { label: 'Regular Posting Out', value: 'RegularPostingOut' },
-        { label: 'RTU On Discipline Issue', value: 'RTUOnDisciplineIssue' },
+        { label: 'RTU', value: 'RTUOnDisciplineIssue' },
         { label: 'Absent', value: 'Absent' },
         { label: 'Arrested', value: 'Arrested' },
     ];
-    selectedPresentStatusType: string = 'RTUOnDisciplineIssue';
+    selectedPresentStatusType: string = 'OnDuty';
 
     constructor(
         private reportService: ReportService,
-        private exportService: ExportService
+        private exportService: ExportService,
+        private commonCodeService: CommonCodeService
     ) {}
 
     @HostListener('document:click')
@@ -69,6 +76,28 @@ export class ReportPresentStatusUnitWiseComponent implements OnInit {
     }
 
     ngOnInit(): void {
+        this.loadUnits();
+    }
+
+    private loadUnits(): void {
+        this.commonCodeService.getAllActiveCommonCodesType('RabUnit').subscribe({
+            next: (codes) => {
+                const opts = (codes ?? [])
+                    .slice()
+                    .sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0))
+                    .map(c => ({
+                        label: c.codeValueEN,
+                        labelBN: c.codeValueBN || c.codeValueEN,
+                        value: c.codeId,
+                    }));
+                this.unitOptions = [{ label: 'All Units', labelBN: 'সকল ইউনিট', value: null }, ...opts];
+            },
+            error: () => { /* keep default 'All Units' option */ },
+        });
+    }
+
+    unitOptionLabel(opt: { label: string; labelBN: string }): string {
+        return this.lang === 'en' ? opt.label : opt.labelBN;
     }
 
     search(): void {
@@ -86,6 +115,7 @@ export class ReportPresentStatusUnitWiseComponent implements OnInit {
                 toDate: fmtDate(this.toDate),
                 postingStatus: this.selectedPostingStatus,
                 presentStatusType: this.selectedPresentStatusType,
+                rabUnitId: this.selectedRabUnitId,
             })
             .subscribe({
                 next: (res: PresentStatusUnitWiseReportResponse) => {

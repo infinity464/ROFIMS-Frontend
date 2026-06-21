@@ -18,6 +18,7 @@ export interface IdentityUserMappingDto {
   serviceId?: string | null;
   rank?: string | null;
   memberType?: string | null;
+  appointment?: string | null;
 }
 
 export interface EmployeeDropdownDto {

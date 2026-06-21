@@ -6,6 +6,19 @@
 
         <div class="report-toolbar-row">
             <div class="report-filter-block">
+                <!-- Unit (Battalion) -->
+                <label class="filter-label">{{ lang === 'en' ? 'Unit:' : 'ইউনিট:' }}</label>
+                <p-select
+                    [options]="unitOptions"
+                    [(ngModel)]="selectedRabUnitId"
+                    optionValue="value"
+                    [showClear]="false"
+                    appendTo="body"
+                    styleClass="posting-status-select">
+                    <ng-template let-opt pTemplate="selectedItem">{{ unitOptionLabel(opt) }}</ng-template>
+                    <ng-template let-opt pTemplate="item">{{ unitOptionLabel(opt) }}</ng-template>
+                </p-select>
+
                 <!-- From Date -->
                 <label class="filter-label">{{ lang === 'en' ? 'From:' : 'হতে:' }}</label>
                 <p-datepicker

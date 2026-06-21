@@ -37,47 +37,82 @@
             </div>
             }
         </div>
-        <div style="flex: 1; min-width: 0">
+        <div class="sp-hero-main">
             <div class="sp-hero-name">{{ getFormattedName(profile) }}</div>
-            @if (activePresentStatus) {
-            <div style="font-size: 0.95rem; font-weight: 700; margin-top: 0.25rem; color: var(--text-color)">{{ L['field.presentStatus'] }}: {{ translatedPresentStatus }}</div>
-            } @if (translatedEmployeeStatus) {
-            <div style="font-size: 0.95rem; font-weight: 700; margin-top: 0.25rem; color: var(--text-color)">{{ L['field.employeeStatus'] }}: {{ translatedEmployeeStatus }}</div>
-            } @if (postingProcessingStatus?.newPostingStep && !postingProcessingStatus!.newPostingOrderReceived) {
-            <div class="sp-posting-status-line">
-                <span>{{ L['posting.newPosting'] }}: {{ getPostingStepLabel(postingProcessingStatus!.newPostingStep!) }}</span>
-                @if (postingProcessingStatus!.newPostingForceOrderGenerated && !isPostingTerminalState(postingProcessingStatus!.newPostingStep)) {
-                <span class="sp-posting-sep">·</span>
-                <span>{{ postingProcessingStatus!.newPostingForceOrderApproved ? L['posting.postingApproved'] : L['posting.postingNotApproved'] }}</span>
-                @if (postingProcessingStatus!.newPostingForceOrderApproved) {
-                <span class="sp-posting-sep">·</span>
-                <span>{{ postingProcessingStatus!.newPostingOrderReceived ? L['posting.postingReceived'] : L['posting.postingNotReceived'] }}</span>
+            <div class="sp-hero-chips">
+                <!-- Line 1: Present Status + Employee Status -->
+                @if (activePresentStatus || translatedEmployeeStatus) {
+                <div class="sp-chip-row">
+                    @if (activePresentStatus) {
+                    <span class="sp-chip sp-chip--primary">
+                        <span class="sp-chip-key">{{ L['field.presentStatus'] }}</span>
+                        <span class="sp-chip-val">{{ translatedPresentStatus }}</span>
+                    </span>
+                    } @if (translatedEmployeeStatus) {
+                    <span class="sp-chip sp-chip--accent">
+                        <span class="sp-chip-key">{{ L['field.employeeStatus'] }}</span>
+                        <span class="sp-chip-val">{{ translatedEmployeeStatus }}</span>
+                    </span>
+                    }
+                </div>
                 }
+                <!-- Line: New Posting -->
+                @if (postingProcessingStatus?.newPostingStep && !postingProcessingStatus!.newPostingOrderReceived) {
+                <div class="sp-chip-row">
+                    <span class="sp-chip sp-chip--info">
+                        <i class="pi pi-send"></i>
+                        <span class="sp-chip-key">{{ L['posting.newPosting'] }}</span>
+                        <span class="sp-chip-val">{{ getPostingStepLabel(postingProcessingStatus!.newPostingStep!) }}</span>
+                        @if (postingProcessingStatus!.newPostingForceOrderGenerated && !isPostingTerminalState(postingProcessingStatus!.newPostingStep)) {
+                        <span class="sp-chip-sep"></span>
+                        <span class="sp-chip-val">{{ postingProcessingStatus!.newPostingForceOrderApproved ? L['posting.postingApproved'] : L['posting.postingNotApproved'] }}</span>
+                        @if (postingProcessingStatus!.newPostingForceOrderApproved) {
+                        <span class="sp-chip-sep"></span>
+                        <span class="sp-chip-val">{{ postingProcessingStatus!.newPostingOrderReceived ? L['posting.postingReceived'] : L['posting.postingNotReceived'] }}</span>
+                        }
+                        }
+                    </span>
+                </div>
+                }
+                <!-- Line: Inter Posting -->
+                @if (postingProcessingStatus?.interPostingStep && !postingProcessingStatus!.interPostingOrderReceived) {
+                <div class="sp-chip-row">
+                    <span class="sp-chip sp-chip--info">
+                        <i class="pi pi-sync"></i>
+                        <span class="sp-chip-key">{{ L['posting.interPosting'] }}</span>
+                        <span class="sp-chip-val">{{ getPostingStepLabel(postingProcessingStatus!.interPostingStep!) }}</span>
+                        @if (postingProcessingStatus!.interPostingForceOrderGenerated && !isPostingTerminalState(postingProcessingStatus!.interPostingStep)) {
+                        <span class="sp-chip-sep"></span>
+                        <span class="sp-chip-val">{{ postingProcessingStatus!.interPostingForceOrderApproved ? L['posting.postingApproved'] : L['posting.postingNotApproved'] }}</span>
+                        @if (postingProcessingStatus!.interPostingForceOrderApproved) {
+                        <span class="sp-chip-sep"></span>
+                        <span class="sp-chip-val">{{ postingProcessingStatus!.interPostingOrderReceived ? L['posting.postingReceived'] : L['posting.postingNotReceived'] }}</span>
+                        }
+                        }
+                    </span>
+                </div>
+                }
+                <!-- Line: On Leave -->
+                @if (currentLeave) {
+                <div class="sp-chip-row">
+                    <span class="sp-chip sp-chip--warn sp-chip--clickable" (click)="goToLeaveHistory()" [title]="L['status.onLeave']">
+                        <i class="pi pi-calendar-times"></i>
+                        <span class="sp-chip-key">{{ L['status.onLeave'] }}{{ currentLeave.type ? ' (' + currentLeave.type + ')' : '' }}</span>
+                        <span class="sp-chip-val">{{ formatDateOnly(currentLeave.from) }} – {{ formatDateOnly(currentLeave.to) }}</span>
+                    </span>
+                </div>
+                }
+                <!-- Line: Present Location / Movement -->
+                @if (currentMovementDestination !== null) {
+                <div class="sp-chip-row">
+                    <span class="sp-chip sp-chip--location sp-chip--clickable" (click)="goToMovementList()" [title]="L['status.presentLocation']">
+                        <i class="pi pi-map-marker"></i>
+                        <span class="sp-chip-key">{{ L['status.presentLocation'] }}</span>
+                        <span class="sp-chip-val">{{ currentMovementDestination || '-' }}</span>
+                    </span>
+                </div>
                 }
             </div>
-            } @if (postingProcessingStatus?.interPostingStep && !postingProcessingStatus!.interPostingOrderReceived) {
-            <div class="sp-posting-status-line">
-                <span>{{ L['posting.interPosting'] }}: {{ getPostingStepLabel(postingProcessingStatus!.interPostingStep!) }}</span>
-                @if (postingProcessingStatus!.interPostingForceOrderGenerated && !isPostingTerminalState(postingProcessingStatus!.interPostingStep)) {
-                <span class="sp-posting-sep">·</span>
-                <span>{{ postingProcessingStatus!.interPostingForceOrderApproved ? L['posting.postingApproved'] : L['posting.postingNotApproved'] }}</span>
-                @if (postingProcessingStatus!.interPostingForceOrderApproved) {
-                <span class="sp-posting-sep">·</span>
-                <span>{{ postingProcessingStatus!.interPostingOrderReceived ? L['posting.postingReceived'] : L['posting.postingNotReceived'] }}</span>
-                }
-                }
-            </div>
-            } @if (currentLeave) {
-            <div class="sp-posting-status-line" style="cursor: pointer" (click)="goToLeaveHistory()" [title]="L['status.onLeave']">
-                <i class="pi pi-calendar-times" style="margin-right: 0.35rem"></i>
-                <span>{{ L['status.onLeave'] }}{{ currentLeave.type ? ' (' + currentLeave.type + ')' : '' }}: {{ formatDateOnly(currentLeave.from) }} – {{ formatDateOnly(currentLeave.to) }}</span>
-            </div>
-            } @if (currentMovementDestination !== null) {
-            <div class="sp-posting-status-line" style="cursor: pointer" (click)="goToMovementList()" [title]="L['status.presentLocation']">
-                <i class="pi pi-map-marker" style="margin-right: 0.35rem"></i>
-                <span>{{ L['status.presentLocation'] }}: {{ currentMovementDestination || '-' }}</span>
-            </div>
-            }
         </div>
         <div class="sp-hero-ids">
             <div class="sp-id-block">

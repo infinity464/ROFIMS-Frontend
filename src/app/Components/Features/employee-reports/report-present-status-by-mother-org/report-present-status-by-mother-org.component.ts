@@ -45,7 +45,6 @@ export class ReportPresentStatusByMotherOrgComponent implements OnInit {
         { label: 'All', value: null },
         { label: 'Servings', value: 'Servings' },
         { label: 'Ex Member', value: 'ExMember' },
-        { label: 'Supernumerary', value: 'Supernumerary' },
     ];
     selectedPostingStatus: string | null = 'Servings';
 
@@ -53,7 +52,7 @@ export class ReportPresentStatusByMotherOrgComponent implements OnInit {
         { label: 'All', value: null },
         { label: 'On Duty', value: 'OnDuty' },
         { label: 'Regular Posting Out', value: 'RegularPostingOut' },
-        { label: 'RTU on Discipline Issue', value: 'RTUOnDisciplineIssue' },
+        { label: 'RTU', value: 'RTUOnDisciplineIssue' },
         { label: 'Deceased', value: 'Deceased' },
         { label: 'Absent', value: 'Absent' },
         { label: 'Arrested', value: 'Arrested' },

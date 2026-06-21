@@ -330,6 +330,7 @@ export interface PresentStatusUnitWiseReportParams {
   toDate?: string | null;
   postingStatus?: string | null;
   presentStatusType?: string | null;
+  rabUnitId?: number | null;
 }
 
 /** One dynamic column (a month) in the Present Status Unit Wise pivot report. */

@@ -189,9 +189,12 @@ export class NotesheetApproverSelectComponent implements OnInit, OnChanges {
                         const rabId = pick(mapping, 'rabID', 'rABID', 'rabid', 'RABID', 'RabID');
                         const serviceId = pick(mapping, 'serviceId', 'ServiceId');
                         const rank = pick(mapping, 'rank', 'Rank');
-                        const memberType = pick(mapping, 'memberType', 'MemberType');
-                        // Employee Type | Rank | RAB | SVC | Name
-                        const parts = [memberType, rank, rabId ? `RAB: ${rabId}` : '', serviceId ? `SVC: ${serviceId}` : '', empName || u.userName].filter(Boolean);
+                        const appointment = pick(mapping, 'appointment', 'Appointment');
+                        // Rank Name (Appointment) | SVC | RAB
+                        const name = empName || u.userName;
+                        let head = [rank, name].filter(Boolean).join(' ');
+                        if (appointment) head = head ? `${head} (${appointment})` : `(${appointment})`;
+                        const parts = [head, serviceId ? `SVC: ${serviceId}` : '', rabId ? `RAB: ${rabId}` : ''].filter(Boolean);
                         opts.push({ label: parts.join(' | '), value: empId });
                     } else {
                         // User without employee mapping — still show with negative id placeholder
