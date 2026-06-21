@@ -13,3 +13,41 @@
 .ns-approver-section {
     padding: 10px 16px 24px 20px;
 }
+
+/* ── Edit mode: full-width sheet ───────────────────────
+   In edit mode the posting table has many columns plus a "Transfer Unit"
+   dropdown and a remarks input per row. Locking it to A4 width (215.9mm)
+   cramps everything, so let the edit sheet span the full page width. */
+.ns-edit-container {
+    padding: 1rem;
+    align-items: stretch;   /* sheet fills the row instead of centering at A4 width */
+    min-height: auto;
+}
+
+.a4-paper.ns-edit-paper {
+    width: 100%;
+    max-width: 100%;
+    min-height: auto;       /* drop the fixed A4 page height — no empty trailing page */
+}
+
+/* Edit mode is interactive (not printed), so make it fully responsive:
+   the wide posting table scrolls horizontally on small screens instead of
+   crushing columns / overflowing the sheet. */
+.ns-edit-paper .ns-posting-table {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+
+    table {
+        min-width: 760px;   /* keep columns legible; wrapper scrolls below this */
+    }
+}
+
+/* Phones / small tablets: tighten the sheet so it uses the available width. */
+@media screen and (max-width: 768px) {
+    .ns-edit-container {
+        padding: 0.5rem;
+    }
+    .a4-paper.ns-edit-paper {
+        padding: 8mm 4mm 12mm;
+    }
+}

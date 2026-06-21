@@ -130,6 +130,7 @@ export class ExMemberProfile implements OnInit, OnDestroy {
     previousYearSummaryLoading = false;
     loading = false;
     activePresentStatus: string | null = null;
+    presentStatusList: any[] = [];
     postingProcessingStatus: EmployeePostingProcessingStatusDto | null = null;
 
     /** Which section is in edit mode; null = all view. Only one section at a time. */
@@ -786,13 +787,28 @@ export class ExMemberProfile implements OnInit, OnDestroy {
                 const movementsArr = Array.isArray(movements) ? movements : [];
                 this.permanentMovementList = movementsArr.filter((m) => m.movementType === MovementType.Permanent);
                 this.temporaryMovementList = movementsArr.filter((m) => m.movementType === MovementType.Temporary);
-                const activeRecord = (presentStatus ?? []).find((r: any) => (r.IsActive ?? r.isActive));
-                if (activeRecord) {
-                    const statusValue = activeRecord.PresentStatusType ?? activeRecord.presentStatusType;
-                    this.activePresentStatus = statusValue || null;
-                } else {
-                    this.activePresentStatus = null;
-                }
+                const psList = (presentStatus ?? []).map((r: any) => ({
+                    presentStatusID: r.PresentStatusID ?? r.presentStatusID,
+                    presentStatusType: r.PresentStatusType ?? r.presentStatusType,
+                    dated: r.Dated ?? r.dated,
+                    profileShift: r.ProfileShift ?? r.profileShift ?? false,
+                    isActive: r.IsActive ?? r.isActive ?? false,
+                    dateOfRelease: r.DateOfRelease ?? r.dateOfRelease,
+                    reduceFromRABStrength: r.ReduceFromRABStrength ?? r.reduceFromRABStrength,
+                    rtuCause: r.RTUCause ?? r.rtuCause,
+                    absentReport: r.AbsentReport ?? r.absentReport,
+                    inquiryReport: r.InquiryReport ?? r.inquiryReport,
+                    incidentDetails: r.IncidentDetails ?? r.incidentDetails,
+                    deceasedPlace: r.DeceasedPlace ?? r.deceasedPlace,
+                    deceasedReason: r.DeceasedReason ?? r.deceasedReason,
+                    backFromArrestedReason: r.BackFromArrestedReason ?? r.backFromArrestedReason,
+                    courtOrderReference: r.CourtOrderReference ?? r.courtOrderReference,
+                    backFromAbsentReason: r.BackFromAbsentReason ?? r.backFromAbsentReason,
+                    supportingDocFilesReferences: r.SupportingDocFilesReferences ?? r.supportingDocFilesReferences
+                }));
+                this.presentStatusList = psList;
+                const activeRecord = psList.find((r: any) => r.isActive);
+                this.activePresentStatus = activeRecord?.presentStatusType || null;
                 this.postingProcessingStatus = postingStatus ?? null;
                 this.loading = false;
                 onComplete?.();
@@ -1012,6 +1028,74 @@ export class ExMemberProfile implements OnInit, OnDestroy {
         this.previousYearSummaryDialogVisible = false;
     }
 
+    private readonly presentStatusLabelMap: Record<string, string> = {
+        OnDuty: 'On Duty',
+        RegularPostingOut: 'Regular Posting Out',
+        RTUOnDisciplineIssue: 'RTU',
+        Deceased: 'Deceased',
+        Absent: 'Absent',
+        Arrested: 'Arrested',
+        BackFromArrested: 'Back From Arrested',
+        BackFromAbsent: 'Back From Absent'
+    };
+
+    getPresentStatusLabel(type: string): string {
+        return this.presentStatusLabelMap[type] ?? type ?? '-';
+    }
+
+    private readonly presentStatusIconMap: Record<string, string> = {
+        OnDuty: 'pi-check-circle',
+        RegularPostingOut: 'pi-sign-out',
+        RTUOnDisciplineIssue: 'pi-replay',
+        Deceased: 'pi-info-circle',
+        Absent: 'pi-user-minus',
+        Arrested: 'pi-lock',
+        BackFromArrested: 'pi-unlock',
+        BackFromAbsent: 'pi-user-plus'
+    };
+
+    getPresentStatusIcon(type: string): string {
+        return this.presentStatusIconMap[type] ?? 'pi-flag';
+    }
+
+    getPresentStatusDetails(row: any): string {
+        const parts: string[] = [];
+        const add = (label: string, value: any) => {
+            if (value != null && value !== '') parts.push(`${label}: ${value}`);
+        };
+
+        switch (row.presentStatusType) {
+            case 'RegularPostingOut':
+                add('Date of Release', this.formatDateOnly(row.dateOfRelease));
+                add('Reduce from RAB Strength', this.formatDateOnly(row.reduceFromRABStrength));
+                break;
+            case 'RTUOnDisciplineIssue':
+                add('RTU Cause', row.rtuCause);
+                break;
+            case 'Deceased':
+                add('Place', row.deceasedPlace);
+                add('Reason', row.deceasedReason);
+                break;
+            case 'Absent':
+                add('Absent Report', row.absentReport);
+                add('Inquiry Report', row.inquiryReport);
+                break;
+            case 'Arrested':
+                add('Incident Details', row.incidentDetails);
+                add('Inquiry Report', row.inquiryReport);
+                break;
+            case 'BackFromArrested':
+                add('Reason', row.backFromArrestedReason);
+                add('Court Order', row.courtOrderReference);
+                break;
+            case 'BackFromAbsent':
+                add('Reason', row.backFromAbsentReason);
+                break;
+        }
+
+        return parts.join(' | ') || '-';
+    }
+
     getInitials(name: string | null | undefined): string {
         if (!name) return '?';
         const parts = name.trim().split(/\s+/);
@@ -1080,6 +1164,13 @@ export class ExMemberProfile implements OnInit, OnDestroy {
             next: (blob) => this.empService.triggerFileDownload(blob, doc.fileName || 'download'),
             error: (err: any) => this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.message || 'Failed to download file.' })
         });
+    }
+
+    downloadAllDocs(refsJson: string | null | undefined): void {
+        const docs = this.parseDocRefs(refsJson);
+        for (const doc of docs) {
+            this.downloadDocRef(doc);
+        }
     }
 
     downloadDocument(item: EmployeeDocumentReferenceItem): void {

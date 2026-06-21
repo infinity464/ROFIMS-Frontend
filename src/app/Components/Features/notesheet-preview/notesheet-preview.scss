@@ -555,6 +555,10 @@
         font-size: 7pt;
         text-transform: uppercase;
     }
+    /* নাম column: value left-aligned (header stays centered). */
+    td.ns-name-cell {
+        text-align: left;
+    }
     tr:nth-child(even) {
         background: #fafafa;
     }

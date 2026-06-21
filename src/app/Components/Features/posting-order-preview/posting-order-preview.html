@@ -432,21 +432,23 @@
     </div>
 
     <!-- অনুলিপি paragraph filter (collapsed by default) -->
-    <div class="unit-filter-bar no-print" *ngIf="!editing && !loading && !error && (transferUnitsCopyText || filteredFooterParagraphs.length > 0)"
+    <div class="unit-filter-bar no-print" *ngIf="!editing && !loading && !error && (autoCopyLines.length > 0 || filteredFooterParagraphs.length > 0)"
          style="flex-direction:column; align-items:flex-start;">
         <span style="font-weight:600; font-size:0.85rem; cursor:pointer;" (click)="showOnulipiFilter = !showOnulipiFilter">
             <i class="pi" [ngClass]="showOnulipiFilter ? 'pi-chevron-down' : 'pi-chevron-right'" style="margin-right:0.3rem;"></i>{{ isBangla ? 'অনুলিপি ফিল্টার' : 'Copy Filter' }}
         </span>
         <div *ngIf="showOnulipiFilter" style="display:flex; flex-direction:column; gap:0.3rem; margin-top:0.4rem; width:100%;">
-            <span *ngIf="transferUnitsCopyText"
+            <span *ngIf="autoCopyLines.length > 0"
                   style="display:inline-flex; align-items:flex-start; gap:0.4rem; font-size:0.82rem; line-height:1.4;">
                 <p-checkbox [(ngModel)]="showTransferUnitsCopy" [binary]="true" inputId="chkTransferUnitsCopy"></p-checkbox>
-                <label for="chkTransferUnitsCopy" style="cursor:pointer;">{{ isBangla ? '১' : '1' }}। {{ transferUnitsCopyText }}</label>
+                <label for="chkTransferUnitsCopy" style="cursor:pointer;">
+                    <span *ngFor="let line of autoCopyLines; let i = index" style="display:block;">{{ isBangla ? toBanglaDigits('' + (i + 1)) : (i + 1) }}। {{ line }}</span>
+                </label>
             </span>
             <span *ngFor="let para of filteredFooterParagraphs; let pi = index"
                   style="display:inline-flex; align-items:flex-start; gap:0.4rem; font-size:0.82rem; line-height:1.4;">
                 <p-checkbox [(ngModel)]="paragraphChecked[pi]" [binary]="true" [inputId]="'chkPara' + pi"></p-checkbox>
-                <label [for]="'chkPara' + pi" style="cursor:pointer;">{{ isBangla ? toBanglaDigits('' + (pi + 2)) : (pi + 2) }}। {{ para.text }}</label>
+                <label [for]="'chkPara' + pi" style="cursor:pointer;">{{ isBangla ? toBanglaDigits('' + (pi + 1 + autoCopyOffset)) : (pi + 1 + autoCopyOffset) }}। {{ para.text }}</label>
             </span>
         </div>
     </div>
@@ -579,7 +581,7 @@
                             <td class="text-center">{{ isBangla ? toBanglaDigits('' + (i + 1)) : (i + 1) }}</td>
                             <td class="font-semibold">{{ empServiceId(emp) }}</td>
                             <td>{{ empRank(emp) }}</td>
-                            <td>{{ empName(emp) }}</td>
+                            <td class="po-doc-name-cell">{{ empName(emp) }}</td>
                             <td *ngIf="showOwnDistrict" style="white-space: pre-line;">{{ empDistrict(emp) }}</td>
                             <td *ngIf="showPrevWorkplaceUnit" style="white-space: pre-line;">{{ empPrevWorkplace(emp) }}</td>
                             <td>{{ empTransferUnit(emp) }}</td>
@@ -604,7 +606,7 @@
                             <td class="font-semibold">{{ empServiceId(emp) }}</td>
                             <td>{{ empRank(emp) }}</td>
                             <td>{{ empTrade(emp) }}</td>
-                            <td>{{ empName(emp) }}</td>
+                            <td class="po-doc-name-cell">{{ empName(emp) }}</td>
                             <td *ngIf="showOwnDistrict" style="white-space: pre-line;">{{ empDistrict(emp) }}</td>
                             <td *ngIf="showPrevWorkplaceUnit" style="white-space: pre-line;">{{ empPrevWorkplace(emp) }}</td>
                             <td>{{ empTransferUnit(emp) }}</td>
@@ -633,26 +635,37 @@
             <!-- Sub Text (rich HTML from editor) -->
             <div class="po-doc-sub-text" *ngIf="subText" [innerHTML]="subText"></div>
 
-            <!-- Signature Block (top right, standalone) -->
+            <!-- Signature Block (top right, standalone). Date is omitted here; it is
+                 rendered separately on the অনুলিপি title line below. -->
             <div class="po-doc-signature">
                 <div>স্বাক্ষরিত/-</div>
                 <div>{{ (isBangla ? approverNameBN : approverName) || approverName || '...................................' }}</div>
                 <div>{{ (isBangla ? approverRankBN : approverRank) || approverRank || '............................' }}</div>
                 <div>{{ (isBangla ? approverAppointmentBN : approverAppointment) || approverAppointment || '............................' }}</div>
                 <div>{{ isBangla ? 'টেলিঃ' : 'Tel:' }} {{ approverPhone || '...............' }}</div>
-                <div>{{ isBangla ? 'তারিখঃ' : 'Date:' }} {{ previewDate }}</div>
             </div>
 
             <!-- Copy Distribution + Footer - mirrors Word two-column table exactly -->
             <div class="po-doc-copy">
+                <!-- Head: prefix + অনুলিপি title (left); only the তারিখ line (right) sits
+                     here, bottom-aligned so it is exactly level with the অনুলিপি title. -->
+                <div class="po-doc-copy-head">
+                    <div class="po-doc-copy-head-left">
+                        <div *ngIf="noteSheetPrefix" style="margin-bottom:0.3rem;">{{ noteSheetPrefix }}</div>
+                        <div class="po-doc-copy-title">{{ isBangla ? 'অনুলিপি (জ্যেষ্ঠতার ভিত্তিতে নহে)' : 'Copy (not in order of seniority):' }}</div>
+                    </div>
+                    <div class="po-doc-signature-date">
+                        <div>{{ isBangla ? 'তারিখঃ' : 'Date:' }} {{ previewDate }}</div>
+                    </div>
+                </div>
                 <table class="po-doc-copy-table">
                     <tr>
                         <td class="po-doc-copy-left">
-                            <div *ngIf="noteSheetPrefix" style="margin-bottom:0.3rem;">{{ noteSheetPrefix }}</div>
-                            <div class="po-doc-copy-title">{{ isBangla ? 'অনুলিপি (জ্যেষ্ঠতার ভিত্তিতে নহে)' : 'Copy (not in order of seniority):' }}</div>
                             <div class="po-doc-copy-list">
-                                <p *ngIf="transferUnitsCopyText && showTransferUnitsCopy">{{ isBangla ? '১' : '1' }}। {{ transferUnitsCopyText }}</p>
-                                <p *ngFor="let para of exportFooterParagraphs; let i = index">{{ isBangla ? toBanglaDigits('' + (i + (showTransferUnitsCopy && transferUnitsCopyText ? 2 : 1))) : (i + (showTransferUnitsCopy && transferUnitsCopyText ? 2 : 1)) }}। {{ para.text }}</p>
+                                <ng-container *ngIf="showTransferUnitsCopy">
+                                    <p *ngFor="let line of autoCopyLines; let i = index">{{ isBangla ? toBanglaDigits('' + (i + 1)) : (i + 1) }}। {{ line }}</p>
+                                </ng-container>
+                                <p *ngFor="let para of exportFooterParagraphs; let i = index">{{ isBangla ? toBanglaDigits('' + (i + 1 + autoCopyOffset)) : (i + 1 + autoCopyOffset) }}। {{ para.text }}</p>
                             </div>
                         </td>
                         <td class="po-doc-copy-right">

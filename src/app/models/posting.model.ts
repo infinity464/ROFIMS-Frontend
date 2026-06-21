@@ -456,6 +456,7 @@ export interface PostingOrderEmployeeRow {
     transferRabUnitId: number | null;
     transferRabUnitName: string | null;
     transferRabUnitNameBN: string | null;
+    transferIsHq?: boolean | null;
     serviceId: string | null;
     prefixName: string | null;
     prefixNameBN: string | null;

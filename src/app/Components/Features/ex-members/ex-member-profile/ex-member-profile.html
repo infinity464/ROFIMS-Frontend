@@ -50,7 +50,7 @@
             <div style="flex: 1; min-width: 0;">
                 <div class="sp-hero-name">{{ getFormattedName(profile) }}</div>
                 @if (activePresentStatus) {
-                    <div style="font-size: 0.95rem; font-weight: 500; margin-top: 0.25rem; color: var(--text-color-secondary);">{{ L['field.presentStatus'] }}: {{ translatedPresentStatus }}</div>
+                    <div style="font-size: 0.95rem; font-weight: 700; margin-top: 0.25rem; color: var(--text-color);">{{ L['field.presentStatus'] }}: {{ translatedPresentStatus }}</div>
                 }
                 @if (postingProcessingStatus?.newPostingStep && !postingProcessingStatus!.newPostingOrderReceived) {
                     <div class="sp-posting-status-line">
@@ -311,6 +311,59 @@
                     (cancelled)="closeSectionAndRefresh()"
                 ></app-emp-personal-info>
             }
+        </div>
+
+        <!-- Present Status -->
+        <div class="sp-section">
+            <div class="sp-section-header">
+                <span class="sp-section-heading">Present Status</span>
+            </div>
+            <div class="sp-table-wrap">
+                <p-table
+                    [value]="presentStatusList"
+                    [tableStyle]="{ 'min-width': '50rem' }"
+                    styleClass="p-datatable-sm p-datatable-gridlines family-info-table"
+                >
+                    <ng-template pTemplate="header">
+                        <tr>
+                            <th style="width: 4rem">Ser</th>
+                            <th>Status Type</th>
+                            <th>Date</th>
+                            <th>Status Details</th>
+                            <th style="width: 8rem">Profile Shift</th>
+                            <th style="width: 7rem">Status</th>
+                            <th style="width: 7rem">Documents</th>
+                        </tr>
+                    </ng-template>
+                    <ng-template pTemplate="body" let-row let-rowIndex="rowIndex">
+                        <tr>
+                            <td>{{ rowNum(rowIndex) }}.</td>
+                            <td>{{ getPresentStatusLabel(row.presentStatusType) }}</td>
+                            <td>{{ formatDateOnly(row.dated) }}</td>
+                            <td>{{ getPresentStatusDetails(row) }}</td>
+                            <td>{{ row.profileShift ? 'Yes' : 'No' }}</td>
+                            <td>
+                                <span class="sp-status-pill" [class.sp-status-pill--active]="row.isActive">
+                                    {{ row.isActive ? 'Active' : 'Inactive' }}
+                                </span>
+                            </td>
+                            <td class="text-center">
+                                @if (parseDocRefs(row.supportingDocFilesReferences).length > 0) {
+                                    <p-button icon="pi pi-download" [rounded]="true" [text]="true" severity="secondary" size="small"
+                                        (onClick)="downloadAllDocs(row.supportingDocFilesReferences)" pTooltip="Download"></p-button>
+                                } @else {
+                                    <span class="text-500">-</span>
+                                }
+                            </td>
+                        </tr>
+                    </ng-template>
+                    <ng-template pTemplate="emptymessage">
+                        <tr>
+                            <td colspan="7" class="text-center text-500 py-3">No present status records found.</td>
+                        </tr>
+                    </ng-template>
+                </p-table>
+            </div>
         </div>
 
         <!-- Family Info (excludes in-law relations) -->
