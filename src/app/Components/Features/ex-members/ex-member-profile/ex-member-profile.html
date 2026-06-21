@@ -85,6 +85,18 @@
                         }
                     </div>
                 }
+                @if (currentLeave) {
+                    <div class="sp-posting-status-line" style="cursor: pointer;" (click)="goToLeaveHistory()" [title]="L['status.onLeave']">
+                        <i class="pi pi-calendar-times" style="margin-right: 0.35rem;"></i>
+                        <span>{{ L['status.onLeave'] }}{{ currentLeave.type ? ' (' + currentLeave.type + ')' : '' }}: {{ formatDateOnly(currentLeave.from) }} – {{ formatDateOnly(currentLeave.to) }}</span>
+                    </div>
+                }
+                @if (currentMovementDestination !== null) {
+                    <div class="sp-posting-status-line" style="cursor: pointer;" (click)="goToMovementList()" [title]="L['status.presentLocation']">
+                        <i class="pi pi-map-marker" style="margin-right: 0.35rem;"></i>
+                        <span>{{ L['status.presentLocation'] }}: {{ currentMovementDestination || '-' }}</span>
+                    </div>
+                }
             </div>
             <div class="sp-hero-ids">
                 <div class="sp-id-block">

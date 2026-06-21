@@ -133,6 +133,11 @@ export class ExMemberProfile implements OnInit, OnDestroy {
     presentStatusList: any[] = [];
     postingProcessingStatus: EmployeePostingProcessingStatusDto | null = null;
 
+    /** Presently-on-leave window (today falls inside it); null when not on leave. */
+    currentLeave: { type: string; from: string | null; to: string | null } | null = null;
+    /** Destination unit of an un-returned temporary movement; null when none. */
+    currentMovementDestination: string | null = null;
+
     /** Which section is in edit mode; null = all view. Only one section at a time. */
     editingSection: string | null = null;
 
@@ -818,6 +823,7 @@ export class ExMemberProfile implements OnInit, OnDestroy {
                 const activeRecord = psList.find((r: any) => r.isActive);
                 this.activePresentStatus = activeRecord?.presentStatusType || null;
                 this.postingProcessingStatus = postingStatus ?? null;
+                this.computePresentLeaveAndMovement();
                 this.loading = false;
                 onComplete?.();
             },
@@ -841,6 +847,46 @@ export class ExMemberProfile implements OnInit, OnDestroy {
     getPostingStepLabel(step: string): string {
         const key = `posting.step.${step}` as any;
         return (this.L as any)[key] ?? step;
+    }
+
+    /**
+     * Derives the live "On Leave" / "Present Location" hero badges from the already-loaded
+     * current-year leave list and temporary-movement list.
+     */
+    private computePresentLeaveAndMovement(): void {
+        this.currentLeave = null;
+        this.currentMovementDestination = null;
+
+        const today = this.toDateOnly(new Date());
+        const leave = (this.leaveList ?? []).find((r) => {
+            const from = r.durationFrom ? this.toDateOnly(new Date(r.durationFrom)) : null;
+            const to = r.durationTo ? this.toDateOnly(new Date(r.durationTo)) : null;
+            return from !== null && to !== null && from <= today && today <= to;
+        });
+        if (leave) {
+            this.currentLeave = { type: (leave.typeOfLeave ?? '').toString(), from: leave.durationFrom, to: leave.durationTo };
+        }
+
+        // temporaryMovementList is newest-first; first un-returned one is the active movement.
+        const movement = (this.temporaryMovementList ?? []).find((m) => !m.isReturned);
+        if (movement) {
+            this.currentMovementDestination = (movement.destinedRABUnit || movement.destinedMotherUnit || '').toString();
+        }
+    }
+
+    /** Local YYYY-MM-DD string for date-only comparison (avoids UTC drift). */
+    private toDateOnly(d: Date): string {
+        const m = `${d.getMonth() + 1}`.padStart(2, '0');
+        const day = `${d.getDate()}`.padStart(2, '0');
+        return `${d.getFullYear()}-${m}-${day}`;
+    }
+
+    goToLeaveHistory(): void {
+        this.router.navigate(['/leave-application/history']);
+    }
+
+    goToMovementList(): void {
+        this.router.navigate(['/movement-list']);
     }
 
     private getPostingStatusExportRows(L: any): string[][] {

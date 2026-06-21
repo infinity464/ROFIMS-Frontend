@@ -15,6 +15,8 @@ import { RabUnitAorMap } from '../../Components/basic-setup/rab-unit-aor-map/rab
 import { ServingMembersService } from '@/services/serving-members.service';
 import { LeaveInfoService } from '@/services/leave-info.service';
 import { MovementInfoService } from '@/services/movement-info.service';
+import { PostingService } from '@/services/posting.service';
+import type { EmployeePostingProcessingStatusDto } from '@/models/posting.model';
 import { PermanentPostingMORecordService } from '@/services/permanent-posting-mo-record.service';
 import { PermanentPostingJoineeDetailService } from '@/services/permanent-posting-joinee-detail.service';
 import { StatisticsService, type ManpowerSummaryResponse } from '@/services/statistics.service';
@@ -109,6 +111,21 @@ type LookupCard = {
     /** On a temporary movement whose return has not been recorded. */
     onMovement: boolean;
     movementDestination: string;
+    /** In-progress posting line, e.g. "New Posting: Notesheet - Draft" (empty when none). */
+    postingStatus: string;
+};
+
+/** Posting-step code → display label (mirrors profile-labels.ts 'posting.step.*'). */
+const POSTING_STEP_LABELS: Record<string, string> = {
+    DraftPosting: 'Draft Posting',
+    DraftInterPosting: 'Draft Inter Posting',
+    NoteSheetDraft: 'Notesheet - Draft',
+    NoteSheetInitiator: 'Notesheet - Pending Initiator',
+    NoteSheetRecommender: 'Notesheet - Pending Recommender',
+    NoteSheetFinalApproval: 'Notesheet - Pending Final Approval',
+    NoteSheetApproved: 'Notesheet Approved',
+    PostingOrderGenerated: 'Posting Order Generated',
+    PostingOrderApproved: 'Posting Order Approved'
 };
 type CalItem = { id: string; day: string; mon: string; dow: string; title: string; description: string; type: 'task' | 'event'; sev: Severity; tag: string; sortTs: number };
 
@@ -352,6 +369,9 @@ type CalItem = { id: string; day: string; mon: string; dow: string; title: strin
                                     @if (r.nameBn) {
                                         <div class="text-muted-color truncate">{{ r.nameBn }}</div>
                                     }
+                                    @if (r.postingStatus) {
+                                        <div class="text-primary font-medium text-sm mt-1 truncate" [title]="r.postingStatus">{{ r.postingStatus }}</div>
+                                    }
                                     <div class="flex flex-wrap gap-2 mt-3">
                                         <span class="inline-flex items-center gap-2 px-3 py-1 rounded-md bg-surface-100 dark:bg-surface-800 border border-surface-200 dark:border-surface-700 text-sm">
                                             <span class="text-muted-color uppercase text-xs">RAB ID</span>
@@ -495,16 +515,7 @@ type CalItem = { id: string; day: string; mon: string; dow: string; title: strin
                             <div class="text-muted-color text-xs uppercase mb-1">Files</div>
                             <div class="flex flex-col items-start gap-1">
                                 @for (f of noticeFiles(n); track f.fileId) {
-                                    <button
-                                        type="button"
-                                        pButton
-                                        text
-                                        size="small"
-                                        class="justify-start"
-                                        icon="pi pi-paperclip"
-                                        [label]="f.fileName"
-                                        (click)="downloadNoticeFile(f)"
-                                    ></button>
+                                    <button type="button" pButton text size="small" class="justify-start" icon="pi pi-paperclip" [label]="f.fileName" (click)="downloadNoticeFile(f)"></button>
                                 }
                             </div>
                         </div>
@@ -679,6 +690,7 @@ export class Dashboard implements OnInit, OnDestroy {
     private empService = inject(EmpService);
     private leaveInfoService = inject(LeaveInfoService);
     private movementInfoService = inject(MovementInfoService);
+    private postingService = inject(PostingService);
     private noticeService = inject(NoticeService);
     notificationService = inject(NotificationService);
     private chatService = inject(ChatService);
@@ -757,6 +769,33 @@ export class Dashboard implements OnInit, OnDestroy {
         this.loadLookupPhoto(card);
         this.loadLeaveStatus(card);
         this.loadMovementStatus(card);
+        this.loadPostingStatus(card);
+    }
+
+    /** Builds the in-progress posting line shown on the member profile (New / Inter posting). */
+    private loadPostingStatus(card: LookupCard): void {
+        this.postingService.getEmployeePostingProcessingStatus(card.employeeId).subscribe({
+            next: (dto) => {
+                if (this.lookupResult !== card || !dto) return;
+                card.postingStatus = this.buildPostingStatus(dto);
+            },
+            error: () => {}
+        });
+    }
+
+    private buildPostingStatus(dto: EmployeePostingProcessingStatusDto): string {
+        const parts: string[] = [];
+        if (dto.newPostingStep && !dto.newPostingOrderReceived) {
+            parts.push(`New Posting: ${this.postingStepLabel(dto.newPostingStep)}`);
+        }
+        if (dto.interPostingStep && !dto.interPostingOrderReceived) {
+            parts.push(`Inter Posting: ${this.postingStepLabel(dto.interPostingStep)}`);
+        }
+        return parts.join(' • ');
+    }
+
+    private postingStepLabel(step: string): string {
+        return POSTING_STEP_LABELS[step] ?? step;
     }
 
     /** Flags the card as on-leave when today falls inside one of this year's leave windows. */
@@ -842,7 +881,8 @@ export class Dashboard implements OnInit, OnDestroy {
             leaveFrom: null,
             leaveTo: null,
             onMovement: false,
-            movementDestination: ''
+            movementDestination: '',
+            postingStatus: ''
         };
     }
 
@@ -966,9 +1006,7 @@ export class Dashboard implements OnInit, OnDestroy {
         try {
             const refs = JSON.parse(n.filesReferences) as { FileId?: number; fileId?: number; fileName?: string }[];
             if (!Array.isArray(refs)) return [];
-            return refs
-                .map((r) => ({ fileId: (r.FileId ?? r.fileId) as number, fileName: r.fileName ?? 'file' }))
-                .filter((r) => r.fileId != null);
+            return refs.map((r) => ({ fileId: (r.FileId ?? r.fileId) as number, fileName: r.fileName ?? 'file' })).filter((r) => r.fileId != null);
         } catch {
             return [];
         }
