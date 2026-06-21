@@ -17,6 +17,8 @@ import { PreviousRABServiceService } from '@/services/previous-rab-service.servi
 import { PromotionInfoService } from '@/services/promotion-info.service';
 import { DisciplineInfoService } from '@/services/discipline-info.service';
 import { DraftCourseService } from '@/services/draft-course.service';
+import { AddressInfoService } from '@/services/address-info.service';
+import { FamilyInfoService } from '@/services/family-info-service';
 import { IdentityUserMemberTypeAccessService } from '@/services/identity-user-member-type-access.service';
 import { SharedService } from '@/shared/services/shared-service';
 import { Router } from '@angular/router';
@@ -76,8 +78,12 @@ export class ReportBioDataIndividualComponent implements OnInit, OnDestroy {
     private previousRabUnits: string[] = [];
     private previousRabUnitsBN: string[] = [];
     private promotionPresentDate: string | null = null;
+    private presentUnitJoiningDate: string | null = null;
     private hasPunishment: boolean | null = null;
     private hasRfts: boolean | null = null;
+    private spouseDistrict: string | null = null;
+    private spouseDistrictBN: string | null = null;
+    private childrenCount: number | null = null;
 
     loading = false;
     searched = false;
@@ -109,6 +115,8 @@ export class ReportBioDataIndividualComponent implements OnInit, OnDestroy {
         private promotionInfoService: PromotionInfoService,
         private disciplineInfoService: DisciplineInfoService,
         private draftCourseService: DraftCourseService,
+        private addressInfoService: AddressInfoService,
+        private familyInfoService: FamilyInfoService,
         private messageService: MessageService,
         private memberTypeAccess: IdentityUserMemberTypeAccessService,
         private sharedService: SharedService,
@@ -134,6 +142,26 @@ export class ReportBioDataIndividualComponent implements OnInit, OnDestroy {
         const s = String(v);
         return this.isBn ? BanglaNumerals.toBangla(s) : s;
     }
+    /** True when a family relation is a child (son/daughter), matched loosely
+        across EN/BN spellings: son, daughter, child, ছেলে, মেয়ে, পুত্র, কন্যা. */
+    private isChildRelation(en: string | null | undefined, bn: string | null | undefined): boolean {
+        const text = `${en ?? ''} ${bn ?? ''}`.toLowerCase();
+        return /son|daughter|child|ছেলে|মেয়ে|পুত্র|কন্যা/.test(text);
+    }
+    /** Count children from family rows by relation type. */
+    private countChildren(rows: { relation?: string | null; relationBN?: string | null }[]): number {
+        return rows.filter(r => this.isChildRelation(r?.relation, r?.relationBN)).length;
+    }
+    /** Height stored in total inches → "4ft 5.5 inch" (ft dropped when 0). */
+    formatHeight(v: string | number | null | undefined): string {
+        if (v == null || String(v).trim() === '') return '-';
+        const total = Number(v);
+        if (isNaN(total)) return '-';
+        const feet = Math.floor(total / 12);
+        const inches = Math.round((total - feet * 12) * 100) / 100;
+        const ft = feet > 0 ? `${this.displayNum(feet)}${this.lx('ft', 'ফুট')} ` : '';
+        return `${ft}${this.displayNum(inches)} ${this.lx('inch', 'ইঞ্চি')}`;
+    }
     codeValue(en: string | null | undefined, bn: string | null | undefined): string {
         if (this.isBn && bn != null && bn.trim() !== '') return bn.trim();
         const v = en ?? bn;
@@ -150,7 +178,10 @@ export class ReportBioDataIndividualComponent implements OnInit, OnDestroy {
     }
     private lx(en: string, bn: string): string { return this.isBn ? bn : en; }
     private joinParts(parts: (string | null | undefined)[], sep: string): string {
-        const list = parts.map(p => (p ?? '').toString().trim()).filter(p => p && p !== '-');
+        const naTokens = new Set(['-', 'n/a', 'na', 'অপ্রযোজ্য']);
+        const list = parts
+            .map(p => (p ?? '').toString().trim())
+            .filter(p => p && !naTokens.has(p.toLowerCase()));
         return list.length ? list.join(sep) : '-';
     }
 
@@ -292,7 +323,7 @@ export class ReportBioDataIndividualComponent implements OnInit, OnDestroy {
         { key: 'passport',            labelEN: 'Passport No',           labelBN: 'পাসপোর্ট নম্বর',         section: 2, kind: 'text', defaultVisible: false },
         // 03 — District, Family & Education
         { key: 'ownDistrict',         labelEN: 'Own District',          labelBN: 'নিজ জেলা',               section: 3, kind: 'text', defaultVisible: true },
-        { key: 'wifeDistrict',        labelEN: 'Wife District',         labelBN: 'স্ত্রীর জেলা',           section: 3, kind: 'text', defaultVisible: true },
+        { key: 'wifeDistrict',        labelEN: 'Spouse District',       labelBN: 'স্বামী/স্ত্রীর জেলা',     section: 3, kind: 'text', defaultVisible: true },
         { key: 'noOfChildren',        labelEN: 'No. of Children',       labelBN: 'সন্তান সংখ্যা',          section: 3, kind: 'text', defaultVisible: true },
         // 04 — RAB Experience & Training
         { key: 'orientation',         labelEN: 'Orientation Training',  labelBN: 'ওরিয়েন্টেশন প্রশিক্ষণ', section: 4, kind: 'orientation', defaultVisible: true },
@@ -369,7 +400,7 @@ export class ReportBioDataIndividualComponent implements OnInit, OnDestroy {
             case 'promotionPresent':   return this.formatDate(this.promotionPresentDate);
             case 'joiningRab':         return this.formatDate(p.joiningDate);
             case 'rabUnit':            return this.codeValue(p.rabUnit, p.rabUnitBN);
-            case 'joiningPresentUnit': return '-';
+            case 'joiningPresentUnit': return this.formatDate(this.presentUnitJoiningDate);
             case 'appointment':        return this.codeValue(p.appointment, p.appointmentBN);
             case 'memberType':         return this.codeValue(p.memberType, p.memberTypeBN);
             case 'motherOrganization': return this.codeValue(p.motherOrganization, p.motherOrganizationBN);
@@ -377,7 +408,7 @@ export class ReportBioDataIndividualComponent implements OnInit, OnDestroy {
             case 'location':           return this.codeValue(p.location, p.locationBN);
             case 'dateOfBirth':        return this.formatDate(p.dateOfBirth);
             case 'bloodGroup':         return this.val(p.bloodGroup);
-            case 'height':             return p.height != null ? `${this.displayNum(p.height)} ${this.lx('Inch', 'ইঞ্চি')}` : '-';
+            case 'height':             return this.formatHeight(p.height);
             case 'weight':             return p.weight != null ? `${this.displayNum(p.weight)} ${this.lx('lbs', 'পাউন্ড')}` : '-';
             case 'religion':           return this.codeValue(p.religion, p.religionBN);
             case 'maritalStatus':      return this.codeValue(p.maritalStatus, p.maritalStatusBN);
@@ -396,8 +427,8 @@ export class ReportBioDataIndividualComponent implements OnInit, OnDestroy {
             case 'passport':           return this.displayNum(p.passportNo);
             case 'identificationMark': return this.val(p.identificationMark);
             case 'ownDistrict':        return this.codeValue(p.permanentDistrictTypeName, p.permanentDistrictTypeNameBN);
-            case 'wifeDistrict':       return '-';
-            case 'noOfChildren':       return '-';
+            case 'wifeDistrict':       return this.codeValue(this.spouseDistrict, this.spouseDistrictBN);
+            case 'noOfChildren':       return this.childrenCount == null ? '-' : this.displayNum(this.childrenCount);
             case 'prevService':        return this.previousServiceInRab;
             default:                   return '-';
         }
@@ -529,8 +560,12 @@ export class ReportBioDataIndividualComponent implements OnInit, OnDestroy {
         this.previousRabUnits = [];
         this.previousRabUnitsBN = [];
         this.promotionPresentDate = null;
+        this.presentUnitJoiningDate = null;
         this.hasPunishment = null;
         this.hasRfts = null;
+        this.spouseDistrict = null;
+        this.spouseDistrictBN = null;
+        this.childrenCount = null;
         if (this.profileImageUrl) { URL.revokeObjectURL(this.profileImageUrl); this.profileImageUrl = null; }
     }
 
@@ -544,14 +579,25 @@ export class ReportBioDataIndividualComponent implements OnInit, OnDestroy {
             promotion: this.promotionInfoService.getViewByEmployeeId(employeeId).pipe(catchError(() => of([] as any[]))),
             discipline: this.disciplineInfoService.getViewByEmployeeId(employeeId).pipe(catchError(() => of([] as any[]))),
             rfts: this.draftCourseService.getRftsTrainingByEmployeeId(employeeId).pipe(catchError(() => of([] as any[]))),
+            address: this.addressInfoService.getViewByEmployeeId(employeeId).pipe(catchError(() => of([] as any[]))),
+            family: this.familyInfoService.getFamilyInfoByEmployeeView(employeeId).pipe(catchError(() => of([] as any[]))),
         }).subscribe({
-            next: ({ profile, previousRab, promotion, discipline, rfts }) => {
+            next: ({ profile, previousRab, promotion, discipline, rfts, address, family }) => {
                 if (!profile) { this.profile = null; this.loading = false; this.showAccessDeniedDialog = true; return; }
                 this.profile = profile;
 
                 const prev = (previousRab ?? []).filter((r: any) => (r.employeeID ?? r.EmployeeID) === employeeId);
                 this.previousRabUnits = prev.map((r: any) => (r.rabUnitName ?? r.RABUnitName ?? '')).filter(Boolean);
                 this.previousRabUnitsBN = prev.map((r: any) => (r.rabUnitNameBN ?? r.RABUnitNameBN ?? '')).filter(Boolean);
+
+                // Joining in present unit = serviceFrom of the currently-active
+                // RAB-service posting; fall back to the latest serviceFrom.
+                const active = prev.find((r: any) => (r.isCurrentlyActive ?? r.IsCurrentlyActive) === true);
+                const latest = [...prev]
+                    .map((r: any) => r.serviceFrom ?? r.ServiceFrom ?? null)
+                    .filter(Boolean)
+                    .sort((a: string, b: string) => new Date(b).getTime() - new Date(a).getTime())[0] ?? null;
+                this.presentUnitJoiningDate = (active?.serviceFrom ?? active?.ServiceFrom) ?? latest;
 
                 // Promotion to present rank: prefer a record whose promoted rank
                 // matches the member's current rank; else the most recent promotion.
@@ -567,6 +613,19 @@ export class ReportBioDataIndividualComponent implements OnInit, OnDestroy {
                 this.hasPunishment = disc.length > 0;
 
                 this.hasRfts = (rfts ?? []).length > 0;
+
+                // Spouse district comes from the spouse permanent address row
+                // (the profile overview only carries the member's own district).
+                const addrRows = (address ?? []).filter((r: any) => (r.employeeID ?? r.EmployeeID) === employeeId);
+                const isSpousePerm = (r: any) => {
+                    const t = String(r?.locationType ?? '').toLowerCase();
+                    return t.includes('spouse') && t.includes('perm');
+                };
+                const spouseAddr = addrRows.find(isSpousePerm) ?? addrRows.find((r: any) => String(r?.locationType ?? '').toLowerCase().includes('spouse'));
+                this.spouseDistrict = spouseAddr?.district ?? null;
+                this.spouseDistrictBN = spouseAddr?.districtBN ?? null;
+
+                this.childrenCount = this.countChildren((family ?? []) as any[]);
 
                 this.loadProfileImage(profile);
                 this.loading = false;

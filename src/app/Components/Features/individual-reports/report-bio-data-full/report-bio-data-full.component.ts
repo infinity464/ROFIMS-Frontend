@@ -148,6 +148,7 @@ export class ReportBioDataFullIndividualComponent implements OnInit, OnDestroy {
                 { key: 'weight', labelEN: 'Weight', labelBN: 'ওজন', defaultVisible: false },
                 { key: 'religion', labelEN: 'Religion', labelBN: 'ধর্ম', defaultVisible: true },
                 { key: 'maritalStatus', labelEN: 'Marital Status', labelBN: 'বৈবাহিক অবস্থা', defaultVisible: true },
+                { key: 'noOfChildren', labelEN: 'No. of Children', labelBN: 'সন্তান সংখ্যা', defaultVisible: true },
                 { key: 'gender', labelEN: 'Gender', labelBN: 'লিঙ্গ', defaultVisible: false },
                 { key: 'gallantry', labelEN: 'Gallantry Award', labelBN: 'বীরত্বসূচক পদক', defaultVisible: true },
                 { key: 'professionalQual', labelEN: 'Professional Qualification', labelBN: 'পেশাগত যোগ্যতা', defaultVisible: true },
@@ -425,6 +426,26 @@ export class ReportBioDataFullIndividualComponent implements OnInit, OnDestroy {
         if (v == null || String(v).trim() === '') return '-';
         return this.isBn ? BanglaNumerals.toBangla(String(v)) : String(v);
     }
+    /** True when a family relation is a child (son/daughter), matched loosely
+        across EN/BN spellings: son, daughter, child, ছেলে, মেয়ে, পুত্র, কন্যা. */
+    private isChildRelation(en: string | null | undefined, bn: string | null | undefined): boolean {
+        const text = `${en ?? ''} ${bn ?? ''}`.toLowerCase();
+        return /son|daughter|child|ছেলে|মেয়ে|পুত্র|কন্যা/.test(text);
+    }
+    /** Count children from family rows by relation type. */
+    private countChildren(rows: { relation?: string | null; relationBN?: string | null }[]): number {
+        return rows.filter(r => this.isChildRelation(r?.relation, r?.relationBN)).length;
+    }
+    /** Height stored in total inches → "4ft 5.5 inch" (ft dropped when 0). */
+    formatHeight(v: string | number | null | undefined): string {
+        if (v == null || String(v).trim() === '') return '-';
+        const total = Number(v);
+        if (isNaN(total)) return '-';
+        const feet = Math.floor(total / 12);
+        const inches = Math.round((total - feet * 12) * 100) / 100;
+        const ft = feet > 0 ? `${this.displayNum(feet)}${this.lx('ft', 'ফুট')} ` : '';
+        return `${ft}${this.displayNum(inches)} ${this.lx('inch', 'ইঞ্চি')}`;
+    }
     codeValue(en: string | null | undefined, bn: string | null | undefined): string {
         if (this.isBn && bn != null && bn.trim() !== '') return bn.trim();
         const v = en ?? bn;
@@ -441,7 +462,10 @@ export class ReportBioDataFullIndividualComponent implements OnInit, OnDestroy {
     }
     private lx(en: string, bn: string): string { return this.isBn ? bn : en; }
     private joinParts(parts: (string | null | undefined)[], sep: string): string {
-        const list = parts.map(p => (p ?? '').toString().trim()).filter(p => p && p !== '-');
+        const naTokens = new Set(['-', 'n/a', 'na', 'অপ্রযোজ্য']);
+        const list = parts
+            .map(p => (p ?? '').toString().trim())
+            .filter(p => p && !naTokens.has(p.toLowerCase()));
         return list.length ? list.join(sep) : '-';
     }
 
@@ -585,10 +609,11 @@ export class ReportBioDataFullIndividualComponent implements OnInit, OnDestroy {
             case 'location':           return this.codeValue(p.location, p.locationBN);
             case 'dateOfBirth':        return this.formatDate(p.dateOfBirth);
             case 'bloodGroup':         return this.val(p.bloodGroup);
-            case 'height':             return p.height != null ? `${this.displayNum(p.height)} ${this.lx('Inch', 'ইঞ্চি')}` : '-';
+            case 'height':             return this.formatHeight(p.height);
             case 'weight':             return p.weight != null ? `${this.displayNum(p.weight)} ${this.lx('lbs', 'পাউন্ড')}` : '-';
             case 'religion':           return this.codeValue(p.religion, p.religionBN);
             case 'maritalStatus':      return this.codeValue(p.maritalStatus, p.maritalStatusBN);
+            case 'noOfChildren':       return this.displayNum(this.countChildren((this.tableRows?.['family'] ?? []) as any[]));
             case 'gender':             return this.codeValue(p.gender, p.genderBN);
             case 'gallantry':          return this.codeValue(p.gallantryAwardsDecoration, p.gallantryAwardsDecorationBN);
             case 'professionalQual':   return this.codeValue(p.professionalQualification, p.professionalQualificationBN);
