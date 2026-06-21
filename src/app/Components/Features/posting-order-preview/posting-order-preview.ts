@@ -1199,10 +1199,9 @@ export class PostingOrderPreviewPageComponent implements OnInit {
     }
 
     private loadCancelledInterPosting(emps: PostingOrderEmployeeRow[]): void {
-        if (!this.isInterPosting) return;
         const ids = emps.map(e => e.employeeId).filter(Boolean);
         if (ids.length === 0) return;
-        this.postingService.getLastCancelledInterPostingByEmployeeIds(ids).subscribe({
+        this.postingService.getLastCancelledInterPostingByEmployeeIds(ids, this.isInterPosting ? NoteSheetType.InterPosting : NoteSheetType.NewPosting).subscribe({
             next: (list) => {
                 this.cancelledInterMap = {};
                 for (const item of (list ?? [])) {
@@ -1224,13 +1223,15 @@ export class PostingOrderPreviewPageComponent implements OnInit {
     /** Combined remark — same content as the note-sheet preview / order generate. */
     empCombinedRemarks(emp: PostingOrderEmployeeRow): string {
         const base = this.isInterPosting ? emp.interPostingRemark : emp.sendingRemark;
-        // The "previous transfer order cancelled" note refers to an EARLIER order, so
+        // The "previous posting cancelled" note refers to an EARLIER order, so
         // skip it when the cancelled order is the one being previewed.
         const cancelled = this.cancelledInterMap[emp.employeeId];
-        const cancelNote = (this.isInterPosting && cancelled?.postingOrderNo
-                            && cancelled.postingOrderNo !== this.postingOrderNo)
-            ? (this.isBangla ? 'পূর্ববর্তী বদলির আদেশ বাতিল করা হলো।' : 'Previous transfer order cancelled.')
-            : '';
+        let cancelNote = '';
+        if (cancelled?.postingOrderNo && cancelled.postingOrderNo !== this.postingOrderNo) {
+            cancelNote = this.isInterPosting
+                ? (this.isBangla ? 'পূর্ববর্তী বদলির আদেশ বাতিল করা হলো।' : 'Previous transfer order cancelled.')
+                : (this.isBangla ? 'পূর্ববর্তী পোস্টিং থেকে বাদ দেওয়া হয়েছে।' : 'Removed from previous posting.');
+        }
         return [base, emp.noteSheetRemarks, this.getRemovalRemark(emp), cancelNote]
             .filter(s => s?.trim()).join(', ');
     }
@@ -1573,7 +1574,7 @@ html, body { margin: 0; padding: 0; background: transparent; }
                     ...(sp ? [this.empPrevWorkplace(emp)] : []),
                     this.empTransferUnit(emp),
                     this.empRabId(emp),
-                    ...(sr ? [this.getRemovalRemark(emp)] : [])
+                    ...(sr ? [this.empCombinedRemarks(emp)] : [])
                 ];
             return new TableRow({
                 children: vals.map((val, ci) => {

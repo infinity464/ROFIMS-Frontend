@@ -593,7 +593,7 @@
                             <td *ngIf="showPrevWorkplaceUnit" style="white-space: pre-line;">{{ empPrevWorkplace(emp) }}</td>
                             <td>{{ empTransferUnit(emp) }}</td>
                             <td>{{ empRabId(emp) }}</td>
-                            <td *ngIf="showRemarks">{{ getRemovalRemark(emp) }}</td>
+                            <td *ngIf="showRemarks">{{ empCombinedRemarks(emp) }}</td>
                         </tr>
                     </ng-container>
                 </tbody>

@@ -2,6 +2,7 @@ import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { BehaviorSubject, Observable, map, tap } from 'rxjs';
 import { environment } from '@/Core/Environments/environment';
+import { NoteSheetType } from '@/models/enums';
 import {
     DraftPostingList,
     DraftPostingMasterDto,
@@ -197,10 +198,10 @@ export class PostingService {
         );
     }
 
-    /** Get the most recent cancelled inter posting (joining cancelled) per employee. */
-    getLastCancelledInterPostingByEmployeeIds(employeeIds: number[]): Observable<CancelledInterPostingInfo[]> {
+    /** Get the most recent cancelled posting (joining cancelled) per employee, by posting type. */
+    getLastCancelledInterPostingByEmployeeIds(employeeIds: number[], postingType: string = NoteSheetType.InterPosting): Observable<CancelledInterPostingInfo[]> {
         return this.http.post<CancelledInterPostingInfo[]>(
-            `${API}/GetLastCancelledInterPostingByEmployeeIds`, employeeIds
+            `${API}/GetLastCancelledInterPostingByEmployeeIds?postingType=${encodeURIComponent(postingType)}`, employeeIds
         );
     }
 

@@ -167,10 +167,10 @@ export class NotesheetPreviewPostingComponent extends NotesheetPreviewBase imple
     }
 
     private loadCancelledInterPosting(emps: { employeeId: number }[]): void {
-        if (!this.isInterPosting()) return;
         const ids = emps.map(e => e.employeeId).filter(Boolean);
         if (ids.length === 0) return;
-        this.postingService.getLastCancelledInterPostingByEmployeeIds(ids).subscribe({
+        const postingType = this.isInterPosting() ? NoteSheetType.InterPosting : NoteSheetType.NewPosting;
+        this.postingService.getLastCancelledInterPostingByEmployeeIds(ids, postingType).subscribe({
             next: (list) => {
                 this.cancelledInterMap = {};
                 for (const item of (list ?? [])) {
@@ -1064,23 +1064,26 @@ export class NotesheetPreviewPostingComponent extends NotesheetPreviewBase imple
         const removalRemark = this.isEnglish()
             ? (history?.removalRemark || '')
             : (history?.removalRemarkBN || history?.removalRemark || '');
+        // After the main remarks, append the "previous posting cancelled" note when this
+        // member's last posting (of this type) was cancelled.
+        const cancelNote = this.getCancelledInterNote(emp);
         if (this.isInterPosting()) {
-            // After the main remarks, append the "previous transfer order may be
-            // cancelled" note when this member's last inter posting was cancelled.
-            const cancelNote = this.getCancelledInterNote(emp);
             return [emp.interPostingRemark, emp.remarks, removalRemark, cancelNote].filter(s => s?.trim()).join(', ');
         }
-        return [emp.sendingRemark, emp.remarks, removalRemark].filter(s => s?.trim()).join(', ');
+        return [emp.sendingRemark, emp.remarks, removalRemark, cancelNote].filter(s => s?.trim()).join(', ');
     }
 
     /**
-     * Simple note when this member's last inter posting was cancelled.
-     * (cancelledInterMap is just the flag that a cancelled order exists.)
+     * Note when this member's last posting was cancelled (cancelledInterMap is the flag).
+     * Inter: "previous transfer order cancelled"; New: "removed from previous posting".
      */
     private getCancelledInterNote(emp: DraftPostingEmployeeRow): string {
         const c = this.cancelledInterMap[emp.employeeId];
         if (!c?.postingOrderNo) return '';
-        return this.isEnglish() ? 'Previous transfer order cancelled.' : 'পূর্ববর্তী বদলির আদেশ বাতিল করা হলো।';
+        if (this.isInterPosting()) {
+            return this.isEnglish() ? 'Previous transfer order cancelled.' : 'পূর্ববর্তী বদলির আদেশ বাতিল করা হলো।';
+        }
+        return this.isEnglish() ? 'Removed from previous posting.' : 'পূর্ববর্তী পোস্টিং থেকে বাদ দেওয়া হয়েছে।';
     }
 
     getPreviousWorkplace(emp: DraftPostingEmployeeRow): string {

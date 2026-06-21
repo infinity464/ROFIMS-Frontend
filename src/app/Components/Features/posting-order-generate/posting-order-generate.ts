@@ -178,20 +178,18 @@ export class PostingOrderGenerateComponent implements OnInit {
             },
             error: () => {}
         });
-        if (isInter) {
-            this.postingService.getLastCancelledInterPostingByEmployeeIds(ids).subscribe({
-                next: (list) => {
-                    this.cancelledInterMap = {};
-                    for (const it of (list ?? [])) {
-                        if (it.postingOrderNo) this.cancelledInterMap[it.employeeId] = it;
-                    }
-                },
-                error: () => {}
-            });
-        }
+        this.postingService.getLastCancelledInterPostingByEmployeeIds(ids, isInter ? NoteSheetType.InterPosting : NoteSheetType.NewPosting).subscribe({
+            next: (list) => {
+                this.cancelledInterMap = {};
+                for (const it of (list ?? [])) {
+                    if (it.postingOrderNo) this.cancelledInterMap[it.employeeId] = it;
+                }
+            },
+            error: () => {}
+        });
     }
 
-    /** Combined remark — same content as the inter posting note-sheet preview. */
+    /** Combined remark — same content as the note-sheet preview. */
     getEmployeeRemarks(emp: NoteSheetEmployee): string {
         const isInter = this.selectedPostingType === NoteSheetType.InterPosting;
         const history = this.removalHistoryMap[emp.employeeId];
@@ -199,9 +197,12 @@ export class PostingOrderGenerateComponent implements OnInit {
             ? (history?.removalRemarkBN || history?.removalRemark || '')
             : (history?.removalRemark || '');
         const base = isInter ? emp.interPostingRemark : emp.sendingRemark;
-        const cancelNote = (isInter && this.cancelledInterMap[emp.employeeId]?.postingOrderNo)
-            ? (this.isBangla ? 'পূর্ববর্তী বদলির আদেশ বাতিল করা হলো।' : 'Previous transfer order cancelled.')
-            : '';
+        let cancelNote = '';
+        if (this.cancelledInterMap[emp.employeeId]?.postingOrderNo) {
+            cancelNote = isInter
+                ? (this.isBangla ? 'পূর্ববর্তী বদলির আদেশ বাতিল করা হলো।' : 'Previous transfer order cancelled.')
+                : (this.isBangla ? 'পূর্ববর্তী পোস্টিং থেকে বাদ দেওয়া হয়েছে।' : 'Removed from previous posting.');
+        }
         return [base, emp.remarks, removalRemark, cancelNote].filter(s => s?.trim()).join(', ');
     }
 

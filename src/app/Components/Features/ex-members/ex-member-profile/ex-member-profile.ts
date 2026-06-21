@@ -67,6 +67,21 @@ export interface EmployeeApprovedNoteSheetRow {
     officeOrderStatus: string | null;
 }
 
+/** One row from usp_GetEmployeeNoteSheetProcessingList (all note-sheet types + downstream status). */
+export interface EmployeeNoteSheetProcessingRow {
+    documentCategory: string;
+    noteSheetType: string;
+    noteSheetId: number | null;
+    noteSheetNo: string | null;
+    noteSheetDate: string | null;
+    subject: string | null;
+    downstreamDocType: string | null;
+    downstreamDocNo: string | null;
+    downstreamDocDate: string | null;
+    downstreamApprovalStatus: string | null;
+    processingStatus: string;
+}
+
 @Component({
     selector: 'app-ex-member-profile',
     standalone: true,
@@ -121,7 +136,7 @@ export class ExMemberProfile implements OnInit, OnDestroy {
     rftsTrainingList: RftsTrainingRow[] = [];
     promotionList: PromotionInfoByEmployeeView[] = [];
     documentList: EmployeeDocumentReferenceItem[] = [];
-    approvedNoteSheetList: EmployeeApprovedNoteSheetRow[] = [];
+    approvedNoteSheetList: EmployeeNoteSheetProcessingRow[] = [];
     exBdLeaveProgressList: ExBdLeaveApplicationProgressView[] = [];
     permanentMovementList: MovementInfoByEmployeeDto[] = [];
     temporaryMovementList: MovementInfoByEmployeeDto[] = [];
@@ -308,7 +323,7 @@ export class ExMemberProfile implements OnInit, OnDestroy {
         // Previous RAB Service
         const prevRabRows = this.previousOnlyRabList.map((row, i) => [
             this.rowNum(i) + '.',
-            this.codeValue(row.rabUnitName, row.rabUnitNameBN),
+            this.rabOrgChain(row),
             formatPartialDate(row.serviceFrom, row.serviceFromPrecision),
             formatPartialDate(row.serviceTo, row.serviceToPrecision),
             this.codeValue(row.appointmentName, row.appointmentNameBN),
@@ -467,18 +482,19 @@ export class ExMemberProfile implements OnInit, OnDestroy {
         if (remRows.length === 0) remRows.push([L['empty.noAdditionalRemarks']]);
         addSection(L['section.additionalRemarks'], [L['table.ser'], L['table.additionalRemarks']], remRows);
 
-        // Approved Note Sheets
+        // Note Sheets (all types + downstream status)
         const nsRows = this.approvedNoteSheetList.map((row, i) => [
             this.rowNum(i) + '.',
+            this.getNoteSheetTypeLabel(row.noteSheetType),
             row.noteSheetNo || '—',
             this.formatDateOnly(row.noteSheetDate),
             row.subject || '—',
-            this.formatDateOnly(row.finalApprovalApprovedDate),
-            row.officeOrderLetterNo || '—',
-            row.officeOrderStatus || '—'
+            this.getPostingStepLabel(row.processingStatus),
+            row.downstreamDocNo || '—',
+            row.downstreamApprovalStatus || '—'
         ]);
-        if (nsRows.length === 0) nsRows.push([L['empty.noApprovedNoteSheets']]);
-        addSection(L['section.approvedNoteSheets'], [L['table.ser'], L['table.noteSheetNo'], L['table.noteSheetDate'], L['table.subject'], L['table.approvedDate'], L['table.officeOrderNo'], L['table.officeOrderStatus']], nsRows);
+        if (nsRows.length === 0) nsRows.push([L['empty.noNoteSheets']]);
+        addSection(L['section.noteSheets'], [L['table.ser'], L['table.type'], L['table.noteSheetNo'], L['table.noteSheetDate'], L['table.subject'], L['table.processingStatus'], L['table.documentNo'], L['table.documentStatus']], nsRows);
 
         // Documents
         const docRows = this.documentList.map((row, i) => [this.rowNum(i) + '.', this.getDocumentSourceLabel(row), this.getDocumentFileName(row)]);
@@ -540,6 +556,22 @@ export class ExMemberProfile implements OnInit, OnDestroy {
     codeValue(enVal: string | null | undefined, bnVal: string | null | undefined): string {
         if (this.isBn && bnVal != null && bnVal !== '') return bnVal;
         return enVal != null && enVal !== '' ? enVal : '-';
+    }
+
+    /**
+     * RAB org chain for a Previous RAB Service row: Unit, Wing, Branch, Sub Branch,
+     * Section, Sub Section — comma-joined, including only the levels that are filled in.
+     */
+    rabOrgChain(row: VwPreviousRABServiceInfoModel): string {
+        const parts = [
+            this.codeValue(row.rabUnitName, row.rabUnitNameBN),
+            this.codeValue(row.rabWingName, row.rabWingNameBN),
+            this.codeValue(row.rabBranchName, row.rabBranchNameBN),
+            this.codeValue(row.rabSubBranchName, row.rabSubBranchNameBN),
+            this.codeValue(row.rabSectionName, row.rabSectionNameBN),
+            this.codeValue(row.rabSubSectionName, row.rabSubSectionNameBN),
+        ].filter((p) => p && p !== '-');
+        return parts.length ? parts.join(', ') : '-';
     }
 
     valDisplay(v: string | number | null | undefined): string {
@@ -830,7 +862,7 @@ export class ExMemberProfile implements OnInit, OnDestroy {
         this.loadSection('rftsTraining', this.draftCourseService.getRftsTrainingByEmployeeId(id), (v) => (this.rftsTrainingList = v ?? []));
         this.loadSection(
             'approvedNoteSheets',
-            this.http.get<EmployeeApprovedNoteSheetRow[]>(`${environment.apis.core}/NoteSheetReferenceEmployee/GetApprovedNoteSheetsByEmployeeId/${id}`),
+            this.http.get<EmployeeNoteSheetProcessingRow[]>(`${environment.apis.core}/Posting/GetEmployeeNoteSheetProcessingList/${id}`),
             (v) => (this.approvedNoteSheetList = Array.isArray(v) ? v : [])
         );
         this.loadSection('exBdLeaveProgress', this.exBdLeaveAppService.getProgressByEmployee(id), (v) => (this.exBdLeaveProgressList = Array.isArray(v) ? v : []));
@@ -892,6 +924,12 @@ export class ExMemberProfile implements OnInit, OnDestroy {
     getPostingStepLabel(step: string): string {
         const key = `posting.step.${step}` as any;
         return (this.L as any)[key] ?? step;
+    }
+
+    /** Friendly label for a note-sheet type (NewPosting / InterPosting / General / ExBDLeave). */
+    getNoteSheetTypeLabel(type: string): string {
+        const key = `notesheet.type.${type}` as any;
+        return (this.L as any)[key] ?? type;
     }
 
     /** Terminal exit states (cancelled/removed) — hide the Force Order / Received sub-flags. */
