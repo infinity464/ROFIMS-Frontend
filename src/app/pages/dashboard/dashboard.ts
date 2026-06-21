@@ -13,6 +13,8 @@ import { ChatService } from '@/services/chat.service';
 import { Router } from '@angular/router';
 import { RabUnitAorMap } from '../../Components/basic-setup/rab-unit-aor-map/rab-unit-aor-map';
 import { ServingMembersService } from '@/services/serving-members.service';
+import { LeaveInfoService } from '@/services/leave-info.service';
+import { MovementInfoService } from '@/services/movement-info.service';
 import { PermanentPostingMORecordService } from '@/services/permanent-posting-mo-record.service';
 import { PermanentPostingJoineeDetailService } from '@/services/permanent-posting-joinee-detail.service';
 import { StatisticsService, type ManpowerSummaryResponse } from '@/services/statistics.service';
@@ -99,6 +101,14 @@ type LookupCard = {
     rabUnit: string;
     profileImages: string | null;
     photoUrl: string | null;
+    /** Presently on leave (today within an approved leave window). */
+    onLeave: boolean;
+    leaveType: string;
+    leaveFrom: string | null;
+    leaveTo: string | null;
+    /** On a temporary movement whose return has not been recorded. */
+    onMovement: boolean;
+    movementDestination: string;
 };
 type CalItem = { id: string; day: string; mon: string; dow: string; title: string; description: string; type: 'task' | 'event'; sev: Severity; tag: string; sortTs: number };
 
@@ -354,6 +364,36 @@ type CalItem = { id: string; day: string; mon: string; dow: string; title: strin
                                     </div>
                                 </div>
                             </div>
+
+                            <!-- present status: on leave / on temporary movement -->
+                            @if (r.onLeave || r.onMovement) {
+                                <div class="flex flex-wrap gap-2 px-4 pb-4">
+                                    @if (r.onLeave) {
+                                        <button
+                                            type="button"
+                                            class="inline-flex items-center gap-2 px-3 py-1.5 rounded-md bg-amber-100 dark:bg-amber-400/10 border border-amber-300 dark:border-amber-700 text-amber-800 dark:text-amber-300 text-sm cursor-pointer"
+                                            (click)="goToLeaveHistory()"
+                                            title="View leave history"
+                                        >
+                                            <i class="pi pi-calendar-times"></i>
+                                            <span class="font-medium">On Leave</span>
+                                            <span class="opacity-80">{{ r.leaveType ? '(' + r.leaveType + ') ' : '' }}{{ fmtDate(r.leaveFrom) }} – {{ fmtDate(r.leaveTo) }}</span>
+                                        </button>
+                                    }
+                                    @if (r.onMovement) {
+                                        <button
+                                            type="button"
+                                            class="inline-flex items-center gap-2 px-3 py-1.5 rounded-md bg-blue-100 dark:bg-blue-400/10 border border-blue-300 dark:border-blue-700 text-blue-800 dark:text-blue-300 text-sm cursor-pointer"
+                                            (click)="goToMovementList()"
+                                            title="View movement list"
+                                        >
+                                            <i class="pi pi-map-marker"></i>
+                                            <span class="font-medium">Present Location</span>
+                                            <span class="opacity-80">{{ r.movementDestination || 'On temporary movement' }}</span>
+                                        </button>
+                                    }
+                                </div>
+                            }
 
                             <!-- attribute boxes -->
                             <div class="grid grid-cols-2 sm:grid-cols-4 border-t border-surface-200 dark:border-surface-700">
@@ -637,6 +677,8 @@ export class Dashboard implements OnInit, OnDestroy {
     private statisticsSvc = inject(StatisticsService);
     private calendarSvc = inject(CalendarService);
     private empService = inject(EmpService);
+    private leaveInfoService = inject(LeaveInfoService);
+    private movementInfoService = inject(MovementInfoService);
     private noticeService = inject(NoticeService);
     notificationService = inject(NotificationService);
     private chatService = inject(ChatService);
@@ -713,6 +755,61 @@ export class Dashboard implements OnInit, OnDestroy {
             card.motherUnit = (overview.motherUnit ?? '').toString();
         });
         this.loadLookupPhoto(card);
+        this.loadLeaveStatus(card);
+        this.loadMovementStatus(card);
+    }
+
+    /** Flags the card as on-leave when today falls inside one of this year's leave windows. */
+    private loadLeaveStatus(card: LookupCard): void {
+        const year = new Date().getFullYear();
+        this.leaveInfoService.getViewByEmployeeIdAndYear(card.employeeId, year).subscribe((rows) => {
+            if (this.lookupResult !== card || !rows?.length) return;
+            const today = this.toDateOnly(new Date());
+            const current = rows.find((r) => {
+                const from = r.durationFrom ? this.toDateOnly(new Date(r.durationFrom)) : null;
+                const to = r.durationTo ? this.toDateOnly(new Date(r.durationTo)) : null;
+                return from !== null && to !== null && from <= today && today <= to;
+            });
+            if (!current) return;
+            card.onLeave = true;
+            card.leaveType = (current.typeOfLeave ?? '').toString();
+            card.leaveFrom = current.durationFrom;
+            card.leaveTo = current.durationTo;
+        });
+    }
+
+    /** Flags the card as on temporary movement when an un-returned temporary movement exists. */
+    private loadMovementStatus(card: LookupCard): void {
+        this.movementInfoService.getByEmployeeId(card.employeeId).subscribe((rows) => {
+            if (this.lookupResult !== card || !rows?.length) return;
+            // Rows are ordered newest-first; pick the latest temporary movement not yet returned.
+            const active = rows.find((m) => m.movementType === 2 && !m.isReturned);
+            if (!active) return;
+            card.onMovement = true;
+            card.movementDestination = (active.destinedRABUnit || active.destinedMotherUnit || '').toString();
+        });
+    }
+
+    /** Local YYYY-MM-DD string for date-only comparison (avoids UTC drift). */
+    private toDateOnly(d: Date): string {
+        const m = `${d.getMonth() + 1}`.padStart(2, '0');
+        const day = `${d.getDate()}`.padStart(2, '0');
+        return `${d.getFullYear()}-${m}-${day}`;
+    }
+
+    goToLeaveHistory(): void {
+        this.router.navigate(['/leave-application/history']);
+    }
+
+    goToMovementList(): void {
+        this.router.navigate(['/movement-list']);
+    }
+
+    /** "21 Jun 2026" for a date-only/ISO string; falls back to the raw value. */
+    fmtDate(value: string | null): string {
+        if (!value) return '';
+        const d = new Date(value);
+        return isNaN(d.getTime()) ? value : d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
     }
 
     /** Case-insensitive property read — the API serializes camelCase but field casing varies. */
@@ -739,7 +836,13 @@ export class Dashboard implements OnInit, OnDestroy {
             motherUnit: '',
             rabUnit: '',
             profileImages: (this.ci(e, 'ProfileImages') ?? null) as string | null,
-            photoUrl: null
+            photoUrl: null,
+            onLeave: false,
+            leaveType: '',
+            leaveFrom: null,
+            leaveTo: null,
+            onMovement: false,
+            movementDestination: ''
         };
     }
 
