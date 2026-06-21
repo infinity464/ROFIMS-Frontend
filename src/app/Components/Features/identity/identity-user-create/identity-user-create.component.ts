@@ -283,6 +283,24 @@ export class IdentityUserCreateComponent implements OnInit {
     return parts.length ? `${name} (${parts.join(' / ')})` : name;
   }
 
+  /** Dropdown label: Employee Type | Rank | RAB: x | Service: y | Name. */
+  private buildEmployeeDropdownLabel(
+    memberType: string | null,
+    rank: string | null,
+    rabID: string | null,
+    serviceId: string | null,
+    name: string
+  ): string {
+    const parts = [
+      memberType,
+      rank,
+      rabID ? `RAB: ${rabID}` : null,
+      serviceId ? `Service: ${serviceId}` : null,
+      name
+    ].filter((p): p is string => !!p);
+    return parts.join(' | ');
+  }
+
   loadEmployees(): void {
     this.mappingService.getEmployeesForDropdown().subscribe({
       next: (list) => {
@@ -291,12 +309,16 @@ export class IdentityUserCreateComponent implements OnInit {
           const fullNameEN = x.fullNameEN ?? x.FullNameEN ?? '';
           const rabID = x.rabID ?? x.RABID ?? null;
           const serviceId = x.serviceId ?? x.ServiceId ?? null;
+          const rank = x.rank ?? x.Rank ?? null;
+          const memberType = x.memberType ?? x.MemberType ?? null;
           return {
             employeeID: x.employeeID ?? x.EmployeeID,
             fullNameEN,
             rabID,
             serviceId,
-            displayLabel: this.buildEmployeeLabel(fullNameEN, rabID, serviceId)
+            rank,
+            memberType,
+            displayLabel: this.buildEmployeeDropdownLabel(memberType, rank, rabID, serviceId, fullNameEN)
           };
         });
       },

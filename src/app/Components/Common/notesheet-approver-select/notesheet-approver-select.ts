@@ -176,10 +176,22 @@ export class NotesheetApproverSelectComponent implements OnInit, OnChanges {
                     if (empId) {
                         // Find mapping for extra info
                         const mapping = mappingList.find((m: any) => ((m as any).userId ?? (m as any).UserId) === u.id);
-                        const empName = (mapping as any)?.employeeName ?? null;
-                        const rabId = (mapping as any)?.rabID ?? null;
-                        const serviceId = (mapping as any)?.serviceId ?? null;
-                        const parts = [empName || u.userName, rabId ? `RAB: ${rabId}` : '', serviceId ? `SVC: ${serviceId}` : ''].filter(Boolean);
+                        // Read each field across possible JSON casings (System.Text.Json camelCase
+                        // turns "RABID" into "rABID", so plain `.rabID` would miss it).
+                        const pick = (o: any, ...keys: string[]): string | null => {
+                            for (const k of keys) {
+                                const v = o?.[k];
+                                if (v != null && String(v).trim() !== '') return String(v);
+                            }
+                            return null;
+                        };
+                        const empName = pick(mapping, 'employeeName', 'EmployeeName');
+                        const rabId = pick(mapping, 'rabID', 'rABID', 'rabid', 'RABID', 'RabID');
+                        const serviceId = pick(mapping, 'serviceId', 'ServiceId');
+                        const rank = pick(mapping, 'rank', 'Rank');
+                        const memberType = pick(mapping, 'memberType', 'MemberType');
+                        // Employee Type | Rank | RAB | SVC | Name
+                        const parts = [memberType, rank, rabId ? `RAB: ${rabId}` : '', serviceId ? `SVC: ${serviceId}` : '', empName || u.userName].filter(Boolean);
                         opts.push({ label: parts.join(' | '), value: empId });
                     } else {
                         // User without employee mapping — still show with negative id placeholder
