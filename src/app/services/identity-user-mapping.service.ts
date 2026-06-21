@@ -16,6 +16,8 @@ export interface IdentityUserMappingDto {
   employeeName?: string | null;
   rabID?: string | null;
   serviceId?: string | null;
+  rank?: string | null;
+  memberType?: string | null;
 }
 
 export interface EmployeeDropdownDto {
@@ -23,6 +25,8 @@ export interface EmployeeDropdownDto {
   fullNameEN: string | null;
   rabID: string | null;
   serviceId: string | null;
+  rank?: string | null;
+  memberType?: string | null;
   /** Set by component for dropdown display */
   displayLabel?: string;
 }

@@ -65,6 +65,13 @@ export class PendingPostingJoiningComponent implements OnInit {
     joiningDate: Date | null = null;
     remarks = '';
     saving = false;
+
+    // Cancel joining dialog
+    showCancelDialog = false;
+    cancelTarget: PendingPostingJoiningDto | null = null;
+    cancelRemarks = '';
+    cancelling = false;
+
     currentUser = '';
     canInsert = true;
     canUpdate = true;
@@ -220,6 +227,52 @@ export class PendingPostingJoiningComponent implements OnInit {
                     summary: 'Error',
                     detail: err?.error?.message || 'Failed to receive members.'
                 });
+            }
+        });
+    }
+
+    /** Open the cancel-joining confirmation dialog for a single member. */
+    openCancelDialog(row: PendingPostingJoiningDto): void {
+        if (!this.canDelete) {
+            this.messageService.add({ severity: 'warn', summary: 'Permission Denied', detail: 'You do not have permission to perform this action.' });
+            return;
+        }
+        this.cancelTarget = row;
+        this.cancelRemarks = '';
+        this.showCancelDialog = true;
+    }
+
+    closeCancelDialog(): void {
+        if (this.cancelling) return;
+        this.showCancelDialog = false;
+        this.cancelTarget = null;
+    }
+
+    /** Set the member's JoinStatus = Cancel (approved orders can't be removed). */
+    confirmCancel(): void {
+        if (this.cancelling || !this.cancelTarget) return;
+
+        this.cancelling = true;
+        this.postingService.cancelPostingJoining(
+            this.cancelTarget.postingOrderMasterId,
+            this.cancelTarget.employeeId,
+            this.currentUser,
+            this.cancelRemarks || null
+        ).subscribe({
+            next: (res) => {
+                this.cancelling = false;
+                if (res.statusCode === 200) {
+                    this.messageService.add({ severity: 'success', summary: 'Success', detail: res.description });
+                    this.showCancelDialog = false;
+                    this.cancelTarget = null;
+                    this.loadPending();
+                } else {
+                    this.messageService.add({ severity: 'error', summary: 'Error', detail: res.description });
+                }
+            },
+            error: (err: any) => {
+                this.cancelling = false;
+                this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.message || 'Failed to cancel joining.' });
             }
         });
     }
