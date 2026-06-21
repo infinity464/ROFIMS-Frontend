@@ -96,7 +96,7 @@ export class ReportMemberAppointmentComponent implements OnInit, OnChanges {
     loading = false;
     first = 0;
     rows = 100;
-    rowsPerPageOptions = [20, 50, 100, 1000, 5000];
+    rowsPerPageOptions = [100, 500, 1000, 5000];
     totalRecords = 0;
     /** Hide the column picker until the user has run a search. */
     searched = false;
@@ -375,8 +375,10 @@ export class ReportMemberAppointmentComponent implements OnInit, OnChanges {
             ? now.toLocaleDateString('bn-BD', { day: 'numeric', month: 'long', year: 'numeric' }).toUpperCase()
             : now.toLocaleDateString('en-US', { day: 'numeric', month: 'long', year: 'numeric' }).toUpperCase();
     }
-    get rabTotalLabel(): string { return this.lang === 'bn' ? 'মোট রেকর্ড' : 'TOTAL RECORDS'; }
-    get rabTotalText(): string { return `${this.rabTotalLabel}: ${this.displayNum(this.totalRecords)}`; }
+    get rabTotalText(): string {
+        const n = this.lang === 'bn' ? BanglaNumerals.toBangla(String(this.totalRecords)) : String(this.totalRecords);
+        return this.lang === 'bn' ? `মোট · ${n} রেকর্ড` : `Total · ${n} records`;
+    }
     get rabConfidentialLabel(): string { return this.lang === 'bn' ? 'গোপনীয়' : 'CONFIDENTIAL'; }
     get rabWarningLabel(): string { return this.lang === 'bn' ? 'অননুমোদিত প্রকাশ নিষিদ্ধ' : 'UNAUTHORIZED DISCLOSURE PROHIBITED'; }
     get rabPageOfLabel(): string { return this.lang === 'bn' ? 'পৃষ্ঠা ১ / ১' : 'PAGE 1 OF 1'; }
@@ -882,7 +884,7 @@ export class ReportMemberAppointmentComponent implements OnInit, OnChanges {
     .criteria-strip-title { display: inline-flex; gap: 1.5mm; align-items: center; color: #0b0b0b; }
     .diamond-bullet { color: #b78b3b; }
     .criteria-strip-meta { display: inline-flex; flex-direction: column; align-items: flex-end; gap: 0.5mm; text-align: right; }
-    .criteria-strip-total { color: #0b0b0b; font-weight: 700; }
+    .criteria-strip-total { color: #b78b3b; font-weight: 700; text-transform: none; letter-spacing: normal; }
     .criteria-strip-date { opacity: 0.75; font-weight: 500; }
     .criteria-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(38mm, 1fr)); }
     .cell { padding: 2mm 3mm; border-right: 1px solid #e6e4de; border-top: 1px solid #e6e4de; }

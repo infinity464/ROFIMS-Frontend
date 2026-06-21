@@ -127,6 +127,18 @@
                         </p-select>
                     </div>
 
+                    <div class="form-field">
+                        <label class="form-label">
+                            Date of Joining in RAB <span class="form-label-required">*</span>
+                        </label>
+                        <p-datepicker formControlName="joiningDate" dateFormat="dd-mm-yy" placeholder="Select Date"
+                            styleClass="w-full">
+                        </p-datepicker>
+                        @if (isFieldInvalid('joiningDate')) {
+                        <small class="form-error">{{ getErrorMessage('joiningDate') }}</small>
+                        }
+                    </div>
+
                 </div>
 
                 <!-- Row 2: 5 Fields -->
@@ -179,34 +191,6 @@
                         }
                     </div>
 
-                    <div class="form-field">
-                        <label class="form-label">RAB Rank</label>
-                        <p-select
-                            [options]="rabRankDropdownOptions"
-                            optionLabel="label"
-                            optionValue="value"
-                            placeholder="Auto"
-                            styleClass="w-full"
-                            [(ngModel)]="selectedRabEquivalentNameId"
-                            [ngModelOptions]="{ standalone: true }"
-                            [disabled]="true"
-                            [filter]="true"
-                            filterPlaceholder="Search">
-                        </p-select>
-                    </div>
-
-                    <div class="form-field">
-                        <label class="form-label">
-                            Date of Joining in RAB <span class="form-label-required">*</span>
-                        </label>
-                        <p-datepicker formControlName="joiningDate" dateFormat="dd-mm-yy" placeholder="Select Date"
-                            styleClass="w-full">
-                        </p-datepicker>
-                        @if (isFieldInvalid('joiningDate')) {
-                        <small class="form-error">{{ getErrorMessage('joiningDate') }}</small>
-                        }
-                    </div>
-
                 </div>
 
                 <!-- Row 3: 4 Fields -->
@@ -222,6 +206,22 @@
                         @if (isFieldInvalid('rank')) {
                         <small class="form-error">{{ getErrorMessage('rank') }}</small>
                         }
+                    </div>
+
+                    <div class="form-field">
+                        <label class="form-label">RAB Rank</label>
+                        <p-select
+                            [options]="rabRankDropdownOptions"
+                            optionLabel="label"
+                            optionValue="value"
+                            placeholder="Auto"
+                            styleClass="w-full"
+                            [(ngModel)]="selectedRabEquivalentNameId"
+                            [ngModelOptions]="{ standalone: true }"
+                            [disabled]="true"
+                            [filter]="true"
+                            filterPlaceholder="Search">
+                        </p-select>
                     </div>
 
                     <div class="form-field">

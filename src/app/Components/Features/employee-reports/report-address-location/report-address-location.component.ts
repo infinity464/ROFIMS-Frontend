@@ -442,7 +442,7 @@ export class ReportAddressLocationComponent implements OnInit {
     first = 0;
     // Reports default to 1000 rows per page — the formal-document layout is
     // designed to be browsed at a roster scale, not 20 rows at a time.
-    rows = 1000;
+    rows = 100;
     totalRecords = 0;
 
     exportDropdownOpen = false;
@@ -584,6 +584,11 @@ export class ReportAddressLocationComponent implements OnInit {
     }
     get rabGeneratedLabel(): string {
         return this.lang === 'bn' ? 'প্রস্তুতকৃত' : 'GENERATED';
+    }
+
+    get rabTotalText(): string {
+        const n = this.lang === 'bn' ? BanglaNumerals.toBangla(String(this.totalRecords)) : String(this.totalRecords);
+        return this.lang === 'bn' ? `মোট · ${n} রেকর্ড` : `Total · ${n} records`;
     }
 
     /** Confidential-strip labels. */
@@ -1137,7 +1142,8 @@ export class ReportAddressLocationComponent implements OnInit {
     }
     .criteria-strip-title { display: inline-flex; gap: 1.5mm; align-items: center; color: #0b0b0b; }
     .diamond-bullet { color: #b78b3b; }
-    .criteria-strip-date { opacity: 0.75; font-weight: 500; }
+    .criteria-strip-date { opacity: 0.9; font-weight: 500; display: flex; flex-direction: column; align-items: flex-end; gap: 0.4mm; text-align: right; }
+    .criteria-strip-total { color: #b78b3b; font-weight: 700; text-transform: none; letter-spacing: normal; }
     .criteria-grid {
         display: grid; grid-template-columns: repeat(auto-fit, minmax(38mm, 1fr));
     }
@@ -1245,7 +1251,7 @@ export class ReportAddressLocationComponent implements OnInit {
         <div class="criteria">
             <div class="criteria-strip">
                 <span class="criteria-strip-title"><span class="diamond-bullet">&#9670;</span> ${criteriaTitle}</span>
-                <span class="criteria-strip-date">${generatedLabel} &middot; ${generatedDate}</span>
+                <span class="criteria-strip-date"><span class="criteria-strip-total">${esc(this.rabTotalText)}</span><span class="criteria-strip-gen">${generatedLabel} &middot; ${generatedDate}</span></span>
             </div>
             ${criteriaGridHtml}
         </div>
@@ -1423,11 +1429,8 @@ export class ReportAddressLocationComponent implements OnInit {
                     }),
                 ], AlignmentType.LEFT),
                 stripCell([
-                    new TextRun({
-                        text: wsafe(`${this.rabGeneratedLabel} · ${this.rabFormattedDate}`),
-                        font: sans, size: S.stripDate, ...bnRunExtras(S.stripDate), bold: true,
-                        color: C.mutedText, characterSpacing: isBn ? 0 : 30, allCaps: !isBn,
-                    }),
+                    new TextRun({ text: wsafe(this.rabTotalText), font: sans, size: S.stripDate, ...bnRunExtras(S.stripDate), bold: true, color: C.black, characterSpacing: isBn ? 0 : 30, allCaps: !isBn }),
+                    new TextRun({ text: wsafe(`${this.rabGeneratedLabel} · ${this.rabFormattedDate}`), font: sans, size: S.stripDate, ...bnRunExtras(S.stripDate), bold: true, color: C.mutedText, characterSpacing: isBn ? 0 : 30, allCaps: !isBn, break: 1 }),
                 ], AlignmentType.RIGHT),
             ],
         });
@@ -1815,7 +1818,7 @@ export class ReportAddressLocationComponent implements OnInit {
         // Strip row: title left + date right merged across full width as a
         // single concatenated string (cell-level alignment isn't reachable
         // without cell styling, so we lean on the natural reading order).
-        const stripText = wsafe(`${this.rabCriteriaTitle}     ${this.rabGeneratedLabel} · ${this.rabFormattedDate}`);
+        const stripText = wsafe(`${this.rabCriteriaTitle}     ${this.rabTotalText}     ${this.rabGeneratedLabel} · ${this.rabFormattedDate}`);
         data.push([stripText]); fullMerge(r++);
 
         const items = this.criteriaItems;

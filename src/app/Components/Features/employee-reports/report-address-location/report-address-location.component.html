@@ -391,7 +391,10 @@
             <div class="rab-criteria">
                 <div class="rab-criteria-strip">
                     <span class="rab-criteria-strip-title"><span class="rab-diamond-bullet">&#9670;</span> {{ rabCriteriaTitle }}</span>
-                    <span class="rab-criteria-strip-date">{{ rabGeneratedLabel }} &middot; {{ rabFormattedDate }}</span>
+                    <span class="rab-criteria-strip-date">
+                        <span class="rab-criteria-strip-total">{{ rabTotalText }}</span>
+                        <span class="rab-criteria-strip-gen">{{ rabGeneratedLabel }} &middot; {{ rabFormattedDate }}</span>
+                    </span>
                 </div>
                 <div class="rab-criteria-grid">
                     @for (item of criteriaItems; track item.label) {
@@ -408,7 +411,10 @@
             <div class="rab-criteria rab-criteria-stamp-only">
                 <div class="rab-criteria-strip">
                     <span class="rab-criteria-strip-title"><span class="rab-diamond-bullet">&#9670;</span> {{ rabCriteriaTitle }}</span>
-                    <span class="rab-criteria-strip-date">{{ rabGeneratedLabel }} &middot; {{ rabFormattedDate }}</span>
+                    <span class="rab-criteria-strip-date">
+                        <span class="rab-criteria-strip-total">{{ rabTotalText }}</span>
+                        <span class="rab-criteria-strip-gen">{{ rabGeneratedLabel }} &middot; {{ rabFormattedDate }}</span>
+                    </span>
                 </div>
             </div>
         }

@@ -20,6 +20,8 @@ export interface MovementInfoModel {
     currentUnitId: number | null;
     destinedMotherUnitId: number | null;
     destinedRABUnitId: number | null;
+    /** Permanent + Mother Unit only — 'RegularPostingOut' | 'RTUOnDisciplineIssue'. */
+    postOutStatusType?: string | null;
     dateOfRelease: string | null;
     dateOfReduce: string | null;
     takeoverDate: string | null;
