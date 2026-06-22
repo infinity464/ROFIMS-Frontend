@@ -785,7 +785,9 @@ export class ServingMemberEntry implements OnInit {
 
         const payload = {
             employeeID: employeeId,
-            previousRABServiceID: 0,
+            // First service record for a freshly-created member starts at 1 (never 0),
+            // matching the client-assigned composite-key convention used elsewhere.
+            previousRABServiceID: 1,
             rabUnitCodeId: v.rabUnitCodeId ?? null,
             rabWingCodeId: v.rabWingCodeId ?? null,
             rabBranchCodeId: v.rabBranchCodeId ?? null,
