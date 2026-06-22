@@ -1730,9 +1730,9 @@ html, body { margin: 0; padding: 0; background: transparent; }
         });
         const sigParas = [new Paragraph({ spacing: { before: 600 }, keepNext: true }), sigTable] as any[];
 
-        // ── অনুলিপি head: prefix + title (left) and তারিখ (right, bottom-aligned) ──
+        // ── অনুলিপি head: prefix + title (left) and তারিখ (right, top-aligned) ──
         // The signature block above keeps its place; only the তারিখ line drops down
-        // here so it lands exactly level with the অনুলিপি title (mirrors the preview).
+        // here so it lands exactly level with the prefix line (mirrors the preview).
         const nsPrefix = this.noteSheetPrefix;
         const headLeftChildren: Paragraph[] = [];
         if (nsPrefix) {
@@ -1746,7 +1746,9 @@ html, body { margin: 0; padding: 0; background: transparent; }
             spacing: { before: nsPrefix ? 0 : 200 }
         }));
         const headDateChildren: Paragraph[] = [
-            new Paragraph({ children: [new TextRun({ text: bn ? `তারিখঃ ${this.previewDate}` : `Date: ${this.previewDate}`, size: ctxSize, sizeComplexScript: csSize, font, language: lang })], keepLines: true })
+            // before:200 matches the prefix paragraph's top spacing so the তারিখ line
+            // sits exactly level with the prefix (top) line, not the অনুলিপি title.
+            new Paragraph({ children: [new TextRun({ text: bn ? `তারিখঃ ${this.previewDate}` : `Date: ${this.previewDate}`, size: ctxSize, sizeComplexScript: csSize, font, language: lang })], spacing: { before: 200 }, keepLines: true })
         ];
         const copyHeadTable = new Table({
             width: { size: contentWidth, type: WidthType.DXA },
@@ -1755,7 +1757,7 @@ html, body { margin: 0; padding: 0; background: transparent; }
             borders: { top: noBorder, bottom: noBorder, left: noBorder, right: noBorder, insideHorizontal: noBorder, insideVertical: noBorder },
             rows: [new TableRow({ cantSplit: true, children: [
                 new TableCell({ borders: noBorders, width: { size: leftWidth, type: WidthType.DXA }, margins: zeroMargins, children: headLeftChildren }),
-                new TableCell({ borders: noBorders, width: { size: sigWidth, type: WidthType.DXA }, margins: sigCellMargins, verticalAlign: VerticalAlign.BOTTOM, children: headDateChildren })
+                new TableCell({ borders: noBorders, width: { size: sigWidth, type: WidthType.DXA }, margins: sigCellMargins, verticalAlign: VerticalAlign.TOP, children: headDateChildren })
             ] })]
         });
 

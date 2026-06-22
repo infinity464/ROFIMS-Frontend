@@ -300,12 +300,12 @@
     margin-top: 16px;
 }
 
-/* Head row: অনুলিপি title (left) + signature block (right), bottoms aligned so
-   the তারিখ line is level with the অনুলিপি title. */
+/* Head row: prefix + অনুলিপি title (left) + তারিখ (right), tops aligned so
+   the তারিখ line is level with the prefix line (the top line). */
 .po-doc-copy-head {
     display: flex;
     justify-content: space-between;
-    align-items: flex-end;
+    align-items: flex-start;
 
     .po-doc-copy-title {
         margin-bottom: 0;
