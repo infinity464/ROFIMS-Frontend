@@ -18,6 +18,8 @@ import { CommonCodeService } from '@/services/common-code-service';
 import { PreviousRABServiceService, PreviousRABServiceInfoModel } from '@/services/previous-rab-service.service';
 import { EmployeeSearchComponent, EmployeeBasicInfo } from '@/Components/Shared/employee-search/employee-search';
 import { PresentStatusInfoService } from '@/services/present-status-info.service';
+import { DirectPostingHistoryService } from '@/services/direct-posting-history.service';
+import { SharedService } from '@/shared/services/shared-service';
 import { UserMenuService } from '@/services/user-menu.service';
 import { PostingStatus, PresentStatusType } from '@/models/enums';
 import { DatePrecision, toDateOnlyWithPrecision } from '@/shared/utils/partial-date.util';
@@ -98,6 +100,8 @@ export class ServicePostingEntry implements OnInit {
         private commonCodeService: CommonCodeService,
         private previousRABService: PreviousRABServiceService,
         private presentStatusService: PresentStatusInfoService,
+        private directPostingHistoryService: DirectPostingHistoryService,
+        private sharedService: SharedService,
         private messageService: MessageService
     ) {}
 
@@ -394,6 +398,7 @@ export class ServicePostingEntry implements OnInit {
                     // Step 2: add the new active service record.
                     this.previousRABService.saveUpdate(newRecord).subscribe({
                         next: () => {
+                            this.recordHistory(serviceFrom, newAppointment);
                             this.isSaving = false;
                             this.messageService.add({
                                 severity: 'success',
@@ -421,6 +426,26 @@ export class ServicePostingEntry implements OnInit {
                     });
                 }
             });
+    }
+
+    /** Fire-and-forget: record this join/transfer in DirectPostingHistory. */
+    private recordHistory(serviceFrom: string | null, appointment: number | null): void {
+        if (!this.selectedEmployeeId) return;
+        let performedBy: string | null = null;
+        try { performedBy = this.sharedService.getCurrentUser?.() ?? null; } catch { performedBy = null; }
+        this.directPostingHistoryService.save({
+            employeeID: this.selectedEmployeeId,
+            rabid: this.employeeInfo?.rabid ?? null,
+            actionType: this.isSupernumerary ? 'DirectJoin' : 'DirectTransfer',
+            rabUnitCodeId: this.serviceForm.get('rabUnitCodeId')?.value ?? null,
+            serviceFrom,
+            appointment,
+            performedBy,
+            performedDate: new Date().toISOString()
+        }).subscribe({
+            next: () => {},
+            error: (err) => console.error('Failed to record direct-posting history', err)
+        });
     }
 
     /** Build an "On Duty" PresentStatusInfo record for a directly-joined member. */
