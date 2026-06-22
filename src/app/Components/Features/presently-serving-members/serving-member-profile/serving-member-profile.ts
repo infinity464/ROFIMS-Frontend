@@ -134,7 +134,7 @@ export class ServingMemberProfile implements OnInit, OnDestroy {
             kv(L['field.dateOfJoiningInServiceTraining'], this.formatDateDisplay(p.dateOfJoiningInServiceTraining)),
             kv(L['field.motherUnit'], this.codeValue(p.motherUnit, p.motherUnitBN)),
             kv(L['field.location'], this.codeValue(p.location, p.locationBN)),
-            kv(L['field.rabUnit'], this.currentRabUnitDisplay),
+            kv(L['field.rabUnit'], this.codeValue(p.rabUnit, p.rabUnitBN)),
             kv(L['field.joiningDate'], this.formatDateDisplay(p.joiningDate)),
             kv(L['field.maritalStatus'], this.codeValue(p.maritalStatus, p.maritalStatusBN)),
         ], true);
@@ -519,25 +519,6 @@ export class ServingMemberProfile implements OnInit, OnDestroy {
     get previousOnlyRabList(): VwPreviousRABServiceInfoModel[] {
         if (!this.previousRabList?.length) return [];
         return this.previousRabList.filter((r) => !this.isRabServiceCurrentlyActive(r));
-    }
-
-    /** Current (active) RAB posting shown in the profile header: unit → wing → branch →
-     *  sub-branch → section → sub-section of the currently-active RAB service record,
-     *  comma-joined, only the levels that exist. '-' when there is no active record. */
-    get currentRabUnitDisplay(): string {
-        const r = this.presentRabList?.[0];
-        if (!r) return '-';
-        const pick = (en?: string | null, bn?: string | null): string =>
-            ((this.isBn && bn ? bn : (en || bn || '')) ?? '').trim();
-        const parts = [
-            pick(r.rabUnitName, r.rabUnitNameBN),
-            pick(r.rabWingName, r.rabWingNameBN),
-            pick(r.rabBranchName, r.rabBranchNameBN),
-            pick(r.rabSubBranchName, r.rabSubBranchNameBN),
-            pick(r.rabSectionName, r.rabSectionNameBN),
-            pick(r.rabSubSectionName, r.rabSubSectionNameBN),
-        ].filter((s) => s.length > 0);
-        return parts.length ? parts.join(', ') : '-';
     }
 
     /** Foreign visits where VisitType is Official. */
