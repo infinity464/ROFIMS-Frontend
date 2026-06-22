@@ -180,11 +180,12 @@
 
                     <div class="form-field">
                         <label class="form-label">
-                            Appointment
+                            Appointment @if (isEditMode) { <span style="color:#b45309; font-size:0.8em; font-style:italic; font-weight:500;">(readonly)</span> }
                         </label>
                         <p-select [options]="appointments" optionLabel="codeValueEN" optionValue="codeId"
                             placeholder="Select Appointment" styleClass="w-full" formControlName="appointment"
-                            [filter]="true" filterPlaceholder="Search" [showClear]="true">
+                            [filter]="true" filterPlaceholder="Search" [showClear]="true"
+                            [readonly]="isEditMode">
                         </p-select>
                         @if (isFieldInvalid('appointment')) {
                         <small class="form-error">{{ getErrorMessage('appointment') }}</small>

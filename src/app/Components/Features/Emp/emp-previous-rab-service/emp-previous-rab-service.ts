@@ -360,6 +360,9 @@ export class EmpPreviousRabService implements OnInit {
         this.isEditMode = false;
         this.editingServiceId = null;
         this.fileRows = [];
+        // Pre-fill Appointment from the employee's current appointment (use the CommonCode
+        // id, not the display name — the dropdown value is the id).
+        const defaultAppointment = this.employeeBasicInfo?.appointmentId ?? null;
         this.serviceForm.reset({
             previousRABServiceID: null,
             rabUnitCodeId: null,
@@ -372,7 +375,7 @@ export class EmpPreviousRabService implements OnInit {
             serviceTo: null,
             precision: 'full',
             isCurrentlyActive: false,
-            appointment: null,
+            appointment: defaultAppointment,
             postingAuth: '',
             remarks: ''
         });
