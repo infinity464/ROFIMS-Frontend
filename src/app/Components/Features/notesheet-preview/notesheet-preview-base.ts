@@ -19,6 +19,7 @@ import {
     IRunPropertiesOptions
 } from 'docx';
 import { saveAs } from 'file-saver';
+import { normalizeRab } from '@/shared/utils/bangla-text.util';
 
 export interface NoteSheetInfoFull {
     noteSheetId: number;
@@ -219,6 +220,13 @@ export abstract class NotesheetPreviewBase implements OnInit {
                 const list = Array.isArray(data) ? data : [];
                 this.noteSheet = list[0] ?? null;
                 if (this.noteSheet) {
+                    // Normalise the "র‍্যাব" spelling once at load so it renders consistently
+                    // everywhere this note-sheet is shown (subject, text, paragraphs, exports).
+                    this.noteSheet.subject = normalizeRab(this.noteSheet.subject);
+                    this.noteSheet.mainText = normalizeRab(this.noteSheet.mainText);
+                    this.noteSheet.referenceNumber = normalizeRab(this.noteSheet.referenceNumber);
+                    this.noteSheet.note = normalizeRab(this.noteSheet.note);
+                    this.noteSheet.paragraphText = normalizeRab(this.noteSheet.paragraphText);
                     this.resolvePermissions();
                     this.loadApprovalChain();
                     this.loadBackHistory();
