@@ -52,6 +52,9 @@ export interface EmployeeRemovalInfo {
 /** Most recent cancelled inter posting (joining cancelled) per employee. */
 export interface CancelledInterPostingInfo {
     employeeId: number;
+    /** PostingOrderMaster.Id of the cancelled order. The "previous order cancelled"
+     *  note is shown only on later orders (current order id > this). */
+    postingOrderMasterId: number;
     postingOrderNo: string | null;
     postingOrderDate: string | null;   // dd-MM-yyyy
     transferRabUnitName: string | null;

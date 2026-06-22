@@ -1075,15 +1075,15 @@ export class NotesheetPreviewPostingComponent extends NotesheetPreviewBase imple
 
     /**
      * Note when this member's last posting was cancelled (cancelledInterMap is the flag).
-     * Inter: "previous transfer order cancelled"; New: "removed from previous posting".
+     * Same text for both posting types: "<order no> এর মাধ্যমে জারিকৃত বদলি আদেশ বাতিল করা হলো।".
      */
     private getCancelledInterNote(emp: DraftPostingEmployeeRow): string {
         const c = this.cancelledInterMap[emp.employeeId];
         if (!c?.postingOrderNo) return '';
-        if (this.isInterPosting()) {
-            return this.isEnglish() ? 'Previous transfer order cancelled.' : 'পূর্ববর্তী বদলির আদেশ বাতিল করা হলো।';
-        }
-        return this.isEnglish() ? 'Removed from previous posting.' : 'পূর্ববর্তী পোস্টিং থেকে বাদ দেওয়া হয়েছে।';
+        const no = c.postingOrderNo;
+        return this.isEnglish()
+            ? `The transfer order issued vide ${no} has been cancelled.`
+            : `${no} এর মাধ্যমে জারিকৃত বদলি আদেশ বাতিল করা হলো।`;
     }
 
     getPreviousWorkplace(emp: DraftPostingEmployeeRow): string {

@@ -836,8 +836,8 @@ export class PostingOrderPreviewPageComponent implements OnInit {
      * Auto-generated অনুলিপি (copy-to) lines derived from the employees' transfer
      * destination units. Hard-coded RAB rules:
      *   • র‍্যাব সদর দপ্তর (HQ) → show the WING name (segment under HQ), not "সদর দপ্তর",
-     *     prefixed "পরিচালক/" — this line comes FIRST.
-     *   • র‍্যাব-N battalions → prefixed "অধিনায়ক/", slash-joined — comes next.
+     *     prefixed "পরিচালক, " — this line comes FIRST.
+     *   • র‍্যাব-N battalions → prefixed "অধিনায়ক, ", units slash-joined — comes next.
      *   • Any other unit → shown plainly (top-level name), comma-joined.
      * Each group is de-duplicated; empty groups are omitted.
      */
@@ -870,8 +870,8 @@ export class PostingOrderPreviewPageComponent implements OnInit {
         }
 
         const lines: string[] = [];
-        if (hqWings.length) lines.push(`${bn ? 'পরিচালক' : 'Director'}/ ${hqWings.join('/ ')}`);
-        if (rabUnits.length) lines.push(`${bn ? 'অধিনায়ক' : 'Commanding Officer'}/ ${rabUnits.join('/ ')}`);
+        if (hqWings.length) lines.push(`${bn ? 'পরিচালক' : 'Director'}, ${hqWings.join('/ ')}`);
+        if (rabUnits.length) lines.push(`${bn ? 'অধিনায়ক' : 'Commanding Officer'}, ${rabUnits.join('/ ')}`);
         if (others.length) lines.push(others.join(', '));
         return lines;
     }
@@ -1223,14 +1223,22 @@ export class PostingOrderPreviewPageComponent implements OnInit {
     /** Combined remark — same content as the note-sheet preview / order generate. */
     empCombinedRemarks(emp: PostingOrderEmployeeRow): string {
         const base = this.isInterPosting ? emp.interPostingRemark : emp.sendingRemark;
-        // The "previous posting cancelled" note refers to an EARLIER order, so
-        // skip it when the cancelled order is the one being previewed.
+        // The "previous posting cancelled" note refers to an EARLIER order, so it must
+        // appear ONLY on orders created AFTER the cancelled one — i.e. the current
+        // order's primary key must be greater than the cancelled order's primary key.
+        // (This naturally excludes the cancelled order itself and any older order.)
+        // Fall back to a same-no check if the backend hasn't supplied the master id yet.
         const cancelled = this.cancelledInterMap[emp.employeeId];
+        const cancelledMasterId = cancelled?.postingOrderMasterId ?? 0;
+        const isAfterCancelled = cancelledMasterId > 0
+            ? (this.currentOrderId ?? 0) > cancelledMasterId
+            : (!!cancelled?.postingOrderNo && cancelled.postingOrderNo !== this.postingOrderNo);
         let cancelNote = '';
-        if (cancelled?.postingOrderNo && cancelled.postingOrderNo !== this.postingOrderNo) {
-            cancelNote = this.isInterPosting
-                ? (this.isBangla ? 'পূর্ববর্তী বদলির আদেশ বাতিল করা হলো।' : 'Previous transfer order cancelled.')
-                : (this.isBangla ? 'পূর্ববর্তী পোস্টিং থেকে বাদ দেওয়া হয়েছে।' : 'Removed from previous posting.');
+        if (cancelled?.postingOrderNo && isAfterCancelled) {
+            const no = cancelled.postingOrderNo;
+            cancelNote = this.isBangla
+                ? `${no} এর মাধ্যমে জারিকৃত বদলি আদেশ বাতিল করা হলো।`
+                : `The transfer order issued vide ${no} has been cancelled.`;
         }
         return [base, emp.noteSheetRemarks, this.getRemovalRemark(emp), cancelNote]
             .filter(s => s?.trim()).join(', ');

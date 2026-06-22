@@ -198,10 +198,11 @@ export class PostingOrderGenerateComponent implements OnInit {
             : (history?.removalRemark || '');
         const base = isInter ? emp.interPostingRemark : emp.sendingRemark;
         let cancelNote = '';
-        if (this.cancelledInterMap[emp.employeeId]?.postingOrderNo) {
-            cancelNote = isInter
-                ? (this.isBangla ? 'পূর্ববর্তী বদলির আদেশ বাতিল করা হলো।' : 'Previous transfer order cancelled.')
-                : (this.isBangla ? 'পূর্ববর্তী পোস্টিং থেকে বাদ দেওয়া হয়েছে।' : 'Removed from previous posting.');
+        const cancelledNo = this.cancelledInterMap[emp.employeeId]?.postingOrderNo;
+        if (cancelledNo) {
+            cancelNote = this.isBangla
+                ? `${cancelledNo} এর মাধ্যমে জারিকৃত বদলি আদেশ বাতিল করা হলো।`
+                : `The transfer order issued vide ${cancelledNo} has been cancelled.`;
         }
         return [base, emp.remarks, removalRemark, cancelNote].filter(s => s?.trim()).join(', ');
     }
