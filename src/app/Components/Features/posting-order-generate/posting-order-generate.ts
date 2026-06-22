@@ -468,7 +468,8 @@ export class PostingOrderGenerateComponent implements OnInit {
 
     /** Add a new (empty) footer paragraph. */
     addFooterParagraph(): void {
-        this.footerParagraphs.push({ text: '', transferRabUnitId: null, transferRabUnitName: null });
+        // New অনুলিপি line goes to the TOP (auto-loaded config lines stay below).
+        this.footerParagraphs.unshift({ text: '', transferRabUnitId: null, transferRabUnitName: null });
     }
 
     removeFooterParagraph(index: number): void {

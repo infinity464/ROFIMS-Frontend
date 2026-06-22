@@ -367,7 +367,7 @@
 
                 <div *ngIf="noteSheet.noteSheetNo" style="padding:4px 16px 2px; font-size:10pt; display:flex; justify-content:space-between; align-items:baseline;">
                     <span>{{ noteSheet.noteSheetNo }}</span>
-                    <span *ngIf="noteSheet.noteSheetDate">{{ isEnglish() ? 'Date:' : 'তারিখঃ' }} {{ formatMonthYear(noteSheet.noteSheetDate) }}</span>
+                    <span *ngIf="noteSheet.noteSheetDate">{{ isEnglish() ? 'Date:' : 'তারিখঃ' }} {{ formatFullDate(noteSheet.noteSheetDate) }}</span>
                 </div>
 
                 <div *ngIf="noteSheet.subject" style="padding:2px 16px 4px; font-size:10pt;">
@@ -391,7 +391,7 @@
                     <table>
                         <colgroup *ngIf="isInterPosting()">
                             <col style="width:30px">   <!-- ক্রমিক -->
-                            <col style="width:58px">   <!-- ব্যক্তিগত নং -->
+                            <col style="width:80px">   <!-- ব্যক্তিগত নং (বড় করা) -->
                             <col>                       <!-- পদবি -->
                             <col>                       <!-- নাম -->
                             <col style="width:48px">   <!-- নিজ জেলা -->
@@ -400,19 +400,19 @@
                             <col style="width:32px">   <!-- বছর -->
                             <col style="width:24px">   <!-- মাস -->
                             <col style="width:24px">   <!-- দিন -->
-                            <col style="width:105px">  <!-- পূর্ববতী কর্মস্থল -->
+                            <col style="width:85px">   <!-- পূর্ববতী কর্মস্থল (ছোট করা) -->
                             <col>                       <!-- বদলিকৃত কর্মস্থল -->
                             <col *ngIf="showRemarks" style="width:90px"> <!-- মন্তব্য -->
                         </colgroup>
                         <colgroup *ngIf="!isInterPosting()">
                             <col style="width:30px">   <!-- ক্রমিক -->
-                            <col style="width:58px">   <!-- ব্যক্তিগত নম্বর -->
+                            <col style="width:88px">   <!-- ব্যক্তিগত নম্বর (বড় করা) -->
                             <col>                       <!-- পদবি -->
-                            <col>                       <!-- ট্রেড -->
+                            <col style="width:58px">   <!-- ট্রেড (ছোট করা) -->
                             <col>                       <!-- নাম -->
                             <col style="width:48px">   <!-- নিজ জেলা -->
                             <col style="width:56px">   <!-- স্পাউস জেলা -->
-                            <col style="width:105px">  <!-- পূর্ববতী কর্মস্থল -->
+                            <col style="width:85px">   <!-- পূর্ববতী কর্মস্থল (ছোট করা) -->
                             <col>                       <!-- বদলি ইউনিট -->
                             <col *ngIf="showRemarks" style="width:90px"> <!-- মন্তব্য -->
                         </colgroup>
@@ -519,7 +519,7 @@
                         <div class="ns-sig-appoint" *ngIf="initiatorDetails.appointment || initiatorDetails.appointmentBN">
                             {{ isEnglish() ? initiatorDetails.appointment : (initiatorDetails.appointmentBN || initiatorDetails.appointment) }}
                         </div>
-                        <div class="ns-sig-date" *ngIf="isInitiatorApproved() && noteSheet.noteSheetDate">{{ formatMonthYear(noteSheet.noteSheetDate) }}</div>
+                        <div class="ns-sig-date" *ngIf="isInitiatorApproved() && noteSheet.noteSheetDate">{{ formatFullDate(noteSheet.noteSheetDate) }}</div>
                     </div>
                 </div>
 

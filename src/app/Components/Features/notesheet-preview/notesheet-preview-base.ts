@@ -410,9 +410,9 @@ export abstract class NotesheetPreviewBase implements OnInit {
     getApproverDate(step: string): string {
         if (!this.noteSheet) return '';
         if (step === ApprovalStep.FinalApprover)
-            return this.noteSheet.finalApprovalApprovedDate ? this.formatMonthYear(this.noteSheet.finalApprovalApprovedDate) : '';
+            return this.noteSheet.finalApprovalApprovedDate ? this.formatFullDate(this.noteSheet.finalApprovalApprovedDate) : '';
         if (step === ApprovalStep.Initiator)
-            return this.noteSheet.initiatorApprovedDate ? this.formatMonthYear(this.noteSheet.initiatorApprovedDate) : '';
+            return this.noteSheet.initiatorApprovedDate ? this.formatFullDate(this.noteSheet.initiatorApprovedDate) : '';
         if (step.startsWith(ApprovalStep.Recommender)) {
             try {
                 const json = this.noteSheet.recommendersJson ?? this.noteSheet.recommenderIdsJson;
@@ -422,7 +422,7 @@ export abstract class NotesheetPreviewBase implements OnInit {
                         const numPart = step.replace(ApprovalStep.Recommender, '').trim();
                         const idx = numPart ? parseInt(numPart, 10) - 1 : 0;
                         const rec = arr[idx];
-                        if (rec?.recomender_approved_date) return this.formatMonthYear(rec.recomender_approved_date);
+                        if (rec?.recomender_approved_date) return this.formatFullDate(rec.recomender_approved_date);
                     }
                 }
             } catch { /* ignore */ }
@@ -470,6 +470,17 @@ export abstract class NotesheetPreviewBase implements OnInit {
             if (isNaN(d.getTime())) return String(value);
             const locale = this.isEnglish() ? 'en-GB' : 'bn-BD';
             return d.toLocaleDateString(locale, { month: 'long', year: 'numeric' });
+        } catch { return String(value); }
+    }
+
+    /** Full date (day + month + year), e.g. "২২ জুন ২০২৬" — used for note-sheet/signature dates. */
+    formatFullDate(value: string | null | undefined): string {
+        if (!value) return '—';
+        try {
+            const d = new Date(value);
+            if (isNaN(d.getTime())) return String(value);
+            const locale = this.isEnglish() ? 'en-GB' : 'bn-BD';
+            return d.toLocaleDateString(locale, { day: 'numeric', month: 'long', year: 'numeric' });
         } catch { return String(value); }
     }
 

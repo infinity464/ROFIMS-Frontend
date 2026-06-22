@@ -205,7 +205,12 @@ export class EmpPresentStatus implements OnInit {
     }
 
     get isUpdateDisabled(): boolean {
-        return this.isEditMode && this.singleInstanceStatusTypes.includes(this.selectedStatusType ?? '');
+        if (!this.isEditMode) return false;
+        if (!this.singleInstanceStatusTypes.includes(this.selectedStatusType ?? '')) return false;
+        // An active record stays editable while its Profile Shift (Present → Ex Member) is
+        // unchecked. The update is only locked once Profile Shift is ticked — i.e. when the
+        // record is actually moving the employee to the Ex Member list.
+        return this.isProfileShiftChecked(this.selectedStatusType);
     }
 
     get bfaDialogHeader(): string {
