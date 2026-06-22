@@ -67,6 +67,9 @@ export class EmpPresentStatus implements OnInit {
     isEditMode = false;
     isSaving = false;
     editingRecordId: number | null = null;
+    /** Profile Shift value of the record as ORIGINALLY saved (used to lock editing of a
+     *  record that has already moved the employee to Ex Member). */
+    private editingProfileShiftOriginal = false;
     presentStatusForm!: FormGroup;
     fileRows: FileRowData[] = [];
     selectedStatusType: string | null = null;
@@ -206,11 +209,13 @@ export class EmpPresentStatus implements OnInit {
 
     get isUpdateDisabled(): boolean {
         if (!this.isEditMode) return false;
-        if (!this.singleInstanceStatusTypes.includes(this.selectedStatusType ?? '')) return false;
-        // An active record stays editable while its Profile Shift (Present → Ex Member) is
-        // unchecked. The update is only locked once Profile Shift is ticked — i.e. when the
-        // record is actually moving the employee to the Ex Member list.
-        return this.isProfileShiftChecked(this.selectedStatusType);
+        // Profile-shift lock applies ONLY to Regular Posting Out and RTU (On Discipline Issue).
+        const st = this.selectedStatusType ?? '';
+        if (st !== PresentStatusType.RegularPostingOut && st !== PresentStatusType.RTUOnDisciplineIssue) return false;
+        // Lock editing only for a record that was ALREADY saved with Profile Shift ticked
+        // (the employee is already on the Ex Member list). Ticking Profile Shift now — to
+        // perform the shift — must keep Update enabled so it can be saved.
+        return this.editingProfileShiftOriginal;
     }
 
     get bfaDialogHeader(): string {
@@ -365,6 +370,7 @@ export class EmpPresentStatus implements OnInit {
         }
         this.isEditMode = false;
         this.editingRecordId = null;
+        this.editingProfileShiftOriginal = false;
         this.presentStatusForm.reset({
             presentStatusType: PresentStatusType.OnDuty,
             rpoProfileShift: false, rtuProfileShift: false,
@@ -388,6 +394,7 @@ export class EmpPresentStatus implements OnInit {
 
         this.isEditMode = true;
         this.editingRecordId = record.presentStatusID;
+        this.editingProfileShiftOriginal = !!record.profileShift;
         this.selectedStatusType = record.presentStatusType;
 
         const st = record.presentStatusType;
