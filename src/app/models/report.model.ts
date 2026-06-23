@@ -183,6 +183,8 @@ export interface RftsCompletionReportRow {
   latestCourseDateFrom?: string | null;
   /** Most recent course end date (ISO yyyy-MM-dd). */
   latestCourseDateTo?: string | null;
+  /** Additional remarks, bullet-joined when an employee has several. */
+  rmks?: string | null;
 }
 
 /** Report H: Address Location – Division, District, Upazila, Post Office, Address details, RAB Unit. */

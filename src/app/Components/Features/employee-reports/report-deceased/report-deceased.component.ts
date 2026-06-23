@@ -545,7 +545,7 @@ export class ReportDeceasedComponent implements OnInit {
             lastUnitBN:     d['lastUnitBN']      as string,
             dateOfDeath:    d['dateOfDeath']     as string,
             deceasedReason: d['deceasedReason']  as string,
-            rmks:           null,
+            rmks:           (d['rmks'] as string) ?? null,
         } as DeceasedReportRow;
     }
 

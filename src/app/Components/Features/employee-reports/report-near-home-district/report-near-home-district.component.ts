@@ -537,7 +537,7 @@ export class ReportNearHomeDistrictComponent implements OnInit {
             ownHomeDistrictBN: d['ownHomeDistrictBN'] as string,
             spouseHomeDistrict: d['spouseHomeDistrict'] as string,
             spouseHomeDistrictBN: d['spouseHomeDistrictBN'] as string,
-            rmks: null
+            rmks: (d['rmks'] as string) ?? null
         } as NearHomeReportRow;
     }
 

@@ -567,7 +567,7 @@ export class ReportLongStayNominalRollComponent implements OnInit {
             relieverServiceId:   d['relieverServiceId']   as string,
             relieverJoiningDate: d['relieverJoiningDate'] as string,
             durationOfStay:      null,
-            rmks:                null,
+            rmks:                (d['rmks'] as string) ?? null,
         } as LongStayNominalRollReportRow;
     }
 

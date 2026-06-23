@@ -4,3 +4,10 @@
  * Uses global theme: .app-dark on document (topbar toggle) for dark mode.
  */
 @use './report-theme-common.scss';
+
+// Remarks cells may carry multiple Additional Remarks joined with newlines
+// ("• item" per line). Preserve those line breaks on screen.
+.rab-td-rmks,
+.rab-td-remarks {
+    white-space: pre-line;
+}

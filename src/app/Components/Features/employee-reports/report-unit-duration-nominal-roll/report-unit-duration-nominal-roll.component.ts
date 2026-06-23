@@ -595,7 +595,7 @@ export class ReportUnitDurationNominalRollComponent implements OnInit {
             joiningInRab:   d['joiningInRab']   as string,
             rabServiceTo:   d['rabServiceTo']   as string,
             postingStatus:  d['postingStatus']  as string,
-            rmks:           null,
+            rmks:           (d['rmks'] as string) ?? null,
         } as UnitDurationNominalRollReportRow;
     }
 

@@ -81,7 +81,7 @@ export class ReportRftsCompletionComponent implements OnInit {
     appliedFilterLines: string[] = [];
     filterOpen = true;
 
-    columnCatalog: { key: string; labelEN: string; labelBN: string; hint: 'Serial' | 'Name' | 'Date' | 'Plain'; defaultVisible: boolean; courseOnly?: boolean }[] = [
+    columnCatalog: { key: string; labelEN: string; labelBN: string; hint: 'Serial' | 'Name' | 'Date' | 'Plain' | 'Remarks'; defaultVisible: boolean; courseOnly?: boolean }[] = [
         { key: 'ser',                  labelEN: 'Ser',              labelBN: 'ক্রঃ',            hint: 'Serial', defaultVisible: true  },
         { key: 'serviceId',            labelEN: 'Service ID',       labelBN: 'সার্ভিস আইডি',    hint: 'Plain',  defaultVisible: true  },
         { key: 'rank',                 labelEN: 'Rank',             labelBN: 'পদবী',            hint: 'Plain',  defaultVisible: true  },
@@ -114,6 +114,7 @@ export class ReportRftsCompletionComponent implements OnInit {
         { key: 'maritalStatus',        labelEN: 'Marital Status',   labelBN: 'বৈবাহিক অবস্থা',   hint: 'Plain',  defaultVisible: false },
         { key: 'mobileNo',             labelEN: 'Mobile',           labelBN: 'মোবাইল',          hint: 'Plain',  defaultVisible: false },
         { key: 'email',                labelEN: 'Email',            labelBN: 'ইমেইল',           hint: 'Plain',  defaultVisible: false },
+        { key: 'rmks',                 labelEN: 'Remarks',          labelBN: 'মন্তব্য',          hint: 'Remarks', defaultVisible: true },
     ];
 
     /** Legacy column key → RftsReportFieldRegistry FieldKey for the request. */
@@ -455,6 +456,7 @@ export class ReportRftsCompletionComponent implements OnInit {
             case 'latestCourseDateFrom': return this.fmtDate(row.latestCourseDateFrom);
             case 'latestCourseDateTo':   return this.fmtDate(row.latestCourseDateTo);
             case 'coursesCompleted':     return this.displayNum(row.coursesCompleted);
+            case 'rmks':                 return row.rmks || '';
             default:                     return this.extraCellValue(row, key);
         }
     }
@@ -489,6 +491,7 @@ export class ReportRftsCompletionComponent implements OnInit {
             latestCourseNo:       d['latestCourseNo']       as string,
             latestCourseDateFrom: d['latestCourseDateFrom'] as string,
             latestCourseDateTo:   d['latestCourseDateTo']   as string,
+            rmks:                 (d['rmks'] as string)     ?? null,
         } as RftsCompletionReportRow;
     }
 
