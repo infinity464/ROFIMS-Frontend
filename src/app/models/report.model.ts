@@ -46,6 +46,8 @@ export interface EducationReportRow extends ReportRowBase {
   higherEducationQualificationBN?: string | null;
   subject?: string | null;
   subjectBN?: string | null;
+  /** Additional remarks, bullet-joined when an employee has several. */
+  rmks?: string | null;
 }
 
 /** Request for Report A (filters + pagination). */

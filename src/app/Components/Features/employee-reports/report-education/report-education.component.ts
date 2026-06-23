@@ -128,7 +128,7 @@ export class ReportEducationComponent implements OnInit, OnChanges {
         // Blank "Remark" column — always renders an empty cell so the
         // printed roster has a writable space for handwritten notes.
         // Default-visible; users can hide via the column picker.
-        { key: 'blankRemark', labelEN: 'Remark', labelBN: 'মন্তব্য', hint: 'BlankRemark', defaultVisible: true },
+        { key: 'rmks', labelEN: 'Remark', labelBN: 'মন্তব্য', hint: 'Remarks', defaultVisible: true },
         // Opt-in extras (same as member-appointment / batch-course catalog).
         { key: 'personnel', labelEN: 'RAB Personnel', labelBN: 'র‍্যাব সদস্য', hint: 'RabPersonnelComposite', defaultVisible: false },
         { key: 'rabId', labelEN: 'RAB ID', labelBN: 'র‍্যাব আইডি', hint: 'RabId', defaultVisible: false },
@@ -979,9 +979,8 @@ export class ReportEducationComponent implements OnInit, OnChanges {
                         return new TableCell({ ...cellOpts, children: [new Paragraph({ children: [run(this.selectedSubjectCellText)] })] });
                     case 'MemberStatus':
                         return new TableCell({ ...cellOpts, children: [new Paragraph({ children: [run(this.memberStatusText(row))] })] });
-                    case 'BlankRemark':
-                        // Always-empty cell — for handwritten notes after printing.
-                        return new TableCell({ ...cellOpts, children: [new Paragraph({ children: [run('')] })] });
+                    case 'Remarks':
+                        return new TableCell({ ...cellOpts, children: [new Paragraph({ children: [run(row.rmks || '')] })] });
                     case 'Plain':
                     default:
                         return new TableCell({ ...cellOpts, children: [new Paragraph({ children: [run(this.plainCellValue(row, col.key))] })] });
@@ -1101,8 +1100,8 @@ export class ReportEducationComponent implements OnInit, OnChanges {
                         return this.selectedSubjectCellText;
                     case 'MemberStatus':
                         return this.memberStatusText(row);
-                    case 'BlankRemark':
-                        return '';
+                    case 'Remarks':
+                        return row.rmks || '';
                     case 'Plain':
                     default:
                         return this.plainCellValue(row, col.key);
@@ -1195,8 +1194,8 @@ export class ReportEducationComponent implements OnInit, OnChanges {
                     return `<td>${esc(this.selectedSubjectCellText)}</td>`;
                 case 'MemberStatus':
                     return `<td>${esc(this.memberStatusText(row))}</td>`;
-                case 'BlankRemark':
-                    return `<td class="td-blank-remark"></td>`;
+                case 'Remarks':
+                    return `<td class="td-rmks">${esc(row.rmks || '')}</td>`;
                 case 'Plain':
                 default:
                     return `<td>${esc(this.plainCellValue(row, col.key))}</td>`;

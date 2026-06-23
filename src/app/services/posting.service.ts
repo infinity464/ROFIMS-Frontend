@@ -542,6 +542,14 @@ export class PostingService {
         return this.http.get<PendingPostingJoiningDto[]>(`${API}/GetPendingPostingJoining`, { params });
     }
 
+    /** Report variant of the pending inter-posting list — same scoped rows, but
+     *  each carries the employee's Additional Remarks for the report's Remarks column. */
+    getPendingInterPostingReport(postingType?: string): Observable<PendingPostingJoiningDto[]> {
+        const params: Record<string, string> = {};
+        if (postingType) params['postingType'] = postingType;
+        return this.http.get<PendingPostingJoiningDto[]>(`${API}/GetPendingInterPostingReport`, { params });
+    }
+
     /** Server-side paginated cancelled joinings (JoinStatus = Cancel) for the collapsible section. */
     getCancelledPostingJoiningPaged(
         postingType: string,
