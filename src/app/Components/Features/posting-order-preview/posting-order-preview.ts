@@ -28,7 +28,8 @@ import { NoteSheetType, IsSendingNotesheetStatus, ApprovalStatus } from '@/model
 import { HttpClient } from '@angular/common/http';
 import { JsReportService } from '@/services/jsreport.service';
 import { environment } from '@/Core/Environments/environment';
-import { firstValueFrom } from 'rxjs';
+import { firstValueFrom, forkJoin } from 'rxjs';
+import { MasterBasicSetupService } from '@/Components/basic-setup/shared/services/MasterBasicSetupService';
 import {
     Document, Packer, Paragraph, TextRun, Table, TableRow, TableCell, ImageRun,
     WidthType, BorderStyle, AlignmentType, PageOrientation, TabStopType, TabStopPosition, TableLayoutType, VerticalAlign
@@ -258,10 +259,12 @@ export class PostingOrderPreviewPageComponent implements OnInit {
         private http: HttpClient,
         private messageService: MessageService,
         private confirmationService: ConfirmationService,
-        private jsreportService: JsReportService
+        private jsreportService: JsReportService,
+        private masterBasicSetupService: MasterBasicSetupService
     ) {}
 
     ngOnInit(): void {
+        this.loadUnitSortOrders();
         this.route.queryParams.subscribe(params => {
             const id = params['id'];
             if (id) {
@@ -870,10 +873,59 @@ export class PostingOrderPreviewPageComponent implements OnInit {
         }
 
         const lines: string[] = [];
-        if (hqWings.length) lines.push(`${bn ? 'পরিচালক' : 'Director'}, ${hqWings.join('/ ')}`);
-        if (rabUnits.length) lines.push(`${bn ? 'অধিনায়ক' : 'Commanding Officer'}, ${rabUnits.join('/ ')}`);
-        if (others.length) lines.push(others.join(', '));
+        if (hqWings.length) lines.push(`${bn ? 'পরিচালক' : 'Director'}, ${this.sortUnitsNaturally(hqWings).join('/ ')}`);
+        if (rabUnits.length) lines.push(`${bn ? 'অধিনায়ক' : 'Commanding Officer'}, ${this.sortUnitsNaturally(rabUnits).join('/ ')}`);
+        if (others.length) lines.push(this.sortUnitsNaturally(others).join(', '));
         return lines;
+    }
+
+    /** DB-maintained serial (CommonCode.SortOrder) per RAB unit / wing name, EN & BN keyed. */
+    private unitSortOrderMap = new Map<string, number>();
+
+    private normalizeUnitName(s: string): string {
+        return this.stripZeroWidth(s || '').toLowerCase();
+    }
+
+    /**
+     * Load the DB serial (SortOrder) for RAB units and wings from their CommonCode
+     * setup (basic-setup/rab-unit & rab-wing), so the অনুলিপি list orders by the
+     * SAME serial the user maintains there.
+     */
+    private loadUnitSortOrders(): void {
+        forkJoin([
+            this.masterBasicSetupService.getAllByType('RabUnit'),
+            this.masterBasicSetupService.getAllByType('RabWing')
+        ]).subscribe({
+            next: ([units, wings]) => {
+                this.unitSortOrderMap.clear();
+                for (const c of [...(units ?? []), ...(wings ?? [])]) {
+                    if (c.sortOrder == null) continue;
+                    if (c.codeValueEN) this.unitSortOrderMap.set(this.normalizeUnitName(c.codeValueEN), c.sortOrder);
+                    if (c.codeValueBN) this.unitSortOrderMap.set(this.normalizeUnitName(c.codeValueBN), c.sortOrder);
+                }
+            },
+            error: () => { /* fall back to numeric sort below */ }
+        });
+    }
+
+    /**
+     * Order unit/wing names by the DB-maintained serial (SortOrder) from rab-unit /
+     * rab-wing setup. Falls back to the trailing number in the name (Bangla ০-৯ or
+     * ASCII) when a name isn't in the map yet, then alphabetically.
+     */
+    private sortUnitsNaturally(units: string[]): string[] {
+        const key = (s: string): number => {
+            const mapped = this.unitSortOrderMap.get(this.normalizeUnitName(s));
+            if (mapped != null) return mapped;
+            const ascii = (s || '').replace(/[০-৯]/g, d => String(d.charCodeAt(0) - 0x09E6));
+            const m = ascii.match(/\d+/);
+            return m ? parseInt(m[0], 10) : Number.POSITIVE_INFINITY;
+        };
+        return [...units].sort((a, b) => {
+            const ka = key(a), kb = key(b);
+            if (ka !== kb) return ka - kb;
+            return a.localeCompare(b, 'bn');
+        });
     }
 
     /** Number of auto copy-lines actually rendered (0 when hidden) — footer paragraphs continue after this. */
@@ -1794,8 +1846,8 @@ html, body { margin: 0; padding: 0; background: transparent; }
         const approvalPersonApptText = (bn ? this.approvalPersonAppointmentBN : this.approvalPersonAppointment) || this.approvalPersonAppointment || '............................';
         const sigCellChildren: Paragraph[] = [];
 
-        // Embed approval person's digital signature image if available
-        if (this.approvalPersonSignatureUrl) {
+        // Embed approval person's digital signature image — ONLY after the order is approved.
+        if (this.approvalPersonSignatureUrl && this.isApproved) {
             try {
                 const base64Data = this.approvalPersonSignatureUrl.split(',')[1];
                 const binaryString = atob(base64Data);

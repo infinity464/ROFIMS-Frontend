@@ -146,7 +146,7 @@
                         <td>{{ (isBangla ? row.fullNameBN : row.fullNameEN) || row.fullNameEN || '-' }}</td>
                         <td>{{ (isBangla ? row.permanentDistrictNameBN : row.permanentDistrictName) || row.permanentDistrictName || '-' }}</td>
                         <td>{{ (isBangla ? row.spousePermanentDistrictNameBN : row.spousePermanentDistrictName) || row.spousePermanentDistrictName || '-' }}</td>
-                        <td>{{ selectedPostingType === 'InterPosting' ? ((isBangla ? row.previousRabUnitsBN || row.previousRabUnits : row.previousRabUnits) || '-') : ((isBangla ? row.motherOrgLocationNameBN : row.motherOrgLocationName) || row.motherOrgLocationName || '-') }}</td>
+                        <td>{{ selectedPostingType === 'InterPosting' ? ((isBangla ? row.previousRabUnitsBN || row.previousRabUnits : row.previousRabUnits) || '-') : ((isBangla ? row.motherUnitNameBN || row.motherUnitName : row.motherUnitName) || (isBangla ? row.motherOrgLocationNameBN : row.motherOrgLocationName) || '-') }}</td>
                         <td>{{ (isBangla ? row.transferRabUnitNameBN || row.transferRabUnitName : row.transferRabUnitName) || '-' }}</td>
                         <td>{{ getEmployeeRemarks(row) || '-' }}</td>
                     </tr>

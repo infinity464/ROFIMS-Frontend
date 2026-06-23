@@ -20,7 +20,7 @@ import { RichEditorComponent } from '@/Components/Common/rich-editor/rich-editor
 import { FileReferencesFormComponent, FileRowData } from '@/Components/Common/file-references-form/file-references-form';
 import { NotesheetApproverSelectComponent } from '@/Components/Common/notesheet-approver-select/notesheet-approver-select';
 import { NotesheetPreviewBase } from '../notesheet-preview-base';
-import { NoteSheetCurrentStatus, NoteSheetCurrentStatusOptions, NoteSheetOperationTypeOptions, ApprovalStatus, NoteSheetRemarkAction, NoteSheetType, ApprovalLogAction, ApprovalLogActionOptions, DraftPostingStatus, PostingStatus, NoteSheetPreviewFrom } from '@/models/enums';
+import { NoteSheetCurrentStatus, NoteSheetCurrentStatusOptions, NoteSheetOperationTypeOptions, ApprovalStatus, NoteSheetRemarkAction, NoteSheetType, ApprovalLogAction, ApprovalLogActionOptions, DraftPostingStatus, NoteSheetPreviewFrom } from '@/models/enums';
 import { SharedService } from '@/shared/services/shared-service';
 import { FlexibleDateDirective } from '@/shared/directives/flexible-date.directive';
 import { DraftPostingEmployeeRow, EmployeeRemovalInfo, CancelledInterPostingInfo } from '@/models/posting.model';
@@ -493,13 +493,9 @@ export class NotesheetPreviewPostingComponent extends NotesheetPreviewBase imple
                     });
                 }
 
-                const empIds = (employees ?? []).map((e: any) => e.employeeId).filter((id: number) => id > 0);
-                if (empIds.length > 0) {
-                    this.postingService.updateEmployeesPostingStatus(empIds, PostingStatus.PendingForJoining).subscribe({
-                        next: () => {},
-                        error: (err: any) => this.messageService.add({ severity: 'warn', summary: 'Warning', detail: err?.error?.message || 'Failed to update employee posting status.' })
-                    });
-                }
+                // NOTE: employees are NOT set to PendingForJoining here. That happens only
+                // when the posting order is APPROVED (PostingOrderService.ApprovePostingOrderAsync),
+                // not on note-sheet final approval.
             },
             error: (err: any) => this.messageService.add({ severity: 'warn', summary: 'Warning', detail: err?.error?.message || 'Failed to load posting employees for status update.' })
         });
@@ -1671,7 +1667,7 @@ html, body { margin: 0; padding: 0; background: transparent; }
                 nameLine: nameStr,
                 rankLine: rankStr,
                 appointment: bn ? (d.appointmentBN || d.appointment) : d.appointment,
-                date: approved && this.noteSheet.noteSheetDate ? this.formatMonthYear(this.noteSheet.noteSheetDate) : undefined,
+                date: approved && this.noteSheet.noteSheetDate ? this.formatFullDate(this.noteSheet.noteSheetDate) : undefined,
                 align: 'right',
                 signatureDataUrl: approved && this.showSignatureImage && this.shouldShowSignature(d.step) ? d.signatureDataUrl : undefined
             };
@@ -1834,7 +1830,7 @@ html, body { margin: 0; padding: 0; background: transparent; }
             ];
             if (this.noteSheet.noteSheetDate) {
                 const dateLabel = bn ? 'তারিখঃ ' : 'Date: ';
-                const dateVal = this.formatMonthYear(this.noteSheet.noteSheetDate);
+                const dateVal = this.formatFullDate(this.noteSheet.noteSheetDate);
                 nsRuns.push(new TextRun({ text: '\t' + dateLabel + dateVal, size: BODY_SZ, sizeComplexScript: csSize, font, language: lang }));
             }
             mainChildren.push(new Paragraph({
@@ -1923,7 +1919,8 @@ html, body { margin: 0; padding: 0; background: transparent; }
                 // ── Inter-posting: 13-column (no Trade), 3-row header ──
                 // Indices: 0=ser,1=svcId,2=rank,3=name,4=ownDist,5=spouseDist,
                 //          6=joinDate,7=yr,8=mo,9=day,10=prevWp,11=trUnit,12=remarks
-                const iBase = [300, 900, 700, 1000, 900, 900, 800, 400, 400, 400, 900, 900, 800];
+                //          ser svcId rank name own  spo  jdt  yr  mo  day prev unit rem
+                const iBase = [300, 1150, 700, 1000, 900, 900, 800, 400, 400, 400, 700, 900, 800];
                 const iBnHdr = ['ক্রমিক','ব্যক্তিগত নং','পদবি','নাম','নিজ জেলা (দায়িত্বপূর্ণ এলাকা)','স্বামী/স্ত্রীর জেলা (দায়িত্বপূর্ণ এলাকা)','','','','','পূর্ববতী কর্মস্থল','বদলিকৃত কর্মস্থল','মন্তব্য'];
                 const iEnHdr = ['Ser','Service ID','Rank','Name','Own District (Responsible Area)',"Husband/Wife's District (Responsible Area)",'','','','','Previous Workplace','Transfer Station','Remarks'];
                 const iVisIdx = iBase.map((_, i) => i).filter(i => i !== 12 || this.showRemarks);
@@ -2001,7 +1998,8 @@ html, body { margin: 0; padding: 0; background: transparent; }
                 const allColHeaders = bn
                     ? ['ক্রমিক','ব্যক্তিগত নম্বর','পদবি','ট্রেড','নাম','নিজ জেলা (দায়িত্বপূর্ণ এলাকা)','স্পাউস জেলা (দায়িত্বপূর্ণ এলাকা)','পূর্ববতী কর্মস্থল','বদলি ইউনিট','মন্তব্য']
                     : ['Ser','Service ID','Rank','Trade','Name','Own District (Responsible Area)','Spouse District (Responsible Area)','Previous Workplace','Transfer Unit','Remarks'];
-                const allBaseWidths = [490, 1220, 850, 1200, 1380, 1220, 1220, 1340, 1060, 1100];
+                //                    ser  svcId rank trade name  own   spouse prev  unit  rem
+                const allBaseWidths = [490, 1550, 850,  820, 1380, 1220, 1220, 1040, 1060, 1100];
 
                 const visibleIndices = allColKeys.map((k, i) => {
                     if (k === 'remarks' && !this.showRemarks) return -1;
@@ -2078,7 +2076,7 @@ html, body { margin: 0; padding: 0; background: transparent; }
 
         // Initiator — right-positioned, keep entire block together
         if (model.initiator) {
-            const initIndent = { left: 8000 };
+            const initIndent = { left: 6300 };  // ~70% from left — matches the on-screen preview
             // Signature image or spacer
             if (model.initiator.signatureDataUrl) {
                 try {

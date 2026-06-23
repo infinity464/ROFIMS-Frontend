@@ -15,6 +15,7 @@ import { ServingMembersService, ServingMemberFilterRequest } from '@/services/se
 import { EmployeeListService } from '@/services/employee-list.service';
 import { CommonCodeService } from '@/services/common-code-service';
 import { EmployeeServiceOverview } from '@/models/employee-service-overview.model';
+import { IsSendingNotesheetStatus } from '@/models/enums';
 import { TagModule } from 'primeng/tag';
 import { FlexibleDateDirective } from '@/shared/directives/flexible-date.directive';
 
@@ -398,22 +399,27 @@ export class PresentlyServingMembers implements OnInit {
 
     /** Whether an employee is already in inter-posting process (cannot be re-selected). */
     isInPostingProcess(row: EmployeeServiceOverview): boolean {
-        return row.isSendingNotesheetStatus === 'draftInterPosting';
+        return row.isSendingNotesheetStatus === IsSendingNotesheetStatus.DraftInterPosting;
     }
 
     /** Used by p-table [rowSelectable] to prevent header checkbox from selecting blocked rows. */
     isRowSelectable(event: { data: EmployeeServiceOverview; index: number }): boolean {
-        return event.data.isSendingNotesheetStatus !== 'draftInterPosting';
+        return event.data.isSendingNotesheetStatus !== IsSendingNotesheetStatus.DraftInterPosting;
     }
 
     /** Maps IsSendingNotesheetStatus to a display label. */
     getStatusLabel(status: string | null): string {
         if (!status) return '';
+        // On the inter-posting page only an in-progress INTER posting is relevant —
+        // show "Inter Posting in Process" for that and nothing for the other states.
+        if (this.interPostingMode) {
+            return status === IsSendingNotesheetStatus.DraftInterPosting ? 'Inter Posting in Process' : '';
+        }
         switch (status) {
-            case 'draft': return 'New Posting (Draft)';
-            case 'draftPosting': return 'New Posting in Process';
-            case 'draftNotesheet': return 'Notesheet in Process';
-            case 'draftInterPosting': return 'Inter Posting in Process';
+            case IsSendingNotesheetStatus.Draft: return 'New Posting (Draft)';
+            case IsSendingNotesheetStatus.DraftPosting: return 'New Posting in Process';
+            case IsSendingNotesheetStatus.DraftNotesheet: return 'Notesheet in Process';
+            case IsSendingNotesheetStatus.DraftInterPosting: return 'Inter Posting in Process';
             default: return status;
         }
     }
@@ -432,7 +438,7 @@ export class PresentlyServingMembers implements OnInit {
             employeeId: r.employeeID,
             interPostingRemark: this.interPostingRemarks[r.employeeID] || null
         }));
-        this.employeeListService.setBulkIsSendingNotesheetStatus(employees, 'draftInterPosting').subscribe({
+        this.employeeListService.setBulkIsSendingNotesheetStatus(employees, IsSendingNotesheetStatus.DraftInterPosting).subscribe({
             next: (res) => {
                 this.savingInterPosting = false;
                 if (res.statusCode === 200) {

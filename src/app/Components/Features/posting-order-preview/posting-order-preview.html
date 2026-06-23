@@ -640,7 +640,7 @@
                         </td>
                         <td class="po-doc-copy-right">
                             <div class="po-doc-copy-sig" *ngIf="approvalEmployeeId">
-                                <img *ngIf="approvalPersonSignatureUrl && showUpperSignature" [src]="approvalPersonSignatureUrl" class="approver-signature-img" alt="Signature" />
+                                <img *ngIf="approvalPersonSignatureUrl && showUpperSignature && isApproved" [src]="approvalPersonSignatureUrl" class="approver-signature-img" alt="Signature" />
                                 <div class="sig-name">{{ (isBangla ? approvalPersonNameBN : approvalPersonName) || approvalPersonName || '...................................' }}</div>
                                 <div class="sig-rank">{{ (isBangla ? approvalPersonRankBN : approvalPersonRank) || approvalPersonRank || '............................' }}</div>
                                 <div class="sig-appointment">{{ (isBangla ? approvalPersonAppointmentBN : approvalPersonAppointment) || approvalPersonAppointment || '............................' }}</div>

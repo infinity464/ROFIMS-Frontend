@@ -37,6 +37,10 @@ export interface EmployeeBasicInfo {
     motherOrganizationDisplay?: string;
     memberTypeDisplay?: string;
     orgId?: number;
+    /** CommonCode id of the employee's current appointment (for pre-filling forms). */
+    appointmentId?: number;
+    /** Display name of the appointment (e.g. "Director General"). */
+    appointment?: string;
 }
 
 @Component({
@@ -208,7 +212,11 @@ export class EmployeeSearchComponent implements OnChanges {
                         tradeDisplay: searchInfo.trade ?? searchInfo.Trade,
                         motherOrganizationDisplay: searchInfo.motherOrganization ?? searchInfo.MotherOrganization,
                         memberTypeDisplay: searchInfo.memberType ?? searchInfo.MemberType,
-                        memberType: reliableMemberTypeId as number | undefined
+                        memberType: reliableMemberTypeId as number | undefined,
+                        appointmentId: (searchInfo as { appointmentId?: number; AppointmentId?: number }).appointmentId
+                            ?? (searchInfo as { appointmentId?: number; AppointmentId?: number }).AppointmentId,
+                        appointment: (searchInfo as { appointment?: string; Appointment?: string }).appointment
+                            ?? (searchInfo as { appointment?: string; Appointment?: string }).Appointment
                     };
                 }
 

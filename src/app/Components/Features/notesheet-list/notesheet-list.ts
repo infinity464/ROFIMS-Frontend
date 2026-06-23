@@ -19,7 +19,7 @@ import { RichEditorComponent } from '@/Components/Common/rich-editor/rich-editor
 import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
 import { EmpService } from '@/services/emp-service';
 import { NoteSheetEditCacheService } from '@/services/note-sheet-edit-cache.service';
-import { NoteSheetType, NoteSheetCurrentStatus, NoteSheetCurrentStatusOptions, ApprovalStatus, NoteSheetRemarkAction, ApprovalLogAction, ApprovalLogActionOptions, NoteSheetOperationType, DraftPostingStatus, PostingStatus, NoteSheetPreviewFrom } from '@/models/enums';
+import { NoteSheetType, NoteSheetCurrentStatus, NoteSheetCurrentStatusOptions, ApprovalStatus, NoteSheetRemarkAction, ApprovalLogAction, ApprovalLogActionOptions, NoteSheetOperationType, DraftPostingStatus, NoteSheetPreviewFrom } from '@/models/enums';
 import { ServingMembersService } from '@/services/serving-members.service';
 import { MasterBasicSetupService } from '@/Components/basic-setup/shared/services/MasterBasicSetupService';
 import { CommonCode } from '@/Components/basic-setup/shared/models/common-code';
@@ -1583,14 +1583,9 @@ export class NotesheetListComponent implements OnInit {
           });
         }
 
-        // 2. Update each employee's PostingStatus to 'PendingForJoining'
-        const empIds = (employees ?? []).map(e => e.employeeId).filter(id => id > 0);
-        if (empIds.length > 0) {
-          this.postingService.updateEmployeesPostingStatus(empIds, PostingStatus.PendingForJoining).subscribe({
-            next: () => {},
-            error: (err: any) => this.messageService.add({ severity: 'warn', summary: 'Warning', detail: err?.error?.message || 'Failed to update employee posting status.' })
-          });
-        }
+        // NOTE: employees are NOT set to PendingForJoining here. That happens only when the
+        // posting order is APPROVED (backend PostingOrderService.ApprovePostingOrderAsync),
+        // not on note-sheet final approval.
       },
       error: (err: any) => this.messageService.add({ severity: 'warn', summary: 'Warning', detail: err?.error?.message || 'Failed to load posting employees for status update.' })
     });
