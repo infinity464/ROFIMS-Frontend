@@ -2067,6 +2067,7 @@ export class EmpBasicInfo implements OnInit {
         const formatted = value
             .replace(/\s+/g, ' ')
             .trim()
+            .toLowerCase()
             .replace(/\b\p{L}/gu, (ch) => ch.toUpperCase());
         if (formatted !== value) {
             field!.setValue(formatted);

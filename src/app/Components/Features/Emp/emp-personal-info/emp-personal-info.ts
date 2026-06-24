@@ -11,6 +11,7 @@ import { ButtonModule } from 'primeng/button';
 import { Fluid } from 'primeng/fluid';
 import { MessageService } from 'primeng/api';
 import { SelectModule } from 'primeng/select';
+import { MultiSelectModule } from 'primeng/multiselect';
 import { DatePickerModule } from 'primeng/datepicker';
 import { InputNumberModule } from 'primeng/inputnumber';
 import { TextareaModule } from 'primeng/textarea';
@@ -36,6 +37,7 @@ import { PresentStatusTypeOptions } from '@/models/enums';
         ButtonModule,
         Fluid,
         SelectModule,
+        MultiSelectModule,
         DatePickerModule,
         InputNumberModule,
         TextareaModule,
@@ -266,9 +268,9 @@ export class EmpPersonalInfo implements OnInit {
             batch: [null],
             investigationExperience: [false],
             investigationExperienceDetails: [''],
-            professionalQualification: [null],
-            personalQualification: [null],
-            gallantryAward: [null],
+            professionalQualification: [[] as number[]],
+            personalQualification: [[] as number[]],
+            gallantryAward: [[] as number[]],
             lastEducationQualification: [null],
             medicalCategory: [null], // Loaded from API (Medical Category Type)
             tribal: [null],
@@ -444,6 +446,17 @@ export class EmpPersonalInfo implements OnInit {
             return isNaN(num) ? val : num;
         };
 
+        // Multi-select fields are stored as a comma-separated id CSV (e.g. "12,45").
+        // Parse into number[] for p-multiSelect; tolerate already-array values.
+        const parseCsvIds = (val: any): number[] => {
+            if (val === null || val === undefined || val === '') return [];
+            if (Array.isArray(val)) return val.map((v) => parseInt(v, 10)).filter((n) => !isNaN(n));
+            return String(val)
+                .split(',')
+                .map((s) => parseInt(s.trim(), 10))
+                .filter((n) => !isNaN(n));
+        };
+
         this.personalInfoForm.patchValue(
             {
                 bloodGroup: data.BloodGroup || data.bloodGroup || null,
@@ -463,9 +476,9 @@ export class EmpPersonalInfo implements OnInit {
                 batch: parseDropdownValue(data.Batch || data.batch),
                 investigationExperience: data.HasInvestigationExp || data.hasInvestigationExp || false,
                 investigationExperienceDetails: data.InvestigationExpDetails || data.investigationExpDetails || '',
-                professionalQualification: parseDropdownValue(data.ProfessionalQualification || data.professionalQualification),
-                personalQualification: parseDropdownValue(data.PersonalQualification || data.personalQualification),
-                gallantryAward: parseDropdownValue(data.Awards || data.awards),
+                professionalQualification: parseCsvIds(data.ProfessionalQualification || data.professionalQualification),
+                personalQualification: parseCsvIds(data.PersonalQualification || data.personalQualification),
+                gallantryAward: parseCsvIds(data.Awards || data.awards),
                 lastEducationQualification: parseDropdownValue(data.LastEducationalQualification || data.lastEducationalQualification),
                 medicalCategory: data.MedicalCategory ?? data.medicalCategory ?? null,
                 tribal: data.Tribal !== undefined ? data.Tribal : data.tribal !== undefined ? data.tribal : null,
@@ -615,9 +628,10 @@ export class EmpPersonalInfo implements OnInit {
             Batch: formValue.batch ? formValue.batch.toString() : null,
             HasInvestigationExp: formValue.investigationExperience,
             InvestigationExpDetails: formValue.investigationExperienceDetails,
-            ProfessionalQualification: formValue.professionalQualification ? formValue.professionalQualification.toString() : null,
-            PersonalQualification: formValue.personalQualification ? formValue.personalQualification.toString() : null,
-            Awards: formValue.gallantryAward ? formValue.gallantryAward.toString() : null,
+            // Multi-select: join selected ids into a CSV string, null when empty.
+            ProfessionalQualification: formValue.professionalQualification?.length ? formValue.professionalQualification.join(',') : null,
+            PersonalQualification: formValue.personalQualification?.length ? formValue.personalQualification.join(',') : null,
+            Awards: formValue.gallantryAward?.length ? formValue.gallantryAward.join(',') : null,
             LastEducationalQualification: formValue.lastEducationQualification ? formValue.lastEducationQualification.toString() : null,
             MedicalCategory: formValue.medicalCategory,
             Tribal: formValue.tribal,

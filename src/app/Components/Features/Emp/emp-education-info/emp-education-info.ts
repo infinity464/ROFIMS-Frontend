@@ -165,7 +165,7 @@ export class EmpEducationInfoComponent implements OnInit {
             instituteType: [null, Validators.required],
             instituteName: [null, Validators.required],
             departmentName: [null],
-            subjectName: [null],
+            subjectName: [null, Validators.required],
             dateFrom: [null],
             dateTo: [null],
             passingYear: [null],

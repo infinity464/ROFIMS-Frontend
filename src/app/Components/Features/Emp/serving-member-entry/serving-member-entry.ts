@@ -843,9 +843,9 @@ export class ServingMemberEntry implements OnInit {
             dateOfCommission: [null],
             investigationExperience: [false],
             investigationExperienceDetails: [''],
-            professionalQualification: [null],
-            personalQualification: [null],
-            gallantryAward: [null],
+            professionalQualification: [[] as number[]],
+            personalQualification: [[] as number[]],
+            gallantryAward: [[] as number[]],
             lastEducationQualification: [null],
             medicalCategory: [null],
             tribal: [0],
@@ -934,9 +934,10 @@ export class ServingMemberEntry implements OnInit {
             CommissionDate: toIso(formValue.dateOfCommission),
             HasInvestigationExp: formValue.investigationExperience,
             InvestigationExpDetails: formValue.investigationExperienceDetails,
-            ProfessionalQualification: formValue.professionalQualification ? formValue.professionalQualification.toString() : null,
-            PersonalQualification: formValue.personalQualification ? formValue.personalQualification.toString() : null,
-            Awards: formValue.gallantryAward ? formValue.gallantryAward.toString() : null,
+            // Multi-select: join selected ids into a CSV string, null when empty.
+            ProfessionalQualification: formValue.professionalQualification?.length ? formValue.professionalQualification.join(',') : null,
+            PersonalQualification: formValue.personalQualification?.length ? formValue.personalQualification.join(',') : null,
+            Awards: formValue.gallantryAward?.length ? formValue.gallantryAward.join(',') : null,
             LastEducationalQualification: formValue.lastEducationQualification ? formValue.lastEducationQualification.toString() : null,
             MedicalCategory: formValue.medicalCategory,
             Tribal: formValue.tribal,
@@ -1507,6 +1508,7 @@ export class ServingMemberEntry implements OnInit {
         const formatted = value
             .replace(/\s+/g, ' ')
             .trim()
+            .toLowerCase()
             .replace(/\b\p{L}/gu, (ch) => ch.toUpperCase());
         if (formatted !== value) field!.setValue(formatted);
     }

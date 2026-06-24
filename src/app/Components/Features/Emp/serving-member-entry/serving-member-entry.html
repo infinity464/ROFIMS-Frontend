@@ -594,7 +594,7 @@
                 <div class="form-row">
                     <div class="form-field">
                         <label class="form-label">Professional Qualification</label>
-                        <p-select
+                        <p-multiSelect
                             [options]="professionalQualifications"
                             formControlName="professionalQualification"
                             optionLabel="label"
@@ -603,13 +603,13 @@
                             styleClass="w-full"
                             [filter]="true"
                             filterPlaceholder="Search"
-                            [showClear]="true"
+                            display="chip"
                         >
-                        </p-select>
+                        </p-multiSelect>
                     </div>
                     <div class="form-field">
                         <label class="form-label">Personal Qualification</label>
-                        <p-select
+                        <p-multiSelect
                             [options]="personalQualifications"
                             formControlName="personalQualification"
                             optionLabel="label"
@@ -618,13 +618,13 @@
                             styleClass="w-full"
                             [filter]="true"
                             filterPlaceholder="Search"
-                            [showClear]="true"
+                            display="chip"
                         >
-                        </p-select>
+                        </p-multiSelect>
                     </div>
                     <div class="form-field">
                         <label class="form-label">Gallantry Awards/Decoration</label>
-                        <p-select [options]="gallantryAwards" formControlName="gallantryAward" optionLabel="label" optionValue="value" placeholder="Select" styleClass="w-full" [filter]="true" filterPlaceholder="Search" [showClear]="true"> </p-select>
+                        <p-multiSelect [options]="gallantryAwards" formControlName="gallantryAward" optionLabel="label" optionValue="value" placeholder="Select" styleClass="w-full" [filter]="true" filterPlaceholder="Search" display="chip"> </p-multiSelect>
                     </div>
                     <div class="form-field">
                         <label class="form-label">Last Education Qualification</label>

@@ -123,15 +123,15 @@
                     <div class="form-row">
                         <div class="form-field">
                             <label class="form-label">Professional Qualification</label>
-                            <p-select formControlName="professionalQualification" [options]="professionalQualifications" optionLabel="label" optionValue="value" placeholder="Select" styleClass="w-full" [filter]="true"></p-select>
+                            <p-multiSelect formControlName="professionalQualification" [options]="professionalQualifications" optionLabel="label" optionValue="value" placeholder="Select" styleClass="w-full" [filter]="true" display="chip"></p-multiSelect>
                         </div>
                         <div class="form-field">
                             <label class="form-label">Personal Qualification</label>
-                            <p-select formControlName="personalQualification" [options]="personalQualifications" optionLabel="label" optionValue="value" placeholder="Select" styleClass="w-full" [filter]="true"></p-select>
+                            <p-multiSelect formControlName="personalQualification" [options]="personalQualifications" optionLabel="label" optionValue="value" placeholder="Select" styleClass="w-full" [filter]="true" display="chip"></p-multiSelect>
                         </div>
                         <div class="form-field">
                             <label class="form-label">Gallantry Awards/Decoration</label>
-                            <p-select formControlName="gallantryAward" [options]="gallantryAwards" optionLabel="label" optionValue="value" placeholder="Select" styleClass="w-full" [filter]="true"></p-select>
+                            <p-multiSelect formControlName="gallantryAward" [options]="gallantryAwards" optionLabel="label" optionValue="value" placeholder="Select" styleClass="w-full" [filter]="true" display="chip"></p-multiSelect>
                         </div>
                         <div class="form-field">
                             <label class="form-label">Last Education Qualification</label>

@@ -49,7 +49,7 @@ export interface ServiceHistoryListRow {
     serviceTo: string | null;
     /** Shared precision for From/To (DB codes). Read from serviceFromPrecision, falling back to serviceToPrecision. */
     servicePrecision: DatePrecision | null;
-    appointment: number | null;
+    appointment: string | null;
     auth: string | null;
     remarks: string | null;
     filesReferences?: string | null;

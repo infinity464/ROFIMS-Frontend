@@ -88,11 +88,11 @@ export interface EmployeePersonalServiceOverview {
     educationQualificationId: number | null;
     educationQualification: string | null;
     educationQualificationBN?: string | null;
-    professionalQualificationId: number | null;
-    professionalQualification: string | null;
+    professionalQualificationId: string | null; // CSV of CommonCode ids (multi-select)
+    professionalQualification: string | null; // comma-joined labels
     professionalQualificationBN?: string | null;
-    personalQualificationId: number | null;
-    personalQualification: string | null;
+    personalQualificationId: string | null; // CSV of CommonCode ids (multi-select)
+    personalQualification: string | null; // comma-joined labels
     personalQualificationBN?: string | null;
     medicalCategoryId: number | null;
     medicalCategory: string | null;
@@ -105,7 +105,7 @@ export interface EmployeePersonalServiceOverview {
     specialQualifications: string | null;
     /** Comma-separated Bangla labels for the ids. */
     specialQualificationsBN?: string | null;
-    gallantryAwardsDecorationId: number | null;
+    gallantryAwardsDecorationId: string | null; // CSV of CommonCode ids (multi-select)
     hasInvestigationExp: boolean | null;
     investigationExpDetails: string | null;
     /** JSON array of profile image ref(s): e.g. [{"FileId":3,"fileName":"photo.png"}]. From EmployeeInfo.ProfileImages. */
