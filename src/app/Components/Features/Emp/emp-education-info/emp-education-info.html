@@ -113,7 +113,7 @@
                                 </div>
                                 <!-- Row 3: Subject & Passing Year -->
                                 <div>
-                                    <label class="font-semibold block mb-2 text-700">Subject</label>
+                                    <label class="font-semibold block mb-2 text-700">Subject <span class="text-red-500">*</span></label>
                                     <div style="display: flex; align-items: center; gap: 0.35rem;">
                                         <div style="flex: 1; min-width: 0;">
                                             <p-select formControlName="subjectName" [options]="subjectOptions" optionLabel="label" optionValue="value" placeholder="Select Subject" styleClass="w-full" [filter]="true" [showClear]="true" appendTo="body"></p-select>
@@ -125,6 +125,9 @@
                                             (click)="openAddSubjectDialog()">
                                         </button>
                                     </div>
+                                    @if (educationForm.get('subjectName')?.invalid && educationForm.get('subjectName')?.touched) {
+                                        <small class="text-red-500">Subject is required</small>
+                                    }
                                 </div>
                                 <div>
                                     <label class="font-semibold block mb-2 text-700">Passing Year</label>

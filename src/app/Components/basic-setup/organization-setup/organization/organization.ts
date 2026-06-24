@@ -97,13 +97,23 @@ export class Organization implements OnInit {
         });
     }
 
+    /** Sort by SortOrder ascending; nulls last, then by English name. */
+    private sortBySortOrder(list: OrganizationModel[]): OrganizationModel[] {
+        return [...list].sort((a, b) => {
+            const sa = a.sortOrder ?? Number.POSITIVE_INFINITY;
+            const sb = b.sortOrder ?? Number.POSITIVE_INFINITY;
+            if (sa !== sb) return sa - sb;
+            return (a.orgNameEN ?? '').localeCompare(b.orgNameEN ?? '');
+        });
+    }
+
     getAll() {
         this.organizationService.getAllMotherOrg().subscribe({
             next: (res: OrganizationModel[]) => {
                 console.log('Organizations fetched successfully', res);
-                this.organizations = res;
-                this.filteredOrganizations = [...res]; // Make a copy
-                this.totalRecords = res.length;
+                this.organizations = this.sortBySortOrder(res);
+                this.filteredOrganizations = [...this.organizations]; // Make a copy
+                this.totalRecords = this.organizations.length;
             },
             error: (err: any) => {
                 console.log('Error fetching organizations');
@@ -121,7 +131,7 @@ export class Organization implements OnInit {
         this.searchValue = target.value.toLowerCase().trim();
 
         if (this.searchValue) {
-            this.filteredOrganizations = this.organizations.filter((org) => org.orgNameEN?.toLowerCase().includes(this.searchValue) || org.orgNameBN?.toLowerCase().includes(this.searchValue));
+            this.filteredOrganizations = this.sortBySortOrder(this.organizations.filter((org) => org.orgNameEN?.toLowerCase().includes(this.searchValue) || org.orgNameBN?.toLowerCase().includes(this.searchValue)));
         } else {
             this.filteredOrganizations = [...this.organizations];
         }

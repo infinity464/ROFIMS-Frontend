@@ -785,7 +785,9 @@ export class ServingMemberEntry implements OnInit {
 
         const payload = {
             employeeID: employeeId,
-            previousRABServiceID: 0,
+            // First service record for a freshly-created member starts at 1 (never 0),
+            // matching the client-assigned composite-key convention used elsewhere.
+            previousRABServiceID: 1,
             rabUnitCodeId: v.rabUnitCodeId ?? null,
             rabWingCodeId: v.rabWingCodeId ?? null,
             rabBranchCodeId: v.rabBranchCodeId ?? null,
@@ -841,9 +843,9 @@ export class ServingMemberEntry implements OnInit {
             dateOfCommission: [null],
             investigationExperience: [false],
             investigationExperienceDetails: [''],
-            professionalQualification: [null],
-            personalQualification: [null],
-            gallantryAward: [null],
+            professionalQualification: [[] as number[]],
+            personalQualification: [[] as number[]],
+            gallantryAward: [[] as number[]],
             lastEducationQualification: [null],
             medicalCategory: [null],
             tribal: [0],
@@ -932,9 +934,10 @@ export class ServingMemberEntry implements OnInit {
             CommissionDate: toIso(formValue.dateOfCommission),
             HasInvestigationExp: formValue.investigationExperience,
             InvestigationExpDetails: formValue.investigationExperienceDetails,
-            ProfessionalQualification: formValue.professionalQualification ? formValue.professionalQualification.toString() : null,
-            PersonalQualification: formValue.personalQualification ? formValue.personalQualification.toString() : null,
-            Awards: formValue.gallantryAward ? formValue.gallantryAward.toString() : null,
+            // Multi-select: join selected ids into a CSV string, null when empty.
+            ProfessionalQualification: formValue.professionalQualification?.length ? formValue.professionalQualification.join(',') : null,
+            PersonalQualification: formValue.personalQualification?.length ? formValue.personalQualification.join(',') : null,
+            Awards: formValue.gallantryAward?.length ? formValue.gallantryAward.join(',') : null,
             LastEducationalQualification: formValue.lastEducationQualification ? formValue.lastEducationQualification.toString() : null,
             MedicalCategory: formValue.medicalCategory,
             Tribal: formValue.tribal,
@@ -1357,6 +1360,14 @@ export class ServingMemberEntry implements OnInit {
         this.loadTrade(codeId);
     }
 
+    /** Show Officer Type unless a non-"Officer" Member Type is selected. */
+    get isOfficerMemberType(): boolean {
+        const id = this.postingForm?.get('memberType')?.value;
+        if (id == null) return true;
+        const mt = this.memberTypes?.find((m: CommonCodeModel) => m.codeId === id);
+        return (mt?.codeValueEN ?? '').trim().toLowerCase() === 'officer';
+    }
+
     onMemberTypeChange(codeId: number) {
         if (codeId != null && this.allowedMemberTypeIds !== null && !this.allowedMemberTypeIds.includes(codeId)) {
             const typeName = this.memberTypes?.find((m: CommonCodeModel) => m.codeId === codeId)?.codeValueEN ?? 'this member type';
@@ -1497,6 +1508,7 @@ export class ServingMemberEntry implements OnInit {
         const formatted = value
             .replace(/\s+/g, ' ')
             .trim()
+            .toLowerCase()
             .replace(/\b\p{L}/gu, (ch) => ch.toUpperCase());
         if (formatted !== value) field!.setValue(formatted);
     }

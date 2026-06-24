@@ -5,35 +5,45 @@
         </div>
 
         <form [formGroup]="postingForm" (ngSubmit)="saveAll()">
-
             <div class="form-section">
                 <!-- Row 1 -->
                 <div class="form-row">
                     <div class="form-field form-field-fixed">
                         @if (!imagePreview) {
-                            <label class="form-label">Add Picture <small class="text-500 font-normal">(Max: 5MB)</small></label>
-                            <p-fileUpload #fileUpload mode="basic" chooseLabel="Upload Picture" chooseIcon="pi pi-upload"
-                                name="picture" accept="image/*" [auto]="true" (onSelect)="onFileSelect($event)"
-                                maxFileSize="5000000" styleClass="w-full">
-                            </p-fileUpload>
+                        <label class="form-label">Add Picture <small class="text-500 font-normal">(Max: 5MB)</small></label>
+                        <p-fileUpload #fileUpload mode="basic" chooseLabel="Upload Picture" chooseIcon="pi pi-upload" name="picture" accept="image/*" [auto]="true" (onSelect)="onFileSelect($event)" maxFileSize="5000000" styleClass="w-full">
+                        </p-fileUpload>
                         } @else {
-                            <div style="position: relative; display: inline-block;">
-                                <div class="profile-photo-container" (click)="showImagePreviewModal = true" pTooltip="Click to enlarge">
-                                    <img [src]="imagePreview" alt="Preview" class="profile-photo" />
-                                </div>
-                                <p-button icon="pi pi-times" [rounded]="true" severity="danger" size="small" pTooltip="Remove"
-                                    (onClick)="removeImage()"
-                                    [style]="{'position': 'absolute', 'top': '-8px', 'right': '-8px', 'width': '22px', 'height': '22px'}">
-                                </p-button>
+                        <div style="position: relative; display: inline-block">
+                            <div class="profile-photo-container" (click)="showImagePreviewModal = true" pTooltip="Click to enlarge">
+                                <img [src]="imagePreview" alt="Preview" class="profile-photo" />
                             </div>
+                            <p-button
+                                icon="pi pi-times"
+                                [rounded]="true"
+                                severity="danger"
+                                size="small"
+                                pTooltip="Remove"
+                                (onClick)="removeImage()"
+                                [style]="{'position': 'absolute', 'top': '-8px', 'right': '-8px', 'width': '22px', 'height': '22px'}"
+                            >
+                            </p-button>
+                        </div>
                         }
                     </div>
                     <div class="form-field">
                         <label class="form-label">Mother Organization <span class="form-label-required">*</span></label>
-                        <p-select [options]="motherOrganizations" formControlName="motherOrganization"
-                            optionLabel="orgNameEN" optionValue="orgId" placeholder="Select Mother Organization"
-                            styleClass="w-full" (onChange)="onMotherOrgChange($event.value)"
-                            [filter]="true" filterPlaceholder="Search">
+                        <p-select
+                            [options]="motherOrganizations"
+                            formControlName="motherOrganization"
+                            optionLabel="orgNameEN"
+                            optionValue="orgId"
+                            placeholder="Select Mother Organization"
+                            styleClass="w-full"
+                            (onChange)="onMotherOrgChange($event.value)"
+                            [filter]="true"
+                            filterPlaceholder="Search"
+                        >
                         </p-select>
                         @if (isFieldInvalid('motherOrganization')) {
                         <small class="form-error">{{ getErrorMessage('motherOrganization') }}</small>
@@ -42,22 +52,33 @@
 
                     <div class="form-field">
                         <label class="form-label">Last Unit of Mother Organization <span class="form-label-required">*</span></label>
-                        <div style="display: flex; align-items: center; gap: 0.35rem;">
-                            <div style="flex: 1; min-width: 0;">
-                                <p-select [options]="lastUnitOrganizations" optionLabel="orgNameEN" optionValue="orgId"
-                                    placeholder="Select Last Unit" styleClass="w-full" formControlName="lastMotherUnit"
+                        <div style="display: flex; align-items: center; gap: 0.35rem">
+                            <div style="flex: 1; min-width: 0">
+                                <p-select
+                                    [options]="lastUnitOrganizations"
+                                    optionLabel="orgNameEN"
+                                    optionValue="orgId"
+                                    placeholder="Select Last Unit"
+                                    styleClass="w-full"
+                                    formControlName="lastMotherUnit"
                                     (onChange)="onLastUnitChange($event.value)"
-                                    [filter]="true" filterPlaceholder="Search"
-                                    [disabled]="!postingForm.get('motherOrganization')?.value">
+                                    [filter]="true"
+                                    filterPlaceholder="Search"
+                                    [disabled]="!postingForm.get('motherOrganization')?.value"
+                                >
                                 </p-select>
                             </div>
-                            <button type="button" pButton icon="pi pi-plus"
+                            <button
+                                type="button"
+                                pButton
+                                icon="pi pi-plus"
                                 class="p-button-sm p-button-outlined p-button-success"
-                                style="flex-shrink: 0; width: 2rem; height: 2rem; padding: 0;"
-                                pTooltip="Add Last Unit of Mother Organization setup" tooltipPosition="top"
+                                style="flex-shrink: 0; width: 2rem; height: 2rem; padding: 0"
+                                pTooltip="Add Last Unit of Mother Organization setup"
+                                tooltipPosition="top"
                                 (click)="openAddLastUnitDialog()"
-                                [disabled]="!postingForm.get('motherOrganization')?.value">
-                            </button>
+                                [disabled]="!postingForm.get('motherOrganization')?.value"
+                            ></button>
                         </div>
                         @if (isFieldInvalid('lastMotherUnit')) {
                         <small class="form-error">{{ getErrorMessage('lastMotherUnit') }}</small>
@@ -66,16 +87,12 @@
 
                     <div class="form-field">
                         <label class="form-label">Last Mother Unit District</label>
-                        <p-select [options]="districtOptions" formControlName="lastMotherUnitDistrictId"
-                            optionLabel="label" optionValue="value" placeholder="Select District"
-                            styleClass="w-full" [filter]="true" filterPlaceholder="Search">
-                        </p-select>
+                        <p-select [options]="districtOptions" formControlName="lastMotherUnitDistrictId" optionLabel="label" optionValue="value" placeholder="Select District" styleClass="w-full" [filter]="true" filterPlaceholder="Search"> </p-select>
                     </div>
 
                     <div class="form-field">
                         <label class="form-label">Date of Joining in RAB <span class="form-label-required">*</span></label>
-                        <p-datepicker formControlName="joiningDate" dateFormat="dd-mm-yy" placeholder="Select Date" styleClass="w-full">
-                        </p-datepicker>
+                        <p-datepicker formControlName="joiningDate" dateFormat="dd-mm-yy" placeholder="Select Date" styleClass="w-full"> </p-datepicker>
                         @if (isFieldInvalid('joiningDate')) {
                         <small class="form-error">{{ getErrorMessage('joiningDate') }}</small>
                         }
@@ -86,52 +103,60 @@
                 <div class="form-row">
                     <div class="form-field">
                         <label class="form-label">Member Type <span class="form-label-required">*</span></label>
-                        <p-select [options]="memberTypes" optionLabel="codeValueEN" optionValue="codeId"
-                            placeholder="Select Member Type" styleClass="w-full" formControlName="memberType"
-                            (onChange)="onMemberTypeChange($event.value)" [filter]="true" filterPlaceholder="Search">
+                        <p-select
+                            [options]="memberTypes"
+                            optionLabel="codeValueEN"
+                            optionValue="codeId"
+                            placeholder="Select Member Type"
+                            styleClass="w-full"
+                            formControlName="memberType"
+                            (onChange)="onMemberTypeChange($event.value)"
+                            [filter]="true"
+                            filterPlaceholder="Search"
+                        >
                         </p-select>
                         @if (isFieldInvalid('memberType')) {
                         <small class="form-error">{{ getErrorMessage('memberType') }}</small>
                         }
                     </div>
 
-                    <div class="form-field">
-                        <label class="form-label">Batch</label>
-                        <p-select [options]="batches" optionLabel="codeValueEN" optionValue="codeId"
-                            placeholder="Select Batch" styleClass="w-full" formControlName="batch"
-                            [filter]="true" filterPlaceholder="Search" [showClear]="true">
-                        </p-select>
-                    </div>
-
+                    @if (isOfficerMemberType) {
                     <div class="form-field">
                         <label class="form-label">Officer Type <span class="form-label-required">*</span></label>
-                        <p-select [options]="officerTypes" optionLabel="codeValueEN" optionValue="codeId"
-                            placeholder="Select Officer Type" styleClass="w-full" formControlName="officerType"
-                            [filter]="true" filterPlaceholder="Search">
-                        </p-select>
+                        <p-select [options]="officerTypes" optionLabel="codeValueEN" optionValue="codeId" placeholder="Select Officer Type" styleClass="w-full" formControlName="officerType" [filter]="true" filterPlaceholder="Search"> </p-select>
                         @if (isFieldInvalid('officerType')) {
                         <small class="form-error">{{ getErrorMessage('officerType') }}</small>
                         }
                     </div>
+                    }
+
+                    <div class="form-field">
+                        <label class="form-label">Batch</label>
+                        <p-select [options]="batches" optionLabel="codeValueEN" optionValue="codeId" placeholder="Select Batch" styleClass="w-full" formControlName="batch" [filter]="true" filterPlaceholder="Search" [showClear]="true"> </p-select>
+                    </div>
 
                     <div class="form-field">
                         <label class="form-label">Appointment</label>
-                        <p-select [options]="appointments" optionLabel="codeValueEN" optionValue="codeId"
-                            placeholder="Select Appointment" styleClass="w-full" formControlName="appointment"
-                            [filter]="true" filterPlaceholder="Search" [showClear]="true">
+                        <p-select
+                            [options]="appointments"
+                            optionLabel="codeValueEN"
+                            optionValue="codeId"
+                            placeholder="Select Appointment"
+                            styleClass="w-full"
+                            formControlName="appointment"
+                            [filter]="true"
+                            filterPlaceholder="Search"
+                            [showClear]="true"
+                        >
                         </p-select>
                     </div>
-
                 </div>
 
                 <!-- Row 3 -->
                 <div class="form-row">
                     <div class="form-field">
                         <label class="form-label">Rank <span class="form-label-required">*</span></label>
-                        <p-select [options]="ranks" optionLabel="codeValueEN" optionValue="codeId"
-                            placeholder="Select Rank" styleClass="w-full" formControlName="rank"
-                            [filter]="true" filterPlaceholder="Search">
-                        </p-select>
+                        <p-select [options]="ranks" optionLabel="codeValueEN" optionValue="codeId" placeholder="Select Rank" styleClass="w-full" formControlName="rank" [filter]="true" filterPlaceholder="Search"> </p-select>
                         @if (isFieldInvalid('rank')) {
                         <small class="form-error">{{ getErrorMessage('rank') }}</small>
                         }
@@ -139,17 +164,34 @@
 
                     <div class="form-field">
                         <label class="form-label">RAB Rank</label>
-                        <p-select [options]="rabRankDropdownOptions" optionLabel="label" optionValue="value"
-                            placeholder="Auto" styleClass="w-full" [(ngModel)]="selectedRabEquivalentNameId"
-                            [ngModelOptions]="{ standalone: true }" [disabled]="true" [filter]="true" filterPlaceholder="Search">
+                        <p-select
+                            [options]="rabRankDropdownOptions"
+                            optionLabel="label"
+                            optionValue="value"
+                            placeholder="Auto"
+                            styleClass="w-full"
+                            [(ngModel)]="selectedRabEquivalentNameId"
+                            [ngModelOptions]="{ standalone: true }"
+                            [disabled]="true"
+                            [filter]="true"
+                            filterPlaceholder="Search"
+                        >
                         </p-select>
                     </div>
 
                     <div class="form-field">
-                        <label class="form-label">Corps <span class="form-label-required">*</span></label>
-                        <p-select [options]="corps" optionLabel="codeValueEN" optionValue="codeId"
-                            placeholder="Select Corps" styleClass="w-full" formControlName="branch"
-                            (onChange)="onChangeCorps($event.value)" [filter]="true" filterPlaceholder="Search">
+                        <label class="form-label">Corps/Branch <span class="form-label-required">*</span></label>
+                        <p-select
+                            [options]="corps"
+                            optionLabel="codeValueEN"
+                            optionValue="codeId"
+                            placeholder="Select Corps"
+                            styleClass="w-full"
+                            formControlName="branch"
+                            (onChange)="onChangeCorps($event.value)"
+                            [filter]="true"
+                            filterPlaceholder="Search"
+                        >
                         </p-select>
                         @if (isFieldInvalid('branch')) {
                         <small class="form-error">{{ getErrorMessage('branch') }}</small>
@@ -158,10 +200,7 @@
 
                     <div class="form-field">
                         <label class="form-label">Trade <span class="form-label-required">*</span></label>
-                        <p-select [options]="trades" optionLabel="codeValueEN" optionValue="codeId"
-                            placeholder="Select Trade" styleClass="w-full" formControlName="trade"
-                            [filter]="true" filterPlaceholder="Search">
-                        </p-select>
+                        <p-select [options]="trades" optionLabel="codeValueEN" optionValue="codeId" placeholder="Select Trade" styleClass="w-full" formControlName="trade" [filter]="true" filterPlaceholder="Search"> </p-select>
                         @if (isFieldInvalid('trade')) {
                         <small class="form-error">{{ getErrorMessage('trade') }}</small>
                         }
@@ -169,9 +208,17 @@
 
                     <div class="form-field">
                         <label class="form-label">Special Qualifications</label>
-                        <p-multiSelect [options]="specialQualificationOptions" optionLabel="codeValueEN" optionValue="codeId"
-                            placeholder="Select Special Qualifications" styleClass="w-full" formControlName="specialQualifications"
-                            [filter]="true" filterPlaceholder="Search" display="chip">
+                        <p-multiSelect
+                            [options]="specialQualificationOptions"
+                            optionLabel="codeValueEN"
+                            optionValue="codeId"
+                            placeholder="Select Special Qualifications"
+                            styleClass="w-full"
+                            formControlName="specialQualifications"
+                            [filter]="true"
+                            filterPlaceholder="Search"
+                            display="chip"
+                        >
                         </p-multiSelect>
                     </div>
 
@@ -185,10 +232,7 @@
                 <div class="form-row">
                     <div class="form-field">
                         <label class="form-label">Gender <span class="form-label-required">*</span></label>
-                        <p-select [options]="genders" optionLabel="codeValueEN" optionValue="codeId"
-                            placeholder="Select Gender" styleClass="w-full" formControlName="gender"
-                            [filter]="true" filterPlaceholder="Search">
-                        </p-select>
+                        <p-select [options]="genders" optionLabel="codeValueEN" optionValue="codeId" placeholder="Select Gender" styleClass="w-full" formControlName="gender" [filter]="true" filterPlaceholder="Search"> </p-select>
                         @if (isFieldInvalid('gender')) {
                         <small class="form-error">{{ getErrorMessage('gender') }}</small>
                         }
@@ -196,10 +240,7 @@
 
                     <div class="form-field">
                         <label class="form-label">Select Prefix <span class="form-label-required">*</span></label>
-                        <p-select [options]="prefixes" optionLabel="codeValueEN" optionValue="codeId"
-                            placeholder="Select Prefix" styleClass="w-full" formControlName="prefix"
-                            [filter]="true" filterPlaceholder="Search">
-                        </p-select>
+                        <p-select [options]="prefixes" optionLabel="codeValueEN" optionValue="codeId" placeholder="Select Prefix" styleClass="w-full" formControlName="prefix" [filter]="true" filterPlaceholder="Search"> </p-select>
                         @if (isFieldInvalid('prefix')) {
                         <small class="form-error">{{ getErrorMessage('prefix') }}</small>
                         }
@@ -210,13 +251,12 @@
                         <div class="p-inputgroup">
                             <input pInputText class="w-full" placeholder="Only Number" formControlName="serviceId" />
                             @if (isCheckingCombo) {
-                                <span class="p-inputgroup-addon"><i class="pi pi-spin pi-spinner"></i></span>
+                            <span class="p-inputgroup-addon"><i class="pi pi-spin pi-spinner"></i></span>
                             }
                         </div>
                         @if (isFieldInvalid('serviceId')) {
                         <small class="form-error">{{ getErrorMessage('serviceId') }}</small>
-                        }
-                        @if (isDuplicateCombo) {
+                        } @if (isDuplicateCombo) {
                         <small class="form-error">A member with the same Mother Organization + Prefix + Service ID already exists</small>
                         }
                     </div>
@@ -227,13 +267,12 @@
                         <div class="p-inputgroup">
                             <input pInputText class="w-full" placeholder="Enter existing RAB ID" formControlName="rabid" />
                             @if (isCheckingRabId) {
-                                <span class="p-inputgroup-addon"><i class="pi pi-spin pi-spinner"></i></span>
+                            <span class="p-inputgroup-addon"><i class="pi pi-spin pi-spinner"></i></span>
                             }
                         </div>
                         @if (isFieldInvalid('rabid')) {
                         <small class="form-error">{{ getErrorMessage('rabid') }}</small>
-                        }
-                        @if (isDuplicateRabId) {
+                        } @if (isDuplicateRabId) {
                         <small class="form-error">This RAB ID already exists</small>
                         }
                     </div>
@@ -243,8 +282,7 @@
                 <div class="form-row">
                     <div class="form-field">
                         <label class="form-label">Name English <span class="form-label-required">*</span></label>
-                        <input pInputText class="w-full" placeholder="Enter name in English"
-                            formControlName="fullNameEN" (blur)="capitalizeWords('fullNameEN')" />
+                        <input pInputText class="w-full" placeholder="Enter name in English" formControlName="fullNameEN" (blur)="capitalizeWords('fullNameEN')" />
                         @if (isFieldInvalid('fullNameEN')) {
                         <small class="form-error">{{ getErrorMessage('fullNameEN') }}</small>
                         }
@@ -260,18 +298,23 @@
 
                     <div class="form-field">
                         <label class="form-label">Marital Status</label>
-                        <p-select [options]="maritalStatusOptions" optionLabel="codeValueEN" optionValue="codeId"
-                            placeholder="Select Marital Status" styleClass="w-full" formControlName="maritalStatus"
-                            (onChange)="onMaritalStatusChange($event.value)" [filter]="true" filterPlaceholder="Search">
+                        <p-select
+                            [options]="maritalStatusOptions"
+                            optionLabel="codeValueEN"
+                            optionValue="codeId"
+                            placeholder="Select Marital Status"
+                            styleClass="w-full"
+                            formControlName="maritalStatus"
+                            (onChange)="onMaritalStatusChange($event.value)"
+                            [filter]="true"
+                            filterPlaceholder="Search"
+                        >
                         </p-select>
                     </div>
 
                     <div class="form-field">
                         <label class="form-label">Is RFTS Complete?</label>
-                        <p-select [options]="yesNoOptions" optionLabel="label" optionValue="value"
-                            placeholder="Select" styleClass="w-full" formControlName="isRFTSComplted"
-                            [showClear]="true">
-                        </p-select>
+                        <p-select [options]="yesNoOptions" optionLabel="label" optionValue="value" placeholder="Select" styleClass="w-full" formControlName="isRFTSComplted" [showClear]="true"> </p-select>
                     </div>
                 </div>
 
@@ -279,14 +322,11 @@
                 <div class="form-row">
                     <div class="form-field">
                         <label class="form-label">Relationship</label>
-                        <p-select [options]="relationOptions" optionLabel="codeValueEN" optionValue="codeId"
-                            styleClass="w-full" formControlName="relationship" placeholder="Spouse" [disabled]="true">
-                        </p-select>
+                        <p-select [options]="relationOptions" optionLabel="codeValueEN" optionValue="codeId" styleClass="w-full" formControlName="relationship" placeholder="Spouse" [disabled]="true"> </p-select>
                     </div>
                     <div class="form-field">
                         <label class="form-label">Spouse Name English</label>
-                        <input pInputText class="w-full" placeholder="Enter spouse name"
-                            formControlName="spouseName" (blur)="capitalizeWords('spouseName')" />
+                        <input pInputText class="w-full" placeholder="Enter spouse name" formControlName="spouseName" (blur)="capitalizeWords('spouseName')" />
                     </div>
                 </div>
                 }
@@ -295,7 +335,7 @@
 
         <!-- Member Addresses: Permanent and Present side by side -->
         <div class="form-section form-section-spacer-first">
-            <h3 class="form-subtitle" style="font-size: calc(1.25rem + 4pt);">Member Address</h3>
+            <h3 class="form-subtitle" style="font-size: calc(1.25rem + 4pt)">Member Address</h3>
             <div class="address-pair">
                 <div class="address-col">
                     <app-address-form
@@ -306,7 +346,8 @@
                         [showCard]="false"
                         [initialAddressData]="permanentAddress"
                         (onSave)="cancelAddress()"
-                        (onCancel)="cancelAddress()">
+                        (onCancel)="cancelAddress()"
+                    >
                     </app-address-form>
                 </div>
                 <div class="address-divider"></div>
@@ -321,7 +362,8 @@
                         [initialAddressData]="presentAddress"
                         (onSave)="cancelAddress()"
                         (onCancel)="cancelAddress()"
-                        (onSameAsPresentRequest)="copyPermanentToPresent()">
+                        (onSameAsPresentRequest)="copyPermanentToPresent()"
+                    >
                     </app-address-form>
                 </div>
             </div>
@@ -330,7 +372,7 @@
         @if (isMaritalStatusNotUnmarried) {
         <!-- Spouse Addresses: Permanent and Present side by side -->
         <div class="form-section">
-            <h3 class="form-subtitle" style="font-size: calc(1.25rem + 4pt);">Spouse Address</h3>
+            <h3 class="form-subtitle" style="font-size: calc(1.25rem + 4pt)">Spouse Address</h3>
             <div class="address-pair">
                 <div class="address-col">
                     <app-address-form
@@ -343,7 +385,8 @@
                         [initialAddressData]="spousePermanentAddress"
                         (onSave)="cancelAddress()"
                         (onCancel)="cancelAddress()"
-                        (onSameAsPresentRequest)="copyMemberPermanentToSpousePermanent()">
+                        (onSameAsPresentRequest)="copyMemberPermanentToSpousePermanent()"
+                    >
                     </app-address-form>
                 </div>
                 <div class="address-divider"></div>
@@ -359,7 +402,8 @@
                         (onSave)="cancelAddress()"
                         (onCancel)="cancelAddress()"
                         (onSameAsPresentRequest)="copyMemberPresentToSpousePresent()"
-                        (onSameAsSecondaryRequest)="copySpousePermanentToSpousePresent()">
+                        (onSameAsSecondaryRequest)="copySpousePermanentToSpousePresent()"
+                    >
                     </app-address-form>
                 </div>
             </div>
@@ -373,10 +417,17 @@
                 <div class="form-row">
                     <div class="form-field">
                         <label class="form-label">Battalion Name <span class="form-label-required">*</span></label>
-                        <p-select formControlName="rabUnitCodeId" [options]="rabUnitOptions"
-                            optionLabel="label" optionValue="value" placeholder="Select" styleClass="w-full"
-                            [filter]="true" filterPlaceholder="Search"
-                            [class.p-invalid]="serviceForm.get('rabUnitCodeId')?.invalid && serviceForm.get('rabUnitCodeId')?.touched">
+                        <p-select
+                            formControlName="rabUnitCodeId"
+                            [options]="rabUnitOptions"
+                            optionLabel="label"
+                            optionValue="value"
+                            placeholder="Select"
+                            styleClass="w-full"
+                            [filter]="true"
+                            filterPlaceholder="Search"
+                            [class.p-invalid]="serviceForm.get('rabUnitCodeId')?.invalid && serviceForm.get('rabUnitCodeId')?.touched"
+                        >
                         </p-select>
                         @if (serviceForm.get('rabUnitCodeId')?.invalid && serviceForm.get('rabUnitCodeId')?.touched) {
                         <small class="form-error">This field is required</small>
@@ -387,50 +438,27 @@
                     @if (serviceForm.get('rabUnitCodeId')?.value) {
                     <div class="form-field">
                         <label class="form-label">RAB Wing</label>
-                        <p-select formControlName="rabWingCodeId" [options]="rabWingOptions"
-                            optionLabel="label" optionValue="value" placeholder="Select" styleClass="w-full"
-                            [filter]="true" filterPlaceholder="Search">
-                        </p-select>
+                        <p-select formControlName="rabWingCodeId" [options]="rabWingOptions" optionLabel="label" optionValue="value" placeholder="Select" styleClass="w-full" [filter]="true" filterPlaceholder="Search"> </p-select>
                     </div>
-                    }
-
-                    @if (serviceForm.get('rabWingCodeId')?.value) {
+                    } @if (serviceForm.get('rabWingCodeId')?.value) {
                     <div class="form-field">
                         <label class="form-label">Branch</label>
-                        <p-select formControlName="rabBranchCodeId" [options]="rabBranchOptions"
-                            optionLabel="label" optionValue="value" placeholder="Select" styleClass="w-full"
-                            [filter]="true" filterPlaceholder="Search">
-                        </p-select>
+                        <p-select formControlName="rabBranchCodeId" [options]="rabBranchOptions" optionLabel="label" optionValue="value" placeholder="Select" styleClass="w-full" [filter]="true" filterPlaceholder="Search"> </p-select>
                     </div>
-                    }
-
-                    @if (serviceForm.get('rabBranchCodeId')?.value) {
+                    } @if (serviceForm.get('rabBranchCodeId')?.value) {
                     <div class="form-field">
                         <label class="form-label">Sub-Branch</label>
-                        <p-select formControlName="rabSubBranchCodeId" [options]="rabSubBranchOptions"
-                            optionLabel="label" optionValue="value" placeholder="Select" styleClass="w-full"
-                            [filter]="true" filterPlaceholder="Search">
-                        </p-select>
+                        <p-select formControlName="rabSubBranchCodeId" [options]="rabSubBranchOptions" optionLabel="label" optionValue="value" placeholder="Select" styleClass="w-full" [filter]="true" filterPlaceholder="Search"> </p-select>
                     </div>
-                    }
-
-                    @if (serviceForm.get('rabSubBranchCodeId')?.value) {
+                    } @if (serviceForm.get('rabSubBranchCodeId')?.value) {
                     <div class="form-field">
                         <label class="form-label">Section</label>
-                        <p-select formControlName="rabSectionCodeId" [options]="rabSectionOptions"
-                            optionLabel="label" optionValue="value" placeholder="Select" styleClass="w-full"
-                            [filter]="true" filterPlaceholder="Search">
-                        </p-select>
+                        <p-select formControlName="rabSectionCodeId" [options]="rabSectionOptions" optionLabel="label" optionValue="value" placeholder="Select" styleClass="w-full" [filter]="true" filterPlaceholder="Search"> </p-select>
                     </div>
-                    }
-
-                    @if (serviceForm.get('rabSectionCodeId')?.value) {
+                    } @if (serviceForm.get('rabSectionCodeId')?.value) {
                     <div class="form-field">
                         <label class="form-label">Sub-Section</label>
-                        <p-select formControlName="rabSubSectionCodeId" [options]="rabSubSectionOptions"
-                            optionLabel="label" optionValue="value" placeholder="Select" styleClass="w-full"
-                            [filter]="true" filterPlaceholder="Search">
-                        </p-select>
+                        <p-select formControlName="rabSubSectionCodeId" [options]="rabSubSectionOptions" optionLabel="label" optionValue="value" placeholder="Select" styleClass="w-full" [filter]="true" filterPlaceholder="Search"> </p-select>
                     </div>
                     }
                 </div>
@@ -438,25 +466,18 @@
                 <div class="form-row">
                     <div class="form-field">
                         <label class="form-label">Date precision</label>
-                        <p-selectButton formControlName="precision" [options]="precisionOptions"
-                            optionLabel="label" optionValue="value" [allowEmpty]="false">
-                        </p-selectButton>
+                        <p-selectButton formControlName="precision" [options]="precisionOptions" optionLabel="label" optionValue="value" [allowEmpty]="false"> </p-selectButton>
                     </div>
 
                     <div class="form-field">
                         <label class="form-label">From <span class="form-label-required">*</span></label>
-                        @switch (serviceForm.get('precision')?.value) {
-                            @case ('year') {
-                                <p-datepicker formControlName="serviceFrom" view="year" dateFormat="yy" [showIcon]="true" placeholder="YYYY" styleClass="w-full"></p-datepicker>
-                            }
-                            @case ('month-year') {
-                                <p-datepicker formControlName="serviceFrom" view="month" dateFormat="mm-yy" [showIcon]="true" placeholder="MM-YYYY" styleClass="w-full"></p-datepicker>
-                            }
-                            @default {
-                                <p-datepicker formControlName="serviceFrom" dateFormat="dd-mm-yy" [showIcon]="true" placeholder="DD-MM-YYYY" styleClass="w-full"></p-datepicker>
-                            }
-                        }
-                        @if (serviceForm.get('serviceFrom')?.invalid && serviceForm.get('serviceFrom')?.touched) {
+                        @switch (serviceForm.get('precision')?.value) { @case ('year') {
+                        <p-datepicker formControlName="serviceFrom" view="year" dateFormat="yy" [showIcon]="true" placeholder="YYYY" styleClass="w-full"></p-datepicker>
+                        } @case ('month-year') {
+                        <p-datepicker formControlName="serviceFrom" view="month" dateFormat="mm-yy" [showIcon]="true" placeholder="MM-YYYY" styleClass="w-full"></p-datepicker>
+                        } @default {
+                        <p-datepicker formControlName="serviceFrom" dateFormat="dd-mm-yy" [showIcon]="true" placeholder="DD-MM-YYYY" styleClass="w-full"></p-datepicker>
+                        } } @if (serviceForm.get('serviceFrom')?.invalid && serviceForm.get('serviceFrom')?.touched) {
                         <small class="form-error">This field is required</small>
                         }
                     </div>
@@ -485,8 +506,7 @@
                 <div class="form-row">
                     <div class="form-field">
                         <label class="form-label">Blood Group</label>
-                        <p-select [options]="bloodGroups" formControlName="bloodGroup" optionLabel="label" optionValue="value"
-                            placeholder="Select Blood Group" styleClass="w-full" [filter]="true" filterPlaceholder="Search" [showClear]="true">
+                        <p-select [options]="bloodGroups" formControlName="bloodGroup" optionLabel="label" optionValue="value" placeholder="Select Blood Group" styleClass="w-full" [filter]="true" filterPlaceholder="Search" [showClear]="true">
                         </p-select>
                     </div>
                     <div class="form-field">
@@ -519,9 +539,7 @@
                     </div>
                     <div class="form-field">
                         <label class="form-label">Religion</label>
-                        <p-select [options]="religions" formControlName="religion" optionLabel="label" optionValue="value"
-                            placeholder="Select Religion" styleClass="w-full" [filter]="true" filterPlaceholder="Search" [showClear]="true">
-                        </p-select>
+                        <p-select [options]="religions" formControlName="religion" optionLabel="label" optionValue="value" placeholder="Select Religion" styleClass="w-full" [filter]="true" filterPlaceholder="Search" [showClear]="true"> </p-select>
                     </div>
                     <div class="form-field">
                         <label class="form-label">Passport No</label>
@@ -553,7 +571,7 @@
                 <div class="form-row">
                     <div class="form-field">
                         <label class="form-label">Investigation Experience</label>
-                        <div class="flex align-items-center gap-4" style="min-height: 2.5rem;">
+                        <div class="flex align-items-center gap-4" style="min-height: 2.5rem">
                             <div class="flex align-items-center gap-2">
                                 <p-radioButton formControlName="investigationExperience" [value]="true" inputId="invExpYes"></p-radioButton>
                                 <label for="invExpYes" class="cursor-pointer">Yes</label>
@@ -565,7 +583,7 @@
                         </div>
                     </div>
                     @if (showInvestigationExperience) {
-                    <div class="form-field" style="flex: 2 1 100%;">
+                    <div class="form-field" style="flex: 2 1 100%">
                         <label class="form-label">Investigation Experience Details</label>
                         <textarea pTextarea class="w-full" rows="2" placeholder="Enter details" formControlName="investigationExperienceDetails"></textarea>
                     </div>
@@ -576,26 +594,51 @@
                 <div class="form-row">
                     <div class="form-field">
                         <label class="form-label">Professional Qualification</label>
-                        <p-select [options]="professionalQualifications" formControlName="professionalQualification" optionLabel="label" optionValue="value"
-                            placeholder="Select" styleClass="w-full" [filter]="true" filterPlaceholder="Search" [showClear]="true">
-                        </p-select>
+                        <p-multiSelect
+                            [options]="professionalQualifications"
+                            formControlName="professionalQualification"
+                            optionLabel="label"
+                            optionValue="value"
+                            placeholder="Select"
+                            styleClass="w-full"
+                            [filter]="true"
+                            filterPlaceholder="Search"
+                            display="chip"
+                        >
+                        </p-multiSelect>
                     </div>
                     <div class="form-field">
                         <label class="form-label">Personal Qualification</label>
-                        <p-select [options]="personalQualifications" formControlName="personalQualification" optionLabel="label" optionValue="value"
-                            placeholder="Select" styleClass="w-full" [filter]="true" filterPlaceholder="Search" [showClear]="true">
-                        </p-select>
+                        <p-multiSelect
+                            [options]="personalQualifications"
+                            formControlName="personalQualification"
+                            optionLabel="label"
+                            optionValue="value"
+                            placeholder="Select"
+                            styleClass="w-full"
+                            [filter]="true"
+                            filterPlaceholder="Search"
+                            display="chip"
+                        >
+                        </p-multiSelect>
                     </div>
                     <div class="form-field">
                         <label class="form-label">Gallantry Awards/Decoration</label>
-                        <p-select [options]="gallantryAwards" formControlName="gallantryAward" optionLabel="label" optionValue="value"
-                            placeholder="Select" styleClass="w-full" [filter]="true" filterPlaceholder="Search" [showClear]="true">
-                        </p-select>
+                        <p-multiSelect [options]="gallantryAwards" formControlName="gallantryAward" optionLabel="label" optionValue="value" placeholder="Select" styleClass="w-full" [filter]="true" filterPlaceholder="Search" display="chip"> </p-multiSelect>
                     </div>
                     <div class="form-field">
                         <label class="form-label">Last Education Qualification</label>
-                        <p-select [options]="educationQualifications" formControlName="lastEducationQualification" optionLabel="label" optionValue="value"
-                            placeholder="Select" styleClass="w-full" [filter]="true" filterPlaceholder="Search" [showClear]="true">
+                        <p-select
+                            [options]="educationQualifications"
+                            formControlName="lastEducationQualification"
+                            optionLabel="label"
+                            optionValue="value"
+                            placeholder="Select"
+                            styleClass="w-full"
+                            [filter]="true"
+                            filterPlaceholder="Search"
+                            [showClear]="true"
+                        >
                         </p-select>
                     </div>
                 </div>
@@ -604,21 +647,16 @@
                 <div class="form-row">
                     <div class="form-field">
                         <label class="form-label">Medical Category</label>
-                        <p-select [options]="medicalCategories" formControlName="medicalCategory" optionLabel="label" optionValue="value"
-                            placeholder="Select" styleClass="w-full" [filter]="true" filterPlaceholder="Search" [showClear]="true">
+                        <p-select [options]="medicalCategories" formControlName="medicalCategory" optionLabel="label" optionValue="value" placeholder="Select" styleClass="w-full" [filter]="true" filterPlaceholder="Search" [showClear]="true">
                         </p-select>
                     </div>
                     <div class="form-field">
                         <label class="form-label">Tribal</label>
-                        <p-select [options]="tribalOptions" formControlName="tribal" optionLabel="label" optionValue="value"
-                            placeholder="Select" styleClass="w-full" [showClear]="true">
-                        </p-select>
+                        <p-select [options]="tribalOptions" formControlName="tribal" optionLabel="label" optionValue="value" placeholder="Select" styleClass="w-full" [showClear]="true"> </p-select>
                     </div>
                     <div class="form-field">
                         <label class="form-label">Freedom Fighter</label>
-                        <p-select [options]="freedomFighterOptions" formControlName="freedomFighter" optionLabel="label" optionValue="value"
-                            placeholder="Select" styleClass="w-full" [showClear]="true">
-                        </p-select>
+                        <p-select [options]="freedomFighterOptions" formControlName="freedomFighter" optionLabel="label" optionValue="value" placeholder="Select" styleClass="w-full" [showClear]="true"> </p-select>
                     </div>
                     <div class="form-field">
                         <label class="form-label">Height</label>
@@ -637,15 +675,11 @@
                     </div>
                     <div class="form-field">
                         <label class="form-label">Leaving Status</label>
-                        <p-select [options]="leavingStatusOptions" formControlName="leavingStatus" optionLabel="label" optionValue="value"
-                            placeholder="Select" styleClass="w-full" [showClear]="true">
-                        </p-select>
+                        <p-select [options]="leavingStatusOptions" formControlName="leavingStatus" optionLabel="label" optionValue="value" placeholder="Select" styleClass="w-full" [showClear]="true"> </p-select>
                     </div>
                     <div class="form-field">
                         <label class="form-label">Present Status</label>
-                        <p-select [options]="presentStatusTypes" formControlName="presentStatus" optionLabel="label" optionValue="value"
-                            placeholder="On Duty" styleClass="w-full">
-                        </p-select>
+                        <p-select [options]="presentStatusTypes" formControlName="presentStatus" optionLabel="label" optionValue="value" placeholder="On Duty" styleClass="w-full"> </p-select>
                     </div>
                     <div class="form-field">
                         <label class="form-label">Driving License No</label>
@@ -661,19 +695,14 @@
 
         <!-- Actions -->
         <div class="form-actions">
-            <p-button type="button" label="Reset" icon="pi pi-refresh" severity="secondary" [outlined]="true"
-                styleClass="form-btn-secondary" (onClick)="onReset()">
-            </p-button>
-            <p-button type="button" label="Save Serving Member" icon="pi pi-check-circle"
-                styleClass="form-btn-primary" [disabled]="isDuplicateCombo || isCheckingCombo || isDuplicateRabId || isCheckingRabId" (onClick)="saveAll()">
-            </p-button>
+            <p-button type="button" label="Reset" icon="pi pi-refresh" severity="secondary" [outlined]="true" styleClass="form-btn-secondary" (onClick)="onReset()"> </p-button>
+            <p-button type="button" label="Save Serving Member" icon="pi pi-check-circle" styleClass="form-btn-primary" [disabled]="isDuplicateCombo || isCheckingCombo || isDuplicateRabId || isCheckingRabId" (onClick)="saveAll()"> </p-button>
         </div>
     </div>
 </p-fluid>
 
 <!-- Add Last Unit of Mother Organization Dialog -->
-<p-dialog header="Add Last Unit of Mother Organization setup" [(visible)]="showLastUnitDialog" [modal]="true"
-    [style]="{ width: '672px' }" [closable]="true" [contentStyle]="{'border-top': '2px solid var(--primary-color)'}" appendTo="body">
+<p-dialog header="Add Last Unit of Mother Organization setup" [(visible)]="showLastUnitDialog" [modal]="true" [style]="{ width: '672px' }" [closable]="true" [contentStyle]="{'border-top': '2px solid var(--primary-color)'}" appendTo="body">
     <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
         <div>
             <label class="font-semibold block mb-2 text-700">Mother Organization</label>
@@ -695,13 +724,10 @@
 </p-dialog>
 
 <!-- Image Preview Modal -->
-<p-dialog header="Picture Preview" [(visible)]="showImagePreviewModal" [modal]="true"
-    [style]="{ width: '500px', maxWidth: '90vw' }" [closable]="true" [draggable]="false"
-    [contentStyle]="{'border-top': '2px solid var(--primary-color)'}">
+<p-dialog header="Picture Preview" [(visible)]="showImagePreviewModal" [modal]="true" [style]="{ width: '500px', maxWidth: '90vw' }" [closable]="true" [draggable]="false" [contentStyle]="{'border-top': '2px solid var(--primary-color)'}">
     <div class="flex justify-content-center">
         @if (imagePreview) {
-            <img [src]="imagePreview" alt="Profile Picture"
-                style="max-width: 100%; max-height: 400px; object-fit: contain; border-radius: 8px;" />
+        <img [src]="imagePreview" alt="Profile Picture" style="max-width: 100%; max-height: 400px; object-fit: contain; border-radius: 8px" />
         }
     </div>
 </p-dialog>

@@ -135,7 +135,7 @@ export class ReportBloodGroupComponent implements OnInit, OnChanges {
         { key: 'bloodGroup',   labelEN: 'Blood Group',   labelBN: 'রক্তের গ্রুপ',    hint: 'Plain',                 defaultVisible: true  },
         { key: 'mobileNo',     labelEN: 'Mobile',        labelBN: 'মোবাইল',         hint: 'Plain',                 defaultVisible: true  },
         { key: 'joiningDate',  labelEN: 'Joining Date',  labelBN: 'যোগদান তারিখ',   hint: 'JoiningDate',          defaultVisible: false },
-        { key: 'rmks',         labelEN: 'Remarks',       labelBN: 'মন্তব্য',       hint: 'Remarks',               defaultVisible: false },
+        { key: 'rmks',         labelEN: 'Remarks',       labelBN: 'মন্তব্য',       hint: 'Remarks',               defaultVisible: true },
         { key: 'serviceId',         labelEN: 'Service ID',       labelBN: 'সার্ভিস আইডি',       hint: 'Plain', defaultVisible: false },
         { key: 'nameEnglish',       labelEN: 'Name (EN)',        labelBN: 'নাম (ইংরেজি)',       hint: 'Plain', defaultVisible: false },
         { key: 'nameBangla',        labelEN: 'Name (BN)',        labelBN: 'নাম (বাংলা)',        hint: 'Plain', defaultVisible: false },

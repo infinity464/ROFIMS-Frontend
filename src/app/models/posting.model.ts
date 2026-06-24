@@ -366,6 +366,10 @@ export interface PendingPostingJoiningDto {
     cancelReason?: string | null;
     cancelledBy?: string | null;
     cancelledDate?: string | null;
+
+    /** Employee's Additional Remarks (bullet-joined). Only the report endpoint
+     *  (GetPendingInterPostingReport) populates this; null elsewhere. */
+    additionalRemarks?: string | null;
 }
 
 // ── Posting Order DTOs ────────────────────────────────────────

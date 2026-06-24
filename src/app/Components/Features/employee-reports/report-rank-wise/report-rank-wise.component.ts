@@ -534,7 +534,7 @@ export class ReportRankWiseComponent implements OnInit {
             joiningPresentUnit: d['joiningPresentUnit'] as string,
             presentWorkplace: d['presentWorkplace'] as string,
             presentWorkplaceBN: d['presentWorkplaceBN'] as string,
-            rmks: null
+            rmks: (d['rmks'] as string) ?? null
         } as RankWiseReportRow;
     }
 

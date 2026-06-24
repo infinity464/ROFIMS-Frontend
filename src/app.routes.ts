@@ -73,6 +73,7 @@ import { RabBranch } from '@/Components/basic-setup/rab-branch/rab-branch';
 import { CourseName } from '@/Components/basic-setup/course-name/course-name';
 import { EmpBasicInfo } from '@/Components/Features/Emp/emp-basic-info/emp-basic-info';
 import { ServingMemberEntry } from '@/Components/Features/Emp/serving-member-entry/serving-member-entry';
+import { ServicePostingEntry } from '@/Components/Features/Emp/service-posting-entry/service-posting-entry';
 import { EmpBulkImport } from '@/Components/Features/Emp/emp-bulk-import/emp-bulk-import';
 import { EmpList } from '@/Components/Features/Emp/emp-list/emp-list';
 import { EmpPersonalInfo } from '@/Components/Features/Emp/emp-personal-info/emp-personal-info';
@@ -361,6 +362,7 @@ export const appRoutes: Routes = [
             { path: 'emp-list', component: EmpList },
             { path: 'emp-basic-info', component: EmpBasicInfo, canActivate: [MemberTypePermissionGuard] },
             { path: 'serving-member-entry', component: ServingMemberEntry, canActivate: [MemberTypePermissionGuard] },
+            { path: 'service-posting-entry', component: ServicePostingEntry, canActivate: [MemberTypePermissionGuard] },
             { path: 'emp-bulk-import', component: EmpBulkImport, canActivate: [MemberTypePermissionGuard] },
             { path: 'emp-personal-service-info', component: EmpPersonalServiceInfoComponent, canActivate: [MemberTypePermissionGuard] },
             { path: 'emp-personal-info', component: EmpPersonalInfo, canActivate: [MemberTypePermissionGuard] },

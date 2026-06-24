@@ -129,7 +129,7 @@ export class EmpBasicInfo implements OnInit {
         showSameAsPresent: true,
         sameAsLabel: 'Same As Member Present Address',
         showSameAsSecondary: true,
-        sameAsSecondaryLabel: 'Same As Spouse Permanent Address',
+        sameAsSecondaryLabel: 'Same As Permanent Address',
         employeeId: this.employeeId
     };
 
@@ -1884,6 +1884,14 @@ export class EmpBasicInfo implements OnInit {
         this.loadTrade(codeId);
     }
 
+    /** Show Officer Type unless a non-"Officer" Member Type is selected. */
+    get isOfficerMemberType(): boolean {
+        const id = this.postingForm?.get('memberType')?.value;
+        if (id == null) return true;
+        const mt = this.memberTypes?.find((m: CommonCodeModel) => m.codeId === id);
+        return (mt?.codeValueEN ?? '').trim().toLowerCase() === 'officer';
+    }
+
     onMemberTypeChange(codeId: number) {
         if (codeId != null && this.allowedMemberTypeIds !== null && !this.allowedMemberTypeIds.includes(codeId)) {
             const typeName =
@@ -2059,6 +2067,7 @@ export class EmpBasicInfo implements OnInit {
         const formatted = value
             .replace(/\s+/g, ' ')
             .trim()
+            .toLowerCase()
             .replace(/\b\p{L}/gu, (ch) => ch.toUpperCase());
         if (formatted !== value) {
             field!.setValue(formatted);

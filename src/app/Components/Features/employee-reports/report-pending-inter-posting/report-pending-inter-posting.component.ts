@@ -213,7 +213,7 @@ export class ReportPendingInterPostingComponent implements OnInit {
 
     loadData(): void {
         this.loading = true;
-        this.postingService.getPendingPostingJoining('InterPosting').subscribe({
+        this.postingService.getPendingInterPostingReport('InterPosting').subscribe({
             next: (data) => {
                 this.allRows = data ?? [];
                 this.loading = false;
@@ -482,7 +482,7 @@ export class ReportPendingInterPostingComponent implements OnInit {
             case 'rabID':               return row.rabID ?? '—';
             case 'postingOrderNo':      return row.postingOrderNo ?? '—';
             case 'noteSheetNo':         return row.noteSheetNo ?? '—';
-            case 'rmks':                return '';
+            case 'rmks':                return row.additionalRemarks || '';
             default:                    return '—';
         }
     }
@@ -596,7 +596,7 @@ export class ReportPendingInterPostingComponent implements OnInit {
                     case 'Date':
                         return new TableCell({ ...cellOpts, children: [new Paragraph({ children: [run(this.cellValue(row, col.key), { fontKey: mono, chSp: isBn ? 0 : 4 })] })] });
                     case 'Remarks':
-                        return new TableCell({ ...cellOpts, children: [new Paragraph({ children: [run('', { color: C.gray })] })] });
+                        return new TableCell({ ...cellOpts, children: [new Paragraph({ children: [run(this.cellValue(row, col.key), { color: C.gray })] })] });
                     case 'Plain':
                     default:
                         return new TableCell({ ...cellOpts, children: [new Paragraph({ children: [run(this.cellValue(row, col.key))] })] });
@@ -643,7 +643,7 @@ export class ReportPendingInterPostingComponent implements OnInit {
                         const meta = this.personnelMetaText(row);
                         return meta ? `${name}\n${meta}` : name;
                     }
-                    case 'Remarks': return '';
+                    case 'Remarks':
                     case 'Date':
                     case 'Plain':
                     default: return this.cellValue(row, col.key);
@@ -695,7 +695,7 @@ export class ReportPendingInterPostingComponent implements OnInit {
                     return `<td class="td-personnel"><div class="personnel-name">${esc(this.cellValue(row, 'name'))}</div>${metaHtml}</td>`;
                 }
                 case 'Date': return `<td class="td-date">${esc(this.cellValue(row, col.key))}</td>`;
-                case 'Remarks': return `<td class="td-rmks"></td>`;
+                case 'Remarks': return `<td class="td-rmks">${esc(this.cellValue(row, col.key))}</td>`;
                 case 'Plain':
                 default: return `<td>${esc(this.cellValue(row, col.key))}</td>`;
             }

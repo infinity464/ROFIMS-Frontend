@@ -36,7 +36,7 @@ export interface MOServHistoryModel {
     serviceFromPrecision?: 'D' | 'M' | 'Y' | null;
     serviceToPrecision?: 'D' | 'M' | 'Y' | null;
     auth?: string | null;
-    appointment?: number | null;
+    appointment?: string | null; // free text (previously a CommonCode id)
     remarks?: string | null;
     filesReferences?: string | null;
     createdBy?: string | null;

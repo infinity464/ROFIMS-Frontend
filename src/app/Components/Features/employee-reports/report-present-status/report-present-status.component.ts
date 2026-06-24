@@ -628,7 +628,7 @@ export class ReportPresentStatusComponent implements OnInit {
             presentStatus: d['presentStatus'] as string,
             statusDate: d['statusDate'] as string,
             statusDetails: d['statusDetails'] as string,
-            rmks: null
+            rmks: (d['rmks'] as string) ?? null
         } as PresentStatusReportRow;
     }
 

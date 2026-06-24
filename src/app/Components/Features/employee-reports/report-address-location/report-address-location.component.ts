@@ -2324,9 +2324,9 @@ export class ReportAddressLocationComponent implements OnInit {
             // Status code passthrough — backend `status` field carries
             // EmployeeInfo.PostingStatus.
             status:          d['status']                 as string,
-            // Remarks column doesn't exist on the view; legacy row had `rmks`
-            // which the existing render falls back to '' for.
-            rmks:            null,
+            // Remarks = the employee's Additional Remarks, filled server-side
+            // (per employee, repeated across that employee's address rows).
+            rmks:            (d['rmks'] as string) ?? null,
         } as AddressLocationReportRow;
     }
 
