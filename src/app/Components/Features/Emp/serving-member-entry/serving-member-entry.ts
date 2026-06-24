@@ -1359,6 +1359,14 @@ export class ServingMemberEntry implements OnInit {
         this.loadTrade(codeId);
     }
 
+    /** Show Officer Type unless a non-"Officer" Member Type is selected. */
+    get isOfficerMemberType(): boolean {
+        const id = this.postingForm?.get('memberType')?.value;
+        if (id == null) return true;
+        const mt = this.memberTypes?.find((m: CommonCodeModel) => m.codeId === id);
+        return (mt?.codeValueEN ?? '').trim().toLowerCase() === 'officer';
+    }
+
     onMemberTypeChange(codeId: number) {
         if (codeId != null && this.allowedMemberTypeIds !== null && !this.allowedMemberTypeIds.includes(codeId)) {
             const typeName = this.memberTypes?.find((m: CommonCodeModel) => m.codeId === codeId)?.codeValueEN ?? 'this member type';

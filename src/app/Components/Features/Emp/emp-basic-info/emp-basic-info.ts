@@ -129,7 +129,7 @@ export class EmpBasicInfo implements OnInit {
         showSameAsPresent: true,
         sameAsLabel: 'Same As Member Present Address',
         showSameAsSecondary: true,
-        sameAsSecondaryLabel: 'Same As Spouse Permanent Address',
+        sameAsSecondaryLabel: 'Same As Permanent Address',
         employeeId: this.employeeId
     };
 
@@ -1882,6 +1882,14 @@ export class EmpBasicInfo implements OnInit {
 
     onChangeCorps(codeId: number) {
         this.loadTrade(codeId);
+    }
+
+    /** Show Officer Type unless a non-"Officer" Member Type is selected. */
+    get isOfficerMemberType(): boolean {
+        const id = this.postingForm?.get('memberType')?.value;
+        if (id == null) return true;
+        const mt = this.memberTypes?.find((m: CommonCodeModel) => m.codeId === id);
+        return (mt?.codeValueEN ?? '').trim().toLowerCase() === 'officer';
     }
 
     onMemberTypeChange(codeId: number) {
