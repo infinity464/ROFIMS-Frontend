@@ -133,6 +133,13 @@ export class ReportBatchCourseComponent implements OnInit, OnChanges {
         { key: 'corps',        labelEN: 'Corps',         labelBN: 'কোর',           hint: 'Plain',                 defaultVisible: true  },
         { key: 'trade',        labelEN: 'Trade',         labelBN: 'ট্রেড',         hint: 'Plain',                 defaultVisible: true  },
         { key: 'name',         labelEN: 'Name',          labelBN: 'নাম',           hint: 'Name',                  defaultVisible: true  },
+        // Single toggle that folds Award + Professional Qualification + Corps
+        // INTO the Name cell when ticked. Never renders as its own column —
+        // see visibleColumns + nameColumnValue. Default off.
+        { key: 'nameExtras', labelEN: 'Award + Professional Qualification', labelBN: 'পদক + পেশাগত যোগ্যতা', hint: 'NameSuffix', defaultVisible: false },
+        // Profile-style composite: line 1 = Prefix + Service No + Rank; line 2 =
+        // Name with awards, professional qualification and corps. Opt-in.
+        { key: 'callNoRankName', labelEN: 'No Rank Name', labelBN: 'নং র‍্যাঙ্ক নাম', hint: 'CallNoRankName', defaultVisible: false },
         // Selected-value column: header mirrors the chosen report type
         // (e.g. "Education") and every cell shows the picked CommonCode
         // value (e.g. "SSC") — the filter context surfaced per row.
@@ -160,7 +167,9 @@ export class ReportBatchCourseComponent implements OnInit, OnChanges {
         { key: 'tradeRemarks',      labelEN: 'Trade Remarks',    labelBN: 'ট্রেড মন্তব্য',       hint: 'Plain', defaultVisible: false },
         { key: 'gender',            labelEN: 'Gender',           labelBN: 'লিঙ্গ',              hint: 'Plain', defaultVisible: false },
         { key: 'motherUnit',        labelEN: 'Last Unit',        labelBN: 'শেষ ইউনিট',          hint: 'Plain', defaultVisible: false },
-        { key: 'rabUnit',           labelEN: 'RAB Unit',         labelBN: 'র‍্যাব ইউনিট',       hint: 'Plain', defaultVisible: false },
+        { key: 'rabUnit',           labelEN: 'Battalion',        labelBN: 'ব্যাটালিয়ন',         hint: 'Plain', defaultVisible: true  },
+        // Full job hierarchy (Battalion › Wing › Branch › Sub-Branch › Section › Sub-Section). Opt-in.
+        { key: 'rabUnitHierarchy', labelEN: 'RAB Unit', labelBN: 'র‍্যাব ইউনিট (পূর্ণ)', hint: 'Plain', defaultVisible: false },
         { key: 'dateOfCommission',  labelEN: 'Commission Date',  labelBN: 'কমিশন তারিখ',         hint: 'Plain', defaultVisible: false },
         { key: 'joiningDate',       labelEN: 'Joining Date',     labelBN: 'যোগদান তারিখ',       hint: 'Plain', defaultVisible: false },
         { key: 'rabServiceFrom',    labelEN: 'RAB Joining Date', labelBN: 'র‍্যাবে যোগদান তারিখ',hint: 'Plain', defaultVisible: false },
@@ -193,6 +202,7 @@ export class ReportBatchCourseComponent implements OnInit, OnChanges {
         gender:              { en: 'gender',              bn: 'genderBN' },
         motherUnit:          { en: 'motherUnit',          bn: 'motherUnitBN' },
         rabUnit:             { en: 'rabUnit',             bn: 'rabUnitBN' },
+        rabUnitHierarchy:    { en: 'rabUnitHierarchy',    bn: 'rabUnitHierarchyBN' },
         dateOfCommission:    { en: 'dateOfCommission' },
         joiningDate:         { en: 'joiningDate' },
         rabServiceFrom:      { en: 'rabServiceFrom' },
@@ -214,11 +224,32 @@ export class ReportBatchCourseComponent implements OnInit, OnChanges {
 
     /** Resolve a Plain-hint cell's value via plainColumnPropertyMap. */
     plainCellValue(row: BatchCourseReportRow, key: string): string {
+        if (key === 'serviceId') {
+            const r = row as any;
+            const prefix = this.codeValue(r.prefix, r.prefixBN);
+            const svc = r.serviceId != null && r.serviceId !== '' ? String(r.serviceId) : '';
+            const px = prefix && prefix !== '-' && prefix !== '—' ? prefix : '';
+            return [px, svc].filter((s) => s).join(' ') || '—';
+        }
         const map = ReportBatchCourseComponent.plainColumnPropertyMap[key];
         if (!map) return '—';
         const en = (row as any)[map.en] as string | null | undefined;
         const bn = map.bn ? (row as any)[map.bn] as string | null | undefined : undefined;
-        return this.codeValue(en, bn);
+        const value = this.codeValue(en, bn);
+        // RAB Unit hierarchy is a comma-joined chain (Battalion, Wing, Branch,
+        // Sub-Branch, Section, Sub-Section). Show only the first two levels
+        // (Unit, Wing) + the deepest level instead of the full chain.
+        if (key === 'rabUnitHierarchy') return this.trimHierarchy(value);
+        return value;
+    }
+
+    /** Keep only the first two levels + the last one from a comma-joined
+     *  hierarchy chain. Chains of 3 or fewer levels are returned unchanged. */
+    private trimHierarchy(value: string): string {
+        if (!value || value === '-' || value === '—') return value;
+        const parts = value.split(',').map((s) => s.trim()).filter(Boolean);
+        if (parts.length <= 3) return parts.join(', ');
+        return [parts[0], parts[1], parts[parts.length - 1]].join(', ');
     }
 
     selectedColumnKeys: string[] = this.columnCatalog.filter(c => c.defaultVisible).map(c => c.key);
@@ -227,11 +258,45 @@ export class ReportBatchCourseComponent implements OnInit, OnChanges {
         return this.columnCatalog.map(c => ({ label: this.lang === 'bn' ? c.labelBN : c.labelEN, value: c.key }));
     }
 
+    /**
+     * Field key that, when ticked, folds Award + Professional Qualification
+     * into the Name cell instead of rendering as its own column. Default
+     * (unticked) = Name shows just the name.
+     */
+    private static readonly NAME_EXTRAS_KEY = 'nameExtras';
+
     get visibleColumns(): typeof this.columnCatalog {
         const map = new Map(this.columnCatalog.map(c => [c.key, c]));
         return this.selectedColumnKeys
+            .filter(k => k !== ReportBatchCourseComponent.NAME_EXTRAS_KEY)
             .map(k => map.get(k))
             .filter((c): c is typeof this.columnCatalog[number] => c != null);
+    }
+
+    /**
+     * Name column value — just the name by default; when the "Award +
+     * Professional Qualification" toggle is ticked, appends Gallantry Awards,
+     * Professional Qualification and Corps (profile-style). An "N/A" corps is
+     * skipped.
+     */
+    nameColumnValue(row: BatchCourseReportRow): string {
+        const r = row as any;
+        const blank = (s: string | null | undefined) => !s || s === '-' || s === '—';
+        const parts: string[] = [];
+        const name = this.codeValue(r.name, r.nameBN);
+        if (!blank(name)) parts.push(name);
+        if (this.selectedColumnKeys.includes(ReportBatchCourseComponent.NAME_EXTRAS_KEY)) {
+            const a = this.codeValue(r.awards, r.awardsBN);
+            if (!blank(a)) parts.push(a);
+            const p = this.codeValue(r.professionalQualification, r.professionalQualificationBN);
+            if (!blank(p)) parts.push(p);
+            let corps = this.codeValue(r.corps, r.corpsBN);
+            // Skip a "not applicable" corps (English "N/A" or Bangla "অপ্রযোজ্য").
+            const na = ['n/a', 'na', 'অপ্রযোজ্য'];
+            if (na.includes((corps ?? '').trim().toLowerCase())) corps = '';
+            if (!blank(corps)) parts.push(corps);
+        }
+        return parts.length ? parts.join(', ') : '—';
     }
 
     draggingColumnKey: string | null = null;
@@ -278,6 +343,28 @@ export class ReportBatchCourseComponent implements OnInit, OnChanges {
 
     personnelMeta(row: BatchCourseReportRow): string {
         return personnelMetaHelper(row as any, this.lang);
+    }
+
+    /** "Call No Rank Name" composite — line 1: Prefix + Service No + Rank. */
+    callNoRankLine1(row: BatchCourseReportRow): string {
+        const r = row as any;
+        const prefix = this.codeValue(r.prefix, r.prefixBN);
+        const svcId = r.serviceId != null && r.serviceId !== '' ? this.displayNum(r.serviceId) : '';
+        const rank = this.codeValue(r.rank, r.rankBN);
+        return [prefix, svcId, rank].filter((s) => s && s !== '-' && s !== '—').join(' ');
+    }
+
+    /** Line 2: Name, Awards, Professional Qualification, Corps (profile style). */
+    callNoRankLine2(row: BatchCourseReportRow): string {
+        const r = row as any;
+        const name = this.codeValue(r.name, r.nameBN);
+        const awards = this.codeValue(r.awards, r.awardsBN);
+        const prof = this.codeValue(r.professionalQualification, r.professionalQualificationBN);
+        let corps = this.codeValue(r.corps, r.corpsBN);
+        // Skip a "not applicable" corps (English "N/A" or Bangla "অপ্রযোজ্য").
+        const na = ['n/a', 'na', 'অপ্রযোজ্য'];
+        if (na.includes((corps ?? '').trim().toLowerCase())) corps = '';
+        return [name, awards, prof, corps].filter((s) => s && s !== '-' && s !== '—').join(', ');
     }
 
     get criteriaItems(): { label: string; value: string }[] {
@@ -557,12 +644,19 @@ export class ReportBatchCourseComponent implements OnInit, OnChanges {
                         }
                         return new TableCell({ ...cellOpts, children });
                     }
+                    case 'CallNoRankName': {
+                        const l1 = this.callNoRankLine1(row);
+                        const l2 = this.callNoRankLine2(row);
+                        const children: Paragraph[] = [new Paragraph({ spacing: { after: l2 ? 40 : 0 }, children: [run(l1, { sz: S.name, bold: true })] })];
+                        if (l2) children.push(new Paragraph({ children: [run(l2, { sz: S.name, bold: true })] }));
+                        return new TableCell({ ...cellOpts, children });
+                    }
                     case 'RabId':
                         return new TableCell({ ...cellOpts, children: [new Paragraph({ children: [run((row as any).rabid ? this.displayNum((row as any).rabid) : '—', { fontKey: mono, chSp: isBn ? 0 : 4 })] })] });
                     case 'Remarks':
                         return new TableCell({ ...cellOpts, children: [new Paragraph({ children: [run(row.rmks || '', { color: C.gray })] })] });
                     case 'Name':
-                        return new TableCell({ ...cellOpts, children: [new Paragraph({ children: [run(codeValue(row.name, row.nameBN), { sz: S.name, bold: true })] })] });
+                        return new TableCell({ ...cellOpts, children: [new Paragraph({ children: [run(this.nameColumnValue(row), { sz: S.name, bold: true })] })] });
                     case 'SelectedValue':
                         return new TableCell({ ...cellOpts, children: [new Paragraph({ children: [run(this.selectedValueCellText)] })] });
                     case 'MemberStatus':
@@ -651,9 +745,14 @@ export class ReportBatchCourseComponent implements OnInit, OnChanges {
                         const meta = this.personnelMeta(row);
                         return meta ? `${name}\n${meta}` : name;
                     }
+                    case 'CallNoRankName': {
+                        const l1 = this.callNoRankLine1(row);
+                        const l2 = this.callNoRankLine2(row);
+                        return l1 && l2 ? `${l1}\n${l2}` : l1 || l2;
+                    }
                     case 'RabId':                 return (row as any).rabid ? this.displayNum((row as any).rabid) : '';
                     case 'Remarks':               return row.rmks || '';
-                    case 'Name':                  return codeValue(row.name, row.nameBN);
+                    case 'Name':                  return this.nameColumnValue(row);
                     case 'SelectedValue':         return this.selectedValueCellText;
                     case 'MemberStatus':          return this.memberStatusText(row);
                     case 'BlankRemark':           return '';
@@ -722,12 +821,14 @@ export class ReportBatchCourseComponent implements OnInit, OnChanges {
                     const metaHtml = meta ? `<div class="personnel-meta">${esc(meta)}</div>` : '';
                     return `<td class="td-personnel"><div class="personnel-name">${esc(codeValue(row.name, row.nameBN))}</div>${metaHtml}</td>`;
                 }
+                case 'CallNoRankName':
+                    return `<td class="td-personnel"><div class="personnel-name">${esc(this.callNoRankLine1(row))}</div><div class="personnel-name">${esc(this.callNoRankLine2(row))}</div></td>`;
                 case 'RabId':
                     return `<td class="td-date">${esc((row as any).rabid ? this.displayNum((row as any).rabid) : '—')}</td>`;
                 case 'Remarks':
                     return `<td class="td-rmks">${esc(row.rmks || '')}</td>`;
                 case 'Name':
-                    return `<td class="td-personnel"><div class="personnel-name">${esc(codeValue(row.name, row.nameBN))}</div></td>`;
+                    return `<td class="td-personnel"><div class="personnel-name">${esc(this.nameColumnValue(row))}</div></td>`;
                 case 'SelectedValue':
                     return `<td>${esc(this.selectedValueCellText)}</td>`;
                 case 'MemberStatus':
@@ -838,13 +939,13 @@ export class ReportBatchCourseComponent implements OnInit, OnChanges {
     table { width: 100%; border-collapse: collapse; table-layout: auto; font-family: ${sans}; font-size: 8pt; }
     thead { display: table-header-group; }
     thead th { background: #0b0b0b; color: #d9c79a; font-family: ${mono}; font-size: 6.5pt; font-weight: 600; letter-spacing: 0.15em; text-transform: uppercase; padding: 1.8mm 2mm; text-align: left; vertical-align: middle; white-space: nowrap; border: 1px solid rgba(11,11,11,0.05); ${isBn ? 'letter-spacing:0.04em;font-family:' + sans + ';' : ''} }
-    tbody td { padding: 2mm 2mm; font-size: 8pt; color: #0b0b0b; border: 1px solid rgba(11,11,11,0.05); vertical-align: top; background: #fff; word-break: break-word; overflow-wrap: anywhere; }
+    tbody td { padding: 2mm 2mm; font-size: 8pt; color: #0b0b0b; border: 1px solid rgba(11,11,11,0.05); vertical-align: top; background: #fff; word-break: keep-all; overflow-wrap: normal; }
     tbody tr:nth-child(even) td { background: #fafaf6; }
     tbody tr { page-break-inside: avoid; }
     .td-ser { white-space: nowrap; }
     .ser { font-family: ${mono}; font-size: 9pt; font-weight: 600; color: #6b6b6b; letter-spacing: 0.04em; white-space: nowrap; }
     .td-personnel { min-width: 56mm; }
-    .personnel-name { font-family: ${sans}; font-weight: 600; font-size: 10pt; color: #0b0b0b; line-height: 1.2; }
+    .personnel-name { font-family: ${sans}; font-weight: 600; font-size: 9.5pt; color: #0b0b0b; line-height: 1.2; }
     .personnel-meta { margin-top: 0.7mm; font-family: ${mono}; font-size: 7pt; letter-spacing: 0.08em; text-transform: uppercase; color: #6b6b6b; ${isBn ? 'letter-spacing:0;text-transform:none;font-family:' + sans + ';' : ''} }
     .td-date { font-family: ${mono}; letter-spacing: 0.02em; white-space: nowrap; }
 </style>
@@ -1100,7 +1201,28 @@ export class ReportBatchCourseComponent implements OnInit, OnChanges {
         const push = (k: string) => { if (!seen.has(k)) { seen.add(k); out.push(k); } };
         for (const key of this.selectedColumnKeys) {
             if (key === 'name') { push('nameEnglish'); push('nameBangla'); continue; }
+            if (key === 'nameExtras') {
+                // Fold-into-name toggle — project awards + professional
+                // qualification + corps so nameColumnValue can append them.
+                push('awards');
+                push('professionalQualification');
+                push('corps');
+                continue;
+            }
+            if (key === 'serviceId') { push('serviceId'); push('prefix'); continue; }
             if (key === 'memberStatus') { push('status'); continue; }
+            if (key === 'callNoRankName') {
+                // Composite cell — request every backend field it renders.
+                push('prefix');
+                push('serviceId');
+                push('armyRank');
+                push('nameEnglish');
+                push('nameBangla');
+                push('awards');
+                push('professionalQualification');
+                push('corps');
+                continue;
+            }
             if (key === 'selectedValue') continue;
             push(key);
         }

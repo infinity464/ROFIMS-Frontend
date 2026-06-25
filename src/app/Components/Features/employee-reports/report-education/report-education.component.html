@@ -43,6 +43,8 @@
                             placeholder="Select"
                             styleClass="w-full"
                             [filter]="true"
+                            [virtualScroll]="true"
+                            [virtualScrollItemSize]="38"
                             appendTo="body">
                         </p-multiSelect>
                     </div>
@@ -58,6 +60,8 @@
                             placeholder="Select"
                             styleClass="w-full"
                             [filter]="true"
+                            [virtualScroll]="true"
+                            [virtualScrollItemSize]="38"
                             appendTo="body">
                         </p-multiSelect>
                     </div>
@@ -73,6 +77,8 @@
                             placeholder="Select"
                             styleClass="w-full"
                             [filter]="true"
+                            [virtualScroll]="true"
+                            [virtualScrollItemSize]="38"
                             appendTo="body">
                         </p-multiSelect>
                     </div>
@@ -88,6 +94,8 @@
                             placeholder="Select"
                             styleClass="w-full"
                             [filter]="true"
+                            [virtualScroll]="true"
+                            [virtualScrollItemSize]="38"
                             appendTo="body">
                         </p-multiSelect>
                     </div>
@@ -374,6 +382,12 @@
                                             }
                                         </td>
                                     }
+                                    @case ('CallNoRankName') {
+                                        <td class="rab-td-personnel">
+                                            <div class="rab-personnel-name">{{ callNoRankLine1(row) }}</div>
+                                            <div class="rab-personnel-name">{{ callNoRankLine2(row) }}</div>
+                                        </td>
+                                    }
                                     @case ('RabId') {
                                         <td class="rab-td-date">{{ row.rabid ? displayNum(row.rabid) : '—' }}</td>
                                     }
@@ -385,7 +399,7 @@
                                     }
                                     @case ('Name') {
                                         <td class="rab-td-personnel">
-                                            <div class="rab-personnel-name">{{ codeValue(row.name, row.nameBN) }}</div>
+                                            <div class="rab-personnel-name">{{ nameColumnValue(row) }}</div>
                                         </td>
                                     }
                                     @case ('SelectedValue') {
