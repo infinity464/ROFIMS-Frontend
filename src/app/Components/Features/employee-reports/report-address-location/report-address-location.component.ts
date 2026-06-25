@@ -171,6 +171,13 @@ export class ReportAddressLocationComponent implements OnInit {
         { key: 'corps',        labelEN: 'Corps',         labelBN: 'কোর',             hint: 'Plain',              defaultVisible: true },
         { key: 'trade',        labelEN: 'Trade',         labelBN: 'ট্রেড',            hint: 'Plain',              defaultVisible: true },
         { key: 'name',         labelEN: 'Name',          labelBN: 'নাম',             hint: 'Plain',              defaultVisible: true },
+        // Single toggle that folds Award + Professional Qualification + Corps
+        // INTO the Name cell when ticked. Never renders as its own column —
+        // see visibleColumns + nameColumnValue. Default off.
+        { key: 'nameExtras',   labelEN: 'Award + Professional Qualification', labelBN: 'পদক + পেশাগত যোগ্যতা', hint: 'NameSuffix', defaultVisible: false },
+        // Profile-style composite: line 1 = Prefix + Service No + Rank; line 2 =
+        // Name with awards, professional qualification and corps. Opt-in.
+        { key: 'callNoRankName', labelEN: 'No Rank Name', labelBN: 'নং র‍্যাঙ্ক নাম', hint: 'CallNoRankName', defaultVisible: false },
         // Personnel composite (name + SVC·Rank·Org meta) — opt-in only now;
         // the identity renders as separate plain columns (serviceId/rank/corps/
         // trade/name) by default instead.
@@ -197,7 +204,9 @@ export class ReportAddressLocationComponent implements OnInit {
         { key: 'tradeRemarks',      labelEN: 'Trade Remarks',    labelBN: 'ট্রেড মন্তব্য',      hint: 'Plain', defaultVisible: false },
         { key: 'gender',            labelEN: 'Gender',           labelBN: 'লিঙ্গ',             hint: 'Plain', defaultVisible: false },
         { key: 'motherUnit',        labelEN: 'Last Unit',        labelBN: 'শেষ ইউনিট',         hint: 'Plain', defaultVisible: false },
-        { key: 'rabUnit',           labelEN: 'RAB Unit',         labelBN: 'র‍্যাব ইউনিট',     hint: 'Plain', defaultVisible: false },
+        { key: 'rabUnit',           labelEN: 'Battalion',        labelBN: 'ব্যাটালিয়ন',        hint: 'Plain', defaultVisible: false },
+        // Trimmed job hierarchy (Battalion, Wing … deepest level — first two + last). Opt-in.
+        { key: 'rabUnitHierarchy',  labelEN: 'RAB Unit',         labelBN: 'র‍্যাব ইউনিট',     hint: 'Plain', defaultVisible: false },
         { key: 'dateOfCommission',  labelEN: 'Commission Date',  labelBN: 'কমিশন তারিখ',       hint: 'Plain', defaultVisible: false },
         { key: 'joiningDate',       labelEN: 'Joining Date',     labelBN: 'যোগদান তারিখ',      hint: 'Plain', defaultVisible: false },
         { key: 'rabServiceFrom',    labelEN: 'RAB Joining Date', labelBN: 'র‍্যাবে যোগদান তারিখ', hint: 'Plain', defaultVisible: false },
@@ -233,11 +242,72 @@ export class ReportAddressLocationComponent implements OnInit {
         source of truth — drag-reorder mutates it directly. New picks land at
         the end (PrimeNG MultiSelect appends), so they appear at the right
         of the table until the user drags them elsewhere. */
+    /**
+     * Field key that, when ticked, folds Award + Professional Qualification
+     * into the Name cell instead of rendering as its own column.
+     */
+    private static readonly NAME_EXTRAS_KEY = 'nameExtras';
+
     get visibleColumns() {
         const map = new Map(this.columnCatalog.map((c) => [c.key, c]));
         return this.selectedColumnKeys
+            .filter((k) => k !== ReportAddressLocationComponent.NAME_EXTRAS_KEY)
             .map((k) => map.get(k))
             .filter((c): c is typeof this.columnCatalog[number] => c != null);
+    }
+
+    /**
+     * Name column value — just the name by default; when the "Award +
+     * Professional Qualification" toggle is ticked, appends Gallantry Awards,
+     * Professional Qualification and Corps (profile-style). An "N/A" corps is skipped.
+     */
+    nameColumnValue(row: AddressLocationReportRow): string {
+        const r = row as any;
+        const blank = (s: string | null | undefined) => !s || s === '-' || s === '—';
+        const parts: string[] = [];
+        const name = this.codeValue(r.name, r.nameBN);
+        if (!blank(name)) parts.push(name);
+        if (this.selectedColumnKeys.includes(ReportAddressLocationComponent.NAME_EXTRAS_KEY)) {
+            const a = this.codeValue(r.awards, r.awardsBN);
+            if (!blank(a)) parts.push(a);
+            const p = this.codeValue(r.professionalQualification, r.professionalQualificationBN);
+            if (!blank(p)) parts.push(p);
+            let corps = this.codeValue(r.corps, r.corpsBN);
+            const na = ['n/a', 'na', 'অপ্রযোজ্য'];
+            if (na.includes((corps ?? '').trim().toLowerCase())) corps = '';
+            if (!blank(corps)) parts.push(corps);
+        }
+        return parts.length ? parts.join(', ') : '—';
+    }
+
+    /** "Call No Rank Name" composite — line 1: Prefix + Service No + Rank. */
+    callNoRankLine1(row: AddressLocationReportRow): string {
+        const r = row as any;
+        const prefix = this.codeValue(r.prefix, r.prefixBN);
+        const svcId = r.serviceId != null && r.serviceId !== '' ? this.displayNum(r.serviceId) : '';
+        const rank = this.codeValue(r.rank, r.rankBN);
+        return [prefix, svcId, rank].filter((s) => s && s !== '-' && s !== '—').join(' ');
+    }
+
+    /** Line 2: Name, Awards, Professional Qualification, Corps (profile style). */
+    callNoRankLine2(row: AddressLocationReportRow): string {
+        const r = row as any;
+        const name = this.codeValue(r.name, r.nameBN);
+        const awards = this.codeValue(r.awards, r.awardsBN);
+        const prof = this.codeValue(r.professionalQualification, r.professionalQualificationBN);
+        let corps = this.codeValue(r.corps, r.corpsBN);
+        const na = ['n/a', 'na', 'অপ্রযোজ্য'];
+        if (na.includes((corps ?? '').trim().toLowerCase())) corps = '';
+        return [name, awards, prof, corps].filter((s) => s && s !== '-' && s !== '—').join(', ');
+    }
+
+    /** Keep only the first two levels + the last one from a comma-joined
+     *  hierarchy chain. Chains of 3 or fewer levels are returned unchanged. */
+    private trimHierarchy(value: string): string {
+        if (!value || value === '-' || value === '—') return value;
+        const parts = value.split(',').map((s) => s.trim()).filter(Boolean);
+        if (parts.length <= 3) return parts.join(', ');
+        return [parts[0], parts[1], parts[parts.length - 1]].join(', ');
     }
 
     // ── Drag-reorder of the column chips ─────────────────────────────────
@@ -326,6 +396,7 @@ export class ReportAddressLocationComponent implements OnInit {
         gender:              { en: 'gender',              bn: 'genderBN' },
         motherUnit:          { en: 'motherUnit',          bn: 'motherUnitBN' },
         rabUnit:             { en: 'rabUnit',             bn: 'rabUnitBN' },
+        rabUnitHierarchy:    { en: 'rabUnitHierarchy',    bn: 'rabUnitHierarchyBN' },
         dateOfCommission:    { en: 'dateOfCommission' },
         joiningDate:         { en: 'joiningDate' },
         rabServiceFrom:      { en: 'rabServiceFrom' },
@@ -373,6 +444,11 @@ export class ReportAddressLocationComponent implements OnInit {
                 return this.displayMemberStatus(row);
             case 'Remarks':
                 return row.rmks || '';
+            case 'CallNoRankName': {
+                const l1 = this.callNoRankLine1(row);
+                const l2 = this.callNoRankLine2(row);
+                return [l1, l2].filter(Boolean).join('\n');
+            }
             default:
                 return this.plainCellValue(row, col.key);
         }
@@ -388,11 +464,27 @@ export class ReportAddressLocationComponent implements OnInit {
     /** Resolve a plain-hint cell's value by walking the column→property map
         and applying the same bilingual fallback as `codeValue()`. */
     plainCellValue(row: AddressLocationReportRow, key: string): string {
+        // Name cell — folds Award + Professional Qualification + Corps into the
+        // name when the nameExtras toggle is ticked (screen + all exporters
+        // route here, so they stay consistent).
+        if (key === 'name') return this.nameColumnValue(row);
+        // Service ID is shown with the member's prefix in front (e.g. "K. 4045260").
+        if (key === 'serviceId') {
+            const r = row as any;
+            const prefix = this.codeValue(r.prefix, r.prefixBN);
+            const svc = r.serviceId != null && r.serviceId !== '' ? String(r.serviceId) : '';
+            const px = prefix && prefix !== '-' && prefix !== '—' ? prefix : '';
+            return [px, svc].filter((s) => s).join(' ') || '—';
+        }
         const map = ReportAddressLocationComponent.plainColumnPropertyMap[key];
         if (!map) return '—';
         const en = (row as any)[map.en] as string | null | undefined;
         const bn = map.bn ? (row as any)[map.bn] as string | null | undefined : undefined;
-        return this.codeValue(en, bn);
+        const value = this.codeValue(en, bn);
+        // RAB Unit hierarchy is a comma-joined chain (Battalion, Wing, Branch, …).
+        // Show only the first two levels + the deepest instead of the full chain.
+        if (key === 'rabUnitHierarchy') return this.trimHierarchy(value);
+        return value;
     }
 
     /** Toggle a single column key in the picker selection. Used by the
@@ -963,6 +1055,12 @@ export class ReportAddressLocationComponent implements OnInit {
                     // Remarks is intentionally blank when absent — em-dash would
                     // imply "intentionally empty" but the column is just optional.
                     return `<td class="td-remarks">${esc(row.rmks || '')}</td>`;
+                case 'CallNoRankName': {
+                    const l1 = this.callNoRankLine1(row);
+                    const l2 = this.callNoRankLine2(row);
+                    const l2Html = l2 ? `<div class="personnel-name">${esc(l2)}</div>` : '';
+                    return `<td class="td-personnel"><div class="personnel-name">${esc(l1)}</div>${l2Html}</td>`;
+                }
                 default:
                     return `<td>${esc(this.plainCellValue(row, col.key))}</td>`;
             }
@@ -1183,8 +1281,8 @@ export class ReportAddressLocationComponent implements OnInit {
         padding: 2mm 2mm; font-size: 8pt; color: #0b0b0b;
         border: 1px solid rgba(11, 11, 11, 0.05); vertical-align: top;
         background: #ffffff;
-        word-break: break-word;
-        overflow-wrap: anywhere;
+        word-break: keep-all;
+        overflow-wrap: normal;
     }
     tbody tr:nth-child(even) td { background: #fafaf6; }
     tbody tr { page-break-inside: avoid; }
@@ -1197,6 +1295,12 @@ export class ReportAddressLocationComponent implements OnInit {
     }
     .name {
         font-family: ${sans}; font-weight: 600; font-size: 10pt;
+        color: #0b0b0b; line-height: 1.2;
+    }
+    /* "No Rank Name" composite — both lines share the same size so the
+       prefix/rank line and the name line read as one block. */
+    .personnel-name {
+        font-family: ${sans}; font-weight: 600; font-size: 9.5pt;
         color: #0b0b0b; line-height: 1.2;
     }
     .meta {
@@ -1666,6 +1770,22 @@ export class ReportAddressLocationComponent implements OnInit {
                                 })],
                             })],
                         });
+                    case 'CallNoRankName': {
+                        const l1 = this.callNoRankLine1(row);
+                        const l2 = this.callNoRankLine2(row);
+                        const children: Paragraph[] = [new Paragraph({
+                            spacing: { after: l2 ? 40 : 0 },
+                            children: [new TextRun({
+                                text: wsafe(l1), font: sans, size: S.name, ...bnRunExtras(S.name), bold: true, color: C.black,
+                            })],
+                        })];
+                        if (l2) children.push(new Paragraph({
+                            children: [new TextRun({
+                                text: wsafe(l2), font: sans, size: S.body, ...bnRunExtras(S.body), color: C.black,
+                            })],
+                        }));
+                        return new TableCell({ ...w, children });
+                    }
                     default:
                         return new TableCell({
                             ...w,
@@ -2197,6 +2317,25 @@ export class ReportAddressLocationComponent implements OnInit {
         const push = (k: string) => { if (!seen.has(k)) { seen.add(k); out.push(k); } };
         for (const key of this.selectedColumnKeys) {
             if (key === 'name') { push('nameEnglish'); push('nameBangla'); continue; }
+            if (key === 'nameExtras') {
+                // Fold-into-name toggle — project awards + professional
+                // qualification + corps so nameColumnValue can append them.
+                push('awards'); push('professionalQualification'); push('corps');
+                continue;
+            }
+            if (key === 'serviceId') {
+                // Service ID cell shows the prefix before the number.
+                push('serviceId'); push('prefix');
+                continue;
+            }
+            if (key === 'callNoRankName') {
+                // Composite cell — request every backend field it renders.
+                push('prefix'); push('serviceId'); push('armyRank');
+                push('nameEnglish'); push('nameBangla');
+                push('awards'); push('professionalQualification'); push('corps');
+                continue;
+            }
+            if (key === 'rabUnitHierarchy') { push('rabUnitHierarchy'); continue; }
             push(key);
         }
         return out;

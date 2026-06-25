@@ -485,6 +485,12 @@
                                 @case ('Remarks') {
                                     <td class="rab-td-remarks">{{ row.rmks || '' }}</td>
                                 }
+                                @case ('CallNoRankName') {
+                                    <td class="rab-td-personnel">
+                                        <div class="rab-personnel-name">{{ callNoRankLine1(row) }}</div>
+                                        <div class="rab-personnel-name">{{ callNoRankLine2(row) }}</div>
+                                    </td>
+                                }
                                 @default {
                                     <td>{{ plainCellValue(row, col.key) }}</td>
                                 }

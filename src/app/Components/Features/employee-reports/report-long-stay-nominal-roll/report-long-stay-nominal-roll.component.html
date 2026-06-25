@@ -203,6 +203,12 @@
                                         @if (personnelMetaText(row); as meta) { @if (meta) { <div class="rab-personnel-meta">{{ meta }}</div> } }
                                     </td>
                                 }
+                                @case ('CallNoRankName') {
+                                    <td class="rab-td-personnel">
+                                        <div class="rab-personnel-name">{{ callNoRankLine1(row) }}</div>
+                                        @if (callNoRankLine2(row); as l2) { @if (l2) { <div class="rab-personnel-name">{{ l2 }}</div> } }
+                                    </td>
+                                }
                                 @case ('Date') { <td class="rab-td-date">{{ cellValue(row, col.key) }}</td> }
                                 @case ('Duration') { <td class="rab-td-date">{{ cellValue(row, col.key) }}</td> }
                                 @case ('Remarks') { <td class="rab-td-rmks">{{ row.rmks || '' }}</td> }

@@ -90,7 +90,7 @@ export class ReportLeaveComponent implements OnInit {
         return memberTypeScopeLine(this.accessibleScope, this.lang);
     }
 
-    columnCatalog: { key: string; labelEN: string; labelBN: string; hint: 'Serial' | 'Personnel' | 'Date' | 'Plain' | 'Remarks'; defaultVisible: boolean }[] = [
+    columnCatalog: { key: string; labelEN: string; labelBN: string; hint: 'Serial' | 'Personnel' | 'Date' | 'Plain' | 'Remarks' | 'NameSuffix' | 'CallNoRankName'; defaultVisible: boolean }[] = [
         { key: 'ser', labelEN: 'Ser', labelBN: 'ক্রমিক', hint: 'Serial', defaultVisible: true },
         { key: 'serviceId', labelEN: 'Service ID', labelBN: 'ব্যক্তিগত নম্বর', hint: 'Plain', defaultVisible: true },
         { key: 'rank', labelEN: 'Rank', labelBN: 'পদবি', hint: 'Plain', defaultVisible: true },
@@ -98,6 +98,13 @@ export class ReportLeaveComponent implements OnInit {
         { key: 'corps', labelEN: 'Corps', labelBN: 'কোর', hint: 'Plain', defaultVisible: true },
         { key: 'trade', labelEN: 'Trade', labelBN: 'ট্রেড', hint: 'Plain', defaultVisible: true },
         { key: 'name', labelEN: 'Name', labelBN: 'নাম', hint: 'Plain', defaultVisible: true },
+        // Single toggle that folds Award + Professional Qualification + Corps
+        // INTO the Name cell when ticked. Never renders as its own column —
+        // see visibleColumns + nameColumnValue. Default off.
+        { key: 'nameExtras', labelEN: 'Award + Professional Qualification', labelBN: 'পদক + পেশাগত যোগ্যতা', hint: 'NameSuffix', defaultVisible: false },
+        // Profile-style composite: line 1 = Prefix + Service No + Rank; line 2 =
+        // Name with awards, professional qualification and corps. Opt-in.
+        { key: 'callNoRankName', labelEN: 'No Rank Name', labelBN: 'নং র‍্যাঙ্ক নাম', hint: 'CallNoRankName', defaultVisible: false },
         { key: 'leaveType', labelEN: 'Leave Type', labelBN: 'ছুটির ধরন', hint: 'Plain', defaultVisible: true },
         { key: 'leaveFrom', labelEN: 'Leave From', labelBN: 'ছুটি শুরুর তারিখ', hint: 'Date', defaultVisible: true },
         { key: 'leaveTo', labelEN: 'Leave To', labelBN: 'ছুটি শেষের তারিখ', hint: 'Date', defaultVisible: true },
@@ -116,7 +123,9 @@ export class ReportLeaveComponent implements OnInit {
         { key: 'motherOrganization', labelEN: 'Mother Org', labelBN: 'মাতৃ সংস্থা', hint: 'Plain', defaultVisible: false },
         { key: 'motherUnit', labelEN: 'Mother Unit', labelBN: 'মাতৃ ইউনিট', hint: 'Plain', defaultVisible: false },
         { key: 'gender', labelEN: 'Gender', labelBN: 'লিঙ্গ', hint: 'Plain', defaultVisible: false },
-        { key: 'rabUnit', labelEN: 'RAB Unit', labelBN: 'র‍্যাব ইউনিট', hint: 'Plain', defaultVisible: false },
+        { key: 'rabUnit', labelEN: 'Battalion', labelBN: 'ব্যাটালিয়ন', hint: 'Plain', defaultVisible: false },
+        // Full job hierarchy (Battalion › Wing › Branch › Sub-Branch › Section › Sub-Section). Opt-in.
+        { key: 'rabUnitHierarchy', labelEN: 'RAB Unit', labelBN: 'র‍্যাব ইউনিট', hint: 'Plain', defaultVisible: false },
         { key: 'officerType', labelEN: 'Officer Type', labelBN: 'অফিসার ধরণ', hint: 'Plain', defaultVisible: false },
         { key: 'joiningInRab', labelEN: 'RAB Joining Date', labelBN: 'র‍্যাবে যোগদানের তারিখ', hint: 'Date', defaultVisible: false },
         { key: 'dateOfCommission', labelEN: 'Commission Date', labelBN: 'কমিশন তারিখ', hint: 'Date', defaultVisible: false },
@@ -154,9 +163,73 @@ export class ReportLeaveComponent implements OnInit {
     get columnPickerOptions(): { label: string; value: string }[] {
         return this.columnCatalog.map((c) => ({ label: this.lang === 'bn' ? c.labelBN : c.labelEN, value: c.key }));
     }
+    /**
+     * Field key that, when ticked, folds Award + Professional Qualification
+     * into the Name cell instead of rendering as its own column. Default
+     * (unticked) = Name shows just the name.
+     */
+    private static readonly NAME_EXTRAS_KEY = 'nameExtras';
+
     get visibleColumns(): typeof this.columnCatalog {
         const map = new Map(this.columnCatalog.map((c) => [c.key, c]));
-        return this.selectedColumnKeys.map((k) => map.get(k)).filter((c): c is (typeof this.columnCatalog)[number] => c != null);
+        return this.selectedColumnKeys
+            .filter((k) => k !== ReportLeaveComponent.NAME_EXTRAS_KEY)
+            .map((k) => map.get(k))
+            .filter((c): c is (typeof this.columnCatalog)[number] => c != null);
+    }
+
+    /**
+     * Name column value — just the name by default; when the "Award +
+     * Professional Qualification" toggle is ticked, appends Gallantry Awards,
+     * Professional Qualification and Corps (profile-style). An "N/A" corps is skipped.
+     */
+    nameColumnValue(row: LeaveReportRow): string {
+        const r = row as any;
+        const blank = (s: string | null | undefined) => !s || s === '-' || s === '—';
+        const parts: string[] = [];
+        const name = this.codeValue(r.name, r.nameBN);
+        if (!blank(name)) parts.push(name);
+        if (this.selectedColumnKeys.includes(ReportLeaveComponent.NAME_EXTRAS_KEY)) {
+            const a = this.codeValue(r.awards, r.awardsBN);
+            if (!blank(a)) parts.push(a);
+            const p = this.codeValue(r.professionalQualification, r.professionalQualificationBN);
+            if (!blank(p)) parts.push(p);
+            let corps = this.codeValue(r.corps, r.corpsBN);
+            const na = ['n/a', 'na', 'অপ্রযোজ্য'];
+            if (na.includes((corps ?? '').trim().toLowerCase())) corps = '';
+            if (!blank(corps)) parts.push(corps);
+        }
+        return parts.length ? parts.join(', ') : '—';
+    }
+
+    /** "Call No Rank Name" composite — line 1: Prefix + Service No + Rank. */
+    callNoRankLine1(row: LeaveReportRow): string {
+        const r = row as any;
+        const prefix = this.codeValue(r.prefix, r.prefixBN);
+        const svcId = r.serviceId != null && r.serviceId !== '' ? this.displayNum(r.serviceId) : '';
+        const rank = this.codeValue(r.rank, r.rankBN);
+        return [prefix, svcId, rank].filter((s) => s && s !== '-' && s !== '—').join(' ');
+    }
+
+    /** Line 2: Name, Awards, Professional Qualification, Corps (profile style). */
+    callNoRankLine2(row: LeaveReportRow): string {
+        const r = row as any;
+        const name = this.codeValue(r.name, r.nameBN);
+        const awards = this.codeValue(r.awards, r.awardsBN);
+        const prof = this.codeValue(r.professionalQualification, r.professionalQualificationBN);
+        let corps = this.codeValue(r.corps, r.corpsBN);
+        const na = ['n/a', 'na', 'অপ্রযোজ্য'];
+        if (na.includes((corps ?? '').trim().toLowerCase())) corps = '';
+        return [name, awards, prof, corps].filter((s) => s && s !== '-' && s !== '—').join(', ');
+    }
+
+    /** Keep only the first two levels + the last one from a comma-joined
+     *  hierarchy chain. Chains of 3 or fewer levels are returned unchanged. */
+    private trimHierarchy(value: string): string {
+        if (!value || value === '-' || value === '—') return value;
+        const parts = value.split(',').map((s) => s.trim()).filter(Boolean);
+        if (parts.length <= 3) return parts.join(', ');
+        return [parts[0], parts[1], parts[parts.length - 1]].join(', ');
     }
     onColumnDragStart(key: string, event: DragEvent): void {
         this.draggingColumnKey = key;
@@ -417,6 +490,56 @@ export class ReportLeaveComponent implements OnInit {
         this.loadPage();
     }
 
+    /**
+     * Translate display column keys into backend registry FieldKeys, expanding
+     * composite columns (nameExtras, callNoRankName, serviceId, rabUnitHierarchy)
+     * into every backend field they render. Plain keys fall through colKeyToBackend.
+     */
+    private backendColumnKeys(): string[] {
+        const out: string[] = [];
+        const seen = new Set<string>();
+        const push = (k: string) => {
+            if (!seen.has(k)) {
+                seen.add(k);
+                out.push(k);
+            }
+        };
+        for (const key of this.selectedColumnKeys) {
+            if (key === 'nameExtras') {
+                // Fold-into-name toggle — project awards + professional
+                // qualification + corps so nameColumnValue can append them.
+                push('awards');
+                push('professionalQualification');
+                push('corps');
+                continue;
+            }
+            if (key === 'callNoRankName') {
+                // Composite cell — request every backend field it renders.
+                push('prefix');
+                push('serviceId');
+                push('armyRank');
+                push('nameEnglish');
+                push('nameBangla');
+                push('awards');
+                push('professionalQualification');
+                push('corps');
+                continue;
+            }
+            if (key === 'serviceId') {
+                // Service ID cell shows the prefix before the number.
+                push('serviceId');
+                push('prefix');
+                continue;
+            }
+            if (key === 'rabUnitHierarchy') {
+                push('rabUnitHierarchy');
+                continue;
+            }
+            push(ReportLeaveComponent.colKeyToBackend[key] ?? key);
+        }
+        return out;
+    }
+
     private loadPage(): void {
         this.loading = true;
         const pageNo = Math.floor(this.first / this.rows) + 1;
@@ -430,8 +553,8 @@ export class ReportLeaveComponent implements OnInit {
         if (this.selectedRabUnitIds.length > 0) criteria.push({ fieldKey: 'rabUnit', idValues: this.selectedRabUnitIds });
         if (this.selectedLeaveTypeIds.length > 0) criteria.push({ fieldKey: 'leaveType', idValues: this.selectedLeaveTypeIds });
 
-        // Map column keys → registry FieldKeys.
-        const columns = Array.from(new Set(this.selectedColumnKeys.map((k) => ReportLeaveComponent.colKeyToBackend[k] ?? k)));
+        // Map column keys → registry FieldKeys (expanding composite columns).
+        const columns = this.backendColumnKeys();
 
         this.reportService
             .runDynamicLeaveReport({
@@ -516,8 +639,16 @@ export class ReportLeaveComponent implements OnInit {
     }
     cellValue(row: LeaveReportRow, key: string): string {
         switch (key) {
-            case 'serviceId':
-                return this.displayNum(row.serviceId);
+            case 'serviceId': {
+                // Service ID cell shows the member's prefix before the number (e.g. "K. 4045260").
+                const r = row as any;
+                const prefix = this.codeValue(r.prefix, r.prefixBN);
+                const svc = row.serviceId != null && (row.serviceId as any) !== '' ? this.displayNum(row.serviceId) : '';
+                const px = prefix && prefix !== '-' && prefix !== '—' ? prefix : '';
+                return [px, svc].filter((s) => s).join(' ') || '—';
+            }
+            case 'rabUnitHierarchy':
+                return this.trimHierarchy(this.codeValue((row as any).rabUnitHierarchy, (row as any).rabUnitHierarchyBN));
             case 'rank':
                 return this.codeValue(row.rank, row.rankBN);
             case 'corps':
@@ -525,7 +656,7 @@ export class ReportLeaveComponent implements OnInit {
             case 'trade':
                 return this.codeValue(row.trade, row.tradeBN);
             case 'name':
-                return this.codeValue(row.name, row.nameBN);
+                return this.nameColumnValue(row);
             case 'leaveType':
                 return this.codeValue(row.leaveType, row.leaveTypeBN);
             case 'leaveFrom':
@@ -758,6 +889,13 @@ export class ReportLeaveComponent implements OnInit {
                         if (meta) children.push(new Paragraph({ children: [new TextRun({ text: meta, font: mono, size: S.meta, ...bnRunExtras(S.meta), color: C.gray, characterSpacing: isBn ? 0 : 16, allCaps: !isBn })] }));
                         return new TableCell({ ...cellOpts, children });
                     }
+                    case 'CallNoRankName': {
+                        const l1 = this.callNoRankLine1(row);
+                        const l2 = this.callNoRankLine2(row);
+                        const children: Paragraph[] = [new Paragraph({ spacing: { after: l2 ? 40 : 0 }, children: [run(l1, { sz: S.name, bold: true })] })];
+                        if (l2) children.push(new Paragraph({ children: [run(l2)] }));
+                        return new TableCell({ ...cellOpts, children });
+                    }
                     case 'Date':
                         return new TableCell({ ...cellOpts, children: [new Paragraph({ children: [run(this.cellValue(row, col.key), { fontKey: mono, chSp: isBn ? 0 : 4 })] })] });
                     case 'Remarks':
@@ -866,6 +1004,11 @@ export class ReportLeaveComponent implements OnInit {
                         const meta = this.personnelMetaText(row);
                         return meta ? `${name}\n${meta}` : name;
                     }
+                    case 'CallNoRankName': {
+                        const l1 = this.callNoRankLine1(row);
+                        const l2 = this.callNoRankLine2(row);
+                        return l2 ? `${l1}\n${l2}` : l1;
+                    }
                     case 'Remarks':
                         return this.cellValue(row, 'rmks');
                     case 'Date':
@@ -932,6 +1075,12 @@ export class ReportLeaveComponent implements OnInit {
                     const metaHtml = meta ? `<div class="personnel-meta">${esc(meta)}</div>` : '';
                     return `<td class="td-personnel"><div class="personnel-name">${esc(this.cellValue(row, 'name'))}</div>${metaHtml}</td>`;
                 }
+                case 'CallNoRankName': {
+                    const l1 = this.callNoRankLine1(row);
+                    const l2 = this.callNoRankLine2(row);
+                    const l2Html = l2 ? `<div class="personnel-name">${esc(l2)}</div>` : '';
+                    return `<td class="td-personnel"><div class="personnel-name">${esc(l1)}</div>${l2Html}</td>`;
+                }
                 case 'Date':
                     return `<td class="td-date">${esc(this.cellValue(row, col.key))}</td>`;
                 case 'Remarks':
@@ -984,13 +1133,13 @@ export class ReportLeaveComponent implements OnInit {
     table { width: 100%; border-collapse: collapse; table-layout: auto; font-family: ${sans}; font-size: 8pt; }
     thead { display: table-header-group; }
     thead th { background: #0b0b0b; color: #d9c79a; font-family: ${mono}; font-size: 6.5pt; font-weight: 600; letter-spacing: 0.15em; text-transform: uppercase; padding: 1.8mm 2mm; text-align: left; vertical-align: middle; white-space: nowrap; border: 1px solid rgba(11,11,11,0.05); ${isBn ? 'letter-spacing:0.04em;font-family:' + sans + ';' : ''} }
-    tbody td { padding: 2mm 2mm; font-size: 8pt; color: #0b0b0b; border: 1px solid rgba(11,11,11,0.05); vertical-align: top; background: #fff; word-break: break-word; overflow-wrap: anywhere; }
+    tbody td { padding: 2mm 2mm; font-size: 8pt; color: #0b0b0b; border: 1px solid rgba(11,11,11,0.05); vertical-align: top; background: #fff; word-break: keep-all; overflow-wrap: normal; }
     tbody tr:nth-child(even) td { background: #fafaf6; }
     tbody tr { page-break-inside: avoid; }
     .td-ser { white-space: nowrap; }
     .ser { font-family: ${mono}; font-size: 9pt; font-weight: 600; color: #6b6b6b; letter-spacing: 0.04em; white-space: nowrap; }
     .td-personnel { min-width: 56mm; }
-    .personnel-name { font-family: ${sans}; font-weight: 600; font-size: 10pt; color: #0b0b0b; line-height: 1.2; }
+    .personnel-name { font-family: ${sans}; font-weight: 600; font-size: 9.5pt; color: #0b0b0b; line-height: 1.2; }
     .personnel-meta { margin-top: 0.7mm; font-family: ${mono}; font-size: 7pt; letter-spacing: 0.08em; text-transform: uppercase; color: #6b6b6b; ${isBn ? 'letter-spacing:0;text-transform:none;font-family:' + sans + ';' : ''} }
     .td-date { font-family: ${mono}; letter-spacing: 0.02em; white-space: nowrap; }
     .td-name { min-width: 34mm; }
