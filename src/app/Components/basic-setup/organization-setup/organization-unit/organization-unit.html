@@ -79,34 +79,24 @@
         </p-iconfield>
     </div>
 
-    <p-table [value]="filteredOrganizations" [paginator]="true" [first]="first" [rows]="rows"
-        [totalRecords]="totalRecords" [rowsPerPageOptions]="[10, 25, 50]"
+    <p-table [value]="filteredOrganizations" [paginator]="true" [(first)]="first" [rows]="rows"
+        [rowsPerPageOptions]="[10, 25, 50]"
         sortMode="single" styleClass="p-datatable-sm">
         <ng-template pTemplate="header">
             <tr>
                 <th style="width: 5%">#</th>
-                <th pSortableColumn="parentName">
-                    Mother Organization <p-sortIcon field="parentName" />
-                </th>
-                <th pSortableColumn="orgNameEN">
-                    Unit Name (English) <p-sortIcon field="orgNameEN" />
-                </th>
-                <th pSortableColumn="orgNameBN">
-                    Unit Name (Bangla) <p-sortIcon field="orgNameBN" />
-                </th>
-                <th pSortableColumn="districtId">
-                    District <p-sortIcon field="districtId" />
-                </th>
-                <th pSortableColumn="status">
-                    Status <p-sortIcon field="status" />
-                </th>
+                <th>Mother Organization</th>
+                <th>Unit Name (English)</th>
+                <th>Unit Name (Bangla)</th>
+                <th>District</th>
+                <th>Status</th>
                 <th style="width: 15%">Action</th>
             </tr>
         </ng-template>
 
         <ng-template pTemplate="body" let-row let-rowIndex="rowIndex">
             <tr>
-                <td>{{ first + rowIndex + 1 }}</td>
+                <td>{{ rowIndex + 1 }}</td>
                 <td>{{ row.parentName || '-' }}</td>
                 <td>{{ row.orgNameEN }}</td>
                 <td>{{ row.orgNameBN }}</td>

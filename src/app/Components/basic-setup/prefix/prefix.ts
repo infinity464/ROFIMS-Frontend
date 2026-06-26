@@ -42,7 +42,7 @@ export class Prefix {
     searchValue: string = '';
     isSubmitting = false;
 
-    orgOptions: { label: string; value: any }[] = [];
+    orgOptions: { label: string; value: any; sortOrder?: number | null }[] = [];
 
     formConfig: FormConfig = {
         formFields: [
@@ -151,7 +151,7 @@ export class Prefix {
     loadActiveMotherOrgs() {
         this.masterBasicSetupService.getAllActiveMotherOrgs().subscribe({
             next: (motherOrgRanks) => {
-                this.orgOptions = motherOrgRanks.map(d => ({ label: d.orgNameEN, value: d.orgId }));
+                this.orgOptions = motherOrgRanks.map(d => ({ label: d.orgNameEN, value: d.orgId, sortOrder: d.sortOrder }));
                 const orgField = this.formConfig.formFields.find(f => f.name === 'orgId');
                 if (orgField) orgField.options = this.orgOptions;
                 this.getAllData();
@@ -188,6 +188,14 @@ export class Prefix {
         if (status != null) list = list.filter((r: any) => r.status === status);
         const q = (this.searchValue ?? '').toLowerCase().trim();
         if (q) list = list.filter((r: any) => r.codeValueEN?.toLowerCase().includes(q) || r.codeValueBN?.toLowerCase().includes(q));
+        // Order by Mother Organization's sort order first, then by the prefix's own sort order.
+        const getOrgSortOrder = (id: number) =>
+            this.orgOptions.find((o: any) => o.value === id)?.sortOrder ?? Number.MAX_SAFE_INTEGER;
+        list.sort((a: any, b: any) => {
+            const parentDiff = getOrgSortOrder(a.orgId) - getOrgSortOrder(b.orgId);
+            if (parentDiff !== 0) return parentDiff;
+            return (a.sortOrder ?? 0) - (b.sortOrder ?? 0);
+        });
         this.commonData = list;
         this.totalRecords = list.length;
         this.first = 0;

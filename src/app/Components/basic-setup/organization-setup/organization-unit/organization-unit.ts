@@ -208,6 +208,12 @@ export class OrganizationUnit implements OnInit {
         return parent?.orgNameEN ?? '';
     }
 
+    private resolveParentSortOrder(parentOrgId: number | null | undefined): number {
+        if (parentOrgId == null) return Number.MAX_SAFE_INTEGER;
+        const parent = this.motherOrg.find(o => o.orgId === parentOrgId);
+        return parent?.sortOrder ?? Number.MAX_SAFE_INTEGER;
+    }
+
     private buildTableData() {
         let list = this.organizations.map(o => ({
             ...o,
@@ -239,6 +245,15 @@ export class OrganizationUnit implements OnInit {
                 this.getDistrictDisplay(org.districtId).toLowerCase().includes(q)
             );
         }
+
+        // Order by the Mother Organization's sort order first (e.g. Army=1 group on top),
+        // then by the unit's own sort order within that group.
+        list.sort((a, b) => {
+            const parentDiff =
+                this.resolveParentSortOrder(a.parentOrg) - this.resolveParentSortOrder(b.parentOrg);
+            if (parentDiff !== 0) return parentDiff;
+            return (a.sortOrder ?? 0) - (b.sortOrder ?? 0);
+        });
 
         this.filteredOrganizations = list;
         this.totalRecords = list.length;

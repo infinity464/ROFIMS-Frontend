@@ -199,6 +199,7 @@ export class Batch {
         if (status != null) list = list.filter((r: any) => r.status === status);
         const q = (this.searchValue ?? '').toLowerCase().trim();
         if (q) list = list.filter((r: any) => r.codeValueEN?.toLowerCase().includes(q) || r.codeValueBN?.toLowerCase().includes(q));
+        list.sort((a: any, b: any) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
         this.commonData = list;
         this.totalRecords = list.length;
         this.first = 0;

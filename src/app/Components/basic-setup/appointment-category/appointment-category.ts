@@ -143,7 +143,9 @@ export class AppointmentCategory {
 
         apiCall.subscribe({
             next: (res) => {
-                this.commonCodeData = res.datalist;
+                this.commonCodeData = (res.datalist ?? []).sort(
+                    (a: any, b: any) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0)
+                );
                 this.totalRecords = res.pages.rows;
                 this.rows = pageSize;
                 this.loading = false;
