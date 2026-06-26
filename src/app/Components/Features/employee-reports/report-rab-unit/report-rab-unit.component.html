@@ -104,6 +104,10 @@
                         appendTo="body">
                     </p-multiSelect>
                 </div>
+                <div class="report-filter-field">
+                    <label>RAB Unit</label>
+                    <app-org-tree-multi-select [(ngModel)]="selectedOrgNodeIds" placeholder="Select units, wings, branches…"></app-org-tree-multi-select>
+                </div>
             </div>
 
             <!-- Column picker — always visible so columns can be chosen before searching. -->

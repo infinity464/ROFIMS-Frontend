@@ -118,7 +118,7 @@ export class ReportPendingInterPostingComponent implements OnInit {
 
     /** Column catalog for the dynamic picker. `key` doubles as both the row
         property accessor (via cellValue() / formatDate()) and the chip id. */
-    columnCatalog: { key: string; labelEN: string; labelBN: string; hint: 'Serial' | 'Personnel' | 'Date' | 'Plain' | 'Remarks'; defaultVisible: boolean }[] = [
+    columnCatalog: { key: string; labelEN: string; labelBN: string; hint: 'Serial' | 'Personnel' | 'NoRankName' | 'Date' | 'Plain' | 'Remarks'; defaultVisible: boolean }[] = [
         { key: 'ser',                labelEN: 'Ser',            labelBN: 'ক্রঃ',           hint: 'Serial',     defaultVisible: true  },
         { key: 'serviceId',          labelEN: 'Service ID',     labelBN: 'সার্ভিস আইডি',    hint: 'Plain',      defaultVisible: true  },
         { key: 'rank',               labelEN: 'Rank',           labelBN: 'র‍্যাঙ্ক',        hint: 'Plain',      defaultVisible: true  },
@@ -136,6 +136,8 @@ export class ReportPendingInterPostingComponent implements OnInit {
         { key: 'postingOrderNo',     labelEN: 'Order No',       labelBN: 'অর্ডার নম্বর',    hint: 'Plain',      defaultVisible: false },
         { key: 'noteSheetNo',        labelEN: 'NoteSheet No',   labelBN: 'নোটশীট নম্বর',    hint: 'Plain',      defaultVisible: false },
         { key: 'transferToHierarchy',labelEN: 'Posted (Full Path)', labelBN: 'পোস্টেড (পূর্ণ পথ)', hint: 'Plain', defaultVisible: false },
+        { key: 'fromHierarchy',      labelEN: 'RAB Unit (Full)', labelBN: 'র‍্যাব ইউনিট (পূর্ণ)', hint: 'Plain', defaultVisible: true  },
+        { key: 'noRankName',         labelEN: 'No Rank Name',   labelBN: 'নং র‍্যাঙ্ক নাম',   hint: 'NoRankName', defaultVisible: false },
         { key: 'motherUnitName',     labelEN: 'Mother Unit',    labelBN: 'মাতৃ ইউনিট',      hint: 'Plain',      defaultVisible: false },
         { key: 'memberType',         labelEN: 'Member Type',    labelBN: 'সদস্য ধরন',       hint: 'Plain',      defaultVisible: false },
     ];
@@ -462,6 +464,20 @@ export class ReportPendingInterPostingComponent implements OnInit {
         } as any, this.lang);
     }
 
+    /** "No Rank Name" composite — line 1: service number + rank. */
+    noRankLine1(row: PendingPostingJoiningDto): string {
+        const serviceId = this.displayNum(row.serviceId);
+        const rank = this.codeValue(row.rankName, row.rankNameBN);
+        return [serviceId, rank].filter(s => s && s !== '-' && s !== '—').join(' ');
+    }
+
+    /** "No Rank Name" composite — line 2: name + corps. */
+    noRankLine2(row: PendingPostingJoiningDto): string {
+        const name = this.codeValue(row.fullNameEN, row.fullNameBN);
+        const corps = this.codeValue(row.corps, row.corpsBN);
+        return [name, corps].filter(s => s && s !== '-' && s !== '—').join(', ');
+    }
+
     /** Resolve a row's value for a column. Handles the curated cells and the
         opt-in raw fields uniformly. Date fields are formatted dd-mm-yyyy. */
     cellValue(row: PendingPostingJoiningDto, key: string): string {
@@ -478,6 +494,7 @@ export class ReportPendingInterPostingComponent implements OnInit {
             case 'presentBnWg':         return row.fromRabUnitName ?? '—';
             case 'postedBnWg':          return row.transferRabUnitName ?? '—';
             case 'transferToHierarchy': return row.transferToHierarchy ?? '—';
+            case 'fromHierarchy':       return this.codeValue(row.fromHierarchy, row.fromHierarchyBN);
             case 'postingOrderDate':    return this.formatDate(row.postingOrderDate);
             case 'rabID':               return row.rabID ?? '—';
             case 'postingOrderNo':      return row.postingOrderNo ?? '—';
@@ -593,6 +610,13 @@ export class ReportPendingInterPostingComponent implements OnInit {
                         if (meta) children.push(new Paragraph({ children: [new TextRun({ text: meta, font: mono, size: S.meta, ...bnRunExtras(S.meta), color: C.gray, characterSpacing: isBn ? 0 : 16, allCaps: !isBn })] }));
                         return new TableCell({ ...cellOpts, children });
                     }
+                    case 'NoRankName': {
+                        const l1 = this.noRankLine1(row);
+                        const l2 = this.noRankLine2(row);
+                        const children: Paragraph[] = [new Paragraph({ spacing: { after: l2 ? 40 : 0 }, children: [run(l1, { sz: S.name, bold: true })] })];
+                        if (l2) children.push(new Paragraph({ children: [new TextRun({ text: l2, font: mono, size: S.meta, ...bnRunExtras(S.meta), color: C.gray, characterSpacing: isBn ? 0 : 16, allCaps: !isBn })] }));
+                        return new TableCell({ ...cellOpts, children });
+                    }
                     case 'Date':
                         return new TableCell({ ...cellOpts, children: [new Paragraph({ children: [run(this.cellValue(row, col.key), { fontKey: mono, chSp: isBn ? 0 : 4 })] })] });
                     case 'Remarks':
@@ -642,6 +666,11 @@ export class ReportPendingInterPostingComponent implements OnInit {
                         const name = this.cellValue(row, 'name');
                         const meta = this.personnelMetaText(row);
                         return meta ? `${name}\n${meta}` : name;
+                    }
+                    case 'NoRankName': {
+                        const l1 = this.noRankLine1(row);
+                        const l2 = this.noRankLine2(row);
+                        return l2 ? `${l1}\n${l2}` : l1;
                     }
                     case 'Remarks':
                     case 'Date':
@@ -693,6 +722,11 @@ export class ReportPendingInterPostingComponent implements OnInit {
                     const meta = this.personnelMetaText(row);
                     const metaHtml = meta ? `<div class="personnel-meta">${esc(meta)}</div>` : '';
                     return `<td class="td-personnel"><div class="personnel-name">${esc(this.cellValue(row, 'name'))}</div>${metaHtml}</td>`;
+                }
+                case 'NoRankName': {
+                    const l2 = this.noRankLine2(row);
+                    const l2Html = l2 ? `<div class="personnel-meta">${esc(l2)}</div>` : '';
+                    return `<td class="td-personnel"><div class="personnel-name">${esc(this.noRankLine1(row))}</div>${l2Html}</td>`;
                 }
                 case 'Date': return `<td class="td-date">${esc(this.cellValue(row, col.key))}</td>`;
                 case 'Remarks': return `<td class="td-rmks">${esc(this.cellValue(row, col.key))}</td>`;

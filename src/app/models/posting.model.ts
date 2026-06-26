@@ -335,6 +335,8 @@ export interface PendingPostingJoiningDto {
 
     transferRabUnitId: number | null;
     transferToHierarchy: string | null;
+    fromHierarchy?: string | null;
+    fromHierarchyBN?: string | null;
     transferRabUnitName: string | null;
     fromRabUnitId: number | null;
     fromRabUnitName: string | null;

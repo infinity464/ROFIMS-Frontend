@@ -27,6 +27,7 @@ import {
     memberTypeScopeLine,
     statusLocked,
 } from '../report-scope.helper';
+import { OrgTreeMultiSelectComponent } from '@/shared/components/org-tree-multi-select/org-tree-multi-select.component';
 import { personnelMeta as personnelMetaHelper } from '../formal-rab-render.helper';
 import {
     AlignmentType,
@@ -57,7 +58,7 @@ import { forkJoin } from 'rxjs';
 @Component({
     selector: 'app-report-professional-qualification',
     standalone: true,
-    imports: [CommonModule, FormsModule, TableModule, ButtonModule, SelectModule, MultiSelectModule, PaginatorModule, Toast],
+    imports: [CommonModule, FormsModule, TableModule, ButtonModule, SelectModule, MultiSelectModule, PaginatorModule, Toast, OrgTreeMultiSelectComponent],
     providers: [MessageService],
     templateUrl: './report-professional-qualification.component.html',
     styleUrls: ['../report-theme.scss', '../report-card-mtr.scss', './report-professional-qualification.component.scss'],
@@ -77,8 +78,16 @@ export class ReportProfessionalQualificationComponent implements OnInit, OnChang
     selectedOrgIds: number[] = [];
     memberTypeOptions: { label: string; labelBn: string; value: number }[] = [];
     selectedMemberTypeIds: number[] = [];
-    rabUnitOptions: { label: string; labelBn: string; value: number }[] = [];
-    selectedRabUnitIds: number[] = [];
+    /**
+     * Multi-select RAB org-tree filter — the user checks any nodes at any
+     * level (Unit / Wing / Branch / Sub-Branch / Section / Sub-Section) in the
+     * shared org-tree picker. The selected node ids are sent to the backend as
+     * the `rabOrgNode` criterion (idValues).
+     */
+    selectedOrgNodeIds: number[] = [];
+    /** id → {en,bn,parentId} for every org node — lets the criteria strip
+     *  resolve each picked node to its full root→node ancestry path. */
+    private orgNodeLabels = new Map<number, { en: string; bn: string; parentId: number | null }>();
     rankOptions: { label: string; labelBn: string; value: number }[] = [];
     corpsOptions: { label: string; labelBn: string; value: number }[] = [];
     tradeOptions: { label: string; labelBn: string; value: number }[] = [];
@@ -368,7 +377,10 @@ export class ReportProfessionalQualificationComponent implements OnInit, OnChang
         multi(this.selectedRankIds, this.rankOptions, L['report.search.rank']);
         multi(this.selectedCorpsIds, this.corpsOptions, L['report.table.corps'] ?? 'Corps');
         multi(this.selectedTradeIds, this.tradeOptions, L['report.search.trade']);
-        multi(this.selectedRabUnitIds, this.rabUnitOptions, this.lang === 'bn' ? 'র‍্যাব ইউনিট' : 'RAB Unit');
+        if (this.selectedOrgNodeIds.length > 0) {
+            const names = this.orgNodesLabel(this.lang === 'bn');
+            if (names) items.push({ label: this.lang === 'bn' ? 'র‍্যাব ইউনিট' : 'RAB Unit', value: names });
+        }
         return items;
     }
 
@@ -492,7 +504,10 @@ export class ReportProfessionalQualificationComponent implements OnInit, OnChang
         multi(this.selectedRankIds, this.rankOptions, L['report.search.rank']);
         multi(this.selectedCorpsIds, this.corpsOptions, L['report.table.corps'] ?? 'Corps');
         multi(this.selectedTradeIds, this.tradeOptions, L['report.search.trade']);
-        multi(this.selectedRabUnitIds, this.rabUnitOptions, this.lang === 'bn' ? 'র‍্যাব ইউনিট' : 'RAB Unit');
+        if (this.selectedOrgNodeIds.length > 0) {
+            const names = this.orgNodesLabel(this.lang === 'bn');
+            if (names) lines.push(`${this.lang === 'bn' ? 'র‍্যাব ইউনিট' : 'RAB Unit'}: ${names}`);
+        }
         return lines;
     }
 
@@ -548,7 +563,7 @@ export class ReportProfessionalQualificationComponent implements OnInit, OnChang
             const cells: TableCell[] = [];
             for (let j = 0; j < colsPerCritRow; j++) {
                 const it = items[i + j];
-                cells.push(new TableCell({ borders: innerCellBorder, margins: { top: 100, bottom: 100, left: 140, right: 140 }, width: { size: critCellPct, type: WidthType.PERCENTAGE }, children: it ? [new Paragraph({ spacing: { after: 40 }, children: [new TextRun({ text: wsafe(it.label), font: sans, size: S.critLabel, ...bnRunExtras(S.critLabel), bold: true, color: C.labelGray, characterSpacing: isBn ? 0 : 32, allCaps: !isBn })] }), new Paragraph({ children: [new TextRun({ text: wsafe(it.value), font: serif, size: S.critValue, ...bnRunExtras(S.critValue), bold: true, color: C.black })] })] : [new Paragraph({ children: [new TextRun({ text: ' ', font: sans, size: S.critValue, ...bnRunExtras(S.critValue) })] })] }));
+                cells.push(new TableCell({ borders: innerCellBorder, margins: { top: 100, bottom: 100, left: 140, right: 140 }, width: { size: critCellPct, type: WidthType.PERCENTAGE }, children: it ? [new Paragraph({ spacing: { after: 40 }, children: [new TextRun({ text: wsafe(it.label), font: sans, size: S.critLabel, ...bnRunExtras(S.critLabel), bold: true, color: C.labelGray, characterSpacing: isBn ? 0 : 32, allCaps: !isBn })] }), ...wsafe(it.value).split('\n').map((line) => new Paragraph({ children: [new TextRun({ text: line, font: serif, size: S.critValue, ...bnRunExtras(S.critValue), bold: true, color: C.black })] }))] : [new Paragraph({ children: [new TextRun({ text: ' ', font: sans, size: S.critValue, ...bnRunExtras(S.critValue) })] })] }));
             }
             critRows.push(new TableRow({ cantSplit: true, children: cells }));
         }
@@ -629,7 +644,7 @@ export class ReportProfessionalQualificationComponent implements OnInit, OnChang
         if (this.rabSubtitleText) aoa.push([wsafe(this.rabSubtitleText), ...pad(totalCols - 1)]);
         aoa.push(pad(totalCols));
         aoa.push([`${this.rabCriteriaTitle}  ·  ${this.rabTotalText}  ·  ${this.rabGeneratedLabel}: ${this.rabFormattedDate}`, ...pad(totalCols - 1)]);
-        for (const it of this.criteriaItems) aoa.push([`${it.label}: ${it.value}`, ...pad(totalCols - 1)]);
+        for (const it of this.criteriaItems) aoa.push([`${it.label}: ${it.value.replace(/\n/g, '; ')}`, ...pad(totalCols - 1)]);
         aoa.push(pad(totalCols));
         aoa.push(headers);
         for (let i = 0; i < this.list.length; i++) {
@@ -724,7 +739,7 @@ export class ReportProfessionalQualificationComponent implements OnInit, OnChang
 
         const tableBodyHtml = this.list.map((row, i) => `<tr>${visibleCols.map(c => renderCell(row, c, i)).join('')}</tr>`).join('');
         const items = this.criteriaItems;
-        const criteriaGridHtml = items.length ? `<div class="criteria-grid">${items.map(item => `<div class="cell"><div class="cell-label">${esc(item.label)}</div><div class="cell-value">${esc(item.value)}</div></div>`).join('')}</div>` : '';
+        const criteriaGridHtml = items.length ? `<div class="criteria-grid">${items.map(item => `<div class="cell"><div class="cell-label">${esc(item.label)}</div><div class="cell-value">${esc(item.value).replace(/\n/g, '<br>')}</div></div>`).join('')}</div>` : '';
         const subtitleHtml = this.rabSubtitleText ? `<div class="paper-section-sub"><em>${esc(this.rabSubtitleText)}</em></div>` : '';
         const confidential = this.rabConfidentialLabel;
         const warning = this.rabWarningLabel;
@@ -807,7 +822,7 @@ export class ReportProfessionalQualificationComponent implements OnInit, OnChang
         this.syncSelectedValueColumnLabel();
         this.loadOrgOptions();
         this.loadMemberTypeOptions();
-        this.loadRabUnitOptions();
+        this.loadOrgNodeLabels();
         this.load();
     }
 
@@ -823,16 +838,67 @@ export class ReportProfessionalQualificationComponent implements OnInit, OnChang
         });
     }
 
-    loadRabUnitOptions(): void {
-        this.commonCodeService.getAllActiveCommonCodesType('RabUnit').subscribe({
-            next: (codes) =>
-                (this.rabUnitOptions = (codes || []).map((c) => ({
-                    label: c.codeValueEN || String(c.codeId),
-                    labelBn: c.codeValueBN || c.codeValueEN || String(c.codeId),
-                    value: c.codeId,
-                }))),
-            error: () => (this.rabUnitOptions = []),
+    /** All RAB org codeTypes — same set the shared picker loads. */
+    private static readonly ORG_CODE_TYPES = ['RabUnit', 'RabWing', 'RabBranch', 'RabSubBranch', 'RabSection', 'RabSubSection'];
+
+    /** Build the id → label map for every org node, so the criteria strip can
+     *  resolve the selected node ids to names. */
+    loadOrgNodeLabels(): void {
+        forkJoin(
+            ReportProfessionalQualificationComponent.ORG_CODE_TYPES.map((t) => this.commonCodeService.getAllActiveCommonCodesType(t))
+        ).subscribe({
+            next: (buckets) => {
+                this.orgNodeLabels.clear();
+                for (const codes of buckets) {
+                    for (const c of codes || []) {
+                        this.orgNodeLabels.set(c.codeId, {
+                            en: c.codeValueEN || String(c.codeId),
+                            bn: c.codeValueBN || c.codeValueEN || String(c.codeId),
+                            parentId: c.parentCodeId ?? null,
+                        });
+                    }
+                }
+            },
+            error: () => this.orgNodeLabels.clear(),
         });
+    }
+
+    /** Root→node label chain for one org node, e.g. ["RAB 1","Wing 1","Sub Branch 1"]. */
+    private orgNodePathParts(id: number, bn: boolean): string[] {
+        const parts: string[] = [];
+        const guard = new Set<number>();   // cycle guard
+        let cur: number | null = id;
+        while (cur != null && !guard.has(cur)) {
+            guard.add(cur);
+            const n = this.orgNodeLabels.get(cur);
+            if (!n) break;
+            parts.unshift(bn ? n.bn : n.en);
+            cur = n.parentId;
+        }
+        return parts;
+    }
+
+    /**
+     * Selected org nodes for the criteria strip — grouped by their root unit so
+     * the unit name isn't repeated. One line per unit; the nodes picked under it
+     * are listed comma-separated (each keeping its sub-path below the unit). A
+     * unit picked on its own renders as just the unit name.
+     */
+    private orgNodesLabel(bn: boolean): string {
+        const groups: { root: string; subs: string[] }[] = [];
+        const byRoot = new Map<string, { root: string; subs: string[] }>();
+        for (const id of this.selectedOrgNodeIds) {
+            const parts = this.orgNodePathParts(id, bn);
+            if (parts.length === 0) continue;
+            const root = parts[0];
+            let g = byRoot.get(root);
+            if (!g) { g = { root, subs: [] }; byRoot.set(root, g); groups.push(g); }
+            const sub = parts.slice(1).join(' › ');
+            if (sub) g.subs.push(sub);
+        }
+        return groups
+            .map((g) => (g.subs.length ? `${g.root}: ${g.subs.join(', ')}` : g.root))
+            .join('\n');
     }
 
     ngOnChanges(changes: SimpleChanges): void {
@@ -860,7 +926,7 @@ export class ReportProfessionalQualificationComponent implements OnInit, OnChang
         if (this.selectedCorpsIds.length > 0) c++;
         if (this.selectedTradeIds.length > 0) c++;
         if (this.selectedMemberTypeIds.length > 0) c++;
-        if (this.selectedRabUnitIds.length > 0) c++;
+        if (this.selectedOrgNodeIds.length > 0) c++;
         return c;
     }
 
@@ -879,7 +945,7 @@ export class ReportProfessionalQualificationComponent implements OnInit, OnChang
         this.selectedCorpsIds = [];
         this.selectedTradeIds = [];
         this.selectedMemberTypeIds = [];
-        this.selectedRabUnitIds = [];
+        this.selectedOrgNodeIds = [];
         this.rankOptions = [];
         this.corpsOptions = [];
         this.tradeOptions = [];
@@ -1030,8 +1096,8 @@ export class ReportProfessionalQualificationComponent implements OnInit, OnChang
             criteria.push({ fieldKey: 'corps', idValues: this.selectedCorpsIds });
         if (this.selectedTradeIds.length > 0)
             criteria.push({ fieldKey: 'trade', idValues: this.selectedTradeIds });
-        if (this.selectedRabUnitIds.length > 0)
-            criteria.push({ fieldKey: 'rabUnit', idValues: this.selectedRabUnitIds });
+        if (this.selectedOrgNodeIds.length > 0)
+            criteria.push({ fieldKey: 'rabOrgNode', idValues: this.selectedOrgNodeIds });
         if (this.commonCodeId != null && this.commonCodeId > 0)
             criteria.push({ fieldKey: 'professionalQualification', idValue: this.commonCodeId });
 

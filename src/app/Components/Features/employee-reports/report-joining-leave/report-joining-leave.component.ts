@@ -18,6 +18,7 @@ import type { JoiningLeaveReportRow, ReportAccessibleScope, DynamicReportCriteri
 import type { CommonCodeModel } from '@/models/common-code-model';
 import type { MotherOrganizationModel } from '@/models/mother-org-model';
 import { unitScopeLine, memberTypeScopeLine } from '../report-scope.helper';
+import { OrgTreeMultiSelectComponent } from '@/shared/components/org-tree-multi-select/org-tree-multi-select.component';
 import { AlignmentType, BorderStyle, Document, Footer, Packer, PageNumber, PageOrientation, Paragraph, Table, TableCell, TableLayoutType, TableRow, TextRun, WidthType } from 'docx';
 import { saveAs } from 'file-saver';
 import * as XLSX from 'xlsx';
@@ -34,7 +35,7 @@ type Lang = 'en' | 'bn';
 @Component({
     selector: 'app-report-joining-leave',
     standalone: true,
-    imports: [CommonModule, FormsModule, TableModule, ButtonModule, SelectModule, MultiSelectModule, DatePickerModule, PaginatorModule, Toast],
+    imports: [CommonModule, FormsModule, TableModule, ButtonModule, SelectModule, MultiSelectModule, DatePickerModule, PaginatorModule, Toast, OrgTreeMultiSelectComponent],
     providers: [MessageService],
     templateUrl: './report-joining-leave.component.html',
     styleUrls: ['../report-theme.scss', '../report-card-mtr.scss', './report-joining-leave.component.scss']
@@ -57,11 +58,19 @@ export class ReportJoiningLeaveComponent implements OnInit {
     tradeOptions: { label: string; labelBn: string; value: number }[] = [];
     selectedOrgIds: number[] = [];
     selectedRankId: number | null = null;
-    rabUnitOptions: { label: string; labelBn: string; value: number }[] = [];
     selectedMemberTypeIds: number[] = [];
     selectedCorpsIds: number[] = [];
     selectedTradeIds: number[] = [];
-    selectedRabUnitIds: number[] = [];
+    /**
+     * Multi-select RAB org-tree filter — the user checks any nodes at any level
+     * (Unit / Wing / Branch / Sub-Branch / Section / Sub-Section) in the shared
+     * org-tree picker. The selected node ids are sent to the backend as the
+     * `rabOrgNode` criterion.
+     */
+    selectedOrgNodeIds: number[] = [];
+    /** id → {en,bn,parentId} for every org node — lets the criteria strip
+     *  resolve each picked node to its full root→node ancestry path. */
+    private orgNodeLabels = new Map<number, { en: string; bn: string; parentId: number | null }>();
     /** Raw org-scoped MotherOrgRank rows, re-filtered client-side by Member Type. */
     private allRanksForOrg: CommonCodeModel[] = [];
 
@@ -289,7 +298,7 @@ export class ReportJoiningLeaveComponent implements OnInit {
 
         this.loadMotherOrgs();
         this.loadMemberTypes();
-        this.loadRabUnits();
+        this.loadOrgNodeLabels();
         // Do not auto-run; the list loads only after the user clicks Search.
     }
 
@@ -318,11 +327,67 @@ export class ReportJoiningLeaveComponent implements OnInit {
             error: () => (this.memberTypeOptions = [])
         });
     }
-    private loadRabUnits(): void {
-        this.commonCodeService.getAllActiveCommonCodesType('RabUnit').subscribe({
-            next: (codes: CommonCodeModel[]) => (this.rabUnitOptions = this.mapCodes(codes)),
-            error: () => (this.rabUnitOptions = [])
+    /** All RAB org codeTypes — same set the shared picker loads. */
+    private static readonly ORG_CODE_TYPES = ['RabUnit', 'RabWing', 'RabBranch', 'RabSubBranch', 'RabSection', 'RabSubSection'];
+
+    /** Build the id → label map for every org node, so the criteria strip can
+     *  resolve the selected node ids to names. */
+    loadOrgNodeLabels(): void {
+        forkJoin(ReportJoiningLeaveComponent.ORG_CODE_TYPES.map((t) => this.commonCodeService.getAllActiveCommonCodesType(t))).subscribe({
+            next: (buckets) => {
+                this.orgNodeLabels.clear();
+                for (const codes of buckets) {
+                    for (const c of codes || []) {
+                        this.orgNodeLabels.set(c.codeId, {
+                            en: c.codeValueEN || String(c.codeId),
+                            bn: c.codeValueBN || c.codeValueEN || String(c.codeId),
+                            parentId: c.parentCodeId ?? null
+                        });
+                    }
+                }
+            },
+            error: () => this.orgNodeLabels.clear()
         });
+    }
+
+    /** Root→node label chain for one org node, e.g. ["RAB 1","Wing 1","Sub Branch 1"]. */
+    private orgNodePathParts(id: number, bn: boolean): string[] {
+        const parts: string[] = [];
+        const guard = new Set<number>(); // cycle guard
+        let cur: number | null = id;
+        while (cur != null && !guard.has(cur)) {
+            guard.add(cur);
+            const n = this.orgNodeLabels.get(cur);
+            if (!n) break;
+            parts.unshift(bn ? n.bn : n.en);
+            cur = n.parentId;
+        }
+        return parts;
+    }
+
+    /**
+     * Selected org nodes for the criteria strip — grouped by their root unit so
+     * the unit name isn't repeated. One line per unit; the nodes picked under it
+     * are listed comma-separated (each keeping its sub-path below the unit). A
+     * unit picked on its own renders as just the unit name.
+     */
+    private orgNodesLabel(bn: boolean): string {
+        const groups: { root: string; subs: string[] }[] = [];
+        const byRoot = new Map<string, { root: string; subs: string[] }>();
+        for (const id of this.selectedOrgNodeIds) {
+            const parts = this.orgNodePathParts(id, bn);
+            if (parts.length === 0) continue;
+            const root = parts[0];
+            let g = byRoot.get(root);
+            if (!g) {
+                g = { root, subs: [] };
+                byRoot.set(root, g);
+                groups.push(g);
+            }
+            const sub = parts.slice(1).join(' › ');
+            if (sub) g.subs.push(sub);
+        }
+        return groups.map((g) => (g.subs.length ? `${g.root}: ${g.subs.join(', ')}` : g.root)).join('\n');
     }
     /** Dedupe CommonCode rows by codeId, preserving first-seen order. */
     private dedupeByCodeId(rows: CommonCodeModel[]): CommonCodeModel[] {
@@ -404,7 +469,7 @@ export class ReportJoiningLeaveComponent implements OnInit {
         if (this.selectedMemberTypeIds.length > 0) c++;
         if (this.selectedCorpsIds.length > 0) c++;
         if (this.selectedTradeIds.length > 0) c++;
-        if (this.selectedRabUnitIds.length > 0) c++;
+        if (this.selectedOrgNodeIds.length > 0) c++;
         if (this.joiningLeaveFrom != null) c++;
         if (this.joiningLeaveTo != null) c++;
         return c;
@@ -434,7 +499,10 @@ export class ReportJoiningLeaveComponent implements OnInit {
         }
         multi(this.selectedCorpsIds, this.corpsOptions, 'Corps', 'কোর');
         multi(this.selectedTradeIds, this.tradeOptions, 'Trade', 'ট্রেড');
-        multi(this.selectedRabUnitIds, this.rabUnitOptions, 'RAB Unit', 'র‍্যাব ইউনিট');
+        if (this.selectedOrgNodeIds.length > 0) {
+            const names = this.orgNodesLabel(this.lang === 'bn');
+            if (names) items.push({ label: this.lang === 'bn' ? 'র‍্যাব ইউনিট' : 'RAB Unit', value: names });
+        }
         if (this.joiningLeaveFrom != null) items.push({ label: 'Joining Leave From', value: this.formatDateLabel(this.fmtDate(this.joiningLeaveFrom)) });
         if (this.joiningLeaveTo != null) items.push({ label: 'Joining Leave To', value: this.formatDateLabel(this.fmtDate(this.joiningLeaveTo)) });
         return items;
@@ -453,7 +521,7 @@ export class ReportJoiningLeaveComponent implements OnInit {
         this.corpsOptions = [];
         this.selectedTradeIds = [];
         this.tradeOptions = [];
-        this.selectedRabUnitIds = [];
+        this.selectedOrgNodeIds = [];
         this.joiningLeaveFrom = null;
         this.joiningLeaveTo = null;
         this.first = 0;
@@ -532,7 +600,7 @@ export class ReportJoiningLeaveComponent implements OnInit {
         if (this.selectedMemberTypeIds.length > 0) criteria.push({ fieldKey: 'memberType', idValues: this.selectedMemberTypeIds });
         if (this.selectedCorpsIds.length > 0) criteria.push({ fieldKey: 'corps', idValues: this.selectedCorpsIds });
         if (this.selectedTradeIds.length > 0) criteria.push({ fieldKey: 'trade', idValues: this.selectedTradeIds });
-        if (this.selectedRabUnitIds.length > 0) criteria.push({ fieldKey: 'rabUnit', idValues: this.selectedRabUnitIds });
+        if (this.selectedOrgNodeIds.length > 0) criteria.push({ fieldKey: 'rabOrgNode', idValues: this.selectedOrgNodeIds });
 
         // Map column keys → registry FieldKeys.
         const columns = Array.from(new Set(this.backendColumnKeys()));
@@ -816,7 +884,11 @@ export class ReportJoiningLeaveComponent implements OnInit {
                                       spacing: { after: 40 },
                                       children: [new TextRun({ text: wsafe(it.label), font: sans, size: S.critLabel, ...bnRunExtras(S.critLabel), bold: true, color: C.labelGray, characterSpacing: isBn ? 0 : 32, allCaps: !isBn })]
                                   }),
-                                  new Paragraph({ children: [new TextRun({ text: wsafe(it.value), font: serif, size: S.critValue, ...bnRunExtras(S.critValue), bold: true, color: C.black })] })
+                                  // One paragraph per line — multi-line values (RAB
+                                  // Unit org paths) keep their line breaks in Word.
+                                  ...wsafe(it.value)
+                                      .split('\n')
+                                      .map((line) => new Paragraph({ children: [new TextRun({ text: line, font: serif, size: S.critValue, ...bnRunExtras(S.critValue), bold: true, color: C.black })] }))
                               ]
                             : [new Paragraph({ children: [new TextRun({ text: ' ', font: sans, size: S.critValue, ...bnRunExtras(S.critValue) })] })]
                     })
@@ -968,7 +1040,7 @@ export class ReportJoiningLeaveComponent implements OnInit {
         aoa.push([wsafe(this.rabSectionTitle), ...pad(totalCols - 1)]);
         aoa.push(pad(totalCols));
         aoa.push([`${this.rabCriteriaTitle}  ·  ${this.rabTotalText}  ·  ${this.rabGeneratedLabel}: ${this.rabFormattedDate}`, ...pad(totalCols - 1)]);
-        for (const it of this.criteriaItems) aoa.push([`${it.label}: ${it.value}`, ...pad(totalCols - 1)]);
+        for (const it of this.criteriaItems) aoa.push([`${it.label}: ${it.value.replace(/\n/g, '; ')}`, ...pad(totalCols - 1)]);
         aoa.push(pad(totalCols));
         aoa.push(headers);
         for (let i = 0; i < this.list.length; i++) {
@@ -1069,7 +1141,7 @@ export class ReportJoiningLeaveComponent implements OnInit {
         };
         const tableBodyHtml = this.list.map((row, i) => `<tr>${visibleCols.map((c) => renderCell(row, c, i)).join('')}</tr>`).join('');
         const items = this.criteriaItems;
-        const criteriaGridHtml = items.length ? `<div class="criteria-grid">${items.map((item) => `<div class="cell"><div class="cell-label">${esc(item.label)}</div><div class="cell-value">${esc(item.value)}</div></div>`).join('')}</div>` : '';
+        const criteriaGridHtml = items.length ? `<div class="criteria-grid">${items.map((item) => `<div class="cell"><div class="cell-label">${esc(item.label)}</div><div class="cell-value">${esc(item.value).replace(/\n/g, '<br>')}</div></div>`).join('')}</div>` : '';
         const confidential = this.rabConfidentialLabel;
         const warning = this.rabWarningLabel;
         const pageWord = isBn ? 'পৃষ্ঠা' : 'PAGE';

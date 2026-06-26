@@ -43,11 +43,12 @@ import { saveAs } from 'file-saver';
 import * as XLSX from 'xlsx';
 import { forkJoin } from 'rxjs';
 import type { MotherOrganizationModel } from '@/models/mother-org-model';
+import { OrgTreeMultiSelectComponent } from '@/shared/components/org-tree-multi-select/org-tree-multi-select.component';
 
 @Component({
     selector: 'app-report-family-occupation',
     standalone: true,
-    imports: [CommonModule, FormsModule, TableModule, ButtonModule, SelectModule, Toast, MultiSelectModule, PaginatorModule],
+    imports: [CommonModule, FormsModule, TableModule, ButtonModule, SelectModule, Toast, MultiSelectModule, PaginatorModule, OrgTreeMultiSelectComponent],
     providers: [MessageService],
     templateUrl: './report-family-occupation.component.html',
     styleUrls: ['../report-theme.scss', '../report-card-mtr.scss', './report-family-occupation.component.scss'],
@@ -79,8 +80,18 @@ export class ReportFamilyOccupationComponent implements OnInit {
     selectedCorpsIds: number[] = [];
     tradeOptions: { label: string; labelBn: string; value: number }[] = [];
     selectedTradeIds: number[] = [];
-    rabUnitOptions: { label: string; labelBn: string; value: number }[] = [];
-    selectedRabUnitIds: number[] = [];
+    /**
+     * Multi-select RAB org-tree filter — the user checks any nodes at any
+     * level (Unit / Wing / Branch / Sub-Branch / Section / Sub-Section) in the
+     * shared org-tree picker. The selected node ids are sent to the backend as
+     * the `rabOrgNode` criterion (idValues); the backend matches employees
+     * whose placement at the node's level is one of the picked ids — so
+     * picking a Wing returns everyone under it, regardless of branch/section.
+     */
+    selectedOrgNodeIds: number[] = [];
+    /** id → {en,bn,parentId} for every org node — lets the criteria strip
+     *  resolve each picked node to its full root→node ancestry path. */
+    private orgNodeLabels = new Map<number, { en: string; bn: string; parentId: number | null }>();
     /** Raw org-scoped MotherOrgRank rows, re-filtered client-side by Member Type. */
     private allRanksForOrg: CommonCodeModel[] = [];
 
@@ -437,7 +448,10 @@ export class ReportFamilyOccupationComponent implements OnInit {
         multi(this.selectedRankIds, this.rankOptions, L['report.search.rank']);
         multi(this.selectedCorpsIds, this.corpsOptions, L['report.table.corps'] ?? 'Corps');
         multi(this.selectedTradeIds, this.tradeOptions, L['report.search.trade']);
-        multi(this.selectedRabUnitIds, this.rabUnitOptions, this.lang === 'bn' ? 'র‍্যাব ইউনিট' : 'RAB Unit');
+        if (this.selectedOrgNodeIds.length > 0) {
+            const names = this.orgNodesLabel(this.lang === 'bn');
+            if (names) items.push({ label: this.lang === 'bn' ? 'র‍্যাব ইউনিট' : 'RAB Unit', value: names });
+        }
         if (this.selectedRelationId != null && this.selectedRelationId > 0) {
             const rel = this.relationOptions.find(o => o.value === this.selectedRelationId);
             const val = this.lang === 'bn' ? rel?.labelBn : rel?.label;
@@ -541,7 +555,10 @@ export class ReportFamilyOccupationComponent implements OnInit {
         multi(this.selectedRankIds, this.rankOptions, L['report.search.rank']);
         multi(this.selectedCorpsIds, this.corpsOptions, L['report.table.corps'] ?? 'Corps');
         multi(this.selectedTradeIds, this.tradeOptions, L['report.search.trade']);
-        multi(this.selectedRabUnitIds, this.rabUnitOptions, this.lang === 'bn' ? 'র‍্যাব ইউনিট' : 'RAB Unit');
+        if (this.selectedOrgNodeIds.length > 0) {
+            const names = this.orgNodesLabel(this.lang === 'bn');
+            if (names) lines.push(`${this.lang === 'bn' ? 'র‍্যাব ইউনিট' : 'RAB Unit'}: ${names}`);
+        }
         if (this.selectedRelationId != null) {
             const rel = this.relationOptions.find((o) => o.value === this.selectedRelationId);
             const val = this.lang === 'bn' ? rel?.labelBn : rel?.label;
@@ -702,7 +719,10 @@ export class ReportFamilyOccupationComponent implements OnInit {
                     width: { size: critCellPct, type: WidthType.PERCENTAGE },
                     children: it ? [
                         new Paragraph({ spacing: { after: 40 }, children: [new TextRun({ text: wsafe(it.label), font: sans, size: S.critLabel, ...bnRunExtras(S.critLabel), bold: true, color: C.labelGray, characterSpacing: isBn ? 0 : 32, allCaps: !isBn })] }),
-                        new Paragraph({ children: [new TextRun({ text: wsafe(it.value), font: serif, size: S.critValue, ...bnRunExtras(S.critValue), bold: true, color: C.black })] }),
+                        // One paragraph per line — multi-line values (RAB Unit
+                        // org paths) keep their line breaks in Word.
+                        ...wsafe(it.value).split('\n').map((line) =>
+                            new Paragraph({ children: [new TextRun({ text: line, font: serif, size: S.critValue, ...bnRunExtras(S.critValue), bold: true, color: C.black })] })),
                     ] : [new Paragraph({ children: [new TextRun({ text: ' ', font: sans, size: S.critValue, ...bnRunExtras(S.critValue) })] })],
                 }));
             }
@@ -854,7 +874,9 @@ export class ReportFamilyOccupationComponent implements OnInit {
         aoa.push([`${this.rabCriteriaTitle}  ·  ${this.rabTotalText}  ·  ${this.rabGeneratedLabel}: ${this.rabFormattedDate}`, ...pad(totalCols - 1)]);
         const items = this.criteriaItems;
         for (const it of items) {
-            aoa.push([`${it.label}: ${it.value}`, ...pad(totalCols - 1)]);
+            // Flatten any multi-line value (RAB Unit org paths) onto one cell.
+            const value = it.value.replace(/\n/g, '; ');
+            aoa.push([`${it.label}: ${value}`, ...pad(totalCols - 1)]);
         }
         aoa.push(pad(totalCols));
 
@@ -998,7 +1020,7 @@ export class ReportFamilyOccupationComponent implements OnInit {
                 .map(item => `
                 <div class="cell">
                     <div class="cell-label">${esc(item.label)}</div>
-                    <div class="cell-value">${esc(item.value)}</div>
+                    <div class="cell-value">${esc(item.value).replace(/\n/g, '<br>')}</div>
                 </div>`)
                 .join('')}</div>`
             : '';
@@ -1146,7 +1168,7 @@ export class ReportFamilyOccupationComponent implements OnInit {
         this.loadOccupationOptions();
         this.loadOrgOptions();
         this.loadMemberTypeOptions();
-        this.loadRabUnitOptions();
+        this.loadOrgNodeLabels();
     }
 
     /** Map CommonCode rows to {label, labelBn, value} option shape. */
@@ -1186,11 +1208,70 @@ export class ReportFamilyOccupationComponent implements OnInit {
         });
     }
 
-    loadRabUnitOptions(): void {
-        this.commonCodeService.getAllActiveCommonCodesType('RabUnit').subscribe({
-            next: (codes) => (this.rabUnitOptions = this.mapCodes(codes || [])),
-            error: () => (this.rabUnitOptions = []),
+    /** All RAB org codeTypes — same set the shared picker loads. */
+    private static readonly ORG_CODE_TYPES = ['RabUnit', 'RabWing', 'RabBranch', 'RabSubBranch', 'RabSection', 'RabSubSection'];
+
+    /** Build the id → label map for every org node, so the criteria strip can
+     *  resolve the selected node ids to names. */
+    loadOrgNodeLabels(): void {
+        forkJoin(
+            ReportFamilyOccupationComponent.ORG_CODE_TYPES.map((t) => this.commonCodeService.getAllActiveCommonCodesType(t))
+        ).subscribe({
+            next: (buckets) => {
+                this.orgNodeLabels.clear();
+                for (const codes of buckets) {
+                    for (const c of codes || []) {
+                        this.orgNodeLabels.set(c.codeId, {
+                            en: c.codeValueEN || String(c.codeId),
+                            bn: c.codeValueBN || c.codeValueEN || String(c.codeId),
+                            parentId: c.parentCodeId ?? null,
+                        });
+                    }
+                }
+            },
+            error: () => this.orgNodeLabels.clear(),
         });
+    }
+
+    /** Root→node label chain for one org node, e.g. ["RAB 1","Wing 1","Sub Branch 1"]. */
+    private orgNodePathParts(id: number, bn: boolean): string[] {
+        const parts: string[] = [];
+        const guard = new Set<number>();   // cycle guard
+        let cur: number | null = id;
+        while (cur != null && !guard.has(cur)) {
+            guard.add(cur);
+            const n = this.orgNodeLabels.get(cur);
+            if (!n) break;
+            parts.unshift(bn ? n.bn : n.en);
+            cur = n.parentId;
+        }
+        return parts;
+    }
+
+    /**
+     * Selected org nodes for the criteria strip — grouped by their root unit so
+     * the unit name isn't repeated. One line per unit; the nodes picked under it
+     * are listed comma-separated (each keeping its sub-path below the unit). A
+     * unit picked on its own renders as just the unit name.
+     *   RAB-1: BN HQ, HQ Coy, CPC-1
+     *   RAB HQ: DG Office › Addl DG (Ops) Office, R & D Cell › R & D Crime Sub-Br
+     *   RAB-2
+     */
+    private orgNodesLabel(bn: boolean): string {
+        const groups: { root: string; subs: string[] }[] = [];
+        const byRoot = new Map<string, { root: string; subs: string[] }>();
+        for (const id of this.selectedOrgNodeIds) {
+            const parts = this.orgNodePathParts(id, bn);
+            if (parts.length === 0) continue;
+            const root = parts[0];
+            let g = byRoot.get(root);
+            if (!g) { g = { root, subs: [] }; byRoot.set(root, g); groups.push(g); }
+            const sub = parts.slice(1).join(' › ');
+            if (sub) g.subs.push(sub);
+        }
+        return groups
+            .map((g) => (g.subs.length ? `${g.root}: ${g.subs.join(', ')}` : g.root))
+            .join('\n');
     }
 
     /** Mother Org changed → reload org-scoped Ranks and Corps across all selected orgs; reset Trade. */
@@ -1300,7 +1381,7 @@ export class ReportFamilyOccupationComponent implements OnInit {
         if (this.selectedRankIds.length > 0) c++;
         if (this.selectedCorpsIds.length > 0) c++;
         if (this.selectedTradeIds.length > 0) c++;
-        if (this.selectedRabUnitIds.length > 0) c++;
+        if (this.selectedOrgNodeIds.length > 0) c++;
         if (this.selectedRelationId != null) c++;
         if (this.selectedOccupationId != null) c++;
         if (this.selectedPostingStatus) c++;
@@ -1324,7 +1405,7 @@ export class ReportFamilyOccupationComponent implements OnInit {
         this.selectedRankIds = [];
         this.selectedCorpsIds = [];
         this.selectedTradeIds = [];
-        this.selectedRabUnitIds = [];
+        this.selectedOrgNodeIds = [];
         this.rankOptions = [];
         this.corpsOptions = [];
         this.tradeOptions = [];
@@ -1402,8 +1483,8 @@ export class ReportFamilyOccupationComponent implements OnInit {
             criteria.push({ fieldKey: 'corps', idValues: this.selectedCorpsIds });
         if (this.selectedTradeIds.length > 0)
             criteria.push({ fieldKey: 'trade', idValues: this.selectedTradeIds });
-        if (this.selectedRabUnitIds.length > 0)
-            criteria.push({ fieldKey: 'rabUnit', idValues: this.selectedRabUnitIds });
+        if (this.selectedOrgNodeIds.length > 0)
+            criteria.push({ fieldKey: 'rabOrgNode', idValues: this.selectedOrgNodeIds });
         if (this.selectedRelationId != null && this.selectedRelationId > 0)
             criteria.push({ fieldKey: 'relation', idValue: this.selectedRelationId });
         if (this.selectedOccupationId != null && this.selectedOccupationId > 0)

@@ -32,6 +32,7 @@ import type {
 } from '@/models/report.model';
 import type { CommonCodeModel } from '@/models/common-code-model';
 import type { MotherOrganizationModel } from '@/models/mother-org-model';
+import { OrgTreeMultiSelectComponent } from '@/shared/components/org-tree-multi-select/org-tree-multi-select.component';
 import {
     Document,
     Packer,
@@ -55,7 +56,7 @@ import { forkJoin } from 'rxjs';
 @Component({
     selector: 'app-report-address-location',
     standalone: true,
-    imports: [CommonModule, FormsModule, TableModule, ButtonModule, SelectModule, MultiSelectModule, InputTextModule, PaginatorModule, Toast],
+    imports: [CommonModule, FormsModule, TableModule, ButtonModule, SelectModule, MultiSelectModule, InputTextModule, PaginatorModule, Toast, OrgTreeMultiSelectComponent],
     providers: [MessageService],
     templateUrl: './report-address-location.component.html',
     styleUrls: ['../report-theme.scss', '../report-card-mtr.scss', './report-address-location.component.scss'],
@@ -85,14 +86,22 @@ export class ReportAddressLocationComponent implements OnInit {
     rankOptions: { label: string; labelBn: string; value: number }[] = [];
     corpsOptions: { label: string; labelBn: string; value: number }[] = [];
     tradeOptions: { label: string; labelBn: string; value: number }[] = [];
-    rabUnitOptions: { label: string; labelBn: string; value: number }[] = [];
 
     selectedOrgIds: number[] = [];
     selectedMemberTypeIds: number[] = [];
     selectedRankIds: number[] = [];
     selectedCorpsIds: number[] = [];
     selectedTradeIds: number[] = [];
-    selectedRabUnitIds: number[] = [];
+    /**
+     * Multi-select RAB org-tree filter — the user checks any nodes at any
+     * level (Unit / Wing / Branch / Sub-Branch / Section / Sub-Section) in the
+     * shared org-tree picker. The selected node ids are sent to the backend as
+     * the `rabOrgNode` criterion (idValues).
+     */
+    selectedOrgNodeIds: number[] = [];
+    /** id → {en,bn,parentId} for every org node — lets the criteria strip
+     *  resolve each picked node to its full root→node ancestry path. */
+    private orgNodeLabels = new Map<number, { en: string; bn: string; parentId: number | null }>();
 
     /** Raw org-scoped MotherOrgRank rows, re-filtered client-side by Member Type. */
     private allRanksForOrg: CommonCodeModel[] = [];
@@ -793,7 +802,10 @@ export class ReportAddressLocationComponent implements OnInit {
         multi(this.selectedRankIds, this.rankOptions, lbl('RANK', 'র‍্যাঙ্ক'));
         multi(this.selectedCorpsIds, this.corpsOptions, lbl('CORPS', 'কোর'));
         multi(this.selectedTradeIds, this.tradeOptions, lbl('TRADE', 'ট্রেড'));
-        multi(this.selectedRabUnitIds, this.rabUnitOptions, lbl('RAB UNIT', 'র‍্যাব ইউনিট'));
+        if (this.selectedOrgNodeIds.length > 0) {
+            const names = this.orgNodesLabel(bn);
+            if (names) items.push({ label: lbl('RAB UNIT', 'র‍্যাব ইউনিট'), value: names });
+        }
 
         // Address Owner always renders — when "All" is picked it reads as the
         // friendly "Member & Family" instead of the placeholder "All", so a
@@ -865,7 +877,10 @@ export class ReportAddressLocationComponent implements OnInit {
         multi(this.selectedRankIds, this.rankOptions, this.lang === 'bn' ? 'র‍্যাঙ্ক' : 'Rank');
         multi(this.selectedCorpsIds, this.corpsOptions, this.lang === 'bn' ? 'কোর' : 'Corps');
         multi(this.selectedTradeIds, this.tradeOptions, this.lang === 'bn' ? 'ট্রেড' : 'Trade');
-        multi(this.selectedRabUnitIds, this.rabUnitOptions, this.lang === 'bn' ? 'র‍্যাব ইউনিট' : 'RAB Unit');
+        if (this.selectedOrgNodeIds.length > 0) {
+            const names = this.orgNodesLabel(this.lang === 'bn');
+            if (names) lines.push(`${this.lang === 'bn' ? 'র‍্যাব ইউনিট' : 'RAB Unit'}: ${names}`);
+        }
         if (this.searchRabId.trim()) lines.push(`RAB ID: ${this.searchRabId.trim()}`);
         if (this.searchServiceId.trim()) lines.push(`Service ID: ${this.searchServiceId.trim()}`);
         if (this.searchNid.trim()) lines.push(`NID: ${this.searchNid.trim()}`);
@@ -1076,7 +1091,7 @@ export class ReportAddressLocationComponent implements OnInit {
                       (item) => `
                 <div class="cell">
                     <div class="cell-label">${esc(item.label)}</div>
-                    <div class="cell-value">${esc(item.value)}</div>
+                    <div class="cell-value">${esc(item.value).replace(/\n/g, '<br>')}</div>
                 </div>`,
                   )
                   .join('')}</div>`
@@ -1559,13 +1574,16 @@ export class ReportAddressLocationComponent implements OnInit {
                                 allCaps: !isBn,
                             })],
                         }),
-                        new Paragraph({
-                            children: [new TextRun({
-                                text: wsafe(it.value),
-                                font: serif, size: S.critValue, ...bnRunExtras(S.critValue), bold: true,
-                                color: C.black,
-                            })],
-                        }),
+                        // One paragraph per line — multi-line values (RAB Unit
+                        // org paths) keep their line breaks in Word.
+                        ...wsafe(it.value).split('\n').map((line) =>
+                            new Paragraph({
+                                children: [new TextRun({
+                                    text: line,
+                                    font: serif, size: S.critValue, ...bnRunExtras(S.critValue), bold: true,
+                                    color: C.black,
+                                })],
+                            })),
                     ] : [new Paragraph({ children: [new TextRun({ text: ' ', font: sans, size: S.critValue, ...bnRunExtras(S.critValue) })] })],
                 }));
             }
@@ -1949,8 +1967,8 @@ export class ReportAddressLocationComponent implements OnInit {
             // table columns (which would break the data-table layout below).
             const halfPoint = Math.floor(totalCols / 2);
             for (let i = 0; i < items.length; i += 2) {
-                const left = items[i] ? wsafe(`${items[i].label}: ${items[i].value}`) : '';
-                const right = items[i + 1] ? wsafe(`${items[i + 1].label}: ${items[i + 1].value}`) : '';
+                const left = items[i] ? wsafe(`${items[i].label}: ${items[i].value.replace(/\n/g, '; ')}`) : '';
+                const right = items[i + 1] ? wsafe(`${items[i + 1].label}: ${items[i + 1].value.replace(/\n/g, '; ')}`) : '';
                 const row: string[] = new Array(totalCols).fill('');
                 row[0] = left;
                 row[halfPoint] = right;
@@ -2029,7 +2047,7 @@ export class ReportAddressLocationComponent implements OnInit {
         this.loadRelationshipOptions();
         this.loadOrgOptions();
         this.loadMemberTypeOptions();
-        this.loadRabUnitOptions();
+        this.loadOrgNodeLabels();
     }
 
     /** Map CommonCode rows to {label, labelBn, value} option shape. */
@@ -2067,11 +2085,67 @@ export class ReportAddressLocationComponent implements OnInit {
         });
     }
 
-    loadRabUnitOptions(): void {
-        this.commonCodeService.getAllActiveCommonCodesType('RabUnit').subscribe({
-            next: (codes) => (this.rabUnitOptions = this.mapCodes(codes)),
-            error: () => (this.rabUnitOptions = []),
+    /** CommonCode types that make up the RAB org tree, root → leaf. */
+    private static readonly ORG_CODE_TYPES = ['RabUnit', 'RabWing', 'RabBranch', 'RabSubBranch', 'RabSection', 'RabSubSection'];
+
+    /** Build the id → label map for every org node, so the criteria strip can
+     *  resolve the selected node ids to names. */
+    loadOrgNodeLabels(): void {
+        forkJoin(
+            ReportAddressLocationComponent.ORG_CODE_TYPES.map((t) => this.commonCodeService.getAllActiveCommonCodesType(t))
+        ).subscribe({
+            next: (buckets) => {
+                this.orgNodeLabels.clear();
+                for (const codes of buckets) {
+                    for (const c of codes || []) {
+                        this.orgNodeLabels.set(c.codeId, {
+                            en: c.codeValueEN || String(c.codeId),
+                            bn: c.codeValueBN || c.codeValueEN || String(c.codeId),
+                            parentId: c.parentCodeId ?? null,
+                        });
+                    }
+                }
+            },
+            error: () => this.orgNodeLabels.clear(),
         });
+    }
+
+    /** Root→node label chain for one org node, e.g. ["RAB 1","Wing 1","Sub Branch 1"]. */
+    private orgNodePathParts(id: number, bn: boolean): string[] {
+        const parts: string[] = [];
+        const guard = new Set<number>();   // cycle guard
+        let cur: number | null = id;
+        while (cur != null && !guard.has(cur)) {
+            guard.add(cur);
+            const n = this.orgNodeLabels.get(cur);
+            if (!n) break;
+            parts.unshift(bn ? n.bn : n.en);
+            cur = n.parentId;
+        }
+        return parts;
+    }
+
+    /**
+     * Selected org nodes for the criteria strip — grouped by their root unit so
+     * the unit name isn't repeated. One line per unit; the nodes picked under it
+     * are listed comma-separated (each keeping its sub-path below the unit). A
+     * unit picked on its own renders as just the unit name.
+     */
+    private orgNodesLabel(bn: boolean): string {
+        const groups: { root: string; subs: string[] }[] = [];
+        const byRoot = new Map<string, { root: string; subs: string[] }>();
+        for (const id of this.selectedOrgNodeIds) {
+            const parts = this.orgNodePathParts(id, bn);
+            if (parts.length === 0) continue;
+            const root = parts[0];
+            let g = byRoot.get(root);
+            if (!g) { g = { root, subs: [] }; byRoot.set(root, g); groups.push(g); }
+            const sub = parts.slice(1).join(' › ');
+            if (sub) g.subs.push(sub);
+        }
+        return groups
+            .map((g) => (g.subs.length ? `${g.root}: ${g.subs.join(', ')}` : g.root))
+            .join('\n');
     }
 
     /** Mother Org changed → reload org-scoped Ranks and Corps across all selected orgs; reset Rank/Corps/Trade. */
@@ -2224,7 +2298,7 @@ export class ReportAddressLocationComponent implements OnInit {
         if (this.selectedRankIds.length > 0) c++;
         if (this.selectedCorpsIds.length > 0) c++;
         if (this.selectedTradeIds.length > 0) c++;
-        if (this.selectedRabUnitIds.length > 0) c++;
+        if (this.selectedOrgNodeIds.length > 0) c++;
         if (this.searchRabId.trim()) c++;
         if (this.searchServiceId.trim()) c++;
         if (this.searchNid.trim()) c++;
@@ -2269,7 +2343,7 @@ export class ReportAddressLocationComponent implements OnInit {
         this.selectedRankIds = [];
         this.selectedCorpsIds = [];
         this.selectedTradeIds = [];
-        this.selectedRabUnitIds = [];
+        this.selectedOrgNodeIds = [];
         this.allRanksForOrg = [];
         this.rankOptions = [];
         this.corpsOptions = [];
@@ -2362,7 +2436,7 @@ export class ReportAddressLocationComponent implements OnInit {
         if (this.selectedRankIds.length > 0)       criteria.push({ fieldKey: 'armyRank',           idValues: this.selectedRankIds });
         if (this.selectedCorpsIds.length > 0)      criteria.push({ fieldKey: 'corps',              idValues: this.selectedCorpsIds });
         if (this.selectedTradeIds.length > 0)      criteria.push({ fieldKey: 'trade',              idValues: this.selectedTradeIds });
-        if (this.selectedRabUnitIds.length > 0)    criteria.push({ fieldKey: 'rabUnit',            idValues: this.selectedRabUnitIds });
+        if (this.selectedOrgNodeIds.length > 0)    criteria.push({ fieldKey: 'rabOrgNode',         idValues: this.selectedOrgNodeIds });
         if (this.selectedDivisionId != null)    criteria.push({ fieldKey: 'division',   idValue: this.selectedDivisionId });
         if (this.selectedDistrictId != null)    criteria.push({ fieldKey: 'district',   idValue: this.selectedDistrictId });
         if (this.selectedUpazilaId != null)     criteria.push({ fieldKey: 'upazila',    idValue: this.selectedUpazilaId });

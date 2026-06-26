@@ -65,9 +65,7 @@
                 </div>
                 <div class="report-filter-field">
                     <label>RAB Unit</label>
-                    <p-multiSelect [options]="rabUnitOptions" [(ngModel)]="selectedRabUnitIds"
-                        optionLabel="label" optionValue="value" display="chip" [filter]="true"
-                        placeholder="Select" styleClass="w-full" appendTo="body"></p-multiSelect>
+                    <app-org-tree-multi-select [(ngModel)]="selectedOrgNodeIds" placeholder="Select units, wings, branches…"></app-org-tree-multi-select>
                 </div>
             </div>
 

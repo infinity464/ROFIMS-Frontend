@@ -45,35 +45,8 @@
                     </p-multiSelect>
                 </div>
                 <div class="report-filter-field">
-                    <label>{{ L['en']['report.search.rabUnit'] }}</label>
-                    <p-multiSelect
-                        [options]="rabUnitOptions"
-                        [(ngModel)]="selectedRabUnitIds"
-                        (ngModelChange)="onRabUnitChange()"
-                        optionLabel="label"
-                        optionValue="value"
-                        display="chip"
-                        placeholder="Select"
-                        styleClass="w-full"
-                        [filter]="true"
-                        appendTo="body">
-                    </p-multiSelect>
-                </div>
-                <div class="report-filter-field">
-                    <label>{{ L['en']['report.search.wing'] ?? 'Wing' }}</label>
-                    <p-multiSelect
-                        [options]="wingOptions"
-                        [(ngModel)]="selectedWingIds"
-                        (ngModelChange)="onFilterChange()"
-                        optionLabel="label"
-                        optionValue="value"
-                        display="chip"
-                        placeholder="Select"
-                        styleClass="w-full"
-                        [disabled]="selectedRabUnitIds.length === 0"
-                        [filter]="true"
-                        appendTo="body">
-                    </p-multiSelect>
+                    <label>RAB Unit</label>
+                    <app-org-tree-multi-select [(ngModel)]="selectedOrgNodeIds" placeholder="Select units, wings, branches…"></app-org-tree-multi-select>
                 </div>
                 <div class="report-filter-field">
                     <label>{{ L['en']['report.search.motherOrg'] }}</label>

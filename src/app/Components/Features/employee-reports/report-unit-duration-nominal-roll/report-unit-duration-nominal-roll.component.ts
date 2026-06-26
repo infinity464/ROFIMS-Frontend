@@ -23,6 +23,7 @@ import type {
     DynamicReportRow,
 } from '@/models/report.model';
 import { unitScopeLine, memberTypeScopeLine } from '../report-scope.helper';
+import { OrgTreeMultiSelectComponent } from '@/shared/components/org-tree-multi-select/org-tree-multi-select.component';
 import {
     AlignmentType, BorderStyle, Document, Footer, Packer, PageNumber, PageOrientation,
     Paragraph, Table, TableCell, TableLayoutType, TableRow, TextRun, WidthType,
@@ -42,7 +43,7 @@ type Lang = 'en' | 'bn';
 @Component({
     selector: 'app-report-unit-duration-nominal-roll',
     standalone: true,
-    imports: [CommonModule, FormsModule, TableModule, ButtonModule, SelectModule, MultiSelectModule, PaginatorModule, DatePickerModule, Toast],
+    imports: [CommonModule, FormsModule, TableModule, ButtonModule, SelectModule, MultiSelectModule, PaginatorModule, DatePickerModule, Toast, OrgTreeMultiSelectComponent],
     providers: [MessageService],
     templateUrl: './report-unit-duration-nominal-roll.component.html',
     styleUrls: ['../report-theme.scss', '../report-card-mtr.scss', './report-unit-duration-nominal-roll.component.scss'],
@@ -58,8 +59,16 @@ export class ReportUnitDurationNominalRollComponent implements OnInit {
     loading = false;
     searched = false;
 
-    rabUnitOptions: { label: string; labelBn: string; value: number }[] = [];
-    selectedRabUnitIds: number[] = [];
+    /**
+     * Multi-select RAB org-tree filter — the user checks any nodes at any
+     * level (Unit / Wing / Branch / Sub-Branch / Section / Sub-Section) in the
+     * shared org-tree picker. The selected node ids are sent to the backend as
+     * `stintUnitIds`.
+     */
+    selectedOrgNodeIds: number[] = [];
+    /** id → {en,bn,parentId} for every org node — lets the criteria strip
+     *  resolve each picked node to its full root→node ancestry path. */
+    private orgNodeLabels = new Map<number, { en: string; bn: string; parentId: number | null }>();
 
     orgOptions: { label: string; labelBn: string; value: number }[] = [];
     rankOptions: { label: string; labelBn: string; value: number }[] = [];
@@ -282,24 +291,73 @@ export class ReportUnitDurationNominalRollComponent implements OnInit {
             error: () => { /* silent */ },
         });
 
-        this.loadRabUnits();
+        this.loadOrgNodeLabels();
         this.loadMotherOrgs();
         this.loadMemberTypes();
         // Corps depends on Mother Org; Trade depends on Corps; Rank depends on
         // Mother Org + Member Type — all loaded reactively on change.
     }
 
-    private loadRabUnits(): void {
-        this.commonCodeService.getAllActiveCommonCodesType('RabUnit').subscribe({
-            next: (codes: CommonCodeModel[]) => {
-                this.rabUnitOptions = (codes || []).map((c) => ({
-                    label: c.codeValueEN || String(c.codeId),
-                    labelBn: c.codeValueBN || c.codeValueEN || String(c.codeId),
-                    value: c.codeId,
-                }));
+    private static readonly ORG_CODE_TYPES = ['RabUnit', 'RabWing', 'RabBranch', 'RabSubBranch', 'RabSection', 'RabSubSection'];
+
+    /** Build the id → label map for every org node, so the criteria strip can
+     *  resolve the selected node ids to names. */
+    loadOrgNodeLabels(): void {
+        forkJoin(
+            ReportUnitDurationNominalRollComponent.ORG_CODE_TYPES.map((t) => this.commonCodeService.getAllActiveCommonCodesType(t))
+        ).subscribe({
+            next: (buckets) => {
+                this.orgNodeLabels.clear();
+                for (const codes of buckets) {
+                    for (const c of codes || []) {
+                        this.orgNodeLabels.set(c.codeId, {
+                            en: c.codeValueEN || String(c.codeId),
+                            bn: c.codeValueBN || c.codeValueEN || String(c.codeId),
+                            parentId: c.parentCodeId ?? null,
+                        });
+                    }
+                }
             },
-            error: () => (this.rabUnitOptions = []),
+            error: () => this.orgNodeLabels.clear(),
         });
+    }
+
+    /** Root→node label chain for one org node, e.g. ["RAB 1","Wing 1","Sub Branch 1"]. */
+    private orgNodePathParts(id: number, bn: boolean): string[] {
+        const parts: string[] = [];
+        const guard = new Set<number>();   // cycle guard
+        let cur: number | null = id;
+        while (cur != null && !guard.has(cur)) {
+            guard.add(cur);
+            const n = this.orgNodeLabels.get(cur);
+            if (!n) break;
+            parts.unshift(bn ? n.bn : n.en);
+            cur = n.parentId;
+        }
+        return parts;
+    }
+
+    /**
+     * Selected org nodes for the criteria strip — grouped by their root unit so
+     * the unit name isn't repeated. One line per unit; the nodes picked under it
+     * are listed comma-separated (each keeping its sub-path below the unit). A
+     * unit picked on its own renders as just the unit name.
+     */
+    private orgNodesLabel(bn: boolean): string {
+        const groups: { root: string; subs: string[] }[] = [];
+        const byRoot = new Map<string, { root: string; subs: string[] }>();
+        for (const id of this.selectedOrgNodeIds) {
+            const parts = this.orgNodePathParts(id, bn);
+            if (parts.length === 0) continue;
+            const root = parts[0];
+            let g = byRoot.get(root);
+            if (!g) { g = { root, subs: [] }; byRoot.set(root, g); groups.push(g); }
+            const sub = parts.slice(1).join(' › ');
+            if (sub) g.subs.push(sub);
+        }
+        return groups
+            .map((g) => (g.subs.length ? `${g.root}: ${g.subs.join(', ')}` : g.root))
+            .join('\n');
     }
     private loadMotherOrgs(): void {
         this.commonCodeService.getAllActiveMotherOrgs().subscribe({
@@ -400,7 +458,7 @@ export class ReportUnitDurationNominalRollComponent implements OnInit {
 
     get activeFilterCount(): number {
         let c = 0;
-        if (this.selectedRabUnitIds.length > 0) c++;
+        if (this.selectedOrgNodeIds.length > 0) c++;
         if (this.selectedOrgIds.length > 0) c++;
         if (this.selectedRankIds.length > 0) c++;
         if (this.selectedMemberTypeIds.length > 0) c++;
@@ -430,7 +488,10 @@ export class ReportUnitDurationNominalRollComponent implements OnInit {
                 .map(o => this.lang === 'bn' ? o.labelBn : o.label);
             if (names.length) items.push({ label: this.lang === 'en' ? en : bn, value: names.join(', ') });
         };
-        multi(this.selectedRabUnitIds, this.rabUnitOptions, 'RAB Unit', 'র‍্যাব ইউনিট');
+        if (this.selectedOrgNodeIds.length > 0) {
+            const names = this.orgNodesLabel(this.lang === 'bn');
+            if (names) items.push({ label: this.lang === 'bn' ? 'র‍্যাব ইউনিট' : 'RAB Unit', value: names });
+        }
         multi(this.selectedOrgIds, this.orgOptions, 'Mother Org', 'মাতৃ সংস্থা');
         multi(this.selectedMemberTypeIds, this.memberTypeOptions, 'Member Type', 'সদস্য ধরন');
         multi(this.selectedRankIds, this.rankOptions, 'Rank', 'পদবী');
@@ -448,7 +509,7 @@ export class ReportUnitDurationNominalRollComponent implements OnInit {
     }
     private buildFilterLines(): string[] { return this.criteriaItems.map(it => `${it.label}: ${it.value}`); }
     clearFilters(): void {
-        this.selectedRabUnitIds = [];
+        this.selectedOrgNodeIds = [];
         this.selectedOrgIds = [];
         this.selectedRankIds = [];
         this.rankOptions = [];
@@ -465,7 +526,7 @@ export class ReportUnitDurationNominalRollComponent implements OnInit {
     toggleLang(): void { this.lang = this.lang === 'en' ? 'bn' : 'en'; this.appliedFilterLines = this.buildFilterLines(); }
 
     search(): void {
-        if (!this.selectedRabUnitIds.length) {
+        if (!this.selectedOrgNodeIds.length) {
             this.messageService.add({
                 severity: 'warn',
                 summary: this.lang === 'en' ? 'RAB Unit required' : 'র‍্যাব ইউনিট প্রয়োজন',
@@ -568,7 +629,7 @@ export class ReportUnitDurationNominalRollComponent implements OnInit {
             // "Servings" server-side. (Hardcoding "Servings" here wrongly hid
             // ex-members from full-access admins.)
             postingStatusFilter: null,
-            stintUnitIds: this.selectedRabUnitIds,
+            stintUnitIds: this.selectedOrgNodeIds,
             stintOverlapFrom: this.fmtDate(this.fromDate),
             stintOverlapTo: this.fmtDate(this.toDate),
             pagination: { page_no: pageNo, row_per_page: this.rows },
@@ -768,7 +829,7 @@ export class ReportUnitDurationNominalRollComponent implements OnInit {
             const cells: TableCell[] = [];
             for (let j = 0; j < colsPerCritRow; j++) {
                 const it = items[i + j];
-                cells.push(new TableCell({ borders: innerCellBorder, margins: { top: 100, bottom: 100, left: 140, right: 140 }, width: { size: critCellPct, type: WidthType.PERCENTAGE }, children: it ? [new Paragraph({ spacing: { after: 40 }, children: [new TextRun({ text: wsafe(it.label), font: sans, size: S.critLabel, ...bnRunExtras(S.critLabel), bold: true, color: C.labelGray, characterSpacing: isBn ? 0 : 32, allCaps: !isBn })] }), new Paragraph({ children: [new TextRun({ text: wsafe(it.value), font: serif, size: S.critValue, ...bnRunExtras(S.critValue), bold: true, color: C.black })] })] : [new Paragraph({ children: [new TextRun({ text: ' ', font: sans, size: S.critValue, ...bnRunExtras(S.critValue) })] })] }));
+                cells.push(new TableCell({ borders: innerCellBorder, margins: { top: 100, bottom: 100, left: 140, right: 140 }, width: { size: critCellPct, type: WidthType.PERCENTAGE }, children: it ? [new Paragraph({ spacing: { after: 40 }, children: [new TextRun({ text: wsafe(it.label), font: sans, size: S.critLabel, ...bnRunExtras(S.critLabel), bold: true, color: C.labelGray, characterSpacing: isBn ? 0 : 32, allCaps: !isBn })] }), ...wsafe(it.value).split('\n').map((line) => new Paragraph({ children: [new TextRun({ text: line, font: serif, size: S.critValue, ...bnRunExtras(S.critValue), bold: true, color: C.black })] }))] : [new Paragraph({ children: [new TextRun({ text: ' ', font: sans, size: S.critValue, ...bnRunExtras(S.critValue) })] })] }));
             }
             critRows.push(new TableRow({ cantSplit: true, children: cells }));
         }
@@ -837,7 +898,7 @@ export class ReportUnitDurationNominalRollComponent implements OnInit {
         aoa.push([wsafe(this.rabSectionTitle), ...pad(totalCols - 1)]);
         aoa.push(pad(totalCols));
         aoa.push([`${this.rabCriteriaTitle}  ·  ${this.rabTotalText}  ·  ${this.rabGeneratedLabel}: ${this.rabFormattedDate}`, ...pad(totalCols - 1)]);
-        for (const it of this.criteriaItems) aoa.push([`${it.label}: ${it.value}`, ...pad(totalCols - 1)]);
+        for (const it of this.criteriaItems) aoa.push([`${it.label}: ${it.value.replace(/\n/g, '; ')}`, ...pad(totalCols - 1)]);
         aoa.push(pad(totalCols));
         aoa.push(headers);
         for (let i = 0; i < this.list.length; i++) {
@@ -921,7 +982,7 @@ export class ReportUnitDurationNominalRollComponent implements OnInit {
         };
         const tableBodyHtml = this.list.map((row, i) => `<tr>${visibleCols.map(c => renderCell(row, c, i)).join('')}</tr>`).join('');
         const items = this.criteriaItems;
-        const criteriaGridHtml = items.length ? `<div class="criteria-grid">${items.map(item => `<div class="cell"><div class="cell-label">${esc(item.label)}</div><div class="cell-value">${esc(item.value)}</div></div>`).join('')}</div>` : '';
+        const criteriaGridHtml = items.length ? `<div class="criteria-grid">${items.map(item => `<div class="cell"><div class="cell-label">${esc(item.label)}</div><div class="cell-value">${esc(item.value).replace(/\n/g, '<br>')}</div></div>`).join('')}</div>` : '';
         const confidential = this.rabConfidentialLabel;
         const warning = this.rabWarningLabel;
         const pageWord = isBn ? 'পৃষ্ঠা' : 'PAGE';

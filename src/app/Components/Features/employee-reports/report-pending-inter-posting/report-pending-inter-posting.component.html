@@ -325,6 +325,14 @@
                                         }
                                     </td>
                                 }
+                                @case ('NoRankName') {
+                                    <td class="rab-td-personnel">
+                                        <div class="rab-personnel-name">{{ noRankLine1(row) }}</div>
+                                        @if (noRankLine2(row); as l2) {
+                                            <div class="rab-personnel-meta">{{ l2 }}</div>
+                                        }
+                                    </td>
+                                }
                                 @case ('Date') {
                                     <td class="rab-td-date">{{ cellValue(row, col.key) }}</td>
                                 }

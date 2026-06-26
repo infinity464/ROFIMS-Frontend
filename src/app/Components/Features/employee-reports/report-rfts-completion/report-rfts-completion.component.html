@@ -65,6 +65,17 @@
                         optionLabel="label" optionValue="value" display="chip" placeholder="Select" styleClass="w-full"
                         [filter]="true" appendTo="body"></p-multiSelect>
                 </div>
+                <!-- Multi-select RAB org-tree filter: check any nodes at any
+                     level (Battalion / Wing / Branch / Sub-Branch / Section /
+                     Sub-Section). Picking an ancestor covers its descendants. -->
+                <div class="report-filter-field">
+                    <label>RAB Unit</label>
+                    <app-org-tree-multi-select
+                        [(ngModel)]="selectedOrgNodeIds"
+                        placeholder="Select units, wings, branches…"
+                    >
+                    </app-org-tree-multi-select>
+                </div>
             </div>
 
             @if (searched) {

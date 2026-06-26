@@ -24,9 +24,7 @@
             <div class="report-fields-row">
                 <div class="report-filter-field">
                     <label>{{ lang === 'en' ? 'RAB Unit' : 'র‍্যাব ইউনিট' }} <span style="color:#b03a3a">*</span></label>
-                    <p-multiSelect [options]="rabUnitOptions" [(ngModel)]="selectedRabUnitIds" (ngModelChange)="onFilterChange()"
-                        optionLabel="label" optionValue="value" display="chip" [filter]="true"
-                        [placeholder]="lang === 'en' ? 'Select' : 'নির্বাচন করুন'" styleClass="w-full" appendTo="body"></p-multiSelect>
+                    <app-org-tree-multi-select [(ngModel)]="selectedOrgNodeIds" placeholder="Select units, wings, branches…"></app-org-tree-multi-select>
                 </div>
                 <div class="report-filter-field">
                     <label>{{ lang === 'en' ? 'Mother Org' : 'মাতৃ সংস্থা' }}</label>
