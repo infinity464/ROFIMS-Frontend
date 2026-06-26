@@ -64,9 +64,7 @@
                 </div>
                 <div class="report-filter-field">
                     <label>RAB Unit</label>
-                    <p-multiSelect [options]="rabUnitOptions" [(ngModel)]="selectedRabUnitIds"
-                        optionLabel="label" optionValue="value" display="chip" [filter]="true"
-                        placeholder="Select" styleClass="w-full" appendTo="body"></p-multiSelect>
+                    <app-org-tree-multi-select [(ngModel)]="selectedOrgNodeIds" placeholder="Select units, wings, branches…"></app-org-tree-multi-select>
                 </div>
                 <div class="report-filter-field">
                     <label>Leave Type</label>
@@ -217,6 +215,12 @@
                                     <td class="rab-td-personnel">
                                         <div class="rab-personnel-name">{{ cellValue(row, 'name') }}</div>
                                         @if (personnelMetaText(row); as meta) { @if (meta) { <div class="rab-personnel-meta">{{ meta }}</div> } }
+                                    </td>
+                                }
+                                @case ('CallNoRankName') {
+                                    <td class="rab-td-personnel">
+                                        <div class="rab-personnel-name">{{ callNoRankLine1(row) }}</div>
+                                        @if (callNoRankLine2(row); as l2) { @if (l2) { <div class="rab-personnel-name">{{ l2 }}</div> } }
                                     </td>
                                 }
                                 @case ('Date') { <td class="rab-td-date">{{ cellValue(row, col.key) }}</td> }

@@ -72,10 +72,8 @@
                             placeholder="Select" styleClass="w-full" appendTo="body"></p-multiSelect>
                     </div>
                     <div class="report-filter-field">
-                        <label>{{ lang === 'en' ? 'RAB Unit' : 'র‍্যাব ইউনিট' }}</label>
-                        <p-multiSelect [options]="rabUnitOptions" [(ngModel)]="selectedRabUnitIds"
-                            optionLabel="label" optionValue="value" display="chip" [filter]="true"
-                            placeholder="Select" styleClass="w-full" appendTo="body"></p-multiSelect>
+                        <label>RAB Unit</label>
+                        <app-org-tree-multi-select [(ngModel)]="selectedOrgNodeIds" placeholder="Select units, wings, branches…"></app-org-tree-multi-select>
                     </div>
                 }
                 @if (relieverMode === 'standRelease') {
@@ -231,6 +229,12 @@
                                     <td class="rab-td-personnel">
                                         <div class="rab-personnel-name">{{ cellValue(row, 'name') }}</div>
                                         @if (personnelMetaText(row); as meta) { @if (meta) { <div class="rab-personnel-meta">{{ meta }}</div> } }
+                                    </td>
+                                }
+                                @case ('CallNoRankName') {
+                                    <td class="rab-td-personnel">
+                                        <div class="rab-personnel-name">{{ callNoRankLine1(row) }}</div>
+                                        @if (callNoRankLine2(row); as l2) { @if (l2) { <div class="rab-personnel-name">{{ l2 }}</div> } }
                                     </td>
                                 }
                                 @case ('Date') { <td class="rab-td-date">{{ cellValue(row, col.key) }}</td> }

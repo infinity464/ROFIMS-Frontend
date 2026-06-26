@@ -192,12 +192,7 @@ export class Decoration {
     }
 
     submit(data: any) {
-        const orgId = this.commonForm.get('orgId')?.value;
         const status = this.commonForm.get('status')?.value;
-        if (orgId == null || orgId === '') {
-            this.messageService.add({ severity: 'warn', summary: 'Validation', detail: 'Please select Mother Organization' });
-            return;
-        }
         if (status == null) {
             this.messageService.add({ severity: 'warn', summary: 'Validation', detail: 'Please select Status' });
             return;
@@ -221,6 +216,7 @@ export class Decoration {
         this.isSubmitting = true;
         const createPayload = {
             ...this.commonForm.value,
+            orgId: this.commonForm.get('orgId')?.value ?? 0,
             createdBy: currentUser,
             createdDate: currentDateTime,
             lastUpdatedBy: currentUser,
@@ -256,6 +252,7 @@ export class Decoration {
         this.isSubmitting = true;
         const updatePayload = {
             ...this.commonForm.value,
+            orgId: this.commonForm.get('orgId')?.value ?? 0,
             codeId: this.editingId,
             lastUpdatedBy: currentUser,
             lastupdate: currentDateTime,

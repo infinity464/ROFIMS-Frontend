@@ -32,6 +32,7 @@ import type {
 } from '@/models/report.model';
 import type { CommonCodeModel } from '@/models/common-code-model';
 import type { MotherOrganizationModel } from '@/models/mother-org-model';
+import { OrgTreeMultiSelectComponent } from '@/shared/components/org-tree-multi-select/org-tree-multi-select.component';
 import {
     Document,
     Packer,
@@ -55,7 +56,7 @@ import { forkJoin } from 'rxjs';
 @Component({
     selector: 'app-report-address-location',
     standalone: true,
-    imports: [CommonModule, FormsModule, TableModule, ButtonModule, SelectModule, MultiSelectModule, InputTextModule, PaginatorModule, Toast],
+    imports: [CommonModule, FormsModule, TableModule, ButtonModule, SelectModule, MultiSelectModule, InputTextModule, PaginatorModule, Toast, OrgTreeMultiSelectComponent],
     providers: [MessageService],
     templateUrl: './report-address-location.component.html',
     styleUrls: ['../report-theme.scss', '../report-card-mtr.scss', './report-address-location.component.scss'],
@@ -85,14 +86,22 @@ export class ReportAddressLocationComponent implements OnInit {
     rankOptions: { label: string; labelBn: string; value: number }[] = [];
     corpsOptions: { label: string; labelBn: string; value: number }[] = [];
     tradeOptions: { label: string; labelBn: string; value: number }[] = [];
-    rabUnitOptions: { label: string; labelBn: string; value: number }[] = [];
 
     selectedOrgIds: number[] = [];
     selectedMemberTypeIds: number[] = [];
     selectedRankIds: number[] = [];
     selectedCorpsIds: number[] = [];
     selectedTradeIds: number[] = [];
-    selectedRabUnitIds: number[] = [];
+    /**
+     * Multi-select RAB org-tree filter — the user checks any nodes at any
+     * level (Unit / Wing / Branch / Sub-Branch / Section / Sub-Section) in the
+     * shared org-tree picker. The selected node ids are sent to the backend as
+     * the `rabOrgNode` criterion (idValues).
+     */
+    selectedOrgNodeIds: number[] = [];
+    /** id → {en,bn,parentId} for every org node — lets the criteria strip
+     *  resolve each picked node to its full root→node ancestry path. */
+    private orgNodeLabels = new Map<number, { en: string; bn: string; parentId: number | null }>();
 
     /** Raw org-scoped MotherOrgRank rows, re-filtered client-side by Member Type. */
     private allRanksForOrg: CommonCodeModel[] = [];
@@ -171,6 +180,13 @@ export class ReportAddressLocationComponent implements OnInit {
         { key: 'corps',        labelEN: 'Corps',         labelBN: 'কোর',             hint: 'Plain',              defaultVisible: true },
         { key: 'trade',        labelEN: 'Trade',         labelBN: 'ট্রেড',            hint: 'Plain',              defaultVisible: true },
         { key: 'name',         labelEN: 'Name',          labelBN: 'নাম',             hint: 'Plain',              defaultVisible: true },
+        // Single toggle that folds Award + Professional Qualification + Corps
+        // INTO the Name cell when ticked. Never renders as its own column —
+        // see visibleColumns + nameColumnValue. Default off.
+        { key: 'nameExtras',   labelEN: 'Award + Professional Qualification', labelBN: 'পদক + পেশাগত যোগ্যতা', hint: 'NameSuffix', defaultVisible: false },
+        // Profile-style composite: line 1 = Prefix + Service No + Rank; line 2 =
+        // Name with awards, professional qualification and corps. Opt-in.
+        { key: 'callNoRankName', labelEN: 'No Rank Name', labelBN: 'নং র‍্যাঙ্ক নাম', hint: 'CallNoRankName', defaultVisible: false },
         // Personnel composite (name + SVC·Rank·Org meta) — opt-in only now;
         // the identity renders as separate plain columns (serviceId/rank/corps/
         // trade/name) by default instead.
@@ -197,7 +213,9 @@ export class ReportAddressLocationComponent implements OnInit {
         { key: 'tradeRemarks',      labelEN: 'Trade Remarks',    labelBN: 'ট্রেড মন্তব্য',      hint: 'Plain', defaultVisible: false },
         { key: 'gender',            labelEN: 'Gender',           labelBN: 'লিঙ্গ',             hint: 'Plain', defaultVisible: false },
         { key: 'motherUnit',        labelEN: 'Last Unit',        labelBN: 'শেষ ইউনিট',         hint: 'Plain', defaultVisible: false },
-        { key: 'rabUnit',           labelEN: 'RAB Unit',         labelBN: 'র‍্যাব ইউনিট',     hint: 'Plain', defaultVisible: false },
+        { key: 'rabUnit',           labelEN: 'Battalion',        labelBN: 'ব্যাটালিয়ন',        hint: 'Plain', defaultVisible: false },
+        // Trimmed job hierarchy (Battalion, Wing … deepest level — first two + last). Opt-in.
+        { key: 'rabUnitHierarchy',  labelEN: 'RAB Unit',         labelBN: 'র‍্যাব ইউনিট',     hint: 'Plain', defaultVisible: false },
         { key: 'dateOfCommission',  labelEN: 'Commission Date',  labelBN: 'কমিশন তারিখ',       hint: 'Plain', defaultVisible: false },
         { key: 'joiningDate',       labelEN: 'Joining Date',     labelBN: 'যোগদান তারিখ',      hint: 'Plain', defaultVisible: false },
         { key: 'rabServiceFrom',    labelEN: 'RAB Joining Date', labelBN: 'র‍্যাবে যোগদান তারিখ', hint: 'Plain', defaultVisible: false },
@@ -233,11 +251,72 @@ export class ReportAddressLocationComponent implements OnInit {
         source of truth — drag-reorder mutates it directly. New picks land at
         the end (PrimeNG MultiSelect appends), so they appear at the right
         of the table until the user drags them elsewhere. */
+    /**
+     * Field key that, when ticked, folds Award + Professional Qualification
+     * into the Name cell instead of rendering as its own column.
+     */
+    private static readonly NAME_EXTRAS_KEY = 'nameExtras';
+
     get visibleColumns() {
         const map = new Map(this.columnCatalog.map((c) => [c.key, c]));
         return this.selectedColumnKeys
+            .filter((k) => k !== ReportAddressLocationComponent.NAME_EXTRAS_KEY)
             .map((k) => map.get(k))
             .filter((c): c is typeof this.columnCatalog[number] => c != null);
+    }
+
+    /**
+     * Name column value — just the name by default; when the "Award +
+     * Professional Qualification" toggle is ticked, appends Gallantry Awards,
+     * Professional Qualification and Corps (profile-style). An "N/A" corps is skipped.
+     */
+    nameColumnValue(row: AddressLocationReportRow): string {
+        const r = row as any;
+        const blank = (s: string | null | undefined) => !s || s === '-' || s === '—';
+        const parts: string[] = [];
+        const name = this.codeValue(r.name, r.nameBN);
+        if (!blank(name)) parts.push(name);
+        if (this.selectedColumnKeys.includes(ReportAddressLocationComponent.NAME_EXTRAS_KEY)) {
+            const a = this.codeValue(r.awards, r.awardsBN);
+            if (!blank(a)) parts.push(a);
+            const p = this.codeValue(r.professionalQualification, r.professionalQualificationBN);
+            if (!blank(p)) parts.push(p);
+            let corps = this.codeValue(r.corps, r.corpsBN);
+            const na = ['n/a', 'na', 'অপ্রযোজ্য'];
+            if (na.includes((corps ?? '').trim().toLowerCase())) corps = '';
+            if (!blank(corps)) parts.push(corps);
+        }
+        return parts.length ? parts.join(', ') : '—';
+    }
+
+    /** "Call No Rank Name" composite — line 1: Prefix + Service No + Rank. */
+    callNoRankLine1(row: AddressLocationReportRow): string {
+        const r = row as any;
+        const prefix = this.codeValue(r.prefix, r.prefixBN);
+        const svcId = r.serviceId != null && r.serviceId !== '' ? this.displayNum(r.serviceId) : '';
+        const rank = this.codeValue(r.rank, r.rankBN);
+        return [prefix, svcId, rank].filter((s) => s && s !== '-' && s !== '—').join(' ');
+    }
+
+    /** Line 2: Name, Awards, Professional Qualification, Corps (profile style). */
+    callNoRankLine2(row: AddressLocationReportRow): string {
+        const r = row as any;
+        const name = this.codeValue(r.name, r.nameBN);
+        const awards = this.codeValue(r.awards, r.awardsBN);
+        const prof = this.codeValue(r.professionalQualification, r.professionalQualificationBN);
+        let corps = this.codeValue(r.corps, r.corpsBN);
+        const na = ['n/a', 'na', 'অপ্রযোজ্য'];
+        if (na.includes((corps ?? '').trim().toLowerCase())) corps = '';
+        return [name, awards, prof, corps].filter((s) => s && s !== '-' && s !== '—').join(', ');
+    }
+
+    /** Keep only the first two levels + the last one from a comma-joined
+     *  hierarchy chain. Chains of 3 or fewer levels are returned unchanged. */
+    private trimHierarchy(value: string): string {
+        if (!value || value === '-' || value === '—') return value;
+        const parts = value.split(',').map((s) => s.trim()).filter(Boolean);
+        if (parts.length <= 3) return parts.join(', ');
+        return [parts[0], parts[1], parts[parts.length - 1]].join(', ');
     }
 
     // ── Drag-reorder of the column chips ─────────────────────────────────
@@ -326,6 +405,7 @@ export class ReportAddressLocationComponent implements OnInit {
         gender:              { en: 'gender',              bn: 'genderBN' },
         motherUnit:          { en: 'motherUnit',          bn: 'motherUnitBN' },
         rabUnit:             { en: 'rabUnit',             bn: 'rabUnitBN' },
+        rabUnitHierarchy:    { en: 'rabUnitHierarchy',    bn: 'rabUnitHierarchyBN' },
         dateOfCommission:    { en: 'dateOfCommission' },
         joiningDate:         { en: 'joiningDate' },
         rabServiceFrom:      { en: 'rabServiceFrom' },
@@ -373,6 +453,11 @@ export class ReportAddressLocationComponent implements OnInit {
                 return this.displayMemberStatus(row);
             case 'Remarks':
                 return row.rmks || '';
+            case 'CallNoRankName': {
+                const l1 = this.callNoRankLine1(row);
+                const l2 = this.callNoRankLine2(row);
+                return [l1, l2].filter(Boolean).join('\n');
+            }
             default:
                 return this.plainCellValue(row, col.key);
         }
@@ -388,11 +473,27 @@ export class ReportAddressLocationComponent implements OnInit {
     /** Resolve a plain-hint cell's value by walking the column→property map
         and applying the same bilingual fallback as `codeValue()`. */
     plainCellValue(row: AddressLocationReportRow, key: string): string {
+        // Name cell — folds Award + Professional Qualification + Corps into the
+        // name when the nameExtras toggle is ticked (screen + all exporters
+        // route here, so they stay consistent).
+        if (key === 'name') return this.nameColumnValue(row);
+        // Service ID is shown with the member's prefix in front (e.g. "K. 4045260").
+        if (key === 'serviceId') {
+            const r = row as any;
+            const prefix = this.codeValue(r.prefix, r.prefixBN);
+            const svc = r.serviceId != null && r.serviceId !== '' ? String(r.serviceId) : '';
+            const px = prefix && prefix !== '-' && prefix !== '—' ? prefix : '';
+            return [px, svc].filter((s) => s).join(' ') || '—';
+        }
         const map = ReportAddressLocationComponent.plainColumnPropertyMap[key];
         if (!map) return '—';
         const en = (row as any)[map.en] as string | null | undefined;
         const bn = map.bn ? (row as any)[map.bn] as string | null | undefined : undefined;
-        return this.codeValue(en, bn);
+        const value = this.codeValue(en, bn);
+        // RAB Unit hierarchy is a comma-joined chain (Battalion, Wing, Branch, …).
+        // Show only the first two levels + the deepest instead of the full chain.
+        if (key === 'rabUnitHierarchy') return this.trimHierarchy(value);
+        return value;
     }
 
     /** Toggle a single column key in the picker selection. Used by the
@@ -701,7 +802,10 @@ export class ReportAddressLocationComponent implements OnInit {
         multi(this.selectedRankIds, this.rankOptions, lbl('RANK', 'র‍্যাঙ্ক'));
         multi(this.selectedCorpsIds, this.corpsOptions, lbl('CORPS', 'কোর'));
         multi(this.selectedTradeIds, this.tradeOptions, lbl('TRADE', 'ট্রেড'));
-        multi(this.selectedRabUnitIds, this.rabUnitOptions, lbl('RAB UNIT', 'র‍্যাব ইউনিট'));
+        if (this.selectedOrgNodeIds.length > 0) {
+            const names = this.orgNodesLabel(bn);
+            if (names) items.push({ label: lbl('RAB UNIT', 'র‍্যাব ইউনিট'), value: names });
+        }
 
         // Address Owner always renders — when "All" is picked it reads as the
         // friendly "Member & Family" instead of the placeholder "All", so a
@@ -773,7 +877,10 @@ export class ReportAddressLocationComponent implements OnInit {
         multi(this.selectedRankIds, this.rankOptions, this.lang === 'bn' ? 'র‍্যাঙ্ক' : 'Rank');
         multi(this.selectedCorpsIds, this.corpsOptions, this.lang === 'bn' ? 'কোর' : 'Corps');
         multi(this.selectedTradeIds, this.tradeOptions, this.lang === 'bn' ? 'ট্রেড' : 'Trade');
-        multi(this.selectedRabUnitIds, this.rabUnitOptions, this.lang === 'bn' ? 'র‍্যাব ইউনিট' : 'RAB Unit');
+        if (this.selectedOrgNodeIds.length > 0) {
+            const names = this.orgNodesLabel(this.lang === 'bn');
+            if (names) lines.push(`${this.lang === 'bn' ? 'র‍্যাব ইউনিট' : 'RAB Unit'}: ${names}`);
+        }
         if (this.searchRabId.trim()) lines.push(`RAB ID: ${this.searchRabId.trim()}`);
         if (this.searchServiceId.trim()) lines.push(`Service ID: ${this.searchServiceId.trim()}`);
         if (this.searchNid.trim()) lines.push(`NID: ${this.searchNid.trim()}`);
@@ -963,6 +1070,12 @@ export class ReportAddressLocationComponent implements OnInit {
                     // Remarks is intentionally blank when absent — em-dash would
                     // imply "intentionally empty" but the column is just optional.
                     return `<td class="td-remarks">${esc(row.rmks || '')}</td>`;
+                case 'CallNoRankName': {
+                    const l1 = this.callNoRankLine1(row);
+                    const l2 = this.callNoRankLine2(row);
+                    const l2Html = l2 ? `<div class="personnel-name">${esc(l2)}</div>` : '';
+                    return `<td class="td-personnel"><div class="personnel-name">${esc(l1)}</div>${l2Html}</td>`;
+                }
                 default:
                     return `<td>${esc(this.plainCellValue(row, col.key))}</td>`;
             }
@@ -978,7 +1091,7 @@ export class ReportAddressLocationComponent implements OnInit {
                       (item) => `
                 <div class="cell">
                     <div class="cell-label">${esc(item.label)}</div>
-                    <div class="cell-value">${esc(item.value)}</div>
+                    <div class="cell-value">${esc(item.value).replace(/\n/g, '<br>')}</div>
                 </div>`,
                   )
                   .join('')}</div>`
@@ -1183,8 +1296,8 @@ export class ReportAddressLocationComponent implements OnInit {
         padding: 2mm 2mm; font-size: 8pt; color: #0b0b0b;
         border: 1px solid rgba(11, 11, 11, 0.05); vertical-align: top;
         background: #ffffff;
-        word-break: break-word;
-        overflow-wrap: anywhere;
+        word-break: keep-all;
+        overflow-wrap: normal;
     }
     tbody tr:nth-child(even) td { background: #fafaf6; }
     tbody tr { page-break-inside: avoid; }
@@ -1197,6 +1310,12 @@ export class ReportAddressLocationComponent implements OnInit {
     }
     .name {
         font-family: ${sans}; font-weight: 600; font-size: 10pt;
+        color: #0b0b0b; line-height: 1.2;
+    }
+    /* "No Rank Name" composite — both lines share the same size so the
+       prefix/rank line and the name line read as one block. */
+    .personnel-name {
+        font-family: ${sans}; font-weight: 600; font-size: 9.5pt;
         color: #0b0b0b; line-height: 1.2;
     }
     .meta {
@@ -1455,13 +1574,16 @@ export class ReportAddressLocationComponent implements OnInit {
                                 allCaps: !isBn,
                             })],
                         }),
-                        new Paragraph({
-                            children: [new TextRun({
-                                text: wsafe(it.value),
-                                font: serif, size: S.critValue, ...bnRunExtras(S.critValue), bold: true,
-                                color: C.black,
-                            })],
-                        }),
+                        // One paragraph per line — multi-line values (RAB Unit
+                        // org paths) keep their line breaks in Word.
+                        ...wsafe(it.value).split('\n').map((line) =>
+                            new Paragraph({
+                                children: [new TextRun({
+                                    text: line,
+                                    font: serif, size: S.critValue, ...bnRunExtras(S.critValue), bold: true,
+                                    color: C.black,
+                                })],
+                            })),
                     ] : [new Paragraph({ children: [new TextRun({ text: ' ', font: sans, size: S.critValue, ...bnRunExtras(S.critValue) })] })],
                 }));
             }
@@ -1666,6 +1788,22 @@ export class ReportAddressLocationComponent implements OnInit {
                                 })],
                             })],
                         });
+                    case 'CallNoRankName': {
+                        const l1 = this.callNoRankLine1(row);
+                        const l2 = this.callNoRankLine2(row);
+                        const children: Paragraph[] = [new Paragraph({
+                            spacing: { after: l2 ? 40 : 0 },
+                            children: [new TextRun({
+                                text: wsafe(l1), font: sans, size: S.name, ...bnRunExtras(S.name), bold: true, color: C.black,
+                            })],
+                        })];
+                        if (l2) children.push(new Paragraph({
+                            children: [new TextRun({
+                                text: wsafe(l2), font: sans, size: S.body, ...bnRunExtras(S.body), color: C.black,
+                            })],
+                        }));
+                        return new TableCell({ ...w, children });
+                    }
                     default:
                         return new TableCell({
                             ...w,
@@ -1829,8 +1967,8 @@ export class ReportAddressLocationComponent implements OnInit {
             // table columns (which would break the data-table layout below).
             const halfPoint = Math.floor(totalCols / 2);
             for (let i = 0; i < items.length; i += 2) {
-                const left = items[i] ? wsafe(`${items[i].label}: ${items[i].value}`) : '';
-                const right = items[i + 1] ? wsafe(`${items[i + 1].label}: ${items[i + 1].value}`) : '';
+                const left = items[i] ? wsafe(`${items[i].label}: ${items[i].value.replace(/\n/g, '; ')}`) : '';
+                const right = items[i + 1] ? wsafe(`${items[i + 1].label}: ${items[i + 1].value.replace(/\n/g, '; ')}`) : '';
                 const row: string[] = new Array(totalCols).fill('');
                 row[0] = left;
                 row[halfPoint] = right;
@@ -1909,7 +2047,7 @@ export class ReportAddressLocationComponent implements OnInit {
         this.loadRelationshipOptions();
         this.loadOrgOptions();
         this.loadMemberTypeOptions();
-        this.loadRabUnitOptions();
+        this.loadOrgNodeLabels();
     }
 
     /** Map CommonCode rows to {label, labelBn, value} option shape. */
@@ -1947,11 +2085,67 @@ export class ReportAddressLocationComponent implements OnInit {
         });
     }
 
-    loadRabUnitOptions(): void {
-        this.commonCodeService.getAllActiveCommonCodesType('RabUnit').subscribe({
-            next: (codes) => (this.rabUnitOptions = this.mapCodes(codes)),
-            error: () => (this.rabUnitOptions = []),
+    /** CommonCode types that make up the RAB org tree, root → leaf. */
+    private static readonly ORG_CODE_TYPES = ['RabUnit', 'RabWing', 'RabBranch', 'RabSubBranch', 'RabSection', 'RabSubSection'];
+
+    /** Build the id → label map for every org node, so the criteria strip can
+     *  resolve the selected node ids to names. */
+    loadOrgNodeLabels(): void {
+        forkJoin(
+            ReportAddressLocationComponent.ORG_CODE_TYPES.map((t) => this.commonCodeService.getAllActiveCommonCodesType(t))
+        ).subscribe({
+            next: (buckets) => {
+                this.orgNodeLabels.clear();
+                for (const codes of buckets) {
+                    for (const c of codes || []) {
+                        this.orgNodeLabels.set(c.codeId, {
+                            en: c.codeValueEN || String(c.codeId),
+                            bn: c.codeValueBN || c.codeValueEN || String(c.codeId),
+                            parentId: c.parentCodeId ?? null,
+                        });
+                    }
+                }
+            },
+            error: () => this.orgNodeLabels.clear(),
         });
+    }
+
+    /** Root→node label chain for one org node, e.g. ["RAB 1","Wing 1","Sub Branch 1"]. */
+    private orgNodePathParts(id: number, bn: boolean): string[] {
+        const parts: string[] = [];
+        const guard = new Set<number>();   // cycle guard
+        let cur: number | null = id;
+        while (cur != null && !guard.has(cur)) {
+            guard.add(cur);
+            const n = this.orgNodeLabels.get(cur);
+            if (!n) break;
+            parts.unshift(bn ? n.bn : n.en);
+            cur = n.parentId;
+        }
+        return parts;
+    }
+
+    /**
+     * Selected org nodes for the criteria strip — grouped by their root unit so
+     * the unit name isn't repeated. One line per unit; the nodes picked under it
+     * are listed comma-separated (each keeping its sub-path below the unit). A
+     * unit picked on its own renders as just the unit name.
+     */
+    private orgNodesLabel(bn: boolean): string {
+        const groups: { root: string; subs: string[] }[] = [];
+        const byRoot = new Map<string, { root: string; subs: string[] }>();
+        for (const id of this.selectedOrgNodeIds) {
+            const parts = this.orgNodePathParts(id, bn);
+            if (parts.length === 0) continue;
+            const root = parts[0];
+            let g = byRoot.get(root);
+            if (!g) { g = { root, subs: [] }; byRoot.set(root, g); groups.push(g); }
+            const sub = parts.slice(1).join(' › ');
+            if (sub) g.subs.push(sub);
+        }
+        return groups
+            .map((g) => (g.subs.length ? `${g.root}: ${g.subs.join(', ')}` : g.root))
+            .join('\n');
     }
 
     /** Mother Org changed → reload org-scoped Ranks and Corps across all selected orgs; reset Rank/Corps/Trade. */
@@ -2104,7 +2298,7 @@ export class ReportAddressLocationComponent implements OnInit {
         if (this.selectedRankIds.length > 0) c++;
         if (this.selectedCorpsIds.length > 0) c++;
         if (this.selectedTradeIds.length > 0) c++;
-        if (this.selectedRabUnitIds.length > 0) c++;
+        if (this.selectedOrgNodeIds.length > 0) c++;
         if (this.searchRabId.trim()) c++;
         if (this.searchServiceId.trim()) c++;
         if (this.searchNid.trim()) c++;
@@ -2149,7 +2343,7 @@ export class ReportAddressLocationComponent implements OnInit {
         this.selectedRankIds = [];
         this.selectedCorpsIds = [];
         this.selectedTradeIds = [];
-        this.selectedRabUnitIds = [];
+        this.selectedOrgNodeIds = [];
         this.allRanksForOrg = [];
         this.rankOptions = [];
         this.corpsOptions = [];
@@ -2197,6 +2391,25 @@ export class ReportAddressLocationComponent implements OnInit {
         const push = (k: string) => { if (!seen.has(k)) { seen.add(k); out.push(k); } };
         for (const key of this.selectedColumnKeys) {
             if (key === 'name') { push('nameEnglish'); push('nameBangla'); continue; }
+            if (key === 'nameExtras') {
+                // Fold-into-name toggle — project awards + professional
+                // qualification + corps so nameColumnValue can append them.
+                push('awards'); push('professionalQualification'); push('corps');
+                continue;
+            }
+            if (key === 'serviceId') {
+                // Service ID cell shows the prefix before the number.
+                push('serviceId'); push('prefix');
+                continue;
+            }
+            if (key === 'callNoRankName') {
+                // Composite cell — request every backend field it renders.
+                push('prefix'); push('serviceId'); push('armyRank');
+                push('nameEnglish'); push('nameBangla');
+                push('awards'); push('professionalQualification'); push('corps');
+                continue;
+            }
+            if (key === 'rabUnitHierarchy') { push('rabUnitHierarchy'); continue; }
             push(key);
         }
         return out;
@@ -2223,7 +2436,7 @@ export class ReportAddressLocationComponent implements OnInit {
         if (this.selectedRankIds.length > 0)       criteria.push({ fieldKey: 'armyRank',           idValues: this.selectedRankIds });
         if (this.selectedCorpsIds.length > 0)      criteria.push({ fieldKey: 'corps',              idValues: this.selectedCorpsIds });
         if (this.selectedTradeIds.length > 0)      criteria.push({ fieldKey: 'trade',              idValues: this.selectedTradeIds });
-        if (this.selectedRabUnitIds.length > 0)    criteria.push({ fieldKey: 'rabUnit',            idValues: this.selectedRabUnitIds });
+        if (this.selectedOrgNodeIds.length > 0)    criteria.push({ fieldKey: 'rabOrgNode',         idValues: this.selectedOrgNodeIds });
         if (this.selectedDivisionId != null)    criteria.push({ fieldKey: 'division',   idValue: this.selectedDivisionId });
         if (this.selectedDistrictId != null)    criteria.push({ fieldKey: 'district',   idValue: this.selectedDistrictId });
         if (this.selectedUpazilaId != null)     criteria.push({ fieldKey: 'upazila',    idValue: this.selectedUpazilaId });

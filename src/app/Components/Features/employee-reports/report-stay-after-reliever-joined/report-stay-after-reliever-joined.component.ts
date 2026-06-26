@@ -19,6 +19,7 @@ import type { StayAfterRelieverJoinedReportRow, ReportAccessibleScope, DynamicRe
 import type { CommonCodeModel } from '@/models/common-code-model';
 import type { MotherOrganizationModel } from '@/models/mother-org-model';
 import { unitScopeLine, memberTypeScopeLine } from '../report-scope.helper';
+import { OrgTreeMultiSelectComponent } from '@/shared/components/org-tree-multi-select/org-tree-multi-select.component';
 import { AlignmentType, BorderStyle, Document, Footer, Packer, PageNumber, PageOrientation, Paragraph, Table, TableCell, TableLayoutType, TableRow, TextRun, WidthType } from 'docx';
 import { saveAs } from 'file-saver';
 import * as XLSX from 'xlsx';
@@ -35,7 +36,7 @@ type Lang = 'en' | 'bn';
 @Component({
     selector: 'app-report-stay-after-reliever-joined',
     standalone: true,
-    imports: [CommonModule, FormsModule, TableModule, ButtonModule, SelectModule, MultiSelectModule, PaginatorModule, DatePickerModule, Toast],
+    imports: [CommonModule, FormsModule, TableModule, ButtonModule, SelectModule, MultiSelectModule, PaginatorModule, DatePickerModule, Toast, OrgTreeMultiSelectComponent],
     providers: [MessageService],
     templateUrl: './report-stay-after-reliever-joined.component.html',
     styleUrls: ['../report-theme.scss', '../report-card-mtr.scss', './report-stay-after-reliever-joined.component.scss']
@@ -70,11 +71,19 @@ export class ReportStayAfterRelieverJoinedComponent implements OnInit {
     tradeOptions: { label: string; labelBn: string; value: number }[] = [];
     selectedOrgIds: number[] = [];
     selectedRankId: number | null = null;
-    rabUnitOptions: { label: string; labelBn: string; value: number }[] = [];
     selectedMemberTypeIds: number[] = [];
     selectedCorpsIds: number[] = [];
     selectedTradeIds: number[] = [];
-    selectedRabUnitIds: number[] = [];
+    /**
+     * Multi-select RAB org-tree filter — the user checks any nodes at any level
+     * (Unit / Wing / Branch / Sub-Branch / Section / Sub-Section) in the shared
+     * org-tree picker. The selected node ids are sent to the backend as the
+     * `rabOrgNode` criterion (idValues).
+     */
+    selectedOrgNodeIds: number[] = [];
+    /** id → {en,bn,parentId} for every org node — lets the criteria strip
+     *  resolve each picked node to its full root→node ancestry path. */
+    private orgNodeLabels = new Map<number, { en: string; bn: string; parentId: number | null }>();
     /** Possible Release Date range — only used in 'standRelease' mode. */
     releaseFrom: Date | null = null;
     releaseTo: Date | null = null;
@@ -102,13 +111,20 @@ export class ReportStayAfterRelieverJoinedComponent implements OnInit {
         return memberTypeScopeLine(this.accessibleScope, this.lang);
     }
 
-    columnCatalog: { key: string; labelEN: string; labelBN: string; hint: 'Serial' | 'Personnel' | 'Date' | 'Plain' | 'Remarks' | 'Duration'; defaultVisible: boolean }[] = [
+    columnCatalog: { key: string; labelEN: string; labelBN: string; hint: 'Serial' | 'Personnel' | 'Date' | 'Plain' | 'Remarks' | 'Duration' | 'NameSuffix' | 'CallNoRankName'; defaultVisible: boolean }[] = [
         { key: 'ser', labelEN: 'Ser', labelBN: 'ক্রঃ', hint: 'Serial', defaultVisible: true },
         { key: 'serviceId', labelEN: 'Service ID', labelBN: 'ব্যক্তিগত নম্বর', hint: 'Plain', defaultVisible: true },
         { key: 'rank', labelEN: 'Rank', labelBN: 'পদবী', hint: 'Plain', defaultVisible: true },
         { key: 'corps', labelEN: 'Corps', labelBN: 'কোর', hint: 'Plain', defaultVisible: true },
         { key: 'trade', labelEN: 'Trade', labelBN: 'ট্রেড', hint: 'Plain', defaultVisible: true },
         { key: 'name', labelEN: 'Name', labelBN: 'নাম', hint: 'Personnel', defaultVisible: true },
+        // Single toggle that folds Award + Professional Qualification + Corps
+        // INTO the Name cell when ticked. Never renders as its own column —
+        // see visibleColumns + nameColumnValue. Default off.
+        { key: 'nameExtras', labelEN: 'Award + Professional Qualification', labelBN: 'পদক + পেশাগত যোগ্যতা', hint: 'NameSuffix', defaultVisible: false },
+        // Profile-style composite: line 1 = Prefix + Service No + Rank; line 2 =
+        // Name with awards, professional qualification and corps. Opt-in.
+        { key: 'callNoRankName', labelEN: 'No Rank Name', labelBN: 'নং র‍্যাঙ্ক নাম', hint: 'CallNoRankName', defaultVisible: false },
         { key: 'joiningInRab', labelEN: 'RAB Joining Date', labelBN: 'র‍্যাবে যোগদানের তারিখ', hint: 'Date', defaultVisible: true },
         { key: 'durationOfStay', labelEN: 'Duration of Stay', labelBN: 'অবস্থানের মেয়াদকাল', hint: 'Duration', defaultVisible: true },
         { key: 'presentUnit', labelEN: 'Battalion', labelBN: 'ব্যাটালিয়ন', hint: 'Plain', defaultVisible: true },
@@ -134,7 +150,9 @@ export class ReportStayAfterRelieverJoinedComponent implements OnInit {
         { key: 'memberType', labelEN: 'Member Type', labelBN: 'সদস্য ধরন', hint: 'Plain', defaultVisible: false },
         { key: 'motherOrganization', labelEN: 'Mother Org', labelBN: 'মাতৃ সংস্থা', hint: 'Plain', defaultVisible: false },
         { key: 'gender', labelEN: 'Gender', labelBN: 'লিঙ্গ', hint: 'Plain', defaultVisible: false },
-        { key: 'rabUnit', labelEN: 'RAB Unit', labelBN: 'র‍্যাব ইউনিট', hint: 'Plain', defaultVisible: false },
+        { key: 'rabUnit', labelEN: 'Battalion', labelBN: 'ব্যাটালিয়ন', hint: 'Plain', defaultVisible: false },
+        // Full job hierarchy (Battalion › Wing › Branch › Sub-Branch › Section › Sub-Section). Opt-in.
+        { key: 'rabUnitHierarchy', labelEN: 'RAB Unit', labelBN: 'র‍্যাব ইউনিট', hint: 'Plain', defaultVisible: false },
         { key: 'dateOfCommission', labelEN: 'Commission Date', labelBN: 'কমিশন তারিখ', hint: 'Date', defaultVisible: false },
         { key: 'rabServiceFrom', labelEN: 'RAB Service From', labelBN: 'র‍্যাব স্থিতিকাল হইতে', hint: 'Date', defaultVisible: false },
         { key: 'rabServiceTo', labelEN: 'RAB Service To', labelBN: 'র‍্যাব স্থিতিকাল পর্যন্ত', hint: 'Date', defaultVisible: false },
@@ -190,6 +208,56 @@ export class ReportStayAfterRelieverJoinedComponent implements OnInit {
     private static readonly extraPlainKeys = new Set(['relieverServiceId', 'rabId', 'nameBangla', 'nid', 'bloodGroup', 'mobileNo', 'email', 'postingStatus']);
     draggingColumnKey: string | null = null;
 
+    /**
+     * Translate display column keys → backend registry FieldKeys. Most keys pass
+     * through colKeyToBackend (or themselves); a handful expand into several
+     * backend fields needed to render composite cells.
+     */
+    private backendColumnKeys(): string[] {
+        const out: string[] = [];
+        const seen = new Set<string>();
+        const push = (k: string) => {
+            if (!seen.has(k)) {
+                seen.add(k);
+                out.push(k);
+            }
+        };
+        for (const key of this.selectedColumnKeys) {
+            if (key === 'nameExtras') {
+                // Fold-into-name toggle — project awards + professional
+                // qualification + corps so nameColumnValue can append them.
+                push('awards');
+                push('professionalQualification');
+                push('corps');
+                continue;
+            }
+            if (key === 'serviceId') {
+                // Service ID cell shows the prefix before the number.
+                push('serviceId');
+                push('prefix');
+                continue;
+            }
+            if (key === 'callNoRankName') {
+                // Composite cell — request every backend field it renders.
+                push('prefix');
+                push('serviceId');
+                push('armyRank');
+                push('nameEnglish');
+                push('nameBangla');
+                push('awards');
+                push('professionalQualification');
+                push('corps');
+                continue;
+            }
+            if (key === 'rabUnitHierarchy') {
+                push('rabUnitHierarchy');
+                continue;
+            }
+            push(ReportStayAfterRelieverJoinedComponent.colKeyToBackend[key] ?? key);
+        }
+        return out;
+    }
+
     /** New Posting has its own column selection (joinee columns only). */
     joineeSelectedColumnKeys: string[] = this.joineeColumnCatalog.map((c) => c.key);
 
@@ -209,9 +277,72 @@ export class ReportStayAfterRelieverJoinedComponent implements OnInit {
     get columnPickerOptions(): { label: string; value: string }[] {
         return this.activeColumnCatalog.map((c) => ({ label: this.lang === 'bn' ? c.labelBN : c.labelEN, value: c.key }));
     }
+    /**
+     * Field key that, when ticked, folds Award + Professional Qualification
+     * into the Name cell instead of rendering as its own column.
+     */
+    private static readonly NAME_EXTRAS_KEY = 'nameExtras';
+
     get visibleColumns(): typeof this.columnCatalog {
         const map = new Map(this.activeColumnCatalog.map((c) => [c.key, c]));
-        return this.activeColumnKeys.map((k) => map.get(k)).filter((c): c is (typeof this.columnCatalog)[number] => c != null);
+        return this.activeColumnKeys
+            .filter((k) => k !== ReportStayAfterRelieverJoinedComponent.NAME_EXTRAS_KEY)
+            .map((k) => map.get(k))
+            .filter((c): c is (typeof this.columnCatalog)[number] => c != null);
+    }
+
+    /**
+     * Name column value — just the name by default; when the "Award +
+     * Professional Qualification" toggle is ticked, appends Gallantry Awards,
+     * Professional Qualification and Corps (profile-style). An "N/A" corps is skipped.
+     */
+    nameColumnValue(row: StayAfterRelieverJoinedReportRow): string {
+        const r = row as any;
+        const blank = (s: string | null | undefined) => !s || s === '-' || s === '—';
+        const parts: string[] = [];
+        const name = this.codeValue(r.name, r.nameBN);
+        if (!blank(name)) parts.push(name);
+        if (this.selectedColumnKeys.includes(ReportStayAfterRelieverJoinedComponent.NAME_EXTRAS_KEY)) {
+            const a = this.codeValue(r.awards, r.awardsBN);
+            if (!blank(a)) parts.push(a);
+            const p = this.codeValue(r.professionalQualification, r.professionalQualificationBN);
+            if (!blank(p)) parts.push(p);
+            let corps = this.codeValue(r.corps, r.corpsBN);
+            const na = ['n/a', 'na', 'অপ্রযোজ্য'];
+            if (na.includes((corps ?? '').trim().toLowerCase())) corps = '';
+            if (!blank(corps)) parts.push(corps);
+        }
+        return parts.length ? parts.join(', ') : '—';
+    }
+
+    /** "Call No Rank Name" composite — line 1: Prefix + Service No + Rank. */
+    callNoRankLine1(row: StayAfterRelieverJoinedReportRow): string {
+        const r = row as any;
+        const prefix = this.codeValue(r.prefix, r.prefixBN);
+        const svcId = r.serviceId != null && r.serviceId !== '' ? this.displayNum(r.serviceId) : '';
+        const rank = this.codeValue(r.rank, r.rankBN);
+        return [prefix, svcId, rank].filter((s) => s && s !== '-' && s !== '—').join(' ');
+    }
+
+    /** Line 2: Name, Awards, Professional Qualification, Corps (profile style). */
+    callNoRankLine2(row: StayAfterRelieverJoinedReportRow): string {
+        const r = row as any;
+        const name = this.codeValue(r.name, r.nameBN);
+        const awards = this.codeValue(r.awards, r.awardsBN);
+        const prof = this.codeValue(r.professionalQualification, r.professionalQualificationBN);
+        let corps = this.codeValue(r.corps, r.corpsBN);
+        const na = ['n/a', 'na', 'অপ্রযোজ্য'];
+        if (na.includes((corps ?? '').trim().toLowerCase())) corps = '';
+        return [name, awards, prof, corps].filter((s) => s && s !== '-' && s !== '—').join(', ');
+    }
+
+    /** Keep only the first two levels + the last one from a comma-joined
+     *  hierarchy chain. Chains of 3 or fewer levels are returned unchanged. */
+    private trimHierarchy(value: string): string {
+        if (!value || value === '-' || value === '—') return value;
+        const parts = value.split(',').map((s) => s.trim()).filter(Boolean);
+        if (parts.length <= 3) return parts.join(', ');
+        return [parts[0], parts[1], parts[parts.length - 1]].join(', ');
     }
     onColumnDragStart(key: string, event: DragEvent): void {
         this.draggingColumnKey = key;
@@ -279,7 +410,7 @@ export class ReportStayAfterRelieverJoinedComponent implements OnInit {
 
         this.loadMotherOrgs();
         this.loadMemberTypes();
-        this.loadRabUnits();
+        this.loadOrgNodeLabels();
         // Do not auto-run; the list loads only after the user clicks Search.
     }
 
@@ -308,11 +439,69 @@ export class ReportStayAfterRelieverJoinedComponent implements OnInit {
             error: () => (this.memberTypeOptions = [])
         });
     }
-    private loadRabUnits(): void {
-        this.commonCodeService.getAllActiveCommonCodesType('RabUnit').subscribe({
-            next: (codes: CommonCodeModel[]) => (this.rabUnitOptions = this.mapCodes(codes)),
-            error: () => (this.rabUnitOptions = [])
+    /** All RAB org codeTypes — same set the shared picker loads. */
+    private static readonly ORG_CODE_TYPES = ['RabUnit', 'RabWing', 'RabBranch', 'RabSubBranch', 'RabSection', 'RabSubSection'];
+
+    /** Build the id → label map for every org node, so the criteria strip can
+     *  resolve the selected node ids to names. */
+    loadOrgNodeLabels(): void {
+        forkJoin(
+            ReportStayAfterRelieverJoinedComponent.ORG_CODE_TYPES.map((t) => this.commonCodeService.getAllActiveCommonCodesType(t))
+        ).subscribe({
+            next: (buckets) => {
+                this.orgNodeLabels.clear();
+                for (const codes of buckets) {
+                    for (const c of codes || []) {
+                        this.orgNodeLabels.set(c.codeId, {
+                            en: c.codeValueEN || String(c.codeId),
+                            bn: c.codeValueBN || c.codeValueEN || String(c.codeId),
+                            parentId: c.parentCodeId ?? null
+                        });
+                    }
+                }
+            },
+            error: () => this.orgNodeLabels.clear()
         });
+    }
+
+    /** Root→node label chain for one org node, e.g. ["RAB 1","Wing 1","Sub Branch 1"]. */
+    private orgNodePathParts(id: number, bn: boolean): string[] {
+        const parts: string[] = [];
+        const guard = new Set<number>(); // cycle guard
+        let cur: number | null = id;
+        while (cur != null && !guard.has(cur)) {
+            guard.add(cur);
+            const n = this.orgNodeLabels.get(cur);
+            if (!n) break;
+            parts.unshift(bn ? n.bn : n.en);
+            cur = n.parentId;
+        }
+        return parts;
+    }
+
+    /**
+     * Selected org nodes for the criteria strip — grouped by their root unit so
+     * the unit name isn't repeated. One line per unit; the nodes picked under it
+     * are listed comma-separated (each keeping its sub-path below the unit). A
+     * unit picked on its own renders as just the unit name.
+     */
+    private orgNodesLabel(bn: boolean): string {
+        const groups: { root: string; subs: string[] }[] = [];
+        const byRoot = new Map<string, { root: string; subs: string[] }>();
+        for (const id of this.selectedOrgNodeIds) {
+            const parts = this.orgNodePathParts(id, bn);
+            if (parts.length === 0) continue;
+            const root = parts[0];
+            let g = byRoot.get(root);
+            if (!g) {
+                g = { root, subs: [] };
+                byRoot.set(root, g);
+                groups.push(g);
+            }
+            const sub = parts.slice(1).join(' › ');
+            if (sub) g.subs.push(sub);
+        }
+        return groups.map((g) => (g.subs.length ? `${g.root}: ${g.subs.join(', ')}` : g.root)).join('\n');
     }
     /** Dedupe CommonCode rows by codeId, preserving first-seen order. */
     private dedupeByCodeId(rows: CommonCodeModel[]): CommonCodeModel[] {
@@ -412,7 +601,7 @@ export class ReportStayAfterRelieverJoinedComponent implements OnInit {
             if (this.selectedMemberTypeIds.length > 0) c++;
             if (this.selectedCorpsIds.length > 0) c++;
             if (this.selectedTradeIds.length > 0) c++;
-            if (this.selectedRabUnitIds.length > 0) c++;
+            if (this.selectedOrgNodeIds.length > 0) c++;
         }
         if (this.relieverMode === 'standRelease' && this.releaseFrom) c++;
         if (this.relieverMode === 'standRelease' && this.releaseTo) c++;
@@ -446,7 +635,10 @@ export class ReportStayAfterRelieverJoinedComponent implements OnInit {
             }
             multi(this.selectedCorpsIds, this.corpsOptions, 'Corps', 'কোর');
             multi(this.selectedTradeIds, this.tradeOptions, 'Trade', 'ট্রেড');
-            multi(this.selectedRabUnitIds, this.rabUnitOptions, 'RAB Unit', 'র‍্যাব ইউনিট');
+            if (this.selectedOrgNodeIds.length > 0) {
+                const names = this.orgNodesLabel(this.lang === 'bn');
+                if (names) items.push({ label: this.lang === 'bn' ? 'র‍্যাব ইউনিট' : 'RAB Unit', value: names });
+            }
         }
         if (this.appliedMode === 'standRelease') {
             if (this.releaseFrom) items.push({ label: this.lang === 'en' ? 'Possible Release From' : 'সম্ভাব্য রিলিজ হইতে', value: this.formatDateLabel(this.fmtDate(this.releaseFrom)!) });
@@ -472,7 +664,7 @@ export class ReportStayAfterRelieverJoinedComponent implements OnInit {
         this.corpsOptions = [];
         this.selectedTradeIds = [];
         this.tradeOptions = [];
-        this.selectedRabUnitIds = [];
+        this.selectedOrgNodeIds = [];
         this.releaseFrom = null;
         this.releaseTo = null;
         this.joiningFrom = null;
@@ -519,7 +711,7 @@ export class ReportStayAfterRelieverJoinedComponent implements OnInit {
         if (this.selectedTradeIds.length > 0) criteria.push({ fieldKey: 'trade', idValues: this.selectedTradeIds });
         // RAB Unit applies to all (long-stay) modes. New Posting is handled by
         // loadNewPostingPage() above, so relieverMode is never 'newPosting' here.
-        if (this.selectedRabUnitIds.length > 0) criteria.push({ fieldKey: 'rabUnit', idValues: this.selectedRabUnitIds });
+        if (this.selectedOrgNodeIds.length > 0) criteria.push({ fieldKey: 'rabOrgNode', idValues: this.selectedOrgNodeIds });
         if (this.appliedMode === 'standRelease') {
             const rFrom = this.fmtDate(this.releaseFrom);
             const rTo = this.fmtDate(this.releaseTo);
@@ -529,7 +721,7 @@ export class ReportStayAfterRelieverJoinedComponent implements OnInit {
         // Map column keys → registry FieldKeys; always include joiningInRab so
         // the client-computed Duration of Stay has a source even if its column
         // is hidden.
-        const columns = Array.from(new Set([...this.selectedColumnKeys.map((k) => ReportStayAfterRelieverJoinedComponent.colKeyToBackend[k] ?? k), 'joiningInRab']));
+        const columns = Array.from(new Set([...this.backendColumnKeys(), 'joiningInRab']));
 
         this.reportService
             .runDynamicLongStayReport({
@@ -696,12 +888,19 @@ export class ReportStayAfterRelieverJoinedComponent implements OnInit {
     cellValue(row: StayAfterRelieverJoinedReportRow, key: string): string {
         if (this.appliedMode === 'newPosting') return this.joineeCellValue(row as any, key);
         switch (key) {
-            case 'serviceId':
-                return this.displayNum(row.serviceId);
+            case 'serviceId': {
+                // Service ID cell shows the member's prefix before the number.
+                const prefix = this.codeValue((row as any).prefix, (row as any).prefixBN);
+                const svc = row.serviceId != null && row.serviceId !== '' ? this.displayNum(row.serviceId) : '';
+                const px = prefix && prefix !== '-' && prefix !== '—' ? prefix : '';
+                return [px, svc].filter((s) => s).join(' ') || '—';
+            }
             case 'rank':
                 return this.codeValue(row.rank, row.rankBN);
             case 'name':
-                return this.codeValue(row.name, row.nameBN);
+                return this.nameColumnValue(row);
+            case 'rabUnitHierarchy':
+                return this.trimHierarchy(this.codeValue((row as any).rabUnitHierarchy, (row as any).rabUnitHierarchyBN));
             case 'joiningInRab':
                 return this.formatDateLabel(row.joiningInRab);
             case 'durationOfStay':
@@ -883,7 +1082,11 @@ export class ReportStayAfterRelieverJoinedComponent implements OnInit {
                                       spacing: { after: 40 },
                                       children: [new TextRun({ text: wsafe(it.label), font: sans, size: S.critLabel, ...bnRunExtras(S.critLabel), bold: true, color: C.labelGray, characterSpacing: isBn ? 0 : 32, allCaps: !isBn })]
                                   }),
-                                  new Paragraph({ children: [new TextRun({ text: wsafe(it.value), font: serif, size: S.critValue, ...bnRunExtras(S.critValue), bold: true, color: C.black })] })
+                                  // One paragraph per line — multi-line values (RAB Unit
+                                  // org paths) keep their line breaks in Word.
+                                  ...wsafe(it.value)
+                                      .split('\n')
+                                      .map((line) => new Paragraph({ children: [new TextRun({ text: line, font: serif, size: S.critValue, ...bnRunExtras(S.critValue), bold: true, color: C.black })] }))
                               ]
                             : [new Paragraph({ children: [new TextRun({ text: ' ', font: sans, size: S.critValue, ...bnRunExtras(S.critValue) })] })]
                     })
@@ -932,6 +1135,13 @@ export class ReportStayAfterRelieverJoinedComponent implements OnInit {
                         const meta = this.personnelMetaText(row);
                         const children: Paragraph[] = [new Paragraph({ spacing: { after: meta ? 40 : 0 }, children: [run(this.cellValue(row, 'name'), { sz: S.name, bold: true })] })];
                         if (meta) children.push(new Paragraph({ children: [new TextRun({ text: meta, font: mono, size: S.meta, ...bnRunExtras(S.meta), color: C.gray, characterSpacing: isBn ? 0 : 16, allCaps: !isBn })] }));
+                        return new TableCell({ ...cellOpts, children });
+                    }
+                    case 'CallNoRankName': {
+                        const l1 = this.callNoRankLine1(row);
+                        const l2 = this.callNoRankLine2(row);
+                        const children: Paragraph[] = [new Paragraph({ spacing: { after: l2 ? 40 : 0 }, children: [run(l1, { sz: S.name, bold: true })] })];
+                        if (l2) children.push(new Paragraph({ children: [run(l2, { sz: S.name, bold: true })] }));
                         return new TableCell({ ...cellOpts, children });
                     }
                     case 'Date':
@@ -1029,7 +1239,7 @@ export class ReportStayAfterRelieverJoinedComponent implements OnInit {
         aoa.push([wsafe(this.rabSectionTitle), ...pad(totalCols - 1)]);
         aoa.push(pad(totalCols));
         aoa.push([`${this.rabCriteriaTitle}  ·  ${this.rabTotalText}  ·  ${this.rabGeneratedLabel}: ${this.rabFormattedDate}`, ...pad(totalCols - 1)]);
-        for (const it of this.criteriaItems) aoa.push([`${it.label}: ${it.value}`, ...pad(totalCols - 1)]);
+        for (const it of this.criteriaItems) aoa.push([`${it.label}: ${it.value.replace(/\n/g, '; ')}`, ...pad(totalCols - 1)]);
         aoa.push(pad(totalCols));
         aoa.push(headers);
         for (let i = 0; i < this.list.length; i++) {
@@ -1042,6 +1252,11 @@ export class ReportStayAfterRelieverJoinedComponent implements OnInit {
                         const name = this.cellValue(row, 'name');
                         const meta = this.personnelMetaText(row);
                         return meta ? `${name}\n${meta}` : name;
+                    }
+                    case 'CallNoRankName': {
+                        const l1 = this.callNoRankLine1(row);
+                        const l2 = this.callNoRankLine2(row);
+                        return l2 ? `${l1}\n${l2}` : l1;
                     }
                     case 'Remarks':
                         return row.rmks || '';
@@ -1110,6 +1325,12 @@ export class ReportStayAfterRelieverJoinedComponent implements OnInit {
                     const metaHtml = meta ? `<div class="personnel-meta">${esc(meta)}</div>` : '';
                     return `<td class="td-personnel"><div class="personnel-name">${esc(this.cellValue(row, 'name'))}</div>${metaHtml}</td>`;
                 }
+                case 'CallNoRankName': {
+                    const l1 = this.callNoRankLine1(row);
+                    const l2 = this.callNoRankLine2(row);
+                    const l2Html = l2 ? `<div class="personnel-name">${esc(l2)}</div>` : '';
+                    return `<td class="td-personnel"><div class="personnel-name">${esc(l1)}</div>${l2Html}</td>`;
+                }
                 case 'Date':
                 case 'Duration':
                     return `<td class="td-date">${esc(this.cellValue(row, col.key))}</td>`;
@@ -1122,7 +1343,7 @@ export class ReportStayAfterRelieverJoinedComponent implements OnInit {
         };
         const tableBodyHtml = this.list.map((row, i) => `<tr>${visibleCols.map((c) => renderCell(row, c, i)).join('')}</tr>`).join('');
         const items = this.criteriaItems;
-        const criteriaGridHtml = items.length ? `<div class="criteria-grid">${items.map((item) => `<div class="cell"><div class="cell-label">${esc(item.label)}</div><div class="cell-value">${esc(item.value)}</div></div>`).join('')}</div>` : '';
+        const criteriaGridHtml = items.length ? `<div class="criteria-grid">${items.map((item) => `<div class="cell"><div class="cell-label">${esc(item.label)}</div><div class="cell-value">${esc(item.value).replace(/\n/g, '<br>')}</div></div>`).join('')}</div>` : '';
         const confidential = this.rabConfidentialLabel;
         const warning = this.rabWarningLabel;
         const pageWord = isBn ? 'পৃষ্ঠা' : 'PAGE';
@@ -1163,13 +1384,13 @@ export class ReportStayAfterRelieverJoinedComponent implements OnInit {
     table { width: 100%; border-collapse: collapse; table-layout: auto; font-family: ${sans}; font-size: 8pt; }
     thead { display: table-header-group; }
     thead th { background: #0b0b0b; color: #d9c79a; font-family: ${mono}; font-size: 6.5pt; font-weight: 600; letter-spacing: 0.15em; text-transform: uppercase; padding: 1.8mm 2mm; text-align: left; vertical-align: middle; white-space: nowrap; border: 1px solid rgba(11,11,11,0.05); ${isBn ? 'letter-spacing:0.04em;font-family:' + sans + ';' : ''} }
-    tbody td { padding: 2mm 2mm; font-size: 8pt; color: #0b0b0b; border: 1px solid rgba(11,11,11,0.05); vertical-align: top; background: #fff; word-break: break-word; overflow-wrap: anywhere; }
+    tbody td { padding: 2mm 2mm; font-size: 8pt; color: #0b0b0b; border: 1px solid rgba(11,11,11,0.05); vertical-align: top; background: #fff; word-break: keep-all; overflow-wrap: normal; }
     tbody tr:nth-child(even) td { background: #fafaf6; }
     tbody tr { page-break-inside: avoid; }
     .td-ser { white-space: nowrap; }
     .ser { font-family: ${mono}; font-size: 9pt; font-weight: 600; color: #6b6b6b; letter-spacing: 0.04em; white-space: nowrap; }
     .td-personnel { min-width: 56mm; }
-    .personnel-name { font-family: ${sans}; font-weight: 600; font-size: 10pt; color: #0b0b0b; line-height: 1.2; }
+    .personnel-name { font-family: ${sans}; font-weight: 600; font-size: 9.5pt; color: #0b0b0b; line-height: 1.2; }
     .personnel-meta { margin-top: 0.7mm; font-family: ${mono}; font-size: 7pt; letter-spacing: 0.08em; text-transform: uppercase; color: #6b6b6b; ${isBn ? 'letter-spacing:0;text-transform:none;font-family:' + sans + ';' : ''} }
     .td-date { font-family: ${mono}; letter-spacing: 0.02em; white-space: nowrap; }
 </style></head><body><div class="paper">

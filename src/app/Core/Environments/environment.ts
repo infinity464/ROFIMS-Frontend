@@ -11,24 +11,24 @@
 //     jsreportUrl: 'http://localhost:5488'
 // };
 
-// export const environment = {
-//     production: true,
-//     apis: {
-//         core: 'http://114.134.95.238:9900/rab/api',
-//         auth: 'http://114.134.95.238:9900'
-//     },
-//     // Relative path → same origin as the site; IIS reverse-proxies /jsreport-api
-//     // to the jsReport Node process on localhost:5488 (see public/web.config).
-//     jsreportUrl: '/jsreport-api'
-// };
-
 export const environment = {
     production: true,
     apis: {
-        core: 'http://192.168.9.103:9900/rab/api',
-        auth: 'http://192.168.9.103:9900'
+        core: 'http://114.134.95.238:9900/rab/api',
+        auth: 'http://114.134.95.238:9900'
     },
     // Relative path → same origin as the site; IIS reverse-proxies /jsreport-api
     // to the jsReport Node process on localhost:5488 (see public/web.config).
     jsreportUrl: '/jsreport-api'
 };
+
+// export const environment = {
+//     production: true,
+//     apis: {
+//         core: 'http://192.168.9.103:9900/rab/api',
+//         auth: 'http://192.168.9.103:9900'
+//     },
+//     // Relative path → same origin as the site; IIS reverse-proxies /jsreport-api
+//     // to the jsReport Node process on localhost:5488 (see public/web.config).
+//     jsreportUrl: '/jsreport-api'
+// };

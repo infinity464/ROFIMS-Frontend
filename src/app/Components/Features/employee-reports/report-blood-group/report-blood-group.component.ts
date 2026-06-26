@@ -27,6 +27,7 @@ import {
     memberTypeScopeLine,
     statusLocked,
 } from '../report-scope.helper';
+import { OrgTreeMultiSelectComponent } from '@/shared/components/org-tree-multi-select/org-tree-multi-select.component';
 import { personnelMeta as personnelMetaHelper } from '../formal-rab-render.helper';
 import {
     AlignmentType,
@@ -71,6 +72,7 @@ import { forkJoin } from 'rxjs';
         MultiSelectModule,
         PaginatorModule,
         Toast,
+        OrgTreeMultiSelectComponent,
     ],
     providers: [MessageService],
     templateUrl: './report-blood-group.component.html',
@@ -92,8 +94,18 @@ export class ReportBloodGroupComponent implements OnInit, OnChanges {
     selectedOrgIds: number[] = [];
     memberTypeOptions: { label: string; labelBn: string; value: number }[] = [];
     selectedMemberTypeIds: number[] = [];
-    rabUnitOptions: { label: string; labelBn: string; value: number }[] = [];
-    selectedRabUnitIds: number[] = [];
+    /**
+     * Multi-select RAB org-tree filter — the user checks any nodes at any
+     * level (Unit / Wing / Branch / Sub-Branch / Section / Sub-Section) in the
+     * shared org-tree picker. The selected node ids are sent to the backend as
+     * the `rabOrgNode` criterion (idValues); the backend matches employees
+     * whose placement at the node's level is one of the picked ids — so
+     * picking a Wing returns everyone under it, regardless of branch/section.
+     */
+    selectedOrgNodeIds: number[] = [];
+    /** id → {en,bn,parentId} for every org node — lets the criteria strip
+     *  resolve each picked node to its full root→node ancestry path. */
+    private orgNodeLabels = new Map<number, { en: string; bn: string; parentId: number | null }>();
     rankOptions: { label: string; labelBn: string; value: number }[] = [];
     corpsOptions: { label: string; labelBn: string; value: number }[] = [];
     tradeOptions: { label: string; labelBn: string; value: number }[] = [];
@@ -128,7 +140,10 @@ export class ReportBloodGroupComponent implements OnInit, OnChanges {
 
     columnCatalog: { key: string; labelEN: string; labelBN: string; hint: string; defaultVisible: boolean }[] = [
         { key: 'ser',          labelEN: 'Ser',           labelBN: 'ক্রঃ',          hint: 'Serial',                defaultVisible: true  },
-        { key: 'personnel',    labelEN: 'RAB Personnel', labelBN: 'র‍্যাব সদস্য',   hint: 'RabPersonnelComposite', defaultVisible: true  },
+        { key: 'name', labelEN: 'Name', labelBN: 'নাম', hint: 'Name', defaultVisible: true },
+        { key: 'nameExtras', labelEN: 'Award + Professional Qualification', labelBN: 'পদক + পেশাগত যোগ্যতা', hint: 'NameSuffix', defaultVisible: false },
+        { key: 'callNoRankName', labelEN: 'No Rank Name', labelBN: 'নং র‍্যাঙ্ক নাম', hint: 'CallNoRankName', defaultVisible: false },
+        { key: 'personnel',    labelEN: 'RAB Personnel', labelBN: 'র‍্যাব সদস্য',   hint: 'RabPersonnelComposite', defaultVisible: false },
         { key: 'rabId',        labelEN: 'RAB ID',        labelBN: 'র‍্যাব আইডি',    hint: 'RabId',                 defaultVisible: true  },
         { key: 'corps',        labelEN: 'Corps',         labelBN: 'কোর',           hint: 'Plain',                 defaultVisible: true  },
         { key: 'trade',        labelEN: 'Trade',         labelBN: 'ট্রেড',         hint: 'Plain',                 defaultVisible: true  },
@@ -149,7 +164,8 @@ export class ReportBloodGroupComponent implements OnInit, OnChanges {
         { key: 'tradeRemarks',      labelEN: 'Trade Remarks',    labelBN: 'ট্রেড মন্তব্য',       hint: 'Plain', defaultVisible: false },
         { key: 'gender',            labelEN: 'Gender',           labelBN: 'লিঙ্গ',              hint: 'Plain', defaultVisible: false },
         { key: 'motherUnit',        labelEN: 'Last Unit',        labelBN: 'শেষ ইউনিট',          hint: 'Plain', defaultVisible: false },
-        { key: 'rabUnit',           labelEN: 'RAB Unit',         labelBN: 'র‍্যাব ইউনিট',       hint: 'Plain', defaultVisible: false },
+        { key: 'rabUnit',           labelEN: 'Battalion',        labelBN: 'ব্যাটালিয়ন',         hint: 'Plain', defaultVisible: true },
+        { key: 'rabUnitHierarchy', labelEN: 'RAB Unit', labelBN: 'র‍্যাব ইউনিট (পূর্ণ)', hint: 'Plain', defaultVisible: false },
         { key: 'dateOfCommission',  labelEN: 'Commission Date',  labelBN: 'কমিশন তারিখ',         hint: 'Plain', defaultVisible: false },
         { key: 'rabServiceFrom',    labelEN: 'RAB Joining Date', labelBN: 'র‍্যাবে যোগদান তারিখ',hint: 'Plain', defaultVisible: false },
         { key: 'rabServiceTo',      labelEN: 'RAB End Date',     labelBN: 'র‍্যাব শেষ তারিখ',   hint: 'Plain', defaultVisible: false },
@@ -178,6 +194,7 @@ export class ReportBloodGroupComponent implements OnInit, OnChanges {
         gender:              { en: 'gender',              bn: 'genderBN' },
         motherUnit:          { en: 'motherUnit',          bn: 'motherUnitBN' },
         rabUnit:             { en: 'rabUnit',             bn: 'rabUnitBN' },
+        rabUnitHierarchy:    { en: 'rabUnitHierarchy',    bn: 'rabUnitHierarchyBN' },
         dateOfCommission:    { en: 'dateOfCommission' },
         rabServiceFrom:      { en: 'rabServiceFrom' },
         rabServiceTo:        { en: 'rabServiceTo' },
@@ -196,11 +213,32 @@ export class ReportBloodGroupComponent implements OnInit, OnChanges {
     };
 
     plainCellValue(row: MemberAppointmentReportRow, key: string): string {
+        if (key === 'serviceId') {
+            const r = row as any;
+            const prefix = this.codeValue(r.prefix, r.prefixBN);
+            const svc = r.serviceId != null && r.serviceId !== '' ? String(r.serviceId) : '';
+            const px = prefix && prefix !== '-' && prefix !== '—' ? prefix : '';
+            return [px, svc].filter((s) => s).join(' ') || '—';
+        }
         const map = ReportBloodGroupComponent.plainColumnPropertyMap[key];
         if (!map) return '—';
         const en = (row as any)[map.en] as string | null | undefined;
         const bn = map.bn ? (row as any)[map.bn] as string | null | undefined : undefined;
-        return this.codeValue(en, bn);
+        const value = this.codeValue(en, bn);
+        // RAB Unit hierarchy is a comma-joined chain (Battalion, Wing, Branch,
+        // Sub-Branch, Section, Sub-Section). Show only the first two levels
+        // (Unit, Wing) + the deepest level instead of the full chain.
+        if (key === 'rabUnitHierarchy') return this.trimHierarchy(value);
+        return value;
+    }
+
+    /** Keep only the first two levels + the last one from a comma-joined
+     *  hierarchy chain. Chains of 3 or fewer levels are returned unchanged. */
+    private trimHierarchy(value: string): string {
+        if (!value || value === '-' || value === '—') return value;
+        const parts = value.split(',').map((s) => s.trim()).filter(Boolean);
+        if (parts.length <= 3) return parts.join(', ');
+        return [parts[0], parts[1], parts[parts.length - 1]].join(', ');
     }
 
     selectedColumnKeys: string[] = this.columnCatalog.filter(c => c.defaultVisible).map(c => c.key);
@@ -209,11 +247,45 @@ export class ReportBloodGroupComponent implements OnInit, OnChanges {
         return this.columnCatalog.map(c => ({ label: this.lang === 'bn' ? c.labelBN : c.labelEN, value: c.key }));
     }
 
+    /**
+     * Field key that, when ticked, folds Award + Professional Qualification
+     * into the Name cell instead of rendering as its own column. Default
+     * (unticked) = Name shows just the name.
+     */
+    private static readonly NAME_EXTRAS_KEY = 'nameExtras';
+
     get visibleColumns(): typeof this.columnCatalog {
         const map = new Map(this.columnCatalog.map(c => [c.key, c]));
         return this.selectedColumnKeys
+            .filter((k) => k !== ReportBloodGroupComponent.NAME_EXTRAS_KEY)
             .map(k => map.get(k))
             .filter((c): c is typeof this.columnCatalog[number] => c != null);
+    }
+
+    /**
+     * Name column value — just the name by default; when the "Award +
+     * Professional Qualification" toggle is ticked, appends Gallantry Awards,
+     * Professional Qualification and Corps (profile-style, same order as the
+     * "No Rank Name" composite). An "N/A" corps is skipped.
+     */
+    nameColumnValue(row: MemberAppointmentReportRow): string {
+        const r = row as any;
+        const blank = (s: string | null | undefined) => !s || s === '-' || s === '—';
+        const parts: string[] = [];
+        const name = this.codeValue(r.name, r.nameBN);
+        if (!blank(name)) parts.push(name);
+        if (this.selectedColumnKeys.includes(ReportBloodGroupComponent.NAME_EXTRAS_KEY)) {
+            const a = this.codeValue(r.awards, r.awardsBN);
+            if (!blank(a)) parts.push(a);
+            const p = this.codeValue(r.professionalQualification, r.professionalQualificationBN);
+            if (!blank(p)) parts.push(p);
+            let corps = this.codeValue(r.corps, r.corpsBN);
+            // Skip a "not applicable" corps (English "N/A" or Bangla "অপ্রযোজ্য").
+            const na = ['n/a', 'na', 'অপ্রযোজ্য'];
+            if (na.includes((corps ?? '').trim().toLowerCase())) corps = '';
+            if (!blank(corps)) parts.push(corps);
+        }
+        return parts.length ? parts.join(', ') : '-';
     }
 
     draggingColumnKey: string | null = null;
@@ -262,6 +334,28 @@ export class ReportBloodGroupComponent implements OnInit, OnChanges {
         return personnelMetaHelper(row as any, this.lang);
     }
 
+    /** "Call No Rank Name" composite — line 1: Prefix + Service No + Rank. */
+    callNoRankLine1(row: MemberAppointmentReportRow): string {
+        const r = row as any;
+        const prefix = this.codeValue(r.prefix, r.prefixBN);
+        const svcId = r.serviceId != null && r.serviceId !== '' ? this.displayNum(r.serviceId) : '';
+        const rank = this.codeValue(r.rank, r.rankBN);
+        return [prefix, svcId, rank].filter((s) => s && s !== '-' && s !== '—').join(' ');
+    }
+
+    /** Line 2: Name, Awards, Professional Qualification, Corps (profile style). */
+    callNoRankLine2(row: MemberAppointmentReportRow): string {
+        const r = row as any;
+        const name = this.codeValue(r.name, r.nameBN);
+        const awards = this.codeValue(r.awards, r.awardsBN);
+        const prof = this.codeValue(r.professionalQualification, r.professionalQualificationBN);
+        let corps = this.codeValue(r.corps, r.corpsBN);
+        // Skip a "not applicable" corps (English "N/A" or Bangla "অপ্রযোজ্য").
+        const na = ['n/a', 'na', 'অপ্রযোজ্য'];
+        if (na.includes((corps ?? '').trim().toLowerCase())) corps = '';
+        return [name, awards, prof, corps].filter((s) => s && s !== '-' && s !== '—').join(', ');
+    }
+
     get criteriaItems(): { label: string; value: string }[] {
         const L = this.L[this.lang];
         const items: { label: string; value: string }[] = [];
@@ -281,7 +375,10 @@ export class ReportBloodGroupComponent implements OnInit, OnChanges {
         multi(this.selectedRankIds, this.rankOptions, L['report.search.rank']);
         multi(this.selectedCorpsIds, this.corpsOptions, L['report.table.corps'] ?? 'Corps');
         multi(this.selectedTradeIds, this.tradeOptions, L['report.search.trade']);
-        multi(this.selectedRabUnitIds, this.rabUnitOptions, this.lang === 'bn' ? 'র‍্যাব ইউনিট' : 'RAB Unit');
+        if (this.selectedOrgNodeIds.length > 0) {
+            const names = this.orgNodesLabel(this.lang === 'bn');
+            if (names) items.push({ label: this.lang === 'bn' ? 'র‍্যাব ইউনিট' : 'RAB Unit', value: names });
+        }
         if (this.postingStatus && this.postingStatus !== 'All') {
             const sLabel = this.lang === 'bn' ? this.statusLabelBn : this.statusLabel;
             if (sLabel) items.push({ label: L['report.search.rabMemberStatus'], value: sLabel });
@@ -379,7 +476,10 @@ export class ReportBloodGroupComponent implements OnInit, OnChanges {
         multi(this.selectedRankIds, this.rankOptions, L['report.search.rank']);
         multi(this.selectedCorpsIds, this.corpsOptions, L['report.table.corps'] ?? 'Corps');
         multi(this.selectedTradeIds, this.tradeOptions, L['report.search.trade']);
-        multi(this.selectedRabUnitIds, this.rabUnitOptions, this.lang === 'bn' ? 'র‍্যাব ইউনিট' : 'RAB Unit');
+        if (this.selectedOrgNodeIds.length > 0) {
+            const names = this.orgNodesLabel(this.lang === 'bn');
+            if (names) lines.push(`${this.lang === 'bn' ? 'র‍্যাব ইউনিট' : 'RAB Unit'}: ${names}`);
+        }
         return lines;
     }
 
@@ -492,7 +592,10 @@ export class ReportBloodGroupComponent implements OnInit, OnChanges {
                     width: { size: critCellPct, type: WidthType.PERCENTAGE },
                     children: it ? [
                         new Paragraph({ spacing: { after: 40 }, children: [new TextRun({ text: wsafe(it.label), font: sans, size: S.critLabel, ...bnRunExtras(S.critLabel), bold: true, color: C.labelGray, characterSpacing: isBn ? 0 : 32, allCaps: !isBn })] }),
-                        new Paragraph({ children: [new TextRun({ text: wsafe(it.value), font: serif, size: S.critValue, ...bnRunExtras(S.critValue), bold: true, color: C.black })] }),
+                        // One paragraph per line — multi-line values (RAB Unit
+                        // org paths) keep their line breaks in Word.
+                        ...wsafe(it.value).split('\n').map((line) =>
+                            new Paragraph({ children: [new TextRun({ text: line, font: serif, size: S.critValue, ...bnRunExtras(S.critValue), bold: true, color: C.black })] })),
                     ] : [new Paragraph({ children: [new TextRun({ text: ' ', font: sans, size: S.critValue, ...bnRunExtras(S.critValue) })] })],
                 }));
             }
@@ -538,6 +641,15 @@ export class ReportBloodGroupComponent implements OnInit, OnChanges {
                         }
                         return new TableCell({ ...cellOpts, children });
                     }
+                    case 'CallNoRankName': {
+                        const l1 = this.callNoRankLine1(row);
+                        const l2 = this.callNoRankLine2(row);
+                        const children: Paragraph[] = [new Paragraph({ spacing: { after: l2 ? 40 : 0 }, children: [run(l1, { sz: S.name, bold: true })] })];
+                        if (l2) children.push(new Paragraph({ children: [run(l2, { sz: S.name, bold: true })] }));
+                        return new TableCell({ ...cellOpts, children });
+                    }
+                    case 'Name':
+                        return new TableCell({ ...cellOpts, children: [new Paragraph({ children: [run(this.nameColumnValue(row), { sz: S.name, bold: true })] })] });
                     case 'RabId':
                         return new TableCell({ ...cellOpts, children: [new Paragraph({ children: [run((row as any).rabid ? this.displayNum((row as any).rabid) : '—', { fontKey: mono, chSp: isBn ? 0 : 4 })] })] });
                     case 'JoiningDate':
@@ -610,7 +722,9 @@ export class ReportBloodGroupComponent implements OnInit, OnChanges {
 
         aoa.push([`${this.rabCriteriaTitle}  ·  ${this.rabTotalText}  ·  ${this.rabGeneratedLabel}: ${this.rabFormattedDate}`, ...pad(totalCols - 1)]);
         for (const it of this.criteriaItems) {
-            aoa.push([`${it.label}: ${it.value}`, ...pad(totalCols - 1)]);
+            // Flatten any multi-line value (RAB Unit org paths) onto one cell.
+            const value = it.value.replace(/\n/g, '; ');
+            aoa.push([`${it.label}: ${value}`, ...pad(totalCols - 1)]);
         }
         aoa.push(pad(totalCols));
 
@@ -625,6 +739,12 @@ export class ReportBloodGroupComponent implements OnInit, OnChanges {
                         const meta = this.personnelMeta(row);
                         return meta ? `${name}\n${meta}` : name;
                     }
+                    case 'CallNoRankName': {
+                        const l1 = this.callNoRankLine1(row);
+                        const l2 = this.callNoRankLine2(row);
+                        return l1 && l2 ? `${l1}\n${l2}` : l1 || l2;
+                    }
+                    case 'Name':                  return this.nameColumnValue(row);
                     case 'RabId':                 return (row as any).rabid ? this.displayNum((row as any).rabid) : '';
                     case 'JoiningDate':           return this.formatDate(row.joiningDate);
                     case 'Remarks':               return row.rmks || '';
@@ -700,6 +820,10 @@ export class ReportBloodGroupComponent implements OnInit, OnChanges {
                     const metaHtml = meta ? `<div class="personnel-meta">${esc(meta)}</div>` : '';
                     return `<td class="td-personnel"><div class="personnel-name">${esc(codeValue(row.name, row.nameBN))}</div>${metaHtml}</td>`;
                 }
+                case 'CallNoRankName':
+                    return `<td class="td-personnel"><div class="personnel-name">${esc(this.callNoRankLine1(row))}</div><div class="personnel-name">${esc(this.callNoRankLine2(row))}</div></td>`;
+                case 'Name':
+                    return `<td class="td-personnel"><div class="personnel-name">${esc(this.nameColumnValue(row))}</div></td>`;
                 case 'RabId':
                     return `<td class="td-date">${esc((row as any).rabid ? this.displayNum((row as any).rabid) : '—')}</td>`;
                 case 'JoiningDate':
@@ -722,7 +846,7 @@ export class ReportBloodGroupComponent implements OnInit, OnChanges {
                 .map(item => `
                 <div class="cell">
                     <div class="cell-label">${esc(item.label)}</div>
-                    <div class="cell-value">${esc(item.value)}</div>
+                    <div class="cell-value">${esc(item.value).replace(/\n/g, '<br>')}</div>
                 </div>`)
                 .join('')}</div>`
             : '';
@@ -807,13 +931,13 @@ export class ReportBloodGroupComponent implements OnInit, OnChanges {
     table { width: 100%; border-collapse: collapse; table-layout: auto; font-family: ${sans}; font-size: 8pt; }
     thead { display: table-header-group; }
     thead th { background: #0b0b0b; color: #d9c79a; font-family: ${mono}; font-size: 6.5pt; font-weight: 600; letter-spacing: 0.15em; text-transform: uppercase; padding: 1.8mm 2mm; text-align: left; vertical-align: middle; white-space: nowrap; border: 1px solid rgba(11,11,11,0.05); ${isBn ? 'letter-spacing:0.04em;font-family:' + sans + ';' : ''} }
-    tbody td { padding: 2mm 2mm; font-size: 8pt; color: #0b0b0b; border: 1px solid rgba(11,11,11,0.05); vertical-align: top; background: #fff; word-break: break-word; overflow-wrap: anywhere; }
+    tbody td { padding: 2mm 2mm; font-size: 8pt; color: #0b0b0b; border: 1px solid rgba(11,11,11,0.05); vertical-align: top; background: #fff; word-break: keep-all; overflow-wrap: normal; }
     tbody tr:nth-child(even) td { background: #fafaf6; }
     tbody tr { page-break-inside: avoid; }
     .td-ser { white-space: nowrap; }
     .ser { font-family: ${mono}; font-size: 9pt; font-weight: 600; color: #6b6b6b; letter-spacing: 0.04em; white-space: nowrap; }
     .td-personnel { min-width: 56mm; }
-    .personnel-name { font-family: ${sans}; font-weight: 600; font-size: 10pt; color: #0b0b0b; line-height: 1.2; }
+    .personnel-name { font-family: ${sans}; font-weight: 600; font-size: 9.5pt; color: #0b0b0b; line-height: 1.2; }
     .personnel-meta { margin-top: 0.7mm; font-family: ${mono}; font-size: 7pt; letter-spacing: 0.08em; text-transform: uppercase; color: #6b6b6b; ${isBn ? 'letter-spacing:0;text-transform:none;font-family:' + sans + ';' : ''} }
     .td-date { font-family: ${mono}; letter-spacing: 0.02em; white-space: nowrap; }
 </style>
@@ -849,7 +973,7 @@ export class ReportBloodGroupComponent implements OnInit, OnChanges {
 
         this.loadOrgOptions();
         this.loadMemberTypeOptions();
-        this.loadRabUnitOptions();
+        this.loadOrgNodeLabels();
         this.load();
     }
 
@@ -865,16 +989,69 @@ export class ReportBloodGroupComponent implements OnInit, OnChanges {
         });
     }
 
-    loadRabUnitOptions(): void {
-        this.commonCodeService.getAllActiveCommonCodesType('RabUnit').subscribe({
-            next: (codes) =>
-                (this.rabUnitOptions = (codes || []).map((c) => ({
-                    label: c.codeValueEN || String(c.codeId),
-                    labelBn: c.codeValueBN || c.codeValueEN || String(c.codeId),
-                    value: c.codeId,
-                }))),
-            error: () => (this.rabUnitOptions = []),
+    private static readonly ORG_CODE_TYPES = ['RabUnit', 'RabWing', 'RabBranch', 'RabSubBranch', 'RabSection', 'RabSubSection'];
+
+    /** Build the id → label map for every org node, so the criteria strip can
+     *  resolve the selected node ids to names. */
+    loadOrgNodeLabels(): void {
+        forkJoin(
+            ReportBloodGroupComponent.ORG_CODE_TYPES.map((t) => this.commonCodeService.getAllActiveCommonCodesType(t))
+        ).subscribe({
+            next: (buckets) => {
+                this.orgNodeLabels.clear();
+                for (const codes of buckets) {
+                    for (const c of codes || []) {
+                        this.orgNodeLabels.set(c.codeId, {
+                            en: c.codeValueEN || String(c.codeId),
+                            bn: c.codeValueBN || c.codeValueEN || String(c.codeId),
+                            parentId: c.parentCodeId ?? null,
+                        });
+                    }
+                }
+            },
+            error: () => this.orgNodeLabels.clear(),
         });
+    }
+
+    /** Root→node label chain for one org node, e.g. ["RAB 1","Wing 1","Sub Branch 1"]. */
+    private orgNodePathParts(id: number, bn: boolean): string[] {
+        const parts: string[] = [];
+        const guard = new Set<number>();   // cycle guard
+        let cur: number | null = id;
+        while (cur != null && !guard.has(cur)) {
+            guard.add(cur);
+            const n = this.orgNodeLabels.get(cur);
+            if (!n) break;
+            parts.unshift(bn ? n.bn : n.en);
+            cur = n.parentId;
+        }
+        return parts;
+    }
+
+    /**
+     * Selected org nodes for the criteria strip — grouped by their root unit so
+     * the unit name isn't repeated. One line per unit; the nodes picked under it
+     * are listed comma-separated (each keeping its sub-path below the unit). A
+     * unit picked on its own renders as just the unit name.
+     *   RAB-1: BN HQ, HQ Coy, CPC-1
+     *   RAB HQ: DG Office › Addl DG (Ops) Office, R & D Cell › R & D Crime Sub-Br
+     *   RAB-2
+     */
+    private orgNodesLabel(bn: boolean): string {
+        const groups: { root: string; subs: string[] }[] = [];
+        const byRoot = new Map<string, { root: string; subs: string[] }>();
+        for (const id of this.selectedOrgNodeIds) {
+            const parts = this.orgNodePathParts(id, bn);
+            if (parts.length === 0) continue;
+            const root = parts[0];
+            let g = byRoot.get(root);
+            if (!g) { g = { root, subs: [] }; byRoot.set(root, g); groups.push(g); }
+            const sub = parts.slice(1).join(' › ');
+            if (sub) g.subs.push(sub);
+        }
+        return groups
+            .map((g) => (g.subs.length ? `${g.root}: ${g.subs.join(', ')}` : g.root))
+            .join('\n');
     }
 
     ngOnChanges(changes: SimpleChanges): void {
@@ -899,7 +1076,7 @@ export class ReportBloodGroupComponent implements OnInit, OnChanges {
         if (this.selectedCorpsIds.length > 0) c++;
         if (this.selectedTradeIds.length > 0) c++;
         if (this.selectedMemberTypeIds.length > 0) c++;
-        if (this.selectedRabUnitIds.length > 0) c++;
+        if (this.selectedOrgNodeIds.length > 0) c++;
         return c;
     }
 
@@ -920,7 +1097,7 @@ export class ReportBloodGroupComponent implements OnInit, OnChanges {
         this.selectedCorpsIds = [];
         this.selectedTradeIds = [];
         this.selectedMemberTypeIds = [];
-        this.selectedRabUnitIds = [];
+        this.selectedOrgNodeIds = [];
         this.rankOptions = [];
         this.corpsOptions = [];
         this.tradeOptions = [];
@@ -1015,6 +1192,56 @@ export class ReportBloodGroupComponent implements OnInit, OnChanges {
 
     onFilterChange(): void {}
 
+    /**
+     * Translate the display column keys into backend field keys. Synthetic
+     * composites (name/nameExtras/callNoRankName) expand into the underlying
+     * registry fields so the server projects the data they render.
+     */
+    private backendColumnKeys(): string[] {
+        const out: string[] = [];
+        const seen = new Set<string>();
+        const push = (k: string) => {
+            if (!seen.has(k)) {
+                seen.add(k);
+                out.push(k);
+            }
+        };
+        for (const key of this.selectedColumnKeys) {
+            if (key === 'name') {
+                push('nameEnglish');
+                push('nameBangla');
+                continue;
+            }
+            if (key === 'nameExtras') {
+                // Fold-into-name toggle — project awards + professional
+                // qualification + corps so nameColumnValue can append them.
+                push('awards');
+                push('professionalQualification');
+                push('corps');
+                continue;
+            }
+            if (key === 'callNoRankName') {
+                // Composite cell — request every backend field it renders.
+                push('prefix');
+                push('serviceId');
+                push('armyRank');
+                push('nameEnglish');
+                push('nameBangla');
+                push('awards');
+                push('professionalQualification');
+                push('corps');
+                continue;
+            }
+            if (key === 'serviceId') {
+                push('serviceId');
+                push('prefix');
+                continue;
+            }
+            push(key);
+        }
+        return out;
+    }
+
     onPage(event: { first?: number; rows?: number }): void {
         this.first = event.first ?? 0;
         this.rows = event.rows ?? this.rows;
@@ -1044,11 +1271,11 @@ export class ReportBloodGroupComponent implements OnInit, OnChanges {
             criteria.push({ fieldKey: 'corps', idValues: this.selectedCorpsIds });
         if (this.selectedTradeIds.length > 0)
             criteria.push({ fieldKey: 'trade', idValues: this.selectedTradeIds });
-        if (this.selectedRabUnitIds.length > 0)
-            criteria.push({ fieldKey: 'rabUnit', idValues: this.selectedRabUnitIds });
+        if (this.selectedOrgNodeIds.length > 0)
+            criteria.push({ fieldKey: 'rabOrgNode', idValues: this.selectedOrgNodeIds });
 
         this.reportService.runDynamicEmployeeBaseReport({
-            columns: this.selectedColumnKeys,
+            columns: this.backendColumnKeys(),
             criteria,
             postingStatusFilter: this.postingStatus || null,
             pagination: { page_no, row_per_page: this.rows },

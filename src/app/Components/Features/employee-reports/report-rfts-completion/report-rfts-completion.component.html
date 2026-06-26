@@ -65,6 +65,17 @@
                         optionLabel="label" optionValue="value" display="chip" placeholder="Select" styleClass="w-full"
                         [filter]="true" appendTo="body"></p-multiSelect>
                 </div>
+                <!-- Multi-select RAB org-tree filter: check any nodes at any
+                     level (Battalion / Wing / Branch / Sub-Branch / Section /
+                     Sub-Section). Picking an ancestor covers its descendants. -->
+                <div class="report-filter-field">
+                    <label>RAB Unit</label>
+                    <app-org-tree-multi-select
+                        [(ngModel)]="selectedOrgNodeIds"
+                        placeholder="Select units, wings, branches…"
+                    >
+                    </app-org-tree-multi-select>
+                </div>
             </div>
 
             @if (searched) {
@@ -191,6 +202,12 @@
                         @for (col of visibleColumns; track col.key) {
                             @switch (col.hint) {
                                 @case ('Serial') { <td class="rab-td-ser"><span class="rab-ser">{{ paddedSer(first + i + 1) }}</span></td> }
+                                @case ('CallNoRankName') {
+                                    <td class="rab-td-personnel">
+                                        <div class="rab-personnel-name">{{ callNoRankLine1(row) }}</div>
+                                        @if (callNoRankLine2(row); as l2) { @if (l2) { <div class="rab-personnel-name">{{ l2 }}</div> } }
+                                    </td>
+                                }
                                 @case ('Date') { <td class="rab-td-date">{{ cellValue(row, col.key) }}</td> }
                                 @default { <td [class]="'rab-td-' + col.key">{{ cellValue(row, col.key) }}</td> }
                             }

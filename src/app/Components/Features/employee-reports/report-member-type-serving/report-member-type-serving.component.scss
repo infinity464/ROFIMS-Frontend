@@ -378,6 +378,9 @@
     font-weight: 700;
     line-height: 1.25;
     word-break: break-word;
+    // Multi-line criteria values (the RAB Unit org-path list — one node group
+    // per line) keep their line breaks.
+    white-space: pre-line;
 }
 
 .rab-criteria-stamp-only .rab-criteria-strip {

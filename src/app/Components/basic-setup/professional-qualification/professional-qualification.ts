@@ -187,12 +187,7 @@ export class ProfessionalQualification {
     }
 
     submit(data: any) {
-        const orgId = this.commonForm.get('orgId')?.value;
         const status = this.commonForm.get('status')?.value;
-        if (orgId == null || orgId === '') {
-            this.messageService.add({ severity: 'warn', summary: 'Validation', detail: 'Please select Mother Organization' });
-            return;
-        }
         if (status == null) {
             this.messageService.add({ severity: 'warn', summary: 'Validation', detail: 'Please select Status' });
             return;
@@ -214,7 +209,7 @@ export class ProfessionalQualification {
 
     private createQualification(currentUser: string, currentDateTime: string) {
         this.isSubmitting = true;
-        const createPayload = { ...this.commonForm.value, createdBy: currentUser, createdDate: currentDateTime, lastUpdatedBy: currentUser, lastupdate: currentDateTime };
+        const createPayload = { ...this.commonForm.value, orgId: this.commonForm.get('orgId')?.value ?? 0, createdBy: currentUser, createdDate: currentDateTime, lastUpdatedBy: currentUser, lastupdate: currentDateTime };
         this.masterBasicSetupService.create(createPayload).subscribe({
             next: () => {
                 this.resetForm();
@@ -232,7 +227,7 @@ export class ProfessionalQualification {
 
     private updateQualification(currentUser: string, currentDateTime: string) {
         this.isSubmitting = true;
-        const updatePayload = { ...this.commonForm.value, codeId: this.editingId, lastUpdatedBy: currentUser, lastupdate: currentDateTime, createdDate: currentDateTime, createdBy: currentUser };
+        const updatePayload = { ...this.commonForm.value, orgId: this.commonForm.get('orgId')?.value ?? 0, codeId: this.editingId, lastUpdatedBy: currentUser, lastupdate: currentDateTime, createdDate: currentDateTime, createdBy: currentUser };
         this.masterBasicSetupService.update(updatePayload).subscribe({
             next: () => {
                 this.resetForm();

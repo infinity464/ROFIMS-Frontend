@@ -85,7 +85,7 @@
                                 >
                                 </p-select>
                             </div>
-                            <button
+                            <!-- <button
                                 type="button"
                                 pButton
                                 icon="pi pi-plus"
@@ -95,7 +95,7 @@
                                 tooltipPosition="top"
                                 (click)="openAddLastUnitDialog()"
                                 [disabled]="!postingForm.get('motherOrganization')?.value || isViewMode"
-                            ></button>
+                            ></button> -->
                         </div>
                         @if (isFieldInvalid('lastMotherUnit')) {
                         <small class="form-error">{{ getErrorMessage('lastMotherUnit') }}</small>
