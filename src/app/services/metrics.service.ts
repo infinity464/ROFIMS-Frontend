@@ -23,9 +23,32 @@ export class MetricsService {
     private apiUrl = environment.apis.core.replace(/\/api\/?$/, '');
     private metricsApi = `${environment.apis.core}/Metrics`;
 
+    // Ref-count of active consumers (e.g. the system-monitoring page). The hub/poll
+    // is only alive while something is actually watching, so we don't hold an always-on
+    // SignalR socket + 5s poll for the whole session — which also kept the backend's
+    // metrics broadcaster (and its per-tick system sampling) running 24/7.
+    private refCount = 0;
+    // Set while we intentionally tear down, so the hub's onclose handler does not
+    // immediately spin the polling fallback back up.
+    private stopping = false;
+
     constructor(private http: HttpClient) {
         this.initializeHubConnection();
-        this.startConnection();
+    }
+
+    /** Call from a consuming component's ngOnInit. Opens the connection on first acquire. */
+    acquire(): void {
+        if (this.refCount++ === 0) {
+            this.startConnection();
+        }
+    }
+
+    /** Call from a consuming component's ngOnDestroy. Tears down on last release. */
+    release(): void {
+        if (--this.refCount <= 0) {
+            this.refCount = 0;
+            this.disconnect();
+        }
     }
 
     private initializeHubConnection(): void {
@@ -49,12 +72,15 @@ export class MetricsService {
 
         this.hubConnection.onclose(() => {
             this.connectionStateSubject.next('Disconnected');
-            this.startPollingFallback();
+            if (!this.stopping) {
+                this.startPollingFallback();
+            }
         });
     }
 
     private startConnection(): void {
         if (!this.hubConnection) return;
+        this.stopping = false;
 
         this.hubConnection
             .start()
@@ -91,9 +117,11 @@ export class MetricsService {
     }
 
     disconnect(): void {
+        this.stopping = true;
         this.stopPolling();
-        if (this.hubConnection && this.hubConnection.state === HubConnectionState.Connected) {
+        if (this.hubConnection && this.hubConnection.state !== HubConnectionState.Disconnected) {
             this.hubConnection.stop();
         }
+        this.connectionStateSubject.next('Disconnected');
     }
 }

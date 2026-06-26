@@ -54,6 +54,9 @@ export class SystemMonitoringComponent implements OnInit, OnDestroy {
 
         this.buildChartOptions();
 
+        // Open the metrics hub/poll only while this page is mounted.
+        this.metricsService.acquire();
+
         this.metricsSub = this.metricsService.metrics$.subscribe((m) => {
             if (!m) return;
             this.metrics = m;
@@ -68,6 +71,8 @@ export class SystemMonitoringComponent implements OnInit, OnDestroy {
     ngOnDestroy(): void {
         this.metricsSub?.unsubscribe();
         this.connectionSub?.unsubscribe();
+        // Release the hub/poll; tears down on last consumer.
+        this.metricsService.release();
     }
 
     getGaugeColor(value: number, threshold: ThresholdConfig): string {
