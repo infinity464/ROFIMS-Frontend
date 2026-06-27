@@ -165,6 +165,19 @@
                 <p-editor [(ngModel)]="bodyText" [style]="{ height: '200px' }"></p-editor>
             </div>
 
+            <!-- Closing Note (becomes paragraph 2 of the letter) -->
+            <div class="field mb-4">
+                <label class="font-semibold block mb-2 text-700">Closing Note</label>
+                <textarea
+                    pTextarea
+                    [(ngModel)]="remarks"
+                    rows="2"
+                    class="w-full"
+                    placeholder="Enter closing note..."
+                    [autoResize]="true"
+                ></textarea>
+            </div>
+
             <!-- Onulipi -->
             <div class="field mb-4 p-4 surface-50 border-round">
                 <div class="flex align-items-center gap-2 mb-3">

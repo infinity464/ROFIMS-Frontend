@@ -224,6 +224,7 @@ export interface ExBdLeaveNoteSheetBodyData {
     rabid: string | null;
     serviceId: string | null;
     prefixEN: string | null;
+    prefixBN: string | null;
     placementEN: string | null;
     placementBN: string | null;
     visitTypeNameEN: string | null;

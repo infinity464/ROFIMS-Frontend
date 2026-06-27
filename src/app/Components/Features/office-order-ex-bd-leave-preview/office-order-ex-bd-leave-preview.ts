@@ -560,14 +560,16 @@ export class OfficeOrderExBdLeavePreviewComponent implements OnInit {
                     children.push(new Paragraph({ children: runs, alignment: AlignmentType.JUSTIFIED, spacing: { after: 60 } }));
                 });
             }
-            const approvalText = this.isBangla ? 'সদয় অনুমোদনের জন্য উপস্থাপন করা হলো।' : 'Presented for kind approval.';
-            children.push(new Paragraph({
-                children: [
-                    new TextRun({ text: `${this.serial(2)}\t`, font, size: contentSize, bold: true }),
-                    new TextRun({ text: approvalText, font, size: contentSize })
-                ],
-                alignment: AlignmentType.JUSTIFIED, spacing: { after: 60 }
-            }));
+            const remarksText = (this.order.remarks || '').trim();
+            if (remarksText) {
+                children.push(new Paragraph({
+                    children: [
+                        new TextRun({ text: `${this.serial(2)}\t`, font, size: contentSize, bold: true }),
+                        new TextRun({ text: remarksText, font, size: contentSize })
+                    ],
+                    alignment: AlignmentType.JUSTIFIED, spacing: { after: 60 }
+                }));
+            }
         }
 
         const sigIndent = 8500;
@@ -701,6 +703,12 @@ html, body { margin: 0; padding: 0; background: transparent; }
     line-height: 1.7;
     color: #000;
 }
+
+/* The body's first paragraph must sit inline with its serial number. The matching
+   rule is :host-scoped and does not apply in this standalone HTML, so restate it. */
+.oo-doc-rich-content p { margin: 4px 0; text-align: justify; }
+.oo-doc-rich-content--inline { display: inline; }
+.oo-doc-rich-content--inline p:first-child { display: inline; }
 </style>
 </head>
 <body>

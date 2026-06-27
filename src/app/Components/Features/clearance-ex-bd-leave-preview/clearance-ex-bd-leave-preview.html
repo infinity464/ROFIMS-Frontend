@@ -176,12 +176,12 @@
                     </div>
                 </div>
 
-                <!-- ═══ Body (exactly what is stored in DB) ═══ -->
+                <!-- ═══ Body (paragraph 1 stored, paragraph 2 = Remarks) ═══ -->
                 <div class="oo-doc-body" *ngIf="order.body">
                     <span class="oo-body-serial">1.</span><span class="oo-doc-rich-content oo-doc-rich-content--inline" [innerHTML]="getBodySafe()"></span>
                 </div>
-                <div class="oo-doc-body" *ngIf="order.body">
-                    <span class="oo-body-serial">2.</span>Forward for your kind information and further necessary action please.
+                <div class="oo-doc-body" *ngIf="order.remarks">
+                    <span class="oo-body-serial">2.</span>{{ order.remarks }}
                 </div>
 
                 <!-- ═══ Information (Copy Distribution) ═══ -->
