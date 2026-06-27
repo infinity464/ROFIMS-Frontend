@@ -86,7 +86,7 @@ export class ClearanceExBdLeavePreviewComponent implements OnInit {
         return this.onulipiEntries.filter((_, i) => this.onulipiChecked[i] !== false);
     }
 
-    selectedPageSize: 'a4' | 'letter' = 'a4';
+    selectedPageSize: 'a4' | 'legal' = 'a4';
 
     exportingPdf = false;
     printingPreview = false;
@@ -279,7 +279,7 @@ export class ClearanceExBdLeavePreviewComponent implements OnInit {
     }
 
     private calcColumnWidthsDxa(columns: any[], rows: Record<string, string>[]): number[] {
-        const pageWidth = this.selectedPageSize === 'letter' ? 12240 : 11906;
+        const pageWidth = this.selectedPageSize === 'legal' ? 12240 : 11906;
         const totalWidth = pageWidth - 720 - 720;
         const slHeader = 'SL';
         const slMaxLen = Math.max(slHeader.length, String(rows.length).length);
@@ -358,8 +358,8 @@ export class ClearanceExBdLeavePreviewComponent implements OnInit {
         const titleSize = 18;
         const contentSize = 16;
         const children: (Paragraph | Table)[] = [];
-        const pageSize = this.selectedPageSize === 'letter'
-            ? { width: 12240, height: 15840 }
+        const pageSize = this.selectedPageSize === 'legal'
+            ? { width: 12240, height: 20160 }
             : { width: 11906, height: 16838 };
 
 
@@ -401,12 +401,14 @@ export class ClearanceExBdLeavePreviewComponent implements OnInit {
             children.push(new Paragraph({ children: [new TextRun({ text: 'SUBJ: ', font, size: contentSize, bold: true }), new TextRun({ text: this.order.subject.toUpperCase(), font, size: contentSize, bold: true, underline: {} })], spacing: { after: 100 } }));
         }
 
+        // Compact serial→text tab (0.3") so the gap after A./1./2. is small, matching the preview.
+        const serialTab = [{ type: TabStopType.LEFT, position: 432 }];
         if (this.referenceEntries.length > 0) {
             children.push(new Paragraph({ children: [new TextRun({ text: 'References:', font, size: contentSize, bold: true })], spacing: { before: 80, after: 0 } }));
             for (let i = 0; i < this.referenceEntries.length; i++) {
                 const ref = this.referenceEntries[i];
                 const letter = String.fromCharCode(65 + i);
-                children.push(new Paragraph({ children: [new TextRun({ text: `${letter}.\t${ref.text}`, font, size: contentSize })], spacing: { after: 20 } }));
+                children.push(new Paragraph({ children: [new TextRun({ text: `${letter}.\t${ref.text}`, font, size: contentSize })], tabStops: serialTab, spacing: { after: 20 } }));
             }
             children.push(new Paragraph({ text: '', spacing: { after: 60 } }));
         }
@@ -421,7 +423,7 @@ export class ClearanceExBdLeavePreviewComponent implements OnInit {
                         runs.push(new TextRun({ text: '1.\t', font, size: contentSize, bold: true }));
                     }
                     runs.push(new TextRun({ text: line.trim(), font, size: contentSize }));
-                    children.push(new Paragraph({ children: runs, alignment: AlignmentType.JUSTIFIED, spacing: { after: 60 } }));
+                    children.push(new Paragraph({ children: runs, tabStops: serialTab, alignment: AlignmentType.JUSTIFIED, spacing: { after: 60 } }));
                 });
             }
             const remarksText = (this.order.remarks || '').trim();
@@ -431,6 +433,7 @@ export class ClearanceExBdLeavePreviewComponent implements OnInit {
                         new TextRun({ text: '2.\t', font, size: contentSize, bold: true }),
                         new TextRun({ text: remarksText, font, size: contentSize })
                     ],
+                    tabStops: serialTab,
                     alignment: AlignmentType.JUSTIFIED, spacing: { after: 60 }
                 }));
             }
@@ -441,7 +444,13 @@ export class ClearanceExBdLeavePreviewComponent implements OnInit {
             children.push(new Paragraph({ children: [new TextRun({ text: 'Information:', font, size: contentSize, bold: true })], spacing: { before: 300 } }));
             exportOnulipi.forEach((entry, idx) => {
                 const ser = String(idx + 1);
-                children.push(new Paragraph({ children: [new TextRun({ text: `${ser}.\t${entry.text}`, font, size: contentSize })], spacing: { after: 20 } }));
+                // Serial at the left margin, text hangs at 0.3", wrapped lines align under the text.
+                children.push(new Paragraph({
+                    children: [new TextRun({ text: `${ser}.\t${entry.text}`, font, size: contentSize })],
+                    indent: { left: 432, hanging: 432 },
+                    tabStops: serialTab,
+                    spacing: { after: 20 }
+                }));
             });
         }
 
@@ -506,10 +515,10 @@ export class ClearanceExBdLeavePreviewComponent implements OnInit {
     private buildJsReportPdf(): { html: string; chrome: Record<string, unknown> } {
         const styles = this.collectDocumentStyles();
         const body = this.legalPaper.nativeElement.innerHTML;
-        const isLetter = this.selectedPageSize === 'letter';
-        const pageWidth = isLetter ? '215.9mm' : '210mm';
-        const pageHeight = isLetter ? '279.4mm' : '297mm';
-        const colWidth = isLetter ? '195.9mm' : '190mm';
+        const isLegal = this.selectedPageSize === 'legal';
+        const pageWidth = isLegal ? '215.9mm' : '210mm';
+        const pageHeight = isLegal ? '355.6mm' : '297mm';
+        const colWidth = isLegal ? '195.9mm' : '190mm';
         const padX = 10, padTop = 14, padBottom = 20;
 
         const html = `<!DOCTYPE html>

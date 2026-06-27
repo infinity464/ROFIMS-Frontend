@@ -8,7 +8,7 @@
             <p-button *ngIf="showEdit && canEdit && !editing" icon="pi pi-pencil" label="Edit" (onClick)="toggleEdit()" styleClass="p-button-outlined p-button-warning"></p-button>
             <p-button *ngIf="editing" icon="pi pi-times" label="Cancel" (onClick)="cancelEdit()" styleClass="p-button-outlined p-button-secondary"></p-button>
             <p-button *ngIf="editing" icon="pi pi-check" label="Save" (onClick)="saveChanges()" [loading]="saving" styleClass="p-button-success"></p-button>
-            <p-select *ngIf="!editing" [options]="pageSizeOptions" [(ngModel)]="selectedPageSize" optionLabel="label" optionValue="value"
+            <p-select *ngIf="!editing" [options]="pageSizeOptions" [(ngModel)]="selectedPageSize" (onChange)="onPageSizeChange()" optionLabel="label" optionValue="value"
                       [style]="{'width':'95px'}" pTooltip="Page size for PDF / Print Preview"></p-select>
             <p-button *ngIf="showWord && !editing" icon="pi pi-file-word" label="Word"  (onClick)="exportWord()" styleClass="p-button-outlined"></p-button>
             <p-button *ngIf="showPdf && !editing" icon="pi pi-file-pdf"  label="PDF"   (onClick)="exportPdf()" [loading]="exportingPdf" styleClass="p-button-outlined"></p-button>
@@ -66,13 +66,13 @@
     <ng-container *ngIf="noteSheet && !loading && !error && !editing">
 
         <!-- Hidden: measure full content height -->
-        <div class="page-measure" #contentMeasure>
+        <div class="page-measure" #contentMeasure [class.page-measure--legal]="selectedPageSize === 'Legal'">
             <ng-container *ngTemplateOutlet="viewContent"></ng-container>
         </div>
 
         <!-- Visible: paginated pages -->
         <div class="a4-paper-container" #pagesContainer>
-            <div *ngFor="let offset of pageOffsets; let i = index; trackBy: trackByIndex" class="a4-paper paginated">
+            <div *ngFor="let offset of pageOffsets; let i = index; trackBy: trackByIndex" class="a4-paper paginated" [class.a4-paper--legal]="selectedPageSize === 'Legal'">
                 <div class="page-viewport ns-general-page">
                     <div class="page-inner" [style.transform]="'translateY(-' + offset + 'px)'">
                         <ng-container *ngTemplateOutlet="viewContent"></ng-container>

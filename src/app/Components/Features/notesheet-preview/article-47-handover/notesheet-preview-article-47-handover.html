@@ -52,7 +52,7 @@
 
 @if (!loading && !error && movement) {
     <div class="a4-paper-container">
-        <div class="a4-paper" #paper>
+        <div class="a4-paper" #paper [class.a4-paper--legal]="selectedPageSize === 'Legal'">
 
             <!-- Org header — matches notesheet-preview/posting's .ns-org-header style. -->
             <div style="font-size:9pt; line-height:1.5; margin-bottom:8pt;">

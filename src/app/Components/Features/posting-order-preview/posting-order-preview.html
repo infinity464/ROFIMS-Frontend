@@ -486,7 +486,7 @@
     </div>
 
     <div class="legal-paper-container" *ngIf="!editing && !loading && !error && employees.length > 0">
-        <div class="legal-paper" #legalPaper>
+        <div class="legal-paper" [class.legal-paper--legal]="selectedPageSize === 'legal'" #legalPaper>
           <div class="po-doc-box">
 
             <!-- Government Header -->

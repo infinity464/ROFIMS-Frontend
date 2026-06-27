@@ -94,7 +94,7 @@ export class OfficeOrderExBdLeavePreviewComponent implements OnInit {
     }
 
     // Page size for export
-    selectedPageSize: 'a4' | 'letter' = 'a4';
+    selectedPageSize: 'a4' | 'legal' = 'a4';
 
     // Export states
     exportingPdf = false;
@@ -483,7 +483,7 @@ export class OfficeOrderExBdLeavePreviewComponent implements OnInit {
     }
 
     private calcColumnWidthsDxa(columns: any[], rows: Record<string, string>[]): number[] {
-        const pageWidth = this.selectedPageSize === 'letter' ? 12240 : 11906;
+        const pageWidth = this.selectedPageSize === 'legal' ? 12240 : 11906;
         const totalWidth = pageWidth - 720 - 720;
         const slHeader = this.isBangla ? 'ক্রমিক' : 'SL';
         const slMaxLen = Math.max(slHeader.length, String(rows.length).length);
@@ -563,8 +563,8 @@ export class OfficeOrderExBdLeavePreviewComponent implements OnInit {
         const titleSize = 18;
         const contentSize = 16;
         const children: (Paragraph | Table)[] = [];
-        const pageSize = this.selectedPageSize === 'letter'
-            ? { width: 12240, height: 15840 }
+        const pageSize = this.selectedPageSize === 'legal'
+            ? { width: 12240, height: 20160 }
             : { width: 11906, height: 16838 };
 
         // Government Header
@@ -699,7 +699,14 @@ export class OfficeOrderExBdLeavePreviewComponent implements OnInit {
             children.push(new Paragraph({ children: [new TextRun({ text: this.isBangla ? 'অনুলিপি (জ্যেষ্ঠতার ভিত্তিতে নহে):' : 'Copy (not in order of seniority):', font, size: contentSize, bold: true })], spacing: { before: this.order.noteSheetNo ? 80 : 300 } }));
             exportOnulipi.forEach((entry, idx) => {
                 const ser = this.isBangla ? this.toBanglaDigits(String(idx + 1)) : String(idx + 1);
-                children.push(new Paragraph({ children: [new TextRun({ text: `${ser}। ${entry.text}`, font, size: contentSize })], indent: { left: 360 }, spacing: { after: 20 } }));
+                // Serials sit at the left margin (aligned with the অনুলিপি heading / notesheet no),
+                // text hangs at 0.3" and wrapped lines align under the text — not under the serial.
+                children.push(new Paragraph({
+                    children: [new TextRun({ text: `${ser}।\t${entry.text}`, font, size: contentSize })],
+                    indent: { left: 432, hanging: 432 },
+                    tabStops: [{ type: TabStopType.LEFT, position: 432 }],
+                    spacing: { after: 20 }
+                }));
             });
 
             addSignatureBlock(false);
@@ -761,11 +768,11 @@ export class OfficeOrderExBdLeavePreviewComponent implements OnInit {
     private buildJsReportPdf(): { html: string; chrome: Record<string, unknown> } {
         const styles = this.collectDocumentStyles();
         const body = this.legalPaper.nativeElement.innerHTML;
-        const isLetter = this.selectedPageSize === 'letter';
-        // a4: 210×297mm (190mm column). letter: 215.9×279.4mm (195.9mm column).
-        const pageWidth = isLetter ? '215.9mm' : '210mm';
-        const pageHeight = isLetter ? '279.4mm' : '297mm';
-        const colWidth = isLetter ? '195.9mm' : '190mm';
+        const isLegal = this.selectedPageSize === 'legal';
+        // a4: 210×297mm (190mm column). legal: 215.9×355.6mm (195.9mm column).
+        const pageWidth = isLegal ? '215.9mm' : '210mm';
+        const pageHeight = isLegal ? '355.6mm' : '297mm';
+        const colWidth = isLegal ? '195.9mm' : '190mm';
         const padX = 10, padTop = 14, padBottom = 20; // mm — .legal-paper padding
 
         const html = `<!DOCTYPE html>

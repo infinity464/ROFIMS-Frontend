@@ -93,7 +93,7 @@
 }
 
 .legal-paper {
-    /* A4 portrait: 210mm x 297mm */
+    /* A4 portrait: 210mm x 297mm (default) */
     width: 210mm;
     min-height: 297mm;
     padding: 14mm 10mm 20mm;
@@ -108,6 +108,12 @@
     overflow-x: hidden;
     display: flex;
     flex-direction: column;
+}
+
+/* Legal portrait: 215.9mm x 355.6mm — applied when the page-size selector is "Legal". */
+.legal-paper.legal-paper--legal {
+    width: 215.9mm;
+    min-height: 355.6mm;
 }
 
 /* ── Document Box (no border — matches A4 export with no page border) ── */
@@ -385,9 +391,11 @@
     }
 }
 
-/* ── Print ────────────────────────────────────────── */
+/* ── Print (browser-native Ctrl+P fallback; the "Print Preview" button uses
+   JsReport which sets the page size dynamically). Defaults to A4 to match the
+   default page-size selection; Legal is overridden below. ── */
 @page {
-    size: 215.9mm 355.6mm;
+    size: 210mm 297mm;
     margin: 0;
 }
 
@@ -407,11 +415,15 @@
     }
 
     .legal-paper {
-        width: 215.9mm !important;
+        width: 210mm !important;
         box-shadow: none !important;
         margin: 0 !important;
         page-break-after: always;
         break-after: page;
+    }
+
+    .legal-paper.legal-paper--legal {
+        width: 215.9mm !important;
     }
 
     .legal-paper:last-child {

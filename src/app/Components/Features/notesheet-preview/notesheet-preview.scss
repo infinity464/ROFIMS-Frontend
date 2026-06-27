@@ -74,8 +74,8 @@
 }
 
 .a4-paper {
-    width: 215.9mm;
-    min-height: 355.6mm;
+    width: 210mm;
+    min-height: 297mm;
     padding: 14mm 6mm 20mm;
     background: #fff;
     box-shadow: 0 6px 24px rgba(0, 0, 0, 0.25);
@@ -90,6 +90,15 @@
     overflow-x: hidden;
     display: flex;
     flex-direction: column;
+}
+
+/* ── Legal page-size modifier ──────────────────────────
+   Default `.a4-paper` renders A4 (210mm × 297mm). When Legal is selected the
+   subclass binds `.a4-paper--legal`, switching to Legal (215.9mm × 355.6mm).
+   Pagination math (computePageContentHeightPx) branches on the same flag. */
+.a4-paper--legal {
+    width: 215.9mm;
+    min-height: 355.6mm;
 }
 
 /* Rich-text (Quill) content keeps the document's crisp Bangla-capable font.
@@ -121,13 +130,19 @@
 
 /* ── Pagination (posting notesheet) ──────────────── */
 .a4-paper.paginated {
-    height: 355.6mm;
-    min-height: 355.6mm;
+    height: 297mm;
+    min-height: 297mm;
     overflow: hidden;
 
     .ns-doc-box {
         border: none;
     }
+}
+
+/* Legal paginated page height (matches Legal paper) */
+.a4-paper.paginated.a4-paper--legal {
+    height: 355.6mm;
+    min-height: 355.6mm;
 }
 
 .page-viewport {
@@ -179,7 +194,7 @@
     position: absolute;
     left: -9999px;
     top: 0;
-    width: 215.9mm;
+    width: 210mm;
     padding: 0 6mm;
     box-sizing: border-box;
     font-family: 'Times New Roman', Times, serif;
@@ -187,6 +202,12 @@
     line-height: 1.7;
     visibility: hidden;
     pointer-events: none;
+}
+
+/* Legal measure width — must match the Legal paper so the unpaginated
+   measurement (used to compute page breaks) wraps text identically. */
+.page-measure--legal {
+    width: 215.9mm;
 }
 
 /* ── Document number – top right ─────────────────── */
@@ -878,8 +899,12 @@
 }
 
 /* ── Print ────────────────────────────────────────── */
+/* Default browser @page is A4 (matches the default on-screen paper). The
+   primary Print Preview path goes through JsReport (size-aware), so this
+   browser-print fallback only needs to track the default. A Legal override is
+   provided below via the .a4-paper--legal flag on the printed pages. */
 @page {
-    size: 215.9mm 355.6mm;
+    size: 210mm 297mm;
     margin: 0;
 }
 
@@ -901,17 +926,26 @@
 
     /* Each paginated page = one printed page (exact same as screen) */
     .a4-paper {
-        width: 215.9mm !important;
+        width: 210mm !important;
         box-shadow: none !important;
         margin: 0 !important;
         page-break-after: always;
         break-after: page;
     }
 
+    .a4-paper--legal {
+        width: 215.9mm !important;
+    }
+
     .a4-paper.paginated {
+        height: 297mm !important;
+        min-height: 297mm !important;
+        overflow: hidden !important;
+    }
+
+    .a4-paper.paginated.a4-paper--legal {
         height: 355.6mm !important;
         min-height: 355.6mm !important;
-        overflow: hidden !important;
     }
 
     .a4-paper:last-child {

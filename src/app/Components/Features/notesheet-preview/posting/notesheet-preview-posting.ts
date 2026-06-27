@@ -128,7 +128,7 @@ export class NotesheetPreviewPostingComponent extends NotesheetPreviewBase imple
         { label: 'A4', value: 'A4' },
         { label: 'Legal', value: 'Legal' }
     ];
-    selectedPageSize = 'Legal';
+    selectedPageSize = 'A4';
 
     // ── Export detail toggles ──────────────────────────────────
     showRankQualifications = true;
@@ -138,6 +138,9 @@ export class NotesheetPreviewPostingComponent extends NotesheetPreviewBase imple
     showPrevWorkplaceDetail = true;
     showRemarks = true;
     showSignatureImage = true;
+    showCorps = false;
+    showProfQualification = false;
+    showGallantryAwards = false;
 
     // ── Edit state ───────────────────────────────────────────
     editing = false;
@@ -767,6 +770,19 @@ export class NotesheetPreviewPostingComponent extends NotesheetPreviewBase imple
         return parts.filter(p => p).join('/ ') || '';
     }
 
+    /**
+     * Page-size dropdown changed (A4 ⇄ Legal). The paper height and `.page-measure`
+     * width both change, so pagination must recompute against the new geometry:
+     * reset the cached page height + last-measured height so ngAfterViewChecked
+     * re-measures the (now re-styled) content on the next cycle.
+     */
+    onPageSizeChange(): void {
+        this.pageContentHeightPx = 0;
+        this.lastMeasuredHeight = 0;
+        this.pageOffsets = [0];
+        this.cdr.detectChanges();
+    }
+
     // ── Pagination logic ──────────────────────────────────────
     ngAfterViewChecked(): void {
         if (this.editing || !this.contentMeasure?.nativeElement) return;
@@ -791,9 +807,12 @@ export class NotesheetPreviewPostingComponent extends NotesheetPreviewBase imple
     }
 
     private computePageContentHeightPx(): number {
-        // 321.6mm total content area - 4mm top inset - 4mm bottom inset = 313.6mm visible
+        // Visible content height inside the page viewport, per page size:
+        //   Legal: 355.6mm paper − 14mm top − 20mm bottom padding − 2×4mm insets = 313.6mm
+        //   A4:    297mm   paper − 14mm top − 20mm bottom padding − 2×4mm insets = 255mm
+        const visibleH = this.selectedPageSize === 'Legal' ? '313.6mm' : '255mm';
         const testDiv = document.createElement('div');
-        testDiv.style.cssText = 'position:absolute;left:-9999px;width:1mm;height:313.6mm;visibility:hidden';
+        testDiv.style.cssText = `position:absolute;left:-9999px;width:1mm;height:${visibleH};visibility:hidden`;
         document.body.appendChild(testDiv);
         const heightPx = testDiv.getBoundingClientRect().height;
         document.body.removeChild(testDiv);
@@ -1101,6 +1120,30 @@ export class NotesheetPreviewPostingComponent extends NotesheetPreviewBase imple
             ? (emp.specialQualifications || '')
             : (emp.specialQualificationsBN || emp.specialQualifications || '');
         return q.trim();
+    }
+
+    /** Treats "N/A" / "NA" / "অপ্রযোজ্য" (and empty) as nothing, so no detail line shows. */
+    private notApplicable(value: string): boolean {
+        const t = value.trim().toLowerCase();
+        return t === '' || t === 'n/a' || t === 'na' || t === 'অপ্রযোজ্য' || t === '(অপ্রযোজ্য)';
+    }
+
+    /** Corps name (BN/EN); '' when not applicable. */
+    getCorps(emp: DraftPostingEmployeeRow): string {
+        const v = (this.isEnglish() ? (emp.corpsName || '') : (emp.corpsNameBN || emp.corpsName || '')).trim();
+        return this.notApplicable(v) ? '' : v;
+    }
+
+    /** Professional Qualification — comma-joined names (BN/EN); '' when not applicable. */
+    getProfQualification(emp: DraftPostingEmployeeRow): string {
+        const v = (this.isEnglish() ? (emp.professionalQualification || '') : (emp.professionalQualificationBN || emp.professionalQualification || '')).trim();
+        return this.notApplicable(v) ? '' : v;
+    }
+
+    /** Gallantry Awards / Decoration — comma-joined names (BN/EN); '' when not applicable. */
+    getGallantryAwards(emp: DraftPostingEmployeeRow): string {
+        const v = (this.isEnglish() ? (emp.gallantryAwardsDecoration || '') : (emp.gallantryAwardsDecorationBN || emp.gallantryAwardsDecoration || '')).trim();
+        return this.notApplicable(v) ? '' : v;
     }
 
     /** Permanent (own) district display; drops the parenthetical detail when the toggle is off. */

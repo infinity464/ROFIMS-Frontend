@@ -677,10 +677,14 @@ export abstract class NotesheetPreviewBase implements OnInit {
         const win = window.open('', '_blank', 'width=950,height=700');
         if (!win) { window.print(); return; }
 
+        // Page size follows the selected option (subclasses declare selectedPageSize).
+        const isLegal = (this as any).selectedPageSize === 'Legal';
+        const pageSize = isLegal ? '215.9mm 355.6mm' : '210mm 297mm';
+
         win.document.write(
             `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Print</title>` +
             `<style>${chunks.join('\n')}\n` +
-            `@page { margin: 5mm 8mm; }\n` +
+            `@page { size: ${pageSize}; margin: 5mm 8mm; }\n` +
             `html, body { margin: 0; padding: 0; background: #fff; }\n` +
             `.print-page-frame { position: relative; }\n` +
             `.print-page-frame::before {\n` +
@@ -718,6 +722,14 @@ export abstract class NotesheetPreviewBase implements OnInit {
         if (!this.noteSheet) return;
         const bn = !this.isEnglish();
         const lang = bn ? 'bn-BD' : 'en-US';
+
+        // Page size follows the selected option (subclasses declare selectedPageSize;
+        // default A4 when absent). Margins below are 567 twips (10mm) each side, so the
+        // usable text column = pageWidth - 1134 (A4 ≈ 10772, Legal ≈ 11106 twips).
+        const isLegal = (this as any).selectedPageSize === 'Legal';
+        const pageWidth = isLegal ? 12240 : 11906;   // twips (Legal 8.5in vs A4)
+        const pageHeight = isLegal ? 20160 : 16838;   // twips (Legal 14in vs A4)
+        const usableWidth = pageWidth - 1134;          // minus 2×567 side margins
 
         // Shared run properties: font + language so Word uses correct word-breaking
         const runProps: IRunPropertiesOptions = {
@@ -774,7 +786,7 @@ export abstract class NotesheetPreviewBase implements OnInit {
                 const rows = Array.from(tbl.querySelectorAll('tr'));
                 if (!rows.length) continue;
                 const maxCols = Math.max(...rows.map(r => r.querySelectorAll('td,th').length), 1);
-                const cw = Math.floor(13000 / maxCols);
+                const cw = Math.floor(usableWidth / maxCols);
                 tables.push(new Table({
                     width: { size: 100, type: WidthType.PERCENTAGE },
                     rows: rows.map(row => new TableRow({
@@ -848,7 +860,7 @@ export abstract class NotesheetPreviewBase implements OnInit {
             const cols = bn
                 ? ['ক্রমিক','ব্যক্তিগত নম্বর','পদবি','ট্রেড','নাম','নিজ জেলা (দায়িত্বপূর্ণ এলাকা)','স্পাউস জেলা (দায়িত্বপূর্ণ এলাকা)','পূর্ববতী কর্মস্থল (দায়িত্বপূর্ণ এলাকা)','বদলি কর্মস্থল','মন্তব্য']
                 : ['Ser','Service ID','Rank','Trade','Name','Own District (Responsible Area)','Spouse District (Responsible Area)','Previous Workplace (Responsible Area)','Transfer Unit','Remarks'];
-            const cw = Math.floor(13000 / cols.length);
+            const cw = Math.floor(usableWidth / cols.length);
             const headerRow = new TableRow({ tableHeader: true, children: cols.map(c => new TableCell({
                 children: [new Paragraph({ children: [new TextRun({ text: c, ...runProps, size: 16, bold: true })], alignment: AlignmentType.CENTER })],
                 borders: cellBorders, width: { size: cw, type: WidthType.DXA },
@@ -899,12 +911,12 @@ export abstract class NotesheetPreviewBase implements OnInit {
             children.push(new Paragraph({ spacing: { before: 60 } }));
         }
 
-        // ── Create document: Legal paper (8.5″ × 14″) ───────────────
+        // ── Create document: page size follows selectedPageSize (A4 default / Legal) ──
         const doc = new Document({
             sections: [{
                 properties: {
                     page: {
-                        size: { width: 12240, height: 20160, orientation: PageOrientation.PORTRAIT }, // Legal in twips
+                        size: { width: pageWidth, height: pageHeight, orientation: PageOrientation.PORTRAIT },
                         margin: { top: 794, bottom: 1134, left: 567, right: 567 }, // ~14mm top, 20mm bottom, 10mm sides
                     },
                 },
@@ -920,6 +932,13 @@ export abstract class NotesheetPreviewBase implements OnInit {
         const bn = !this.isEnglish();
         const fontFamily = bn ? "'Noto Sans Bengali', sans-serif" : "'Times New Roman', serif";
         const title = bn ? 'মন্তব্যপত্র' : 'NOTE SHEET';
+
+        // Page size follows the selected option (subclasses override this method with a
+        // JsReport path, so this is only the base fallback). A4 default / Legal.
+        const pdfIsLegal = (this as any).selectedPageSize === 'Legal';
+        const pdfPageSize = pdfIsLegal ? '215.9mm 355.6mm' : 'A4 portrait';
+        const pdfPageWidth = pdfIsLegal ? '215.9mm' : '210mm';
+        const pdfPageHeight = pdfIsLegal ? '355.6mm' : '297mm';
 
         const metaParts: string[] = [];
         if (this.noteSheet.noteSheetNo)     metaParts.push(`<strong>${bn ? 'মন্তব্যপত্র নং:' : 'Note-Sheet No:'}</strong> ${this.escapeHtml(this.noteSheet.noteSheetNo)}`);
@@ -945,10 +964,10 @@ export abstract class NotesheetPreviewBase implements OnInit {
 
         const html = `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>${this.escapeHtml(title)}</title>
 <style>
-    @page { size: A4 portrait; margin: 15mm; }
+    @page { size: ${pdfPageSize}; margin: 15mm; }
     * { box-sizing: border-box; }
     body { font-family: ${fontFamily}; font-size: 8pt; margin: 0; padding: 0; color: #000; }
-    .a4-page { width: 210mm; min-height: 297mm; margin: 0 auto; padding: 20mm; border: 2px solid #000; background: #fff; }
+    .a4-page { width: ${pdfPageWidth}; min-height: ${pdfPageHeight}; margin: 0 auto; padding: 20mm; border: 2px solid #000; background: #fff; }
     .title { font-size: 9pt; text-align: center; font-weight: bold; text-decoration: underline; margin: 0 0 4px; }
     .title-bn { font-size: 9pt; text-align: center; text-decoration: underline; margin: 0 0 12px; }
     .doc-box { border: 1.5px solid #000; }

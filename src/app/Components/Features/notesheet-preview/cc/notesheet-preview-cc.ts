@@ -79,10 +79,9 @@ export class NotesheetPreviewCCComponent implements OnInit {
     printingPreview = false;
     pageSizeOptions = [
         { label: 'Legal',     value: 'Legal'     },
-        { label: 'A4',        value: 'A4'        },
-        { label: 'Letter',    value: 'Letter'    }
+        { label: 'A4',        value: 'A4'        }
     ];
-    selectedPageSize: 'Legal' | 'A4' | 'Letter' = 'Legal';
+    selectedPageSize: 'Legal' | 'A4' | 'Letter' = 'A4';
 
     /** Numbered Bangla list of employees rendered in column 2 (বাহিনীর পূর্ণ বিবরণ ও নাম). */
     employeeLines: EmployeeLine[] = [];

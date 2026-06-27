@@ -142,6 +142,11 @@
     display: flex;
     flex-direction: column;
 }
+/* Legal page size selected → render the on-screen paper as Legal (matches Word/PDF). */
+.legal-paper--legal {
+    width: 215.9mm;
+    min-height: 355.6mm;
+}
 
 /* ── Document Box ─────────────────────────────────── */
 .oo-doc-box {
@@ -166,6 +171,9 @@
 .oo-doc-section-label { font-weight: 700; margin-bottom: 4px; font-size: 10pt; }
 .oo-doc-list { padding-left: 0; line-height: 2; p { margin: 2px 0; } }
 .oo-ref-serial { display: inline-block; min-width: 2.5em; }
+/* Onulipi list: serial at the left, a tab-like gap before the text, wrapped lines hang under the text. */
+.oo-onulipi-item { padding-left: 2.5em; text-indent: -2.5em; }
+.oo-onulipi-serial { display: inline-block; min-width: 2.5em; text-indent: 0; }
 .oo-doc-subject { margin: 10px 0; font-size: 10pt; }
 .oo-doc-subject-label { font-weight: 700; }
 .oo-doc-subject-text { font-weight: 700; text-decoration: underline; }
@@ -293,6 +301,7 @@
     :host { background: #fff !important; min-height: auto !important; }
     .legal-paper-container { padding: 0 !important; min-height: auto !important; }
     .legal-paper { width: 210mm !important; box-shadow: none !important; margin: 0 !important; page-break-after: always; break-after: page; }
+    .legal-paper--legal { width: 215.9mm !important; }
     .legal-paper:last-child { page-break-after: auto; break-after: auto; }
 }
 
