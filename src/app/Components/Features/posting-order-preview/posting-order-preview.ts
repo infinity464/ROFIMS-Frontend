@@ -119,6 +119,10 @@ export class PostingOrderPreviewPageComponent implements OnInit {
     showOwnDistrict = true;
     showRemarks = true;
     showUpperSignature = true;
+    // Name-suffix toggles (off by default) — Gallantry / Professional Qual. / Corps
+    showGallantryAwards = false;
+    showProfQualification = false;
+    showCorps = false;
 
     private syncParagraphChecked(): void {
         const paras = this.filteredFooterParagraphs;
@@ -773,6 +777,23 @@ export class PostingOrderPreviewPageComponent implements OnInit {
 
     empName(emp: PostingOrderEmployeeRow): string {
         return (this.isBangla ? (emp.fullNameBN || emp.fullNameEN) : emp.fullNameEN) || '-';
+    }
+
+    /** ", decoration, professional qualification, corps" suffix appended after the name —
+     *  same sequence the member profile shows. "N/A"/"অপ্রযোজ্য"/empty values are skipped. */
+    empNameQuals(emp: PostingOrderEmployeeRow): string {
+        const bn = this.isBangla;
+        const pick = (en?: string | null, bnv?: string | null): string => (bn ? (bnv || en || '') : (en || '')).trim();
+        const na = (v: string): boolean => {
+            const t = v.trim().toLowerCase();
+            return t === '' || t === 'n/a' || t === 'na' || t === 'অপ্রযোজ্য' || t === '(অপ্রযোজ্য)';
+        };
+        const parts = [
+            this.showGallantryAwards ? pick(emp.gallantryAwardsDecoration, emp.gallantryAwardsDecorationBN) : '',
+            this.showProfQualification ? pick(emp.professionalQualification, emp.professionalQualificationBN) : '',
+            this.showCorps ? pick(emp.corpsName, emp.corpsNameBN) : '',
+        ].filter(v => !na(v));
+        return parts.length ? ', ' + parts.join(', ') : '';
     }
 
     empDistrict(emp: PostingOrderEmployeeRow): string {

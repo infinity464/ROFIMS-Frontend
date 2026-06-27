@@ -501,6 +501,10 @@ export interface PostingOrderEmployeeRow {
     tradeName: string | null;
     tradeNameBN: string | null;
     tradeRemarks: string | null;
+    professionalQualification: string | null;
+    professionalQualificationBN: string | null;
+    gallantryAwardsDecoration: string | null;
+    gallantryAwardsDecorationBN: string | null;
     motherUnitName: string | null;
     motherUnitNameBN: string | null;
     joiningDateInRAB: string | null;

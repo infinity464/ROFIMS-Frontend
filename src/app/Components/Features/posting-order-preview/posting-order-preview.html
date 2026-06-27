@@ -470,6 +470,18 @@
                 <label for="chkRemarks" style="cursor:pointer;">{{ isBangla ? 'মন্তব্য' : 'Remarks' }}</label>
             </span>
             <span style="display:inline-flex; align-items:center; gap:0.4rem;">
+                <p-checkbox [(ngModel)]="showGallantryAwards" [binary]="true" inputId="chkGallantry"></p-checkbox>
+                <label for="chkGallantry" style="cursor:pointer;">{{ isBangla ? 'খেতাব/পদক' : 'Gallantry Awards' }}</label>
+            </span>
+            <span style="display:inline-flex; align-items:center; gap:0.4rem;">
+                <p-checkbox [(ngModel)]="showProfQualification" [binary]="true" inputId="chkProfQ"></p-checkbox>
+                <label for="chkProfQ" style="cursor:pointer;">{{ isBangla ? 'পেশাগত যোগ্যতা' : 'Professional Qual.' }}</label>
+            </span>
+            <span style="display:inline-flex; align-items:center; gap:0.4rem;">
+                <p-checkbox [(ngModel)]="showCorps" [binary]="true" inputId="chkCorps"></p-checkbox>
+                <label for="chkCorps" style="cursor:pointer;">{{ isBangla ? 'কোর' : 'Corps' }}</label>
+            </span>
+            <span style="display:inline-flex; align-items:center; gap:0.4rem;">
                 <p-checkbox [(ngModel)]="showUpperSignature" [binary]="true" inputId="chkUpperSig"></p-checkbox>
                 <label for="chkUpperSig" style="cursor:pointer;">{{ isBangla ? 'স্বাক্ষর' : 'Signature' }}</label>
             </span>
@@ -575,7 +587,7 @@
                             <td class="text-center">{{ isBangla ? toBanglaDigits('' + (i + 1)) : (i + 1) }}</td>
                             <td class="font-semibold">{{ empServiceId(emp) }}</td>
                             <td>{{ empRank(emp) }}</td>
-                            <td class="po-doc-name-cell">{{ empName(emp) }}</td>
+                            <td class="po-doc-name-cell">{{ empName(emp) }}{{ empNameQuals(emp) }}</td>
                             <td *ngIf="showOwnDistrict" style="white-space: pre-line;">{{ empDistrict(emp) }}</td>
                             <td *ngIf="showPrevWorkplaceUnit" style="white-space: pre-line;">{{ empPrevWorkplace(emp) }}</td>
                             <td>{{ empTransferUnit(emp) }}</td>
@@ -588,7 +600,7 @@
                             <td class="font-semibold">{{ empServiceId(emp) }}</td>
                             <td>{{ empRank(emp) }}</td>
                             <td>{{ empTrade(emp) }}</td>
-                            <td class="po-doc-name-cell">{{ empName(emp) }}</td>
+                            <td class="po-doc-name-cell">{{ empName(emp) }}{{ empNameQuals(emp) }}</td>
                             <td *ngIf="showOwnDistrict" style="white-space: pre-line;">{{ empDistrict(emp) }}</td>
                             <td *ngIf="showPrevWorkplaceUnit" style="white-space: pre-line;">{{ empPrevWorkplace(emp) }}</td>
                             <td>{{ empTransferUnit(emp) }}</td>
