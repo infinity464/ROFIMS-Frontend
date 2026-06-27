@@ -110,6 +110,13 @@
             'Nirmala UI', 'Vrinda', 'Shonar Bangla', Times, serif !important;
         color: #000 !important;
     }
+
+    /* The blanket rule above also hits the download button's <i>, which needs the
+       primeicons font to render its glyph — restore the icon font and button colour. */
+    ::ng-deep .ns-ref-file-btn .pi {
+        font-family: 'primeicons' !important;
+        color: inherit !important;
+    }
 }
 
 /* ── Pagination (posting notesheet) ──────────────── */
@@ -420,22 +427,33 @@
     margin-right: 1em;
 }
 .ns-ref-file-btn {
-    background: none;
+    background: #eff6ff;
     border: 1px solid #3b82f6;
     color: #3b82f6;
-    font-size: 7pt;
-    padding: 1px 6px;
-    border-radius: 3px;
+    font-size: 11px;
+    line-height: 1;
+    padding: 4px 9px;
+    border-radius: 5px;
     cursor: pointer;
     display: inline-flex;
     align-items: center;
-    gap: 3px;
+    gap: 5px;
+    max-width: 220px;
     white-space: nowrap;
+    transition: background .15s ease, color .15s ease;
     &:hover {
-        background: #eff6ff;
+        background: #3b82f6;
+        color: #fff;
     }
     i {
-        font-size: 7pt;
+        font-size: 13px;
+        line-height: 1;
+        flex-shrink: 0;
+    }
+    .ns-ref-file-name {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
     }
 }
 

@@ -707,26 +707,39 @@ export class NotesheetExBdLeaveComponent implements OnInit {
         });
     }
 
-    /** Load Ex-BD Leave applications that don't have a notesheet yet */
+    /** Build the application display label (applicant, RAB id, purpose, countries, dates). */
+    private buildAppLabel(app: ExBdLeaveApplicationListViewModel): string {
+        const parts = [
+            app.applicantName || '',
+            app.rabid ? `RAB: ${app.rabid}` : '',
+            app.visitTypeName || '',
+            app.destinationCountriesDisplay || '',
+            `${app.fromDate?.slice(0, 10) ?? ''} ~ ${app.toDate?.slice(0, 10) ?? ''}`
+        ].filter(Boolean);
+        return parts.join(' | ');
+    }
+
+    /** Load Ex-BD Leave applications. Keep the full list (for edit-mode label lookup); only
+     *  applications without a notesheet are offered in the create dropdown. */
     private loadExBdLeaveApplications(): void {
         this.exBdLeaveAppService.getListView().subscribe({
             next: (list) => {
-                this.allExBdLeaveApps = (list ?? []).filter(
-                    (app) => !app.noteSheetId && !app.isDeleted
-                );
-                this.exBdLeaveAppOptions = this.allExBdLeaveApps.map((app) => {
-                    const parts = [
-                        app.applicantName || '',
-                        app.rabid ? `RAB: ${app.rabid}` : '',
-                        app.visitTypeName || '',
-                        app.destinationCountriesDisplay || '',
-                        `${app.fromDate?.slice(0, 10) ?? ''} ~ ${app.toDate?.slice(0, 10) ?? ''}`
-                    ].filter(Boolean);
-                    return { label: parts.join(' | '), value: app.exBdLeaveApplicationId };
-                });
+                this.allExBdLeaveApps = (list ?? []).filter((app) => !app.isDeleted);
+                this.exBdLeaveAppOptions = this.allExBdLeaveApps
+                    .filter((app) => !app.noteSheetId)
+                    .map((app) => ({ label: this.buildAppLabel(app), value: app.exBdLeaveApplicationId }));
             },
             error: () => {}
         });
+    }
+
+    /** Full application label for the read-only field shown in edit mode (matches the
+     *  create-mode dropdown option); falls back to the applicant name if not yet loaded. */
+    getEditApplicationLabel(): string {
+        const appId = this.form?.get('exBdLeaveApplicationId')?.value;
+        if (appId == null) return this.getEmployeeDisplayName();
+        const app = this.allExBdLeaveApps.find((a) => a.exBdLeaveApplicationId === appId);
+        return app ? this.buildAppLabel(app) : this.getEmployeeDisplayName();
     }
 
     /** When an Ex-BD Leave application is selected, auto-fill the form */

@@ -22,10 +22,11 @@ import { EmpService } from '@/services/emp-service';
 import { ReferenceNoEntry, OnulipiEntry } from '@/models/office-order.model';
 import { ApprovalStatus } from '@/models/enums';
 import { NotesheetMembersTableComponent } from '@/Components/Shared/notesheet-members-table/notesheet-members-table';
-import { Document, Packer, Paragraph, TextRun, AlignmentType, BorderStyle, Table, TableRow, TableCell, WidthType, VerticalAlign, TableLayoutType, TabStopType } from 'docx';
+import { Document, Packer, Paragraph, TextRun, AlignmentType, BorderStyle, Table, TableRow, TableCell, WidthType, VerticalAlign, TableLayoutType, TabStopType, ImageRun } from 'docx';
 import { saveAs } from 'file-saver';
 import { firstValueFrom } from 'rxjs';
 import { JsReportService } from '@/services/jsreport.service';
+import { ServingMembersService } from '@/services/serving-members.service';
 
 @Component({
     selector: 'app-office-order-ex-bd-leave-preview',
@@ -59,6 +60,7 @@ export class OfficeOrderExBdLeavePreviewComponent implements OnInit {
     private messageService = inject(MessageService);
     private sanitizer = inject(DomSanitizer);
     private jsreportService = inject(JsReportService);
+    private servingMembersService = inject(ServingMembersService);
 
     @ViewChild('legalPaper') legalPaper!: ElementRef<HTMLDivElement>;
 
@@ -108,6 +110,18 @@ export class OfficeOrderExBdLeavePreviewComponent implements OnInit {
     nsMainText = '';
     nsNote = '';
     nsParagraphs: string[] = [];
+
+    // Notesheet final approver (signature shown above Onulipi)
+    finalApproverName = '';
+    finalApproverNameBN = '';
+    finalApproverRank = '';
+    finalApproverRankBN = '';
+    finalApproverAppointment = '';
+    finalApproverAppointmentBN = '';
+    finalApproverDate = '';
+
+    // Approval person's signature image (data URL), shown in the after-Onulipi block
+    approvalSignatureUrl = '';
 
     get isBangla(): boolean {
         return this.order?.textType === 'bn';
@@ -203,12 +217,62 @@ export class OfficeOrderExBdLeavePreviewComponent implements OnInit {
                 this.order = data;
                 this.parseJsonFields();
                 this.parseNoteSheetFields();
+                this.loadFinalApprover(data?.noteSheetId);
+                this.loadApprovalSignature(data?.approvalEmployeeId);
                 this.loading = false;
             },
             error: () => {
                 this.error = true;
                 this.loading = false;
             }
+        });
+    }
+
+    /** Load the linked notesheet's final-approval user — shown as the signature above Onulipi. */
+    private loadFinalApprover(noteSheetId: number | null | undefined): void {
+        this.finalApproverName = this.finalApproverNameBN = '';
+        this.finalApproverRank = this.finalApproverRankBN = '';
+        this.finalApproverAppointment = this.finalApproverAppointmentBN = '';
+        this.finalApproverDate = '';
+        if (!noteSheetId) return;
+        const api = `${environment.apis.core}/NoteSheetInfo`;
+        this.http.get<any>(`${api}/GetFilteredByKeysAsyn/${noteSheetId}`).subscribe({
+            next: (data) => {
+                const ns = Array.isArray(data) ? data[0] : data;
+                const finalId = ns?.finalApprovalId ?? ns?.FinalApprovalId;
+                if (!finalId) return;
+                const finalDate = ns?.finalApprovalApprovedDate ?? ns?.FinalApprovalApprovedDate;
+                this.finalApproverDate = finalDate ? this.formatDate(finalDate) : '';
+                this.servingMembersService.getEmployeeBriefProfile(finalId).subscribe({
+                    next: (emp) => {
+                        if (!emp) return;
+                        this.finalApproverName = emp.nameEN ?? '';
+                        this.finalApproverNameBN = emp.nameBN ?? '';
+                        this.finalApproverRank = emp.rankEN ?? '';
+                        this.finalApproverRankBN = emp.rankBN ?? '';
+                        this.finalApproverAppointment = emp.appointmentEN ?? '';
+                        this.finalApproverAppointmentBN = emp.appointmentBN ?? '';
+                    },
+                    error: () => { /* no final approver profile */ }
+                });
+            },
+            error: () => { /* notesheet not reachable */ }
+        });
+    }
+
+    /** Load the approval person's signature image (shown in the after-Onulipi block, if they have one). */
+    private loadApprovalSignature(employeeId: number | null | undefined): void {
+        this.approvalSignatureUrl = '';
+        if (!employeeId) return;
+        this.empService.getSignatureBlob(employeeId).subscribe({
+            next: (blob) => {
+                if (blob && blob.size > 0) {
+                    const reader = new FileReader();
+                    reader.onloadend = () => { this.approvalSignatureUrl = reader.result as string; };
+                    reader.readAsDataURL(blob);
+                }
+            },
+            error: () => { /* no signature on file */ }
         });
     }
 
@@ -539,10 +603,13 @@ export class OfficeOrderExBdLeavePreviewComponent implements OnInit {
             children.push(new Paragraph({ children: [new TextRun({ text: `${this.isBangla ? 'বিষয়: ' : 'Subject: '}`, font, size: contentSize, bold: true }), new TextRun({ text: this.order.subject, font, size: contentSize, bold: true, underline: {} })], spacing: { after: 100 } }));
         }
 
+        // Compact serial→text tab stop (0.3") so the gap after ক।/১।/২। is small and uniform,
+        // instead of Word's default 0.5" tab which leaves an oversized gap.
+        const serialTab = [{ type: TabStopType.LEFT, position: 432 }];
         if (this.referenceEntries.length > 0) {
             children.push(new Paragraph({ children: [new TextRun({ text: this.isBangla ? 'সূত্র:' : 'Reference:', font, size: contentSize, bold: true })], spacing: { before: 80, after: 0 } }));
             for (const ref of this.referenceEntries) {
-                children.push(new Paragraph({ children: [new TextRun({ text: `${ref.serial}।\t${ref.text}`, font, size: contentSize })], spacing: { after: 20 } }));
+                children.push(new Paragraph({ children: [new TextRun({ text: `${ref.serial}।\t${ref.text}`, font, size: contentSize })], tabStops: serialTab, spacing: { after: 20 } }));
             }
             children.push(new Paragraph({ text: '', spacing: { after: 60 } }));
         }
@@ -557,7 +624,7 @@ export class OfficeOrderExBdLeavePreviewComponent implements OnInit {
                         runs.push(new TextRun({ text: `${this.serial(1)}\t`, font, size: contentSize, bold: true }));
                     }
                     runs.push(new TextRun({ text: line.trim(), font, size: contentSize }));
-                    children.push(new Paragraph({ children: runs, alignment: AlignmentType.JUSTIFIED, spacing: { after: 60 } }));
+                    children.push(new Paragraph({ children: runs, tabStops: serialTab, alignment: AlignmentType.JUSTIFIED, spacing: { after: 60 } }));
                 });
             }
             const remarksText = (this.order.remarks || '').trim();
@@ -567,6 +634,7 @@ export class OfficeOrderExBdLeavePreviewComponent implements OnInit {
                         new TextRun({ text: `${this.serial(2)}\t`, font, size: contentSize, bold: true }),
                         new TextRun({ text: remarksText, font, size: contentSize })
                     ],
+                    tabStops: serialTab,
                     alignment: AlignmentType.JUSTIFIED, spacing: { after: 60 }
                 }));
             }
@@ -576,8 +644,18 @@ export class OfficeOrderExBdLeavePreviewComponent implements OnInit {
         const addSignatureBlock = (includeEmail = true) => {
             if (!this.order?.approvalEmployeeName) return;
             children.push(new Paragraph({ text: '', spacing: { before: 400 } }));
+            // Embed the approval person's signature image, only once the order is approved.
+            if (this.approvalSignatureUrl && this.isApproved) {
+                try {
+                    const base64Data = this.approvalSignatureUrl.split(',')[1];
+                    const binaryString = atob(base64Data);
+                    const bytes = new Uint8Array(binaryString.length);
+                    for (let j = 0; j < binaryString.length; j++) bytes[j] = binaryString.charCodeAt(j);
+                    children.push(new Paragraph({ children: [new ImageRun({ data: bytes, transformation: { width: 130, height: 40 }, type: 'png' })], alignment: AlignmentType.LEFT, indent: { left: sigIndent } }));
+                } catch { /* ignore unreadable signature image */ }
+            }
             const sigName = this.isBangla ? (this.order.approvalEmployeeNameBN || this.order.approvalEmployeeName) : this.order.approvalEmployeeName;
-            children.push(new Paragraph({ children: [new TextRun({ text: sigName, font, size: contentSize, bold: true })], alignment: AlignmentType.LEFT, indent: { left: sigIndent } }));
+            children.push(new Paragraph({ children: [new TextRun({ text: sigName, font, size: contentSize })], alignment: AlignmentType.LEFT, indent: { left: sigIndent } }));
             if (this.order.approvalEmployeeRank) {
                 const rank = this.isBangla ? (this.order.approvalEmployeeRankBN || this.order.approvalEmployeeRank) : this.order.approvalEmployeeRank;
                 children.push(new Paragraph({ children: [new TextRun({ text: rank, font, size: contentSize })], alignment: AlignmentType.LEFT, indent: { left: sigIndent } }));
@@ -593,15 +671,24 @@ export class OfficeOrderExBdLeavePreviewComponent implements OnInit {
             }
         };
 
-        addSignatureBlock(true);
+        // Final-approver signature (from the linked notesheet) — printed above Onulipi.
+        if (this.finalApproverName) {
+            children.push(new Paragraph({ text: '', spacing: { before: 400 } }));
+            const fName = this.isBangla ? (this.finalApproverNameBN || this.finalApproverName) : this.finalApproverName;
+            children.push(new Paragraph({ children: [new TextRun({ text: fName, font, size: contentSize })], alignment: AlignmentType.LEFT, indent: { left: sigIndent } }));
+            const fRank = this.isBangla ? (this.finalApproverRankBN || this.finalApproverRank) : this.finalApproverRank;
+            if (fRank) children.push(new Paragraph({ children: [new TextRun({ text: fRank, font, size: contentSize })], alignment: AlignmentType.LEFT, indent: { left: sigIndent } }));
+            const fAppt = this.isBangla ? (this.finalApproverAppointmentBN || this.finalApproverAppointment) : this.finalApproverAppointment;
+            if (fAppt) children.push(new Paragraph({ children: [new TextRun({ text: fAppt, font, size: contentSize })], alignment: AlignmentType.LEFT, indent: { left: sigIndent } }));
+        }
 
         const exportOnulipi = this.exportOnulipiEntries;
         if (exportOnulipi.length > 0) {
             if (this.order.noteSheetNo) {
                 const nsNoRuns: TextRun[] = [new TextRun({ text: this.order.noteSheetNo, font, size: contentSize })];
-                if (this.isApproved && this.order.approvalDate) {
+                if (this.finalApproverDate) {
                     nsNoRuns.push(new TextRun({ text: '\t', font, size: contentSize }));
-                    nsNoRuns.push(new TextRun({ text: `${this.isBangla ? 'তারিখ: ' : 'Date: '}${this.formatDate(this.order.approvalDate)}`, font, size: contentSize }));
+                    nsNoRuns.push(new TextRun({ text: `${this.isBangla ? 'তারিখ: ' : 'Date: '}${this.finalApproverDate}`, font, size: contentSize }));
                 }
                 children.push(new Paragraph({
                     children: nsNoRuns,

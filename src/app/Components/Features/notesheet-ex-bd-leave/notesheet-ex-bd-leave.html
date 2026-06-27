@@ -156,7 +156,7 @@
           <div class="ns-gen-field ns-gen-full">
             <label class="ns-gen-label">Select Ex-BD Leave Application <span class="ns-gen-req">*</span></label>
             @if (editMode) {
-              <input pInputText [value]="getEmployeeDisplayName()" class="w-full" [readonly]="true" />
+              <input pInputText [value]="getEditApplicationLabel()" class="w-full" [readonly]="true" />
             } @else {
               <p-select
                 formControlName="exBdLeaveApplicationId"
