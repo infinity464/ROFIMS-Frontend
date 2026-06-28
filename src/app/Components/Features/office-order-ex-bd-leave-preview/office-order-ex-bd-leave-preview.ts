@@ -27,6 +27,8 @@ import { saveAs } from 'file-saver';
 import { firstValueFrom } from 'rxjs';
 import { JsReportService } from '@/services/jsreport.service';
 import { ServingMembersService } from '@/services/serving-members.service';
+import { SharedService } from '@/shared/services/shared-service';
+import { IdentityUserMemberTypeAccessService } from '@/services/identity-user-member-type-access.service';
 
 @Component({
     selector: 'app-office-order-ex-bd-leave-preview',
@@ -61,6 +63,9 @@ export class OfficeOrderExBdLeavePreviewComponent implements OnInit {
     private sanitizer = inject(DomSanitizer);
     private jsreportService = inject(JsReportService);
     private servingMembersService = inject(ServingMembersService);
+    private sharedService = inject(SharedService);
+    private memberTypeAccess = inject(IdentityUserMemberTypeAccessService);
+    allowedMemberTypeIds: number[] | null = null;
 
     @ViewChild('legalPaper') legalPaper!: ElementRef<HTMLDivElement>;
 
@@ -174,6 +179,7 @@ export class OfficeOrderExBdLeavePreviewComponent implements OnInit {
     }
 
     ngOnInit(): void {
+        this.loadCurrentUserMemberTypePermissions();
         const id = Number(this.route.snapshot.queryParamMap.get('id'));
         if (id) {
             this.viewMode = 'detail';
@@ -185,12 +191,24 @@ export class OfficeOrderExBdLeavePreviewComponent implements OnInit {
         }
     }
 
+    /** Resolve the current user's accessible member type ids (cache first, then always refetch). */
+    private loadCurrentUserMemberTypePermissions(): void {
+        const userId = this.sharedService.getCurrentUserId?.() ?? null;
+        if (!userId) { this.allowedMemberTypeIds = null; return; }
+        this.allowedMemberTypeIds = this.memberTypeAccess.getCachedMemberTypeIds(userId);
+        this.memberTypeAccess.cacheForUser(userId).subscribe({
+            next: (ids) => { this.allowedMemberTypeIds = Array.isArray(ids) ? ids : []; },
+            error: () => { /* keep cached value */ }
+        });
+    }
+
     // ─── List ────────────────────────────────────────
     loadList(): void {
         this.loadingList = true;
         this.officeOrderService.getOfficeOrderMasters().subscribe({
             next: (list) => {
-                this.orders = list ?? [];
+                // Scope to the user's accessible member types (via the linked note-sheet's EmployeeTypeIds).
+                this.orders = (list ?? []).filter((o) => this.memberTypeAccess.isAccessible(o.employeeTypeIds, this.allowedMemberTypeIds));
                 this.loadingList = false;
             },
             error: () => {

@@ -5,6 +5,8 @@ export interface GeneralNotesheetOfficeOrderDto {
     letterDate: string;
     noteSheetId: number;
     noteSheetNo: string | null;
+    /** Linked note-sheet's member-type ids — used to scope the list by user access. */
+    employeeTypeIds?: string | null;
     subject: string | null;
     textType: string | null;
     status: string;

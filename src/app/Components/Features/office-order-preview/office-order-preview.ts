@@ -171,7 +171,7 @@ export class OfficeOrderPreviewComponent implements OnInit {
         }
     }
 
-    // ─── List ────────────────────────────────────────
+    // ─── List (access-scoped server-side in GetOfficeOrderMasters → realtime, fresh per request) ──
     loadList(): void {
         this.loadingList = true;
         this.officeOrderService.getOfficeOrderMasters().subscribe({

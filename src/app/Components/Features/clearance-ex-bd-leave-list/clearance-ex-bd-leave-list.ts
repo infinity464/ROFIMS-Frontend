@@ -12,6 +12,8 @@ import { InputTextModule } from 'primeng/inputtext';
 import { IconFieldModule } from 'primeng/iconfield';
 import { InputIconModule } from 'primeng/inputicon';
 import { ExBdLeaveClearanceService, ExBdLeaveClearanceDto } from '@/services/ex-bd-leave-clearance.service';
+import { SharedService } from '@/shared/services/shared-service';
+import { IdentityUserMemberTypeAccessService } from '@/services/identity-user-member-type-access.service';
 
 @Component({
     selector: 'app-clearance-ex-bd-leave-list',
@@ -38,12 +40,15 @@ export class ClearanceExBdLeaveListComponent implements OnInit {
 
     orders: ExBdLeaveClearanceDto[] = [];
     loading = false;
+    allowedMemberTypeIds: number[] | null = null;
 
     constructor(
         private clearanceService: ExBdLeaveClearanceService,
         private router: Router,
         private messageService: MessageService,
-        private _userMenuService: UserMenuService
+        private _userMenuService: UserMenuService,
+        private sharedService: SharedService,
+        private memberTypeAccess: IdentityUserMemberTypeAccessService
     ) {}
 
     ngOnInit(): void {
@@ -51,15 +56,28 @@ export class ClearanceExBdLeaveListComponent implements OnInit {
         this.canInsert = _perms.canInsert;
         this.canUpdate = _perms.canUpdate;
         this.canDelete = _perms.canDelete;
+        this.loadCurrentUserMemberTypePermissions();
 
         this.loadOrders();
+    }
+
+    /** Resolve the current user's accessible member type ids (cache first, then always refetch). */
+    private loadCurrentUserMemberTypePermissions(): void {
+        const userId = this.sharedService.getCurrentUserId?.() ?? null;
+        if (!userId) { this.allowedMemberTypeIds = null; return; }
+        this.allowedMemberTypeIds = this.memberTypeAccess.getCachedMemberTypeIds(userId);
+        this.memberTypeAccess.cacheForUser(userId).subscribe({
+            next: (ids) => { this.allowedMemberTypeIds = Array.isArray(ids) ? ids : []; },
+            error: () => { /* keep cached value */ }
+        });
     }
 
     loadOrders(): void {
         this.loading = true;
         this.clearanceService.getClearanceMasters().subscribe({
             next: (data) => {
-                this.orders = data ?? [];
+                // Scope to the user's accessible member types (via the linked note-sheet's EmployeeTypeIds).
+                this.orders = (data ?? []).filter((o) => this.memberTypeAccess.isAccessible(o.employeeTypeIds, this.allowedMemberTypeIds));
                 this.loading = false;
             },
             error: (err: any) => {
