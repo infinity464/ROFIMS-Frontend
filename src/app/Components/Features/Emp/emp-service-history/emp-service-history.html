@@ -56,6 +56,8 @@
                                             styleClass="w-full"
                                             appendTo="body"
                                             [filter]="true"
+                                            [virtualScroll]="true"
+                                            [virtualScrollItemSize]="38"
                                             (onChange)="onOrgUnitChangeInForm()"
                                             [class.p-invalid]="serviceForm.get('orgUnitId')?.invalid && serviceForm.get('orgUnitId')?.touched"></p-select>
                                         @if (serviceForm.get('orgUnitId')?.invalid && serviceForm.get('orgUnitId')?.touched) {

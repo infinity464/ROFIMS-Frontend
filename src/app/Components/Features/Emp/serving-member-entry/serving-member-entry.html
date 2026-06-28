@@ -64,6 +64,8 @@
                                     (onChange)="onLastUnitChange($event.value)"
                                     [filter]="true"
                                     filterPlaceholder="Search"
+                                    [virtualScroll]="true"
+                                    [virtualScrollItemSize]="38"
                                     [disabled]="!postingForm.get('motherOrganization')?.value"
                                 >
                                 </p-select>

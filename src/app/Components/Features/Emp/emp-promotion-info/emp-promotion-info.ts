@@ -178,13 +178,9 @@ export class EmpPromotionInfo implements OnInit {
         });
     }
 
-    /** Filter the org-scoped ranks by selectedMemberTypeId (rank.parentCodeId === memberType). */
+    /** Show all org-scoped ranks (no member-type filter for promotion). */
     private applyRankMemberTypeFilter(): void {
-        const mt = this.selectedMemberTypeId;
-        const filtered = mt == null
-            ? this.allRanksForOrg
-            : this.allRanksForOrg.filter((r: any) => (r?.parentCodeId ?? r?.ParentCodeId ?? null) === mt);
-        this.rankOptions = filtered.map((item: any) => this.mapCommonCodeToOption(item));
+        this.rankOptions = this.allRanksForOrg.map((item: any) => this.mapCommonCodeToOption(item));
     }
 
     toDateOnly(d: Date | string | null): string | null {
