@@ -41,6 +41,7 @@ import { BriefStatementOfOffence } from '@/Components/basic-setup/brief-statemen
 import { MedicalCategoryType } from '@/Components/basic-setup/medical-category-type/medical-category-type';
 import { PurposeOfVisitType } from '@/Components/basic-setup/purpose-of-visit-type/purpose-of-visit-type';
 import { SubjectType } from '@/Components/basic-setup/subject-type/subject-type';
+import { NoteSheetSubject } from '@/Components/basic-setup/notesheet-subject/notesheet-subject';
 import { LeaveType } from '@/Components/basic-setup/leave-type/leave-type';
 import { EquivalentName } from '@/Components/basic-setup/equivalent-name/equivalent-name';
 import { EmployeeStatusType } from '@/Components/basic-setup/employee-status-type/employee-status-type';
@@ -271,6 +272,7 @@ export const appRoutes: Routes = [
             { path: 'basic-setup/medical-category-type', component: MedicalCategoryType },
             { path: 'basic-setup/purpose-of-visit-type', component: PurposeOfVisitType },
             { path: 'basic-setup/subject-type', component: SubjectType },
+            { path: 'basic-setup/notesheet-subject', component: NoteSheetSubject },
             { path: 'basic-setup/leave-type', component: LeaveType },
             { path: 'basic-setup/equivalent-name', component: EquivalentName },
             { path: 'basic-setup/employee-status-type', component: EmployeeStatusType },
