@@ -142,9 +142,9 @@ export class NotesheetPreviewPostingComponent extends NotesheetPreviewBase imple
     showPrevWorkplaceDetail = true;
     showRemarks = true;
     showSignatureImage = true;
-    showCorps = false;
-    showProfQualification = false;
-    showGallantryAwards = false;
+    showCorps = true;
+    showProfQualification = true;
+    showGallantryAwards = true;
 
     // ── Edit state ───────────────────────────────────────────
     editing = false;

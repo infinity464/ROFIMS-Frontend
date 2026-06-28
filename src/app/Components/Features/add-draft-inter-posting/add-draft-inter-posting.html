@@ -1,4 +1,5 @@
 <p-toast position="top-center"></p-toast>
+<p-confirmDialog></p-confirmDialog>
 
 <div class="add-draft-posting">
     <!-- Page header card -->
@@ -18,6 +19,20 @@
                     <label class="font-semibold block mb-2 text-700">Draft Inter Posting List No <span class="text-red-500">*</span></label>
                     <input pInputText class="w-full" [(ngModel)]="draftPostingListNo" placeholder="Auto Generated" [readonly]="!isEditMode" />
                 </div>
+                <div class="field flex-1 min-w-200px">
+                    <label class="font-semibold block mb-2 text-700">Member Type <span class="text-red-500">*</span></label>
+                    <p-multiSelect
+                        [options]="memberTypeOptions"
+                        [(ngModel)]="selectedMemberTypeIds"
+                        optionLabel="label"
+                        optionValue="value"
+                        placeholder="Select Member Type(s)"
+                        display="chip"
+                        [filter]="true"
+                        appendTo="body"
+                        styleClass="w-full">
+                    </p-multiSelect>
+                </div>
                 <div *ngIf="isEditMode" class="field min-w-150px">
                     <label class="font-semibold block mb-2 text-700">Status</label>
                     <p-select [options]="draftPostingStatusOptions" [(ngModel)]="editDraftStatus" optionLabel="label" optionValue="value" placeholder="Select status" styleClass="w-full"></p-select>
@@ -28,7 +43,7 @@
         <!-- Add mode: label + Select All button -->
         <div *ngIf="!isEditMode" class="draft-label-bar">
             <span class="font-semibold text-700">Presently Serving Employees (select one or more)</span>
-            <p-button label="Select All" icon="pi pi-check-square" size="small" [outlined]="true" (onClick)="onAddAll()"></p-button>
+            <p-button *ngIf="canInsert" label="Select All" icon="pi pi-check-square" size="small" [outlined]="true" (onClick)="onAddAll()"></p-button>
         </div>
 
         <!-- Employee list table -->
@@ -55,6 +70,7 @@
                     <th style="min-width: 100px">Corps</th>
                     <th style="min-width: 100px">Trade</th>
                     <th style="min-width: 180px">Name</th>
+                    <th *ngIf="!isEditMode" style="min-width: 130px">Member Type</th>
                     <th style="min-width: 140px">Mother Unit</th>
                     <th style="min-width: 130px">RAB Unit</th>
                     <th style="min-width: 130px">Date of Join in Rab</th>
@@ -74,6 +90,7 @@
                     <td>{{ (row.corpsName ?? row.corps) || '-' }}</td>
                     <td>{{ (row.tradeName ?? row.trade) || '-' }}</td>
                     <td>{{ (row.fullNameEN ?? row.name) || '-' }}{{ (row.corpsName ?? row.corps) ? ', ' + (row.corpsName ?? row.corps) : '' }}</td>
+                    <td *ngIf="!isEditMode">{{ memberTypeName(row.memberTypeId) }}</td>
                     <td>{{ (row.motherUnitName ?? row.motherUnit) || '-' }}</td>
                     <td>{{ row.rabUnit || row.rabUnitName || '-' }}</td>
                     <td>{{ formatDate(row.joiningDateInRAB ?? row.joiningDate ?? row.rabJoingdate) }}</td>
@@ -84,7 +101,7 @@
             </ng-template>
             <ng-template pTemplate="emptymessage">
                 <tr>
-                    <td [attr.colspan]="isEditMode ? 12 : 11" class="text-center p-4">
+                    <td [attr.colspan]="isEditMode ? 11 : 12" class="text-center p-4">
                         <div class="flex flex-column align-items-center gap-3 py-5">
                             <i class="pi pi-inbox text-5xl text-400"></i>
                             <span class="text-lg text-500">No serving employees available for inter posting.</span>
@@ -114,7 +131,7 @@
         </div>
         <p class="text-600 mt-0 mb-3">Saved draft inter posting lists. Click Edit to modify.</p>
         <p-table
-            [value]="draftMastersList"
+            [value]="visibleDraftMasters"
             [loading]="loadingMasters"
             dataKey="id"
             [tableStyle]="{ 'min-width': '50rem' }"
@@ -129,6 +146,7 @@
                     <th style="min-width: 140px">Draft Inter Posting No</th>
                     <th style="min-width: 120px">Date</th>
                     <th style="min-width: 100px">Status</th>
+                    <th style="min-width: 160px">Member Type</th>
                     <th style="width: 80px">Employees</th>
                     <th style="min-width: 100px">Created By</th>
                     <th style="min-width: 140px">Action</th>
@@ -140,17 +158,18 @@
                     <td>{{ row.draftInterPostingNo }}</td>
                     <td>{{ row.draftInterPostingDate }}</td>
                     <td>{{ getDraftPostingStatusLabel(row.draftInterPostingStatus) }}</td>
+                    <td>{{ row.employeeTypeNames || '-' }}</td>
                     <td>{{ row.detailCount }}</td>
                     <td>{{ row.createdBy || '-' }}</td>
                     <td class="text-center">
-                        <p-button icon="pi pi-users" label="View Member" severity="primary" size="small"
+                        <p-button *ngIf="canView" icon="pi pi-users" label="View Member" severity="primary" size="small"
                                   (onClick)="viewEmployees(row)"></p-button>
                     </td>
                 </tr>
             </ng-template>
             <ng-template pTemplate="emptymessage">
                 <tr>
-                    <td colspan="7" class="text-center p-4 text-500">No Draft Inter Posting saved yet. Select employees above and click Save.</td>
+                    <td colspan="8" class="text-center p-4 text-500">No Draft Inter Posting saved yet. Select employees above and click Save.</td>
                 </tr>
             </ng-template>
         </p-table>
@@ -176,11 +195,13 @@
                 <th>Corps</th>
                 <th>Trade</th>
                 <th>Name</th>
+                <th>Member Type</th>
                 <th>Mother Unit</th>
                 <th>RAB Unit</th>
                 <th>Date of Join in RAB</th>
                 <th>Transfer Unit</th>
                 <th>Remarks</th>
+                <th *ngIf="!employeeModalHasNoteSheet && canDelete" style="width: 90px">Action</th>
             </tr>
         </ng-template>
         <ng-template pTemplate="body" let-row let-rowIndex="rowIndex">
@@ -191,16 +212,21 @@
                 <td>{{ row.corps || '-' }}</td>
                 <td>{{ row.trade || '-' }}</td>
                 <td>{{ row.name || '-' }}</td>
+                <td>{{ memberTypeName(row.memberTypeId) }}</td>
                 <td>{{ row.motherUnit || '-' }}</td>
                 <td>{{ row.rabUnit || '-' }}</td>
                 <td>{{ formatDate(row.rabJoingdate) }}</td>
                 <td>{{ row.transferRabUnitName || '-' }}</td>
                 <td>{{ row.remarks || '-' }}</td>
+                <td *ngIf="!employeeModalHasNoteSheet && canDelete" class="text-center">
+                    <p-button icon="pi pi-trash" severity="danger" size="small" [text]="true"
+                              [loading]="removingMemberId === row.id" (onClick)="removeMember(row)" pTooltip="Remove member"></p-button>
+                </td>
             </tr>
         </ng-template>
         <ng-template pTemplate="emptymessage">
             <tr>
-                <td colspan="11" class="text-center p-4 text-500">No employees found.</td>
+                <td [attr.colspan]="(!employeeModalHasNoteSheet && canDelete) ? 13 : 12" class="text-center p-4 text-500">No employees found.</td>
             </tr>
         </ng-template>
     </p-table>

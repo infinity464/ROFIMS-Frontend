@@ -144,12 +144,17 @@ export interface DraftPostingMasterDto {
     createdDate: string;
     detailCount: number;
     hasNoteSheet: boolean;
+    employeeTypeIds?: string | null;
+    employeeTypeNames?: string | null;
+    employeeTypeNamesBN?: string | null;
 }
 
 /** Detail row for GetDraftNewPostingById (Edit). */
 export interface DraftPostingDetailDto {
     id: number;
     employeeId: number;
+    /** Member Type (EmployeeInfo.MemberType → CommonCode 'EmployeeType' id). */
+    memberTypeId?: number | null;
     /** Transfer RAB Unit Id (FK to CommonCode). */
     transferRabUnitId: number | null;
     transferRabUnitName: string | null;
@@ -172,6 +177,9 @@ export interface DraftPostingMasterWithDetailsDto {
     draftPostingStatus: string;
     createdBy: string;
     createdDate: string;
+    employeeTypeIds?: string | null;
+    employeeTypeNames?: string | null;
+    employeeTypeNamesBN?: string | null;
     details: DraftPostingDetailDto[];
 }
 
@@ -189,12 +197,17 @@ export interface DraftInterPostingMasterDto {
     createdDate: string;
     detailCount: number;
     hasNoteSheet: boolean;
+    employeeTypeIds?: string | null;
+    employeeTypeNames?: string | null;
+    employeeTypeNamesBN?: string | null;
 }
 
 /** Detail row for GetDraftInterPostingById (Edit). */
 export interface DraftInterPostingDetailDto {
     id: number;
     employeeId: number;
+    /** Member Type (EmployeeInfo.MemberType → CommonCode 'EmployeeType' id). */
+    memberTypeId?: number | null;
     transferRabUnitId: number | null;
     transferRabUnitName: string | null;
     remarks: string | null;
@@ -216,6 +229,9 @@ export interface DraftInterPostingMasterWithDetailsDto {
     draftInterPostingStatus: string;
     createdBy: string;
     createdDate: string;
+    employeeTypeIds?: string | null;
+    employeeTypeNames?: string | null;
+    employeeTypeNamesBN?: string | null;
     details: DraftInterPostingDetailDto[];
 }
 
