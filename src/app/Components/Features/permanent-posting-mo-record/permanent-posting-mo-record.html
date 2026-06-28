@@ -92,6 +92,7 @@
                             optionLabel="label" optionValue="value"
                             placeholder="Select posting unit" [filter]="true" filterBy="label"
                             [showClear]="true" class="w-full" appendTo="body"
+                            [virtualScroll]="true" [virtualScrollItemSize]="38"
                             [disabled]="!postingUnitOptions.length"></p-select>
                         <p-button icon="pi pi-plus" severity="success" [outlined]="true"
                             (onClick)="openAddPostingUnitDialog()" size="small"

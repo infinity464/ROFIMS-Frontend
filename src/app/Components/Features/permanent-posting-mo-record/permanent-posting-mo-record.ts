@@ -305,8 +305,10 @@ export class PermanentPostingMORecordComponent implements OnInit {
             this.clearanceGivenDate = null;
         }
 
-        this.orgService.GetAllOrgUnit().subscribe({
-            next: (units) => {
+        const motherOrgId = employee.orgId ?? null;
+        if (!motherOrgId) { this.postingUnitOptions = []; return; }
+        this.commonCodeService.getAllActiveMotherOrgUnits(motherOrgId).subscribe({
+            next: (units: any[]) => {
                 this.postingUnitOptions = units.map(u => ({ label: u.orgNameEN, value: u.orgId }));
             },
             error: (err: any) => { this.postingUnitOptions = []; }
@@ -373,9 +375,9 @@ export class PermanentPostingMORecordComponent implements OnInit {
                 this.isSavingUnit = false;
 
                 const newOrgId = res?.orgId ?? res?.OrgId;
-                // Reload ALL org units
-                this.orgService.GetAllOrgUnit().subscribe({
-                    next: (units) => {
+                // Reload units for this employee's mother org only
+                this.commonCodeService.getAllActiveMotherOrgUnits(parentOrgId).subscribe({
+                    next: (units: any[]) => {
                         this.postingUnitOptions = units.map(u => ({ label: u.orgNameEN, value: u.orgId }));
                         if (newOrgId) this.postingUnitId = newOrgId;
                     }
