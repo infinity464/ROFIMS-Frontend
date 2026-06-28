@@ -81,6 +81,51 @@
         min-width: 12rem;
     }
 
+    /* Freeze the Office (tree) column: it stays put while rank columns scroll
+       horizontally. Needs an opaque background so scrolled cells don't bleed
+       through, and a divider so the frozen column reads as separate. */
+    th.dist-table__office,
+    td.dist-table__office {
+        position: sticky;
+        left: 0;
+        z-index: 2;
+        background: var(--surface-card, var(--surface-0, #1e1e1e));
+        border-right: 1px solid var(--surface-border);
+    }
+    /* Header office cell must sit above both the frozen column and the
+       scrolling header cells. */
+    thead th.dist-table__office {
+        z-index: 3;
+    }
+    /* Footer total stays opaque while frozen too. */
+    tfoot td.dist-table__office {
+        z-index: 2;
+    }
+
+    /* Row hover: highlight the whole row and emphasize the node (office) name.
+       The frozen office cell needs the same hover background re-applied so it
+       doesn't keep its default opaque colour while the rest of the row lights up. */
+    tbody tr:hover td {
+        background: var(--surface-hover, rgba(255, 255, 255, 0.06));
+    }
+    tbody tr:hover td.dist-table__office {
+        background: var(--surface-hover, rgba(255, 255, 255, 0.06));
+    }
+    tbody tr:hover .tree-label {
+        color: var(--primary-color);
+        font-weight: 600;
+        letter-spacing: 0.2px;
+    }
+    tbody tr:hover .tree-marker {
+        transform: scale(1.15);
+    }
+    .tree-label {
+        transition: color 0.12s ease, font-weight 0.12s ease;
+    }
+    .tree-marker {
+        transition: transform 0.12s ease;
+    }
+
     .dist-table__rank,
     .dist-table__cell {
         min-width: 5rem;
