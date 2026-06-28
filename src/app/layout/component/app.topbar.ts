@@ -97,9 +97,14 @@ import { EmployeePersonalServiceOverview } from '@/models/employee-personal-serv
                                 } @else {
                                     <div class="divide-y divide-surface-200 dark:divide-surface-600">
                                         @for (n of notificationService.notifications; track n.id) {
-                                            <div (click)="onNotificationClick(n, $event)" class="block p-3 hover:bg-surface-100 dark:hover:bg-surface-700 cursor-pointer" [class.bg-primary-50]="!n.read" [class.dark:bg-primary-900/20]="!n.read">
-                                                <div class="font-medium text-sm">{{ n.title }}</div>
-                                                <div class="text-surface-600 dark:text-surface-400 text-xs mt-0.5">{{ n.message }}</div>
+                                            <div class="flex items-start gap-2 p-3 hover:bg-surface-100 dark:hover:bg-surface-700" [class.bg-primary-50]="!n.read" [class.dark:bg-primary-900/20]="!n.read">
+                                                <div class="flex-1 min-w-0 cursor-pointer" (click)="onNotificationClick(n, $event)">
+                                                    <div class="font-medium text-sm">{{ n.title }}</div>
+                                                    <div class="text-surface-600 dark:text-surface-400 text-xs mt-0.5">{{ n.message }}</div>
+                                                </div>
+                                                <button type="button" class="shrink-0 text-surface-400 hover:text-red-500 p-1 -m-1" (click)="onDeleteNotification(n, $event)" aria-label="Delete notification">
+                                                    <i class="pi pi-trash text-sm"></i>
+                                                </button>
                                             </div>
                                         }
                                     </div>
@@ -275,6 +280,9 @@ export class AppTopbar implements OnInit, OnDestroy {
     toggleNotificationPanel(): void {
         this.showNotificationPanel = !this.showNotificationPanel;
         if (this.showNotificationPanel) {
+            // Refresh from the server so notifications created since login (e.g. note-sheet
+            // approvals) show up even if their live SignalR push was missed.
+            this.notificationService.loadFromApi();
             this.closeBound = (e: MouseEvent) => this.handleOutsideClick(e);
             setTimeout(() => document.addEventListener('click', this.closeBound!));
         } else {
@@ -310,6 +318,11 @@ export class AppTopbar implements OnInit, OnDestroy {
     markAllRead(e: Event): void {
         e.stopPropagation();
         this.notificationService.markAllAsRead();
+    }
+
+    onDeleteNotification(n: { id: string }, e: Event): void {
+        e.stopPropagation();
+        this.notificationService.deleteNotification(n.id);
     }
 
     toggleDarkMode() {

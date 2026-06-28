@@ -52,10 +52,9 @@ export class NotesheetPreviewArticle47HandoverComponent implements OnInit {
     printingPreview = false;
     pageSizeOptions = [
         { label: 'Legal',  value: 'Legal'  },
-        { label: 'A4',     value: 'A4'     },
-        { label: 'Letter', value: 'Letter' }
+        { label: 'A4',     value: 'A4'     }
     ];
-    selectedPageSize: 'Legal' | 'A4' | 'Letter' = 'Legal';
+    selectedPageSize: 'Legal' | 'A4' | 'Letter' = 'A4';
 
     loading = true;
     error: string | null = null;

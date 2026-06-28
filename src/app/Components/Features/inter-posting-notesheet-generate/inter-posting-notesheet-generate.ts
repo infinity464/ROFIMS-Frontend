@@ -1,6 +1,6 @@
 import { Component, OnInit, ViewChild , inject } from '@angular/core';
 import { UserMenuService } from '@/services/user-menu.service';
-import { FormBuilder, FormGroup, Validators } from '@angular/forms';
+import { FormBuilder, FormGroup, Validators, FormsModule } from '@angular/forms';
 import { MessageService } from 'primeng/api';
 import { SharedService } from '@/shared/services/shared-service';
 import { FlexibleDateDirective } from '@/shared/directives/flexible-date.directive';
@@ -15,6 +15,7 @@ import { DatePickerModule } from 'primeng/datepicker';
 import { RichEditorComponent } from '@/Components/Common/rich-editor/rich-editor';
 import { TextareaModule } from 'primeng/textarea';
 import { CheckboxModule } from 'primeng/checkbox';
+import { DialogModule } from 'primeng/dialog';
 import { ToastModule } from 'primeng/toast';
 import { environment } from '@/Core/Environments/environment';
 import { HttpClient } from '@angular/common/http';
@@ -26,8 +27,9 @@ import { EmpService } from '@/services/emp-service';
 import { PostingService } from '@/services/posting.service';
 import { IdentityUserMappingService } from '@/services/identity-user-mapping.service';
 import { NoteSheetEditCacheService } from '@/services/note-sheet-edit-cache.service';
-import { NoteSheetType, NoteSheetOperationTypeOptions, ApprovalStatus, CodeType } from '@/models/enums';
+import { NoteSheetType, NoteSheetOperationType, NoteSheetOperationTypeOptions, ApprovalStatus, CodeType } from '@/models/enums';
 import { MasterBasicSetupService } from '@/Components/basic-setup/shared/services/MasterBasicSetupService';
+import { NoteSheetSubjectService, NoteSheetSubjectModel } from '@/Components/basic-setup/shared/services/NoteSheetSubjectService';
 import { NotesheetApproverSelectComponent } from '@/Components/Common/notesheet-approver-select/notesheet-approver-select';
 import { NoteSheetNumberConfigModel } from '@/Components/basic-setup/shared/models/notesheet-number-config';
 
@@ -37,6 +39,7 @@ import { NoteSheetNumberConfigModel } from '@/Components/basic-setup/shared/mode
     imports: [
         CommonModule,
         ReactiveFormsModule,
+        FormsModule,
         FluidModule,
         InputTextModule,
         ButtonModule,
@@ -47,6 +50,7 @@ import { NoteSheetNumberConfigModel } from '@/Components/basic-setup/shared/mode
         TextareaModule,
         ToastModule,
         CheckboxModule,
+        DialogModule,
         FileReferencesFormComponent,
         NotesheetApproverSelectComponent
     ],
@@ -83,6 +87,13 @@ export class InterPostingNotesheetGenerateComponent implements OnInit {
     /** Dynamic paragraphs */
     paragraphs: string[] = [''];
 
+    /** Predefined subjects for Inter Posting note-sheets — picking one fills the Subject
+     *  text field. NOT stored as an id; only the resulting text is saved (NoteSheetInfo.Subject). */
+    private subjectPickList: NoteSheetSubjectModel[] = [];
+    subjectOptions: { label: string; value: number }[] = [];
+    showSubjectDialog = false;
+    subjectSearch = '';
+
     @ViewChild('fileReferencesForm') fileReferencesForm!: FileReferencesFormComponent;
 
     constructor(
@@ -96,7 +107,8 @@ export class InterPostingNotesheetGenerateComponent implements OnInit {
         private route: ActivatedRoute,
         private router: Router,
         private noteSheetEditCache: NoteSheetEditCacheService,
-        private masterBasicSetupService: MasterBasicSetupService
+        private masterBasicSetupService: MasterBasicSetupService,
+        private noteSheetSubjectService: NoteSheetSubjectService
     ) {
         this.form = this.fb.group({
             draftPostingMasterId: [null as number | null, Validators.required],
@@ -113,11 +125,13 @@ export class InterPostingNotesheetGenerateComponent implements OnInit {
             initiatorId: [null as number | null, Validators.required],
             recommenderIds: [[] as number[]],
             finalApproverId: [null as number | null, Validators.required],
-            noteSheetOperationType: ['manual' as string | null, Validators.required],
+            noteSheetOperationType: [NoteSheetOperationType.Manual as string | null, Validators.required],
             isSecret: [false]
         });
     }
 
+    /** Initiator/final approver are required only for manual note sheets. System-generate note
+     *  sheets get the chain from config, so the pickers are hidden and these validators dropped. */
     ngOnInit(): void {
         const _perms = this._userMenuService.getPermissionsByRoute(this._router.url);
         this.canInsert = _perms.canInsert;
@@ -128,10 +142,12 @@ export class InterPostingNotesheetGenerateComponent implements OnInit {
         this.resolvePreparedByMapping();
         this.loadPreparedByOptions();
         this.loadNoteSheetNumberConfigs();
+        this.loadSubjectPickList();
 
         this.form.get('textType')!.valueChanges.subscribe(() => {
             this.form.get('noteSheetNumberConfigId')?.setValue(null);
             this.rebuildConfigOptions();
+            this.buildSubjectOptions();
         });
 
         this.route.queryParams.pipe(take(1)).subscribe((params) => {
@@ -150,6 +166,47 @@ export class InterPostingNotesheetGenerateComponent implements OnInit {
 
     get isBangla(): boolean {
         return this.form?.get('textType')?.value === 'bn';
+    }
+
+    /** Load active predefined subjects for Inter Posting note-sheets. */
+    private loadSubjectPickList(): void {
+        this.noteSheetSubjectService.getActiveByType(NoteSheetType.InterPosting).subscribe({
+            next: (list) => {
+                this.subjectPickList = Array.isArray(list) ? list : [];
+                this.buildSubjectOptions();
+            },
+            error: () => {
+                this.subjectPickList = [];
+                this.subjectOptions = [];
+            }
+        });
+    }
+
+    /** Option labels follow the current textType (bn/en). */
+    private buildSubjectOptions(): void {
+        const isBn = this.isBangla;
+        this.subjectOptions = this.subjectPickList.map((s) => ({
+            label: (isBn ? s.subjectBN : s.subjectEN) || s.subjectEN || s.subjectBN || '',
+            value: s.id
+        }));
+    }
+
+    /** Subjects filtered by the modal search box (matches the current-language label). */
+    get filteredSubjects(): { label: string; value: number }[] {
+        const term = (this.subjectSearch || '').trim().toLowerCase();
+        if (!term) return this.subjectOptions;
+        return this.subjectOptions.filter((o) => o.label.toLowerCase().includes(term));
+    }
+
+    openSubjectDialog(): void {
+        this.subjectSearch = '';
+        this.showSubjectDialog = true;
+    }
+
+    /** Copy the chosen subject's text into the editable Subject field (no id stored). */
+    pickSubject(opt: { label: string; value: number }): void {
+        this.form.get('subject')?.setValue(opt.label);
+        this.showSubjectDialog = false;
     }
 
     loadDraftInterPostingMasters(): void {

@@ -1,7 +1,7 @@
 import { Component, OnDestroy, OnInit, Renderer2, ViewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { NavigationEnd, Router, RouterModule } from '@angular/router';
-import { filter, Subscription } from 'rxjs';
+import { filter, interval, Subscription } from 'rxjs';
 import { AppTopbar } from './app.topbar';
 import { AppSidebar } from './app.sidebar';
 import { AppFooter } from './app.footer';
@@ -36,6 +36,8 @@ export class AppLayout implements OnInit, OnDestroy {
     overlayMenuOpenSubscription: Subscription;
     private leaveApprovalSub: Subscription | null = null;
     private leaveReturnedSub: Subscription | null = null;
+    private noteSheetApprovalSub: Subscription | null = null;
+    private notificationPollSub: Subscription | null = null;
 
     menuOutsideClickListener: any;
 
@@ -72,6 +74,9 @@ export class AppLayout implements OnInit, OnDestroy {
     ngOnInit(): void {
         this.chatService.connectToHub().catch(() => {});
         this.notificationService.loadFromApi();
+        // Poll periodically so the bell badge reflects notifications created during the session
+        // (e.g. note-sheet approvals) even if a live SignalR push is missed.
+        this.notificationPollSub = interval(30000).subscribe(() => this.notificationService.loadFromApi());
         this.leaveApprovalSub = this.chatService.leaveApprovalRequested$.subscribe((p) => {
             const msg = p?.message ?? 'A leave application requires your approval.';
             this.notificationService.add({
@@ -91,6 +96,16 @@ export class AppLayout implements OnInit, OnDestroy {
                 message: (p?.message ?? 'Your leave application was returned for corrections.') + reasonSnippet,
                 link: `/leave-application/apply?id=${p?.leaveApplicationId}`,
                 data: { leaveApplicationId: p?.leaveApplicationId },
+                serverId: p?.notificationId ?? undefined
+            });
+        });
+        this.noteSheetApprovalSub = this.chatService.noteSheetApprovalRequested$.subscribe((p) => {
+            this.notificationService.add({
+                type: 'noteSheetApproval',
+                title: 'Note-Sheet Approval',
+                message: p?.message ?? 'A note-sheet requires your approval.',
+                link: p?.link ?? '/notesheet-list/my-approval',
+                data: { noteSheetId: p?.noteSheetId, noteSheetType: p?.noteSheetType },
                 serverId: p?.notificationId ?? undefined
             });
         });
@@ -142,6 +157,8 @@ export class AppLayout implements OnInit, OnDestroy {
     ngOnDestroy(): void {
         this.leaveApprovalSub?.unsubscribe();
         this.leaveReturnedSub?.unsubscribe();
+        this.noteSheetApprovalSub?.unsubscribe();
+        this.notificationPollSub?.unsubscribe();
         if (this.overlayMenuOpenSubscription) {
             this.overlayMenuOpenSubscription.unsubscribe();
         }

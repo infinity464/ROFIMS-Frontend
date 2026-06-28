@@ -111,7 +111,11 @@
         <div class="form-row">
           <div class="form-field" style="flex: 2 1 0%">
             <label class="form-label">Subject</label>
-            <input pInputText formControlName="subject" placeholder="Enter subject" class="w-full" />
+            <div class="subject-input-row">
+              <input pInputText formControlName="subject" placeholder="Enter subject or click search" class="w-full" />
+              <button pButton type="button" icon="pi pi-search" class="p-button-outlined subject-search-btn"
+                title="Pick subject from list" (click)="openSubjectDialog()"></button>
+            </div>
           </div>
           <div class="form-field">
             <label class="form-label">Operation Type <span class="form-label-required">*</span></label>
@@ -194,3 +198,22 @@
     </form>
   </div>
 </p-fluid>
+
+<p-dialog header="Select Subject" [(visible)]="showSubjectDialog" [modal]="true" [draggable]="false"
+  [dismissableMask]="true" [style]="{ width: '34rem' }" styleClass="subject-pick-dialog">
+  <div class="subject-pick">
+    <span class="subject-pick-search">
+      <i class="pi pi-search"></i>
+      <input pInputText type="text" [(ngModel)]="subjectSearch" [ngModelOptions]="{ standalone: true }"
+        placeholder="Search subject..." class="w-full" autofocus />
+    </span>
+
+    <ul class="subject-pick-list">
+      @for (opt of filteredSubjects; track opt.value) {
+        <li (click)="pickSubject(opt)">{{ opt.label }}</li>
+      } @empty {
+        <li class="subject-pick-empty">No subjects found</li>
+      }
+    </ul>
+  </div>
+</p-dialog>

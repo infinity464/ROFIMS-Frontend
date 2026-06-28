@@ -81,7 +81,7 @@ export class NotesheetPreviewGeneralComponent extends NotesheetPreviewBase imple
     private jsreportService = inject(JsReportService);
 
     // ── Page size for jsReport export (Legal default, A4 optional) ──
-    selectedPageSize = 'Legal';
+    selectedPageSize = 'A4';
     pageSizeOptions = [
         { label: 'Legal', value: 'Legal' },
         { label: 'A4', value: 'A4' }
@@ -102,6 +102,8 @@ export class NotesheetPreviewGeneralComponent extends NotesheetPreviewBase imple
 
     // ── Pending-list inline actions ───────────────────────────
     fromPending = false;
+    /** The list URL to return to after an approval action (e.g. /notesheet-list/my-approval). */
+    returnUrl: string | null = null;
     currentUserEmployeeId = 0;
 
     // Remark dialog
@@ -538,6 +540,7 @@ export class NotesheetPreviewGeneralComponent extends NotesheetPreviewBase imple
         super.ngOnInit();
         this.route.queryParams.subscribe(params => {
             this.fromPending = (params['from'] ?? '').toString().toLowerCase() === NoteSheetPreviewFrom.Pending;
+            this.returnUrl = params['returnUrl'] ?? null;
         });
         const userId = this.sharedService.getCurrentUserId?.();
         if (userId) {
@@ -1089,7 +1092,7 @@ export class NotesheetPreviewGeneralComponent extends NotesheetPreviewBase imple
                 if (code === 200) {
                     this.messageService.add({ severity: 'success', summary: 'Success', detail: 'Action completed.' });
                     this.showRemarkDialog = false;
-                    this.router.navigate(['/notesheet-list/pending']);
+                    this.router.navigateByUrl(this.returnUrl || '/notesheet-list/pending');
                 } else {
                     this.messageService.add({ severity: 'warn', summary: 'Notice', detail: msg || 'Action failed.' });
                 }
@@ -1619,6 +1622,14 @@ html, body { margin: 0; padding: 0; background: transparent; }
         const csSig = bn ? sigSize : undefined;
         const lang = bn ? { value: 'bn-BD', bidirectional: 'bn-BD' } : undefined;
 
+        // Page size follows the selected option (A4 default / Legal). Margins are
+        // 400 twips each side, so the bordered cell width = pageWidth − 800
+        // (A4 = 11106, Legal = 11440 twips).
+        const wordIsLegal = this.selectedPageSize === 'Legal';
+        const wordPageWidth = wordIsLegal ? 12240 : 11906;
+        const wordPageHeight = wordIsLegal ? 20160 : 16838;
+        const wordCellWidth = wordPageWidth - 800;
+
         const mainChildren: (Paragraph | Table)[] = [];
 
         // Org header (9pt)
@@ -1925,18 +1936,20 @@ html, body { margin: 0; padding: 0; background: transparent; }
 
         // Outer bordered table: single cell (full width, no sanglagni column)
         const thickBorder = { style: BorderStyle.SINGLE, size: 12, color: '000000' } as const;
-        const rowHeight = 19200; // ≈ full legal page content height
+        // ≈ full page content height (page height − 2×400 twip margins), so the
+        // border stretches the page. Smaller for A4 so it does not overflow.
+        const rowHeight = wordIsLegal ? 19200 : 15900;
 
         const outerTable = new Table({
             layout: TableLayoutType.FIXED,
             width: { size: 100, type: WidthType.PERCENTAGE },
-            columnWidths: [11440],
+            columnWidths: [wordCellWidth],
             rows: [new TableRow({
                 cantSplit: false,
                 height: { value: rowHeight, rule: HeightRule.ATLEAST },
                 children: [
                     new TableCell({
-                        width: { size: 11440, type: WidthType.DXA },
+                        width: { size: wordCellWidth, type: WidthType.DXA },
                         borders: { top: thickBorder, bottom: thickBorder, left: thickBorder, right: thickBorder },
                         margins: { top: 60, bottom: 60, left: 120, right: 120 },
                         verticalAlign: VerticalAlign.TOP,
@@ -1953,7 +1966,7 @@ html, body { margin: 0; padding: 0; background: transparent; }
             sections: [{
                 properties: {
                     page: {
-                        size: { width: 12240, height: 20160, orientation: PageOrientation.PORTRAIT },
+                        size: { width: wordPageWidth, height: wordPageHeight, orientation: PageOrientation.PORTRAIT },
                         margin: { top: 400, right: 400, bottom: 400, left: 400 }
                     }
                 },
@@ -2065,6 +2078,17 @@ html, body { margin: 0; padding: 0; background: transparent; }
         return bytes;
     }
 
+    /**
+     * Page-size dropdown changed (A4 ⇄ Legal). Reset cached pagination geometry so
+     * ngAfterViewChecked re-measures the re-styled content against the new page height.
+     */
+    onPageSizeChange(): void {
+        this.pageContentHeightPx = 0;
+        this.lastMeasuredHeight = 0;
+        this.pageOffsets = [0];
+        this.cdr.detectChanges();
+    }
+
     // ── Pagination logic ──────────────────────────────────────
     ngAfterViewChecked(): void {
         if (this.editing || !this.contentMeasure?.nativeElement) return;
@@ -2089,8 +2113,11 @@ html, body { margin: 0; padding: 0; background: transparent; }
     }
 
     private computePageContentHeightPx(): number {
+        // Visible content height inside the page viewport, per page size:
+        //   Legal: 355.6mm − 14mm − 20mm − 2×4mm = 313.6mm; A4: 297mm − … = 255mm
+        const visibleH = this.selectedPageSize === 'Legal' ? '313.6mm' : '255mm';
         const testDiv = document.createElement('div');
-        testDiv.style.cssText = 'position:absolute;left:-9999px;width:1mm;height:313.6mm;visibility:hidden';
+        testDiv.style.cssText = `position:absolute;left:-9999px;width:1mm;height:${visibleH};visibility:hidden`;
         document.body.appendChild(testDiv);
         const heightPx = testDiv.getBoundingClientRect().height;
         document.body.removeChild(testDiv);

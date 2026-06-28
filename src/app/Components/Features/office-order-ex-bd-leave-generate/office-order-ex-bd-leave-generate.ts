@@ -122,6 +122,13 @@ export class OfficeOrderExBdLeaveGenerateComponent implements OnInit {
         return this.selectedTextType === 'bn';
     }
 
+    /** Default Remarks text loaded on a new order (Bangla when textType is bn, else English). */
+    private defaultRemarks(): string {
+        return this.isBangla
+            ? 'সদয় অনুমোদনের জন্য উপস্থাপন করা হলো।'
+            : 'Submitted for your kind approval.';
+    }
+
     toBanglaDigits(s: string): string {
         return s.replace(/\d/g, d => String.fromCharCode(0x09E6 + Number(d)));
     }
@@ -335,6 +342,7 @@ export class OfficeOrderExBdLeaveGenerateComponent implements OnInit {
                     this.subject = ns.subject ?? '';
                 }
                 this.bodyText = ns.mainText ?? ns.MainText ?? '';
+                this.remarks = this.defaultRemarks();
                 this.postingOrderNumberConfigId = null;
                 this.rebuildConfigOptions();
                 this.loadOnulipiFromConfig();

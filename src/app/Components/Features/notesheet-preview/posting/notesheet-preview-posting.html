@@ -62,7 +62,7 @@
     <div class="export-options-bar no-print" *ngIf="noteSheet && isFullyLoaded && !error && !editing"
          style="display:flex; gap:0.75rem; flex-wrap:wrap; align-items:center; padding:0.5rem 1rem; background:var(--surface-ground); border-radius:6px; margin-bottom:0.5rem;">
         <span style="font-weight:600; font-size:0.85rem;"><i class="pi pi-cog" style="margin-right:0.3rem;"></i>Export:</span>
-        <p-select [options]="pageSizeOptions" [(ngModel)]="selectedPageSize" optionLabel="label" optionValue="value" [style]="{'width': '90px'}"></p-select>
+        <p-select [options]="pageSizeOptions" [(ngModel)]="selectedPageSize" (onChange)="onPageSizeChange()" optionLabel="label" optionValue="value" [style]="{'width': '90px'}"></p-select>
         <ng-container *ngIf="isPostingType() && postingEmployees.length > 0">
             <span style="border-left:1px solid var(--surface-border); height:1.5rem;"></span>
             <span style="display:inline-flex; align-items:center; gap:0.3rem;"><p-checkbox [(ngModel)]="showRankQualifications" [binary]="true" inputId="chkRankQ"></p-checkbox><label for="chkRankQ" style="cursor:pointer;">পদবি বিবরণ</label></span>
@@ -71,6 +71,10 @@
             <span style="display:inline-flex; align-items:center; gap:0.3rem;"><p-checkbox [(ngModel)]="showSpouseDistrictDetail" [binary]="true" inputId="chkSpDist"></p-checkbox><label for="chkSpDist" style="cursor:pointer;">স্পাউস জেলা বিবরণ</label></span>
             <span style="display:inline-flex; align-items:center; gap:0.3rem;"><p-checkbox [(ngModel)]="showPrevWorkplaceDetail" [binary]="true" inputId="chkPrevWp"></p-checkbox><label for="chkPrevWp" style="cursor:pointer;">পূর্ববতী কর্মস্থল বিবরণ</label></span>
             <span style="display:inline-flex; align-items:center; gap:0.3rem;"><p-checkbox [(ngModel)]="showRemarks" [binary]="true" inputId="chkRemarks"></p-checkbox><label for="chkRemarks" style="cursor:pointer;">মন্তব্য</label></span>
+            <span style="border-left:1px solid var(--surface-border); height:1.5rem;"></span>
+            <span style="display:inline-flex; align-items:center; gap:0.3rem;"><p-checkbox [(ngModel)]="showCorps" [binary]="true" inputId="chkCorps"></p-checkbox><label for="chkCorps" style="cursor:pointer;">কোর</label></span>
+            <span style="display:inline-flex; align-items:center; gap:0.3rem;"><p-checkbox [(ngModel)]="showProfQualification" [binary]="true" inputId="chkProfQ"></p-checkbox><label for="chkProfQ" style="cursor:pointer;">পেশাগত যোগ্যতা</label></span>
+            <span style="display:inline-flex; align-items:center; gap:0.3rem;"><p-checkbox [(ngModel)]="showGallantryAwards" [binary]="true" inputId="chkGallantry"></p-checkbox><label for="chkGallantry" style="cursor:pointer;">খেতাব/পদক</label></span>
             <span style="border-left:1px solid var(--surface-border); height:1.5rem;"></span>
             <span style="display:inline-flex; align-items:center; gap:0.3rem;"><p-checkbox [(ngModel)]="showSignatureImage" [binary]="true" inputId="chkSigImg"></p-checkbox><label for="chkSigImg" style="cursor:pointer;">স্বাক্ষর ছবি</label></span>
         </ng-container>
@@ -82,13 +86,13 @@
     <ng-container *ngIf="noteSheet && isFullyLoaded && !error && !editing">
 
         <!-- Hidden: measure full content height -->
-        <div class="page-measure" #contentMeasure>
+        <div class="page-measure" #contentMeasure [class.page-measure--legal]="selectedPageSize === 'Legal'">
             <ng-container *ngTemplateOutlet="viewContent"></ng-container>
         </div>
 
         <!-- Visible: paginated pages -->
         <div class="a4-paper-container" #pagesContainer>
-            <div *ngFor="let offset of pageOffsets; let i = index; trackBy: trackByIndex" class="a4-paper paginated">
+            <div *ngFor="let offset of pageOffsets; let i = index; trackBy: trackByIndex" class="a4-paper paginated" [class.a4-paper--legal]="selectedPageSize === 'Legal'">
                 <div class="page-viewport">
                     <div class="page-inner" [style.transform]="'translateY(-' + offset + 'px)'">
                         <ng-container *ngTemplateOutlet="viewContent"></ng-container>
@@ -461,7 +465,7 @@
                                     <td>{{ isEnglish() ? (i + 1) : serial(i + 1) }}</td>
                                     <td>{{ getServiceIdDisplay(emp) }}</td>
                                     <td>{{ isEnglish() ? (emp.rankName || '') : (emp.rankNameBN || emp.rankName || '') }}<span *ngIf="showRankQualifications && getRankQualifications(emp)"><br>({{ getRankQualifications(emp) }})</span></td>
-                                    <td class="ns-name-cell">{{ isEnglish() ? (emp.fullNameEN || '') : (emp.fullNameBN || emp.fullNameEN || '') }}</td>
+                                    <td class="ns-name-cell">{{ isEnglish() ? (emp.fullNameEN || '') : (emp.fullNameBN || emp.fullNameEN || '') }}<span *ngIf="showGallantryAwards && getGallantryAwards(emp)">, {{ getGallantryAwards(emp) }}</span><span *ngIf="showProfQualification && getProfQualification(emp)">, {{ getProfQualification(emp) }}</span><span *ngIf="showCorps && getCorps(emp)">, {{ getCorps(emp) }}</span></td>
                                     <td style="white-space: pre-line;">{{ getOwnDistrict(emp) }}</td>
                                     <td style="white-space: pre-line;">{{ getSpouseDistrict(emp) }}</td>
                                     <td>{{ isEnglish() ? formatJoiningDate(emp.joiningDateInRAB) : toBnDigits(formatJoiningDate(emp.joiningDateInRAB)) }}</td>
@@ -479,7 +483,7 @@
                                     <td>{{ getServiceIdDisplay(emp) }}</td>
                                     <td>{{ isEnglish() ? (emp.rankName || '') : (emp.rankNameBN || emp.rankName || '') }}<span *ngIf="showRankQualifications && getRankQualifications(emp)"><br>({{ getRankQualifications(emp) }})</span></td>
                                     <td>{{ isEnglish() ? (emp.tradeName || '') : (emp.tradeNameBN || emp.tradeName || '') }}<span *ngIf="showTradeRemarks && emp.tradeRemarks"><br>({{ emp.tradeRemarks }})</span></td>
-                                    <td class="ns-name-cell">{{ isEnglish() ? (emp.fullNameEN || '') : (emp.fullNameBN || emp.fullNameEN || '') }}</td>
+                                    <td class="ns-name-cell">{{ isEnglish() ? (emp.fullNameEN || '') : (emp.fullNameBN || emp.fullNameEN || '') }}<span *ngIf="showGallantryAwards && getGallantryAwards(emp)">, {{ getGallantryAwards(emp) }}</span><span *ngIf="showProfQualification && getProfQualification(emp)">, {{ getProfQualification(emp) }}</span><span *ngIf="showCorps && getCorps(emp)">, {{ getCorps(emp) }}</span></td>
                                     <td style="white-space: pre-line;">{{ getOwnDistrict(emp) }}</td>
                                     <td style="white-space: pre-line;">{{ getSpouseDistrict(emp) }}</td>
                                     <td style="white-space: pre-line;">{{ getPreviousWorkplace(emp) }}</td>

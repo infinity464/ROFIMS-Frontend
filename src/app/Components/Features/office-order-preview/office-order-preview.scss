@@ -148,6 +148,12 @@
     flex-direction: column;
 }
 
+/* Legal page size override (A4 is the default above) */
+.legal-paper.legal-paper--legal {
+    width: 215.9mm;
+    min-height: 355.6mm;
+}
+
 /* ── Document Box ─────────────────────────────────── */
 .oo-doc-box {
     flex: 1;
@@ -409,6 +415,10 @@
         margin: 0 !important;
         page-break-after: always;
         break-after: page;
+    }
+
+    .legal-paper.legal-paper--legal {
+        width: 215.9mm !important;
     }
 
     .legal-paper:last-child {

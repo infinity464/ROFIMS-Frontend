@@ -235,6 +235,8 @@ export class NotesheetExBdLeaveComponent implements OnInit {
         return this.preparedByOptions;
     }
 
+    /** Initiator/final approver are required only for manual note sheets. System-generate note
+     *  sheets get the chain from config, so the pickers are hidden and these validators dropped. */
     ngOnInit(): void {
         const _perms = this._userMenuService.getPermissionsByRoute(this._router.url);
         this.canInsert = _perms.canInsert;
@@ -283,6 +285,10 @@ export class NotesheetExBdLeaveComponent implements OnInit {
                     this.editId = numId;
                     this.editMode = true;
                     this.title = 'Update Draft Note-Sheet (Ex-BD Leave)';
+                    // In edit mode the number is already assigned (shown read-only as Note Sheet No),
+                    // so the numbering-config picker is hidden and no longer required.
+                    this.form.get('noteSheetNumberConfigId')?.clearValidators();
+                    this.form.get('noteSheetNumberConfigId')?.updateValueAndValidity();
                     this.loadNoteSheetForEdit(numId);
                 }
             } else {
@@ -349,7 +355,13 @@ export class NotesheetExBdLeaveComponent implements OnInit {
         } catch { /* ignore */ }
         const empId = this.toNum(d.employeeId ?? d.EmployeeId);
         this.selectedEmployeeId = empId && empId > 0 ? empId : null;
-        if (this.selectedEmployeeId) this.loadFamilyMembersForEmployee(this.selectedEmployeeId, familyMemberIds);
+        const appIdForEdit = this.toNum(d.exBdLeaveApplicationId ?? d.ExBdLeaveApplicationId);
+        // Leave details (purpose, visit dates, countries, total days, family) live on
+        // ExBdLeaveApplication, not NoteSheetInfo — they are fetched separately below.
+        // Only load family directly here when there is no linked application to source it from.
+        if (this.selectedEmployeeId && !(appIdForEdit && appIdForEdit > 0)) {
+            this.loadFamilyMembersForEmployee(this.selectedEmployeeId, familyMemberIds);
+        }
         const noteSheetDate = d.noteSheetDate ?? d.NoteSheetDate;
         const fromDate = d.dateOfVisitFrom ?? d.FromDate ?? d.fromDate;
         const toDate = d.dateOfVisitTo ?? d.ToDate ?? d.toDate;
@@ -440,6 +452,63 @@ export class NotesheetExBdLeaveComponent implements OnInit {
                     : [];
             }
         } catch { /* ignore */ }
+
+        if (appIdForEdit && appIdForEdit > 0) {
+            this.loadExBdLeaveApplicationDetails(appIdForEdit);
+        }
+    }
+
+    /**
+     * Leave-specific fields (purpose, visit dates, destination countries, total days and
+     * family members) live on ExBdLeaveApplication, not NoteSheetInfo. The edit payload from
+     * GetFilteredByKeysAsyn doesn't carry them, so fetch the linked application and patch them.
+     */
+    private loadExBdLeaveApplicationDetails(appId: number): void {
+        this.selectedExBdLeaveAppId = appId;
+        this.exBdLeaveAppService.getById(appId).subscribe({
+            next: (app) => {
+                if (!app) return;
+                const empId = this.toNum(app.applicantEmployeeId);
+                if (empId && empId > 0) {
+                    this.selectedEmployeeId = empId;
+                    this.form.patchValue({ rabIdEmployeeId: empId });
+                }
+
+                let countryIds: number[] = [];
+                try {
+                    if (app.destinationCountriesJson) {
+                        const arr = JSON.parse(app.destinationCountriesJson) as any[];
+                        countryIds = (Array.isArray(arr) ? arr : [])
+                            .map((c) => typeof c === 'number' ? c : (this.toNum(c.countryId ?? c.CountryId) ?? 0))
+                            .filter((id) => id > 0);
+                    }
+                } catch { /* ignore */ }
+
+                this.form.patchValue({
+                    purposeOfExBdLeaveId: this.toNum(app.visitTypeId),
+                    destinationCountryIds: countryIds,
+                    dateOfVisitFrom: this.parseDate(app.fromDate),
+                    dateOfVisitTo: this.parseDate(app.toDate),
+                    totalDays: app.totalDays ?? 0
+                });
+                this.calculateTotalDays();
+
+                let fmids: number[] = [];
+                try {
+                    if (app.familyMembersJson) {
+                        const members = JSON.parse(app.familyMembersJson) as any[];
+                        fmids = (Array.isArray(members) ? members : [])
+                            .map((m) => typeof m === 'number' ? m : (this.toNum(m.fmid ?? m.FMID) ?? 0))
+                            .filter((id) => id > 0);
+                    }
+                } catch { /* ignore */ }
+
+                if (empId && empId > 0) {
+                    this.loadFamilyMembersForEmployee(empId, fmids.length ? fmids : undefined);
+                }
+            },
+            error: () => { /* leave-specific fields stay empty if the application can't be loaded */ }
+        });
     }
 
     private loadNoteSheetForEdit(noteSheetId: number): void {
@@ -640,26 +709,39 @@ export class NotesheetExBdLeaveComponent implements OnInit {
         });
     }
 
-    /** Load Ex-BD Leave applications that don't have a notesheet yet */
+    /** Build the application display label (applicant, RAB id, purpose, countries, dates). */
+    private buildAppLabel(app: ExBdLeaveApplicationListViewModel): string {
+        const parts = [
+            app.applicantName || '',
+            app.rabid ? `RAB: ${app.rabid}` : '',
+            app.visitTypeName || '',
+            app.destinationCountriesDisplay || '',
+            `${app.fromDate?.slice(0, 10) ?? ''} ~ ${app.toDate?.slice(0, 10) ?? ''}`
+        ].filter(Boolean);
+        return parts.join(' | ');
+    }
+
+    /** Load Ex-BD Leave applications. Keep the full list (for edit-mode label lookup); only
+     *  applications without a notesheet are offered in the create dropdown. */
     private loadExBdLeaveApplications(): void {
         this.exBdLeaveAppService.getListView().subscribe({
             next: (list) => {
-                this.allExBdLeaveApps = (list ?? []).filter(
-                    (app) => !app.noteSheetId && !app.isDeleted
-                );
-                this.exBdLeaveAppOptions = this.allExBdLeaveApps.map((app) => {
-                    const parts = [
-                        app.applicantName || '',
-                        app.rabid ? `RAB: ${app.rabid}` : '',
-                        app.visitTypeName || '',
-                        app.destinationCountriesDisplay || '',
-                        `${app.fromDate?.slice(0, 10) ?? ''} ~ ${app.toDate?.slice(0, 10) ?? ''}`
-                    ].filter(Boolean);
-                    return { label: parts.join(' | '), value: app.exBdLeaveApplicationId };
-                });
+                this.allExBdLeaveApps = (list ?? []).filter((app) => !app.isDeleted);
+                this.exBdLeaveAppOptions = this.allExBdLeaveApps
+                    .filter((app) => !app.noteSheetId)
+                    .map((app) => ({ label: this.buildAppLabel(app), value: app.exBdLeaveApplicationId }));
             },
             error: () => {}
         });
+    }
+
+    /** Full application label for the read-only field shown in edit mode (matches the
+     *  create-mode dropdown option); falls back to the applicant name if not yet loaded. */
+    getEditApplicationLabel(): string {
+        const appId = this.form?.get('exBdLeaveApplicationId')?.value;
+        if (appId == null) return this.getEmployeeDisplayName();
+        const app = this.allExBdLeaveApps.find((a) => a.exBdLeaveApplicationId === appId);
+        return app ? this.buildAppLabel(app) : this.getEmployeeDisplayName();
     }
 
     /** When an Ex-BD Leave application is selected, auto-fill the form */
@@ -754,6 +836,8 @@ export class NotesheetExBdLeaveComponent implements OnInit {
         const nameBN = bodyData.empNameBN || app.applicantName || '';
         const nameEN = bodyData.empNameEN || app.applicantName || '';
         const serviceId = bodyData.serviceId || app.applicantServiceId || '';
+        const prefixEN = bodyData.prefixEN || '';
+        const prefixBN = bodyData.prefixBN || '';
         const rabUnitBN = bodyData.placementBN || app.applicantPlacement || '';
         const rabUnitEN = bodyData.placementEN || app.applicantPlacement || '';
         const purposeBN = bodyData.visitTypeNameBN || '';
@@ -775,9 +859,13 @@ export class NotesheetExBdLeaveComponent implements OnInit {
             familySectionEN = ` self and family members (${bodyData.familyMembersDisplayEN})`;
         }
 
-        const dynamicBN = `র‍্যাব প্রেষণে নিয়োজিত বর্তমানে ${rabUnitBN} এ কর্মরত ${BanglaNumerals.toBangla(serviceId)} ${nameBN} এর ${purposeBN} জন্য${familySectionBN} আগামী ${formatDateBangla(fromDate)} হতে ${formatDateBangla(toDate)} তারিখ পর্যন্ত ${daysBN} (${daysWordsBN}) দিন অথবা উল্লিখিত সময়ের মধ্যে যাত্রার তারিখ হতে ${daysBN} (${daysWordsBN}) দিন ${countriesBN} গমনের জন্য অর্জিত `;
+        // Person identifier: Prefix → ServiceId → Name (empties skipped to avoid stray spaces)
+        const personBN = [prefixBN, BanglaNumerals.toBangla(serviceId), nameBN].filter(Boolean).join(' ');
+        const personEN = [prefixEN, serviceId, nameEN].filter(Boolean).join(' ');
 
-        const dynamicEN = `Currently serving at ${rabUnitEN} under RAB deputation, ${serviceId} ${nameEN} has applied for ${purposeEN}${familySectionEN}, for ${totalDays} (${daysWordsEN}) days from ${formatDateEnglish(fromDate)} to ${formatDateEnglish(toDate)}, or ${totalDays} (${daysWordsEN}) days from the date of journey within the aforementioned period, to ${countriesEN} for earned `;
+        const dynamicBN = `র‍্যাব প্রেষণে নিয়োজিত বর্তমানে ${rabUnitBN} এ কর্মরত ${personBN} এর ${purposeBN} জন্য${familySectionBN} আগামী ${formatDateBangla(fromDate)} হতে ${formatDateBangla(toDate)} তারিখ পর্যন্ত ${daysBN} (${daysWordsBN}) দিন অথবা উল্লিখিত সময়ের মধ্যে যাত্রার তারিখ হতে ${daysBN} (${daysWordsBN}) দিন ${countriesBN} গমনের জন্য অর্জিত `;
+
+        const dynamicEN = `Currently serving at ${rabUnitEN} under RAB deputation, ${personEN} has applied for ${purposeEN}${familySectionEN}, for ${totalDays} (${daysWordsEN}) days from ${formatDateEnglish(fromDate)} to ${formatDateEnglish(toDate)}, or ${totalDays} (${daysWordsEN}) days from the date of journey within the aforementioned period, to ${countriesEN} for earned `;
 
         this.generatedMainTextBN = dynamicBN + this.defaultMainTextBN;
         this.generatedMainTextEN = dynamicEN + this.defaultMainTextEN;

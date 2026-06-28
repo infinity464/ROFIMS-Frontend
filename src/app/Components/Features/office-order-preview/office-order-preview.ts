@@ -92,7 +92,7 @@ export class OfficeOrderPreviewComponent implements OnInit {
     }
 
     // Page size for export
-    selectedPageSize: 'a4' | 'letter' = 'a4';
+    selectedPageSize: 'a4' | 'legal' = 'a4';
 
     // Export states
     exportingPdf = false;
@@ -349,7 +349,7 @@ export class OfficeOrderPreviewComponent implements OnInit {
     /** Calculate dynamic column widths in twips (DXA) based on content */
     private calcColumnWidthsDxa(columns: any[], rows: Record<string, string>[]): number[] {
         // Total usable width in twips: page width - left margin - right margin
-        const pageWidth = this.selectedPageSize === 'letter' ? 12240 : 11906;
+        const pageWidth = this.selectedPageSize === 'legal' ? 12240 : 11906;
         const totalWidth = pageWidth - 720 - 720; // margins are 720 twips each
 
         const slHeader = this.isBangla ? 'ক্রমিক' : 'SL';
@@ -463,8 +463,8 @@ export class OfficeOrderPreviewComponent implements OnInit {
         const children: (Paragraph | Table)[] = [];
 
         // ── Page size ──
-        const pageSize = this.selectedPageSize === 'letter'
-            ? { width: 12240, height: 15840 } // Letter: 8.5" × 11"
+        const pageSize = this.selectedPageSize === 'legal'
+            ? { width: 12240, height: 20160 } // Legal: 215.9mm × 355.6mm
             : { width: 11906, height: 16838 }; // A4: 210mm × 297mm
 
         // ── Government Header (centered, 9pt) ──
@@ -737,11 +737,11 @@ export class OfficeOrderPreviewComponent implements OnInit {
     private buildJsReportPdf(): { html: string; chrome: Record<string, unknown> } {
         const styles = this.collectDocumentStyles();
         const body = this.legalPaper.nativeElement.innerHTML;
-        const isLetter = this.selectedPageSize === 'letter';
-        // a4: 210×297mm (190mm column). letter: 215.9×279.4mm (195.9mm column).
-        const pageWidth = isLetter ? '215.9mm' : '210mm';
-        const pageHeight = isLetter ? '279.4mm' : '297mm';
-        const colWidth = isLetter ? '195.9mm' : '190mm';
+        const isLegal = this.selectedPageSize === 'legal';
+        // a4: 210×297mm (190mm column). legal: 215.9×355.6mm (195.9mm column).
+        const pageWidth = isLegal ? '215.9mm' : '210mm';
+        const pageHeight = isLegal ? '355.6mm' : '297mm';
+        const colWidth = isLegal ? '195.9mm' : '190mm';
         const padX = 10, padTop = 14, padBottom = 20; // mm — .legal-paper padding
 
         const html = `<!DOCTYPE html>

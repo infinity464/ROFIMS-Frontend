@@ -142,6 +142,11 @@
     display: flex;
     flex-direction: column;
 }
+/* Legal page size selected → render the on-screen paper as Legal (matches Word/PDF). */
+.legal-paper--legal {
+    width: 215.9mm;
+    min-height: 355.6mm;
+}
 
 /* ── Document Box ─────────────────────────────────── */
 .oo-doc-box {

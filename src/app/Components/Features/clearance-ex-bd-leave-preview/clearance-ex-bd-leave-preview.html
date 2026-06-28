@@ -80,7 +80,7 @@
                 <p-button *ngIf="!isApproved" icon="pi pi-pencil" label="Edit" (onClick)="goEdit()" styleClass="p-button-outlined" severity="info"></p-button>
                 <select [(ngModel)]="selectedPageSize" class="page-size-select">
                     <option value="a4">A4</option>
-                    <option value="letter">Letter</option>
+                    <option value="legal">Legal</option>
                 </select>
                 <p-button icon="pi pi-file-word" label="Word" (onClick)="exportWord()" styleClass="p-button-outlined"></p-button>
                 <p-button icon="pi pi-file-pdf" label="PDF" (onClick)="exportPdf()" [loading]="exportingPdf" styleClass="p-button-outlined"></p-button>
@@ -140,7 +140,7 @@
 
     <!-- ─── A4 Paper Preview ─── -->
     <div class="legal-paper-container" *ngIf="!loading && !error && order">
-        <div class="legal-paper" #legalPaper>
+        <div class="legal-paper" [class.legal-paper--legal]="selectedPageSize === 'legal'" #legalPaper>
             <div class="oo-doc-box">
 
                 <!-- Government Header -->
@@ -176,12 +176,12 @@
                     </div>
                 </div>
 
-                <!-- ═══ Body (exactly what is stored in DB) ═══ -->
+                <!-- ═══ Body (paragraph 1 stored, paragraph 2 = Remarks) ═══ -->
                 <div class="oo-doc-body" *ngIf="order.body">
                     <span class="oo-body-serial">1.</span><span class="oo-doc-rich-content oo-doc-rich-content--inline" [innerHTML]="getBodySafe()"></span>
                 </div>
-                <div class="oo-doc-body" *ngIf="order.body">
-                    <span class="oo-body-serial">2.</span>Forward for your kind information and further necessary action please.
+                <div class="oo-doc-body" *ngIf="order.remarks">
+                    <span class="oo-body-serial">2.</span>{{ order.remarks }}
                 </div>
 
                 <!-- ═══ Information (Copy Distribution) ═══ -->

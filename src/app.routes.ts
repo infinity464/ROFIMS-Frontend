@@ -41,6 +41,7 @@ import { BriefStatementOfOffence } from '@/Components/basic-setup/brief-statemen
 import { MedicalCategoryType } from '@/Components/basic-setup/medical-category-type/medical-category-type';
 import { PurposeOfVisitType } from '@/Components/basic-setup/purpose-of-visit-type/purpose-of-visit-type';
 import { SubjectType } from '@/Components/basic-setup/subject-type/subject-type';
+import { NoteSheetSubject } from '@/Components/basic-setup/notesheet-subject/notesheet-subject';
 import { LeaveType } from '@/Components/basic-setup/leave-type/leave-type';
 import { EquivalentName } from '@/Components/basic-setup/equivalent-name/equivalent-name';
 import { EmployeeStatusType } from '@/Components/basic-setup/employee-status-type/employee-status-type';
@@ -271,6 +272,7 @@ export const appRoutes: Routes = [
             { path: 'basic-setup/medical-category-type', component: MedicalCategoryType },
             { path: 'basic-setup/purpose-of-visit-type', component: PurposeOfVisitType },
             { path: 'basic-setup/subject-type', component: SubjectType },
+            { path: 'basic-setup/notesheet-subject', component: NoteSheetSubject },
             { path: 'basic-setup/leave-type', component: LeaveType },
             { path: 'basic-setup/equivalent-name', component: EquivalentName },
             { path: 'basic-setup/employee-status-type', component: EmployeeStatusType },
@@ -342,6 +344,11 @@ export const appRoutes: Routes = [
             { path: 'notesheet-list/approved-inter-posting', component: NotesheetListComponent, data: { section: 'approved', noteSheetTypeFilter: 'InterPosting' } },
             { path: 'notesheet-list/declined-inter-posting', component: NotesheetListComponent, data: { section: 'declined', noteSheetTypeFilter: 'InterPosting' } },
             { path: 'notesheet-list/all-inter-posting', component: NotesheetListComponent, data: { section: 'all', noteSheetTypeFilter: 'InterPosting' } },
+            // System-generate "My Approval" lists — per-logged-in-user, only note sheets currently awaiting their action.
+            { path: 'notesheet-list/my-approval', component: NotesheetListComponent, data: { section: 'my-pending', noteSheetTypeFilter: 'General' } },
+            { path: 'notesheet-list/my-approval-ex-bd-leave', component: NotesheetListComponent, data: { section: 'my-pending', noteSheetTypeFilter: 'ExBDLeave' } },
+            { path: 'notesheet-list/my-approval-new-posting', component: NotesheetListComponent, data: { section: 'my-pending', noteSheetTypeFilter: 'NewPosting' } },
+            { path: 'notesheet-list/my-approval-inter-posting', component: NotesheetListComponent, data: { section: 'my-pending', noteSheetTypeFilter: 'InterPosting' } },
             { path: 'notesheet-preview',         component: NotesheetPreviewComponent },
             { path: 'notesheet-preview/general', component: NotesheetPreviewGeneralComponent },
             { path: 'notesheet-preview/posting', component: NotesheetPreviewPostingComponent },
@@ -357,7 +364,7 @@ export const appRoutes: Routes = [
             { path: 'leave-application/apply-for-other', component: LeaveApplyForOtherComponent },
             { path: 'leave-application/action-taken-by-me', component: LeaveActionTakenByMeComponent },
             { path: 'leave-application/card', component: LeaveCardComponent },
-
+            
             // EMP
             { path: 'emp-list', component: EmpList },
             { path: 'emp-basic-info', component: EmpBasicInfo, canActivate: [MemberTypePermissionGuard] },

@@ -155,20 +155,24 @@
           <!-- Row 0: Select Ex-BD Leave Application (full width) -->
           <div class="ns-gen-field ns-gen-full">
             <label class="ns-gen-label">Select Ex-BD Leave Application <span class="ns-gen-req">*</span></label>
-            <p-select
-              formControlName="exBdLeaveApplicationId"
-              [options]="exBdLeaveAppOptions"
-              optionLabel="label"
-              optionValue="value"
-              [filter]="true"
-              filterBy="label"
-              [showClear]="true"
-              placeholder="Search & Select Application"
-              styleClass="w-full"
-              (onChange)="onExBdLeaveAppChange($event.value)">
-            </p-select>
-            @if (form.get('exBdLeaveApplicationId')?.invalid && form.get('exBdLeaveApplicationId')?.touched) {
-              <small class="ns-gen-error">Ex-BD Leave Application is required</small>
+            @if (editMode) {
+              <input pInputText [value]="getEditApplicationLabel()" class="w-full" [readonly]="true" />
+            } @else {
+              <p-select
+                formControlName="exBdLeaveApplicationId"
+                [options]="exBdLeaveAppOptions"
+                optionLabel="label"
+                optionValue="value"
+                [filter]="true"
+                filterBy="label"
+                [showClear]="true"
+                placeholder="Search & Select Application"
+                styleClass="w-full"
+                (onChange)="onExBdLeaveAppChange($event.value)">
+              </p-select>
+              @if (form.get('exBdLeaveApplicationId')?.invalid && form.get('exBdLeaveApplicationId')?.touched) {
+                <small class="ns-gen-error">Ex-BD Leave Application is required</small>
+              }
             }
           </div>
 
@@ -192,16 +196,20 @@
 
           <div class="ns-gen-field">
             <label class="ns-gen-label">Note Sheet No <span class="ns-gen-req">*</span></label>
-            <p-select
-              formControlName="noteSheetNumberConfigId"
-              [options]="noteSheetConfigOptions"
-              optionLabel="label"
-              optionValue="value"
-              placeholder="Select NoteSheet Number"
-              styleClass="w-full">
-            </p-select>
-            @if (form.get('noteSheetNumberConfigId')?.invalid && form.get('noteSheetNumberConfigId')?.touched) {
-              <small class="ns-gen-error">Note Sheet No is required</small>
+            @if (editMode) {
+              <input pInputText formControlName="noteSheetNo" class="w-full" [readonly]="true" />
+            } @else {
+              <p-select
+                formControlName="noteSheetNumberConfigId"
+                [options]="noteSheetConfigOptions"
+                optionLabel="label"
+                optionValue="value"
+                placeholder="Select NoteSheet Number"
+                styleClass="w-full">
+              </p-select>
+              @if (form.get('noteSheetNumberConfigId')?.invalid && form.get('noteSheetNumberConfigId')?.touched) {
+                <small class="ns-gen-error">Note Sheet No is required</small>
+              }
             }
           </div>
 

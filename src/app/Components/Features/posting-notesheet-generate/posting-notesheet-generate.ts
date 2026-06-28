@@ -1,6 +1,6 @@
 import { Component, OnInit, ViewChild , inject } from '@angular/core';
 import { UserMenuService } from '@/services/user-menu.service';
-import { FormBuilder, FormGroup, Validators } from '@angular/forms';
+import { FormBuilder, FormGroup, Validators, FormsModule } from '@angular/forms';
 import { MessageService } from 'primeng/api';
 import { SharedService } from '@/shared/services/shared-service';
 import { FlexibleDateDirective } from '@/shared/directives/flexible-date.directive';
@@ -15,6 +15,7 @@ import { DatePickerModule } from 'primeng/datepicker';
 import { RichEditorComponent } from '@/Components/Common/rich-editor/rich-editor';
 import { TextareaModule } from 'primeng/textarea';
 import { CheckboxModule } from 'primeng/checkbox';
+import { DialogModule } from 'primeng/dialog';
 import { ToastModule } from 'primeng/toast';
 import { environment } from '@/Core/Environments/environment';
 import { HttpClient } from '@angular/common/http';
@@ -29,6 +30,7 @@ import { NoteSheetEditCacheService } from '@/services/note-sheet-edit-cache.serv
 import { NoteSheetType, NoteSheetOperationType, NoteSheetOperationTypeOptions, ApprovalStatus, CodeType } from '@/models/enums';
 import { BanglaNumerals } from '@/Core/i18n/bangla-numerals';
 import { MasterBasicSetupService } from '@/Components/basic-setup/shared/services/MasterBasicSetupService';
+import { NoteSheetSubjectService, NoteSheetSubjectModel } from '@/Components/basic-setup/shared/services/NoteSheetSubjectService';
 import { NotesheetApproverSelectComponent } from '@/Components/Common/notesheet-approver-select/notesheet-approver-select';
 
 @Component({
@@ -37,6 +39,7 @@ import { NotesheetApproverSelectComponent } from '@/Components/Common/notesheet-
     imports: [
         CommonModule,
         ReactiveFormsModule,
+        FormsModule,
         FluidModule,
         InputTextModule,
         ButtonModule,
@@ -47,6 +50,7 @@ import { NotesheetApproverSelectComponent } from '@/Components/Common/notesheet-
         TextareaModule,
         ToastModule,
         CheckboxModule,
+        DialogModule,
         FileReferencesFormComponent,
         NotesheetApproverSelectComponent
     ],
@@ -91,6 +95,13 @@ export class PostingNotesheetGenerateComponent implements OnInit {
     /** Dynamic paragraphs */
     paragraphs: string[] = [''];
 
+    /** Predefined subjects for New Posting note-sheets — picking one fills the Subject
+     *  text field. NOT stored as an id; only the resulting text is saved (NoteSheetInfo.Subject). */
+    private subjectPickList: NoteSheetSubjectModel[] = [];
+    subjectOptions: { label: string; value: number }[] = [];
+    showSubjectDialog = false;
+    subjectSearch = '';
+
     @ViewChild('fileReferencesForm') fileReferencesForm!: FileReferencesFormComponent;
 
     constructor(
@@ -104,7 +115,8 @@ export class PostingNotesheetGenerateComponent implements OnInit {
         private route: ActivatedRoute,
         private router: Router,
         private noteSheetEditCache: NoteSheetEditCacheService,
-        private masterBasicSetupService: MasterBasicSetupService
+        private masterBasicSetupService: MasterBasicSetupService,
+        private noteSheetSubjectService: NoteSheetSubjectService
     ) {
         this.form = this.fb.group({
             draftPostingMasterId: [null as number | null, Validators.required],
@@ -126,6 +138,8 @@ export class PostingNotesheetGenerateComponent implements OnInit {
         });
     }
 
+    /** Initiator/final approver are required only for manual note sheets. System-generate note
+     *  sheets get the chain from config, so the pickers are hidden and these validators dropped. */
     ngOnInit(): void {
         const _perms = this._userMenuService.getPermissionsByRoute(this._router.url);
         this.canInsert = _perms.canInsert;
@@ -136,6 +150,7 @@ export class PostingNotesheetGenerateComponent implements OnInit {
         this.loadPreparedByOptions();
         this.resolvePreparedByMapping();
         this.loadNoteSheetNumberConfig();
+        this.loadSubjectPickList();
 
         this.route.queryParams.pipe(take(1)).subscribe((params) => {
             const id = params['id'];
@@ -155,6 +170,7 @@ export class PostingNotesheetGenerateComponent implements OnInit {
         // When textType changes: rebuild config dropdown options + swap prefix in edit mode
         this.form.get('textType')?.valueChanges.subscribe((newType: string) => {
             this.buildNoteSheetConfigOptions();
+            this.buildSubjectOptions();
             if (this.editMode) {
                 this.transformNoteSheetNo(newType);
             }
@@ -163,6 +179,47 @@ export class PostingNotesheetGenerateComponent implements OnInit {
 
     get isBangla(): boolean {
         return this.form?.get('textType')?.value === 'bn';
+    }
+
+    /** Load active predefined subjects for New Posting note-sheets. */
+    private loadSubjectPickList(): void {
+        this.noteSheetSubjectService.getActiveByType(NoteSheetType.NewPosting).subscribe({
+            next: (list) => {
+                this.subjectPickList = Array.isArray(list) ? list : [];
+                this.buildSubjectOptions();
+            },
+            error: () => {
+                this.subjectPickList = [];
+                this.subjectOptions = [];
+            }
+        });
+    }
+
+    /** Option labels follow the current textType (bn/en). */
+    private buildSubjectOptions(): void {
+        const isBn = this.isBangla;
+        this.subjectOptions = this.subjectPickList.map((s) => ({
+            label: (isBn ? s.subjectBN : s.subjectEN) || s.subjectEN || s.subjectBN || '',
+            value: s.id
+        }));
+    }
+
+    /** Subjects filtered by the modal search box (matches the current-language label). */
+    get filteredSubjects(): { label: string; value: number }[] {
+        const term = (this.subjectSearch || '').trim().toLowerCase();
+        if (!term) return this.subjectOptions;
+        return this.subjectOptions.filter((o) => o.label.toLowerCase().includes(term));
+    }
+
+    openSubjectDialog(): void {
+        this.subjectSearch = '';
+        this.showSubjectDialog = true;
+    }
+
+    /** Copy the chosen subject's text into the editable Subject field (no id stored). */
+    pickSubject(opt: { label: string; value: number }): void {
+        this.form.get('subject')?.setValue(opt.label);
+        this.showSubjectDialog = false;
     }
 
     loadDraftPostingMasters(): void {

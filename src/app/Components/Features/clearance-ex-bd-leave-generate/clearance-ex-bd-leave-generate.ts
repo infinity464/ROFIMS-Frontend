@@ -120,6 +120,11 @@ export class ClearanceExBdLeaveGenerateComponent implements OnInit {
         return false;
     }
 
+    /** Default Remarks text loaded on a new clearance — becomes paragraph 2 of the letter. */
+    private defaultRemarks(): string {
+        return 'Forward for your kind information and further necessary action please.';
+    }
+
     getReferenceSerial(index: number): string {
         return String.fromCharCode(65 + index);  // A, B, C...
     }
@@ -319,6 +324,7 @@ export class ClearanceExBdLeaveGenerateComponent implements OnInit {
                 } else {
                     this.subject = ns.subject ?? '';
                 }
+                this.remarks = this.defaultRemarks();
                 this.postingOrderNumberConfigId = null;
                 this.rebuildConfigOptions();
                 this.loadOnulipiFromConfig();

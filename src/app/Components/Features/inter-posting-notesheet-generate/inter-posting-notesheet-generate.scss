@@ -1,3 +1,76 @@
 :host {
   display: block;
 }
+
+/* Subject field: text input + compact search button */
+.subject-input-row {
+  display: flex;
+  gap: 0.4rem;
+  align-items: stretch;
+
+  input {
+    flex: 1 1 auto;
+  }
+
+  .subject-search-btn {
+    flex: 0 0 auto;
+  }
+}
+
+/* Subject picker modal */
+.subject-pick {
+  .subject-pick-search {
+    position: relative;
+    display: block;
+    margin-bottom: 0.85rem;
+
+    i {
+      position: absolute;
+      top: 50%;
+      left: 0.75rem;
+      transform: translateY(-50%);
+      color: var(--text-color-secondary, #6b7280);
+      pointer-events: none;
+    }
+
+    input {
+      width: 100%;
+      padding-left: 2.1rem;
+    }
+  }
+
+  .subject-pick-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    max-height: 18rem;
+    overflow-y: auto;
+    border: 1px solid var(--surface-border, #e5e7eb);
+    border-radius: 6px;
+
+    li {
+      padding: 0.6rem 0.85rem;
+      cursor: pointer;
+      border-bottom: 1px solid var(--surface-border, #f1f1f1);
+      transition: background-color 0.15s ease;
+
+      &:last-child {
+        border-bottom: none;
+      }
+
+      &:hover {
+        background-color: var(--surface-hover, #f3f4f6);
+      }
+
+      &.subject-pick-empty {
+        cursor: default;
+        color: var(--text-color-secondary, #6b7280);
+        text-align: center;
+
+        &:hover {
+          background-color: transparent;
+        }
+      }
+    }
+  }
+}

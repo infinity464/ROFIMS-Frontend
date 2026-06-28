@@ -101,10 +101,10 @@ export class PostingOrderPreviewPageComponent implements OnInit {
 
     // ── Page size for export ──────────────────────────────────
     pageSizeOptions = [
-        { label: 'A4', value: 'A4' },
-        { label: 'Legal', value: 'Legal' }
+        { label: 'A4', value: 'a4' },
+        { label: 'Legal', value: 'legal' }
     ];
-    selectedPageSize = 'A4';
+    selectedPageSize: 'a4' | 'legal' = 'a4';
 
     // ── অনুলিপি paragraph checkboxes ────────────────────────
     showOnulipiFilter = false;
@@ -119,6 +119,10 @@ export class PostingOrderPreviewPageComponent implements OnInit {
     showOwnDistrict = true;
     showRemarks = true;
     showUpperSignature = true;
+    // Name-suffix toggles (off by default) — Gallantry / Professional Qual. / Corps
+    showGallantryAwards = false;
+    showProfQualification = false;
+    showCorps = false;
 
     private syncParagraphChecked(): void {
         const paras = this.filteredFooterParagraphs;
@@ -773,6 +777,23 @@ export class PostingOrderPreviewPageComponent implements OnInit {
 
     empName(emp: PostingOrderEmployeeRow): string {
         return (this.isBangla ? (emp.fullNameBN || emp.fullNameEN) : emp.fullNameEN) || '-';
+    }
+
+    /** ", decoration, professional qualification, corps" suffix appended after the name —
+     *  same sequence the member profile shows. "N/A"/"অপ্রযোজ্য"/empty values are skipped. */
+    empNameQuals(emp: PostingOrderEmployeeRow): string {
+        const bn = this.isBangla;
+        const pick = (en?: string | null, bnv?: string | null): string => (bn ? (bnv || en || '') : (en || '')).trim();
+        const na = (v: string): boolean => {
+            const t = v.trim().toLowerCase();
+            return t === '' || t === 'n/a' || t === 'na' || t === 'অপ্রযোজ্য' || t === '(অপ্রযোজ্য)';
+        };
+        const parts = [
+            this.showGallantryAwards ? pick(emp.gallantryAwardsDecoration, emp.gallantryAwardsDecorationBN) : '',
+            this.showProfQualification ? pick(emp.professionalQualification, emp.professionalQualificationBN) : '',
+            this.showCorps ? pick(emp.corpsName, emp.corpsNameBN) : '',
+        ].filter(v => !na(v));
+        return parts.length ? ', ' + parts.join(', ') : '';
     }
 
     empDistrict(emp: PostingOrderEmployeeRow): string {
@@ -1432,7 +1453,7 @@ export class PostingOrderPreviewPageComponent implements OnInit {
     private buildJsReportPdf(): { html: string; chrome: Record<string, unknown> } {
         const styles = this.collectDocumentStyles();
         const body = this.legalPaper.nativeElement.innerHTML;
-        const isLegal = this.selectedPageSize === 'Legal';
+        const isLegal = this.selectedPageSize === 'legal';
         const pageWidth = isLegal ? '215.9mm' : '210mm';
         const pageHeight = isLegal ? '355.6mm' : '297mm';
         const colWidth = isLegal ? '195.9mm' : '190mm';
@@ -1581,11 +1602,13 @@ html, body { margin: 0; padding: 0; background: transparent; }
                    : ['Ser', 'Service ID', 'Rank', 'Name', ...(sd ? ['Own District'] : []), ...(sp ? ['Previous Workplace'] : []), 'Transfer Station', ...(sr ? ['Remarks'] : [])])
             : (bn ? ['ক্রমিক', 'ব্যক্তিগত নম্বর', 'পদবি', 'ট্রেড', 'নাম', ...(sd ? ['নিজ জেলা'] : []), ...(sp ? ['পূর্ববতী কর্মস্থল'] : []), 'বদলিকৃত কর্মস্থল', 'র‌্যাব আইডি', ...(sr ? ['মন্তব্য'] : [])]
                    : ['Ser', 'Service ID', 'Rank', 'Trade', 'Name', ...(sd ? ['Own District'] : []), ...(sp ? ['Previous Workplace'] : []), 'Transfer Unit', 'RAB ID', ...(sr ? ['Remarks'] : [])]);
-        // Column widths in DXA – must sum to full content width (page 12240 - margins 567*2 = 11106)
+        // Column widths in DXA – must sum to full content width.
+        // Legal: page 12240 − margins 567*2 = 11106. A4: page 11906 − margins 567*2 = 10772.
+        const tblContentWidth = this.selectedPageSize === 'legal' ? 11106 : 10772;
         const buildColW = (): number[] => {
             if (isInter) {
                 const base = [500, 1050, 900];
-                const rem = 11106 - 500 - 1050 - 900;
+                const rem = tblContentWidth - 500 - 1050 - 900;
                 const optCols = (sd ? 1 : 0) + (sp ? 1 : 0) + (sr ? 1 : 0);
                 const nameW = 2200;
                 const transferW = 1500;
@@ -1605,7 +1628,7 @@ html, body { margin: 0; padding: 0; background: transparent; }
             const prevW = sp ? 1374 : 0;
             const remW = sr ? 1100 : 0;
             const usedW = fixedSum + nameW + transferW + rabIdW + distW + prevW + remW;
-            const adjust = 11106 - usedW;
+            const adjust = tblContentWidth - usedW;
             return [...base, nameW + adjust, ...(sd ? [distW] : []), ...(sp ? [prevW] : []), transferW, rabIdW, ...(sr ? [remW] : [])];
         };
         const colW = buildColW();
@@ -1655,7 +1678,7 @@ html, body { margin: 0; padding: 0; background: transparent; }
         const allRows = [...headerRows, ...dataRows];
 
         const empTable = new Table({
-            width: { size: 11106, type: WidthType.DXA },
+            width: { size: tblContentWidth, type: WidthType.DXA },
             layout: TableLayoutType.FIXED,
             indent: { size: 0, type: WidthType.DXA },
             rows: allRows,
@@ -1772,7 +1795,7 @@ html, body { margin: 0; padding: 0; background: transparent; }
         ];
         // DXA widths: both tables are identical 100%-wide structures → exact same column positions
         // contentWidth = page width − left margin − right margin (DXA units)
-        const contentWidth = this.selectedPageSize === 'Legal' ? 11106 : 10772;
+        const contentWidth = this.selectedPageSize === 'legal' ? 11106 : 10772;
         const sigWidth  = Math.round(contentWidth * 0.20);   // right 20%
         const leftWidth = contentWidth - sigWidth;            // left  80%
         const zeroMargins = { top: 0, bottom: 0, left: 0, right: 0 };
@@ -1881,8 +1904,8 @@ html, body { margin: 0; padding: 0; background: transparent; }
             ] })]
         });
 
-        const pageWidth = this.selectedPageSize === 'Legal' ? 12240 : 11906;
-        const pageHeight = this.selectedPageSize === 'Legal' ? 20160 : 16838;
+        const pageWidth = this.selectedPageSize === 'legal' ? 12240 : 11906;
+        const pageHeight = this.selectedPageSize === 'legal' ? 20160 : 16838;
 
         return new Document({
             styles: bn ? { default: { document: { run: { language: { value: 'bn-BD', bidirectional: 'bn-BD' } } } } } : undefined,
