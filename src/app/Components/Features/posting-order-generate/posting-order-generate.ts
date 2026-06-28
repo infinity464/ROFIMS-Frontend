@@ -20,6 +20,8 @@ import { DialogModule } from 'primeng/dialog';
 import { MessageService, ConfirmationService } from 'primeng/api';
 import { environment } from '@/Core/Environments/environment';
 import { PostingService } from '@/services/posting.service';
+import { SharedService } from '@/shared/services/shared-service';
+import { IdentityUserMemberTypeAccessService } from '@/services/identity-user-member-type-access.service';
 import { MasterBasicSetupService } from '@/Components/basic-setup/shared/services/MasterBasicSetupService';
 import { ApprovedNoteSheetItem, PostingOrderMasterDto, EmployeeRemovalInfo, CancelledInterPostingInfo } from '@/models/posting.model';
 import { PostingOrderNumberConfigModel } from '@/Components/basic-setup/shared/models/posting-order-number-config';
@@ -92,6 +94,9 @@ interface FooterParagraph {
 export class PostingOrderGenerateComponent implements OnInit {
     private _router = inject(Router);
     private _userMenuService = inject(UserMenuService);
+    private sharedService = inject(SharedService);
+    private memberTypeAccess = inject(IdentityUserMemberTypeAccessService);
+    allowedMemberTypeIds: number[] | null = null;
     canInsert = true;
     canUpdate = true;
     canDelete = true;
@@ -229,6 +234,7 @@ export class PostingOrderGenerateComponent implements OnInit {
         this.canInsert = _perms.canInsert;
         this.canUpdate = _perms.canUpdate;
         this.canDelete = _perms.canDelete;
+        this.loadCurrentUserMemberTypePermissions();
 
         this.postingOrderDate = new Date();
         this.loadApprovalEmployees();
@@ -328,12 +334,25 @@ export class PostingOrderGenerateComponent implements OnInit {
             });
     }
 
-    /** Dropdown options for notesheet select. */
+    /** Dropdown options for notesheet select — scoped to the user's accessible member types. */
     get noteSheetDropdownOptions() {
-        return this.approvedNoteSheets.map(ns => ({
-            label: ns.noteSheetNo,
-            value: ns.noteSheetId
-        }));
+        return this.approvedNoteSheets
+            .filter(ns => this.memberTypeAccess.isAccessible(ns.employeeTypeIds, this.allowedMemberTypeIds))
+            .map(ns => ({
+                label: ns.noteSheetNo,
+                value: ns.noteSheetId
+            }));
+    }
+
+    /** Resolve the current user's accessible member type ids (cache first, then always refetch). */
+    private loadCurrentUserMemberTypePermissions(): void {
+        const userId = this.sharedService.getCurrentUserId?.() ?? null;
+        if (!userId) { this.allowedMemberTypeIds = null; return; }
+        this.allowedMemberTypeIds = this.memberTypeAccess.getCachedMemberTypeIds(userId);
+        this.memberTypeAccess.cacheForUser(userId).subscribe({
+            next: (ids) => { this.allowedMemberTypeIds = Array.isArray(ids) ? ids : []; },
+            error: () => { /* keep cached value */ }
+        });
     }
 
     /** When a notesheet is selected, load its employees and set textType from notesheet. */
@@ -613,7 +632,9 @@ export class PostingOrderGenerateComponent implements OnInit {
         this.postingService.getPostingOrderMasters().subscribe({
             next: (data) => {
                 const postingType = this.fixedPostingType ?? this.selectedPostingType;
-                const filtered = postingType ? (data ?? []).filter(o => o.postingType === postingType) : (data ?? []);
+                const byType = postingType ? (data ?? []).filter(o => o.postingType === postingType) : (data ?? []);
+                // Scope to the user's accessible member types (via the linked note-sheet's EmployeeTypeIds).
+                const filtered = byType.filter(o => this.memberTypeAccess.isAccessible(o.employeeTypeIds, this.allowedMemberTypeIds));
                 this.generatedOrders = filtered.slice().sort((a, b) => {
                     const ad = a.createdDate ? new Date(a.createdDate).getTime() : 0;
                     const bd = b.createdDate ? new Date(b.createdDate).getTime() : 0;

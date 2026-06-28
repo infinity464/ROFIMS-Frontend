@@ -8,10 +8,12 @@ import { ButtonModule } from 'primeng/button';
 import { InputTextModule } from 'primeng/inputtext';
 import { DatePickerModule } from 'primeng/datepicker';
 import { SelectModule } from 'primeng/select';
+import { MultiSelectModule } from 'primeng/multiselect';
 import { DialogModule } from 'primeng/dialog';
+import { ConfirmDialogModule } from 'primeng/confirmdialog';
 import { TooltipModule } from 'primeng/tooltip';
 import { Toast } from 'primeng/toast';
-import { MessageService } from 'primeng/api';
+import { MessageService, ConfirmationService } from 'primeng/api';
 import { EmployeeListService } from '@/services/employee-list.service';
 import { PostingService } from '@/services/posting.service';
 import { SharedService } from '@/shared/services/shared-service';
@@ -19,6 +21,8 @@ import { FlexibleDateDirective } from '@/shared/directives/flexible-date.directi
 import { EmployeeList } from '@/models/employee-list.model';
 import { DraftInterPostingMasterDto, DraftInterPostingMasterWithDetailsDto, DraftInterPostingDetailDto } from '@/models/posting.model';
 import { DraftPostingStatusOptions } from '@/models/enums';
+import { MasterBasicSetupService } from '@/Components/basic-setup/shared/services/MasterBasicSetupService';
+import { IdentityUserMemberTypeAccessService } from '@/services/identity-user-member-type-access.service';
 
 @Component({
     selector: 'app-add-draft-inter-posting',
@@ -31,11 +35,13 @@ import { DraftPostingStatusOptions } from '@/models/enums';
         InputTextModule,
         DatePickerModule, FlexibleDateDirective,
         SelectModule,
+        MultiSelectModule,
         DialogModule,
+        ConfirmDialogModule,
         TooltipModule,
         Toast
     ],
-    providers: [MessageService],
+    providers: [MessageService, ConfirmationService],
     templateUrl: './add-draft-inter-posting.html',
     styleUrl: './add-draft-inter-posting.scss'
 })
@@ -53,6 +59,7 @@ export class AddDraftInterPostingComponent implements OnInit {
     editDraft: DraftInterPostingMasterWithDetailsDto | null = null;
     editDraftStatus = '';
     draftPostingStatusOptions = DraftPostingStatusOptions;
+    canView = true;
     canInsert = true;
     canUpdate = true;
     canDelete = true;
@@ -61,6 +68,17 @@ export class AddDraftInterPostingComponent implements OnInit {
     employeeModalTitle = '';
     employeeModalList: DraftInterPostingDetailDto[] = [];
     employeeModalLoading = false;
+    /** Master being previewed + whether its notesheet exists (removal allowed only before notesheet). */
+    employeeModalMasterId: number | null = null;
+    employeeModalHasNoteSheet = false;
+    /** Detail id currently being removed (for per-row button loading state). */
+    removingMemberId: number | null = null;
+
+    /** All active Member Types (CommonCode 'EmployeeType'); `memberTypeOptions` exposes the accessible subset. */
+    allMemberTypeOptions: { label: string; value: number }[] = [];
+    selectedMemberTypeIds: number[] = [];
+    /** Member type ids the logged-in user may access (null = not yet resolved / unrestricted). */
+    allowedMemberTypeIds: number[] | null = null;
 
     constructor(
         private employeeListService: EmployeeListService,
@@ -68,16 +86,90 @@ export class AddDraftInterPostingComponent implements OnInit {
         private sharedService: SharedService,
         private messageService: MessageService,
         private _router: Router,
-        private _userMenuService: UserMenuService
+        private _userMenuService: UserMenuService,
+        private masterBasicSetupService: MasterBasicSetupService,
+        private memberTypeAccess: IdentityUserMemberTypeAccessService,
+        private confirmationService: ConfirmationService
     ) {}
 
     ngOnInit(): void {
         const _perms = this._userMenuService.getPermissionsByRoute(this._router.url);
+        this.canView = _perms.canView;
         this.canInsert = _perms.canInsert;
         this.canUpdate = _perms.canUpdate;
         this.canDelete = _perms.canDelete;
+        this.loadCurrentUserMemberTypePermissions();
         this.loadData();
         this.loadDraftMasters();
+        this.loadMemberTypes();
+    }
+
+    /** Dropdown options limited to the user's accessible member types (all if not resolved). */
+    get memberTypeOptions(): { label: string; value: number }[] {
+        if (this.allowedMemberTypeIds == null) return this.allMemberTypeOptions;
+        const allowed = this.allowedMemberTypeIds;
+        return this.allMemberTypeOptions.filter((o) => allowed.includes(o.value));
+    }
+
+    /** Resolve the current user's accessible member type ids.
+     *  Shows the cached set first (no blank flash), then ALWAYS refetches from the API so
+     *  admin changes to this user's accessible member types take effect without a re-login
+     *  (cacheForUser also refreshes the shared localStorage cache). */
+    private loadCurrentUserMemberTypePermissions(): void {
+        const userId = this.sharedService.getCurrentUserId?.() ?? null;
+        if (!userId) { this.allowedMemberTypeIds = null; return; }
+        this.allowedMemberTypeIds = this.memberTypeAccess.getCachedMemberTypeIds(userId);
+        this.memberTypeAccess.cacheForUser(userId).subscribe({
+            next: (ids) => { this.allowedMemberTypeIds = Array.isArray(ids) ? ids : []; },
+            error: () => { /* network error: keep whatever cached value we already have */ }
+        });
+    }
+
+    /** Display name for a member type id (from the loaded EmployeeType options). */
+    memberTypeName(id: number | null | undefined): string {
+        if (id == null) return '-';
+        return this.allMemberTypeOptions.find((o) => o.value === id)?.label ?? '-';
+    }
+
+    /** True if an employee's member type is within the user's accessible set (no restriction when unresolved). */
+    isAccessibleMemberType(id: number | null | undefined): boolean {
+        if (this.allowedMemberTypeIds == null) return true;
+        if (id == null) return false;
+        return this.allowedMemberTypeIds.includes(id);
+    }
+
+    /** True if a saved draft's member types overlap the user's accessible set.
+     *  Untagged (legacy) drafts and unresolved access are treated as visible. */
+    isDraftAccessible(employeeTypeIds: string | null | undefined): boolean {
+        if (this.allowedMemberTypeIds == null) return true;
+        const ids = this.parseMemberTypeIds(employeeTypeIds);
+        if (ids.length === 0) return true;
+        const allowed = this.allowedMemberTypeIds;
+        return ids.some((id) => allowed.includes(id));
+    }
+
+    /** Saved drafts limited to those whose member types the user may access (for the list table).
+     *  Keeps the full `draftMastersList` intact for duplicate-check + list-no sequencing. */
+    get visibleDraftMasters(): DraftInterPostingMasterDto[] {
+        return this.draftMastersList.filter((m) => this.isDraftAccessible(m.employeeTypeIds));
+    }
+
+    /** Load active Member Types (CommonCode CodeType = 'EmployeeType') for the multi-select. */
+    loadMemberTypes(): void {
+        this.masterBasicSetupService.getAllByType('EmployeeType').subscribe({
+            next: (data: any[]) => {
+                this.allMemberTypeOptions = (data ?? [])
+                    .filter((c) => c.status !== false)
+                    .map((c) => ({ label: c.codeValueEN || c.codeValueBN || String(c.codeId), value: c.codeId }));
+            },
+            error: () => { this.allMemberTypeOptions = []; }
+        });
+    }
+
+    /** Parse comma-separated "1,2,3" into a number[] for the multi-select. */
+    private parseMemberTypeIds(ids: string | null | undefined): number[] {
+        if (!ids) return [];
+        return ids.split(',').map((s) => parseInt(s.trim(), 10)).filter((n) => !isNaN(n));
     }
 
     get isEditMode(): boolean {
@@ -89,7 +181,8 @@ export class AddDraftInterPostingComponent implements OnInit {
         if (this.isEditMode && this.editDraft?.details) {
             return this.editDraft.details;
         }
-        return this.list;
+        // Show only employees whose member type the logged-in user may access.
+        return this.list.filter((r) => this.isAccessibleMemberType(r.memberTypeId));
     }
 
     /** Save: create Draft Inter Posting (add) or update master (edit). */
@@ -113,6 +206,12 @@ export class AddDraftInterPostingComponent implements OnInit {
             return;
         }
 
+        // Member Type is mandatory
+        if (!this.selectedMemberTypeIds || this.selectedMemberTypeIds.length === 0) {
+            this.messageService.add({ severity: 'warn', summary: 'Validation', detail: 'Please select at least one Member Type.' });
+            return;
+        }
+
         const trimmedNo = this.draftPostingListNo.trim();
         const duplicate = this.draftMastersList.find(
             (m) => m.draftInterPostingNo?.toLowerCase() === trimmedNo.toLowerCase() && m.id !== this.editDraftId
@@ -122,9 +221,11 @@ export class AddDraftInterPostingComponent implements OnInit {
             return;
         }
 
+        const employeeTypeIds = this.selectedMemberTypeIds.join(',');
+
         if (this.isEditMode && this.editDraftId) {
             this.saving = true;
-            this.postingService.updateDraftInterPosting(this.editDraftId, trimmedNo, dateStr, this.editDraftStatus).subscribe({
+            this.postingService.updateDraftInterPosting(this.editDraftId, trimmedNo, dateStr, this.editDraftStatus, employeeTypeIds).subscribe({
                 next: (res: { statusCode?: number; description?: string }) => {
                     this.saving = false;
                     const ok = res?.statusCode === 200;
@@ -154,7 +255,7 @@ export class AddDraftInterPostingComponent implements OnInit {
 
         const createdBy = this.sharedService.getCurrentUser() ?? 'system';
         this.saving = true;
-        this.postingService.saveDraftInterPosting(trimmedNo, dateStr, employeeIds, createdBy).subscribe({
+        this.postingService.saveDraftInterPosting(trimmedNo, dateStr, employeeIds, createdBy, employeeTypeIds).subscribe({
             next: (res: { statusCode?: number; description?: string }) => {
                 this.saving = false;
                 const ok = res?.statusCode === 200;
@@ -167,6 +268,7 @@ export class AddDraftInterPostingComponent implements OnInit {
                     this.loadData();
                     this.loadDraftMasters();
                     this.selectedRows = [];
+                    this.selectedMemberTypeIds = [];
                     this.draftPostingDate = null;
                     this.draftPostingListNo = '';
                 }
@@ -211,10 +313,13 @@ export class AddDraftInterPostingComponent implements OnInit {
     }
 
     viewEmployees(row: DraftInterPostingMasterDto): void {
+        if (!this.canView) return;
         this.employeeModalTitle = `Employees — ${row.draftInterPostingNo}`;
         this.employeeModalLoading = true;
         this.showEmployeeModal = true;
         this.employeeModalList = [];
+        this.employeeModalMasterId = row.id;
+        this.employeeModalHasNoteSheet = !!row.hasNoteSheet;
 
         this.postingService.getDraftInterPostingById(row.id).subscribe({
             next: (data: DraftInterPostingMasterWithDetailsDto) => {
@@ -224,6 +329,53 @@ export class AddDraftInterPostingComponent implements OnInit {
             error: () => {
                 this.employeeModalLoading = false;
                 this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to load employees.' });
+            }
+        });
+    }
+
+    /** Ask for confirmation before removing a member from the draft. */
+    removeMember(detail: DraftInterPostingDetailDto): void {
+        if (this.employeeModalMasterId == null || this.employeeModalHasNoteSheet || !this.canDelete) return;
+        this.confirmationService.confirm({
+            header: 'Remove Member',
+            message: `Are you sure you want to remove ${detail.name || 'this member'} from the list?`,
+            icon: 'pi pi-exclamation-triangle',
+            acceptButtonProps: { label: 'Remove', severity: 'danger' },
+            rejectButtonProps: { label: 'Cancel', severity: 'secondary', outlined: true },
+            accept: () => this.doRemoveMember(detail)
+        });
+    }
+
+    /** Remove a member from the draft (only before notesheet). The employee returns to the
+     *  "Presently Serving Employees" top list. */
+    private doRemoveMember(detail: DraftInterPostingDetailDto): void {
+        if (this.employeeModalMasterId == null || this.employeeModalHasNoteSheet) return;
+        const masterId = this.employeeModalMasterId;
+        this.removingMemberId = detail.id;
+        this.postingService.removeDraftMember(masterId, detail.id, true).subscribe({
+            next: (res: { statusCode?: number; description?: string }) => {
+                this.removingMemberId = null;
+                const ok = res?.statusCode === 200;
+                this.messageService.add({
+                    severity: ok ? 'success' : 'warn',
+                    summary: 'Remove',
+                    detail: res?.description ?? (ok ? 'Member removed.' : 'Remove failed.')
+                });
+                if (ok) {
+                    // Refresh the modal members, the selectable top list, and the saved drafts.
+                    this.postingService.getDraftInterPostingById(masterId).subscribe({
+                        next: (data: DraftInterPostingMasterWithDetailsDto) => {
+                            this.employeeModalList = data?.details ?? [];
+                            if (this.employeeModalList.length === 0) this.showEmployeeModal = false;
+                        }
+                    });
+                    this.loadData();
+                    this.loadDraftMasters();
+                }
+            },
+            error: (err: { error?: { description?: string }; message?: string }) => {
+                this.removingMemberId = null;
+                this.messageService.add({ severity: 'error', summary: 'Remove', detail: err?.error?.description ?? err?.message ?? 'Failed to remove.' });
             }
         });
     }
@@ -251,15 +403,17 @@ export class AddDraftInterPostingComponent implements OnInit {
     }
 
     onAddAll(): void {
-        if (this.list.length === 0) {
+        const accessible = this.list.filter((r) => this.isAccessibleMemberType(r.memberTypeId));
+        if (accessible.length === 0) {
             this.messageService.add({ severity: 'info', summary: 'Select All', detail: 'No employees available to select.' });
             return;
         }
-        this.selectedRows = [...this.list];
-        this.messageService.add({ severity: 'success', summary: 'Select All', detail: `${this.list.length} employee(s) selected.` });
+        this.selectedRows = [...accessible];
+        this.messageService.add({ severity: 'success', summary: 'Select All', detail: `${accessible.length} employee(s) selected.` });
     }
 
     onEditDraft(row: DraftInterPostingMasterDto): void {
+        if (!this.canUpdate) return;
         this.loading = true;
         this.postingService.getDraftInterPostingById(row.id).subscribe({
             next: (data: DraftInterPostingMasterWithDetailsDto) => {
@@ -268,6 +422,7 @@ export class AddDraftInterPostingComponent implements OnInit {
                 this.draftPostingListNo = data.draftInterPostingNo ?? '';
                 this.draftPostingDate = data.draftInterPostingDate ? this.parseDateFromApi(data.draftInterPostingDate) : null;
                 this.editDraftStatus = data.draftInterPostingStatus ?? '';
+                this.selectedMemberTypeIds = this.parseMemberTypeIds(data.employeeTypeIds);
                 this.loading = false;
             },
             error: (err: { error?: { description?: string }; message?: string }) => {
@@ -288,6 +443,7 @@ export class AddDraftInterPostingComponent implements OnInit {
         this.draftPostingDate = null;
         this.draftPostingListNo = '';
         this.selectedRows = [];
+        this.selectedMemberTypeIds = [];
         this.loadData();
     }
 

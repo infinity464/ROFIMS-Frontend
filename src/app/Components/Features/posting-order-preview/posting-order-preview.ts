@@ -22,6 +22,8 @@ import { OrgService } from '@/Components/basic-setup/org-tree/org.service';
 import { ServingMembersService } from '@/services/serving-members.service';
 import { EmpService } from '@/services/emp-service';
 import { EmployeeListService } from '@/services/employee-list.service';
+import { SharedService } from '@/shared/services/shared-service';
+import { IdentityUserMemberTypeAccessService } from '@/services/identity-user-member-type-access.service';
 import { PostingOrderEmployeeRow, EmployeeRemovalInfo, CancelledInterPostingInfo } from '@/models/posting.model';
 import { EmployeeList } from '@/models/employee-list.model';
 import { NoteSheetType, IsSendingNotesheetStatus, ApprovalStatus } from '@/models/enums';
@@ -115,14 +117,16 @@ export class PostingOrderPreviewPageComponent implements OnInit {
     showPrevWorkplaceUnit = true;
     showTransferUnitsCopy = true;
 
-    // ── নিজ জেলা column visibility ───────────────────
+    // ── Column visibility ───────────────────
+    /** Show/hide the whole Trade column (new-posting only) across preview / Word / PDF / print. */
+    showTradeColumn = true;
     showOwnDistrict = true;
     showRemarks = true;
     showUpperSignature = true;
-    // Name-suffix toggles (off by default) — Gallantry / Professional Qual. / Corps
-    showGallantryAwards = false;
-    showProfQualification = false;
-    showCorps = false;
+    // Name-suffix toggles (on by default) — Gallantry / Professional Qual. / Corps
+    showGallantryAwards = true;
+    showProfQualification = true;
+    showCorps = true;
 
     private syncParagraphChecked(): void {
         const paras = this.filteredFooterParagraphs;
@@ -163,6 +167,8 @@ export class PostingOrderPreviewPageComponent implements OnInit {
 
     // ─── Add member (inline dropdown) ��────────────────
     addMemberList: EmployeeList[] = [];
+    /** Member type ids the logged-in user may access (null = unresolved / no restriction). */
+    allowedMemberTypeIds: number[] | null = null;
     addMemberLoading = false;
     addMemberSaving = false;
     selectedAddEmployee: EmployeeList | null = null;
@@ -264,10 +270,31 @@ export class PostingOrderPreviewPageComponent implements OnInit {
         private messageService: MessageService,
         private confirmationService: ConfirmationService,
         private jsreportService: JsReportService,
-        private masterBasicSetupService: MasterBasicSetupService
+        private masterBasicSetupService: MasterBasicSetupService,
+        private sharedService: SharedService,
+        private memberTypeAccess: IdentityUserMemberTypeAccessService
     ) {}
 
+    /** Resolve the current user's accessible member type ids (cache first, then always refetch). */
+    private loadCurrentUserMemberTypePermissions(): void {
+        const userId = this.sharedService.getCurrentUserId?.() ?? null;
+        if (!userId) { this.allowedMemberTypeIds = null; return; }
+        this.allowedMemberTypeIds = this.memberTypeAccess.getCachedMemberTypeIds(userId);
+        this.memberTypeAccess.cacheForUser(userId).subscribe({
+            next: (ids) => { this.allowedMemberTypeIds = Array.isArray(ids) ? ids : []; },
+            error: () => { /* keep cached value */ }
+        });
+    }
+
+    /** True if an employee's member type is within the user's accessible set (no restriction when unresolved). */
+    private isAccessibleMemberType(id: number | null | undefined): boolean {
+        if (this.allowedMemberTypeIds == null) return true;
+        if (id == null) return false;
+        return this.allowedMemberTypeIds.includes(id);
+    }
+
     ngOnInit(): void {
+        this.loadCurrentUserMemberTypePermissions();
         this.loadUnitSortOrders();
         this.route.queryParams.subscribe(params => {
             const id = params['id'];
@@ -1122,7 +1149,11 @@ export class PostingOrderPreviewPageComponent implements OnInit {
             ? this.employeeListService.getEmployeesMarkedForInterPosting()
             : this.employeeListService.getEmployeesByIsSendingNotesheetStatus(IsSendingNotesheetStatus.Draft);
         obs.subscribe({
-            next: (list) => { this.addMemberList = list ?? []; this.addMemberLoading = false; },
+            next: (list) => {
+                // Scope the add-member dropdown to the user's accessible member types.
+                this.addMemberList = (list ?? []).filter((e) => this.isAccessibleMemberType(e.memberTypeId));
+                this.addMemberLoading = false;
+            },
             error: () => { this.addMemberLoading = false; }
         });
     }
@@ -1599,11 +1630,12 @@ html, body { margin: 0; padding: 0; background: transparent; }
         const sd = this.showOwnDistrict;
         const sp = this.showPrevWorkplaceUnit;
         const sr = this.showRemarks;
+        const st = this.showTradeColumn;   // Trade column (new-posting only)
         const cols = isInter
             ? (bn ? ['ক্রমিক', 'ব্যক্তিগত নং', 'পদবি', 'নাম', ...(sd ? ['নিজ জেলা'] : []), ...(sp ? ['পূর্ববতী কর্মস্থল'] : []), 'বদলিকৃত কর্মস্থল', ...(sr ? ['মন্তব্য'] : [])]
                    : ['Ser', 'Service ID', 'Rank', 'Name', ...(sd ? ['Own District'] : []), ...(sp ? ['Previous Workplace'] : []), 'Transfer Station', ...(sr ? ['Remarks'] : [])])
-            : (bn ? ['ক্রমিক', 'ব্যক্তিগত নম্বর', 'পদবি', 'ট্রেড', 'নাম', ...(sd ? ['নিজ জেলা'] : []), ...(sp ? ['পূর্ববতী কর্মস্থল'] : []), 'বদলিকৃত কর্মস্থল', 'র‌্যাব আইডি', ...(sr ? ['মন্তব্য'] : [])]
-                   : ['Ser', 'Service ID', 'Rank', 'Trade', 'Name', ...(sd ? ['Own District'] : []), ...(sp ? ['Previous Workplace'] : []), 'Transfer Unit', 'RAB ID', ...(sr ? ['Remarks'] : [])]);
+            : (bn ? ['ক্রমিক', 'ব্যক্তিগত নম্বর', 'পদবি', ...(st ? ['ট্রেড'] : []), 'নাম', ...(sd ? ['নিজ জেলা'] : []), ...(sp ? ['পূর্ববতী কর্মস্থল'] : []), 'বদলিকৃত কর্মস্থল', 'র‌্যাব আইডি', ...(sr ? ['মন্তব্য'] : [])]
+                   : ['Ser', 'Service ID', 'Rank', ...(st ? ['Trade'] : []), 'Name', ...(sd ? ['Own District'] : []), ...(sp ? ['Previous Workplace'] : []), 'Transfer Unit', 'RAB ID', ...(sr ? ['Remarks'] : [])]);
         // Column widths in DXA – must sum to full content width.
         // Legal: page 12240 − margins 567*2 = 11106. A4: page 11906 − margins 567*2 = 10772.
         const tblContentWidth = this.selectedPageSize === 'legal' ? 11106 : 10772;
@@ -1621,8 +1653,8 @@ html, body { margin: 0; padding: 0; background: transparent; }
                 const adjust = rem - fixedW;
                 return [...base, nameW + adjust, ...(sd ? [distW] : []), ...(sp ? [prevW] : []), transferW, ...(sr ? [remW] : [])];
             }
-            const base = [580, 1100, 860, 924];
-            const fixedSum = 580 + 1100 + 860 + 924;
+            const base = st ? [580, 1100, 860, 924] : [580, 1100, 860];
+            const fixedSum = base.reduce((a, b) => a + b, 0);
             const nameW = 2800;
             const transferW = 1374;
             const rabIdW = 1160;
@@ -1642,7 +1674,7 @@ html, body { margin: 0; padding: 0; background: transparent; }
 
         const headerRows = [new TableRow({ tableHeader: true, children: cols.map((col, ci) => hdrCell(col, ci)) })];
 
-        const nameIdx = isInter ? 3 : 4;   // নাম column index (left-aligned)
+        const nameIdx = isInter ? 3 : (st ? 4 : 3);   // নাম column index (left-aligned)
         const dataRows = this.filteredEmployees.map((emp, i) => {
             const serial = bn ? this.toBanglaDigits(String(i + 1)) : String(i + 1);
             const vals = isInter
@@ -1654,7 +1686,7 @@ html, body { margin: 0; padding: 0; background: transparent; }
                     ...(sr ? [this.empCombinedRemarks(emp)] : [])
                 ]
                 : [
-                    serial, this.empServiceId(emp), this.empRank(emp), this.empTrade(emp), this.empName(emp),
+                    serial, this.empServiceId(emp), this.empRank(emp), ...(st ? [this.empTrade(emp)] : []), this.empName(emp),
                     ...(sd ? [this.empDistrict(emp)] : []),
                     ...(sp ? [this.empPrevWorkplace(emp)] : []),
                     this.empTransferUnit(emp),

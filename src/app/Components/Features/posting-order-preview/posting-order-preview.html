@@ -457,6 +457,10 @@
     <div class="unit-filter-bar no-print" *ngIf="!editing && !loading && !error && employees.length > 0"
          style="flex-direction:column; align-items:flex-start;">
         <div style="display:flex; align-items:center; gap:0.8rem; font-size:0.82rem;">
+            <span *ngIf="!isInterPosting" style="display:inline-flex; align-items:center; gap:0.4rem;">
+                <p-checkbox [(ngModel)]="showTradeColumn" [binary]="true" inputId="chkTradeCol"></p-checkbox>
+                <label for="chkTradeCol" style="cursor:pointer;">{{ isBangla ? 'ট্রেড' : 'Trade' }}</label>
+            </span>
             <span style="display:inline-flex; align-items:center; gap:0.4rem;">
                 <p-checkbox [(ngModel)]="showOwnDistrict" [binary]="true" inputId="chkOwnDistrict"></p-checkbox>
                 <label for="chkOwnDistrict" style="cursor:pointer;">{{ isBangla ? 'নিজ জেলা' : 'Own District' }}</label>
@@ -558,7 +562,7 @@
                                 <th style="width:4%">ক্রমিক</th>
                                 <th style="width:9%">ব্যক্তিগত নম্বর</th>
                                 <th style="width:6%">পদবি</th>
-                                <th style="width:6%">ট্রেড</th>
+                                <th *ngIf="showTradeColumn" style="width:6%">ট্রেড</th>
                                 <th style="width:14%">নাম</th>
                                 <th *ngIf="showOwnDistrict" style="width:8%">নিজ জেলা</th>
                                 <th *ngIf="showPrevWorkplaceUnit" style="width:13%">পূর্ববতী কর্মস্থল</th>
@@ -570,7 +574,7 @@
                                 <th style="width:4%">Ser</th>
                                 <th style="width:9%">Service ID</th>
                                 <th style="width:6%">Rank</th>
-                                <th style="width:6%">Trade</th>
+                                <th *ngIf="showTradeColumn" style="width:6%">Trade</th>
                                 <th style="width:14%">Name</th>
                                 <th *ngIf="showOwnDistrict" style="width:8%">Own District</th>
                                 <th *ngIf="showPrevWorkplaceUnit" style="width:13%">Previous Workplace</th>
@@ -599,7 +603,7 @@
                             <td class="text-center">{{ isBangla ? toBanglaDigits('' + (i + 1)) : (i + 1) }}</td>
                             <td class="font-semibold">{{ empServiceId(emp) }}</td>
                             <td>{{ empRank(emp) }}</td>
-                            <td>{{ empTrade(emp) }}</td>
+                            <td *ngIf="showTradeColumn">{{ empTrade(emp) }}</td>
                             <td class="po-doc-name-cell">{{ empName(emp) }}{{ empNameQuals(emp) }}</td>
                             <td *ngIf="showOwnDistrict" style="white-space: pre-line;">{{ empDistrict(emp) }}</td>
                             <td *ngIf="showPrevWorkplaceUnit" style="white-space: pre-line;">{{ empPrevWorkplace(emp) }}</td>

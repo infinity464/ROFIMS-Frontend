@@ -135,12 +135,13 @@ export class PostingService {
     }
 
     /** Save Draft New Posting: creates master + details, sets IsSendingNotesheetStatus to draftPosting for selected employees. */
-    saveDraftNewPosting(draftPostingNo: string, draftPostingDate: string, employeeIds: number[], createdBy: string): Observable<{ statusCode: number; description: string }> {
+    saveDraftNewPosting(draftPostingNo: string, draftPostingDate: string, employeeIds: number[], createdBy: string, employeeTypeIds: string | null = null): Observable<{ statusCode: number; description: string }> {
         return this.http.post<{ statusCode: number; description: string }>(`${API}/SaveDraftNewPosting`, {
             draftPostingNo,
             draftPostingDate,
             employeeIds,
-            createdBy
+            createdBy,
+            employeeTypeIds
         });
     }
 
@@ -184,6 +185,16 @@ export class PostingService {
         });
     }
 
+    /** Remove a single member from a draft (New/Inter) before a notesheet is generated.
+     *  Reverts the employee to the draft-selectable status so they reappear in the Add-Draft top list. */
+    removeDraftMember(draftPostingMasterId: number, detailId: number, isInterPosting: boolean): Observable<{ statusCode: number; description: string }> {
+        return this.http.post<{ statusCode: number; description: string }>(`${API}/RemoveDraftMember`, {
+            draftPostingMasterId,
+            detailId,
+            isInterPosting
+        });
+    }
+
     /** Get the removal history log for a draft posting list. */
     getPostingMemberRemovalHistory(draftPostingMasterId: number, isInterPosting: boolean): Observable<PostingMemberRemovalHistoryDto[]> {
         return this.http.get<PostingMemberRemovalHistoryDto[]>(
@@ -206,12 +217,13 @@ export class PostingService {
     }
 
     /** Update Draft New Posting master (DraftPostingNo, DraftPostingDate, DraftPostingStatus). */
-    updateDraftNewPosting(id: number, draftPostingNo: string, draftPostingDate: string, draftPostingStatus: string): Observable<{ statusCode: number; description: string }> {
+    updateDraftNewPosting(id: number, draftPostingNo: string, draftPostingDate: string, draftPostingStatus: string, employeeTypeIds: string | null = null): Observable<{ statusCode: number; description: string }> {
         return this.http.post<{ statusCode: number; description: string }>(`${API}/UpdateDraftNewPosting`, {
             id,
             draftPostingNo,
             draftPostingDate,
-            draftPostingStatus
+            draftPostingStatus,
+            employeeTypeIds
         });
     }
 
@@ -474,12 +486,13 @@ export class PostingService {
     // ── Draft Inter Posting (API) ──────────────────────────────────
 
     /** Save Draft Inter Posting: creates master + details, sets IsSendingNotesheetStatus to draftInterPosting. */
-    saveDraftInterPosting(draftInterPostingNo: string, draftInterPostingDate: string, employeeIds: number[], createdBy: string): Observable<{ statusCode: number; description: string }> {
+    saveDraftInterPosting(draftInterPostingNo: string, draftInterPostingDate: string, employeeIds: number[], createdBy: string, employeeTypeIds: string | null = null): Observable<{ statusCode: number; description: string }> {
         return this.http.post<{ statusCode: number; description: string }>(`${API}/SaveDraftInterPosting`, {
             draftInterPostingNo,
             draftInterPostingDate,
             employeeIds,
-            createdBy
+            createdBy,
+            employeeTypeIds
         });
     }
 
@@ -494,12 +507,13 @@ export class PostingService {
     }
 
     /** Update Draft Inter Posting master. */
-    updateDraftInterPosting(id: number, draftInterPostingNo: string, draftInterPostingDate: string, draftInterPostingStatus: string): Observable<{ statusCode: number; description: string }> {
+    updateDraftInterPosting(id: number, draftInterPostingNo: string, draftInterPostingDate: string, draftInterPostingStatus: string, employeeTypeIds: string | null = null): Observable<{ statusCode: number; description: string }> {
         return this.http.post<{ statusCode: number; description: string }>(`${API}/UpdateDraftInterPosting`, {
             id,
             draftInterPostingNo,
             draftInterPostingDate,
-            draftInterPostingStatus
+            draftInterPostingStatus,
+            employeeTypeIds
         });
     }
 

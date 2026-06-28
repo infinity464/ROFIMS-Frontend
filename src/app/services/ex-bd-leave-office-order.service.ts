@@ -12,6 +12,8 @@ export interface ExBdLeaveOfficeOrderDto {
     letterDate: string;
     noteSheetId: number;
     noteSheetNo: string;
+    /** Linked note-sheet's member-type ids — used to scope the list by user access. */
+    employeeTypeIds?: string | null;
     subject: string;
     textType: string;
     status: string;

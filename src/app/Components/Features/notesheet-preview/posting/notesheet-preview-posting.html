@@ -398,18 +398,18 @@
                     <table>
                         <colgroup *ngIf="isInterPosting()">
                             <col style="width:30px">   <!-- ক্রমিক -->
-                            <col style="width:80px">   <!-- ব্যক্তিগত নং (বড় করা) -->
-                            <col>                       <!-- পদবি -->
-                            <col>                       <!-- নাম -->
+                            <col style="width:80px">   <!-- ব্যক্তিগত নং -->
+                            <col>                       <!-- পদবি (auto — absorbs balance so table stays 100%) -->
+                            <col style="width:82px">   <!-- নাম (বড় করা) -->
                             <col style="width:48px">   <!-- নিজ জেলা -->
                             <col style="width:56px">   <!-- স্বামী/স্ত্রীর জেলা -->
-                            <col style="width:74px">   <!-- যোগদানের তারিখ -->
+                            <col style="width:64px">   <!-- যোগদানের তারিখ (ছোট করা) -->
                             <col style="width:32px">   <!-- বছর -->
                             <col style="width:24px">   <!-- মাস -->
                             <col style="width:24px">   <!-- দিন -->
-                            <col style="width:85px">   <!-- পূর্ববতী কর্মস্থল (ছোট করা) -->
-                            <col>                       <!-- বদলিকৃত কর্মস্থল -->
-                            <col *ngIf="showRemarks" style="width:90px"> <!-- মন্তব্য -->
+                            <col style="width:85px">   <!-- পূর্ববতী কর্মস্থল -->
+                            <col style="width:48px">   <!-- বদলিকৃত কর্মস্থল (ছোট করা) -->
+                            <col *ngIf="showRemarks" style="width:76px"> <!-- মন্তব্য (ছোট করা) -->
                         </colgroup>
                         <colgroup *ngIf="!isInterPosting()">
                             <col style="width:30px">   <!-- ক্রমিক -->

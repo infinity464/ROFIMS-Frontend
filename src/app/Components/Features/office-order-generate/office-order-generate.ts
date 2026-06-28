@@ -1,5 +1,7 @@
 import { Component, OnInit, ViewChild, inject } from '@angular/core';
 import { UserMenuService } from '@/services/user-menu.service';
+import { SharedService } from '@/shared/services/shared-service';
+import { IdentityUserMemberTypeAccessService } from '@/services/identity-user-member-type-access.service';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
@@ -64,6 +66,9 @@ export class OfficeOrderGenerateComponent implements OnInit {
 
     private _router = inject(Router);
     private _userMenuService = inject(UserMenuService);
+    private sharedService = inject(SharedService);
+    private memberTypeAccess = inject(IdentityUserMemberTypeAccessService);
+    allowedMemberTypeIds: number[] | null = null;
     canInsert = true;
     canUpdate = true;
     canDelete = true;
@@ -138,6 +143,7 @@ export class OfficeOrderGenerateComponent implements OnInit {
         this.canInsert = _perms.canInsert;
         this.canUpdate = _perms.canUpdate;
         this.canDelete = _perms.canDelete;
+        this.loadCurrentUserMemberTypePermissions();
 
         this.letterDate = new Date();
         this.loadApprovalEmployees();
@@ -281,10 +287,23 @@ export class OfficeOrderGenerateComponent implements OnInit {
     }
 
     get noteSheetDropdownOptions() {
-        return this.approvedNoteSheets.map(ns => ({
-            label: ns.noteSheetNo,
-            value: ns.noteSheetId
-        }));
+        return this.approvedNoteSheets
+            .filter(ns => this.memberTypeAccess.isAccessible(ns.employeeTypeIds, this.allowedMemberTypeIds))
+            .map(ns => ({
+                label: ns.noteSheetNo,
+                value: ns.noteSheetId
+            }));
+    }
+
+    /** Resolve the current user's accessible member type ids (cache first, then always refetch). */
+    private loadCurrentUserMemberTypePermissions(): void {
+        const userId = this.sharedService.getCurrentUserId?.() ?? null;
+        if (!userId) { this.allowedMemberTypeIds = null; return; }
+        this.allowedMemberTypeIds = this.memberTypeAccess.getCachedMemberTypeIds(userId);
+        this.memberTypeAccess.cacheForUser(userId).subscribe({
+            next: (ids) => { this.allowedMemberTypeIds = Array.isArray(ids) ? ids : []; },
+            error: () => { /* keep cached value */ }
+        });
     }
 
     /** When a notesheet is selected, auto-fill Subject and TextType. */

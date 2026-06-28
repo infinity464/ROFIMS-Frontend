@@ -40,6 +40,7 @@ import { PostingService } from '@/services/posting.service';
 import { DraftPostingEmployeeRow, PostingMemberRemovalHistoryDto } from '@/models/posting.model';
 import { EmployeeList } from '@/models/employee-list.model';
 import { EmployeeListService } from '@/services/employee-list.service';
+import { IdentityUserMemberTypeAccessService } from '@/services/identity-user-member-type-access.service';
 import { IsSendingNotesheetStatus } from '@/models/enums';
 import { ForeignVisitInfoService } from '@/services/foreign-visit-info.service';
 import { ExBdLeaveApplicationService, ExBdLeaveApplicationModel } from '@/services/ex-bd-leave-application.service';
@@ -72,6 +73,11 @@ export interface NoteSheetInfoRow {
   remark?: string;
   referenceNumber?: string;
   draftPostingMasterId?: number | null;
+  /** Comma-separated CommonCode member-type ids (CodeType = 'EmployeeType'). */
+  employeeTypeIds?: string | null;
+  /** Resolved member-type names (EN/BN), filled server-side in the existing list response. */
+  employeeTypeNames?: string | null;
+  employeeTypeNamesBN?: string | null;
   /** JSON array of { FileId, fileName } from API */
   filesReferences?: string;
   /** True when this note sheet is currently in a step it was backed to. */
@@ -305,6 +311,9 @@ export class NotesheetListComponent implements OnInit {
   readonly NoteSheetRemarkAction  = NoteSheetRemarkAction;
   readonly ApprovalLogAction      = ApprovalLogAction;
 
+  /** Member type ids the logged-in user may access (null = unresolved / no restriction). */
+  allowedMemberTypeIds: number[] | null = null;
+
   constructor(
     private http: HttpClient,
     private messageService: MessageService,
@@ -322,8 +331,34 @@ export class NotesheetListComponent implements OnInit {
     private servingMembersService: ServingMembersService,
     private foreignVisitService: ForeignVisitInfoService,
     private exBdLeaveApplicationService: ExBdLeaveApplicationService,
-    private employeeListService: EmployeeListService
+    private employeeListService: EmployeeListService,
+    private memberTypeAccess: IdentityUserMemberTypeAccessService
   ) {}
+
+  /** Resolve the current user's accessible member type ids (cache first, then always refetch). */
+  private loadCurrentUserMemberTypePermissions(): void {
+    const userId = this.sharedService.getCurrentUserId?.() ?? null;
+    if (!userId) { this.allowedMemberTypeIds = null; return; }
+    this.allowedMemberTypeIds = this.memberTypeAccess.getCachedMemberTypeIds(userId);
+    this.memberTypeAccess.cacheForUser(userId).subscribe({
+      next: (ids) => { this.allowedMemberTypeIds = Array.isArray(ids) ? ids : []; },
+      error: () => { /* keep cached value */ }
+    });
+  }
+
+  /** True if an employee's member type is within the user's accessible set (no restriction when unresolved). */
+  private isAccessibleMemberType(id: number | null | undefined): boolean {
+    if (this.allowedMemberTypeIds == null) return true;
+    if (id == null) return false;
+    return this.allowedMemberTypeIds.includes(id);
+  }
+
+  /** Member-type names for the column — resolved server-side into the existing list row (no extra call). */
+  memberTypeNames(row: NoteSheetInfoRow): string {
+    const bn = !this.isPreviewEnglish();
+    const v = (bn ? (row?.employeeTypeNamesBN || row?.employeeTypeNames) : (row?.employeeTypeNames || row?.employeeTypeNamesBN)) || '';
+    return v.trim() || '-';
+  }
 
   /** Open preview page: navigate to the type-specific preview route */
   openPreview(row: NoteSheetInfoRow): void {
@@ -623,7 +658,8 @@ export class NotesheetListComponent implements OnInit {
       : this.employeeListService.getEmployeesByIsSendingNotesheetStatus(IsSendingNotesheetStatus.Draft);
     obs.subscribe({
       next: (list) => {
-        this.addMemberList = list ?? [];
+        // Scope the add-member dropdown to the user's accessible member types.
+        this.addMemberList = (list ?? []).filter((e) => this.isAccessibleMemberType(e.memberTypeId));
         this.addMemberLoading = false;
       },
       error: () => { this.addMemberLoading = false; }
@@ -1216,6 +1252,7 @@ export class NotesheetListComponent implements OnInit {
         this.canInsert = _perms.canInsert;
         this.canUpdate = _perms.canUpdate;
         this.canDelete = _perms.canDelete;
+        this.loadCurrentUserMemberTypePermissions();
 
     if (this.sectionInput) {
       this.section = this.sectionInput;

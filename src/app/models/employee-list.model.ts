@@ -40,6 +40,8 @@ export interface EmployeeList {
     interPostingRemark?: string | null;
     /** Date the record was inserted into the database (EmployeeInfo.CreatedDate). */
     createdDate?: string | null;
+    /** Member Type (EmployeeInfo.MemberType → CommonCode 'EmployeeType' id). Used for access filtering. */
+    memberTypeId?: number | null;
 }
 
 /** Request for AllocateRabId API. */
