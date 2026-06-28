@@ -13,6 +13,7 @@ import { RabIdSerialModel } from '../models/rab-id-serial';
 import { LeaveCardNumberConfigModel } from '../models/leave-card-number-config';
 import { EquivalentRankModel } from '../models/equivalent-rank';
 import { MotherOrgRankVacancyDistributionModel, MotherOrgVacancyLockModel } from '../models/mother-org-rank-vacancy';
+import { EquivalentNameVacancyDistributionModel, EquivalentNameVacancyLockModel } from '../models/equivalent-name-vacancy';
 
 import { NoteSheetTemplateModel } from '../models/notesheet-template';
 import { NoteSheetNumberConfigModel } from '../models/notesheet-number-config';
@@ -42,6 +43,8 @@ export class MasterBasicSetupService {
     private apiUrlRankEquivalent = `${environment.apis.core}/RankEquivalent`;
     private apiUrlMotherOrgRankVacancyDistribution = `${environment.apis.core}/MotherOrgRankVacancyDistribution`;
     private apiUrlMotherOrgVacancyLock = `${environment.apis.core}/MotherOrgVacancyLock`;
+    private apiUrlEquivalentNameVacancyDistribution = `${environment.apis.core}/EquivalentNameVacancyDistribution`;
+    private apiUrlEquivalentNameVacancyLock = `${environment.apis.core}/EquivalentNameVacancyLock`;
     private apiUrlNoteSheetTemplate = `${environment.apis.core}/NoteSheetTemplate`;
     private apiUrlNoteSheetNumberConfig = `${environment.apis.core}/NoteSheetNumberConfig`;
     private apiUrlNoteSheetApproverConfig = `${environment.apis.core}/NoteSheetApproverConfig`;
@@ -132,6 +135,28 @@ export class MasterBasicSetupService {
     }
     setMotherOrgVacancyLock(model: MotherOrgVacancyLockModel): Observable<{ statusCode: number; description?: string }> {
         return this.http.post<{ statusCode: number; description?: string }>(`${this.apiUrlMotherOrgVacancyLock}/Set`, model);
+    }
+
+    // EquivalentNameVacancyDistribution
+    getEquivalentNameVacancyDistributionByVacancy(orgId: number, equivalentNameId: number): Observable<EquivalentNameVacancyDistributionModel[]> {
+        return this.http.get<EquivalentNameVacancyDistributionModel[]>(`${this.apiUrlEquivalentNameVacancyDistribution}/GetByVacancy/${orgId}/${equivalentNameId}`);
+    }
+    saveEquivalentNameVacancyDistribution(model: EquivalentNameVacancyDistributionModel): Observable<{ statusCode: number; description?: string }> {
+        return this.http.post<{ statusCode: number; description?: string }>(`${this.apiUrlEquivalentNameVacancyDistribution}/Save`, model);
+    }
+    updateEquivalentNameVacancyDistribution(model: EquivalentNameVacancyDistributionModel): Observable<{ statusCode: number; description?: string }> {
+        return this.http.put<{ statusCode: number; description?: string }>(`${this.apiUrlEquivalentNameVacancyDistribution}/Update`, model);
+    }
+    deleteEquivalentNameVacancyDistribution(id: number): Observable<{ statusCode: number; description?: string }> {
+        return this.http.delete<{ statusCode: number; description?: string }>(`${this.apiUrlEquivalentNameVacancyDistribution}/Delete/${id}`);
+    }
+
+    // EquivalentNameVacancyLock — per-office entry lock
+    getEquivalentNameVacancyLocksByOrg(orgId: number): Observable<EquivalentNameVacancyLockModel[]> {
+        return this.http.get<EquivalentNameVacancyLockModel[]>(`${this.apiUrlEquivalentNameVacancyLock}/GetByOrg/${orgId}`);
+    }
+    setEquivalentNameVacancyLock(model: EquivalentNameVacancyLockModel): Observable<{ statusCode: number; description?: string }> {
+        return this.http.post<{ statusCode: number; description?: string }>(`${this.apiUrlEquivalentNameVacancyLock}/Set`, model);
     }
 
     getAuthorizedOrganogramCounts(): Observable<AuthorizedCountItem[]> {
