@@ -559,7 +559,7 @@ export class OfficeOrderExBdLeavePreviewComponent implements OnInit {
 
     private async buildWordDocument(): Promise<Document> {
         if (!this.order) throw new Error('No order loaded');
-        const font = this.isBangla ? 'Nirmala UI' : 'Times New Roman';
+        const font = this.isBangla ? { ascii: 'Times New Roman', hAnsi: 'Times New Roman', cs: 'Nirmala UI', hint: 'cs' as const } : 'Times New Roman';
         const titleSize = 18;
         const contentSize = 16;
         const children: (Paragraph | Table)[] = [];
@@ -792,7 +792,7 @@ html, body { margin: 0; padding: 0; background: transparent; }
     padding: 0;
     box-sizing: border-box;
     width: ${colWidth};
-    font-family: 'Times New Roman', 'Noto Sans Bengali', 'SolaimanLipi', Times, serif;
+    font-family: 'Times New Roman', 'Nirmala UI', Times, serif;
     font-size: 10pt;
     line-height: 1.7;
     color: #000;

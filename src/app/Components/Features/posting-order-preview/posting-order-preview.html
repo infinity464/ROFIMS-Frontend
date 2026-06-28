@@ -645,9 +645,9 @@
                         <td class="po-doc-copy-left">
                             <div class="po-doc-copy-list">
                                 <ng-container *ngIf="showTransferUnitsCopy">
-                                    <p *ngFor="let line of autoCopyLines; let i = index">{{ isBangla ? toBanglaDigits('' + (i + 1)) : (i + 1) }}। {{ line }}</p>
+                                    <p *ngFor="let line of autoCopyLines; let i = index"><span class="po-copy-no">{{ isBangla ? toBanglaDigits('' + (i + 1)) : (i + 1) }}।</span>{{ line }}</p>
                                 </ng-container>
-                                <p *ngFor="let para of exportFooterParagraphs; let i = index">{{ isBangla ? toBanglaDigits('' + (i + 1 + autoCopyOffset)) : (i + 1 + autoCopyOffset) }}। {{ para.text }}</p>
+                                <p *ngFor="let para of exportFooterParagraphs; let i = index"><span class="po-copy-no">{{ isBangla ? toBanglaDigits('' + (i + 1 + autoCopyOffset)) : (i + 1 + autoCopyOffset) }}।</span>{{ para.text }}</p>
                             </div>
                         </td>
                         <td class="po-doc-copy-right">

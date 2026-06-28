@@ -298,7 +298,7 @@ export class ReportPresentStatusByMotherOrgComponent implements OnInit {
 
     private async exportPdfDirect(): Promise<void> {
         const fontFamily = this.lang === 'bn'
-            ? "'Noto Sans Bengali', 'Nirmala UI', sans-serif"
+            ? "'Times New Roman', 'Nirmala UI', sans-serif"
             : "'Times New Roman', serif";
         const dateStr = this.dateLine;
         const genStr = this.generateDateLabel;
@@ -357,7 +357,7 @@ export class ReportPresentStatusByMotherOrgComponent implements OnInit {
 
     private exportPrintPopup(): void {
         const fontFamily = this.lang === 'bn'
-            ? "'Noto Sans Bengali', 'Nirmala UI', sans-serif"
+            ? "'Times New Roman', 'Nirmala UI', sans-serif"
             : "'Times New Roman', serif";
         const dateStr = this.dateLine;
         const genStr = this.generateDateLabel;

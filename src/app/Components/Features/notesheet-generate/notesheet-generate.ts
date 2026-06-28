@@ -2,6 +2,7 @@ import { Component, OnInit, ViewChild } from '@angular/core';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { DomSanitizer } from '@angular/platform-browser';
 import { MasterBasicSetupService } from '@/Components/basic-setup/shared/services/MasterBasicSetupService';
+import { NoteSheetSubjectService, NoteSheetSubjectModel } from '@/Components/basic-setup/shared/services/NoteSheetSubjectService';
 import { MessageService } from 'primeng/api';
 import { SharedService } from '@/shared/services/shared-service';
 import { FlexibleDateDirective } from '@/shared/directives/flexible-date.directive';
@@ -232,8 +233,14 @@ export class NotesheetGenerateComponent implements OnInit {
         { label: 'Custom', value: '__custom__' },
     ];
 
-    // Subject autocomplete
+    // Subject autocomplete (legacy free-text — kept for backward compat)
     subjectSuggestions: string[] = [];
+
+    // Subject dropdown — General subjects from the NoteSheetSubject master.
+    // The selected subject's id is stored (NoteSheetInfo.NoteSheetSubjectId); the
+    // text is also mirrored into `subject` for list/search. Label follows textType.
+    private subjectPickList: NoteSheetSubjectModel[] = [];
+    subjectOptions: { label: string; value: number }[] = [];
 
     // NoteSheet number config
     allNoteSheetConfigs: any[] = [];
@@ -264,7 +271,8 @@ export class NotesheetGenerateComponent implements OnInit {
         private postingService: PostingService,
         private orgService: OrgService,
         private servingMembersService: ServingMembersService,
-        private familyInfoService: FamilyInfoService
+        private familyInfoService: FamilyInfoService,
+        private noteSheetSubjectService: NoteSheetSubjectService
     ) {
         this.form = this.fb.group({
             noteSheetTemplateId: [null as number | null],
@@ -278,7 +286,8 @@ export class NotesheetGenerateComponent implements OnInit {
             subSectionId: [null as number | null],
             noteSheetNo: [''],
             noteSheetNumberConfigId: [null as number | null, Validators.required],
-            subject: ['', Validators.required],
+            noteSheetSubjectId: [null as number | null, Validators.required],
+            subject: [''],
             mainText: [''],
             note: [''],
             paragraphText: [''],
@@ -304,6 +313,7 @@ export class NotesheetGenerateComponent implements OnInit {
         this.loadPreparedByOptions();
         this.loadReferenceEmployeeOptions();
         this.loadNoteSheetNumberConfig();
+        this.loadSubjectPickList();
         const user = this.sharedService.getCurrentUser?.() ?? '';
         this.form.get('preparedBy')?.setValue(user);
         this.resolvePreparedByMapping();
@@ -324,10 +334,54 @@ export class NotesheetGenerateComponent implements OnInit {
 
         this.form.get('textType')?.valueChanges.subscribe((newType: string) => {
             this.buildNoteSheetConfigOptions();
+            this.buildSubjectOptions();
             if (this.editMode) {
                 this.transformNoteSheetNo(newType);
             }
         });
+    }
+
+    // ── Subject dropdown (General subject master) ───────────────────────────
+
+    /** Load active General-type subjects for the subject dropdown. */
+    private loadSubjectPickList(): void {
+        this.noteSheetSubjectService.getActiveByType(NoteSheetType.General).subscribe({
+            next: (list) => {
+                this.subjectPickList = Array.isArray(list) ? list : [];
+                this.buildSubjectOptions();
+            },
+            error: () => {
+                this.subjectPickList = [];
+                this.subjectOptions = [];
+            }
+        });
+    }
+
+    /** Option labels follow the current textType (bn/en). */
+    private buildSubjectOptions(): void {
+        const isBn = this.form.get('textType')?.value === 'bn';
+        this.subjectOptions = this.subjectPickList.map((s) => ({
+            label: (isBn ? s.subjectBN : s.subjectEN) || s.subjectEN || s.subjectBN || '',
+            value: s.id
+        }));
+    }
+
+    /** Mirror the picked subject's text into `subject` (stored for list/search; preview resolves BN/EN by id). */
+    onSubjectPicked(id: number | null): void {
+        this.form.get('subject')?.setValue(this.subjectTextById(id, this.form.get('textType')?.value === 'bn'));
+    }
+
+    /** Resolve a subject's display text (current language) from the master list by id. */
+    private subjectTextById(id: number | null | undefined, isBn: boolean): string {
+        const picked = this.subjectPickList.find((s) => s.id === id);
+        return picked ? ((isBn ? picked.subjectBN : picked.subjectEN) || picked.subjectEN || picked.subjectBN || '') : '';
+    }
+
+    /** Subject text for the payload — the form value, or derived from the picked id if empty. */
+    private resolveSubjectText(d: any): string {
+        const existing = d.subject != null ? String(d.subject) : '';
+        if (existing.trim()) return existing;
+        return this.subjectTextById(d.noteSheetSubjectId, d.textType === 'bn');
     }
 
     // ── Unit Hierarchy Tree ─────────────────────────────────────────────
@@ -756,6 +810,7 @@ export class NotesheetGenerateComponent implements OnInit {
             sectionId: d.sectionId ?? d.SectionId ?? null,
             subSectionId: d.subSectionId ?? d.SubSectionId ?? null,
             noteSheetNo: String(d.noteSheetNo ?? d.NoteSheetNo ?? ''),
+            noteSheetSubjectId: d.noteSheetSubjectId ?? d.NoteSheetSubjectId ?? null,
             subject: String(d.subject ?? d.Subject ?? ''),
             mainText: String(d.mainText ?? d.MainText ?? ''),
             note: String(d.note ?? d.Note ?? ''),
@@ -1296,6 +1351,7 @@ export class NotesheetGenerateComponent implements OnInit {
             subSectionId: null,
             noteSheetNo: '',
             noteSheetNumberConfigId: null,
+            noteSheetSubjectId: null,
             subject: '',
             mainText: '',
             note: '',
@@ -1499,7 +1555,10 @@ export class NotesheetGenerateComponent implements OnInit {
             noteSheetDate: dateStr,
             noteSheetTemplateId: d.noteSheetTemplateId ?? null,
             referenceNumber: referenceNumberJson ?? null,
-            subject: d.subject != null ? String(d.subject) : '',
+            noteSheetSubjectId: d.noteSheetSubjectId ?? null,
+            // Always store the subject text too (mirrored from the picked subject) so the preview
+            // shows it even before the id→master relation resolves / if the master is unavailable.
+            subject: this.resolveSubjectText(d),
             mainText: d.mainText != null ? String(d.mainText) : '',
             note: d.note != null ? String(d.note) : null,
             paragraphText: d.paragraphText != null ? String(d.paragraphText) : null,

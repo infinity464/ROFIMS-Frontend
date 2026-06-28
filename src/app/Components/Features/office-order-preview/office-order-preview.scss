@@ -138,8 +138,8 @@
     background: #fff;
     box-shadow: 0 6px 24px rgba(0, 0, 0, 0.25);
     box-sizing: border-box;
-    font-family: 'Times New Roman', 'Noto Sans Bengali', 'SolaimanLipi', Times, serif;
-    font-size: 10pt;
+    font-family: 'Times New Roman', 'Nirmala UI', Times, serif;
+    font-size: 9pt;
     color: #000;
     line-height: 1.7;
     position: relative;
@@ -173,13 +173,13 @@
 
 .oo-doc-header-line {
     font-weight: 700;
-    font-size: 11pt;
+    font-size: 9pt;
     line-height: 1.5;
 }
 
 .oo-doc-title {
     text-align: center;
-    font-size: 14pt;
+    font-size: 11pt;
     font-weight: 700;
     text-decoration: underline;
     margin: 12px 0;
@@ -189,12 +189,12 @@
     display: flex;
     justify-content: space-between;
     margin-bottom: 6px;
-    font-size: 10pt;
+    font-size: 9pt;
 }
 
 .oo-doc-reference {
     margin-bottom: 10px;
-    font-size: 10pt;
+    font-size: 9pt;
     font-style: italic;
 
     .oo-doc-reference-label {
@@ -207,13 +207,13 @@
 /* ── Sections (Address To, Reference No, Attachment, Onulipi) ── */
 .oo-doc-section {
     margin: 10px 0;
-    font-size: 10pt;
+    font-size: 9pt;
 }
 
 .oo-doc-section-label {
     font-weight: 700;
     margin-bottom: 4px;
-    font-size: 10pt;
+    font-size: 9pt;
 }
 
 .oo-doc-list {
@@ -228,7 +228,7 @@
 /* ── Subject ──────────────────────────────────────── */
 .oo-doc-subject {
     margin: 10px 0;
-    font-size: 10pt;
+    font-size: 9pt;
 }
 
 .oo-doc-subject-label {
@@ -245,7 +245,7 @@
     display: flex;
     gap: 8px;
     margin: 10px 0;
-    font-size: 10pt;
+    font-size: 9pt;
     line-height: 1.8;
 }
 
@@ -265,7 +265,7 @@
     margin: 12px 0;
     line-height: 1.8;
     text-align: justify;
-    font-size: 10pt;
+    font-size: 9pt;
 }
 
 /* ── Signature Area ──────────────────────────────── */
@@ -282,7 +282,7 @@
 
 .oo-doc-sig-name {
     font-weight: 700;
-    font-size: 10pt;
+    font-size: 9pt;
     border-top: 1px solid transparent;
     padding-top: 4px;
 }
@@ -298,6 +298,12 @@
 .oo-doc-onulipi {
     margin-top: 30px;
     padding-top: 10px;
+
+    /* Tab gap after the serial (১।, ২।…) so অনুলিপি text starts at a fixed stop. */
+    .oo-copy-no {
+        display: inline-block;
+        min-width: 2.2em;
+    }
 }
 
 /* ── File Attachments ────────────────────────────── */
@@ -310,7 +316,7 @@
 
     .oo-file-attachments-label {
         font-weight: 600;
-        font-size: 10pt;
+        font-size: 9pt;
         margin-bottom: 10px;
         color: #374151;
         display: flex;
@@ -368,7 +374,7 @@
 /* ── Rich HTML sections (innerHTML) ── */
 :host ::ng-deep {
     .oo-doc-rich-content {
-        font-size: 10pt;
+        font-size: 9pt;
         line-height: 1.8;
         width: 100%;
         max-width: 100%;

@@ -23,7 +23,7 @@
     margin: -0.75rem 0 1.25rem 0;
     padding-bottom: 0.75rem;
     border-bottom: 1px solid #e5e7eb;
-    font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+    font-family: 'Times New Roman', sans-serif;
 
     .spacer { flex: 1; }
 }
@@ -152,10 +152,10 @@
     color: #000;
 
     // When language is Bangla, swap to a Bangla-friendly font stack.
-    // Includes 'Nirmala UI' / 'Vrinda' so Windows machines without SolaimanLipi
-    // still get proper Bangla shaping (avoids broken cluster spacing).
+    // Includes 'Nirmala UI' (ships with Windows 8+) so Bangla shaping is
+    // correct (avoids broken cluster spacing) while Latin stays Times New Roman.
     &.is-bn {
-        font-family: 'SolaimanLipi', 'Noto Sans Bengali', 'Nirmala UI', 'Vrinda', 'Shonar Bangla', 'Times New Roman', sans-serif;
+        font-family: 'Times New Roman', 'Nirmala UI', sans-serif;
     }
 }
 
@@ -219,7 +219,7 @@
     margin: 0 0 0.3rem;
     font-size: 10pt;
     color: #000;
-    font-family: 'SolaimanLipi', 'Noto Sans Bengali', 'Nirmala UI', 'Vrinda', 'Shonar Bangla', 'Times New Roman', sans-serif;
+    font-family: 'Times New Roman', 'Nirmala UI', sans-serif;
     line-height: 1.5;
     display: inline-block;
     border-bottom: 1px solid #000;
@@ -332,7 +332,7 @@
     border-radius: 0.5rem;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
     padding: 1.25rem 1.5rem;
-    font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+    font-family: 'Times New Roman', sans-serif;
 }
 
 .approval-card-title {
@@ -363,7 +363,7 @@
     display: flex;
     flex-direction: column;
     gap: 0.75rem;
-    font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+    font-family: 'Times New Roman', sans-serif;
 }
 
 .review-label {

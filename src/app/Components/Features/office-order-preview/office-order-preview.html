@@ -253,9 +253,7 @@
                 <div class="oo-doc-section oo-doc-onulipi" *ngIf="exportOnulipiEntries.length > 0">
                     <div class="oo-doc-section-label">{{ isBangla ? 'অনুলিপি (জ্যেষ্ঠতার ভিত্তিতে নহে):' : 'Copy (not in order of seniority):' }}</div>
                     <div class="oo-doc-list">
-                        <p *ngFor="let entry of exportOnulipiEntries; let i = index">
-                            {{ isBangla ? toBanglaDigits('' + (i + 1)) : (i + 1) }}। {{ entry.text }}
-                        </p>
+                        <p *ngFor="let entry of exportOnulipiEntries; let i = index"><span class="oo-copy-no">{{ isBangla ? toBanglaDigits('' + (i + 1)) : (i + 1) }}।</span>{{ entry.text }}</p>
                     </div>
                 </div>
 

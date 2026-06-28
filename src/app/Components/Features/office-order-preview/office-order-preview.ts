@@ -23,7 +23,7 @@ import { GeneralNotesheetOfficeOrderDto, GeneralNotesheetOfficeOrderWithDetailsD
 import { ApprovalStatus } from '@/models/enums';
 import { NotesheetMembersTableComponent } from '@/Components/Shared/notesheet-members-table/notesheet-members-table';
 import { JsReportService } from '@/services/jsreport.service';
-import { Document, Packer, Paragraph, TextRun, AlignmentType, BorderStyle, HeadingLevel, Table, TableRow, TableCell, WidthType, VerticalAlign, TableLayoutType } from 'docx';
+import { Document, Packer, Paragraph, TextRun, AlignmentType, BorderStyle, HeadingLevel, Table, TableRow, TableCell, WidthType, VerticalAlign, TableLayoutType, TabStopType } from 'docx';
 import { saveAs } from 'file-saver';
 import { firstValueFrom } from 'rxjs';
 
@@ -392,7 +392,7 @@ export class OfficeOrderPreviewComponent implements OnInit {
     }
 
     /** Build members table as docx Table */
-    private buildMembersTable(columns: any[], rows: Record<string, string>[], font: string): Table {
+    private buildMembersTable(columns: any[], rows: Record<string, string>[], font: string | { ascii: string; hAnsi: string; cs: string; hint: 'cs' }): Table {
         const tableFontSize = 14; // 7pt in half-points
         const borderStyle = { style: BorderStyle.SINGLE, size: 1, color: '000000' };
         const borders = {
@@ -457,9 +457,10 @@ export class OfficeOrderPreviewComponent implements OnInit {
     private async buildWordDocument(): Promise<Document> {
         if (!this.order) throw new Error('No order loaded');
 
-        const font = this.isBangla ? 'Nirmala UI' : 'Times New Roman';
-        const titleSize = 18; // 9pt
-        const contentSize = 16; // 8pt
+        const font = this.isBangla ? { ascii: 'Times New Roman', hAnsi: 'Times New Roman', cs: 'Nirmala UI', hint: 'cs' as const } : 'Times New Roman';
+        const titleSize = 22; // 11pt — document title (অফিস আদেশ)
+        const headerSize = 18; // 9pt — government header lines
+        const contentSize = 18; // 9pt — body / meta / reference / onulipi
         const children: (Paragraph | Table)[] = [];
 
         // ── Page size ──
@@ -473,13 +474,13 @@ export class OfficeOrderPreviewComponent implements OnInit {
             : ["Government of the People's Republic of Bangladesh", 'Bangladesh Police', 'RAB Forces Headquarters', 'Kurmitola, Dhaka'];
         for (const line of headerLines) {
             children.push(new Paragraph({
-                children: [new TextRun({ text: line, font, size: titleSize, bold: true })],
+                children: [new TextRun({ text: line, font, size: headerSize, bold: true })],
                 alignment: AlignmentType.CENTER,
                 spacing: { after: 20 }
             }));
         }
 
-        // ── Title (9pt, bold, underlined, centered) ──
+        // ── Title (11pt, bold, underlined, centered) ──
         children.push(new Paragraph({
             children: [new TextRun({ text: this.isBangla ? 'অফিস আদেশ' : 'OFFICE ORDER', font, size: titleSize, bold: true, underline: {} })],
             alignment: AlignmentType.CENTER,
@@ -660,8 +661,9 @@ export class OfficeOrderPreviewComponent implements OnInit {
             exportOnulipi.forEach((entry, idx) => {
                 const ser = this.isBangla ? this.toBanglaDigits(String(idx + 1)) : String(idx + 1);
                 children.push(new Paragraph({
-                    children: [new TextRun({ text: `${ser}। ${entry.text}`, font, size: contentSize })],
+                    children: [new TextRun({ text: `${ser}।\t${entry.text}`, font, size: contentSize })],
                     indent: { left: 360 },
+                    tabStops: [{ type: TabStopType.LEFT, position: 760 }],
                     spacing: { after: 20 }
                 }));
             });
@@ -761,8 +763,8 @@ html, body { margin: 0; padding: 0; background: transparent; }
     padding: 0;
     box-sizing: border-box;
     width: ${colWidth};
-    font-family: 'Times New Roman', 'Noto Sans Bengali', 'SolaimanLipi', Times, serif;
-    font-size: 10pt;
+    font-family: 'Times New Roman', 'Nirmala UI', Times, serif;
+    font-size: 9pt;
     line-height: 1.7;
     color: #000;
 }

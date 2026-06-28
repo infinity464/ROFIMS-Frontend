@@ -1140,7 +1140,7 @@ import { catchError, debounceTime, distinctUntilChanged, switchMap, takeUntil } 
   `,
   styles: [`
     .chat-container {
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+      font-family: 'Times New Roman', sans-serif;
     }
     .messages-area {
       background: linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%);

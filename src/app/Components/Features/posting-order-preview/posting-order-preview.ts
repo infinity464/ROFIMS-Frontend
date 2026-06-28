@@ -1483,8 +1483,8 @@ html, body { margin: 0; padding: 0; background: transparent; }
     padding: 0;
     box-sizing: border-box;
     width: ${colWidth};
-    font-family: 'Times New Roman', 'Noto Sans Bengali', 'SolaimanLipi', Times, serif;
-    font-size: 10pt;
+    font-family: 'Times New Roman', 'Nirmala UI', Times, serif;
+    font-size: 9pt;
     line-height: 1.7;
     color: #000;
 }
@@ -1526,19 +1526,21 @@ html, body { margin: 0; padding: 0; background: transparent; }
     private buildWordDocument(): Document {
         const bn = this.isBangla;
         const font = bn
-            ? { ascii: 'Nirmala UI', hAnsi: 'Nirmala UI', cs: 'Nirmala UI', hint: 'cs' as const }
+            ? { ascii: 'Times New Roman', hAnsi: 'Times New Roman', cs: 'Nirmala UI', hint: 'cs' as const }
             : 'Times New Roman';
-        const csSize = bn ? 16 : undefined;   // 8pt for order context
+        const csSize = bn ? 18 : undefined;   // 9pt for order context (complex script)
         const hdrSize = 18;                     // 9pt for header
         const hdrCsSize = bn ? 18 : undefined;
         const tblSize = 14;                     // 7pt for table content
         const tblCsSize = bn ? 14 : undefined;
-        const ctxSize = 16;                     // 8pt for order context
+        const tblHdrSize = 13;                  // 6.5pt for table header
+        const tblHdrCsSize = bn ? 13 : undefined;
+        const ctxSize = 18;                     // 9pt for order context
         const lang = bn ? { value: 'bn-BD', bidirectional: 'bn-BD' } : undefined;
         const thinBorder = { style: BorderStyle.SINGLE, size: 1, color: '000000' };
         const cellBorders = { top: thinBorder, bottom: thinBorder, left: thinBorder, right: thinBorder };
 
-        // ── Government Header (11pt, bold, centered) ──
+        // ── Government Header (9pt, bold, centered) ──
         const headerLines = bn
             ? ['গণপ্রজাতন্ত্রী বাংলাদেশ সরকার', 'বাংলাদেশ পুলিশ', 'র‌্যাব ফোর্সেস সদর দপ্তর', 'কুর্মিটোলা, ঢাকা']
             : ['Government of the Peoples Republic of Bangladesh', 'Bangladesh Police', 'RAB Forces Headquarters', 'Kurmitola, Dhaka'];
@@ -1549,14 +1551,14 @@ html, body { margin: 0; padding: 0; background: transparent; }
             spacing: { after: 40 }
         }));
 
-        // ── Title (14pt, bold, underlined, centered) ──
+        // ── Title (11pt, bold, underlined, centered) ──
         const titlePara = new Paragraph({
-            children: [new TextRun({ text: bn ? 'প্রজ্ঞাপন' : 'NOTIFICATION', bold: true, size: 28, sizeComplexScript: bn ? 28 : undefined, font, underline: {}, language: lang })],
+            children: [new TextRun({ text: bn ? 'প্রজ্ঞাপন' : 'NOTIFICATION', bold: true, size: 22, sizeComplexScript: bn ? 22 : undefined, font, underline: {}, language: lang })],
             alignment: AlignmentType.CENTER,
             spacing: { before: 200, after: 200 }
         });
 
-        // ── Order No & Date (10pt, space-between via tab stop) ──
+        // ── Order No & Date (9pt, space-between via tab stop) ──
         const orderLine = new Paragraph({
             tabStops: [{ type: TabStopType.RIGHT, position: TabStopPosition.MAX }],
             children: [
@@ -1633,7 +1635,7 @@ html, body { margin: 0; padding: 0; background: transparent; }
         };
         const colW = buildColW();
 
-        const hdrPara = (text: string) => new Paragraph({ children: [new TextRun({ text, bold: true, size: tblSize, sizeComplexScript: tblCsSize, font, language: lang })], alignment: AlignmentType.CENTER });
+        const hdrPara = (text: string) => new Paragraph({ children: [new TextRun({ text, bold: true, size: tblHdrSize, sizeComplexScript: tblHdrCsSize, font, language: lang })], alignment: AlignmentType.CENTER });
         const hdrCell = (text: string, ci: number, extra?: Partial<ConstructorParameters<typeof TableCell>[0]>) => new TableCell({
             children: [hdrPara(text)], borders: cellBorders, width: { size: colW[ci], type: WidthType.DXA }, ...extra
         });
@@ -1851,15 +1853,17 @@ html, body { margin: 0; padding: 0; background: transparent; }
         autoLines.forEach((line, i) => {
             const serial = i + 1;
             leftCellChildren.push(new Paragraph({
-                children: [new TextRun({ text: `${bn ? this.toBanglaDigits(String(serial)) : serial}। ${line}`, size: ctxSize, sizeComplexScript: csSize, font, language: lang })],
-                spacing: { after: 100 }
+                children: [new TextRun({ text: `${bn ? this.toBanglaDigits(String(serial)) : serial}।\t${line}`, size: ctxSize, sizeComplexScript: csSize, font, language: lang })],
+                spacing: { after: 100 },
+                tabStops: [{ type: TabStopType.LEFT, position: 400 }]
             }));
         });
         this.exportFooterParagraphs.forEach((p, i) => {
             const serial = i + 1 + autoLines.length;
             leftCellChildren.push(new Paragraph({
-                children: [new TextRun({ text: `${bn ? this.toBanglaDigits(String(serial)) : serial}। ${p.text}`, size: ctxSize, sizeComplexScript: csSize, font, language: lang })],
-                spacing: { after: 100 }
+                children: [new TextRun({ text: `${bn ? this.toBanglaDigits(String(serial)) : serial}।\t${p.text}`, size: ctxSize, sizeComplexScript: csSize, font, language: lang })],
+                spacing: { after: 100 },
+                tabStops: [{ type: TabStopType.LEFT, position: 400 }]
             }));
         });
 

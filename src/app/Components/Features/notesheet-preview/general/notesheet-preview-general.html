@@ -329,13 +329,13 @@
                     <div style="border-bottom:1.5px solid #000; display:inline-block; padding-bottom:2px;">{{ getOrgHeaderLine2() }}</div>
                 </div>
 
-                <div class="ns-notesheet-no" *ngIf="noteSheet.noteSheetNo" style="padding:4px 16px 2px; font-size:8pt;">
+                <div class="ns-notesheet-no" *ngIf="noteSheet.noteSheetNo" style="padding:4px 2px 2px 4px; font-size:7pt;">
                     {{ noteSheet.noteSheetNo }}
                 </div>
 
                 <!-- ── Subject ── -->
-                <div *ngIf="noteSheet.subject" style="padding:2px 16px 4px; font-size:8pt;">
-                    <strong><u>{{ noteSheet.subject }}</u></strong>
+                <div *ngIf="displaySubject" style="padding:2px 2px 4px 4px; font-size:8pt;">
+                    <strong><u>{{ displaySubject }}</u></strong>
                 </div>
 
                 <!-- ── Reference / Date ── -->

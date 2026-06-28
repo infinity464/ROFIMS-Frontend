@@ -726,8 +726,8 @@ export class ReportBioDataIndividualComponent implements OnInit, OnDestroy {
     private buildPrintHtml(): string {
         const esc = (s: unknown) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;');
         const isBn = this.isBn;
-        const grotesk = isBn ? "'Hind Siliguri', 'Noto Sans Bengali', 'Space Grotesk', sans-serif" : "'Space Grotesk', 'Helvetica Neue', Helvetica, sans-serif";
-        const mono = isBn ? "'Hind Siliguri', 'Noto Sans Bengali', 'IBM Plex Mono', monospace" : "'IBM Plex Mono', ui-monospace, 'SF Mono', Menlo, monospace";
+        const grotesk = isBn ? "'Times New Roman', 'Nirmala UI', sans-serif" : "'Space Grotesk', 'Helvetica Neue', Helvetica, sans-serif";
+        const mono = isBn ? "'Times New Roman', 'Nirmala UI', monospace" : "'IBM Plex Mono', ui-monospace, 'SF Mono', Menlo, monospace";
 
         const renderItem = (it: BioCatalogItem): string => {
             const cls = 'f' + (it.span === 2 ? ' span2' : '');
@@ -829,7 +829,7 @@ export class ReportBioDataIndividualComponent implements OnInit, OnDestroy {
             // Bangla glyphs are complex-script — the run must carry a cs (and
             // eastAsia) font + sizeComplexScript, otherwise Word falls back to a
             // non-Bangla cs font and renders boxes. Nirmala UI ships with Windows.
-            const bnFont = { ascii: 'Nirmala UI', hAnsi: 'Nirmala UI', cs: 'Nirmala UI', eastAsia: 'Nirmala UI', hint: 'cs' as const };
+            const bnFont = { ascii: 'Times New Roman', hAnsi: 'Times New Roman', cs: 'Nirmala UI', eastAsia: 'Nirmala UI', hint: 'cs' as const };
             const bnLang = { value: 'bn-BD', bidirectional: 'bn-BD', eastAsia: 'bn-BD' } as any;
             const sans = isBn ? (bnFont as any) : 'Calibri';
             const serif = isBn ? (bnFont as any) : 'Cambria';

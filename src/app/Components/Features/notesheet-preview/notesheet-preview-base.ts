@@ -28,6 +28,7 @@ export interface NoteSheetInfoFull {
     wingBattalionId?: number;
     branchId?: number;
     subject: string;
+    noteSheetSubjectId?: number | null;
     noteSheetType?: string;
     referenceNumber?: string;
     draftPostingMasterId?: number | null;
@@ -936,7 +937,7 @@ export abstract class NotesheetPreviewBase implements OnInit {
     exportPdf(): void {
         if (!this.noteSheet) return;
         const bn = !this.isEnglish();
-        const fontFamily = bn ? "'Noto Sans Bengali', sans-serif" : "'Times New Roman', serif";
+        const fontFamily = bn ? "'Times New Roman', 'Nirmala UI', sans-serif" : "'Times New Roman', serif";
         const title = bn ? 'মন্তব্যপত্র' : 'NOTE SHEET';
 
         // Page size follows the selected option (subclasses override this method with a

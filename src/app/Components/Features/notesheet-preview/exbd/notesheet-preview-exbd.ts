@@ -1017,7 +1017,7 @@ html, body { margin: 0; padding: 0; background: transparent; }
     padding: 0;
     box-sizing: border-box;
     width: ${colWidth};
-    font-family: 'Times New Roman', 'SolaimanLipi', 'Noto Sans Bengali', 'Nirmala UI', 'Vrinda', 'Shonar Bangla', Times, serif;
+    font-family: 'Times New Roman', 'Nirmala UI', Times, serif;
     font-size: 10pt;
     line-height: 1.7;
     color: #000;
@@ -1196,13 +1196,16 @@ html, body { margin: 0; padding: 0; background: transparent; }
         const model = this.buildDocumentModel();
         const bn = model.isBangla;
         const font = bn
-            ? { ascii: 'Nirmala UI', hAnsi: 'Nirmala UI', cs: 'Nirmala UI', hint: 'cs' as const }
+            ? { ascii: 'Times New Roman', hAnsi: 'Times New Roman', cs: 'Nirmala UI', hint: 'cs' as const }
             : 'Times New Roman';
         // Font sizes (half-points): Header=10pt, Content=8pt, Signature=9pt
         const hdrSize = 20;        // 10pt - org header, title
         const contentSize = 16;    // 8pt  - body content
         const sigSize = 18;        // 9pt  - signature/approver block
+        const titleHdrSize = hdrSize + 2;     // 11pt — NOTE SHEET / মন্তব্য পত্র (+1pt)
+        const noDateSize = contentSize - 2;   // 7pt  — notesheet no + date (-1pt)
         const csContent = bn ? contentSize : undefined;
+        const csNoDate = bn ? noDateSize : undefined;
         const csSig = bn ? sigSize : undefined;
         const lang = bn ? { value: 'bn-BD', bidirectional: 'bn-BD' } : undefined;
 
@@ -1220,12 +1223,12 @@ html, body { margin: 0; padding: 0; background: transparent; }
         if (this.noteSheet?.noteSheetNo || this.noteSheet?.noteSheetDate) {
             const runs: TextRun[] = [];
             if (this.noteSheet?.noteSheetNo) {
-                runs.push(new TextRun({ text: this.noteSheet.noteSheetNo, size: contentSize, sizeComplexScript: csContent, font, language: lang }));
+                runs.push(new TextRun({ text: this.noteSheet.noteSheetNo, size: noDateSize, sizeComplexScript: csNoDate, font, language: lang }));
             }
             if (this.noteSheet?.noteSheetDate) {
-                runs.push(new TextRun({ text: '\t', size: contentSize, font }));
+                runs.push(new TextRun({ text: '\t', size: noDateSize, font }));
                 const datePrefix = bn ? 'তারিখ : ' : 'Date: ';
-                runs.push(new TextRun({ text: `${datePrefix}${model.dateValue}`, size: contentSize, sizeComplexScript: csContent, font, language: lang }));
+                runs.push(new TextRun({ text: `${datePrefix}${model.dateValue}`, size: noDateSize, sizeComplexScript: csNoDate, font, language: lang }));
             }
             mainChildren.push(new Paragraph({
                 children: runs,
@@ -1391,11 +1394,11 @@ html, body { margin: 0; padding: 0; background: transparent; }
         // Title paragraphs — placed at top of the main cell, INSIDE the outer border
         const titleChildren: Paragraph[] = [
             new Paragraph({
-                children: [new TextRun({ text: 'NOTE SHEET', bold: true, underline: {}, size: hdrSize, font: 'Times New Roman' })],
+                children: [new TextRun({ text: 'NOTE SHEET', bold: true, underline: {}, size: titleHdrSize, font: 'Times New Roman' })],
                 alignment: AlignmentType.CENTER, spacing: { before: 80, after: 40 }, keepNext: true
             }),
             new Paragraph({
-                children: [new TextRun({ text: 'মন্তব্য পত্র', bold: true, underline: {}, size: hdrSize, font: 'Nirmala UI' })],
+                children: [new TextRun({ text: 'মন্তব্য পত্র', bold: true, underline: {}, size: titleHdrSize, font: { ascii: 'Times New Roman', hAnsi: 'Times New Roman', cs: 'Nirmala UI', hint: 'cs' as const } })],
                 alignment: AlignmentType.CENTER, spacing: { after: 100 }, keepNext: true
             }),
         ];

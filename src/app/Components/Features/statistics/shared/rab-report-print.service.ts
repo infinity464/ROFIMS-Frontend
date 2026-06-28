@@ -79,11 +79,11 @@ export class RabReportPrintService {
         const esc = (s: string) => this.esc(s);
         const isBn = cfg.lang === 'bn';
         const serif = isBn
-            ? "'Nirmala UI', 'Hind Siliguri', 'SolaimanLipi', serif"
-            : "'Playfair Display', Georgia, 'Times New Roman', serif";
+            ? "'Times New Roman', 'Nirmala UI', serif"
+            : "'Times New Roman', serif";
         const sans = isBn
-            ? "'Nirmala UI', 'Hind Siliguri', 'SolaimanLipi', sans-serif"
-            : "'DM Sans', 'Segoe UI', Arial, sans-serif";
+            ? "'Times New Roman', 'Nirmala UI', sans-serif"
+            : "'Times New Roman', sans-serif";
         const mono = "'JetBrains Mono', 'Consolas', 'Courier New', monospace";
 
         const overline = isBn ? 'গণপ্রজাতন্ত্রী বাংলাদেশ সরকার' : "GOVERNMENT OF THE PEOPLE'S REPUBLIC OF BANGLADESH";

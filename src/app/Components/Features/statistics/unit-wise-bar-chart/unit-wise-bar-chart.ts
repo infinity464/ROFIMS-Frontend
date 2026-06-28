@@ -322,7 +322,7 @@ export class UnitWiseBarChartComponent implements OnInit {
         if (!canvas) return;
         const imgData = canvas.toDataURL('image/png');
         const fontFamily = this.lang === 'bn'
-            ? "'Noto Sans Bengali', 'Nirmala UI', sans-serif"
+            ? "'Times New Roman', 'Nirmala UI', sans-serif"
             : "'Times New Roman', serif";
 
         const scope = this.scopeLine;

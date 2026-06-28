@@ -82,7 +82,7 @@
     box-sizing: border-box;
     /* Bangla-friendly fallback list ensures Bangla glyphs render consistently
        across previews. Times New Roman remains the primary for Latin text. */
-    font-family: 'Times New Roman', 'SolaimanLipi', 'Noto Sans Bengali', 'Nirmala UI', 'Vrinda', 'Shonar Bangla', Times, serif;
+    font-family: 'Times New Roman', 'Nirmala UI', Times, serif;
     font-size: 10pt;
     color: #000;
     line-height: 1.7;
@@ -115,8 +115,7 @@
     ::ng-deep .ns-ref-content *,
     ::ng-deep .ns-note,
     ::ng-deep .ns-note * {
-        font-family: 'Times New Roman', 'SolaimanLipi', 'Noto Sans Bengali',
-            'Nirmala UI', 'Vrinda', 'Shonar Bangla', Times, serif !important;
+        font-family: 'Times New Roman', 'Nirmala UI', Times, serif !important;
         color: #000 !important;
     }
 
@@ -229,12 +228,12 @@
     padding: 8px 2px 4px;
 }
 .ns-title-en {
-    font-size: 9pt;
+    font-size: 10pt;
     font-weight: bold;
     letter-spacing: 2px;
 }
 .ns-title-bn {
-    font-size: 9pt;
+    font-size: 10pt;
     margin-top: 2px;
 }
 
@@ -423,7 +422,7 @@
 
 .ns-cell-ref {
     padding: 5px 2px 0 4px;
-    font-size: 8pt;
+    font-size: 7pt;
 
     .ns-ref-content { margin-left: 0; }
     ::ng-deep .ns-ref-content p { margin: 0 0 0.2rem; }

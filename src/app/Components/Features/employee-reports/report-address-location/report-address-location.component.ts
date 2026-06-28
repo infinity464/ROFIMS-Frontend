@@ -1020,11 +1020,11 @@ export class ReportAddressLocationComponent implements OnInit {
                 .replace(/'/g, '&#039;');
         const isBn = this.lang === 'bn';
         const serif = isBn
-            ? "'Nirmala UI', 'Hind Siliguri', 'SolaimanLipi', serif"
-            : "'Playfair Display', Georgia, 'Times New Roman', serif";
+            ? "'Times New Roman', 'Nirmala UI', serif"
+            : "'Times New Roman', serif";
         const sans = isBn
-            ? "'Nirmala UI', 'Hind Siliguri', 'SolaimanLipi', sans-serif"
-            : "'DM Sans', 'Segoe UI', Arial, sans-serif";
+            ? "'Times New Roman', 'Nirmala UI', sans-serif"
+            : "'Times New Roman', sans-serif";
         const mono = "'JetBrains Mono', 'Consolas', 'Courier New', monospace";
 
         const visibleCols = this.visibleColumns;
@@ -1401,8 +1401,8 @@ export class ReportAddressLocationComponent implements OnInit {
         // ZWJ (U+200D) in "র‍্যাপিড" gets dropped to a placeholder box even
         // when cs font is set.
         const bnFont = {
-            ascii: 'Nirmala UI',
-            hAnsi: 'Nirmala UI',
+            ascii: 'Times New Roman',
+            hAnsi: 'Times New Roman',
             cs: 'Nirmala UI',
             hint: 'cs' as const,
         };

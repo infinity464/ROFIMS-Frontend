@@ -557,7 +557,7 @@
     --rab-body-ink-faint: #b0b0b0;
     --rab-body-border: #ece6d4;
 
-    --rab-serif: 'Playfair Display', 'Cormorant Garamond', Georgia, 'Times New Roman', serif;
+    --rab-serif: 'Times New Roman', serif;
     --rab-mono: 'JetBrains Mono', 'SF Mono', Consolas, 'Liberation Mono', monospace;
 
     margin-top: 1.25rem;
@@ -856,7 +856,7 @@
     border-bottom: none;
 }
 
-/* Bangla doesn't tolerate letter-spacing — Playfair Display has no Bangla glyphs,
+/* Bangla doesn't tolerate letter-spacing — the Latin serif has no Bangla glyphs,
    the browser falls back to a Bangla font, and letter-spacing then prises apart
    conjuncts and modifier marks. Reset spacing on dynamic-text elements when
    rendering in Bangla, and let the OS pick a Bangla-aware font instead of the
@@ -881,7 +881,7 @@
     .rab-addr-part-value,
     .rab-addr-detail {
         letter-spacing: 0;
-        font-family: 'Hind Siliguri', 'Noto Sans Bengali', 'SolaimanLipi', 'Kalpurush', sans-serif;
+        font-family: 'Times New Roman', 'Nirmala UI', sans-serif;
     }
 
     /* Heavily tracked uppercase strips — soften the tracking but keep a hint
@@ -890,7 +890,7 @@
     .rab-criteria-cell-label,
     .rab-foot-row {
         letter-spacing: 0.04em;
-        font-family: 'Hind Siliguri', 'Noto Sans Bengali', 'SolaimanLipi', sans-serif;
+        font-family: 'Times New Roman', 'Nirmala UI', sans-serif;
         text-transform: none;
     }
 
@@ -904,7 +904,7 @@
 /* PrimeNG-generated table cells: ::ng-deep must live at the top level. */
 :host ::ng-deep .rab-paper.rab-lang-bn .rab-data-table .p-datatable-thead > tr > th {
     letter-spacing: 0.04em;
-    font-family: 'Hind Siliguri', 'Noto Sans Bengali', 'SolaimanLipi', sans-serif;
+    font-family: 'Times New Roman', 'Nirmala UI', sans-serif;
 }
 
 /* ----- Data table ----- */
@@ -1017,7 +1017,7 @@
     .rab-th-loctype, .rab-td-loctype { width: 160px; }
     .rab-th-owner, .rab-td-owner {
         width: 140px;
-        font-family: 'DM Sans', sans-serif;
+        font-family: 'Times New Roman', sans-serif;
         font-weight: 600;
         font-size: 0.92rem;
         letter-spacing: -0.005em;
@@ -1027,7 +1027,7 @@
        breaking mid-word at narrower viewports. */
     .rab-th-status, .rab-td-status {
         width: 150px;
-        font-family: 'DM Sans', sans-serif;
+        font-family: 'Times New Roman', sans-serif;
         font-weight: 600;
         font-size: 0.92rem;
         white-space: nowrap;
@@ -1041,7 +1041,7 @@
 /* Composite cell typography — keep weight where it earns it (the name, the
    breadcrumb head), drop to muted ink for the secondary line. */
 .rab-personnel-name {
-    font-family: 'DM Sans', sans-serif;
+    font-family: 'Times New Roman', sans-serif;
     font-weight: 600;
     font-size: 0.92rem;
     color: var(--rab-body-ink);

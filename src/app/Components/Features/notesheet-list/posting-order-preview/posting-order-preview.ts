@@ -329,7 +329,7 @@ export class PostingOrderPreviewComponent implements OnChanges, OnInit {
 
     async exportPdfDirect(): Promise<void> {
         const bn = !this.isEnglish;
-        const fontFamily = bn ? "'Noto Sans Bengali', 'SolaimanLipi', 'Kalpurush', sans-serif" : "'Times New Roman', serif";
+        const fontFamily = bn ? "'Times New Roman', 'Nirmala UI', sans-serif" : "'Times New Roman', serif";
         const title = bn ? 'মন্তব্যপত্র' : 'NOTE SHEET';
 
         // ── Build meta ──
@@ -438,7 +438,7 @@ export class PostingOrderPreviewComponent implements OnChanges, OnInit {
 
     exportPdf(): void {
         const bn = !this.isEnglish;
-        const fontFamily = bn ? "'Noto Sans Bengali', 'SolaimanLipi', 'Kalpurush', sans-serif" : "'Times New Roman', serif";
+        const fontFamily = bn ? "'Times New Roman', 'Nirmala UI', sans-serif" : "'Times New Roman', serif";
         const title = bn ? 'মন্তব্যপত্র' : 'NOTE SHEET';
 
         const metaParts: string[] = [];
