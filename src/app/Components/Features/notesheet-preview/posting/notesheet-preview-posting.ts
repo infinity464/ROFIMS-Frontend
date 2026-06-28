@@ -134,6 +134,8 @@ export class NotesheetPreviewPostingComponent extends NotesheetPreviewBase imple
 
     // ── Export detail toggles ──────────────────────────────────
     showRankQualifications = true;
+    /** Show/hide the whole Trade column (header + cells) across preview / print / PDF / Word. */
+    showTradeColumn = true;
     showTradeRemarks = true;
     showOwnDistrictDetail = true;
     showSpouseDistrictDetail = true;
@@ -2049,6 +2051,7 @@ html, body { margin: 0; padding: 0; background: transparent; }
 
                 const visibleIndices = allColKeys.map((k, i) => {
                     if (k === 'remarks' && !this.showRemarks) return -1;
+                    if (k === 'trade' && !this.showTradeColumn) return -1;
                     return i;
                 }).filter(i => i >= 0);
                 const cols = visibleIndices.map(i => allColHeaders[i]);
