@@ -1708,7 +1708,7 @@ export class NotesheetExBdLeaveComponent implements OnInit {
         const ns = this.viewNoteSheet;
         if (!ns) return;
         const bn = !this.isViewEnglish();
-        const fontFamily = bn ? "'Noto Sans Bengali', 'SolaimanLipi', 'Kalpurush', sans-serif" : "'Times New Roman', serif";
+        const fontFamily = bn ? "'Times New Roman', 'Nirmala UI', sans-serif" : "'Times New Roman', serif";
         const title = bn ? 'মন্তব্যপত্র' : 'NOTE SHEET';
 
         const metaParts: string[] = [];
@@ -1781,7 +1781,7 @@ export class NotesheetExBdLeaveComponent implements OnInit {
         const ns = this.viewNoteSheet;
         if (!ns) return;
         const bn = !this.isViewEnglish();
-        const fontFamily = bn ? "'Noto Sans Bengali', 'SolaimanLipi', 'Kalpurush', sans-serif" : "'Times New Roman', serif";
+        const fontFamily = bn ? "'Times New Roman', 'Nirmala UI', sans-serif" : "'Times New Roman', serif";
         const title = bn ? 'মন্তব্যপত্র' : 'NOTE SHEET';
 
         const metaParts: string[] = [];

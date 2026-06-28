@@ -192,7 +192,7 @@ export class LeavePendingApprovalPreviewComponent implements OnInit {
     private getPrintStyles(): string {
         return `
   @page { size: A4; margin: 18mm 16mm; }
-  body { font-family: 'SolaimanLipi','Noto Sans Bengali','Times New Roman',serif; margin: 0; padding: 0; color: #000; line-height: 1.7; font-size: 10pt; }
+  body { font-family: 'Times New Roman','Nirmala UI',serif; margin: 0; padding: 0; color: #000; line-height: 1.7; font-size: 10pt; }
   .leave-letter { width: 100%; padding: 0; box-sizing: border-box; }
   .letter-title { text-align: center; font-size: 13pt; font-weight: 700; margin: 0 0 14px; padding-bottom: 4px; border-bottom: 1.5px solid #000; display: inline-block; width: 100%; letter-spacing: 1px; }
   .letter-para { line-height: 1.9; text-align: justify; margin: 10px 0; font-size: 11pt; }
@@ -271,7 +271,7 @@ export class LeavePendingApprovalPreviewComponent implements OnInit {
     private async exportWord(): Promise<void> {
         if (!this.application) return;
         try {
-            const FONT = 'Nirmala UI';
+            const FONT = { ascii: 'Times New Roman', hAnsi: 'Times New Roman', cs: 'Nirmala UI', hint: 'cs' as const };
             const isBn = this.lang === 'bn';
             const appId = this.application.applicantEmployeeId;
             const relieverId = this.getRelieverId();

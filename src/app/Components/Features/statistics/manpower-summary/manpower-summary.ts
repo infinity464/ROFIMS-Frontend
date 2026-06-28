@@ -292,11 +292,11 @@ export class ManpowerSummaryComponent implements OnInit {
             (s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;');
         const isBn = this.lang === 'bn';
         const serif = isBn
-            ? "'Nirmala UI', 'Hind Siliguri', 'SolaimanLipi', serif"
-            : "'Playfair Display', Georgia, 'Times New Roman', serif";
+            ? "'Times New Roman', 'Nirmala UI', serif"
+            : "'Times New Roman', serif";
         const sans = isBn
-            ? "'Nirmala UI', 'Hind Siliguri', 'SolaimanLipi', sans-serif"
-            : "'DM Sans', 'Segoe UI', Arial, sans-serif";
+            ? "'Times New Roman', 'Nirmala UI', sans-serif"
+            : "'Times New Roman', sans-serif";
         const mono = "'JetBrains Mono', 'Consolas', 'Courier New', monospace";
 
         const cols = COLUMNS;

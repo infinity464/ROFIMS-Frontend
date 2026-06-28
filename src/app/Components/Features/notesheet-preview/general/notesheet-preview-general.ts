@@ -20,6 +20,7 @@ import { FileReferencesFormComponent, FileRowData } from '@/Components/Common/fi
 import { NotesheetApproverSelectComponent } from '@/Components/Common/notesheet-approver-select/notesheet-approver-select';
 import { EmployeeSearchComponent, EmployeeBasicInfo } from '@/Components/Shared/employee-search/employee-search';
 import { NotesheetPreviewBase } from '../notesheet-preview-base';
+import { NoteSheetSubjectService, NoteSheetSubjectModel } from '@/Components/basic-setup/shared/services/NoteSheetSubjectService';
 import { MemberColumnDef, MemberRow, MembersJsonData, AVAILABLE_MEMBER_COLUMNS, ReferenceParagraph } from '../../notesheet-generate/notesheet-generate';
 import { NoteSheetCurrentStatus, NoteSheetCurrentStatusOptions, NoteSheetOperationTypeOptions, ApprovalStatus, NoteSheetRemarkAction, NoteSheetPreviewFrom, ApprovalLogAction, ApprovalLogActionOptions } from '@/models/enums';
 import { SharedService } from '@/shared/services/shared-service';
@@ -126,6 +127,10 @@ export class NotesheetPreviewGeneralComponent extends NotesheetPreviewBase imple
     titleBlockHeightPx = 0;
     private pageInsetPx = 0;
     private lastMeasuredHeight = 0;
+
+    // ── General subject master (resolve NoteSheetSubjectId → BN/EN for display) ──
+    private noteSheetSubjectService = inject(NoteSheetSubjectService);
+    private noteSheetSubjects: NoteSheetSubjectModel[] = [];
 
     // ── Edit model fields ────────────────────────────────────
     editSubject = '';
@@ -538,6 +543,16 @@ export class NotesheetPreviewGeneralComponent extends NotesheetPreviewBase imple
     // ── Lifecycle: detect pending mode, resolve current user ──
     override ngOnInit(): void {
         super.ngOnInit();
+        // Load the General subject master so the preview can resolve NoteSheetSubjectId → BN/EN.
+        this.noteSheetSubjectService.getActiveByType('General').subscribe({
+            next: (list) => {
+                this.noteSheetSubjects = Array.isArray(list) ? list : [];
+                // Subject text may change length → force a re-measure so pagination re-runs.
+                this.lastMeasuredHeight = 0;
+                this.cdr.detectChanges();
+            },
+            error: () => { this.noteSheetSubjects = []; }
+        });
         this.route.queryParams.subscribe(params => {
             this.fromPending = (params['from'] ?? '').toString().toLowerCase() === NoteSheetPreviewFrom.Pending;
             this.returnUrl = params['returnUrl'] ?? null;
@@ -1349,7 +1364,7 @@ html, body { margin: 0; padding: 0; background: transparent; }
     padding: 0;
     box-sizing: border-box;
     width: ${colWidth};
-    font-family: 'Times New Roman', 'SolaimanLipi', 'Noto Sans Bengali', 'Nirmala UI', 'Vrinda', 'Shonar Bangla', Times, serif;
+    font-family: 'Times New Roman', 'Nirmala UI', Times, serif;
     font-size: 10pt;
     line-height: 1.7;
     color: #000;
@@ -1402,6 +1417,21 @@ html, body { margin: 0; padding: 0; background: transparent; }
     }
 
     /** Build shared document model (used by both Word and PDF). */
+    /**
+     * Subject text for display. General note-sheets store NoteSheetSubjectId — resolve it
+     * against the General subject master and show BN/EN by language. Falls back to the
+     * stored Subject text (legacy rows, or before the master finishes loading).
+     */
+    get displaySubject(): string {
+        const ns: any = this.noteSheet;
+        const id = ns?.noteSheetSubjectId ?? ns?.NoteSheetSubjectId;
+        if (id) {
+            const s = this.noteSheetSubjects.find((x) => x.id === id);
+            if (s) return this.isEnglish() ? (s.subjectEN || s.subjectBN || '') : (s.subjectBN || s.subjectEN || '');
+        }
+        return ns?.subject ?? '';
+    }
+
     private buildDocumentModel(): NotesheetDocumentModel {
         if (!this.noteSheet) throw new Error('No noteSheet');
         const bn = !this.isEnglish();
@@ -1414,7 +1444,7 @@ html, body { margin: 0; padding: 0; background: transparent; }
 
         const model: NotesheetDocumentModel = {
             isBangla: bn,
-            subject: this.noteSheet.subject ?? '',
+            subject: this.displaySubject,
             referenceBlocks: refBlocks,
             referenceLabel: bn ? 'সূত্রঃ ' : 'Reference: ',
             dateLabel: bn ? 'তারিখঃ ' : 'Date: ',
@@ -1609,7 +1639,7 @@ html, body { margin: 0; padding: 0; background: transparent; }
         const model = this.buildDocumentModel();
         const bn = model.isBangla;
         const font = bn
-            ? { ascii: 'Nirmala UI', hAnsi: 'Nirmala UI', cs: 'Nirmala UI', hint: 'cs' as const }
+            ? { ascii: 'Times New Roman', hAnsi: 'Times New Roman', cs: 'Nirmala UI', hint: 'cs' as const }
             : 'Times New Roman';
         // Font sizes in half-points: title/org=9pt(18), body=8pt(16), table=7pt(14), sig=9pt(18)
         const titleSize = 18;   // 9pt — title, org header
@@ -1620,6 +1650,9 @@ html, body { margin: 0; padding: 0; background: transparent; }
         const csBody = bn ? bodySize : undefined;
         const csTbl = bn ? tblSize : undefined;
         const csSig = bn ? sigSize : undefined;
+        const titleHdrSize = titleSize + 2;   // 10pt — NOTE SHEET / মন্তব্য পত্র (+1pt)
+        const noDateSize = bodySize - 2;      // 7pt — notesheet no + date (-1pt)
+        const csNoDate = bn ? noDateSize : undefined;
         const lang = bn ? { value: 'bn-BD', bidirectional: 'bn-BD' } : undefined;
 
         // Page size follows the selected option (A4 default / Legal). Margins are
@@ -1646,7 +1679,7 @@ html, body { margin: 0; padding: 0; background: transparent; }
         if (this.noteSheet?.noteSheetNo) {
             mainChildren.push(new Paragraph({
                 children: [
-                    new TextRun({ text: this.noteSheet.noteSheetNo, size: bodySize, sizeComplexScript: csBody, font, language: lang })
+                    new TextRun({ text: this.noteSheet.noteSheetNo, size: noDateSize, sizeComplexScript: csNoDate, font, language: lang })
                 ],
                 indent: { left: 240 }, spacing: { before: 60, after: 40 }
             }));
@@ -1688,8 +1721,8 @@ html, body { margin: 0; padding: 0; background: transparent; }
         } else if (this.noteSheet?.noteSheetDate) {
             mainChildren.push(new Paragraph({
                 children: [
-                    new TextRun({ text: model.dateLabel, bold: true, size: bodySize, sizeComplexScript: csBody, font, language: lang }),
-                    new TextRun({ text: model.dateValue, size: bodySize, sizeComplexScript: csBody, font, language: lang })
+                    new TextRun({ text: model.dateLabel, bold: true, size: noDateSize, sizeComplexScript: csNoDate, font, language: lang }),
+                    new TextRun({ text: model.dateValue, size: noDateSize, sizeComplexScript: csNoDate, font, language: lang })
                 ],
                 indent: { left: 240 }, spacing: { after: 80 }
             }));
@@ -1925,11 +1958,11 @@ html, body { margin: 0; padding: 0; background: transparent; }
         // Title paragraphs — placed at top of the left (main) cell, INSIDE the outer border
         const titleChildren: Paragraph[] = [
             new Paragraph({
-                children: [new TextRun({ text: 'NOTE SHEET', bold: true, underline: {}, size: titleSize, font: 'Times New Roman' })],
+                children: [new TextRun({ text: 'NOTE SHEET', bold: true, underline: {}, size: titleHdrSize, font: 'Times New Roman' })],
                 alignment: AlignmentType.CENTER, spacing: { before: 80, after: 40 }, keepNext: true
             }),
             new Paragraph({
-                children: [new TextRun({ text: 'মন্তব্য পত্র', underline: {}, size: titleSize, font: 'Nirmala UI' })],
+                children: [new TextRun({ text: 'মন্তব্য পত্র', underline: {}, size: titleHdrSize, font: { ascii: 'Times New Roman', hAnsi: 'Times New Roman', cs: 'Nirmala UI', hint: 'cs' as const } })],
                 alignment: AlignmentType.CENTER, spacing: { after: 100 }, keepNext: true
             }),
         ];

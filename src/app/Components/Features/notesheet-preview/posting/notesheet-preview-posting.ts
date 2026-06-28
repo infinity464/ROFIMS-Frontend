@@ -1566,7 +1566,7 @@ html, body { margin: 0; padding: 0; background: transparent; }
     padding: 0;
     box-sizing: border-box;
     width: ${pageWidth === '215.9mm' ? '195.9mm' : '190mm'};
-    font-family: 'Times New Roman', 'SolaimanLipi', 'Noto Sans Bengali', 'Nirmala UI', 'Vrinda', 'Shonar Bangla', Times, serif;
+    font-family: 'Times New Roman', 'Nirmala UI', Times, serif;
     font-size: 10pt;
     line-height: 1.7;
     color: #000;
@@ -1574,38 +1574,40 @@ html, body { margin: 0; padding: 0; background: transparent; }
 
 /* Per-element font-size tiers restated so they win over scoped component styles
    (1:1 with the web view). */
+.pdf-flow .ns-title-bn,
+.pdf-flow .ns-title-en { font-size: 11pt !important; }   /* title — match প্রজ্ঞাপন / Word */
+
 .pdf-flow .ns-cell-subject,
 .pdf-flow .ns-edit-field,
 .pdf-flow .ns-exbd-info,
 .pdf-flow .ns-file-attachments-label,
-.pdf-flow .ns-page-no,
-.pdf-flow .ns-posting-note,
-.pdf-flow .ns-sanglagni-col { font-size: 10pt !important; }
+.pdf-flow .ns-page-no { font-size: 10pt !important; }
 
 .pdf-flow .ns-approver-left,
 .pdf-flow .ns-approver-remark,
 .pdf-flow .ns-approver-role,
+.pdf-flow .ns-cell-ref,
 .pdf-flow .ns-file-item,
+.pdf-flow .ns-note,
+.pdf-flow .ns-para,
+.pdf-flow .ns-posting-note,
+.pdf-flow .ns-sanglagni-col,
 .pdf-flow .ns-sig-appoint,
 .pdf-flow .ns-sig-date,
 .pdf-flow .ns-sig-name,
 .pdf-flow .ns-sig-paren,
-.pdf-flow .ns-sig-rank,
-.pdf-flow .ns-title-bn,
-.pdf-flow .ns-title-en { font-size: 9pt !important; }
+.pdf-flow .ns-sig-rank { font-size: 9pt !important; }
 
-.pdf-flow .ns-cell-ref,
-.pdf-flow .ns-closing-text,
-.pdf-flow .ns-note,
-.pdf-flow .ns-para { font-size: 8pt !important; }
+.pdf-flow .ns-closing-text { font-size: 8pt !important; }
 
 .pdf-flow .ns-members-preview-table,
 .pdf-flow .ns-members-preview-table th,
 .pdf-flow .ns-members-preview-table td,
-.pdf-flow .ns-posting-table th,
 .pdf-flow .ns-posting-table td,
 .pdf-flow .ns-ref-file-btn,
 .pdf-flow .ns-ref-file-btn i { font-size: 7pt !important; }
+
+.pdf-flow .ns-posting-table th { font-size: 6.5pt !important; }   /* table header */
 
 /* Keep column widths (colgroup) identical to the on-screen preview */
 .pdf-flow .ns-posting-table table { table-layout: fixed; width: 100%; }
@@ -1616,7 +1618,7 @@ html, body { margin: 0; padding: 0; background: transparent; }
 .pdf-flow .ns-para-text, .pdf-flow .ns-para-text *,
 .pdf-flow .ns-ref-content, .pdf-flow .ns-ref-content *,
 .pdf-flow .ns-note, .pdf-flow .ns-note * {
-    font-family: 'Times New Roman', 'SolaimanLipi', 'Noto Sans Bengali', 'Nirmala UI', 'Vrinda', 'Shonar Bangla', Times, serif !important;
+    font-family: 'Times New Roman', 'Nirmala UI', Times, serif !important;
     color: #000 !important;
 }
 
@@ -1847,14 +1849,17 @@ html, body { margin: 0; padding: 0; background: transparent; }
         const model = this.buildDocumentModel();
         const bn = model.isBangla;
         const font = bn
-            ? { ascii: 'Nirmala UI', hAnsi: 'Nirmala UI', cs: 'Nirmala UI', hint: 'cs' as const }
+            ? { ascii: 'Times New Roman', hAnsi: 'Times New Roman', cs: 'Nirmala UI', hint: 'cs' as const }
             : 'Times New Roman';
-        // Font sizes in half-points (1pt = 2 half-pts)
+        // Font sizes in half-points (1pt = 2 half-pts) — matched to posting-order-preview
         const ORG_SZ = 18;      // 9pt — org header
-        const BODY_SZ = 16;     // 8pt — body text, paragraphs, note, reference
-        const TBL_SZ = 14;      // 7pt — table header & cells
+        const BODY_SZ = 18;     // 9pt — body text, paragraphs, note, reference
+        const TBL_SZ = 14;      // 7pt — table cells
+        const TBL_HDR_SZ = 13;  // 6.5pt — table header
         const SIG_SZ = 18;      // 9pt — signature & approver
+        const NODATE_SZ = BODY_SZ - 2;  // 8pt — notesheet no + date (-1pt)
         const csSize = bn ? BODY_SZ : undefined;
+        const csNoDate = bn ? NODATE_SZ : undefined;
         const lang = bn ? { value: 'bn-BD', bidirectional: 'bn-BD' } : undefined;
         const thinBorder = { style: BorderStyle.SINGLE, size: 1, color: '000000' };
         const cellBorders = { top: thinBorder, bottom: thinBorder, left: thinBorder, right: thinBorder };
@@ -1874,12 +1879,12 @@ html, body { margin: 0; padding: 0; background: transparent; }
         // Notesheet number + date on same line
         if (this.noteSheet?.noteSheetNo) {
             const nsRuns: TextRun[] = [
-                new TextRun({ text: this.noteSheet.noteSheetNo, size: BODY_SZ, sizeComplexScript: csSize, font, language: lang })
+                new TextRun({ text: this.noteSheet.noteSheetNo, size: NODATE_SZ, sizeComplexScript: csNoDate, font, language: lang })
             ];
             if (this.noteSheet.noteSheetDate) {
                 const dateLabel = bn ? 'তারিখঃ ' : 'Date: ';
                 const dateVal = this.formatFullDate(this.noteSheet.noteSheetDate);
-                nsRuns.push(new TextRun({ text: '\t' + dateLabel + dateVal, size: BODY_SZ, sizeComplexScript: csSize, font, language: lang }));
+                nsRuns.push(new TextRun({ text: '\t' + dateLabel + dateVal, size: NODATE_SZ, sizeComplexScript: csNoDate, font, language: lang }));
             }
             mainChildren.push(new Paragraph({
                 children: nsRuns,
@@ -1956,7 +1961,7 @@ html, body { margin: 0; padding: 0; background: transparent; }
             const pageUsable = isA4 ? 10772 : 11106;
             const cellMargins = { top: 30, bottom: 30, left: 0, right: 0 };
             const cellSpacing = { before: 0, after: 0, line: 220 };
-            const hdrParaFn = (text: string) => new Paragraph({ children: [new TextRun({ text, size: TBL_SZ, sizeComplexScript: bn ? TBL_SZ : undefined, font, language: lang })], alignment: AlignmentType.CENTER, spacing: cellSpacing });
+            const hdrParaFn = (text: string) => new Paragraph({ children: [new TextRun({ text, size: TBL_HDR_SZ, sizeComplexScript: bn ? TBL_HDR_SZ : undefined, font, language: lang })], alignment: AlignmentType.CENTER, spacing: cellSpacing });
             const dataCellFn = (v: string, w: number, align: (typeof AlignmentType)[keyof typeof AlignmentType] = AlignmentType.CENTER) => {
                 const lines = v.split('\n');
                 const cellParas = lines.map(line => new Paragraph({ children: [new TextRun({ text: line, size: TBL_SZ, sizeComplexScript: bn ? TBL_SZ : undefined, font, language: lang })], alignment: align, spacing: cellSpacing }));
@@ -2208,11 +2213,11 @@ html, body { margin: 0; padding: 0; background: transparent; }
         // Title paragraphs — inside the page border at the top
         const titleChildren: (Paragraph | Table)[] = [
             new Paragraph({
-                children: [new TextRun({ text: 'NOTE SHEET', bold: true, size: 22, font: 'Times New Roman' })],
+                children: [new TextRun({ text: 'NOTE SHEET', bold: true, size: 24, font: 'Times New Roman' })],
                 alignment: AlignmentType.CENTER, spacing: { before: 80, after: 40 }
             }),
             new Paragraph({
-                children: [new TextRun({ text: 'মন্তব্য পত্র', size: 22, font: 'Nirmala UI' })],
+                children: [new TextRun({ text: 'মন্তব্য পত্র', size: 24, font: { ascii: 'Times New Roman', hAnsi: 'Times New Roman', cs: 'Nirmala UI', hint: 'cs' as const } })],
                 alignment: AlignmentType.CENTER, spacing: { after: 100 }
             }),
         ];

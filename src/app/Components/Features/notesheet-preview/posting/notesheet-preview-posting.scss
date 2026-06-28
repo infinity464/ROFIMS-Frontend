@@ -51,3 +51,25 @@
         padding: 8mm 4mm 12mm;
     }
 }
+
+/* ── Match posting-order-preview document font sizes (posting notesheet ONLY) ──
+   Scoped here instead of the shared ../notesheet-preview.scss so general / exbd /
+   cc / mo / article-47 previews are untouched. styleUrls load this file AFTER the
+   shared sheet, so these rules win on equal specificity. */
+.ns-title-en,
+.ns-title-bn { font-size: 11pt; }          /* document title — match প্রজ্ঞাপন (11pt) */
+
+.ns-sanglagni-col { font-size: 9pt; }      /* সংলগ্নী নং column */
+
+.ns-cell-ref { font-size: 9pt; }           /* সূত্র */
+
+.ns-para { font-size: 9pt; }               /* body paragraphs */
+
+.ns-note { font-size: 9pt; }               /* note */
+
+.ns-initiator-area { font-size: 9pt; }     /* signature block base (sig lines already 9pt) */
+
+.ns-posting-table {
+    th { font-size: 6.5pt; }               /* table header (cells stay 7pt) */
+    .ns-posting-note { font-size: 9pt; }
+}

@@ -3,7 +3,7 @@
 
 :host {
   display: block;
-  font-family: 'DM Sans', sans-serif;
+  font-family: 'Times New Roman', sans-serif;
 }
 
 /* ── Light theme (default): use app surface/text vars like other components ── */
@@ -70,7 +70,7 @@
 }
 
 .header-left h2 {
-  font-family: 'Playfair Display', serif;
+  font-family: 'Times New Roman', serif;
   font-size: 2.25rem;
   font-weight: 700;
   letter-spacing: -0.02em;
@@ -130,7 +130,7 @@
   letter-spacing: 0.06em;
   text-transform: uppercase;
   color: var(--cal-ink);
-  font-family: 'DM Sans', sans-serif;
+  font-family: 'Times New Roman', sans-serif;
   transition: background 0.18s, color 0.18s;
 }
 
@@ -141,7 +141,7 @@
 }
 
 .month-year {
-  font-family: 'Playfair Display', serif;
+  font-family: 'Times New Roman', serif;
   font-size: 1.5rem;
   font-weight: 700;
   margin-left: 0.75rem;
@@ -226,7 +226,7 @@
 }
 
 .day-num {
-  font-family: 'Playfair Display', serif;
+  font-family: 'Times New Roman', serif;
   font-size: 1rem;
   font-weight: 400;
   color: var(--cal-ink);
@@ -251,7 +251,7 @@
   font-size: 0.7rem;
   line-height: 1.35;
   text-align: left;
-  font-family: 'DM Sans', sans-serif;
+  font-family: 'Times New Roman', sans-serif;
   transition: filter 0.15s, transform 0.1s;
   overflow: hidden;
   color: #fff;

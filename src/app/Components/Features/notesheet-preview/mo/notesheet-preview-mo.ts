@@ -554,7 +554,7 @@ html, body { margin: 0; padding: 0; background: transparent; }
     padding: 0;
     box-sizing: border-box;
     width: ${colWidth};
-    font-family: 'Times New Roman', 'SolaimanLipi', 'Noto Sans Bengali', 'Nirmala UI', 'Vrinda', 'Shonar Bangla', Times, serif;
+    font-family: 'Times New Roman', 'Nirmala UI', Times, serif;
     font-size: 10pt;
     line-height: 1.7;
     color: #000;
@@ -613,7 +613,7 @@ html, body { margin: 0; padding: 0; background: transparent; }
     /** Build the MO Word document (portrait, mirrors the on-screen layout). */
     private buildWordDocument(): Document {
         const m = this.movement!;
-        const font = { ascii: 'Nirmala UI', hAnsi: 'Nirmala UI', cs: 'Nirmala UI', hint: 'cs' as const };
+        const font = { ascii: 'Times New Roman', hAnsi: 'Times New Roman', cs: 'Nirmala UI', hint: 'cs' as const };
         const bnLang = { value: 'bn-BD', bidirectional: 'bn-BD' } as any;
         const dims = this.getPageDimensions();
         const contentWidth = dims.width - 1440;

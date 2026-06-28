@@ -615,7 +615,7 @@ html, body { margin: 0; padding: 0; background: transparent; }
     padding: 0;
     box-sizing: border-box;
     width: ${colWidth};
-    font-family: 'Times New Roman', 'SolaimanLipi', 'Noto Sans Bengali', 'Nirmala UI', 'Vrinda', 'Shonar Bangla', Times, serif;
+    font-family: 'Times New Roman', 'Nirmala UI', Times, serif;
     font-size: 10pt;
     line-height: 1.7;
     color: #000;
@@ -675,7 +675,7 @@ html, body { margin: 0; padding: 0; background: transparent; }
         const m = this.movement!;
         // Word-friendly Bangla font (Nirmala UI ships with Windows 10+);
         // `cs` covers complex-script shaping needed for Bangla.
-        const font = { ascii: 'Nirmala UI', hAnsi: 'Nirmala UI', cs: 'Nirmala UI', hint: 'cs' as const };
+        const font = { ascii: 'Times New Roman', hAnsi: 'Times New Roman', cs: 'Nirmala UI', hint: 'cs' as const };
         const dims = this.getPageDimensions();
         // Printable width in landscape = page-height twips minus 2 × 0.5" margins (1440 twips).
         // getPageDimensions() returns *portrait* dims, so `height` is the longer side.

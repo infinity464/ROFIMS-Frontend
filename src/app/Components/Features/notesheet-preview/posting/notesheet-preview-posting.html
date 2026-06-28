@@ -372,12 +372,12 @@
                     <div style="border-bottom:1.5px solid #000; display:inline-block; padding-bottom:2px;">{{ getOrgHeaderLine2() }}</div>
                 </div>
 
-                <div *ngIf="noteSheet.noteSheetNo" style="padding:4px 16px 2px; font-size:10pt; display:flex; justify-content:space-between; align-items:baseline;">
+                <div *ngIf="noteSheet.noteSheetNo" style="padding:4px 16px 2px; font-size:8pt; display:flex; justify-content:space-between; align-items:baseline;">
                     <span>{{ noteSheet.noteSheetNo }}</span>
                     <span *ngIf="noteSheet.noteSheetDate">{{ isEnglish() ? 'Date:' : 'তারিখঃ' }} {{ formatFullDate(noteSheet.noteSheetDate) }}</span>
                 </div>
 
-                <div *ngIf="noteSheet.subject" style="padding:2px 16px 4px; font-size:10pt;">
+                <div *ngIf="noteSheet.subject" style="padding:2px 16px 4px; font-size:9pt;">
                     <strong><u>{{ noteSheet.subject }}</u></strong>
                 </div>
 

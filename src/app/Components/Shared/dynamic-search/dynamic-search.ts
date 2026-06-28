@@ -714,8 +714,8 @@ export class DynamicSearchComponent implements OnInit {
                 .replace(/>/g, '&gt;')
                 .replace(/"/g, '&quot;')
                 .replace(/'/g, '&#039;');
-        const serif = "'Playfair Display', Georgia, 'Times New Roman', serif";
-        const sans  = "'DM Sans', 'Segoe UI', Arial, sans-serif";
+        const serif = "'Times New Roman', serif";
+        const sans  = "'Times New Roman', sans-serif";
         const mono  = "'JetBrains Mono', 'Consolas', 'Courier New', monospace";
 
         const visibleCols = this.visibleColumns.filter(c => c.hint !== 'Action');

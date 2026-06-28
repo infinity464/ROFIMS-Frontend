@@ -100,8 +100,8 @@
     background: #fff;
     box-shadow: 0 6px 24px rgba(0, 0, 0, 0.25);
     box-sizing: border-box;
-    font-family: 'Times New Roman', 'Noto Sans Bengali', 'SolaimanLipi', Times, serif;
-    font-size: 10pt;
+    font-family: 'Times New Roman', 'Nirmala UI', Times, serif;
+    font-size: 9pt;
     color: #000;
     line-height: 1.7;
     position: relative;
@@ -136,13 +136,13 @@
 
 .po-doc-header-line {
     font-weight: 700;
-    font-size: 11pt;
+    font-size: 9pt;
     line-height: 1.5;
 }
 
 .po-doc-title {
     text-align: center;
-    font-size: 14pt;
+    font-size: 11pt;
     font-weight: 700;
     text-decoration: underline;
     margin: 12px 0;
@@ -152,12 +152,12 @@
     display: flex;
     justify-content: space-between;
     margin-bottom: 6px;
-    font-size: 10pt;
+    font-size: 9pt;
 }
 
 .po-doc-reference {
     margin-bottom: 10px;
-    font-size: 10pt;
+    font-size: 9pt;
 
     .po-doc-reference-label {
         font-weight: 700;
@@ -169,7 +169,7 @@
     margin-bottom: 10px;
     line-height: 1.8;
     text-align: justify;
-    font-size: 10pt;
+    font-size: 9pt;
 }
 
 /* ── Employee Table ───────────────────────────────── */
@@ -178,7 +178,7 @@
     table-layout: fixed;
     border-collapse: collapse;
     margin-bottom: 8px;
-    font-size: 8pt;
+    font-size: 7pt;
 
     th,
     td {
@@ -200,7 +200,7 @@
         font-weight: 700;
         background: #f0f0f0;
         text-align: center;
-        font-size: 7.5pt;
+        font-size: 6.5pt;
     }
 
     tr:nth-child(even) {
@@ -218,7 +218,7 @@
     .po-doc-posting-text,
     .po-doc-sub-text,
     .po-doc-master-remarks {
-        font-size: 10pt;
+        font-size: 9pt;
         line-height: 1.8;
         width: 100%;
         max-width: 100%;
@@ -249,13 +249,13 @@
     margin: 8px 0;
     font-style: italic;
     color: #555;
-    font-size: 10pt;
+    font-size: 9pt;
 }
 
 /* ── Footer Paragraphs ───────────────────────────── */
 .po-doc-footer-text {
     margin: 12px 0;
-    font-size: 10pt;
+    font-size: 9pt;
     line-height: 1.7;
     white-space: pre-wrap;
 
@@ -270,10 +270,10 @@
     width: 20%;
     text-align: left;
     line-height: 1.2;
-    font-size: 10pt;
+    font-size: 9pt;
     div {
         margin-bottom: 0px;
-        font-size: 10pt;
+        font-size: 9pt;
     }
 }
 
@@ -285,19 +285,19 @@
 }
 
 .po-doc-memo {
-    font-size: 10pt;
+    font-size: 9pt;
 }
 
 .po-doc-initiator {
     text-align: left;
     margin-top: 16px;
     line-height: 1.8;
-    font-size: 10pt;
+    font-size: 9pt;
 
     div {
         line-height: 1.3;
         margin-bottom: 1px;
-        font-size: 10pt;
+        font-size: 9pt;
     }
 }
 
@@ -326,7 +326,7 @@
     width: 20%;
     text-align: left;
     line-height: 1.2;
-    font-size: 10pt;
+    font-size: 9pt;
 }
 
 .po-doc-copy-table {
@@ -344,12 +344,18 @@
 .po-doc-copy-title {
     font-weight: 600;
     margin-bottom: 6px;
-    font-size: 10pt;
+    font-size: 9pt;
 }
 
 .po-doc-copy-list {
     line-height: 2;
-    font-size: 10pt;
+    font-size: 9pt;
+
+    /* Tab gap after the serial (১।, ২।…) so the text starts at a fixed stop. */
+    .po-copy-no {
+        display: inline-block;
+        min-width: 2.2em;
+    }
 }
 
 .po-doc-copy-right {
@@ -363,7 +369,7 @@
 .po-doc-copy-sig {
     text-align: left;
     line-height: 1.2;
-    font-size: 10pt;
+    font-size: 9pt;
     padding-top: 20px;
     overflow: hidden;
     .approver-signature-img {
@@ -377,17 +383,17 @@
     }
     div {
         margin-bottom: 0px;
-        font-size: 10pt;
+        font-size: 9pt;
         &:last-child {
             margin-bottom: 0;
         }
     }
     .sig-name {
         font-weight: 600;
-        font-size: 10pt;
+        font-size: 9pt;
     }
     .sig-rank, .sig-appointment {
-        font-size: 10pt;
+        font-size: 9pt;
     }
 }
 

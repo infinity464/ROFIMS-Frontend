@@ -760,7 +760,7 @@ export class LeaveCardComponent implements OnInit {
     private getPrintStyles(): string {
         return `
   @page { size: A4; margin: 18mm 16mm; }
-  body { font-family: 'SolaimanLipi','Noto Sans Bengali','Times New Roman',serif; margin: 0; padding: 0; color: #000; line-height: 1.7; font-size: 10pt; }
+  body { font-family: 'Times New Roman','Nirmala UI',serif; margin: 0; padding: 0; color: #000; line-height: 1.7; font-size: 10pt; }
   .lc-paper { width: 100%; padding: 0; box-sizing: border-box; color: #000; }
   .lc-org-header { text-align: center; margin-bottom: 14px; }
   .lc-org-line { font-weight: 600; font-size: 10pt; line-height: 1.5; }
@@ -860,7 +860,7 @@ export class LeaveCardComponent implements OnInit {
     private async exportWord(): Promise<void> {
         if (!this.row) return;
         try {
-            const FONT = 'Nirmala UI';
+            const FONT = { ascii: 'Times New Roman', hAnsi: 'Times New Roman', cs: 'Nirmala UI', hint: 'cs' as const };
             const appId = this.row.applicantEmployeeId;
             const approveId = this.getApproverId();
             const relieverId = this.getRelieverId();

@@ -93,7 +93,7 @@
     --rab-body-ink-faint: #b0b0b0;
     --rab-body-border: #ece6d4;
 
-    --rab-serif: 'Playfair Display', 'Cormorant Garamond', Georgia, 'Times New Roman', serif;
+    --rab-serif: 'Times New Roman', serif;
     --rab-mono: 'JetBrains Mono', 'SF Mono', Consolas, 'Liberation Mono', monospace;
 
     margin-top: 1.25rem;
@@ -383,14 +383,14 @@
     .rab-personnel-name,
     .rab-personnel-meta {
         letter-spacing: 0;
-        font-family: 'Hind Siliguri', 'Noto Sans Bengali', 'SolaimanLipi', 'Kalpurush', sans-serif;
+        font-family: 'Times New Roman', 'Nirmala UI', sans-serif;
     }
 
     .rab-criteria-strip,
     .rab-criteria-cell-label,
     .rab-foot-row {
         letter-spacing: 0.04em;
-        font-family: 'Hind Siliguri', 'Noto Sans Bengali', 'SolaimanLipi', sans-serif;
+        font-family: 'Times New Roman', 'Nirmala UI', sans-serif;
         text-transform: none;
     }
 
@@ -401,7 +401,7 @@
 
 :host ::ng-deep .rab-paper.rab-lang-bn .rab-data-table .p-datatable-thead > tr > th {
     letter-spacing: 0.04em;
-    font-family: 'Hind Siliguri', 'Noto Sans Bengali', 'SolaimanLipi', sans-serif;
+    font-family: 'Times New Roman', 'Nirmala UI', sans-serif;
 }
 
 /* ----- Data table ----- */
@@ -500,7 +500,7 @@
 
 /* Composite RAB-Personnel cell — name on top, mono-uppercase meta line under. */
 .rab-personnel-name {
-    font-family: 'DM Sans', sans-serif;
+    font-family: 'Times New Roman', sans-serif;
     font-weight: 600;
     font-size: 0.92rem;
     color: var(--rab-body-ink);

@@ -1062,7 +1062,7 @@ export class NotesheetListComponent implements OnInit {
     const ns = this.previewNoteSheet;
     if (!ns) return;
     const bn = !this.isPreviewEnglish();
-    const fontFamily = bn ? "'Noto Sans Bengali', 'SolaimanLipi', 'Kalpurush', sans-serif" : "'Times New Roman', serif";
+    const fontFamily = bn ? "'Times New Roman', 'Nirmala UI', sans-serif" : "'Times New Roman', serif";
     const title = bn ? 'মন্তব্যপত্র' : 'NOTE SHEET';
 
     const metaParts: string[] = [];
@@ -1135,7 +1135,7 @@ export class NotesheetListComponent implements OnInit {
     const ns = this.previewNoteSheet;
     if (!ns) return;
     const bn = !this.isPreviewEnglish();
-    const fontFamily = bn ? "'Noto Sans Bengali', 'SolaimanLipi', 'Kalpurush', sans-serif" : "'Times New Roman', serif";
+    const fontFamily = bn ? "'Times New Roman', 'Nirmala UI', sans-serif" : "'Times New Roman', serif";
     const title = bn ? 'মন্তব্যপত্র' : 'NOTE SHEET';
 
     const metaParts: string[] = [];
