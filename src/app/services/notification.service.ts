@@ -109,6 +109,14 @@ export class NotificationService {
     );
   }
 
+  /** Delete a notification: remove from the UI and soft-delete (IsDeleted = true) on the server. */
+  deleteNotification(id: string): void {
+    this.clear(id);
+    if (this.isServerId(id)) {
+      this.http.delete(`${this.api}/Delete/${id}`).pipe(catchError(() => of(null))).subscribe();
+    }
+  }
+
   getUnreadCount(): number {
     return this.notificationsSubject.value.filter((n) => !n.read).length;
   }

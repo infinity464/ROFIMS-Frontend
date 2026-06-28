@@ -270,9 +270,14 @@ type CalItem = { id: string; day: string; mon: string; dow: string; title: strin
                                         <div class="text-muted-color text-xs truncate" [title]="n.message">{{ n.message }}</div>
                                         <div class="text-muted-color text-xs mt-1">{{ notifTime(n.createdAt) }}</div>
                                     </div>
-                                    @if (!n.read) {
-                                        <span class="w-2 h-2 rounded-full bg-red-500 shrink-0 mt-2"></span>
-                                    }
+                                    <div class="flex flex-col items-center gap-1.5 shrink-0">
+                                        @if (!n.read) {
+                                            <span class="w-2 h-2 rounded-full bg-red-500"></span>
+                                        }
+                                        <button type="button" class="text-surface-400 hover:text-red-500 p-1 -m-1" (click)="onDeleteNotification(n, $event)" aria-label="Delete notification">
+                                            <i class="pi pi-trash text-sm"></i>
+                                        </button>
+                                    </div>
                                 </li>
                             }
                         </ul>
@@ -961,6 +966,11 @@ export class Dashboard implements OnInit, OnDestroy {
         }
         // Leave (and anything else) → behave as before: navigate to the linked page.
         if (n.link) this.router.navigateByUrl(n.link);
+    }
+
+    onDeleteNotification(n: AppNotification, e: Event): void {
+        e.stopPropagation();
+        this.notificationService.deleteNotification(n.id);
     }
 
     events: CalItem[] = [];
