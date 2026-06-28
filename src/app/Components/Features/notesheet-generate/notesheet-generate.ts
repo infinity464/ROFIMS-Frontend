@@ -27,6 +27,7 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { NoteSheetEditCacheService } from '@/services/note-sheet-edit-cache.service';
 import { UserMenuService } from '@/services/user-menu.service';
 import { IdentityUserMappingService } from '@/services/identity-user-mapping.service';
+import { IdentityUserMemberTypeAccessService } from '@/services/identity-user-member-type-access.service';
 import { PostingService } from '@/services/posting.service';
 import { NoteSheetType, NoteSheetOperationType, NoteSheetOperationTypeOptions, ApprovalStatus, CodeType } from '@/models/enums';
 import { NotesheetApproverSelectComponent } from '@/Components/Common/notesheet-approver-select/notesheet-approver-select';
@@ -253,6 +254,10 @@ export class NotesheetGenerateComponent implements OnInit {
     canUpdate = true;
     canDelete = true;
 
+    /** Member Type (CommonCode 'EmployeeType') options + the logged-in user's accessible set. */
+    allMemberTypes: { value: number; en: string; bn: string }[] = [];
+    allowedMemberTypeIds: number[] | null = null;
+
     @ViewChild('fileReferencesForm') fileReferencesForm!: FileReferencesFormComponent;
 
     constructor(
@@ -267,6 +272,7 @@ export class NotesheetGenerateComponent implements OnInit {
         private sanitizer: DomSanitizer,
         private noteSheetEditCache: NoteSheetEditCacheService,
         private identityMappingService: IdentityUserMappingService,
+        private memberTypeAccess: IdentityUserMemberTypeAccessService,
         private _userMenuService: UserMenuService,
         private postingService: PostingService,
         private orgService: OrgService,
@@ -298,7 +304,8 @@ export class NotesheetGenerateComponent implements OnInit {
             finalApproverId: [null as number | null, Validators.required],
             isSecret: [false],
             noteSheetOperationType: [NoteSheetOperationType.Manual as string, Validators.required],
-            referenceEmployeeIds: [[] as number[]]
+            referenceEmployeeIds: [[] as number[]],
+            memberTypeIds: [[] as number[]]
         });
     }
 
@@ -313,6 +320,7 @@ export class NotesheetGenerateComponent implements OnInit {
         this.loadPreparedByOptions();
         this.loadReferenceEmployeeOptions();
         this.loadNoteSheetNumberConfig();
+        this.loadCurrentUserMemberTypePermissions();
         this.loadSubjectPickList();
         const user = this.sharedService.getCurrentUser?.() ?? '';
         this.form.get('preparedBy')?.setValue(user);
@@ -608,6 +616,11 @@ export class NotesheetGenerateComponent implements OnInit {
                     });
                 });
 
+                // Options for the "Member Type" multi-select (accessible subset applied by getter).
+                this.allMemberTypes = (memberTypes ?? [])
+                    .filter((mt: any) => mt.status !== false)
+                    .map((mt: any) => ({ value: mt.codeId, en: mt.codeValueEN ?? '', bn: mt.codeValueBN ?? mt.codeValueEN ?? '' }));
+
                 this.allNoteSheetConfigs = (configs ?? []).filter(
                     (c: any) => (c.noteSheetType ?? c.NoteSheetType) === 'General'
                         && (c.status ?? c.Status) !== false
@@ -666,6 +679,35 @@ export class NotesheetGenerateComponent implements OnInit {
 
     get isBangla(): boolean {
         return this.form?.get('textType')?.value === 'bn';
+    }
+
+    /** Member type dropdown options limited to the user's accessible set (label follows language). */
+    get memberTypeOptions(): { label: string; value: number }[] {
+        const isBn = this.isBangla;
+        let list = this.allMemberTypes;
+        if (this.allowedMemberTypeIds != null) {
+            const allowed = this.allowedMemberTypeIds;
+            list = list.filter((o) => allowed.includes(o.value));
+        }
+        return list.map((o) => ({ label: (isBn ? o.bn : o.en) || o.en || o.bn || String(o.value), value: o.value }));
+    }
+
+    /** Resolve the current user's accessible member type ids (cache first, then always refetch
+     *  so admin changes apply without a re-login). */
+    private loadCurrentUserMemberTypePermissions(): void {
+        const userId = this.sharedService.getCurrentUserId?.() ?? null;
+        if (!userId) { this.allowedMemberTypeIds = null; return; }
+        this.allowedMemberTypeIds = this.memberTypeAccess.getCachedMemberTypeIds(userId);
+        this.memberTypeAccess.cacheForUser(userId).subscribe({
+            next: (ids) => { this.allowedMemberTypeIds = Array.isArray(ids) ? ids : []; },
+            error: () => { /* keep cached value on network error */ }
+        });
+    }
+
+    /** Parse comma-separated "1,2,3" → number[]. */
+    private parseMemberTypeIds(ids: string | null | undefined): number[] {
+        if (!ids) return [];
+        return String(ids).split(',').map((s) => parseInt(s.trim(), 10)).filter((n) => !isNaN(n));
     }
 
     memberSerial(index: number): string {
@@ -821,7 +863,8 @@ export class NotesheetGenerateComponent implements OnInit {
             recommenderIds,
             finalApproverId: d.finalApprovalId ?? d.FinalApprovalId ?? null,
             isSecret: !!(d.isSecret ?? d.IsSecret ?? false),
-            noteSheetOperationType: d.noteSheetOperationType ?? d.NoteSheetOperationType ?? null
+            noteSheetOperationType: d.noteSheetOperationType ?? d.NoteSheetOperationType ?? null,
+            memberTypeIds: this.parseMemberTypeIds(d.employeeTypeIds ?? d.EmployeeTypeIds)
         });
         if (d.createdBy ?? d.CreatedBy) this.form.get('preparedBy')?.setValue(d.createdBy ?? d.CreatedBy);
 
@@ -1363,7 +1406,8 @@ export class NotesheetGenerateComponent implements OnInit {
             finalApproverId: null,
             isSecret: false,
             noteSheetOperationType: 'manual',
-            referenceEmployeeIds: []
+            referenceEmployeeIds: [],
+            memberTypeIds: []
         });
         this.referenceParagraphs = [{ text: '', fileRows: [] }];
         this.membersData = { columns: [], members: [] };
@@ -1565,6 +1609,8 @@ export class NotesheetGenerateComponent implements OnInit {
             textType: d.textType === 'bn' ? 1 : 0,
             isSecret: d.isSecret ?? false,
             noteSheetOperationType: d.noteSheetOperationType ?? null,
+            // Member types selected for this General note-sheet (comma-separated CommonCode ids).
+            employeeTypeIds: (Array.isArray(d.memberTypeIds) ? d.memberTypeIds : []).join(',') || null,
             employeeId: null,
             preparedByEmployeeId: d.preparedByEmployeeId ?? null,
             ...this.getHierarchyIdsFromSelectedNode(),

@@ -78,6 +78,18 @@ export class IdentityUserMemberTypeAccessService {
     return null;
   }
 
+  /**
+   * True if a comma-separated member-type id string is visible to a user with the given allowed set.
+   * `allowed == null` (not resolved) → visible; untagged (empty ids) → visible; otherwise at least
+   * one of the item's member-type ids must be in the allowed set.
+   */
+  isAccessible(employeeTypeIds: string | null | undefined, allowed: number[] | null): boolean {
+    if (allowed == null) return true;
+    if (!employeeTypeIds) return true;
+    const ids = String(employeeTypeIds).split(',').map((s) => parseInt(s.trim(), 10)).filter((n) => !isNaN(n));
+    return ids.some((id) => allowed.includes(id));
+  }
+
   /** Clears the cached member-type IDs (call on logout). */
   clearCache(): void {
     try {

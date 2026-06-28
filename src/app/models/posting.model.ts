@@ -404,6 +404,8 @@ export interface PostingOrderMasterDto {
     postingType: string;
     noteSheetId: number;
     noteSheetNo: string | null;
+    /** Linked note-sheet's member-type ids — used to scope the list by user access. */
+    employeeTypeIds?: string | null;
     refPostingOrderMasterId: number | null;
     referenceNumber: string | null;
     subject: string | null;
@@ -538,6 +540,8 @@ export interface ApprovedNoteSheetItem {
     noteSheetDate: string;
     subject: string;
     noteSheetType: string;
+    /** Comma-separated CommonCode member-type ids — used to scope the dropdown by user access. */
+    employeeTypeIds?: string | null;
 }
 
 /** Pending joining item (approved posting order, not yet joined). */

@@ -65,6 +65,20 @@
               </p-treeSelect>
             }
           </div>
+          <div class="form-field">
+            <label class="form-label">Member Type</label>
+            <p-multiSelect
+              formControlName="memberTypeIds"
+              [options]="memberTypeOptions"
+              optionLabel="label"
+              optionValue="value"
+              placeholder="Select Member Type(s)"
+              display="chip"
+              [filter]="true"
+              appendTo="body"
+              styleClass="w-full">
+            </p-multiSelect>
+          </div>
         </div>
 
         <!-- Date, Note Sheet No, Subject -->

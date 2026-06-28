@@ -22,6 +22,8 @@ import { OrgService } from '@/Components/basic-setup/org-tree/org.service';
 import { ServingMembersService } from '@/services/serving-members.service';
 import { EmpService } from '@/services/emp-service';
 import { EmployeeListService } from '@/services/employee-list.service';
+import { SharedService } from '@/shared/services/shared-service';
+import { IdentityUserMemberTypeAccessService } from '@/services/identity-user-member-type-access.service';
 import { PostingOrderEmployeeRow, EmployeeRemovalInfo, CancelledInterPostingInfo } from '@/models/posting.model';
 import { EmployeeList } from '@/models/employee-list.model';
 import { NoteSheetType, IsSendingNotesheetStatus, ApprovalStatus } from '@/models/enums';
@@ -165,6 +167,8 @@ export class PostingOrderPreviewPageComponent implements OnInit {
 
     // ─── Add member (inline dropdown) ��────────────────
     addMemberList: EmployeeList[] = [];
+    /** Member type ids the logged-in user may access (null = unresolved / no restriction). */
+    allowedMemberTypeIds: number[] | null = null;
     addMemberLoading = false;
     addMemberSaving = false;
     selectedAddEmployee: EmployeeList | null = null;
@@ -266,10 +270,31 @@ export class PostingOrderPreviewPageComponent implements OnInit {
         private messageService: MessageService,
         private confirmationService: ConfirmationService,
         private jsreportService: JsReportService,
-        private masterBasicSetupService: MasterBasicSetupService
+        private masterBasicSetupService: MasterBasicSetupService,
+        private sharedService: SharedService,
+        private memberTypeAccess: IdentityUserMemberTypeAccessService
     ) {}
 
+    /** Resolve the current user's accessible member type ids (cache first, then always refetch). */
+    private loadCurrentUserMemberTypePermissions(): void {
+        const userId = this.sharedService.getCurrentUserId?.() ?? null;
+        if (!userId) { this.allowedMemberTypeIds = null; return; }
+        this.allowedMemberTypeIds = this.memberTypeAccess.getCachedMemberTypeIds(userId);
+        this.memberTypeAccess.cacheForUser(userId).subscribe({
+            next: (ids) => { this.allowedMemberTypeIds = Array.isArray(ids) ? ids : []; },
+            error: () => { /* keep cached value */ }
+        });
+    }
+
+    /** True if an employee's member type is within the user's accessible set (no restriction when unresolved). */
+    private isAccessibleMemberType(id: number | null | undefined): boolean {
+        if (this.allowedMemberTypeIds == null) return true;
+        if (id == null) return false;
+        return this.allowedMemberTypeIds.includes(id);
+    }
+
     ngOnInit(): void {
+        this.loadCurrentUserMemberTypePermissions();
         this.loadUnitSortOrders();
         this.route.queryParams.subscribe(params => {
             const id = params['id'];
@@ -1124,7 +1149,11 @@ export class PostingOrderPreviewPageComponent implements OnInit {
             ? this.employeeListService.getEmployeesMarkedForInterPosting()
             : this.employeeListService.getEmployeesByIsSendingNotesheetStatus(IsSendingNotesheetStatus.Draft);
         obs.subscribe({
-            next: (list) => { this.addMemberList = list ?? []; this.addMemberLoading = false; },
+            next: (list) => {
+                // Scope the add-member dropdown to the user's accessible member types.
+                this.addMemberList = (list ?? []).filter((e) => this.isAccessibleMemberType(e.memberTypeId));
+                this.addMemberLoading = false;
+            },
             error: () => { this.addMemberLoading = false; }
         });
     }
