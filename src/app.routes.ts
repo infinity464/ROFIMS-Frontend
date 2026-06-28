@@ -342,6 +342,11 @@ export const appRoutes: Routes = [
             { path: 'notesheet-list/approved-inter-posting', component: NotesheetListComponent, data: { section: 'approved', noteSheetTypeFilter: 'InterPosting' } },
             { path: 'notesheet-list/declined-inter-posting', component: NotesheetListComponent, data: { section: 'declined', noteSheetTypeFilter: 'InterPosting' } },
             { path: 'notesheet-list/all-inter-posting', component: NotesheetListComponent, data: { section: 'all', noteSheetTypeFilter: 'InterPosting' } },
+            // System-generate "My Approval" lists — per-logged-in-user, only note sheets currently awaiting their action.
+            { path: 'notesheet-list/my-approval', component: NotesheetListComponent, data: { section: 'my-pending', noteSheetTypeFilter: 'General' } },
+            { path: 'notesheet-list/my-approval-ex-bd-leave', component: NotesheetListComponent, data: { section: 'my-pending', noteSheetTypeFilter: 'ExBDLeave' } },
+            { path: 'notesheet-list/my-approval-new-posting', component: NotesheetListComponent, data: { section: 'my-pending', noteSheetTypeFilter: 'NewPosting' } },
+            { path: 'notesheet-list/my-approval-inter-posting', component: NotesheetListComponent, data: { section: 'my-pending', noteSheetTypeFilter: 'InterPosting' } },
             { path: 'notesheet-preview',         component: NotesheetPreviewComponent },
             { path: 'notesheet-preview/general', component: NotesheetPreviewGeneralComponent },
             { path: 'notesheet-preview/posting', component: NotesheetPreviewPostingComponent },
@@ -357,7 +362,7 @@ export const appRoutes: Routes = [
             { path: 'leave-application/apply-for-other', component: LeaveApplyForOtherComponent },
             { path: 'leave-application/action-taken-by-me', component: LeaveActionTakenByMeComponent },
             { path: 'leave-application/card', component: LeaveCardComponent },
-
+            
             // EMP
             { path: 'emp-list', component: EmpList },
             { path: 'emp-basic-info', component: EmpBasicInfo, canActivate: [MemberTypePermissionGuard] },

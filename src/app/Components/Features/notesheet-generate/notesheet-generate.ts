@@ -27,7 +27,7 @@ import { NoteSheetEditCacheService } from '@/services/note-sheet-edit-cache.serv
 import { UserMenuService } from '@/services/user-menu.service';
 import { IdentityUserMappingService } from '@/services/identity-user-mapping.service';
 import { PostingService } from '@/services/posting.service';
-import { NoteSheetType, NoteSheetOperationTypeOptions, ApprovalStatus, CodeType } from '@/models/enums';
+import { NoteSheetType, NoteSheetOperationType, NoteSheetOperationTypeOptions, ApprovalStatus, CodeType } from '@/models/enums';
 import { NotesheetApproverSelectComponent } from '@/Components/Common/notesheet-approver-select/notesheet-approver-select';
 import { BanglaNumerals } from '@/Core/i18n/bangla-numerals';
 import { TooltipModule } from 'primeng/tooltip';
@@ -288,11 +288,13 @@ export class NotesheetGenerateComponent implements OnInit {
             recommenderIds: [[] as number[]],
             finalApproverId: [null as number | null, Validators.required],
             isSecret: [false],
-            noteSheetOperationType: ['manual', Validators.required],
+            noteSheetOperationType: [NoteSheetOperationType.Manual as string, Validators.required],
             referenceEmployeeIds: [[] as number[]]
         });
     }
 
+    /** Initiator/final approver are required only for manual note sheets. System-generate note
+     *  sheets get the chain from config, so the pickers are hidden and these validators dropped. */
     ngOnInit(): void {
         const _perms = this._userMenuService.getPermissionsByRoute(this.router.url);
         this.canInsert = _perms.canInsert;
@@ -872,6 +874,31 @@ export class NotesheetGenerateComponent implements OnInit {
     // ── Members Table (MembersJson) ─────────────────────────────────────
 
     onMemberFound(emp: EmployeeBasicInfo): void {
+        // Access gate FIRST: block adding members outside the logged-in user's
+        // scope (accessible org-tree nodes + accessible member types). Reuses the
+        // same access mechanism as the serving/ex-member lists. We fall back to
+        // ALLOWING the add on a network/check error so a transient backend hiccup
+        // never blocks a legitimate user.
+        this.servingMembersService.checkMemberAccess(emp.employeeID).subscribe({
+            next: (res) => {
+                if (res && res.accessible === false) {
+                    this.messageService.add({
+                        severity: 'error',
+                        summary: 'Access denied',
+                        detail: res.reason || "You don't have permission to view this employee (outside your assigned units / member types)."
+                    });
+                    return;
+                }
+                this.addFoundMember(emp);
+            },
+            error: () => {
+                // Resilient: don't hard-block on a network error — proceed with the add.
+                this.addFoundMember(emp);
+            }
+        });
+    }
+
+    private addFoundMember(emp: EmployeeBasicInfo): void {
         if (this.membersData.members.some(m => m.employeeId === emp.employeeID)) {
             this.messageService.add({ severity: 'warn', summary: 'Duplicate', detail: 'This member is already added.' });
             return;

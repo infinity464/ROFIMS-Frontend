@@ -26,7 +26,7 @@ import { EmpService } from '@/services/emp-service';
 import { PostingService } from '@/services/posting.service';
 import { IdentityUserMappingService } from '@/services/identity-user-mapping.service';
 import { NoteSheetEditCacheService } from '@/services/note-sheet-edit-cache.service';
-import { NoteSheetType, NoteSheetOperationTypeOptions, ApprovalStatus, CodeType } from '@/models/enums';
+import { NoteSheetType, NoteSheetOperationType, NoteSheetOperationTypeOptions, ApprovalStatus, CodeType } from '@/models/enums';
 import { MasterBasicSetupService } from '@/Components/basic-setup/shared/services/MasterBasicSetupService';
 import { NotesheetApproverSelectComponent } from '@/Components/Common/notesheet-approver-select/notesheet-approver-select';
 import { NoteSheetNumberConfigModel } from '@/Components/basic-setup/shared/models/notesheet-number-config';
@@ -113,11 +113,13 @@ export class InterPostingNotesheetGenerateComponent implements OnInit {
             initiatorId: [null as number | null, Validators.required],
             recommenderIds: [[] as number[]],
             finalApproverId: [null as number | null, Validators.required],
-            noteSheetOperationType: ['manual' as string | null, Validators.required],
+            noteSheetOperationType: [NoteSheetOperationType.Manual as string | null, Validators.required],
             isSecret: [false]
         });
     }
 
+    /** Initiator/final approver are required only for manual note sheets. System-generate note
+     *  sheets get the chain from config, so the pickers are hidden and these validators dropped. */
     ngOnInit(): void {
         const _perms = this._userMenuService.getPermissionsByRoute(this._router.url);
         this.canInsert = _perms.canInsert;

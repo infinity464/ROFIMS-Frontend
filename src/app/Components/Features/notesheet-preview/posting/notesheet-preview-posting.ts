@@ -87,6 +87,8 @@ export class NotesheetPreviewPostingComponent extends NotesheetPreviewBase imple
     // ── Pending-list inline actions (only when opened from pending list) ─
     /** True when this preview was opened from /notesheet-list/pending-new-posting (or any pending list). */
     fromPending = false;
+    /** The list URL to return to after an approval action (e.g. /notesheet-list/my-approval-new-posting). */
+    returnUrl: string | null = null;
     currentUserEmployeeId = 0;
 
     // Remark dialog (Approve / Decline / Back)
@@ -353,6 +355,7 @@ export class NotesheetPreviewPostingComponent extends NotesheetPreviewBase imple
         // Detect `from=pending` query param to enable inline approval actions
         this.route.queryParams.subscribe(params => {
             this.fromPending = (params['from'] ?? '').toString().toLowerCase() === NoteSheetPreviewFrom.Pending;
+            this.returnUrl = params['returnUrl'] ?? null;
         });
         // Resolve current user's employee id (needed for Approve/Decline/Back APIs)
         const userId = this.sharedService.getCurrentUserId?.();
@@ -453,7 +456,7 @@ export class NotesheetPreviewPostingComponent extends NotesheetPreviewBase imple
                     const pendingRoute = ns.noteSheetType === NoteSheetType.InterPosting
                         ? '/notesheet-list/pending-inter-posting'
                         : '/notesheet-list/pending-new-posting';
-                    this.router.navigate([pendingRoute]);
+                    this.router.navigateByUrl(this.returnUrl || pendingRoute);
                 } else {
                     this.messageService.add({ severity: 'warn', summary: 'Notice', detail: msg || 'Action failed.' });
                 }

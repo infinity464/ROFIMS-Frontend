@@ -168,6 +168,8 @@ export class NotesheetPreviewExbdComponent extends NotesheetPreviewBase implemen
 
     // ── Pending-list inline actions ───────────────────────────
     fromPending = false;
+    /** The list URL to return to after an approval action (e.g. /notesheet-list/my-approval-ex-bd-leave). */
+    returnUrl: string | null = null;
     currentUserEmployeeId = 0;
 
     // Remark dialog (Approve / Decline / Back)
@@ -253,6 +255,7 @@ export class NotesheetPreviewExbdComponent extends NotesheetPreviewBase implemen
         super.ngOnInit();
         this.route.queryParams.subscribe(params => {
             this.fromPending = (params['from'] ?? '').toString().toLowerCase() === NoteSheetPreviewFrom.Pending;
+            this.returnUrl = params['returnUrl'] ?? null;
         });
         const userId = this.sharedService.getCurrentUserId?.();
         if (userId) {
@@ -704,7 +707,7 @@ export class NotesheetPreviewExbdComponent extends NotesheetPreviewBase implemen
                 if (code === 200) {
                     this.messageService.add({ severity: 'success', summary: 'Success', detail: 'Action completed.' });
                     this.showRemarkDialog = false;
-                    this.router.navigate(['/notesheet-list/pending-ex-bd-leave']);
+                    this.router.navigateByUrl(this.returnUrl || '/notesheet-list/pending-ex-bd-leave');
                 } else {
                     this.messageService.add({ severity: 'warn', summary: 'Notice', detail: msg || 'Action failed.' });
                 }

@@ -56,6 +56,12 @@ export interface ServingMemberPaginatedFilterRequest {
     filter: ServingMemberFilterRequest;
 }
 
+/** Result of the member-access check (EmployeeInfo/CheckMemberAccess). */
+export interface MemberAccessResult {
+    accessible: boolean;
+    reason?: string;
+}
+
 @Injectable({
     providedIn: 'root'
 })
@@ -109,6 +115,15 @@ export class ServingMembersService {
 
     getEmployeeBriefProfile(employeeId: number): Observable<EmployeeBriefProfile> {
         return this.http.get<EmployeeBriefProfile>(`${this.apiUrl}/GetEmployeeBriefProfile/${employeeId}`);
+    }
+
+    /**
+     * Checks whether the current user may view (and therefore add) the given employee,
+     * using the same access scope (accessible org-tree nodes + accessible member types)
+     * as the serving/ex-member lists. Returns { accessible, reason? }.
+     */
+    checkMemberAccess(employeeId: number): Observable<MemberAccessResult> {
+        return this.http.get<MemberAccessResult>(`${this.apiUrl}/CheckMemberAccess/${employeeId}`);
     }
 
     // --- Ex-Members (PostingStatus = ExMember; RAB Unit from Top 1 PreviousRABServiceInfo ORDER BY ServiceFrom DESC) ---

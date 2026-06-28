@@ -126,6 +126,8 @@ export class PostingNotesheetGenerateComponent implements OnInit {
         });
     }
 
+    /** Initiator/final approver are required only for manual note sheets. System-generate note
+     *  sheets get the chain from config, so the pickers are hidden and these validators dropped. */
     ngOnInit(): void {
         const _perms = this._userMenuService.getPermissionsByRoute(this._router.url);
         this.canInsert = _perms.canInsert;

@@ -51,6 +51,9 @@ export class ChatService {
   private noticePublishedSubject = new Subject<{ noticeId: number; topic: string; message: string; link?: string; notificationId?: number }>();
   public noticePublished$ = this.noticePublishedSubject.asObservable();
 
+  private noteSheetApprovalRequestedSubject = new Subject<{ noteSheetId: number; noteSheetType: string; noteSheetNo: string; stage: string; message: string; link?: string; notificationId?: number }>();
+  public noteSheetApprovalRequested$ = this.noteSheetApprovalRequestedSubject.asObservable();
+
   private connectionStatusSubject = new BehaviorSubject<boolean>(false);
   public connectionStatus$ = this.connectionStatusSubject.asObservable();
 
@@ -225,6 +228,13 @@ export class ChatService {
         console.debug('[ChatService] NoticePublished received', payload);
       }
       this.noticePublishedSubject.next(payload);
+    });
+
+    this.hubConnection.on('NoteSheetApprovalRequested', (payload: any) => {
+      if (typeof console !== 'undefined' && console.debug) {
+        console.debug('[ChatService] NoteSheetApprovalRequested received', payload);
+      }
+      this.noteSheetApprovalRequestedSubject.next(payload);
     });
 
     this.hubConnection.on('Error', (message: string) => {

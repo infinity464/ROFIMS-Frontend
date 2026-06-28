@@ -644,6 +644,12 @@ export abstract class NotesheetPreviewBase implements OnInit {
     }
 
     goBack(): void {
+        // If we were opened from a list (e.g. a My-Approval list), return to exactly that list.
+        const returnUrl = this.route.snapshot.queryParamMap.get('returnUrl');
+        if (returnUrl) {
+            this.router.navigateByUrl(returnUrl);
+            return;
+        }
         const type = this.noteSheet?.noteSheetType;
         if (type === NoteSheetType.ExBDLeave) {
             this.router.navigate(['/notesheet-list/draft-ex-bd-leave']);

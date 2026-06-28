@@ -91,10 +91,10 @@
   </div>
   }
 
-  @if (section === 'pending') {
+  @if (section === 'pending' || section === 'my-pending') {
   <div class="form-card">
     <div class="form-card-header">
-      <h3 class="form-card-title">Pending for Approval Note-Sheet List</h3>
+      <h3 class="form-card-title">{{ section === 'my-pending' ? 'My Pending Approvals' : 'Pending for Approval Note-Sheet List' }}</h3>
     </div>
     <p class="text-600 mt-0 mb-3">Approve, Decline, or Back with remark as per workflow.</p>
     <p-table #dt [value]="pendingList" [loading]="loading" dataKey="noteSheetId" [tableStyle]="{ 'min-width': '50rem' }" styleClass="p-datatable-striped p-datatable-gridlines" [paginator]="true" [rows]="10" [rowsPerPageOptions]="[10, 25, 50]" [globalFilterFields]="['noteSheetNo', 'subject', 'referenceNumber']">

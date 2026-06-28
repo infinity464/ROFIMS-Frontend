@@ -102,6 +102,8 @@ export class NotesheetPreviewGeneralComponent extends NotesheetPreviewBase imple
 
     // ── Pending-list inline actions ───────────────────────────
     fromPending = false;
+    /** The list URL to return to after an approval action (e.g. /notesheet-list/my-approval). */
+    returnUrl: string | null = null;
     currentUserEmployeeId = 0;
 
     // Remark dialog
@@ -538,6 +540,7 @@ export class NotesheetPreviewGeneralComponent extends NotesheetPreviewBase imple
         super.ngOnInit();
         this.route.queryParams.subscribe(params => {
             this.fromPending = (params['from'] ?? '').toString().toLowerCase() === NoteSheetPreviewFrom.Pending;
+            this.returnUrl = params['returnUrl'] ?? null;
         });
         const userId = this.sharedService.getCurrentUserId?.();
         if (userId) {
@@ -1089,7 +1092,7 @@ export class NotesheetPreviewGeneralComponent extends NotesheetPreviewBase imple
                 if (code === 200) {
                     this.messageService.add({ severity: 'success', summary: 'Success', detail: 'Action completed.' });
                     this.showRemarkDialog = false;
-                    this.router.navigate(['/notesheet-list/pending']);
+                    this.router.navigateByUrl(this.returnUrl || '/notesheet-list/pending');
                 } else {
                     this.messageService.add({ severity: 'warn', summary: 'Notice', detail: msg || 'Action failed.' });
                 }

@@ -275,6 +275,9 @@ export class AppTopbar implements OnInit, OnDestroy {
     toggleNotificationPanel(): void {
         this.showNotificationPanel = !this.showNotificationPanel;
         if (this.showNotificationPanel) {
+            // Refresh from the server so notifications created since login (e.g. note-sheet
+            // approvals) show up even if their live SignalR push was missed.
+            this.notificationService.loadFromApi();
             this.closeBound = (e: MouseEvent) => this.handleOutsideClick(e);
             setTimeout(() => document.addEventListener('click', this.closeBound!));
         } else {

@@ -124,7 +124,7 @@ export interface NoteSheetInfoFull extends NoteSheetInfoRow {
   preparedByEmployeeId?: number | null;
 }
 
-export type NoteSheetSection = 'draft' | 'pending' | 'approved' | 'declined' | 'all';
+export type NoteSheetSection = 'draft' | 'pending' | 'approved' | 'declined' | 'all' | 'my-pending';
 
 export const NOTE_SHEET_SECTIONS = {
   DRAFT: 'draft' as NoteSheetSection,
@@ -132,6 +132,7 @@ export const NOTE_SHEET_SECTIONS = {
   APPROVED: 'approved' as NoteSheetSection,
   DECLINED: 'declined' as NoteSheetSection,
   ALL: 'all' as NoteSheetSection,
+  MY_PENDING: 'my-pending' as NoteSheetSection,
 };
 
 export interface ApprovalLogEntry {
@@ -333,10 +334,12 @@ export class NotesheetListComponent implements OnInit {
       route = '/notesheet-preview/posting';
     }
     const queryParams: Record<string, string | number> = { id: row.noteSheetId };
-    // When previewing from the Pending section, pass a marker so preview can
+    // When previewing from the Pending or My-Approval section, pass a marker so preview can
     // show inline approval actions (Approve/Decline/Back/View Members/Log).
-    if (this.section === NOTE_SHEET_SECTIONS.PENDING) {
+    if (this.section === NOTE_SHEET_SECTIONS.PENDING || this.section === NOTE_SHEET_SECTIONS.MY_PENDING) {
       queryParams['from'] = NoteSheetPreviewFrom.Pending;
+      // Remember which list we came from so the preview returns here after an action.
+      queryParams['returnUrl'] = this.router.url;
     }
     this.router.navigate([route], { queryParams });
   }
@@ -1250,18 +1253,39 @@ export class NotesheetListComponent implements OnInit {
 
   /** Load only the current section's data. */
   loadSection(): void {
-    const base = `${this.api}/GetByStatus`;
     this.loading = true;
-    const onError = () => {
+    const onNext = (data: unknown) => {
+      const list = this.parseListResponse(data);
+      this._fullList = list;
+      this.filterDateFrom = null;
+      this.filterDateTo = null;
+      this.setCurrentList(list);
+      this.loading = false;
+    };
+    const onErr = () => {
+      this._fullList = [];
+      this.setCurrentList([]);
       this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to load note-sheet list.' });
       this.loading = false;
     };
+
+    // "My Approval" lists: GetMyPending returns only the system-generate note sheets currently
+    // waiting on the logged-in user, already filtered by type — so no status map is applied.
+    if (this.section === NOTE_SHEET_SECTIONS.MY_PENDING) {
+      const myParams: Record<string, string> = {};
+      if (this.noteSheetTypeFilter) myParams['noteSheetType'] = this.noteSheetTypeFilter;
+      this.http.get<unknown>(`${this.api}/GetMyPending`, { params: myParams }).subscribe({ next: onNext, error: onErr });
+      return;
+    }
+
+    const base = `${this.api}/GetByStatus`;
     const statusMap: Record<NoteSheetSection, string> = {
       draft:    '',
       pending:  '',
       approved: NoteSheetCurrentStatus.FinalApproval,
       declined: NoteSheetCurrentStatus.Cancel,
-      all: ''
+      all: '',
+      'my-pending': ''
     };
     let params: Record<string, string> = {};
     if (statusMap[this.section]) {
@@ -1270,21 +1294,7 @@ export class NotesheetListComponent implements OnInit {
     if (this.noteSheetTypeFilter) {
       params['noteSheetType'] = this.noteSheetTypeFilter;
     }
-    this.http.get<unknown>(base, { params }).subscribe({
-      next: (data) => {
-        const list = this.parseListResponse(data);
-        this._fullList = list;
-        this.filterDateFrom = null;
-        this.filterDateTo = null;
-        this.setCurrentList(list);
-        this.loading = false;
-      },
-      error: (err: any) => {
-        this._fullList = [];
-        this.setCurrentList([]);
-        onError();
-      }
-    });
+    this.http.get<unknown>(base, { params }).subscribe({ next: onNext, error: onErr });
   }
 
   /** Used when a single-section action (e.g. submit) needs to refresh current list. */
@@ -1334,17 +1344,23 @@ export class NotesheetListComponent implements OnInit {
     }
     switch (this.section) {
       case 'draft':
+        // System-generate drafts show to their creator here until submitted; once submitted they
+        // move to the approver's My-Approval list. Manual keeps the draft/initiator/recommender view.
         this.draftList = list.filter(r =>
-          r.currentStatus === NoteSheetCurrentStatus.Draft ||
-          r.currentStatus === NoteSheetCurrentStatus.Initiator ||
-          r.currentStatus === NoteSheetCurrentStatus.Recommender
+          r.noteSheetOperationType === NoteSheetOperationType.SystemGenerate
+            ? r.currentStatus === NoteSheetCurrentStatus.Draft
+            : (r.currentStatus === NoteSheetCurrentStatus.Draft ||
+               r.currentStatus === NoteSheetCurrentStatus.Initiator ||
+               r.currentStatus === NoteSheetCurrentStatus.Recommender)
         );
         break;
       case 'pending':
+        // The everyone-pending list stays manual-only; system-generate approvals live in My-Approval.
         this.pendingList = list.filter(r =>
-          r.currentStatus === NoteSheetCurrentStatus.Initiator ||
-          r.currentStatus === NoteSheetCurrentStatus.Recommender ||
-          (r.currentStatus === NoteSheetCurrentStatus.FinalApproval && r.finalApprovalStatus !== ApprovalStatus.Approve)
+          r.noteSheetOperationType !== NoteSheetOperationType.SystemGenerate &&
+          (r.currentStatus === NoteSheetCurrentStatus.Initiator ||
+           r.currentStatus === NoteSheetCurrentStatus.Recommender ||
+           (r.currentStatus === NoteSheetCurrentStatus.FinalApproval && r.finalApprovalStatus !== ApprovalStatus.Approve))
         );
         break;
       case 'approved':
@@ -1355,6 +1371,10 @@ export class NotesheetListComponent implements OnInit {
         break;
       case 'declined': this.declinedList = list; break;
       case 'all': this.allList = list; break;
+      case NOTE_SHEET_SECTIONS.MY_PENDING:
+        // Server already returns exactly the items waiting on me; reuse the pending table to render them.
+        this.pendingList = list;
+        break;
     }
   }
 
