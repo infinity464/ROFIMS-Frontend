@@ -21,6 +21,7 @@ import { EmpService } from '@/services/emp-service';
 import { FamilyInfoService, FamilyInfoModel } from '@/services/family-info-service';
 import { SharedService } from '@/shared/services/shared-service';
 import { ExBdLeaveApplicationService, DestinationCountryItem, FamilyMemberItem, FileReferenceItem } from '@/services/ex-bd-leave-application.service';
+import { ServingMembersService } from '@/services/serving-members.service';
 import { CommonCode } from '@/Components/basic-setup/shared/models/common-code';
 import { ExBdLeaveStatus } from '@/models/enums';
 import { forkJoin } from 'rxjs';
@@ -60,6 +61,7 @@ export class ExBdLeaveApplyComponent implements OnInit {
     private familyInfoService = inject(FamilyInfoService);
     private sharedService = inject(SharedService);
     private exBdLeaveService = inject(ExBdLeaveApplicationService);
+    private servingMembersService = inject(ServingMembersService);
 
     @ViewChild(EmployeeSearchComponent) employeeSearchRef!: EmployeeSearchComponent;
 
@@ -190,6 +192,28 @@ export class ExBdLeaveApplyComponent implements OnInit {
     }
 
     onApplicantFound(info: EmployeeBasicInfo): void {
+        // Access control first: the searched applicant must be within the current user's
+        // accessible org scope + member types. If not, deny with a message and clear the search.
+        this.servingMembersService.checkMemberAccess(info.employeeID).subscribe({
+            next: (res) => {
+                if (res && res.accessible === false) {
+                    this.messageService.add({
+                        severity: 'error',
+                        summary: 'Access denied',
+                        detail: res.reason || "You don't have permission to view this employee (outside your assigned units / member types).",
+                        life: 8000
+                    });
+                    this.employeeSearchRef?.reset();
+                    return;
+                }
+                this.proceedApplicantFound(info);
+            },
+            // Resilient: a transient check failure shouldn't block a legitimate selection.
+            error: () => this.proceedApplicantFound(info)
+        });
+    }
+
+    private proceedApplicantFound(info: EmployeeBasicInfo): void {
         // In edit mode, skip eligibility check — the active application is the one being edited
         if (this.editMode) {
             this.selectedApplicant = info;
