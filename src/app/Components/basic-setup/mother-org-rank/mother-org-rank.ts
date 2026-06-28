@@ -269,13 +269,18 @@ export class MotherOrgRank {
                 r.codeValueEN?.toLowerCase().includes(q) || r.codeValueBN?.toLowerCase().includes(q)
             );
         }
-        // Sort by motherOrg seniority, then rank seniority
+        // Sort by motherOrg seniority, then member type seniority, then rank seniority
         const getOrgSortOrder = (orgId: number) =>
             this.motherOrgs.find(o => o.orgId === orgId)?.sortOrder ?? 999;
+        const getMemberTypeSortOrder = (parentCodeId: number | null) =>
+            this.memberTypes.find(m => m.codeId === parentCodeId)?.sortOrder ?? 999;
         list.sort((a: any, b: any) => {
             const orgOrderA = getOrgSortOrder(a.orgId);
             const orgOrderB = getOrgSortOrder(b.orgId);
             if (orgOrderA !== orgOrderB) return (orgOrderA ?? 999) - (orgOrderB ?? 999);
+            const mtOrderA = getMemberTypeSortOrder(a.parentCodeId);
+            const mtOrderB = getMemberTypeSortOrder(b.parentCodeId);
+            if (mtOrderA !== mtOrderB) return (mtOrderA ?? 999) - (mtOrderB ?? 999);
             return (a.sortOrder ?? 999) - (b.sortOrder ?? 999);
         });
         this.commonData = list;

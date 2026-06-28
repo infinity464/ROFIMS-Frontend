@@ -33,6 +33,7 @@ export class OfficerType {
 
     allData: any[] = [];
     commonCodeData: any[] = [];
+    motherOrgs: any[] = [];
     editingId: number | null = null;
     commonCodeForm!: FormGroup;
 
@@ -153,6 +154,7 @@ export class OfficerType {
     loadActiveMotherOrgs() {
         this.masterBasicSetupService.getAllActiveMotherOrgs().subscribe({
             next: (motherOrgs) => {
+                this.motherOrgs = motherOrgs ?? [];
                 const motherOrgOptions = motherOrgs.map(d => ({
                     label: d.orgNameEN,
                     value: d.orgId
@@ -235,6 +237,10 @@ export class OfficerType {
         if (status != null) list = list.filter((r: any) => r.status === status);
         const q = (this.searchValue ?? '').toLowerCase().trim();
         if (q) list = list.filter((r: any) => r.codeValueEN?.toLowerCase().includes(q) || r.codeValueBN?.toLowerCase().includes(q));
+        // Sort by Mother Organization seniority
+        const getOrgSortOrder = (orgId: number) =>
+            this.motherOrgs.find(o => o.orgId === orgId)?.sortOrder ?? 999;
+        list.sort((a: any, b: any) => (getOrgSortOrder(a.orgId) ?? 999) - (getOrgSortOrder(b.orgId) ?? 999));
         this.commonCodeData = list;
         this.totalRecords = list.length;
         this.first = 0;
