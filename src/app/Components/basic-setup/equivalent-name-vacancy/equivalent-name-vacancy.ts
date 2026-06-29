@@ -61,7 +61,7 @@ export class EquivalentNameVacancyComponent implements OnInit {
     canUpdate = true;
     canDelete = true;
 
-    title = 'Equivalent Name Man Power Setup';
+    title = 'Man Power Setup';
     orgList: OrganizationModel[] = [];
     selectedOrg: OrganizationModel | null = null;
     loading = false;
