@@ -151,6 +151,7 @@ export class ReportTradeComponent implements OnInit, OnChanges {
         { key: 'corps',        labelEN: 'Corps',         labelBN: 'কোর',           hint: 'Plain',                 defaultVisible: true  },
         { key: 'trade',        labelEN: 'Trade',         labelBN: 'ট্রেড',         hint: 'Plain',                 defaultVisible: true  },
         { key: 'name',         labelEN: 'Name',          labelBN: 'নাম',           hint: 'Name',                  defaultVisible: true  },
+        { key: 'rabUnit',           labelEN: 'Battalion',        labelBN: 'ব্যাটালিয়ন',         hint: 'Plain', defaultVisible: true },
         { key: 'nameExtras', labelEN: 'Award + Professional Qualification', labelBN: 'পদক + পেশাগত যোগ্যতা', hint: 'NameSuffix', defaultVisible: false },
         { key: 'callNoRankName', labelEN: 'No Rank Name', labelBN: 'নং র‍্যাঙ্ক নাম', hint: 'CallNoRankName', defaultVisible: false },
         // Selected-value column: header mirrors the chosen report type
@@ -162,12 +163,11 @@ export class ReportTradeComponent implements OnInit, OnChanges {
         // "All" and rows are of mixed statuses. When selected, backendColumnKeys()
         // requests the raw `status` field so memberStatusText() can localize it.
         { key: 'memberStatus', labelEN: 'Member Status',  labelBN: 'সদস্য অবস্থা',   hint: 'MemberStatus',          defaultVisible: false },
-        { key: 'blankRemark',  labelEN: 'Remark',        labelBN: 'মন্তব্য',       hint: 'BlankRemark',           defaultVisible: true  },
         { key: 'personnel',    labelEN: 'RAB Personnel', labelBN: 'র‍্যাব সদস্য',   hint: 'RabPersonnelComposite', defaultVisible: false },
         { key: 'rabId',        labelEN: 'RAB ID',        labelBN: 'র‍্যাব আইডি',    hint: 'RabId',                 defaultVisible: false },
         { key: 'motherOrganization',labelEN: 'Mother Org', labelBN: 'মাতৃ সংস্থা',  hint: 'Plain',                 defaultVisible: false },
         { key: 'joiningDate',  labelEN: 'Joining Date',  labelBN: 'যোগদান তারিখ',   hint: 'JoiningDate',          defaultVisible: false },
-        { key: 'rmks',         labelEN: 'Remarks',       labelBN: 'মন্তব্য',       hint: 'Remarks',               defaultVisible: true },
+        { key: 'rmks',         labelEN: 'Remark',       labelBN: 'মন্তব্য',       hint: 'Remarks',               defaultVisible: true },
         { key: 'nameEnglish',       labelEN: 'Name (EN)',        labelBN: 'নাম (ইংরেজি)',       hint: 'Plain', defaultVisible: false },
         { key: 'nameEnglish',       labelEN: 'Name (EN)',        labelBN: 'নাম (ইংরেজি)',       hint: 'Plain', defaultVisible: false },
         { key: 'nameBangla',        labelEN: 'Name (BN)',        labelBN: 'নাম (বাংলা)',        hint: 'Plain', defaultVisible: false },
@@ -178,7 +178,6 @@ export class ReportTradeComponent implements OnInit, OnChanges {
         { key: 'tradeRemarks',      labelEN: 'Trade Remarks',    labelBN: 'ট্রেড মন্তব্য',       hint: 'Plain', defaultVisible: false },
         { key: 'gender',            labelEN: 'Gender',           labelBN: 'লিঙ্গ',              hint: 'Plain', defaultVisible: false },
         { key: 'motherUnit',        labelEN: 'Last Unit',        labelBN: 'শেষ ইউনিট',          hint: 'Plain', defaultVisible: false },
-        { key: 'rabUnit',           labelEN: 'Battalion',        labelBN: 'ব্যাটালিয়ন',         hint: 'Plain', defaultVisible: true },
         { key: 'rabUnitHierarchy', labelEN: 'RAB Unit', labelBN: 'র‍্যাব ইউনিট (পূর্ণ)', hint: 'Plain', defaultVisible: false },
         { key: 'dateOfCommission',  labelEN: 'Commission Date',  labelBN: 'কমিশন তারিখ',         hint: 'Plain', defaultVisible: false },
         { key: 'rabServiceFrom',    labelEN: 'RAB Joining Date', labelBN: 'র‍্যাবে যোগদান তারিখ',hint: 'Plain', defaultVisible: false },
@@ -396,9 +395,21 @@ export class ReportTradeComponent implements OnInit, OnChanges {
         return items;
     }
 
-    /** Cell text for the synthetic "Selected Value" column — the picked CommonCode value (e.g. "SSC"), identical for every row. */
+    /** Fallback "Selected Value" text when a row carries no trade of its own. */
     get selectedValueCellText(): string {
         return this.commonCodeLabel?.trim() ? this.commonCodeLabel.trim() : '—';
+    }
+
+    /**
+     * Per-row "Selected Value" — this member's OWN trade, not the (possibly multi-pick)
+     * filter label. With several trades picked, each row must surface its own trade rather
+     * than the joined list of everything selected.
+     */
+    selectedValueText(row: MemberAppointmentReportRow): string {
+        const r = row as any;
+        const own = this.codeValue(r.trade, r.tradeBN);
+        if (own && own !== '-' && own !== '—') return own;
+        return this.selectedValueCellText;
     }
 
     /** Localized labels for the raw PostingStatus passthrough values (matches the parent Status dropdown wording). */
@@ -613,7 +624,7 @@ export class ReportTradeComponent implements OnInit, OnChanges {
                         return new TableCell({ ...cellOpts, children });
                     }
                     case 'SelectedValue':
-                        return new TableCell({ ...cellOpts, children: [new Paragraph({ children: [run(this.selectedValueCellText)] })] });
+                        return new TableCell({ ...cellOpts, children: [new Paragraph({ children: [run(this.selectedValueText(row))] })] });
                     case 'MemberStatus':
                         return new TableCell({ ...cellOpts, children: [new Paragraph({ children: [run(this.memberStatusText(row))] })] });
                     case 'BlankRemark':
@@ -675,7 +686,7 @@ export class ReportTradeComponent implements OnInit, OnChanges {
                         const l2 = this.callNoRankLine2(row);
                         return l1 && l2 ? `${l1}\n${l2}` : l1 || l2;
                     }
-                    case 'SelectedValue':         return this.selectedValueCellText;
+                    case 'SelectedValue':         return this.selectedValueText(row);
                     case 'MemberStatus':          return this.memberStatusText(row);
                     case 'BlankRemark':           return '';
                     case 'Plain':
@@ -733,7 +744,7 @@ export class ReportTradeComponent implements OnInit, OnChanges {
                 case 'Remarks': return `<td class="td-rmks">${esc(row.rmks || '')}</td>`;
                 case 'Name': return `<td class="td-personnel"><div class="personnel-name">${esc(this.nameColumnValue(row))}</div></td>`;
                 case 'CallNoRankName': return `<td class="td-personnel"><div class="personnel-name">${esc(this.callNoRankLine1(row))}</div><div class="personnel-name">${esc(this.callNoRankLine2(row))}</div></td>`;
-                case 'SelectedValue': return `<td>${esc(this.selectedValueCellText)}</td>`;
+                case 'SelectedValue': return `<td>${esc(this.selectedValueText(row))}</td>`;
                 case 'MemberStatus': return `<td>${esc(this.memberStatusText(row))}</td>`;
                 case 'BlankRemark': return `<td class="td-blank-remark"></td>`;
                 case 'Plain':

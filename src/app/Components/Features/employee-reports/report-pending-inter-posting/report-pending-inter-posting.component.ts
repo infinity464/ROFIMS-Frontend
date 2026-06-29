@@ -130,7 +130,7 @@ export class ReportPendingInterPostingComponent implements OnInit {
         { key: 'presentBnWg',        labelEN: 'Present Bn/Wg',  labelBN: 'বর্তমান বিএন/উইং', hint: 'Plain',      defaultVisible: true  },
         { key: 'postedBnWg',         labelEN: 'Posted Bn/Wg',   labelBN: 'পোস্টেড বিএন/উইং', hint: 'Plain',      defaultVisible: true  },
         { key: 'postingOrderDate',   labelEN: 'Posting Order Date', labelBN: 'পোস্টিং অর্ডার তারিখ', hint: 'Date', defaultVisible: true  },
-        { key: 'rmks',               labelEN: 'Remarks',        labelBN: 'মন্তব্য',        hint: 'Remarks',    defaultVisible: true  },
+        { key: 'rmks',               labelEN: 'Remark',        labelBN: 'মন্তব্য',        hint: 'Remarks',    defaultVisible: true  },
         // Opt-in extras
         { key: 'rabID',              labelEN: 'RAB ID',         labelBN: 'র‍্যাব আইডি',    hint: 'Plain',      defaultVisible: false },
         { key: 'postingOrderNo',     labelEN: 'Order No',       labelBN: 'অর্ডার নম্বর',    hint: 'Plain',      defaultVisible: false },

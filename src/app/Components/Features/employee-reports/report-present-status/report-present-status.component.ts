@@ -159,7 +159,7 @@ export class ReportPresentStatusComponent implements OnInit {
         { key: 'presentStatus', labelEN: 'Present Status', labelBN: 'বর্তমান অবস্থা', hint: 'Plain', defaultVisible: true },
         { key: 'statusDate', labelEN: 'Status Date', labelBN: 'অবস্থার তারিখ', hint: 'Date', defaultVisible: false },
         { key: 'statusDetails', labelEN: 'Status Details', labelBN: 'বিবরণ', hint: 'Plain', defaultVisible: false },
-        { key: 'rmks', labelEN: 'Remarks', labelBN: 'মন্তব্য', hint: 'Remarks', defaultVisible: true },
+        { key: 'rmks', labelEN: 'Remark', labelBN: 'মন্তব্য', hint: 'Remarks', defaultVisible: true },
         // ── Opt-in extras (registry FieldKeys) — hidden by default ────────
         // ── Status-type-specific columns (each status fills its own) ──────
         { key: 'dateOfRelease', labelEN: 'Date of Release', labelBN: 'রিলিজের তারিখ', hint: 'Date', defaultVisible: false },

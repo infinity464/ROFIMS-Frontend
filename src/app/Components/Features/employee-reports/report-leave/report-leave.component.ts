@@ -107,6 +107,7 @@ export class ReportLeaveComponent implements OnInit {
         { key: 'corps', labelEN: 'Corps', labelBN: 'কোর', hint: 'Plain', defaultVisible: true },
         { key: 'trade', labelEN: 'Trade', labelBN: 'ট্রেড', hint: 'Plain', defaultVisible: true },
         { key: 'name', labelEN: 'Name', labelBN: 'নাম', hint: 'Plain', defaultVisible: true },
+        { key: 'rabUnit', labelEN: 'Battalion', labelBN: 'ব্যাটালিয়ন', hint: 'Plain', defaultVisible: false },
         // Single toggle that folds Award + Professional Qualification + Corps
         // INTO the Name cell when ticked. Never renders as its own column —
         // see visibleColumns + nameColumnValue. Default off.
@@ -118,7 +119,7 @@ export class ReportLeaveComponent implements OnInit {
         { key: 'leaveFrom', labelEN: 'Leave From', labelBN: 'ছুটি শুরুর তারিখ', hint: 'Date', defaultVisible: true },
         { key: 'leaveTo', labelEN: 'Leave To', labelBN: 'ছুটি শেষের তারিখ', hint: 'Date', defaultVisible: true },
         { key: 'leaveDays', labelEN: 'Duration', labelBN: 'মেয়াদকাল', hint: 'Plain', defaultVisible: true },
-        { key: 'rmks', labelEN: 'Remarks', labelBN: 'মন্তব্য', hint: 'Remarks', defaultVisible: true },
+        { key: 'rmks', labelEN: 'Remark', labelBN: 'মন্তব্য', hint: 'Remarks', defaultVisible: true },
         // ── Opt-in extras (registry FieldKeys) — hidden by default ────────
         { key: 'leaveCertificateNo', labelEN: 'Leave Cert. No.', labelBN: 'ছুটির সনদপত্র নং', hint: 'Plain', defaultVisible: false },
         { key: 'relieverName', labelEN: 'Reliever', labelBN: 'পরিবর্তে দায়িত্বপ্রাপ্ত', hint: 'Plain', defaultVisible: false },
@@ -132,7 +133,6 @@ export class ReportLeaveComponent implements OnInit {
         { key: 'motherOrganization', labelEN: 'Mother Org', labelBN: 'মাতৃ সংস্থা', hint: 'Plain', defaultVisible: false },
         { key: 'motherUnit', labelEN: 'Mother Unit', labelBN: 'মাতৃ ইউনিট', hint: 'Plain', defaultVisible: false },
         { key: 'gender', labelEN: 'Gender', labelBN: 'লিঙ্গ', hint: 'Plain', defaultVisible: false },
-        { key: 'rabUnit', labelEN: 'Battalion', labelBN: 'ব্যাটালিয়ন', hint: 'Plain', defaultVisible: false },
         // Full job hierarchy (Battalion › Wing › Branch › Sub-Branch › Section › Sub-Section). Opt-in.
         { key: 'rabUnitHierarchy', labelEN: 'RAB Unit', labelBN: 'র‍্যাব ইউনিট', hint: 'Plain', defaultVisible: false },
         { key: 'officerType', labelEN: 'Officer Type', labelBN: 'অফিসার ধরণ', hint: 'Plain', defaultVisible: false },

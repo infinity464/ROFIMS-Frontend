@@ -118,6 +118,7 @@ export class ReportStayAfterRelieverJoinedComponent implements OnInit {
         { key: 'corps', labelEN: 'Corps', labelBN: 'কোর', hint: 'Plain', defaultVisible: true },
         { key: 'trade', labelEN: 'Trade', labelBN: 'ট্রেড', hint: 'Plain', defaultVisible: true },
         { key: 'name', labelEN: 'Name', labelBN: 'নাম', hint: 'Personnel', defaultVisible: true },
+        { key: 'rabUnit', labelEN: 'Battalion', labelBN: 'ব্যাটালিয়ন', hint: 'Plain', defaultVisible: false },
         // Single toggle that folds Award + Professional Qualification + Corps
         // INTO the Name cell when ticked. Never renders as its own column —
         // see visibleColumns + nameColumnValue. Default off.
@@ -131,7 +132,7 @@ export class ReportStayAfterRelieverJoinedComponent implements OnInit {
         { key: 'postedOutUnit', labelEN: 'Posted-out Unit', labelBN: 'বদলিকৃত ইউনিট', hint: 'Plain', defaultVisible: true },
         { key: 'relieverYesNo', labelEN: 'Reliever (Yes/No)', labelBN: 'প্রতিস্থাপক (হ্যাঁ/না)', hint: 'Plain', defaultVisible: false },
         { key: 'relieverJoiningDate', labelEN: 'Reliever Joining Date', labelBN: 'প্রতিস্থাপক যোগদানের তারিখ', hint: 'Date', defaultVisible: true },
-        { key: 'rmks', labelEN: 'Remarks', labelBN: 'মন্তব্য', hint: 'Remarks', defaultVisible: true },
+        { key: 'rmks', labelEN: 'Remark', labelBN: 'মন্তব্য', hint: 'Remarks', defaultVisible: true },
         // ── Opt-in extras (registry FieldKeys) — hidden by default ────────
         { key: 'relieverServiceId', labelEN: 'Reliever Service ID', labelBN: 'প্রতিস্থাপক সার্ভিস আইডি', hint: 'Plain', defaultVisible: false },
         { key: 'relieverName', labelEN: 'Reliever Name', labelBN: 'প্রতিস্থাপক নাম', hint: 'Plain', defaultVisible: false },
@@ -150,7 +151,6 @@ export class ReportStayAfterRelieverJoinedComponent implements OnInit {
         { key: 'memberType', labelEN: 'Member Type', labelBN: 'সদস্য ধরন', hint: 'Plain', defaultVisible: false },
         { key: 'motherOrganization', labelEN: 'Mother Org', labelBN: 'মাতৃ সংস্থা', hint: 'Plain', defaultVisible: false },
         { key: 'gender', labelEN: 'Gender', labelBN: 'লিঙ্গ', hint: 'Plain', defaultVisible: false },
-        { key: 'rabUnit', labelEN: 'Battalion', labelBN: 'ব্যাটালিয়ন', hint: 'Plain', defaultVisible: false },
         // Full job hierarchy (Battalion › Wing › Branch › Sub-Branch › Section › Sub-Section). Opt-in.
         { key: 'rabUnitHierarchy', labelEN: 'RAB Unit', labelBN: 'র‍্যাব ইউনিট', hint: 'Plain', defaultVisible: false },
         { key: 'dateOfCommission', labelEN: 'Commission Date', labelBN: 'কমিশন তারিখ', hint: 'Date', defaultVisible: false },

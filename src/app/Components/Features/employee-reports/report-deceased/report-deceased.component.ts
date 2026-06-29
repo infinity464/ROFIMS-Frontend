@@ -131,6 +131,7 @@ export class ReportDeceasedComponent implements OnInit {
         { key: 'rabRank',        labelEN: 'RAB Rank',             labelBN: 'র‍্যাব র‍্যাঙ্ক',         hint: 'Plain',      defaultVisible: false },
         { key: 'trade',          labelEN: 'Trade',                labelBN: 'ট্রেড',                  hint: 'Plain',      defaultVisible: true  },
         { key: 'name',           labelEN: 'Name',                 labelBN: 'নাম',                    hint: 'Personnel',  defaultVisible: true  },
+        { key: 'rabUnit',        labelEN: 'Battalion',            labelBN: 'ব্যাটালিয়ন',             hint: 'Plain',      defaultVisible: false },
         // Single toggle that folds Award + Professional Qualification + Corps
         // INTO the Name cell when ticked. Never renders as its own column —
         // see visibleColumns + nameColumnValue. Default off.
@@ -142,7 +143,7 @@ export class ReportDeceasedComponent implements OnInit {
         { key: 'lastUnit',       labelEN: 'Last Bn/Wg',           labelBN: 'সর্বশেষ ইউনিট',          hint: 'Plain',      defaultVisible: true  },
         { key: 'dateOfDeath',    labelEN: 'Date of Death',        labelBN: 'মৃত্যুবরণের তারিখ',       hint: 'Date',       defaultVisible: true  },
         { key: 'deceasedReason', labelEN: 'Death Reason',         labelBN: 'মৃত্যুর কারণ',           hint: 'Plain',      defaultVisible: true  },
-        { key: 'rmks',           labelEN: 'Remarks',              labelBN: 'মন্তব্য',                hint: 'Remarks',    defaultVisible: true  },
+        { key: 'rmks',           labelEN: 'Remark',               labelBN: 'মন্তব্য',                hint: 'Remarks',    defaultVisible: true  },
         // ── Opt-in extras (registry FieldKeys) — hidden by default ────────
         { key: 'rabId',          labelEN: 'RAB ID',               labelBN: 'র‍্যাব আইডি',            hint: 'Plain',      defaultVisible: false },
         { key: 'nameBangla',     labelEN: 'Name (Bangla)',        labelBN: 'নাম (বাংলা)',            hint: 'Plain',      defaultVisible: false },
@@ -153,7 +154,6 @@ export class ReportDeceasedComponent implements OnInit {
         { key: 'motherOrganization', labelEN: 'Mother Org',       labelBN: 'মাতৃ সংস্থা',            hint: 'Plain',      defaultVisible: false },
         { key: 'gender',         labelEN: 'Gender',               labelBN: 'লিঙ্গ',                  hint: 'Plain',      defaultVisible: false },
         { key: 'motherUnit',     labelEN: 'Mother Unit',          labelBN: 'মাতৃ ইউনিট',             hint: 'Plain',      defaultVisible: false },
-        { key: 'rabUnit',        labelEN: 'Battalion',            labelBN: 'ব্যাটালিয়ন',             hint: 'Plain',      defaultVisible: false },
         // Trimmed job hierarchy (Battalion, Wing … deepest level — first two + last). Opt-in.
         { key: 'rabUnitHierarchy', labelEN: 'RAB Unit',           labelBN: 'র‍্যাব ইউনিট',           hint: 'Plain',      defaultVisible: false },
         { key: 'dateOfCommission', labelEN: 'Commission Date',    labelBN: 'কমিশন তারিখ',            hint: 'Date',       defaultVisible: false },

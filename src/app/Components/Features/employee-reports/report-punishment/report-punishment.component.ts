@@ -106,6 +106,7 @@ export class ReportPunishmentComponent implements OnInit {
         { key: 'corps', labelEN: 'Corps', labelBN: 'কোর', hint: 'Plain', defaultVisible: true },
         { key: 'trade', labelEN: 'Trade', labelBN: 'ট্রেড', hint: 'Plain', defaultVisible: true },
         { key: 'name', labelEN: 'Name', labelBN: 'নাম', hint: 'Plain', defaultVisible: true },
+        { key: 'rabUnit', labelEN: 'Battalion', labelBN: 'ব্যাটালিয়ন', hint: 'Plain', defaultVisible: false },
         // Single toggle that folds Award + Professional Qualification + Corps
         // INTO the Name cell when ticked. Never renders as its own column —
         // see visibleColumns + nameColumnValue. Default off.
@@ -116,7 +117,7 @@ export class ReportPunishmentComponent implements OnInit {
         { key: 'offenceDetails', labelEN: 'Offence Details', labelBN: 'অপরাধের বিবরণ', hint: 'Plain', defaultVisible: true },
         { key: 'punishmentDate', labelEN: 'Punishment Date', labelBN: 'শাস্তির তারিখ', hint: 'Date', defaultVisible: true },
         { key: 'punishment', labelEN: 'Punishment', labelBN: 'শাস্তির বিবরণ', hint: 'Plain', defaultVisible: true },
-        { key: 'rmks', labelEN: 'Remarks', labelBN: 'মন্তব্য', hint: 'Remarks', defaultVisible: true },
+        { key: 'rmks', labelEN: 'Remark', labelBN: 'মন্তব্য', hint: 'Remarks', defaultVisible: true },
         // ── Opt-in extras (registry FieldKeys) — hidden by default ────────
         { key: 'punishmentDateMo', labelEN: 'Punishment Date (MO)', labelBN: 'শাস্তির তারিখ (মাতৃ সংস্থা)', hint: 'Date', defaultVisible: false },
         { key: 'punishmentMo', labelEN: 'Punishment (MO)', labelBN: 'শাস্তি (মাতৃ সংস্থা)', hint: 'Plain', defaultVisible: false },
@@ -132,7 +133,6 @@ export class ReportPunishmentComponent implements OnInit {
         { key: 'motherOrganization', labelEN: 'Mother Org', labelBN: 'মাতৃ সংস্থা', hint: 'Plain', defaultVisible: false },
         { key: 'motherUnit', labelEN: 'Mother Unit', labelBN: 'মাতৃ ইউনিট', hint: 'Plain', defaultVisible: false },
         { key: 'gender', labelEN: 'Gender', labelBN: 'লিঙ্গ', hint: 'Plain', defaultVisible: false },
-        { key: 'rabUnit', labelEN: 'Battalion', labelBN: 'ব্যাটালিয়ন', hint: 'Plain', defaultVisible: false },
         // Trimmed job hierarchy (Battalion, Wing … deepest level — first two + last). Opt-in.
         { key: 'rabUnitHierarchy', labelEN: 'RAB Unit', labelBN: 'র‍্যাব ইউনিট', hint: 'Plain', defaultVisible: false },
         { key: 'officerType', labelEN: 'Officer Type', labelBN: 'অফিসার ধরণ', hint: 'Plain', defaultVisible: false },

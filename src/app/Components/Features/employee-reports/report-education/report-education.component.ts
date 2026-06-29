@@ -120,6 +120,7 @@ export class ReportEducationComponent implements OnInit, OnChanges {
         { key: 'corps', labelEN: 'Corps', labelBN: 'কোর', hint: 'Plain', defaultVisible: true },
         { key: 'trade', labelEN: 'Trade', labelBN: 'ট্রেড', hint: 'Plain', defaultVisible: true },
         { key: 'name', labelEN: 'Name', labelBN: 'নাম', hint: 'Name', defaultVisible: true },
+        { key: 'rabUnit', labelEN: 'Battalion', labelBN: 'ব্যাটালিয়ন', hint: 'Plain', defaultVisible: true },
         // Single toggle that folds Award + Professional Qualification + Corps
         // INTO the Name cell when ticked (e.g. "Md Shahidul Islam, PPM, BPM,
         // NDC, psc"). Never renders as its own column — see visibleColumns +
@@ -128,7 +129,6 @@ export class ReportEducationComponent implements OnInit, OnChanges {
         // Profile-style composite: line 1 = Prefix + Service No + Rank; line 2 =
         // Name with awards, professional qualification and corps. Opt-in.
         { key: 'callNoRankName', labelEN: 'No Rank Name', labelBN: 'নং র‍্যাঙ্ক নাম', hint: 'CallNoRankName', defaultVisible: false },
-        { key: 'rabUnit', labelEN: 'Battalion', labelBN: 'ব্যাটালিয়ন', hint: 'Plain', defaultVisible: true },
         // Full job hierarchy (Battalion › Wing › Branch › Sub-Branch › Section › Sub-Section). Opt-in.
         { key: 'rabUnitHierarchy', labelEN: 'RAB Unit', labelBN: 'র‍্যাব ইউনিট (পূর্ণ)', hint: 'Plain', defaultVisible: false },
         // Selected-value column: header mirrors the chosen report type

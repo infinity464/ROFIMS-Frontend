@@ -109,6 +109,7 @@ export class ReportUnitDurationNominalRollComponent implements OnInit {
         { key: 'rabRank',        labelEN: 'RAB Rank',            labelBN: 'র‍্যাব র‍্যাঙ্ক',         hint: 'Plain',     defaultVisible: false },
         { key: 'trade',          labelEN: 'Trade',               labelBN: 'ট্রেড',                  hint: 'Plain',     defaultVisible: true  },
         { key: 'name',           labelEN: 'Name',                labelBN: 'নাম',                    hint: 'Personnel', defaultVisible: true  },
+        { key: 'rabUnit',        labelEN: 'Battalion',           labelBN: 'ব্যাটালিয়ন',             hint: 'Plain',     defaultVisible: false },
         // Single toggle that folds Award + Professional Qualification + Corps
         // INTO the Name cell when ticked. Never renders as its own column —
         // see visibleColumns + nameColumnValue. Default off.
@@ -119,7 +120,7 @@ export class ReportUnitDurationNominalRollComponent implements OnInit {
         { key: 'presentUnit',    labelEN: 'Present Unit',        labelBN: 'বর্তমান ইউনিট',          hint: 'Plain',     defaultVisible: true  },
         { key: 'durationOfStay', labelEN: 'Duration of Stay',    labelBN: 'অবস্থানের মেয়াদকাল',     hint: 'Duration',  defaultVisible: true  },
         { key: 'serviceHistory', labelEN: 'Service History',     labelBN: 'চাকরির ইতিহাস',          hint: 'Multiline', defaultVisible: true  },
-        { key: 'rmks',           labelEN: 'Remarks',             labelBN: 'মন্তব্য',                hint: 'Remarks',   defaultVisible: true  },
+        { key: 'rmks',           labelEN: 'Remark',             labelBN: 'মন্তব্য',                hint: 'Remarks',   defaultVisible: true  },
         // ── Opt-in extras (registry FieldKeys) — hidden by default ────────
         { key: 'relieverServiceId',  labelEN: 'Reliever Service ID',labelBN: 'প্রতিস্থাপক সার্ভিস আইডি', hint: 'Plain', defaultVisible: false },
         { key: 'relieverName',       labelEN: 'Reliever Name',      labelBN: 'প্রতিস্থাপক নাম',         hint: 'Plain',    defaultVisible: false },
@@ -136,7 +137,6 @@ export class ReportUnitDurationNominalRollComponent implements OnInit {
         { key: 'memberType',     labelEN: 'Member Type',         labelBN: 'সদস্য ধরন',              hint: 'Plain',     defaultVisible: false },
         { key: 'gender',         labelEN: 'Gender',              labelBN: 'লিঙ্গ',                  hint: 'Plain',     defaultVisible: false },
         { key: 'motherUnit',     labelEN: 'Mother Unit',         labelBN: 'মাতৃ ইউনিট',             hint: 'Plain',     defaultVisible: false },
-        { key: 'rabUnit',        labelEN: 'Battalion',           labelBN: 'ব্যাটালিয়ন',             hint: 'Plain',     defaultVisible: false },
         { key: 'rabUnitHierarchy', labelEN: 'RAB Unit',          labelBN: 'র‍্যাব ইউনিট',           hint: 'Plain',     defaultVisible: false },
         { key: 'dateOfCommission', labelEN: 'Commission Date',   labelBN: 'কমিশন তারিখ',            hint: 'Date',      defaultVisible: false },
         { key: 'joiningInRab',   labelEN: 'RAB Joining Date',    labelBN: 'র‍্যাবে যোগদানের তারিখ',  hint: 'Date',      defaultVisible: false },

@@ -101,6 +101,7 @@ export class ReportRftsCompletionComponent implements OnInit {
         { key: 'corps',                labelEN: 'Corps',            labelBN: 'কোর',             hint: 'Plain',  defaultVisible: true  },
         { key: 'trade',                labelEN: 'Trade',            labelBN: 'ট্রেড',           hint: 'Plain',  defaultVisible: true  },
         { key: 'name',                 labelEN: 'Name',             labelBN: 'নাম',             hint: 'Name',   defaultVisible: true  },
+        { key: 'rabUnit',              labelEN: 'Battalion',        labelBN: 'ব্যাটালিয়ন',     hint: 'Plain',  defaultVisible: false },
         // Single toggle that folds Award + Professional Qualification + Corps
         // INTO the Name cell when ticked. Never renders as its own column —
         // see visibleColumns + nameColumnValue. Default off.
@@ -123,7 +124,6 @@ export class ReportRftsCompletionComponent implements OnInit {
         { key: 'memberType',           labelEN: 'Member Type',      labelBN: 'সদস্য ধরন',       hint: 'Plain',  defaultVisible: false },
         { key: 'gender',               labelEN: 'Gender',           labelBN: 'লিঙ্গ',           hint: 'Plain',  defaultVisible: false },
         { key: 'motherUnit',           labelEN: 'Mother Unit',      labelBN: 'মাতৃ ইউনিট',      hint: 'Plain',  defaultVisible: false },
-        { key: 'rabUnit',              labelEN: 'Battalion',        labelBN: 'ব্যাটালিয়ন',     hint: 'Plain',  defaultVisible: false },
         // Trimmed job hierarchy (Battalion, Wing … deepest level — first two + last). Opt-in.
         { key: 'rabUnitHierarchy',     labelEN: 'RAB Unit',         labelBN: 'র‍্যাব ইউনিট',    hint: 'Plain',  defaultVisible: false },
         { key: 'dateOfCommission',     labelEN: 'Commission Date',  labelBN: 'কমিশন তারিখ',     hint: 'Date',   defaultVisible: false },
@@ -136,7 +136,7 @@ export class ReportRftsCompletionComponent implements OnInit {
         { key: 'maritalStatus',        labelEN: 'Marital Status',   labelBN: 'বৈবাহিক অবস্থা',   hint: 'Plain',  defaultVisible: false },
         { key: 'mobileNo',             labelEN: 'Mobile',           labelBN: 'মোবাইল',          hint: 'Plain',  defaultVisible: false },
         { key: 'email',                labelEN: 'Email',            labelBN: 'ইমেইল',           hint: 'Plain',  defaultVisible: false },
-        { key: 'rmks',                 labelEN: 'Remarks',          labelBN: 'মন্তব্য',          hint: 'Remarks', defaultVisible: true },
+        { key: 'rmks',                 labelEN: 'Remark',          labelBN: 'মন্তব্য',          hint: 'Remarks', defaultVisible: true },
     ];
 
     /** Legacy column key → RftsReportFieldRegistry FieldKey for the request. */

@@ -17,6 +17,7 @@ import { ReportRabRankComponent } from './report-rab-rank/report-rab-rank.compon
 import { ReportCorpsComponent } from './report-corps/report-corps.component';
 import { ReportTradeComponent } from './report-trade/report-trade.component';
 import { SelectModule } from 'primeng/select';
+import { MultiSelectModule } from 'primeng/multiselect';
 import { REPORT_LABELS, type ReportLang } from '@/Core/i18n/report-labels';
 import { CommonCodeService } from '@/services/common-code-service';
 import { ReportService } from '@/services/report.service';
@@ -90,6 +91,7 @@ const BLOOD_GROUP_OPTIONS: { label: string; labelBn: string; value: number }[] =
         FormsModule,
         ButtonModule,
         SelectModule,
+        MultiSelectModule,
         ReportMemberAppointmentComponent,
         ReportBatchCourseComponent,
         ReportEducationComponent,
@@ -144,12 +146,27 @@ export class EmployeeReportsComponent implements OnInit {
     private naCommonCodeIds: number[] = [];
 
     /**
+     * For Corps / Trade reports: the same label (e.g. "Driver") exists as a separate CommonCode
+     * row per mother org. We collapse same-label rows into ONE dropdown option (value = the first
+     * row's CodeId) and remember every underlying CodeId here, keyed by that representative value,
+     * so picking "Driver" returns all of them to the child (same mechanism as the N/A bundle).
+     */
+    private labelBundleIds = new Map<number, number[]>();
+
+    /**
      * Stable, cached array passed to the Corps / Trade child via `[commonCodeIds]`. Recomputed
      * ONLY when the selection or the N/A list changes — never on each change detection cycle.
      * A fresh array per CD tick would flip the input's reference, fire ngOnChanges on the child,
      * trigger load(), and create an infinite request storm.
      */
     selectedCommonCodeIds: number[] = [];
+
+    /**
+     * Trade report only — the representative option values picked in the multi-select.
+     * Each value expands (via labelBundleIds / naCommonCodeIds) into its underlying CodeIds;
+     * the union feeds `selectedCommonCodeIds` passed down to the child.
+     */
+    selectedTradeValues: number[] = [];
 
     /**
      * Status (PostingStatus) dropdown options and selection. Default: Presently Serving.
@@ -210,13 +227,42 @@ export class EmployeeReportsComponent implements OnInit {
 
     onReportTypeChange(): void {
         this.selectedCommonCodeId = null;
+        this.selectedTradeValues = [];
         this.naCommonCodeIds = [];
         this.updateSelectedCommonCodeIds();
         this.loadCommonCodeOptions();
     }
 
+    /** True when the second filter should render as a multi-select (Trade only). */
+    get isTradeMultiSelect(): boolean {
+        return this.reportType === 'trade';
+    }
+
+    /** True when enough is selected to render the child report. */
+    get hasSelection(): boolean {
+        return this.isTradeMultiSelect ? this.selectedTradeValues.length > 0 : this.selectedCommonCodeId != null;
+    }
+
+    /**
+     * Trade multi-select changed — union every picked option's underlying CodeIds
+     * (expanding same-label bundles and the N/A bucket) into selectedCommonCodeIds.
+     */
+    onTradeSelectionChange(): void {
+        const ids: number[] = [];
+        for (const v of this.selectedTradeValues) {
+            if (v === NA_SENTINEL_VALUE) {
+                ids.push(...this.naCommonCodeIds);
+            } else {
+                const bundle = this.labelBundleIds.get(v);
+                ids.push(...(bundle ?? [v]));
+            }
+        }
+        this.selectedCommonCodeIds = Array.from(new Set(ids));
+    }
+
     loadCommonCodeOptions(): void {
         this.naCommonCodeIds = [];
+        this.labelBundleIds.clear();
         if (this.reportType === 'motherOrg') {
             this.commonCodeService.getAllActiveMotherOrgs().subscribe({
                 next: (list: MotherOrganizationModel[]) => {
@@ -246,18 +292,33 @@ export class EmployeeReportsComponent implements OnInit {
                     // a single synthetic option whose value is NA_SENTINEL_VALUE. We remember the
                     // underlying CodeIds so selectedCommonCodeIds can return them to the child component.
                     const naIds: number[] = [];
-                    const nonNa: { label: string; labelBn: string; value: number }[] = [];
+                    // Group non-N/A rows by their (normalised) English label so that the same
+                    // trade/corps appearing once per mother org collapses into a single option.
+                    const groups = new Map<string, { label: string; labelBn: string; codeIds: number[] }>();
                     for (const c of raw) {
                         if (isNALabel(c.codeValueEN) || isNALabel(c.codeValueBN)) {
                             naIds.push(c.codeId);
+                            continue;
+                        }
+                        const label = c.codeValueEN || String(c.codeId);
+                        const key = label.trim().toLowerCase();
+                        const existing = groups.get(key);
+                        if (existing) {
+                            existing.codeIds.push(c.codeId);
                         } else {
-                            nonNa.push({
-                                label: c.codeValueEN || String(c.codeId),
+                            groups.set(key, {
+                                label,
                                 labelBn: c.codeValueBN || c.codeValueEN || String(c.codeId),
-                                value: c.codeId,
+                                codeIds: [c.codeId],
                             });
                         }
                     }
+                    this.labelBundleIds.clear();
+                    const nonNa = Array.from(groups.values()).map((g) => {
+                        const value = g.codeIds[0];
+                        this.labelBundleIds.set(value, g.codeIds);
+                        return { label: g.label, labelBn: g.labelBn, value };
+                    });
                     this.naCommonCodeIds = naIds;
                     this.commonCodeOptions = nonNa;
                     if (naIds.length > 0) {
@@ -294,7 +355,9 @@ export class EmployeeReportsComponent implements OnInit {
         } else if (this.selectedCommonCodeId === NA_SENTINEL_VALUE) {
             this.selectedCommonCodeIds = [...this.naCommonCodeIds];
         } else {
-            this.selectedCommonCodeIds = [this.selectedCommonCodeId];
+            // A non-N/A pick may bundle several same-label CodeIds (one per mother org).
+            const bundle = this.labelBundleIds.get(this.selectedCommonCodeId);
+            this.selectedCommonCodeIds = bundle ? [...bundle] : [this.selectedCommonCodeId];
         }
     }
 
@@ -319,6 +382,14 @@ export class EmployeeReportsComponent implements OnInit {
 
     /** Label of the currently selected common code (language-aware, for child report titles). Handles the synthetic N/A bucket. */
     get selectedCommonCodeLabel(): string {
+        if (this.isTradeMultiSelect) {
+            const names = this.selectedTradeValues.map((v) => {
+                if (v === NA_SENTINEL_VALUE) return 'N/A';
+                const opt = this.commonCodeOptions.find((o) => o.value === v);
+                return opt ? (this.reportLang === 'bn' ? opt.labelBn : opt.label) : '';
+            }).filter(Boolean);
+            return names.join(', ');
+        }
         if (this.selectedCommonCodeId == null) return '';
         if (this.selectedCommonCodeId === NA_SENTINEL_VALUE) return 'N/A';
         const opt = this.commonCodeOptions.find((o) => o.value === this.selectedCommonCodeId);

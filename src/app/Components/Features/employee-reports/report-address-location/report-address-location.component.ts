@@ -180,6 +180,7 @@ export class ReportAddressLocationComponent implements OnInit {
         { key: 'corps',        labelEN: 'Corps',         labelBN: 'কোর',             hint: 'Plain',              defaultVisible: true },
         { key: 'trade',        labelEN: 'Trade',         labelBN: 'ট্রেড',            hint: 'Plain',              defaultVisible: true },
         { key: 'name',         labelEN: 'Name',          labelBN: 'নাম',             hint: 'Plain',              defaultVisible: true },
+        { key: 'rabUnit',           labelEN: 'Battalion',        labelBN: 'ব্যাটালিয়ন',        hint: 'Plain', defaultVisible: false },
         // Single toggle that folds Award + Professional Qualification + Corps
         // INTO the Name cell when ticked. Never renders as its own column —
         // see visibleColumns + nameColumnValue. Default off.
@@ -196,7 +197,7 @@ export class ReportAddressLocationComponent implements OnInit {
         { key: 'locationType', labelEN: 'Address Type',  labelBN: 'ঠিকানার ধরন',     hint: 'LocationType',       defaultVisible: false },
         { key: 'address',      labelEN: 'Address',       labelBN: 'ঠিকানা',         hint: 'AddressComposite',   defaultVisible: true },
         { key: 'status',       labelEN: 'Status',        labelBN: 'অবস্থা',          hint: 'Status',             defaultVisible: false },
-        { key: 'remarks',      labelEN: 'Remarks',       labelBN: 'মন্তব্য',         hint: 'Remarks',            defaultVisible: true },
+        { key: 'remarks',      labelEN: 'Remark',        labelBN: 'মন্তব্য',         hint: 'Remarks',            defaultVisible: true },
         // Extras the user can add — already in the AddressLocationReportRow
         // shape; just not shown by default.
         // Service-side extras (data comes from the dynamic backend via
@@ -213,7 +214,6 @@ export class ReportAddressLocationComponent implements OnInit {
         { key: 'tradeRemarks',      labelEN: 'Trade Remarks',    labelBN: 'ট্রেড মন্তব্য',      hint: 'Plain', defaultVisible: false },
         { key: 'gender',            labelEN: 'Gender',           labelBN: 'লিঙ্গ',             hint: 'Plain', defaultVisible: false },
         { key: 'motherUnit',        labelEN: 'Last Unit',        labelBN: 'শেষ ইউনিট',         hint: 'Plain', defaultVisible: false },
-        { key: 'rabUnit',           labelEN: 'Battalion',        labelBN: 'ব্যাটালিয়ন',        hint: 'Plain', defaultVisible: false },
         // Trimmed job hierarchy (Battalion, Wing … deepest level — first two + last). Opt-in.
         { key: 'rabUnitHierarchy',  labelEN: 'RAB Unit',         labelBN: 'র‍্যাব ইউনিট',     hint: 'Plain', defaultVisible: false },
         { key: 'dateOfCommission',  labelEN: 'Commission Date',  labelBN: 'কমিশন তারিখ',       hint: 'Plain', defaultVisible: false },

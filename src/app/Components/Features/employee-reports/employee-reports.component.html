@@ -22,16 +22,31 @@
             <div class="report-type-field">
                 <div class="rt-label">{{ commonCodeDropdownLabelEn }}</div>
                 <div class="rt-select-wrap">
-                    <p-select
-                        [options]="commonCodeOptions"
-                        [(ngModel)]="selectedCommonCodeId"
-                        (ngModelChange)="onCommonCodeChange()"
-                        optionLabel="label"
-                        optionValue="value"
-                        [inputId]="'report-commoncode-select'"
-                        [placeholder]="commonCodePlaceholderEn"
-                        appendTo="body"
-                        [filter]="true" />
+                    @if (isTradeMultiSelect) {
+                        <p-multiSelect
+                            [options]="commonCodeOptions"
+                            [(ngModel)]="selectedTradeValues"
+                            (ngModelChange)="onTradeSelectionChange()"
+                            optionLabel="label"
+                            optionValue="value"
+                            [inputId]="'report-commoncode-select'"
+                            [placeholder]="commonCodePlaceholderEn"
+                            appendTo="body"
+                            [filter]="true"
+                            [virtualScroll]="true"
+                            [virtualScrollItemSize]="38" />
+                    } @else {
+                        <p-select
+                            [options]="commonCodeOptions"
+                            [(ngModel)]="selectedCommonCodeId"
+                            (ngModelChange)="onCommonCodeChange()"
+                            optionLabel="label"
+                            optionValue="value"
+                            [inputId]="'report-commoncode-select'"
+                            [placeholder]="commonCodePlaceholderEn"
+                            appendTo="body"
+                            [filter]="true" />
+                    }
                 </div>
             </div>
             <div class="report-type-field">
@@ -56,7 +71,7 @@
         </div>
     </div>
 
-    @if (selectedCommonCodeId != null) {
+    @if (hasSelection) {
         <div>
             @switch (reportType) {
                 @case ('memberAppointment') {

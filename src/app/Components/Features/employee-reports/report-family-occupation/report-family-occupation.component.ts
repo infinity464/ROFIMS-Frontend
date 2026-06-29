@@ -156,6 +156,7 @@ export class ReportFamilyOccupationComponent implements OnInit {
         { key: 'trade',              labelEN: 'Trade',                labelBN: 'ট্রেড',             hint: 'Plain',                 defaultVisible: true  },
         // Plain employee name (just the name — no SVC·Rank·Org meta line).
         { key: 'name',               labelEN: 'Name',                 labelBN: 'নাম',               hint: 'Name',                  defaultVisible: true  },
+        { key: 'rabUnit',            labelEN: 'Battalion',            labelBN: 'ব্যাটালিয়ন',        hint: 'Plain',                 defaultVisible: false },
         // Single toggle that folds Award + Professional Qualification + Corps
         // INTO the EMPLOYEE Name cell when ticked. Never renders as its own
         // column — see visibleColumns + nameColumnValue. Default off.
@@ -187,7 +188,6 @@ export class ReportFamilyOccupationComponent implements OnInit {
         { key: 'tradeRemarks',       labelEN: 'Trade Remarks',        labelBN: 'ট্রেড মন্তব্য',      hint: 'Plain',                 defaultVisible: false },
         { key: 'gender',             labelEN: 'Gender',               labelBN: 'লিঙ্গ',             hint: 'Plain',                 defaultVisible: false },
         { key: 'motherUnit',         labelEN: 'Last Unit',            labelBN: 'শেষ ইউনিট',         hint: 'Plain',                 defaultVisible: false },
-        { key: 'rabUnit',            labelEN: 'Battalion',            labelBN: 'ব্যাটালিয়ন',        hint: 'Plain',                 defaultVisible: false },
         // Full job hierarchy (Battalion › Wing › Branch › … ). Opt-in; trimmed.
         { key: 'rabUnitHierarchy',   labelEN: 'RAB Unit',             labelBN: 'র‍্যাব ইউনিট',      hint: 'Plain',                 defaultVisible: false },
         { key: 'dateOfCommission',   labelEN: 'Commission Date',      labelBN: 'কমিশন তারিখ',        hint: 'Plain',                 defaultVisible: false },
