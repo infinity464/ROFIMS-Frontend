@@ -1136,7 +1136,9 @@ export class Dashboard implements OnInit, OnDestroy {
         this.themeObserver.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
 
         // Authorized & Held manpower pies — full force (no filter on the dashboard).
-        this.statisticsSvc.getManpowerSummary(null).subscribe({
+        // Authorized Strength is sourced from the equivalent-name man-power setup;
+        // Held is computed identically by this endpoint, so one call drives both pies.
+        this.statisticsSvc.getManpowerSummaryByEquivalentName(null).subscribe({
             next: (res: ManpowerSummaryResponse) => this.buildManpowerCharts(res.rows ?? []),
             error: () => this.buildManpowerCharts([])
         });

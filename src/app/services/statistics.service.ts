@@ -285,10 +285,24 @@ export class StatisticsService {
         return this.http.get<ManpowerSummaryResponse>(`${this.apiUrl}/GetManpowerSummary`, { params });
     }
 
+    /** Same report, but Auth is sourced from the equivalent-name man-power setup. */
+    getManpowerSummaryByEquivalentName(rabCodeId?: number | null): Observable<ManpowerSummaryResponse> {
+        const params: any = {};
+        if (rabCodeId != null) params.rabCodeId = rabCodeId;
+        return this.http.get<ManpowerSummaryResponse>(`${this.apiUrl}/GetManpowerSummaryByEquivalentName`, { params });
+    }
+
     getRankWiseManpower(rabCodeId?: number | null): Observable<RankWiseManpowerResponse> {
         const params: any = {};
         if (rabCodeId != null) params.rabCodeId = rabCodeId;
         return this.http.get<RankWiseManpowerResponse>(`${this.apiUrl}/GetRankWiseManpower`, { params });
+    }
+
+    /** Equivalent-name variant: rows are EquivalentName, Auth from the equivalent-name man-power setup. */
+    getEquivalentNameWiseManpower(rabCodeId?: number | null): Observable<RankWiseManpowerResponse> {
+        const params: any = {};
+        if (rabCodeId != null) params.rabCodeId = rabCodeId;
+        return this.http.get<RankWiseManpowerResponse>(`${this.apiUrl}/GetEquivalentNameWiseManpower`, { params });
     }
 
     getMotherOrgOptions(): Observable<MotherUnitOrgOption[]> {
@@ -303,11 +317,29 @@ export class StatisticsService {
         );
     }
 
+    /** Same report, but columns are Equivalent Name (the equivalent-name man-power setup). */
+    getMotherUnitWiseManpowerByEquivalentName(orgId: number, rabCodeId?: number | null): Observable<MotherUnitWiseManpowerResponse> {
+        const params: any = { orgId };
+        if (rabCodeId != null) params.rabCodeId = rabCodeId;
+        return this.http.get<MotherUnitWiseManpowerResponse>(
+            `${this.apiUrl}/GetMotherUnitWiseManpowerByEquivalentName`, { params }
+        );
+    }
+
     getCorpsWiseManpower(orgId: number, rabCodeId?: number | null): Observable<CorpsWiseManpowerResponse> {
         const params: any = { orgId };
         if (rabCodeId != null) params.rabCodeId = rabCodeId;
         return this.http.get<CorpsWiseManpowerResponse>(
             `${this.apiUrl}/GetCorpsWiseManpower`, { params }
+        );
+    }
+
+    /** Same report, but columns are Equivalent Name (the equivalent-name man-power setup). */
+    getCorpsWiseManpowerByEquivalentName(orgId: number, rabCodeId?: number | null): Observable<CorpsWiseManpowerResponse> {
+        const params: any = { orgId };
+        if (rabCodeId != null) params.rabCodeId = rabCodeId;
+        return this.http.get<CorpsWiseManpowerResponse>(
+            `${this.apiUrl}/GetCorpsWiseManpowerByEquivalentName`, { params }
         );
     }
 
@@ -326,10 +358,27 @@ export class StatisticsService {
         );
     }
 
+    /** Same report, but columns are Equivalent Name (the equivalent-name man-power setup). */
+    getTradeWiseManpowerByEquivalentName(orgId: number, corpsId?: number, rabCodeId?: number | null): Observable<TradeWiseManpowerResponse> {
+        const params: any = { orgId };
+        if (corpsId != null) params.corpsId = corpsId;
+        if (rabCodeId != null) params.rabCodeId = rabCodeId;
+        return this.http.get<TradeWiseManpowerResponse>(
+            `${this.apiUrl}/GetTradeWiseManpowerByEquivalentName`, { params }
+        );
+    }
+
     getMemberTypeWiseManpower(rabCodeId?: number | null): Observable<MemberTypeWiseManpowerResponse> {
         const params: any = {};
         if (rabCodeId != null) params.rabCodeId = rabCodeId;
         return this.http.get<MemberTypeWiseManpowerResponse>(`${this.apiUrl}/GetMemberTypeWiseManpower`, { params });
+    }
+
+    /** Same report, but Auth is sourced from the equivalent-name man-power setup. */
+    getMemberTypeWiseManpowerByEquivalentName(rabCodeId?: number | null): Observable<MemberTypeWiseManpowerResponse> {
+        const params: any = {};
+        if (rabCodeId != null) params.rabCodeId = rabCodeId;
+        return this.http.get<MemberTypeWiseManpowerResponse>(`${this.apiUrl}/GetMemberTypeWiseManpowerByEquivalentName`, { params });
     }
 
     getUnitRankWiseManpower(
@@ -345,6 +394,23 @@ export class StatisticsService {
         }
         return this.http.get<UnitRankWiseManpowerResponse>(
             `${this.apiUrl}/GetUnitRankWiseManpower`, { params }
+        );
+    }
+
+    /** Same report, but Auth is sourced from the equivalent-name man-power setup. */
+    getUnitRankWiseManpowerByEquivalentName(
+        excludeEquivalentNames?: string,
+        rabUnitId?: number | null,
+        mergeMemberTypeIds?: number[] | null
+    ): Observable<UnitRankWiseManpowerResponse> {
+        const params: any = {};
+        if (excludeEquivalentNames != null) params.excludeEquivalentNames = excludeEquivalentNames;
+        if (rabUnitId != null) params.rabUnitId = rabUnitId;
+        if (mergeMemberTypeIds && mergeMemberTypeIds.length > 0) {
+            params.mergeMemberTypeIds = mergeMemberTypeIds.join(',');
+        }
+        return this.http.get<UnitRankWiseManpowerResponse>(
+            `${this.apiUrl}/GetUnitRankWiseManpowerByEquivalentName`, { params }
         );
     }
 

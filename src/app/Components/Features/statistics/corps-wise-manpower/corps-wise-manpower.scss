@@ -30,11 +30,42 @@
     flex-wrap: wrap;
 }
 
+/* Left group: org multiselect + column-visibility toggles */
+.report-toolbar-left {
+    display: flex;
+    align-items: flex-end;
+    gap: 0.75rem;
+    flex: 1;
+    flex-wrap: wrap;
+}
+
 /* Org filter dropdown */
 .org-filter-wrap {
     flex: 1;
     min-width: 220px;
     max-width: 400px;
+}
+
+/* Show/Hide toggle field (label + select) */
+.col-vis-field {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    flex-shrink: 0;
+}
+
+.col-vis-label {
+    font-size: 0.7rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    color: var(--text-color-secondary, #64748b);
+    white-space: nowrap;
+}
+
+::ng-deep .col-vis-select {
+    width: 170px;
+    font-size: 0.82rem;
 }
 
 ::ng-deep .org-filter-select {

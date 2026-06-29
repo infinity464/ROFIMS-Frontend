@@ -40,10 +40,41 @@
 }
 
 /* Org filter dropdown */
+/* Left group: org multiselect + column-visibility toggles */
+.report-toolbar-left {
+    display: flex;
+    align-items: flex-end;
+    gap: 0.75rem;
+    flex: 1;
+    flex-wrap: wrap;
+}
+
 .org-filter-wrap {
     min-width: 220px;
     max-width: 340px;
     flex: 1;
+}
+
+/* Show/Hide toggle field (label + checkbox multiselect) */
+.col-vis-field {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    flex-shrink: 0;
+}
+
+.col-vis-label {
+    font-size: 0.7rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    color: var(--text-color-secondary, #64748b);
+    white-space: nowrap;
+}
+
+::ng-deep .col-vis-select {
+    width: 170px;
+    font-size: 0.82rem;
 }
 
 /* Corps filter dropdown */

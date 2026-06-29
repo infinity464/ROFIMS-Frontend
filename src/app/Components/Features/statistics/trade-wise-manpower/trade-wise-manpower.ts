@@ -59,6 +59,68 @@ export class TradeWiseManpowerComponent implements OnInit {
     filterRabCodeId: number | null = null;
     filterLabel: string | null = null;
 
+    /** Checked Trade ids (rows shown). Rebuilt when org selection/data changes. */
+    selectedTradeIds: number[] = [];
+    /** Checked rank ids (columns shown). Rebuilt when org selection/data changes. */
+    selectedRankIds: number[] = [];
+
+    /** Distinct Trades across all displayed orgs — options for the checkbox list. */
+    get tradeVisOptions(): { label: string; value: number }[] {
+        const seen = new Map<number, { label: string; value: number }>();
+        for (const org of this.filteredOrgs) {
+            for (const t of org.trades) {
+                if (!seen.has(t.tradeId)) {
+                    seen.set(t.tradeId, { value: t.tradeId, label: this.lang === 'en' ? t.tradeName : (t.tradeNameBN || t.tradeName) });
+                }
+            }
+        }
+        return [...seen.values()];
+    }
+
+    /** Distinct ranks across all displayed orgs — options for the checkbox list. */
+    get rankVisOptions(): { label: string; value: number }[] {
+        const seen = new Map<number, { label: string; value: number }>();
+        for (const org of this.filteredOrgs) {
+            for (const r of org.ranks) {
+                if (!seen.has(r.rankId)) {
+                    seen.set(r.rankId, { value: r.rankId, label: this.lang === 'en' ? r.rankName : (r.rankNameBN || r.rankName) });
+                }
+            }
+        }
+        return [...seen.values()];
+    }
+
+    /** Default every Trade and rank to checked when the displayed data changes. */
+    private resetVisibilitySelections(): void {
+        this.selectedTradeIds = this.tradeVisOptions.map(o => o.value);
+        this.selectedRankIds = this.rankVisOptions.map(o => o.value);
+    }
+
+    /** Visible rows/columns per org after applying the checkbox filters. */
+    visibleTrades(org: TradeOrgBlock): TradeRow[] {
+        return org.trades.filter(t => this.selectedTradeIds.includes(t.tradeId));
+    }
+    visibleRanks(org: TradeOrgBlock): MotherUnitRankColumn[] {
+        return org.ranks.filter(r => this.selectedRankIds.includes(r.rankId));
+    }
+
+    /** Row total over the CHECKED ranks only (adjusts as columns are toggled). */
+    rowTotal(org: TradeOrgBlock, t: TradeRow): number {
+        return this.visibleRanks(org).reduce((s, r) => s + this.cellValue(t, r.rankId), 0);
+    }
+    /** Column subtotal over the CHECKED trade rows only. */
+    colSubtotal(org: TradeOrgBlock, rankId: number): number {
+        return this.visibleTrades(org).reduce((s, t) => s + this.cellValue(t, rankId), 0);
+    }
+    /** Org grand total = sum of every visible cell (checked trades × checked ranks). */
+    orgGrandTotal(org: TradeOrgBlock): number {
+        return this.visibleTrades(org).reduce((s, t) => s + this.rowTotal(org, t), 0);
+    }
+    /** Grand total across all displayed orgs, respecting the checkbox filters. */
+    get visibleGrandTotal(): number {
+        return this.filteredOrgs.reduce((s, o) => s + this.orgGrandTotal(o), 0);
+    }
+
     /** Names of the RAB Units the user is restricted to. null/empty = full access. */
     accessibleRabUnitNames: string[] | null = null;
     accessibleRabUnitNamesBN: string[] | null = null;
@@ -139,6 +201,8 @@ export class TradeWiseManpowerComponent implements OnInit {
         if (ids.length === 0) {
             this.filteredOrgs = [];
             this.grandTotal = 0;
+            this.selectedTradeIds = [];
+            this.selectedRankIds = [];
             this.accessibleRabUnitNames = null;
             this.accessibleRabUnitNamesBN = null;
             this.accessibleMemberTypeNames = null;
@@ -163,6 +227,7 @@ export class TradeWiseManpowerComponent implements OnInit {
                 this.accessibleMemberTypeNames   = first?.accessibleMemberTypeNames   ?? null;
                 this.accessibleMemberTypeNamesBN = first?.accessibleMemberTypeNamesBN ?? null;
                 this.grandTotal = this.filteredOrgs.reduce((sum, o) => sum + (o.grandTotal ?? 0), 0);
+                this.resetVisibilitySelections();
                 this.loading = false;
             },
             error: () => { this.loading = false; }
@@ -214,23 +279,23 @@ export class TradeWiseManpowerComponent implements OnInit {
                 columns: [
                     this.serLabel,
                     this.tradeColLabel,
-                    ...org.ranks.map(r => this.rankLabel(r)),
+                    ...this.visibleRanks(org).map(r => this.rankLabel(r)),
                     this.totalLabel
                 ],
-                rows: org.trades.map((t, i) => [
+                rows: this.visibleTrades(org).map((t, i) => [
                     this.fmt(i + 1),
                     this.tradeNameLabel(t),
-                    ...org.ranks.map(r => this.fmt(this.cellValue(t, r.rankId))),
-                    this.fmt(t.total)
+                    ...this.visibleRanks(org).map(r => this.fmt(this.cellValue(t, r.rankId))),
+                    this.fmt(this.rowTotal(org, t))
                 ]),
                 subtotalRow: [
                     '',
                     this.totalLabel,
-                    ...org.ranks.map(r => this.fmt(this.columnTotal(org, r.rankId))),
-                    this.fmt(org.grandTotal)
+                    ...this.visibleRanks(org).map(r => this.fmt(this.colSubtotal(org, r.rankId))),
+                    this.fmt(this.orgGrandTotal(org))
                 ]
             })),
-            grandTotalRow: ['', this.grandTotalLabel, this.fmt(this.grandTotal)],
+            grandTotalRow: ['', this.grandTotalLabel, this.fmt(this.visibleGrandTotal)],
             showPageNumbers: true,
             filename: 'trade-wise-manpower',
             filterLines: scope ? [scope] : undefined,
@@ -251,23 +316,23 @@ export class TradeWiseManpowerComponent implements OnInit {
                     const cols = [
                         { label: this.serLabel, align: 'center' as const },
                         { label: this.tradeColLabel, align: 'left' as const },
-                        ...org.ranks.map(r => ({ label: this.rankLabel(r), align: 'center' as const, mono: true })),
+                        ...this.visibleRanks(org).map(r => ({ label: this.rankLabel(r), align: 'center' as const, mono: true })),
                         { label: this.totalLabel, align: 'center' as const, mono: true }
                     ];
                     return {
                         title: this.orgLabel(org),
                         columns: cols,
-                        rows: org.trades.map((t, i) => [
+                        rows: this.visibleTrades(org).map((t, i) => [
                             this.fmt(i + 1),
                             this.tradeNameLabel(t),
-                            ...org.ranks.map(r => this.fmt(this.cellValue(t, r.rankId))),
-                            this.fmt(t.total)
+                            ...this.visibleRanks(org).map(r => this.fmt(this.cellValue(t, r.rankId))),
+                            this.fmt(this.rowTotal(org, t))
                         ]),
                         totalRow: [
                             '',
                             this.totalLabel,
-                            ...org.ranks.map(r => this.fmt(this.columnTotal(org, r.rankId))),
-                            this.fmt(org.grandTotal)
+                            ...this.visibleRanks(org).map(r => this.fmt(this.colSubtotal(org, r.rankId))),
+                            this.fmt(this.orgGrandTotal(org))
                         ]
                     };
                 })

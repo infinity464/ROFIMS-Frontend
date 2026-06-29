@@ -15,25 +15,29 @@ import {
     StatisticsService,
     type MotherUnitOrgOption,
     type MotherUnitRankColumn,
-    type CorpsRow,
-    type CorpsWiseManpowerResponse
+    type TradeRow,
+    type TradeWiseManpowerResponse
 } from '@/services/statistics.service';
 import { OrgTreeFilterComponent } from '../shared/org-tree-filter/org-tree-filter.component';
 import { RabReportPrintService } from '../shared/rab-report-print.service';
 
 type Lang = 'en' | 'bn';
 
-/** One mother org's data block; alias of the per-org backend response for clarity. */
-type CorpsOrgBlock = CorpsWiseManpowerResponse;
+type TradeOrgBlock = TradeWiseManpowerResponse;
 
+/**
+ * Equivalent-name variant of the trade-wise manpower report. Identical to
+ * TradeWiseManpowerComponent except the columns are EquivalentName (the equivalent-name
+ * man-power setup) instead of MotherOrgRank. Reuses the original template/styles.
+ */
 @Component({
-    selector: 'app-corps-wise-manpower',
+    selector: 'app-trade-wise-equivalent-manpower',
     standalone: true,
     imports: [CommonModule, FormsModule, MultiSelectModule, OrgTreeFilterComponent],
-    templateUrl: './corps-wise-manpower.html',
-    styleUrl: './corps-wise-manpower.scss'
+    templateUrl: '../trade-wise-manpower/trade-wise-manpower.html',
+    styleUrl: '../trade-wise-manpower/trade-wise-manpower.scss'
 })
-export class CorpsWiseManpowerComponent implements OnInit {
+export class TradeWiseEquivalentManpowerComponent implements OnInit {
     canInsert = true;
     canUpdate = true;
     canDelete = true;
@@ -44,40 +48,33 @@ export class CorpsWiseManpowerComponent implements OnInit {
     exporting = false;
     exportDropdownOpen = false;
 
-    /** All mother orgs available to the user (raw dropdown options). */
     orgOptions: MotherUnitOrgOption[] = [];
-    /** Multi-select binding: empty array = nothing loaded yet (shows empty state). */
     selectedOrgIds: number[] = [];
 
-    /** Currently displayed blocks — only orgs the user explicitly selected. */
-    filteredOrgs: CorpsOrgBlock[] = [];
+    filteredOrgs: TradeOrgBlock[] = [];
 
-    /** Sum of every filtered org's grandTotal — single number because rank columns vary per org. */
     grandTotal = 0;
 
-    /** Org-tree node filter (Unit/Wing/Branch/…) — scopes Held server-side. */
     filterRabCodeId: number | null = null;
     filterLabel: string | null = null;
 
-    /** Checked Regiment/Corps ids (rows shown). Rebuilt when org selection/data changes. */
-    selectedCorpsIds: number[] = [];
-    /** Checked rank ids (columns shown). Rebuilt when org selection/data changes. */
+    /** Checked Trade ids (rows shown). */
+    selectedTradeIds: number[] = [];
+    /** Checked equivalent-name column ids (columns shown). */
     selectedRankIds: number[] = [];
 
-    /** Distinct Regiment/Corps across all displayed orgs — options for the checkbox list. */
-    get corpsVisOptions(): { label: string; value: number }[] {
+    get tradeVisOptions(): { label: string; value: number }[] {
         const seen = new Map<number, { label: string; value: number }>();
         for (const org of this.filteredOrgs) {
-            for (const c of org.corps) {
-                if (!seen.has(c.corpsId)) {
-                    seen.set(c.corpsId, { value: c.corpsId, label: this.lang === 'en' ? c.corpsName : (c.corpsNameBN || c.corpsName) });
+            for (const t of org.trades) {
+                if (!seen.has(t.tradeId)) {
+                    seen.set(t.tradeId, { value: t.tradeId, label: this.lang === 'en' ? t.tradeName : (t.tradeNameBN || t.tradeName) });
                 }
             }
         }
         return [...seen.values()];
     }
 
-    /** Distinct ranks across all displayed orgs — options for the checkbox list. */
     get rankVisOptions(): { label: string; value: number }[] {
         const seen = new Map<number, { label: string; value: number }>();
         for (const org of this.filteredOrgs) {
@@ -90,41 +87,33 @@ export class CorpsWiseManpowerComponent implements OnInit {
         return [...seen.values()];
     }
 
-    /** Default every Regiment/Corps and rank to checked when the displayed data changes. */
     private resetVisibilitySelections(): void {
-        this.selectedCorpsIds = this.corpsVisOptions.map(o => o.value);
+        this.selectedTradeIds = this.tradeVisOptions.map(o => o.value);
         this.selectedRankIds = this.rankVisOptions.map(o => o.value);
     }
 
-    /** Visible rows/columns per org after applying the checkbox filters. */
-    visibleCorps(org: CorpsOrgBlock): CorpsRow[] {
-        return org.corps.filter(c => this.selectedCorpsIds.includes(c.corpsId));
+    visibleTrades(org: TradeOrgBlock): TradeRow[] {
+        return org.trades.filter(t => this.selectedTradeIds.includes(t.tradeId));
     }
-    visibleRanks(org: CorpsOrgBlock): MotherUnitRankColumn[] {
+    visibleRanks(org: TradeOrgBlock): MotherUnitRankColumn[] {
         return org.ranks.filter(r => this.selectedRankIds.includes(r.rankId));
     }
 
-    /** Row total over the CHECKED ranks only (adjusts as columns are toggled). */
-    rowTotal(org: CorpsOrgBlock, c: CorpsRow): number {
-        return this.visibleRanks(org).reduce((s, r) => s + this.cellValue(c, r.rankId), 0);
+    rowTotal(org: TradeOrgBlock, t: TradeRow): number {
+        return this.visibleRanks(org).reduce((s, r) => s + this.cellValue(t, r.rankId), 0);
     }
-    /** Column subtotal over the CHECKED corps rows only. */
-    colSubtotal(org: CorpsOrgBlock, rankId: number): number {
-        return this.visibleCorps(org).reduce((s, c) => s + this.cellValue(c, rankId), 0);
+    colSubtotal(org: TradeOrgBlock, rankId: number): number {
+        return this.visibleTrades(org).reduce((s, t) => s + this.cellValue(t, rankId), 0);
     }
-    /** Org grand total = sum of every visible cell (checked corps × checked ranks). */
-    orgGrandTotal(org: CorpsOrgBlock): number {
-        return this.visibleCorps(org).reduce((s, c) => s + this.rowTotal(org, c), 0);
+    orgGrandTotal(org: TradeOrgBlock): number {
+        return this.visibleTrades(org).reduce((s, t) => s + this.rowTotal(org, t), 0);
     }
-    /** Grand total across all displayed orgs, respecting the checkbox filters. */
     get visibleGrandTotal(): number {
         return this.filteredOrgs.reduce((s, o) => s + this.orgGrandTotal(o), 0);
     }
 
-    /** Names of the RAB Units the user is restricted to. null/empty = full access. */
     accessibleRabUnitNames: string[] | null = null;
     accessibleRabUnitNamesBN: string[] | null = null;
-    /** Names of the Member Types the user is restricted to. null/empty = full access on this axis. */
     accessibleMemberTypeNames: string[] | null = null;
     accessibleMemberTypeNamesBN: string[] | null = null;
 
@@ -147,9 +136,6 @@ export class CorpsWiseManpowerComponent implements OnInit {
         private rabPrint: RabReportPrintService
     ) {}
 
-    @HostListener('document:click')
-    onDocumentClick(): void { this.exportDropdownOpen = false; }
-
     onOrgTreeFilter(e: { codeId: number | null; label: string | null }): void {
         this.filterRabCodeId = e.codeId;
         this.filterLabel = e.label;
@@ -159,7 +145,6 @@ export class CorpsWiseManpowerComponent implements OnInit {
     private buildCriteriaItems(): { label: string; value: string }[] {
         const bn = this.lang === 'bn';
         const items: { label: string; value: string }[] = [];
-        // Organization first.
         const orgNames = this.filteredOrgs.map(o => this.orgLabel(o));
         if (orgNames.length) items.push({ label: bn ? 'বাহিনী' : 'ORGANIZATION', value: orgNames.join(', ') });
         if (this.filterLabel) items.push({ label: bn ? 'অফিস' : 'OFFICE', value: this.filterLabel });
@@ -171,6 +156,9 @@ export class CorpsWiseManpowerComponent implements OnInit {
         return items;
     }
 
+    @HostListener('document:click')
+    onDocumentClick(): void { this.exportDropdownOpen = false; }
+
     ngOnInit(): void {
         const _perms = this._userMenuService.getPermissionsByRoute(this._router.url);
         this.canInsert = _perms.canInsert;
@@ -180,7 +168,6 @@ export class CorpsWiseManpowerComponent implements OnInit {
         this.loadOrgOptions();
     }
 
-    /** Loads the dropdown options only — data is fetched on-demand when the user selects orgs. */
     private loadOrgOptions(): void {
         this.loadingOrgs = true;
         this.statisticsService.getMotherOrgOptions().subscribe({
@@ -192,16 +179,12 @@ export class CorpsWiseManpowerComponent implements OnInit {
         });
     }
 
-    /**
-     * Multi-select changed: fetch data only for the currently selected orgs.
-     * Empty selection clears the report (no auto-load-all).
-     */
     onOrgFilterChange(): void {
         const ids = this.selectedOrgIds ?? [];
         if (ids.length === 0) {
             this.filteredOrgs = [];
             this.grandTotal = 0;
-            this.selectedCorpsIds = [];
+            this.selectedTradeIds = [];
             this.selectedRankIds = [];
             this.accessibleRabUnitNames = null;
             this.accessibleRabUnitNamesBN = null;
@@ -212,15 +195,14 @@ export class CorpsWiseManpowerComponent implements OnInit {
         this.loading = true;
         forkJoin(
             ids.map(id =>
-                this.statisticsService.getCorpsWiseManpower(id, this.filterRabCodeId).pipe(
-                    catchError(() => of(null as CorpsWiseManpowerResponse | null))
+                this.statisticsService.getTradeWiseManpowerByEquivalentName(id, undefined, this.filterRabCodeId).pipe(
+                    catchError(() => of(null as TradeWiseManpowerResponse | null))
                 )
             )
         ).subscribe({
             next: (results) => {
                 this.filteredOrgs = (results ?? [])
-                    .filter((r): r is CorpsWiseManpowerResponse => r != null);
-                // RAB-unit scope is the same across calls — take it from the first non-null response.
+                    .filter((r): r is TradeWiseManpowerResponse => r != null);
                 const first = this.filteredOrgs[0];
                 this.accessibleRabUnitNames      = first?.accessibleRabUnitNames      ?? null;
                 this.accessibleRabUnitNamesBN    = first?.accessibleRabUnitNamesBN    ?? null;
@@ -234,11 +216,6 @@ export class CorpsWiseManpowerComponent implements OnInit {
         });
     }
 
-    /**
-     * Combined scope line shown under the report title when EITHER axis is
-     * restricted. Either side is omitted when that axis is unrestricted.
-     * Returns null when the caller has no restrictions at all.
-     */
     get scopeLine(): string | null {
         const bn = this.lang === 'bn';
         const unitNames = (bn ? this.accessibleRabUnitNamesBN : this.accessibleRabUnitNames)
@@ -267,9 +244,6 @@ export class CorpsWiseManpowerComponent implements OnInit {
     async exportAs(type: 'pdf' | 'print' | 'word' | 'excel'): Promise<void> {
         this.exportDropdownOpen = false;
 
-        // All four formats share one source-of-truth: the same sectioned-Word config.
-        // PDF + Print follow movement-preview/mo's pattern — build the docx, send
-        // it to /Document/ConvertToPdf, then save (PDF) or open in a new tab (Print).
         const scope = this.scopeLine;
         const sectionedConfig = {
             title: this.titleLabel,
@@ -279,15 +253,15 @@ export class CorpsWiseManpowerComponent implements OnInit {
                 title: this.orgLabel(org),
                 columns: [
                     this.serLabel,
-                    this.corpsColLabel,
+                    this.tradeColLabel,
                     ...this.visibleRanks(org).map(r => this.rankLabel(r)),
                     this.totalLabel
                 ],
-                rows: this.visibleCorps(org).map((c, i) => [
+                rows: this.visibleTrades(org).map((t, i) => [
                     this.fmt(i + 1),
-                    this.corpsNameLabel(c),
-                    ...this.visibleRanks(org).map(r => this.fmt(this.cellValue(c, r.rankId))),
-                    this.fmt(this.rowTotal(org, c))
+                    this.tradeNameLabel(t),
+                    ...this.visibleRanks(org).map(r => this.fmt(this.cellValue(t, r.rankId))),
+                    this.fmt(this.rowTotal(org, t))
                 ]),
                 subtotalRow: [
                     '',
@@ -298,15 +272,13 @@ export class CorpsWiseManpowerComponent implements OnInit {
             })),
             grandTotalRow: ['', this.grandTotalLabel, this.fmt(this.visibleGrandTotal)],
             showPageNumbers: true,
-            filename: 'corps-wise-manpower',
+            filename: 'trade-wise-equivalent-manpower',
             filterLines: scope ? [scope] : undefined,
             landscape: true,
             rabLetterhead: true,
             criteriaItems: this.buildCriteriaItems()
         };
 
-        // Print uses the shared RAB letterhead (frontend only). Matrix mode: each
-        // org renders its own table (its rank columns differ).
         if (type === 'print') {
             this.rabPrint.print({
                 lang: this.lang,
@@ -316,18 +288,18 @@ export class CorpsWiseManpowerComponent implements OnInit {
                 sections: this.filteredOrgs.map(org => {
                     const cols = [
                         { label: this.serLabel, align: 'center' as const },
-                        { label: this.corpsColLabel, align: 'left' as const },
+                        { label: this.tradeColLabel, align: 'left' as const },
                         ...this.visibleRanks(org).map(r => ({ label: this.rankLabel(r), align: 'center' as const, mono: true })),
                         { label: this.totalLabel, align: 'center' as const, mono: true }
                     ];
                     return {
                         title: this.orgLabel(org),
                         columns: cols,
-                        rows: this.visibleCorps(org).map((c, i) => [
+                        rows: this.visibleTrades(org).map((t, i) => [
                             this.fmt(i + 1),
-                            this.corpsNameLabel(c),
-                            ...this.visibleRanks(org).map(r => this.fmt(this.cellValue(c, r.rankId))),
-                            this.fmt(this.rowTotal(org, c))
+                            this.tradeNameLabel(t),
+                            ...this.visibleRanks(org).map(r => this.fmt(this.cellValue(t, r.rankId))),
+                            this.fmt(this.rowTotal(org, t))
                         ]),
                         totalRow: [
                             '',
@@ -366,7 +338,6 @@ export class CorpsWiseManpowerComponent implements OnInit {
         }
     }
 
-    /** POST the in-memory docx to the backend's LibreOffice-based conversion endpoint. */
     private async convertDocxToPdf(docxBlob: Blob): Promise<Blob> {
         const form = new FormData();
         form.append('file', docxBlob, 'document.docx');
@@ -379,19 +350,19 @@ export class CorpsWiseManpowerComponent implements OnInit {
 
     get titleLabel(): string {
         return this.lang === 'en'
-            ? 'REGIMENT & RANK WISE MANPOWER STATE'
-            : 'রেজিমেন্ট ভিত্তিক জনবলের সারাংশ';
+            ? 'EQUIVALENT NAME & TRADE WISE MANPOWER STATE'
+            : 'সমতুল্য নাম ও ট্রেড ভিত্তিক জনবলের সারাংশ';
     }
 
     get dateLine(): string {
         const now = new Date();
         const day = now.getDate(), mon = now.getMonth(), year = now.getFullYear();
-        if (this.lang === 'en') return `${day} ${CorpsWiseManpowerComponent.EN_MONTHS[mon]} ${year}`;
-        return `${BanglaNumerals.toBangla(String(day))} ${CorpsWiseManpowerComponent.BN_MONTHS[mon]} ${BanglaNumerals.toBangla(String(year))}`;
+        if (this.lang === 'en') return `${day} ${TradeWiseEquivalentManpowerComponent.EN_MONTHS[mon]} ${year}`;
+        return `${BanglaNumerals.toBangla(String(day))} ${TradeWiseEquivalentManpowerComponent.BN_MONTHS[mon]} ${BanglaNumerals.toBangla(String(year))}`;
     }
 
     get serLabel(): string { return this.lang === 'en' ? 'Ser' : 'ক্রমিক'; }
-    get corpsColLabel(): string { return this.lang === 'en' ? 'Regiment / Corps' : 'রেজিমেন্ট / কোর'; }
+    get tradeColLabel(): string { return this.lang === 'en' ? 'Trade' : 'ট্রেড'; }
     get totalLabel(): string { return this.lang === 'en' ? 'Total' : 'মোট'; }
     get grandTotalLabel(): string { return this.lang === 'en' ? 'GRAND TOTAL' : 'সর্ব মোট'; }
 
@@ -399,22 +370,21 @@ export class CorpsWiseManpowerComponent implements OnInit {
         return this.lang === 'en' ? rank.rankName : (rank.rankNameBN || rank.rankName);
     }
 
-    corpsNameLabel(c: CorpsRow): string {
-        return this.lang === 'en' ? c.corpsName : (c.corpsNameBN || c.corpsName);
+    tradeNameLabel(t: TradeRow): string {
+        return this.lang === 'en' ? t.tradeName : (t.tradeNameBN || t.tradeName);
     }
 
-    orgLabel(org: CorpsOrgBlock): string {
+    orgLabel(org: TradeOrgBlock): string {
         return this.lang === 'en'
             ? org.orgName.toUpperCase()
             : (org.orgNameBN || org.orgName);
     }
 
-    cellValue(c: CorpsRow, rankId: number): number { return c.rankCounts?.[rankId] ?? 0; }
-    columnTotal(org: CorpsOrgBlock, rankId: number): number { return org.totals?.[rankId] ?? 0; }
+    cellValue(t: TradeRow, rankId: number): number { return t.rankCounts?.[rankId] ?? 0; }
+    columnTotal(org: TradeOrgBlock, rankId: number): number { return org.totals?.[rankId] ?? 0; }
 
     fmt(n: number | undefined | null): string {
         const s = String(n ?? 0);
         return this.lang === 'bn' ? BanglaNumerals.toBangla(s) : s;
     }
-
 }

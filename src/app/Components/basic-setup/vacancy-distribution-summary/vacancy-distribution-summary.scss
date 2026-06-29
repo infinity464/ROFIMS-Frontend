@@ -42,7 +42,26 @@
 }
 
 .dist-summary-wrap {
-    overflow-x: auto;
+    /* Scroll inside the wrap (both axes) so the sticky rank header and the frozen
+       Office column pin to the wrap's edges. max-height fills the viewport (not a
+       small box) — only kicks in once the table is taller than the screen. */
+    overflow: auto;
+    max-height: calc(100vh - 8rem);
+
+    /* Hide the VERTICAL scrollbar (still scrolls via wheel/trackpad) while keeping
+       the horizontal one visible. Defining the base scrollbar switches WebKit into
+       custom-styling mode so the per-axis rule below is honoured. */
+    &::-webkit-scrollbar {
+        height: 10px;   /* horizontal bar thickness */
+        width: 0;       /* collapse the vertical track */
+    }
+    &::-webkit-scrollbar:vertical {
+        display: none;
+    }
+    &::-webkit-scrollbar-thumb {
+        background: rgba(148, 163, 184, 0.5);
+        border-radius: 4px;
+    }
 }
 
 .dist-table {
@@ -100,6 +119,19 @@
     /* Footer total stays opaque while frozen too. */
     tfoot td.dist-table__office {
         z-index: 2;
+    }
+
+    /* Freeze the header row: rank columns stay visible while scrolling vertically.
+       Opaque background so body rows don't show through as they scroll under it. */
+    thead th {
+        position: sticky;
+        top: 0;
+        z-index: 4;
+        background: var(--surface-card, var(--surface-0, #1e1e1e));
+    }
+    /* Top-left corner cell is frozen on BOTH axes — must sit above everything. */
+    thead th.dist-table__office {
+        z-index: 5;
     }
 
     /* Row hover: highlight the whole row and emphasize the node (office) name.
