@@ -167,7 +167,7 @@ export class MasterBasicSetupService {
         ]);
 
         return forkJoin({
-            distributions: this.http.get<MotherOrgRankVacancyDistributionModel[]>(`${this.apiUrlMotherOrgRankVacancyDistribution}/GetAll`),
+            distributions: this.http.get<EquivalentNameVacancyDistributionModel[]>(`${this.apiUrlEquivalentNameVacancyDistribution}/GetAll`),
             allCodes: this.http.get<CommonCode[]>(`${this.apiUrl}/GetAll`)
         }).pipe(
             map(({ distributions, allCodes }) => {
