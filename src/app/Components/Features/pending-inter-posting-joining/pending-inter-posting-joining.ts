@@ -103,16 +103,22 @@ export class PendingInterPostingJoiningComponent implements OnInit {
         private _userMenuService: UserMenuService
     ) {}
 
-    /** True once a movement order has already been generated for the member —
-     *  the row can no longer be selected (prevents duplicate movements). */
+    /** True once a movement order has already been generated for the member.
+     *  Such a member can still be *received*, but a second movement can't be
+     *  generated — so only the Movement action is gated on this, not Receive. */
     hasMovement(row: PendingPostingJoiningDto): boolean {
         return row.movementId != null;
     }
 
-    /** Keep only movement-less rows in the selection — the header checkbox
-     *  sweeps in disabled rows too. */
+    /** Selected rows still eligible for a movement order (none generated yet).
+     *  The Movement button/dialog operate on this subset; Receive uses the full
+     *  selection. */
+    get movableRows(): PendingPostingJoiningDto[] {
+        return this.selectedRows.filter(r => !this.hasMovement(r));
+    }
+
     onSelectionChange(rows: PendingPostingJoiningDto[]): void {
-        this.selectedRows = (rows ?? []).filter(r => !this.hasMovement(r));
+        this.selectedRows = rows ?? [];
     }
 
     ngOnInit(): void {
@@ -297,13 +303,14 @@ export class PendingInterPostingJoiningComponent implements OnInit {
         });
     }
 
-    /** Open the movement dialog to choose an Order type for the selected members. */
+    /** Open the movement dialog to choose an Order type for the selected members.
+     *  Only members without an existing movement order are eligible. */
     openMovementDialog(): void {
-        if (!this.selectedRows.length) {
+        if (!this.movableRows.length) {
             this.messageService.add({
                 severity: 'warn',
-                summary: 'No selection',
-                detail: 'Please select at least one row for movement.'
+                summary: 'No eligible selection',
+                detail: 'Please select at least one member without an existing movement order.'
             });
             return;
         }
@@ -326,11 +333,13 @@ export class PendingInterPostingJoiningComponent implements OnInit {
             });
             return;
         }
+        // Operate only on members without an existing movement order.
+        const movable = this.movableRows;
         // CC is a single combined record covering everyone, so all selected members
         // must share the same Transfer To unit, Posting Order and NoteSheet — the
         // movement stores ONE NoteSheetId / OfficeOrderId for the whole CC.
         if (this.movementOrderType === MoveOrderType.CC) {
-            const units = new Set(this.selectedRows.map(r => r.transferRabUnitId));
+            const units = new Set(movable.map(r => r.transferRabUnitId));
             if (units.size > 1) {
                 this.messageService.add({
                     severity: 'warn',
@@ -339,7 +348,7 @@ export class PendingInterPostingJoiningComponent implements OnInit {
                 });
                 return;
             }
-            const orders = new Set(this.selectedRows.map(r => r.postingOrderMasterId));
+            const orders = new Set(movable.map(r => r.postingOrderMasterId));
             if (orders.size > 1) {
                 this.messageService.add({
                     severity: 'warn',
@@ -348,7 +357,7 @@ export class PendingInterPostingJoiningComponent implements OnInit {
                 });
                 return;
             }
-            const noteSheets = new Set(this.selectedRows.map(r => r.noteSheetId));
+            const noteSheets = new Set(movable.map(r => r.noteSheetId));
             if (noteSheets.size > 1) {
                 this.messageService.add({
                     severity: 'warn',
@@ -359,7 +368,7 @@ export class PendingInterPostingJoiningComponent implements OnInit {
             }
         }
 
-        const rows = this.selectedRows.filter(r => r.employeeId != null);
+        const rows = movable.filter(r => r.employeeId != null);
         const employeeIds = rows.map(r => r.employeeId as number);
 
         // Per-member destined unit + source references (current RAB unit,

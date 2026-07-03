@@ -9,10 +9,10 @@
             <div class="flex gap-2">
                 <p-button
                     icon="pi pi-arrow-right-arrow-left"
-                    label="Movement ({{ selectedRows.length }})"
+                    label="Movement ({{ movableRows.length }})"
                     severity="info"
                     [outlined]="true"
-                    [disabled]="!selectedRows.length"
+                    [disabled]="!movableRows.length"
                     (onClick)="openMovementDialog()"
                 ></p-button>
                 <p-button
@@ -167,11 +167,12 @@
             <ng-template pTemplate="body" let-row let-rowIndex="rowIndex">
                 <tr>
                     <td>
-                        <!-- Disabled once a movement order exists for the member -->
+                        <!-- Row stays selectable even after a movement order exists —
+                             the member can still be received; only the Movement action
+                             is gated on movement-less rows. -->
                         <p-tableCheckbox
                             [value]="row"
-                            [disabled]="hasMovement(row)"
-                            [pTooltip]="hasMovement(row) ? 'Movement order already generated' : ''"
+                            [pTooltip]="hasMovement(row) ? 'Movement order already generated — can still be received' : ''"
                         ></p-tableCheckbox>
                     </td>
                     <td>{{ rowIndex + 1 }}</td>
@@ -362,7 +363,7 @@
 >
     <div class="receive-form">
         <p class="receive-info">
-            Move <b>{{ selectedRows.length }}</b> selected employee(s). Choose the order type to continue.
+            Move <b>{{ movableRows.length }}</b> selected employee(s). Choose the order type to continue.
         </p>
         <div class="receive-field">
             <label for="movementOrderType">Order Type <span class="required">*</span></label>
