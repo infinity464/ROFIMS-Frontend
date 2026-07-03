@@ -152,7 +152,7 @@ export class ReportMemberTypeServingComponent implements OnInit {
         { key: 'rabRank',      labelEN: 'RAB Rank',      labelBN: 'র‍্যাব র‍্যাঙ্ক', hint: 'Plain',                 defaultVisible: false },
         { key: 'motherOrganization',labelEN: 'Mother Org', labelBN: 'মাতৃ সংস্থা',  hint: 'Plain',                 defaultVisible: false },
         { key: 'joiningDate',  labelEN: 'Joining Date',  labelBN: 'যোগদান তারিখ',   hint: 'JoiningDate',          defaultVisible: true  },
-        { key: 'rmks',         labelEN: 'Remarks',       labelBN: 'মন্তব্য',       hint: 'Remarks',               defaultVisible: true  },
+        { key: 'allRemarks',   labelEN: 'Remarks',       labelBN: 'মন্তব্য',       hint: 'Remarks',               defaultVisible: true  },
         { key: 'nameBangla',        labelEN: 'Name (BN)',        labelBN: 'নাম (বাংলা)',        hint: 'Plain', defaultVisible: false },
         { key: 'nid',               labelEN: 'NID',              labelBN: 'এনআইডি',            hint: 'Plain', defaultVisible: false },
         { key: 'prefix',            labelEN: 'Prefix',           labelBN: 'প্রিফিক্স',          hint: 'Plain', defaultVisible: false },
@@ -308,6 +308,12 @@ export class ReportMemberTypeServingComponent implements OnInit {
         const na = ['n/a', 'na', 'অপ্রযোজ্য'];
         if (na.includes((corps ?? '').trim().toLowerCase())) corps = '';
         return [name, awards, prof, corps].filter((s) => s && s !== '-' && s !== '—').join(', ');
+    }
+
+    /** Combined remarks cell — language-aware (EN vs BN), newline-separated lines. */
+    remarksCellValue(row: MemberAppointmentReportRow): string {
+        const r = row as any;
+        return ((this.lang === 'bn' ? r.allRemarksBN : r.allRemarks) as string) || '';
     }
 
     draggingColumnKey: string | null = null;
@@ -786,6 +792,8 @@ export class ReportMemberTypeServingComponent implements OnInit {
             presentUnitBN: d['rabUnitBN']             as string,
             joiningDate:   d['joiningDate']           as string,
             rmks:          (d['rmks'] ?? d['remarks'])as string,
+            allRemarks:    d['allRemarks']            as string,
+            allRemarksBN:  d['allRemarksBN']          as string,
             ...(d['rabId'] ? { rabid: d['rabId'] as string } : {}),
         } as MemberAppointmentReportRow & { rabid?: string };
     }
@@ -877,7 +885,11 @@ export class ReportMemberTypeServingComponent implements OnInit {
                     case 'Name': return new TableCell({ ...cellOpts, children: [new Paragraph({ children: [run(this.nameColumnValue(row), { sz: S.name, bold: true })] })] });
                     case 'RabId': return new TableCell({ ...cellOpts, children: [new Paragraph({ children: [run((row as any).rabid ? this.displayNum((row as any).rabid) : '—', { fontKey: mono, chSp: isBn ? 0 : 4 })] })] });
                     case 'JoiningDate': return new TableCell({ ...cellOpts, children: [new Paragraph({ children: [run(this.formatDate(row.joiningDate), { fontKey: mono, chSp: isBn ? 0 : 4 })] })] });
-                    case 'Remarks': return new TableCell({ ...cellOpts, children: [new Paragraph({ children: [run(row.rmks || '', { color: C.gray })] })] });
+                    case 'Remarks': {
+                        const rmkTxt = this.remarksCellValue(row);
+                        const rmkLines = rmkTxt ? rmkTxt.split('\n') : [''];
+                        return new TableCell({ ...cellOpts, children: rmkLines.map(l => new Paragraph({ children: [run(l, { color: C.gray })] })) });
+                    }
                     case 'Plain':
                     default: return new TableCell({ ...cellOpts, children: [new Paragraph({ children: [run(this.plainCellValue(row, col.key))] })] });
                 }
@@ -932,7 +944,7 @@ export class ReportMemberTypeServingComponent implements OnInit {
                     case 'Name': return this.nameColumnValue(row);
                     case 'RabId': return (row as any).rabid ? this.displayNum((row as any).rabid) : '';
                     case 'JoiningDate': return this.formatDate(row.joiningDate);
-                    case 'Remarks': return row.rmks || '';
+                    case 'Remarks': return this.remarksCellValue(row);
                     case 'Plain':
                     default: return this.plainCellValue(row, col.key);
                 }
@@ -989,7 +1001,7 @@ export class ReportMemberTypeServingComponent implements OnInit {
                     return `<td class="td-personnel"><div class="personnel-name">${esc(this.nameColumnValue(row))}</div></td>`;
                 case 'RabId': return `<td class="td-date">${esc((row as any).rabid ? this.displayNum((row as any).rabid) : '—')}</td>`;
                 case 'JoiningDate': return `<td class="td-date">${esc(this.formatDate(row.joiningDate))}</td>`;
-                case 'Remarks': return `<td class="td-rmks">${esc(row.rmks || '')}</td>`;
+                case 'Remarks': return `<td class="td-rmks">${esc(this.remarksCellValue(row)).replace(/\n/g, '<br>')}</td>`;
                 case 'Plain':
                 default: return `<td>${esc(this.plainCellValue(row, col.key))}</td>`;
             }

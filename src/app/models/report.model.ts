@@ -31,6 +31,9 @@ export interface ReportRowBase {
 export interface MemberAppointmentReportRow extends ReportRowBase {
   joiningDate?: string | null;
   rmks?: string | null;
+  /** Combined remark set (present status + inter-posting joining + leave + temp move + additional), from vw_MemberAllRemarks. */
+  allRemarks?: string | null;
+  allRemarksBN?: string | null;
 }
 
 /** Report B: Course – Course/Batch, Rmks. */

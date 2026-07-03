@@ -39,4 +39,7 @@ export interface EmployeeServiceOverview {
     joiningDate: string | null;
     permanentDistrictType: number | null;
     permanentDistrictTypeName: string | null;
+    /** Combined remark set (present status + inter-posting joining + leave + temp move + additional), newline-separated. */
+    allRemarks?: string | null;
+    allRemarksBN?: string | null;
 }
