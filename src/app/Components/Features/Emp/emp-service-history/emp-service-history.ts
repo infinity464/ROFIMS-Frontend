@@ -22,6 +22,7 @@ import { SelectButtonModule } from 'primeng/selectbutton';
 import { EmpService } from '@/services/emp-service';
 import { MOServHistoryService } from '@/services/mo-serv-history.service';
 import { CommonCodeService } from '@/services/common-code-service';
+import { MasterBasicSetupService } from '@/Components/basic-setup/shared/services/MasterBasicSetupService';
 import { OrganizationService } from '@/Components/basic-setup/organization-setup/services/organization-service';
 import { EmployeeSearchComponent, EmployeeBasicInfo } from '@/Components/Shared/employee-search/employee-search';
 import { FileReferencesFormComponent, FileRowData } from '@components/Common/file-references-form/file-references-form';
@@ -39,12 +40,14 @@ interface OrgUnitOption {
     orgId: number;
     orgNameEN: string;
     locationEN?: string;
+    districtId?: number | null;
 }
 
 export interface ServiceHistoryListRow {
     servHisID: number;
     orgUnitId: number | null;
     locationName: string | null;
+    districtId: number | null;
     serviceFrom: string | null;
     serviceTo: string | null;
     /** Shared precision for From/To (DB codes). Read from serviceFromPrecision, falling back to serviceToPrecision. */
@@ -129,12 +132,14 @@ export class EmpServiceHistory implements OnInit {
     appointmentOptions: { label: string; value: number }[] = [];
     yearOptions: { label: string; value: string }[] = [];
     orgUnitOptions: OrgUnitOption[] = [];
+    districtOptions: { label: string; value: number }[] = [];
 
     constructor(
         private fb: FormBuilder,
         private empService: EmpService,
         private moServHistoryService: MOServHistoryService,
         private commonCodeService: CommonCodeService,
+        private masterBasicSetupService: MasterBasicSetupService,
         private organizationService: OrganizationService,
         private messageService: MessageService,
         private confirmationService: ConfirmationService,
@@ -151,6 +156,7 @@ export class EmpServiceHistory implements OnInit {
         this.buildForm();
         this.buildYearOptions();
         this.loadDropdowns();
+        this.loadDistricts();
         if (this.embedMode && this.externalEmployeeId != null) {
             this.mode = 'edit';
             this.isReadonly = false;
@@ -174,6 +180,7 @@ export class EmpServiceHistory implements OnInit {
             servHisID: [null],
             orgUnitId: [null, Validators.required],
             locationName: [''],
+            districtId: [null],
             serviceFrom: [null, Validators.required],
             serviceTo: [null],
             precision: ['full' as ServicePrecision],
@@ -219,6 +226,19 @@ export class EmpServiceHistory implements OnInit {
         });
     }
 
+    /** District options from CommonCode 'District' type; shows English (Bangla). */
+    loadDistricts(): void {
+        this.masterBasicSetupService.getAllByType('District').pipe(catchError(() => of([] as any[]))).subscribe({
+            next: (districts: any[]) => {
+                const list = Array.isArray(districts) ? districts : [];
+                this.districtOptions = list.map((d: any) => ({
+                    label: d.codeValueBN ? `${d.codeValueEN} (${d.codeValueBN})` : d.codeValueEN,
+                    value: d.codeId
+                }));
+            }
+        });
+    }
+
     loadOrgUnitsForMotherOrg(): void {
         if (this.selectedOrgId == null) {
             this.orgUnitOptions = [];
@@ -230,7 +250,8 @@ export class EmpServiceHistory implements OnInit {
                 this.orgUnitOptions = arr.map((u: any) => ({
                     orgId: u.orgId ?? u.OrgId,
                     orgNameEN: u.orgNameEN ?? u.OrgNameEN ?? '',
-                    locationEN: u.locationEN ?? u.LocationEN ?? ''
+                    locationEN: u.locationEN ?? u.LocationEN ?? '',
+                    districtId: u.districtId ?? u.DistrictId ?? null
                 }));
             },
             error: (err: any) => { this.orgUnitOptions = []; }
@@ -260,6 +281,14 @@ export class EmpServiceHistory implements OnInit {
         if (orgUnitId == null) return;
         const unit = this.orgUnitOptions.find(u => u.orgId === orgUnitId);
         if (unit?.locationEN) this.serviceForm.patchValue({ locationName: unit.locationEN }, { emitEvent: false });
+        // Auto-fill District from the selected unit's mapped district (same as serving-member-entry).
+        if (unit?.districtId != null) this.serviceForm.patchValue({ districtId: unit.districtId }, { emitEvent: false });
+    }
+
+    getDistrictLabel(districtId: number | null): string {
+        if (districtId == null) return '—';
+        const opt = this.districtOptions.find(o => o.value === districtId);
+        return opt ? opt.label : String(districtId);
     }
 
     checkRouteParams(): void {
@@ -313,6 +342,7 @@ export class EmpServiceHistory implements OnInit {
                             servHisID: item.servHisID ?? item.ServHisID,
                             orgUnitId: (item as any).orgUnitId ?? (item as any).OrgUnitId ?? null,
                             locationName: (item as any).locationName ?? (item as any).LocationName ?? null,
+                            districtId: (item as any).districtId ?? (item as any).DistrictId ?? null,
                             serviceFrom: item.serviceFrom ?? (item as any).ServiceFrom ?? null,
                             serviceTo: item.serviceTo ?? (item as any).ServiceTo ?? null,
                             servicePrecision: (((item as any).serviceFromPrecision ?? (item as any).ServiceFromPrecision ?? (item as any).serviceToPrecision ?? (item as any).ServiceToPrecision) ?? null) as DatePrecision | null,
@@ -393,6 +423,7 @@ export class EmpServiceHistory implements OnInit {
             servHisID: null,
             orgUnitId: null,
             locationName: '',
+            districtId: null,
             serviceFrom: null,
             serviceTo: null,
             precision: 'full',
@@ -412,6 +443,7 @@ export class EmpServiceHistory implements OnInit {
             servHisID: row.servHisID,
             orgUnitId: row.orgUnitId,
             locationName: row.locationName ?? '',
+            districtId: row.districtId ?? null,
             serviceFrom,
             serviceTo,
             precision: DB_TO_UI_PRECISION[row.servicePrecision ?? 'D'],
@@ -490,6 +522,7 @@ export class EmpServiceHistory implements OnInit {
                 orgId: this.selectedOrgId ?? null,
                 orgUnitId: v.orgUnitId ?? null,
                 locationName: v.locationName || null,
+                districtId: v.districtId ?? null,
                 serviceFrom,
                 serviceTo,
                 // Store the selected precision on BOTH columns regardless of whether the date is set.

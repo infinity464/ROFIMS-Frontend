@@ -65,8 +65,18 @@
                                         }
                                     </div>
                                     <div class="form-field flex-1">
-                                        <label class="font-semibold block mb-2 text-700">Location Name</label>
-                                        <input pInputText formControlName="locationName" class="w-full" placeholder="Location name" />
+                                        <label class="font-semibold block mb-2 text-700">District</label>
+                                        <p-select
+                                            formControlName="districtId"
+                                            [options]="districtOptions"
+                                            optionLabel="label"
+                                            optionValue="value"
+                                            placeholder="Select District"
+                                            styleClass="w-full"
+                                            appendTo="body"
+                                            [filter]="true"
+                                            filterPlaceholder="Search"
+                                            [showClear]="true"></p-select>
                                     </div>
                                 </div>
                                 <div class="mb-4">
@@ -152,7 +162,7 @@
                             <tr>
                                 <th style="width: 60px; background: var(--surface-100)">Ser</th>
                                 <th style="min-width: 160px; background: var(--surface-100)">Organization Unit&#32;*</th>
-                                <th style="min-width: 140px; background: var(--surface-100)">Location Name</th>
+                                <th style="min-width: 140px; background: var(--surface-100)">District</th>
                                 <th style="width: 90px; background: var(--surface-100)">From</th>
                                 <th style="width: 90px; background: var(--surface-100)">To</th>
                                 <th style="width: 95px; background: var(--surface-100)">Appointment</th>
@@ -167,7 +177,7 @@
                             <tr>
                                 <td class="text-center font-semibold">{{ i + 1 }}</td>
                                 <td>{{ getOrgUnitLabel(row.orgUnitId) }}</td>
-                                <td>{{ row.locationName || '—' }}</td>
+                                <td>{{ getDistrictLabel(row.districtId) }}</td>
                                 <td>{{ row.serviceFrom | partialDate: row.servicePrecision }}</td>
                                 <td>{{ row.serviceTo | partialDate: row.servicePrecision }}</td>
                                 <td>{{ row.appointment || '-' }}</td>

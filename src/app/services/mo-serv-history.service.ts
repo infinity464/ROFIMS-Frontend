@@ -31,6 +31,7 @@ export interface MOServHistoryModel {
     orgId?: number | null;
     orgUnitId?: number | null;
     locationName?: string | null;
+    districtId?: number | null;
     serviceFrom?: string | null;
     serviceTo?: string | null;
     serviceFromPrecision?: 'D' | 'M' | 'Y' | null;
@@ -92,6 +93,7 @@ export class MOServHistoryService {
             orgId: payload.orgId ?? null,
             orgUnitId: payload.orgUnitId ?? null,
             locationName: payload.locationName ?? null,
+            districtId: payload.districtId ?? null,
             serviceFrom: payload.serviceFrom ?? null,
             serviceTo: payload.serviceTo ?? null,
             serviceFromPrecision: payload.serviceFromPrecision ?? null,
