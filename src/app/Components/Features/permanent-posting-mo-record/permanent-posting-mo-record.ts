@@ -31,6 +31,7 @@ import { CommonCodeService } from '@/services/common-code-service';
 import { FlexibleDateDirective } from '@/shared/directives/flexible-date.directive';
 import { DialogModule } from 'primeng/dialog';
 import { IdentityUserMemberTypeAccessService } from '@/services/identity-user-member-type-access.service';
+import { PreviousRABServiceService, VwPreviousRABServiceInfoModel } from '@/services/previous-rab-service.service';
 import { MotherOrganizationModel } from '@/models/mother-org-model';
 import { PostingStatus } from '@/models/enums';
 
@@ -63,6 +64,7 @@ export class PermanentPostingMORecordComponent implements OnInit {
     postedOutEmployee: EmployeeBasicInfo | null = null;
     editPostedOutEmployeeId: number | null = null;
     isOfficer = false;
+    postedOutRabUnitName = '';
 
     // Posted Out inline search
     poSearchRabId = '';
@@ -179,6 +181,7 @@ export class PermanentPostingMORecordComponent implements OnInit {
         private orgService: OrganizationService,
         private commonCodeService: CommonCodeService,
         private memberTypeAccess: IdentityUserMemberTypeAccessService,
+        private prevRabService: PreviousRABServiceService,
         private route: ActivatedRoute
     ) {}
 
@@ -305,6 +308,8 @@ export class PermanentPostingMORecordComponent implements OnInit {
             this.clearanceGivenDate = null;
         }
 
+        this.loadPostedOutRabUnit(employee.employeeID);
+
         const motherOrgId = employee.orgId ?? null;
         if (!motherOrgId) { this.postingUnitOptions = []; return; }
         this.commonCodeService.getAllActiveMotherOrgUnits(motherOrgId).subscribe({
@@ -318,8 +323,23 @@ export class PermanentPostingMORecordComponent implements OnInit {
     onPostedOutReset(): void {
         this.postedOutEmployee = null;
         this.isOfficer = false;
+        this.postedOutRabUnitName = '';
         this.postingUnitOptions = [];
         this.postingUnitId = null;
+    }
+
+    /** Current RAB Unit = the active PreviousRABServiceInfo row (latest first), shown readonly. */
+    private loadPostedOutRabUnit(employeeID: number): void {
+        this.postedOutRabUnitName = '';
+        this.prevRabService.getViewByEmployeeId(employeeID).subscribe({
+            next: (rows: VwPreviousRABServiceInfoModel[]) => {
+                if (this.postedOutEmployee?.employeeID !== employeeID) return;
+                const active = (rows ?? [])
+                    .filter(r => (r.isCurrentlyActive ?? (r as any).IsCurrentlyActive) === true)
+                    .sort((a, b) => (b.previousRABServiceID ?? 0) - (a.previousRABServiceID ?? 0))[0];
+                this.postedOutRabUnitName = active?.rabUnitName ?? (active as any)?.RabUnitName ?? '';
+            }
+        });
     }
 
     // ── Add Posting Unit Dialog ──────────────────────────────────
@@ -1240,7 +1260,7 @@ export class PermanentPostingMORecordComponent implements OnInit {
     resetForm(): void {
         this.editId = null; this.editDetailId = null;
         this.editPostedOutEmployeeId = null; this.editRelieverEmployeeId = null;
-        this.postedOutEmployee = null; this.isOfficer = false;
+        this.postedOutEmployee = null; this.isOfficer = false; this.postedOutRabUnitName = '';
         this.poSearchRabId = ''; this.poSearchServiceId = ''; this.poSearching = false;
         this.joineeSearchServiceId = ''; this.joineeSearching = false;
         this.postingUnitId = null; this.postingUnitOptions = [];

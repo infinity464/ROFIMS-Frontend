@@ -225,8 +225,29 @@ export class EmpEducationInfoComponent implements OnInit {
         });
     }
 
+    /** Hard-coded: SSC/HSC/Dakhil/Alim have a Group instead of a Subject, so the Subject dropdown is hidden. */
+    private readonly noSubjectQualifications = ['ssc', 'hsc', 'dakhil', 'alim'];
+
+    get isSubjectHidden(): boolean {
+        const qualId = this.educationForm?.get('examName')?.value;
+        if (!qualId) return false;
+        const qualName = this.qualificationOptions.find((o) => o.value === qualId)?.label?.toLowerCase() ?? '';
+        return this.noSubjectQualifications.some((kw) => qualName.includes(kw));
+    }
+
     /** Filter Department options to those mapped to the selected qualification. */
     onQualificationChange(qualificationId: number | null): void {
+        const subjectCtrl = this.educationForm.get('subjectName');
+        if (subjectCtrl) {
+            const qualName = this.qualificationOptions.find((o) => o.value === qualificationId)?.label?.toLowerCase() ?? '';
+            if (qualificationId && this.noSubjectQualifications.some((kw) => qualName.includes(kw))) {
+                subjectCtrl.clearValidators();
+                subjectCtrl.setValue(null);
+            } else {
+                subjectCtrl.setValidators([Validators.required]);
+            }
+            subjectCtrl.updateValueAndValidity();
+        }
         if (!qualificationId) {
             this.filteredDepartmentOptions = this.departmentOptions;
             return;
@@ -420,7 +441,7 @@ export class EmpEducationInfoComponent implements OnInit {
                 instituteType: formValue.instituteType ?? null,
                 instituteName: formValue.instituteName ?? null,
                 departmentName: formValue.departmentName ?? null,
-                subjectName: formValue.subjectName ?? null,
+                subjectName: this.isSubjectHidden ? null : (formValue.subjectName ?? null),
                 dateFrom: toDateStr(formValue.dateFrom),
                 dateTo: toDateStr(formValue.dateTo),
                 passingYear: formValue.passingYear ?? null,

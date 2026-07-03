@@ -5,10 +5,6 @@
         <div class="form-card-header flex justify-between items-center">
             <div>
                 <h3 class="form-card-title">Pending List for Joining — Inter Posting</h3>
-                <p class="text-600 mt-1 mb-0">
-                    Employees whose inter-posting order has been generated but who have not yet joined their new unit.
-                    Select rows and click <b>Receive Posting Order</b> to mark them as joined.
-                </p>
             </div>
             <div class="flex gap-2">
                 <p-button
@@ -19,9 +15,6 @@
                     [disabled]="!selectedRows.length"
                     (onClick)="openMovementDialog()"
                 ></p-button>
-                <!-- Receive Posting Order is handled on the Transfer Unit page now
-                     (/posting/pending-inter-joining-transfer-unit). Hidden here for
-                     the time being — uncomment to restore.
                 <p-button
                     icon="pi pi-check-square"
                     label="Receive Posting Order ({{ selectedRows.length }})"
@@ -30,7 +23,6 @@
                     [class.perm-hidden]="!canUpdate"
                     (onClick)="openReceiveDialog()"
                 ></p-button>
-                -->
             </div>
         </div>
 
