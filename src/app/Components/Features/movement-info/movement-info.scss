@@ -42,6 +42,29 @@
         }
     }
 
+    .mv-destined-banner {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        margin-top: 0.85rem;
+        padding: 0.6rem 0.9rem;
+        border-radius: 10px;
+        border: 1px solid var(--p-primary-color, #10b981);
+        background: var(--p-primary-50, rgba(16, 185, 129, 0.08));
+
+        .pi { color: var(--p-primary-color, #10b981); }
+
+        .mv-destined-label {
+            font-size: 0.82rem;
+            color: var(--p-text-muted-color, #9ca3af);
+        }
+
+        .mv-destined-value {
+            font-weight: 600;
+            font-size: 0.9rem;
+        }
+    }
+
     .mv-field {
         display: flex;
         flex-direction: column;

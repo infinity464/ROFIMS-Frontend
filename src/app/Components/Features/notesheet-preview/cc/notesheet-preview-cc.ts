@@ -236,8 +236,10 @@ export class NotesheetPreviewCCComponent implements OnInit {
                     next: (overviews) => {
                         this.employeeLines = infos.map((info, idx) => {
                             const overview = overviews[idx];
-                            if (idx === 0 && overview) {
-                                this.firstOverview = overview;
+                            if (idx === 0) {
+                                this.firstOverview = overview ?? null;
+                                // Run even without an overview — the movement's
+                                // CurrentUnitId alone can resolve জেলা/স্টেশন.
                                 this.resolveStationAndSutro();
                             }
                             return {
@@ -252,6 +254,8 @@ export class NotesheetPreviewCCComponent implements OnInit {
                             serial: this.serialBn(idx + 1),
                             text: this.formatEmployeeLine(info, null)
                         }));
+                        // Still resolve জেলা/স্টেশন from the movement's CurrentUnitId.
+                        this.resolveStationAndSutro();
                         this.loading = false;
                     }
                 });
@@ -343,12 +347,21 @@ export class NotesheetPreviewCCComponent implements OnInit {
         return idBn ? `${body} (${idBn})` : body;
     }
 
-    /** Column 1 (জেলা এবং স্টেশন) and সূত্র — derive from first employee's RAB unit.
+    /** Column 1 (জেলা এবং স্টেশন) and সূত্র — derive from the movement's stored
+     *  CurrentUnitId (the member's current RAB unit; RAB HQ for new postings),
+     *  falling back to the first employee's overview RAB unit for legacy rows.
      *  জেলা এবং স্টেশন = Battalion HQ Bangla location (from basic-setup/rab-unit-aor).
      *  সূত্র = the RAB unit's Bangla name from CommonCode 'RabUnit'. */
     private resolveStationAndSutro(): void {
         const o: any = this.firstOverview || {};
-        const rabUnitId: number | undefined = o.rabUnitId ?? o.RabUnitId;
+        // Legacy rows stored the mother unit in currentUnitId — only trust it
+        // when it resolves as a real RabUnit code.
+        const movementUnitId = this.movement?.currentUnitId;
+        const overviewUnitId: number | undefined = o.rabUnitId ?? o.RabUnitId;
+        const rabUnitId: number | undefined =
+            movementUnitId != null && this.rabUnitLabels.has(movementUnitId)
+                ? movementUnitId
+                : (overviewUnitId ?? undefined);
 
         const rabUnitBn = (rabUnitId != null ? this.rabUnitLabels.get(rabUnitId)?.bn : '')
             ?? (o.rabUnit ?? o.RabUnit ?? '');
@@ -450,7 +463,12 @@ export class NotesheetPreviewCCComponent implements OnInit {
     }
     private loadRabUnitLabels(): void {
         this.masterBasicSetup.getAllByType('RabUnit').subscribe({
-            next: (rows: any[]) => this.fillMap(this.rabUnitLabels, rows)
+            next: (rows: any[]) => {
+                this.fillMap(this.rabUnitLabels, rows);
+                // Labels may arrive after the movement/employees — re-resolve so
+                // জেলা/স্টেশন picks up the unit name once it's known.
+                if (this.movement) this.resolveStationAndSutro();
+            }
         });
     }
     private loadRankLabels(): void {

@@ -351,6 +351,7 @@ export interface PendingPostingJoiningDto {
     postingType: string;
     approvalStatus: string | null;
 
+    noteSheetId: number | null;
     noteSheetNo: string | null;
 
     transferRabUnitId: number | null;
@@ -382,6 +383,14 @@ export interface PendingPostingJoiningDto {
     rabRankBN?: string | null;
     motherOrganization: string | null;
     motherUnitName: string | null;
+
+    // Movement order generated for this member from this posting order (null until
+    // one exists). Drives the transfer-unit replica page's actions/selection.
+    movementId?: number | null;
+    moveOrderType?: number | null;
+
+    /** True while the member has an active "Absent" present-status. */
+    hasActiveAbsent?: boolean;
 
     // Per-member joining state + cancel audit ("Pending" | "Received" | "Cancel"; nullable).
     joinStatus?: string | null;

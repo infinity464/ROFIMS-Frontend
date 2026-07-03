@@ -54,6 +54,10 @@ export class ChatService {
   private noteSheetApprovalRequestedSubject = new Subject<{ noteSheetId: number; noteSheetType: string; noteSheetNo: string; stage: string; message: string; link?: string; notificationId?: number }>();
   public noteSheetApprovalRequested$ = this.noteSheetApprovalRequestedSubject.asObservable();
 
+  /** Emitted when a movement order is generated for a unit within this user's org-tree scope. */
+  private movementGeneratedSubject = new Subject<{ movementId: number; letterNo?: string; moveOrderType?: number; destinedRABUnitId?: number; message: string; link?: string; notificationId?: number }>();
+  public movementGenerated$ = this.movementGeneratedSubject.asObservable();
+
   private connectionStatusSubject = new BehaviorSubject<boolean>(false);
   public connectionStatus$ = this.connectionStatusSubject.asObservable();
 
@@ -235,6 +239,13 @@ export class ChatService {
         console.debug('[ChatService] NoteSheetApprovalRequested received', payload);
       }
       this.noteSheetApprovalRequestedSubject.next(payload);
+    });
+
+    this.hubConnection.on('MovementGenerated', (payload: any) => {
+      if (typeof console !== 'undefined' && console.debug) {
+        console.debug('[ChatService] MovementGenerated received', payload);
+      }
+      this.movementGeneratedSubject.next(payload);
     });
 
     this.hubConnection.on('Error', (message: string) => {

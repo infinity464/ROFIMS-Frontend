@@ -37,6 +37,7 @@ export class AppLayout implements OnInit, OnDestroy {
     private leaveApprovalSub: Subscription | null = null;
     private leaveReturnedSub: Subscription | null = null;
     private noteSheetApprovalSub: Subscription | null = null;
+    private movementGeneratedSub: Subscription | null = null;
     private notificationPollSub: Subscription | null = null;
 
     menuOutsideClickListener: any;
@@ -109,6 +110,16 @@ export class AppLayout implements OnInit, OnDestroy {
                 serverId: p?.notificationId ?? undefined
             });
         });
+        this.movementGeneratedSub = this.chatService.movementGenerated$.subscribe((p) => {
+            this.notificationService.add({
+                type: 'movementGenerated',
+                title: 'Movement Order Generated',
+                message: p?.message ?? 'A movement order was generated for a unit in your scope.',
+                link: p?.link ?? '/posting/pending-joining-transfer-unit',
+                data: { movementId: p?.movementId, moveOrderType: p?.moveOrderType },
+                serverId: p?.notificationId ?? undefined
+            });
+        });
     }
 
     isOutsideClicked(event: MouseEvent) {
@@ -158,6 +169,7 @@ export class AppLayout implements OnInit, OnDestroy {
         this.leaveApprovalSub?.unsubscribe();
         this.leaveReturnedSub?.unsubscribe();
         this.noteSheetApprovalSub?.unsubscribe();
+        this.movementGeneratedSub?.unsubscribe();
         this.notificationPollSub?.unsubscribe();
         if (this.overlayMenuOpenSubscription) {
             this.overlayMenuOpenSubscription.unsubscribe();

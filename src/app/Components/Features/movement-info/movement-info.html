@@ -27,6 +27,9 @@
                         <th>Corps</th>
                         <th>Trade</th>
                         <th>Org</th>
+                        @if (hideDestination && hasMixedTransferUnits) {
+                            <th>Transfer Unit</th>
+                        }
                         <th style="width: 60px"></th>
                     </tr>
                 </ng-template>
@@ -40,6 +43,9 @@
                         <td>{{ row.corpsDisplay || 'N/A' }}</td>
                         <td>{{ row.tradeDisplay || 'N/A' }}</td>
                         <td>{{ row.motherOrganizationDisplay || '—' }}</td>
+                        @if (hideDestination && hasMixedTransferUnits) {
+                            <td>{{ transferUnitLabel(row.employeeID) }}</td>
+                        }
                         <td>
                             <button type="button" pButton
                                     icon="pi pi-trash" severity="danger"
@@ -50,6 +56,14 @@
                     </tr>
                 </ng-template>
             </p-table>
+        }
+
+        @if (hideDestination && !hasMixedTransferUnits) {
+            <div class="mv-destined-banner">
+                <i class="pi pi-map-marker"></i>
+                <span class="mv-destined-label">Transfer To (RAB Unit):</span>
+                <span class="mv-destined-value">{{ destinedRABUnitLabel || '—' }}</span>
+            </div>
         }
     </section>
 
@@ -72,7 +86,8 @@
                         [options]="movementTypeOptions"
                         optionLabel="label" optionValue="value"
                         placeholder="Select"
-                        [showClear]="true" appendTo="body"
+                        [showClear]="!lockOrderFields" appendTo="body"
+                        [disabled]="lockOrderFields"
                         styleClass="w-full"></p-select>
                 </div>
 
@@ -83,7 +98,8 @@
                         [options]="moveOrderTypeOptions"
                         optionLabel="label" optionValue="value"
                         placeholder="Select"
-                        [showClear]="true" appendTo="body"
+                        [showClear]="!lockOrderFields" appendTo="body"
+                        [disabled]="lockOrderFields"
                         styleClass="w-full"></p-select>
                 </div>
             </div>
@@ -113,6 +129,7 @@
         </div>
 
         <!-- ── Destination ────────────────────────────────────────────── -->
+        @if (!hideDestination) {
         <div class="mv-subsection">
             <h3 class="mv-subsection-title">Destination</h3>
 
@@ -159,6 +176,7 @@
                 </div>
             }
         </div>
+        }
 
         <!-- ── Effective dates ────────────────────────────────────────── -->
         <div class="mv-subsection">

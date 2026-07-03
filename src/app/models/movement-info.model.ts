@@ -20,6 +20,9 @@ export interface MovementInfoModel {
     currentUnitId: number | null;
     destinedMotherUnitId: number | null;
     destinedRABUnitId: number | null;
+    /** Source references when raised from the New-Posting flow (else null). */
+    noteSheetId?: number | null;
+    officeOrderId?: number | null;
     /** Permanent + Mother Unit only — 'RegularPostingOut' | 'RTUOnDisciplineIssue'. */
     postOutStatusType?: string | null;
     dateOfRelease: string | null;

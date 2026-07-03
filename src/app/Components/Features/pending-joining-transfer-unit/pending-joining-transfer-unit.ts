@@ -2,7 +2,7 @@ import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
-import { Table, TableModule, TableLazyLoadEvent } from 'primeng/table';
+import { Table, TableModule } from 'primeng/table';
 import { ButtonModule } from 'primeng/button';
 import { TooltipModule } from 'primeng/tooltip';
 import { InputTextModule } from 'primeng/inputtext';
@@ -18,11 +18,19 @@ import { PostingService } from '@/services/posting.service';
 import { SharedService } from '@/shared/services/shared-service';
 import { FlexibleDateDirective } from '@/shared/directives/flexible-date.directive';
 import { UserMenuService } from '@/services/user-menu.service';
+import { PresentStatusInfoService } from '@/services/present-status-info.service';
+import { CommonCodeService } from '@/services/common-code-service';
 import { PendingPostingJoiningDto } from '@/models/posting.model';
-import { MoveOrderTypeOptions, MoveOrderType } from '@/models/enums';
+import { MoveOrderType, PresentStatusType } from '@/models/enums';
 
+/**
+ * Transfer-unit replica of the "Pending List for Joining — New Posting" page.
+ * Shown to the RECEIVING unit: a member becomes actionable only once a movement
+ * order has been generated for them (row.movementId). Until then the action
+ * column shows "Movement Order is not generated yet" and the row can't be selected.
+ */
 @Component({
-    selector: 'app-pending-posting-joining',
+    selector: 'app-pending-joining-transfer-unit',
     standalone: true,
     imports: [
         CommonModule,
@@ -40,10 +48,10 @@ import { MoveOrderTypeOptions, MoveOrderType } from '@/models/enums';
         TextareaModule
     ],
     providers: [MessageService],
-    templateUrl: './pending-posting-joining.html',
-    styleUrl: './pending-posting-joining.scss'
+    templateUrl: './pending-joining-transfer-unit.html',
+    styleUrl: '../pending-posting-joining/pending-posting-joining.scss'
 })
-export class PendingPostingJoiningComponent implements OnInit {
+export class PendingJoiningTransferUnitComponent implements OnInit {
     allRows: PendingPostingJoiningDto[] = [];
     rows: PendingPostingJoiningDto[] = [];
     loading = false;
@@ -67,28 +75,16 @@ export class PendingPostingJoiningComponent implements OnInit {
     remarks = '';
     saving = false;
 
-    // Movement dialog — pick an Order type, then redirect to the Movement form
-    // carrying the selected employees.
-    showMovementDialog = false;
-    // Article 47 (Takeover) is not a valid order type from this screen.
-    moveOrderTypeOptions = MoveOrderTypeOptions.filter(o => o.value !== MoveOrderType.Article47Takeover);
-    movementOrderType: number | null = null;
-
-    // Cancel joining dialog
-    showCancelDialog = false;
-    cancelTarget: PendingPostingJoiningDto | null = null;
-    cancelRemarks = '';
-    cancelling = false;
-
-    // Cancelled-joinings list (collapsible section below the pending table).
-    // Loaded on demand (Load button) with server-side pagination so it stays fast.
-    cancelledRows: PendingPostingJoiningDto[] = [];
-    cancelledLoading = false;
-    cancelledLoaded = false;
-    showCancelled = false;
-    cancelledTotal = 0;
-    cancelledFirst = 0;
-    cancelledPageSize = 10;
+    // Absent dialog — marks the member Absent (PresentStatusInfo) WITHOUT removing
+    // them from this pending list. Receiving later deactivates it + inserts OnDuty.
+    showAbsentDialog = false;
+    absentTarget: PendingPostingJoiningDto | null = null;
+    absentDate: Date | null = null;
+    absentTypeId: number | null = null;
+    absentReport = '';
+    absentInquiryReport = '';
+    absentSaving = false;
+    absentTypeOptions: { label: string; value: number }[] = [];
 
     currentUser = '';
     canInsert = true;
@@ -100,30 +96,31 @@ export class PendingPostingJoiningComponent implements OnInit {
         private router: Router,
         private messageService: MessageService,
         private sharedService: SharedService,
-        private _userMenuService: UserMenuService
+        private _userMenuService: UserMenuService,
+        private presentStatusService: PresentStatusInfoService,
+        private commonCodeService: CommonCodeService
     ) {}
 
-    /** True once a movement order has already been generated for the member —
-     *  the row can no longer be selected (prevents duplicate movements). */
-    hasMovement(row: PendingPostingJoiningDto): boolean {
-        return row.movementId != null;
-    }
-
-    /** Keep only movement-less rows in the selection — the header checkbox
-     *  sweeps in disabled rows too. */
-    onSelectionChange(rows: PendingPostingJoiningDto[]): void {
-        this.selectedRows = (rows ?? []).filter(r => !this.hasMovement(r));
-    }
-
     ngOnInit(): void {
+        // Until Menu_PendingJoiningTransferUnit.sql is seeded and roles are granted,
+        // this route has no permission row — fall back to the HQ pending page's
+        // permissions (receiving is the same operation, just unit-side).
         const _perms = this._userMenuService.getPermissionsByRoute(this.router.url);
-        this.canInsert = _perms.canInsert;
-        this.canUpdate = _perms.canUpdate;
-        this.canDelete = _perms.canDelete;
+        const _fallback = this._userMenuService.getPermissionsByRoute('/posting/pending-posting-joining');
+        this.canInsert = _perms.canInsert || _fallback.canInsert;
+        this.canUpdate = _perms.canUpdate || _fallback.canUpdate;
+        this.canDelete = _perms.canDelete || _fallback.canDelete;
         this.currentUser = this.sharedService.getCurrentUser();
         this.loadPending();
-        // Cancelled joinings are NOT loaded here — they load on demand via the Load
-        // button so the initial page load isn't slowed by an extra request.
+        this.loadAbsentTypes();
+    }
+
+    private loadAbsentTypes(): void {
+        this.commonCodeService.getAllActiveCommonCodesType('AbsentType').subscribe({
+            next: (data: any[]) =>
+                (this.absentTypeOptions = (data || []).map(d => ({ label: d.codeValueEN, value: d.codeId }))),
+            error: (err: any) => console.error('Failed to load absent types', err)
+        });
     }
 
     loadPending(): void {
@@ -147,41 +144,15 @@ export class PendingPostingJoiningComponent implements OnInit {
         });
     }
 
-    /** Reveal the cancelled-joinings section. The lazy table then fires onLazyLoad
-     *  to fetch the first page from the server. */
-    loadCancelled(): void {
-        this.showCancelled = true;
-        this.cancelledLoaded = true;
+    /** True once a movement order has been generated for the member. */
+    hasMovement(row: PendingPostingJoiningDto): boolean {
+        return row.movementId != null;
     }
 
-    /** Server-side page fetch for the cancelled-joinings table (PrimeNG lazy load). */
-    loadCancelledLazy(event: TableLazyLoadEvent): void {
-        const size = event.rows ?? this.cancelledPageSize;
-        const first = event.first ?? 0;
-        this.cancelledPageSize = size;
-        this.cancelledFirst = first;
-        const pageNo = Math.floor(first / size) + 1;
-
-        this.cancelledLoading = true;
-        this.postingService.getCancelledPostingJoiningPaged('NewPosting', pageNo, size).subscribe({
-            next: (res) => {
-                this.cancelledRows = res?.datalist ?? [];
-                this.cancelledTotal = res?.pages?.Rows ?? 0;
-                this.cancelledLoading = false;
-            },
-            error: () => { this.cancelledLoading = false; }
-        });
-    }
-
-    /** Re-fetch the current cancelled page (e.g. after a new cancellation). */
-    reloadCancelled(): void {
-        if (!this.cancelledLoaded) return;
-        this.loadCancelledLazy({ first: this.cancelledFirst, rows: this.cancelledPageSize } as TableLazyLoadEvent);
-    }
-
-    /** Expand/collapse the cancelled-joinings section. */
-    toggleCancelled(): void {
-        this.showCancelled = !this.showCancelled;
+    /** Keep only movement-generated rows in the selection — the header
+     *  checkbox sweeps in disabled rows too. */
+    onSelectionChange(rows: PendingPostingJoiningDto[]): void {
+        this.selectedRows = (rows ?? []).filter(r => this.hasMovement(r));
     }
 
     private buildFilterOptions(): void {
@@ -227,19 +198,28 @@ export class PendingPostingJoiningComponent implements OnInit {
         this.applyFilters();
     }
 
-    /** Open the receive dialog to mark selected rows as received. */
+    /** Open the receive dialog for the checked rows (movement-generated only). */
     openReceiveDialog(): void {
+        // Header checkbox can sweep in rows without a movement — drop them.
+        this.selectedRows = this.selectedRows.filter(r => this.hasMovement(r));
         if (!this.selectedRows.length) {
             this.messageService.add({
                 severity: 'warn',
                 summary: 'No selection',
-                detail: 'Please select at least one row to receive.'
+                detail: 'Please select at least one row (with a generated movement order) to receive.'
             });
             return;
         }
         this.joiningDate = new Date();
         this.remarks = '';
         this.showReceiveDialog = true;
+    }
+
+    /** Per-row receive — behaves like Receive Posting Order for that single member. */
+    openReceiveDialogFor(row: PendingPostingJoiningDto): void {
+        if (!this.hasMovement(row)) return;
+        this.selectedRows = [row];
+        this.openReceiveDialog();
     }
 
     closeReceiveDialog(): void {
@@ -300,145 +280,96 @@ export class PendingPostingJoiningComponent implements OnInit {
         });
     }
 
-    /** Open the movement dialog to choose an Order type for the selected members. */
-    openMovementDialog(): void {
-        if (!this.selectedRows.length) {
+    // ── Absent ────────────────────────────────────────────────────────────
+
+    /** Open the Absent form for one member (like emp-present-status's Absent
+     *  option, minus Profile Shift — always false here). */
+    openAbsentDialog(row: PendingPostingJoiningDto): void {
+        if (row.hasActiveAbsent) {
             this.messageService.add({
                 severity: 'warn',
-                summary: 'No selection',
-                detail: 'Please select at least one row for movement.'
+                summary: 'Already Absent',
+                detail: 'This member already has an active Absent status.'
             });
             return;
         }
-        this.movementOrderType = null;
-        this.showMovementDialog = true;
+        this.absentTarget = row;
+        this.absentDate = new Date();
+        this.absentTypeId = null;
+        this.absentReport = '';
+        this.absentInquiryReport = '';
+        this.showAbsentDialog = true;
     }
 
-    closeMovementDialog(): void {
-        this.showMovementDialog = false;
+    closeAbsentDialog(): void {
+        if (this.absentSaving) return;
+        this.showAbsentDialog = false;
+        this.absentTarget = null;
     }
 
-    /** Redirect to the Movement form with the chosen Order type and the
-     *  selected employees pre-loaded. */
-    confirmMovement(): void {
-        if (!this.movementOrderType) {
+    confirmAbsent(): void {
+        if (this.absentSaving || !this.absentTarget) return;
+        if (!this.absentDate || !this.absentTypeId) {
             this.messageService.add({
                 severity: 'warn',
-                summary: 'Order type required',
-                detail: 'Please select an order type.'
+                summary: 'Validation',
+                detail: 'Absent date and absent type are required.'
             });
             return;
         }
-        // CC is a single combined record covering everyone, so all selected members
-        // must share the same Transfer To unit, Posting Order and NoteSheet — the
-        // movement stores ONE NoteSheetId / OfficeOrderId for the whole CC.
-        if (this.movementOrderType === MoveOrderType.CC) {
-            const units = new Set(this.selectedRows.map(r => r.transferRabUnitId));
-            if (units.size > 1) {
+
+        const now = new Date().toISOString();
+        const payload: any = {
+            EmployeeID: this.absentTarget.employeeId,
+            PresentStatusType: PresentStatusType.Absent,
+            Dated: this.formatDateForApi(this.absentDate),
+            ProfileShift: false, // hidden on this page — never shifts the profile
+            TransferredUnitID: null,
+            MotherOrgTransferredUnitID: null,
+            DateOfRelease: null,
+            ReduceFromRABStrength: null,
+            RTUCause: null,
+            AbsentTypeID: this.absentTypeId,
+            AbsentReport: this.absentReport || null,
+            InquiryReport: this.absentInquiryReport || null,
+            IncidentDetails: null,
+            DeceasedPlace: null,
+            DeceasedReason: null,
+            ArrestedPresentStatusID: null,
+            BackFromArrestedReason: null,
+            BackFromArrestedDate: null,
+            CourtOrderReference: null,
+            AbsentPresentStatusID: null,
+            BackFromAbsentReason: null,
+            BackFromAbsentDate: null,
+            SupportingDocFilesReferences: null,
+            IsActive: true,
+            CreatedBy: this.currentUser,
+            CreatedDate: now,
+            LastUpdatedBy: this.currentUser,
+            Lastupdate: now
+        };
+
+        this.absentSaving = true;
+        this.presentStatusService.save(payload).subscribe({
+            next: () => {
+                this.absentSaving = false;
+                this.showAbsentDialog = false;
+                this.absentTarget = null;
                 this.messageService.add({
-                    severity: 'warn',
-                    summary: 'Different Transfer To',
-                    detail: 'For a CC order, all selected members must have the same Transfer To unit.'
+                    severity: 'success',
+                    summary: 'Success',
+                    detail: 'Member marked as Absent. They remain on the pending list until received.'
                 });
-                return;
-            }
-            const orders = new Set(this.selectedRows.map(r => r.postingOrderMasterId));
-            if (orders.size > 1) {
-                this.messageService.add({
-                    severity: 'warn',
-                    summary: 'Different Posting Order',
-                    detail: 'For a CC order, all selected members must belong to the same Posting Order.'
-                });
-                return;
-            }
-            const noteSheets = new Set(this.selectedRows.map(r => r.noteSheetId));
-            if (noteSheets.size > 1) {
-                this.messageService.add({
-                    severity: 'warn',
-                    summary: 'Different NoteSheet',
-                    detail: 'For a CC order, all selected members must belong to the same NoteSheet.'
-                });
-                return;
-            }
-        }
-        const rows = this.selectedRows.filter(r => r.employeeId != null);
-        const employeeIds = rows.map(r => r.employeeId as number);
-
-        // The transfer destination is always a known RAB unit, per member.
-        // Pass an employeeId → transferRabUnitId map so the Movement form can
-        // hide the Destination section and stamp each record with the member's
-        // own destined unit (MO / Article 47 split one record per member).
-        const unitMap: Record<number, number> = {};
-        // Per-member source references carried into the movement record:
-        //   f = current (from) RAB unit → CurrentUnitId
-        //   n = posting notesheet id    → NoteSheetId
-        //   o = posting order id        → OfficeOrderId
-        const postingContext: Record<number, { f: number | null; n: number | null; o: number | null }> = {};
-        for (const r of rows) {
-            const empId = r.employeeId as number;
-            if (r.transferRabUnitId != null) unitMap[empId] = r.transferRabUnitId;
-            postingContext[empId] = {
-                f: r.fromRabUnitId ?? null,
-                n: r.noteSheetId ?? null,
-                o: r.postingOrderMasterId ?? null
-            };
-        }
-
-        this.showMovementDialog = false;
-        this.router.navigate(['/movement-info'], {
-            queryParams: {
-                moveOrderType: this.movementOrderType,
-                employeeIds: JSON.stringify(employeeIds),
-                unitMap: JSON.stringify(unitMap),
-                postingContext: JSON.stringify(postingContext)
-            }
-        });
-    }
-
-    /** Open the cancel-joining confirmation dialog for a single member. */
-    openCancelDialog(row: PendingPostingJoiningDto): void {
-        if (!this.canDelete) {
-            this.messageService.add({ severity: 'warn', summary: 'Permission Denied', detail: 'You do not have permission to perform this action.' });
-            return;
-        }
-        this.cancelTarget = row;
-        this.cancelRemarks = '';
-        this.showCancelDialog = true;
-    }
-
-    closeCancelDialog(): void {
-        if (this.cancelling) return;
-        this.showCancelDialog = false;
-        this.cancelTarget = null;
-    }
-
-    /** Set the member's JoinStatus = Cancel (approved orders can't be removed). */
-    confirmCancel(): void {
-        if (this.cancelling || !this.cancelTarget) return;
-
-        this.cancelling = true;
-        this.postingService.cancelPostingJoining(
-            this.cancelTarget.postingOrderMasterId,
-            this.cancelTarget.employeeId,
-            this.currentUser,
-            this.cancelRemarks || null
-        ).subscribe({
-            next: (res) => {
-                this.cancelling = false;
-                if (res.statusCode === 200) {
-                    this.messageService.add({ severity: 'success', summary: 'Success', detail: res.description });
-                    this.showCancelDialog = false;
-                    this.cancelTarget = null;
-                    this.loadPending();
-                    // Only refresh the cancelled list if the user has already loaded it.
-                    if (this.cancelledLoaded) this.reloadCancelled();
-                } else {
-                    this.messageService.add({ severity: 'error', summary: 'Error', detail: res.description });
-                }
+                this.loadPending();
             },
             error: (err: any) => {
-                this.cancelling = false;
-                this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.message || 'Failed to cancel joining.' });
+                this.absentSaving = false;
+                this.messageService.add({
+                    severity: 'error',
+                    summary: 'Error',
+                    detail: err?.error?.message || err?.error?.Description || 'Failed to save Absent status.'
+                });
             }
         });
     }
@@ -456,6 +387,28 @@ export class PendingPostingJoiningComponent implements OnInit {
             this.router.navigate(['/posting/posting-order-preview'], {
                 queryParams: { id: row.postingOrderMasterId }
             });
+        }
+    }
+
+    /** Open the generated movement order's preview (route depends on order type). */
+    openMovement(row: PendingPostingJoiningDto): void {
+        if (row.movementId == null) return;
+        switch (row.moveOrderType) {
+            case MoveOrderType.CC:
+                this.router.navigate(['/movement-preview/cc'], { queryParams: { id: row.movementId } });
+                return;
+            case MoveOrderType.MO:
+                this.router.navigate(['/movement-preview/mo'], { queryParams: { id: row.movementId } });
+                return;
+            case MoveOrderType.Article47Handover:
+                this.router.navigate(['/movement-preview/article-47-handover'], { queryParams: { id: row.movementId } });
+                return;
+            case MoveOrderType.Article47Takeover:
+                this.router.navigate(['/movement-preview/article-47-takeover'], { queryParams: { id: row.movementId } });
+                return;
+            default:
+                this.router.navigate(['/movement-info'], { queryParams: { id: row.movementId, mode: 'view' } });
+                return;
         }
     }
 

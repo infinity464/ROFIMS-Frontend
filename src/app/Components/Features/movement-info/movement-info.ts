@@ -21,7 +21,8 @@ import { EmployeeSearchComponent, EmployeeBasicInfo } from '@/Components/Shared/
 import { RichEditorComponent } from '@/Components/Common/rich-editor/rich-editor';
 import { FileReferencesFormComponent, FileRowData } from '@/Components/Common/file-references-form/file-references-form';
 import { FlexibleDateDirective } from '@/shared/directives/flexible-date.directive';
-import { forkJoin } from 'rxjs';
+import { forkJoin, from } from 'rxjs';
+import { concatMap, toArray } from 'rxjs/operators';
 
 import { CommonCodeService } from '@/services/common-code-service';
 import { MasterBasicSetupService } from '@/Components/basic-setup/shared/services/MasterBasicSetupService';
@@ -163,6 +164,21 @@ export class MovementInfoComponent implements OnInit {
     readonly MovementType = MovementType;
     readonly MoveOrderType = MoveOrderType;
 
+    /** True when opened from pending-posting-joining: Movement type + Order type
+     *  are pre-filled and locked. */
+    lockOrderFields = false;
+
+    /** True when the destined unit is known from the redirect — the Destination
+     *  section is hidden and each record's RAB unit comes from prefilledUnits. */
+    hideDestination = false;
+
+    /** employeeId → destined RAB unit id, handed over from pending-posting-joining. */
+    prefilledUnits: Record<number, number> | null = null;
+
+    /** employeeId → source references from the New-Posting flow:
+     *  f = current (from) RAB unit, n = notesheet id, o = posting order id. */
+    prefilledContext: Record<number, { f: number | null; n: number | null; o: number | null }> | null = null;
+
     getInitials(name: string | null | undefined): string {
         if (!name) return '?';
         const parts = name.trim().split(/\s+/).filter(Boolean);
@@ -199,6 +215,60 @@ export class MovementInfoComponent implements OnInit {
         const id = idParam ? Number(idParam) : NaN;
         if (Number.isFinite(id) && id > 0) {
             this.loadExistingMovement(id);
+        } else {
+            // Prefill mode: employees + order type handed over from another screen
+            // (e.g. the pending-posting-joining "Movement" action).
+            this.prefillFromQueryParams();
+        }
+    }
+
+    /** Non-edit entry: preselect the Order type and hydrate any employees passed
+     *  via ?moveOrderType=N&employeeIds=[..] query params. */
+    private prefillFromQueryParams(): void {
+        const qp = this.route.snapshot.queryParamMap;
+
+        const orderTypeParam = qp.get('moveOrderType');
+        const orderType = orderTypeParam ? Number(orderTypeParam) : NaN;
+        if (Number.isFinite(orderType) && orderType > 0) {
+            // Coming from pending-posting-joining: movement is always Permanent,
+            // and both Movement type + Order type are locked to what was chosen there.
+            this.form.patchValue({
+                movementType: MovementType.Permanent,
+                moveOrderType: orderType
+            });
+            this.lockOrderFields = true;
+        }
+
+        // Transfer destination is a known RAB unit, per member. Hide the
+        // Destination section; each record's destined unit is stamped from the
+        // map at submit time.
+        this.prefilledUnits = this.parseUnitMap(qp.get('unitMap'));
+        if (this.prefilledUnits) {
+            this.hideDestination = true;
+            // No single destined unit to validate — units are supplied per record.
+            this.form.patchValue({ destinedUnitTarget: 'rab', destinedMotherUnitId: null });
+            const motherCtrl = this.form.get('destinedMotherUnitId')!;
+            const rabCtrl = this.form.get('destinedRABUnitId')!;
+            motherCtrl.clearValidators();
+            rabCtrl.clearValidators();
+            motherCtrl.updateValueAndValidity({ emitEvent: false });
+            rabCtrl.updateValueAndValidity({ emitEvent: false });
+        }
+
+        // Per-member source references (current RAB unit, notesheet, posting order).
+        const ctxParam = qp.get('postingContext');
+        if (ctxParam) {
+            try {
+                const obj = JSON.parse(ctxParam);
+                this.prefilledContext = obj && typeof obj === 'object' ? obj : null;
+            } catch {
+                this.prefilledContext = null;
+            }
+        }
+
+        const empIds = this.parseIntJsonArray(qp.get('employeeIds'));
+        for (const empId of empIds) {
+            this.hydrateEmployeeRow(empId);
         }
     }
 
@@ -290,6 +360,18 @@ export class MovementInfoComponent implements OnInit {
         }
     }
 
+    /** Case-insensitive property lookup — GetEmployeeSearchInfo serializes some
+     *  fields (e.g. all-caps RABID) in a casing that doesn't match either camelCase
+     *  or PascalCase spellings, so match on a lowercased key. */
+    private pick(info: any, ...keys: string[]): any {
+        if (!info) return undefined;
+        const wanted = new Set(keys.map((k) => k.toLowerCase()));
+        for (const key of Object.keys(info)) {
+            if (wanted.has(key.toLowerCase())) return info[key];
+        }
+        return undefined;
+    }
+
     private hydrateEmployeeRow(empId: number): void {
         this.empService.getEmployeeSearchInfo(empId).subscribe({
             next: (info: any) => {
@@ -299,15 +381,15 @@ export class MovementInfoComponent implements OnInit {
                     ...this.selectedEmployees,
                     {
                         employeeID: empId,
-                        rabid: info.rabID ?? info.RABID ?? '',
-                        serviceId: info.serviceId ?? info.ServiceId ?? '',
-                        fullNameEN: info.fullNameEN ?? info.FullNameEN ?? '',
-                        rankDisplay: info.rank ?? info.Rank,
-                        corpsDisplay: info.corps ?? info.Corps,
-                        tradeDisplay: info.trade ?? info.Trade,
-                        motherOrganizationDisplay: info.motherOrganization ?? info.MotherOrganization,
-                        memberTypeDisplay: info.memberType ?? info.MemberType,
-                        unit: info.lastMotherUnitId ?? info.LastMotherUnitId ?? null
+                        rabid: this.pick(info, 'rabID', 'RABID') ?? '',
+                        serviceId: this.pick(info, 'serviceId') ?? '',
+                        fullNameEN: this.pick(info, 'fullNameEN') ?? '',
+                        rankDisplay: this.pick(info, 'rank'),
+                        corpsDisplay: this.pick(info, 'corps'),
+                        tradeDisplay: this.pick(info, 'trade'),
+                        motherOrganizationDisplay: this.pick(info, 'motherOrganization'),
+                        memberTypeDisplay: this.pick(info, 'memberType'),
+                        unit: this.pick(info, 'lastMotherUnitId') ?? null
                     }
                 ];
                 this.syncCurrentUnitFromEmployees();
@@ -321,18 +403,36 @@ export class MovementInfoComponent implements OnInit {
                 if (!info) return;
                 this.takeoverPerson = {
                     employeeID: empId,
-                    rabid: info.rabID ?? info.RABID ?? '',
-                    serviceId: info.serviceId ?? info.ServiceId ?? '',
-                    fullNameEN: info.fullNameEN ?? info.FullNameEN ?? '',
-                    rankDisplay: info.rank ?? info.Rank,
-                    corpsDisplay: info.corps ?? info.Corps,
-                    tradeDisplay: info.trade ?? info.Trade,
-                    motherOrganizationDisplay: info.motherOrganization ?? info.MotherOrganization,
-                    memberTypeDisplay: info.memberType ?? info.MemberType,
-                    unit: info.lastMotherUnitId ?? info.LastMotherUnitId ?? null
+                    rabid: this.pick(info, 'rabID', 'RABID') ?? '',
+                    serviceId: this.pick(info, 'serviceId') ?? '',
+                    fullNameEN: this.pick(info, 'fullNameEN') ?? '',
+                    rankDisplay: this.pick(info, 'rank'),
+                    corpsDisplay: this.pick(info, 'corps'),
+                    tradeDisplay: this.pick(info, 'trade'),
+                    motherOrganizationDisplay: this.pick(info, 'motherOrganization'),
+                    memberTypeDisplay: this.pick(info, 'memberType'),
+                    unit: this.pick(info, 'lastMotherUnitId') ?? null
                 } as EmployeeBasicInfo;
             }
         });
+    }
+
+    /** Parse the employeeId → unitId map passed as a JSON query param. */
+    private parseUnitMap(json: string | null | undefined): Record<number, number> | null {
+        if (!json) return null;
+        try {
+            const obj = JSON.parse(json);
+            if (!obj || typeof obj !== 'object') return null;
+            const map: Record<number, number> = {};
+            for (const [k, val] of Object.entries(obj)) {
+                const empId = Number(k);
+                const unitId = Number(val);
+                if (Number.isInteger(empId) && Number.isInteger(unitId)) map[empId] = unitId;
+            }
+            return Object.keys(map).length ? map : null;
+        } catch {
+            return null;
+        }
     }
 
     private parseIntJsonArray(json: string | null | undefined): number[] {
@@ -645,6 +745,28 @@ export class MovementInfoComponent implements OnInit {
         });
     }
 
+    /** True when selected members are being transferred to different RAB units.
+     *  In that case each member's unit is shown as a table column instead of the
+     *  single-unit banner. */
+    get hasMixedTransferUnits(): boolean {
+        if (!this.prefilledUnits) return false;
+        return new Set(Object.values(this.prefilledUnits)).size > 1;
+    }
+
+    /** Single destined RAB unit label for the banner (everyone shares one unit). */
+    get destinedRABUnitLabel(): string {
+        if (!this.prefilledUnits) return '';
+        const unitIds = [...new Set(Object.values(this.prefilledUnits))];
+        return this.rabUnitOptions.find((o) => o.value === unitIds[0])?.label ?? '';
+    }
+
+    /** Transfer RAB unit label for a specific employee (per-member column). */
+    transferUnitLabel(employeeId: number): string {
+        const unitId = this.prefilledUnits?.[employeeId];
+        if (unitId == null) return '—';
+        return this.rabUnitOptions.find((o) => o.value === unitId)?.label ?? '—';
+    }
+
     // ── Conditional logic ─────────────────────────────────────────────────
     get isPermanent(): boolean {
         return this.form?.get('movementType')!.value === MovementType.Permanent;
@@ -796,22 +918,36 @@ export class MovementInfoComponent implements OnInit {
         const newFileRows: FileRowData[] = this.filesForm?.getFilesToUpload() ?? [];
         const existingRefs: any[] = this.filesForm?.getExistingFileReferences() ?? [];
 
-        const buildPayload = (filesJson: string | null): MovementInfoModel => ({
+        const buildPayload = (filesJson: string | null, employeeIds: number[]): MovementInfoModel => {
+            // When redirected from pending-posting-joining, each record's destined
+            // RAB unit comes from that member's transfer unit; otherwise use the form.
+            const destinedRABUnitId = this.prefilledUnits
+                ? (this.prefilledUnits[employeeIds[0]] ?? null)
+                : (v.destinedRABUnitId ?? null);
+            // Per-member source refs from the New-Posting flow (current RAB unit,
+            // notesheet id, posting-order id). Fall back to the form's currentUnitId.
+            const ctx = this.prefilledContext?.[employeeIds[0]] ?? null;
+            const currentUnitId = ctx ? (ctx.f ?? null) : (v.currentUnitId ?? null);
+            const noteSheetId = ctx?.n ?? null;
+            const officeOrderId = ctx?.o ?? null;
+            return {
             movementId: this.editingId ?? 0,
             // On update keep the previously assigned LetterNo; on insert send null so
             // InsertMovementInfoHandler can mint a fresh one from MovementLetterNumberConfig.
             letterNo: this.editingId ? this.editingLetterNo : null,
             publicToken: this.editingId ? this.editingPublicToken : null,
             letterDate: this.toIsoDate(v.letterDate),
-            employeeIds: JSON.stringify(this.selectedEmployees.map((e) => e.employeeID)),
+            employeeIds: JSON.stringify(employeeIds),
             finalApproverIds: finalApproverIds.length > 0 ? JSON.stringify(finalApproverIds) : null,
             letterRecipients: this.serialiseLetterRecipients(),
             movementType: v.movementType,
             moveOrderType: v.moveOrderType,
             movementReasonId: v.movementReasonId ?? null,
-            currentUnitId: v.currentUnitId ?? null,
-            destinedMotherUnitId: v.destinedMotherUnitId ?? null,
-            destinedRABUnitId: v.destinedRABUnitId ?? null,
+            currentUnitId: currentUnitId,
+            destinedMotherUnitId: this.prefilledUnits ? null : (v.destinedMotherUnitId ?? null),
+            destinedRABUnitId: destinedRABUnitId,
+            noteSheetId: noteSheetId,
+            officeOrderId: officeOrderId,
             // Only meaningful for Permanent + Mother Unit; null otherwise.
             postOutStatusType: this.showPostOutType ? (v.postOutStatusType ?? null) : null,
             dateOfRelease: this.toIsoDate(v.dateOfRelease),
@@ -838,7 +974,8 @@ export class MovementInfoComponent implements OnInit {
             createdDate: now,
             lastUpdatedBy: currentUser,
             lastupdate: now
-        });
+            };
+        };
 
         const proceed = (uploaded: { fileId: number; fileName: string }[]) => {
             const refs = [
@@ -846,19 +983,45 @@ export class MovementInfoComponent implements OnInit {
                 ...uploaded
             ];
             const filesJson = refs.length ? JSON.stringify(refs) : null;
-            const payload = buildPayload(filesJson);
+            const allIds = this.selectedEmployees.map((e) => e.employeeID);
 
-            const call$ = this.editingId
-                ? this.movementService.update(payload)
-                : this.movementService.save(payload);
+            // CC is one combined order for everyone; MO and Article 47 are individual
+            // orders, so on insert we create one record per selected employee.
+            // Editing always updates the single existing record.
+            const splitPerEmployee = !this.editingId && (this.isMO || this.isArticle47Variant);
+            const groups: number[][] = splitPerEmployee ? allIds.map((id) => [id]) : [allIds];
 
-            call$.subscribe({
-                next: () => {
+            const orderType = v.moveOrderType;
+
+            // Run the saves SEQUENTIALLY (concatMap), not in parallel. Each insert
+            // mints its LetterNo by reading+incrementing the shared number config, so
+            // parallel saves would race and produce duplicate numbers. Sequencing
+            // guarantees each movement gets the next number (increment by 1).
+            from(groups)
+                .pipe(
+                    concatMap((ids) => {
+                        const payload = buildPayload(filesJson, ids);
+                        return this.editingId
+                            ? this.movementService.update(payload)
+                            : this.movementService.save(payload);
+                    }),
+                    toArray()
+                )
+                .subscribe({
+                next: (responses: any[]) => {
+                    const n = groups.length;
                     this.messageService.add({
                         severity: 'success',
                         summary: 'Saved',
-                        detail: 'Movement saved successfully.'
+                        detail: n > 1 ? `${n} movements saved successfully.` : 'Movement saved successfully.'
                     });
+                    // Open each saved movement's preview in a new tab (insert only).
+                    if (!this.editingId) {
+                        const ids = responses
+                            .map((r) => r?.data?.movementId ?? r?.Data?.MovementId)
+                            .filter((id: any): id is number => id != null);
+                        this.openPreviewTabs(orderType, ids);
+                    }
                     this.saving = false;
                     this.resetForm();
                 },
@@ -889,6 +1052,26 @@ export class MovementInfoComponent implements OnInit {
             });
         } else {
             proceed([]);
+        }
+    }
+
+    /** Open the movement preview page for each saved movement in a new browser tab. */
+    private openPreviewTabs(orderType: number | null, movementIds: number[]): void {
+        const path = this.previewPathFor(orderType);
+        if (!path) return;
+        for (const id of movementIds) {
+            window.open(`${path}?id=${id}`, '_blank');
+        }
+    }
+
+    /** Preview route for a given MoveOrderType (null if none maps). */
+    private previewPathFor(orderType: number | null): string | null {
+        switch (orderType) {
+            case MoveOrderType.CC:                return '/movement-preview/cc';
+            case MoveOrderType.MO:                return '/movement-preview/mo';
+            case MoveOrderType.Article47Handover: return '/movement-preview/article-47-handover';
+            case MoveOrderType.Article47Takeover: return '/movement-preview/article-47-takeover';
+            default:                              return null;
         }
     }
 
