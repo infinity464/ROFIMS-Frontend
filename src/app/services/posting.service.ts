@@ -556,6 +556,12 @@ export class PostingService {
         return this.http.get<PendingPostingJoiningDto[]>(`${API}/GetPendingPostingJoining`, { params });
     }
 
+    /** Single-employee lookup of active pending-joining rows (New + Inter posting)
+     *  for the Movement form's search-time check. */
+    getPendingJoiningByEmployee(employeeId: number): Observable<PendingPostingJoiningDto[]> {
+        return this.http.get<PendingPostingJoiningDto[]>(`${API}/GetPendingJoiningByEmployee/${employeeId}`);
+    }
+
     /** Report variant of the pending inter-posting list — same scoped rows, but
      *  each carries the employee's Additional Remarks for the report's Remarks column. */
     getPendingInterPostingReport(postingType?: string): Observable<PendingPostingJoiningDto[]> {

@@ -86,8 +86,8 @@
                         [options]="movementTypeOptions"
                         optionLabel="label" optionValue="value"
                         placeholder="Select"
-                        [showClear]="!lockOrderFields" appendTo="body"
-                        [disabled]="lockOrderFields"
+                        [showClear]="!lockOrderFields && !lockMovementType" appendTo="body"
+                        [disabled]="lockOrderFields || lockMovementType"
                         styleClass="w-full"></p-select>
                 </div>
 
@@ -150,6 +150,7 @@
                             optionLabel="label" optionValue="value"
                             placeholder="Select mother unit..."
                             [filter]="true" [showClear]="true" appendTo="body"
+                            [virtualScroll]="true" [virtualScrollItemSize]="38"
                             styleClass="w-full"></p-select>
                     } @else {
                         <p-select
@@ -158,13 +159,14 @@
                             optionLabel="label" optionValue="value"
                             placeholder="Select RAB unit..."
                             [filter]="true" [showClear]="true" appendTo="body"
+                            [virtualScroll]="true" [virtualScrollItemSize]="38"
                             styleClass="w-full"></p-select>
                     }
                 </div>
             </div>
 
             @if (showPostOutType) {
-                <div class="mv-field">
+                <div class="mv-field" style="margin-top: 1rem;">
                     <label>Post-out status <span class="p-error">*</span></label>
                     <p-select
                         formControlName="postOutStatusType"

@@ -29,6 +29,8 @@ import { MasterBasicSetupService } from '@/Components/basic-setup/shared/service
 import { OrganizationService } from '@/Components/basic-setup/organization-setup/services/organization-service';
 import { MovementInfoService } from '@/services/movement-info.service';
 import { EmpService } from '@/services/emp-service';
+import { PostingService } from '@/services/posting.service';
+import { PendingPostingJoiningDto } from '@/models/posting.model';
 import { IdentityUserMappingService } from '@/services/identity-user-mapping.service';
 import { SharedService } from '@/shared/services/shared-service';
 import { UserMenuService } from '@/services/user-menu.service';
@@ -92,6 +94,7 @@ export class MovementInfoComponent implements OnInit {
     private masterBasicSetup = inject(MasterBasicSetupService);
     private organizationService = inject(OrganizationService);
     private empService = inject(EmpService);
+    private postingService = inject(PostingService);
     private identityMappingService = inject(IdentityUserMappingService);
     private sharedService = inject(SharedService);
     private messageService = inject(MessageService);
@@ -167,6 +170,10 @@ export class MovementInfoComponent implements OnInit {
     /** True when opened from pending-posting-joining: Movement type + Order type
      *  are pre-filled and locked. */
     lockOrderFields = false;
+
+    /** True when a searched member was found on a pending posting list: Movement
+     *  type is locked to Permanent (Order type stays selectable). */
+    lockMovementType = false;
 
     /** True when the destined unit is known from the redirect — the Destination
      *  section is hidden and each record's RAB unit comes from prefilledUnits. */
@@ -619,6 +626,51 @@ export class MovementInfoComponent implements OnInit {
             });
             return;
         }
+
+        // Check the pending-joining lists (New + Inter posting). A member found
+        // there gets the pending-posting handover applied automatically; one who
+        // already has an (un-received) movement is blocked.
+        this.postingService.getPendingJoiningByEmployee(emp.employeeID).subscribe({
+            next: (rows) => {
+                const pending = (rows ?? [])[0] ?? null;
+                if (pending) {
+                    if (pending.movementId != null) {
+                        this.messageService.add({
+                            severity: 'warn',
+                            summary: 'Movement already generated',
+                            detail: `${emp.fullNameEN} already has a movement order for their pending posting (not yet received). Receive it or cancel it before creating another.`
+                        });
+                        return;
+                    }
+                    if (this.selectedEmployees.length > 0 && !this.prefilledUnits) {
+                        this.messageService.add({
+                            severity: 'warn',
+                            summary: 'Cannot mix members',
+                            detail: `${emp.fullNameEN} is on a pending posting list. Members from pending postings cannot be mixed with others in one movement.`
+                        });
+                        return;
+                    }
+                    this.addEmployeeToList(emp);
+                    this.applyPendingHandover(emp.employeeID, pending);
+                } else {
+                    if (this.prefilledUnits && !this.lockOrderFields) {
+                        this.messageService.add({
+                            severity: 'warn',
+                            summary: 'Cannot mix members',
+                            detail: `${emp.fullNameEN} is not on a pending posting list. Members from pending postings cannot be mixed with others in one movement.`
+                        });
+                        return;
+                    }
+                    this.addEmployeeToList(emp);
+                }
+            },
+            // Lookup failure must not block manual entry — behave as before.
+            error: () => this.addEmployeeToList(emp)
+        });
+    }
+
+    /** Plain add of a searched employee to the personnel list. */
+    private addEmployeeToList(emp: EmployeeBasicInfo): void {
         this.selectedEmployees = [
             ...this.selectedEmployees,
             {
@@ -641,10 +693,7 @@ export class MovementInfoComponent implements OnInit {
         this.empService.getEmployeeSearchInfo(emp.employeeID).subscribe({
             next: (info) => {
                 if (!info) return;
-                const motherUnitId =
-                    (info as any).lastMotherUnitId ??
-                    (info as any).LastMotherUnitId ??
-                    null;
+                const motherUnitId = this.pick(info, 'lastMotherUnitId') ?? null;
                 const row = this.selectedEmployees.find((e) => e.employeeID === emp.employeeID);
                 if (row) {
                     row.unit = motherUnitId;
@@ -654,9 +703,65 @@ export class MovementInfoComponent implements OnInit {
         });
     }
 
+    /** The searched member sits on a pending posting list: lock Movement type to
+     *  Permanent, hide the Destination section, and stamp the pending row's
+     *  transfer unit / current unit / notesheet / posting order onto the record —
+     *  identical to arriving via the pending page's Movement button. */
+    private applyPendingHandover(employeeId: number, pending: PendingPostingJoiningDto): void {
+        this.prefilledUnits = { ...(this.prefilledUnits ?? {}) };
+        if (pending.transferRabUnitId != null) {
+            this.prefilledUnits[employeeId] = pending.transferRabUnitId;
+        }
+        this.prefilledContext = { ...(this.prefilledContext ?? {}) };
+        this.prefilledContext[employeeId] = {
+            f: pending.fromRabUnitId ?? null,
+            n: pending.noteSheetId ?? null,
+            o: pending.postingOrderMasterId ?? null
+        };
+
+        this.hideDestination = true;
+        this.lockMovementType = true;
+        this.form.patchValue({
+            movementType: MovementType.Permanent,
+            destinedUnitTarget: 'rab',
+            destinedMotherUnitId: null
+        });
+        this.clearDestinationValidators();
+
+        this.messageService.add({
+            severity: 'info',
+            summary: 'Pending posting member',
+            detail: `${pending.fullNameEN || 'Member'} is on the pending ${pending.postingType === 'InterPosting' ? 'inter-' : ''}posting list — destination set to ${pending.transferRabUnitName || 'the posting\'s transfer unit'}.`
+        });
+    }
+
+    /** Units are supplied per record — no single destined unit to validate. */
+    private clearDestinationValidators(): void {
+        const motherCtrl = this.form.get('destinedMotherUnitId')!;
+        const rabCtrl = this.form.get('destinedRABUnitId')!;
+        motherCtrl.clearValidators();
+        rabCtrl.clearValidators();
+        motherCtrl.updateValueAndValidity({ emitEvent: false });
+        rabCtrl.updateValueAndValidity({ emitEvent: false });
+    }
+
     removeEmployee(row: MovementEmployeeRow) {
         this.selectedEmployees = this.selectedEmployees.filter((e) => e.employeeID !== row.employeeID);
         this.syncCurrentUnitFromEmployees();
+
+        // Drop the removed member's pending handover; when the last pending-sourced
+        // member is gone (search flow only — not the redirect), restore the normal
+        // Movement-type + Destination controls.
+        if (this.prefilledUnits) delete this.prefilledUnits[row.employeeID];
+        if (this.prefilledContext) delete this.prefilledContext[row.employeeID];
+        if (this.lockMovementType && !this.lockOrderFields
+            && Object.keys(this.prefilledContext ?? {}).length === 0) {
+            this.lockMovementType = false;
+            this.hideDestination = false;
+            this.prefilledUnits = null;
+            this.prefilledContext = null;
+            this.onDestinedUnitTargetChange(this.form.get('destinedUnitTarget')!.value);
+        }
     }
 
     /** Current unit = first selected employee's RAB unit. Auto-syncs on add/remove. */
@@ -905,6 +1010,39 @@ export class MovementInfoComponent implements OnInit {
             });
             return;
         }
+        // Pending-posting members + CC: one combined record stores ONE transfer unit /
+        // posting order / notesheet — all members must share them (same rule the
+        // pending pages enforce before redirecting).
+        if (this.isCC && this.prefilledUnits && this.selectedEmployees.length > 1) {
+            const ids = this.selectedEmployees.map((e) => e.employeeID);
+            const units = new Set(ids.map((id) => this.prefilledUnits![id] ?? null));
+            if (units.size > 1) {
+                this.messageService.add({
+                    severity: 'error',
+                    summary: 'Different Transfer To',
+                    detail: 'For a CC order, all selected members must have the same Transfer To unit.'
+                });
+                return;
+            }
+            const orders = new Set(ids.map((id) => this.prefilledContext?.[id]?.o ?? null));
+            if (orders.size > 1) {
+                this.messageService.add({
+                    severity: 'error',
+                    summary: 'Different Posting Order',
+                    detail: 'For a CC order, all selected members must belong to the same Posting Order.'
+                });
+                return;
+            }
+            const noteSheets = new Set(ids.map((id) => this.prefilledContext?.[id]?.n ?? null));
+            if (noteSheets.size > 1) {
+                this.messageService.add({
+                    severity: 'error',
+                    summary: 'Different NoteSheet',
+                    detail: 'For a CC order, all selected members must belong to the same NoteSheet.'
+                });
+                return;
+            }
+        }
 
 
         const finalApproverIds: number[] = (this.form.get('finalApproverIds')?.value as number[] | null) ?? [];
@@ -1037,22 +1175,48 @@ export class MovementInfoComponent implements OnInit {
             });
         };
 
-        this.saving = true;
-        if (newFileRows.length > 0) {
-            forkJoin(newFileRows.map((r) => this.empService.uploadEmployeeFile(r.file!))).subscribe({
-                next: (results: any[]) => proceed(results as { fileId: number; fileName: string }[]),
-                error: () => {
-                    this.saving = false;
-                    this.messageService.add({
-                        severity: 'error',
-                        summary: 'Upload',
-                        detail: 'File upload failed.'
-                    });
-                }
+        const startSave = () => {
+            this.saving = true;
+            if (newFileRows.length > 0) {
+                forkJoin(newFileRows.map((r) => this.empService.uploadEmployeeFile(r.file!))).subscribe({
+                    next: (results: any[]) => proceed(results as { fileId: number; fileName: string }[]),
+                    error: () => {
+                        this.saving = false;
+                        this.messageService.add({
+                            severity: 'error',
+                            summary: 'Upload',
+                            detail: 'File upload failed.'
+                        });
+                    }
+                });
+            } else {
+                proceed([]);
+            }
+        };
+
+        // Direct Permanent movement to a RAB unit (not sourced from a pending
+        // posting): saving updates the members' RAB Service History IMMEDIATELY —
+        // confirm before proceeding.
+        const isDirectPermanentRabMove =
+            !this.editingId &&
+            this.isPermanent &&
+            !this.prefilledUnits &&
+            this.form.get('destinedUnitTarget')!.value === 'rab' &&
+            v.destinedRABUnitId != null;
+
+        if (isDirectPermanentRabMove) {
+            this.confirmationService.confirm({
+                header: 'Service History Will Be Updated',
+                message: 'Saving this Permanent movement will immediately update the RAB Service History.',
+                icon: 'pi pi-exclamation-triangle',
+                acceptButtonProps: { label: 'Yes, Save', severity: 'success' },
+                rejectButtonProps: { label: 'Cancel', severity: 'secondary', outlined: true },
+                accept: () => startSave()
             });
-        } else {
-            proceed([]);
+            return;
         }
+
+        startSave();
     }
 
     /** Open the movement preview page for each saved movement in a new browser tab. */
@@ -1083,6 +1247,14 @@ export class MovementInfoComponent implements OnInit {
         this.takeoverPerson = null;
         this.letterRecipientsList = [];
         this.fileRows = [];
+        // Clear any pending-posting handover state (redirect or search sourced)
+        // and restore the normal Destination controls.
+        this.lockOrderFields = false;
+        this.lockMovementType = false;
+        this.hideDestination = false;
+        this.prefilledUnits = null;
+        this.prefilledContext = null;
+        this.onDestinedUnitTargetChange('mother');
         this.form.reset({
             movementType: null,
             moveOrderType: null,

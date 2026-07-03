@@ -2,9 +2,9 @@
 
 <div class="pending-posting-joining">
     <div class="form-card">
-        <div class="form-card-header flex justify-content-between align-items-center">
+        <div class="form-card-header flex justify-between items-center">
             <div>
-                <h3 class="form-card-title">Pending List for Joining — Transfer Unit</h3>
+                <h3 class="form-card-title">Pending List for Joining — Transfer Unit (Inter Posting)</h3>
             </div>
             <div class="flex gap-2">
                 <!-- Appears once rows are selected; works exactly like the
@@ -152,7 +152,7 @@
                     <th style="min-width: 80px">Rank</th>
                     <th style="min-width: 140px">Full Name</th>
                     <th style="min-width: 120px">Mother Organization</th>
-                    <th style="min-width: 120px">Mother Unit</th>
+                    <th style="min-width: 120px">From Unit</th>
                     <th style="min-width: 120px">Transfer To</th>
                     <th style="min-width: 220px">Action</th>
                 </tr>
@@ -174,7 +174,7 @@
                     <td>{{ row.rankName || '-' }}</td>
                     <td>{{ row.fullNameEN || '-' }}</td>
                     <td>{{ row.motherOrganization || '-' }}</td>
-                    <td>{{ row.motherUnitName || '-' }}</td>
+                    <td>{{ row.fromRabUnitName || '-' }}</td>
                     <td>{{ row.transferRabUnitName || '-' }}</td>
                     <td>
                         <span *ngIf="!hasMovement(row)" class="text-500 font-italic white-space-nowrap">

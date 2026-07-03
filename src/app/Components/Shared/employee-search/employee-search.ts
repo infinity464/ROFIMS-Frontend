@@ -60,7 +60,7 @@ export interface EmployeeBasicInfo {
                 </div>
                 <div>
                     <label class="font-semibold block mb-2 text-700">&nbsp;</label>
-                    <button type="button" pButton label="Search" icon="pi pi-search" [loading]="isSearching" (click)="$event.preventDefault(); $event.stopPropagation(); search()"></button>
+                    <button type="button" pButton label="Search" icon="pi pi-search" [loading]="isSearching" [disabled]="isSearching" (click)="$event.preventDefault(); $event.stopPropagation(); search()"></button>
                 </div>
                 <div>
                     <label class="font-semibold block mb-2 text-700">&nbsp;</label>

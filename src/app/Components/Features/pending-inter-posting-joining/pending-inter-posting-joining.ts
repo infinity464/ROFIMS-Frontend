@@ -19,6 +19,7 @@ import { SharedService } from '@/shared/services/shared-service';
 import { FlexibleDateDirective } from '@/shared/directives/flexible-date.directive';
 import { UserMenuService } from '@/services/user-menu.service';
 import { PendingPostingJoiningDto } from '@/models/posting.model';
+import { MoveOrderTypeOptions, MoveOrderType } from '@/models/enums';
 
 @Component({
     selector: 'app-pending-inter-posting-joining',
@@ -66,6 +67,13 @@ export class PendingInterPostingJoiningComponent implements OnInit {
     remarks = '';
     saving = false;
 
+    // Movement dialog — pick an Order type, then redirect to the Movement form
+    // carrying the selected employees (same flow as pending-posting-joining).
+    showMovementDialog = false;
+    // Article 47 (Takeover) is not a valid order type from this screen.
+    moveOrderTypeOptions = MoveOrderTypeOptions.filter(o => o.value !== MoveOrderType.Article47Takeover);
+    movementOrderType: number | null = null;
+
     // Cancel joining dialog
     showCancelDialog = false;
     cancelTarget: PendingPostingJoiningDto | null = null;
@@ -94,6 +102,18 @@ export class PendingInterPostingJoiningComponent implements OnInit {
         private sharedService: SharedService,
         private _userMenuService: UserMenuService
     ) {}
+
+    /** True once a movement order has already been generated for the member —
+     *  the row can no longer be selected (prevents duplicate movements). */
+    hasMovement(row: PendingPostingJoiningDto): boolean {
+        return row.movementId != null;
+    }
+
+    /** Keep only movement-less rows in the selection — the header checkbox
+     *  sweeps in disabled rows too. */
+    onSelectionChange(rows: PendingPostingJoiningDto[]): void {
+        this.selectedRows = (rows ?? []).filter(r => !this.hasMovement(r));
+    }
 
     ngOnInit(): void {
         const _perms = this._userMenuService.getPermissionsByRoute(this.router.url);
@@ -273,6 +293,96 @@ export class PendingInterPostingJoiningComponent implements OnInit {
                     summary: 'Error',
                     detail: err?.error?.message || 'Failed to receive members.'
                 });
+            }
+        });
+    }
+
+    /** Open the movement dialog to choose an Order type for the selected members. */
+    openMovementDialog(): void {
+        if (!this.selectedRows.length) {
+            this.messageService.add({
+                severity: 'warn',
+                summary: 'No selection',
+                detail: 'Please select at least one row for movement.'
+            });
+            return;
+        }
+        this.movementOrderType = null;
+        this.showMovementDialog = true;
+    }
+
+    closeMovementDialog(): void {
+        this.showMovementDialog = false;
+    }
+
+    /** Redirect to the Movement form with the chosen Order type and the
+     *  selected employees pre-loaded (same handover as pending-posting-joining). */
+    confirmMovement(): void {
+        if (!this.movementOrderType) {
+            this.messageService.add({
+                severity: 'warn',
+                summary: 'Order type required',
+                detail: 'Please select an order type.'
+            });
+            return;
+        }
+        // CC is a single combined record covering everyone, so all selected members
+        // must share the same Transfer To unit, Posting Order and NoteSheet — the
+        // movement stores ONE NoteSheetId / OfficeOrderId for the whole CC.
+        if (this.movementOrderType === MoveOrderType.CC) {
+            const units = new Set(this.selectedRows.map(r => r.transferRabUnitId));
+            if (units.size > 1) {
+                this.messageService.add({
+                    severity: 'warn',
+                    summary: 'Different Transfer To',
+                    detail: 'For a CC order, all selected members must have the same Transfer To unit.'
+                });
+                return;
+            }
+            const orders = new Set(this.selectedRows.map(r => r.postingOrderMasterId));
+            if (orders.size > 1) {
+                this.messageService.add({
+                    severity: 'warn',
+                    summary: 'Different Posting Order',
+                    detail: 'For a CC order, all selected members must belong to the same Posting Order.'
+                });
+                return;
+            }
+            const noteSheets = new Set(this.selectedRows.map(r => r.noteSheetId));
+            if (noteSheets.size > 1) {
+                this.messageService.add({
+                    severity: 'warn',
+                    summary: 'Different NoteSheet',
+                    detail: 'For a CC order, all selected members must belong to the same NoteSheet.'
+                });
+                return;
+            }
+        }
+
+        const rows = this.selectedRows.filter(r => r.employeeId != null);
+        const employeeIds = rows.map(r => r.employeeId as number);
+
+        // Per-member destined unit + source references (current RAB unit,
+        // notesheet id, posting order id) — stamped onto each movement record.
+        const unitMap: Record<number, number> = {};
+        const postingContext: Record<number, { f: number | null; n: number | null; o: number | null }> = {};
+        for (const r of rows) {
+            const empId = r.employeeId as number;
+            if (r.transferRabUnitId != null) unitMap[empId] = r.transferRabUnitId;
+            postingContext[empId] = {
+                f: r.fromRabUnitId ?? null,
+                n: r.noteSheetId ?? null,
+                o: r.postingOrderMasterId ?? null
+            };
+        }
+
+        this.showMovementDialog = false;
+        this.router.navigate(['/movement-info'], {
+            queryParams: {
+                moveOrderType: this.movementOrderType,
+                employeeIds: JSON.stringify(employeeIds),
+                unitMap: JSON.stringify(unitMap),
+                postingContext: JSON.stringify(postingContext)
             }
         });
     }

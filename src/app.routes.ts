@@ -117,6 +117,7 @@ import { PostingNotesheetGenerateComponent } from '@/Components/Features/posting
 import { PostingOrderReceiveComponent } from '@/Components/Features/posting-order-receive/posting-order-receive';
 import { PendingPostingJoiningComponent } from '@/Components/Features/pending-posting-joining/pending-posting-joining';
 import { PendingJoiningTransferUnitComponent } from '@/Components/Features/pending-joining-transfer-unit/pending-joining-transfer-unit';
+import { PendingInterJoiningTransferUnitComponent } from '@/Components/Features/pending-inter-joining-transfer-unit/pending-inter-joining-transfer-unit';
 import { PendingInterPostingJoiningComponent } from '@/Components/Features/pending-inter-posting-joining/pending-inter-posting-joining';
 import { PostingOrderGenerateComponent } from '@/Components/Features/posting-order-generate/posting-order-generate';
 import { PostingOrderListComponent } from '@/Components/Features/posting-order-list/posting-order-list';
@@ -425,6 +426,7 @@ export const appRoutes: Routes = [
             { path: 'posting/posting-order-receive', component: PostingOrderReceiveComponent },
             { path: 'posting/pending-posting-joining', component: PendingPostingJoiningComponent },
             { path: 'posting/pending-joining-transfer-unit', component: PendingJoiningTransferUnitComponent },
+            { path: 'posting/pending-inter-joining-transfer-unit', component: PendingInterJoiningTransferUnitComponent },
             { path: 'posting/pending-inter-posting-joining', component: PendingInterPostingJoiningComponent },
             { path: 'posting/posting-order-list', component: PostingOrderListComponent },
             { path: 'posting/posting-order-preview', component: PostingOrderPreviewPageComponent },
