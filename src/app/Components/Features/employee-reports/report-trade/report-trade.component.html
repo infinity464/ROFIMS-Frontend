@@ -31,6 +31,20 @@
                  and re-filtered client-side by Member Type. -->
             <div class="report-fields-row">
                 <div class="report-filter-field">
+                    <label>{{ L['en']['report.search.motherOrg'] }}</label>
+                    <p-multiSelect
+                        [options]="orgOptions"
+                        [(ngModel)]="selectedOrgIds"
+                        optionLabel="label"
+                        optionValue="value"
+                        display="chip"
+                        placeholder="Select"
+                        styleClass="w-full"
+                        [filter]="true"
+                        appendTo="body">
+                    </p-multiSelect>
+                </div>
+                <div class="report-filter-field">
                     <label>Member Type</label>
                     <p-multiSelect
                         [options]="memberTypeOptions"

@@ -100,6 +100,11 @@ export class ReportTradeComponent implements OnInit, OnChanges {
 
     memberTypeOptions: { label: string; labelBn: string; value: number }[] = [];
     selectedMemberTypeIds: number[] = [];
+
+    /** Mother Org filter — a distinct-English trade pick can span several mother
+     *  orgs (e.g. "Cook" bundled across forces), so let the user narrow by org. */
+    orgOptions: { label: string; labelBn: string; value: number }[] = [];
+    selectedOrgIds: number[] = [];
     /**
      * Multi-select RAB org-tree filter — the user checks any nodes at any
      * level (Unit / Wing / Branch / Sub-Branch / Section / Sub-Section) in the
@@ -386,6 +391,7 @@ export class ReportTradeComponent implements OnInit, OnChanges {
                 .map((o) => (this.lang === 'bn' ? o.labelBn : o.label));
             if (names.length) items.push({ label, value: names.join(', ') });
         };
+        multi(this.selectedOrgIds, this.orgOptions, L['report.search.motherOrg']);
         multi(this.selectedMemberTypeIds, this.memberTypeOptions, this.lang === 'bn' ? 'সদস্য ধরন' : 'Member Type');
         multi(this.selectedRankIds, this.rankOptions, L['report.search.rank']);
         if (this.selectedOrgNodeIds.length > 0) {
@@ -519,6 +525,7 @@ export class ReportTradeComponent implements OnInit, OnChanges {
                 .map((o) => (this.lang === 'bn' ? o.labelBn : o.label));
             if (names.length) lines.push(`${label}: ${names.join(', ')}`);
         };
+        multi(this.selectedOrgIds, this.orgOptions, L['report.search.motherOrg']);
         multi(this.selectedMemberTypeIds, this.memberTypeOptions, this.lang === 'bn' ? 'সদস্য ধরন' : 'Member Type');
         multi(this.selectedRankIds, this.rankOptions, L['report.search.rank']);
         if (this.selectedOrgNodeIds.length > 0) {
@@ -845,6 +852,14 @@ export class ReportTradeComponent implements OnInit, OnChanges {
                 this.allTradeCodes = trades ?? [];
                 this.allCorpsCodes = corps ?? [];
                 this.allMotherOrgs = orgs ?? [];
+                // Mother Org filter options — sorted by the org's own sort order.
+                this.orgOptions = [...(orgs ?? [])]
+                    .sort((a, b) => this.cmpNum(a.sortOrder, b.sortOrder) || (a.orgNameEN ?? '').localeCompare(b.orgNameEN ?? ''))
+                    .map((o) => ({
+                        label: o.orgNameEN || String(o.orgId),
+                        labelBn: o.orgNameBN || o.orgNameEN || String(o.orgId),
+                        value: o.orgId,
+                    }));
                 this.refreshDependentOptions();
             },
             error: () => { this.allTradeCodes = []; this.allCorpsCodes = []; this.allMotherOrgs = []; },
@@ -1049,6 +1064,7 @@ export class ReportTradeComponent implements OnInit, OnChanges {
 
     get activeFilterCount(): number {
         let c = 0;
+        if (this.selectedOrgIds.length > 0) c++;
         if (this.selectedMemberTypeIds.length > 0) c++;
         if (this.selectedRankIds.length > 0) c++;
         if (this.selectedOrgNodeIds.length > 0) c++;
@@ -1065,6 +1081,7 @@ export class ReportTradeComponent implements OnInit, OnChanges {
     }
 
     clearFilters(): void {
+        this.selectedOrgIds = [];
         this.selectedMemberTypeIds = [];
         this.selectedRankIds = [];
         this.selectedOrgNodeIds = [];
@@ -1118,6 +1135,8 @@ export class ReportTradeComponent implements OnInit, OnChanges {
                 criteria.push({ fieldKey: 'trade', idValues: [...this.commonCodeIds] });
             }
         }
+        if (this.selectedOrgIds.length > 0)
+            criteria.push({ fieldKey: 'motherOrganization', idValues: [...this.selectedOrgIds] });
         if (this.selectedMemberTypeIds.length > 0)
             criteria.push({ fieldKey: 'memberType', idValues: [...this.selectedMemberTypeIds] });
         if (this.selectedRankIds.length > 0)
