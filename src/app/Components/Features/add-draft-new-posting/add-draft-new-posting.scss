@@ -22,4 +22,15 @@
     border-radius: 0.5rem;
     gap: 1.5rem;
   }
+
+  // Dark mode: surface-50 fallback and the .text-700 label don't flip,
+  // leaving light text on a light bar. Force a dark surface + light label.
+  :host-context(.app-dark) & .draft-label-bar {
+    background: var(--surface-800, #1f2937);
+    border-color: var(--surface-700, #374151);
+
+    span {
+      color: var(--surface-100, #e5e7eb) !important;
+    }
+  }
 }

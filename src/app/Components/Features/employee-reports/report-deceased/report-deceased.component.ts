@@ -556,11 +556,9 @@ export class ReportDeceasedComponent implements OnInit {
     toggleFilter(): void { this.filterOpen = !this.filterOpen; }
 
     filterSubtitle(): string {
-        if (this.activeFilterCount === 0) {
-            return this.lang === 'en' ? 'Select fields to search on' : 'খোঁজার জন্য ক্ষেত্র নির্বাচন করুন';
-        }
-        const n = this.lang === 'bn' ? BanglaNumerals.toBangla(String(this.activeFilterCount)) : String(this.activeFilterCount);
-        return this.lang === 'en' ? `${n} filters applied` : `${n} ফিল্টার প্রয়োগকৃত`;
+        // Keep this subtitle in English regardless of the selected language.
+        if (this.activeFilterCount === 0) return 'Select fields to search on';
+        return `${this.activeFilterCount} filters applied`;
     }
 
     clearFilters(): void {
