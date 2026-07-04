@@ -12,7 +12,7 @@
                 <p-button
                     *ngIf="selectedRows.length"
                     icon="pi pi-check-square"
-                    label="Receive Posting Order ({{ selectedRows.length }})"
+                    label="Join Member ({{ selectedRows.length }})"
                     severity="success"
                     [class.perm-hidden]="!canUpdate"
                     (onClick)="openReceiveDialog()"
@@ -212,7 +212,7 @@
                                 [rounded]="true"
                                 [text]="true"
                                 size="small"
-                                pTooltip="Receive"
+                                pTooltip="Join Member"
                                 [disabled]="!canUpdate"
                                 (onClick)="openReceiveDialogFor(row)"
                             ></p-button>
@@ -399,7 +399,7 @@
             (onClick)="closeReceiveDialog()"
         ></p-button>
         <p-button
-            label="Confirm Receive"
+            label="Join Member"
             icon="pi pi-check"
             severity="success"
             [loading]="saving"

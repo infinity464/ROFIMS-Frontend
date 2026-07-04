@@ -9,7 +9,7 @@
             <div class="flex gap-2">
                 <p-button
                     icon="pi pi-arrow-right-arrow-left"
-                    label="Movement ({{ movableRows.length }})"
+                    label="Issue Movement Order ({{ movableRows.length }})"
                     severity="info"
                     [outlined]="true"
                     [disabled]="!movableRows.length"
@@ -17,7 +17,7 @@
                 ></p-button>
                 <p-button
                     icon="pi pi-check-square"
-                    label="Receive Posting Order ({{ selectedRows.length }})"
+                    label="Join Member ({{ selectedRows.length }})"
                     severity="success"
                     [disabled]="!selectedRows.length"
                     [class.perm-hidden]="!canUpdate"
