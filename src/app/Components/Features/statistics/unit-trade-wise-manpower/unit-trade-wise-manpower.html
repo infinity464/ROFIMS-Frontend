@@ -21,6 +21,21 @@
                     (onChange)="onRabUnitChange()"
                     (onClear)="onRabUnitChange()">
                 </p-multiSelect>
+
+                <label class="filter-label">{{ lang === 'en' ? 'Trade:' : 'ট্রেড:' }}</label>
+                <p-multiSelect
+                    [options]="tradeVisOptions"
+                    [(ngModel)]="selectedTradeColIds"
+                    optionLabel="label"
+                    optionValue="value"
+                    [placeholder]="lang === 'en' ? 'Trades' : 'ট্রেড'"
+                    [filter]="true"
+                    filterBy="label"
+                    display="comma"
+                    appendTo="body"
+                    styleClass="rab-unit-select"
+                    [disabled]="trades.length === 0">
+                </p-multiSelect>
             </div>
             <div class="report-results-actions">
                 <button type="button" class="report-lang-toggle" (click)="toggleLang()">
@@ -88,7 +103,7 @@
                     <thead>
                         <tr>
                             <th class="unit-col">{{ unitHeader }}</th>
-                            <th *ngFor="let col of trades" class="rank-col">
+                            <th *ngFor="let col of visibleTradeCols()" class="rank-col">
                                 <div class="rank-head">
                                     <span class="rank-name">{{ tradeLabel(col) }}</span>
                                 </div>
@@ -103,15 +118,15 @@
                     <tbody>
                         <tr *ngFor="let row of section.units">
                             <td class="unit-name">{{ unitLabel(row) }}</td>
-                            <td *ngFor="let col of trades" class="num-cell">{{ fmt(cell(row, col.tradeColId)) }}</td>
-                            <td class="num-cell total-col">{{ fmt(row.total) }}</td>
+                            <td *ngFor="let col of visibleTradeCols()" class="num-cell">{{ fmt(cell(row, col.tradeColId)) }}</td>
+                            <td class="num-cell total-col">{{ fmt(rowTotalVisible(row)) }}</td>
                         </tr>
                     </tbody>
                     <tfoot>
                         <tr class="totals-row">
                             <td class="totals-label">{{ totalHeader }}</td>
-                            <td *ngFor="let col of trades" class="num-cell">{{ fmt(colTotal(section, col.tradeColId)) }}</td>
-                            <td class="num-cell total-col">{{ fmt(section.grandTotal) }}</td>
+                            <td *ngFor="let col of visibleTradeCols()" class="num-cell">{{ fmt(colTotal(section, col.tradeColId)) }}</td>
+                            <td class="num-cell total-col">{{ fmt(sectionGrandTotalVisible(section)) }}</td>
                         </tr>
                     </tfoot>
                 </table>

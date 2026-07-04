@@ -63,6 +63,33 @@ export class UnitTradeWiseManpowerComponent implements OnInit {
     rabUnitOptions: { label: string; value: number }[] = [];
     private rabUnits: CommonCode[] = [];
 
+    /** Checked trade column ids (columns shown). Rebuilt when data changes. */
+    selectedTradeColIds: number[] = [];
+
+    /** Trade columns as check options — label is language-aware (Bangla shows the
+     *  merged comma-separated names, e.g. "কুক(মেস), কুক(ইউনিট)"). */
+    get tradeVisOptions(): { label: string; value: number }[] {
+        return this.trades.map(t => ({ label: this.tradeLabel(t), value: t.tradeColId }));
+    }
+
+    private resetTradeVisibility(): void {
+        this.selectedTradeColIds = this.trades.map(t => t.tradeColId);
+    }
+
+    /** Trade columns after applying the checkbox filter. */
+    visibleTradeCols(): UnitTradeColumn[] {
+        return this.trades.filter(t => this.selectedTradeColIds.includes(t.tradeColId));
+    }
+
+    /** Row total over the CHECKED trade columns only. */
+    rowTotalVisible(row: UnitTradeRow): number {
+        return this.visibleTradeCols().reduce((s, c) => s + this.cell(row, c.tradeColId), 0);
+    }
+    /** Section grand total over the CHECKED trade columns only. */
+    sectionGrandTotalVisible(section: UnitTradeSection): number {
+        return this.visibleTradeCols().reduce((s, c) => s + this.colTotal(section, c.tradeColId), 0);
+    }
+
     private http = inject(HttpClient);
 
     constructor(
@@ -129,6 +156,7 @@ export class UnitTradeWiseManpowerComponent implements OnInit {
                     }];
                     this.accessibleRabUnitNames   = res.accessibleRabUnitNames ?? null;
                     this.accessibleRabUnitNamesBN = res.accessibleRabUnitNamesBN ?? null;
+                    this.resetTradeVisibility();
                     this.loading = false;
                 },
                 error: () => { this.loading = false; }
@@ -165,6 +193,7 @@ export class UnitTradeWiseManpowerComponent implements OnInit {
                 this.sections = built;
                 this.accessibleRabUnitNames   = scopeEN;
                 this.accessibleRabUnitNamesBN = scopeBN;
+                this.resetTradeVisibility();
                 this.loading = false;
             },
             error: () => { this.loading = false; }
@@ -273,7 +302,8 @@ export class UnitTradeWiseManpowerComponent implements OnInit {
         this.exportDropdownOpen = false;
 
         const scope = this.scopeLine;
-        const columns = [this.unitHeader, ...this.trades.map(t => this.tradeLabel(t)), this.totalHeader];
+        const visibleCols = this.visibleTradeCols();
+        const columns = [this.unitHeader, ...visibleCols.map(t => this.tradeLabel(t)), this.totalHeader];
         const sectionedConfig = {
             title: this.titleLabel,
             lang: this.lang,
@@ -283,13 +313,13 @@ export class UnitTradeWiseManpowerComponent implements OnInit {
                 columns,
                 rows: sec.units.map(u => [
                     this.unitLabel(u),
-                    ...this.trades.map(t => this.fmt(this.cell(u, t.tradeColId))),
-                    this.fmt(u.total)
+                    ...visibleCols.map(t => this.fmt(this.cell(u, t.tradeColId))),
+                    this.fmt(this.rowTotalVisible(u))
                 ]),
                 subtotalRow: [
                     this.totalHeader,
-                    ...this.trades.map(t => this.fmt(this.colTotal(sec, t.tradeColId))),
-                    this.fmt(sec.grandTotal)
+                    ...visibleCols.map(t => this.fmt(this.colTotal(sec, t.tradeColId))),
+                    this.fmt(this.sectionGrandTotalVisible(sec))
                 ]
             })),
             showPageNumbers: true,
@@ -311,18 +341,18 @@ export class UnitTradeWiseManpowerComponent implements OnInit {
                     title: this.sectionTitle(sec),
                     columns: [
                         { label: this.unitHeader, align: 'left' as const },
-                        ...this.trades.map(t => ({ label: this.tradeLabel(t), align: 'center' as const, mono: true })),
+                        ...visibleCols.map(t => ({ label: this.tradeLabel(t), align: 'center' as const, mono: true })),
                         { label: this.totalHeader, align: 'center' as const, mono: true }
                     ],
                     rows: sec.units.map(u => [
                         this.unitLabel(u),
-                        ...this.trades.map(t => this.fmt(this.cell(u, t.tradeColId))),
-                        this.fmt(u.total)
+                        ...visibleCols.map(t => this.fmt(this.cell(u, t.tradeColId))),
+                        this.fmt(this.rowTotalVisible(u))
                     ]),
                     totalRow: [
                         this.totalHeader,
-                        ...this.trades.map(t => this.fmt(this.colTotal(sec, t.tradeColId))),
-                        this.fmt(sec.grandTotal)
+                        ...visibleCols.map(t => this.fmt(this.colTotal(sec, t.tradeColId))),
+                        this.fmt(this.sectionGrandTotalVisible(sec))
                     ]
                 }))
             });

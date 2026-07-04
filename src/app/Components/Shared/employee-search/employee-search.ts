@@ -13,6 +13,8 @@ import { map } from 'rxjs/operators';
 import { EmpService } from '@/services/emp-service';
 import { CommonCodeService } from '@/services/common-code-service';
 import { IdentityUserMemberTypeAccessService } from '@/services/identity-user-member-type-access.service';
+import { ServingMembersService } from '@/services/serving-members.service';
+import { PreviousRABServiceService, VwPreviousRABServiceInfoModel } from '@/services/previous-rab-service.service';
 import { SharedService } from '@/shared/services/shared-service';
 import { MotherOrganizationModel } from '@/models/mother-org-model';
 import { PostingStatus } from '@/models/enums';
@@ -36,6 +38,10 @@ export interface EmployeeBasicInfo {
     tradeDisplay?: string;
     motherOrganizationDisplay?: string;
     memberTypeDisplay?: string;
+    /** Mother Unit / RAB Unit display names from vw_EmployeePersonalServiceOverview.
+     *  Only populated when the host enables showMotherUnit / showRabUnit. */
+    motherUnitDisplay?: string;
+    rabUnitDisplay?: string;
     orgId?: number;
     /** CommonCode id of the employee's current appointment (for pre-filling forms). */
     appointmentId?: number;
@@ -66,33 +72,31 @@ export interface EmployeeBasicInfo {
                     <label class="font-semibold block mb-2 text-700">&nbsp;</label>
                     <button type="button" pButton label="Clear" icon="pi pi-times" severity="secondary" (click)="$event.preventDefault(); $event.stopPropagation(); reset()"></button>
                 </div>
-                @if (employeeFound && employeeInfo) {
-                    <div class="ml-3">
-                        <label class="font-semibold block mb-2 text-700">&nbsp;</label>
-                        <div class="flex align-items-center gap-3">
-                            <div class="flex align-items-center gap-3 px-3 shadow-1" style="line-height: 2.25rem; border: 1px solid var(--primary-color); border-radius: 2rem; background: var(--primary-50, rgba(16,185,129,0.05));">
-                                <span
-                                    ><span class="font-semibold"> Name : </span> <span class="font-semibold">{{ employeeInfo.fullNameEN || 'N/A' }}</span></span
-                                >
-                                <span
-                                    ><span class="font-semibold"> Rank : </span> <span class="font-semibold">{{ employeeInfo.rankDisplay || 'N/A' }}</span></span
-                                >
-                                <span
-                                    ><span class="font-semibold"> Corps : </span> <span class="font-semibold">{{ employeeInfo.corpsDisplay || 'N/A' }}</span></span
-                                >
-                                <span
-                                    ><span class="font-semibold"> Trade : </span> <span class="font-semibold">{{ employeeInfo.tradeDisplay || 'N/A' }}</span></span
-                                >
-                                <span
-                                    ><span class="font-semibold"> Mother Org : </span>
-                                    <span class="font-semibold">{{ employeeInfo.motherOrganizationDisplay ?? employeeInfo.motherOrganization ?? 'N/A' }}</span></span
-                                >
-                            </div>
-                            <button type="button" pButton label="View Profile" (click)="$event.preventDefault(); $event.stopPropagation(); openEmployeeProfile()"></button>
-                        </div>
-                    </div>
-                }
             </div>
+
+            @if (employeeFound && employeeInfo) {
+                <div class="flex align-items-stretch flex-wrap gap-3 mt-3">
+                    <div
+                        class="flex align-items-stretch flex-wrap flex-1 shadow-1"
+                        style="min-width: 0; border: 1px solid var(--primary-color); border-radius: 0.85rem; background: var(--primary-50, rgba(16,185,129,0.06)); overflow: hidden;">
+                        @for (f of chipFields; track f.label) {
+                            <div
+                                class="flex align-items-center gap-2 px-3 py-2"
+                                [style.border-left]="$first ? 'none' : '1px solid var(--surface-border, rgba(0,0,0,0.08))'">
+                                <span class="text-sm" style="color: var(--text-color-secondary, #6b7280);">{{ f.label }}:</span>
+                                <span class="text-sm font-semibold text-900 white-space-nowrap">{{ f.value }}</span>
+                            </div>
+                        }
+                    </div>
+                    <button
+                        type="button"
+                        pButton
+                        label="View Profile"
+                        icon="pi pi-user"
+                        class="align-self-stretch"
+                        (click)="$event.preventDefault(); $event.stopPropagation(); openEmployeeProfile()"></button>
+                </div>
+            }
         </div>
 
         <p-dialog
@@ -137,6 +141,15 @@ export class EmployeeSearchComponent implements OnChanges {
     /** When set (e.g. in edit mode), load and display this employee so RAB info shows on Update. */
     @Input() initialEmployeeId: number | null = null;
 
+    /** Result-chip field visibility. Default across the app: hide Corps/Trade, show
+     *  Mother Unit + RAB Unit. Any host can override per-usage (e.g. [showCorps]="true").
+     *  Hiding a field only removes it from the chip — the underlying data is still fetched
+     *  and emitted via onEmployeeFound so other consumers keep working. */
+    @Input() showCorps = false;
+    @Input() showTrade = false;
+    @Input() showMotherUnit = true;
+    @Input() showRabUnit = true;
+
     @Output() onEmployeeFound = new EventEmitter<EmployeeBasicInfo>();
     @Output() onSearchReset = new EventEmitter<void>();
 
@@ -171,7 +184,9 @@ export class EmployeeSearchComponent implements OnChanges {
         private messageService: MessageService,
         private router: Router,
         private memberTypeAccess: IdentityUserMemberTypeAccessService,
-        private sharedService: SharedService
+        private sharedService: SharedService,
+        private servingMembersService: ServingMembersService,
+        private previousRabService: PreviousRABServiceService
     ) {
         this.commonCodeService.getAllActiveMotherOrgs().subscribe({
             next: (res) => (this.motherOrganizations = res ?? []),
@@ -240,21 +255,72 @@ export class EmployeeSearchComponent implements OnChanges {
                     return;
                 }
 
-                this.employeeFound = true;
-                this.isSearching = false;
-                if (this.employeeInfo) {
-                    this.onEmployeeFound.emit(this.employeeInfo);
-                }
+                this.enrichMotherRabUnitThenEmit(employeeID);
             },
             error: (err: any) => {
                 // Fail-open if enrichment/view fails: emit with what we have rather than block.
-                this.employeeFound = true;
-                this.isSearching = false;
-                if (this.employeeInfo) {
-                    this.onEmployeeFound.emit(this.employeeInfo);
-                }
+                this.markFoundAndEmit();
             }
         });
+    }
+
+    /**
+     * When the host enables Mother Unit / RAB Unit in the result chip, fetch those display
+     * names from vw_EmployeePersonalServiceOverview (the same source the members/profile page
+     * uses) before emitting. Otherwise emit immediately. Enrichment failures fail-open.
+     */
+    private enrichMotherRabUnitThenEmit(employeeID: number): void {
+        if (!this.showMotherUnit && !this.showRabUnit) {
+            this.markFoundAndEmit();
+            return;
+        }
+        this.servingMembersService.getEmployeePersonalServiceOverview(employeeID).subscribe({
+            next: (overview) => {
+                const matches = !!overview && !!this.employeeInfo && this.employeeInfo.employeeID === employeeID;
+                if (matches) {
+                    this.employeeInfo = {
+                        ...this.employeeInfo!,
+                        motherUnitDisplay: overview.motherUnit ?? overview.motherUnitBN ?? undefined,
+                        rabUnitDisplay: overview.rabUnit ?? overview.rabUnitBN ?? undefined
+                    };
+                }
+
+                // RAB Unit on the overview view is often empty (e.g. ex-members carry their
+                // last RAB unit in previous-service history). Mirror the members/profile page:
+                // fall back to the most recent previous RAB service entry.
+                if (this.showRabUnit && matches && !this.employeeInfo?.rabUnitDisplay) {
+                    this.previousRabService.getViewByEmployeeId(employeeID).subscribe({
+                        next: (list) => {
+                            if (this.employeeInfo && this.employeeInfo.employeeID === employeeID) {
+                                const fallback = this.latestRabUnitName(list);
+                                if (fallback) this.employeeInfo = { ...this.employeeInfo, rabUnitDisplay: fallback };
+                            }
+                            this.markFoundAndEmit();
+                        },
+                        error: () => this.markFoundAndEmit()
+                    });
+                    return;
+                }
+
+                this.markFoundAndEmit();
+            },
+            error: () => this.markFoundAndEmit()
+        });
+    }
+
+    /** Most recent previous RAB service unit name (sorted by serviceFrom DESC), like the profile page. */
+    private latestRabUnitName(list: VwPreviousRABServiceInfoModel[] | null): string | undefined {
+        if (!list?.length) return undefined;
+        const sorted = [...list].sort((a, b) => (b.serviceFrom ?? '').localeCompare(a.serviceFrom ?? ''));
+        return sorted[0]?.rabUnitName ?? sorted[0]?.rabUnitNameBN ?? undefined;
+    }
+
+    private markFoundAndEmit(): void {
+        this.employeeFound = true;
+        this.isSearching = false;
+        if (this.employeeInfo) {
+            this.onEmployeeFound.emit(this.employeeInfo);
+        }
     }
 
     ngOnChanges(changes: SimpleChanges): void {
@@ -626,6 +692,27 @@ export class EmployeeSearchComponent implements OnChanges {
         this.employeeFound = false;
         this.employeeInfo = null;
         this.onSearchReset.emit();
+    }
+
+    /**
+     * Label/value pairs rendered in the result chip, in display order. Corps/Trade and
+     * Mother Unit / RAB Unit are included per the show* toggles so the same strip layout
+     * works for every host without template duplication.
+     */
+    get chipFields(): { label: string; value: string }[] {
+        const e = this.employeeInfo;
+        if (!e) return [];
+        const motherOrg = e.motherOrganizationDisplay ?? (e.motherOrganization != null ? String(e.motherOrganization) : null);
+        const fields: { label: string; value: string }[] = [
+            { label: 'Name', value: e.fullNameEN || 'N/A' },
+            { label: 'Rank', value: e.rankDisplay || 'N/A' }
+        ];
+        if (this.showCorps) fields.push({ label: 'Corps', value: e.corpsDisplay || 'N/A' });
+        if (this.showTrade) fields.push({ label: 'Trade', value: e.tradeDisplay || 'N/A' });
+        fields.push({ label: 'Mother Org', value: motherOrg || 'N/A' });
+        if (this.showMotherUnit) fields.push({ label: 'Mother Unit', value: e.motherUnitDisplay || 'N/A' });
+        if (this.showRabUnit) fields.push({ label: 'RAB Unit', value: e.rabUnitDisplay || 'N/A' });
+        return fields;
     }
 
     // Public method to get the current employee info

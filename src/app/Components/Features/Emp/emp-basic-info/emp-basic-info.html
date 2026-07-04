@@ -167,18 +167,19 @@
                     </div>
 
                     <div class="form-field">
-                        <label class="form-label"> Appointment @if (isEditMode) { <span style="color: #b45309; font-size: 0.8em; font-style: italic; font-weight: 500">(readonly)</span> } </label>
+                        <label class="form-label"> Appointment <span style="color: #b45309; font-size: 0.8em; font-style: italic; font-weight: 500">(readonly)</span> </label>
                         <p-select
                             [options]="appointments"
                             optionLabel="codeValueEN"
                             optionValue="codeId"
                             placeholder="Select Appointment"
                             styleClass="w-full"
+                            [class.surface-100]="true"
                             formControlName="appointment"
                             [filter]="true"
                             filterPlaceholder="Search"
-                            [showClear]="true"
-                            [readonly]="isEditMode"
+                            [showClear]="false"
+                            [readonly]="true"
                         >
                         </p-select>
                         @if (isFieldInvalid('appointment')) {
