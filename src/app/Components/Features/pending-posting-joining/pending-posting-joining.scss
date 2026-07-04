@@ -124,6 +124,12 @@
         border-radius: 4px;
         font-size: 0.9rem;
         color: var(--text-color);
+
+        // surface-100 fallback stays light in dark mode, leaving light
+        // text on a light box — give the box a dark surface instead.
+        :host-context(.app-dark) & {
+            background: var(--surface-800, #1f2937);
+        }
     }
 
     .receive-field {
