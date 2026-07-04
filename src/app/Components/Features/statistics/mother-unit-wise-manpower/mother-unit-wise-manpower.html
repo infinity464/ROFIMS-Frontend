@@ -29,6 +29,13 @@
 
             <!-- Lang + Export -->
             <div class="report-results-actions">
+                <button type="button" class="report-lang-toggle" (click)="toggleRankMode()"
+                        [title]="showMotherOrgRank ? 'Switch to RAB Rank (Equivalent Name)' : 'Switch to Mother Org Rank'">
+                    {{ showMotherOrgRank
+                        ? (lang === 'en' ? 'Mother Org Rank' : 'মাতৃ বাহিনীর পদবী')
+                        : (lang === 'en' ? 'RAB Rank' : 'র‍্যাব পদবী') }}
+                </button>
+
                 <button type="button" class="report-lang-toggle" (click)="toggleLang()">
                     {{ lang === 'en' ? 'বাংলা' : 'English' }}
                 </button>

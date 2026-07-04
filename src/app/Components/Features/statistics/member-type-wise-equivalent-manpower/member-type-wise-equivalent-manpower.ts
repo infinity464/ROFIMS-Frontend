@@ -270,8 +270,8 @@ export class MemberTypeWiseEquivalentManpowerComponent implements OnInit {
 
     get titleLabel(): string {
         return this.lang === 'en'
-            ? 'ORGANIZATION & MEMBER TYPE WISE MANPOWER STATE (EQUIVALENT NAME)'
-            : 'বাহিনী এবং সদস্য প্রকার অনুযায়ী জনবলের সারাংশ (সমতুল্য নাম)';
+            ? 'ORGANIZATION & MEMBER TYPE WISE MANPOWER STATE'
+            : 'বাহিনী এবং সদস্য প্রকার অনুযায়ী জনবলের সারাংশ';
     }
 
     get dateLine(): string {

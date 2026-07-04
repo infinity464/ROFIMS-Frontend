@@ -456,8 +456,8 @@ export class ManpowerSummaryEquivalentComponent implements OnInit {
 
     get titleLabel(): string {
         return this.lang === 'en'
-            ? 'OVERALL MANPOWER SUMMARY (EQUIVALENT NAME)'
-            : 'জনবলের পরিসংখ্যান-র‌্যাব ফোর্সেস (সমতুল্য নাম)';
+            ? 'OVERALL MANPOWER SUMMARY'
+            : 'জনবলের পরিসংখ্যান-র‌্যাব ফোর্সেস';
     }
 
     get dateLine(): string {

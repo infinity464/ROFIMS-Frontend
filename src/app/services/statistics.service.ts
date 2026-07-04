@@ -255,6 +255,30 @@ export interface UnitRankWiseManpowerResponse {
     accessibleRabUnitNamesBN?: string[] | null;
 }
 
+/** RAB-Unit × Trade serving-manpower matrix (trades merged by name). */
+export interface UnitTradeColumn {
+    tradeColId: number;
+    tradeNameEN: string;
+    tradeNameBN: string;
+}
+
+export interface UnitTradeRow {
+    unitId: number;
+    unitNameEN: string;
+    unitNameBN: string;
+    cells: Record<number, number>;   // key = tradeColId
+    total: number;
+}
+
+export interface UnitTradeWiseManpowerResponse {
+    trades: UnitTradeColumn[];
+    units: UnitTradeRow[];
+    columnTotals: Record<number, number>;   // key = tradeColId
+    grandTotal: number;
+    accessibleRabUnitNames?: string[] | null;
+    accessibleRabUnitNamesBN?: string[] | null;
+}
+
 export interface CorpsWiseManpowerResponse {
     orgId: number;
     orgName: string;
@@ -411,6 +435,15 @@ export class StatisticsService {
         }
         return this.http.get<UnitRankWiseManpowerResponse>(
             `${this.apiUrl}/GetUnitRankWiseManpowerByEquivalentName`, { params }
+        );
+    }
+
+    /** RAB-Unit × Trade serving-manpower matrix (rows = units, drill-down to wings via rabUnitId). */
+    getUnitTradeWiseManpower(rabUnitId?: number | null): Observable<UnitTradeWiseManpowerResponse> {
+        const params: any = {};
+        if (rabUnitId != null) params.rabUnitId = rabUnitId;
+        return this.http.get<UnitTradeWiseManpowerResponse>(
+            `${this.apiUrl}/GetUnitTradeWiseManpower`, { params }
         );
     }
 

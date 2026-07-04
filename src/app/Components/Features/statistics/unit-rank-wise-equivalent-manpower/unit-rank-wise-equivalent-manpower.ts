@@ -300,8 +300,8 @@ export class UnitRankWiseEquivalentManpowerComponent implements OnInit {
         const rowEN = isWingMode ? 'WING' : 'UNIT';
         const rowBN = isWingMode ? 'উইং'   : 'ইউনিট';
         return this.lang === 'en'
-            ? `${rowEN}-WISE MANPOWER STATE BY RAB RANK (EQUIVALENT NAME)`
-            : `${rowBN} অনুযায়ী র‍্যাব পদবী ভিত্তিক জনবলের পরিসংখ্যান (সমতুল্য নাম)`;
+            ? `${rowEN}-WISE MANPOWER STATE BY RAB RANK`
+            : `${rowBN} অনুযায়ী র‍্যাব পদবী ভিত্তিক জনবলের পরিসংখ্যান`;
     }
 
     get unitHeader(): string {

@@ -60,6 +60,15 @@ export class MotherUnitWiseManpowerComponent implements OnInit {
     filterRabCodeId: number | null = null;
     filterLabel: string | null = null;
 
+    /** Rank axis: false = RAB Rank (Equivalent Name, default); true = Mother Org Rank. */
+    showMotherOrgRank = false;
+
+    /** Toggle between RAB Rank (Equivalent Name) and Mother Org Rank columns, then reload. */
+    toggleRankMode(): void {
+        this.showMotherOrgRank = !this.showMotherOrgRank;
+        this.onOrgFilterChange();
+    }
+
     /** Names of the RAB Units the user is restricted to. null/empty = full access. */
     accessibleRabUnitNames: string[] | null = null;
     accessibleRabUnitNamesBN: string[] | null = null;
@@ -147,9 +156,13 @@ export class MotherUnitWiseManpowerComponent implements OnInit {
             return;
         }
         this.loading = true;
+        // Default = RAB Rank (Equivalent Name); toggled = Mother Org Rank.
+        const fetchOrg = (id: number) => this.showMotherOrgRank
+            ? this.statisticsService.getMotherUnitWiseManpower(id, this.filterRabCodeId)
+            : this.statisticsService.getMotherUnitWiseManpowerByEquivalentName(id, this.filterRabCodeId);
         forkJoin(
             ids.map(id =>
-                this.statisticsService.getMotherUnitWiseManpower(id, this.filterRabCodeId).pipe(
+                fetchOrg(id).pipe(
                     catchError(() => of(null as MotherUnitWiseManpowerResponse | null))
                 )
             )

@@ -267,6 +267,7 @@
                         <th>RAB Unit</th>
                         <th>Joining Date in RAB</th>
                         <th>Home District (Permanent)</th>
+                        <th style="min-width: 200px">Remarks</th>
                         <th>Status</th>
                         @if (interPostingMode) {
                             <th style="min-width: 180px">Remarks</th>
@@ -305,6 +306,7 @@
                         </td>
                         <td>{{ formatDate(row.joiningDate) }}</td>
                         <td>{{ row.permanentDistrictTypeName || '—' }}</td>
+                        <td style="white-space: pre-line; min-width: 200px">{{ row.allRemarks || '—' }}</td>
                         <td>
                             @if (row.isSendingNotesheetStatus) {
                                 <p-tag [value]="getStatusLabel(row.isSendingNotesheetStatus)" severity="warn"></p-tag>

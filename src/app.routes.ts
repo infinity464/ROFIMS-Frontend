@@ -210,16 +210,14 @@ import { ManpowerChartEquivalentComponent } from '@/Components/Features/statisti
 import { RankWiseManpowerComponent } from '@/Components/Features/statistics/rank-wise-manpower/rank-wise-manpower';
 import { EquivalentNameWiseManpowerComponent } from '@/Components/Features/statistics/equivalent-name-wise-manpower/equivalent-name-wise-manpower';
 import { MotherUnitWiseManpowerComponent } from '@/Components/Features/statistics/mother-unit-wise-manpower/mother-unit-wise-manpower';
-import { MotherUnitWiseEquivalentManpowerComponent } from '@/Components/Features/statistics/mother-unit-wise-equivalent-manpower/mother-unit-wise-equivalent-manpower';
 import { CorpsWiseManpowerComponent } from '@/Components/Features/statistics/corps-wise-manpower/corps-wise-manpower';
-import { CorpsWiseEquivalentManpowerComponent } from '@/Components/Features/statistics/corps-wise-equivalent-manpower/corps-wise-equivalent-manpower';
 import { TradeWiseManpowerComponent } from '@/Components/Features/statistics/trade-wise-manpower/trade-wise-manpower';
-import { TradeWiseEquivalentManpowerComponent } from '@/Components/Features/statistics/trade-wise-equivalent-manpower/trade-wise-equivalent-manpower';
 import { MemberTypeWiseManpowerComponent } from '@/Components/Features/statistics/member-type-wise-manpower/member-type-wise-manpower';
 import { MemberTypeWiseEquivalentManpowerComponent } from '@/Components/Features/statistics/member-type-wise-equivalent-manpower/member-type-wise-equivalent-manpower';
 import { UnitWiseBarChartComponent } from '@/Components/Features/statistics/unit-wise-bar-chart/unit-wise-bar-chart';
 import { UnitRankWiseManpowerComponent } from '@/Components/Features/statistics/unit-rank-wise-manpower/unit-rank-wise-manpower';
 import { UnitRankWiseEquivalentManpowerComponent } from '@/Components/Features/statistics/unit-rank-wise-equivalent-manpower/unit-rank-wise-equivalent-manpower';
+import { UnitTradeWiseManpowerComponent } from '@/Components/Features/statistics/unit-trade-wise-manpower/unit-trade-wise-manpower';
 import { SystemMonitoringComponent } from '@/Components/Features/system-monitoring/system-monitoring';
 import { OfficeOrderGenerateComponent } from '@/Components/Features/office-order-generate/office-order-generate';
 import { OfficeOrderPreviewComponent } from '@/Components/Features/office-order-preview/office-order-preview';
@@ -485,16 +483,14 @@ export const appRoutes: Routes = [
             { path: 'statistics/rank-wise-manpower', component: RankWiseManpowerComponent },
             { path: 'statistics/equivalent-name-wise-manpower', component: EquivalentNameWiseManpowerComponent },
             { path: 'statistics/mother-unit-wise-manpower', component: MotherUnitWiseManpowerComponent },
-            { path: 'statistics/mother-unit-wise-equivalent-manpower', component: MotherUnitWiseEquivalentManpowerComponent },
             { path: 'statistics/corps-wise-manpower', component: CorpsWiseManpowerComponent },
-            { path: 'statistics/corps-wise-equivalent-manpower', component: CorpsWiseEquivalentManpowerComponent },
             { path: 'statistics/trade-wise-manpower', component: TradeWiseManpowerComponent },
-            { path: 'statistics/trade-wise-equivalent-manpower', component: TradeWiseEquivalentManpowerComponent },
             { path: 'statistics/member-type-wise-manpower', component: MemberTypeWiseManpowerComponent },
             { path: 'statistics/member-type-wise-equivalent-manpower', component: MemberTypeWiseEquivalentManpowerComponent },
             { path: 'statistics/unit-wise-bar-chart', component: UnitWiseBarChartComponent },
             { path: 'statistics/unit-rank-wise-manpower', component: UnitRankWiseManpowerComponent },
             { path: 'statistics/unit-rank-wise-equivalent-manpower', component: UnitRankWiseEquivalentManpowerComponent },
+            { path: 'statistics/unit-trade-wise-manpower', component: UnitTradeWiseManpowerComponent },
 
             // Dynamic Search
             { path: 'dynamic-search', component: DynamicSearchComponent },

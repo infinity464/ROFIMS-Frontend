@@ -114,23 +114,15 @@
             <div class="report-table-wrap">
                 <table class="report-table">
                     <colgroup *ngIf="!showPostingOut">
-                        <col style="width: 6%">
+                        <col style="width: 8%">
+                        <col style="width: 62%">
                         <col style="width: 30%">
-                        <col style="width: 12%">
-                        <col style="width: 12%">
-                        <col style="width: 12%">
-                        <col style="width: 12%">
-                        <col style="width: 16%">
                     </colgroup>
                     <colgroup *ngIf="showPostingOut">
-                        <col style="width: 5%">
-                        <col style="width: 24%">
-                        <col style="width: 11%">
-                        <col style="width: 11%">
-                        <col style="width: 11%">
-                        <col style="width: 11%">
-                        <col style="width: 13%">
-                        <col style="width: 14%">
+                        <col style="width: 7%">
+                        <col style="width: 53%">
+                        <col style="width: 20%">
+                        <col style="width: 20%">
                     </colgroup>
                     <thead>
                         <tr>
@@ -141,11 +133,11 @@
                         <tr *ngFor="let row of org.rows; let i = index">
                             <td class="num-cell">{{ fmt(i + 1) }}</td>
                             <td class="rank-name">{{ rankLabel(row) }}</td>
-                            <td class="num-cell">{{ fmt(row.auth) }}</td>
+                            <!-- <td class="num-cell">{{ fmt(row.auth) }}</td> -->
                             <td class="num-cell">{{ fmt(row.held) }}</td>
-                            <td class="num-cell" [class.cell-danger]="row.def > 0">{{ fmt(row.def) }}</td>
-                            <td class="num-cell" [class.cell-warning]="row.sur > 0">{{ fmt(row.sur) }}</td>
-                            <td class="num-cell" [class.cell-danger]="row.defPct > 0">{{ fmtPct(row.defPct) }}</td>
+                            <!-- <td class="num-cell" [class.cell-danger]="row.def > 0">{{ fmt(row.def) }}</td> -->
+                            <!-- <td class="num-cell" [class.cell-warning]="row.sur > 0">{{ fmt(row.sur) }}</td> -->
+                            <!-- <td class="num-cell" [class.cell-danger]="row.defPct > 0">{{ fmtPct(row.defPct) }}</td> -->
                             <td class="num-cell" *ngIf="showPostingOut">{{ fmt(row.postedOut) }}</td>
                         </tr>
                     </tbody>
@@ -153,11 +145,11 @@
                         <tr class="subtotals-row">
                             <td></td>
                             <td class="totals-label">{{ subtotalLabel }}</td>
-                            <td class="num-cell">{{ fmt(org.subtotal.auth) }}</td>
+                            <!-- <td class="num-cell">{{ fmt(org.subtotal.auth) }}</td> -->
                             <td class="num-cell">{{ fmt(org.subtotal.held) }}</td>
-                            <td class="num-cell">{{ fmt(org.subtotal.def) }}</td>
-                            <td class="num-cell">{{ fmt(org.subtotal.sur) }}</td>
-                            <td class="num-cell">{{ fmtPct(org.subtotal.defPct) }}</td>
+                            <!-- <td class="num-cell">{{ fmt(org.subtotal.def) }}</td> -->
+                            <!-- <td class="num-cell">{{ fmt(org.subtotal.sur) }}</td> -->
+                            <!-- <td class="num-cell">{{ fmtPct(org.subtotal.defPct) }}</td> -->
                             <td class="num-cell" *ngIf="showPostingOut">{{ fmt(org.subtotal.postedOut) }}</td>
                         </tr>
                     </tfoot>
@@ -170,33 +162,25 @@
             <div class="report-table-wrap">
                 <table class="report-table">
                     <colgroup *ngIf="!showPostingOut">
-                        <col style="width: 6%">
+                        <col style="width: 8%">
+                        <col style="width: 62%">
                         <col style="width: 30%">
-                        <col style="width: 12%">
-                        <col style="width: 12%">
-                        <col style="width: 12%">
-                        <col style="width: 12%">
-                        <col style="width: 16%">
                     </colgroup>
                     <colgroup *ngIf="showPostingOut">
-                        <col style="width: 5%">
-                        <col style="width: 24%">
-                        <col style="width: 11%">
-                        <col style="width: 11%">
-                        <col style="width: 11%">
-                        <col style="width: 11%">
-                        <col style="width: 13%">
-                        <col style="width: 14%">
+                        <col style="width: 7%">
+                        <col style="width: 53%">
+                        <col style="width: 20%">
+                        <col style="width: 20%">
                     </colgroup>
                     <tbody>
                         <tr class="grand-total-row">
                             <td class="num-cell"></td>
                             <td class="totals-label">{{ grandTotalLabel }}</td>
-                            <td class="num-cell">{{ fmt(grandTotal.auth) }}</td>
+                            <!-- <td class="num-cell">{{ fmt(grandTotal.auth) }}</td> -->
                             <td class="num-cell">{{ fmt(grandTotal.held) }}</td>
-                            <td class="num-cell">{{ fmt(grandTotal.def) }}</td>
-                            <td class="num-cell">{{ fmt(grandTotal.sur) }}</td>
-                            <td class="num-cell">{{ fmtPct(grandTotal.defPct) }}</td>
+                            <!-- <td class="num-cell">{{ fmt(grandTotal.def) }}</td> -->
+                            <!-- <td class="num-cell">{{ fmt(grandTotal.sur) }}</td> -->
+                            <!-- <td class="num-cell">{{ fmtPct(grandTotal.defPct) }}</td> -->
                             <td class="num-cell" *ngIf="showPostingOut">{{ fmt(grandTotal.postedOut) }}</td>
                         </tr>
                     </tbody>

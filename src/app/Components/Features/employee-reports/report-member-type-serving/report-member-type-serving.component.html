@@ -337,7 +337,7 @@
                                     <td class="rab-td-date">{{ formatDate(row.joiningDate) }}</td>
                                 }
                                 @case ('Remarks') {
-                                    <td class="rab-td-rmks" style="white-space: pre-line">{{ row.rmks || '' }}</td>
+                                    <td class="rab-td-rmks" style="white-space: pre-line">{{ remarksCellValue(row) }}</td>
                                 }
                                 @case ('Plain') {
                                     <td>{{ plainCellValue(row, col.key) }}</td>

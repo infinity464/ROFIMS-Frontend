@@ -63,8 +63,8 @@ export class RankWiseManpowerComponent implements OnInit {
     /** When true, the equivalent-name (basic-setup/rank-equivalent) is appended in parens after each rank name. */
     showEquivalentRanks = false;
 
-    /** When true, an extra "Posting Out" column (in-flight PermanentPostingMORecord count) is rendered. */
-    showPostingOut = false;
+    /** When true, an extra "Posting Out" column (in-flight PermanentPostingMORecord count) is rendered. Checked by default. */
+    showPostingOut = true;
 
     /** rankId -> equivalent-name label(s) it maps to (EN + BN). */
     private equivalentNamesByRankId: Map<number, { en: string; bn: string }[]> = new Map();
@@ -237,11 +237,11 @@ export class RankWiseManpowerComponent implements OnInit {
                     const cells = [
                         this.fmt(i + 1),
                         this.rankLabel(row),
-                        this.fmt(row.auth),
-                        this.fmt(row.held),
-                        this.fmt(row.def),
-                        this.fmt(row.sur),
-                        this.fmtPct(row.defPct)
+                        // this.fmt(row.auth),
+                        this.fmt(row.held)
+                        // this.fmt(row.def),
+                        // this.fmt(row.sur),
+                        // this.fmtPct(row.defPct)
                     ];
                     if (includePO) cells.push(this.fmt(row.postedOut));
                     return cells;
@@ -250,11 +250,11 @@ export class RankWiseManpowerComponent implements OnInit {
                     const cells = [
                         '',
                         this.subtotalLabel,
-                        this.fmt(org.subtotal.auth),
-                        this.fmt(org.subtotal.held),
-                        this.fmt(org.subtotal.def),
-                        this.fmt(org.subtotal.sur),
-                        this.fmtPct(org.subtotal.defPct)
+                        // this.fmt(org.subtotal.auth),
+                        this.fmt(org.subtotal.held)
+                        // this.fmt(org.subtotal.def),
+                        // this.fmt(org.subtotal.sur),
+                        // this.fmtPct(org.subtotal.defPct)
                     ];
                     if (includePO) cells.push(this.fmt(org.subtotal.postedOut));
                     return cells;
@@ -264,11 +264,11 @@ export class RankWiseManpowerComponent implements OnInit {
                 const cells = [
                     '',
                     this.grandTotalLabel,
-                    this.fmt(this.grandTotal.auth),
-                    this.fmt(this.grandTotal.held),
-                    this.fmt(this.grandTotal.def),
-                    this.fmt(this.grandTotal.sur),
-                    this.fmtPct(this.grandTotal.defPct)
+                    // this.fmt(this.grandTotal.auth),
+                    this.fmt(this.grandTotal.held)
+                    // this.fmt(this.grandTotal.def),
+                    // this.fmt(this.grandTotal.sur),
+                    // this.fmtPct(this.grandTotal.defPct)
                 ];
                 if (includePO) cells.push(this.fmt(this.grandTotal.postedOut));
                 return cells;
@@ -352,9 +352,10 @@ export class RankWiseManpowerComponent implements OnInit {
     }
 
     get colHeaders(): string[] {
+        // Auth / Def / Sur / Def % columns commented out (kept for easy restore).
         const base = this.lang === 'en'
-            ? ['Ser', 'Rank', 'Auth', 'Held', 'Def', 'Sur', 'Def %']
-            : ['ক্রমিক', 'পদবী', 'প্রাধিকার', 'বিদ্যমান', 'ঘাটতি', 'অতিরিক্ত', 'ঘাটতি %'];
+            ? ['Ser', 'Rank', /* 'Auth', */ 'Held' /* , 'Def', 'Sur', 'Def %' */]
+            : ['ক্রমিক', 'পদবী', /* 'প্রাধিকার', */ 'বিদ্যমান' /* , 'ঘাটতি', 'অতিরিক্ত', 'ঘাটতি %' */];
         if (!this.showPostingOut) return base;
         return [...base, this.lang === 'en' ? 'Posted Out' : 'প্রেষণাদেশ বাতিল'];
     }

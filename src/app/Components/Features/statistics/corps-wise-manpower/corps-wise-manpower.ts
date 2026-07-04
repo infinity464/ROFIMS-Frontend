@@ -59,6 +59,15 @@ export class CorpsWiseManpowerComponent implements OnInit {
     filterRabCodeId: number | null = null;
     filterLabel: string | null = null;
 
+    /** Rank axis: false = RAB Rank (Equivalent Name, default); true = Mother Org Rank. */
+    showMotherOrgRank = false;
+
+    /** Toggle between RAB Rank (Equivalent Name) and Mother Org Rank columns, then reload. */
+    toggleRankMode(): void {
+        this.showMotherOrgRank = !this.showMotherOrgRank;
+        this.onOrgFilterChange();
+    }
+
     /** Checked Regiment/Corps ids (rows shown). Rebuilt when org selection/data changes. */
     selectedCorpsIds: number[] = [];
     /** Checked rank ids (columns shown). Rebuilt when org selection/data changes. */
@@ -210,9 +219,13 @@ export class CorpsWiseManpowerComponent implements OnInit {
             return;
         }
         this.loading = true;
+        // Default = RAB Rank (Equivalent Name); toggled = Mother Org Rank.
+        const fetchOrg = (id: number) => this.showMotherOrgRank
+            ? this.statisticsService.getCorpsWiseManpower(id, this.filterRabCodeId)
+            : this.statisticsService.getCorpsWiseManpowerByEquivalentName(id, this.filterRabCodeId);
         forkJoin(
             ids.map(id =>
-                this.statisticsService.getCorpsWiseManpower(id, this.filterRabCodeId).pipe(
+                fetchOrg(id).pipe(
                     catchError(() => of(null as CorpsWiseManpowerResponse | null))
                 )
             )

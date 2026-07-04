@@ -11,13 +11,7 @@ import { ExportService } from '@/services/export.service';
 import { UserMenuService } from '@/services/user-menu.service';
 import { BanglaNumerals } from '@/Core/i18n/bangla-numerals';
 import { environment } from '@/Core/Environments/environment';
-import {
-    StatisticsService,
-    type MotherUnitOrgOption,
-    type MotherUnitRankColumn,
-    type TradeRow,
-    type TradeWiseManpowerResponse
-} from '@/services/statistics.service';
+import { StatisticsService, type MotherUnitOrgOption, type MotherUnitRankColumn, type TradeRow, type TradeWiseManpowerResponse } from '@/services/statistics.service';
 import { OrgTreeFilterComponent } from '../shared/org-tree-filter/org-tree-filter.component';
 import { RabReportPrintService } from '../shared/rab-report-print.service';
 
@@ -59,6 +53,15 @@ export class TradeWiseManpowerComponent implements OnInit {
     filterRabCodeId: number | null = null;
     filterLabel: string | null = null;
 
+    /** Rank axis: false = RAB Rank (Equivalent Name, default); true = Mother Org Rank. */
+    showMotherOrgRank = false;
+
+    /** Toggle between RAB Rank (Equivalent Name) and Mother Org Rank columns, then reload. */
+    toggleRankMode(): void {
+        this.showMotherOrgRank = !this.showMotherOrgRank;
+        this.onOrgFilterChange();
+    }
+
     /** Checked Trade ids (rows shown). Rebuilt when org selection/data changes. */
     selectedTradeIds: number[] = [];
     /** Checked rank ids (columns shown). Rebuilt when org selection/data changes. */
@@ -70,7 +73,7 @@ export class TradeWiseManpowerComponent implements OnInit {
         for (const org of this.filteredOrgs) {
             for (const t of org.trades) {
                 if (!seen.has(t.tradeId)) {
-                    seen.set(t.tradeId, { value: t.tradeId, label: this.lang === 'en' ? t.tradeName : (t.tradeNameBN || t.tradeName) });
+                    seen.set(t.tradeId, { value: t.tradeId, label: this.lang === 'en' ? t.tradeName : t.tradeNameBN || t.tradeName });
                 }
             }
         }
@@ -83,7 +86,7 @@ export class TradeWiseManpowerComponent implements OnInit {
         for (const org of this.filteredOrgs) {
             for (const r of org.ranks) {
                 if (!seen.has(r.rankId)) {
-                    seen.set(r.rankId, { value: r.rankId, label: this.lang === 'en' ? r.rankName : (r.rankNameBN || r.rankName) });
+                    seen.set(r.rankId, { value: r.rankId, label: this.lang === 'en' ? r.rankName : r.rankNameBN || r.rankName });
                 }
             }
         }
@@ -92,16 +95,16 @@ export class TradeWiseManpowerComponent implements OnInit {
 
     /** Default every Trade and rank to checked when the displayed data changes. */
     private resetVisibilitySelections(): void {
-        this.selectedTradeIds = this.tradeVisOptions.map(o => o.value);
-        this.selectedRankIds = this.rankVisOptions.map(o => o.value);
+        this.selectedTradeIds = this.tradeVisOptions.map((o) => o.value);
+        this.selectedRankIds = this.rankVisOptions.map((o) => o.value);
     }
 
     /** Visible rows/columns per org after applying the checkbox filters. */
     visibleTrades(org: TradeOrgBlock): TradeRow[] {
-        return org.trades.filter(t => this.selectedTradeIds.includes(t.tradeId));
+        return org.trades.filter((t) => this.selectedTradeIds.includes(t.tradeId));
     }
     visibleRanks(org: TradeOrgBlock): MotherUnitRankColumn[] {
-        return org.ranks.filter(r => this.selectedRankIds.includes(r.rankId));
+        return org.ranks.filter((r) => this.selectedRankIds.includes(r.rankId));
     }
 
     /** Row total over the CHECKED ranks only (adjusts as columns are toggled). */
@@ -128,14 +131,8 @@ export class TradeWiseManpowerComponent implements OnInit {
     accessibleMemberTypeNames: string[] | null = null;
     accessibleMemberTypeNamesBN: string[] | null = null;
 
-    private static readonly EN_MONTHS = [
-        'JANUARY','FEBRUARY','MARCH','APRIL','MAY','JUNE',
-        'JULY','AUGUST','SEPTEMBER','OCTOBER','NOVEMBER','DECEMBER'
-    ];
-    private static readonly BN_MONTHS = [
-        'জানুয়ারি','ফেব্রুয়ারি','মার্চ','এপ্রিল','মে','জুন',
-        'জুলাই','আগস্ট','সেপ্টেম্বর','অক্টোবর','নভেম্বর','ডিসেম্বর'
-    ];
+    private static readonly EN_MONTHS = ['JANUARY', 'FEBRUARY', 'MARCH', 'APRIL', 'MAY', 'JUNE', 'JULY', 'AUGUST', 'SEPTEMBER', 'OCTOBER', 'NOVEMBER', 'DECEMBER'];
+    private static readonly BN_MONTHS = ['জানুয়ারি', 'ফেব্রুয়ারি', 'মার্চ', 'এপ্রিল', 'মে', 'জুন', 'জুলাই', 'আগস্ট', 'সেপ্টেম্বর', 'অক্টোবর', 'নভেম্বর', 'ডিসেম্বর'];
 
     private http = inject(HttpClient);
 
@@ -157,7 +154,7 @@ export class TradeWiseManpowerComponent implements OnInit {
         const bn = this.lang === 'bn';
         const items: { label: string; value: string }[] = [];
         // Organization first.
-        const orgNames = this.filteredOrgs.map(o => this.orgLabel(o));
+        const orgNames = this.filteredOrgs.map((o) => this.orgLabel(o));
         if (orgNames.length) items.push({ label: bn ? 'বাহিনী' : 'ORGANIZATION', value: orgNames.join(', ') });
         if (this.filterLabel) items.push({ label: bn ? 'অফিস' : 'OFFICE', value: this.filterLabel });
         const unitNames = (bn ? this.accessibleRabUnitNamesBN : this.accessibleRabUnitNames) ?? this.accessibleRabUnitNames;
@@ -169,7 +166,9 @@ export class TradeWiseManpowerComponent implements OnInit {
     }
 
     @HostListener('document:click')
-    onDocumentClick(): void { this.exportDropdownOpen = false; }
+    onDocumentClick(): void {
+        this.exportDropdownOpen = false;
+    }
 
     ngOnInit(): void {
         const _perms = this._userMenuService.getPermissionsByRoute(this._router.url);
@@ -188,7 +187,9 @@ export class TradeWiseManpowerComponent implements OnInit {
                 this.orgOptions = opts ?? [];
                 this.loadingOrgs = false;
             },
-            error: () => { this.loadingOrgs = false; }
+            error: () => {
+                this.loadingOrgs = false;
+            }
         });
     }
 
@@ -210,27 +211,24 @@ export class TradeWiseManpowerComponent implements OnInit {
             return;
         }
         this.loading = true;
-        forkJoin(
-            ids.map(id =>
-                this.statisticsService.getTradeWiseManpower(id, undefined, this.filterRabCodeId).pipe(
-                    catchError(() => of(null as TradeWiseManpowerResponse | null))
-                )
-            )
-        ).subscribe({
+        // Default = RAB Rank (Equivalent Name); toggled = Mother Org Rank.
+        const fetchOrg = (id: number) => (this.showMotherOrgRank ? this.statisticsService.getTradeWiseManpower(id, undefined, this.filterRabCodeId) : this.statisticsService.getTradeWiseManpowerByEquivalentName(id, undefined, this.filterRabCodeId));
+        forkJoin(ids.map((id) => fetchOrg(id).pipe(catchError(() => of(null as TradeWiseManpowerResponse | null))))).subscribe({
             next: (results) => {
-                this.filteredOrgs = (results ?? [])
-                    .filter((r): r is TradeWiseManpowerResponse => r != null);
+                this.filteredOrgs = (results ?? []).filter((r): r is TradeWiseManpowerResponse => r != null);
                 // RAB-unit scope is the same across calls — take it from the first non-null response.
                 const first = this.filteredOrgs[0];
-                this.accessibleRabUnitNames      = first?.accessibleRabUnitNames      ?? null;
-                this.accessibleRabUnitNamesBN    = first?.accessibleRabUnitNamesBN    ?? null;
-                this.accessibleMemberTypeNames   = first?.accessibleMemberTypeNames   ?? null;
+                this.accessibleRabUnitNames = first?.accessibleRabUnitNames ?? null;
+                this.accessibleRabUnitNamesBN = first?.accessibleRabUnitNamesBN ?? null;
+                this.accessibleMemberTypeNames = first?.accessibleMemberTypeNames ?? null;
                 this.accessibleMemberTypeNamesBN = first?.accessibleMemberTypeNamesBN ?? null;
                 this.grandTotal = this.filteredOrgs.reduce((sum, o) => sum + (o.grandTotal ?? 0), 0);
                 this.resetVisibilitySelections();
                 this.loading = false;
             },
-            error: () => { this.loading = false; }
+            error: () => {
+                this.loading = false;
+            }
         });
     }
 
@@ -241,10 +239,8 @@ export class TradeWiseManpowerComponent implements OnInit {
      */
     get scopeLine(): string | null {
         const bn = this.lang === 'bn';
-        const unitNames = (bn ? this.accessibleRabUnitNamesBN : this.accessibleRabUnitNames)
-            ?? this.accessibleRabUnitNames;
-        const memberTypeNames = (bn ? this.accessibleMemberTypeNamesBN : this.accessibleMemberTypeNames)
-            ?? this.accessibleMemberTypeNames;
+        const unitNames = (bn ? this.accessibleRabUnitNamesBN : this.accessibleRabUnitNames) ?? this.accessibleRabUnitNames;
+        const memberTypeNames = (bn ? this.accessibleMemberTypeNamesBN : this.accessibleMemberTypeNames) ?? this.accessibleMemberTypeNames;
 
         const parts: string[] = [];
         if (unitNames && unitNames.length > 0) {
@@ -257,7 +253,9 @@ export class TradeWiseManpowerComponent implements OnInit {
         return parts.length === 0 ? null : parts.join('  |  ');
     }
 
-    toggleLang(): void { this.lang = this.lang === 'en' ? 'bn' : 'en'; }
+    toggleLang(): void {
+        this.lang = this.lang === 'en' ? 'bn' : 'en';
+    }
 
     toggleExportDropdown(event: Event): void {
         event.stopPropagation();
@@ -274,26 +272,11 @@ export class TradeWiseManpowerComponent implements OnInit {
             title: this.titleLabel,
             lang: this.lang,
             columns: [],
-            sections: this.filteredOrgs.map(org => ({
+            sections: this.filteredOrgs.map((org) => ({
                 title: this.orgLabel(org),
-                columns: [
-                    this.serLabel,
-                    this.tradeColLabel,
-                    ...this.visibleRanks(org).map(r => this.rankLabel(r)),
-                    this.totalLabel
-                ],
-                rows: this.visibleTrades(org).map((t, i) => [
-                    this.fmt(i + 1),
-                    this.tradeNameLabel(t),
-                    ...this.visibleRanks(org).map(r => this.fmt(this.cellValue(t, r.rankId))),
-                    this.fmt(this.rowTotal(org, t))
-                ]),
-                subtotalRow: [
-                    '',
-                    this.totalLabel,
-                    ...this.visibleRanks(org).map(r => this.fmt(this.colSubtotal(org, r.rankId))),
-                    this.fmt(this.orgGrandTotal(org))
-                ]
+                columns: [this.serLabel, this.tradeColLabel, ...this.visibleRanks(org).map((r) => this.rankLabel(r)), this.totalLabel],
+                rows: this.visibleTrades(org).map((t, i) => [this.fmt(i + 1), this.tradeNameLabel(t), ...this.visibleRanks(org).map((r) => this.fmt(this.cellValue(t, r.rankId))), this.fmt(this.rowTotal(org, t))]),
+                subtotalRow: ['', this.totalLabel, ...this.visibleRanks(org).map((r) => this.fmt(this.colSubtotal(org, r.rankId))), this.fmt(this.orgGrandTotal(org))]
             })),
             grandTotalRow: ['', this.grandTotalLabel, this.fmt(this.visibleGrandTotal)],
             showPageNumbers: true,
@@ -312,28 +295,18 @@ export class TradeWiseManpowerComponent implements OnInit {
                 reportTitle: this.titleLabel,
                 criteriaItems: this.buildCriteriaItems(),
                 columns: [],
-                sections: this.filteredOrgs.map(org => {
+                sections: this.filteredOrgs.map((org) => {
                     const cols = [
                         { label: this.serLabel, align: 'center' as const },
                         { label: this.tradeColLabel, align: 'left' as const },
-                        ...this.visibleRanks(org).map(r => ({ label: this.rankLabel(r), align: 'center' as const, mono: true })),
+                        ...this.visibleRanks(org).map((r) => ({ label: this.rankLabel(r), align: 'center' as const, mono: true })),
                         { label: this.totalLabel, align: 'center' as const, mono: true }
                     ];
                     return {
                         title: this.orgLabel(org),
                         columns: cols,
-                        rows: this.visibleTrades(org).map((t, i) => [
-                            this.fmt(i + 1),
-                            this.tradeNameLabel(t),
-                            ...this.visibleRanks(org).map(r => this.fmt(this.cellValue(t, r.rankId))),
-                            this.fmt(this.rowTotal(org, t))
-                        ]),
-                        totalRow: [
-                            '',
-                            this.totalLabel,
-                            ...this.visibleRanks(org).map(r => this.fmt(this.colSubtotal(org, r.rankId))),
-                            this.fmt(this.orgGrandTotal(org))
-                        ]
+                        rows: this.visibleTrades(org).map((t, i) => [this.fmt(i + 1), this.tradeNameLabel(t), ...this.visibleRanks(org).map((r) => this.fmt(this.cellValue(t, r.rankId))), this.fmt(this.rowTotal(org, t))]),
+                        totalRow: ['', this.totalLabel, ...this.visibleRanks(org).map((r) => this.fmt(this.colSubtotal(org, r.rankId))), this.fmt(this.orgGrandTotal(org))]
                     };
                 })
             });
@@ -369,47 +342,55 @@ export class TradeWiseManpowerComponent implements OnInit {
     private async convertDocxToPdf(docxBlob: Blob): Promise<Blob> {
         const form = new FormData();
         form.append('file', docxBlob, 'document.docx');
-        return await firstValueFrom(
-            this.http.post(`${environment.apis.core}/Document/ConvertToPdf`, form, { responseType: 'blob' })
-        );
+        return await firstValueFrom(this.http.post(`${environment.apis.core}/Document/ConvertToPdf`, form, { responseType: 'blob' }));
     }
 
     // ── Computed labels ──────────────────────────────────────────────────
 
     get titleLabel(): string {
-        return this.lang === 'en'
-            ? 'RANK & TRADE WISE MANPOWER STATE'
-            : 'পদবী ও ট্রেড ভিত্তিক জনবলের সারাংশ';
+        return this.lang === 'en' ? 'RANK & TRADE WISE MANPOWER STATE' : 'পদবী ও ট্রেড ভিত্তিক জনবলের সারাংশ';
     }
 
     get dateLine(): string {
         const now = new Date();
-        const day = now.getDate(), mon = now.getMonth(), year = now.getFullYear();
+        const day = now.getDate(),
+            mon = now.getMonth(),
+            year = now.getFullYear();
         if (this.lang === 'en') return `${day} ${TradeWiseManpowerComponent.EN_MONTHS[mon]} ${year}`;
         return `${BanglaNumerals.toBangla(String(day))} ${TradeWiseManpowerComponent.BN_MONTHS[mon]} ${BanglaNumerals.toBangla(String(year))}`;
     }
 
-    get serLabel(): string { return this.lang === 'en' ? 'Ser' : 'ক্রমিক'; }
-    get tradeColLabel(): string { return this.lang === 'en' ? 'Trade' : 'ট্রেড'; }
-    get totalLabel(): string { return this.lang === 'en' ? 'Total' : 'মোট'; }
-    get grandTotalLabel(): string { return this.lang === 'en' ? 'GRAND TOTAL' : 'সর্ব মোট'; }
+    get serLabel(): string {
+        return this.lang === 'en' ? 'Ser' : 'ক্রমিক';
+    }
+    get tradeColLabel(): string {
+        return this.lang === 'en' ? 'Trade' : 'ট্রেড';
+    }
+    get totalLabel(): string {
+        return this.lang === 'en' ? 'Total' : 'মোট';
+    }
+    get grandTotalLabel(): string {
+        return this.lang === 'en' ? 'GRAND TOTAL' : 'সর্ব মোট';
+    }
 
     rankLabel(rank: MotherUnitRankColumn): string {
-        return this.lang === 'en' ? rank.rankName : (rank.rankNameBN || rank.rankName);
+        return this.lang === 'en' ? rank.rankName : rank.rankNameBN || rank.rankName;
     }
 
     tradeNameLabel(t: TradeRow): string {
-        return this.lang === 'en' ? t.tradeName : (t.tradeNameBN || t.tradeName);
+        return this.lang === 'en' ? t.tradeName : t.tradeNameBN || t.tradeName;
     }
 
     orgLabel(org: TradeOrgBlock): string {
-        return this.lang === 'en'
-            ? org.orgName.toUpperCase()
-            : (org.orgNameBN || org.orgName);
+        return this.lang === 'en' ? org.orgName.toUpperCase() : org.orgNameBN || org.orgName;
     }
 
-    cellValue(t: TradeRow, rankId: number): number { return t.rankCounts?.[rankId] ?? 0; }
-    columnTotal(org: TradeOrgBlock, rankId: number): number { return org.totals?.[rankId] ?? 0; }
+    cellValue(t: TradeRow, rankId: number): number {
+        return t.rankCounts?.[rankId] ?? 0;
+    }
+    columnTotal(org: TradeOrgBlock, rankId: number): number {
+        return org.totals?.[rankId] ?? 0;
+    }
 
     fmt(n: number | undefined | null): string {
         const s = String(n ?? 0);
