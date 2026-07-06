@@ -1,10 +1,12 @@
 <p-toast position="top-center"></p-toast>
 
-<div class="report-filter-card">
-    <div class="report-filter-card-title">
-        <h1 class="report-page-title">Member Type Serving Report</h1>
-    </div>
-    <div class="report-filter-header" [class.open]="filterOpen" (click)="toggleFilter()" role="button" tabindex="0" (keydown.enter)="toggleFilter()" (keydown.space)="toggleFilter()">
+<div class="employee-reports-page">
+    <div class="report-filter-card">
+        <div class="report-filter-card-title">
+            <h1 class="report-page-title">{{ L['en']['report.title.confidentialRemarks'] }}</h1>
+        </div>
+
+        <div class="report-filter-header" [class.open]="filterOpen" (click)="toggleFilter()" role="button" tabindex="0" (keydown.enter)="toggleFilter()" (keydown.space)="toggleFilter()">
         <div class="report-filter-header-left">
             <div class="report-filter-icon">
                 <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
@@ -30,11 +32,11 @@
         <div class="report-filter-body-inner">
             <div class="report-fields-row">
                 <div class="report-filter-field">
-                    <label>{{ L['en']['report.search.memberType'] }}</label>
+                    <label>{{ L['en']['report.search.motherOrg'] }}</label>
                     <p-multiSelect
-                        [options]="memberTypeOptions"
-                        [(ngModel)]="selectedMemberTypeIds"
-                        (ngModelChange)="onMemberTypeChange()"
+                        [options]="orgOptions"
+                        [(ngModel)]="selectedOrgIds"
+                        (ngModelChange)="onOrgChange()"
                         optionLabel="label"
                         optionValue="value"
                         display="chip"
@@ -45,15 +47,11 @@
                     </p-multiSelect>
                 </div>
                 <div class="report-filter-field">
-                    <label>RAB Unit</label>
-                    <app-org-tree-multi-select [(ngModel)]="selectedOrgNodeIds" placeholder="Select units, wings, branches…"></app-org-tree-multi-select>
-                </div>
-                <div class="report-filter-field">
-                    <label>{{ L['en']['report.search.motherOrg'] }}</label>
+                    <label>Member Type</label>
                     <p-multiSelect
-                        [options]="orgOptions"
-                        [(ngModel)]="selectedOrgIds"
-                        (ngModelChange)="onOrgChange()"
+                        [options]="memberTypeOptions"
+                        [(ngModel)]="selectedMemberTypeIds"
+                        (ngModelChange)="onMemberTypeChange()"
                         optionLabel="label"
                         optionValue="value"
                         display="chip"
@@ -80,7 +78,7 @@
                     </p-multiSelect>
                 </div>
                 <div class="report-filter-field">
-                    <label>{{ L['en']['report.table.corps'] ?? 'Corps' }}</label>
+                    <label>{{ L['en']['report.table.corps'] }}</label>
                     <p-multiSelect
                         [options]="corpsOptions"
                         [(ngModel)]="selectedCorpsIds"
@@ -112,28 +110,15 @@
                     </p-multiSelect>
                 </div>
                 <div class="report-filter-field">
-                    <label>{{ L['en']['report.search.joiningInRabFrom'] ?? 'Joining From' }}</label>
-                    <p-datepicker
-                        [(ngModel)]="joiningInRabFrom"
-                        dateFormat="dd-mm-yy"
-                        placeholder="Select"
-                        [showIcon]="true"
-                        appendTo="body">
-                    </p-datepicker>
-                </div>
-                <div class="report-filter-field">
-                    <label>{{ L['en']['report.search.joiningInRabTo'] ?? 'Joining To' }}</label>
-                    <p-datepicker
-                        [(ngModel)]="joiningInRabTo"
-                        dateFormat="dd-mm-yy"
-                        placeholder="Select"
-                        [showIcon]="true"
-                        appendTo="body">
-                    </p-datepicker>
+                    <label>RAB Unit</label>
+                    <app-org-tree-multi-select
+                        [(ngModel)]="selectedOrgNodeIds"
+                        placeholder="Select units, wings, branches…">
+                    </app-org-tree-multi-select>
                 </div>
                 <div class="report-filter-field">
                     <label>
-                        Member Status
+                        RAB Member Status
                         @if (statusLocked) {
                             <i class="pi pi-lock ml-1" style="font-size: 0.75rem; opacity: 0.7;"
                                title="Locked to Presently Serving — your access scope only covers serving members"></i>
@@ -142,7 +127,7 @@
                     <p-select
                         [options]="statusOptions"
                         [(ngModel)]="selectedPostingStatus"
-                        (ngModelChange)="onPostingStatusChange()"
+                        (ngModelChange)="onPostingStatusFilterChange()"
                         [disabled]="statusLocked"
                         optionLabel="label"
                         optionValue="value"
@@ -154,58 +139,67 @@
                         <small class="report-filter-hint">Locked to Presently Serving — your access scope is restricted.</small>
                     }
                 </div>
+                <div class="report-filter-field">
+                    <label>{{ L['en']['report.search.confidentialRemarks'] }}</label>
+                    <input
+                        pInputText
+                        type="text"
+                        [(ngModel)]="remarksSearchText"
+                        [placeholder]="lang === 'bn' ? 'মন্তব্য অনুসন্ধান (ঐচ্ছিক)' : 'Search remark text (optional)'"
+                        class="w-full" />
+                </div>
             </div>
 
             <!-- Column picker — always visible so columns can be chosen before searching. -->
-                <div class="ds-field-group">
-                    <div class="ds-group-divider">
-                        <span class="ds-group-label">Columns</span>
-                        <span class="ds-group-line"></span>
-                    </div>
-                    <div class="ds-field">
-                        <label class="ds-field-label">Visible columns</label>
-                        <p-multiSelect
-                            [options]="columnPickerOptions"
-                            [(ngModel)]="selectedColumnKeys"
-                            (ngModelChange)="onColumnsChange()"
-                            optionLabel="label"
-                            optionValue="value"
-                            display="chip"
-                            [filter]="true"
-                            placeholder="Pick columns…"
-                            styleClass="w-full"
-                            appendTo="body">
-                        </p-multiSelect>
-                    </div>
-                    <div class="ds-field">
-                        <label class="ds-field-label column-order-label">Column order — drag to rearrange</label>
-                        <div class="column-order-strip" (dragover)="onColumnDragOver($event)">
-                            @for (col of visibleColumns; track col.key) {
-                                <span
-                                    class="column-order-chip"
-                                    [class.dragging]="draggingColumnKey === col.key"
-                                    draggable="true"
-                                    (dragstart)="onColumnDragStart(col.key, $event)"
-                                    (dragend)="onColumnDragEnd()"
-                                    (dragover)="onColumnDragOver($event)"
-                                    (drop)="onColumnDrop(col.key, $event)">
-                                    <i class="pi pi-bars chip-handle" aria-hidden="true"></i>
-                                    <span class="chip-label">{{ lang === 'bn' ? col.labelBN : col.labelEN }}</span>
-                                    <button
-                                        type="button"
-                                        class="chip-remove"
-                                        (click)="removeColumn(col.key)"
-                                        title="Remove column">
-                                        <i class="pi pi-times" aria-hidden="true"></i>
-                                    </button>
-                                </span>
-                            }
-                            @if (visibleColumns.length === 0) {
-                                <span class="column-order-empty">Pick columns above to populate the table.</span>
-                            }
-                        </div>
+            <div class="ds-field-group">
+                <div class="ds-group-divider">
+                    <span class="ds-group-label">Columns</span>
+                    <span class="ds-group-line"></span>
+                </div>
+                <div class="ds-field">
+                    <label class="ds-field-label">Visible columns</label>
+                    <p-multiSelect
+                        [options]="columnPickerOptions"
+                        [(ngModel)]="selectedColumnKeys"
+                        (ngModelChange)="onColumnsChange()"
+                        optionLabel="label"
+                        optionValue="value"
+                        display="chip"
+                        [filter]="true"
+                        placeholder="Pick columns…"
+                        styleClass="w-full"
+                        appendTo="body">
+                    </p-multiSelect>
+                </div>
+                <div class="ds-field">
+                    <label class="ds-field-label column-order-label">Column order — drag to rearrange</label>
+                    <div class="column-order-strip" (dragover)="onColumnDragOver($event)">
+                        @for (col of visibleColumns; track col.key) {
+                            <span
+                                class="column-order-chip"
+                                [class.dragging]="draggingColumnKey === col.key"
+                                draggable="true"
+                                (dragstart)="onColumnDragStart(col.key, $event)"
+                                (dragend)="onColumnDragEnd()"
+                                (dragover)="onColumnDragOver($event)"
+                                (drop)="onColumnDrop(col.key, $event)">
+                                <i class="pi pi-bars chip-handle" aria-hidden="true"></i>
+                                <span class="chip-label">{{ lang === 'bn' ? col.labelBN : col.labelEN }}</span>
+                                <button
+                                    type="button"
+                                    class="chip-remove"
+                                    (click)="removeColumn(col.key)"
+                                    title="Remove column">
+                                    <i class="pi pi-times" aria-hidden="true"></i>
+                                </button>
+                            </span>
+                        }
+                        @if (visibleColumns.length === 0) {
+                            <span class="column-order-empty">Pick columns above to populate the table.</span>
+                        }
                     </div>
                 </div>
+            </div>
 
             <div class="report-filter-actions">
                 <button type="button" class="report-btn-clear" (click)="clearFilters()">
@@ -214,7 +208,7 @@
                     </svg>
                     {{ L['en']['report.search.clear'] }}
                 </button>
-                <button type="button" class="report-btn-search" (click)="load()">
+                <button type="button" class="report-btn-search" (click)="first = 0; load()">
                     <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
                         <circle cx="6" cy="6" r="4.5" stroke="white" stroke-width="1.6"/>
                         <path d="M10 10l2.5 2.5" stroke="white" stroke-width="1.6" stroke-linecap="round"/>
@@ -228,6 +222,7 @@
 
 @if (searched) {
 <div class="rab-report-document">
+    <!-- Screen-only toolbar: language toggle + export. -->
     <div class="rab-toolbar">
         <button type="button" class="report-lang-toggle" (click)="toggleLang()">
             {{ lang === 'en' ? 'বাংলা' : 'English' }}
@@ -262,6 +257,7 @@
         </div>
     </div>
 
+    <!-- Formal report paper -->
     <div class="rab-paper" [class.rab-lang-bn]="lang === 'bn'">
         <header class="rab-paper-head">
             <div class="rab-overline">{{ rabOverlineText }}</div>
@@ -273,11 +269,18 @@
                 <span class="rab-orn-line"></span>
             </div>
             <h2 class="rab-paper-section">{{ rabSectionTitle }}</h2>
+            @if (rabSubtitleText) {
+                <div class="rab-paper-section-sub"><em>{{ rabSubtitleText }}</em></div>
+            }
             @if (unitScopeLine) {
                 <div class="report-scope-line">{{ unitScopeLine }}</div>
             }
+            @if (memberTypeScopeLine) {
+                <div class="report-scope-line">{{ memberTypeScopeLine }}</div>
+            }
         </header>
 
+        <!-- Selection Criteria — only rendered when the user applied filters. -->
         @if (criteriaItems.length > 0) {
             <div class="rab-criteria">
                 <div class="rab-criteria-strip">
@@ -308,6 +311,7 @@
             </div>
         }
 
+        <!-- Data table -->
         <div class="rab-paper-table-wrap">
             <p-table
                 [value]="list"
@@ -342,15 +346,15 @@
                                         }
                                     </td>
                                 }
+                                @case ('Name') {
+                                    <td class="rab-td-personnel">
+                                        <div class="rab-personnel-name">{{ nameColumnValue(row) }}</div>
+                                    </td>
+                                }
                                 @case ('CallNoRankName') {
                                     <td class="rab-td-personnel">
                                         <div class="rab-personnel-name">{{ callNoRankLine1(row) }}</div>
                                         <div class="rab-personnel-name">{{ callNoRankLine2(row) }}</div>
-                                    </td>
-                                }
-                                @case ('Name') {
-                                    <td class="rab-td-personnel">
-                                        <div class="rab-personnel-name">{{ nameColumnValue(row) }}</div>
                                     </td>
                                 }
                                 @case ('RabId') {
@@ -360,7 +364,13 @@
                                     <td class="rab-td-date">{{ formatDate(row.joiningDate) }}</td>
                                 }
                                 @case ('Remarks') {
-                                    <td class="rab-td-rmks" style="white-space: pre-line">{{ remarksCellValue(row) }}</td>
+                                    <td class="rab-td-rmks">{{ row.rmks || '' }}</td>
+                                }
+                                @case ('ConfidentialRemarks') {
+                                    <td class="rab-td-rmks">{{ plainCellValue(row, col.key) }}</td>
+                                }
+                                @case ('MemberStatus') {
+                                    <td>{{ memberStatusText(row) }}</td>
                                 }
                                 @case ('Plain') {
                                     <td>{{ plainCellValue(row, col.key) }}</td>
@@ -380,6 +390,7 @@
             </p-table>
         </div>
 
+        <!-- Confidential footer -->
         <footer class="rab-paper-foot">
             <div class="rab-foot-line"></div>
             <div class="rab-foot-row">
@@ -390,6 +401,7 @@
         </footer>
     </div>
 
+    <!-- Page navigation lives outside the paper, below the confidential strip. -->
     @if (totalRecords > 0) {
         <div class="rab-paginator-bar">
             <p-paginator
@@ -404,3 +416,4 @@
     }
 </div>
 }
+</div>

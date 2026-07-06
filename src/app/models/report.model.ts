@@ -128,6 +128,28 @@ export interface BloodGroupReportParams {
   pagination: ReportPagination;
 }
 
+/** Confidential Remarks report — only members with confidential remarks. */
+export interface ConfidentialRemarksReportRow extends ReportRowBase {
+  confidentialRemarks?: string | null;
+  rmks?: string | null;
+  [key: string]: unknown;
+}
+
+export interface ConfidentialRemarksReportParams {
+  orgIds?: number[] | null;
+  memberTypeIds?: number[] | null;
+  rankIds?: number[] | null;
+  corpsIds?: number[] | null;
+  tradeIds?: number[] | null;
+  rabOrgNodeIds?: number[] | null;
+  /** Optional Contains filter on remark text. */
+  remarksSearchText?: string | null;
+  postingStatus?: string | null;
+  /** Registry field keys to project (same as dynamic employee-base report). */
+  columns?: string[] | null;
+  pagination: ReportPagination;
+}
+
 /** Report: Family Member Occupation – family member details. */
 export interface FamilyOccupationReportRow {
   ser?: number;

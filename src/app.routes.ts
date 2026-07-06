@@ -200,6 +200,7 @@ import { ReportPunishmentComponent } from '@/Components/Features/employee-report
 import { ReportPresentStatusComponent } from '@/Components/Features/employee-reports/report-present-status/report-present-status.component';
 import { ReportRankWiseComponent } from '@/Components/Features/employee-reports/report-rank-wise/report-rank-wise.component';
 import { ReportDeceasedComponent } from '@/Components/Features/employee-reports/report-deceased/report-deceased.component';
+import { ReportConfidentialRemarksComponent } from '@/Components/Features/employee-reports/report-confidential-remarks/report-confidential-remarks.component';
 import { IndividualReportsComponent } from '@/Components/Features/individual-reports/individual-reports.component';
 import { RabUnitAor } from '@/Components/basic-setup/rab-unit-aor/rab-unit-aor';
 import { RabUnitAorMap } from '@/Components/basic-setup/rab-unit-aor-map/rab-unit-aor-map';
@@ -218,6 +219,7 @@ import { UnitWiseBarChartComponent } from '@/Components/Features/statistics/unit
 import { UnitRankWiseManpowerComponent } from '@/Components/Features/statistics/unit-rank-wise-manpower/unit-rank-wise-manpower';
 import { UnitRankWiseEquivalentManpowerComponent } from '@/Components/Features/statistics/unit-rank-wise-equivalent-manpower/unit-rank-wise-equivalent-manpower';
 import { UnitTradeWiseManpowerComponent } from '@/Components/Features/statistics/unit-trade-wise-manpower/unit-trade-wise-manpower';
+import { UnitSpecialQualificationWiseManpowerComponent } from '@/Components/Features/statistics/unit-special-qualification-wise-manpower/unit-special-qualification-wise-manpower';
 import { SystemMonitoringComponent } from '@/Components/Features/system-monitoring/system-monitoring';
 import { OfficeOrderGenerateComponent } from '@/Components/Features/office-order-generate/office-order-generate';
 import { OfficeOrderPreviewComponent } from '@/Components/Features/office-order-preview/office-order-preview';
@@ -471,6 +473,7 @@ export const appRoutes: Routes = [
             { path: 'report-present-status', component: ReportPresentStatusComponent },
             { path: 'report-rank-wise', component: ReportRankWiseComponent },
             { path: 'report-deceased', component: ReportDeceasedComponent },
+            { path: 'report-confidential-remarks', component: ReportConfidentialRemarksComponent },
 
             // Individual Personnel Report (parent with dropdown — Course, then more)
             { path: 'individual-reports', component: IndividualReportsComponent },
@@ -491,6 +494,7 @@ export const appRoutes: Routes = [
             { path: 'statistics/unit-rank-wise-manpower', component: UnitRankWiseManpowerComponent },
             { path: 'statistics/unit-rank-wise-equivalent-manpower', component: UnitRankWiseEquivalentManpowerComponent },
             { path: 'statistics/unit-trade-wise-manpower', component: UnitTradeWiseManpowerComponent },
+            { path: 'statistics/unit-special-qualification-wise-manpower', component: UnitSpecialQualificationWiseManpowerComponent },
 
             // Dynamic Search
             { path: 'dynamic-search', component: DynamicSearchComponent },

@@ -51,10 +51,10 @@ import * as XLSX from 'xlsx';
 import { forkJoin } from 'rxjs';
 
 /**
- * Member Type (Serving) Report — standalone report (no parent dropdown).
- * Filters: Member Type, RAB Unit → Wing cascade, Mother Org → Rank cascade,
- * Joining-in-RAB date range. Status is hard-pinned to "Servings" — this is
- * a serving-roster report.
+ * Member Type Report — standalone report (no parent dropdown).
+ * Filters: Member Type, RAB Unit org-tree, Mother Org → Rank cascade,
+ * Joining-in-RAB date range, and Member Status (Servings | Ex-Member).
+ * Ex-Member rows show last posting battalion via the shared employee-base view.
  */
 @Component({
     selector: 'app-report-member-type-serving',
@@ -109,6 +109,21 @@ export class ReportMemberTypeServingComponent implements OnInit {
     /** Joining-in-RAB date range (maps to registry `joiningDate`). */
     joiningInRabFrom: Date | null = null;
     joiningInRabTo: Date | null = null;
+
+    /** Member Status — Servings (default) or Ex-Member only. */
+    statusOptions: { label: string; labelBn: string; value: string }[] = [
+        { label: 'Presently Serving', labelBn: 'কর্মরত', value: 'Servings' },
+        { label: 'Ex Member', labelBn: 'সাবেক সদস্য', value: 'ExMember' },
+    ];
+    selectedPostingStatus = 'Servings';
+
+    get statusLabel(): string {
+        return this.statusOptions.find(o => o.value === this.selectedPostingStatus)?.label ?? '';
+    }
+
+    get statusLabelBn(): string {
+        return this.statusOptions.find(o => o.value === this.selectedPostingStatus)?.labelBn ?? '';
+    }
 
     list: MemberAppointmentReportRow[] = [];
     loading = false;
@@ -243,8 +258,26 @@ export class ReportMemberTypeServingComponent implements OnInit {
 
     selectedColumnKeys: string[] = this.columnCatalog.filter(c => c.defaultVisible).map(c => c.key);
 
+    /** Battalion vs last-posting battalion header — mirrors course report behaviour. */
+    private get rabUnitColumnLabels(): { labelEN: string; labelBN: string } {
+        if (this.selectedPostingStatus === 'ExMember') {
+            return { labelEN: 'Last Posting Battalion', labelBN: 'শেষ পোস্টিং ব্যাটালিয়ন' };
+        }
+        return { labelEN: 'Battalion', labelBN: 'ব্যাটালিয়ন' };
+    }
+
+    private decorateColumn(col: typeof this.columnCatalog[number]): typeof this.columnCatalog[number] {
+        if (col.key === 'rabUnit') {
+            return { ...col, ...this.rabUnitColumnLabels };
+        }
+        return col;
+    }
+
     get columnPickerOptions(): { label: string; value: string }[] {
-        return this.columnCatalog.map(c => ({ label: this.lang === 'bn' ? c.labelBN : c.labelEN, value: c.key }));
+        return this.columnCatalog.map(c => {
+            const col = this.decorateColumn(c);
+            return { label: this.lang === 'bn' ? col.labelBN : col.labelEN, value: c.key };
+        });
     }
 
     /**
@@ -259,7 +292,8 @@ export class ReportMemberTypeServingComponent implements OnInit {
         return this.selectedColumnKeys
             .filter((k) => k !== ReportMemberTypeServingComponent.NAME_EXTRAS_KEY)
             .map(k => map.get(k))
-            .filter((c): c is typeof this.columnCatalog[number] => c != null);
+            .filter((c): c is typeof this.columnCatalog[number] => c != null)
+            .map(c => this.decorateColumn(c));
     }
 
     /**
@@ -355,6 +389,8 @@ export class ReportMemberTypeServingComponent implements OnInit {
     get criteriaItems(): { label: string; value: string }[] {
         const L = this.L[this.lang];
         const items: { label: string; value: string }[] = [];
+        const sLabel = this.lang === 'bn' ? this.statusLabelBn : this.statusLabel;
+        if (sLabel) items.push({ label: this.lang === 'bn' ? 'সদস্য অবস্থা' : 'Member Status', value: sLabel });
         const multi = (ids: number[], opts: { label: string; labelBn: string; value: number }[], label: string) => {
             if (!ids.length) return;
             const names = ids
@@ -434,7 +470,12 @@ export class ReportMemberTypeServingComponent implements OnInit {
         // Eager scope fetch so the unit-scope chip shows on first paint without
         // waiting for the user to click Search.
         this.reportService.getMyReportAccessScope().subscribe({
-            next: (scope) => { this.accessibleScope = scope ?? null; },
+            next: (scope) => {
+                this.accessibleScope = scope ?? null;
+                if (this.accessibleScope?.orgScopeRestricted && this.selectedPostingStatus !== 'Servings') {
+                    this.selectedPostingStatus = 'Servings';
+                }
+            },
             error: () => { /* silent — chip stays hidden on failure */ },
         });
 
@@ -603,6 +644,11 @@ export class ReportMemberTypeServingComponent implements OnInit {
 
     onFilterChange(): void {}
 
+    onPostingStatusChange(): void {
+        this.first = 0;
+        if (this.searched) this.load();
+    }
+
     /** Column selection changed — re-fetch so newly added columns are populated. */
     onColumnsChange(): void {
         if (this.searched) this.load();
@@ -645,6 +691,7 @@ export class ReportMemberTypeServingComponent implements OnInit {
         this.allRanksForOrg = [];
         this.joiningInRabFrom = null;
         this.joiningInRabTo = null;
+        if (!this.statusLocked) this.selectedPostingStatus = 'Servings';
         this.first = 0;
     }
 
@@ -722,10 +769,7 @@ export class ReportMemberTypeServingComponent implements OnInit {
         this.appliedFilterLines = this.buildFilterLines();
         const page_no = Math.floor(this.first / this.rows) + 1;
 
-        // ── Dynamic-backend criteria ────────────────────────────────
-        // Status is hard-pinned to "Servings" — this is a serving-roster
-        // report. Date range on Joining-in-RAB maps to the registry's
-        // `joiningDate` DateRange field.
+        // Date range on Joining-in-RAB maps to the registry's `joiningDate` field.
         const criteria: DynamicReportCriterion[] = [];
         if (this.selectedMemberTypeIds.length > 0)
             criteria.push({ fieldKey: 'memberType', idValues: this.selectedMemberTypeIds });
@@ -748,7 +792,7 @@ export class ReportMemberTypeServingComponent implements OnInit {
         this.reportService.runDynamicEmployeeBaseReport({
             columns: this.backendColumnKeys(),
             criteria,
-            postingStatusFilter: 'Servings',
+            postingStatusFilter: this.selectedPostingStatus || 'Servings',
             pagination: { page_no, row_per_page: this.rows },
         }).subscribe({
             next: (res) => {
@@ -762,6 +806,9 @@ export class ReportMemberTypeServingComponent implements OnInit {
                     memberTypeNamesBN: null,
                     orgScopeRestricted: res.accessibleScope.orgScopeRestricted,
                 } as ReportAccessibleScope : null;
+                if (this.accessibleScope?.orgScopeRestricted && this.selectedPostingStatus !== 'Servings') {
+                    this.selectedPostingStatus = 'Servings';
+                }
                 this.searched = true;
                 this.loading = false;
             },

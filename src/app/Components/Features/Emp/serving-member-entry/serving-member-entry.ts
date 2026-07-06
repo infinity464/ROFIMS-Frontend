@@ -632,7 +632,7 @@ export class ServingMemberEntry implements OnInit {
     appointments: CommonCodeModel[] = [];
     ranks: CommonCodeModel[] = [];
     corps: CommonCodeModel[] = [];
-    trades: CommonCodeModel[] = [];
+    tradeOptions: { label: string; value: number }[] = [];
     genders: CommonCodeModel[] = [];
     maritalStatusOptions: CommonCodeModel[] = [];
     relationOptions: CommonCodeModel[] = [];
@@ -1351,7 +1351,13 @@ export class ServingMemberEntry implements OnInit {
 
     loadTrade(codeId: number) {
         this.commonCodeService.getAllActiveCommonCodesByParentId(codeId).subscribe({
-            next: (res) => { this.trades = res; },
+            next: (res) => {
+                const list = Array.isArray(res) ? res : [];
+                this.tradeOptions = list.map((t: CommonCodeModel) => ({
+                    label: t.codeValueBN ? `${t.codeValueEN} (${t.codeValueBN})` : t.codeValueEN,
+                    value: t.codeId
+                }));
+            },
             error: (err) => console.error(err)
         });
     }

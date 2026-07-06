@@ -14,6 +14,8 @@ import type {
     GenericReportRow,
     BloodGroupReportParams,
     BloodGroupReportRow,
+    ConfidentialRemarksReportParams,
+    ConfidentialRemarksReportRow,
     FamilyOccupationReportParams,
     FamilyOccupationReportRow,
     AddressLocationReportParams,
@@ -131,6 +133,10 @@ export class ReportService {
 
     getBloodGroupReport(params: BloodGroupReportParams): Observable<PagedResponse<BloodGroupReportRow> & { accessibleScope: ReportAccessibleScope | null }> {
         return this.http.post<ScopedReportPagedResponse<BloodGroupReportRow>>(`${this.apiUrl}/GetBloodGroupReport`, params).pipe(map(normalizeScopedPages));
+    }
+
+    getConfidentialRemarksReport(params: ConfidentialRemarksReportParams): Observable<PagedResponse<ConfidentialRemarksReportRow> & { accessibleScope: ReportAccessibleScope | null }> {
+        return this.http.post<ScopedReportPagedResponse<ConfidentialRemarksReportRow>>(`${this.apiUrl}/GetConfidentialRemarksReport`, params).pipe(map(normalizeScopedPages));
     }
 
     getFamilyOccupationReport(params: FamilyOccupationReportParams): Observable<PagedResponse<FamilyOccupationReportRow> & { accessibleScope: ReportAccessibleScope | null }> {

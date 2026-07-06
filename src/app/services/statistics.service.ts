@@ -279,6 +279,30 @@ export interface UnitTradeWiseManpowerResponse {
     accessibleRabUnitNamesBN?: string[] | null;
 }
 
+/** RAB-Unit × Special Qualification serving-manpower matrix. */
+export interface UnitSpecialQualificationColumn {
+    qualificationColId: number;
+    qualificationNameEN: string;
+    qualificationNameBN: string;
+}
+
+export interface UnitSpecialQualificationRow {
+    unitId: number;
+    unitNameEN: string;
+    unitNameBN: string;
+    cells: Record<number, number>;   // key = qualificationColId
+    total: number;
+}
+
+export interface UnitSpecialQualificationWiseManpowerResponse {
+    qualifications: UnitSpecialQualificationColumn[];
+    units: UnitSpecialQualificationRow[];
+    columnTotals: Record<number, number>;
+    grandTotal: number;
+    accessibleRabUnitNames?: string[] | null;
+    accessibleRabUnitNamesBN?: string[] | null;
+}
+
 export interface CorpsWiseManpowerResponse {
     orgId: number;
     orgName: string;
@@ -444,6 +468,15 @@ export class StatisticsService {
         if (rabUnitId != null) params.rabUnitId = rabUnitId;
         return this.http.get<UnitTradeWiseManpowerResponse>(
             `${this.apiUrl}/GetUnitTradeWiseManpower`, { params }
+        );
+    }
+
+    /** RAB-Unit × Special Qualification serving-manpower matrix (drill-down via rabUnitId). */
+    getUnitSpecialQualificationWiseManpower(rabUnitId?: number | null): Observable<UnitSpecialQualificationWiseManpowerResponse> {
+        const params: any = {};
+        if (rabUnitId != null) params.rabUnitId = rabUnitId;
+        return this.http.get<UnitSpecialQualificationWiseManpowerResponse>(
+            `${this.apiUrl}/GetUnitSpecialQualificationWiseManpower`, { params }
         );
     }
 

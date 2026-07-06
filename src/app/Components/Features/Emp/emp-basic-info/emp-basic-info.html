@@ -236,7 +236,7 @@
 
                     <div class="form-field">
                         <label class="form-label"> Trade <span class="form-label-required">*</span> </label>
-                        <p-select [options]="trades" optionLabel="codeValueEN" optionValue="codeId" placeholder="Select Trade" styleClass="w-full" formControlName="trade" [filter]="true" filterPlaceholder="Search"> </p-select>
+                        <p-select [options]="tradeOptions" optionLabel="label" optionValue="value" placeholder="Select Trade" styleClass="w-full" formControlName="trade" [filter]="true" filterPlaceholder="Search"> </p-select>
                         @if (isFieldInvalid('trade')) {
                         <small class="form-error">{{ getErrorMessage('trade') }}</small>
                         }

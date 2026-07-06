@@ -29,6 +29,7 @@ export const REPORT_LABELS = {
         'report.title.rabRank': 'RAB Rank',
         'report.title.corps': 'Corps',
         'report.title.trade': 'Trade',
+        'report.title.confidentialRemarks': 'Confidential Remarks',
 
         'report.search.createList': 'Search',
         'report.search.motherOrg': 'Mother Organization',
@@ -70,6 +71,7 @@ export const REPORT_LABELS = {
         'report.table.subject': 'Subject',
         'report.table.bloodGroup': 'Blood Group',
         'report.search.bloodGroup': 'Blood Group',
+        'report.search.confidentialRemarks': 'Confidential Remarks',
 
         'report.title.familyOccupation': 'Family Member Occupation Report',
         'report.search.relationType': 'Relation Type',
@@ -155,6 +157,7 @@ export const REPORT_LABELS = {
         'report.title.rabRank': 'র‍্যাব পদবি',
         'report.title.corps': 'কোর',
         'report.title.trade': 'ট্রেড',
+        'report.title.confidentialRemarks': 'গোপনীয় মন্তব্য',
 
         'report.search.createList': 'অনুসন্ধান',
         'report.search.motherOrg': 'মাতৃ সংস্থা',
@@ -196,6 +199,7 @@ export const REPORT_LABELS = {
         'report.table.subject': 'বিষয়',
         'report.table.bloodGroup': 'রক্তের গ্রুপ',
         'report.search.bloodGroup': 'রক্তের গ্রুপ',
+        'report.search.confidentialRemarks': 'গোপনীয় মন্তব্য',
 
         'report.title.familyOccupation': 'পরিবারের সদস্যের পেশা প্রতিবেদন',
         'report.search.relationType': 'সম্পর্কের ধরণ',
