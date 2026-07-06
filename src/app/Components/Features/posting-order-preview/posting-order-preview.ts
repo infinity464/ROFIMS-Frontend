@@ -1885,7 +1885,7 @@ html, body { margin: 0; padding: 0; background: transparent; }
             const serial = i + 1;
             leftCellChildren.push(new Paragraph({
                 children: [new TextRun({ text: `${bn ? this.toBanglaDigits(String(serial)) : serial}।\t${line}`, size: ctxSize, sizeComplexScript: csSize, font, language: lang })],
-                spacing: { after: 100 },
+                spacing: { after: 40 },
                 tabStops: [{ type: TabStopType.LEFT, position: 400 }]
             }));
         });
@@ -1893,7 +1893,7 @@ html, body { margin: 0; padding: 0; background: transparent; }
             const serial = i + 1 + autoLines.length;
             leftCellChildren.push(new Paragraph({
                 children: [new TextRun({ text: `${bn ? this.toBanglaDigits(String(serial)) : serial}।\t${p.text}`, size: ctxSize, sizeComplexScript: csSize, font, language: lang })],
-                spacing: { after: 100 },
+                spacing: { after: 40 },
                 tabStops: [{ type: TabStopType.LEFT, position: 400 }]
             }));
         });
