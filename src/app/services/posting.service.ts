@@ -116,14 +116,7 @@ export class PostingService {
     }
 
     /** Add employees to an existing Draft Posting list (New or Inter). Employees must have IsSendingNotesheetStatus = 'draft'. */
-    addDraftPostingDetail(
-        draftPostingMasterId: number,
-        isInterPosting: boolean,
-        employeeIds: number[],
-        createdBy: string,
-        transferRabUnitId?: number | null,
-        remarks?: string | null
-    ): Observable<{ statusCode: number; description: string }> {
+    addDraftPostingDetail(draftPostingMasterId: number, isInterPosting: boolean, employeeIds: number[], createdBy: string, transferRabUnitId?: number | null, remarks?: string | null): Observable<{ statusCode: number; description: string }> {
         return this.http.post<{ statusCode: number; description: string }>(`${API}/AddDraftPostingDetail`, {
             draftPostingMasterId,
             isInterPosting,
@@ -197,23 +190,17 @@ export class PostingService {
 
     /** Get the removal history log for a draft posting list. */
     getPostingMemberRemovalHistory(draftPostingMasterId: number, isInterPosting: boolean): Observable<PostingMemberRemovalHistoryDto[]> {
-        return this.http.get<PostingMemberRemovalHistoryDto[]>(
-            `${API}/GetPostingMemberRemovalHistory?draftPostingMasterId=${draftPostingMasterId}&isInterPosting=${isInterPosting}`
-        );
+        return this.http.get<PostingMemberRemovalHistoryDto[]>(`${API}/GetPostingMemberRemovalHistory?draftPostingMasterId=${draftPostingMasterId}&isInterPosting=${isInterPosting}`);
     }
 
     /** Get the latest removal history for a list of employee IDs (across all postings). */
     getRemovalHistoryByEmployeeIds(employeeIds: number[]): Observable<EmployeeRemovalInfo[]> {
-        return this.http.post<EmployeeRemovalInfo[]>(
-            `${API}/GetRemovalHistoryByEmployeeIds`, employeeIds
-        );
+        return this.http.post<EmployeeRemovalInfo[]>(`${API}/GetRemovalHistoryByEmployeeIds`, employeeIds);
     }
 
     /** Get the most recent cancelled posting (joining cancelled) per employee, by posting type. */
     getLastCancelledInterPostingByEmployeeIds(employeeIds: number[], postingType: string = NoteSheetType.InterPosting): Observable<CancelledInterPostingInfo[]> {
-        return this.http.post<CancelledInterPostingInfo[]>(
-            `${API}/GetLastCancelledInterPostingByEmployeeIds?postingType=${encodeURIComponent(postingType)}`, employeeIds
-        );
+        return this.http.post<CancelledInterPostingInfo[]>(`${API}/GetLastCancelledInterPostingByEmployeeIds?postingType=${encodeURIComponent(postingType)}`, employeeIds);
     }
 
     /** Update Draft New Posting master (DraftPostingNo, DraftPostingDate, DraftPostingStatus). */
@@ -283,11 +270,7 @@ export class PostingService {
     }
 
     // ---------- Posting Note-Sheet: Create from Draft List (API) ----------
-    createPostingNoteSheetFromDraftList(
-        draftListId: string,
-        postingType: PostingType,
-        createdBy: string
-    ): Observable<PostingNoteSheet | null> {
+    createPostingNoteSheetFromDraftList(draftListId: string, postingType: PostingType, createdBy: string): Observable<PostingNoteSheet | null> {
         const id = parseInt(draftListId, 10);
         if (isNaN(id)) return new Observable((s) => (s.next(null), s.complete()));
 
@@ -345,46 +328,44 @@ export class PostingService {
     }
 
     getPostingNoteSheets(): Observable<PostingNoteSheet[]> {
-        return this.http
-            .get<any[]>(`${API}/GetDraftNewPostingNoteSheets`, { params: { postingType: 'New' } })
-            .pipe(
-                map((list) =>
-                    (list ?? []).map((l) => ({
-                        id: String(l.id),
-                        postingType: 'New' as PostingType,
-                        draftListId: l.draftPostingListId ? String(l.draftPostingListId) : null,
-                        noteSheetNo: l.noteSheetNo,
-                        noteSheetDate: l.noteSheetDate,
-                        referenceNumber: null,
-                        subject: '',
-                        mainText: '',
-                        textType: 'en' as const,
-                        preparedBy: '',
-                        initiatorId: null,
-                        recommenderIds: [],
-                        finalApproverId: null,
-                        filesReferences: [],
-                        status: (l.status ?? 'Draft') as PostingNoteSheetStatus,
-                        members: (l.members ?? []).map((m: any) => ({
-                            employeeId: m.employeeId,
-                            serviceId: m.serviceId,
-                            fullNameEN: m.fullNameEN,
-                            rankName: m.rankName,
-                            corpsName: m.corpsName,
-                            tradeName: m.tradeName,
-                            motherUnitName: m.motherUnitName,
-                            rabUnit: m.rabUnit,
-                            joiningDate: m.joiningDate,
-                            homeDistrictName: m.homeDistrictName,
-                            transferUnitId: m.transferUnitId ?? null,
-                            transferUnitName: m.transferUnitName ?? null
-                        })),
-                        createdBy: '',
-                        createdDate: ''
-                    }))
-                ),
-                tap((sheets) => this.noteSheets$.next(sheets))
-            );
+        return this.http.get<any[]>(`${API}/GetDraftNewPostingNoteSheets`, { params: { postingType: 'New' } }).pipe(
+            map((list) =>
+                (list ?? []).map((l) => ({
+                    id: String(l.id),
+                    postingType: 'New' as PostingType,
+                    draftListId: l.draftPostingListId ? String(l.draftPostingListId) : null,
+                    noteSheetNo: l.noteSheetNo,
+                    noteSheetDate: l.noteSheetDate,
+                    referenceNumber: null,
+                    subject: '',
+                    mainText: '',
+                    textType: 'en' as const,
+                    preparedBy: '',
+                    initiatorId: null,
+                    recommenderIds: [],
+                    finalApproverId: null,
+                    filesReferences: [],
+                    status: (l.status ?? 'Draft') as PostingNoteSheetStatus,
+                    members: (l.members ?? []).map((m: any) => ({
+                        employeeId: m.employeeId,
+                        serviceId: m.serviceId,
+                        fullNameEN: m.fullNameEN,
+                        rankName: m.rankName,
+                        corpsName: m.corpsName,
+                        tradeName: m.tradeName,
+                        motherUnitName: m.motherUnitName,
+                        rabUnit: m.rabUnit,
+                        joiningDate: m.joiningDate,
+                        homeDistrictName: m.homeDistrictName,
+                        transferUnitId: m.transferUnitId ?? null,
+                        transferUnitName: m.transferUnitName ?? null
+                    })),
+                    createdBy: '',
+                    createdDate: ''
+                }))
+            ),
+            tap((sheets) => this.noteSheets$.next(sheets))
+        );
     }
 
     getPostingNoteSheetsSnapshot(type?: PostingType): PostingNoteSheet[] {
@@ -396,10 +377,7 @@ export class PostingService {
         return this.noteSheets$.value.find((n) => n.id === id) ?? null;
     }
 
-    updatePostingNoteSheet(
-        id: string,
-        patch: Partial<Pick<PostingNoteSheet, 'subject' | 'mainText' | 'referenceNumber' | 'noteSheetDate' | 'textType' | 'initiatorId' | 'recommenderIds' | 'finalApproverId' | 'filesReferences' | 'members'>>
-    ): void {
+    updatePostingNoteSheet(id: string, patch: Partial<Pick<PostingNoteSheet, 'subject' | 'mainText' | 'referenceNumber' | 'noteSheetDate' | 'textType' | 'initiatorId' | 'recommenderIds' | 'finalApproverId' | 'filesReferences' | 'members'>>): void {
         const list = this.noteSheets$.value.map((n) => (n.id === id ? { ...n, ...patch } : n));
         this.noteSheets$.next(list);
     }
@@ -440,7 +418,7 @@ export class PostingService {
             corpsName: m.corpsName,
             tradeName: m.tradeName,
             postingFromUnitId: null,
-            postingFromUnitName: sheet.postingType === 'Inter' ? (sheet.members[idx] as any).rabUnit ?? null : null,
+            postingFromUnitName: sheet.postingType === 'Inter' ? ((sheet.members[idx] as any).rabUnit ?? null) : null,
             postedToUnitId: m.transferUnitId,
             postedToUnitName: m.transferUnitName ?? null,
             joiningDate: null,
@@ -469,17 +447,8 @@ export class PostingService {
         return type ? list.filter((p) => p.postingType === type) : list;
     }
 
-    recordJoin(
-        itemId: string,
-        joiningDate: string,
-        ccMoArticle47No: string | null,
-        ccMoArticle47FileId: number | null
-    ): void {
-        const list = this.pendingJoining$.value.map((p) =>
-            p.id === itemId
-                ? { ...p, joiningDate, ccMoArticle47No, ccMoArticle47FileId }
-                : p
-        );
+    recordJoin(itemId: string, joiningDate: string, ccMoArticle47No: string | null, ccMoArticle47FileId: number | null): void {
+        const list = this.pendingJoining$.value.map((p) => (p.id === itemId ? { ...p, joiningDate, ccMoArticle47No, ccMoArticle47FileId } : p));
         this.pendingJoining$.next(list);
     }
 
@@ -548,11 +517,15 @@ export class PostingService {
     }
 
     /** "Pending List for Joining — New Posting": employees whose posting order is generated but who haven't joined yet.
-     *  Pass onlyCancelled = true to fetch the cancelled-joinings list instead. */
-    getPendingPostingJoining(postingType?: string, onlyCancelled = false): Observable<PendingPostingJoiningDto[]> {
+     *  Pass onlyCancelled = true to fetch the cancelled-joinings list instead.
+     *  scopeSide (inter posting only) picks which side the org scope matches on:
+     *  'Destination' = Transfer To only (transfer-unit page), 'Source' = From only
+     *  (HQ page), 'Both' = either side (default; report / cancelled list). */
+    getPendingPostingJoining(postingType?: string, onlyCancelled = false, scopeSide?: 'Both' | 'Source' | 'Destination'): Observable<PendingPostingJoiningDto[]> {
         const params: Record<string, string> = {};
         if (postingType) params['postingType'] = postingType;
         if (onlyCancelled) params['onlyCancelled'] = 'true';
+        if (scopeSide) params['scopeSide'] = scopeSide;
         return this.http.get<PendingPostingJoiningDto[]>(`${API}/GetPendingPostingJoining`, { params });
     }
 
@@ -571,21 +544,11 @@ export class PostingService {
     }
 
     /** Server-side paginated cancelled joinings (JoinStatus = Cancel) for the collapsible section. */
-    getCancelledPostingJoiningPaged(
-        postingType: string,
-        pageNo: number,
-        rowPerPage: number
-    ): Observable<{ datalist: PendingPostingJoiningDto[]; pages: { Rows: number; TotalPages: number } }> {
-        return this.http.post<{ datalist: PendingPostingJoiningDto[]; pages: { Rows: number; TotalPages: number } }>(
-            `${API}/GetCancelledPostingJoiningPaginated`,
-            { postingType, pagination: { page_no: pageNo, row_per_page: rowPerPage } }
-        );
+    getCancelledPostingJoiningPaged(postingType: string, pageNo: number, rowPerPage: number): Observable<{ datalist: PendingPostingJoiningDto[]; pages: { Rows: number; TotalPages: number } }> {
+        return this.http.post<{ datalist: PendingPostingJoiningDto[]; pages: { Rows: number; TotalPages: number } }>(`${API}/GetCancelledPostingJoiningPaginated`, { postingType, pagination: { page_no: pageNo, row_per_page: rowPerPage } });
     }
 
-    receivePostingMembers(
-        items: { postingReceiveId: number; joiningDate: string; remarks: string | null }[],
-        receivedBy: string
-    ): Observable<{ statusCode: number; description: string }> {
+    receivePostingMembers(items: { postingReceiveId: number; joiningDate: string; remarks: string | null }[], receivedBy: string): Observable<{ statusCode: number; description: string }> {
         return this.http.post<{ statusCode: number; description: string }>(`${API}/ReceivePostingMembers`, {
             items,
             receivedBy
@@ -599,10 +562,7 @@ export class PostingService {
     /** Get approved notesheets filtered by type (NewPosting / InterPosting),
      *  excluding those that already have a generated Posting Order. */
     getApprovedNoteSheetsByType(noteSheetType: string): Observable<ApprovedNoteSheetItem[]> {
-        return this.http.get<ApprovedNoteSheetItem[]>(
-            `${API}/GetApprovedNoteSheetsForPostingOrder`,
-            { params: { noteSheetType } }
-        );
+        return this.http.get<ApprovedNoteSheetItem[]>(`${API}/GetApprovedNoteSheetsForPostingOrder`, { params: { noteSheetType } });
     }
 
     /** Get notesheet employees (from DraftPostingDetail via DraftPostingMasterId). */
@@ -695,13 +655,7 @@ export class PostingService {
     }
 
     /** Remove a single employee from an existing Posting Order (immediate DB persist + history). */
-    removePostingOrderEmployee(
-        postingOrderMasterId: number,
-        employeeId: number,
-        removedBy: string,
-        draftPostingMasterId: number | null = null,
-        postingType: string | null = null
-    ): Observable<{ statusCode: number; description: string }> {
+    removePostingOrderEmployee(postingOrderMasterId: number, employeeId: number, removedBy: string, draftPostingMasterId: number | null = null, postingType: string | null = null): Observable<{ statusCode: number; description: string }> {
         return this.http.post<{ statusCode: number; description: string }>(`${API}/RemovePostingOrderEmployee`, {
             postingOrderMasterId,
             employeeId,

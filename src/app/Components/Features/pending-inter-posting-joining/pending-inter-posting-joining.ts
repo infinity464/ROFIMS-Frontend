@@ -24,21 +24,7 @@ import { MoveOrderTypeOptions, MoveOrderType } from '@/models/enums';
 @Component({
     selector: 'app-pending-inter-posting-joining',
     standalone: true,
-    imports: [
-        CommonModule,
-        FormsModule,
-        TableModule,
-        ButtonModule,
-        TooltipModule,
-        InputTextModule,
-        IconFieldModule,
-        InputIconModule,
-        SelectModule,
-        Toast,
-        DialogModule,
-        DatePickerModule, FlexibleDateDirective,
-        TextareaModule
-    ],
+    imports: [CommonModule, FormsModule, TableModule, ButtonModule, TooltipModule, InputTextModule, IconFieldModule, InputIconModule, SelectModule, Toast, DialogModule, DatePickerModule, FlexibleDateDirective, TextareaModule],
     providers: [MessageService],
     templateUrl: './pending-inter-posting-joining.html',
     styleUrl: './pending-inter-posting-joining.scss'
@@ -71,7 +57,7 @@ export class PendingInterPostingJoiningComponent implements OnInit {
     // carrying the selected employees (same flow as pending-posting-joining).
     showMovementDialog = false;
     // Article 47 (Takeover) is not a valid order type from this screen.
-    moveOrderTypeOptions = MoveOrderTypeOptions.filter(o => o.value !== MoveOrderType.Article47Takeover);
+    moveOrderTypeOptions = MoveOrderTypeOptions.filter((o) => o.value !== MoveOrderType.Article47Takeover);
     movementOrderType: number | null = null;
 
     // Cancel joining dialog
@@ -114,7 +100,7 @@ export class PendingInterPostingJoiningComponent implements OnInit {
      *  The Movement button/dialog operate on this subset; Receive uses the full
      *  selection. */
     get movableRows(): PendingPostingJoiningDto[] {
-        return this.selectedRows.filter(r => !this.hasMovement(r));
+        return this.selectedRows.filter((r) => !this.hasMovement(r));
     }
 
     onSelectionChange(rows: PendingPostingJoiningDto[]): void {
@@ -133,7 +119,9 @@ export class PendingInterPostingJoiningComponent implements OnInit {
     loadPending(): void {
         this.loading = true;
         this.selectedRows = [];
-        this.postingService.getPendingPostingJoining('InterPosting').subscribe({
+        // HQ pending page: show a member only when their "From" unit (current active
+        // placement) is in the caller's scope — i.e. members leaving their unit.
+        this.postingService.getPendingPostingJoining('InterPosting', false, 'Source').subscribe({
             next: (data) => {
                 this.allRows = data ?? [];
                 this.buildFilterOptions();
@@ -173,7 +161,9 @@ export class PendingInterPostingJoiningComponent implements OnInit {
                 this.cancelledTotal = res?.pages?.Rows ?? 0;
                 this.cancelledLoading = false;
             },
-            error: () => { this.cancelledLoading = false; }
+            error: () => {
+                this.cancelledLoading = false;
+            }
         });
     }
 
@@ -189,29 +179,16 @@ export class PendingInterPostingJoiningComponent implements OnInit {
     }
 
     private buildFilterOptions(): void {
-        const unique = (arr: (string | null | undefined)[]) =>
-            [...new Set(arr.filter((v): v is string => !!v))].sort();
+        const unique = (arr: (string | null | undefined)[]) => [...new Set(arr.filter((v): v is string => !!v))].sort();
 
-        this.noteSheetOptions = [
-            { label: 'All NoteSheets', value: null },
-            ...unique(this.allRows.map(r => r.noteSheetNo)).map(v => ({ label: v, value: v }))
-        ];
-        this.motherOrgOptions = [
-            { label: 'All Mother Organizations', value: null },
-            ...unique(this.allRows.map(r => r.motherOrganization)).map(v => ({ label: v, value: v }))
-        ];
-        this.postingOrderOptions = [
-            { label: 'All Posting Orders', value: null },
-            ...unique(this.allRows.map(r => r.postingOrderNo)).map(v => ({ label: v, value: v }))
-        ];
-        this.transferUnitOptions = [
-            { label: 'All Transfer Units', value: null },
-            ...unique(this.allRows.map(r => r.transferRabUnitName)).map(v => ({ label: v, value: v }))
-        ];
+        this.noteSheetOptions = [{ label: 'All NoteSheets', value: null }, ...unique(this.allRows.map((r) => r.noteSheetNo)).map((v) => ({ label: v, value: v }))];
+        this.motherOrgOptions = [{ label: 'All Mother Organizations', value: null }, ...unique(this.allRows.map((r) => r.motherOrganization)).map((v) => ({ label: v, value: v }))];
+        this.postingOrderOptions = [{ label: 'All Posting Orders', value: null }, ...unique(this.allRows.map((r) => r.postingOrderNo)).map((v) => ({ label: v, value: v }))];
+        this.transferUnitOptions = [{ label: 'All Transfer Units', value: null }, ...unique(this.allRows.map((r) => r.transferRabUnitName)).map((v) => ({ label: v, value: v }))];
     }
 
     applyFilters(): void {
-        this.rows = this.allRows.filter(r => {
+        this.rows = this.allRows.filter((r) => {
             if (this.noteSheetFilter && r.noteSheetNo !== this.noteSheetFilter) return false;
             if (this.motherOrgFilter && r.motherOrganization !== this.motherOrgFilter) return false;
             if (this.postingOrderFilter && r.postingOrderNo !== this.postingOrderFilter) return false;
@@ -219,8 +196,8 @@ export class PendingInterPostingJoiningComponent implements OnInit {
             return true;
         });
         // Drop selections that are no longer visible after filter change.
-        const visibleIds = new Set(this.rows.map(r => r.postingReceiveId));
-        this.selectedRows = this.selectedRows.filter(r => visibleIds.has(r.postingReceiveId));
+        const visibleIds = new Set(this.rows.map((r) => r.postingReceiveId));
+        this.selectedRows = this.selectedRows.filter((r) => visibleIds.has(r.postingReceiveId));
     }
 
     clearFilters(): void {
@@ -267,7 +244,7 @@ export class PendingInterPostingJoiningComponent implements OnInit {
 
         this.saving = true;
         const joiningDateStr = this.formatDateForApi(this.joiningDate);
-        const items = this.selectedRows.map(r => ({
+        const items = this.selectedRows.map((r) => ({
             postingReceiveId: r.postingReceiveId,
             joiningDate: joiningDateStr,
             remarks: this.remarks || null
@@ -339,7 +316,10 @@ export class PendingInterPostingJoiningComponent implements OnInit {
         // must share the same Transfer To unit, Posting Order and NoteSheet — the
         // movement stores ONE NoteSheetId / OfficeOrderId for the whole CC.
         if (this.movementOrderType === MoveOrderType.CC) {
-            const units = new Set(movable.map(r => r.transferRabUnitId));
+            // Members may point at different SUB-units (wing/branch/…) of the same
+            // RAB unit — that still qualifies for one CC, so compare the top-level
+            // unit (what the Transfer To column shows), not the exact node id.
+            const units = new Set(movable.map((r) => r.transferRabUnitName ?? r.transferRabUnitId));
             if (units.size > 1) {
                 this.messageService.add({
                     severity: 'warn',
@@ -348,7 +328,7 @@ export class PendingInterPostingJoiningComponent implements OnInit {
                 });
                 return;
             }
-            const orders = new Set(movable.map(r => r.postingOrderMasterId));
+            const orders = new Set(movable.map((r) => r.postingOrderMasterId));
             if (orders.size > 1) {
                 this.messageService.add({
                     severity: 'warn',
@@ -357,7 +337,7 @@ export class PendingInterPostingJoiningComponent implements OnInit {
                 });
                 return;
             }
-            const noteSheets = new Set(movable.map(r => r.noteSheetId));
+            const noteSheets = new Set(movable.map((r) => r.noteSheetId));
             if (noteSheets.size > 1) {
                 this.messageService.add({
                     severity: 'warn',
@@ -368,16 +348,20 @@ export class PendingInterPostingJoiningComponent implements OnInit {
             }
         }
 
-        const rows = movable.filter(r => r.employeeId != null);
-        const employeeIds = rows.map(r => r.employeeId as number);
+        const rows = movable.filter((r) => r.employeeId != null);
+        const employeeIds = rows.map((r) => r.employeeId as number);
 
         // Per-member destined unit + source references (current RAB unit,
         // notesheet id, posting order id) — stamped onto each movement record.
         const unitMap: Record<number, number> = {};
+        // Per-member TOP-LEVEL unit name for display on the Movement form — the
+        // ids in unitMap can be different sub-units of the same RAB unit.
+        const unitNames: Record<number, string> = {};
         const postingContext: Record<number, { f: number | null; n: number | null; o: number | null }> = {};
         for (const r of rows) {
             const empId = r.employeeId as number;
             if (r.transferRabUnitId != null) unitMap[empId] = r.transferRabUnitId;
+            if (r.transferRabUnitName) unitNames[empId] = r.transferRabUnitName;
             postingContext[empId] = {
                 f: r.fromRabUnitId ?? null,
                 n: r.noteSheetId ?? null,
@@ -391,15 +375,20 @@ export class PendingInterPostingJoiningComponent implements OnInit {
                 moveOrderType: this.movementOrderType,
                 employeeIds: JSON.stringify(employeeIds),
                 unitMap: JSON.stringify(unitMap),
+                unitNames: JSON.stringify(unitNames),
                 postingContext: JSON.stringify(postingContext)
             }
         });
     }
 
-    /** Open the cancel-joining confirmation dialog for a single member. */
+    /** Toast shown when a user without delete permission clicks the (disabled) Cancel button. */
+    notifyNoCancelPermission(): void {
+        this.messageService.add({ severity: 'warn', summary: 'Permission Denied', detail: 'You did not have cancel permission' });
+    }
+
     openCancelDialog(row: PendingPostingJoiningDto): void {
         if (!this.canDelete) {
-            this.messageService.add({ severity: 'warn', summary: 'Permission Denied', detail: 'You do not have permission to perform this action.' });
+            this.notifyNoCancelPermission();
             return;
         }
         this.cancelTarget = row;
@@ -418,14 +407,15 @@ export class PendingInterPostingJoiningComponent implements OnInit {
      *  to presently serving and IsSendingNotesheetStatus is cleared (handled server-side). */
     confirmCancel(): void {
         if (this.cancelling || !this.cancelTarget) return;
+        // Re-check here too — the stored permissions live in local storage and the
+        // dialog could be reached with a tampered flag.
+        if (!this.canDelete) {
+            this.notifyNoCancelPermission();
+            return;
+        }
 
         this.cancelling = true;
-        this.postingService.cancelPostingJoining(
-            this.cancelTarget.postingOrderMasterId,
-            this.cancelTarget.employeeId,
-            this.currentUser,
-            this.cancelRemarks || null
-        ).subscribe({
+        this.postingService.cancelPostingJoining(this.cancelTarget.postingOrderMasterId, this.cancelTarget.employeeId, this.currentUser, this.cancelRemarks || null).subscribe({
             next: (res) => {
                 this.cancelling = false;
                 if (res.statusCode === 200) {
@@ -470,9 +460,7 @@ export class PendingInterPostingJoiningComponent implements OnInit {
     formatDate(value: string | null | undefined): string {
         if (value == null || value === '') return '-';
         const d = new Date(value);
-        return isNaN(d.getTime())
-            ? String(value)
-            : d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+        return isNaN(d.getTime()) ? String(value) : d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
     }
 
     onGlobalFilter(table: Table, event: Event): void {

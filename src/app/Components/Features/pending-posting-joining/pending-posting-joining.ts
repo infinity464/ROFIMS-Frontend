@@ -235,6 +235,10 @@ export class PendingPostingJoiningComponent implements OnInit {
 
     /** Open the receive dialog to mark selected rows as received. */
     openReceiveDialog(): void {
+        if (!this.canUpdate) {
+            this.notifyNoJoinPermission();
+            return;
+        }
         if (!this.selectedRows.length) {
             this.messageService.add({
                 severity: 'warn',
@@ -342,7 +346,10 @@ export class PendingPostingJoiningComponent implements OnInit {
         // must share the same Transfer To unit, Posting Order and NoteSheet — the
         // movement stores ONE NoteSheetId / OfficeOrderId for the whole CC.
         if (this.movementOrderType === MoveOrderType.CC) {
-            const units = new Set(movable.map(r => r.transferRabUnitId));
+            // Members may point at different SUB-units (wing/branch/…) of the same
+            // RAB unit — that still qualifies for one CC, so compare the top-level
+            // unit (what the Transfer To column shows), not the exact node id.
+            const units = new Set(movable.map(r => r.transferRabUnitName ?? r.transferRabUnitId));
             if (units.size > 1) {
                 this.messageService.add({
                     severity: 'warn',
@@ -378,6 +385,9 @@ export class PendingPostingJoiningComponent implements OnInit {
         // hide the Destination section and stamp each record with the member's
         // own destined unit (MO / Article 47 split one record per member).
         const unitMap: Record<number, number> = {};
+        // Per-member TOP-LEVEL unit name for display on the Movement form — the
+        // ids in unitMap can be different sub-units of the same RAB unit.
+        const unitNames: Record<number, string> = {};
         // Per-member source references carried into the movement record:
         //   f = current (from) RAB unit → CurrentUnitId
         //   n = posting notesheet id    → NoteSheetId
@@ -386,6 +396,7 @@ export class PendingPostingJoiningComponent implements OnInit {
         for (const r of rows) {
             const empId = r.employeeId as number;
             if (r.transferRabUnitId != null) unitMap[empId] = r.transferRabUnitId;
+            if (r.transferRabUnitName) unitNames[empId] = r.transferRabUnitName;
             postingContext[empId] = {
                 f: r.fromRabUnitId ?? null,
                 n: r.noteSheetId ?? null,
@@ -399,15 +410,26 @@ export class PendingPostingJoiningComponent implements OnInit {
                 moveOrderType: this.movementOrderType,
                 employeeIds: JSON.stringify(employeeIds),
                 unitMap: JSON.stringify(unitMap),
+                unitNames: JSON.stringify(unitNames),
                 postingContext: JSON.stringify(postingContext)
             }
         });
     }
 
+    /** Toast shown when a user without delete permission clicks the (disabled) Cancel button. */
+    notifyNoCancelPermission(): void {
+        this.messageService.add({ severity: 'warn', summary: 'Permission Denied', detail: 'You did not have cancel permission' });
+    }
+
+    /** Toast shown when a user without edit permission clicks the (disabled) Join Member button. */
+    notifyNoJoinPermission(): void {
+        this.messageService.add({ severity: 'warn', summary: 'Permission Denied', detail: 'You did not have join permission' });
+    }
+
     /** Open the cancel-joining confirmation dialog for a single member. */
     openCancelDialog(row: PendingPostingJoiningDto): void {
         if (!this.canDelete) {
-            this.messageService.add({ severity: 'warn', summary: 'Permission Denied', detail: 'You do not have permission to perform this action.' });
+            this.notifyNoCancelPermission();
             return;
         }
         this.cancelTarget = row;
@@ -424,6 +446,12 @@ export class PendingPostingJoiningComponent implements OnInit {
     /** Set the member's JoinStatus = Cancel (approved orders can't be removed). */
     confirmCancel(): void {
         if (this.cancelling || !this.cancelTarget) return;
+        // Re-check here too — the stored permissions live in local storage and the
+        // dialog could be reached with a tampered flag.
+        if (!this.canDelete) {
+            this.notifyNoCancelPermission();
+            return;
+        }
 
         this.cancelling = true;
         this.postingService.cancelPostingJoining(

@@ -209,16 +209,21 @@
                                 pTooltip="View Posting Order"
                                 (onClick)="openPostingOrder(row)"
                             ></p-button>
-                            <p-button
-                                icon="pi pi-ban"
-                                severity="danger"
-                                [rounded]="true"
-                                [text]="true"
-                                size="small"
-                                pTooltip="Cancel Joining"
-                                [disabled]="!canDelete"
-                                (onClick)="openCancelDialog(row)"
-                            ></p-button>
+                            <!-- Disabled button ignores pointer events, so the wrapper span
+                                 catches the click and surfaces the permission message. -->
+                            <span (click)="!canDelete && notifyNoCancelPermission()">
+                                <p-button
+                                    icon="pi pi-ban"
+                                    severity="danger"
+                                    [rounded]="true"
+                                    [text]="true"
+                                    size="small"
+                                    [pTooltip]="canDelete ? 'Cancel Joining' : 'You did not have cancel permission'"
+                                    tooltipPosition="top"
+                                    [disabled]="!canDelete"
+                                    (onClick)="openCancelDialog(row)"
+                                ></p-button>
+                            </span>
                         </div>
                     </td>
                 </tr>

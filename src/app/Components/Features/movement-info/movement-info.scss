@@ -50,7 +50,11 @@
         padding: 0.6rem 0.9rem;
         border-radius: 10px;
         border: 1px solid var(--p-primary-color, #10b981);
-        background: var(--p-primary-50, rgba(16, 185, 129, 0.08));
+        // Translucent primary tint instead of --p-primary-50: the -50 shade is a
+        // fixed LIGHT tint that doesn't invert in dark mode. A transparent mix
+        // sits on the theme's own surface, so it works in both themes.
+        background: rgba(16, 185, 129, 0.1);
+        background: color-mix(in srgb, var(--p-primary-color, #10b981) 12%, transparent);
 
         .pi { color: var(--p-primary-color, #10b981); }
 
@@ -62,6 +66,7 @@
         .mv-destined-value {
             font-weight: 600;
             font-size: 0.9rem;
+            color: var(--p-text-color, inherit);
         }
     }
 

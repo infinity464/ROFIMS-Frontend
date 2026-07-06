@@ -182,6 +182,11 @@ export class MovementInfoComponent implements OnInit {
     /** employeeId → destined RAB unit id, handed over from pending-posting-joining. */
     prefilledUnits: Record<number, number> | null = null;
 
+    /** employeeId → TOP-LEVEL RAB unit name for display. The ids in prefilledUnits
+     *  can be different sub-units of the same RAB unit, so mixed-unit detection and
+     *  the Transfer Unit column/banner go by this name when available. */
+    prefilledUnitNames: Record<number, string> | null = null;
+
     /** employeeId → source references from the New-Posting flow:
      *  f = current (from) RAB unit, n = notesheet id, o = posting order id. */
     prefilledContext: Record<number, { f: number | null; n: number | null; o: number | null }> | null = null;
@@ -250,6 +255,15 @@ export class MovementInfoComponent implements OnInit {
         // Destination section; each record's destined unit is stamped from the
         // map at submit time.
         this.prefilledUnits = this.parseUnitMap(qp.get('unitMap'));
+        const namesParam = qp.get('unitNames');
+        if (namesParam) {
+            try {
+                const obj = JSON.parse(namesParam);
+                this.prefilledUnitNames = obj && typeof obj === 'object' ? obj : null;
+            } catch {
+                this.prefilledUnitNames = null;
+            }
+        }
         if (this.prefilledUnits) {
             this.hideDestination = true;
             // No single destined unit to validate — units are supplied per record.
@@ -712,6 +726,10 @@ export class MovementInfoComponent implements OnInit {
         if (pending.transferRabUnitId != null) {
             this.prefilledUnits[employeeId] = pending.transferRabUnitId;
         }
+        if (pending.transferRabUnitName) {
+            this.prefilledUnitNames = { ...(this.prefilledUnitNames ?? {}) };
+            this.prefilledUnitNames[employeeId] = pending.transferRabUnitName;
+        }
         this.prefilledContext = { ...(this.prefilledContext ?? {}) };
         this.prefilledContext[employeeId] = {
             f: pending.fromRabUnitId ?? null,
@@ -753,12 +771,14 @@ export class MovementInfoComponent implements OnInit {
         // member is gone (search flow only — not the redirect), restore the normal
         // Movement-type + Destination controls.
         if (this.prefilledUnits) delete this.prefilledUnits[row.employeeID];
+        if (this.prefilledUnitNames) delete this.prefilledUnitNames[row.employeeID];
         if (this.prefilledContext) delete this.prefilledContext[row.employeeID];
         if (this.lockMovementType && !this.lockOrderFields
             && Object.keys(this.prefilledContext ?? {}).length === 0) {
             this.lockMovementType = false;
             this.hideDestination = false;
             this.prefilledUnits = null;
+            this.prefilledUnitNames = null;
             this.prefilledContext = null;
             this.onDestinedUnitTargetChange(this.form.get('destinedUnitTarget')!.value);
         }
@@ -855,18 +875,29 @@ export class MovementInfoComponent implements OnInit {
      *  single-unit banner. */
     get hasMixedTransferUnits(): boolean {
         if (!this.prefilledUnits) return false;
+        // Compare by top-level unit NAME when the sender supplied one — members can
+        // point at different sub-units of the same RAB unit and still be one unit.
+        if (this.prefilledUnitNames && Object.keys(this.prefilledUnitNames).length > 0) {
+            return new Set(Object.values(this.prefilledUnitNames)).size > 1;
+        }
         return new Set(Object.values(this.prefilledUnits)).size > 1;
     }
 
     /** Single destined RAB unit label for the banner (everyone shares one unit). */
     get destinedRABUnitLabel(): string {
         if (!this.prefilledUnits) return '';
+        if (this.prefilledUnitNames) {
+            const names = [...new Set(Object.values(this.prefilledUnitNames))];
+            if (names[0]) return names[0];
+        }
         const unitIds = [...new Set(Object.values(this.prefilledUnits))];
         return this.rabUnitOptions.find((o) => o.value === unitIds[0])?.label ?? '';
     }
 
     /** Transfer RAB unit label for a specific employee (per-member column). */
     transferUnitLabel(employeeId: number): string {
+        const name = this.prefilledUnitNames?.[employeeId];
+        if (name) return name;
         const unitId = this.prefilledUnits?.[employeeId];
         if (unitId == null) return '—';
         return this.rabUnitOptions.find((o) => o.value === unitId)?.label ?? '—';

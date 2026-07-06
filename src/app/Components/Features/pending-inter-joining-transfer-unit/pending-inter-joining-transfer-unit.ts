@@ -127,7 +127,9 @@ export class PendingInterJoiningTransferUnitComponent implements OnInit {
     loadPending(): void {
         this.loading = true;
         this.selectedRows = [];
-        this.postingService.getPendingPostingJoining('InterPosting').subscribe({
+        // Transfer-unit (receiving) page: show a member only when the "Transfer To"
+        // destination is in the caller's scope — i.e. members coming INTO their unit.
+        this.postingService.getPendingPostingJoining('InterPosting', false, 'Destination').subscribe({
             next: (data) => {
                 this.allRows = data ?? [];
                 this.buildFilterOptions();
