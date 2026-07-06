@@ -1593,7 +1593,6 @@ html, body { margin: 0; padding: 0; background: transparent; }
         const orderLine = new Paragraph({
             tabStops: [{ type: TabStopType.RIGHT, position: TabStopPosition.MAX }],
             children: [
-                new TextRun({ text: bn ? 'ফোর্স অর্ডার নং: ' : 'Force Order No: ', bold: true, size: ctxSize, sizeComplexScript: csSize, font, language: lang }),
                 new TextRun({ text: this.postingOrderNo, size: ctxSize, sizeComplexScript: csSize, font, language: lang }),
                 new TextRun({ text: '\t', font }),
                 new TextRun({ text: bn ? 'তারিখ: ' : 'Date: ', bold: true, size: ctxSize, sizeComplexScript: csSize, font, language: lang }),
