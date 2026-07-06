@@ -55,18 +55,18 @@
         <div class="a4-paper" #paper [class.a4-paper--legal]="selectedPageSize === 'Legal'">
 
             <!-- Org header — matches notesheet-preview/posting's .ns-org-header style. -->
-            <div style="font-size:9pt; line-height:1.5; margin-bottom:8pt;">
+            <div style="font-size:8pt; line-height:1.5; margin-bottom:8pt;">
                 বাংলাদেশ ফরম নং-২৪০৩
             </div>
 
             <!-- Memo number + Date row — 2-line gap above the form header. -->
-            <div style="display:flex; justify-content:space-between; margin-top:36pt; font-size:10pt;">
+            <div style="display:flex; justify-content:space-between; margin-top:36pt; font-size:9pt;">
                 <div>স্মারক নং- {{ memoNoBn }}</div>
                 <div>{{ letterDateBn }}</div>
             </div>
 
             <!-- Reference line — 2 empty lines above and below সূত্র. -->
-            <div style="margin-top:36pt; font-size:10pt;">
+            <div style="margin-top:36pt; font-size:9pt;">
                 <div style="display:flex; gap:0; align-items:flex-start;">
                     <div style="min-width:50pt;">সূত্র:</div>
                     <div class="mv-rich" [innerHTML]="movement.auth || '---'"></div>
@@ -74,7 +74,7 @@
             </div>
 
             <!-- প্রতি (To) block -->
-            <div style="margin-top:36pt; font-size:10pt;">
+            <div style="margin-top:36pt; font-size:9pt;">
                 <div>প্রতি,</div>
                 <table style="margin-left:50pt; margin-top:4pt; border-collapse:collapse;">
                     @for (line of recipientLines; track $index) {
@@ -89,17 +89,17 @@
             </div>
 
             <!-- Body — sourced from MovementInfo.remarks (rich text) -->
-            <div class="mv-rich" style="margin-top:18pt; font-size:10pt;"
+            <div class="mv-rich" style="margin-top:18pt; font-size:9pt;"
                  [innerHTML]="movement.remarks || ''"></div>
 
             <!-- Static "অগ্রগামী করা হইল।" on its own left-aligned line, with a 2-line gap above. -->
-            <div style="margin-top:34pt; font-size:10pt;">
+            <div style="margin-top:34pt; font-size:9pt;">
                 অগ্রগামী করা হইল।
             </div>
 
             <!-- Signature block (right-aligned) on the next line — Takeover variant title.
                  margin-top:30pt keeps a clear gap between the static line and the signature stack. -->
-            <div style="margin-top:30pt; font-size:10pt; text-align:right;">
+            <div style="margin-top:30pt; font-size:9pt; text-align:right;">
                 <div style="display:inline-block; text-align:center;">
                     <div>গ্রহণকারী কর্মকর্তা</div>
                     <div style="margin-top:36pt; border-top:1px solid #000; min-width:220pt;"></div>
@@ -113,7 +113,7 @@
             </div>
 
             <!-- Witness / Rule 78 block -->
-            <div style="margin-top:28pt; font-size:10pt;">
+            <div style="margin-top:28pt; font-size:9pt;">
                 <div>
                     বেসামরিক হিসাব পদ্ধতির ৭৮ নং বিধি অনুযায়ী আমি (গ্রহণকারী কর্মকর্তা)
                 </div>

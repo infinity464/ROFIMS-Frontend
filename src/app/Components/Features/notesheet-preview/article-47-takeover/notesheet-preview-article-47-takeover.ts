@@ -32,7 +32,7 @@ import { MovementFilesInfoComponent } from '../shared/movement-files-info';
     imports: [CommonModule, FormsModule, ButtonModule, SelectModule, Toast, MovementReturnButtonComponent, MovementFilesInfoComponent],
     providers: [MessageService],
     templateUrl: './notesheet-preview-article-47-takeover.html',
-    styleUrls: ['../notesheet-preview.scss', '../notesheet-preview-toolbar-dark.scss']
+    styleUrls: ['../notesheet-preview.scss', '../notesheet-preview-toolbar-dark.scss', './notesheet-preview-article-47-takeover.scss']
 })
 export class NotesheetPreviewArticle47TakeoverComponent implements OnInit {
     private route = inject(ActivatedRoute);
@@ -451,8 +451,12 @@ export class NotesheetPreviewArticle47TakeoverComponent implements OnInit {
         const sz = this.selectedPageSize;
         const pageWidth = sz === 'A4' ? '210mm' : '215.9mm';
         const pageHeight = sz === 'A4' ? '297mm' : sz === 'Letter' ? '279.4mm' : '355.6mm';
-        const colWidth = sz === 'A4' ? '190mm' : '195.9mm';
-        const padX = 10, padTop = 14, padBottom = 20; // mm — .a4-paper padding
+        const padLeft = 25.4; // 1in left margin
+        const padRight = 6;
+        const padTop = 14, padBottom = 20; // mm — .a4-paper padding
+        const colWidth = sz === 'A4'
+            ? `${210 - padLeft - padRight}mm`
+            : `${215.9 - padLeft - padRight}mm`;
 
         const html = `<!DOCTYPE html>
 <html>
@@ -461,7 +465,7 @@ export class NotesheetPreviewArticle47TakeoverComponent implements OnInit {
 <style>
 ${styles}
 
-@page { size: ${pageWidth} ${pageHeight}; margin: ${padTop}mm ${padX}mm ${padBottom}mm ${padX}mm; }
+@page { size: ${pageWidth} ${pageHeight}; margin: ${padTop}mm ${padRight}mm ${padBottom}mm ${padLeft}mm; }
 html, body { margin: 0; padding: 0; background: transparent; }
 
 .no-print, .preview-header, .preview-actions { display: none !important; }
@@ -472,7 +476,7 @@ html, body { margin: 0; padding: 0; background: transparent; }
     box-sizing: border-box;
     width: ${colWidth};
     font-family: 'Times New Roman', 'Nirmala UI', Times, serif;
-    font-size: 10pt;
+    font-size: 9pt;
     line-height: 1.7;
     color: #000;
 }
@@ -523,10 +527,14 @@ html, body { margin: 0; padding: 0; background: transparent; }
         const font = { ascii: 'Times New Roman', hAnsi: 'Times New Roman', cs: 'Nirmala UI', hint: 'cs' as const };
         const bnLang = { value: 'bn-BD', bidirectional: 'bn-BD' } as any;
         const dims = this.getPageDimensions();
-        const contentWidth = dims.width - 1440;
+        const marginLeft = 1440;  // 1 inch
+        const marginRight = 720;  // 0.5 inch
+        const marginTop = 720;
+        const marginBottom = 720;
+        const contentWidth = dims.width - marginLeft - marginRight;
 
-        const SZ_BODY = 20;
-        const SZ_ORG  = 18;
+        const SZ_BODY = 18; // 9pt
+        const SZ_ORG  = 16; // 8pt
 
         const noBorder = {
             top:    { style: BorderStyle.NONE, size: 0, color: 'FFFFFF' },
@@ -726,7 +734,7 @@ html, body { margin: 0; padding: 0; background: transparent; }
                 properties: {
                     page: {
                         size: { width: dims.width, height: dims.height, orientation: PageOrientation.PORTRAIT },
-                        margin: { top: 720, bottom: 720, left: 720, right: 720 }
+                        margin: { top: marginTop, bottom: marginBottom, left: marginLeft, right: marginRight }
                     }
                 },
                 children
