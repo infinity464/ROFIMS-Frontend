@@ -323,7 +323,12 @@ export abstract class NotesheetPreviewBase implements OnInit {
 
         forkJoin(
             allIds.map(({ empId }) =>
-                this.servingMembersService.getEmployeePersonalServiceOverview(empId)
+                // Signatory display info is intentionally NOT member-access scoped:
+                // if a user can open this note-sheet, they may see who signed it.
+                // GetEmployeeBriefProfile is the non-scoped source (name / rank /
+                // appointment / RAB ID), so an office-access viewer sees officer
+                // signatories the same as anyone else — no per-viewer 404 blanking.
+                this.servingMembersService.getEmployeeBriefProfile(empId)
                     .pipe(catchError(() => of(null)))
             )
         ).subscribe({
@@ -332,13 +337,13 @@ export abstract class NotesheetPreviewBase implements OnInit {
                     const { empId, step } = allIds[idx];
                     const detail: SignatoryDetail = {
                         step,
-                        name:          emp?.nameEnglish  ?? '-',
-                        nameBN:        emp?.nameBN       ?? '',
-                        rabId:         emp?.rabId        ?? '-',
-                        rank:          emp?.armyRank     ?? '-',
-                        rankBN:        emp?.armyRankBN   ?? '',
-                        serviceRank:   emp?.armyRank     ?? '-',
-                        appointment:   emp?.appointment  ?? '',
+                        name:          emp?.nameEN        ?? '-',
+                        nameBN:        emp?.nameBN        ?? '',
+                        rabId:         emp?.rabId         ?? '-',
+                        rank:          emp?.rankEN        ?? '-',
+                        rankBN:        emp?.rankBN        ?? '',
+                        serviceRank:   emp?.rankEN        ?? '-',
+                        appointment:   emp?.appointmentEN ?? '',
                         appointmentBN: emp?.appointmentBN ?? '',
                         employeeId: empId
                     };
