@@ -1,6 +1,24 @@
 <p-toast position="top-center"></p-toast>
 
 <div class="pending-posting-joining">
+    <!-- Direction toggle: Posting Out (members leaving — the HQ Source-scoped page,
+         embedded as-is) / Posting In (members coming in — this component's list). -->
+    <div class="mode-toggle-bar mb-3">
+        <p-selectButton
+            [options]="modeOptions"
+            [(ngModel)]="mode"
+            optionLabel="label"
+            optionValue="value"
+            [allowEmpty]="false"
+            (onChange)="onModeChange()"
+        ></p-selectButton>
+    </div>
+
+    <!-- Posting Out: full HQ (Source-scoped) page reused with all its actions. -->
+    <app-pending-inter-posting-joining *ngIf="mode === 'out'"></app-pending-inter-posting-joining>
+
+    <!-- Posting In: this unit's existing Destination-scoped pending list. -->
+    <ng-container *ngIf="mode === 'in'">
     <div class="form-card">
         <div class="form-card-header flex justify-between items-center">
             <div>
@@ -250,6 +268,7 @@
             </ng-template>
         </p-table>
     </div>
+    </ng-container>
 </div>
 
 <!-- Absent Dialog (like emp-present-status's Absent option; no Profile Shift) -->

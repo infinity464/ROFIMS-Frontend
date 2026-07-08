@@ -62,7 +62,7 @@ export class RabUnitAorMap implements OnInit {
     unmatchedNames: string[] = [];
 
     viewBox = '0 0 800 1000';
-    tooltip = { visible: false, x: 0, y: 0, name: '', nameBn: '', unitName: '', battalionHQ: '' };
+    tooltip = { visible: false, x: 0, y: 0, transform: '', name: '', nameBn: '', unitName: '', battalionHQ: '' };
 
     private aorByUpazila = new Map<number, { unitId: number; unitName: string; color: string; battalionHQ: string }>();
 
@@ -363,14 +363,37 @@ export class RabUnitAorMap implements OnInit {
         const host = this.mapHost?.nativeElement;
         if (!host) return;
         const rect = host.getBoundingClientRect();
+        const x = event.clientX - rect.left;
+        const y = event.clientY - rect.top;
+
+        const nameBn = f.nameBn ?? '';
+        const unitName = f.unitName ?? 'Not assigned';
+        const battalionHQ = f.unitId != null ? this.aorByUpazila.get(f.upazilaId ?? -1)?.battalionHQ ?? '' : '';
+
+        // The tip lives inside the overflow:hidden host, so near the edges the default
+        // "centred, above the cursor" placement gets clipped. Flip its anchor toward the
+        // interior, deciding from the tip's estimated size so tall (4-line) tips near the
+        // top edge — e.g. northern upazilas like Patgram — flip below instead of clipping.
+        // Placement itself uses -50%/-100%/-100% offsets which are pixel-exact regardless
+        // of the estimate; the estimate only picks which side to flip to.
+        let estH = 13 + 17 + 22; // padding + name row + unit row (incl. mt-1)
+        if (nameBn) estH += 15;
+        if (battalionHQ) estH += 18;
+        const estChars = Math.max(f.name.length, nameBn.length, ('Unit: ' + unitName).length, ('HQ: ' + battalionHQ).length);
+        const estW = Math.min(rect.width - 8, estChars * 8 + 24);
+
+        const tx = x - estW / 2 < 4 ? '0' : x + estW / 2 > rect.width - 4 ? '-100%' : '-50%';
+        const ty = y - estH - 14 < 0 ? '14px' : 'calc(-100% - 10px)';
+
         this.tooltip = {
             visible: true,
-            x: event.clientX - rect.left,
-            y: event.clientY - rect.top,
+            x,
+            y,
+            transform: `translate(${tx}, ${ty})`,
             name: f.name,
-            nameBn: f.nameBn ?? '',
-            unitName: f.unitName ?? 'Not assigned',
-            battalionHQ: f.unitId != null ? this.aorByUpazila.get(f.upazilaId ?? -1)?.battalionHQ ?? '' : ''
+            nameBn,
+            unitName,
+            battalionHQ
         };
     }
 

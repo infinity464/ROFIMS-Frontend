@@ -48,7 +48,8 @@
                 </div>
 
                 @if (tooltip.visible) {
-                    <div class="aor-map-tip" [style.left.px]="tooltip.x" [style.top.px]="tooltip.y">
+                    <div class="aor-map-tip" [style.left.px]="tooltip.x" [style.top.px]="tooltip.y"
+                        [style.transform]="tooltip.transform">
                         <div class="font-semibold">{{ tooltip.name }}</div>
                         @if (tooltip.nameBn) { <div class="bn">{{ tooltip.nameBn }}</div> }
                         <div class="mt-1 text-sm">

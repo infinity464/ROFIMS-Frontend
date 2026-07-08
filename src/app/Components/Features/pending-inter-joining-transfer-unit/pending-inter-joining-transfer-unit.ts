@@ -9,6 +9,7 @@ import { InputTextModule } from 'primeng/inputtext';
 import { IconFieldModule } from 'primeng/iconfield';
 import { InputIconModule } from 'primeng/inputicon';
 import { SelectModule } from 'primeng/select';
+import { SelectButtonModule } from 'primeng/selectbutton';
 import { Toast } from 'primeng/toast';
 import { MessageService } from 'primeng/api';
 import { DialogModule } from 'primeng/dialog';
@@ -22,6 +23,7 @@ import { PresentStatusInfoService } from '@/services/present-status-info.service
 import { CommonCodeService } from '@/services/common-code-service';
 import { PendingPostingJoiningDto } from '@/models/posting.model';
 import { MoveOrderType, PresentStatusType } from '@/models/enums';
+import { PendingInterPostingJoiningComponent } from '@/Components/Features/pending-inter-posting-joining/pending-inter-posting-joining';
 
 /**
  * Transfer-unit replica of the "Pending List for Joining — Inter Posting" page.
@@ -46,7 +48,9 @@ import { MoveOrderType, PresentStatusType } from '@/models/enums';
         Toast,
         DialogModule,
         DatePickerModule, FlexibleDateDirective,
-        TextareaModule
+        TextareaModule,
+        SelectButtonModule,
+        PendingInterPostingJoiningComponent
     ],
     providers: [MessageService],
     templateUrl: './pending-inter-joining-transfer-unit.html',
@@ -56,6 +60,17 @@ export class PendingInterJoiningTransferUnitComponent implements OnInit {
     allRows: PendingPostingJoiningDto[] = [];
     rows: PendingPostingJoiningDto[] = [];
     loading = false;
+
+    // Direction toggle. 'out' = Source-scoped view (embedded HQ page — members
+    // LEAVING this unit); 'in' = Destination-scoped view (this component's own
+    // list — members COMING INTO this unit). Defaults to Posting Out.
+    mode: 'in' | 'out' = 'out';
+    modeOptions = [
+        { label: 'Posting Out', value: 'out' },
+        { label: 'Posting In', value: 'in' }
+    ];
+    /** True once the Posting In (Destination) list has been fetched at least once. */
+    private inLoaded = false;
 
     // Filter options
     noteSheetOptions: { label: string; value: string | null }[] = [];
@@ -112,8 +127,21 @@ export class PendingInterJoiningTransferUnitComponent implements OnInit {
         this.canUpdate = _perms.canUpdate || _fallback.canUpdate;
         this.canDelete = _perms.canDelete || _fallback.canDelete;
         this.currentUser = this.sharedService.getCurrentUser();
-        this.loadPending();
+        // Default tab is Posting Out (the embedded HQ component loads its own list);
+        // only fetch this component's Destination list when Posting In is shown.
+        if (this.mode === 'in') {
+            this.loadPending();
+            this.inLoaded = true;
+        }
         this.loadAbsentTypes();
+    }
+
+    /** Lazy-load the Posting In (Destination) list the first time that tab is shown. */
+    onModeChange(): void {
+        if (this.mode === 'in' && !this.inLoaded) {
+            this.loadPending();
+            this.inLoaded = true;
+        }
     }
 
     private loadAbsentTypes(): void {
