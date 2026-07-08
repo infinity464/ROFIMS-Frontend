@@ -17,6 +17,14 @@ import { EmployeeList } from '@/models/employee-list.model';
 
 type NodeType = 'org' | 'supernumerary' | 'pending';
 
+/** Dropdown option. orgId/parentCodeId drive the Mother Org → Rank/Corps/Trade cascade. */
+interface FilterOption {
+    label: string;
+    value: number;
+    orgId: number | null;
+    parentCodeId: number | null;
+}
+
 interface FilterModel {
     motherOrg: number | null;
     rabId: string;
@@ -80,12 +88,13 @@ export class RabOrganogramMembersComponent implements OnInit {
     };
 
     motherOrgOptions: { label: string; value: number }[] = [];
-    rankOptions: { label: string; value: number }[] = [];
-    corpsOptions: { label: string; value: number }[] = [];
-    allCorpsOptions: { label: string; value: number }[] = [];
-    tradeOptions: { label: string; value: number }[] = [];
-    allTradeOptions: { label: string; value: number }[] = [];
-    districtOptions: { label: string; value: number }[] = [];
+    rankOptions: FilterOption[] = [];
+    allRankOptions: FilterOption[] = [];
+    corpsOptions: FilterOption[] = [];
+    allCorpsOptions: FilterOption[] = [];
+    tradeOptions: FilterOption[] = [];
+    allTradeOptions: FilterOption[] = [];
+    districtOptions: FilterOption[] = [];
 
 
     ngOnInit(): void {
@@ -106,15 +115,18 @@ export class RabOrganogramMembersComponent implements OnInit {
         this.servingMembersService.getServingMemberFilterOptions().subscribe({
             next: (res) => {
                 const raw = res as unknown as Record<string, unknown>;
-                const toOptions = (arr: unknown[]): { label: string; value: number }[] =>
+                const toOptions = (arr: unknown[]): FilterOption[] =>
                     (arr ?? []).map((x: unknown) => {
                         const o = x as Record<string, unknown>;
                         return {
                             label: String(o?.['codeValueEN'] ?? o?.['CodeValueEN'] ?? ''),
-                            value: Number(o?.['codeId'] ?? o?.['CodeId'] ?? 0)
+                            value: Number(o?.['codeId'] ?? o?.['CodeId'] ?? 0),
+                            orgId: Number(o?.['orgId'] ?? o?.['OrgId'] ?? 0) || null,
+                            parentCodeId: Number(o?.['parentCodeId'] ?? o?.['ParentCodeId'] ?? 0) || null
                         };
                     });
-                this.rankOptions = toOptions(((raw['ranks'] ?? raw['Ranks']) as unknown[]) ?? []);
+                this.allRankOptions = toOptions(((raw['ranks'] ?? raw['Ranks']) as unknown[]) ?? []);
+                this.rankOptions = [...this.allRankOptions];
                 this.allCorpsOptions = toOptions(((raw['corps'] ?? raw['Corps']) as unknown[]) ?? []);
                 this.corpsOptions = [...this.allCorpsOptions];
                 this.allTradeOptions = toOptions(((raw['trades'] ?? raw['Trades']) as unknown[]) ?? []);
@@ -133,42 +145,32 @@ export class RabOrganogramMembersComponent implements OnInit {
         });
     }
 
-    /** When Mother Org changes, load corps for that org */
+    /** When Mother Org changes, scope Rank, Corps and Trade options to that org. */
     onMotherOrgChange(): void {
+        this.filter.rank = null;
         this.filter.corps = null;
         this.filter.trade = null;
-        this.tradeOptions = [...this.allTradeOptions];
         const orgId = this.filter.motherOrg;
         if (orgId != null) {
-            this.commonCodeService.getAllActiveCommonCodesByOrgIdAndType(orgId, 'Corps').subscribe({
-                next: (codes) => {
-                    this.corpsOptions = codes.map(c => ({
-                        label: c.codeValueEN || String(c.codeId),
-                        value: c.codeId
-                    }));
-                }
-            });
+            this.rankOptions = this.allRankOptions.filter(o => o.orgId === orgId);
+            this.corpsOptions = this.allCorpsOptions.filter(o => o.orgId === orgId);
+            this.tradeOptions = this.allTradeOptions.filter(o => o.orgId === orgId);
         } else {
+            this.rankOptions = [...this.allRankOptions];
             this.corpsOptions = [...this.allCorpsOptions];
+            this.tradeOptions = [...this.allTradeOptions];
         }
     }
 
-    /** When Corps changes, load trades whose parentCodeId = corpsId */
+    /** When Corps changes, narrow Trade options to that corps (within the selected org). */
     onCorpsChange(): void {
         this.filter.trade = null;
         const corpsId = this.filter.corps;
-        if (corpsId != null) {
-            this.commonCodeService.getAllActiveCommonCodesByParentId(corpsId).subscribe({
-                next: (codes) => {
-                    this.tradeOptions = codes.map(c => ({
-                        label: c.codeValueEN || String(c.codeId),
-                        value: c.codeId
-                    }));
-                }
-            });
-        } else {
-            this.tradeOptions = [...this.allTradeOptions];
-        }
+        const orgId = this.filter.motherOrg;
+        let trades = this.allTradeOptions;
+        if (orgId != null) trades = trades.filter(o => o.orgId === orgId);
+        if (corpsId != null) trades = trades.filter(o => o.parentCodeId === corpsId);
+        this.tradeOptions = [...trades];
     }
 
     get filteredList(): EmployeeServiceOverview[] {
@@ -177,7 +179,7 @@ export class RabOrganogramMembersComponent implements OnInit {
         return this.list.filter(
             (r) =>
                 (r.serviceId ?? '').toLowerCase().includes(q) ||
-                (r.rabID ?? '').toLowerCase().includes(q)
+                (r.rabID ?? r.rabId ?? '').toLowerCase().includes(q)
         );
     }
 
@@ -215,6 +217,7 @@ export class RabOrganogramMembersComponent implements OnInit {
             rank: null, corps: null, trade: null,
             wonHomeDistrict: null, spouseHomeDistrict: null
         };
+        this.rankOptions = [...this.allRankOptions];
         this.corpsOptions = [...this.allCorpsOptions];
         this.tradeOptions = [...this.allTradeOptions];
         this.first = 0;
@@ -248,6 +251,7 @@ export class RabOrganogramMembersComponent implements OnInit {
     private loadOrg(pageNo: number, rowPerPage: number): void {
         const filterReq: ServingMemberFilterRequest = {
             organogramNodeCodeId: this.nodeId || undefined,
+            motherOrganizationId: this.filter.motherOrg ?? undefined,
             rabId: this.filter.rabId?.trim() || undefined,
             serviceId: this.filter.serviceId?.trim() || undefined,
             nidId: this.filter.nidId?.trim() || undefined,
