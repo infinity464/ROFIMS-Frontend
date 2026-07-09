@@ -4,3 +4,29 @@
     height: 2.3rem;
     box-sizing: border-box;
 }
+
+/* Dark mode: keep every filter control's background dark like the rest of the
+   theme. The shared report theme styles PrimeNG's internal .p-select-label
+   without ::ng-deep, so view encapsulation stops it from reaching the select
+   boxes — they stay white while the inputs flip. Pierce it here so the Mother
+   Org / Rank / Corps / Trade / district selects match the inputs. */
+:host-context(.app-dark) ::ng-deep .report-filter-body-inner {
+    .p-select,
+    .p-select-label,
+    .p-inputtext,
+    input[pInputText] {
+        background: var(--surface-card) !important;
+        color: var(--text-color) !important;
+        border-color: var(--surface-border) !important;
+    }
+
+    .p-select-label.p-placeholder,
+    .p-inputtext::placeholder {
+        color: var(--text-color-secondary) !important;
+    }
+
+    .p-select .p-select-dropdown,
+    .p-select svg {
+        color: var(--text-color) !important;
+    }
+}

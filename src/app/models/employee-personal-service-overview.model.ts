@@ -1,5 +1,6 @@
 export interface EmployeeBriefProfile {
     employeeID: number;
+    rabId: string | null;
     nameEN: string | null;
     nameBN: string | null;
     prefixEN: string | null;

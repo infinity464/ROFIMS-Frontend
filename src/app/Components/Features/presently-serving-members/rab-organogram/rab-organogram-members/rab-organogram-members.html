@@ -196,7 +196,7 @@
                         <th>Corps</th>
                         <th>Trade</th>
                         <th>Name</th>
-                        <th>Mother Unit</th>
+                        <th>Mother Organization</th>
                         <th>Joining Date</th>
                         <th>Action</th>
                     </tr>
@@ -205,7 +205,7 @@
                     <tr>
                         <td><span class="report-ser-num">{{ rowIndex + 1 }}</span></td>
                         <td><span class="font-semibold">{{ row.serviceId || '—' }}</span></td>
-                        <td>{{ row.rabID || '—' }}</td>
+                        <td>{{ row.rabId || row.rabID || '—' }}</td>
                         <td>{{ row.armyRank || '—' }}</td>
                         <td>
                             @if (row.corps) {
