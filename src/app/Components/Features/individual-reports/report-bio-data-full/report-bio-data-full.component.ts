@@ -39,6 +39,7 @@ import { UserMenuService } from '@/services/user-menu.service';
 import { type ReportLang } from '@/Core/i18n/report-labels';
 import { BanglaNumerals } from '@/Core/i18n/bangla-numerals';
 import type { EmployeePersonalServiceOverview } from '@/models/employee-personal-service-overview.model';
+import { getFormattedMemberName, isNavyMotherOrganization } from '@/shared/utils/member-display-name.util';
 import type {
     ReportAccessibleScope,
     DynamicReportCriterion,
@@ -475,6 +476,7 @@ export class ReportBioDataFullIndividualComponent implements OnInit, OnDestroy {
     get heroName(): string {
         const p = this.profile;
         if (!p) return '-';
+        if (isNavyMotherOrganization(p)) return getFormattedMemberName(p, this.isBn);
         return this.isBn ? this.val(p.nameBN ?? p.nameEnglish) : this.val(p.nameEnglish);
     }
     get heroNameAlt(): string {
@@ -484,7 +486,7 @@ export class ReportBioDataFullIndividualComponent implements OnInit, OnDestroy {
     }
     get postNom(): string {
         const p = this.profile;
-        if (!p) return '';
+        if (!p || isNavyMotherOrganization(p)) return '';
         const s = this.joinParts([
             this.codeValue(p.gallantryAwardsDecoration, p.gallantryAwardsDecorationBN),
             this.codeValue(p.professionalQualification, p.professionalQualificationBN),

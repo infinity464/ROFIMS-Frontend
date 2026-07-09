@@ -23,6 +23,7 @@ import { DisciplineInfoService, DisciplineInfoByEmployeeView } from '@/services/
 import { CourseInfoService, CourseInfoByEmployeeView } from '@/services/course-info-service';
 import { PromotionInfoService, PromotionInfoByEmployeeView } from '@/services/promotion-info.service';
 import { EmployeePersonalServiceOverview } from '@/models/employee-personal-service-overview.model';
+import { getFormattedMemberName } from '@/shared/utils/member-display-name.util';
 import { LocationType } from '@/models/enums';
 import { DialogModule } from 'primeng/dialog';
 import { TooltipModule } from 'primeng/tooltip';
@@ -816,12 +817,7 @@ export class ServingMemberProfile implements OnInit, OnDestroy {
     }
 
     getFormattedName(profile: EmployeePersonalServiceOverview | null): string {
-        if (!profile) return '-';
-        const namePart = this.isBn ? (profile.nameBN ?? profile.nameEnglish) : profile.nameEnglish;
-        const deco = this.isBn ? (profile.gallantryAwardsDecorationBN ?? profile.gallantryAwardsDecoration) : profile.gallantryAwardsDecoration;
-        const prof = this.isBn ? (profile.professionalQualificationBN ?? profile.professionalQualification) : profile.professionalQualification;
-        const crps = this.isBn ? (profile.corpsBN ?? profile.corps) : profile.corps;
-        return [namePart, deco, prof, crps].filter((value) => value && String(value).trim() !== '').join(', ');
+        return getFormattedMemberName(profile, this.isBn);
     }
 
     /** Document list: source table label for display. Accepts row (camelCase or PascalCase). */

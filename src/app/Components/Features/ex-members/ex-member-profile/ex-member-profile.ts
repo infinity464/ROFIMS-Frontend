@@ -32,6 +32,7 @@ import { PostingService } from '@/services/posting.service';
 import { EmployeePostingProcessingStatusDto } from '@/models/posting.model';
 import { MovementType, MoveOrderType } from '@/models/enums';
 import { EmployeePersonalServiceOverview } from '@/models/employee-personal-service-overview.model';
+import { getFormattedMemberName } from '@/shared/utils/member-display-name.util';
 import { LocationType } from '@/models/enums';
 import { PresentStatusInfoService } from '@/services/present-status-info.service';
 import { DialogModule } from 'primeng/dialog';
@@ -1250,17 +1251,7 @@ export class ExMemberProfile implements OnInit, OnDestroy {
     }
 
     getFormattedName(profile: EmployeePersonalServiceOverview | null): string {
-        if (!profile) return '-';
-        const namePart = this.isBn ? (profile.nameBN ?? profile.nameEnglish) : profile.nameEnglish;
-        const deco = this.isBn ? (profile.gallantryAwardsDecorationBN ?? profile.gallantryAwardsDecoration) : profile.gallantryAwardsDecoration;
-        const prof = this.isBn ? (profile.professionalQualificationBN ?? profile.professionalQualification) : profile.professionalQualification;
-        const crps = this.isBn ? (profile.corpsBN ?? profile.corps) : profile.corps;
-        return [namePart, deco, prof, crps]
-            .filter((value) => {
-                const v = String(value ?? '').trim();
-                return v !== '' && v !== 'N/A' && v !== 'অপ্রযোজ্য';
-            })
-            .join(', ');
+        return getFormattedMemberName(profile, this.isBn);
     }
 
     getDocumentSourceLabel(row: { sourceTable?: string; SourceTable?: string }): string {
