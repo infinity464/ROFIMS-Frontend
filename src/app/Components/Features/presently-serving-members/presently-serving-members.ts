@@ -101,8 +101,8 @@ export class PresentlyServingMembers implements OnInit {
     organogramNodeCodeId: number | null = null;
     organogramFilterName: string | null = null;
 
-    /** Collapsible filter panel open by default. */
-    filterOpen = true;
+    /** Collapsible filter panel closed by default. */
+    filterOpen = false;
 
     /** Selected rows for inter posting */
     selectedRows: EmployeeServiceOverview[] = [];
@@ -150,6 +150,13 @@ export class PresentlyServingMembers implements OnInit {
     get pageTitle(): string {
         if (this.organogramFilterName) return this.organogramFilterName;
         return this.interPostingMode ? 'Serving Members for Inter Posting' : 'Presently Serving Members List';
+    }
+
+    get tableColspan(): number {
+        let cols = 12; // ser + 9 data cols + remarks + action
+        if (this.canUpdate) cols += 1; // checkbox
+        if (this.interPostingMode) cols += 2; // status + remark input
+        return cols;
     }
 
     loadFilterOptions(): void {

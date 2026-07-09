@@ -18,6 +18,7 @@ import { DialogModule } from 'primeng/dialog';
 import { ConfirmDialogModule } from 'primeng/confirmdialog';
 import { DatePickerModule } from 'primeng/datepicker';
 import { TextareaModule } from 'primeng/textarea';
+import { CheckboxModule } from 'primeng/checkbox';
 
 import { EmpService } from '@/services/emp-service';
 import { DisciplineInfoService, DisciplineInfoModel } from '@/services/discipline-info.service';
@@ -50,6 +51,7 @@ export interface DisciplineListRow extends DisciplineInfoModel {
         ConfirmDialogModule,
         DatePickerModule,
         TextareaModule,
+        CheckboxModule,
         EmployeeSearchComponent,
         FileReferencesFormComponent,
         FlexibleDateDirective
@@ -147,6 +149,7 @@ export class EmpDisciplineInfoComponent implements OnInit {
             offenseType: [null, Validators.required],
             briefStatementOfOffenceId: [null, Validators.required],
             offenseDetails: [''],
+            isRTU: [false],
             punishmentTypeRAB: [null],
             punishmentDate: [null],
             punishmentTypeMotherOrg: [null],
@@ -155,6 +158,19 @@ export class EmpDisciplineInfoComponent implements OnInit {
             auth: [''],
             remarks: ['']
         });
+        this.disciplineForm.get('isRTU')?.valueChanges.subscribe(() => this.updatePunishmentTypeRabState());
+    }
+
+    private updatePunishmentTypeRabState(): void {
+        const isRTU = this.disciplineForm.get('isRTU')?.value === true;
+        const rabControl = this.disciplineForm.get('punishmentTypeRAB');
+        if (!rabControl) return;
+        if (isRTU) {
+            rabControl.setValue(null, { emitEvent: false });
+            rabControl.disable({ emitEvent: false });
+        } else {
+            rabControl.enable({ emitEvent: false });
+        }
     }
 
     private mapCommonCodeToOption(item: any): { label: string; value: number } {
@@ -236,6 +252,7 @@ export class EmpDisciplineInfoComponent implements OnInit {
                     offenseType: item.offenseType ?? item.OffenseType ?? null,
                     briefStatementOfOffenceId: item.briefStatementOfOffenceId ?? item.BriefStatementOfOffenceId ?? null,
                     offenseDetails: item.offenseDetails ?? item.OffenseDetails ?? null,
+                    isRTU: item.isRTU ?? item.IsRTU ?? false,
                     punishmentTypeRAB: item.punishmentTypeRAB ?? item.PunishmentTypeRAB ?? null,
                     punishmentDate: item.punishmentDate ?? item.PunishmentDate ?? null,
                     punishmentTypeMotherOrg: item.punishmentTypeMotherOrg ?? item.PunishmentTypeMotherOrg ?? null,
@@ -306,6 +323,7 @@ export class EmpDisciplineInfoComponent implements OnInit {
             offenseType: null,
             briefStatementOfOffenceId: null,
             offenseDetails: '',
+            isRTU: false,
             punishmentTypeRAB: null,
             punishmentDate: null,
             punishmentTypeMotherOrg: null,
@@ -314,6 +332,7 @@ export class EmpDisciplineInfoComponent implements OnInit {
             auth: '',
             remarks: ''
         });
+        this.updatePunishmentTypeRabState();
         this.showInlineForm = true;
     }
 
@@ -330,6 +349,7 @@ export class EmpDisciplineInfoComponent implements OnInit {
             offenseType: row.offenseType,
             briefStatementOfOffenceId: row.briefStatementOfOffenceId,
             offenseDetails: row.offenseDetails ?? '',
+            isRTU: row.isRTU ?? false,
             punishmentTypeRAB: row.punishmentTypeRAB,
             punishmentDate,
             punishmentTypeMotherOrg: row.punishmentTypeMotherOrg,
@@ -338,6 +358,7 @@ export class EmpDisciplineInfoComponent implements OnInit {
             auth: row.auth ?? '',
             remarks: row.remarks ?? ''
         });
+        this.updatePunishmentTypeRabState();
         this.showInlineForm = true;
     }
 
@@ -351,7 +372,8 @@ export class EmpDisciplineInfoComponent implements OnInit {
         const filesToUpload = this.fileReferencesForm?.getFilesToUpload() || [];
 
         const doSave = (filesReferencesJson: string | null) => {
-            const v = this.disciplineForm.value;
+            const v = this.disciplineForm.getRawValue();
+            const isRTU = v.isRTU === true;
             const now = new Date().toISOString();
             const payload: DisciplineInfoModel = {
                 employeeId: this.selectedEmployeeId!,
@@ -360,7 +382,8 @@ export class EmpDisciplineInfoComponent implements OnInit {
                 offenseType: v.offenseType ?? null,
                 briefStatementOfOffenceId: v.briefStatementOfOffenceId ?? null,
                 offenseDetails: v.offenseDetails || null,
-                punishmentTypeRAB: v.punishmentTypeRAB ?? null,
+                isRTU,
+                punishmentTypeRAB: isRTU ? null : (v.punishmentTypeRAB ?? null),
                 punishmentDate: this.toDateString(v.punishmentDate),
                 punishmentTypeMotherOrg: v.punishmentTypeMotherOrg ?? null,
                 punishmentDateMotherOrg: this.toDateString(v.punishmentDateMotherOrg),

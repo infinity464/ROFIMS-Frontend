@@ -6,8 +6,10 @@ import { TableModule } from 'primeng/table';
 import { ButtonModule } from 'primeng/button';
 import { SelectModule } from 'primeng/select';
 import { MultiSelectModule } from 'primeng/multiselect';
+import { InputTextModule } from 'primeng/inputtext';
 import { DatePickerModule } from 'primeng/datepicker';
 import { PaginatorModule } from 'primeng/paginator';
+import { CheckboxModule } from 'primeng/checkbox';
 import { Toast } from 'primeng/toast';
 import { MessageService } from 'primeng/api';
 import { ReportService } from '@/services/report.service';
@@ -22,7 +24,8 @@ import { OrgTreeMultiSelectComponent } from '@/shared/components/org-tree-multi-
 import { AlignmentType, BorderStyle, Document, Footer, Packer, PageNumber, PageOrientation, Paragraph, Table, TableCell, TableLayoutType, TableRow, TextRun, WidthType } from 'docx';
 import { saveAs } from 'file-saver';
 import * as XLSX from 'xlsx';
-import { forkJoin } from 'rxjs';
+import { forkJoin, of } from 'rxjs';
+import { catchError } from 'rxjs/operators';
 
 type Lang = 'en' | 'bn';
 
@@ -35,7 +38,7 @@ type Lang = 'en' | 'bn';
 @Component({
     selector: 'app-report-punishment',
     standalone: true,
-    imports: [CommonModule, FormsModule, TableModule, ButtonModule, SelectModule, MultiSelectModule, DatePickerModule, PaginatorModule, Toast, OrgTreeMultiSelectComponent],
+    imports: [CommonModule, FormsModule, TableModule, ButtonModule, SelectModule, MultiSelectModule, InputTextModule, DatePickerModule, PaginatorModule, CheckboxModule, Toast, OrgTreeMultiSelectComponent],
     providers: [MessageService],
     templateUrl: './report-punishment.component.html',
     styleUrls: ['../report-theme.scss', '../report-card-mtr.scss', './report-punishment.component.scss']
@@ -68,6 +71,15 @@ export class ReportPunishmentComponent implements OnInit {
      * the `rabOrgNode` criterion (idValues).
      */
     selectedOrgNodeIds: number[] = [];
+    filterRabId = '';
+    filterServiceId = '';
+    filterName = '';
+    selectedOffenceTypeId: number | null = null;
+    selectedBriefStatementId: number | null = null;
+    selectedPunishmentById: number | null = null;
+    offenceTypeOptions: { label: string; labelBn: string; value: number }[] = [];
+    briefStatementOptions: { label: string; labelBn: string; value: number }[] = [];
+    punishmentByOptions: { label: string; labelBn: string; value: number }[] = [];
     /** id → {en,bn,parentId} for every org node — lets the criteria strip
      *  resolve each picked node to its full root→node ancestry path. */
     private orgNodeLabels = new Map<number, { en: string; bn: string; parentId: number | null }>();
@@ -79,6 +91,12 @@ export class ReportPunishmentComponent implements OnInit {
     punRabTo: Date | null = null;
     punMoFrom: Date | null = null;
     punMoTo: Date | null = null;
+    filterIsRTU = false;
+    motherOrgTakenOptions: { label: string; value: 'Yes' | 'No' }[] = [
+        { label: 'Yes', value: 'Yes' },
+        { label: 'No', value: 'No' }
+    ];
+    selectedMotherOrgTaken: 'Yes' | 'No' | null = null;
 
     first = 0;
     rows = 100;
@@ -102,10 +120,16 @@ export class ReportPunishmentComponent implements OnInit {
         { key: 'ser', labelEN: 'Ser', labelBN: 'ক্রমিক', hint: 'Serial', defaultVisible: true },
         { key: 'serviceId', labelEN: 'Service ID', labelBN: 'ব্যক্তিগত নম্বর', hint: 'Plain', defaultVisible: true },
         { key: 'rank', labelEN: 'Rank', labelBN: 'পদবি', hint: 'Plain', defaultVisible: true },
-        { key: 'rabRank', labelEN: 'RAB Rank', labelBN: 'র‍্যাব র‍্যাঙ্ক', hint: 'Plain', defaultVisible: false },
-        { key: 'corps', labelEN: 'Corps', labelBN: 'কোর', hint: 'Plain', defaultVisible: true },
-        { key: 'trade', labelEN: 'Trade', labelBN: 'ট্রেড', hint: 'Plain', defaultVisible: true },
         { key: 'name', labelEN: 'Name', labelBN: 'নাম', hint: 'Plain', defaultVisible: true },
+        { key: 'offenseType', labelEN: 'Offence Type', labelBN: 'অপরাধের ধরন', hint: 'Plain', defaultVisible: true },
+        { key: 'briefStatementOfOffence', labelEN: 'Short Details', labelBN: 'সংক্ষিপ্ত বিবরণ', hint: 'Plain', defaultVisible: true },
+        { key: 'punishment', labelEN: 'Action by RAB', labelBN: 'র‍্যাব কর্তৃক ব্যবস্থা', hint: 'Plain', defaultVisible: true },
+        { key: 'punishmentDate', labelEN: 'Date', labelBN: 'তারিখ', hint: 'Date', defaultVisible: true },
+        { key: 'punishmentMo', labelEN: 'Action by Mother Org', labelBN: 'মাতৃ সংস্থার ব্যবস্থা', hint: 'Plain', defaultVisible: true },
+        { key: 'punishmentDateMo', labelEN: 'Date', labelBN: 'তারিখ', hint: 'Date', defaultVisible: true },
+        { key: 'rabRank', labelEN: 'RAB Rank', labelBN: 'র‍্যাব র‍্যাঙ্ক', hint: 'Plain', defaultVisible: false },
+        { key: 'corps', labelEN: 'Corps', labelBN: 'কোর', hint: 'Plain', defaultVisible: false },
+        { key: 'trade', labelEN: 'Trade', labelBN: 'ট্রেড', hint: 'Plain', defaultVisible: false },
         { key: 'rabUnit', labelEN: 'Battalion', labelBN: 'ব্যাটালিয়ন', hint: 'Plain', defaultVisible: false },
         // Single toggle that folds Award + Professional Qualification + Corps
         // INTO the Name cell when ticked. Never renders as its own column —
@@ -114,15 +138,10 @@ export class ReportPunishmentComponent implements OnInit {
         // Profile-style composite: line 1 = Prefix + Service No + Rank; line 2 =
         // Name with awards, professional qualification and corps. Opt-in.
         { key: 'callNoRankName', labelEN: 'No Rank Name', labelBN: 'নং র‍্যাঙ্ক নাম', hint: 'CallNoRankName', defaultVisible: false },
-        { key: 'offenceDetails', labelEN: 'Offence Details', labelBN: 'অপরাধের বিবরণ', hint: 'Plain', defaultVisible: true },
-        { key: 'punishmentDate', labelEN: 'Punishment Date', labelBN: 'শাস্তির তারিখ', hint: 'Date', defaultVisible: true },
-        { key: 'punishment', labelEN: 'Punishment', labelBN: 'শাস্তির বিবরণ', hint: 'Plain', defaultVisible: true },
-        { key: 'rmks', labelEN: 'Remark', labelBN: 'মন্তব্য', hint: 'Remarks', defaultVisible: true },
+        { key: 'offenceDetails', labelEN: 'Offence Details', labelBN: 'অপরাধের বিবরণ', hint: 'Plain', defaultVisible: false },
+        { key: 'rmks', labelEN: 'Remark', labelBN: 'মন্তব্য', hint: 'Remarks', defaultVisible: false },
         // ── Opt-in extras (registry FieldKeys) — hidden by default ────────
-        { key: 'punishmentDateMo', labelEN: 'Punishment Date (MO)', labelBN: 'শাস্তির তারিখ (মাতৃ সংস্থা)', hint: 'Date', defaultVisible: false },
-        { key: 'punishmentMo', labelEN: 'Punishment (MO)', labelBN: 'শাস্তি (মাতৃ সংস্থা)', hint: 'Plain', defaultVisible: false },
         { key: 'offenseDate', labelEN: 'Offence Date', labelBN: 'অপরাধের তারিখ', hint: 'Date', defaultVisible: false },
-        { key: 'offenseType', labelEN: 'Offence Type', labelBN: 'অপরাধের ধরন', hint: 'Plain', defaultVisible: false },
         { key: 'disciplineAction', labelEN: 'Action', labelBN: 'ব্যবস্থা', hint: 'Plain', defaultVisible: false },
         { key: 'rabId', labelEN: 'RAB ID', labelBN: 'র‍্যাব আইডি', hint: 'Plain', defaultVisible: false },
         { key: 'nameBangla', labelEN: 'Name (Bangla)', labelBN: 'নাম (বাংলা)', hint: 'Plain', defaultVisible: false },
@@ -150,14 +169,18 @@ export class ReportPunishmentComponent implements OnInit {
     /** Legacy column key → backend registry FieldKey for the request. */
     private static readonly colKeyToBackend: Record<string, string> = {
         ser: 'ser',
-        name: 'personnel',
+        name: 'nameEnglish',
         rank: 'armyRank',
         serviceId: 'serviceId',
         corps: 'corps',
         trade: 'trade',
+        offenseType: 'offenseType',
+        briefStatementOfOffence: 'briefStatementOfOffence',
         offenceDetails: 'offenceDetails',
         punishmentDate: 'punishmentDate',
         punishment: 'punishment',
+        punishmentMo: 'punishmentMo',
+        punishmentDateMo: 'punishmentDateMo',
         rmks: 'rmks'
     };
     /** Extra (registry-keyed) columns rendered as formatted dates. */
@@ -301,7 +324,23 @@ export class ReportPunishmentComponent implements OnInit {
         this.loadMotherOrgs();
         this.loadMemberTypes();
         this.loadOrgNodeLabels();
+        this.loadDisciplineDropdowns();
         // Do not auto-run; the list loads only after the user clicks Search.
+    }
+
+    private loadDisciplineDropdowns(): void {
+        forkJoin([
+            this.commonCodeService.getAllActiveCommonCodesType('OffenceType').pipe(catchError(() => of([] as CommonCodeModel[]))),
+            this.commonCodeService.getAllActiveCommonCodesType('OffenseType').pipe(catchError(() => of([] as CommonCodeModel[])))
+        ]).subscribe(([offenceType, offenseType]) => {
+            this.offenceTypeOptions = this.mapCodes(this.dedupeByCodeId([...(offenceType ?? []), ...(offenseType ?? [])]));
+        });
+        this.commonCodeService.getAllActiveCommonCodesType('BriefStatementOfOffence').pipe(catchError(() => of([] as CommonCodeModel[]))).subscribe({
+            next: (codes) => (this.briefStatementOptions = this.mapCodes(codes))
+        });
+        this.commonCodeService.getAllActiveCommonCodesType('PunishmentType').pipe(catchError(() => of([] as CommonCodeModel[]))).subscribe({
+            next: (codes) => (this.punishmentByOptions = this.mapCodes(codes))
+        });
     }
 
     private loadMotherOrgs(): void {
@@ -454,6 +493,12 @@ export class ReportPunishmentComponent implements OnInit {
 
     onFilterChange(): void {}
 
+    onFilterIsRTUChange(): void {
+        if (!this.filterIsRTU) {
+            this.selectedMotherOrgTaken = null;
+        }
+    }
+
     toggleFilter(): void {
         this.filterOpen = !this.filterOpen;
     }
@@ -472,10 +517,18 @@ export class ReportPunishmentComponent implements OnInit {
         if (this.selectedCorpsIds.length > 0) c++;
         if (this.selectedTradeIds.length > 0) c++;
         if (this.selectedOrgNodeIds.length > 0) c++;
+        if (this.filterRabId.trim()) c++;
+        if (this.filterServiceId.trim()) c++;
+        if (this.filterName.trim()) c++;
+        if (this.selectedOffenceTypeId != null) c++;
+        if (this.selectedBriefStatementId != null) c++;
+        if (this.selectedPunishmentById != null) c++;
         if (this.punRabFrom != null) c++;
         if (this.punRabTo != null) c++;
         if (this.punMoFrom != null) c++;
         if (this.punMoTo != null) c++;
+        if (this.filterIsRTU) c++;
+        if (this.filterIsRTU && this.selectedMotherOrgTaken != null) c++;
         return c;
     }
     filterSubtitle(): string {
@@ -507,10 +560,27 @@ export class ReportPunishmentComponent implements OnInit {
             const names = this.orgNodesLabel(this.lang === 'bn');
             if (names) items.push({ label: this.lang === 'en' ? 'RAB Unit' : 'র‍্যাব ইউনিট', value: names });
         }
+        if (this.filterRabId.trim()) items.push({ label: 'RAB ID', value: this.filterRabId.trim() });
+        if (this.filterServiceId.trim()) items.push({ label: 'Service ID', value: this.filterServiceId.trim() });
+        if (this.filterName.trim()) items.push({ label: 'Name', value: this.filterName.trim() });
+        if (this.selectedOffenceTypeId != null) {
+            const opt = this.offenceTypeOptions.find((o) => o.value === this.selectedOffenceTypeId);
+            if (opt) items.push({ label: 'Offence Type', value: this.lang === 'bn' ? opt.labelBn : opt.label });
+        }
+        if (this.selectedBriefStatementId != null) {
+            const opt = this.briefStatementOptions.find((o) => o.value === this.selectedBriefStatementId);
+            if (opt) items.push({ label: 'Brief Statement of Offence', value: this.lang === 'bn' ? opt.labelBn : opt.label });
+        }
+        if (this.selectedPunishmentById != null) {
+            const opt = this.punishmentByOptions.find((o) => o.value === this.selectedPunishmentById);
+            if (opt) items.push({ label: 'Action/Punishment By', value: this.lang === 'bn' ? opt.labelBn : opt.label });
+        }
         if (this.punRabFrom != null) items.push({ label: 'Date of Punishment (RAB) From', value: this.formatDateLabel(this.fmtDate(this.punRabFrom)) });
         if (this.punRabTo != null) items.push({ label: 'Date of Punishment (RAB) To', value: this.formatDateLabel(this.fmtDate(this.punRabTo)) });
         if (this.punMoFrom != null) items.push({ label: 'Date of Punishment (MO) From', value: this.formatDateLabel(this.fmtDate(this.punMoFrom)) });
         if (this.punMoTo != null) items.push({ label: 'Date of Punishment (MO) To', value: this.formatDateLabel(this.fmtDate(this.punMoTo)) });
+        if (this.filterIsRTU) items.push({ label: 'RTU for Discipline Case (With Court of Inquiry)', value: 'Yes' });
+        if (this.filterIsRTU && this.selectedMotherOrgTaken != null) items.push({ label: 'Punishment by Mother Org', value: this.selectedMotherOrgTaken });
         return items;
     }
     private buildFilterLines(): string[] {
@@ -528,10 +598,18 @@ export class ReportPunishmentComponent implements OnInit {
         this.selectedTradeIds = [];
         this.tradeOptions = [];
         this.selectedOrgNodeIds = [];
+        this.filterRabId = '';
+        this.filterServiceId = '';
+        this.filterName = '';
+        this.selectedOffenceTypeId = null;
+        this.selectedBriefStatementId = null;
+        this.selectedPunishmentById = null;
         this.punRabFrom = null;
         this.punRabTo = null;
         this.punMoFrom = null;
         this.punMoTo = null;
+        this.filterIsRTU = false;
+        this.selectedMotherOrgTaken = null;
         this.first = 0;
     }
     toggleLang(): void {
@@ -613,11 +691,19 @@ export class ReportPunishmentComponent implements OnInit {
         if (this.selectedCorpsIds.length > 0) criteria.push({ fieldKey: 'corps', idValues: this.selectedCorpsIds });
         if (this.selectedTradeIds.length > 0) criteria.push({ fieldKey: 'trade', idValues: this.selectedTradeIds });
         if (this.selectedOrgNodeIds.length > 0) criteria.push({ fieldKey: 'rabOrgNode', idValues: this.selectedOrgNodeIds });
+        if (this.filterRabId.trim()) criteria.push({ fieldKey: 'rabId', textValue: this.filterRabId.trim() });
+        if (this.filterServiceId.trim()) criteria.push({ fieldKey: 'serviceId', textValue: this.filterServiceId.trim() });
+        if (this.filterName.trim()) criteria.push({ fieldKey: 'nameEnglish', textValue: this.filterName.trim() });
+        if (this.selectedOffenceTypeId != null && this.selectedOffenceTypeId > 0) criteria.push({ fieldKey: 'offenseType', idValue: this.selectedOffenceTypeId });
+        if (this.selectedBriefStatementId != null && this.selectedBriefStatementId > 0) criteria.push({ fieldKey: 'briefStatementOfOffence', idValue: this.selectedBriefStatementId });
+        if (this.selectedPunishmentById != null && this.selectedPunishmentById > 0) criteria.push({ fieldKey: 'punishmentBy', idValue: this.selectedPunishmentById });
         if (this.punRabFrom || this.punRabTo) criteria.push({ fieldKey: 'punishmentDate', dateFrom: this.fmtDate(this.punRabFrom), dateTo: this.fmtDate(this.punRabTo) });
         if (this.punMoFrom || this.punMoTo) criteria.push({ fieldKey: 'punishmentDateMo', dateFrom: this.fmtDate(this.punMoFrom), dateTo: this.fmtDate(this.punMoTo) });
+        if (this.filterIsRTU) criteria.push({ fieldKey: 'isRTU', textValue: 'true' });
+        if (this.filterIsRTU && this.selectedMotherOrgTaken != null) criteria.push({ fieldKey: 'motherOrgTaken', textValue: this.selectedMotherOrgTaken });
 
-        // Map column keys → registry FieldKeys.
-        const columns = Array.from(new Set(this.backendColumnKeys()));
+        // Map column keys → registry FieldKeys; always request isRTU for Action by RAB display logic.
+        const columns = Array.from(new Set([...this.backendColumnKeys(), 'isRTU']));
 
         this.reportService
             .runDynamicPunishmentReport({
@@ -717,8 +803,23 @@ export class ReportPunishmentComponent implements OnInit {
                 return this.stripHtml(row.offenceDetails);
             case 'punishmentDate':
                 return this.formatDateLabel(row.punishmentDate);
-            case 'punishment':
-                return this.codeValue(row.punishment, row.punishmentBN);
+            case 'punishmentDateMo':
+                return this.formatDateLabel((row as any).punishmentDateMo);
+            case 'punishment': {
+                const r = row as any;
+                const val = this.codeValue(row.punishment, row.punishmentBN);
+                const isBlank = !val || val === '—' || val === '-';
+                if (isBlank && (r.isRTU === true || r.isRTU === 1)) {
+                    return this.lang === 'bn' ? 'শৃঙ্খলা বিষয়ে আরটিইউ' : 'RTU for Discipline issue';
+                }
+                return val;
+            }
+            case 'punishmentMo':
+                return this.codeValue((row as any).punishmentMo, (row as any).punishmentMoBN);
+            case 'briefStatementOfOffence':
+                return this.codeValue((row as any).briefStatementOfOffence, (row as any).briefStatementOfOffenceBN);
+            case 'offenseType':
+                return this.codeValue((row as any).offenseType, (row as any).offenseTypeBN);
             case 'rmks':
                 return this.stripHtml(row.rmks);
             default:
@@ -769,9 +870,17 @@ export class ReportPunishmentComponent implements OnInit {
             trade: d['trade'] as string,
             tradeBN: d['tradeBN'] as string,
             offenceDetails: d['offenceDetails'] as string,
+            offenseType: d['offenseType'] as string,
+            offenseTypeBN: d['offenseTypeBN'] as string,
+            briefStatementOfOffence: d['briefStatementOfOffence'] as string,
+            briefStatementOfOffenceBN: d['briefStatementOfOffenceBN'] as string,
             punishmentDate: d['punishmentDate'] as string,
             punishment: d['punishment'] as string,
             punishmentBN: d['punishmentBN'] as string,
+            punishmentMo: d['punishmentMo'] as string,
+            punishmentMoBN: d['punishmentMoBN'] as string,
+            punishmentDateMo: d['punishmentDateMo'] as string,
+            isRTU: d['isRTU'] as boolean,
             rmks: (d['rmks'] as string) ?? null
         } as PunishmentReportRow;
     }

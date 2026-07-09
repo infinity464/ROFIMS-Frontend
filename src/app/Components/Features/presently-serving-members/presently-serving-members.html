@@ -217,18 +217,19 @@
     <div class="report-filter-card">
         <div class="psm-results-header">
             <h3 class="report-panel-title">Presently Serving Members ({{ totalRecords }})</h3>
+            @if (canUpdate) {
             <p-button
                 label="Send Inter Posting"
                 icon="pi pi-send"
                 severity="warn"
                 [loading]="savingInterPosting"
                 [disabled]="!selectedRows?.length"
-                [class.perm-hidden]="!canUpdate"
                 (onClick)="sendInterPosting()">
             </p-button>
+            }
         </div>
 
-        @if (interPostingMode) {
+        @if (interPostingMode && canUpdate) {
             <div class="px-3 py-2 mb-2" style="background: var(--blue-50); border-left: 3px solid var(--blue-400); border-radius: 4px;">
                 <i class="pi pi-info-circle text-blue-500 mr-2"></i>
                 <span class="text-700 text-sm">Select employees and optionally enter a remark per row before clicking <strong>Send Inter Posting</strong>.</span>
@@ -256,7 +257,9 @@
                 [showCurrentPageReport]="true">
                 <ng-template pTemplate="header">
                     <tr>
+                        @if (canUpdate) {
                         <th style="width: 44px"><p-tableHeaderCheckbox></p-tableHeaderCheckbox></th>
+                        }
                         <th style="width: 4rem;">Ser</th>
                         <th>Service ID</th>
                         <th>RAB ID</th>
@@ -277,6 +280,7 @@
                 </ng-template>
                 <ng-template pTemplate="body" let-row let-rowIndex="rowIndex">
                     <tr>
+                        @if (canUpdate) {
                         <td>
                             @if (isInPostingProcess(row)) {
                                 <p-tableCheckbox [value]="row" [disabled]="true"></p-tableCheckbox>
@@ -284,6 +288,7 @@
                                 <p-tableCheckbox [value]="row"></p-tableCheckbox>
                             }
                         </td>
+                        }
                         <td><span class="report-ser-num">{{ serialNumber(rowIndex) }}</span></td>
                         <td><span class="font-semibold">{{ row.prefix ? row.prefix + ' - ' : '' }}{{ row.serviceId || '—' }}</span></td>
                         <td>{{ row.rabId || '—' }}</td>
@@ -337,7 +342,7 @@
                 </ng-template>
                 <ng-template pTemplate="emptymessage">
                     <tr>
-                        <td [attr.colspan]="interPostingMode ? 15 : 13" class="text-center p-4">No records found.</td>
+                        <td [attr.colspan]="tableColspan" class="text-center p-4">No records found.</td>
                     </tr>
                 </ng-template>
             </p-table>

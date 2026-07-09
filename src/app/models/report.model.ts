@@ -569,6 +569,14 @@ export interface PunishmentReportRow {
   punishmentDate?: string | null;
   punishment?: string | null;
   punishmentBN?: string | null;
+  punishmentMo?: string | null;
+  punishmentMoBN?: string | null;
+  punishmentDateMo?: string | null;
+  offenseType?: string | null;
+  offenseTypeBN?: string | null;
+  briefStatementOfOffence?: string | null;
+  briefStatementOfOffenceBN?: string | null;
+  isRTU?: boolean | null;
   rmks?: string | null;
 }
 

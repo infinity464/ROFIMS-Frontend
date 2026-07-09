@@ -31,6 +31,18 @@
         <div class="report-filter-body-inner">
             <div class="report-fields-row">
                 <div class="report-filter-field">
+                    <label>RAB ID</label>
+                    <input pInputText [(ngModel)]="filterRabId" class="w-full" placeholder="RAB ID" />
+                </div>
+                <div class="report-filter-field">
+                    <label>Service ID</label>
+                    <input pInputText [(ngModel)]="filterServiceId" class="w-full" placeholder="Service ID" />
+                </div>
+                <div class="report-filter-field">
+                    <label>Name</label>
+                    <input pInputText [(ngModel)]="filterName" class="w-full" placeholder="Name" />
+                </div>
+                <div class="report-filter-field">
                     <label>Mother Org</label>
                     <p-multiSelect [options]="orgOptions" [(ngModel)]="selectedOrgIds" (ngModelChange)="onOrgChange()"
                         optionLabel="label" optionValue="value" display="chip" [filter]="true"
@@ -67,6 +79,24 @@
                     <app-org-tree-multi-select [(ngModel)]="selectedOrgNodeIds" placeholder="Select units, wings, branches…"></app-org-tree-multi-select>
                 </div>
                 <div class="report-filter-field">
+                    <label>Offence Type</label>
+                    <p-select [options]="offenceTypeOptions" [(ngModel)]="selectedOffenceTypeId"
+                        optionLabel="label" optionValue="value" placeholder="Select" styleClass="w-full"
+                        [filter]="true" [showClear]="true" appendTo="body"></p-select>
+                </div>
+                <div class="report-filter-field">
+                    <label>Brief Statement of Offence</label>
+                    <p-select [options]="briefStatementOptions" [(ngModel)]="selectedBriefStatementId"
+                        optionLabel="label" optionValue="value" placeholder="Select" styleClass="w-full"
+                        [filter]="true" [showClear]="true" appendTo="body"></p-select>
+                </div>
+                <div class="report-filter-field">
+                    <label>Action/Punishment By</label>
+                    <p-select [options]="punishmentByOptions" [(ngModel)]="selectedPunishmentById"
+                        optionLabel="label" optionValue="value" placeholder="Select" styleClass="w-full"
+                        [filter]="true" [showClear]="true" appendTo="body"></p-select>
+                </div>
+                <div class="report-filter-field">
                     <label>Date of Punishment (RAB) From</label>
                     <p-datePicker [(ngModel)]="punRabFrom" dateFormat="yy-mm-dd" [showIcon]="true"
                         placeholder="yyyy-mm-dd" styleClass="w-full" appendTo="body"></p-datePicker>
@@ -86,6 +116,21 @@
                     <p-datePicker [(ngModel)]="punMoTo" dateFormat="yy-mm-dd" [showIcon]="true"
                         placeholder="yyyy-mm-dd" styleClass="w-full" appendTo="body"></p-datePicker>
                 </div>
+                <div class="report-filter-field">
+                    <label class="report-filter-label-spacer" aria-hidden="true">&nbsp;</label>
+                    <div class="flex align-items-center gap-2" style="min-height: 2.5rem;">
+                        <p-checkbox [(ngModel)]="filterIsRTU" [binary]="true" inputId="filterIsRTU" (ngModelChange)="onFilterIsRTUChange()"></p-checkbox>
+                        <label for="filterIsRTU" class="m-0 cursor-pointer">RTU for Discipline Case (With Court of Inquiry)</label>
+                    </div>
+                </div>
+                @if (filterIsRTU) {
+                <div class="report-filter-field">
+                    <label>Punishment by Mother Org</label>
+                    <p-select [options]="motherOrgTakenOptions" [(ngModel)]="selectedMotherOrgTaken"
+                        optionLabel="label" optionValue="value" placeholder="Select" styleClass="w-full"
+                        [showClear]="true" appendTo="body"></p-select>
+                </div>
+                }
             </div>
 
             @if (searched) {

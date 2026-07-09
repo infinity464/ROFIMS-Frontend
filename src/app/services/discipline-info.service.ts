@@ -36,6 +36,7 @@ export interface DisciplineInfoModel {
     offenseType?: number | null;
     briefStatementOfOffenceId?: number | null;
     offenseDetails?: string | null;
+    isRTU?: boolean | null;
     punishmentTypeRAB?: number | null;
     punishmentDate?: string | null;
     punishmentTypeMotherOrg?: number | null;
@@ -112,6 +113,7 @@ export class DisciplineInfoService {
             offenseType: p.offenseType ?? null,
             briefStatementOfOffenceId: p.briefStatementOfOffenceId ?? null,
             offenseDetails: p.offenseDetails ?? null,
+            isRTU: p.isRTU ?? false,
             punishmentTypeRAB: p.punishmentTypeRAB ?? null,
             punishmentDate: p.punishmentDate ?? null,
             punishmentTypeMotherOrg: p.punishmentTypeMotherOrg ?? null,

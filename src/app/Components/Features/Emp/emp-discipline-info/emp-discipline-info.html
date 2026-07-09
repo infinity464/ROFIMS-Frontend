@@ -75,6 +75,12 @@
                                     <label class="font-semibold block mb-2 text-700">Offence Details</label>
                                     <textarea pInputTextarea formControlName="offenseDetails" rows="2" class="w-full" placeholder="Offence details"></textarea>
                                 </div>
+                                <div class="col-span-2">
+                                    <div class="flex align-items-center gap-2 flex-nowrap">
+                                        <p-checkbox formControlName="isRTU" [binary]="true" inputId="isRTU"></p-checkbox>
+                                        <label for="isRTU" class="font-semibold text-700 m-0 cursor-pointer">RTU for Discipline Case (With Court of Inquiry)</label>
+                                    </div>
+                                </div>
                                 <div>
                                     <label class="font-semibold block mb-2 text-700">Action/Punishment by RAB</label>
                                     <div style="display: flex; align-items: center; gap: 0.35rem;">
@@ -85,6 +91,7 @@
                                             class="p-button-sm p-button-outlined p-button-success"
                                             style="flex-shrink: 0; width: 2rem; height: 2rem; padding: 0;"
                                             pTooltip="Add New Punishment Type" tooltipPosition="top"
+                                            [disabled]="disciplineForm.get('isRTU')?.value === true"
                                             (click)="openAddPunishmentTypeDialog('punishmentTypeRAB')">
                                         </button>
                                     </div>
@@ -147,6 +154,7 @@
                                 <th style="width: 100px; background: var(--surface-100)">Offence Date</th>
                                 <th style="min-width: 140px; background: var(--surface-100)">Brief Statement</th>
                                 <th style="min-width: 140px; background: var(--surface-100)">Offence Details</th>
+                                <th style="min-width: 120px; background: var(--surface-100)">RTU (COI)</th>
                                 <th style="min-width: 120px; background: var(--surface-100)">Punishment (RAB)</th>
                                 <th style="width: 100px; background: var(--surface-100)">Date (RAB)</th>
                                 <th style="min-width: 120px; background: var(--surface-100)">Punishment (MO)</th>
@@ -163,7 +171,8 @@
                                 <td>{{ formatDate(row.offenseDate) }}</td>
                                 <td>{{ getOptionLabel(briefStatementOptions, row.briefStatementOfOffenceId) }}</td>
                                 <td class="text-600">{{ (row.offenseDetails || '—') | slice:0:30 }}{{ (row.offenseDetails && row.offenseDetails.length > 30) ? '...' : '' }}</td>
-                                <td>{{ getOptionLabel(punishmentTypeOptions, row.punishmentTypeRAB) }}</td>
+                                <td class="text-center">{{ row.isRTU ? 'Yes' : '—' }}</td>
+                                <td>{{ row.isRTU ? '—' : getOptionLabel(punishmentTypeOptions, row.punishmentTypeRAB) }}</td>
                                 <td>{{ formatDate(row.punishmentDate) }}</td>
                                 <td>{{ getOptionLabel(punishmentTypeOptions, row.punishmentTypeMotherOrg) }}</td>
                                 <td>{{ formatDate(row.punishmentDateMotherOrg) }}</td>
@@ -181,7 +190,7 @@
                         </ng-template>
                         <ng-template pTemplate="emptymessage">
                             <tr>
-                                <td [attr.colspan]="12" class="text-center py-4 text-500">No discipline entries. Click "Add row" to add.</td>
+                                <td [attr.colspan]="13" class="text-center py-4 text-500">No discipline entries. Click "Add row" to add.</td>
                             </tr>
                         </ng-template>
                     </p-table>

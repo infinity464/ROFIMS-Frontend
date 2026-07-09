@@ -20,6 +20,7 @@ import type { EmployeePostingProcessingStatusDto } from '@/models/posting.model'
 import { PermanentPostingMORecordService } from '@/services/permanent-posting-mo-record.service';
 import { PermanentPostingJoineeDetailService } from '@/services/permanent-posting-joinee-detail.service';
 import { StatisticsService, type ManpowerSummaryResponse } from '@/services/statistics.service';
+import { ReportService } from '@/services/report.service';
 
 const SLICE_COLORS = ['#4f46e5', '#06b6d4', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#14b8a6', '#f97316', '#6366f1', '#22c55e', '#0ea5e9', '#a855f7', '#fb923c', '#84cc16'];
 
@@ -143,7 +144,7 @@ type CalItem = { id: string; day: string; mon: string; dow: string; title: strin
 
         <div class="grid grid-cols-12 gap-6">
             <!-- ===== Row 1: KPI + Notice ===== -->
-            <div class="col-span-12 xl:col-span-4">
+            <div [class]="kpiColClass">
                 <div class="card mb-0 h-full">
                     <div class="flex justify-between items-start mb-4">
                         <span class="block text-muted-color font-medium uppercase text-sm tracking-wide">Total Serving Member</span>
@@ -155,29 +156,31 @@ type CalItem = { id: string; day: string; mon: string; dow: string; title: strin
                 </div>
             </div>
 
-            <div class="col-span-12 xl:col-span-4">
-                <div class="card mb-0 h-full">
-                    <div class="flex justify-between items-start mb-4">
-                        <span class="block text-muted-color font-medium uppercase text-sm tracking-wide">Posted Out | New Posting</span>
-                        <div class="flex items-center justify-center bg-green-100 dark:bg-green-400/10 rounded-full" style="width:2.75rem;height:2.75rem">
-                            <i class="pi pi-sync text-green-500 text-xl!"></i>
+            @if (hasFullOrgAccess) {
+                <div class="col-span-12 xl:col-span-4">
+                    <div class="card mb-0 h-full">
+                        <div class="flex justify-between items-start mb-4">
+                            <span class="block text-muted-color font-medium uppercase text-sm tracking-wide">Posted Out | New Posting</span>
+                            <div class="flex items-center justify-center bg-green-100 dark:bg-green-400/10 rounded-full" style="width:2.75rem;height:2.75rem">
+                                <i class="pi pi-sync text-green-500 text-xl!"></i>
+                            </div>
                         </div>
-                    </div>
-                    <div class="flex items-end gap-4">
-                        <div>
-                            <div class="text-surface-900 dark:text-surface-0 font-bold text-4xl">{{ (postedOutCount | number) ?? '—' }}</div>
-                            <span class="text-muted-color text-sm">Posted Out</span>
-                        </div>
-                        <div class="text-2xl text-muted-color pb-1">|</div>
-                        <div>
-                            <div class="text-surface-900 dark:text-surface-0 font-bold text-4xl">{{ (newPostingCount | number) ?? '—' }}</div>
-                            <span class="text-muted-color text-sm">New Posting</span>
+                        <div class="flex items-end gap-4">
+                            <div>
+                                <div class="text-surface-900 dark:text-surface-0 font-bold text-4xl">{{ (postedOutCount | number) ?? '—' }}</div>
+                                <span class="text-muted-color text-sm">Posted Out</span>
+                            </div>
+                            <div class="text-2xl text-muted-color pb-1">|</div>
+                            <div>
+                                <div class="text-surface-900 dark:text-surface-0 font-bold text-4xl">{{ (newPostingCount | number) ?? '—' }}</div>
+                                <span class="text-muted-color text-sm">New Posting</span>
+                            </div>
                         </div>
                     </div>
                 </div>
-            </div>
+            }
 
-            <div class="col-span-12 xl:col-span-4">
+            <div [class]="kpiColClass">
                 <div class="card mb-0 h-full flex flex-col">
                     <div class="flex justify-between items-center mb-3">
                         <span class="text-muted-color font-medium uppercase text-sm tracking-wide">Urgent Notice</span>
@@ -223,7 +226,12 @@ type CalItem = { id: string; day: string; mon: string; dow: string; title: strin
             <div class="col-span-12 xl:col-span-4">
                 <div class="card mb-0 h-full">
                     <div class="font-semibold text-lg text-surface-900 dark:text-surface-0">Held Strength</div>
-                    <div class="text-muted-color text-sm mb-4">Manpower by organization</div>
+                    <div class="text-muted-color text-sm mb-4">
+                        Manpower by organization
+                        @if (manpowerScopeLine) {
+                            <span class="block mt-1 text-primary font-medium">{{ manpowerScopeLine }}</span>
+                        }
+                    </div>
                     <div class="dash-chart-wrap">
                         <p-chart type="pie" [data]="heldData" [options]="pieOptions" [plugins]="chartPlugins"></p-chart>
                     </div>
@@ -233,7 +241,12 @@ type CalItem = { id: string; day: string; mon: string; dow: string; title: strin
             <div class="col-span-12 xl:col-span-4">
                 <div class="card mb-0 h-full">
                     <div class="font-semibold text-lg text-surface-900 dark:text-surface-0">Authorized Strength</div>
-                    <div class="text-muted-color text-sm mb-4">Manpower by organization</div>
+                    <div class="text-muted-color text-sm mb-4">
+                        From equivalent-name man-power setup
+                        @if (manpowerScopeLine) {
+                            <span class="block mt-1 text-primary font-medium">{{ manpowerScopeLine }}</span>
+                        }
+                    </div>
                     <div class="dash-chart-wrap">
                         <p-chart type="pie" [data]="authData" [options]="pieOptions" [plugins]="chartPlugins"></p-chart>
                     </div>
@@ -691,6 +704,7 @@ export class Dashboard implements OnInit, OnDestroy {
     private postedOutSvc = inject(PermanentPostingMORecordService);
     private newJoiningSvc = inject(PermanentPostingJoineeDetailService);
     private statisticsSvc = inject(StatisticsService);
+    private reportService = inject(ReportService);
     private calendarSvc = inject(CalendarService);
     private empService = inject(EmpService);
     private leaveInfoService = inject(LeaveInfoService);
@@ -703,6 +717,12 @@ export class Dashboard implements OnInit, OnDestroy {
     servingCount: number | null = null;
     postedOutCount: number | null = null;
     newPostingCount: number | null = null;
+    /** False when the user has org-tree access restrictions (scoped user). */
+    hasFullOrgAccess = false;
+
+    get kpiColClass(): string {
+        return this.hasFullOrgAccess ? 'col-span-12 xl:col-span-4' : 'col-span-12 xl:col-span-6';
+    }
 
     readonly chartPlugins = [PIE_PERCENTAGE_PLUGIN];
 
@@ -932,6 +952,8 @@ export class Dashboard implements OnInit, OnDestroy {
     authData: any;
     heldData: any;
     pieOptions: any;
+    /** Scope line under pie charts when the user is org-restricted (e.g. "RAB 1"). */
+    manpowerScopeLine: string | null = null;
 
     // ── Notifications (real, per-user) ───────────────────────────────────
     notifColor(type: string): string {
@@ -1116,17 +1138,15 @@ export class Dashboard implements OnInit, OnDestroy {
             error: () => (this.servingCount = 0)
         });
 
-        // Posted Out count (posting/posted-out-person-list source).
-        this.postedOutSvc.getCount().subscribe({
-            next: (count) => (this.postedOutCount = count),
-            error: () => (this.postedOutCount = 0)
-        });
-
-        // New Posting count (posting/new-joining-person-list source).
-        // The list defaults to "Entry Pending" (isAddedInNewJoineeDataEntry = false); match that view.
-        this.newJoiningSvc.getCountFiltered({ isAddedInNewJoineeDataEntry: false }).subscribe({
-            next: (count) => (this.newPostingCount = count),
-            error: () => (this.newPostingCount = 0)
+        this.reportService.getMyReportAccessScope().subscribe({
+            next: (scope) => {
+                this.hasFullOrgAccess = scope?.orgScopeRestricted !== true;
+                if (this.hasFullOrgAccess) this.loadPostingKpis();
+            },
+            error: () => {
+                this.hasFullOrgAccess = true;
+                this.loadPostingKpis();
+            }
         });
 
         this.pieOptions = this.buildPieOptions();
@@ -1135,12 +1155,18 @@ export class Dashboard implements OnInit, OnDestroy {
         this.themeObserver = new MutationObserver(() => (this.pieOptions = this.buildPieOptions()));
         this.themeObserver.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
 
-        // Authorized & Held manpower pies — full force (no filter on the dashboard).
-        // Authorized Strength is sourced from the equivalent-name man-power setup;
-        // Held is computed identically by this endpoint, so one call drives both pies.
+        // Authorized & Held manpower pies — scoped to the user's org-tree access.
+        // Auth is sourced from basic-setup/equivalent-name-vacancy (EquivalentNameVacancyDistribution).
         this.statisticsSvc.getManpowerSummaryByEquivalentName(null).subscribe({
-            next: (res: ManpowerSummaryResponse) => this.buildManpowerCharts(res.rows ?? []),
-            error: () => this.buildManpowerCharts([])
+            next: (res: ManpowerSummaryResponse) => {
+                const names = res.accessibleRabUnitNames;
+                this.manpowerScopeLine = names?.length ? names.join(', ') : null;
+                this.buildManpowerCharts(res.rows ?? []);
+            },
+            error: () => {
+                this.manpowerScopeLine = null;
+                this.buildManpowerCharts([]);
+            }
         });
     }
 
@@ -1148,6 +1174,18 @@ export class Dashboard implements OnInit, OnDestroy {
         this.themeObserver?.disconnect();
         this.revokeLookupPhoto();
         clearInterval(this.criticalTimer);
+    }
+
+    private loadPostingKpis(): void {
+        this.postedOutSvc.getCount().subscribe({
+            next: (count) => (this.postedOutCount = count),
+            error: () => (this.postedOutCount = 0)
+        });
+
+        this.newJoiningSvc.getCountFiltered({ isAddedInNewJoineeDataEntry: false }).subscribe({
+            next: (count) => (this.newPostingCount = count),
+            error: () => (this.newPostingCount = 0)
+        });
     }
 
     private buildPieOptions(): any {
@@ -1177,17 +1215,18 @@ export class Dashboard implements OnInit, OnDestroy {
     }
 
     private buildManpowerCharts(rows: { orgName: string; auth: number; held: number }[]): void {
-        const labels = rows.map((r) => r.orgName);
-        const colors = rows.map((_, i) => SLICE_COLORS[i % SLICE_COLORS.length]);
+        const visible = rows.filter((r) => (r.auth ?? 0) > 0 || (r.held ?? 0) > 0);
+        const labels = visible.map((r) => r.orgName);
+        const colors = visible.map((_, i) => SLICE_COLORS[i % SLICE_COLORS.length]);
         const hover = colors.map((c) => c + 'cc');
 
         this.authData = {
             labels,
-            datasets: [{ data: rows.map((r) => r.auth), backgroundColor: colors, hoverBackgroundColor: hover }]
+            datasets: [{ data: visible.map((r) => r.auth), backgroundColor: colors, hoverBackgroundColor: hover }]
         };
         this.heldData = {
             labels,
-            datasets: [{ data: rows.map((r) => r.held), backgroundColor: colors, hoverBackgroundColor: hover }]
+            datasets: [{ data: visible.map((r) => r.held), backgroundColor: colors, hoverBackgroundColor: hover }]
         };
     }
 }
