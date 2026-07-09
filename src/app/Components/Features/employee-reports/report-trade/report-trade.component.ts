@@ -63,7 +63,11 @@ import * as XLSX from 'xlsx';
  * ambiguous).
  */
 @Component({
-    selector: 'app-report-trade',
+    // Dual selector: the same component backs both the Trade report and the
+    // Gallantry Awards/Decoration report (see the `kind` input). Both filter the
+    // per-employee dynamic base view, differing only in which criterion field
+    // they push and which value they surface in the "Selected Value" column.
+    selector: 'app-report-trade, app-report-decoration',
     standalone: true,
     imports: [CommonModule, FormsModule, TableModule, ButtonModule, SelectModule, MultiSelectModule, PaginatorModule, Toast, OrgTreeMultiSelectComponent],
     providers: [MessageService],
@@ -73,7 +77,14 @@ import * as XLSX from 'xlsx';
 export class ReportTradeComponent implements OnInit, OnChanges {
     L = REPORT_LABELS;
     @Input() lang: ReportLang = 'en';
-    /** Parent-locked Trade CodeId(s). Single-pick = one element; N/A bundle = many. */
+    /**
+     * Report variant. 'trade' (default) filters on the member's Trade;
+     * 'decoration' filters on Gallantry Awards/Decoration — a CSV field, so any
+     * of the picked awards matches — and surfaces the member's awards in the
+     * "Selected Value" column. Everything else (filters, columns, exports) is shared.
+     */
+    @Input() kind: 'trade' | 'decoration' = 'trade';
+    /** Parent-locked Trade / Decoration CodeId(s). Single-pick = one element; multi-pick = many. */
     @Input() commonCodeIds: number[] = [];
     @Input() reportTypeLabel = '';
     @Input() commonCodeLabel = '';
@@ -413,7 +424,11 @@ export class ReportTradeComponent implements OnInit, OnChanges {
      */
     selectedValueText(row: MemberAppointmentReportRow): string {
         const r = row as any;
-        const own = this.codeValue(r.trade, r.tradeBN);
+        // Decoration variant: show the member's OWN gallantry awards (a
+        // comma-joined list — a member may hold several), not just the picked filter.
+        const own = this.kind === 'decoration'
+            ? this.codeValue(r.awards, r.awardsBN)
+            : this.codeValue(r.trade, r.tradeBN);
         if (own && own !== '-' && own !== '—') return own;
         return this.selectedValueCellText;
     }
@@ -651,7 +666,7 @@ export class ReportTradeComponent implements OnInit, OnChanges {
 
         const doc = new Document({ sections: [{ properties: { page: { size: { orientation: PageOrientation.LANDSCAPE }, margin: { top: 680, bottom: 1247, left: 680, right: 680 } } }, footers: { default: footer }, children: [...headerPars, criteriaTable, new Paragraph({ spacing: { before: 0, after: 200 }, children: [new TextRun({ text: '', font: sans, size: 4 })] }), dataTable] }] });
         const blob = await Packer.toBlob(doc);
-        saveAs(blob, `trade-report_${this.lang}.docx`);
+        saveAs(blob, `${this.kind}-report_${this.lang}.docx`);
     }
 
     private exportRabExcel(): void {
@@ -714,7 +729,7 @@ export class ReportTradeComponent implements OnInit, OnChanges {
 
         const wb = XLSX.utils.book_new();
         XLSX.utils.book_append_sheet(wb, ws, isBn ? 'প্রতিবেদন' : 'Report');
-        XLSX.writeFile(wb, `trade-report_${this.lang}.xlsx`);
+        XLSX.writeFile(wb, `${this.kind}-report_${this.lang}.xlsx`);
     }
 
     private openRabPrintWindow(): void {
@@ -993,7 +1008,10 @@ export class ReportTradeComponent implements OnInit, OnChanges {
           still filter inside the bundle.
         - Nothing picked: no-op (the dropdown stays empty + disabled). */
     private refreshDependentOptions(): void {
-        if (this.isSingleTradePicked) {
+        // Decoration filters aren't tied to a single mother org, so skip the
+        // Trade → Corps → MotherOrg rank-scoping chain and fall through to the
+        // flat "every active rank" list below.
+        if (this.kind !== 'decoration' && this.isSingleTradePicked) {
             const tradeId = this.pickedTradeId!;
             const trade = this.allTradeCodes.find(t => t.codeId === tradeId);
             const corpsId = trade?.parentCodeId ?? null;
@@ -1012,10 +1030,14 @@ export class ReportTradeComponent implements OnInit, OnChanges {
             });
             return;
         }
-        // N/A bundle (multi-org) — flat list of every active rank, sorted by
-        // MotherOrg.SortOrder first, then the rank's own sort order, so the
-        // dropdown groups ranks by org in the user's preferred org order.
-        if (Array.isArray(this.commonCodeIds) && this.commonCodeIds.length > 1) {
+        // Flat list of every active rank, sorted by MotherOrg.SortOrder first,
+        // then the rank's own sort order, so the dropdown groups ranks by org in
+        // the user's preferred org order. Used by the multi-org Trade N/A bundle
+        // AND every Decoration pick (which is never org-scoped).
+        const wantAllRanks = this.kind === 'decoration'
+            ? (Array.isArray(this.commonCodeIds) && this.commonCodeIds.length > 0)
+            : (Array.isArray(this.commonCodeIds) && this.commonCodeIds.length > 1);
+        if (wantAllRanks) {
             this.commonCodeService.getAllActiveCommonCodesType('MotherOrgRank').subscribe({
                 next: (codes: CommonCodeModel[]) => {
                     const orgSortOrderById = new Map(
@@ -1106,6 +1128,10 @@ export class ReportTradeComponent implements OnInit, OnChanges {
         const out: string[] = [];
         const seen = new Set<string>();
         const push = (k: string) => { if (!seen.has(k)) { seen.add(k); out.push(k); } };
+        // Decoration variant: the "Selected Value" column shows the member's
+        // gallantry awards, so always fetch `awards` (projects awards + awardsBN)
+        // even though `selectedValue` is otherwise a frontend-only column.
+        if (this.kind === 'decoration') push('awards');
         for (const key of this.selectedColumnKeys) {
             if (key === 'name') { push('nameEnglish'); push('nameBangla'); continue; }
             if (key === 'nameExtras') { push('awards'); push('professionalQualification'); push('corps'); continue; }
@@ -1124,15 +1150,16 @@ export class ReportTradeComponent implements OnInit, OnChanges {
         const page_no = Math.floor(this.first / this.rows) + 1;
 
         // ── Dynamic-backend criteria ────────────────────────────────
-        // The parent-locked Trade drives the `trade` filter. Single pick →
-        // idValue; N/A bundle (multi-org) → idValues so the backend does
-        // an IN match.
+        // The parent-locked pick drives the filter. Trade → `trade` (FK match);
+        // Decoration → `decorationMatch` (CSV membership, any of the picked awards).
+        // Single pick → idValue; multi-pick → idValues.
+        const filterFieldKey = this.kind === 'decoration' ? 'decorationMatch' : 'trade';
         const criteria: DynamicReportCriterion[] = [];
         if (Array.isArray(this.commonCodeIds) && this.commonCodeIds.length > 0) {
             if (this.commonCodeIds.length === 1) {
-                criteria.push({ fieldKey: 'trade', idValue: this.commonCodeIds[0] });
+                criteria.push({ fieldKey: filterFieldKey, idValue: this.commonCodeIds[0] });
             } else {
-                criteria.push({ fieldKey: 'trade', idValues: [...this.commonCodeIds] });
+                criteria.push({ fieldKey: filterFieldKey, idValues: [...this.commonCodeIds] });
             }
         }
         if (this.selectedOrgIds.length > 0)

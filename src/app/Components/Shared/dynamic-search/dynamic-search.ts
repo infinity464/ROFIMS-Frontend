@@ -1,4 +1,4 @@
-import { Component, HostListener, OnInit } from '@angular/core';
+import { Component, HostListener, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterModule } from '@angular/router';
@@ -22,6 +22,7 @@ import { UserMenuService } from '@/services/user-menu.service';
 import { ReportService } from '@/services/report.service';
 import { CommonCodeService } from '@/services/common-code-service';
 import { ExportService } from '@/services/export.service';
+import { EmpService } from '@/services/emp-service';
 import {
     AlignmentType,
     BorderStyle,
@@ -63,7 +64,7 @@ interface CriterionValue {
     templateUrl: './dynamic-search.html',
     styleUrls: ['../../../Components/Features/employee-reports/report-theme.scss', './dynamic-search.scss']
 })
-export class DynamicSearchComponent implements OnInit {
+export class DynamicSearchComponent implements OnInit, OnDestroy {
     canInsert = true;
     canUpdate = true;
     canDelete = true;
@@ -122,6 +123,7 @@ export class DynamicSearchComponent implements OnInit {
      */
     columnCatalog: { key: string; labelEN: string; labelBN: string; hint: string; defaultVisible: boolean }[] = [
         { key: 'ser',             labelEN: 'Ser',          labelBN: 'ক্রঃ',           hint: 'Serial',          defaultVisible: true  },
+        { key: 'picture',         labelEN: 'Picture',      labelBN: 'ছবি',            hint: 'Photo',           defaultVisible: true  },
         { key: 'serviceId',       labelEN: 'Service ID',   labelBN: 'সার্ভিস আইডি',    hint: 'Plain',           defaultVisible: true  },
         { key: 'rabid',           labelEN: 'RAB ID',       labelBN: 'র‍্যাব আইডি',     hint: 'Plain',           defaultVisible: true  },
         { key: 'nameEnglish',     labelEN: 'Name (EN)',    labelBN: 'নাম (ইংরেজি)',    hint: 'NameWithProfile', defaultVisible: true  },
@@ -267,8 +269,81 @@ export class DynamicSearchComponent implements OnInit {
         private _userMenuService: UserMenuService,
         private reportService: ReportService,
         private commonCodeService: CommonCodeService,
-        private exportService: ExportService
+        private exportService: ExportService,
+        private empService: EmpService
     ) {}
+
+    // ── Row thumbnails ────────────────────────────────────────────────────
+    // Profile photos aren't part of the search payload as an image — the row
+    // carries `profileImages` (JSON array of {FileId,fileName}). We resolve
+    // the first FileId to a blob via FileInformation/Download, cache the
+    // object URL per employeeID, and render a small clickable thumbnail that
+    // opens the full image in a modal. Object URLs are revoked on every new
+    // results page and on destroy to avoid leaks.
+    private photoUrls = new Map<number, string>();
+    private photoRequested = new Set<number>();
+
+    /** Photo modal state. */
+    showPhotoDialog = false;
+    photoDialogUrl: string | null = null;
+    photoDialogName = '';
+
+    /** Revoke and drop every cached thumbnail object URL. */
+    private clearRowPhotos(): void {
+        for (const url of this.photoUrls.values()) {
+            try { URL.revokeObjectURL(url); } catch { /* already revoked */ }
+        }
+        this.photoUrls.clear();
+        this.photoRequested.clear();
+    }
+
+    /** First FileId from a row's ProfileImages JSON, or null when absent/invalid. */
+    private firstPhotoFileId(row: any): number | null {
+        const json = row?.profileImages ?? row?.ProfileImages;
+        if (!json || typeof json !== 'string') return null;
+        try {
+            const refs = JSON.parse(json);
+            const first = Array.isArray(refs) && refs.length > 0 ? refs[0] : null;
+            const id = first?.FileId ?? first?.fileId;
+            return typeof id === 'number' && id > 0 ? id : null;
+        } catch {
+            return null;
+        }
+    }
+
+    /** Kick off thumbnail downloads for the current results page (deduped). */
+    private loadRowPhotos(): void {
+        for (const row of this.results) {
+            const empId = row?.employeeID;
+            if (empId == null || this.photoRequested.has(empId)) continue;
+            const fileId = this.firstPhotoFileId(row);
+            if (fileId == null) continue;
+            this.photoRequested.add(empId);
+            this.empService.downloadFile(fileId).subscribe({
+                next: (blob) => {
+                    if (blob && blob.size > 0) {
+                        this.photoUrls.set(empId, URL.createObjectURL(blob));
+                    }
+                },
+                error: () => { /* leave the placeholder in place */ },
+            });
+        }
+    }
+
+    /** Cached thumbnail URL for a row, or null while loading / when none. */
+    photoUrlFor(row: any): string | null {
+        const empId = row?.employeeID;
+        return empId != null ? (this.photoUrls.get(empId) ?? null) : null;
+    }
+
+    /** Open the full-size photo modal for a row (no-op if the thumb isn't loaded). */
+    openPhotoDialog(row: any): void {
+        const url = this.photoUrlFor(row);
+        if (!url) return;
+        this.photoDialogUrl = url;
+        this.photoDialogName = row?.nameEnglish ?? '';
+        this.showPhotoDialog = true;
+    }
 
     /** Export dropdown state — print / PDF / Word / Excel options. */
     exportDropdownOpen = false;
@@ -290,8 +365,8 @@ export class DynamicSearchComponent implements OnInit {
      * exported document mirrors the on-screen table.
      */
     private getExportData(): { columns: string[]; rows: string[][] } {
-        // Action column is interactive-only — strip it from exports.
-        const cols = this.visibleColumns.filter(c => c.hint !== 'Action');
+        // Action + Photo columns are interactive-only — strip them from exports.
+        const cols = this.visibleColumns.filter(c => c.hint !== 'Action' && c.hint !== 'Photo');
         const columns = cols.map(c => c.labelEN);
         const rows = this.results.map((row, idx) =>
             cols.map(c => {
@@ -500,7 +575,7 @@ export class DynamicSearchComponent implements OnInit {
         });
 
         // ── Data table ────────────────────────────────────────────────────
-        const visibleCols = this.visibleColumns.filter(c => c.hint !== 'Action');
+        const visibleCols = this.visibleColumns.filter(c => c.hint !== 'Action' && c.hint !== 'Photo');
         const headerLabels = visibleCols.map(c => c.labelEN);
         // Each column gets an even slice — dynamic-search has too many
         // permutations to hand-tune width weights per column.
@@ -718,7 +793,7 @@ export class DynamicSearchComponent implements OnInit {
         const sans  = "'Times New Roman', sans-serif";
         const mono  = "'JetBrains Mono', 'Consolas', 'Courier New', monospace";
 
-        const visibleCols = this.visibleColumns.filter(c => c.hint !== 'Action');
+        const visibleCols = this.visibleColumns.filter(c => c.hint !== 'Action' && c.hint !== 'Photo');
         const tableHeaderHtml = `<tr>${visibleCols
             .map((c) => `<th>${esc(c.labelEN)}</th>`)
             .join('')}</tr>`;
@@ -1045,6 +1120,10 @@ export class DynamicSearchComponent implements OnInit {
         this.loadFields();
     }
 
+    ngOnDestroy(): void {
+        this.clearRowPhotos();
+    }
+
     /**
      * Cascade dependency wiring — when the parent field's value changes,
      * its dependent fields reload from a scoped endpoint. Called by the
@@ -1054,13 +1133,20 @@ export class DynamicSearchComponent implements OnInit {
     onCriterionIdChange(fieldKey: string): void {
         const cv = this.criteriaValues.get(fieldKey);
         if (fieldKey === 'motherOrg') {
-            // Mother Org → reload Corps options for the picked org
-            // and Rank options (per-org MotherOrgRank).
-            this.reloadCorpsByMotherOrg(cv?.idValue ?? null);
-            this.reloadRankByMotherOrg(cv?.idValue ?? null);
+            // Mother Org → narrow Corps + Rank (per-org MotherOrgRank), and
+            // Trade (scoped to the org until a Corps is picked).
+            // reloadCorpsByMotherOrg re-scopes Trade once the corps list
+            // resolves, so we don't call reloadTradeForSelection here too.
+            const orgId = cv?.idValue ?? null;
+            this.reloadCorpsByMotherOrg(orgId);
+            this.reloadRankByMotherOrg(orgId);
         } else if (fieldKey === 'corps') {
-            // Corps → reload Trade options for the picked corps's children.
-            this.reloadTradeByCorps(cv?.idValue ?? null);
+            // Corps → narrow Trade to the picked corps's children.
+            this.reloadTradeForSelection();
+        } else if (fieldKey === 'memberType') {
+            // Member Type → re-filter the org's ranks (MotherOrgRank rows
+            // carry parentCodeId = member-type id).
+            this.applyRankMemberTypeFilter();
         }
     }
 
@@ -1071,59 +1157,125 @@ export class DynamicSearchComponent implements OnInit {
         if (orgId == null || orgId <= 0) {
             const original = this.originalOptionsByField.get('corps');
             if (original) corpsField.options = original;
+            this.clearStaleCriterionId('corps', corpsField.options);
+            // Org cleared → drop the corps scope and re-scope Trade (falls
+            // back to the full list since neither org nor corps is set).
+            this.reloadTradeForSelection();
         } else {
             this.commonCodeService.getAllActiveCommonCodesByOrgIdAndType(orgId, 'Corps').subscribe({
                 next: (codes: any[]) => {
                     corpsField.options = this.collapseNa(codes, 'corps');
+                    // Clear a now-invalid corps pick against the NARROWED list
+                    // (must run after the async options arrive), then re-scope
+                    // Trade — by corps if still valid, otherwise by the org.
+                    this.clearStaleCriterionId('corps', corpsField.options);
+                    this.reloadTradeForSelection();
                 },
-                error: () => { corpsField.options = []; },
+                error: () => {
+                    corpsField.options = [];
+                    this.clearStaleCriterionId('corps', corpsField.options);
+                    this.reloadTradeForSelection();
+                },
             });
         }
-        this.clearStaleCriterionId('corps', corpsField.options);
-        // Corps changed implicitly → cascade Trade too.
-        this.reloadTradeByCorps(this.criteriaValues.get('corps')?.idValue ?? null);
     }
+
+    /** Raw MotherOrgRank rows for the currently-picked Mother Org (each row
+     *  carries parentCodeId = member-type id). Cached so a Member Type change
+     *  can re-filter without another round-trip. Empty when no org is picked. */
+    private allRanksForOrg: any[] = [];
 
     private reloadRankByMotherOrg(orgId: number | null): void {
         const rankField = this.availableFields.find(f => f.fieldKey === 'rank');
         if (!rankField) return;
         if (orgId == null || orgId <= 0) {
+            // Org cleared → drop the org-rank cache and restore the full list.
+            this.allRanksForOrg = [];
             const original = this.originalOptionsByField.get('rank');
             if (original) rankField.options = original;
-        } else {
-            this.commonCodeService.getAllActiveCommonCodesByOrgIdAndType(orgId, 'MotherOrgRank').subscribe({
-                next: (codes: any[]) => {
-                    rankField.options = (Array.isArray(codes) ? codes : [])
-                        .map((c: any) => ({ label: c?.codeValueEN ?? String(c?.codeId ?? ''), value: c?.codeId ?? 0 }));
-                },
-                error: () => { rankField.options = []; },
-            });
+            this.clearStaleCriterionId('rank', rankField.options);
+            return;
         }
+        this.commonCodeService.getAllActiveCommonCodesByOrgIdAndType(orgId, 'MotherOrgRank').subscribe({
+            next: (codes: any[]) => {
+                this.allRanksForOrg = Array.isArray(codes) ? codes : [];
+                // Narrow further by the currently-selected Member Type.
+                this.applyRankMemberTypeFilter();
+            },
+            error: () => {
+                this.allRanksForOrg = [];
+                rankField.options = [];
+                this.clearStaleCriterionId('rank', rankField.options);
+            },
+        });
+    }
+
+    /**
+     * Narrow the Rank options to the picked Member Type. MotherOrgRank rows
+     * carry parentCodeId = member-type (EmployeeType) id, so once the org's
+     * ranks are cached we filter them by the selected Member Type. Mirrors
+     * serving-member-entry's applyRankMemberTypeFilter. With no org picked we
+     * have no per-rank member-type key (the flat registry list omits it), so
+     * the full list stays until an org is chosen.
+     */
+    private applyRankMemberTypeFilter(): void {
+        const rankField = this.availableFields.find(f => f.fieldKey === 'rank');
+        if (!rankField) return;
+        if (this.allRanksForOrg.length === 0) {
+            const original = this.originalOptionsByField.get('rank');
+            if (original) rankField.options = original;
+            this.clearStaleCriterionId('rank', rankField.options);
+            return;
+        }
+        const memberType = this.criteriaValues.get('memberType')?.idValue ?? null;
+        const source = (memberType != null && memberType > 0)
+            ? this.allRanksForOrg.filter((r: any) => (r?.parentCodeId ?? r?.ParentCodeId) === memberType)
+            : this.allRanksForOrg;
+        rankField.options = source.map((c: any) => ({
+            label: c?.codeValueEN ?? String(c?.codeId ?? ''),
+            value: c?.codeId ?? 0,
+        }));
         this.clearStaleCriterionId('rank', rankField.options);
     }
 
-    private reloadTradeByCorps(corpsId: number | null): void {
+    /**
+     * Scope the Trade options to the tightest active upstream selection:
+     * the picked Corps (Trade.ParentCodeId) if one is set, else the picked
+     * Mother Org (Trade.OrgId), else the full list. Trade CommonCodes carry
+     * both keys, so either scope is a real subset. Any now-invalid Trade
+     * pick is cleared against the resulting list.
+     */
+    private reloadTradeForSelection(): void {
         const tradeField = this.availableFields.find(f => f.fieldKey === 'trade');
         if (!tradeField) return;
-        if (corpsId == null || corpsId <= 0) {
-            const original = this.originalOptionsByField.get('trade');
-            if (original) tradeField.options = original;
-        } else if (corpsId === -1) {
-            // User picked the N/A corps — Trade options would be the N/A
-            // trade rows. The simplest behaviour: keep the global Trade
-            // list so the user can narrow further (or wipe the trade pick
-            // if it's no longer meaningful). Leave options as-is.
-            const original = this.originalOptionsByField.get('trade');
-            if (original) tradeField.options = original;
+        const corpsId = this.criteriaValues.get('corps')?.idValue ?? null;
+        const orgId = this.criteriaValues.get('motherOrg')?.idValue ?? null;
+
+        // Shared subscribe: collapse N/A + drop a now-invalid trade pick.
+        const applyNarrowed = (obs: any) => obs.subscribe({
+            next: (codes: any[]) => {
+                tradeField.options = this.collapseNa(codes, 'trade');
+                this.clearStaleCriterionId('trade', tradeField.options);
+            },
+            error: () => {
+                tradeField.options = [];
+                this.clearStaleCriterionId('trade', tradeField.options);
+            },
+        });
+
+        if (corpsId != null && corpsId > 0) {
+            // Tightest scope: trades whose parent is the picked corps.
+            applyNarrowed(this.commonCodeService.getAllActiveCommonCodesByParentId(corpsId));
+        } else if (orgId != null && orgId > 0) {
+            // No specific corps (or the collapsed N/A corps, id = -1) —
+            // scope trades to the mother org.
+            applyNarrowed(this.commonCodeService.getAllActiveCommonCodesByOrgIdAndType(orgId, 'Trade'));
         } else {
-            this.commonCodeService.getAllActiveCommonCodesByParentId(corpsId).subscribe({
-                next: (codes: any[]) => {
-                    tradeField.options = this.collapseNa(codes, 'trade');
-                },
-                error: () => { tradeField.options = []; },
-            });
+            // Nothing upstream — restore the full list.
+            const original = this.originalOptionsByField.get('trade');
+            if (original) tradeField.options = original;
+            this.clearStaleCriterionId('trade', tradeField.options);
         }
-        this.clearStaleCriterionId('trade', tradeField.options);
     }
 
     /** Collapse multiple "N/A" CommonCode rows into one synthetic option
@@ -1198,7 +1350,7 @@ export class DynamicSearchComponent implements OnInit {
      * Any field not in PRIORITY_ORDER keeps the backend-registry order
      * after the priority block.
      */
-    private static readonly FIELD_PRIORITY_ORDER = ['motherOrg', 'rank', 'corps', 'trade'];
+    private static readonly FIELD_PRIORITY_ORDER = ['motherOrg', 'memberType', 'rank', 'corps', 'trade'];
     private reorderFields(fields: SearchFieldDefinition[]): SearchFieldDefinition[] {
         const priority = DynamicSearchComponent.FIELD_PRIORITY_ORDER;
         const byKey = new Map(fields.map(f => [f.fieldKey, f]));
@@ -1206,6 +1358,39 @@ export class DynamicSearchComponent implements OnInit {
         const headKeys = new Set(head.map(f => f.fieldKey));
         const tail = fields.filter(f => !headKeys.has(f.fieldKey));
         return [...head, ...tail];
+    }
+
+    /**
+     * Fields shown (pre-selected) by default on page load — the most
+     * commonly used service filters. These are OPTIONAL: unlike fields the
+     * user adds manually, leaving one of these empty does NOT trigger the
+     * "fill the selected fields" validation in search(); an empty one is
+     * simply dropped from the request (see loadResults()). Employee only.
+     */
+    private static readonly DEFAULT_FIELD_KEYS = ['motherOrg', 'memberType', 'rank', 'corps', 'trade'];
+
+    /**
+     * Pre-select the DEFAULT_FIELD_KEYS into selectedFields, merging (defaults
+     * first) with anything already selected and de-duping. Uses the exact
+     * field object references from availableFields so p-multiselect (reference
+     * equality, no dataKey) renders them as ticked. Then wires up their
+     * criterion values via onFieldsChange().
+     */
+    private applyDefaultFields(): void {
+        if (this.selectedCategory !== 'Employee') return;
+        const byKey = new Map(this.availableFields.map(f => [f.fieldKey, f]));
+        const defaults = DynamicSearchComponent.DEFAULT_FIELD_KEYS
+            .map(k => byKey.get(k))
+            .filter((f): f is SearchFieldDefinition => f != null);
+        const seen = new Set<string>();
+        const merged: SearchFieldDefinition[] = [];
+        for (const f of [...defaults, ...this.selectedFields]) {
+            if (seen.has(f.fieldKey)) continue;
+            seen.add(f.fieldKey);
+            merged.push(f);
+        }
+        this.selectedFields = merged;
+        this.onFieldsChange();
     }
 
     private loadFields(): void {
@@ -1229,6 +1414,10 @@ export class DynamicSearchComponent implements OnInit {
                 if (this.memberStatusLocked) this.applyScopeFieldRestrictions();
                 // Re-apply the member-type allowlist too — same race.
                 this.applyMemberTypeRestriction();
+                // Show the common service filters (Mother Org / Member Type /
+                // Rank / Corps / Trade) pre-selected. They're optional — an
+                // empty one won't block Search (see DEFAULT_FIELD_KEYS).
+                this.applyDefaultFields();
             },
             error: (err: any) => {
                 this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.message || 'Failed to load search fields.' });
@@ -1268,12 +1457,17 @@ export class DynamicSearchComponent implements OnInit {
     }
 
     search(): void {
-        // If the user picked search fields, they MUST fill each one.
-        // Without this check, an empty field is silently dropped from the
-        // request and the page returns an effectively unfiltered result
-        // set — surprising and (with no upper bound on the FE side)
-        // potentially huge.
-        const empty = this.selectedFields.filter((f) => !this.hasCriterionValue(f));
+        // If the user picked search fields, they MUST fill each one — EXCEPT
+        // the default service filters (Mother Org / Member Type / Rank /
+        // Corps / Trade), which are pre-selected and optional: an empty one
+        // is simply dropped from the request rather than blocking Search.
+        // Without this check, an empty (non-default) field is silently
+        // dropped and the page returns an effectively unfiltered result set
+        // — surprising and (with no upper bound on the FE side) potentially
+        // huge.
+        const empty = this.selectedFields.filter((f) =>
+            !DynamicSearchComponent.DEFAULT_FIELD_KEYS.includes(f.fieldKey)
+            && !this.hasCriterionValue(f));
         if (empty.length > 0) {
             const names = empty.map((f) => f.displayLabel).join(', ');
             this.messageService.add({
@@ -1310,6 +1504,10 @@ export class DynamicSearchComponent implements OnInit {
         this.totalRecords = 0;
         this.first = 0;
         this.hasSearched = false;
+        // Keep the default service filters (Mother Org / Member Type / Rank /
+        // Corps / Trade) on screen — Clear All wipes their values, not the
+        // fields themselves. Restores fresh empty criterion values for them.
+        this.applyDefaultFields();
     }
 
     onLazyLoad(event: TableLazyLoadEvent): void {
@@ -1390,6 +1588,10 @@ export class DynamicSearchComponent implements OnInit {
             next: (response) => {
                 this.results = response.datalist || [];
                 this.totalRecords = response.pages?.rows || 0;
+                // Refresh row thumbnails for the new page — revoke the old
+                // object URLs first, then lazily download this page's photos.
+                this.clearRowPhotos();
+                this.loadRowPhotos();
                 // Lock state is set once at ngOnInit via getMyReportAccessScope()
                 // — a user's access scope can't change mid-session, so the
                 // search response is NOT used here. (Doing so would briefly

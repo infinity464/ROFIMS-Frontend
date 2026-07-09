@@ -728,7 +728,7 @@ export class ReportPunishmentComponent implements OnInit {
     }
 
     get reportTitle(): string {
-        return this.lang === 'en' ? 'Punishment Report' : 'শাস্তির প্রতিবেদন';
+        return this.lang === 'en' ? 'Discipline Information Report' : 'শৃঙ্খলা তথ্য প্রতিবেদন';
     }
 
     // ── RAB paper getters ─────────────────────────────────────────────

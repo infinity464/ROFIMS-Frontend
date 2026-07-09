@@ -164,7 +164,6 @@
                     <th style="width: 50px">Ser</th>
                     <th style="min-width: 300px">Posting Order No</th>
                     <th style="min-width: 110px; white-space: nowrap">Order Date</th>
-                    <th style="min-width: 300px; white-space: nowrap">NoteSheet No</th>
                     <th style="min-width: 90px">Service ID</th>
                     <th style="min-width: 80px">RAB ID</th>
                     <th style="min-width: 80px">Rank</th>
@@ -186,7 +185,6 @@
                         {{ row.postingOrderNo || '-' }}
                     </td>
                     <td>{{ formatDate(row.postingOrderDate) }}</td>
-                    <td style="white-space: nowrap">{{ row.noteSheetNo || '-' }}</td>
                     <td>{{ row.serviceId || '-' }}</td>
                     <td>{{ row.rabID || '-' }}</td>
                     <td>{{ row.rankName || '-' }}</td>
@@ -256,7 +254,7 @@
             </ng-template>
             <ng-template pTemplate="emptymessage">
                 <tr>
-                    <td colspan="13" class="text-center p-4">
+                    <td colspan="12" class="text-center p-4">
                         <div class="flex flex-column align-items-center gap-3 py-5">
                             <i class="pi pi-check-circle text-5xl text-400"></i>
                             <span class="text-lg text-500">

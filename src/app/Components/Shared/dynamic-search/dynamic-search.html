@@ -22,6 +22,22 @@
     </ng-template>
 </p-dialog>
 
+<!-- Full-size profile photo modal — opened by clicking a row thumbnail.
+     dismissableMask lets the user click outside to close. -->
+<p-dialog
+    [(visible)]="showPhotoDialog"
+    [header]="photoDialogName || 'Photo'"
+    [modal]="true"
+    [dismissableMask]="true"
+    [style]="{ width: 'auto' }"
+    [contentStyle]="{ 'max-width': '90vw' }"
+    [draggable]="false"
+    [resizable]="false">
+    @if (photoDialogUrl) {
+        <img [src]="photoDialogUrl" alt="Profile photo" class="ds-photo-full" />
+    }
+</p-dialog>
+
 <div class="employee-reports-page">
     <!-- Title + Category + Filter -->
     <div class="report-filter-card">
@@ -354,6 +370,17 @@
                                 @switch (col.hint) {
                                     @case ('Serial') {
                                         <td><span class="report-ser-num">{{ rowIndex + 1 }}</span></td>
+                                    }
+                                    @case ('Photo') {
+                                        <td>
+                                            @if (photoUrlFor(row)) {
+                                                <img [src]="photoUrlFor(row)" alt="Photo"
+                                                     class="ds-thumb" (click)="openPhotoDialog(row)"
+                                                     title="Click to enlarge" />
+                                            } @else {
+                                                <span class="ds-thumb ds-thumb--empty"><i class="pi pi-user"></i></span>
+                                            }
+                                        </td>
                                     }
                                     @case ('NameWithProfile') {
                                         <td>{{ row[col.key] || '—' }}</td>

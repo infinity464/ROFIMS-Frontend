@@ -22,7 +22,7 @@
             <div class="report-type-field">
                 <div class="rt-label">{{ commonCodeDropdownLabelEn }}</div>
                 <div class="rt-select-wrap">
-                    @if (isTradeMultiSelect) {
+                    @if (isMultiSelectType) {
                         <p-multiSelect
                             [options]="commonCodeOptions"
                             [(ngModel)]="selectedTradeValues"
@@ -112,6 +112,9 @@
                 }
                 @case ('trade') {
                     <app-report-trade [lang]="reportLang" [commonCodeIds]="selectedCommonCodeIds" [reportTypeLabel]="selectedReportTypeLabel" [commonCodeLabel]="selectedCommonCodeLabel" [postingStatus]="selectedPostingStatus" [statusLabel]="selectedStatusLabel" [statusLabelBn]="selectedStatusLabelBn" (langToggle)="toggleReportLang()" (scopeChange)="onChildScopeChange($event)" />
+                }
+                @case ('decoration') {
+                    <app-report-decoration [kind]="'decoration'" [lang]="reportLang" [commonCodeIds]="selectedCommonCodeIds" [reportTypeLabel]="selectedReportTypeLabel" [commonCodeLabel]="selectedCommonCodeLabel" [postingStatus]="selectedPostingStatus" [statusLabel]="selectedStatusLabel" [statusLabelBn]="selectedStatusLabelBn" (langToggle)="toggleReportLang()" (scopeChange)="onChildScopeChange($event)" />
                 }
             }
         </div>

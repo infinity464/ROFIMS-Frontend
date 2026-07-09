@@ -39,7 +39,8 @@ export type ReportType =
     | 'specialQualification'
     | 'rabRank'
     | 'corps'
-    | 'trade';
+    | 'trade'
+    | 'decoration';
 
 /** Sentinel value for the synthetic "N/A" option that collapses every CommonCode row whose label normalises to N/A. */
 const NA_SENTINEL_VALUE = -1;
@@ -66,6 +67,7 @@ const COMMON_CODE_TYPE_BY_REPORT: Record<ReportType, string> = {
     rabRank: 'EquivalentName',
     corps: 'Corps',
     trade: 'Trade',
+    decoration: 'Decoration',
 };
 
 /**
@@ -132,6 +134,7 @@ export class EmployeeReportsComponent implements OnInit {
         { label: 'RAB Rank', labelBn: 'র‍্যাব পদবি', value: 'rabRank' },
         { label: 'Corps', labelBn: 'কোর', value: 'corps' },
         { label: 'Trade', labelBn: 'ট্রেড', value: 'trade' },
+        { label: 'Gallantry Awards/Decoration', labelBn: 'বীরত্বসূচক পদক', value: 'decoration' },
     ];
 
     /** Common code options for the selected report type. When user selects one, filter fires. */
@@ -233,19 +236,22 @@ export class EmployeeReportsComponent implements OnInit {
         this.loadCommonCodeOptions();
     }
 
-    /** True when the second filter should render as a multi-select (Trade only). */
-    get isTradeMultiSelect(): boolean {
-        return this.reportType === 'trade';
+    /** True when the second filter should render as a multi-select. Trade and
+        Gallantry Awards/Decoration both let the user pick several values. */
+    get isMultiSelectType(): boolean {
+        return this.reportType === 'trade' || this.reportType === 'decoration';
     }
 
     /** True when enough is selected to render the child report. */
     get hasSelection(): boolean {
-        return this.isTradeMultiSelect ? this.selectedTradeValues.length > 0 : this.selectedCommonCodeId != null;
+        return this.isMultiSelectType ? this.selectedTradeValues.length > 0 : this.selectedCommonCodeId != null;
     }
 
     /**
-     * Trade multi-select changed — union every picked option's underlying CodeIds
-     * (expanding same-label bundles and the N/A bucket) into selectedCommonCodeIds.
+     * Multi-select (Trade / Decoration) changed — union every picked option's
+     * underlying CodeIds (expanding same-label bundles and the N/A bucket) into
+     * selectedCommonCodeIds. Decoration options carry no bundles, so each picked
+     * value maps straight to its own CodeId.
      */
     onTradeSelectionChange(): void {
         const ids: number[] = [];
@@ -382,7 +388,7 @@ export class EmployeeReportsComponent implements OnInit {
 
     /** Label of the currently selected common code (language-aware, for child report titles). Handles the synthetic N/A bucket. */
     get selectedCommonCodeLabel(): string {
-        if (this.isTradeMultiSelect) {
+        if (this.isMultiSelectType) {
             const names = this.selectedTradeValues.map((v) => {
                 if (v === NA_SENTINEL_VALUE) return 'N/A';
                 const opt = this.commonCodeOptions.find((o) => o.value === v);

@@ -11,14 +11,15 @@ export function isNavyMotherOrganization(profile: Pick<EmployeePersonalServiceOv
     return (profile.motherOrganization ?? '').trim().toLowerCase() === 'navy';
 }
 
-/** Name line: default `Name, Award, Qualification, Corps`; Navy `Name, Corps, Award, Qualification, BN`. */
+/** Name line: default `Name, Award, Qualification, Corps`; Navy `Name, Corps, Award, Qualification, BN` (suffix localized: বিএন in Bangla). */
 export function getFormattedMemberName(profile: EmployeePersonalServiceOverview | null, isBn: boolean): string {
     if (!profile) return '-';
     const namePart = isBn ? (profile.nameBN ?? profile.nameEnglish) : profile.nameEnglish;
     const deco = isBn ? (profile.gallantryAwardsDecorationBN ?? profile.gallantryAwardsDecoration) : profile.gallantryAwardsDecoration;
     const prof = isBn ? (profile.professionalQualificationBN ?? profile.professionalQualification) : profile.professionalQualification;
     const crps = isBn ? (profile.corpsBN ?? profile.corps) : profile.corps;
-    const parts = isNavyMotherOrganization(profile) ? [namePart, crps, deco, prof, 'BN'] : [namePart, deco, prof, crps];
+    const bnSuffix = isBn ? 'বিএন' : 'BN';
+    const parts = isNavyMotherOrganization(profile) ? [namePart, crps, deco, prof, bnSuffix] : [namePart, deco, prof, crps];
     const filtered = parts.filter(isDisplayable);
     return filtered.length ? filtered.join(', ') : '-';
 }
