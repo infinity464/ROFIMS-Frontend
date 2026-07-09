@@ -1,7 +1,7 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { Router, RouterModule } from '@angular/router';
+import { Router, RouterModule, ActivatedRoute } from '@angular/router';
 import { UserMenuService } from '@/services/user-menu.service';
 import { TableModule } from 'primeng/table';
 import { ButtonModule } from 'primeng/button';
@@ -75,6 +75,7 @@ export class SupernumeraryList implements OnInit {
         private sharedService: SharedService,
         private memberTypeAccess: IdentityUserMemberTypeAccessService,
         private _router: Router,
+        private _route: ActivatedRoute,
         private _userMenuService: UserMenuService
     ) {}
 
@@ -128,12 +129,21 @@ export class SupernumeraryList implements OnInit {
 
     /** Member Type from Employee Type Setup – load once on init (not dependent on org). */
     loadMemberTypeOptions(): void {
+        const memberTypeIdFromRoute = +(this._route.snapshot.queryParamMap.get('memberTypeId') ?? 0);
+
         this.commonCodeService.getAllActiveCommonCodesType('EmployeeType').subscribe({
             next: (codes: CommonCodeModel[]) => {
                 this.memberTypeOptions = codes.map((c) => ({
                     label: c.codeValueEN || String(c.codeId),
                     value: c.codeId
                 }));
+                if (memberTypeIdFromRoute > 0) {
+                    this.selectedMemberTypeId = memberTypeIdFromRoute;
+                    this.rebuildRankOptions();
+                    if (this.orgOptions.length > 0) {
+                        this.loadData();
+                    }
+                }
             },
             error: (err) => {
                 console.error('Failed to load member types', err);

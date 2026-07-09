@@ -97,6 +97,10 @@ export class PresentlyServingMembers implements OnInit {
     /** Whether list is using filter (so pagination uses filtered API). */
     useFilter = false;
 
+    /** Set when navigated from organogram (RAB HQ / Battalions). */
+    organogramNodeCodeId: number | null = null;
+    organogramFilterName: string | null = null;
+
     /** Collapsible filter panel open by default. */
     filterOpen = true;
 
@@ -129,12 +133,22 @@ export class PresentlyServingMembers implements OnInit {
         this.canInsert = _perms.canInsert;
         this.canUpdate = _perms.canUpdate;
         this.canDelete = _perms.canDelete;
+
+        const params = this._route.snapshot.queryParamMap;
+        const organogramNodeId = +(params.get('organogramNodeCodeId') ?? 0);
+        if (organogramNodeId > 0) {
+            this.organogramNodeCodeId = organogramNodeId;
+            this.organogramFilterName = params.get('name');
+            this.useFilter = true;
+        }
+
         this.loadMotherOrgs();
         this.loadFilterOptions();
         this.loadList(this.pageNumber, this.pageSize);
     }
 
     get pageTitle(): string {
+        if (this.organogramFilterName) return this.organogramFilterName;
         return this.interPostingMode ? 'Serving Members for Inter Posting' : 'Presently Serving Members List';
     }
 
@@ -317,7 +331,8 @@ export class PresentlyServingMembers implements OnInit {
             joiningDateTo: toDateOnly(this.filter.durationTo),
             permanentDistrictType: this.filter.wonHomeDistrict ?? undefined,
             wifePermanentDistrictType: this.filter.spouseHomeDistrict ?? undefined,
-            appointmentId: this.filter.appointment ?? undefined
+            appointmentId: this.filter.appointment ?? undefined,
+            organogramNodeCodeId: this.organogramNodeCodeId ?? undefined
         };
     }
 
@@ -346,8 +361,11 @@ export class PresentlyServingMembers implements OnInit {
             appointment: null
         };
         this.applyMotherOrgCascade();
+        this.organogramNodeCodeId = null;
+        this.organogramFilterName = null;
         this.useFilter = false;
         this.resetToFirstPage();
+        this._router.navigate([], { relativeTo: this._route, queryParams: {}, replaceUrl: true });
         this.loadList(this.pageNumber, this.pageSize);
     }
 
@@ -384,6 +402,7 @@ export class PresentlyServingMembers implements OnInit {
         if (f.wonHomeDistrict != null) n++;
         if (f.spouseHomeDistrict != null) n++;
         if (f.appointment != null) n++;
+        if (this.organogramNodeCodeId != null) n++;
         return n;
     }
 

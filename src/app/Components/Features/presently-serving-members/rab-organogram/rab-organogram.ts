@@ -392,28 +392,38 @@ export class RabOrganogramComponent implements OnInit {
     }
 
     onNodeSelect(node: OrgNode): void {
-        let type = 'org';
-        let nodeId = node.id;
+        const path = this.buildBreadcrumb(node);
 
         if (node.id === -1) {
-            type = 'supernumerary';
-            nodeId = 0;
-        } else if (node.id === -2) {
-            type = 'pending';
-            nodeId = 0;
-        } else if (node.id <= -10 && node.id >= -19) {
-            type = 'supernumerary';
+            this._router.navigate(['/supernumerary-list']);
+            return;
+        }
+        if (node.id === -2) {
+            this._router.navigate(['/presently-serving-members/rab-organogram-members'], {
+                queryParams: { nodeId: 0, type: 'pending', name: path }
+            });
+            return;
+        }
+        if (node.id <= -10 && node.id >= -19) {
             const idx = -(node.id + 10);
-            nodeId = this.memberTypes[idx]?.codeId ?? 0;
-        } else if (node.id <= -20 && node.id >= -29) {
-            type = 'pending';
+            const memberTypeId = this.memberTypes[idx]?.codeId ?? 0;
+            this._router.navigate(['/supernumerary-list'], {
+                queryParams: memberTypeId > 0 ? { memberTypeId } : {}
+            });
+            return;
+        }
+        if (node.id <= -20 && node.id >= -29) {
             const idx = -(node.id + 20);
-            nodeId = this.memberTypes[idx]?.codeId ?? 0;
+            const memberTypeId = this.memberTypes[idx]?.codeId ?? 0;
+            this._router.navigate(['/presently-serving-members/rab-organogram-members'], {
+                queryParams: { nodeId: memberTypeId, type: 'pending', name: path }
+            });
+            return;
         }
 
-        const path = this.buildBreadcrumb(node);
-        const name = encodeURIComponent(path);
-        window.open(`/presently-serving-members/rab-organogram-members?nodeId=${nodeId}&type=${type}&name=${name}`, '_blank');
+        this._router.navigate(['/presently-serving-members'], {
+            queryParams: { organogramNodeCodeId: node.id, name: path }
+        });
     }
 
     private buildBreadcrumb(node: OrgNode): string {
