@@ -268,9 +268,9 @@
                         <th>Joining Date in RAB</th>
                         <th>Home District (Permanent)</th>
                         <th style="min-width: 200px">Remarks</th>
-                        <th>Status</th>
                         @if (interPostingMode) {
-                            <th style="min-width: 180px">Remarks</th>
+                        <th>Status</th>
+                        <th style="min-width: 180px">Remarks</th>
                         }
                         <th>Action</th>
                     </tr>
@@ -307,6 +307,7 @@
                         <td>{{ formatDate(row.joiningDate) }}</td>
                         <td>{{ row.permanentDistrictTypeName || '—' }}</td>
                         <td style="white-space: pre-line; min-width: 200px">{{ row.allRemarks || '—' }}</td>
+                        @if (interPostingMode) {
                         <td>
                             @if (row.isSendingNotesheetStatus) {
                                 <p-tag [value]="getStatusLabel(row.isSendingNotesheetStatus)" severity="warn"></p-tag>
@@ -314,6 +315,7 @@
                                 <span class="report-dash">—</span>
                             }
                         </td>
+                        }
                         @if (interPostingMode) {
                             <td>
                                 <input
@@ -335,7 +337,7 @@
                 </ng-template>
                 <ng-template pTemplate="emptymessage">
                     <tr>
-                        <td [attr.colspan]="interPostingMode ? 14 : 13" class="text-center p-4">No records found.</td>
+                        <td [attr.colspan]="interPostingMode ? 15 : 13" class="text-center p-4">No records found.</td>
                     </tr>
                 </ng-template>
             </p-table>
