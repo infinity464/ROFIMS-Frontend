@@ -9,12 +9,14 @@ import { MessageModule } from 'primeng/message';
 import { MasterBasicSetupService } from '../shared/services/MasterBasicSetupService';
 import { CommonCode } from '../shared/models/common-code';
 import { RABUnitAORModel } from '../shared/models/rab-unit-aor';
+import { DUPLICATE_UPAZILA_NAMES } from './upazila-duplicate-names';
 
 type LngLat = [number, number];
 type Ring = LngLat[];
 type GeoFeature = {
     type: 'Feature';
-    properties: { n: string; bn?: string };
+    /** `d` = district English name; present on the 14 duplicate upazila name groups in GeoJSON. */
+    properties: { n: string; bn?: string; d?: string };
     geometry: { type: 'Polygon'; coordinates: Ring[] } | { type: 'MultiPolygon'; coordinates: Ring[][] };
 };
 type GeoJSON = { type: 'FeatureCollection'; features: GeoFeature[] };
@@ -88,11 +90,12 @@ export class RabUnitAorMap implements OnInit {
         forkJoin({
             geo: this.http.get<GeoJSON>('assets/data/bd-upazilas.geo.json'),
             upazilas: this.master.getAllByType('Upazila'),
+            districts: this.master.getAllByType('District'),
             units: this.master.getAllByType('RabUnit'),
             aors: this.master.getAllRABUnitAOR()
         }).subscribe({
-            next: ({ geo, upazilas, units, aors }) => {
-                this.buildAorIndex(upazilas, units, aors);
+            next: ({ geo, upazilas, districts, units, aors }) => {
+                this.buildAorIndex(upazilas, districts, units, aors);
                 this.renderMap(geo);
                 this.buildLegend(units, aors);
                 this.loading = false;
@@ -107,11 +110,39 @@ export class RabUnitAorMap implements OnInit {
         });
     }
 
-    private buildAorIndex(upazilas: CommonCode[], units: CommonCode[], aors: RABUnitAORModel[]): void {
-        this._upazilaNameToId.clear();
+    private buildAorIndex(
+        upazilas: CommonCode[],
+        districts: CommonCode[],
+        units: CommonCode[],
+        aors: RABUnitAORModel[]
+    ): void {
+        const districtNameById = new Map<number, string>();
+        for (const d of districts ?? []) {
+            districtNameById.set(d.codeId, d.codeValueEN ?? '');
+        }
+
+        const nameCounts = new Map<string, number>();
         for (const u of upazilas ?? []) {
             const key = this.normalizeName(u.codeValueEN ?? '');
-            if (key) this._upazilaNameToId.set(key, u.codeId);
+            if (key) nameCounts.set(key, (nameCounts.get(key) ?? 0) + 1);
+        }
+
+        this._upazilaNameToId.clear();
+        this._districtUpazilaToId.clear();
+        for (const u of upazilas ?? []) {
+            const upazilaKey = this.normalizeName(u.codeValueEN ?? '');
+            if (!upazilaKey) continue;
+
+            const districtName = districtNameById.get(u.parentCodeId ?? -1) ?? '';
+            const districtKey = this.normalizeName(districtName);
+            if (districtKey) {
+                this._districtUpazilaToId.set(`${districtKey}|${upazilaKey}`, u.codeId);
+            }
+
+            // Name-only lookup for upazilas whose name is unique in the backend.
+            if ((nameCounts.get(upazilaKey) ?? 0) === 1) {
+                this._upazilaNameToId.set(upazilaKey, u.codeId);
+            }
         }
 
         const unitById = new Map<number, { name: string; color: string }>();
@@ -150,18 +181,17 @@ export class RabUnitAorMap implements OnInit {
         const pad = 20;
         const projection = this.fitMercator(geo, w, h, pad);
 
-        const upazilaIdByName = this.upazilaIdMap();
-
         const rendered: RenderedFeature[] = [];
         const unmatched: string[] = [];
 
         geo.features.forEach((f) => {
             const name = (f.properties?.n ?? '').trim();
             const key = this.normalizeName(name);
-            const upazilaId = upazilaIdByName.get(key);
+            const district = (f.properties?.d ?? '').trim();
+            const upazilaId = this.resolveUpazilaId(key, district);
             const aor = upazilaId != null ? this.aorByUpazila.get(upazilaId) : undefined;
 
-            if (!upazilaId) unmatched.push(name);
+            if (!upazilaId) unmatched.push(district ? `${name} (${district})` : name);
 
             const fill = aor?.color ?? UNASSIGNED_FILL;
             rendered.push({
@@ -212,10 +242,21 @@ export class RabUnitAorMap implements OnInit {
             .sort((a, b) => a.sortOrder - b.sortOrder || a.name.localeCompare(b.name));
     }
 
+  private resolveUpazilaId(upazilaKey: string, districtEN: string): number | undefined {
+        if (DUPLICATE_UPAZILA_NAMES.has(upazilaKey)) {
+            const districtKey = this.normalizeName(districtEN);
+            if (!districtKey) return undefined;
+            return this._districtUpazilaToId.get(`${districtKey}|${upazilaKey}`);
+        }
+        return this._upazilaNameToId.get(upazilaKey);
+    }
+
     private upazilaIdMap(): Map<string, number> {
         return this._upazilaNameToId;
     }
     private _upazilaNameToId = new Map<string, number>();
+    /** Composite key: normalize(district)|normalize(upazila) → codeId */
+    private _districtUpazilaToId = new Map<string, number>();
 
     private fitMercator(geo: GeoJSON, w: number, h: number, pad: number) {
         const project = (lng: number, lat: number): [number, number] => {
