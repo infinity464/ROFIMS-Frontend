@@ -72,8 +72,33 @@ export class UnitTradeWiseManpowerComponent implements OnInit {
         return this.trades.map(t => ({ label: this.tradeLabel(t), value: t.tradeColId }));
     }
 
+    /** Trades shown by default on init; user may select or unselect others. */
+    private static readonly DEFAULT_VISIBLE_TRADE_NAMES = [
+        'RCO/RT',
+        'Clk',
+        'GD Clk',
+        'Dvr',
+        'GD Dvr',
+        'Med Asst',
+        'OP',
+        'Cook(U)',
+        'Cook(M)',
+        'Mess Waiter',
+        'NC(E)/Cleaner',
+        'MLSS',
+        'Mali'
+    ] as const;
+
+    private static readonly DEFAULT_VISIBLE_TRADE_KEYS = new Set(
+        UnitTradeWiseManpowerComponent.DEFAULT_VISIBLE_TRADE_NAMES.map(n => n.trim().toLowerCase())
+    );
+
     private resetTradeVisibility(): void {
-        this.selectedTradeColIds = this.trades.map(t => t.tradeColId);
+        this.selectedTradeColIds = this.trades
+            .filter(t => UnitTradeWiseManpowerComponent.DEFAULT_VISIBLE_TRADE_KEYS.has(
+                (t.tradeNameEN ?? '').trim().toLowerCase()
+            ))
+            .map(t => t.tradeColId);
     }
 
     /** Trade columns after applying the checkbox filter. */
