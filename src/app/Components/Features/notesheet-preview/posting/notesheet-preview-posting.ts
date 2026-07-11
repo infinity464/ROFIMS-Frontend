@@ -115,6 +115,12 @@ export class NotesheetPreviewPostingComponent extends NotesheetPreviewBase imple
 
     // ── Pagination ─────────────────────────────────────────────
     pageOffsets: number[] = [0];
+    /** Index-aligned with pageOffsets: true when the page opens inside the employee
+     *  table body, so the column header (<thead>) is repeated at the top of that page. */
+    pageNeedsTableHeader: boolean[] = [false];
+    /** Measured height (px) of the employee table's <thead>, reserved as header space
+     *  on continuation pages so repeated headers don't overlap the first row. */
+    tableHeaderHeightPx = 0;
     pageContentHeightPx = 0;
     titleBlockHeightPx = 0;
     private pageInsetPx = 0;
@@ -785,6 +791,7 @@ export class NotesheetPreviewPostingComponent extends NotesheetPreviewBase imple
         this.pageContentHeightPx = 0;
         this.lastMeasuredHeight = 0;
         this.pageOffsets = [0];
+        this.pageNeedsTableHeader = [false];
         this.cdr.detectChanges();
     }
 
@@ -836,7 +843,7 @@ export class NotesheetPreviewPostingComponent extends NotesheetPreviewBase imple
     private calculatePageOffsets(totalHeight: number): number[] {
         const container = this.contentMeasure?.nativeElement;
         const pageH = this.pageContentHeightPx;
-        if (!container || pageH <= 0) return [0];
+        if (!container || pageH <= 0) { this.pageNeedsTableHeader = [false]; return [0]; }
 
         const containerTop = container.getBoundingClientRect().top;
 
@@ -849,7 +856,7 @@ export class NotesheetPreviewPostingComponent extends NotesheetPreviewBase imple
 
         // First page has less space because title is above the viewport
         const firstPageH = pageH - this.titleBlockHeightPx;
-        if (totalHeight <= firstPageH + this.titleBlockHeightPx) return [this.titleBlockHeightPx];
+        if (totalHeight <= firstPageH + this.titleBlockHeightPx) { this.pageNeedsTableHeader = [false]; return [this.titleBlockHeightPx]; }
 
         // Keep-together blocks (should not be split across pages)
         const keepTogether = Array.from(
@@ -891,13 +898,31 @@ export class NotesheetPreviewPostingComponent extends NotesheetPreviewBase imple
             }
         }
 
+        // Employee-table region + header height: a page that opens inside the table
+        // body reserves space at its top for a repeated column header.
+        const tbodyEl = container.querySelector('.ns-posting-table tbody') as HTMLElement | null;
+        const theadEl = container.querySelector('.ns-posting-table thead') as HTMLElement | null;
+        let tableBodyTop = Infinity;
+        let tableBodyBottom = -Infinity;
+        this.tableHeaderHeightPx = 0;
+        if (tbodyEl && theadEl) {
+            const bodyRect = tbodyEl.getBoundingClientRect();
+            tableBodyTop = bodyRect.top - containerTop;
+            tableBodyBottom = bodyRect.bottom - containerTop;
+            this.tableHeaderHeightPx = theadEl.getBoundingClientRect().height;
+        }
+        const startsInTableBody = (pos: number): boolean => pos > tableBodyTop && pos < tableBodyBottom;
+
         // Page 1 starts after the title block (title is rendered outside viewport)
         const offsets: number[] = [this.titleBlockHeightPx];
+        const needsHeader: boolean[] = [false];   // page 0 carries the table's own header
         let cursor = this.titleBlockHeightPx;
         let isFirstPage = true;
 
         while (cursor < totalHeight) {
-            const currentPageH = isFirstPage ? firstPageH : pageH;
+            // Reserve header room when THIS page opens inside the table body.
+            const headerReserve = needsHeader[needsHeader.length - 1] ? this.tableHeaderHeightPx : 0;
+            const currentPageH = (isFirstPage ? firstPageH : pageH) - headerReserve;
             if (cursor + currentPageH >= totalHeight) break; // remaining content fits
 
             let nextBreak = cursor + currentPageH;
@@ -935,10 +960,12 @@ export class NotesheetPreviewPostingComponent extends NotesheetPreviewBase imple
             cursor = nextBreak;
             if (cursor < totalHeight) {
                 offsets.push(cursor);
+                needsHeader.push(startsInTableBody(cursor));
             }
             isFirstPage = false;
         }
 
+        this.pageNeedsTableHeader = needsHeader;
         return offsets;
     }
 
@@ -946,10 +973,27 @@ export class NotesheetPreviewPostingComponent extends NotesheetPreviewBase imple
     getPageCoverHeight(pageIndex: number): number {
         if (pageIndex >= this.pageOffsets.length - 1) return 0;
         const usedHeight = this.pageOffsets[pageIndex + 1] - this.pageOffsets[pageIndex];
-        const availHeight = pageIndex === 0
+        // Header pages reserve space at the top for the repeated column header, so
+        // the usable area (and thus the bottom cover) shrinks by that much.
+        const headerReserve = this.pageNeedsTableHeader[pageIndex] ? this.tableHeaderHeightPx : 0;
+        const availHeight = (pageIndex === 0
             ? this.pageContentHeightPx - this.titleBlockHeightPx
-            : this.pageContentHeightPx;
+            : this.pageContentHeightPx) - headerReserve;
         return Math.max(0, availHeight - usedHeight + this.pageInsetPx);
+    }
+
+    /** Number of leaf columns in the employee table, matching the visible colgroup.
+     *  Used for the PDF header-gap spacer row's colspan (a wrong value squishes the
+     *  table because table-layout:fixed would add phantom columns). */
+    get postingColumnCount(): number {
+        if (this.isInterPosting()) {
+            // Ser, Service ID, Rank, Name, Own/Spouse District, Joining Date, Year,
+            // Month, Day, Previous Workplace, Transfer Station (+ Remarks).
+            return 12 + (this.showRemarks ? 1 : 0);
+        }
+        // Ser, Service ID, Rank, Name, Own/Spouse District, Previous Workplace,
+        // Transfer Unit (+ Trade + Remarks).
+        return 8 + (this.showTradeColumn ? 1 : 0) + (this.showRemarks ? 1 : 0);
     }
 
     // ── Toggle edit mode ─────────────────────────────────────
@@ -1537,7 +1581,9 @@ export class NotesheetPreviewPostingComponent extends NotesheetPreviewBase imple
 ${styles}
 
 /* @page insets mirror .a4-paper's padding so the text column width matches the
-   web view exactly (215.9 - 2*10 = 195.9mm). */
+   web view exactly (215.9 - 2*10 = 195.9mm). The top margin (uniform across all
+   pages) gives the gap above the content — incl. the repeated table header on
+   continuation pages. */
 @page { size: ${pageWidth} ${pageHeight}; margin: ${padTop}mm ${padX}mm ${padBottom}mm ${padX}mm; }
 
 /* No body background — it would cover the position:fixed frame. */
@@ -1629,7 +1675,36 @@ html, body { margin: 0; padding: 0; background: transparent; }
 .ns-posting-table tr,
 .ns-approver-section,
 .ns-org-header,
-.ns-title-block { page-break-inside: avoid; }
+.ns-title-block { page-break-inside: avoid; break-inside: avoid; }
+
+/* ── Multi-page employee table ──────────────────────────────────────────────
+   When the table spans 2+ pages: repeat the column header (<thead>) on every
+   page, keep each row whole, and close the table with borders at each page
+   boundary. The component's scoped ".ns-posting-table { overflow-x: hidden }"
+   makes the table an unbreakable/clipped block in print and suppresses <thead>
+   repetition — force overflow:visible so Chromium fragments it natively.
+   Bordered cells + unbroken rows mean the columns "close" at the bottom of each
+   page; the @page top margin (${padTop}mm) provides the small gap before the
+   repeated header on continuation pages. */
+.pdf-flow .ns-posting-table { overflow: visible !important; }
+.pdf-flow .ns-posting-table table { border-collapse: collapse; }
+.pdf-flow .ns-posting-table thead { display: table-header-group !important; }
+.pdf-flow .ns-posting-table tfoot { display: table-footer-group; }
+.pdf-flow .ns-posting-table th,
+.pdf-flow .ns-posting-table td { border: 1px solid #000 !important; }
+/* Normal block flow (not flex) around the table so Chromium fragments it across
+   pages and repeats <thead> reliably — a table inside a flex column may not. */
+.pdf-flow .ns-doc-box,
+.pdf-flow .ns-main-col { display: block !important; }
+/* Show the header gap row (hidden on screen) as a borderless white band, so the
+   repeated header has a gap below the page frame on every continuation page. */
+.pdf-flow .ns-posting-table thead tr.ns-head-gap { display: table-row !important; }
+.pdf-flow .ns-posting-table thead tr.ns-head-gap td {
+    border: 0 !important;
+    padding: 0 !important;
+    height: 6mm;
+    background: #fff;
+}
 </style>
 </head>
 <body>

@@ -189,6 +189,54 @@
     z-index: 1;
 }
 
+/* When the employee table continues onto the next page, close it with a bottom
+   border on this page. The line sits at the top of the white cover (i.e. right
+   under the last visible row) and is inset to match the table's column edges
+   (.ns-posting-table padding: left 20px, right 16px). */
+.page-bottom-cover--close-table::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 20px;
+    right: 16px;
+    border-top: 1px solid #000;
+}
+
+/* Spacer row that only renders in the PDF/Print export (see buildJsReportPdf).
+   Hidden everywhere on screen and in Word so those surfaces are unchanged. */
+.ns-head-gap {
+    display: none;
+}
+
+/* Repeated employee-table column header on continuation pages. Sits just below
+   the top inset band, over the clipped content. Same .ns-doc-box > .ns-main-col
+   > .ns-posting-table nesting as the real table so columns line up; vertical
+   padding is zeroed so its height matches the reserved header space (the thead
+   height) and the first data row lands flush beneath it. */
+.page-repeat-header {
+    position: absolute;
+    top: 4mm;
+    left: 0;
+    right: 0;
+    z-index: 1;
+    background: #fff;
+
+    .ns-doc-box,
+    .ns-main-col {
+        padding-top: 0 !important;
+        padding-bottom: 0 !important;
+        margin-top: 0 !important;
+        margin-bottom: 0 !important;
+    }
+    .ns-posting-table {
+        padding-top: 0 !important;
+        padding-bottom: 0 !important;
+    }
+    table {
+        margin: 0 !important;
+    }
+}
+
 .page-measure {
     position: absolute;
     left: -9999px;

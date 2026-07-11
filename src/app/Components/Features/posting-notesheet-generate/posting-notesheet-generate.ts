@@ -16,6 +16,8 @@ import { RichEditorComponent } from '@/Components/Common/rich-editor/rich-editor
 import { TextareaModule } from 'primeng/textarea';
 import { CheckboxModule } from 'primeng/checkbox';
 import { DialogModule } from 'primeng/dialog';
+import { TableModule } from 'primeng/table';
+import { PanelModule } from 'primeng/panel';
 import { ToastModule } from 'primeng/toast';
 import { environment } from '@/Core/Environments/environment';
 import { HttpClient } from '@angular/common/http';
@@ -25,6 +27,7 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { FileReferencesFormComponent, FileRowData } from '@/Components/Common/file-references-form/file-references-form';
 import { EmpService } from '@/services/emp-service';
 import { PostingService } from '@/services/posting.service';
+import { DraftPostingDetailDto, DraftPostingMasterDto } from '@/models/posting.model';
 import { IdentityUserMappingService } from '@/services/identity-user-mapping.service';
 import { NoteSheetEditCacheService } from '@/services/note-sheet-edit-cache.service';
 import { NoteSheetType, NoteSheetOperationType, NoteSheetOperationTypeOptions, ApprovalStatus, CodeType } from '@/models/enums';
@@ -51,6 +54,8 @@ import { NotesheetApproverSelectComponent } from '@/Components/Common/notesheet-
         ToastModule,
         CheckboxModule,
         DialogModule,
+        TableModule,
+        PanelModule,
         FileReferencesFormComponent,
         NotesheetApproverSelectComponent
     ],
@@ -79,6 +84,14 @@ export class PostingNotesheetGenerateComponent implements OnInit {
     ];
     draftPostingOptions: { label: string; value: number }[] = [];
     loadingDraftList = false;
+    /** Employees of the currently selected draft — shown in a collapsible preview under the form. */
+    draftEmployees: DraftPostingDetailDto[] = [];
+    loadingDraftEmployees = false;
+    /** Header info for the selected draft's employee preview. */
+    selectedDraftNo = '';
+    selectedDraftDate = '';
+    /** Full draft masters keyed by id, for resolving draft no/date without an extra call. */
+    private draftMastersById = new Map<number, DraftPostingMasterDto>();
     isPreparedByMapped = false;
     preparedByOptions: { label: string; value: number }[] = [];
     fileRows: FileRowData[] = [];
@@ -167,6 +180,11 @@ export class PostingNotesheetGenerateComponent implements OnInit {
             }
         });
 
+        // When a draft is selected/cleared: load (or clear) its employee preview.
+        this.form.get('draftPostingMasterId')?.valueChanges.subscribe((id: number | null) => {
+            this.loadDraftEmployees(id);
+        });
+
         // When textType changes: rebuild config dropdown options + swap prefix in edit mode
         this.form.get('textType')?.valueChanges.subscribe((newType: string) => {
             this.buildNoteSheetConfigOptions();
@@ -179,6 +197,14 @@ export class PostingNotesheetGenerateComponent implements OnInit {
 
     get isBangla(): boolean {
         return this.form?.get('textType')?.value === 'bn';
+    }
+
+    /** Header for the draft employees preview panel: "Employees — <no> (<date>)  ·  N member(s)". */
+    get draftEmployeesPanelHeader(): string {
+        const parts: string[] = ['Employees'];
+        if (this.selectedDraftNo) parts.push(`— ${this.selectedDraftNo}`);
+        if (this.selectedDraftDate) parts.push(`(${this.selectedDraftDate})`);
+        return `${parts.join(' ')}  ·  ${this.draftEmployees.length} member(s)`;
     }
 
     /** Load active predefined subjects for New Posting note-sheets. */
@@ -227,19 +253,59 @@ export class PostingNotesheetGenerateComponent implements OnInit {
         this.postingService.getDraftNewPostingMasters().subscribe({
             next: (list) => {
                 const currentMasterId = this.form.get('draftPostingMasterId')?.value;
-                this.draftPostingOptions = (list ?? [])
+                const arr = list ?? [];
+                this.draftMastersById = new Map(arr.map((m) => [m.id, m]));
+                this.draftPostingOptions = arr
                     .filter((m) => !m.hasNoteSheet || (this.editMode && m.id === currentMasterId))
                     .map((m) => ({
                         label: `${m.draftPostingNo} (${m.draftPostingDate})`,
                         value: m.id
                     }));
                 this.loadingDraftList = false;
+                // Masters may arrive after the form value was set (edit mode) — refresh the preview.
+                if (currentMasterId) this.loadDraftEmployees(currentMasterId);
             },
             error: (err: any) => {
                 this.loadingDraftList = false;
                 this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.message || 'Failed to load Draft Posting list.' });
             }
         });
+    }
+
+    /** Load the selected draft's employees for the collapsible preview (or clear it when deselected). */
+    private loadDraftEmployees(masterId: number | null): void {
+        if (masterId == null) {
+            this.draftEmployees = [];
+            this.selectedDraftNo = '';
+            this.selectedDraftDate = '';
+            return;
+        }
+        const master = this.draftMastersById.get(masterId);
+        this.selectedDraftNo = master?.draftPostingNo ?? '';
+        this.selectedDraftDate = master?.draftPostingDate ?? '';
+        this.loadingDraftEmployees = true;
+        this.draftEmployees = [];
+        this.postingService.getDraftNewPostingById(masterId).subscribe({
+            next: (data) => {
+                this.draftEmployees = data?.details ?? [];
+                // Prefer the response's own no/date (reliable even before the masters list loads).
+                if (data?.draftPostingNo) this.selectedDraftNo = data.draftPostingNo;
+                if (data?.draftPostingDate) this.selectedDraftDate = data.draftPostingDate;
+                this.loadingDraftEmployees = false;
+            },
+            error: () => {
+                this.draftEmployees = [];
+                this.loadingDraftEmployees = false;
+            }
+        });
+    }
+
+    /** Member Type display name (reuses the map built for the note-sheet-number config), current language. */
+    memberTypeName(id: number | null | undefined): string {
+        if (id == null) return '-';
+        const mt = this.memberTypeMap.get(id);
+        if (!mt) return '-';
+        return (this.isBangla ? mt.bn : mt.en) || mt.en || '-';
     }
 
     private loadPreparedByOptions(): void {
