@@ -2134,7 +2134,10 @@ html, body { margin: 0; padding: 0; background: transparent; }
                         this.getTransferUnitShort(emp),
                         this.getCombinedRemarks(emp)
                     ];
-                    return new TableRow({ children: iVisIdx.map(oi => dataCellFn(allV[oi], iW[oi], oi === 3 ? AlignmentType.LEFT : AlignmentType.CENTER)) });
+                    // cantSplit: keep each employee row whole — Word must not break a
+                    // multi-line row across pages (that leaves a stray fragment after
+                    // the repeated header on the next page).
+                    return new TableRow({ cantSplit: true, children: iVisIdx.map(oi => dataCellFn(allV[oi], iW[oi], oi === 3 ? AlignmentType.LEFT : AlignmentType.CENTER)) });
                 });
 
                 const iTotalW = iVisIdx.reduce((a, oi) => a + iW[oi], 0);
@@ -2184,7 +2187,8 @@ html, body { margin: 0; padding: 0; background: transparent; }
                 const headerRows = [new TableRow({ tableHeader: true, children: cols.map((c, vi) => hdrCell(c, vi)) })];
                 const dataRows = this.postingEmployees.map((emp, i) => {
                     const allVals = buildAllCellValues(emp, i);
-                    return new TableRow({ children: visibleIndices.map((oi, vi) => dataCellFn(allVals[oi], colWidths[vi], oi === 4 ? AlignmentType.LEFT : AlignmentType.CENTER)) });
+                    // cantSplit: keep each employee row whole across page breaks.
+                    return new TableRow({ cantSplit: true, children: visibleIndices.map((oi, vi) => dataCellFn(allVals[oi], colWidths[vi], oi === 4 ? AlignmentType.LEFT : AlignmentType.CENTER)) });
                 });
                 const tableRows = [...headerRows, ...dataRows];
                 mainChildren.push(new Paragraph({ spacing: { before: 200 }, children: [] }));
