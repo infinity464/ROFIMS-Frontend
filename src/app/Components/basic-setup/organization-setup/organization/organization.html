@@ -77,7 +77,7 @@
         </p-iconfield>
     </div>
 
-    <p-table [value]="filteredOrganizations" [paginator]="true" [first]="first" [rows]="rows"
+    <p-table [value]="filteredOrganizations" [paginator]="true" [(first)]="first" [rows]="rows"
         [totalRecords]="totalRecords" [rowsPerPageOptions]="[10, 25, 50]">
         <ng-template pTemplate="header">
             <tr>
