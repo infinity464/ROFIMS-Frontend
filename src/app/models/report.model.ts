@@ -700,10 +700,19 @@ export interface DynamicReportSort {
   direction: 'asc' | 'desc';
 }
 
+/** Which seniority leads the nominal-roll ordering. Mirrors the server's values. */
+export type NominalRollSeniority = 'RankSeniority' | 'OrganizationSeniority';
+
 export interface DynamicReportRequest {
   columns: string[];
   criteria: DynamicReportCriterion[];
   sort?: DynamicReportSort[];
+  /**
+   * Nominal Roll Seniority — which seniority leads the employee-base ordering.
+   * "RankSeniority" = Rank SortOrder first, then Mother Org; "OrganizationSeniority"
+   * = the reverse. Omitted/null keeps Organization Seniority (the server default).
+   */
+  nominalRollSeniority?: NominalRollSeniority | null;
   /** "Servings" / "ExMember" / "Supernumerary" / "Pending" / "" (All). */
   postingStatusFilter?: string | null;
   /** "Permanent" / "Present" / "" (All). Matches base + Spouse* server-side. */

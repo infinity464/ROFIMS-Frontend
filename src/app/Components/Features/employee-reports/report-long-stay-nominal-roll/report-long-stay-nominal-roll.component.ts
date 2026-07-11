@@ -19,6 +19,7 @@ import type {
     ReportAccessibleScope,
     DynamicReportCriterion,
     DynamicReportRow,
+    NominalRollSeniority,
 } from '@/models/report.model';
 import type { CommonCodeModel } from '@/models/common-code-model';
 import type { MotherOrganizationModel } from '@/models/mother-org-model';
@@ -61,6 +62,16 @@ export class ReportLongStayNominalRollComponent implements OnInit {
 
     minDuration = 2;
     unit: 'Years' | 'Months' = 'Years';
+
+    /**
+     * Nominal Roll Seniority — which seniority leads the row order. Organization
+     * Seniority is the server's default (and the canonical order), so it leads here.
+     */
+    seniorityOptions: { label: string; value: NominalRollSeniority }[] = [
+        { label: 'Organization Seniority', value: 'OrganizationSeniority' },
+        { label: 'Rank Seniority',         value: 'RankSeniority' },
+    ];
+    selectedSeniority: NominalRollSeniority = 'OrganizationSeniority';
     unitOptions: { label: string; value: 'Years' | 'Months' }[] = [
         { label: 'Years', value: 'Years' },
         { label: 'Months', value: 'Months' },
@@ -277,6 +288,12 @@ export class ReportLongStayNominalRollComponent implements OnInit {
     /** Picker selection changed — reload so newly-added columns' data is fetched
         (the backend only returns the columns requested at query time). */
     onColumnsChange(): void { if (this.searched) this.loadPage(); }
+
+    /** Seniority drives the server-side ORDER BY, so re-fetch from page 1. */
+    onSeniorityChange(): void {
+        this.first = 0;
+        if (this.searched) this.loadPage();
+    }
     removeColumn(key: string): void { this.selectedColumnKeys = this.selectedColumnKeys.filter(k => k !== key); }
 
     constructor(
@@ -527,6 +544,7 @@ export class ReportLongStayNominalRollComponent implements OnInit {
     clearFilters(): void {
         this.minDuration = 2;
         this.unit = 'Years';
+        this.selectedSeniority = 'OrganizationSeniority';
         this.selectedOrgIds = [];
         this.selectedRankId = null;
         this.rankOptions = [];
@@ -637,6 +655,7 @@ export class ReportLongStayNominalRollComponent implements OnInit {
         this.reportService.runDynamicLongStayReport({
             columns,
             criteria,
+            nominalRollSeniority: this.selectedSeniority,
             postingStatusFilter: 'Servings',
             minStayValue: this.minDuration,
             minStayUnit: this.unit,

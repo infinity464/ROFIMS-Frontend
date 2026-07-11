@@ -21,6 +21,7 @@ import type {
     ReportAccessibleScope,
     DynamicReportCriterion,
     DynamicReportRow,
+    NominalRollSeniority,
 } from '@/models/report.model';
 import { unitScopeLine, memberTypeScopeLine } from '../report-scope.helper';
 import { OrgTreeMultiSelectComponent } from '@/shared/components/org-tree-multi-select/org-tree-multi-select.component';
@@ -265,6 +266,22 @@ export class ReportUnitDurationNominalRollComponent implements OnInit {
         (the backend only returns the columns requested at query time). */
     onColumnsChange(): void { if (this.searched) this.loadPage(); }
 
+    /**
+     * Nominal Roll Seniority — which seniority leads the row order. Organization
+     * Seniority is the server's default (and the canonical order), so it leads here.
+     */
+    seniorityOptions: { label: string; value: NominalRollSeniority }[] = [
+        { label: 'Organization Seniority', value: 'OrganizationSeniority' },
+        { label: 'Rank Seniority',         value: 'RankSeniority' },
+    ];
+    selectedSeniority: NominalRollSeniority = 'OrganizationSeniority';
+
+    /** Seniority drives the server-side ORDER BY, so re-fetch from page 1. */
+    onSeniorityChange(): void {
+        this.first = 0;
+        if (this.searched) this.loadPage();
+    }
+
     constructor(
         private _router: Router,
         private _userMenuService: UserMenuService,
@@ -508,6 +525,7 @@ export class ReportUnitDurationNominalRollComponent implements OnInit {
     }
     private buildFilterLines(): string[] { return this.criteriaItems.map(it => `${it.label}: ${it.value}`); }
     clearFilters(): void {
+        this.selectedSeniority = 'OrganizationSeniority';
         this.selectedOrgNodeIds = [];
         this.selectedOrgIds = [];
         this.selectedRankIds = [];
@@ -622,6 +640,7 @@ export class ReportUnitDurationNominalRollComponent implements OnInit {
         this.reportService.runDynamicUnitDurationReport({
             columns,
             criteria,
+            nominalRollSeniority: this.selectedSeniority,
             // Leave null so the backend applies the access-based rule:
             // full-access users see ex + serving members who served the unit
             // during the period; org-scope-restricted users are forced to

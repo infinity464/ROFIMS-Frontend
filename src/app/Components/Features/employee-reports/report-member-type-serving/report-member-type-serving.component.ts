@@ -20,6 +20,7 @@ import type {
     ReportAccessibleScope,
     DynamicReportCriterion,
     DynamicReportRow,
+    NominalRollSeniority,
 } from '@/models/report.model';
 import type { MotherOrganizationModel } from '@/models/mother-org-model';
 import type { CommonCodeModel } from '@/models/common-code-model';
@@ -109,6 +110,16 @@ export class ReportMemberTypeServingComponent implements OnInit {
     /** Joining-in-RAB date range (maps to registry `joiningDate`). */
     joiningInRabFrom: Date | null = null;
     joiningInRabTo: Date | null = null;
+
+    /**
+     * Nominal Roll Seniority — which seniority leads the row order. Organization
+     * Seniority is the server's default (and every other report's), so it leads here.
+     */
+    seniorityOptions: { label: string; value: NominalRollSeniority }[] = [
+        { label: 'Organization Seniority', value: 'OrganizationSeniority' },
+        { label: 'Rank Seniority',         value: 'RankSeniority' },
+    ];
+    selectedSeniority: NominalRollSeniority = 'OrganizationSeniority';
 
     /** Member Status — Servings (default) or Ex-Member only. */
     statusOptions: { label: string; labelBn: string; value: string }[] = [
@@ -680,6 +691,12 @@ export class ReportMemberTypeServingComponent implements OnInit {
         if (this.searched) this.load();
     }
 
+    /** Seniority drives the server-side ORDER BY, so re-fetch from page 1. */
+    onSeniorityChange(): void {
+        this.first = 0;
+        if (this.searched) this.load();
+    }
+
     /** Column selection changed — re-fetch so newly added columns are populated. */
     onColumnsChange(): void {
         if (this.searched) this.load();
@@ -722,6 +739,7 @@ export class ReportMemberTypeServingComponent implements OnInit {
         this.allRanksForOrg = [];
         this.joiningInRabFrom = null;
         this.joiningInRabTo = null;
+        this.selectedSeniority = 'OrganizationSeniority';
         if (!this.statusLocked) this.selectedPostingStatus = 'Servings';
         this.first = 0;
     }
@@ -823,6 +841,7 @@ export class ReportMemberTypeServingComponent implements OnInit {
         this.reportService.runDynamicEmployeeBaseReport({
             columns: this.backendColumnKeys(),
             criteria,
+            nominalRollSeniority: this.selectedSeniority,
             postingStatusFilter: this.selectedPostingStatus || 'Servings',
             pagination: { page_no, row_per_page: this.rows },
         }).subscribe({

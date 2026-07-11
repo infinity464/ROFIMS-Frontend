@@ -66,6 +66,12 @@
                     <label>{{ lang === 'en' ? 'Duration To' : 'সময়কাল পর্যন্ত' }}</label>
                     <p-datepicker [(ngModel)]="toDate" dateFormat="dd-mm-yy" [placeholder]="lang === 'en' ? 'Select' : 'নির্বাচন করুন'" [showIcon]="true" appendTo="body"></p-datepicker>
                 </div>
+                <div class="report-filter-field">
+                    <label>Nominal Roll Seniority</label>
+                    <p-select [options]="seniorityOptions" [(ngModel)]="selectedSeniority" (ngModelChange)="onSeniorityChange()"
+                        optionLabel="label" optionValue="value"
+                        placeholder="Select Seniority" styleClass="w-full" appendTo="body"></p-select>
+                </div>
             </div>
 
             @if (searched) {
