@@ -5,9 +5,20 @@
  */
 @use './report-theme-common.scss';
 
-// Remarks cells may carry multiple Additional Remarks joined with newlines
-// ("• item" per line). Preserve those line breaks on screen.
+// Remarks cells may carry several remarks joined with newlines, bulleted
+// ("• item" per line) once there is more than one. Preserve those line breaks.
 .rab-td-rmks,
 .rab-td-remarks {
     white-space: pre-line;
+    text-align: left;
+}
+
+// One block per remark, every line flush left — a wrapped line starts under the
+// bullet, not under the text. (No hanging indent: these cells are narrow enough
+// that a hang eats width and reads as a ragged left edge.)
+.rab-rmk-line {
+    white-space: normal;
+    text-align: left;
+    padding-left: 0;
+    text-indent: 0;
 }
