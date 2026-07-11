@@ -154,6 +154,19 @@
                         <small class="report-filter-hint">Locked to Presently Serving — your access scope is restricted.</small>
                     }
                 </div>
+                <div class="report-filter-field">
+                    <label>Nominal Roll Seniority</label>
+                    <p-select
+                        [options]="seniorityOptions"
+                        [(ngModel)]="selectedSeniority"
+                        (ngModelChange)="onSeniorityChange()"
+                        optionLabel="label"
+                        optionValue="value"
+                        placeholder="Select Seniority"
+                        styleClass="w-full"
+                        appendTo="body">
+                    </p-select>
+                </div>
             </div>
 
             <!-- Column picker — always visible so columns can be chosen before searching. -->
