@@ -70,6 +70,7 @@
                 <span style="display:inline-flex; align-items:center; gap:0.3rem;"><p-checkbox [(ngModel)]="showTradeColumn" [binary]="true" inputId="chkTradeCol"></p-checkbox><label for="chkTradeCol" style="cursor:pointer;">ট্রেড</label></span>
                 <span style="display:inline-flex; align-items:center; gap:0.3rem;"><p-checkbox [(ngModel)]="showTradeRemarks" [binary]="true" inputId="chkTradeR" [disabled]="!showTradeColumn"></p-checkbox><label for="chkTradeR" style="cursor:pointer;">ট্রেড বিবরণ</label></span>
             </ng-container>
+            <span *ngIf="isInterPosting()" style="display:inline-flex; align-items:center; gap:0.3rem;"><p-checkbox [(ngModel)]="showTenure" [binary]="true" inputId="chkTenure"></p-checkbox><label for="chkTenure" style="cursor:pointer;">র‌্যাবে অবস্থানকাল</label></span>
             <span style="display:inline-flex; align-items:center; gap:0.3rem;"><p-checkbox [(ngModel)]="showOwnDistrictDetail" [binary]="true" inputId="chkOwnDist"></p-checkbox><label for="chkOwnDist" style="cursor:pointer;">নিজ জেলা বিবরণ</label></span>
             <span style="display:inline-flex; align-items:center; gap:0.3rem;"><p-checkbox [(ngModel)]="showSpouseDistrictDetail" [binary]="true" inputId="chkSpDist"></p-checkbox><label for="chkSpDist" style="cursor:pointer;">স্পাউস জেলা বিবরণ</label></span>
             <span style="display:inline-flex; align-items:center; gap:0.3rem;"><p-checkbox [(ngModel)]="showPrevWorkplaceDetail" [binary]="true" inputId="chkPrevWp"></p-checkbox><label for="chkPrevWp" style="cursor:pointer;">পূর্ববতী কর্মস্থল বিবরণ</label></span>
@@ -376,15 +377,15 @@
             <col style="width:30px">   <!-- ক্রমিক -->
             <col style="width:80px">   <!-- ব্যক্তিগত নং -->
             <col>                       <!-- পদবি (auto — absorbs balance so table stays 100%) -->
-            <col style="width:82px">   <!-- নাম (বড় করা) -->
+            <col [style.width]="showTenure ? '82px' : '130px'">   <!-- নাম (tenure লুকালে চওড়া) -->
             <col style="width:48px">   <!-- নিজ জেলা -->
             <col style="width:56px">   <!-- স্বামী/স্ত্রীর জেলা -->
-            <col style="width:64px">   <!-- যোগদানের তারিখ (ছোট করা) -->
-            <col style="width:32px">   <!-- বছর -->
-            <col style="width:24px">   <!-- মাস -->
-            <col style="width:24px">   <!-- দিন -->
-            <col style="width:85px">   <!-- পূর্ববতী কর্মস্থল -->
-            <col style="width:48px">   <!-- বদলিকৃত কর্মস্থল (ছোট করা) -->
+            <col *ngIf="showTenure" style="width:64px">   <!-- যোগদানের তারিখ (ছোট করা) -->
+            <col *ngIf="showTenure" style="width:32px">   <!-- বছর -->
+            <col *ngIf="showTenure" style="width:24px">   <!-- মাস -->
+            <col *ngIf="showTenure" style="width:24px">   <!-- দিন -->
+            <col [style.width]="showTenure ? '85px' : '125px'">   <!-- পূর্ববতী কর্মস্থল (tenure লুকালে চওড়া) -->
+            <col [style.width]="showTenure ? '48px' : '90px'">   <!-- বদলিকৃত কর্মস্থল (tenure লুকালে চওড়া) -->
             <col *ngIf="showRemarks" style="width:76px"> <!-- মন্তব্য (ছোট করা) -->
         </colgroup>
         <colgroup *ngIf="!isInterPosting()">
@@ -408,22 +409,22 @@
             <tr class="ns-head-gap"><td [attr.colspan]="postingColumnCount"></td></tr>
             <ng-container *ngIf="isInterPosting()">
                 <tr>
-                    <th rowspan="3" style="width:28px">{{ isEnglish() ? 'Ser' : 'ক্রমিক' }}</th>
-                    <th rowspan="3">{{ isEnglish() ? 'Service ID' : 'ব্যক্তিগত নং' }}</th>
-                    <th rowspan="3">{{ isEnglish() ? 'Rank' : 'পদবি' }}</th>
-                    <th rowspan="3">{{ isEnglish() ? 'Name' : 'নাম' }}</th>
-                    <th rowspan="3" style="width:45px; max-width:45px; word-break:break-word">{{ isEnglish() ? 'Own District (Responsible Area)' : 'নিজ জেলা (দায়িত্বপূর্ণ এলাকা)' }}</th>
-                    <th rowspan="3">{{ isEnglish() ? "Husband/Wife's District (Responsible Area)" : 'স্বামী/স্ত্রীর জেলা (দায়িত্বপূর্ণ এলাকা)' }}</th>
-                    <th colspan="4">{{ isEnglish() ? 'Tenure in RAB' : 'র‌্যাবে অবস্থানকাল' }}</th>
-                    <th rowspan="3" style="width:100px">{{ isEnglish() ? 'Previous Workplace' : 'পূর্ববতী কর্মস্থল' }}</th>
-                    <th rowspan="3">{{ isEnglish() ? 'Transfer Station' : 'বদলিকৃত কর্মস্থল' }}</th>
-                    <th *ngIf="showRemarks" rowspan="3" style="min-width:90px">{{ isEnglish() ? 'Remarks' : 'মন্তব্য' }}</th>
+                    <th [attr.rowspan]="showTenure ? 3 : 1" style="width:28px">{{ isEnglish() ? 'Ser' : 'ক্রমিক' }}</th>
+                    <th [attr.rowspan]="showTenure ? 3 : 1">{{ isEnglish() ? 'Service ID' : 'ব্যক্তিগত নং' }}</th>
+                    <th [attr.rowspan]="showTenure ? 3 : 1">{{ isEnglish() ? 'Rank' : 'পদবি' }}</th>
+                    <th [attr.rowspan]="showTenure ? 3 : 1">{{ isEnglish() ? 'Name' : 'নাম' }}</th>
+                    <th [attr.rowspan]="showTenure ? 3 : 1" style="width:45px; max-width:45px; word-break:break-word">{{ isEnglish() ? 'Own District (Responsible Area)' : 'নিজ জেলা (দায়িত্বপূর্ণ এলাকা)' }}</th>
+                    <th [attr.rowspan]="showTenure ? 3 : 1">{{ isEnglish() ? "Husband/Wife's District (Responsible Area)" : 'স্বামী/স্ত্রীর জেলা (দায়িত্বপূর্ণ এলাকা)' }}</th>
+                    <th *ngIf="showTenure" colspan="4">{{ isEnglish() ? 'Tenure in RAB' : 'র‌্যাবে অবস্থানকাল' }}</th>
+                    <th [attr.rowspan]="showTenure ? 3 : 1" style="width:100px">{{ isEnglish() ? 'Previous Workplace' : 'পূর্ববতী কর্মস্থল' }}</th>
+                    <th [attr.rowspan]="showTenure ? 3 : 1">{{ isEnglish() ? 'Transfer Station' : 'বদলিকৃত কর্মস্থল' }}</th>
+                    <th *ngIf="showRemarks" [attr.rowspan]="showTenure ? 3 : 1" style="min-width:90px">{{ isEnglish() ? 'Remarks' : 'মন্তব্য' }}</th>
                 </tr>
-                <tr>
+                <tr *ngIf="showTenure">
                     <th rowspan="2" style="width:82px">{{ isEnglish() ? 'Joining Date' : 'যোগদানের তারিখ' }}</th>
                     <th colspan="3">{{ isEnglish() ? 'Duration' : 'অবস্থানকাল' }}</th>
                 </tr>
-                <tr>
+                <tr *ngIf="showTenure">
                     <th style="width:22px">{{ isEnglish() ? 'Year' : 'বছর' }}</th>
                     <th style="width:22px">{{ isEnglish() ? 'Month' : 'মাস' }}</th>
                     <th style="width:22px">{{ isEnglish() ? 'Day' : 'দিন' }}</th>
@@ -498,10 +499,10 @@
                                     <td class="ns-name-cell">{{ isEnglish() ? (emp.fullNameEN || '') : (emp.fullNameBN || emp.fullNameEN || '') }}<span *ngIf="showGallantryAwards && getGallantryAwards(emp)">, {{ getGallantryAwards(emp) }}</span><span *ngIf="showProfQualification && getProfQualification(emp)">, {{ getProfQualification(emp) }}</span><span *ngIf="showCorps && getCorps(emp)">, {{ getCorps(emp) }}</span></td>
                                     <td style="white-space: pre-line;">{{ getOwnDistrict(emp) }}</td>
                                     <td style="white-space: pre-line;">{{ getSpouseDistrict(emp) }}</td>
-                                    <td>{{ isEnglish() ? formatJoiningDate(emp.joiningDateInRAB) : toBnDigits(formatJoiningDate(emp.joiningDateInRAB)) }}</td>
-                                    <td>{{ tenure(emp.joiningDateInRAB, 'y') }}</td>
-                                    <td>{{ tenure(emp.joiningDateInRAB, 'm') }}</td>
-                                    <td>{{ tenure(emp.joiningDateInRAB, 'd') }}</td>
+                                    <td *ngIf="showTenure">{{ isEnglish() ? formatJoiningDate(emp.joiningDateInRAB) : toBnDigits(formatJoiningDate(emp.joiningDateInRAB)) }}</td>
+                                    <td *ngIf="showTenure">{{ tenure(emp.joiningDateInRAB, 'y') }}</td>
+                                    <td *ngIf="showTenure">{{ tenure(emp.joiningDateInRAB, 'm') }}</td>
+                                    <td *ngIf="showTenure">{{ tenure(emp.joiningDateInRAB, 'd') }}</td>
                                     <td style="white-space: pre-line;">{{ getInterPrevWorkplace(emp) }}</td>
                                     <td>{{ getTransferUnitShort(emp) }}</td>
                                     <td *ngIf="showRemarks">{{ getCombinedRemarks(emp) }}</td>

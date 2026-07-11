@@ -147,6 +147,9 @@ export class NotesheetPreviewPostingComponent extends NotesheetPreviewBase imple
     showSpouseDistrictDetail = true;
     showPrevWorkplaceDetail = true;
     showRemarks = true;
+    /** Inter-posting only: show/hide the "র‌্যাবে অবস্থানকাল" (Tenure in RAB) column
+     *  group — Joining Date + Duration (Year/Month/Day). Header collapses to one row when off. */
+    showTenure = true;
     showSignatureImage = true;
     showCorps = true;
     showProfQualification = true;
@@ -987,9 +990,10 @@ export class NotesheetPreviewPostingComponent extends NotesheetPreviewBase imple
      *  table because table-layout:fixed would add phantom columns). */
     get postingColumnCount(): number {
         if (this.isInterPosting()) {
-            // Ser, Service ID, Rank, Name, Own/Spouse District, Joining Date, Year,
-            // Month, Day, Previous Workplace, Transfer Station (+ Remarks).
-            return 12 + (this.showRemarks ? 1 : 0);
+            // Ser, Service ID, Rank, Name, Own/Spouse District, Previous Workplace,
+            // Transfer Station (8) + Tenure group (Joining Date, Year, Month, Day = 4)
+            // + Remarks.
+            return (this.showTenure ? 12 : 8) + (this.showRemarks ? 1 : 0);
         }
         // Ser, Service ID, Rank, Name, Own/Spouse District, Previous Workplace,
         // Transfer Unit (+ Trade + Remarks).
@@ -2048,11 +2052,21 @@ html, body { margin: 0; padding: 0; background: transparent; }
                 // Indices: 0=ser,1=svcId,2=rank,3=name,4=ownDist,5=spouseDist,
                 //          6=joinDate,7=yr,8=mo,9=day,10=prevWp,11=trUnit,12=remarks
                 //          ser svcId rank name own  spo  jdt  yr  mo  day prev unit rem
-                const iBase = [300, 1150, 700, 1000, 900, 900, 800, 400, 400, 400, 700, 900, 800];
+                // When tenure is hidden, give the freed width to Name / Previous
+                // Workplace / Transfer Station (idx 3 / 10 / 11).
+                const iBase = this.showTenure
+                    ? [300, 1150, 700, 1000, 900, 900, 800, 400, 400, 400, 700, 900, 800]
+                    : [300, 1150, 700, 1600, 900, 900, 800, 400, 400, 400, 1300, 1400, 800];
                 const iBnHdr = ['ক্রমিক','ব্যক্তিগত নং','পদবি','নাম','নিজ জেলা (দায়িত্বপূর্ণ এলাকা)','স্বামী/স্ত্রীর জেলা (দায়িত্বপূর্ণ এলাকা)','','','','','পূর্ববতী কর্মস্থল','বদলিকৃত কর্মস্থল','মন্তব্য'];
                 const iEnHdr = ['Ser','Service ID','Rank','Name','Own District (Responsible Area)',"Husband/Wife's District (Responsible Area)",'','','','','Previous Workplace','Transfer Station','Remarks'];
-                const iVisIdx = iBase.map((_, i) => i).filter(i => i !== 12 || this.showRemarks);
-                const iBaseTotal = iBase.reduce((a, b) => a + b, 0);
+                const iVisIdx = iBase.map((_, i) => i).filter(i => {
+                    if (i === 12) return this.showRemarks;          // Remarks
+                    if (i >= 6 && i <= 9) return this.showTenure;   // Tenure group (join date + Y/M/D)
+                    return true;
+                });
+                // Scale to the VISIBLE columns so the table fills the page width even
+                // when the tenure (or remarks) columns are hidden.
+                const iBaseTotal = iVisIdx.reduce((a, oi) => a + iBase[oi], 0);
                 const iW = iBase.map(w => Math.round(w * pageUsable / iBaseTotal));
 
                 const iMkHdrCell = (text: string, w: number, extra?: any) => new TableCell({
@@ -2060,41 +2074,48 @@ html, body { margin: 0; padding: 0; background: transparent; }
                 });
                 const iContCell = (w: number) => new TableCell({ children: [new Paragraph({})], verticalMerge: VerticalMergeType.CONTINUE, borders: cellBorders, width: { size: w, type: WidthType.DXA }, margins: cellMargins });
 
-                // Row 1: outer cols span 3 rows, tenure block colspan=4
-                const r1: TableCell[] = [];
-                for (const oi of iVisIdx) {
-                    if (oi >= 7 && oi <= 9) continue; // covered by colspan=4 from oi=6
-                    if (oi === 6) {
-                        r1.push(iMkHdrCell(bn ? 'র‌্যাবে অবস্থানকাল' : 'Tenure in RAB', iW[6]+iW[7]+iW[8]+iW[9], { columnSpan: 4 }));
-                    } else {
-                        r1.push(iMkHdrCell(bn ? iBnHdr[oi] : iEnHdr[oi], iW[oi], { verticalMerge: VerticalMergeType.RESTART }));
+                let iHdrRows: TableRow[];
+                if (this.showTenure) {
+                    // Row 1: outer cols span 3 rows, tenure block colspan=4
+                    const r1: TableCell[] = [];
+                    for (const oi of iVisIdx) {
+                        if (oi >= 7 && oi <= 9) continue; // covered by colspan=4 from oi=6
+                        if (oi === 6) {
+                            r1.push(iMkHdrCell(bn ? 'র‌্যাবে অবস্থানকাল' : 'Tenure in RAB', iW[6]+iW[7]+iW[8]+iW[9], { columnSpan: 4 }));
+                        } else {
+                            r1.push(iMkHdrCell(bn ? iBnHdr[oi] : iEnHdr[oi], iW[oi], { verticalMerge: VerticalMergeType.RESTART }));
+                        }
                     }
-                }
 
-                // Row 2: joining date spans 2 rows, duration colspan=3
-                const r2: TableCell[] = [];
-                for (const oi of iVisIdx) {
-                    if (oi < 6 || oi >= 10) { r2.push(iContCell(iW[oi])); }
-                    else if (oi === 6) { r2.push(iMkHdrCell(bn ? 'যোগদানের তারিখ' : 'Joining Date', iW[6], { verticalMerge: VerticalMergeType.RESTART })); }
-                    else if (oi === 7) { r2.push(iMkHdrCell(bn ? 'অবস্থানকাল' : 'Duration', iW[7]+iW[8]+iW[9], { columnSpan: 3 })); }
-                    // oi 8,9: skipped (covered by colspan=3)
-                }
+                    // Row 2: joining date spans 2 rows, duration colspan=3
+                    const r2: TableCell[] = [];
+                    for (const oi of iVisIdx) {
+                        if (oi < 6 || oi >= 10) { r2.push(iContCell(iW[oi])); }
+                        else if (oi === 6) { r2.push(iMkHdrCell(bn ? 'যোগদানের তারিখ' : 'Joining Date', iW[6], { verticalMerge: VerticalMergeType.RESTART })); }
+                        else if (oi === 7) { r2.push(iMkHdrCell(bn ? 'অবস্থানকাল' : 'Duration', iW[7]+iW[8]+iW[9], { columnSpan: 3 })); }
+                        // oi 8,9: skipped (covered by colspan=3)
+                    }
 
-                // Row 3: joining date continues, বছর/মাস/দিন cells
-                const r3: TableCell[] = [];
-                const subBn = ['বছর','মাস','দিন'];
-                const subEn = ['Year','Month','Day'];
-                for (const oi of iVisIdx) {
-                    if (oi < 6 || oi >= 10) { r3.push(iContCell(iW[oi])); }
-                    else if (oi === 6) { r3.push(iContCell(iW[6])); }
-                    else { r3.push(iMkHdrCell(bn ? subBn[oi-7] : subEn[oi-7], iW[oi])); }
-                }
+                    // Row 3: joining date continues, বছর/মাস/দিন cells
+                    const r3: TableCell[] = [];
+                    const subBn = ['বছর','মাস','দিন'];
+                    const subEn = ['Year','Month','Day'];
+                    for (const oi of iVisIdx) {
+                        if (oi < 6 || oi >= 10) { r3.push(iContCell(iW[oi])); }
+                        else if (oi === 6) { r3.push(iContCell(iW[6])); }
+                        else { r3.push(iMkHdrCell(bn ? subBn[oi-7] : subEn[oi-7], iW[oi])); }
+                    }
 
-                const iHdrRows = [
-                    new TableRow({ tableHeader: true, children: r1 }),
-                    new TableRow({ tableHeader: true, children: r2 }),
-                    new TableRow({ tableHeader: true, children: r3 }),
-                ];
+                    iHdrRows = [
+                        new TableRow({ tableHeader: true, children: r1 }),
+                        new TableRow({ tableHeader: true, children: r2 }),
+                        new TableRow({ tableHeader: true, children: r3 }),
+                    ];
+                } else {
+                    // Tenure hidden → single-row header (indices 6-9 already dropped from iVisIdx)
+                    const r1 = iVisIdx.map(oi => iMkHdrCell(bn ? iBnHdr[oi] : iEnHdr[oi], iW[oi]));
+                    iHdrRows = [new TableRow({ tableHeader: true, children: r1 })];
+                }
 
                 const iDataRows = this.postingEmployees.map((emp, i) => {
                     const t = this.calcTenure(emp.joiningDateInRAB);
