@@ -148,6 +148,12 @@ export class ReportMemberTypeServingComponent implements OnInit {
     canUpdate = true;
     canDelete = true;
 
+    // Catalog order doubles as the default column order: `selectedColumnKeys` is
+    // seeded by filtering this list on `defaultVisible`. The first twelve entries
+    // are the Nominal Roll default table, in the order the spec prints them —
+    // Ser, Service Id, Rank, Corps, Trade, Name, Mother Org, RAB Joining Date,
+    // Present Unit, Unit Joining Date, Appointment, Remarks. Keep them contiguous
+    // and in that order; everything below is opt-in via the column picker.
     columnCatalog: { key: string; labelEN: string; labelBN: string; hint: string; defaultVisible: boolean }[] = [
         { key: 'ser',          labelEN: 'Ser',           labelBN: 'ক্রঃ',          hint: 'Serial',                defaultVisible: true  },
         { key: 'serviceId',    labelEN: 'Service ID',    labelBN: 'সার্ভিস আইডি',    hint: 'Plain',                 defaultVisible: true  },
@@ -155,28 +161,33 @@ export class ReportMemberTypeServingComponent implements OnInit {
         { key: 'corps',        labelEN: 'Corps',         labelBN: 'কোর',           hint: 'Plain',                 defaultVisible: true  },
         { key: 'trade',        labelEN: 'Trade',         labelBN: 'ট্রেড',         hint: 'Plain',                 defaultVisible: true  },
         { key: 'name', labelEN: 'Name', labelBN: 'নাম', hint: 'Name', defaultVisible: true },
-        { key: 'rabUnit',      labelEN: 'Battalion',     labelBN: 'ব্যাটালিয়ন',     hint: 'Plain',                 defaultVisible: true  },
+        { key: 'motherOrganization',labelEN: 'Mother Org', labelBN: 'মাতৃ সংস্থা',  hint: 'Plain',                 defaultVisible: true  },
+        // Joining in RAB (EmployeeInfo.JoiningDate) — the same field the
+        // "Joining in RAB" date-range filter above targets.
+        { key: 'joiningDate',  labelEN: 'RAB Joining Date', labelBN: 'র‍্যাবে যোগদান তারিখ', hint: 'JoiningDate',  defaultVisible: true  },
+        { key: 'rabUnit',      labelEN: 'Present Unit',  labelBN: 'বর্তমান ইউনিট',   hint: 'Plain',                 defaultVisible: true  },
+        // RABServiceFrom is the ServiceFrom of the member's currently-active
+        // PreviousRABServiceInfo row — the same row Present Unit resolves from —
+        // so it is the date they joined that unit, not their RAB joining date.
+        { key: 'rabServiceFrom',    labelEN: 'Unit Joining Date', labelBN: 'ইউনিটে যোগদান তারিখ', hint: 'Plain', defaultVisible: true  },
+        { key: 'appointment',       labelEN: 'Appointment',      labelBN: 'নিয়োগ',             hint: 'Plain', defaultVisible: true  },
+        { key: 'allRemarks',   labelEN: 'Remarks',       labelBN: 'মন্তব্য',       hint: 'Remarks',               defaultVisible: true  },
         { key: 'nameExtras', labelEN: 'Award + Professional Qualification', labelBN: 'পদক + পেশাগত যোগ্যতা', hint: 'NameSuffix', defaultVisible: false },
         { key: 'callNoRankName', labelEN: 'No Rank Name', labelBN: 'নং র‍্যাঙ্ক নাম', hint: 'CallNoRankName', defaultVisible: false },
-        { key: 'nameEnglish',  labelEN: 'Name',          labelBN: 'নাম',           hint: 'Plain',                 defaultVisible: true  },
+        { key: 'nameEnglish',  labelEN: 'Name',          labelBN: 'নাম',           hint: 'Plain',                 defaultVisible: false },
         { key: 'personnel',    labelEN: 'RAB Personnel', labelBN: 'র‍্যাব সদস্য',   hint: 'RabPersonnelComposite', defaultVisible: false },
         { key: 'rabId',        labelEN: 'RAB ID',        labelBN: 'র‍্যাব আইডি',    hint: 'RabId',                 defaultVisible: false },
-        { key: 'memberType',   labelEN: 'Member Type',   labelBN: 'সদস্য ধরন',      hint: 'Plain',                 defaultVisible: true  },
+        { key: 'memberType',   labelEN: 'Member Type',   labelBN: 'সদস্য ধরন',      hint: 'Plain',                 defaultVisible: false },
         { key: 'rabUnitHierarchy', labelEN: 'RAB Unit', labelBN: 'র‍্যাব ইউনিট (পূর্ণ)', hint: 'Plain', defaultVisible: false },
-        { key: 'rabWing',      labelEN: 'RAB Wing',      labelBN: 'র‍্যাব উইং',     hint: 'Plain',                 defaultVisible: true  },
+        { key: 'rabWing',      labelEN: 'RAB Wing',      labelBN: 'র‍্যাব উইং',     hint: 'Plain',                 defaultVisible: false },
         { key: 'rabRank',      labelEN: 'RAB Rank',      labelBN: 'র‍্যাব র‍্যাঙ্ক', hint: 'Plain',                 defaultVisible: false },
-        { key: 'motherOrganization',labelEN: 'Mother Org', labelBN: 'মাতৃ সংস্থা',  hint: 'Plain',                 defaultVisible: false },
-        { key: 'joiningDate',  labelEN: 'Joining Date',  labelBN: 'যোগদান তারিখ',   hint: 'JoiningDate',          defaultVisible: true  },
-        { key: 'allRemarks',   labelEN: 'Remarks',       labelBN: 'মন্তব্য',       hint: 'Remarks',               defaultVisible: true  },
         { key: 'nameBangla',        labelEN: 'Name (BN)',        labelBN: 'নাম (বাংলা)',        hint: 'Plain', defaultVisible: false },
         { key: 'nid',               labelEN: 'NID',              labelBN: 'এনআইডি',            hint: 'Plain', defaultVisible: false },
         { key: 'prefix',            labelEN: 'Prefix',           labelBN: 'প্রিফিক্স',          hint: 'Plain', defaultVisible: false },
-        { key: 'appointment',       labelEN: 'Appointment',      labelBN: 'নিয়োগ',             hint: 'Plain', defaultVisible: false },
         { key: 'tradeRemarks',      labelEN: 'Trade Remarks',    labelBN: 'ট্রেড মন্তব্য',       hint: 'Plain', defaultVisible: false },
         { key: 'gender',            labelEN: 'Gender',           labelBN: 'লিঙ্গ',              hint: 'Plain', defaultVisible: false },
         { key: 'motherUnit',        labelEN: 'Last Unit',        labelBN: 'শেষ ইউনিট',          hint: 'Plain', defaultVisible: false },
         { key: 'dateOfCommission',  labelEN: 'Commission Date',  labelBN: 'কমিশন তারিখ',         hint: 'Plain', defaultVisible: false },
-        { key: 'rabServiceFrom',    labelEN: 'RAB Joining Date', labelBN: 'র‍্যাবে যোগদান তারিখ',hint: 'Plain', defaultVisible: false },
         { key: 'rabServiceTo',      labelEN: 'RAB End Date',     labelBN: 'র‍্যাব শেষ তারিখ',   hint: 'Plain', defaultVisible: false },
         { key: 'officerType',       labelEN: 'Officer Type',     labelBN: 'অফিসার ধরণ',        hint: 'Plain', defaultVisible: false },
         { key: 'division',          labelEN: 'Division',         labelBN: 'বিভাগ',              hint: 'Plain', defaultVisible: false },
@@ -226,6 +237,18 @@ export class ReportMemberTypeServingComponent implements OnInit {
         email:               { en: 'email' },
     };
 
+    /**
+     * Plain columns whose value is a date. They come off the wire as raw ISO
+     * strings, so they need the same dd-mm-yyyy (and Bangla-numeral) rendering
+     * the dedicated date hints get — otherwise the cell leaks "2020-01-15T00:00:00".
+     */
+    private static readonly dateColumnKeys = new Set([
+        'dateOfCommission',
+        'rabServiceFrom',
+        'rabServiceTo',
+        'dob',
+    ]);
+
     plainCellValue(row: MemberAppointmentReportRow, key: string): string {
         // Service ID is shown with the member's prefix in front (e.g. "K. 4045260").
         if (key === 'serviceId') {
@@ -239,6 +262,7 @@ export class ReportMemberTypeServingComponent implements OnInit {
         if (!map) return '—';
         const en = (row as any)[map.en] as string | null | undefined;
         const bn = map.bn ? (row as any)[map.bn] as string | null | undefined : undefined;
+        if (ReportMemberTypeServingComponent.dateColumnKeys.has(key)) return this.formatDate(en);
         const value = this.codeValue(en, bn);
         // RAB Unit hierarchy is a comma-joined chain (Battalion, Wing, Branch,
         // Sub-Branch, Section, Sub-Section). Show only the first two levels
@@ -258,17 +282,14 @@ export class ReportMemberTypeServingComponent implements OnInit {
 
     selectedColumnKeys: string[] = this.columnCatalog.filter(c => c.defaultVisible).map(c => c.key);
 
-    /** Battalion vs last-posting battalion header — mirrors course report behaviour. */
-    private get rabUnitColumnLabels(): { labelEN: string; labelBN: string } {
-        if (this.selectedPostingStatus === 'ExMember') {
-            return { labelEN: 'Last Posting Battalion', labelBN: 'শেষ পোস্টিং ব্যাটালিয়ন' };
-        }
-        return { labelEN: 'Battalion', labelBN: 'ব্যাটালিয়ন' };
-    }
-
+    /**
+     * For ex-members the RAB Unit column holds their final posting rather than a
+     * present one, so the "Present Unit" header would be a lie — retitle it.
+     * Mirrors course report behaviour.
+     */
     private decorateColumn(col: typeof this.columnCatalog[number]): typeof this.columnCatalog[number] {
-        if (col.key === 'rabUnit') {
-            return { ...col, ...this.rabUnitColumnLabels };
+        if (col.key === 'rabUnit' && this.selectedPostingStatus === 'ExMember') {
+            return { ...col, labelEN: 'Last Posting Battalion', labelBN: 'শেষ পোস্টিং ব্যাটালিয়ন' };
         }
         return col;
     }
@@ -348,6 +369,16 @@ export class ReportMemberTypeServingComponent implements OnInit {
     remarksCellValue(row: MemberAppointmentReportRow): string {
         const r = row as any;
         return ((this.lang === 'bn' ? r.allRemarksBN : r.allRemarks) as string) || '';
+    }
+
+    /**
+     * The remarks cell split into one entry per remark. Rendered as a block each
+     * (rather than newlines inside one block) so each can carry a hanging indent —
+     * CSS only indents the first line of a block, so "\n" alone cannot hang-indent.
+     */
+    remarksLines(row: MemberAppointmentReportRow): string[] {
+        const txt = this.remarksCellValue(row);
+        return txt ? txt.split('\n').filter((l) => l.trim() !== '') : [];
     }
 
     draggingColumnKey: string | null = null;
@@ -933,9 +964,10 @@ export class ReportMemberTypeServingComponent implements OnInit {
                     case 'RabId': return new TableCell({ ...cellOpts, children: [new Paragraph({ children: [run((row as any).rabid ? this.displayNum((row as any).rabid) : '—', { fontKey: mono, chSp: isBn ? 0 : 4 })] })] });
                     case 'JoiningDate': return new TableCell({ ...cellOpts, children: [new Paragraph({ children: [run(this.formatDate(row.joiningDate), { fontKey: mono, chSp: isBn ? 0 : 4 })] })] });
                     case 'Remarks': {
-                        const rmkTxt = this.remarksCellValue(row);
-                        const rmkLines = rmkTxt ? rmkTxt.split('\n') : [''];
-                        return new TableCell({ ...cellOpts, children: rmkLines.map(l => new Paragraph({ children: [run(l, { color: C.gray })] })) });
+                        // One paragraph per remark, all flush left — a wrapped line starts
+                        // under the bullet, not under the text.
+                        const rmkLines = this.remarksLines(row);
+                        return new TableCell({ ...cellOpts, children: (rmkLines.length ? rmkLines : ['']).map(l => new Paragraph({ children: [run(l, { color: C.gray })] })) });
                     }
                     case 'Plain':
                     default: return new TableCell({ ...cellOpts, children: [new Paragraph({ children: [run(this.plainCellValue(row, col.key))] })] });
@@ -951,7 +983,7 @@ export class ReportMemberTypeServingComponent implements OnInit {
 
         const doc = new Document({ sections: [{ properties: { page: { size: { orientation: PageOrientation.LANDSCAPE }, margin: { top: 680, bottom: 1247, left: 680, right: 680 } } }, footers: { default: footer }, children: [...headerPars, criteriaTable, new Paragraph({ spacing: { before: 0, after: 200 }, children: [new TextRun({ text: '', font: sans, size: 4 })] }), dataTable] }] });
         const blob = await Packer.toBlob(doc);
-        saveAs(blob, `member-type-serving-report_${this.lang}.docx`);
+        saveAs(blob, `nominal-roll-report_${this.lang}.docx`);
     }
 
     private exportRabExcel(): void {
@@ -1010,7 +1042,7 @@ export class ReportMemberTypeServingComponent implements OnInit {
 
         const wb = XLSX.utils.book_new();
         XLSX.utils.book_append_sheet(wb, ws, isBn ? 'প্রতিবেদন' : 'Report');
-        XLSX.writeFile(wb, `member-type-serving-report_${this.lang}.xlsx`);
+        XLSX.writeFile(wb, `nominal-roll-report_${this.lang}.xlsx`);
     }
 
     private openRabPrintWindow(): void {
@@ -1048,7 +1080,8 @@ export class ReportMemberTypeServingComponent implements OnInit {
                     return `<td class="td-personnel"><div class="personnel-name">${esc(this.nameColumnValue(row))}</div></td>`;
                 case 'RabId': return `<td class="td-date">${esc((row as any).rabid ? this.displayNum((row as any).rabid) : '—')}</td>`;
                 case 'JoiningDate': return `<td class="td-date">${esc(this.formatDate(row.joiningDate))}</td>`;
-                case 'Remarks': return `<td class="td-rmks">${esc(this.remarksCellValue(row)).replace(/\n/g, '<br>')}</td>`;
+                case 'Remarks':
+                    return `<td class="td-rmks">${this.remarksLines(row).map((l) => `<div class="rmk-line">${esc(l)}</div>`).join('')}</td>`;
                 case 'Plain':
                 default: return `<td>${esc(this.plainCellValue(row, col.key))}</td>`;
             }
@@ -1107,6 +1140,10 @@ export class ReportMemberTypeServingComponent implements OnInit {
     .personnel-name { font-family: ${sans}; font-weight: 600; font-size: 9.5pt; color: #0b0b0b; line-height: 1.2; }
     .personnel-meta { margin-top: 0.7mm; font-family: ${mono}; font-size: 7pt; letter-spacing: 0.08em; text-transform: uppercase; color: #6b6b6b; ${isBn ? 'letter-spacing:0;text-transform:none;font-family:' + sans + ';' : ''} }
     .td-date { font-family: ${mono}; letter-spacing: 0.02em; white-space: nowrap; }
+    /* One block per remark, every line flush left — a wrapped line starts under
+       the bullet, not under the text. */
+    .td-rmks { text-align: left; }
+    .rmk-line { text-align: left; padding-left: 0; text-indent: 0; }
 </style></head><body><div class="paper">
     <header class="paper-head">
         <div class="overline">${esc(this.rabOverlineText)}</div>
