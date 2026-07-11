@@ -190,6 +190,16 @@ export class NotesheetApproverSelectComponent implements OnInit, OnChanges {
                         const serviceId = pick(mapping, 'serviceId', 'ServiceId');
                         const rank = pick(mapping, 'rank', 'Rank');
                         const appointment = pick(mapping, 'appointment', 'Appointment');
+                        // Exclude users whose employee appointment is missing or a "not applicable"
+                        // placeholder — they must not appear as selectable approvers.
+                        // The appointment string is CommonCode.CodeValueEN (CodeType
+                        // 'AppointmentCategory') resolved by vw_EmployeeSearchInfo: null when the
+                        // employee's Appointment is unset/unmatched, or a literal "N/A"/"NA"/
+                        // "Not Applicable" row. Mirror the backend's canonical N/A detection
+                        // (e.g. UnitTradeWiseManpowerQuery.IsNaName), case-insensitively.
+                        if (this.isMissingAppointment(appointment)) {
+                            continue;
+                        }
                         // Rank Name (Appointment) | SVC | RAB
                         const name = empName || u.userName;
                         let head = [rank, name].filter(Boolean).join(' ');
@@ -213,6 +223,16 @@ export class NotesheetApproverSelectComponent implements OnInit, OnChanges {
                 this.loadOptionsFromEmployees();
             }
         });
+    }
+
+    /**
+     * True when an employee's appointment is unusable for approver selection:
+     * null/empty, or a "not applicable" placeholder ("N/A" / "NA" / "Not Applicable").
+     * Mirrors the backend's canonical N/A detection (CommonCode CodeValueEN), case-insensitively.
+     */
+    private isMissingAppointment(appointment: string | null): boolean {
+        const norm = (appointment ?? '').trim().toLowerCase();
+        return !norm || norm === 'n/a' || norm === 'na' || norm === 'not applicable';
     }
 
     /** Apply approver config filtering to the given options */

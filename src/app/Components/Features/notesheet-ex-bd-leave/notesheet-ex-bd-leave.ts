@@ -119,7 +119,7 @@ export class NotesheetExBdLeaveComponent implements OnInit {
     preparedByOptions: { label: string; value: number }[] = [];
     familyMemberOptions: { label: string; labelBn?: string; value: number; fmid: number; employeeId: number; relationLabel?: string; nameRaw?: string; nameBnRaw?: string; relationLabelBn?: string }[] = [];
     relationshipOptions: { label: string; labelBn: string | null; value: number }[] = [];
-    subjectTypeOptions: { label: string; value: number }[] = [];
+    subjectTypeOptions: { label: string; labelBn: string | null; value: number }[] = [];
     showSubjectDialog = false;
     newSubject: Partial<CommonCode> = { codeValueEN: '', codeValueBN: '' };
     isSavingSubject = false;
@@ -233,6 +233,15 @@ export class NotesheetExBdLeaveComponent implements OnInit {
     /** RAB employee dropdown uses the same approval employee options */
     get rabEmployeeOptionsDisplay(): { label: string; value: number }[] {
         return this.preparedByOptions;
+    }
+    /** Subject options localized to the selected Text Type: Bangla label when bn (falls back to
+     *  English if a subject has no Bangla value). In view mode the note sheet's own language wins. */
+    get subjectTypeOptionsDisplay(): { label: string; value: number }[] {
+        const isBn = this.viewMode ? !this.isViewEnglish() : this.isBangla;
+        return this.subjectTypeOptions.map((o) => ({
+            label: isBn ? (o.labelBn || o.label) : o.label,
+            value: o.value
+        }));
     }
 
     /** Initiator/final approver are required only for manual note sheets. System-generate note
@@ -658,6 +667,7 @@ export class NotesheetExBdLeaveComponent implements OnInit {
             next: (list) => {
                 this.subjectTypeOptions = (Array.isArray(list) ? list : []).map((c: any) => ({
                     label: c.codeValueEN || c.displayCodeValueEN || String(c.codeId),
+                    labelBn: c.codeValueBN ?? null,
                     value: c.codeId
                 }));
             },
@@ -693,6 +703,7 @@ export class NotesheetExBdLeaveComponent implements OnInit {
                 this.commonCodeService.getAllActiveCommonCodesType('SubjectType').subscribe((list: any) => {
                     this.subjectTypeOptions = (Array.isArray(list) ? list : []).map((c: any) => ({
                         label: c.codeValueEN || c.displayCodeValueEN || String(c.codeId),
+                        labelBn: c.codeValueBN ?? null,
                         value: c.codeId
                     }));
                     // Auto-select the newly added entry (highest codeId)
@@ -1192,8 +1203,11 @@ export class NotesheetExBdLeaveComponent implements OnInit {
             })))
             : null;
 
-        // Resolve subject label from SubjectType dropdown
-        const subjectLabel = this.subjectTypeOptions.find(o => o.value === d.exBdLeaveSubjectId)?.label ?? '';
+        // Resolve subject label from SubjectType dropdown in the note sheet's language
+        const subjOpt = this.subjectTypeOptions.find(o => o.value === d.exBdLeaveSubjectId);
+        const subjectLabel = subjOpt
+            ? (d.textType === 'bn' ? (subjOpt.labelBn || subjOpt.label) : subjOpt.label)
+            : '';
 
         const payload: Record<string, unknown> = {
             noteSheetId: 0,
@@ -1416,7 +1430,9 @@ export class NotesheetExBdLeaveComponent implements OnInit {
     getSubjectLabel(id: number | null | undefined): string {
         if (id == null) return '';
         const o = this.subjectTypeOptions.find((opt) => opt.value === id);
-        return o ? o.label : '';
+        if (!o) return '';
+        const isBn = this.viewMode ? !this.isViewEnglish() : this.isBangla;
+        return isBn ? (o.labelBn || o.label) : o.label;
     }
 
     get isBangla(): boolean {
