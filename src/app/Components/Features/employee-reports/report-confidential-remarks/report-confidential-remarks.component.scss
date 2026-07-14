@@ -5,6 +5,33 @@
     min-width: 160px;
 }
 
+/* ── Page + title chrome — same block every other employee report carries
+   (report-member-type-serving, report-deceased, report-rank-wise, …). Without
+   it the title falls back to report-theme-common's inset padding and loses the
+   divider rule, so this card reads differently from its siblings. ────────── */
+.employee-reports-page {
+    background: transparent;
+    color: var(--text-color, inherit);
+    font-family: inherit;
+    margin: 0 auto;
+    padding: 0 0 1.5rem 0;
+}
+.report-filter-card-title {
+    padding: 0 0 0.75rem 0;
+    margin: 0 0 1.25rem 0;
+    border-bottom: 1px solid var(--surface-border, rgba(255, 255, 255, 0.08));
+}
+.report-page-title {
+    font-size: 1.75rem;
+    font-weight: 700;
+    color: var(--text-color, #fff);
+    margin: 0;
+    letter-spacing: 0;
+}
+:host-context(.app-dark) .report-page-title {
+    color: var(--text-color);
+}
+
 /* Force datepicker to fill the same width as p-select dropdowns */
 :host ::ng-deep .report-fields-row .report-filter-field p-datepicker,
 :host ::ng-deep .report-fields-row .report-filter-field .p-datepicker {

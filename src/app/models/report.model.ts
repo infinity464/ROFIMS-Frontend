@@ -709,8 +709,13 @@ export interface DynamicReportRequest {
   sort?: DynamicReportSort[];
   /**
    * Nominal Roll Seniority — which seniority leads the employee-base ordering.
-   * "RankSeniority" = Rank SortOrder first, then Mother Org; "OrganizationSeniority"
-   * = the reverse. Omitted/null keeps Organization Seniority (the server default).
+   * "RankSeniority" leads on the RAB (equivalent) rank ladder — the EquivalentName
+   * SortOrder set on basic-setup/equivalent-name, reached through the
+   * basic-setup/rank-equivalent map — then Mother Org, then the mother-org rank.
+   * It is deliberately NOT the mother-org rank ladder: each org curates its own,
+   * so those are only comparable within one org. "OrganizationSeniority" leads on
+   * Mother Org, then the mother-org rank (right scale inside a single org).
+   * Omitted/null keeps Organization Seniority (the server default).
    */
   nominalRollSeniority?: NominalRollSeniority | null;
   /** "Servings" / "ExMember" / "Supernumerary" / "Pending" / "" (All). */
