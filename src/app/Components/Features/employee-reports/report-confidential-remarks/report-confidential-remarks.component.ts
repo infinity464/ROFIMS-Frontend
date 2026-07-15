@@ -455,7 +455,9 @@ export class ReportConfidentialRemarksComponent implements OnInit, OnDestroy {
         return this.L[this.lang]['report.title.confidentialRemarks'];
     }
     get rabSubtitleText(): string {
-        return (this.lang === 'bn' ? this.statusLabelBn : this.statusLabel) || '';
+        // Intentionally blank — the member-status label is no longer shown under
+        // the report title (it still appears in the Selection Criteria strip).
+        return '';
     }
     get rabCriteriaTitle(): string { return this.lang === 'bn' ? 'নির্বাচন মানদণ্ড' : 'SELECTION CRITERIA'; }
     get rabGeneratedLabel(): string { return this.lang === 'bn' ? 'তারিখ' : 'GENERATED'; }

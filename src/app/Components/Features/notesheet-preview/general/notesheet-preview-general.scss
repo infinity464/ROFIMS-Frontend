@@ -1,0 +1,32 @@
+/* ── Document font ─────────────────────────────────────
+   SolaimanLipi (bundled, see styles.scss) replaces Nirmala UI as the Bangla
+   face for this preview. Times New Roman stays first so Latin text and digits
+   are unchanged — Bangla codepoints have no Times glyphs and fall through to
+   SolaimanLipi.
+
+   The `:host` prefix raises specificity above the shared notesheet-preview.scss
+   rule (`.a4-paper` alone), so this override wins no matter the stylesheet
+   order. .page-measure carries the SAME stack as the visible .a4-paper on
+   purpose: it is the hidden div the page-break math measures and the source
+   snapshot for the JsReport PDF — a different Bangla face there would compute
+   breaks against text of a different height than what is shown and printed. */
+:host .a4-paper,
+:host .page-measure {
+    font-family: 'Times New Roman', 'SolaimanLipi', Times, serif;
+
+    /* Beats the shared preview's !important rule that pins rich-text (Quill)
+       content to Nirmala UI. */
+    ::ng-deep .ns-para-text,
+    ::ng-deep .ns-para-text *,
+    ::ng-deep .ns-ref-content,
+    ::ng-deep .ns-ref-content *,
+    ::ng-deep .ns-note,
+    ::ng-deep .ns-note * {
+        font-family: 'Times New Roman', 'SolaimanLipi', Times, serif !important;
+    }
+
+    /* Restore the icon font the blanket rule above would otherwise clobber. */
+    ::ng-deep .ns-ref-file-btn .pi {
+        font-family: 'primeicons' !important;
+    }
+}

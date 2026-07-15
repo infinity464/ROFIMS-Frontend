@@ -1,4 +1,4 @@
-import { Component, HostListener, OnInit } from '@angular/core';
+import { Component, HostListener, OnDestroy, OnInit } from '@angular/core';
 import { Router } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -42,7 +42,7 @@ import {
 } from 'docx';
 import { saveAs } from 'file-saver';
 import * as XLSX from 'xlsx';
-import { forkJoin } from 'rxjs';
+import { debounceTime, forkJoin, Subject, Subscription } from 'rxjs';
 
 /**
  * Supernumerary Report — lists unplaced personnel
@@ -74,7 +74,7 @@ import { forkJoin } from 'rxjs';
     templateUrl: './report-supernumerary.component.html',
     styleUrls: ['../report-theme.scss', '../report-card-mtr.scss', './report-supernumerary.component.scss'],
 })
-export class ReportSupernumeraryComponent implements OnInit {
+export class ReportSupernumeraryComponent implements OnInit, OnDestroy {
     L = REPORT_LABELS;
     lang: ReportLang = 'en';
 
@@ -94,6 +94,15 @@ export class ReportSupernumeraryComponent implements OnInit {
     selectedTradeIds: number[] = [];
     /** Raw org-scoped MotherOrgRank rows, re-filtered client-side by Member Type. */
     private allRanksForOrg: CommonCodeModel[] = [];
+
+    /** Toolbar quick search — matches Service ID or RAB ID (server-side). */
+    idSearchText = '';
+    /** Debounces toolbar typing so we don't query on every keystroke. */
+    private readonly idSearchInput$ = new Subject<string>();
+    private idSearchSub: Subscription | null = null;
+    /** Last term actually sent to the server — suppresses duplicate reloads
+     *  (e.g. Enter followed by the debounced emission of the same text). */
+    private lastIdSearchApplied = '';
 
     list: MemberAppointmentReportRow[] = [];
     loading = false;
@@ -413,6 +422,14 @@ export class ReportSupernumeraryComponent implements OnInit {
 
         this.loadOrgs();
         this.loadMemberTypes();
+
+        this.idSearchSub = this.idSearchInput$
+            .pipe(debounceTime(400))
+            .subscribe((term) => this.applyIdSearch(term));
+    }
+
+    ngOnDestroy(): void {
+        this.idSearchSub?.unsubscribe();
     }
 
     loadOrgs(): void {
@@ -533,6 +550,8 @@ export class ReportSupernumeraryComponent implements OnInit {
     }
 
     clearFilters(): void {
+        this.idSearchText = '';
+        this.lastIdSearchApplied = '';
         this.selectedOrgIds = [];
         this.selectedMemberTypeIds = [];
         this.selectedRankIds = [];
@@ -554,6 +573,28 @@ export class ReportSupernumeraryComponent implements OnInit {
     toggleLang(): void {
         this.lang = this.lang === 'en' ? 'bn' : 'en';
         this.appliedFilterLines = this.buildFilterLines();
+    }
+
+    /** Keystroke in the toolbar search — debounced auto-search. */
+    onIdSearchInput(): void {
+        this.idSearchInput$.next((this.idSearchText ?? '').trim());
+    }
+
+    /** Enter / search icon — search immediately, skipping the debounce. */
+    onIdSearch(): void {
+        this.applyIdSearch((this.idSearchText ?? '').trim());
+    }
+
+    clearIdSearch(): void {
+        this.idSearchText = '';
+        this.applyIdSearch('');
+    }
+
+    private applyIdSearch(term: string): void {
+        if (term === this.lastIdSearchApplied) return;
+        this.lastIdSearchApplied = term;
+        this.first = 0;
+        this.load();
     }
 
     buildFilterLines(): string[] {
@@ -643,6 +684,7 @@ export class ReportSupernumeraryComponent implements OnInit {
             columns: this.backendColumnKeys(),
             criteria,
             postingStatusFilter: 'Supernumerary',
+            idSearchText: (this.idSearchText ?? '').trim() || undefined,
             pagination: { page_no, row_per_page: this.rows },
         }).subscribe({
             next: (res) => {
