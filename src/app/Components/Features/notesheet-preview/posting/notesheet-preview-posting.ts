@@ -1519,7 +1519,7 @@ export class NotesheetPreviewPostingComponent extends NotesheetPreviewBase imple
         if (!this.noteSheet || !this.contentMeasure) return;
         this.exportingPdf = true;
         try {
-            const { html, chrome } = this.buildJsReportPdf();
+            const { html, chrome } = await this.buildJsReportPdf();
             await this.jsreportService.downloadPdf(
                 html, {}, `NoteSheet_${this.noteSheet.noteSheetNo ?? 'export'}.pdf`, chrome,
             );
@@ -1542,7 +1542,7 @@ export class NotesheetPreviewPostingComponent extends NotesheetPreviewBase imple
         if (!this.noteSheet || !this.contentMeasure) return;
         this.exportingPdfJsReport = true;
         try {
-            const { html, chrome } = this.buildJsReportPdf();
+            const { html, chrome } = await this.buildJsReportPdf();
             await this.jsreportService.previewPdfInNewTab(
                 html, {}, `NoteSheet_${this.noteSheet.noteSheetNo ?? 'export'}`, chrome,
             );
@@ -1565,8 +1565,9 @@ export class NotesheetPreviewPostingComponent extends NotesheetPreviewBase imple
      * in Chromium; contentMeasure holds the full content as one flow, which
      * Chromium paginates correctly via @page rules.
      */
-    private buildJsReportPdf(): { html: string; chrome: Record<string, unknown> } {
+    private async buildJsReportPdf(): Promise<{ html: string; chrome: Record<string, unknown> }> {
         const styles = this.collectDocumentStyles();
+        const fontCss = await this.embedBanglaFontCss();
         const body = this.contentMeasure.nativeElement.innerHTML;
         const isLegal = this.selectedPageSize === 'Legal';
         // Match the on-screen .a4-paper exactly: Legal is 215.9mm × 355.6mm
@@ -1583,6 +1584,12 @@ export class NotesheetPreviewPostingComponent extends NotesheetPreviewBase imple
 <meta charset="utf-8">
 <style>
 ${styles}
+
+/* SolaimanLipi, inlined as base64. The collected page styles declare the same
+   family against /assets/fonts/*.ttf, but JsReport renders this HTML as a bare
+   string with no base URL, so that relative reference cannot resolve on the
+   server — the embedded copy below is what Chromium actually loads. */
+${fontCss}
 
 /* @page insets mirror .a4-paper's padding so the text column width matches the
    web view exactly (215.9 - 2*10 = 195.9mm). The top margin (uniform across all
@@ -1616,7 +1623,7 @@ html, body { margin: 0; padding: 0; background: transparent; }
     padding: 0;
     box-sizing: border-box;
     width: ${pageWidth === '215.9mm' ? '195.9mm' : '190mm'};
-    font-family: 'Times New Roman', 'Nirmala UI', Times, serif;
+    font-family: 'Times New Roman', 'SolaimanLipi', Times, serif;
     font-size: 10pt;
     line-height: 1.7;
     color: #000;
@@ -1668,7 +1675,7 @@ html, body { margin: 0; padding: 0; background: transparent; }
 .pdf-flow .ns-para-text, .pdf-flow .ns-para-text *,
 .pdf-flow .ns-ref-content, .pdf-flow .ns-ref-content *,
 .pdf-flow .ns-note, .pdf-flow .ns-note * {
-    font-family: 'Times New Roman', 'Nirmala UI', Times, serif !important;
+    font-family: 'Times New Roman', 'SolaimanLipi', Times, serif !important;
     color: #000 !important;
 }
 
@@ -1746,6 +1753,10 @@ html, body { margin: 0; padding: 0; background: transparent; }
         for (const sheet of Array.from(document.styleSheets)) {
             try {
                 for (const rule of Array.from(sheet.cssRules)) {
+                    // The app's SolaimanLipi @font-face points at a relative asset URL
+                    // that JsReport's Chromium cannot resolve. Drop it so it can't win
+                    // over the base64 face embedded in buildJsReportPdf().
+                    if (rule instanceof CSSFontFaceRule && rule.cssText.includes('SolaimanLipi')) continue;
                     out.push(rule.cssText);
                 }
             } catch {
@@ -1753,6 +1764,55 @@ html, body { margin: 0; padding: 0; background: transparent; }
             }
         }
         return out.join('\n');
+    }
+
+    /** Cached base64 @font-face CSS — the font is ~200KB per face, so build it once. */
+    private banglaFontCss?: string;
+
+    /**
+     * SolaimanLipi as self-contained @font-face rules with the TTFs inlined as
+     * base64 data URIs, so the PDF renders the same Bangla face as the web view
+     * without the font being installed on the JsReport server.
+     *
+     * If a face cannot be fetched, it is skipped rather than failing the export:
+     * Chromium then falls back to whatever Bangla font it has, which is the same
+     * behaviour as before this font was bundled.
+     */
+    private async embedBanglaFontCss(): Promise<string> {
+        if (this.banglaFontCss !== undefined) return this.banglaFontCss;
+
+        const faces = [
+            { file: 'SolaimanLipi.ttf', weight: 400 },
+            { file: 'SolaimanLipi-Bold.ttf', weight: 700 },
+        ];
+
+        const rules: string[] = [];
+        for (const face of faces) {
+            try {
+                const res = await fetch(`assets/fonts/${face.file}`);
+                if (!res.ok) continue;
+                rules.push(
+                    `@font-face { font-family: 'SolaimanLipi'; font-style: normal; font-weight: ${face.weight};` +
+                    ` src: url(data:font/ttf;base64,${this.toBase64(await res.arrayBuffer())}) format('truetype'); }`
+                );
+            } catch {
+                // font asset unavailable — fall back to a system Bangla face
+            }
+        }
+
+        this.banglaFontCss = rules.join('\n');
+        return this.banglaFontCss;
+    }
+
+    /** btoa() over a font buffer, chunked to stay under the argument-count limit. */
+    private toBase64(buf: ArrayBuffer): string {
+        const bytes = new Uint8Array(buf);
+        const CHUNK = 8192;
+        let binary = '';
+        for (let i = 0; i < bytes.length; i += CHUNK) {
+            binary += String.fromCharCode(...bytes.subarray(i, i + CHUNK));
+        }
+        return btoa(binary);
     }
 
     override async exportWord(): Promise<void> {
