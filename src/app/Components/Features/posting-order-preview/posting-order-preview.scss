@@ -100,7 +100,10 @@
     background: #fff;
     box-shadow: 0 6px 24px rgba(0, 0, 0, 0.25);
     box-sizing: border-box;
-    font-family: 'Times New Roman', 'Nirmala UI', Times, serif;
+    /* SolaimanLipi (bundled, see styles.scss) is the Bangla face. Times New Roman
+       stays first so Latin text and digits are unchanged — Bangla codepoints have
+       no Times glyphs and fall through to SolaimanLipi. */
+    font-family: 'Times New Roman', 'SolaimanLipi', Times, serif;
     font-size: 9pt;
     color: #000;
     line-height: 1.7;
@@ -108,6 +111,18 @@
     overflow-x: hidden;
     display: flex;
     flex-direction: column;
+
+    /* Rich-text (Quill) blocks: editor font choices and pasted inline
+       font-family would otherwise override the stack above and drop Bangla back
+       to a system fallback. */
+    ::ng-deep .po-doc-posting-text,
+    ::ng-deep .po-doc-posting-text *,
+    ::ng-deep .po-doc-master-remarks,
+    ::ng-deep .po-doc-master-remarks *,
+    ::ng-deep .po-doc-sub-text,
+    ::ng-deep .po-doc-sub-text * {
+        font-family: 'Times New Roman', 'SolaimanLipi', Times, serif !important;
+    }
 }
 
 /* Legal portrait: 215.9mm x 355.6mm — applied when the page-size selector is "Legal". */

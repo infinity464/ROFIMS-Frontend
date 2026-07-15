@@ -126,7 +126,7 @@ export class ReportMemberTypeServingComponent implements OnInit, OnDestroy {
      */
     seniorityOptions: { label: string; value: NominalRollSeniority }[] = [
         { label: 'Organization Seniority', value: 'OrganizationSeniority' },
-        { label: 'Rank Seniority',         value: 'RankSeniority' },
+        { label: 'RAB Rank Seniority',     value: 'RankSeniority' },
     ];
     selectedSeniority: NominalRollSeniority = 'OrganizationSeniority';
 

@@ -762,7 +762,9 @@ export class PostingOrderPreviewPageComponent implements OnInit {
         const dateStr = this.noteSheetApprovalDate
             ? (this.isBangla ? this.formatDateBangla(this.noteSheetApprovalDate) : this.formatDate(this.noteSheetApprovalDate))
             : '';
-        return dateStr ? `${no}, ${dateStr}` : no;
+        if (!dateStr) return no;
+        const dateLabel = this.isBangla ? 'তারিখঃ' : 'Date:';
+        return `${no}, ${dateLabel} ${dateStr}`;
     }
 
     formatDate(value: string | null | undefined): string {
@@ -785,6 +787,14 @@ export class PostingOrderPreviewPageComponent implements OnInit {
 
     toBanglaDigits(input: string): string {
         return input.replace(/[0-9]/g, d => String.fromCharCode(0x09E6 + parseInt(d)));
+    }
+
+    /** Approver's Tel value for the signature block — Bangla digits in the Bangla
+     *  document, so it matches the তারিখ line right below it. Falls back to the
+     *  dotted placeholder when no number is on file. */
+    get approverPhoneText(): string {
+        if (!this.approverPhone) return '...............';
+        return this.isBangla ? this.toBanglaDigits(this.approverPhone) : this.approverPhone;
     }
 
     empServiceId(emp: PostingOrderEmployeeRow): string {
@@ -1440,7 +1450,7 @@ export class PostingOrderPreviewPageComponent implements OnInit {
         if (this.filteredEmployees.length === 0 || !this.legalPaper) return;
         this.exportingPdf = true;
         try {
-            const { html, chrome } = this.buildJsReportPdf();
+            const { html, chrome } = await this.buildJsReportPdf();
             await this.jsreportService.downloadPdf(
                 html, {}, `PostingOrder_${this.postingOrderNo || 'export'}${this.exportFileSuffix}.pdf`, chrome,
             );
@@ -1459,7 +1469,7 @@ export class PostingOrderPreviewPageComponent implements OnInit {
         if (this.filteredEmployees.length === 0 || !this.legalPaper) return;
         this.printingPreview = true;
         try {
-            const { html, chrome } = this.buildJsReportPdf();
+            const { html, chrome } = await this.buildJsReportPdf();
             await this.jsreportService.previewPdfInNewTab(
                 html, {}, `PostingOrder_${this.postingOrderNo || 'export'}`, chrome,
             );
@@ -1481,8 +1491,9 @@ export class PostingOrderPreviewPageComponent implements OnInit {
      * insets mirror `.legal-paper`'s padding so the text column matches the web
      * view (A4 210 − 2×10 = 190mm).
      */
-    private buildJsReportPdf(): { html: string; chrome: Record<string, unknown> } {
+    private async buildJsReportPdf(): Promise<{ html: string; chrome: Record<string, unknown> }> {
         const styles = this.collectDocumentStyles();
+        const fontCss = await this.embedBanglaFontCss();
         const body = this.legalPaper.nativeElement.innerHTML;
         const isLegal = this.selectedPageSize === 'legal';
         const pageWidth = isLegal ? '215.9mm' : '210mm';
@@ -1499,6 +1510,12 @@ export class PostingOrderPreviewPageComponent implements OnInit {
 <style>
 ${styles}
 
+/* SolaimanLipi, inlined as base64. The collected page styles declare the same
+   family against /assets/fonts/*.ttf, but JsReport renders this HTML as a bare
+   string with no base URL, so that relative reference cannot resolve on the
+   server — the embedded copy below is what Chromium actually loads. */
+${fontCss}
+
 /* @page insets mirror .legal-paper's padding so the text column width matches
    the web view exactly. */
 @page { size: ${pageWidth} ${pageHeight}; margin: ${padTop}mm ${padX}mm ${padBottom}mm ${padX}mm; }
@@ -1514,7 +1531,7 @@ html, body { margin: 0; padding: 0; background: transparent; }
     padding: 0;
     box-sizing: border-box;
     width: ${colWidth};
-    font-family: 'Times New Roman', 'Nirmala UI', Times, serif;
+    font-family: 'Times New Roman', 'SolaimanLipi', Times, serif;
     font-size: 9pt;
     line-height: 1.7;
     color: #000;
@@ -1546,10 +1563,63 @@ html, body { margin: 0; padding: 0; background: transparent; }
         const out: string[] = [];
         for (const sheet of Array.from(document.styleSheets)) {
             try {
-                for (const rule of Array.from(sheet.cssRules)) out.push(rule.cssText);
+                for (const rule of Array.from(sheet.cssRules)) {
+                    // The app's SolaimanLipi @font-face points at a relative asset URL
+                    // that JsReport's Chromium cannot resolve. Drop it so it can't win
+                    // over the base64 face embedded in buildJsReportPdf().
+                    if (rule instanceof CSSFontFaceRule && rule.cssText.includes('SolaimanLipi')) continue;
+                    out.push(rule.cssText);
+                }
             } catch { /* cross-origin — skip */ }
         }
         return out.join('\n');
+    }
+
+    /** Cached base64 @font-face CSS — the font is ~200KB per face, so build it once. */
+    private banglaFontCss?: string;
+
+    /**
+     * SolaimanLipi as self-contained @font-face rules with the TTFs inlined as
+     * base64 data URIs, so the PDF renders the same Bangla face as the web view
+     * without the font being installed on the JsReport server.
+     *
+     * A face that cannot be fetched is skipped rather than failing the export:
+     * Chromium then falls back to a system Bangla font, as it did before the
+     * font was bundled.
+     */
+    private async embedBanglaFontCss(): Promise<string> {
+        if (this.banglaFontCss !== undefined) return this.banglaFontCss;
+
+        const faces = [
+            { file: 'SolaimanLipi.ttf', weight: 400 },
+            { file: 'SolaimanLipi-Bold.ttf', weight: 700 },
+        ];
+
+        const rules: string[] = [];
+        for (const face of faces) {
+            try {
+                const res = await fetch(`assets/fonts/${face.file}`);
+                if (!res.ok) continue;
+                rules.push(
+                    `@font-face { font-family: 'SolaimanLipi'; font-style: normal; font-weight: ${face.weight};` +
+                    ` src: url(data:font/ttf;base64,${this.toBase64(await res.arrayBuffer())}) format('truetype'); }`
+                );
+            } catch { /* font asset unavailable — fall back to a system Bangla face */ }
+        }
+
+        this.banglaFontCss = rules.join('\n');
+        return this.banglaFontCss;
+    }
+
+    /** btoa() over a font buffer, chunked to stay under the argument-count limit. */
+    private toBase64(buf: ArrayBuffer): string {
+        const bytes = new Uint8Array(buf);
+        const CHUNK = 8192;
+        let binary = '';
+        for (let i = 0; i < bytes.length; i += CHUNK) {
+            binary += String.fromCharCode(...bytes.subarray(i, i + CHUNK));
+        }
+        return btoa(binary);
     }
 
     // ─── Shared Word Document Builder ─────────────────────
@@ -1815,7 +1885,7 @@ html, body { margin: 0; padding: 0; background: transparent; }
         const approverNameText = (bn ? this.approverNameBN : this.approverName) || this.approverName || '...................................';
         const approverRankText = (bn ? this.approverRankBN : this.approverRank) || this.approverRank || '............................';
         const approverApptText = (bn ? this.approverAppointmentBN : this.approverAppointment) || this.approverAppointment || '............................';
-        const approverPhoneText = this.approverPhone || '...............';
+        const approverPhoneText = this.approverPhoneText;
         const noBorder = { style: BorderStyle.NONE, size: 0, color: 'FFFFFF' };
         const noBorders = { top: noBorder, bottom: noBorder, left: noBorder, right: noBorder };
 

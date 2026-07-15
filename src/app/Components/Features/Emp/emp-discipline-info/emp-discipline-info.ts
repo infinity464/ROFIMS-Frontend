@@ -213,6 +213,13 @@ export class EmpDisciplineInfoComponent implements OnInit {
         return null;
     }
 
+    private toDateForPicker(d: Date | string | null): Date | null {
+        if (d == null) return null;
+        if (d instanceof Date) return isNaN(d.getTime()) ? null : d;
+        const parsed = new Date(d);
+        return isNaN(parsed.getTime()) ? null : parsed;
+    }
+
     checkRouteParams(): void {
         this.route.queryParams.subscribe(params => {
             const id = params['id'];
@@ -304,7 +311,9 @@ export class EmpDisciplineInfoComponent implements OnInit {
         if (value == null) return '—';
         const d = typeof value === 'string' ? new Date(value) : value;
         if (isNaN(d.getTime())) return '—';
-        return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+        const day = String(d.getDate()).padStart(2, '0');
+        const month = String(d.getMonth() + 1).padStart(2, '0');
+        return `${day}-${month}-${d.getFullYear()}`;
     }
 
     onDialogHide(): void {}
@@ -339,9 +348,9 @@ export class EmpDisciplineInfoComponent implements OnInit {
     openEditDialog(row: DisciplineListRow): void {
         this.isEditMode = true;
         this.editingDisciplineId = row.disciplineId;
-        const offenseDate = this.toDateString(row.offenseDate ?? null);
-        const punishmentDate = this.toDateString(row.punishmentDate ?? null);
-        const punishmentDateMO = this.toDateString(row.punishmentDateMotherOrg ?? null);
+        const offenseDate = this.toDateForPicker(row.offenseDate ?? null);
+        const punishmentDate = this.toDateForPicker(row.punishmentDate ?? null);
+        const punishmentDateMO = this.toDateForPicker(row.punishmentDateMotherOrg ?? null);
         this.fileRows = this.parseFileRowsFromReferences(row.filesReferences);
         this.disciplineForm.patchValue({
             disciplineId: row.disciplineId,

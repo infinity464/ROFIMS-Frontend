@@ -1344,13 +1344,13 @@ export class DynamicSearchComponent implements OnInit, OnDestroy {
     }
 
     /**
-     * Surface Mother Org / Rank / Corps / Trade at the top of the
-     * Search Fields multiselect — they're the most commonly used and
+     * Surface Mother Org / Rank / Corps / Trade / Home District at the top
+     * of the Search Fields multiselect — they're the most commonly used and
      * have a cascade dependency, so listing them first reads naturally.
      * Any field not in PRIORITY_ORDER keeps the backend-registry order
      * after the priority block.
      */
-    private static readonly FIELD_PRIORITY_ORDER = ['motherOrg', 'memberType', 'rank', 'corps', 'trade'];
+    private static readonly FIELD_PRIORITY_ORDER = ['motherOrg', 'memberType', 'rank', 'corps', 'trade', 'permanentDistrict'];
     private reorderFields(fields: SearchFieldDefinition[]): SearchFieldDefinition[] {
         const priority = DynamicSearchComponent.FIELD_PRIORITY_ORDER;
         const byKey = new Map(fields.map(f => [f.fieldKey, f]));
@@ -1367,7 +1367,7 @@ export class DynamicSearchComponent implements OnInit, OnDestroy {
      * "fill the selected fields" validation in search(); an empty one is
      * simply dropped from the request (see loadResults()). Employee only.
      */
-    private static readonly DEFAULT_FIELD_KEYS = ['motherOrg', 'memberType', 'rank', 'corps', 'trade'];
+    private static readonly DEFAULT_FIELD_KEYS = ['motherOrg', 'memberType', 'rank', 'corps', 'trade', 'permanentDistrict'];
 
     /**
      * Pre-select the DEFAULT_FIELD_KEYS into selectedFields, merging (defaults
@@ -1415,8 +1415,9 @@ export class DynamicSearchComponent implements OnInit, OnDestroy {
                 // Re-apply the member-type allowlist too — same race.
                 this.applyMemberTypeRestriction();
                 // Show the common service filters (Mother Org / Member Type /
-                // Rank / Corps / Trade) pre-selected. They're optional — an
-                // empty one won't block Search (see DEFAULT_FIELD_KEYS).
+                // Rank / Corps / Trade / Home District) pre-selected. They're
+                // optional — an empty one won't block Search (see
+                // DEFAULT_FIELD_KEYS).
                 this.applyDefaultFields();
             },
             error: (err: any) => {
@@ -1459,8 +1460,9 @@ export class DynamicSearchComponent implements OnInit, OnDestroy {
     search(): void {
         // If the user picked search fields, they MUST fill each one — EXCEPT
         // the default service filters (Mother Org / Member Type / Rank /
-        // Corps / Trade), which are pre-selected and optional: an empty one
-        // is simply dropped from the request rather than blocking Search.
+        // Corps / Trade / Home District), which are pre-selected and optional:
+        // an empty one is simply dropped from the request rather than blocking
+        // Search.
         // Without this check, an empty (non-default) field is silently
         // dropped and the page returns an effectively unfiltered result set
         // — surprising and (with no upper bound on the FE side) potentially
@@ -1631,12 +1633,12 @@ export class DynamicSearchComponent implements OnInit, OnDestroy {
     // "Other" catch-all so newly-registered fields render immediately
     // without the dev forgetting to assign a group.
     private readonly identifierKeys = new Set(['rabId', 'serviceId', 'nid']);
-    private readonly personalKeys = new Set(['nameEnglish', 'nameBangla', 'prefix', 'mobileNo', 'email', 'dob', 'gender', 'bloodGroup', 'religion', 'maritalStatus']);
+    private readonly personalKeys = new Set(['nameEnglish', 'nameBangla', 'prefix', 'mobileNo', 'email', 'dob', 'gender', 'bloodGroup', 'religion', 'maritalStatus', 'permanentDistrict']);
     private readonly serviceKeys = new Set([
         'rank', 'corps', 'trade', 'tradeRemarks', 'appointment', 'memberType',
         'motherOrg', 'motherUnit', 'rabUnit', 'location',
         'joiningDate', 'commissionDate', 'dateOfJoinService',
-        'rabServiceFrom', 'rabServiceTo', 'permanentDistrict'
+        'rabServiceFrom', 'rabServiceTo'
     ]);
 
     get groupedFields(): { label: string; fields: SearchFieldDefinition[] }[] {

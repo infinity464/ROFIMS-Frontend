@@ -73,3 +73,34 @@
     th { font-size: 6.5pt; }               /* table header (cells stay 7pt) */
     .ns-posting-note { font-size: 9pt; }
 }
+
+/* ── Document font ─────────────────────────────────────
+   SolaimanLipi (bundled, see styles.scss) replaces Nirmala UI as the Bangla
+   face for this preview. Times New Roman stays first so Latin text and digits
+   are unchanged — Bangla codepoints have no Times glyphs and fall through to
+   SolaimanLipi.
+
+   .page-measure carries the SAME stack as the visible .a4-paper on purpose: it
+   is the hidden div the page-break math measures, and it is also the source
+   snapshot for the JsReport PDF. A different Bangla face there would compute
+   breaks against text of a different height than what is shown and printed. */
+.a4-paper,
+.page-measure {
+    font-family: 'Times New Roman', 'SolaimanLipi', Times, serif;
+
+    /* Beats the shared preview's !important rule that pins rich-text (Quill)
+       content to Nirmala UI. */
+    ::ng-deep .ns-para-text,
+    ::ng-deep .ns-para-text *,
+    ::ng-deep .ns-ref-content,
+    ::ng-deep .ns-ref-content *,
+    ::ng-deep .ns-note,
+    ::ng-deep .ns-note * {
+        font-family: 'Times New Roman', 'SolaimanLipi', Times, serif !important;
+    }
+
+    /* Restore the icon font the blanket rule above would otherwise clobber. */
+    ::ng-deep .ns-ref-file-btn .pi {
+        font-family: 'primeicons' !important;
+    }
+}

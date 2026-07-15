@@ -78,7 +78,7 @@ export class ReportLongStayNominalRollComponent implements OnInit, OnDestroy {
      */
     seniorityOptions: { label: string; value: NominalRollSeniority }[] = [
         { label: 'Organization Seniority', value: 'OrganizationSeniority' },
-        { label: 'Rank Seniority',         value: 'RankSeniority' },
+        { label: 'RAB Rank Seniority',     value: 'RankSeniority' },
     ];
     selectedSeniority: NominalRollSeniority = 'OrganizationSeniority';
     unitOptions: { label: string; value: 'Years' | 'Months' }[] = [
