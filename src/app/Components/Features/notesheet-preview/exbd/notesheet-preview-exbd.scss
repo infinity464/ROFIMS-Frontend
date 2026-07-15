@@ -30,3 +30,11 @@
         font-family: 'primeicons' !important;
     }
 }
+
+/* Push the document text 10px in from the left border. Padding on the content
+   column (`.ns-main-col` has none by default) opens a gap between the border and
+   the text; `:host` scopes it to this screen only. The matching PDF/Print rule
+   lives in buildJsReportPdf() (`.pdf-flow .ns-main-col`). */
+:host .ns-main-col {
+    padding-left: 5px;
+}

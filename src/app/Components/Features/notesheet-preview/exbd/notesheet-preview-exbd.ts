@@ -1040,6 +1040,10 @@ html, body { margin: 0; padding: 0; background: transparent; }
 
 .pdf-flow .ns-doc-box { border: none !important; }
 
+/* Match the on-screen gap between the left border and the text
+   (see notesheet-preview-exbd.scss → :host .ns-main-col). */
+.pdf-flow .ns-main-col { padding-left: 5px; }
+
 .ns-posting-table tr,
 .ns-approver-section,
 .ns-org-header,
