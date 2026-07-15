@@ -1,4 +1,4 @@
-import { Component, HostListener, OnInit } from '@angular/core';
+import { Component, HostListener, OnDestroy, OnInit } from '@angular/core';
 import { Router } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -51,7 +51,7 @@ import {
 } from 'docx';
 import { saveAs } from 'file-saver';
 import * as XLSX from 'xlsx';
-import { forkJoin } from 'rxjs';
+import { debounceTime, forkJoin, Subject, Subscription } from 'rxjs';
 
 @Component({
     selector: 'app-report-address-location',
@@ -61,13 +61,22 @@ import { forkJoin } from 'rxjs';
     templateUrl: './report-address-location.component.html',
     styleUrls: ['../report-theme.scss', '../report-card-mtr.scss', './report-address-location.component.scss'],
 })
-export class ReportAddressLocationComponent implements OnInit {
+export class ReportAddressLocationComponent implements OnInit, OnDestroy {
     canInsert = true;
     canUpdate = true;
     canDelete = true;
 
     L = REPORT_LABELS;
     lang: ReportLang = 'en';
+
+    /** Toolbar quick search — matches Service ID or RAB ID (server-side). */
+    idSearchText = '';
+    /** Debounces toolbar typing so we don't query on every keystroke. */
+    private readonly idSearchInput$ = new Subject<string>();
+    private idSearchSub: Subscription | null = null;
+    /** Last term actually sent to the server — suppresses duplicate reloads
+     *  (e.g. Enter followed by the debounced emission of the same text). */
+    private lastIdSearchApplied = '';
 
     /** Cascading geographic dropdowns */
     divisionOptions: { label: string; labelBn: string; value: number }[] = [];
@@ -2048,6 +2057,14 @@ export class ReportAddressLocationComponent implements OnInit {
         this.loadOrgOptions();
         this.loadMemberTypeOptions();
         this.loadOrgNodeLabels();
+
+        this.idSearchSub = this.idSearchInput$
+            .pipe(debounceTime(400))
+            .subscribe((term) => this.applyIdSearch(term));
+    }
+
+    ngOnDestroy(): void {
+        this.idSearchSub?.unsubscribe();
     }
 
     /** Map CommonCode rows to {label, labelBn, value} option shape. */
@@ -2351,6 +2368,8 @@ export class ReportAddressLocationComponent implements OnInit {
         this.searchRabId = '';
         this.searchServiceId = '';
         this.searchNid = '';
+        this.idSearchText = '';
+        this.lastIdSearchApplied = '';
         this.selectedAddressOwner = 'Self';
         this.selectedLocationType = 'Present';
         this.selectedDivisionId = null;
@@ -2379,6 +2398,28 @@ export class ReportAddressLocationComponent implements OnInit {
     toggleLang(): void {
         this.lang = this.lang === 'en' ? 'bn' : 'en';
         this.appliedFilterLines = this.buildFilterLines();
+    }
+
+    /** Keystroke in the toolbar search — debounced auto-search. */
+    onIdSearchInput(): void {
+        this.idSearchInput$.next((this.idSearchText ?? '').trim());
+    }
+
+    /** Enter / search icon — search immediately, skipping the debounce. */
+    onIdSearch(): void {
+        this.applyIdSearch((this.idSearchText ?? '').trim());
+    }
+
+    clearIdSearch(): void {
+        this.idSearchText = '';
+        this.applyIdSearch('');
+    }
+
+    private applyIdSearch(term: string): void {
+        if (term === this.lastIdSearchApplied) return;
+        this.lastIdSearchApplied = term;
+        this.first = 0;
+        this.load();
     }
 
     /** Translate display column keys → backend registry field keys. The
@@ -2448,6 +2489,7 @@ export class ReportAddressLocationComponent implements OnInit {
         this.reportService.runDynamicReport({
             columns: this.backendColumnKeys(),
             criteria,
+            idSearchText: (this.idSearchText ?? '').trim() || undefined,
             postingStatusFilter: this.selectedPostingStatus || null,
             locationTypeFilter:  this.selectedLocationType  || null,
             addressOwnerFilter:  this.selectedAddressOwner  || null,

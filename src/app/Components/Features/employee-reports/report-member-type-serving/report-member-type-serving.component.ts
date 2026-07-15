@@ -1,4 +1,4 @@
-import { Component, HostListener, OnInit } from '@angular/core';
+import { Component, HostListener, OnDestroy, OnInit } from '@angular/core';
 import { Router } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -49,7 +49,7 @@ import {
 } from 'docx';
 import { saveAs } from 'file-saver';
 import * as XLSX from 'xlsx';
-import { forkJoin } from 'rxjs';
+import { debounceTime, forkJoin, Subject, Subscription } from 'rxjs';
 
 /**
  * Member Type Report — standalone report (no parent dropdown).
@@ -76,9 +76,18 @@ import { forkJoin } from 'rxjs';
     templateUrl: './report-member-type-serving.component.html',
     styleUrls: ['../report-theme.scss', '../report-card-mtr.scss', './report-member-type-serving.component.scss'],
 })
-export class ReportMemberTypeServingComponent implements OnInit {
+export class ReportMemberTypeServingComponent implements OnInit, OnDestroy {
     L = REPORT_LABELS;
     lang: ReportLang = 'en';
+
+    /** Toolbar quick search — matches Service ID or RAB ID (server-side). */
+    idSearchText = '';
+    /** Debounces toolbar typing so we don't query on every keystroke. */
+    private readonly idSearchInput$ = new Subject<string>();
+    private idSearchSub: Subscription | null = null;
+    /** Last term actually sent to the server — suppresses duplicate reloads
+     *  (e.g. Enter followed by the debounced emission of the same text). */
+    private lastIdSearchApplied = '';
 
     /** Member Type — independent root pick. */
     memberTypeOptions: { label: string; labelBn: string; value: number }[] = [];
@@ -524,6 +533,14 @@ export class ReportMemberTypeServingComponent implements OnInit {
         this.loadMemberTypes();
         this.loadOrgNodeLabels();
         this.loadOrgs();
+
+        this.idSearchSub = this.idSearchInput$
+            .pipe(debounceTime(400))
+            .subscribe((term) => this.applyIdSearch(term));
+    }
+
+    ngOnDestroy(): void {
+        this.idSearchSub?.unsubscribe();
     }
 
     loadMemberTypes(): void {
@@ -727,6 +744,8 @@ export class ReportMemberTypeServingComponent implements OnInit {
     }
 
     clearFilters(): void {
+        this.idSearchText = '';
+        this.lastIdSearchApplied = '';
         this.selectedMemberTypeIds = [];
         this.selectedOrgNodeIds = [];
         this.selectedOrgIds = [];
@@ -753,6 +772,28 @@ export class ReportMemberTypeServingComponent implements OnInit {
     toggleLang(): void {
         this.lang = this.lang === 'en' ? 'bn' : 'en';
         this.appliedFilterLines = this.buildFilterLines();
+    }
+
+    /** Keystroke in the toolbar search — debounced auto-search. */
+    onIdSearchInput(): void {
+        this.idSearchInput$.next((this.idSearchText ?? '').trim());
+    }
+
+    /** Enter / search icon — search immediately, skipping the debounce. */
+    onIdSearch(): void {
+        this.applyIdSearch((this.idSearchText ?? '').trim());
+    }
+
+    clearIdSearch(): void {
+        this.idSearchText = '';
+        this.applyIdSearch('');
+    }
+
+    private applyIdSearch(term: string): void {
+        if (term === this.lastIdSearchApplied) return;
+        this.lastIdSearchApplied = term;
+        this.first = 0;
+        this.load();
     }
 
     buildFilterLines(): string[] {
@@ -843,6 +884,7 @@ export class ReportMemberTypeServingComponent implements OnInit {
             criteria,
             nominalRollSeniority: this.selectedSeniority,
             postingStatusFilter: this.selectedPostingStatus || 'Servings',
+            idSearchText: (this.idSearchText ?? '').trim() || undefined,
             pagination: { page_no, row_per_page: this.rows },
         }).subscribe({
             next: (res) => {

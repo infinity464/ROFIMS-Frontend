@@ -1,4 +1,4 @@
-import { Component, HostListener, OnInit } from '@angular/core';
+import { Component, HostListener, OnDestroy, OnInit } from '@angular/core';
 import { Router } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -12,7 +12,7 @@ import { MessageService } from 'primeng/api';
 import { ReportService } from '@/services/report.service';
 import { CommonCodeService } from '@/services/common-code-service';
 import type { CommonCodeModel } from '@/models/common-code-model';
-import { forkJoin } from 'rxjs';
+import { debounceTime, forkJoin, Subject, Subscription } from 'rxjs';
 import { UserMenuService } from '@/services/user-menu.service';
 import { BanglaNumerals } from '@/Core/i18n/bangla-numerals';
 import type {
@@ -41,8 +41,17 @@ type Lang = 'en' | 'bn';
     templateUrl: './report-rfts-completion.component.html',
     styleUrls: ['../report-theme.scss', '../report-card-mtr.scss', './report-rfts-completion.component.scss'],
 })
-export class ReportRftsCompletionComponent implements OnInit {
+export class ReportRftsCompletionComponent implements OnInit, OnDestroy {
     lang: Lang = 'en';
+
+    /** Toolbar quick search — matches Service ID or RAB ID (server-side). */
+    idSearchText = '';
+    /** Debounces toolbar typing so we don't query on every keystroke. */
+    private readonly idSearchInput$ = new Subject<string>();
+    private idSearchSub: Subscription | null = null;
+    /** Last term actually sent to the server — suppresses duplicate reloads
+     *  (e.g. Enter followed by the debounced emission of the same text). */
+    private lastIdSearchApplied = '';
 
     canInsert = true;
     canUpdate = true;
@@ -280,6 +289,14 @@ export class ReportRftsCompletionComponent implements OnInit {
         this.loadMotherOrgOptions();
         this.loadMemberTypeOptions();
         this.loadOrgNodeLabels();
+
+        this.idSearchSub = this.idSearchInput$
+            .pipe(debounceTime(400))
+            .subscribe((term) => this.applyIdSearch(term));
+    }
+
+    ngOnDestroy(): void {
+        this.idSearchSub?.unsubscribe();
     }
 
     /** All RAB org codeTypes — same set the shared picker loads. */
@@ -524,6 +541,8 @@ export class ReportRftsCompletionComponent implements OnInit {
         this.corpsOptions = [];
         this.tradeOptions = [];
         this.selectedColumnKeys = this.defaultColumnsFor('Completed');
+        this.idSearchText = '';
+        this.lastIdSearchApplied = '';
         this.first = 0;
         this.list = [];
         this.totalRecords = 0;
@@ -545,6 +564,28 @@ export class ReportRftsCompletionComponent implements OnInit {
     toggleLang(): void {
         this.lang = this.lang === 'en' ? 'bn' : 'en';
         this.appliedFilterLines = this.buildFilterLines();
+    }
+
+    /** Keystroke in the toolbar search — debounced auto-search. */
+    onIdSearchInput(): void {
+        this.idSearchInput$.next((this.idSearchText ?? '').trim());
+    }
+
+    /** Enter / search icon — search immediately, skipping the debounce. */
+    onIdSearch(): void {
+        this.applyIdSearch((this.idSearchText ?? '').trim());
+    }
+
+    clearIdSearch(): void {
+        this.idSearchText = '';
+        this.applyIdSearch('');
+    }
+
+    private applyIdSearch(term: string): void {
+        if (term === this.lastIdSearchApplied) return;
+        this.lastIdSearchApplied = term;
+        this.first = 0;
+        this.load();
     }
 
     /**
@@ -628,6 +669,7 @@ export class ReportRftsCompletionComponent implements OnInit {
                 rftsCourseNo: null,
                 rftsDateFrom: null,
                 rftsDateTo: null,
+                idSearchText: (this.idSearchText ?? '').trim() || undefined,
                 pagination: { page_no, row_per_page: this.rows },
             })
             .subscribe({

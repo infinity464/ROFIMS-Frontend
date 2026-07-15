@@ -1,4 +1,4 @@
-import { Component, HostListener, OnInit } from '@angular/core';
+import { Component, HostListener, OnDestroy, OnInit } from '@angular/core';
 import { Router } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -41,7 +41,7 @@ import {
 } from 'docx';
 import { saveAs } from 'file-saver';
 import * as XLSX from 'xlsx';
-import { forkJoin } from 'rxjs';
+import { debounceTime, forkJoin, Subject, Subscription } from 'rxjs';
 import type { MotherOrganizationModel } from '@/models/mother-org-model';
 import { OrgTreeMultiSelectComponent } from '@/shared/components/org-tree-multi-select/org-tree-multi-select.component';
 
@@ -53,13 +53,22 @@ import { OrgTreeMultiSelectComponent } from '@/shared/components/org-tree-multi-
     templateUrl: './report-family-occupation.component.html',
     styleUrls: ['../report-theme.scss', '../report-card-mtr.scss', './report-family-occupation.component.scss'],
 })
-export class ReportFamilyOccupationComponent implements OnInit {
+export class ReportFamilyOccupationComponent implements OnInit, OnDestroy {
     canInsert = true;
     canUpdate = true;
     canDelete = true;
 
     L = REPORT_LABELS;
     lang: ReportLang = 'en';
+
+    /** Toolbar quick search — matches Service ID or RAB ID (server-side). */
+    idSearchText = '';
+    /** Debounces toolbar typing so we don't query on every keystroke. */
+    private readonly idSearchInput$ = new Subject<string>();
+    private idSearchSub: Subscription | null = null;
+    /** Last term actually sent to the server — suppresses duplicate reloads
+     *  (e.g. Enter followed by the debounced emission of the same text). */
+    private lastIdSearchApplied = '';
 
     /** Relation Type dropdown (value = 0 means "All") */
     relationOptions: { label: string; labelBn: string; value: number }[] = [];
@@ -1169,6 +1178,14 @@ export class ReportFamilyOccupationComponent implements OnInit {
         this.loadOrgOptions();
         this.loadMemberTypeOptions();
         this.loadOrgNodeLabels();
+
+        this.idSearchSub = this.idSearchInput$
+            .pipe(debounceTime(400))
+            .subscribe((term) => this.applyIdSearch(term));
+    }
+
+    ngOnDestroy(): void {
+        this.idSearchSub?.unsubscribe();
     }
 
     /** Map CommonCode rows to {label, labelBn, value} option shape. */
@@ -1413,6 +1430,8 @@ export class ReportFamilyOccupationComponent implements OnInit {
         this.selectedRelationId = null;
         this.selectedOccupationId = null;
         this.selectedPostingStatus = 'Servings';
+        this.idSearchText = '';
+        this.lastIdSearchApplied = '';
         this.first = 0;
         this.list = [];
         this.totalRecords = 0;
@@ -1427,6 +1446,28 @@ export class ReportFamilyOccupationComponent implements OnInit {
     toggleLang(): void {
         this.lang = this.lang === 'en' ? 'bn' : 'en';
         this.appliedFilterLines = this.buildFilterLines();
+    }
+
+    /** Keystroke in the toolbar search — debounced auto-search. */
+    onIdSearchInput(): void {
+        this.idSearchInput$.next((this.idSearchText ?? '').trim());
+    }
+
+    /** Enter / search icon — search immediately, skipping the debounce. */
+    onIdSearch(): void {
+        this.applyIdSearch((this.idSearchText ?? '').trim());
+    }
+
+    clearIdSearch(): void {
+        this.idSearchText = '';
+        this.applyIdSearch('');
+    }
+
+    private applyIdSearch(term: string): void {
+        if (term === this.lastIdSearchApplied) return;
+        this.lastIdSearchApplied = term;
+        this.first = 0;
+        this.load();
     }
 
     /**
@@ -1493,6 +1534,7 @@ export class ReportFamilyOccupationComponent implements OnInit {
         this.reportService.runDynamicFamilyReport({
             columns: this.backendColumnKeys(),
             criteria,
+            idSearchText: (this.idSearchText ?? '').trim() || undefined,
             postingStatusFilter: this.selectedPostingStatus && this.selectedPostingStatus !== 'All'
                 ? this.selectedPostingStatus
                 : null,

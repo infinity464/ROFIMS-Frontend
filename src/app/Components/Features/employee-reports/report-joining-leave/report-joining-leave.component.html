@@ -187,6 +187,22 @@
     @if (searched) {
         <div class="rab-report-document">
             <div class="rab-toolbar">
+                <div class="rab-toolbar-search">
+                    <button type="button" class="rab-search-btn" (click)="onIdSearch()" title="Search">
+                        <i class="pi pi-search"></i>
+                    </button>
+                    <input
+                        type="text"
+                        [(ngModel)]="idSearchText"
+                        (ngModelChange)="onIdSearchInput()"
+                        (keydown.enter)="onIdSearch()"
+                        [placeholder]="lang === 'bn' ? 'সার্ভিস আইডি / র‍্যাব আইডি' : 'Service ID / RAB ID'" />
+                    @if (idSearchText) {
+                        <button type="button" class="rab-search-clear" (click)="clearIdSearch()" title="Clear search">
+                            <i class="pi pi-times"></i>
+                        </button>
+                    }
+                </div>
                 <button type="button" class="report-lang-toggle" (click)="toggleLang()">{{ lang === 'en' ? 'বাংলা' : 'English' }}</button>
                 <div class="report-export-wrap">
                     <button type="button" class="report-btn-export" (click)="toggleExportDropdown($event)" [disabled]="loading || exporting || list.length === 0">

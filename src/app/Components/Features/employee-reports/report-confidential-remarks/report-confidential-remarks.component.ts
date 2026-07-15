@@ -1,4 +1,4 @@
-import { Component, HostListener, OnInit } from '@angular/core';
+import { Component, HostListener, OnDestroy, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { TableModule } from 'primeng/table';
@@ -47,7 +47,7 @@ import {
 } from 'docx';
 import { saveAs } from 'file-saver';
 import * as XLSX from 'xlsx';
-import { forkJoin } from 'rxjs';
+import { debounceTime, forkJoin, Subject, Subscription } from 'rxjs';
 
 /**
  * Confidential Remarks Report — standalone route at /report-confidential-remarks.
@@ -74,12 +74,21 @@ import { forkJoin } from 'rxjs';
     templateUrl: './report-confidential-remarks.component.html',
     styleUrls: ['../report-theme.scss', '../report-card-mtr.scss', './report-confidential-remarks.component.scss'],
 })
-export class ReportConfidentialRemarksComponent implements OnInit {
+export class ReportConfidentialRemarksComponent implements OnInit, OnDestroy {
     L = REPORT_LABELS;
     lang: ReportLang = 'en';
 
     /** Optional Contains filter on confidential remark text. */
     remarksSearchText = '';
+
+    /** Toolbar quick search — matches Service ID or RAB ID (server-side). */
+    idSearchText = '';
+    /** Debounces toolbar typing so we don't query on every keystroke. */
+    private readonly idSearchInput$ = new Subject<string>();
+    private idSearchSub: Subscription | null = null;
+    /** Last term actually sent to the server — suppresses duplicate reloads
+     *  (e.g. Enter followed by the debounced emission of the same text). */
+    private lastIdSearchApplied = '';
 
     statusOptions: { label: string; labelBn: string; value: string }[] = [
         { label: 'All Member', labelBn: 'সকল সদস্য', value: '' },
@@ -139,6 +148,28 @@ export class ReportConfidentialRemarksComponent implements OnInit {
     toggleLang(): void {
         this.lang = this.lang === 'en' ? 'bn' : 'en';
         this.appliedFilterLines = this.buildFilterLines();
+    }
+
+    /** Keystroke in the toolbar search — debounced auto-search. */
+    onIdSearchInput(): void {
+        this.idSearchInput$.next((this.idSearchText ?? '').trim());
+    }
+
+    /** Enter / search icon — search immediately, skipping the debounce. */
+    onIdSearch(): void {
+        this.applyIdSearch((this.idSearchText ?? '').trim());
+    }
+
+    clearIdSearch(): void {
+        this.idSearchText = '';
+        this.applyIdSearch('');
+    }
+
+    private applyIdSearch(term: string): void {
+        if (term === this.lastIdSearchApplied) return;
+        this.lastIdSearchApplied = term;
+        this.first = 0;
+        this.load();
     }
 
     get unitScopeLine(): string | null { return unitScopeLine(this.accessibleScope, this.lang); }
@@ -1013,6 +1044,14 @@ export class ReportConfidentialRemarksComponent implements OnInit {
         this.loadOrgOptions();
         this.loadMemberTypeOptions();
         this.loadOrgNodeLabels();
+
+        this.idSearchSub = this.idSearchInput$
+            .pipe(debounceTime(400))
+            .subscribe((term) => this.applyIdSearch(term));
+    }
+
+    ngOnDestroy(): void {
+        this.idSearchSub?.unsubscribe();
     }
 
     loadMemberTypeOptions(): void {
@@ -1122,6 +1161,8 @@ export class ReportConfidentialRemarksComponent implements OnInit {
 
     clearFilters(): void {
         this.remarksSearchText = '';
+        this.idSearchText = '';
+        this.lastIdSearchApplied = '';
         this.selectedPostingStatus = 'Servings';
         this.selectedOrgIds = [];
         this.selectedRankIds = [];
@@ -1297,6 +1338,7 @@ export class ReportConfidentialRemarksComponent implements OnInit {
             tradeIds: this.selectedTradeIds.length ? this.selectedTradeIds : undefined,
             rabOrgNodeIds: this.selectedOrgNodeIds.length ? this.selectedOrgNodeIds : undefined,
             remarksSearchText: search || undefined,
+            idSearchText: (this.idSearchText ?? '').trim() || undefined,
             postingStatus: this.selectedPostingStatus || undefined,
             columns: this.backendColumnKeys(),
             pagination: { page_no, row_per_page: this.rows },

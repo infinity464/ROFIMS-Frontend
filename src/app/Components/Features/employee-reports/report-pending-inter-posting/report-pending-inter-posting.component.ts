@@ -1,4 +1,4 @@
-import { Component, HostListener, OnInit } from '@angular/core';
+import { Component, HostListener, OnDestroy, OnInit } from '@angular/core';
 import { Router } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -39,7 +39,7 @@ import {
 } from 'docx';
 import { saveAs } from 'file-saver';
 import * as XLSX from 'xlsx';
-import { forkJoin } from 'rxjs';
+import { debounceTime, forkJoin, Subject, Subscription } from 'rxjs';
 
 /**
  * Pending Inter-Posting Report — rows are pending posting orders (each
@@ -73,9 +73,19 @@ import { forkJoin } from 'rxjs';
     templateUrl: './report-pending-inter-posting.component.html',
     styleUrls: ['../report-theme.scss', '../report-card-mtr.scss', './report-pending-inter-posting.component.scss'],
 })
-export class ReportPendingInterPostingComponent implements OnInit {
+export class ReportPendingInterPostingComponent implements OnInit, OnDestroy {
     L = REPORT_LABELS;
     lang: ReportLang = 'en';
+
+    /** Toolbar quick search — matches Service ID or RAB ID (client-side,
+     *  this report holds the full result set in memory). */
+    idSearchText = '';
+    /** Debounces toolbar typing so we don't re-filter on every keystroke. */
+    private readonly idSearchInput$ = new Subject<string>();
+    private idSearchSub: Subscription | null = null;
+    /** Last term actually applied — suppresses duplicate re-filters
+     *  (e.g. Enter followed by the debounced emission of the same text). */
+    private lastIdSearchApplied = '';
 
     canInsert = true;
     canUpdate = true;
@@ -211,6 +221,14 @@ export class ReportPendingInterPostingComponent implements OnInit {
 
         this.loadFilterOptions();
         this.loadData();
+
+        this.idSearchSub = this.idSearchInput$
+            .pipe(debounceTime(400))
+            .subscribe((term) => this.applyIdSearch(term));
+    }
+
+    ngOnDestroy(): void {
+        this.idSearchSub?.unsubscribe();
     }
 
     loadData(): void {
@@ -360,6 +378,8 @@ export class ReportPendingInterPostingComponent implements OnInit {
         this.rankOptions = [];
         this.corpsOptions = [];
         this.tradeOptions = [];
+        this.idSearchText = '';
+        this.lastIdSearchApplied = '';
         this.first = 0;
     }
 
@@ -384,6 +404,29 @@ export class ReportPendingInterPostingComponent implements OnInit {
     toggleLang(): void {
         this.lang = this.lang === 'en' ? 'bn' : 'en';
         this.appliedFilterLines = this.buildFilterLines();
+    }
+
+    /** Keystroke in the toolbar search — debounced auto-filter. */
+    onIdSearchInput(): void {
+        this.idSearchInput$.next((this.idSearchText ?? '').trim());
+    }
+
+    /** Enter / search icon — filter immediately, skipping the debounce. */
+    onIdSearch(): void {
+        this.applyIdSearch((this.idSearchText ?? '').trim());
+    }
+
+    clearIdSearch(): void {
+        this.idSearchText = '';
+        this.applyIdSearch('');
+    }
+
+    private applyIdSearch(term: string): void {
+        if (term === this.lastIdSearchApplied) return;
+        this.lastIdSearchApplied = term;
+        // Re-run the client-side filter over the full in-memory set — search()
+        // reapplies every dropdown filter plus the id term and resets paging.
+        this.search();
     }
 
     buildFilterLines(): string[] {
@@ -423,6 +466,8 @@ export class ReportPendingInterPostingComponent implements OnInit {
     search(): void {
         this.searched = true;
         this.appliedFilterLines = this.buildFilterLines();
+        // Identifier fields use EXACT match — "1234" must not surface "12345".
+        const idTerm = (this.idSearchText ?? '').trim().toLowerCase();
         this.list = this.allRows.filter((r) => {
             if (this.selectedFromUnitIds.length && !this.selectedFromUnitIds.includes(r.fromRabUnitId as number)) return false;
             if (this.selectedPostedUnitIds.length && !this.selectedPostedUnitIds.includes(r.transferRabUnitId as number)) return false;
@@ -431,6 +476,11 @@ export class ReportPendingInterPostingComponent implements OnInit {
             if (this.selectedRankIds.length && !this.selectedRankIds.includes(r.rankId as number)) return false;
             if (this.selectedCorpsIds.length && !this.selectedCorpsIds.includes(r.corpsId as number)) return false;
             if (this.selectedTradeIds.length && !this.selectedTradeIds.includes(r.tradeId as number)) return false;
+            if (idTerm) {
+                const svc = String(r.serviceId ?? '').toLowerCase();
+                const rab = String(r.rabID ?? '').toLowerCase();
+                if (svc !== idTerm && rab !== idTerm) return false;
+            }
             return true;
         });
         this.first = 0;

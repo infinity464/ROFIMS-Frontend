@@ -1,4 +1,4 @@
-import { Component, EventEmitter, HostListener, Input, OnChanges, OnInit, Output, SimpleChanges } from '@angular/core';
+import { Component, EventEmitter, HostListener, Input, OnChanges, OnDestroy, OnInit, Output, SimpleChanges } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { TableModule } from 'primeng/table';
@@ -23,7 +23,7 @@ import { personnelMeta as personnelMetaHelper } from '../formal-rab-render.helpe
 import { AlignmentType, BorderStyle, Document, Footer, Packer, PageNumber, PageOrientation, Paragraph, Table, TableCell, TableLayoutType, TableRow, TextRun, WidthType } from 'docx';
 import { saveAs } from 'file-saver';
 import * as XLSX from 'xlsx';
-import { forkJoin } from 'rxjs';
+import { debounceTime, forkJoin, Subject, Subscription } from 'rxjs';
 
 @Component({
     selector: 'app-report-education',
@@ -33,7 +33,7 @@ import { forkJoin } from 'rxjs';
     templateUrl: './report-education.component.html',
     styleUrls: ['../report-theme.scss', '../report-card-mtr.scss', './report-education.component.scss']
 })
-export class ReportEducationComponent implements OnInit, OnChanges {
+export class ReportEducationComponent implements OnInit, OnChanges, OnDestroy {
     L = REPORT_LABELS;
     @Input() lang: ReportLang = 'en';
     /** Parent's CommonCode pick (Higher Education Qualification CodeId). */
@@ -43,6 +43,15 @@ export class ReportEducationComponent implements OnInit, OnChanges {
     @Input() postingStatus: string = 'Servings';
     @Input() statusLabel = '';
     @Input() statusLabelBn = '';
+
+    /** Toolbar quick search — matches Service ID or RAB ID (server-side). */
+    idSearchText = '';
+    /** Debounces toolbar typing so we don't query on every keystroke. */
+    private readonly idSearchInput$ = new Subject<string>();
+    private idSearchSub: Subscription | null = null;
+    /** Last term actually sent to the server — suppresses duplicate reloads
+     *  (e.g. Enter followed by the debounced emission of the same text). */
+    private lastIdSearchApplied = '';
     @Output() langToggle = new EventEmitter<void>();
 
     orgOptions: { label: string; labelBn: string; value: number }[] = [];
@@ -531,6 +540,36 @@ export class ReportEducationComponent implements OnInit, OnChanges {
         this.loadInstitutionOptions();
         this.loadDepartmentOptions();
         this.load();
+
+        this.idSearchSub = this.idSearchInput$
+            .pipe(debounceTime(400))
+            .subscribe((term) => this.applyIdSearch(term));
+    }
+
+    ngOnDestroy(): void {
+        this.idSearchSub?.unsubscribe();
+    }
+
+    /** Keystroke in the toolbar search — debounced auto-search. */
+    onIdSearchInput(): void {
+        this.idSearchInput$.next((this.idSearchText ?? '').trim());
+    }
+
+    /** Enter / search icon — search immediately, skipping the debounce. */
+    onIdSearch(): void {
+        this.applyIdSearch((this.idSearchText ?? '').trim());
+    }
+
+    clearIdSearch(): void {
+        this.idSearchText = '';
+        this.applyIdSearch('');
+    }
+
+    private applyIdSearch(term: string): void {
+        if (term === this.lastIdSearchApplied) return;
+        this.lastIdSearchApplied = term;
+        this.first = 0;
+        this.load();
     }
 
     loadSubjectOptions(): void {
@@ -717,6 +756,8 @@ export class ReportEducationComponent implements OnInit, OnChanges {
     }
 
     clearFilters(): void {
+        this.idSearchText = '';
+        this.lastIdSearchApplied = '';
         this.selectedOrgIds = [];
         this.selectedRankIds = [];
         this.selectedCorpsIds = [];
@@ -917,6 +958,7 @@ export class ReportEducationComponent implements OnInit, OnChanges {
                 columns: this.backendColumnKeys(),
                 criteria,
                 postingStatusFilter: this.postingStatus || null,
+                idSearchText: (this.idSearchText ?? '').trim() || undefined,
                 pagination: { page_no, row_per_page: this.rows }
             })
             .subscribe({

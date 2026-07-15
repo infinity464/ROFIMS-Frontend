@@ -1,4 +1,4 @@
-import { Component, EventEmitter, HostListener, Input, OnChanges, OnInit, Output, SimpleChanges } from '@angular/core';
+import { Component, EventEmitter, HostListener, Input, OnChanges, OnDestroy, OnInit, Output, SimpleChanges } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { TableModule } from 'primeng/table';
@@ -47,7 +47,7 @@ import {
 } from 'docx';
 import { saveAs } from 'file-saver';
 import * as XLSX from 'xlsx';
-import { forkJoin } from 'rxjs';
+import { debounceTime, forkJoin, Subject, Subscription } from 'rxjs';
 
 /**
  * Special Qualification Report — parent's `commonCodeId` is a CommonCode
@@ -67,7 +67,7 @@ import { forkJoin } from 'rxjs';
     templateUrl: './report-special-qualification.component.html',
     styleUrls: ['../report-theme.scss', '../report-card-mtr.scss', './report-special-qualification.component.scss'],
 })
-export class ReportSpecialQualificationComponent implements OnInit, OnChanges {
+export class ReportSpecialQualificationComponent implements OnInit, OnChanges, OnDestroy {
     L = REPORT_LABELS;
     @Input() lang: ReportLang = 'en';
     @Input() commonCodeId: number | null = null;
@@ -77,6 +77,15 @@ export class ReportSpecialQualificationComponent implements OnInit, OnChanges {
     @Input() statusLabel = '';
     @Input() statusLabelBn = '';
     @Output() langToggle = new EventEmitter<void>();
+
+    /** Toolbar quick search — matches Service ID or RAB ID (server-side). */
+    idSearchText = '';
+    /** Debounces toolbar typing so we don't query on every keystroke. */
+    private readonly idSearchInput$ = new Subject<string>();
+    private idSearchSub: Subscription | null = null;
+    /** Last term actually sent to the server — suppresses duplicate reloads
+     *  (e.g. Enter followed by the debounced emission of the same text). */
+    private lastIdSearchApplied = '';
 
     orgOptions: { label: string; labelBn: string; value: number }[] = [];
     selectedOrgIds: number[] = [];
@@ -814,7 +823,16 @@ export class ReportSpecialQualificationComponent implements OnInit, OnChanges {
         this.loadOrgOptions();
         this.loadMemberTypeOptions();
         this.loadOrgNodeLabels();
+
+        this.idSearchSub = this.idSearchInput$
+            .pipe(debounceTime(400))
+            .subscribe((term) => this.applyIdSearch(term));
+
         this.load();
+    }
+
+    ngOnDestroy(): void {
+        this.idSearchSub?.unsubscribe();
     }
 
     loadMemberTypeOptions(): void {
@@ -932,6 +950,28 @@ export class ReportSpecialQualificationComponent implements OnInit, OnChanges {
         return n + ' ' + L['report.search.panelSubtitleApplied'];
     }
 
+    /** Keystroke in the toolbar search — debounced auto-search. */
+    onIdSearchInput(): void {
+        this.idSearchInput$.next((this.idSearchText ?? '').trim());
+    }
+
+    /** Enter / search icon — search immediately, skipping the debounce. */
+    onIdSearch(): void {
+        this.applyIdSearch((this.idSearchText ?? '').trim());
+    }
+
+    clearIdSearch(): void {
+        this.idSearchText = '';
+        this.applyIdSearch('');
+    }
+
+    private applyIdSearch(term: string): void {
+        if (term === this.lastIdSearchApplied) return;
+        this.lastIdSearchApplied = term;
+        this.first = 0;
+        this.load();
+    }
+
     clearFilters(): void {
         this.selectedOrgIds = [];
         this.selectedRankIds = [];
@@ -943,6 +983,8 @@ export class ReportSpecialQualificationComponent implements OnInit, OnChanges {
         this.corpsOptions = [];
         this.tradeOptions = [];
         this.allRanksForOrg = [];
+        this.idSearchText = '';
+        this.lastIdSearchApplied = '';
         this.first = 0;
     }
 
@@ -1087,6 +1129,7 @@ export class ReportSpecialQualificationComponent implements OnInit, OnChanges {
             columns: this.backendColumnKeys(),
             criteria,
             postingStatusFilter: this.postingStatus || null,
+            idSearchText: (this.idSearchText ?? '').trim() || undefined,
             pagination: { page_no, row_per_page: this.rows },
         }).subscribe({
             next: (res) => {

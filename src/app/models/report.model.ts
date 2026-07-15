@@ -144,6 +144,8 @@ export interface ConfidentialRemarksReportParams {
   rabOrgNodeIds?: number[] | null;
   /** Optional Contains filter on remark text. */
   remarksSearchText?: string | null;
+  /** Optional Contains filter matching Service ID or RAB ID. */
+  idSearchText?: string | null;
   postingStatus?: string | null;
   /** Registry field keys to project (same as dynamic employee-base report). */
   columns?: string[] | null;
@@ -707,6 +709,8 @@ export interface DynamicReportRequest {
   columns: string[];
   criteria: DynamicReportCriterion[];
   sort?: DynamicReportSort[];
+  /** Toolbar quick-search: Contains match against Service ID OR RAB ID. */
+  idSearchText?: string | null;
   /**
    * Nominal Roll Seniority — which seniority leads the employee-base ordering.
    * "RankSeniority" = Rank SortOrder first, then Mother Org; "OrganizationSeniority"

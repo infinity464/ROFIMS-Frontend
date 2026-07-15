@@ -1,4 +1,4 @@
-import { Component, EventEmitter, HostListener, Input, OnChanges, OnInit, Output, SimpleChanges } from '@angular/core';
+import { Component, EventEmitter, HostListener, Input, OnChanges, OnDestroy, OnInit, Output, SimpleChanges } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { TableModule } from 'primeng/table';
@@ -47,7 +47,7 @@ import {
 } from 'docx';
 import { saveAs } from 'file-saver';
 import * as XLSX from 'xlsx';
-import { forkJoin } from 'rxjs';
+import { debounceTime, forkJoin, Subject, Subscription } from 'rxjs';
 
 /**
  * Officer Type Report — same shape as report-member-appointment.
@@ -77,7 +77,7 @@ import { forkJoin } from 'rxjs';
     templateUrl: './report-officer-type.component.html',
     styleUrls: ['../report-theme.scss', '../report-card-mtr.scss', './report-officer-type.component.scss'],
 })
-export class ReportOfficerTypeComponent implements OnInit, OnChanges {
+export class ReportOfficerTypeComponent implements OnInit, OnChanges, OnDestroy {
     L = REPORT_LABELS;
     @Input() lang: ReportLang = 'en';
     /** Parent-locked Officer Type CommonCode CodeId. */
@@ -88,6 +88,15 @@ export class ReportOfficerTypeComponent implements OnInit, OnChanges {
     @Input() statusLabel = '';
     @Input() statusLabelBn = '';
     @Output() langToggle = new EventEmitter<void>();
+
+    /** Toolbar quick search — matches Service ID or RAB ID (server-side). */
+    idSearchText = '';
+    /** Debounces toolbar typing so we don't query on every keystroke. */
+    private readonly idSearchInput$ = new Subject<string>();
+    private idSearchSub: Subscription | null = null;
+    /** Last term actually sent to the server — suppresses duplicate reloads
+     *  (e.g. Enter followed by the debounced emission of the same text). */
+    private lastIdSearchApplied = '';
 
     orgOptions: { label: string; labelBn: string; value: number }[] = [];
     selectedOrgIds: number[] = [];
@@ -1018,6 +1027,28 @@ export class ReportOfficerTypeComponent implements OnInit, OnChanges {
 </html>`;
     }
 
+    /** Keystroke in the toolbar search — debounced auto-search. */
+    onIdSearchInput(): void {
+        this.idSearchInput$.next((this.idSearchText ?? '').trim());
+    }
+
+    /** Enter / search icon — search immediately, skipping the debounce. */
+    onIdSearch(): void {
+        this.applyIdSearch((this.idSearchText ?? '').trim());
+    }
+
+    clearIdSearch(): void {
+        this.idSearchText = '';
+        this.applyIdSearch('');
+    }
+
+    private applyIdSearch(term: string): void {
+        if (term === this.lastIdSearchApplied) return;
+        this.lastIdSearchApplied = term;
+        this.first = 0;
+        this.load();
+    }
+
     ngOnInit(): void {
         const _perms = this._userMenuService.getPermissionsByRoute(this._router.url);
         this.canInsert = _perms.canInsert;
@@ -1029,6 +1060,14 @@ export class ReportOfficerTypeComponent implements OnInit, OnChanges {
         this.loadMemberTypeOptions();
         this.loadOrgNodeLabels();
         this.load();
+
+        this.idSearchSub = this.idSearchInput$
+            .pipe(debounceTime(400))
+            .subscribe((term) => this.applyIdSearch(term));
+    }
+
+    ngOnDestroy(): void {
+        this.idSearchSub?.unsubscribe();
     }
 
     loadMemberTypeOptions(): void {
@@ -1147,6 +1186,8 @@ export class ReportOfficerTypeComponent implements OnInit, OnChanges {
     }
 
     clearFilters(): void {
+        this.idSearchText = '';
+        this.lastIdSearchApplied = '';
         this.selectedOrgIds = [];
         this.selectedRankIds = [];
         this.selectedCorpsIds = [];
@@ -1301,6 +1342,7 @@ export class ReportOfficerTypeComponent implements OnInit, OnChanges {
             columns: this.backendColumnKeys(),
             criteria,
             postingStatusFilter: this.postingStatus || null,
+            idSearchText: (this.idSearchText ?? '').trim() || undefined,
             pagination: { page_no, row_per_page: this.rows },
         }).subscribe({
             next: (res) => {

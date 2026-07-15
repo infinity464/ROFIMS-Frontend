@@ -138,6 +138,61 @@
     gap: 0.4rem;
     margin-bottom: 0.65rem;
 
+    .rab-toolbar-search {
+        display: flex;
+        align-items: center;
+        height: 28px;
+        border: 1px solid var(--rab-strip-border);
+        border-radius: 2px;
+        background: var(--rab-strip-bg);
+        transition: border-color 0.15s;
+
+        &:focus-within {
+            border-color: var(--rab-accent);
+        }
+
+        input {
+            width: 180px;
+            height: 100%;
+            padding: 0 4px;
+            border: none;
+            outline: none;
+            background: transparent;
+            color: var(--rab-text);
+            font-family: var(--rab-mono);
+            font-size: 0.7rem;
+            letter-spacing: 0.04em;
+
+            &::placeholder {
+                color: var(--rab-text);
+                opacity: 0.45;
+                text-transform: uppercase;
+                letter-spacing: 0.1em;
+            }
+        }
+
+        .rab-search-btn,
+        .rab-search-clear {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            padding: 0 8px;
+            border: none;
+            background: transparent;
+            color: var(--rab-text);
+            cursor: pointer;
+
+            .pi {
+                font-size: 0.66rem;
+            }
+
+            &:hover {
+                color: var(--rab-accent);
+            }
+        }
+    }
+
     .report-lang-toggle,
     .report-btn-export {
         height: 28px;

@@ -1,4 +1,4 @@
-import { Component, HostListener, OnInit } from '@angular/core';
+import { Component, HostListener, OnDestroy, OnInit } from '@angular/core';
 import { Router } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -23,7 +23,7 @@ import { OrgTreeMultiSelectComponent } from '@/shared/components/org-tree-multi-
 import { AlignmentType, BorderStyle, Document, Footer, Packer, PageNumber, PageOrientation, Paragraph, Table, TableCell, TableLayoutType, TableRow, TextRun, WidthType } from 'docx';
 import { saveAs } from 'file-saver';
 import * as XLSX from 'xlsx';
-import { forkJoin } from 'rxjs';
+import { debounceTime, forkJoin, Subject, Subscription } from 'rxjs';
 
 type Lang = 'en' | 'bn';
 
@@ -41,8 +41,17 @@ type Lang = 'en' | 'bn';
     templateUrl: './report-stay-after-reliever-joined.component.html',
     styleUrls: ['../report-theme.scss', '../report-card-mtr.scss', './report-stay-after-reliever-joined.component.scss']
 })
-export class ReportStayAfterRelieverJoinedComponent implements OnInit {
+export class ReportStayAfterRelieverJoinedComponent implements OnInit, OnDestroy {
     lang: Lang = 'en';
+
+    /** Toolbar quick search — matches Service ID or RAB ID (server-side). */
+    idSearchText = '';
+    /** Debounces toolbar typing so we don't query on every keystroke. */
+    private readonly idSearchInput$ = new Subject<string>();
+    private idSearchSub: Subscription | null = null;
+    /** Last term actually sent to the server — suppresses duplicate reloads
+     *  (e.g. Enter followed by the debounced emission of the same text). */
+    private lastIdSearchApplied = '';
 
     canInsert = true;
     canUpdate = true;
@@ -412,6 +421,14 @@ export class ReportStayAfterRelieverJoinedComponent implements OnInit {
         this.loadMemberTypes();
         this.loadOrgNodeLabels();
         // Do not auto-run; the list loads only after the user clicks Search.
+
+        this.idSearchSub = this.idSearchInput$
+            .pipe(debounceTime(400))
+            .subscribe((term) => this.applyIdSearch(term));
+    }
+
+    ngOnDestroy(): void {
+        this.idSearchSub?.unsubscribe();
     }
 
     private loadMotherOrgs(): void {
@@ -655,6 +672,8 @@ export class ReportStayAfterRelieverJoinedComponent implements OnInit {
     }
 
     clearFilters(): void {
+        this.idSearchText = '';
+        this.lastIdSearchApplied = '';
         this.selectedOrgIds = [];
         this.selectedRankId = null;
         this.rankOptions = [];
@@ -674,6 +693,28 @@ export class ReportStayAfterRelieverJoinedComponent implements OnInit {
     toggleLang(): void {
         this.lang = this.lang === 'en' ? 'bn' : 'en';
         this.appliedFilterLines = this.buildFilterLines();
+    }
+
+    /** Keystroke in the toolbar search — debounced auto-search. */
+    onIdSearchInput(): void {
+        this.idSearchInput$.next((this.idSearchText ?? '').trim());
+    }
+
+    /** Enter / search icon — search immediately, skipping the debounce. */
+    onIdSearch(): void {
+        this.applyIdSearch((this.idSearchText ?? '').trim());
+    }
+
+    clearIdSearch(): void {
+        this.idSearchText = '';
+        this.applyIdSearch('');
+    }
+
+    private applyIdSearch(term: string): void {
+        if (term === this.lastIdSearchApplied) return;
+        this.lastIdSearchApplied = term;
+        this.first = 0;
+        this.loadPage();
     }
 
     search(): void {
@@ -731,6 +772,7 @@ export class ReportStayAfterRelieverJoinedComponent implements OnInit {
                 relieverJoinedOnly: this.appliedMode === 'joined',
                 relieverNotJoinedOnly: this.appliedMode === 'notJoined',
                 postedOutAllOnly: this.appliedMode === 'standRelease',
+                idSearchText: (this.idSearchText ?? '').trim() || undefined,
                 pagination: { page_no: pageNo, row_per_page: this.rows }
             })
             .subscribe({
