@@ -41,6 +41,30 @@
     margin-right: 0.8em;
 }
 
+/* Edit-mode members table: mark every editable data cell (same affordance as the
+   generate page) — soft tint + text cursor, with a pencil hint on hover. */
+.ns-edit-member-cell--editable {
+    cursor: text;
+    background: var(--primary-50, #eff6ff);
+    position: relative;
+
+    &:hover {
+        background: var(--primary-100, #dbeafe);
+
+        &::after {
+            content: '\270E'; // ✎ pencil
+            position: absolute;
+            top: 2px;
+            right: 4px;
+            font-size: 0.65rem;
+            line-height: 1;
+            color: var(--primary-color, #3b82f6);
+            opacity: 0.6;
+            pointer-events: none;
+        }
+    }
+}
+
 /* Edit mode uses a plain .a4-paper (no .paginated); the visible view-mode pages
    are .a4-paper.paginated. Let the edit form span the full available width
    instead of the fixed A4 column — view pages and the PDF stay A4. */

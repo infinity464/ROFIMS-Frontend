@@ -252,6 +252,9 @@
                                                                 (keydown.escape)="editingColLabelKey = null" />
                                                         } @else {
                                                             <span (dblclick)="startEditColLabel(col.key, col.label, $event)" title="Double-click to rename" style="font-size:7pt;">{{ col.label }}</span>
+                                                            <button type="button" style="border:none;background:none;cursor:pointer;color:#3b82f6;padding:0;font-size:9px;opacity:0.6;" (click)="startEditColLabel(col.key, col.label, $event)" title="Rename column">
+                                                                <i class="pi pi-pencil"></i>
+                                                            </button>
                                                         }
                                                         <button type="button" style="border:none;background:none;cursor:pointer;color:#e74c3c;padding:0;font-size:10px;" (click)="removeColumn(col.key)" title="Remove column">
                                                             <i class="pi pi-times"></i>
@@ -260,7 +263,7 @@
                                                     <span style="position:absolute;top:0;right:-2px;bottom:0;width:5px;cursor:col-resize;z-index:1;" (mousedown)="onResizeStart(ci, $event)"></span>
                                                 </th>
                                             }
-                                            <th style="padding:4px 6px;background:#f8f9fa;border:1px solid #dee2e6;font-size:7pt;">Action</th>
+                                            <th style="padding:4px 6px;background:#f8f9fa;border:1px solid #dee2e6;font-size:7pt;">{{ editTextType === 'bn' ? 'অ্যাকশন' : 'Action' }}</th>
                                         </tr>
                                     </thead>
                                     <tbody>
@@ -268,19 +271,22 @@
                                             <tr>
                                                 <td style="padding:3px 5px;border:1px solid #dee2e6;font-size:7pt;text-align:center;">{{ memberSerial(i) }}</td>
                                                 @for (col of editMembersData.columns; track col.key) {
-                                                    <td style="padding:3px 5px;border:1px solid #dee2e6;font-size:7pt;word-break:break-word;"
-                                                        [style.cursor]="isCustomColumn(col) ? 'pointer' : 'default'"
-                                                        (click)="isCustomColumn(col) ? startEditMemberCell(i, col.key, $event) : null">
+                                                    <td class="ns-edit-member-cell"
+                                                        [class.ns-edit-member-cell--editable]="isEditableCell(col)"
+                                                        style="padding:3px 5px;border:1px solid #dee2e6;font-size:7pt;word-break:break-word;"
+                                                        (click)="isEditableCell(col) ? startEditMemberCell(i, col.key, $event) : null">
                                                         @if (col.mergedFrom) {
-                                                            {{ getMergedCellValue(member, col) }}
-                                                        } @else if (isCustomColumn(col) && editingMemberCellKey === memberCellKey(i, col.key)) {
+                                                            {{ formatMemberCellDisplay(getMergedCellValue(member, col)) }}
+                                                        } @else if (editingMemberCellKey === memberCellKey(i, col.key)) {
                                                             <input type="text" style="width:80px;font-size:7pt;padding:1px 3px;"
                                                                 [(ngModel)]="editingMemberCellValue"
                                                                 [ngModelOptions]="{standalone:true}"
                                                                 (blur)="onMemberCellBlur(i, col.key)"
                                                                 (keydown)="onMemberCellKeydown($event, i, col.key)" />
+                                                        } @else if (member.values[col.key]) {
+                                                            {{ formatMemberCellDisplay(member.values[col.key]) }}
                                                         } @else {
-                                                            {{ member.values[col.key] || '—' }}
+                                                            <span style="color:#94a3b8;font-style:italic;">{{ editTextType === 'bn' ? '✎ লিখুন' : '✎ Click to edit' }}</span>
                                                         }
                                                     </td>
                                                 }
@@ -421,7 +427,7 @@
                         <table class="ns-members-preview-table">
                             <thead>
                                 <tr>
-                                    <th style="text-align:center;width:30px;">{{ isEnglish() ? 'SL' : 'ক্রমিক' }}</th>
+                                    <th style="text-align:center;width:36px;">{{ isEnglish() ? 'SL' : 'ক্রমিক' }}</th>
                                     <th *ngFor="let col of previewMembersColumns" [style.width.%]="getPreviewColWidth(col)">{{ getMemberColHeader(col) }}</th>
                                 </tr>
                             </thead>

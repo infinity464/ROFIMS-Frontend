@@ -622,7 +622,8 @@ export class NotesheetPreviewGeneralComponent extends NotesheetPreviewBase imple
             if (payload['filesReferences'] !== undefined) ns.filesReferences = payload['filesReferences'] ?? null;
         }
         // View mode reads the members from previewMembers* — mirror the edited set.
-        this.previewMembersColumns = this.editMembersData.columns.map((c) => ({ ...c }));
+        // (Cast as-any to match the loaded path, which assigns parsed JSON columns.)
+        this.previewMembersColumns = this.editMembersData.columns.map((c) => ({ ...c })) as any;
         this.previewMembersRows = this.editMembersData.members.map((m) => ({ ...m.values }));
         this.loadedMemberEmployeeIds = this.editMembersData.members.map((m) => m.employeeId);
     }
@@ -936,6 +937,17 @@ export class NotesheetPreviewGeneralComponent extends NotesheetPreviewBase imple
         return col.group === 'custom';
     }
 
+    /** Any non-merged cell is inline-editable (same as the generate page). */
+    isEditableCell(col: MemberColumnDef): boolean {
+        return !col.mergedFrom;
+    }
+
+    /** Edit-table cell display: Bangla digits when the edited language is Bangla. */
+    formatMemberCellDisplay(value: string | null | undefined): string {
+        const v = value ?? '';
+        return this.editTextType === 'bn' ? this.toBanglaDigits(v) : v;
+    }
+
     memberCellKey(rowIndex: number, colKey: string): string {
         return `${rowIndex}_${colKey}`;
     }
@@ -1075,12 +1087,22 @@ export class NotesheetPreviewGeneralComponent extends NotesheetPreviewBase imple
         return Math.round(((100 - 10) / colCount) * 10) / 10;
     }
 
+    /** Default proportional widths (%) for the standard member columns when no explicit
+     *  width is set — Service ID / Rank render narrow, Name / Unit / Remarks wider. */
+    private readonly defaultColWidthByKey: Record<string, number> = {
+        prefixWithServiceId: 12, prefixWithServiceIdBN: 12,
+        armyRank: 11, armyRankBN: 11,
+        formattedName: 27, formattedNameBN: 27,
+        presentRabUnit: 25, presentRabUnitBN: 25,
+        custom_Remarks: 25
+    };
+
     getEditColWidth(col: MemberColumnDef): number {
-        return col.width ?? this.getDefaultColWidth(this.editMembersData.columns.length);
+        return col.width ?? this.defaultColWidthByKey[col.key] ?? this.getDefaultColWidth(this.editMembersData.columns.length);
     }
 
-    getPreviewColWidth(col: { width?: number }): number {
-        return col.width ?? this.getDefaultColWidth(this.previewMembersColumns.length);
+    getPreviewColWidth(col: { key: string; width?: number }): number {
+        return col.width ?? this.defaultColWidthByKey[col.key] ?? this.getDefaultColWidth(this.previewMembersColumns.length);
     }
 
     /** Bangla header text for member-table columns (keyed by column key, both
@@ -1117,9 +1139,9 @@ export class NotesheetPreviewGeneralComponent extends NotesheetPreviewBase imple
     /** Auto serial for members table rows: Bangla numerals when Bangla, English otherwise */
     memberSerial(index: number): string {
         const n = index + 1;
-        if (this.isEnglish()) return String(n);
+        if (this.isEnglish()) return `${n}.`;
         const bn = ['০','১','২','৩','৪','৫','৬','৭','৮','৯'];
-        return String(n).replace(/\d/g, d => bn[+d]);
+        return String(n).replace(/\d/g, d => bn[+d]) + '।';
     }
 
     /** Get cell value for preview members table — handles merged columns + Bangla numeral conversion */

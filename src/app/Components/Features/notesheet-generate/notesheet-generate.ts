@@ -791,7 +791,7 @@ export class NotesheetGenerateComponent implements OnInit {
 
     memberSerial(index: number): string {
         const n = index + 1;
-        return this.isBangla ? BanglaNumerals.toBangla(String(n)) : String(n);
+        return this.isBangla ? BanglaNumerals.toBangla(String(n)) + '।' : String(n) + '.';
     }
 
     get referenceEmployeeOptionsDisplay(): { label: string; value: number }[] {

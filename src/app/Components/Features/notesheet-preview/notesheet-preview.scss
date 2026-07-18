@@ -336,10 +336,11 @@
     overflow-x: auto;
 }
 .ns-members-preview-table {
-    width: calc(100% - 8px);
+    // Keep a small, symmetric gap from the page border on both sides.
+    width: calc(100% - 28px);
     border-collapse: collapse;
     font-size: 7pt;
-    margin: 4px 0 4px 8px;
+    margin: 6px 14px;
     table-layout: fixed;
     th,
     td {
@@ -355,11 +356,12 @@
         font-size: 7pt;
         text-transform: uppercase;
     }
-    // Serial column stays narrow
+    // Serial column stays narrow (just wide enough for "ক্রমিক" / "১।")
     th:first-child,
     td:first-child {
-        width: 30px;
-        min-width: 30px;
+        width: 36px;
+        min-width: 36px;
+        padding: 4px 3px;
     }
 }
 
