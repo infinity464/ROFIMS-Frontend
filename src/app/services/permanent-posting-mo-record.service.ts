@@ -116,11 +116,30 @@ export interface PostedOutServedReportModel {
     rmks: string | null;
 }
 
+export interface EmployeeClearanceStatus {
+    employeeId: number;
+    hasPostedOut: boolean;
+    postedOutId: number | null;
+    hasClearanceNoteSheet: boolean;
+    clearanceNoteSheetId: number | null;
+    clearanceNoteSheetNo: string | null;
+    clearanceApproved: boolean;
+    /** True when the latest clearance note-sheet was cancelled (member is free again). */
+    clearanceCancelled: boolean;
+    /** None | PostedOut | ClearanceNoteSheet | ClearanceApproved | ClearanceCancelled */
+    step: string;
+}
+
 @Injectable({ providedIn: 'root' })
 export class PermanentPostingMORecordService {
     private baseUrl = `${environment.apis.core}/PermanentPostingMORecord`;
 
     constructor(private http: HttpClient) {}
+
+    /** Step-wise clearance workflow status for a member (posted-out → note-sheet → approved). */
+    getEmployeeClearanceStatus(employeeId: number): Observable<EmployeeClearanceStatus> {
+        return this.http.get<EmployeeClearanceStatus>(`${this.baseUrl}/GetEmployeeClearanceStatus/${employeeId}`);
+    }
 
     getAll(): Observable<PermanentPostingMORecordModel[]> {
         return this.http.get<any>(`${this.baseUrl}/GetAllWithEmployeeAsyn`).pipe(map((r) => (Array.isArray(r) ? r : [])));

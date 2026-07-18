@@ -30,6 +30,7 @@ import { ExBdLeaveApplicationService, ExBdLeaveApplicationProgressView } from '@
 import { MovementInfoService, MovementInfoByEmployeeDto } from '@/services/movement-info.service';
 import { PostingService } from '@/services/posting.service';
 import { EmployeePostingProcessingStatusDto } from '@/models/posting.model';
+import { PermanentPostingMORecordService, EmployeeClearanceStatus } from '@/services/permanent-posting-mo-record.service';
 import { MovementType, MoveOrderType } from '@/models/enums';
 import { EmployeePersonalServiceOverview } from '@/models/employee-personal-service-overview.model';
 import { getFormattedMemberName } from '@/shared/utils/member-display-name.util';
@@ -150,6 +151,8 @@ export class ExMemberProfile implements OnInit, OnDestroy {
     activePresentStatus: string | null = null;
     presentStatusList: any[] = [];
     postingProcessingStatus: EmployeePostingProcessingStatusDto | null = null;
+    /** Step-wise clearance workflow status (posted-out → note-sheet → approved). */
+    clearanceStatus: EmployeeClearanceStatus | null = null;
 
     /** Presently-on-leave window (today falls inside it); null when not on leave. */
     currentLeave: { type: string; from: string | null; to: string | null } | null = null;
@@ -187,6 +190,7 @@ export class ExMemberProfile implements OnInit, OnDestroy {
         private exBdLeaveAppService: ExBdLeaveApplicationService,
         private movementInfoService: MovementInfoService,
         private postingService: PostingService,
+        private permanentPostingMORecordService: PermanentPostingMORecordService,
         private http: HttpClient
     ) {}
 
@@ -897,6 +901,7 @@ export class ExMemberProfile implements OnInit, OnDestroy {
             this.activePresentStatus = psList.find((r: any) => r.isActive)?.presentStatusType || null;
         });
         this.loadSection('postingStatus', this.postingService.getEmployeePostingProcessingStatus(id), (v) => (this.postingProcessingStatus = v ?? null));
+        this.loadSection('clearanceStatus', this.permanentPostingMORecordService.getEmployeeClearanceStatus(id), (v) => (this.clearanceStatus = v ?? null));
     }
 
     /**

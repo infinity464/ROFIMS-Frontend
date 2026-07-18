@@ -112,6 +112,34 @@
                     </span>
                 </div>
                 }
+                <!-- Line: Clearance workflow — single current status that advances as it progresses
+                     (Posted Out → Clearance Note-Sheet Generated → Approved / Cancelled).
+                     Note-sheet no is shown only on hover (tooltip). -->
+                @if (clearanceStatus?.hasPostedOut) {
+                <div class="sp-chip-row">
+                    <span class="sp-chip sp-chip--clearance"
+                          [class.sp-chip--clearance-done]="clearanceStatus!.clearanceApproved"
+                          [class.sp-chip--clearance-cancelled]="clearanceStatus!.clearanceCancelled"
+                          [title]="clearanceStatus!.clearanceNoteSheetNo || L['clearance.label']">
+                        <i class="pi"
+                           [class.pi-check-circle]="clearanceStatus!.clearanceApproved"
+                           [class.pi-times-circle]="clearanceStatus!.clearanceCancelled"
+                           [class.pi-clock]="!clearanceStatus!.clearanceApproved && !clearanceStatus!.clearanceCancelled"></i>
+                        <span class="sp-chip-key">{{ L['clearance.label'] }}</span>
+                        <span class="sp-chip-val">
+                            @if (clearanceStatus!.clearanceCancelled) {
+                                {{ L['clearance.cancelled'] }}
+                            } @else if (clearanceStatus!.clearanceApproved) {
+                                {{ L['clearance.generated'] }}
+                            } @else if (clearanceStatus!.hasClearanceNoteSheet) {
+                                {{ L['clearance.noteSheet'] }}
+                            } @else {
+                                {{ L['clearance.postedOut'] }}
+                            }
+                        </span>
+                    </span>
+                </div>
+                }
             </div>
         </div>
         <div class="sp-hero-ids">

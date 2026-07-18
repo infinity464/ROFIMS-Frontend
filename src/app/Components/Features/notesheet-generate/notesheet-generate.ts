@@ -79,6 +79,11 @@ export interface PostedOutClearanceInfo {
     hasPostedOut: boolean;
     usedInNoteSheetId: number | null;
     usedInNoteSheetNo: string | null;
+    /** True when the blocking note-sheet is final-approved (hard block). Cancelled ones don't block. */
+    usedInNoteSheetApproved: boolean;
+    /** True when the member was previously in a cancelled note-sheet — allowed to re-add, but warn. */
+    hasCancelledNoteSheet: boolean;
+    cancelledNoteSheetNo: string | null;
 }
 
 /** Shape stored in NoteSheetInfo.MembersJson */
@@ -1154,20 +1159,34 @@ export class NotesheetGenerateComponent implements OnInit {
                     return;
                 }
                 if (info.usedInNoteSheetId != null) {
+                    const nsRef = info.usedInNoteSheetNo || ('#' + info.usedInNoteSheetId);
                     this.messageService.add({
                         severity: 'error',
-                        summary: 'Already in a note-sheet',
-                        detail: `This posted-out member is already added in note-sheet ${info.usedInNoteSheetNo || ('#' + info.usedInNoteSheetId)}. A posted-out member can be in only one note-sheet.`,
+                        summary: info.usedInNoteSheetApproved ? 'Clearance already approved' : 'Already in a note-sheet',
+                        detail: info.usedInNoteSheetApproved
+                            ? `This posted-out member's clearance is already approved in note-sheet ${nsRef} and cannot be added again.`
+                            : `This posted-out member is already in note-sheet ${nsRef}. A posted-out member can be in only one active note-sheet. (If that note-sheet is cancelled, the member becomes available again.)`,
                         life: 8000
                     });
                     return;
                 }
-                this.messageService.add({
-                    severity: 'info',
-                    summary: 'Posted-out member',
-                    detail: `Verified posted-out member (Posted Out ID: ${info.postedOutId}). Adding to the note-sheet.`,
-                    life: 5000
-                });
+                if (info.hasCancelledNoteSheet) {
+                    // Allowed to re-add, but the member's earlier clearance note-sheet was cancelled — warn.
+                    const cancelledRef = info.cancelledNoteSheetNo ? ` (${info.cancelledNoteSheetNo})` : '';
+                    this.messageService.add({
+                        severity: 'warn',
+                        summary: 'Previously cancelled',
+                        detail: `This member's earlier clearance note-sheet${cancelledRef} was cancelled. Adding to this new note-sheet.`,
+                        life: 7000
+                    });
+                } else {
+                    this.messageService.add({
+                        severity: 'info',
+                        summary: 'Posted-out member',
+                        detail: `Verified posted-out member (Posted Out ID: ${info.postedOutId}). Adding to the note-sheet.`,
+                        life: 5000
+                    });
+                }
                 this.addFoundMember(emp, info.postedOutId);
             },
             error: () => {

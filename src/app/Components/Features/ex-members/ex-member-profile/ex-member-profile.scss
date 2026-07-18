@@ -219,6 +219,86 @@ $section-margin: 1rem;
         border-color: var(--p-green-200, #bbf7d0);
         color: var(--p-green-700, #15803d);
     }
+
+    /* Clearance workflow chip — carries an inline step-wise progress track. */
+    &--clearance {
+        background: var(--p-cyan-50, #ecfeff);
+        border-color: var(--p-cyan-200, #a5f3fc);
+        color: var(--p-cyan-800, #155e75);
+        padding-right: 0.85rem;
+
+        &.sp-chip--clearance-done {
+            background: var(--p-green-50, #f0fdf4);
+            border-color: var(--p-green-300, #86efac);
+            color: var(--p-green-800, #166534);
+        }
+
+        &.sp-chip--clearance-cancelled {
+            background: var(--p-red-50, #fef2f2);
+            border-color: var(--p-red-300, #fca5a5);
+            color: var(--p-red-800, #991b1b);
+        }
+    }
+}
+
+/* ═══ Inline step-wise progress track (clearance) ═══ */
+.sp-steps {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    margin-left: 0.15rem;
+}
+
+.sp-step {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.28rem;
+    font-size: 0.76rem;
+    font-weight: 600;
+    white-space: nowrap;
+    opacity: 0.5;
+    transition: opacity 0.15s;
+
+    i {
+        font-size: 0.82rem;
+        opacity: 0.7;
+    }
+
+    &--done {
+        opacity: 1;
+
+        i {
+            opacity: 1;
+        }
+    }
+
+    /* Cancelled outcome — always emphasised in red regardless of theme chip colour. */
+    &--cancelled {
+        opacity: 1;
+        color: var(--p-red-600, #dc2626);
+
+        i {
+            opacity: 1;
+        }
+    }
+}
+
+.sp-step-line {
+    width: 16px;
+    height: 2px;
+    border-radius: 2px;
+    background: currentColor;
+    opacity: 0.28;
+    flex-shrink: 0;
+
+    &--done {
+        opacity: 0.85;
+    }
+
+    &--cancelled {
+        background: var(--p-red-500, #ef4444);
+        opacity: 0.7;
+    }
 }
 
 .sp-hero-ids {
@@ -798,6 +878,28 @@ $section-margin: 1rem;
             background: rgba(34, 197, 94, 0.16);
             border-color: rgba(34, 197, 94, 0.4);
             color: var(--p-green-300, #86efac);
+        }
+
+        &--clearance {
+            background: rgba(6, 182, 212, 0.16);
+            border-color: rgba(6, 182, 212, 0.4);
+            color: var(--p-cyan-300, #67e8f9);
+
+            &.sp-chip--clearance-done {
+                background: rgba(34, 197, 94, 0.18);
+                border-color: rgba(34, 197, 94, 0.45);
+                color: var(--p-green-300, #86efac);
+            }
+
+            &.sp-chip--clearance-cancelled {
+                background: rgba(239, 68, 68, 0.16);
+                border-color: rgba(239, 68, 68, 0.42);
+                color: var(--p-red-300, #fca5a5);
+            }
+        }
+
+        .sp-step--cancelled {
+            color: var(--p-red-400, #f87171);
         }
     }
 

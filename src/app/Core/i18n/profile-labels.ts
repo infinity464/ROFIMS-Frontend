@@ -274,6 +274,13 @@ export const PROFILE_LABELS = {
     'posting.postingApproved': 'Posting Approved',
     'posting.postingNotApproved': 'Posting Not Approved',
 
+    // Clearance workflow status (posted-out → clearance note-sheet → approved)
+    'clearance.label': 'Clearance',
+    'clearance.postedOut': 'Posted Out',
+    'clearance.noteSheet': 'Clearance Note-Sheet Generated',
+    'clearance.generated': 'Clearance Note-Sheet Approved',
+    'clearance.cancelled': 'Clearance Note-Sheet Cancelled',
+
     // Present (live) leave / movement status
     'status.onLeave': 'On Leave',
     'status.presentLocation': 'Present Location',
@@ -536,6 +543,13 @@ export const PROFILE_LABELS = {
     'posting.postingReceived': 'পোস্টিং গৃহীত',
     'posting.postingApproved': 'পোস্টিং অনুমোদিত',
     'posting.postingNotApproved': 'পোস্টিং অনুমোদিত নয়',
+
+    // Clearance workflow status (posted-out → clearance note-sheet → approved)
+    'clearance.label': 'ছাড়পত্র',
+    'clearance.postedOut': 'পোস্টেড আউট',
+    'clearance.noteSheet': 'ছাড়পত্র নোটশীট তৈরি',
+    'clearance.generated': 'ছাড়পত্র নোটশীট অনুমোদিত',
+    'clearance.cancelled': 'ছাড়পত্র নোটশীট বাতিল',
 
     // Present (live) leave / movement status
     'status.onLeave': 'ছুটিতে আছেন',
