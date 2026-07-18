@@ -10,6 +10,7 @@ export interface NoteSheetSubjectModel {
     subjectEN: string;
     subjectBN: string;
     status: boolean;
+    isClearanceSubject?: boolean;
 }
 
 @Injectable({ providedIn: 'root' })

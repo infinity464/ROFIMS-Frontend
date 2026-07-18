@@ -11,5 +11,7 @@ export interface FormField {
     options?: { label: string; value: any }[];
     dependsOn?: string;
     cascadeLoad?: boolean;
+    /** Show this field only when another field's value equals `equals`. */
+    visibleWhen?: { field: string; equals: any };
 
 }

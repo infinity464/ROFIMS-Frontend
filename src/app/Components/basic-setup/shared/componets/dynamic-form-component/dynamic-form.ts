@@ -5,6 +5,7 @@ import { ButtonModule } from 'primeng/button';
 import { SelectModule } from 'primeng/select';
 import { FormBuilder, FormGroup, FormsModule, Validators } from '@angular/forms';
 import { TextareaModule } from 'primeng/textarea';
+import { CheckboxModule } from 'primeng/checkbox';
 import { MultiSelectModule } from 'primeng/multiselect';
 import { SliderModule } from 'primeng/slider';
 import { Table, TableModule } from 'primeng/table';
@@ -30,6 +31,7 @@ import { FormConfig, FormField } from '../../models/formConfig';
         SelectModule,
         FormsModule,
         TextareaModule,
+        CheckboxModule,
         TableModule,
         MultiSelectModule,
         SelectModule,
@@ -128,6 +130,12 @@ export class DynamicFormComponent implements OnInit, OnChanges {
             return !parentControl?.value;
         }
         return false;
+    }
+
+    /** A field with `visibleWhen` shows only while the referenced control equals the value. */
+    isFieldVisible(field: FormField): boolean {
+        if (!field.visibleWhen) return true;
+        return this.form.get(field.visibleWhen.field)?.value === field.visibleWhen.equals;
     }
 
     onSave() {

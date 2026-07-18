@@ -1,7 +1,7 @@
 <form [formGroup]="form" (ngSubmit)="onSave()">
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
         @for (field of config.formFields; track field.name) {
-        @if (field.name !== 'status' || editingId) {
+        @if ((field.name !== 'status' || editingId) && isFieldVisible(field)) {
         <div>
             <label [for]="field.name" class="block mb-2">
                 {{ field.label }}
@@ -56,6 +56,11 @@
                 {{ field.label }} is required
             </small>
             }
+            }
+            @else if (field.type === 'checkbox') {
+            <div class="pt-1">
+                <p-checkbox [formControlName]="field.name" [binary]="true" [inputId]="field.name"></p-checkbox>
+            </div>
             }
         </div>
         }
