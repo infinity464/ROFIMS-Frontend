@@ -157,11 +157,30 @@
           }
         </p-fieldset>
 
-        <!-- Main Text -->
+        <!-- Main Text (repeatable blocks — each rendered with its own serial) -->
         <div class="form-row">
           <div class="form-field" style="flex-basis: 100%">
-            <label class="form-label">Main Text</label>
-            <app-rich-editor formControlName="mainText" height="220px" placeholder="Write content here..."></app-rich-editor>
+            <div style="display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; margin-bottom: 0.5rem;">
+              <label class="form-label" style="margin: 0;">Main Text</label>
+              <p-button icon="pi pi-plus" label="Add Block" [rounded]="false" [text]="true" severity="success" size="small" (onClick)="addMainTextParagraph()" pTooltip="Add Main Text block"></p-button>
+            </div>
+            @for (block of mainTextParagraphs; track trackByIndex($index)) {
+              <div class="ref-paragraph-row">
+                <span class="ref-serial">{{ getMainTextSerial($index) }}</span>
+                <div class="ref-paragraph-content">
+                  <app-rich-editor
+                    [ngModel]="mainTextParagraphs[$index].text"
+                    [ngModelOptions]="{ standalone: true }"
+                    (ngModelChange)="mainTextParagraphs[$index].text = $event"
+                    height="150px"
+                    placeholder="Write content here...">
+                  </app-rich-editor>
+                </div>
+                @if (mainTextParagraphs.length > 1) {
+                  <p-button icon="pi pi-trash" [rounded]="true" [text]="true" severity="danger" (onClick)="removeMainTextParagraph($index)"></p-button>
+                }
+              </div>
+            }
           </div>
         </div>
 
@@ -232,6 +251,13 @@
                               (keydown.escape)="editingColLabelKey = null" />
                           } @else {
                             <span (dblclick)="startEditColLabel(col.key, col.label, $event)" title="Double-click to rename">{{ col.label }}</span>
+                            <button
+                              type="button"
+                              class="members-table__col-rename"
+                              (click)="startEditColLabel(col.key, col.label, $event)"
+                              title="Rename column">
+                              <i class="pi pi-pencil"></i>
+                            </button>
                           }
                           <button
                             type="button"
@@ -244,7 +270,7 @@
                         <span class="members-table__col-resize" (mousedown)="onResizeStart(ci, $event)"></span>
                       </th>
                     }
-                    <th class="members-table__action">Action</th>
+                    <th class="members-table__action">{{ isBangla ? 'অ্যাকশন' : 'Action' }}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -253,12 +279,12 @@
                       <td style="text-align:center;">{{ memberSerial(i) }}</td>
                       @for (col of membersData.columns; track col.key) {
                         <td
-                          [class.members-table__custom-cell]="isCustomColumn(col)"
-                          [class.members-table__custom-cell--editable]="isCustomColumn(col)"
-                          (click)="isCustomColumn(col) ? startEditMemberCell(i, col.key, $event) : null">
+                          [class.members-table__custom-cell]="isEditableCell(col)"
+                          [class.members-table__custom-cell--editable]="isEditableCell(col)"
+                          (click)="isEditableCell(col) ? startEditMemberCell(i, col.key, $event) : null">
                           @if (col.mergedFrom) {
-                            {{ getMergedCellValue(member, col) }}
-                          } @else if (isCustomColumn(col) && editingMemberCellKey === memberCellKey(i, col.key)) {
+                            {{ formatMemberCellDisplay(getMergedCellValue(member, col)) }}
+                          } @else if (editingMemberCellKey === memberCellKey(i, col.key)) {
                             <input
                               type="text"
                               class="members-cell-input"
@@ -266,8 +292,10 @@
                               [ngModelOptions]="{standalone: true}"
                               (blur)="onMemberCellBlur(i, col.key)"
                               (keydown)="onMemberCellKeydown($event, i, col.key)" />
+                          } @else if (member.values[col.key]) {
+                            {{ formatMemberCellDisplay(member.values[col.key]) }}
                           } @else {
-                            {{ member.values[col.key] || '—' }}
+                            <span class="members-cell-placeholder">{{ isBangla ? '✎ লিখুন' : '✎ Click to edit' }}</span>
                           }
                         </td>
                       }
@@ -305,11 +333,30 @@
           </div>
         </div>
 
-        <!-- Last Text -->
+        <!-- Last Text (repeatable blocks — each rendered with its own serial) -->
         <div class="form-row">
           <div class="form-field" style="flex-basis: 100%">
-            <label class="form-label">Last Text</label>
-            <app-rich-editor formControlName="paragraphText" height="160px" placeholder="Enter last text..."></app-rich-editor>
+            <div style="display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; margin-bottom: 0.5rem;">
+              <label class="form-label" style="margin: 0;">Last Text</label>
+              <p-button icon="pi pi-plus" label="Add Block" [rounded]="false" [text]="true" severity="success" size="small" (onClick)="addLastTextParagraph()" pTooltip="Add Last Text block"></p-button>
+            </div>
+            @for (block of lastTextParagraphs; track trackByIndex($index)) {
+              <div class="ref-paragraph-row">
+                <span class="ref-serial">{{ getLastTextSerial($index) }}</span>
+                <div class="ref-paragraph-content">
+                  <app-rich-editor
+                    [ngModel]="lastTextParagraphs[$index]"
+                    [ngModelOptions]="{ standalone: true }"
+                    (ngModelChange)="lastTextParagraphs[$index] = $event"
+                    height="150px"
+                    placeholder="Enter last text...">
+                  </app-rich-editor>
+                </div>
+                @if (lastTextParagraphs.length > 1) {
+                  <p-button icon="pi pi-trash" [rounded]="true" [text]="true" severity="danger" (onClick)="removeLastTextParagraph($index)"></p-button>
+                }
+              </div>
+            }
           </div>
         </div>
 

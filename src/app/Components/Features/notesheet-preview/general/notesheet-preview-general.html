@@ -101,6 +101,23 @@
                 </div>
             </div>
         </div>
+
+        <!-- ── Reference Attachments (files attached to the Reference paragraphs) ── -->
+        <div class="ns-file-attachments" *ngIf="viewReferenceAttachments.length > 0">
+            <div class="ns-file-attachments-label">
+                <i class="pi pi-paperclip"></i>
+                {{ isEnglish() ? 'Reference Attachments' : 'সূত্র সংযুক্তি' }} ({{ viewReferenceAttachments.length }})
+            </div>
+            <div class="ns-file-list">
+                <div class="ns-file-item" *ngFor="let file of viewReferenceAttachments; let fi = index">
+                    <i class="pi pi-file"></i>
+                    <span class="ns-file-name">{{ file.serial ? file.serial + ' ' : (fi + 1) + '. ' }}{{ file.fileName }}</span>
+                    <button class="ns-file-download-btn" (click)="onDownloadFile(file)" pTooltip="Download">
+                        <i class="pi pi-download"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
     </ng-container>
 
     <!-- ══════════════════════════════════════════════════════════ -->
@@ -171,8 +188,25 @@
                     </div>
 
                     <div class="ns-edit-field">
-                        <label class="ns-edit-label">Main Text</label>
-                        <app-rich-editor [(ngModel)]="editMainText"></app-rich-editor>
+                        <div style="display:flex;align-items:center;justify-content:space-between;gap:0.5rem;margin-bottom:0.35rem;">
+                            <label class="ns-edit-label" style="margin:0;">Main Text</label>
+                            <p-button icon="pi pi-plus" label="Add Block" [rounded]="false" [text]="true" severity="success" size="small" (onClick)="addEditMainTextParagraph()"></p-button>
+                        </div>
+                        @for (block of editMainTextParagraphs; track $index) {
+                            <div style="display:flex;align-items:flex-start;gap:0.5rem;margin-bottom:0.6rem;">
+                                <span style="min-width:1.5rem;padding-top:0.5rem;font-weight:700;">{{ getEditMainTextSerial($index) }}</span>
+                                <div style="flex:1;">
+                                    <app-rich-editor
+                                        [ngModel]="editMainTextParagraphs[$index].text"
+                                        [ngModelOptions]="{ standalone: true }"
+                                        (ngModelChange)="editMainTextParagraphs[$index].text = $event">
+                                    </app-rich-editor>
+                                </div>
+                                @if (editMainTextParagraphs.length > 1) {
+                                    <p-button icon="pi pi-trash" [rounded]="true" [text]="true" severity="danger" (onClick)="removeEditMainTextParagraph($index)"></p-button>
+                                }
+                            </div>
+                        }
                     </div>
 
                     <!-- ── Members Table (Edit) ── -->
@@ -275,8 +309,26 @@
                     </div>
 
                     <div class="ns-edit-field">
-                        <label class="ns-edit-label">{{ isEnglish() ? 'Last Text' : 'শেষ লেখা' }}</label>
-                        <app-rich-editor [(ngModel)]="editParagraphText" height="120px"></app-rich-editor>
+                        <div style="display:flex;align-items:center;justify-content:space-between;gap:0.5rem;margin-bottom:0.35rem;">
+                            <label class="ns-edit-label" style="margin:0;">{{ isEnglish() ? 'Last Text' : 'শেষ লেখা' }}</label>
+                            <p-button icon="pi pi-plus" label="Add Block" [rounded]="false" [text]="true" severity="success" size="small" (onClick)="addEditLastTextParagraph()"></p-button>
+                        </div>
+                        @for (block of editLastTextParagraphs; track $index) {
+                            <div style="display:flex;align-items:flex-start;gap:0.5rem;margin-bottom:0.6rem;">
+                                <span style="min-width:1.5rem;padding-top:0.5rem;font-weight:700;">{{ getEditLastTextSerial($index) }}</span>
+                                <div style="flex:1;">
+                                    <app-rich-editor
+                                        [ngModel]="editLastTextParagraphs[$index]"
+                                        [ngModelOptions]="{ standalone: true }"
+                                        (ngModelChange)="editLastTextParagraphs[$index] = $event"
+                                        height="120px">
+                                    </app-rich-editor>
+                                </div>
+                                @if (editLastTextParagraphs.length > 1) {
+                                    <p-button icon="pi pi-trash" [rounded]="true" [text]="true" severity="danger" (onClick)="removeEditLastTextParagraph($index)"></p-button>
+                                }
+                            </div>
+                        }
                     </div>
 
                     <!-- ── Supporting Documents ── -->
@@ -359,29 +411,29 @@
                     </ng-container>
                 </div>
 
-                <!-- ── ১। Main Text + Members Table ── -->
-                <div class="ns-para">
-                    <span class="ns-para-no">{{ serial(1) }}</span>
-                    <div class="ns-para-text">
-                        <div [innerHTML]="getMainTextSafe()"></div>
-                        <div *ngIf="previewMembersRows.length > 0 && previewMembersColumns.length > 0" class="ns-members-preview-table-wrap">
-                            <table class="ns-members-preview-table">
-                                <thead>
-                                    <tr>
-                                        <th style="text-align:center;width:30px;">{{ isEnglish() ? 'SL' : 'ক্রমিক' }}</th>
-                                        <th *ngFor="let col of previewMembersColumns" [style.width.%]="getPreviewColWidth(col)">{{ getMemberColHeader(col) }}</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <tr *ngFor="let row of previewMembersRows; let ri = index">
-                                        <td style="text-align:center;">{{ memberSerial(ri) }}</td>
-                                        <td *ngFor="let col of previewMembersColumns">
-                                            {{ formatMemberCell(row, col) }}
-                                        </td>
-                                    </tr>
-                                </tbody>
-                            </table>
-                        </div>
+                <!-- ── ১।..N। Main Text blocks (members table under block 1) ── -->
+                <!-- innerHTML sits directly on .ns-para-text so its first <p> renders inline
+                     next to the serial (like the note/last-text), with the 2em gap as the tab. -->
+                <div class="ns-para" *ngFor="let block of mainDisplayBlocks; let bi = index">
+                    <span class="ns-para-no">{{ serial(bi + 1) }}</span>
+                    <div class="ns-para-text" [innerHTML]="getMainBlockSafe(bi)"></div>
+                    <div *ngIf="bi === 0 && previewMembersRows.length > 0 && previewMembersColumns.length > 0" class="ns-members-preview-table-wrap">
+                        <table class="ns-members-preview-table">
+                            <thead>
+                                <tr>
+                                    <th style="text-align:center;width:30px;">{{ isEnglish() ? 'SL' : 'ক্রমিক' }}</th>
+                                    <th *ngFor="let col of previewMembersColumns" [style.width.%]="getPreviewColWidth(col)">{{ getMemberColHeader(col) }}</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr *ngFor="let row of previewMembersRows; let ri = index">
+                                    <td style="text-align:center;">{{ memberSerial(ri) }}</td>
+                                    <td *ngFor="let col of previewMembersColumns">
+                                        {{ formatMemberCell(row, col) }}
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
                     </div>
                 </div>
 
@@ -391,10 +443,10 @@
                     <div class="ns-para-text" [innerHTML]="getNoteSafe()"></div>
                 </div>
 
-                <!-- ── Last Text (with serial) ── -->
-                <div class="ns-para" *ngIf="noteSheet.paragraphText">
-                    <span class="ns-para-no">{{ serial(lastTextSerial) }}</span>
-                    <div class="ns-para-text" [innerHTML]="getLastTextSafe()"></div>
+                <!-- ── Last Text blocks (each with its own serial) ── -->
+                <div class="ns-para" *ngFor="let block of lastTextBlocks; let li = index">
+                    <span class="ns-para-no">{{ serial(lastTextStartSerial + li) }}</span>
+                    <div class="ns-para-text" [innerHTML]="getLastBlockSafe(li)"></div>
                 </div>
 
                 <!-- ── Initiator area ── -->

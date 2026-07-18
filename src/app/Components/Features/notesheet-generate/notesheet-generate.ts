@@ -19,8 +19,8 @@ import { RichEditorComponent } from '@/Components/Common/rich-editor/rich-editor
 import { CommonCode } from '@/Components/basic-setup/shared/models/common-code';
 import { environment } from '@/Core/Environments/environment';
 import { HttpClient } from '@angular/common/http';
-import { forkJoin, Subject } from 'rxjs';
-import { take } from 'rxjs/operators';
+import { forkJoin, Subject, of } from 'rxjs';
+import { take, catchError } from 'rxjs/operators';
 import { FileReferencesFormComponent, FileRowData } from '@/Components/Common/file-references-form/file-references-form';
 import { EmpService } from '@/services/emp-service';
 import { ActivatedRoute, Router } from '@angular/router';
@@ -43,6 +43,9 @@ import { DialogModule } from 'primeng/dialog';
 import { ServingMembersService } from '@/services/serving-members.service';
 import { EmployeeSearchComponent, EmployeeBasicInfo } from '@/Components/Shared/employee-search/employee-search';
 import { FamilyInfoService, FamilyInfoByEmployeeView } from '@/services/family-info-service';
+import { MainTextBlock, parseMainTextBlocks, serializeMainTextBlocks } from '@/shared/utils/notesheet-main-text';
+import { getFormattedMemberName } from '@/shared/utils/member-display-name.util';
+import { PreviousRABServiceService, VwPreviousRABServiceInfoModel } from '@/services/previous-rab-service.service';
 
 /** Reference paragraph row (serial + text + optional file) */
 export interface ReferenceParagraph {
@@ -80,6 +83,9 @@ export const AVAILABLE_MEMBER_COLUMNS: MemberColumnDef[] = [
     { key: 'rabId', label: 'RAB ID', group: 'basic' },
     { key: 'nameEnglish', label: 'Name (EN)', group: 'basic' },
     { key: 'nameBN', label: 'Name (BN)', group: 'basic' },
+    // Composite name as shown at the top of the member profile: Name, Award, Qualification, Corps.
+    { key: 'formattedName', label: 'Name — Full (EN)', group: 'basic' },
+    { key: 'formattedNameBN', label: 'Name — Full (BN)', group: 'basic' },
     { key: 'armyRank', label: 'Rank (EN)', group: 'basic' },
     { key: 'armyRankBN', label: 'Rank (BN)', group: 'basic' },
     { key: 'corps', label: 'Corps (EN)', group: 'basic' },
@@ -101,6 +107,10 @@ export const AVAILABLE_MEMBER_COLUMNS: MemberColumnDef[] = [
     { key: 'batchBN', label: 'Batch (BN)', group: 'basic' },
     { key: 'rabUnit', label: 'RAB Unit (EN)', group: 'basic' },
     { key: 'rabUnitBN', label: 'RAB Unit (BN)', group: 'basic' },
+    // Full present-posting hierarchy path (Unit > Wing > Branch > Sub-branch > Section > Sub-section)
+    // from the currently-active Previous RAB Service row.
+    { key: 'presentRabUnit', label: 'Present RAB Unit — Full (EN)', group: 'basic' },
+    { key: 'presentRabUnitBN', label: 'Present RAB Unit — Full (BN)', group: 'basic' },
     { key: 'postingStatus', label: 'Posting Status', group: 'basic' },
     { key: 'permanentDistrictTypeName', label: 'Permanent District (EN)', group: 'basic' },
     { key: 'permanentDistrictTypeNameBN', label: 'Permanent District (BN)', group: 'basic' },
@@ -200,8 +210,23 @@ export class NotesheetGenerateComponent implements OnInit {
     // Reference paragraphs (JSON array with serial + file)
     referenceParagraphs: ReferenceParagraph[] = [{ text: '', fileRows: [] }];
 
+    // Main Text blocks — repeatable rich-text paragraphs, each rendered with its
+    // own serial in the note-sheet. Stored in NoteSheetInfo.MainText as a JSON array.
+    mainTextParagraphs: MainTextBlock[] = [{ text: '' }];
+
+    // Last Text blocks — repeatable rich-text paragraphs, each with its own serial.
+    // Stored in NoteSheetInfo.ParagraphText as a JSON array of HTML strings
+    // (["<p>..</p>", ...]) — the same convention posting note-sheets already use.
+    lastTextParagraphs: string[] = [''];
+
     // ── Members Table (MembersJson) ─────────────────────────────────────
     membersData: MembersJsonData = { columns: [], members: [] };
+    /** True once the default column set has been auto-applied, so we don't fight the
+     *  user if they clear columns, and don't override columns loaded in edit mode. */
+    private defaultColumnsApplied = false;
+    /** True while the columns are still the untouched default set — lets a language
+     *  switch rebuild them; cleared once the user manually add/remove/rename/merge a column. */
+    private columnsAreDefault = false;
     memberAddLoading = false;
     showAddColumnDialog = false;
     addColumnMode: 'field' | 'custom' = 'field';
@@ -278,7 +303,8 @@ export class NotesheetGenerateComponent implements OnInit {
         private orgService: OrgService,
         private servingMembersService: ServingMembersService,
         private familyInfoService: FamilyInfoService,
-        private noteSheetSubjectService: NoteSheetSubjectService
+        private noteSheetSubjectService: NoteSheetSubjectService,
+        private previousRABService: PreviousRABServiceService
     ) {
         this.form = this.fb.group({
             noteSheetTemplateId: [null as number | null],
@@ -294,9 +320,7 @@ export class NotesheetGenerateComponent implements OnInit {
             noteSheetNumberConfigId: [null as number | null, Validators.required],
             noteSheetSubjectId: [null as number | null, Validators.required],
             subject: [''],
-            mainText: [''],
             note: [''],
-            paragraphText: [''],
             preparedBy: [''],
             preparedByEmployeeId: [null as number | null],
             initiatorId: [null as number | null, Validators.required],
@@ -343,6 +367,8 @@ export class NotesheetGenerateComponent implements OnInit {
         this.form.get('textType')?.valueChanges.subscribe((newType: string) => {
             this.buildNoteSheetConfigOptions();
             this.buildSubjectOptions();
+            // Type drives the whole document's language — reflect it in the (untouched) member table too.
+            this.relanguageDefaultColumns();
             if (this.editMode) {
                 this.transformNoteSheetNo(newType);
             }
@@ -600,6 +626,59 @@ export class NotesheetGenerateComponent implements OnInit {
         return index;
     }
 
+    // ── Main Text Blocks (repeatable) ────────────────────────────────────
+
+    addMainTextParagraph(): void {
+        this.mainTextParagraphs.push({ text: '' });
+    }
+
+    removeMainTextParagraph(index: number): void {
+        if (this.mainTextParagraphs.length > 1) {
+            this.mainTextParagraphs.splice(index, 1);
+        }
+    }
+
+    /** Numeric serial for a Main Text block: ১।/২। in Bangla, 1./2. in English. */
+    getMainTextSerial(index: number): string {
+        const n = String(index + 1);
+        return this.isBangla ? BanglaNumerals.toBangla(n) + '।' : n + '.';
+    }
+
+    // ── Last Text Blocks (repeatable) ────────────────────────────────────
+
+    addLastTextParagraph(): void {
+        this.lastTextParagraphs.push('');
+    }
+
+    removeLastTextParagraph(index: number): void {
+        if (this.lastTextParagraphs.length > 1) {
+            this.lastTextParagraphs.splice(index, 1);
+        }
+    }
+
+    /** Numeric serial for a Last Text block: ১।/২। in Bangla, 1./2. in English. */
+    getLastTextSerial(index: number): string {
+        const n = String(index + 1);
+        return this.isBangla ? BanglaNumerals.toBangla(n) + '।' : n + '.';
+    }
+
+    /** Parse stored ParagraphText into blocks. JSON array → strings; legacy plain
+     *  HTML → single block; empty → one blank block. */
+    private parseLastTextBlocks(raw: string | null | undefined): string[] {
+        const s = (raw ?? '').trim();
+        if (!s) return [''];
+        if (s.startsWith('[')) {
+            try {
+                const arr = JSON.parse(s);
+                if (Array.isArray(arr)) {
+                    const blocks = arr.map((p: any) => String(p ?? '')).filter((p) => p.trim() !== '');
+                    return blocks.length ? blocks : [''];
+                }
+            } catch { /* legacy HTML string below */ }
+        }
+        return [s];
+    }
+
     // ── NoteSheet Number Config ──────────────────────────────────────────
 
     private loadNoteSheetNumberConfig(): void {
@@ -823,6 +902,9 @@ export class NotesheetGenerateComponent implements OnInit {
     }
 
     private applyCachedNoteSheetToForm(d: any, user: string): void {
+        // Editing an existing draft — keep whatever columns were saved; never auto-apply/relanguage defaults.
+        this.defaultColumnsApplied = true;
+        this.columnsAreDefault = false;
         this.originalCreatedBy = d.createdBy ?? d.CreatedBy ?? d.lastUpdatedBy ?? d.LastUpdatedBy ?? user ?? null;
         const noteSheetDate = (d.noteSheetDate ?? d.NoteSheetDate) != null ? this.parseDate(d.noteSheetDate ?? d.NoteSheetDate) : null;
         let recommenderIds: number[] = [];
@@ -854,9 +936,7 @@ export class NotesheetGenerateComponent implements OnInit {
             noteSheetNo: String(d.noteSheetNo ?? d.NoteSheetNo ?? ''),
             noteSheetSubjectId: d.noteSheetSubjectId ?? d.NoteSheetSubjectId ?? null,
             subject: String(d.subject ?? d.Subject ?? ''),
-            mainText: String(d.mainText ?? d.MainText ?? ''),
             note: String(d.note ?? d.Note ?? ''),
-            paragraphText: String(d.paragraphText ?? d.ParagraphText ?? ''),
             preparedBy: d.createdBy ?? d.CreatedBy ?? d.lastUpdatedBy ?? d.LastUpdatedBy ?? user,
             preparedByEmployeeId: d.preparedByEmployeeId ?? d.PreparedByEmployeeId ?? null,
             initiatorId: d.initiatorId ?? d.InitiatorId ?? null,
@@ -867,6 +947,12 @@ export class NotesheetGenerateComponent implements OnInit {
             memberTypeIds: this.parseMemberTypeIds(d.employeeTypeIds ?? d.EmployeeTypeIds)
         });
         if (d.createdBy ?? d.CreatedBy) this.form.get('preparedBy')?.setValue(d.createdBy ?? d.CreatedBy);
+
+        // Load Main Text blocks (JSON array; legacy HTML string → single block)
+        this.mainTextParagraphs = parseMainTextBlocks(d.mainText ?? d.MainText);
+
+        // Load Last Text blocks (JSON array of strings; legacy HTML string → single block)
+        this.lastTextParagraphs = this.parseLastTextBlocks(d.paragraphText ?? d.ParagraphText);
 
         // Load reference number paragraphs
         const refNumber = d.referenceNumber ?? d.ReferenceNumber;
@@ -927,7 +1013,21 @@ export class NotesheetGenerateComponent implements OnInit {
                                 };
                             });
                             this.membersData = { columns, members };
+                            // Match create-mode behaviour in edit mode:
+                            //  • no saved column config → show the default set;
+                            //  • saved config that IS the default set → let a language switch relanguage it;
+                            //  • otherwise → keep the user's saved columns as-is.
+                            if (columns.length === 0) {
+                                this.defaultColumnsApplied = false;
+                                this.applyDefaultMemberColumnsIfEmpty();
+                            } else {
+                                this.columnsAreDefault = this.columnsMatchDefaultSet(columns);
+                            }
                         } catch { /* malformed JSON — leave default */ }
+                    } else {
+                        // Draft has no saved members → let the default columns appear when one is added.
+                        this.defaultColumnsApplied = false;
+                        this.columnsAreDefault = false;
                     }
                 }
             });
@@ -1003,12 +1103,13 @@ export class NotesheetGenerateComponent implements OnInit {
         }
 
         this.memberAddLoading = true;
-        // Fetch full profile to get all fields
+        // Fetch full profile + family + previous RAB service (for the present-unit hierarchy path).
         forkJoin([
             this.servingMembersService.getEmployeePersonalServiceOverview(emp.employeeID),
-            this.familyInfoService.getFamilyInfoByEmployeeView(emp.employeeID)
+            this.familyInfoService.getFamilyInfoByEmployeeView(emp.employeeID),
+            this.previousRABService.getViewByEmployeeId(emp.employeeID).pipe(catchError(() => of([] as VwPreviousRABServiceInfoModel[])))
         ]).subscribe({
-            next: ([profile, familyList]) => {
+            next: ([profile, familyList, rabServiceList]) => {
                 const values: Record<string, string> = {};
 
                 // Basic Info fields (EN + BN)
@@ -1085,7 +1186,25 @@ export class NotesheetGenerateComponent implements OnInit {
                 values['family_mother'] = mother?.name ?? '';
                 values['family_members'] = family.map(f => `${f.relation ?? ''}: ${f.name ?? ''}`).join('; ');
 
+                // Composite name exactly as shown at the top of the member profile.
+                values['formattedName'] = getFormattedMemberName(profile, false);
+                values['formattedNameBN'] = getFormattedMemberName(profile, true);
+
+                // Present RAB unit as the full hierarchy path (Unit > Wing > Branch > Sub-branch >
+                // Section > Sub-section) from the currently-active Previous RAB Service row.
+                const activeRab = (Array.isArray(rabServiceList) ? rabServiceList : [])
+                    .find((r) => (r.isCurrentlyActive as any) === true || (r.isCurrentlyActive as any) === 1);
+                values['presentRabUnit'] = this.buildRabUnitPath(activeRab, false) || (profile.rabUnit ?? '');
+                values['presentRabUnitBN'] = this.buildRabUnitPath(activeRab, true) || (profile.rabUnitBN ?? profile.rabUnit ?? '');
+
+                // Keep any already-present custom columns (e.g. Remarks) in sync for the new row.
+                for (const col of this.membersData.columns) {
+                    if (col.group === 'custom' && values[col.key] === undefined) values[col.key] = '';
+                }
+
                 this.membersData.members.push({ employeeId: emp.employeeID, values });
+                // First member added with no columns configured → show a sensible default set.
+                this.applyDefaultMemberColumnsIfEmpty();
                 this.memberAddLoading = false;
                 this.messageService.add({ severity: 'success', summary: 'Member Added', detail: `${profile.nameEnglish || emp.fullNameEN} added.` });
             },
@@ -1102,6 +1221,79 @@ export class NotesheetGenerateComponent implements OnInit {
 
     removeMember(index: number): void {
         this.membersData.members.splice(index, 1);
+    }
+
+    /**
+     * Full present-posting path from a Previous RAB Service row:
+     * "Unit, Wing, Branch, Sub-branch, Section, Sub-section", skipping empty levels.
+     * In Bangla it uses each level's BN name, falling back to the EN name when BN is unset.
+     */
+    private buildRabUnitPath(row: VwPreviousRABServiceInfoModel | undefined | null, bn: boolean): string {
+        if (!row) return '';
+        const lvl = (en?: string | null, bnName?: string | null): string =>
+            (bn ? ((bnName ?? '').trim() || (en ?? '').trim()) : (en ?? '').trim());
+        return [
+            lvl(row.rabUnitName, row.rabUnitNameBN),
+            lvl(row.rabWingName, row.rabWingNameBN),
+            lvl(row.rabBranchName, row.rabBranchNameBN),
+            lvl(row.rabSubBranchName, row.rabSubBranchNameBN),
+            lvl(row.rabSectionName, row.rabSectionNameBN),
+            lvl(row.rabSubSectionName, row.rabSubSectionNameBN)
+        ].filter((p) => p !== '').join(', ');
+    }
+
+    /** Cell display value: digits become Bangla numerals when the note-sheet is Bangla,
+     *  stay Latin otherwise. Follows the same rule as the preview and the dates. */
+    formatMemberCellDisplay(value: string | null | undefined): string {
+        const v = value ?? '';
+        return this.isBangla ? BanglaNumerals.toBangla(v) : v;
+    }
+
+    /**
+     * The default column set: Prefix & Service ID, Rank, Name (profile's full name),
+     * Present RAB Unit (full hierarchy path), and an editable Remarks column. Both the
+     * value keys and the header labels follow the current note-sheet language.
+     */
+    private buildDefaultColumns(): MemberColumnDef[] {
+        const bn = this.isBangla;
+        const lbl = (en: string, bnLabel: string) => (bn ? bnLabel : en);
+        return [
+            { key: bn ? 'prefixWithServiceIdBN' : 'prefixWithServiceId', label: lbl('Prefix & Service ID', 'সার্ভিস আইডি'), group: 'basic' },
+            { key: bn ? 'armyRankBN' : 'armyRank', label: lbl('Rank', 'পদবি'), group: 'basic' },
+            { key: bn ? 'formattedNameBN' : 'formattedName', label: lbl('Name', 'নাম'), group: 'basic' },
+            { key: bn ? 'presentRabUnitBN' : 'presentRabUnit', label: lbl('Present RAB Unit', 'বর্তমান র‍্যাব ইউনিট'), group: 'basic' },
+            { key: 'custom_Remarks', label: lbl('Remarks', 'মন্তব্য'), group: 'custom' }
+        ];
+    }
+
+    /** Apply the default columns the first time a member is added (nothing configured yet). */
+    private applyDefaultMemberColumnsIfEmpty(): void {
+        if (this.defaultColumnsApplied || this.membersData.columns.length > 0) return;
+        this.defaultColumnsApplied = true;
+        this.columnsAreDefault = true;
+        this.membersData.columns = this.buildDefaultColumns();
+        // Ensure the editable Remarks cell exists on every current row.
+        for (const m of this.membersData.members) {
+            if (m.values['custom_Remarks'] === undefined) m.values['custom_Remarks'] = '';
+        }
+    }
+
+    /** On a language switch, re-apply the default columns (new-language keys + labels) so the
+     *  whole table follows the note-sheet type — but only while the user hasn't customised them. */
+    private relanguageDefaultColumns(): void {
+        if (this.columnsAreDefault && this.membersData.members.length > 0) {
+            this.membersData.columns = this.buildDefaultColumns();
+        }
+    }
+
+    /** True when a loaded column set is exactly the auto-default set (either language) —
+     *  used in edit mode to decide whether a language switch may relanguage them. */
+    private columnsMatchDefaultSet(cols: MemberColumnDef[]): boolean {
+        const keys = cols.map((c) => c.key);
+        const en = ['prefixWithServiceId', 'armyRank', 'formattedName', 'presentRabUnit', 'custom_Remarks'];
+        const bn = ['prefixWithServiceIdBN', 'armyRankBN', 'formattedNameBN', 'presentRabUnitBN', 'custom_Remarks'];
+        const eq = (a: string[]) => a.length === keys.length && a.every((k, i) => k === keys[i]);
+        return eq(en) || eq(bn);
     }
 
     // Column management
@@ -1167,11 +1359,13 @@ export class NotesheetGenerateComponent implements OnInit {
                 member.values[key] = '';
             }
         }
+        this.columnsAreDefault = false;
         this.closeAddColumnDialog();
     }
 
     removeColumn(colKey: string): void {
         this.membersData.columns = this.membersData.columns.filter(c => c.key !== colKey);
+        this.columnsAreDefault = false;
     }
 
     // Column label editing
@@ -1191,6 +1385,7 @@ export class NotesheetGenerateComponent implements OnInit {
         if (trimmed) {
             const col = this.membersData.columns.find(c => c.key === colKey);
             if (col) col.label = trimmed;
+            this.columnsAreDefault = false;
         }
         this.editingColLabelKey = null;
     }
@@ -1198,6 +1393,11 @@ export class NotesheetGenerateComponent implements OnInit {
     // Inline cell editing (for custom columns or any editable cell)
     isCustomColumn(col: MemberColumnDef): boolean {
         return col.group === 'custom';
+    }
+
+    /** Any non-merged cell is inline-editable, so users can adjust the fetched values. */
+    isEditableCell(col: MemberColumnDef): boolean {
+        return !col.mergedFrom;
     }
 
     memberCellKey(rowIndex: number, colKey: string): string {
@@ -1364,6 +1564,7 @@ export class NotesheetGenerateComponent implements OnInit {
         const firstIndex = Math.min(...keys.map(k => this.membersData.columns.findIndex(c => c.key === k)));
         this.membersData.columns = this.membersData.columns.filter(c => !keys.includes(c.key));
         this.membersData.columns.splice(firstIndex, 0, mergedCol);
+        this.columnsAreDefault = false;
         this.closeMergeColumnDialog();
     }
 
@@ -1396,9 +1597,7 @@ export class NotesheetGenerateComponent implements OnInit {
             noteSheetNumberConfigId: null,
             noteSheetSubjectId: null,
             subject: '',
-            mainText: '',
             note: '',
-            paragraphText: '',
             preparedBy: user,
             preparedByEmployeeId: null,
             initiatorId: null,
@@ -1410,7 +1609,11 @@ export class NotesheetGenerateComponent implements OnInit {
             memberTypeIds: []
         });
         this.referenceParagraphs = [{ text: '', fileRows: [] }];
+        this.mainTextParagraphs = [{ text: '' }];
+        this.lastTextParagraphs = [''];
         this.membersData = { columns: [], members: [] };
+        this.defaultColumnsApplied = false;
+        this.columnsAreDefault = false;
         this.selectedUnitNode = null;
         this.resolvePreparedByMapping();
     }
@@ -1603,9 +1806,13 @@ export class NotesheetGenerateComponent implements OnInit {
             // Always store the subject text too (mirrored from the picked subject) so the preview
             // shows it even before the id→master relation resolves / if the master is unavailable.
             subject: this.resolveSubjectText(d),
-            mainText: d.mainText != null ? String(d.mainText) : '',
+            // Main Text stored as a JSON array of rich-text blocks (each its own serial).
+            mainText: serializeMainTextBlocks(this.mainTextParagraphs),
             note: d.note != null ? String(d.note) : null,
-            paragraphText: d.paragraphText != null ? String(d.paragraphText) : null,
+            // Last Text stored as a JSON array of HTML strings (each its own serial), or null when empty.
+            paragraphText: this.lastTextParagraphs.some((p) => (p ?? '').trim() !== '')
+                ? JSON.stringify(this.lastTextParagraphs.filter((p) => (p ?? '').trim() !== ''))
+                : null,
             textType: d.textType === 'bn' ? 1 : 0,
             isSecret: d.isSecret ?? false,
             noteSheetOperationType: d.noteSheetOperationType ?? null,

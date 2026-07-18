@@ -45,6 +45,15 @@ export interface NotesheetDocumentModel {
     dateValue: string;
     mainSerialText: string;
     mainBlocks: ContentBlock[];
+    /**
+     * Optional: multiple Main Text blocks, each with its own serial (General
+     * note-sheet). When present, the Word builder renders these instead of the
+     * single mainSerialText/mainBlocks pair. `mainBlocks` still mirrors block 1
+     * so consumers that ignore this field keep working.
+     */
+    mainSections?: { serialText: string; blocks: ContentBlock[] }[];
+    /** Optional: multiple Last Text blocks, each with its own serial (General note-sheet). */
+    lastSections?: { serialText: string; blocks: ContentBlock[] }[];
     note?: string;
     closingText: string;
     initiator?: SignatoryBlock;

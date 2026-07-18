@@ -30,3 +30,21 @@
         font-family: 'primeicons' !important;
     }
 }
+
+/* Tighter gap between a body paragraph's serial (১।) and its text. The shared
+   .ns-para-no uses 2em, which reads as too wide a tab at this 8pt size.
+   Kept as a plain (non-:host) selector so Angular scopes it to THIS component
+   (_ngcontent) — it overrides the shared 2em on screen AND in the JsReport PDF
+   (whose body is this component's innerHTML), while posting / ex-bd previews
+   keep their own spacing. Loaded after notesheet-preview.scss, so it wins. */
+.ns-para-no {
+    margin-right: 0.8em;
+}
+
+/* Edit mode uses a plain .a4-paper (no .paginated); the visible view-mode pages
+   are .a4-paper.paginated. Let the edit form span the full available width
+   instead of the fixed A4 column — view pages and the PDF stay A4. */
+.a4-paper:not(.paginated) {
+    width: 100%;
+    max-width: 100%;
+}

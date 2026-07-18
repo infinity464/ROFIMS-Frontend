@@ -167,6 +167,21 @@
     gap: 0.375rem;
   }
 
+  // Rename affordance on each column header — the label is editable (double-click
+  // or click the pencil), so it carries the same pencil hint as the cells.
+  &__col-rename {
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: var(--primary-color, #3b82f6);
+    padding: 0;
+    font-size: 0.7rem;
+    opacity: 0.55;
+    transition: opacity 0.15s;
+
+    &:hover { opacity: 1; }
+  }
+
   &__col-remove {
     background: none;
     border: none;
@@ -199,14 +214,37 @@
   &__custom-cell {
     min-width: 120px;
 
+    // Every data cell is inline-editable: a soft persistent tint marks the editable
+    // area, a text cursor invites typing, and a pencil hint reveals on hover.
     &--editable {
-      cursor: pointer;
+      cursor: text;
+      background: var(--primary-50, #eff6ff);
+      position: relative;
 
       &:hover {
-        background: var(--primary-50, #eff6ff);
+        background: var(--primary-100, #dbeafe);
+
+        &::after {
+          content: '\270E'; // ✎ pencil
+          position: absolute;
+          top: 3px;
+          right: 5px;
+          font-size: 0.7rem;
+          line-height: 1;
+          color: var(--primary-color, #3b82f6);
+          opacity: 0.6;
+          pointer-events: none;
+        }
       }
     }
   }
+}
+
+// Muted hint shown in an empty editable cell so it reads as "click to type", not "no data".
+.members-cell-placeholder {
+  color: var(--text-color-secondary, #94a3b8);
+  font-style: italic;
+  font-size: 0.75rem;
 }
 
 .members-cell-input {

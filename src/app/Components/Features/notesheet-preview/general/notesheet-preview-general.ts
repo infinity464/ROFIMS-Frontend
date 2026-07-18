@@ -22,6 +22,7 @@ import { EmployeeSearchComponent, EmployeeBasicInfo } from '@/Components/Shared/
 import { NotesheetPreviewBase } from '../notesheet-preview-base';
 import { NoteSheetSubjectService, NoteSheetSubjectModel } from '@/Components/basic-setup/shared/services/NoteSheetSubjectService';
 import { MemberColumnDef, MemberRow, MembersJsonData, AVAILABLE_MEMBER_COLUMNS, ReferenceParagraph } from '../../notesheet-generate/notesheet-generate';
+import { MainTextBlock, parseMainTextBlocks, serializeMainTextBlocks } from '@/shared/utils/notesheet-main-text';
 import { NoteSheetCurrentStatus, NoteSheetCurrentStatusOptions, NoteSheetOperationTypeOptions, ApprovalStatus, NoteSheetRemarkAction, NoteSheetPreviewFrom, ApprovalLogAction, ApprovalLogActionOptions } from '@/models/enums';
 import { SharedService } from '@/shared/services/shared-service';
 import { FlexibleDateDirective } from '@/shared/directives/flexible-date.directive';
@@ -135,9 +136,9 @@ export class NotesheetPreviewGeneralComponent extends NotesheetPreviewBase imple
     // ── Edit model fields ────────────────────────────────────
     editSubject = '';
     editReferenceParagraphs: ReferenceParagraph[] = [{ text: '', fileRows: [] }];
-    editMainText = '';
+    editMainTextParagraphs: MainTextBlock[] = [{ text: '' }];
     editNote = '';
-    editParagraphText = '';
+    editLastTextParagraphs: string[] = [''];
     editNoteSheetDate: Date | null = null;
     editInitiatorId: number | null = null;
     editRecommenderIds: number[] = [];
@@ -183,6 +184,33 @@ export class NotesheetPreviewGeneralComponent extends NotesheetPreviewBase imple
                 }))
                 : [];
         } catch { return []; }
+    }
+
+    /** Files attached to the Reference paragraphs (referenceNumber JSON), flattened for
+     *  the view-mode "Reference Attachments" list. Each file is tagged with its reference
+     *  serial (ক./খ./…) when there is more than one reference paragraph. */
+    get viewReferenceAttachments(): { fileId: number; fileName: string; serial: string }[] {
+        const raw = this.noteSheet?.referenceNumber;
+        if (!raw || typeof raw !== 'string') return [];
+        let arr: any[];
+        try { arr = JSON.parse(raw); } catch { return []; }
+        if (!Array.isArray(arr)) return [];
+        const multi = arr.length > 1;
+        const out: { fileId: number; fileName: string; serial: string }[] = [];
+        arr.forEach((item: any, idx: number) => {
+            const files = item?.files ?? item?.Files ?? [];
+            if (!Array.isArray(files)) return;
+            for (const f of files) {
+                const fileId = f?.FileId ?? f?.fileId;
+                if (!fileId) continue;
+                out.push({
+                    fileId,
+                    fileName: f?.fileName ?? f?.FileName ?? 'File',
+                    serial: multi ? this.refSerialLabel(idx) : ''
+                });
+            }
+        });
+        return out;
     }
 
     // ── Members table data (loaded from NoteSheetReferenceEmployee) ──
@@ -263,9 +291,9 @@ export class NotesheetPreviewGeneralComponent extends NotesheetPreviewBase imple
         } else {
             this.editReferenceParagraphs = [{ text: '', fileRows: [] }];
         }
-        this.editMainText = this.noteSheet.mainText ?? '';
+        this.editMainTextParagraphs = parseMainTextBlocks(this.noteSheet.mainText);
         this.editNote = this.noteSheet.note ?? '';
-        this.editParagraphText = this.noteSheet.paragraphText ?? '';
+        this.editLastTextParagraphs = this.parseLastTextBlocks(this.noteSheet.paragraphText);
         this.editNoteSheetDate = this.noteSheet.noteSheetDate ? new Date(this.noteSheet.noteSheetDate) : null;
         this.editInitiatorId = this.noteSheet.initiatorId ?? null;
         this.editRecommenderIds = this.parseRecommenderIds();
@@ -334,6 +362,98 @@ export class NotesheetPreviewGeneralComponent extends NotesheetPreviewBase imple
         return String.fromCharCode(65 + index) + '.';
     }
 
+    // ── Main Text Blocks (edit mode + display) ────────────────
+    addEditMainTextParagraph(): void {
+        this.editMainTextParagraphs.push({ text: '' });
+    }
+
+    removeEditMainTextParagraph(index: number): void {
+        if (this.editMainTextParagraphs.length > 1) {
+            this.editMainTextParagraphs.splice(index, 1);
+        }
+    }
+
+    /** Numeric serial label for a Main Text block in edit mode (৪./4.), following editTextType. */
+    getEditMainTextSerial(index: number): string {
+        const n = String(index + 1);
+        return this.editTextType === 'bn' ? this.toBanglaDigits(n) + '।' : n + '.';
+    }
+
+    /** Main Text blocks for display (view mode). Legacy HTML → single block; always ≥ 1 block. */
+    get mainDisplayBlocks(): string[] {
+        const blocks = parseMainTextBlocks(this.noteSheet?.mainText).map((b) => b.text);
+        const nonEmpty = blocks.filter((t) => (t ?? '').trim() !== '');
+        return nonEmpty.length ? nonEmpty : [''];
+    }
+
+    /** Number of rendered Main Text blocks — drives the serial of the following sections. */
+    get mainBlockCount(): number {
+        return this.mainDisplayBlocks.length;
+    }
+
+    /** Sanitized HTML for a single Main Text block (view mode). */
+    getMainBlockSafe(index: number): SafeHtml {
+        const raw = this.mainDisplayBlocks[index] ?? '';
+        return this.sanitizer.bypassSecurityTrustHtml(this.fixBanglaWordBreaks(raw));
+    }
+
+    // ── Last Text Blocks (edit mode + display) ────────────────
+    addEditLastTextParagraph(): void {
+        this.editLastTextParagraphs.push('');
+    }
+
+    removeEditLastTextParagraph(index: number): void {
+        if (this.editLastTextParagraphs.length > 1) {
+            this.editLastTextParagraphs.splice(index, 1);
+        }
+    }
+
+    /** Numeric serial label for a Last Text block in edit mode (৪./4.), following editTextType. */
+    getEditLastTextSerial(index: number): string {
+        const n = String(index + 1);
+        return this.editTextType === 'bn' ? this.toBanglaDigits(n) + '।' : n + '.';
+    }
+
+    /** Parse ParagraphText into blocks (JSON array of strings; legacy HTML → one block). */
+    private parseLastTextBlocks(raw: string | null | undefined): string[] {
+        const s = (raw ?? '').trim();
+        if (!s) return [''];
+        if (s.startsWith('[')) {
+            try {
+                const arr = JSON.parse(s);
+                if (Array.isArray(arr)) {
+                    const blocks = arr.map((p: any) => String(p ?? '')).filter((p) => p.trim() !== '');
+                    return blocks.length ? blocks : [''];
+                }
+            } catch { /* legacy HTML string below */ }
+        }
+        return [s];
+    }
+
+    /** Last Text blocks for display (view mode). Empty → no blocks (section hidden). */
+    get lastTextBlocks(): string[] {
+        const s = (this.noteSheet?.paragraphText ?? '').trim();
+        if (!s) return [];
+        if (s.startsWith('[')) {
+            try {
+                const arr = JSON.parse(s);
+                if (Array.isArray(arr)) return arr.map((p: any) => String(p ?? '')).filter((p) => p.trim() !== '');
+            } catch { /* legacy HTML string below */ }
+        }
+        return [s];
+    }
+
+    /** Number of rendered Last Text blocks — feeds the content/approver serials. */
+    get lastBlockCount(): number {
+        return this.lastTextBlocks.length;
+    }
+
+    /** Sanitized HTML for a single Last Text block (view mode). */
+    getLastBlockSafe(index: number): SafeHtml {
+        const raw = this.lastTextBlocks[index] ?? '';
+        return this.sanitizer.bypassSecurityTrustHtml(this.fixBanglaWordBreaks(raw));
+    }
+
     onRefFileRowsChange(event: FileRowData[], index: number): void {
         if (event && Array.isArray(event)) {
             this.editReferenceParagraphs[index].fileRows = event;
@@ -380,9 +500,11 @@ export class NotesheetPreviewGeneralComponent extends NotesheetPreviewBase imple
                 ...this.noteSheet,
                 subject: this.editSubject,
                 referenceNumber: referenceNumberJson,
-                mainText: this.editMainText,
+                mainText: serializeMainTextBlocks(this.editMainTextParagraphs),
                 note: this.editNote || null,
-                paragraphText: this.editParagraphText || null,
+                paragraphText: this.editLastTextParagraphs.some((p) => (p ?? '').trim() !== '')
+                    ? JSON.stringify(this.editLastTextParagraphs.filter((p) => (p ?? '').trim() !== ''))
+                    : null,
                 textType: this.editTextType === 'bn' ? 1 : 0,
                 noteSheetOperationType: this.editOperationType,
                 noteSheetDate: this.editNoteSheetDate ? this.formatDateOnly(this.editNoteSheetDate) : this.noteSheet!.noteSheetDate,
@@ -419,12 +541,21 @@ export class NotesheetPreviewGeneralComponent extends NotesheetPreviewBase imple
                             error: () => this.messageService.add({ severity: 'warn', summary: 'Warning', detail: 'Saved but failed to sync members.' })
                         });
                     }
+                    // Reflect the edits in the in-memory model right away so the view updates
+                    // immediately — the paginated view otherwise keeps the pre-save layout until a
+                    // manual reload. The async reload below still re-syncs server truth.
+                    this.applyEditsToNoteSheet(payload, referenceNumberJson);
+
                     this.messageService.add({ severity: 'success', summary: 'Success', detail: 'Note-sheet updated successfully.' });
                     this.editing = false;
                     this.saving = false;
                     this.fileRows = [];
+                    // Force a clean re-measure + re-pagination for the now-updated content.
+                    this.pageContentHeightPx = 0;
                     this.lastMeasuredHeight = 0;
+                    this.pageOffsets = [0];
                     this.reloadNoteSheet();
+                    this.cdr.detectChanges();
                 },
                 error: (err: any) => {
                     this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.message || 'Failed to update note-sheet.' });
@@ -473,6 +604,27 @@ export class NotesheetPreviewGeneralComponent extends NotesheetPreviewBase imple
         this.approversDetails = [];
         this.preparedByDetails = null;
         this.loadNoteSheet();
+    }
+
+    /** Optimistically mirror the just-saved edits onto the in-memory note-sheet + members so
+     *  the view reflects them immediately (the async reload re-syncs the server truth after). */
+    private applyEditsToNoteSheet(payload: Record<string, unknown>, referenceNumberJson: string | null): void {
+        const ns = this.noteSheet as any;
+        if (ns) {
+            ns.subject = this.editSubject;
+            ns.referenceNumber = referenceNumberJson;
+            ns.mainText = (payload['mainText'] as string) ?? '';
+            ns.note = (payload['note'] as string) ?? null;
+            ns.paragraphText = (payload['paragraphText'] as string) ?? null;
+            ns.textType = payload['textType'] as number;
+            ns.noteSheetDate = payload['noteSheetDate'];
+            ns.noteSheetOperationType = this.editOperationType ?? null;
+            if (payload['filesReferences'] !== undefined) ns.filesReferences = payload['filesReferences'] ?? null;
+        }
+        // View mode reads the members from previewMembers* — mirror the edited set.
+        this.previewMembersColumns = this.editMembersData.columns.map((c) => ({ ...c }));
+        this.previewMembersRows = this.editMembersData.members.map((m) => ({ ...m.values }));
+        this.loadedMemberEmployeeIds = this.editMembersData.members.map((m) => m.employeeId);
     }
 
     // ── Parse file references from noteSheet ─────────────────
@@ -602,18 +754,18 @@ export class NotesheetPreviewGeneralComponent extends NotesheetPreviewBase imple
         }
     }
 
-    // ── Serial computation: mainText(+members table) = 1, note, lastText ──
+    // ── Serial computation: main blocks (1..M), note, last-text blocks, then approvers ──
     get contentSerialCount(): number {
-        let count = 1; // ১। Main Text (+ members table, no separate serial)
+        let count = this.mainBlockCount; // ১।..M। Main Text blocks (members table under block 1)
         if (this.noteSheet?.note) count++;
-        if (this.noteSheet?.paragraphText) count++;
+        count += this.lastBlockCount;    // Last Text blocks each take a serial
         return count;
     }
 
-    /** Get serial number for note section */
-    get noteSerial(): number { return 2; }
-    /** Get serial number for last text section */
-    get lastTextSerial(): number {
+    /** Get serial number for note section (immediately after the last Main Text block) */
+    get noteSerial(): number { return this.mainBlockCount + 1; }
+    /** Serial of the FIRST Last Text block (block i → lastTextStartSerial + i). */
+    get lastTextStartSerial(): number {
         return this.noteSerial + (this.noteSheet?.note ? 1 : 0);
     }
     /** Get starting serial for approver sections */
@@ -936,8 +1088,9 @@ export class NotesheetPreviewGeneralComponent extends NotesheetPreviewBase imple
      *  configured English label for anything not listed. */
     private readonly memberColHeaderBN: Record<string, string> = {
         serviceId: 'সার্ভিস আইডি', rabId: 'র‍্যাব আইডি', prefixWithServiceId: 'সার্ভিস আইডি', prefixWithServiceIdBN: 'সার্ভিস আইডি',
-        nameEnglish: 'নাম', nameBN: 'নাম',
+        nameEnglish: 'নাম', nameBN: 'নাম', formattedName: 'নাম', formattedNameBN: 'নাম',
         armyRank: 'পদবি', armyRankBN: 'পদবি',
+        presentRabUnit: 'বর্তমান র‍্যাব ইউনিট', presentRabUnitBN: 'বর্তমান র‍্যাব ইউনিট',
         corps: 'কোর', corpsBN: 'কোর',
         trade: 'ট্রেড', tradeBN: 'ট্রেড', tradeRemarks: 'ট্রেড মন্তব্য',
         motherOrganization: 'মূল সংস্থা', motherOrganizationBN: 'মূল সংস্থা',
@@ -1017,11 +1170,6 @@ export class NotesheetPreviewGeneralComponent extends NotesheetPreviewBase imple
         return this.sanitizer.bypassSecurityTrustHtml(this.fixBanglaWordBreaks(raw));
     }
 
-    /** Render paragraphText (Last Text) HTML safely */
-    getLastTextSafe(): SafeHtml {
-        const raw = this.noteSheet?.paragraphText ?? '';
-        return this.sanitizer.bypassSecurityTrustHtml(this.fixBanglaWordBreaks(raw));
-    }
 
     // ── Submit for approval ─────────────────────────────────────
     submitForApproval(): void {
@@ -1507,8 +1655,12 @@ html, body { margin: 0; padding: 0; background: transparent; }
         const refHtml = this.fixBanglaWordBreaks(this.noteSheet.referenceNumber ?? '');
         const refBlocks = refHtml ? this.parseHtmlToContentBlocks(refHtml) : [];
 
-        const mainHtml = this.fixBanglaWordBreaks(this.noteSheet.mainText ?? '');
-        const mainBlocks = this.parseHtmlToContentBlocks(mainHtml);
+        // Each Main Text block becomes its own numbered section (১।, ২।, …).
+        const mainSections = this.mainDisplayBlocks.map((html, idx) => ({
+            serialText: this.serial(idx + 1),
+            blocks: this.parseHtmlToContentBlocks(this.fixBanglaWordBreaks(html ?? ''))
+        }));
+        const mainBlocks = mainSections[0]?.blocks ?? [];
 
         const model: NotesheetDocumentModel = {
             isBangla: bn,
@@ -1519,6 +1671,7 @@ html, body { margin: 0; padding: 0; background: transparent; }
             dateValue: this.formatDate(this.noteSheet.noteSheetDate),
             mainSerialText: this.serial(1),
             mainBlocks,
+            mainSections,
             closingText: bn ? 'আপনার সদয় অনুমোদনের জন্য উপস্থাপন করা হলো।' : 'Presented for your kind approval.',
             approvers: [],
             enclLabel: '',
@@ -1531,10 +1684,13 @@ html, body { margin: 0; padding: 0; background: transparent; }
             (model as any).membersColumns = this.previewMembersColumns;
             (model as any).membersRows = this.previewMembersRows;
         }
-        // Add last text / paragraphText
-        if (this.noteSheet.paragraphText) {
-            (model as any).lastText = this.noteSheet.paragraphText;
-            (model as any).lastTextSerial = this.serial(this.lastTextSerial);
+        // Add last text / paragraphText — one numbered section per block.
+        const lastBlocks = this.lastTextBlocks;
+        if (lastBlocks.length > 0) {
+            (model as any).lastSections = lastBlocks.map((html, idx) => ({
+                serialText: this.serial(this.lastTextStartSerial + idx),
+                blocks: this.parseHtmlToContentBlocks(this.fixBanglaWordBreaks(html ?? ''))
+            }));
         }
         // Note serial
         if (this.noteSheet.note) {
@@ -1796,36 +1952,49 @@ html, body { margin: 0; padding: 0; background: transparent; }
             }));
         }
 
-        // Merge serial (১।) with first text block so they appear inline (matches posting style)
-        if (model.mainBlocks.length > 0 && model.mainBlocks[0].type === 'paragraph' && model.mainBlocks[0].text) {
-            const firstBlock = model.mainBlocks[0];
-            const serialRun = new TextRun({ text: `${model.mainSerialText}  `, bold: true, size: bodySize, sizeComplexScript: csBody, font, language: lang });
-            const contentRuns = (firstBlock.runs && firstBlock.runs.length > 0)
-                ? firstBlock.runs.map(r => new TextRun({
-                    text: r.text,
-                    bold: r.bold,
-                    italics: r.italic,
-                    underline: r.underline ? {} : undefined,
-                    size: bodySize,
-                    sizeComplexScript: csBody,
-                    font,
-                    language: lang
-                }))
-                : [new TextRun({ text: firstBlock.text!, bold: firstBlock.bold, italics: firstBlock.italic, size: bodySize, sizeComplexScript: csBody, font, language: lang })];
-            mainChildren.push(new Paragraph({
-                children: [serialRun, ...contentRuns],
-                indent: { left: 240 }, spacing: { before: 160, after: 80 }, alignment: AlignmentType.JUSTIFIED
-            }));
-            if (model.mainBlocks.length > 1) {
-                mainChildren.push(...this.contentBlocksToDocx(model.mainBlocks.slice(1), font, bn));
+        // Main Text — one numbered section per block (১।, ২।, …). The serial is
+        // merged inline with the first paragraph so they appear on one line
+        // (matches posting style). The members table sits under block 1 (below).
+        const mainSections: { serialText: string; blocks: ContentBlock[] }[] =
+            (model.mainSections && model.mainSections.length)
+                ? model.mainSections
+                : [{ serialText: model.mainSerialText, blocks: model.mainBlocks }];
+
+        const renderMainSection = (section: { serialText: string; blocks: ContentBlock[] }) => {
+            const blocks = section.blocks ?? [];
+            if (blocks.length > 0 && blocks[0].type === 'paragraph' && blocks[0].text) {
+                const firstBlock = blocks[0];
+                const serialRun = new TextRun({ text: `${section.serialText}  `, bold: true, size: bodySize, sizeComplexScript: csBody, font, language: lang });
+                const contentRuns = (firstBlock.runs && firstBlock.runs.length > 0)
+                    ? firstBlock.runs.map(r => new TextRun({
+                        text: r.text,
+                        bold: r.bold,
+                        italics: r.italic,
+                        underline: r.underline ? {} : undefined,
+                        size: bodySize,
+                        sizeComplexScript: csBody,
+                        font,
+                        language: lang
+                    }))
+                    : [new TextRun({ text: firstBlock.text!, bold: firstBlock.bold, italics: firstBlock.italic, size: bodySize, sizeComplexScript: csBody, font, language: lang })];
+                mainChildren.push(new Paragraph({
+                    children: [serialRun, ...contentRuns],
+                    indent: { left: 240 }, spacing: { before: 160, after: 80 }, alignment: AlignmentType.JUSTIFIED
+                }));
+                if (blocks.length > 1) {
+                    mainChildren.push(...this.contentBlocksToDocx(blocks.slice(1), font, bn));
+                }
+            } else {
+                mainChildren.push(new Paragraph({
+                    children: [new TextRun({ text: section.serialText, bold: true, size: bodySize, sizeComplexScript: csBody, font, language: lang })],
+                    indent: { left: 240 }, spacing: { before: 160, after: 40 }
+                }));
+                mainChildren.push(...this.contentBlocksToDocx(blocks, font, bn));
             }
-        } else {
-            mainChildren.push(new Paragraph({
-                children: [new TextRun({ text: model.mainSerialText, bold: true, size: bodySize, sizeComplexScript: csBody, font, language: lang })],
-                indent: { left: 240 }, spacing: { before: 160, after: 40 }
-            }));
-            mainChildren.push(...this.contentBlocksToDocx(model.mainBlocks, font, bn));
-        }
+        };
+
+        // Block 1 (the members table renders directly under it, below).
+        renderMainSection(mainSections[0]);
 
         // Members table (if any)
         const mModel = model as any;
@@ -1884,6 +2053,11 @@ html, body { margin: 0; padding: 0; background: transparent; }
             }));
         }
 
+        // Remaining Main Text blocks (২।, ৩।, …) render after the members table.
+        for (let s = 1; s < mainSections.length; s++) {
+            renderMainSection(mainSections[s]);
+        }
+
         // Note (with serial, rendered as HTML content blocks)
         if (model.note) {
             const noteSerial = mModel.noteSerial || '';
@@ -1914,12 +2088,13 @@ html, body { margin: 0; padding: 0; background: transparent; }
             }
         }
 
-        // Last Text (paragraphText) with serial
-        if (mModel.lastText) {
-            const ltBlocks = this.parseHtmlToContentBlocks(this.fixBanglaWordBreaks(mModel.lastText));
+        // Last Text (paragraphText) — one numbered section per block, same inline-serial style.
+        const lastSections: { serialText: string; blocks: ContentBlock[] }[] = mModel.lastSections ?? [];
+        for (const section of lastSections) {
+            const ltBlocks = section.blocks ?? [];
             if (ltBlocks.length > 0 && ltBlocks[0].type === 'paragraph' && ltBlocks[0].text) {
                 const firstBlock = ltBlocks[0];
-                const serialRun = new TextRun({ text: `${mModel.lastTextSerial}  `, bold: true, size: bodySize, sizeComplexScript: csBody, font, language: lang });
+                const serialRun = new TextRun({ text: `${section.serialText}  `, bold: true, size: bodySize, sizeComplexScript: csBody, font, language: lang });
                 const contentRuns = (firstBlock.runs?.length)
                     ? firstBlock.runs.map(r => new TextRun({ text: r.text, bold: r.bold, italics: r.italic, underline: r.underline ? {} : undefined, size: bodySize, sizeComplexScript: csBody, font, language: lang }))
                     : [new TextRun({ text: firstBlock.text!, size: bodySize, sizeComplexScript: csBody, font, language: lang })];
@@ -1932,12 +2107,10 @@ html, body { margin: 0; padding: 0; background: transparent; }
                 }
             } else {
                 mainChildren.push(new Paragraph({
-                    children: [
-                        new TextRun({ text: mModel.lastTextSerial + ' ', bold: true, size: bodySize, sizeComplexScript: csBody, font, language: lang }),
-                        new TextRun({ text: this.stripHtml(mModel.lastText), size: bodySize, sizeComplexScript: csBody, font, language: lang })
-                    ],
-                    indent: { left: 240 }, spacing: { before: 160, after: 80 }
+                    children: [new TextRun({ text: section.serialText, bold: true, size: bodySize, sizeComplexScript: csBody, font, language: lang })],
+                    indent: { left: 240 }, spacing: { before: 160, after: 40 }
                 }));
+                mainChildren.push(...this.contentBlocksToDocx(ltBlocks, font, bn));
             }
         }
 

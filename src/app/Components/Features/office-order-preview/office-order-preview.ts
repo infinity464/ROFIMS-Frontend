@@ -20,6 +20,7 @@ import { environment } from '@/Core/Environments/environment';
 import { OfficeOrderService } from '@/services/office-order.service';
 import { EmpService } from '@/services/emp-service';
 import { GeneralNotesheetOfficeOrderDto, GeneralNotesheetOfficeOrderWithDetailsDto, ReferenceNoEntry, OnulipiEntry } from '@/models/office-order.model';
+import { mainTextBlocksToHtml } from '@/shared/utils/notesheet-main-text';
 import { ApprovalStatus } from '@/models/enums';
 import { NotesheetMembersTableComponent } from '@/Components/Shared/notesheet-members-table/notesheet-members-table';
 import { JsReportService } from '@/services/jsreport.service';
@@ -221,19 +222,20 @@ export class OfficeOrderPreviewComponent implements OnInit {
 
     private parseNoteSheetFields(): void {
         if (!this.order) return;
-        this.nsMainText = this.order.nsMainText ?? '';
+        // Note-sheet Main Text is stored as a JSON array of blocks — flatten to combined HTML.
+        this.nsMainText = mainTextBlocksToHtml(this.order.nsMainText);
         this.nsNote = this.order.nsNote ?? '';
         const pt = (this.order.nsParagraphText ?? '').trim();
         if (!pt) {
             this.nsParagraphs = [];
         } else if (pt.startsWith('[')) {
-            // Posting notesheets store as JSON array
+            // Posting & General notesheets store Last Text as a JSON array of blocks
             try {
                 const arr = JSON.parse(pt);
                 this.nsParagraphs = Array.isArray(arr) ? arr.filter((p: string) => p && p.trim()) : [];
             } catch { this.nsParagraphs = [pt]; }
         } else {
-            // General notesheets store as plain HTML string
+            // Legacy General notesheets stored a single plain HTML string
             this.nsParagraphs = [pt];
         }
     }

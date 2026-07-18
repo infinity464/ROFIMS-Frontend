@@ -19,6 +19,7 @@ import { TooltipModule } from 'primeng/tooltip';
 import { MessageService, ConfirmationService } from 'primeng/api';
 import { environment } from '@/Core/Environments/environment';
 import { OfficeOrderService } from '@/services/office-order.service';
+import { mainTextBlocksToHtml } from '@/shared/utils/notesheet-main-text';
 import { MasterBasicSetupService } from '@/Components/basic-setup/shared/services/MasterBasicSetupService';
 import { ApprovedNoteSheetItem } from '@/models/posting.model';
 import { PostingOrderNumberConfigModel } from '@/Components/basic-setup/shared/models/posting-order-number-config';
@@ -322,7 +323,8 @@ export class OfficeOrderGenerateComponent implements OnInit {
                 this.selectedNoteSheetApprovedDate = ns.finalApprovalApprovedDate ?? ns.lastupdate;
                 this.selectedTextType = (ns.textType === 1 || ns.textType === '1') ? 'bn' : 'en';
                 this.subject = ns.subject ?? '';
-                this.bodyText = ns.mainText ?? ns.MainText ?? '';
+                // Main Text is a JSON array of blocks — flatten to combined HTML for the office-order body.
+                this.bodyText = mainTextBlocksToHtml(ns.mainText ?? ns.MainText);
                 this.postingOrderNumberConfigId = null;
                 this.rebuildConfigOptions();
                 this.loadOnulipiFromConfig();

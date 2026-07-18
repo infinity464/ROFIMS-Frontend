@@ -19,6 +19,7 @@ import { RichEditorComponent } from '@/Components/Common/rich-editor/rich-editor
 import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
 import { EmpService } from '@/services/emp-service';
 import { NoteSheetEditCacheService } from '@/services/note-sheet-edit-cache.service';
+import { mainTextBlocksToHtml, serializeMainTextBlocks } from '@/shared/utils/notesheet-main-text';
 import { NoteSheetType, NoteSheetCurrentStatus, NoteSheetCurrentStatusOptions, ApprovalStatus, NoteSheetRemarkAction, ApprovalLogAction, ApprovalLogActionOptions, NoteSheetOperationType, DraftPostingStatus, NoteSheetPreviewFrom } from '@/models/enums';
 import { ServingMembersService } from '@/services/serving-members.service';
 import { MasterBasicSetupService } from '@/Components/basic-setup/shared/services/MasterBasicSetupService';
@@ -520,7 +521,9 @@ export class NotesheetListComponent implements OnInit {
 
   togglePreviewEdit(): void {
     this.editSubject = this.previewNoteSheet?.subject ?? '';
-    this.editMainText = this.previewNoteSheet?.mainText ?? '';
+    // Main Text is stored as a JSON array of blocks; the quick inline editor edits
+    // it as one combined HTML blob (saved back as a single block).
+    this.editMainText = mainTextBlocksToHtml(this.previewNoteSheet?.mainText);
     this.editReferenceNumber = this.previewNoteSheet?.referenceNumber ?? '';
     this.previewEditing = true;
   }
@@ -532,10 +535,11 @@ export class NotesheetListComponent implements OnInit {
   savePreviewChanges(): void {
     if (!this.previewNoteSheet) return;
     this.savingPreview = true;
+    const mainTextJson = serializeMainTextBlocks([{ text: this.editMainText }]);
     const payload = {
       ...this.previewNoteSheet,
       subject: this.editSubject,
-      mainText: this.editMainText,
+      mainText: mainTextJson,
       referenceNumber: this.editReferenceNumber
     };
     this.http.post<{ statusCode?: number }>(`${this.api}/UpdateAsyn`, payload).subscribe({
@@ -543,7 +547,7 @@ export class NotesheetListComponent implements OnInit {
         this.savingPreview = false;
         if (res?.statusCode === 200) {
           this.previewNoteSheet!.subject = this.editSubject;
-          this.previewNoteSheet!.mainText = this.editMainText;
+          this.previewNoteSheet!.mainText = mainTextJson;
           this.previewNoteSheet!.referenceNumber = this.editReferenceNumber;
           this.previewEditing = false;
           this.messageService.add({ severity: 'success', summary: 'Success', detail: 'Note sheet updated.' });
@@ -829,7 +833,7 @@ export class NotesheetListComponent implements OnInit {
 
   /** Sanitized main text for preview (formal doc uses same content). */
   getPreviewMainTextSafe(): SafeHtml {
-    const html = this.previewNoteSheet?.mainText ?? '';
+    const html = mainTextBlocksToHtml(this.previewNoteSheet?.mainText);
     return this.sanitizer.bypassSecurityTrustHtml(html);
   }
 
@@ -914,7 +918,7 @@ export class NotesheetListComponent implements OnInit {
         const list = Array.isArray(data) ? data : [];
         const full = list[0] ?? null;
         this.editMainTextNoteSheet = full;
-        this.mainTextEditValue = full?.mainText ?? '';
+        this.mainTextEditValue = mainTextBlocksToHtml(full?.mainText);
       },
       error: (err: any) => this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.message || 'Failed to load note-sheet.' })
     });
@@ -924,7 +928,7 @@ export class NotesheetListComponent implements OnInit {
   saveMainText(): void {
     if (!this.editMainTextNoteSheet) return;
     this.savingMainText = true;
-    const payload = { ...this.editMainTextNoteSheet, mainText: this.mainTextEditValue };
+    const payload = { ...this.editMainTextNoteSheet, mainText: serializeMainTextBlocks([{ text: this.mainTextEditValue }]) };
     this.http.post<{ statusCode?: number }>(`${this.api}/UpdateAsyn`, payload).subscribe({
       next: (res) => {
         this.savingMainText = false;
@@ -1031,7 +1035,7 @@ export class NotesheetListComponent implements OnInit {
       }));
     }
 
-    const mainTextPlain = this.stripHtml(ns.mainText ?? '');
+    const mainTextPlain = this.stripHtml(mainTextBlocksToHtml(ns.mainText));
     if (mainTextPlain) {
       children.push(new Paragraph({
         children: [new TextRun({ text: mainTextPlain, size: 22, font })],
@@ -1121,7 +1125,7 @@ export class NotesheetListComponent implements OnInit {
         <h1 style="font-size:16pt;text-align:center;margin:0 0 10px 0">${this.escapeHtml(title)}</h1>
         <div style="font-size:10pt;margin-bottom:12px;display:flex;gap:24px;flex-wrap:wrap">${metaParts.join('')}</div>
         ${subjectHtml}
-        <div style="margin-bottom:12px">${ns.mainText ?? ''}</div>
+        <div style="margin-bottom:12px">${mainTextBlocksToHtml(ns.mainText)}</div>
         <p style="font-style:italic;color:#64748b;margin-top:16px;padding-top:10px;border-top:1px dashed #ccc">${this.escapeHtml(closingText)}</p>
         ${sigHtml}
       </div>`;
@@ -1197,7 +1201,7 @@ export class NotesheetListComponent implements OnInit {
   <h1>${this.escapeHtml(title)}</h1>
   <div class="meta">${metaParts.map(p => `<span>${p}</span>`).join('')}</div>
   ${subjectHtml}
-  <div class="content">${ns.mainText ?? ''}</div>
+  <div class="content">${mainTextBlocksToHtml(ns.mainText)}</div>
   <p style="font-style:italic;color:#64748b;margin-top:16px;padding-top:10px;border-top:1px dashed #ccc">${this.escapeHtml(closingText)}</p>
   ${sigHtml}
 </body></html>`;
