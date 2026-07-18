@@ -336,15 +336,15 @@
     overflow-x: auto;
 }
 .ns-members-preview-table {
-    // Keep a small, symmetric gap from the page border on both sides.
-    width: calc(100% - 28px);
+    // Centred with a small symmetric gap from the border on both sides (matches Word).
+    width: 98%;
     border-collapse: collapse;
     font-size: 7pt;
-    margin: 6px 14px;
+    margin: 6px auto;
     table-layout: fixed;
     th,
     td {
-        border: 1px solid #000;
+        border: 0.5px solid #666;
         padding: 4px 6px;
         text-align: center;
         word-break: break-word;

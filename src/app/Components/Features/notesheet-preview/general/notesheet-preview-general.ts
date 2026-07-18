@@ -2021,43 +2021,27 @@ html, body { margin: 0; padding: 0; background: transparent; }
         // Members table (if any)
         const mModel = model as any;
         if (mModel.membersColumns?.length > 0 && mModel.membersRows?.length > 0) {
-            const thinBorder = { style: BorderStyle.SINGLE, size: 4, color: '000000' } as const;
+            const thinBorder = { style: BorderStyle.SINGLE, size: 2, color: '666666' } as const;
             const cols = mModel.membersColumns as { key: string; label: string; mergedFrom?: string[] }[];
             const slLabel = bn ? 'ক্রমিক' : 'SL';
             const bnDigits = ['০','১','২','৩','৪','৫','৬','৭','৮','৯'];
             const convertDigits = (s: string) => bn && /\d/.test(s) ? s.replace(/\d/g, d => bnDigits[+d]) : s;
             const rows = mModel.membersRows as Record<string, string>[];
 
-            // Use saved width% from JSON if available; otherwise distribute proportionally by content
-            const hasCustomWidths = cols.some((c: any) => c.width != null);
-            let slPct: number;
-            let colPcts: number[];
-            if (hasCustomWidths) {
-                const defaultPct = Math.round(((100 - 5) / cols.length) * 10) / 10;
-                slPct = 5;
-                colPcts = cols.map((c: any) => c.width ?? defaultPct);
-            } else {
-                const colMaxLens = cols.map(c => {
-                    let max = c.label.length;
-                    for (const row of rows) {
-                        const val = c.mergedFrom ? c.mergedFrom.map((k: string) => row[k] || '').filter(Boolean).join(' ') : (row[c.key] || '');
-                        if (val.length > max) max = val.length;
-                    }
-                    return Math.max(max, 2);
-                });
-                const slMaxLen = Math.max(slLabel.length, String(rows.length).length, 2);
-                const totalLen = slMaxLen + colMaxLens.reduce((a, b) => a + b, 0);
-                slPct = Math.round((slMaxLen / totalLen) * 100);
-                colPcts = colMaxLens.map(l => Math.round((l / totalLen) * 100));
-            }
+            // Match the on-screen preview exactly: each column's effective width (explicit or the
+            // per-key default) with a narrow SL column, normalised to fill the table width.
+            const slPct = 5;
+            const rawCol = cols.map((c) => this.getPreviewColWidth(c as any));
+            const rawSum = rawCol.reduce((a, b) => a + b, 0) || 1;
+            const colPcts = rawCol.map((w) => Math.round((w / rawSum) * (100 - slPct) * 10) / 10);
 
             const mkWidth = (pct: number) => ({ size: pct, type: WidthType.PERCENTAGE });
             const slHeaderCell = new TableCell({ width: mkWidth(slPct), children: [new Paragraph({ children: [new TextRun({ text: slLabel, bold: true, size: tblSize, sizeComplexScript: csTbl, font, language: lang })], alignment: AlignmentType.CENTER })], borders: { top: thinBorder, bottom: thinBorder, left: thinBorder, right: thinBorder } });
             const headerRow = new TableRow({
-                children: [slHeaderCell, ...cols.map((c, ci) => new TableCell({ width: mkWidth(colPcts[ci]), children: [new Paragraph({ children: [new TextRun({ text: c.label, bold: true, size: tblSize, sizeComplexScript: csTbl, font, language: lang })], alignment: AlignmentType.CENTER })], borders: { top: thinBorder, bottom: thinBorder, left: thinBorder, right: thinBorder } }))]
+                children: [slHeaderCell, ...cols.map((c, ci) => new TableCell({ width: mkWidth(colPcts[ci]), children: [new Paragraph({ children: [new TextRun({ text: this.getMemberColHeader(c), bold: true, size: tblSize, sizeComplexScript: csTbl, font, language: lang })], alignment: AlignmentType.CENTER })], borders: { top: thinBorder, bottom: thinBorder, left: thinBorder, right: thinBorder } }))]
             });
             const dataRows = rows.map((row: Record<string, string>, ri: number) => {
-                const slVal = bn ? String(ri + 1).replace(/\d/g, d => bnDigits[+d]) : String(ri + 1);
+                const slVal = bn ? String(ri + 1).replace(/\d/g, d => bnDigits[+d]) + '।' : String(ri + 1) + '.';
                 const slCell = new TableCell({ width: mkWidth(slPct), children: [new Paragraph({ children: [new TextRun({ text: slVal, size: tblSize, sizeComplexScript: csTbl, font, language: lang })], alignment: AlignmentType.CENTER })], borders: { top: thinBorder, bottom: thinBorder, left: thinBorder, right: thinBorder } });
                 return new TableRow({
                     children: [slCell, ...cols.map((c, ci) => {
@@ -2069,8 +2053,8 @@ html, body { margin: 0; padding: 0; background: transparent; }
             });
             mainChildren.push(new Table({
                 layout: TableLayoutType.FIXED,
-                indent: { size: 240, type: WidthType.DXA },
-                width: { size: 97, type: WidthType.PERCENTAGE },
+                alignment: AlignmentType.CENTER,
+                width: { size: 98, type: WidthType.PERCENTAGE },
                 rows: [headerRow, ...dataRows]
             }));
         }
@@ -2247,6 +2231,8 @@ html, body { margin: 0; padding: 0; background: transparent; }
                     new TableCell({
                         width: { size: wordCellWidth, type: WidthType.DXA },
                         borders: { top: thickBorder, bottom: thickBorder, left: thickBorder, right: thickBorder },
+                        // Content inset from the border ≈ the preview's .ns-main-col 8px padding (120 twips),
+                        // so the left/right gap matches the preview / PDF / print.
                         margins: { top: 60, bottom: 60, left: 120, right: 120 },
                         verticalAlign: VerticalAlign.TOP,
                         children: [...titleChildren, ...mainChildren]

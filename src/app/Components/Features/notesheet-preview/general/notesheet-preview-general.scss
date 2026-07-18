@@ -41,6 +41,11 @@
     margin-right: 0.8em;
 }
 
+/* Small left/right gap so the content doesn't touch the page's inner border. */
+.ns-main-col {
+    padding: 0 8px;
+}
+
 /* Edit-mode members table: mark every editable data cell (same affordance as the
    generate page) — soft tint + text cursor, with a pencil hint on hover. */
 .ns-edit-member-cell--editable {
