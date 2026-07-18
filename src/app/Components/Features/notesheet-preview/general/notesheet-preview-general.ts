@@ -1921,11 +1921,11 @@ html, body { margin: 0; padding: 0; background: transparent; }
             alignment: AlignmentType.CENTER, spacing: { before: 0, after: 100 }
         }));
 
-        // Notesheet number (8pt)
+        // Notesheet number (8pt — same as body)
         if (this.noteSheet?.noteSheetNo) {
             mainChildren.push(new Paragraph({
                 children: [
-                    new TextRun({ text: this.noteSheet.noteSheetNo, size: noDateSize, sizeComplexScript: csNoDate, font, language: lang })
+                    new TextRun({ text: this.noteSheet.noteSheetNo, size: bodySize, sizeComplexScript: csBody, font, language: lang })
                 ],
                 indent: { left: 240 }, spacing: { before: 60, after: 40 }
             }));
@@ -2051,10 +2051,12 @@ html, body { margin: 0; padding: 0; background: transparent; }
                     })]
                 });
             });
+            // Align the table with the body paragraphs: same left indent (240) and the same
+            // right edge (spans to the cell's content-right), so it lines up like the preview.
             mainChildren.push(new Table({
                 layout: TableLayoutType.FIXED,
-                alignment: AlignmentType.CENTER,
-                width: { size: 98, type: WidthType.PERCENTAGE },
+                indent: { size: 240, type: WidthType.DXA },
+                width: { size: wordCellWidth - 480, type: WidthType.DXA },
                 rows: [headerRow, ...dataRows]
             }));
         }
