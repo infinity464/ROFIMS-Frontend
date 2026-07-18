@@ -68,6 +68,17 @@ export interface MemberColumnDef {
 export interface MemberRow {
     employeeId: number;
     values: Record<string, string>;
+    /** Clearance subjects: PermanentPostingMORecord.id for this posted-out member. */
+    postedOutId?: number | null;
+}
+
+/** Result of GetPostedOutClearanceInfo — posted-out lookup + cross-note-sheet duplicate check. */
+export interface PostedOutClearanceInfo {
+    employeeId: number;
+    postedOutId: number | null;
+    hasPostedOut: boolean;
+    usedInNoteSheetId: number | null;
+    usedInNoteSheetNo: string | null;
 }
 
 /** Shape stored in NoteSheetInfo.MembersJson */
@@ -409,6 +420,21 @@ export class NotesheetGenerateComponent implements OnInit {
     private subjectTextById(id: number | null | undefined, isBn: boolean): string {
         const picked = this.subjectPickList.find((s) => s.id === id);
         return picked ? ((isBn ? picked.subjectBN : picked.subjectEN) || picked.subjectEN || picked.subjectBN || '') : '';
+    }
+
+    /** True when the selected subject is flagged IsClearanceSubject — members become required
+     *  and each must be a posted-out member (with a Permanent Posting MO Change record). */
+    get isClearanceSubjectSelected(): boolean {
+        const id = this.form.get('noteSheetSubjectId')?.value;
+        if (id == null) return false;
+        return !!this.subjectPickList.find((s) => s.id === id)?.isClearanceSubject;
+    }
+
+    /** Selected subject's display label (language-aware) — used for the read-only field in edit mode. */
+    get selectedSubjectLabel(): string {
+        const id = this.form.get('noteSheetSubjectId')?.value;
+        const opt = this.subjectOptions.find((o) => o.value === id);
+        return opt?.label ?? this.form.get('subject')?.value ?? '';
     }
 
     /** Subject text for the payload — the form value, or derived from the picked id if empty. */
@@ -1009,7 +1035,8 @@ export class NotesheetGenerateComponent implements OnInit {
                                 }
                                 return {
                                     employeeId: r.employeeId ?? r.EmployeeId,
-                                    values: vals
+                                    values: vals,
+                                    postedOutId: r.postedOutId ?? r.PostedOutId ?? null
                                 };
                             });
                             this.membersData = { columns, members };
@@ -1087,16 +1114,70 @@ export class NotesheetGenerateComponent implements OnInit {
                     });
                     return;
                 }
-                this.addFoundMember(emp);
+                this.proceedAddMember(emp);
             },
             error: () => {
                 // Resilient: don't hard-block on a network error — proceed with the add.
-                this.addFoundMember(emp);
+                this.proceedAddMember(emp);
             }
         });
     }
 
-    private addFoundMember(emp: EmployeeBasicInfo): void {
+    /** Route the found member: for a clearance subject, verify the posted-out record + cross-note-sheet
+     *  duplicate first; otherwise add normally. */
+    private proceedAddMember(emp: EmployeeBasicInfo): void {
+        if (this.membersData.members.some(m => m.employeeId === emp.employeeID)) {
+            this.messageService.add({ severity: 'warn', summary: 'Duplicate', detail: 'This member is already added.' });
+            return;
+        }
+        if (!this.isClearanceSubjectSelected) {
+            this.addFoundMember(emp, null);
+            return;
+        }
+
+        // Clearance subject: the member MUST have a posted-out record and must not already be
+        // used as a posted-out member in another note-sheet.
+        this.memberAddLoading = true;
+        const api = `${environment.apis.core}/NoteSheetReferenceEmployee`;
+        let params: any = { employeeId: String(emp.employeeID) };
+        if (this.editMode && this.editId != null) params.excludeNoteSheetId = String(this.editId);
+        this.http.get<PostedOutClearanceInfo>(`${api}/GetPostedOutClearanceInfo`, { params }).subscribe({
+            next: (info) => {
+                this.memberAddLoading = false;
+                if (!info?.hasPostedOut) {
+                    this.messageService.add({
+                        severity: 'error',
+                        summary: 'No Posted Out record',
+                        detail: `${emp.fullNameEN || 'This member'} has no Posted Out entry. Please generate the Posted Out (Permanent Posting MO Change) record first.`,
+                        life: 7000
+                    });
+                    return;
+                }
+                if (info.usedInNoteSheetId != null) {
+                    this.messageService.add({
+                        severity: 'error',
+                        summary: 'Already in a note-sheet',
+                        detail: `This posted-out member is already added in note-sheet ${info.usedInNoteSheetNo || ('#' + info.usedInNoteSheetId)}. A posted-out member can be in only one note-sheet.`,
+                        life: 8000
+                    });
+                    return;
+                }
+                this.messageService.add({
+                    severity: 'info',
+                    summary: 'Posted-out member',
+                    detail: `Verified posted-out member (Posted Out ID: ${info.postedOutId}). Adding to the note-sheet.`,
+                    life: 5000
+                });
+                this.addFoundMember(emp, info.postedOutId);
+            },
+            error: () => {
+                this.memberAddLoading = false;
+                this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to verify the posted-out record. Please try again.' });
+            }
+        });
+    }
+
+    private addFoundMember(emp: EmployeeBasicInfo, postedOutId: number | null): void {
         if (this.membersData.members.some(m => m.employeeId === emp.employeeID)) {
             this.messageService.add({ severity: 'warn', summary: 'Duplicate', detail: 'This member is already added.' });
             return;
@@ -1202,7 +1283,7 @@ export class NotesheetGenerateComponent implements OnInit {
                     if (col.group === 'custom' && values[col.key] === undefined) values[col.key] = '';
                 }
 
-                this.membersData.members.push({ employeeId: emp.employeeID, values });
+                this.membersData.members.push({ employeeId: emp.employeeID, values, postedOutId });
                 // First member added with no columns configured → show a sensible default set.
                 this.applyDefaultMemberColumnsIfEmpty();
                 this.memberAddLoading = false;
@@ -1631,6 +1712,11 @@ export class NotesheetGenerateComponent implements OnInit {
             this.messageService.add({ severity: 'warn', summary: 'Validation', detail: 'Please fill required fields.' });
             return;
         }
+        // Clearance subject → at least one (posted-out) member is required.
+        if (this.isClearanceSubjectSelected && this.membersData.members.length === 0) {
+            this.messageService.add({ severity: 'warn', summary: 'Members required', detail: 'This is a clearance subject — add at least one posted-out member.' });
+            return;
+        }
         this.isSubmitting = true;
 
         // First upload reference paragraph files, then main supporting docs
@@ -1657,6 +1743,7 @@ export class NotesheetGenerateComponent implements OnInit {
                                 const refApi = `${environment.apis.core}/NoteSheetReferenceEmployee`;
                                 const employees = this.membersData.members.map(m => ({
                                     employeeId: m.employeeId,
+                                    postedOutId: m.postedOutId ?? null,
                                     informationJson: JSON.stringify({
                                         columns: this.membersData.columns,
                                         values: m.values

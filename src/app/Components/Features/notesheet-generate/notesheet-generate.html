@@ -115,19 +115,23 @@
 
           <div class="form-field" style="flex: 2 1 0%;">
             <label class="form-label">Subject <span class="form-label-required">*</span></label>
-            <p-select
-              formControlName="noteSheetSubjectId"
-              [options]="subjectOptions"
-              optionLabel="label"
-              optionValue="value"
-              [filter]="true"
-              [showClear]="true"
-              placeholder="Select subject"
-              (onChange)="onSubjectPicked($event.value)"
-              styleClass="w-full">
-            </p-select>
-            @if (form.get('noteSheetSubjectId')?.invalid && form.get('noteSheetSubjectId')?.touched) {
-              <small class="form-error">Subject is required</small>
+            @if (editMode) {
+              <input pInputText [value]="selectedSubjectLabel" [readonly]="true" class="w-full" pTooltip="Subject cannot be changed after the note-sheet is created" tooltipPosition="top" />
+            } @else {
+              <p-select
+                formControlName="noteSheetSubjectId"
+                [options]="subjectOptions"
+                optionLabel="label"
+                optionValue="value"
+                [filter]="true"
+                [showClear]="true"
+                placeholder="Select subject"
+                (onChange)="onSubjectPicked($event.value)"
+                styleClass="w-full">
+              </p-select>
+              @if (form.get('noteSheetSubjectId')?.invalid && form.get('noteSheetSubjectId')?.touched) {
+                <small class="form-error">Subject is required</small>
+              }
             }
           </div>
         </div>

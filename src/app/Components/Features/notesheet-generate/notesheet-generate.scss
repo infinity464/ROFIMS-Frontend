@@ -124,9 +124,10 @@
   }
 
   th {
-    background: var(--surface-100, #f1f5f9);
+    // Neutral translucent overlay so the header adapts to light AND dark themes.
+    background: rgba(128, 128, 128, 0.14);
     font-weight: 600;
-    color: var(--text-color, #1e293b);
+    color: inherit;
 
     &[draggable="true"] {
       cursor: grab;
@@ -147,7 +148,7 @@
   }
 
   tbody tr:hover {
-    background: var(--surface-50, #f8fafc);
+    background: rgba(128, 128, 128, 0.07);
   }
 
   &__sl {
@@ -218,11 +219,12 @@
     // area, a text cursor invites typing, and a pencil hint reveals on hover.
     &--editable {
       cursor: text;
-      background: var(--primary-50, #eff6ff);
+      // Translucent blue tint — subtle on light backgrounds, still visible on dark.
+      background: rgba(59, 130, 246, 0.10);
       position: relative;
 
       &:hover {
-        background: var(--primary-100, #dbeafe);
+        background: rgba(59, 130, 246, 0.22);
 
         &::after {
           content: '\270E'; // ✎ pencil
