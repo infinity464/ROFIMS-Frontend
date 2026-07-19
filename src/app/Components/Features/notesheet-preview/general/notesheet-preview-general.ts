@@ -1928,7 +1928,7 @@ html, body { margin: 0; padding: 0; background: transparent; }
                 children: [
                     new TextRun({ text: this.noteSheet.noteSheetNo, size: bodySize, sizeComplexScript: csBody, font, language: lang })
                 ],
-                indent: { left: 240 }, spacing: { before: 60, after: 40 }
+                indent: { left: 40 }, spacing: { before: 60, after: 40 }
             }));
         }
 
@@ -1937,7 +1937,7 @@ html, body { margin: 0; padding: 0; background: transparent; }
             mainChildren.push(new Paragraph({
                 children: [new TextRun({ text: model.subject, bold: true, underline: {}, size: bodySize, sizeComplexScript: csBody, font, language: lang })],
                 spacing: { before: 20, after: 60 },
-                indent: { left: 240 }
+                indent: { left: 40 }
             }));
         }
 
@@ -1949,12 +1949,12 @@ html, body { margin: 0; padding: 0; background: transparent; }
                     new TextRun({ text: `${model.referenceLabel} `, bold: true, size: bodySize, sizeComplexScript: csBody, font, language: lang }),
                     new TextRun({ text: refs[0], size: bodySize, sizeComplexScript: csBody, font, language: lang })
                 ],
-                indent: { left: 240 }, spacing: { after: 80 }, alignment: AlignmentType.JUSTIFIED
+                indent: { left: 40 }, spacing: { after: 80 }, alignment: AlignmentType.JUSTIFIED
             }));
         } else if (refs.length > 1) {
             mainChildren.push(new Paragraph({
                 children: [new TextRun({ text: model.referenceLabel, bold: true, size: bodySize, sizeComplexScript: csBody, font, language: lang })],
-                indent: { left: 240 }, spacing: { after: 40 }
+                indent: { left: 40 }, spacing: { after: 40 }
             }));
             for (let ri = 0; ri < refs.length; ri++) {
                 mainChildren.push(new Paragraph({
@@ -1971,7 +1971,7 @@ html, body { margin: 0; padding: 0; background: transparent; }
                     new TextRun({ text: model.dateLabel, bold: true, size: noDateSize, sizeComplexScript: csNoDate, font, language: lang }),
                     new TextRun({ text: model.dateValue, size: noDateSize, sizeComplexScript: csNoDate, font, language: lang })
                 ],
-                indent: { left: 240 }, spacing: { after: 80 }
+                indent: { left: 40 }, spacing: { after: 80 }
             }));
         }
 
@@ -2002,7 +2002,7 @@ html, body { margin: 0; padding: 0; background: transparent; }
                     : [new TextRun({ text: firstBlock.text!, bold: firstBlock.bold, italics: firstBlock.italic, size: bodySize, sizeComplexScript: csBody, font, language: lang })];
                 mainChildren.push(new Paragraph({
                     children: [serialRun, ...contentRuns],
-                    indent: { left: 240 }, spacing: { before: 160, after: 80 }, alignment: AlignmentType.JUSTIFIED
+                    indent: { left: 40 }, spacing: { before: 160, after: 80 }, alignment: AlignmentType.JUSTIFIED
                 }));
                 if (blocks.length > 1) {
                     mainChildren.push(...this.contentBlocksToDocx(blocks.slice(1), font, bn));
@@ -2010,7 +2010,7 @@ html, body { margin: 0; padding: 0; background: transparent; }
             } else {
                 mainChildren.push(new Paragraph({
                     children: [new TextRun({ text: section.serialText, bold: true, size: bodySize, sizeComplexScript: csBody, font, language: lang })],
-                    indent: { left: 240 }, spacing: { before: 160, after: 40 }
+                    indent: { left: 40 }, spacing: { before: 160, after: 40 }
                 }));
                 mainChildren.push(...this.contentBlocksToDocx(blocks, font, bn));
             }
@@ -2057,10 +2057,12 @@ html, body { margin: 0; padding: 0; background: transparent; }
             });
             // Align the table with the body paragraphs: same left indent (240) and the same
             // right edge (spans to the cell's content-right), so it lines up like the preview.
+            // Align with the body paragraphs: same left indent (40) and span to the cell's
+            // content-right edge (content box = wordCellWidth − 240 from the 120-twip cell margins).
             mainChildren.push(new Table({
                 layout: TableLayoutType.FIXED,
-                indent: { size: 300, type: WidthType.DXA },
-                width: { size: wordCellWidth - 420, type: WidthType.DXA },
+                indent: { size: 40, type: WidthType.DXA },
+                width: { size: wordCellWidth - 280, type: WidthType.DXA },
                 rows: [headerRow, ...dataRows]
             }));
         }
@@ -2075,7 +2077,7 @@ html, body { margin: 0; padding: 0; background: transparent; }
                     : [new TextRun({ text: firstBlock.text!, size: bodySize, sizeComplexScript: csBody, font, language: lang })];
                 mainChildren.push(new Paragraph({
                     children: [...contentRuns],
-                    indent: { left: 300 }, spacing: { before: 80, after: 80 }, alignment: AlignmentType.JUSTIFIED
+                    indent: { left: 40 }, spacing: { before: 80, after: 80 }, alignment: AlignmentType.JUSTIFIED
                 }));
                 if (noteBlocks.length > 1) {
                     mainChildren.push(...this.contentBlocksToDocx(noteBlocks.slice(1), font, bn));
@@ -2087,7 +2089,7 @@ html, body { margin: 0; padding: 0; background: transparent; }
                     children: [
                         new TextRun({ text: plainNote, size: bodySize, sizeComplexScript: csBody, font, language: lang })
                     ],
-                    indent: { left: 300 }, spacing: { before: 80, after: 80 }
+                    indent: { left: 40 }, spacing: { before: 80, after: 80 }
                 }));
             }
         }
@@ -2104,7 +2106,7 @@ html, body { margin: 0; padding: 0; background: transparent; }
                     : [new TextRun({ text: firstBlock.text!, size: bodySize, sizeComplexScript: csBody, font, language: lang })];
                 mainChildren.push(new Paragraph({
                     children: [serialRun, ...contentRuns],
-                    indent: { left: 240 }, spacing: { before: 160, after: 80 }, alignment: AlignmentType.JUSTIFIED
+                    indent: { left: 40 }, spacing: { before: 160, after: 80 }, alignment: AlignmentType.JUSTIFIED
                 }));
                 if (ltBlocks.length > 1) {
                     mainChildren.push(...this.contentBlocksToDocx(ltBlocks.slice(1), font, bn));
@@ -2112,7 +2114,7 @@ html, body { margin: 0; padding: 0; background: transparent; }
             } else {
                 mainChildren.push(new Paragraph({
                     children: [new TextRun({ text: section.serialText, bold: true, size: bodySize, sizeComplexScript: csBody, font, language: lang })],
-                    indent: { left: 240 }, spacing: { before: 160, after: 40 }
+                    indent: { left: 40 }, spacing: { before: 160, after: 40 }
                 }));
                 mainChildren.push(...this.contentBlocksToDocx(ltBlocks, font, bn));
             }
@@ -2172,11 +2174,11 @@ html, body { margin: 0; padding: 0; background: transparent; }
         for (const ap of model.approvers) {
             mainChildren.push(new Paragraph({
                 children: [new TextRun({ text: ap.role, underline: {}, size: sigSize, sizeComplexScript: csSig, font, language: lang })],
-                indent: { left: 240 }, spacing: { before: 280 }, keepNext: true, keepLines: true
+                indent: { left: 40 }, spacing: { before: 280 }, keepNext: true, keepLines: true
             }));
             const runs: TextRun[] = [new TextRun({ text: ap.serialText, bold: true, size: sigSize, sizeComplexScript: csSig, font, language: lang })];
             if (ap.remark) runs.push(new TextRun({ text: ` ${ap.remark}`, size: sigSize, sizeComplexScript: csSig, font, language: lang }));
-            mainChildren.push(new Paragraph({ children: runs, indent: { left: 240 }, keepNext: true }));
+            mainChildren.push(new Paragraph({ children: runs, indent: { left: 40 }, keepNext: true }));
             if (ap.signatureDataUrl) {
                 try {
                     mainChildren.push(new Paragraph({
