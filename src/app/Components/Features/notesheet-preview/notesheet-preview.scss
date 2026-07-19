@@ -336,11 +336,11 @@
     overflow-x: auto;
 }
 .ns-members-preview-table {
-    // Centred with a small symmetric gap from the border on both sides (matches Word).
-    width: 98%;
+    // Left-aligned with a left gap from the border (matches Word); extends toward the right.
+    width: 97%;
     border-collapse: collapse;
     font-size: 7pt;
-    margin: 6px auto;
+    margin: 6px auto 6px 16px;
     table-layout: fixed;
     th,
     td {
@@ -738,20 +738,25 @@
 .ns-initiator-sig .ns-sig-img {
     margin: 0 auto 4px 0;
 }
+/* Tight line spacing so the name / rank / appointment lines sit close together. */
 .ns-sig-name {
     font-size: 9pt;
-    margin-bottom: 2px;
+    margin-bottom: 0;
+    line-height: 1.2;
 }
 .ns-sig-rank {
     font-size: 9pt;
-    margin-bottom: 2px;
+    margin-bottom: 0;
+    line-height: 1.2;
 }
 .ns-sig-paren {
     font-size: 9pt;
-    margin-bottom: 2px;
+    margin-bottom: 0;
+    line-height: 1.2;
 }
 .ns-sig-appoint {
     font-size: 9pt;
+    line-height: 1.2;
 }
 .ns-sig-date {
     font-size: 9pt;

@@ -387,12 +387,12 @@
                     <div style="border-bottom:1.5px solid #000; display:inline-block; padding-bottom:2px;">{{ getOrgHeaderLine2() }}</div>
                 </div>
 
-                <div class="ns-notesheet-no" *ngIf="noteSheet.noteSheetNo" style="padding:4px 2px 2px 4px; font-size:8pt;">
+                <div class="ns-notesheet-no" *ngIf="noteSheet.noteSheetNo" style="padding:4px 2px 2px 4px; font-size:10pt;">
                     {{ noteSheet.noteSheetNo }}
                 </div>
 
                 <!-- ── Subject ── -->
-                <div *ngIf="displaySubject" style="padding:2px 2px 4px 4px; font-size:8pt;">
+                <div *ngIf="displaySubject" style="padding:2px 2px 4px 4px; font-size:10pt;">
                     <strong><u>{{ displaySubject }}</u></strong>
                 </div>
 
@@ -417,35 +417,36 @@
                     </ng-container>
                 </div>
 
-                <!-- ── ১।..N। Main Text blocks (members table under block 1) ── -->
+                <!-- ── ১।..N। Main Text blocks ── -->
                 <!-- innerHTML sits directly on .ns-para-text so its first <p> renders inline
                      next to the serial (like the note/last-text), with the 2em gap as the tab. -->
                 <div class="ns-para" *ngFor="let block of mainDisplayBlocks; let bi = index">
                     <span class="ns-para-no">{{ serial(bi + 1) }}</span>
                     <div class="ns-para-text" [innerHTML]="getMainBlockSafe(bi)"></div>
-                    <div *ngIf="bi === 0 && previewMembersRows.length > 0 && previewMembersColumns.length > 0" class="ns-members-preview-table-wrap">
-                        <table class="ns-members-preview-table">
-                            <thead>
-                                <tr>
-                                    <th style="text-align:center;width:36px;">{{ isEnglish() ? 'SL' : 'ক্রমিক' }}</th>
-                                    <th *ngFor="let col of previewMembersColumns" [style.width.%]="getPreviewColWidth(col)">{{ getMemberColHeader(col) }}</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <tr *ngFor="let row of previewMembersRows; let ri = index">
-                                    <td style="text-align:center;">{{ memberSerial(ri) }}</td>
-                                    <td *ngFor="let col of previewMembersColumns">
-                                        {{ formatMemberCell(row, col) }}
-                                    </td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
                 </div>
 
-                <!-- ── Note (with serial) ── -->
-                <div class="ns-para" *ngIf="noteSheet.note">
-                    <span class="ns-para-no">{{ serial(noteSerial) }}</span>
+                <!-- ── Members table — renders after ALL main body blocks ── -->
+                <div *ngIf="previewMembersRows.length > 0 && previewMembersColumns.length > 0" class="ns-members-preview-table-wrap">
+                    <table class="ns-members-preview-table">
+                        <thead>
+                            <tr>
+                                <th style="text-align:center;width:36px;">{{ isEnglish() ? 'SL' : 'ক্রমিক' }}</th>
+                                <th *ngFor="let col of previewMembersColumns" [style.width.%]="getPreviewColWidth(col)">{{ getMemberColHeader(col) }}</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr *ngFor="let row of previewMembersRows; let ri = index">
+                                <td style="text-align:center;">{{ memberSerial(ri) }}</td>
+                                <td *ngFor="let col of previewMembersColumns">
+                                    {{ formatMemberCell(row, col) }}
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- ── Note (no serial — renders as a plain paragraph, aligned with the table) ── -->
+                <div class="ns-para ns-note-para" *ngIf="noteSheet.note">
                     <div class="ns-para-text" [innerHTML]="getNoteSafe()"></div>
                 </div>
 

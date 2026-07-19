@@ -84,6 +84,10 @@ export interface PostedOutClearanceInfo {
     /** True when the member was previously in a cancelled note-sheet — allowed to re-add, but warn. */
     hasCancelledNoteSheet: boolean;
     cancelledNoteSheetNo: string | null;
+    /** Posted-out record's Posting Unit (mother-org transfer destination) — shown as a members column. */
+    postingUnitId: number | null;
+    postingUnitName: string | null;
+    postingUnitNameBN: string | null;
 }
 
 /** Shape stored in NoteSheetInfo.MembersJson */
@@ -127,6 +131,9 @@ export const AVAILABLE_MEMBER_COLUMNS: MemberColumnDef[] = [
     // from the currently-active Previous RAB Service row.
     { key: 'presentRabUnit', label: 'Present RAB Unit — Full (EN)', group: 'basic' },
     { key: 'presentRabUnitBN', label: 'Present RAB Unit — Full (BN)', group: 'basic' },
+    // Posted-out Posting Unit (mother-org transfer destination) — populated for clearance-subject members.
+    { key: 'postingUnit', label: 'Posting Unit (EN)', group: 'basic' },
+    { key: 'postingUnitBN', label: 'Posting Unit (BN)', group: 'basic' },
     { key: 'postingStatus', label: 'Posting Status', group: 'basic' },
     { key: 'permanentDistrictTypeName', label: 'Permanent District (EN)', group: 'basic' },
     { key: 'permanentDistrictTypeNameBN', label: 'Permanent District (BN)', group: 'basic' },
@@ -1187,7 +1194,7 @@ export class NotesheetGenerateComponent implements OnInit {
                         life: 5000
                     });
                 }
-                this.addFoundMember(emp, info.postedOutId);
+                this.addFoundMember(emp, info.postedOutId, info.postingUnitName ?? '', info.postingUnitNameBN ?? '');
             },
             error: () => {
                 this.memberAddLoading = false;
@@ -1196,7 +1203,7 @@ export class NotesheetGenerateComponent implements OnInit {
         });
     }
 
-    private addFoundMember(emp: EmployeeBasicInfo, postedOutId: number | null): void {
+    private addFoundMember(emp: EmployeeBasicInfo, postedOutId: number | null, postingUnitEN: string = '', postingUnitBN: string = ''): void {
         if (this.membersData.members.some(m => m.employeeId === emp.employeeID)) {
             this.messageService.add({ severity: 'warn', summary: 'Duplicate', detail: 'This member is already added.' });
             return;
@@ -1297,6 +1304,10 @@ export class NotesheetGenerateComponent implements OnInit {
                 values['presentRabUnit'] = this.buildRabUnitPath(activeRab, false) || (profile.rabUnit ?? '');
                 values['presentRabUnitBN'] = this.buildRabUnitPath(activeRab, true) || (profile.rabUnitBN ?? profile.rabUnit ?? '');
 
+                // Posted-out Posting Unit (mother-org transfer destination) — populated for clearance subjects.
+                values['postingUnit'] = postingUnitEN;
+                values['postingUnitBN'] = postingUnitBN;
+
                 // Keep any already-present custom columns (e.g. Remarks) in sync for the new row.
                 for (const col of this.membersData.columns) {
                     if (col.group === 'custom' && values[col.key] === undefined) values[col.key] = '';
@@ -1357,13 +1368,18 @@ export class NotesheetGenerateComponent implements OnInit {
     private buildDefaultColumns(): MemberColumnDef[] {
         const bn = this.isBangla;
         const lbl = (en: string, bnLabel: string) => (bn ? bnLabel : en);
-        return [
+        const cols: MemberColumnDef[] = [
             { key: bn ? 'prefixWithServiceIdBN' : 'prefixWithServiceId', label: lbl('Prefix & Service ID', 'সার্ভিস আইডি'), group: 'basic' },
             { key: bn ? 'armyRankBN' : 'armyRank', label: lbl('Rank', 'পদবি'), group: 'basic' },
             { key: bn ? 'formattedNameBN' : 'formattedName', label: lbl('Name', 'নাম'), group: 'basic' },
-            { key: bn ? 'presentRabUnitBN' : 'presentRabUnit', label: lbl('Present RAB Unit', 'বর্তমান র‍্যাব ইউনিট'), group: 'basic' },
-            { key: 'custom_Remarks', label: lbl('Remarks', 'মন্তব্য'), group: 'custom' }
+            { key: bn ? 'presentRabUnitBN' : 'presentRabUnit', label: lbl('Present RAB Unit', 'বর্তমান র‍্যাব ইউনিট'), group: 'basic' }
         ];
+        // Clearance subjects: show the posted-out destination (mother-org transfer / Posting Unit).
+        if (this.isClearanceSubjectSelected) {
+            cols.push({ key: bn ? 'postingUnitBN' : 'postingUnit', label: lbl('Posting Unit', 'বদলি ইউনিট'), group: 'basic' });
+        }
+        cols.push({ key: 'custom_Remarks', label: lbl('Remarks', 'মন্তব্য'), group: 'custom' });
+        return cols;
     }
 
     /** Apply the default columns the first time a member is added (nothing configured yet). */
@@ -1392,8 +1408,11 @@ export class NotesheetGenerateComponent implements OnInit {
         const keys = cols.map((c) => c.key);
         const en = ['prefixWithServiceId', 'armyRank', 'formattedName', 'presentRabUnit', 'custom_Remarks'];
         const bn = ['prefixWithServiceIdBN', 'armyRankBN', 'formattedNameBN', 'presentRabUnitBN', 'custom_Remarks'];
+        // Clearance-subject variant carries an extra Posting Unit column before Remarks.
+        const enC = ['prefixWithServiceId', 'armyRank', 'formattedName', 'presentRabUnit', 'postingUnit', 'custom_Remarks'];
+        const bnC = ['prefixWithServiceIdBN', 'armyRankBN', 'formattedNameBN', 'presentRabUnitBN', 'postingUnitBN', 'custom_Remarks'];
         const eq = (a: string[]) => a.length === keys.length && a.every((k, i) => k === keys[i]);
-        return eq(en) || eq(bn);
+        return eq(en) || eq(bn) || eq(enC) || eq(bnC);
     }
 
     // Column management

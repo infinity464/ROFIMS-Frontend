@@ -757,17 +757,18 @@ export class NotesheetPreviewGeneralComponent extends NotesheetPreviewBase imple
 
     // ── Serial computation: main blocks (1..M), note, last-text blocks, then approvers ──
     get contentSerialCount(): number {
-        let count = this.mainBlockCount; // ১।..M। Main Text blocks (members table under block 1)
-        if (this.noteSheet?.note) count++;
+        let count = this.mainBlockCount; // ১।..M। Main Text blocks
+        // Note is NOT numbered — it does not consume a serial slot.
         count += this.lastBlockCount;    // Last Text blocks each take a serial
         return count;
     }
 
     /** Get serial number for note section (immediately after the last Main Text block) */
     get noteSerial(): number { return this.mainBlockCount + 1; }
-    /** Serial of the FIRST Last Text block (block i → lastTextStartSerial + i). */
+    /** Serial of the FIRST Last Text block. The Note takes no serial, so this follows the
+     *  Main Text blocks directly (block i → lastTextStartSerial + i). */
     get lastTextStartSerial(): number {
-        return this.noteSerial + (this.noteSheet?.note ? 1 : 0);
+        return this.mainBlockCount + 1;
     }
     /** Get starting serial for approver sections */
     get approverStartSerial(): number {
@@ -1888,16 +1889,16 @@ html, body { margin: 0; padding: 0; background: transparent; }
             ? { ascii: 'Times New Roman', hAnsi: 'Times New Roman', cs: 'Nirmala UI', hint: 'cs' as const }
             : 'Times New Roman';
         // Font sizes in half-points: title/org=9pt(18), body=8pt(16), table=7pt(14), sig=9pt(18)
-        const titleSize = 18;   // 9pt — title, org header
-        const bodySize = 16;    // 8pt — main text, reference, note, notesheet no, subject
-        const tblSize = 14;     // 7pt — members table content
-        const sigSize = 18;     // 9pt — signature sections
+        const titleSize = 18;   // 9pt — org header (HEADER — kept)
+        const bodySize = 20;    // 10pt — main text, reference, note, notesheet no, subject
+        const tblSize = 18;        // 9pt — members table (1pt smaller than body so columns fit)
+        const sigSize = bodySize;  // signature sections — uniform with body (10pt)
         const csTitle = bn ? titleSize : undefined;
         const csBody = bn ? bodySize : undefined;
         const csTbl = bn ? tblSize : undefined;
         const csSig = bn ? sigSize : undefined;
-        const titleHdrSize = titleSize + 2;   // 10pt — NOTE SHEET / মন্তব্য পত্র (+1pt)
-        const noDateSize = bodySize - 2;      // 7pt — notesheet no + date (-1pt)
+        const titleHdrSize = titleSize + 2;   // 10pt — NOTE SHEET / মন্তব্য পত্র (HEADER — kept)
+        const noDateSize = bodySize - 2;      // 9pt — notesheet no + date
         const csNoDate = bn ? noDateSize : undefined;
         const lang = bn ? { value: 'bn-BD', bidirectional: 'bn-BD' } : undefined;
 
@@ -2015,10 +2016,13 @@ html, body { margin: 0; padding: 0; background: transparent; }
             }
         };
 
-        // Block 1 (the members table renders directly under it, below).
+        // All Main Text blocks (১।, ২।, …) render first; the members table follows after them.
         renderMainSection(mainSections[0]);
+        for (let s = 1; s < mainSections.length; s++) {
+            renderMainSection(mainSections[s]);
+        }
 
-        // Members table (if any)
+        // Members table (if any) — renders after ALL main body blocks
         const mModel = model as any;
         if (mModel.membersColumns?.length > 0 && mModel.membersRows?.length > 0) {
             const thinBorder = { style: BorderStyle.SINGLE, size: 2, color: '666666' } as const;
@@ -2055,30 +2059,23 @@ html, body { margin: 0; padding: 0; background: transparent; }
             // right edge (spans to the cell's content-right), so it lines up like the preview.
             mainChildren.push(new Table({
                 layout: TableLayoutType.FIXED,
-                indent: { size: 240, type: WidthType.DXA },
-                width: { size: wordCellWidth - 480, type: WidthType.DXA },
+                indent: { size: 300, type: WidthType.DXA },
+                width: { size: wordCellWidth - 420, type: WidthType.DXA },
                 rows: [headerRow, ...dataRows]
             }));
         }
 
-        // Remaining Main Text blocks (২।, ৩।, …) render after the members table.
-        for (let s = 1; s < mainSections.length; s++) {
-            renderMainSection(mainSections[s]);
-        }
-
-        // Note (with serial, rendered as HTML content blocks)
+        // Note (no serial — renders as a plain paragraph, matching the preview)
         if (model.note) {
-            const noteSerial = mModel.noteSerial || '';
             const noteBlocks = this.parseHtmlToContentBlocks(this.fixBanglaWordBreaks(model.note));
             if (noteBlocks.length > 0 && noteBlocks[0].type === 'paragraph' && noteBlocks[0].text) {
                 const firstBlock = noteBlocks[0];
-                const serialRun = new TextRun({ text: `${noteSerial}  `, bold: true, size: bodySize, sizeComplexScript: csBody, font, language: lang });
                 const contentRuns = (firstBlock.runs?.length)
                     ? firstBlock.runs.map(r => new TextRun({ text: r.text, bold: r.bold, italics: r.italic, underline: r.underline ? {} : undefined, size: bodySize, sizeComplexScript: csBody, font, language: lang }))
                     : [new TextRun({ text: firstBlock.text!, size: bodySize, sizeComplexScript: csBody, font, language: lang })];
                 mainChildren.push(new Paragraph({
-                    children: [serialRun, ...contentRuns],
-                    indent: { left: 240 }, spacing: { before: 80, after: 80 }, alignment: AlignmentType.JUSTIFIED
+                    children: [...contentRuns],
+                    indent: { left: 300 }, spacing: { before: 80, after: 80 }, alignment: AlignmentType.JUSTIFIED
                 }));
                 if (noteBlocks.length > 1) {
                     mainChildren.push(...this.contentBlocksToDocx(noteBlocks.slice(1), font, bn));
@@ -2088,10 +2085,9 @@ html, body { margin: 0; padding: 0; background: transparent; }
                 const plainNote = this.stripHtml(model.note);
                 mainChildren.push(new Paragraph({
                     children: [
-                        new TextRun({ text: noteSerial + ' ', bold: true, size: bodySize, sizeComplexScript: csBody, font, language: lang }),
                         new TextRun({ text: plainNote, size: bodySize, sizeComplexScript: csBody, font, language: lang })
                     ],
-                    indent: { left: 240 }, spacing: { before: 80, after: 80 }
+                    indent: { left: 300 }, spacing: { before: 80, after: 80 }
                 }));
             }
         }
