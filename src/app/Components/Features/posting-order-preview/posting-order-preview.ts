@@ -838,7 +838,20 @@ export class PostingOrderPreviewPageComponent implements OnInit {
     }
 
     empPrevWorkplace(emp: PostingOrderEmployeeRow): string {
-        return (this.isBangla ? (emp.motherUnitNameBN || emp.motherUnitName) : emp.motherUnitName) || '';
+        const bn = this.isBangla;
+        const motherUnit = (bn ? (emp.motherUnitNameBN || emp.motherUnitName) : emp.motherUnitName) || '';
+        if (!this.isInterPosting) return motherUnit;
+        // Inter-posting: পূর্ববতী কর্মস্থল = mother unit + present RAB unit hierarchy (matches the notesheet).
+        const parts = [
+            motherUnit,
+            bn ? (emp.presentRabUnitNameBN || emp.presentRabUnitName || '') : (emp.presentRabUnitName || ''),
+            bn ? (emp.presentRabWingNameBN || emp.presentRabWingName || '') : (emp.presentRabWingName || ''),
+            bn ? (emp.presentRabBranchNameBN || emp.presentRabBranchName || '') : (emp.presentRabBranchName || ''),
+            bn ? (emp.presentRabSubBranchNameBN || emp.presentRabSubBranchName || '') : (emp.presentRabSubBranchName || ''),
+            bn ? (emp.presentRabSectionNameBN || emp.presentRabSectionName || '') : (emp.presentRabSectionName || ''),
+            bn ? (emp.presentRabSubSectionNameBN || emp.presentRabSubSectionName || '') : (emp.presentRabSubSectionName || ''),
+        ];
+        return parts.filter(p => p).join('/ ') || '';
     }
 
     empTransferUnit(emp: PostingOrderEmployeeRow): string {

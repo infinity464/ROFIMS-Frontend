@@ -534,6 +534,20 @@ export interface PostingOrderEmployeeRow {
     gallantryAwardsDecorationBN: string | null;
     motherUnitName: string | null;
     motherUnitNameBN: string | null;
+    // Present RAB unit hierarchy (current serving posting) — used for interposting পূর্ববতী কর্মস্থল.
+    presentRabUnitId?: number | null;
+    presentRabUnitName?: string | null;
+    presentRabUnitNameBN?: string | null;
+    presentRabWingName?: string | null;
+    presentRabWingNameBN?: string | null;
+    presentRabBranchName?: string | null;
+    presentRabBranchNameBN?: string | null;
+    presentRabSubBranchName?: string | null;
+    presentRabSubBranchNameBN?: string | null;
+    presentRabSectionName?: string | null;
+    presentRabSectionNameBN?: string | null;
+    presentRabSubSectionName?: string | null;
+    presentRabSubSectionNameBN?: string | null;
     joiningDateInRAB: string | null;
     rankSortOrder: number | null;
     motherOrgSortOrder: number | null;
