@@ -14,6 +14,7 @@ import {
 } from 'docx';
 import { saveAs } from 'file-saver';
 import { JsReportService } from '@/services/jsreport.service';
+import { embedBanglaFontCss, collectDocumentStyles, BANGLA_DOC_FONT_STACK } from '@/shared/utils/bangla-font.util';
 
 import { MovementInfoService } from '@/services/movement-info.service';
 import { MovementInfoModel } from '@/models/movement-info.model';
@@ -417,7 +418,7 @@ export class NotesheetPreviewArticle47HandoverComponent implements OnInit {
         if (!this.movement || !this.paper) return;
         this.exportingPdf = true;
         try {
-            const { html, chrome } = this.buildJsReportPdf();
+            const { html, chrome } = await this.buildJsReportPdf();
             await this.jsreportService.downloadPdf(html, {}, `${this.exportFileStem()}.pdf`, chrome);
         } catch (err: any) {
             this.messageService.add({
@@ -434,7 +435,7 @@ export class NotesheetPreviewArticle47HandoverComponent implements OnInit {
         if (!this.movement || !this.paper) return;
         this.printingPreview = true;
         try {
-            const { html, chrome } = this.buildJsReportPdf();
+            const { html, chrome } = await this.buildJsReportPdf();
             await this.jsreportService.previewPdfInNewTab(html, {}, this.exportFileStem(), chrome);
         } catch (err: any) {
             this.messageService.add({
@@ -452,8 +453,9 @@ export class NotesheetPreviewArticle47HandoverComponent implements OnInit {
      * applies the scoped CSS; @page insets mirror .a4-paper's padding so the
      * text column matches the web view.
      */
-    private buildJsReportPdf(): { html: string; chrome: Record<string, unknown> } {
-        const styles = this.collectDocumentStyles();
+    private async buildJsReportPdf(): Promise<{ html: string; chrome: Record<string, unknown> }> {
+        const styles = collectDocumentStyles();
+        const fontCss = await embedBanglaFontCss();
         const body = this.paper.nativeElement.innerHTML;
         const sz = this.selectedPageSize;
         const pageWidth = sz === 'A4' ? '210mm' : '215.9mm';
@@ -468,6 +470,10 @@ export class NotesheetPreviewArticle47HandoverComponent implements OnInit {
 <style>
 ${styles}
 
+/* SolaimanLipi inlined as base64 — JsReport has no base URL to resolve the app's
+   relative /assets/fonts reference. See bangla-font.util.ts. */
+${fontCss}
+
 @page { size: ${pageWidth} ${pageHeight}; margin: ${padTop}mm ${padX}mm ${padBottom}mm ${padX}mm; }
 html, body { margin: 0; padding: 0; background: transparent; }
 
@@ -478,7 +484,7 @@ html, body { margin: 0; padding: 0; background: transparent; }
     padding: 0;
     box-sizing: border-box;
     width: ${colWidth};
-    font-family: 'Times New Roman', 'Nirmala UI', Times, serif;
+    font-family: ${BANGLA_DOC_FONT_STACK};
     font-size: 10pt;
     line-height: 1.7;
     color: #000;
@@ -502,17 +508,6 @@ html, body { margin: 0; padding: 0; background: transparent; }
         };
 
         return { html, chrome };
-    }
-
-    /** Concatenate every same-origin stylesheet loaded into the page. */
-    private collectDocumentStyles(): string {
-        const out: string[] = [];
-        for (const sheet of Array.from(document.styleSheets)) {
-            try {
-                for (const rule of Array.from(sheet.cssRules)) out.push(rule.cssText);
-            } catch { /* cross-origin — skip */ }
-        }
-        return out.join('\n');
     }
 
     private getPageDimensions(): { width: number; height: number } {

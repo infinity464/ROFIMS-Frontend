@@ -152,10 +152,10 @@
     color: #000;
 
     // When language is Bangla, swap to a Bangla-friendly font stack.
-    // Includes 'Nirmala UI' (ships with Windows 8+) so Bangla shaping is
-    // correct (avoids broken cluster spacing) while Latin stays Times New Roman.
+    // SolaimanLipi (bundled, see styles.scss) shapes Bangla clusters correctly
+    // while Latin stays Times New Roman.
     &.is-bn {
-        font-family: 'Times New Roman', 'Nirmala UI', sans-serif;
+        font-family: 'Times New Roman', 'SolaimanLipi', sans-serif;
     }
 }
 
@@ -219,7 +219,7 @@
     margin: 0 0 0.3rem;
     font-size: 10pt;
     color: #000;
-    font-family: 'Times New Roman', 'Nirmala UI', sans-serif;
+    font-family: 'Times New Roman', 'SolaimanLipi', sans-serif;
     line-height: 1.5;
     display: inline-block;
     border-bottom: 1px solid #000;

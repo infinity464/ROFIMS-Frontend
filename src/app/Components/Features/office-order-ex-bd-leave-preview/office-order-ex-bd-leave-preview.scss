@@ -133,7 +133,10 @@
     background: #fff;
     box-shadow: 0 6px 24px rgba(0, 0, 0, 0.25);
     box-sizing: border-box;
-    font-family: 'Times New Roman', 'Nirmala UI', Times, serif;
+    /* SolaimanLipi (bundled, see styles.scss) is the Bangla face. Times New Roman
+       stays first so Latin text and digits are unchanged — Bangla codepoints have
+       no Times glyphs and fall through to SolaimanLipi. */
+    font-family: 'Times New Roman', 'SolaimanLipi', Times, serif;
     font-size: 10pt;
     color: #000;
     line-height: 1.7;
@@ -141,6 +144,14 @@
     overflow-x: hidden;
     display: flex;
     flex-direction: column;
+
+    /* Rich-text blocks rendered via [innerHTML]: editor font choices and pasted
+       inline font-family would otherwise override the stack above and drop Bangla
+       back to a system fallback. */
+    ::ng-deep .oo-doc-rich-content,
+    ::ng-deep .oo-doc-rich-content * {
+        font-family: 'Times New Roman', 'SolaimanLipi', Times, serif !important;
+    }
 }
 /* Legal page size selected → render the on-screen paper as Legal (matches Word/PDF). */
 .legal-paper--legal {

@@ -28,6 +28,7 @@ import { OrganizationService } from '@/Components/basic-setup/organization-setup
 import { BanglaNumerals } from '@/Core/i18n/bangla-numerals';
 import { MovementVehicleOptions } from '@/models/enums';
 import { JsReportService } from '@/services/jsreport.service';
+import { embedBanglaFontCss, collectDocumentStyles, BANGLA_DOC_FONT_STACK } from '@/shared/utils/bangla-font.util';
 import { MovementReturnButtonComponent } from '../shared/movement-return-button';
 import { MovementFilesInfoComponent } from '../shared/movement-files-info';
 
@@ -562,7 +563,7 @@ export class NotesheetPreviewCCComponent implements OnInit {
         if (!this.movement || !this.paper) return;
         this.exportingPdf = true;
         try {
-            const { html, chrome } = this.buildJsReportPdf();
+            const { html, chrome } = await this.buildJsReportPdf();
             await this.jsreportService.downloadPdf(html, {}, `${this.exportFileStem()}.pdf`, chrome);
         } catch (err: any) {
             this.messageService.add({
@@ -579,7 +580,7 @@ export class NotesheetPreviewCCComponent implements OnInit {
         if (!this.movement || !this.paper) return;
         this.printingPreview = true;
         try {
-            const { html, chrome } = this.buildJsReportPdf();
+            const { html, chrome } = await this.buildJsReportPdf();
             await this.jsreportService.previewPdfInNewTab(html, {}, this.exportFileStem(), chrome);
         } catch (err: any) {
             this.messageService.add({
@@ -597,7 +598,7 @@ export class NotesheetPreviewCCComponent implements OnInit {
      * applies the scoped CSS; @page insets mirror .a4-paper's padding so the
      * text column matches the web view.
      */
-    private buildJsReportPdf(): { html: string; chrome: Record<string, unknown> } {
+    private async buildJsReportPdf(): Promise<{ html: string; chrome: Record<string, unknown> }> {
         const sz = this.selectedPageSize;
         // Rewrite the body-row height directly in the collected CSS: the on-screen
         // rule `tbody .cc-cell { padding-bottom: 150pt }` is Angular-scoped and
@@ -606,8 +607,9 @@ export class NotesheetPreviewCCComponent implements OnInit {
         // spills to a 2nd page — give A4 a reduced value (~−25pt at the 0.667 zoom)
         // so it fits one page.
         const rowPad = sz === 'A4' ? 217 : 242;
-        const styles = this.collectDocumentStyles()
+        const styles = collectDocumentStyles()
             .replace(/padding-bottom:\s*150pt/gi, `padding-bottom:${rowPad}pt`);
+        const fontCss = await embedBanglaFontCss();
         const body = this.paper.nativeElement.innerHTML;
         // CC is a wide grid → LANDSCAPE: page width = the long edge, height = short.
         const pageWidth = sz === 'A4' ? '297mm' : sz === 'Letter' ? '279.4mm' : '355.6mm';
@@ -623,6 +625,10 @@ export class NotesheetPreviewCCComponent implements OnInit {
 <style>
 ${styles}
 
+/* SolaimanLipi inlined as base64 — JsReport has no base URL to resolve the app's
+   relative /assets/fonts reference. See bangla-font.util.ts. */
+${fontCss}
+
 @page { size: ${pageWidth} ${pageHeight}; margin: ${padTop}mm ${padX}mm ${padBottom}mm ${padX}mm; }
 html, body { margin: 0; padding: 0; background: transparent; }
 
@@ -633,7 +639,7 @@ html, body { margin: 0; padding: 0; background: transparent; }
     padding: 0;
     box-sizing: border-box;
     width: ${colWidth};
-    font-family: 'Times New Roman', 'Nirmala UI', Times, serif;
+    font-family: ${BANGLA_DOC_FONT_STACK};
     font-size: 10pt;
     line-height: 1.7;
     color: #000;
@@ -666,16 +672,6 @@ html, body { margin: 0; padding: 0; background: transparent; }
         return { html, chrome };
     }
 
-    /** Concatenate every same-origin stylesheet loaded into the page. */
-    private collectDocumentStyles(): string {
-        const out: string[] = [];
-        for (const sheet of Array.from(document.styleSheets)) {
-            try {
-                for (const rule of Array.from(sheet.cssRules)) out.push(rule.cssText);
-            } catch { /* cross-origin — skip */ }
-        }
-        return out.join('\n');
-    }
 
     /** Twentieths of a point (twips) for the selected page size.
      *  Returns *portrait* dimensions — docx swaps them when orientation = LANDSCAPE. */

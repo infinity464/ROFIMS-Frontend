@@ -80,9 +80,10 @@
     background: #fff;
     box-shadow: 0 6px 24px rgba(0, 0, 0, 0.25);
     box-sizing: border-box;
-    /* Bangla-friendly fallback list ensures Bangla glyphs render consistently
-       across previews. Times New Roman remains the primary for Latin text. */
-    font-family: 'Times New Roman', 'Nirmala UI', Times, serif;
+    /* SolaimanLipi (bundled, see styles.scss) is the Bangla face for every
+       notesheet preview. Times New Roman remains the primary for Latin text —
+       Bangla codepoints have no Times glyphs and fall through to SolaimanLipi. */
+    font-family: 'Times New Roman', 'SolaimanLipi', Times, serif;
     font-size: 10pt;
     color: #000;
     line-height: 1.7;
@@ -115,7 +116,7 @@
     ::ng-deep .ns-ref-content *,
     ::ng-deep .ns-note,
     ::ng-deep .ns-note * {
-        font-family: 'Times New Roman', 'Nirmala UI', Times, serif !important;
+        font-family: 'Times New Roman', 'SolaimanLipi', Times, serif !important;
         color: #000 !important;
     }
 

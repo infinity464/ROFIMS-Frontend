@@ -16,6 +16,7 @@ import { TextareaModule } from 'primeng/textarea';
 import { ToastModule } from 'primeng/toast';
 import { TooltipModule } from 'primeng/tooltip';
 import { JsReportService } from '@/services/jsreport.service';
+import { embedBanglaFontCss } from '@/shared/utils/bangla-font.util';
 import { Document, Packer, Paragraph, TextRun, AlignmentType, BorderStyle, Table, TableRow, TableCell, WidthType, TableBorders } from 'docx';
 
 interface EmpInfo {
@@ -192,7 +193,7 @@ export class LeavePendingApprovalPreviewComponent implements OnInit {
     private getPrintStyles(): string {
         return `
   @page { size: A4; margin: 18mm 16mm; }
-  body { font-family: 'Times New Roman','Nirmala UI',serif; margin: 0; padding: 0; color: #000; line-height: 1.7; font-size: 10pt; }
+  body { font-family: 'Times New Roman','SolaimanLipi',serif; margin: 0; padding: 0; color: #000; line-height: 1.7; font-size: 10pt; }
   .leave-letter { width: 100%; padding: 0; box-sizing: border-box; }
   .letter-title { text-align: center; font-size: 13pt; font-weight: 700; margin: 0 0 14px; padding-bottom: 4px; border-bottom: 1.5px solid #000; display: inline-block; width: 100%; letter-spacing: 1px; }
   .letter-para { line-height: 1.9; text-align: justify; margin: 10px 0; font-size: 11pt; }
@@ -208,7 +209,7 @@ export class LeavePendingApprovalPreviewComponent implements OnInit {
     // Print Preview via JsReport (chrome-pdf) — opens the PDF in a new tab.
     private async printPreview(): Promise<void> {
         try {
-            const html = this.buildJsReportHtml();
+            const html = await this.buildJsReportHtml();
             if (!html) return;
             await this.jsreportService.previewPdfInNewTab(html, {}, this.exportFileStem(), this.jsReportChrome());
         } catch (err: any) {
@@ -224,7 +225,7 @@ export class LeavePendingApprovalPreviewComponent implements OnInit {
     // PDF download via JsReport (chrome-pdf) — same render as Print Preview.
     private async exportPDF(): Promise<void> {
         try {
-            const html = this.buildJsReportHtml();
+            const html = await this.buildJsReportHtml();
             if (!html) return;
             await this.jsreportService.downloadPdf(html, {}, `${this.exportFileStem()}.pdf`, this.jsReportChrome());
         } catch (err: any) {
@@ -239,14 +240,18 @@ export class LeavePendingApprovalPreviewComponent implements OnInit {
 
     /** Wrap the rendered letter element + its print CSS into a standalone HTML
      *  document for jsReport's chrome-pdf recipe. */
-    private buildJsReportHtml(): string | null {
+    private async buildJsReportHtml(): Promise<string | null> {
         const el = document.getElementById('leave-preview-print');
         if (!el) return null;
+        // SolaimanLipi inlined as base64 — JsReport has no base URL to resolve the
+        // app's relative /assets/fonts reference. See bangla-font.util.ts.
+        const fontCss = await embedBanglaFontCss();
         return `<!DOCTYPE html>
 <html>
 <head>
 <meta charset="utf-8">
-<style>${this.getPrintStyles()}</style>
+<style>${fontCss}
+${this.getPrintStyles()}</style>
 </head>
 <body>${el.outerHTML}</body>
 </html>`;
