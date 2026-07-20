@@ -1641,6 +1641,14 @@ export class NotesheetGenerateComponent implements OnInit {
         return col.width ?? this.getDefaultColWidth();
     }
 
+    /** Explicitly set a column's width as a percentage (3–80). Renders live and persists on save. */
+    setColWidth(col: MemberColumnDef, value: number | string): void {
+        const n = Number(value);
+        if (isNaN(n)) return;
+        col.width = Math.max(3, Math.min(80, Math.round(n * 10) / 10));
+        this.columnsAreDefault = false;
+    }
+
     // ── Merge Columns ─────────────────────────────────────────────────────
 
     openMergeColumnDialog(): void {

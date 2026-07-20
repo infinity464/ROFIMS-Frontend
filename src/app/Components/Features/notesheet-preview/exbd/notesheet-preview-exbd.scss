@@ -37,4 +37,32 @@
    lives in buildJsReportPdf() (`.pdf-flow .ns-main-col`). */
 :host .ns-main-col {
     padding-left: 5px;
+    padding-right: 5px;   /* small gap so justified text doesn't touch the right border */
+}
+
+/* ── Ex-BD Leave body tweaks (this screen only) ──────────
+   Uniform body size: everything except the NOTE SHEET title/header renders at
+   10pt (the body size). Applied to BOTH .a4-paper (visible) and .page-measure
+   (the hidden pagination source) so the page-break math matches what is shown. */
+:host .a4-paper,
+:host .page-measure {
+    font-size: 10pt;                          /* base — anything without its own size */
+
+    /* Blocks the shared stylesheet pins smaller (7–9pt) — force them to body size. */
+    .ns-para,
+    .ns-para-no,
+    .ns-cell-ref,
+    .ns-note,
+    .ns-approver-role,
+    .ns-approver-left,
+    .ns-approver-remark,
+    .ns-sig-name,
+    .ns-sig-rank,
+    .ns-sig-paren,
+    .ns-sig-appoint,
+    .ns-sig-date { font-size: 10pt; }
+
+    /* Tighter serial indents. */
+    .ns-para-no    { margin-right: 1em; }     /* was 2em — tighter ১। indent */
+    .ns-ref-serial { margin-right: 0.5em; }   /* was 1em — tighter ক. indent */
 }

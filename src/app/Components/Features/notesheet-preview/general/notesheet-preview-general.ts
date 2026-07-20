@@ -1102,6 +1102,13 @@ export class NotesheetPreviewGeneralComponent extends NotesheetPreviewBase imple
         return col.width ?? this.defaultColWidthByKey[col.key] ?? this.getDefaultColWidth(this.editMembersData.columns.length);
     }
 
+    /** Explicitly set a column's width as a percentage (3–80). Renders live and persists on save. */
+    setColWidth(col: MemberColumnDef, value: number | string): void {
+        const n = Number(value);
+        if (isNaN(n)) return;
+        col.width = Math.max(3, Math.min(80, Math.round(n * 10) / 10));
+    }
+
     getPreviewColWidth(col: { key: string; width?: number }): number {
         return col.width ?? this.defaultColWidthByKey[col.key] ?? this.getDefaultColWidth(this.previewMembersColumns.length);
     }

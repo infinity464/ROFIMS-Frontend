@@ -260,6 +260,14 @@
                                                             <i class="pi pi-times"></i>
                                                         </button>
                                                     </div>
+                                                    <div class="ns-edit-col-width" title="Column width (%)"
+                                                         (click)="$event.stopPropagation()" (mousedown)="$event.stopPropagation()">
+                                                        <button type="button" class="ns-edit-col-width-btn" (click)="setColWidth(col, getEditColWidth(col) - 1)" title="Narrower">−</button>
+                                                        <input type="number" min="3" max="80" step="0.5"
+                                                            [ngModel]="getEditColWidth(col)" (ngModelChange)="setColWidth(col, $event)" [ngModelOptions]="{standalone:true}" />
+                                                        <span class="ns-edit-col-width-pct">%</span>
+                                                        <button type="button" class="ns-edit-col-width-btn" (click)="setColWidth(col, getEditColWidth(col) + 1)" title="Wider">+</button>
+                                                    </div>
                                                     <span style="position:absolute;top:0;right:-2px;bottom:0;width:5px;cursor:col-resize;z-index:1;" (mousedown)="onResizeStart(ci, $event)"></span>
                                                 </th>
                                             }
