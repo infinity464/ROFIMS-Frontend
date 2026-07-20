@@ -180,6 +180,50 @@ export class EmpBasicInfo implements OnInit {
             });
     }
 
+    // Duplicate check on RAB ID (mirrors serving-member-entry, where RAB ID is also user-entered)
+    isDuplicateRabId: boolean = false;
+    isCheckingRabId: boolean = false;
+
+    checkDuplicateRabId(): void {
+        const rabId = this.postingForm?.get('rabid')?.value;
+        const rabIdStr = rabId != null ? String(rabId).trim() : '';
+
+        // Blank is valid — the backend auto-generates a RAB ID when none is supplied.
+        if (!rabIdStr) {
+            this.isDuplicateRabId = false;
+            this.isCheckingRabId = false;
+            return;
+        }
+
+        this.isCheckingRabId = true;
+        // selfId excludes this employee's own record, so editing without changing
+        // the RAB ID does not flag itself as a duplicate.
+        const selfId = this.generatedEmployeeId != null ? Number(this.generatedEmployeeId) : null;
+        this.empService
+            .searchListByRabIdOrServiceId(rabIdStr, undefined, undefined, undefined, undefined, undefined, selfId)
+            .subscribe({
+                next: (employees) => {
+                    // Match exactly (API search may be partial); compare trimmed RAB IDs.
+                    this.isDuplicateRabId = (employees ?? []).some(
+                        (e: any) => String(e.rabid ?? e.RABID ?? e.rabId ?? '').trim() === rabIdStr
+                    );
+                    this.isCheckingRabId = false;
+
+                    if (this.isDuplicateRabId) {
+                        this.messageService.add({
+                            severity: 'warn',
+                            summary: 'Duplicate RAB ID',
+                            detail: `RAB ID "${rabIdStr}" already exists`
+                        });
+                    }
+                },
+                error: (err) => {
+                    console.error('Error checking duplicate RAB ID', err);
+                    this.isCheckingRabId = false;
+                }
+            });
+    }
+
     checkJoineeDetail(serviceId: string): void {
         const sid = serviceId?.trim();
         if (!sid) { this.joineeRecord = null; return; }
@@ -569,6 +613,16 @@ export class EmpBasicInfo implements OnInit {
                 severity: 'warn',
                 summary: 'Duplicate Entry',
                 detail: 'A member with the same Mother Organization + Prefix + Service ID already exists'
+            });
+            return;
+        }
+
+        // Check for duplicate RAB ID
+        if (this.isDuplicateRabId) {
+            this.messageService.add({
+                severity: 'warn',
+                summary: 'Duplicate RAB ID',
+                detail: 'A member with the same RAB ID already exists'
             });
             return;
         }
@@ -1037,6 +1091,12 @@ export class EmpBasicInfo implements OnInit {
             ).subscribe(() => this.checkDuplicateCombo());
         });
 
+        // Real-time duplicate check on RAB ID (now user-editable)
+        this.postingForm.get('rabid')?.valueChanges.pipe(
+            debounceTime(500),
+            distinctUntilChanged()
+        ).subscribe(() => this.checkDuplicateRabId());
+
         this.postingForm.get('rank')?.valueChanges.subscribe((rankId) => this.updateRabRankEquivalent(rankId));
 
         this.loadMotherOrg();
@@ -1354,8 +1414,8 @@ export class EmpBasicInfo implements OnInit {
     // Enable form for edit mode
     enableForm(): void {
         this.postingForm.enable();
-        // Keep rabid and serviceId disabled as they're always readonly (relationship is readonly in UI when Married, not disabled)
-        this.postingForm.get('rabid')?.disable();
+        // serviceId stays disabled in edit mode (relationship is readonly in UI when Married, not disabled).
+        // rabid is editable — see checkDuplicateRabId() for its uniqueness guard.
         if (this.isEditMode) {
             this.postingForm.get('serviceId')?.disable();
         }
@@ -1400,7 +1460,7 @@ export class EmpBasicInfo implements OnInit {
             spouseName: [''],
             prefix: [null, Validators.required],
             serviceId: ['', [Validators.required]],
-            rabid: [{ value: '', disabled: true }],
+            rabid: [''],
             nid: [''],
             fullNameEN: ['', [Validators.required, Validators.minLength(2)]],
             fullNameBN: ['', [Validators.required, Validators.minLength(2)]],
@@ -2041,6 +2101,8 @@ export class EmpBasicInfo implements OnInit {
         this.spousePermanentAddress = undefined;
         this.spousePresentAddress = undefined;
         this.isDuplicateCombo = false;
+        this.isDuplicateRabId = false;
+        this.isCheckingRabId = false;
 
         this.presentAddressConfig.employeeId = 0;
         this.permanentAddressConfig.employeeId = 0;

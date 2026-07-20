@@ -301,7 +301,17 @@
 
                     <div class="form-field">
                         <label class="form-label">RAB ID</label>
-                        <input pInputText class="w-full surface-100" placeholder="Auto Generated" formControlName="rabid" readonly />
+                        <div class="p-inputgroup">
+                            <input pInputText class="w-full" placeholder="Auto Generated if left blank" formControlName="rabid" />
+                            @if (isCheckingRabId) {
+                            <span class="p-inputgroup-addon">
+                                <i class="pi pi-spin pi-spinner"></i>
+                            </span>
+                            }
+                        </div>
+                        @if (isDuplicateRabId) {
+                        <small class="form-error">This RAB ID already exists</small>
+                        }
                     </div>
                 </div>
 
@@ -508,7 +518,7 @@
             @if (!isEditMode) {
             <p-button type="button" label="Reset" icon="pi pi-refresh" severity="secondary" [outlined]="true" styleClass="form-btn-secondary" (onClick)="onReset()"> </p-button>
             }
-            <p-button type="button" [label]="isEditMode ? 'Update All Information' : 'Save All Information'" icon="pi pi-check-circle" styleClass="form-btn-primary" [disabled]="isDuplicateCombo || isCheckingCombo" (onClick)="saveAll()"> </p-button>
+            <p-button type="button" [label]="isEditMode ? 'Update All Information' : 'Save All Information'" icon="pi pi-check-circle" styleClass="form-btn-primary" [disabled]="isDuplicateCombo || isCheckingCombo || isDuplicateRabId || isCheckingRabId" (onClick)="saveAll()"> </p-button>
         </div>
         }
     </div>
