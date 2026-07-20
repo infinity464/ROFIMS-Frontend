@@ -34,7 +34,7 @@ import { JsReportService } from '@/services/jsreport.service';
 import {
     Document, Packer, Paragraph, TextRun, Table, TableRow, TableCell,
     WidthType, BorderStyle, AlignmentType, PageOrientation, ImageRun,
-    VerticalAlign, TableLayoutType, HeightRule
+    VerticalAlign, TableLayoutType, HeightRule, TabStopType
 } from 'docx';
 import { saveAs } from 'file-saver';
 import type {
@@ -1898,8 +1898,6 @@ html, body { margin: 0; padding: 0; background: transparent; }
         const csTbl = bn ? tblSize : undefined;
         const csSig = bn ? sigSize : undefined;
         const titleHdrSize = titleSize + 2;   // 10pt — NOTE SHEET / মন্তব্য পত্র (HEADER — kept)
-        const noDateSize = bodySize - 2;      // 9pt — notesheet no + date
-        const csNoDate = bn ? noDateSize : undefined;
         const lang = bn ? { value: 'bn-BD', bidirectional: 'bn-BD' } : undefined;
 
         // Page size follows the selected option (A4 default / Legal). Margins are
@@ -1922,12 +1920,19 @@ html, body { margin: 0; padding: 0; background: transparent; }
             alignment: AlignmentType.CENTER, spacing: { before: 0, after: 100 }
         }));
 
-        // Notesheet number (8pt — same as body)
-        if (this.noteSheet?.noteSheetNo) {
+        // Notesheet number (left) + date (right, on the same line via a right tab stop)
+        if (this.noteSheet?.noteSheetNo || this.noteSheet?.noteSheetDate) {
+            const numDateChildren: TextRun[] = [];
+            if (this.noteSheet?.noteSheetNo) {
+                numDateChildren.push(new TextRun({ text: this.noteSheet.noteSheetNo, size: bodySize, sizeComplexScript: csBody, font, language: lang }));
+            }
+            if (this.noteSheet?.noteSheetDate) {
+                numDateChildren.push(new TextRun({ text: '\t', size: bodySize, sizeComplexScript: csBody, font, language: lang }));
+                numDateChildren.push(new TextRun({ text: `${model.dateLabel}${model.dateValue}`, size: bodySize, sizeComplexScript: csBody, font, language: lang }));
+            }
             mainChildren.push(new Paragraph({
-                children: [
-                    new TextRun({ text: this.noteSheet.noteSheetNo, size: bodySize, sizeComplexScript: csBody, font, language: lang })
-                ],
+                tabStops: [{ type: TabStopType.RIGHT, position: wordCellWidth - 280 }],
+                children: numDateChildren,
                 indent: { left: 40 }, spacing: { before: 60, after: 40 }
             }));
         }
@@ -1965,14 +1970,6 @@ html, body { margin: 0; padding: 0; background: transparent; }
                     indent: { left: 480 }, spacing: { after: 40 }
                 }));
             }
-        } else if (this.noteSheet?.noteSheetDate) {
-            mainChildren.push(new Paragraph({
-                children: [
-                    new TextRun({ text: model.dateLabel, bold: true, size: noDateSize, sizeComplexScript: csNoDate, font, language: lang }),
-                    new TextRun({ text: model.dateValue, size: noDateSize, sizeComplexScript: csNoDate, font, language: lang })
-                ],
-                indent: { left: 40 }, spacing: { after: 80 }
-            }));
         }
 
         // Main Text — one numbered section per block (১।, ২।, …). The serial is
