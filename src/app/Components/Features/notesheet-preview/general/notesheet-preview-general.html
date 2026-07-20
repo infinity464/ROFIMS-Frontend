@@ -442,7 +442,7 @@
                         <tbody>
                             <tr *ngFor="let row of previewMembersRows; let ri = index">
                                 <td style="text-align:center;">{{ memberSerial(ri) }}</td>
-                                <td *ngFor="let col of previewMembersColumns">
+                                <td *ngFor="let col of previewMembersColumns" [style.text-align]="isNameColumn(col) ? 'left' : null">
                                     {{ formatMemberCell(row, col) }}
                                 </td>
                             </tr>

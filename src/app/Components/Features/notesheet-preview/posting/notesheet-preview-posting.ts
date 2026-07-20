@@ -1663,8 +1663,10 @@ html, body { margin: 0; padding: 0; background: transparent; }
 .pdf-flow .ns-ref-file-btn,
 .pdf-flow .ns-ref-file-btn i { font-size: 7pt !important; }
 
-.pdf-flow .ns-posting-table td { font-size: 8pt !important; }    /* table content */
-.pdf-flow .ns-posting-table th { font-size: 6.5pt !important; }  /* table header (kept) */
+.pdf-flow .ns-posting-table td { font-size: 8pt !important; }    /* table content (inter) */
+.pdf-flow .ns-posting-table.ns-posting-new td { font-size: 9pt !important; }  /* new posting content */
+.pdf-flow .ns-posting-table th { font-size: 6.5pt !important; }  /* table header (inter) */
+.pdf-flow .ns-posting-table.ns-posting-new th { font-size: 9pt !important; font-weight: normal !important; }  /* new posting header (not bold) */
 
 /* No shading — plain white rows and header (no zebra, no grey header). */
 .pdf-flow .ns-posting-table th,
@@ -1998,8 +2000,8 @@ html, body { margin: 0; padding: 0; background: transparent; }
         // Font sizes in half-points (1pt = 2 half-pts) — matched to posting-order-preview
         const ORG_SZ = 18;      // 9pt — org header (HEADER — kept)
         const BODY_SZ = 20;     // 10pt — body text, paragraphs, note, reference
-        const TBL_SZ = 16;      // 8pt — table content cells
-        const TBL_HDR_SZ = 13;  // 6.5pt — table header (table information — kept)
+        const TBL_SZ = this.isInterPosting() ? 16 : 18;  // 8pt inter / 9pt new posting — table content
+        const TBL_HDR_SZ = this.isInterPosting() ? 13 : 18;  // 6.5pt inter / 9pt new posting — table header
         const SIG_SZ = 20;      // 10pt — signature & approver
         const NODATE_SZ = BODY_SZ;  // 10pt — notesheet no + date (matches body)
         const csSize = bn ? BODY_SZ : undefined;
@@ -2216,7 +2218,7 @@ html, body { margin: 0; padding: 0; background: transparent; }
                     ? ['ক্রমিক','ব্যক্তিগত নম্বর','পদবি','ট্রেড','নাম','নিজ জেলা (দায়িত্বপূর্ণ এলাকা)','স্পাউস জেলা (দায়িত্বপূর্ণ এলাকা)','পূর্ববতী কর্মস্থল','বদলি ইউনিট','মন্তব্য']
                     : ['Ser','Service ID','Rank','Trade','Name','Own District (Responsible Area)','Spouse District (Responsible Area)','Previous Workplace','Transfer Unit','Remarks'];
                 //                    ser  svcId rank trade name  own   spouse prev  unit  rem
-                const allBaseWidths = [490, 1550, 850,  820, 1380, 1220, 1220, 1040, 1060, 1100];
+                const allBaseWidths = [620, 1480, 850,  820, 1380, 1400, 1220, 1040,  780,  800];
 
                 const visibleIndices = allColKeys.map((k, i) => {
                     if (k === 'remarks' && !this.showRemarks) return -1;

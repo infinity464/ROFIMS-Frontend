@@ -101,7 +101,7 @@
                     <!-- Repeated column header when this page continues the employee table -->
                     <div class="page-repeat-header ns-doc-box" *ngIf="pageNeedsTableHeader[i]">
                         <div class="ns-main-col">
-                            <div class="ns-posting-table">
+                            <div class="ns-posting-table" [class.ns-posting-new]="!isInterPosting()">
                                 <table>
                                     <ng-container *ngTemplateOutlet="postingTableHead"></ng-container>
                                 </table>
@@ -197,7 +197,7 @@
                     </div>
 
                     <!-- ── Posting: employee table (edit) ── -->
-                    <div class="ns-posting-table" *ngIf="postingEmployees.length > 0">
+                    <div class="ns-posting-table" [class.ns-posting-new]="!isInterPosting()" *ngIf="postingEmployees.length > 0">
                         <table>
                             <colgroup *ngIf="isInterPosting()">
                                 <col style="width:30px">   <!-- ক্রমিক -->
@@ -389,16 +389,16 @@
             <col *ngIf="showRemarks" style="width:58px"> <!-- মন্তব্য (ছোট করা; পদবি auto বাকি জায়গা পায়) -->
         </colgroup>
         <colgroup *ngIf="!isInterPosting()">
-            <col style="width:30px">   <!-- ক্রমিক -->
-            <col style="width:88px">   <!-- ব্যক্তিগত নম্বর (বড় করা) -->
+            <col style="width:38px">   <!-- ক্রমিক (একটু বড়) -->
+            <col style="width:86px">   <!-- ব্যক্তিগত নম্বর -->
             <col>                       <!-- পদবি -->
             <col *ngIf="showTradeColumn" style="width:58px">   <!-- ট্রেড (ছোট করা) -->
             <col>                       <!-- নাম -->
-            <col style="width:48px">   <!-- নিজ জেলা -->
+            <col style="width:58px">   <!-- নিজ জেলা (একটু বড়) -->
             <col style="width:56px">   <!-- স্পাউস জেলা -->
             <col style="width:85px">   <!-- পূর্ববতী কর্মস্থল (ছোট করা) -->
-            <col>                       <!-- বদলি ইউনিট -->
-            <col *ngIf="showRemarks" style="width:90px"> <!-- মন্তব্য -->
+            <col style="width:88px">   <!-- বদলি ইউনিট (একটু ছোট) -->
+            <col *ngIf="showRemarks" style="width:66px"> <!-- মন্তব্য (একটু ছোট) -->
         </colgroup>
         <thead>
             <!-- PDF/Print only: borderless white gap row above the repeated header
@@ -487,7 +487,7 @@
                 </div>
 
                 <!-- ── Posting: employee table ── -->
-                <div class="ns-posting-table" *ngIf="postingEmployees.length > 0">
+                <div class="ns-posting-table" [class.ns-posting-new]="!isInterPosting()" *ngIf="postingEmployees.length > 0">
                     <table>
                         <ng-container *ngTemplateOutlet="postingTableHead"></ng-container>
                         <tbody>

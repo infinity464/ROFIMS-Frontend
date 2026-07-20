@@ -1144,6 +1144,16 @@ export class NotesheetPreviewGeneralComponent extends NotesheetPreviewBase imple
         return this.memberColHeaderBN[col.key] ?? col.label;
     }
 
+    /** Column keys that hold a person's name — their cells are left-aligned. */
+    private readonly nameColumnKeys = ['nameEnglish', 'nameBN', 'formattedName', 'formattedNameBN'];
+
+    /** True for the members-table "name" column (direct or merged) so its cells
+     *  can start from the left instead of centered. */
+    isNameColumn(col: { key: string; mergedFrom?: string[] }): boolean {
+        if (this.nameColumnKeys.includes(col.key)) return true;
+        return !!col.mergedFrom?.some(k => this.nameColumnKeys.includes(k));
+    }
+
     /** Auto serial for members table rows: Bangla numerals when Bangla, English otherwise */
     memberSerial(index: number): string {
         const n = index + 1;
@@ -2055,7 +2065,8 @@ html, body { margin: 0; padding: 0; background: transparent; }
                     children: [slCell, ...cols.map((c, ci) => {
                         let val = c.mergedFrom ? c.mergedFrom.map((k: string) => row[k] || '').filter(Boolean).join(' ') : (row[c.key] || '');
                         val = convertDigits(val);
-                        return new TableCell({ width: mkWidth(colPcts[ci]), children: [new Paragraph({ children: [new TextRun({ text: val, size: tblSize, sizeComplexScript: csTbl, font, language: lang })], alignment: AlignmentType.CENTER })], borders: { top: thinBorder, bottom: thinBorder, left: thinBorder, right: thinBorder } });
+                        const cellAlign = this.isNameColumn(c) ? AlignmentType.LEFT : AlignmentType.CENTER;
+                        return new TableCell({ width: mkWidth(colPcts[ci]), children: [new Paragraph({ children: [new TextRun({ text: val, size: tblSize, sizeComplexScript: csTbl, font, language: lang })], alignment: cellAlign })], borders: { top: thinBorder, bottom: thinBorder, left: thinBorder, right: thinBorder } });
                     })]
                 });
             });
