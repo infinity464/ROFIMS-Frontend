@@ -495,13 +495,19 @@
 .sup-results-header {
     display: flex;
     align-items: center;
-    justify-content: space-between;
+    justify-content: flex-start;
     gap: 0.75rem;
     flex-wrap: wrap;
     margin: 0 0 1rem 0;
 
     .report-panel-title {
         margin: 0;
+    }
+
+    /* Push the search box (and the Export button that follows it) to the right,
+       so search sits directly to the left of Export instead of being spread apart. */
+    .report-search-wrap {
+        margin-left: auto;
     }
 }
 

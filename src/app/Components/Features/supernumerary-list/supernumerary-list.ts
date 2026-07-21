@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, HostListener } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterModule, ActivatedRoute } from '@angular/router';
@@ -25,6 +25,8 @@ import { IsSendingNotesheetStatus } from '@/models/enums';
 import { FlexibleDateDirective } from '@/shared/directives/flexible-date.directive';
 import { DialogModule } from 'primeng/dialog';
 import { Article47TakeoverBulkComponent } from '@/Components/Features/article-47-takeover-bulk/article-47-takeover-bulk';
+import { ExportService, SectionedReportConfig } from '@/services/export.service';
+import { RabReportPrintService } from '@/Components/Features/statistics/shared/rab-report-print.service';
 
 /** Minimal employee shape handed to the Article 47 (Takeover) modal. */
 interface Article47TakeoverEmployee {
@@ -74,6 +76,8 @@ export class SupernumeraryList implements OnInit {
         private messageService: MessageService,
         private sharedService: SharedService,
         private memberTypeAccess: IdentityUserMemberTypeAccessService,
+        private exportService: ExportService,
+        private rabPrint: RabReportPrintService,
         private _router: Router,
         private _route: ActivatedRoute,
         private _userMenuService: UserMenuService
@@ -467,6 +471,116 @@ export class SupernumeraryList implements OnInit {
 
     clearSelection(): void {
         this.selectedIds.clear();
+    }
+
+    // ── Export (Word / Excel / Print) ────────────────────────────
+    exportDropdownOpen = false;
+    exporting = false;
+
+    toggleExportDropdown(event: Event): void {
+        event.stopPropagation();
+        this.exportDropdownOpen = !this.exportDropdownOpen;
+    }
+
+    @HostListener('document:click')
+    closeExportDropdown(): void {
+        this.exportDropdownOpen = false;
+    }
+
+    /** Report title used in every export format (matches the on-screen report style). */
+    private readonly reportTitle = 'SUPERNUMERARY LIST';
+
+    /** Table columns (same order/labels as the web view, minus Action). */
+    private readonly exportColumns = [
+        'Ser', 'Service ID', 'Rank', 'Corps', 'Trade', 'Name',
+        'Mother Unit', 'Date of Join in RAB', 'RAB ID',
+    ];
+
+    /** Builds the data rows for export from the currently filtered list. */
+    private buildExportRows(records: EmployeeList[]): string[][] {
+        return records.map((r, i) => [
+            String(i + 1),
+            (r.prefixName ? `${r.prefixName} - ` : '') + (r.serviceId || '-'),
+            r.rankName || '-',
+            r.corpsName || '-',
+            r.tradeName || '-',
+            (r.fullNameEN || '-') + (r.fullNameBN ? ` (${r.fullNameBN})` : ''),
+            r.motherUnitName || '-',
+            this.formatDate(r.joiningDate),
+            this.rabIdOf(r) || '-',
+        ]);
+    }
+
+    /** SELECTION CRITERIA cells shown in the letterhead grid — derived from the active filters. */
+    private buildCriteriaItems(): { label: string; value: string }[] {
+        const items: { label: string; value: string }[] = [];
+        const org = this.orgOptions.find(o => o.orgId === this.selectedOrgId)?.orgNameEN;
+        if (org) items.push({ label: 'ORGANIZATION', value: org });
+        const mt = this.memberTypeOptions.find(o => o.value === this.selectedMemberTypeId)?.label;
+        if (mt) items.push({ label: 'MEMBER TYPE', value: mt });
+        const rank = this.rankOptions.find(o => o.value === this.selectedRankId)?.label;
+        if (rank) items.push({ label: 'RANK', value: rank });
+        const trade = this.tradeOptions.find(o => o.value === this.selectedTradeId)?.label;
+        if (trade) items.push({ label: 'TRADE', value: trade });
+        if (this.joiningDateFrom || this.joiningDateTo) {
+            items.push({ label: 'DATE OF JOINING', value: `${this.displayDate(this.joiningDateFrom)} – ${this.displayDate(this.joiningDateTo)}` });
+        }
+        if (this.createdDateFrom || this.createdDateTo) {
+            items.push({ label: 'DATA ENTRY DATE', value: `${this.displayDate(this.createdDateFrom)} – ${this.displayDate(this.createdDateTo)}` });
+        }
+        const ps = this.postingStatusOptions.find(o => o.value === this.selectedPostingStatus)?.label;
+        if (ps) items.push({ label: 'POSTING STATUS', value: ps });
+        if (items.length === 0) items.push({ label: 'SCOPE', value: 'All Members' });
+        items.push({ label: 'TOTAL MEMBERS', value: String(this.filteredList.length) });
+        return items;
+    }
+
+    private displayDate(d: Date | null): string {
+        return d == null ? 'Any' : d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+    }
+
+    async exportAs(type: 'print' | 'word' | 'excel'): Promise<void> {
+        this.exportDropdownOpen = false;
+
+        const rows = this.buildExportRows(this.filteredList);
+        const criteriaItems = this.buildCriteriaItems();
+
+        // Print: shared RAB letterhead (frontend only), identical to the statistics reports.
+        if (type === 'print') {
+            this.rabPrint.print({
+                lang: 'en',
+                reportTitle: this.reportTitle,
+                criteriaItems,
+                columns: this.exportColumns.map((label, i) => ({
+                    label, align: i === 0 ? 'center' : 'left',
+                })),
+                sections: [{ rows }],
+            });
+            return;
+        }
+
+        this.exporting = true;
+        try {
+            const config: SectionedReportConfig = {
+                title: this.reportTitle,
+                lang: 'en',
+                columns: this.exportColumns,
+                sections: [{ title: '', rows }],
+                showPageNumbers: true,
+                filename: 'Supernumerary_List',
+                rabLetterhead: true,
+                criteriaItems,
+            };
+            if (type === 'word') {
+                await this.exportService.exportWordSectioned(config);
+            } else {
+                this.exportService.exportExcelSectioned(config);
+            }
+        } catch (err) {
+            console.error(`${type} export failed`, err);
+        } finally {
+            this.exporting = false;
+        }
     }
 
     /** Article 47 (Takeover) modal state. */
