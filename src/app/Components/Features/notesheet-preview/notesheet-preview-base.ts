@@ -486,7 +486,10 @@ export abstract class NotesheetPreviewBase implements OnInit {
             const d = new Date(value);
             if (isNaN(d.getTime())) return String(value);
             const locale = this.isEnglish() ? 'en-GB' : 'bn-BD';
-            return d.toLocaleDateString(locale, { day: 'numeric', month: 'long', year: 'numeric' });
+            const day = d.toLocaleDateString(locale, { day: 'numeric' });
+            const month = d.toLocaleDateString(locale, { month: 'long' });
+            const year = d.toLocaleDateString(locale, { year: 'numeric' });
+            return `${day} ${month} ${year}`;   // no comma
         } catch { return String(value); }
     }
 

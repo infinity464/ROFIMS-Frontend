@@ -57,12 +57,13 @@
    cc / mo / article-47 previews are untouched. styleUrls load this file AFTER the
    shared sheet, so these rules win on equal specificity. */
 .ns-title-en,
-.ns-title-bn { font-size: 11pt; }          /* document title (HEADER) — kept */
+.ns-title-bn { font-size: 13pt; }          /* document title (HEADER) — +2pt */
 
 /* Body: everything except the document header + table column headers → 10pt. */
 .ns-sanglagni-col { font-size: 10pt; }     /* সংলগ্নী নং column */
 .ns-cell-ref { font-size: 10pt; }          /* সূত্র */
 .ns-para { font-size: 10pt; }              /* body paragraphs */
+.ns-para-no { font-weight: normal; }       /* serial numbers (১। ২। …) not bold */
 .ns-note { font-size: 10pt; }              /* note */
 .ns-initiator-area { font-size: 10pt; }    /* signature block */
 .ns-closing-text { font-size: 10pt; }      /* closing line */
