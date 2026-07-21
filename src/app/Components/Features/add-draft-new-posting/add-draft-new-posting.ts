@@ -328,6 +328,50 @@ export class AddDraftNewPostingComponent implements OnInit {
         });
     }
 
+    /** Employee id currently being removed from the draft list (per-row button loading state). */
+    removingDraftEmployeeId: number | null = null;
+
+    /** Confirm, then reverse an employee's draft status so they're removed from this list. */
+    removeFromDraft(row: EmployeeList): void {
+        if (!this.canDelete) {
+            this.messageService.add({ severity: 'warn', summary: 'Permission Denied', detail: 'You do not have permission to perform this action.' });
+            return;
+        }
+        const name = row.fullNameEN || row.serviceId || 'this member';
+        this.confirmationService.confirm({
+            header: 'Remove from Draft',
+            message: `Remove ${name} from the draft posting list? Their sending status will be reverted and they'll return to the Supernumerary List.`,
+            icon: 'pi pi-exclamation-triangle',
+            acceptButtonProps: { label: 'Remove', severity: 'danger' },
+            rejectButtonProps: { label: 'Cancel', severity: 'secondary', outlined: true },
+            accept: () => this.doRemoveFromDraft(row)
+        });
+    }
+
+    /** Clear IsSendingNotesheetStatus (empty = not sent), reversing the "Send to Posting" action. */
+    private doRemoveFromDraft(row: EmployeeList): void {
+        this.removingDraftEmployeeId = row.employeeID;
+        this.employeeListService.setIsSendingNotesheetStatus(row.employeeID, '').subscribe({
+            next: (res: { statusCode?: number; description?: string }) => {
+                this.removingDraftEmployeeId = null;
+                const ok = (res?.statusCode ?? 200) === 200;
+                this.messageService.add({
+                    severity: ok ? 'success' : 'warn',
+                    summary: 'Remove',
+                    detail: ok ? 'Member removed from draft.' : (res?.description ?? 'Remove failed.')
+                });
+                if (ok) {
+                    this.selectedRows = this.selectedRows.filter((r) => r.employeeID !== row.employeeID);
+                    this.loadData();
+                }
+            },
+            error: (err: { error?: { description?: string }; message?: string }) => {
+                this.removingDraftEmployeeId = null;
+                this.messageService.add({ severity: 'error', summary: 'Remove', detail: err?.error?.description ?? err?.message ?? 'Failed to remove.' });
+            }
+        });
+    }
+
     onAddAll(): void {
         const accessible = this.list.filter((r) => this.isAccessibleMemberType(r.memberTypeId));
         if (accessible.length === 0) {
