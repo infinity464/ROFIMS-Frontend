@@ -341,6 +341,7 @@ export class NotesheetGenerateComponent implements OnInit {
             subSectionId: [null as number | null],
             noteSheetNo: [''],
             noteSheetNumberConfigId: [null as number | null, Validators.required],
+            noteSheetNoStaticWord: [''],
             noteSheetSubjectId: [null as number | null, Validators.required],
             subject: [''],
             note: [''],
@@ -762,9 +763,9 @@ export class NotesheetGenerateComponent implements OnInit {
             const prefix = isBn
                 ? (c.prefixBN ?? c.PrefixBN ?? c.prefix ?? c.Prefix ?? '')
                 : (c.prefix ?? c.Prefix ?? '');
-            const memberTypeId = c.memberTypeId ?? c.MemberTypeId;
-            const mt = this.memberTypeMap.get(memberTypeId);
-            const memberLabel = mt ? (isBn ? mt.bn : mt.en) : '';
+            const memberLabel = (c.memberTypeIds ?? c.MemberTypeIds ?? '').split(',').filter(Boolean)
+                .map((id: string) => { const mt = this.memberTypeMap.get(+id); return mt ? (isBn ? mt.bn : mt.en) : ''; })
+                .filter(Boolean).join(', ');
             const includeDate = c.includeDateInNumber ?? c.IncludeDateInNumber ?? false;
 
             let pattern: string;
@@ -1722,6 +1723,7 @@ export class NotesheetGenerateComponent implements OnInit {
             subSectionId: null,
             noteSheetNo: '',
             noteSheetNumberConfigId: null,
+            noteSheetNoStaticWord: '',
             noteSheetSubjectId: null,
             subject: '',
             note: '',
@@ -1945,6 +1947,7 @@ export class NotesheetGenerateComponent implements OnInit {
             noteSheetType: NoteSheetType.General,
             noteSheetNo: this.editMode ? (d.noteSheetNo || 'AUTO') : 'AUTO',
             noteSheetNumberConfigId: d.noteSheetNumberConfigId ?? null,
+            noteSheetNoStaticWord: (d.noteSheetNoStaticWord && String(d.noteSheetNoStaticWord).trim()) || null,
             noteSheetDate: dateStr,
             noteSheetTemplateId: d.noteSheetTemplateId ?? null,
             referenceNumber: referenceNumberJson ?? null,

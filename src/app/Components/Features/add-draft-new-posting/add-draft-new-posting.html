@@ -76,6 +76,7 @@
                     <th style="min-width: 140px">Remark</th>
                     <th *ngIf="isEditMode" style="min-width: 140px">Transfer Unit</th>
                     <th *ngIf="isEditMode" style="min-width: 140px">Remarks</th>
+                    <th *ngIf="!isEditMode && canDelete" style="width: 90px">Action</th>
                 </tr>
             </ng-template>
             <ng-template pTemplate="body" let-row let-rowIndex="rowIndex">
@@ -95,11 +96,17 @@
                     <td>{{ row.sendingRemark || row.remarks || '-' }}</td>
                     <td *ngIf="isEditMode">{{ row.transferRabUnitName || '-' }}</td>
                     <td *ngIf="isEditMode">{{ row.remarks || '-' }}</td>
+                    <td *ngIf="!isEditMode && canDelete" class="text-center">
+                        <p-button icon="pi pi-trash" severity="danger" size="small" [text]="true"
+                                  [loading]="removingEmployeeId === row.employeeID"
+                                  (onClick)="removeFromDraftList(row)"
+                                  pTooltip="Remove (return to Supernumerary List)"></p-button>
+                    </td>
                 </tr>
             </ng-template>
             <ng-template pTemplate="emptymessage">
                 <tr>
-                    <td [attr.colspan]="isEditMode ? 11 : 11" class="text-center p-4">
+                    <td [attr.colspan]="isEditMode ? 11 : (canDelete ? 12 : 11)" class="text-center p-4">
                         <div class="flex flex-column align-items-center gap-3 py-5">
                             <i class="pi pi-inbox text-5xl text-400"></i>
                             <span class="text-lg text-500">No employees with draft status. Use Supernumerary List and click "Send New Posting list" to add here.</span>

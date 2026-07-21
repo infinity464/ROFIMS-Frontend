@@ -15,10 +15,11 @@ import { IconField } from 'primeng/iconfield';
 import { InputIcon } from 'primeng/inputicon';
 import { TableModule } from 'primeng/table';
 import { Select } from 'primeng/select';
+import { MultiSelect } from 'primeng/multiselect';
 import { Checkbox } from 'primeng/checkbox';
 @Component({
     selector: 'app-notesheet-number-config',
-    imports: [ReactiveFormsModule, TableModule, InputText, InputNumber, Fluid, ButtonModule, IconField, InputIcon, Select, Checkbox],
+    imports: [ReactiveFormsModule, TableModule, InputText, InputNumber, Fluid, ButtonModule, IconField, InputIcon, Select, MultiSelect, Checkbox],
     templateUrl: './notesheet-number-config.html',
     styleUrl: './notesheet-number-config.scss'
 })
@@ -81,7 +82,7 @@ export class NoteSheetNumberConfigComponent implements OnInit {
         this.configForm = this.fb.group({
             configId: [0],
             noteSheetType: [null, Validators.required],
-            memberTypeId: [null, Validators.required],
+            memberTypeIds: [[], [(control: any) => control.value?.length ? null : { required: true }]],
             prefix: [null, Validators.required],
             prefixBN: [null, Validators.required],
             startNumber: [null, [Validators.required, Validators.min(1)]],
@@ -154,10 +155,10 @@ export class NoteSheetNumberConfigComponent implements OnInit {
     create() {
         this.isSubmitting = true;
         const currentDateTime = this.sharedService.getCurrentDateTime();
-
         const formVal = this.configForm.value;
         const payload: any = {
             ...formVal,
+            memberTypeIds: (formVal.memberTypeIds as number[]).join(','),
             configId: 0,
             currentNumber: 0,
             status: true,
@@ -198,7 +199,7 @@ export class NoteSheetNumberConfigComponent implements OnInit {
         const formVal = this.configForm.getRawValue();
         const payload: any = {
             ...existing,
-            memberTypeId: formVal.memberTypeId,
+            memberTypeIds: (formVal.memberTypeIds as number[]).join(','),
             prefix: formVal.prefix,
             prefixBN: formVal.prefixBN ?? '',
             includeDateInNumber: formVal.includeDateInNumber ?? false,
@@ -234,7 +235,7 @@ export class NoteSheetNumberConfigComponent implements OnInit {
         this.configForm.patchValue({
             configId: row.configId,
             noteSheetType: row.noteSheetType,
-            memberTypeId: row.memberTypeId,
+            memberTypeIds: row.memberTypeIds ? row.memberTypeIds.split(',').map(Number) : [],
             prefix: row.prefix,
             prefixBN: row.prefixBN ?? '',
             startNumber: row.startNumber,
@@ -269,15 +270,19 @@ export class NoteSheetNumberConfigComponent implements OnInit {
         });
     }
 
-    getMemberTypeLabel(id: number): string {
-        return this.memberTypeOptions.find(o => o.value === id)?.label ?? '-';
+    getMemberTypeLabel(idsStr: string): string {
+        if (!idsStr) return '-';
+        const labels = idsStr.split(',')
+            .map(id => this.memberTypeOptions.find(o => o.value === +id)?.label)
+            .filter(Boolean) as string[];
+        return labels.length ? labels.join(', ') : '-';
     }
 
     onReset() {
         this.configForm.reset({
             configId: 0,
             noteSheetType: null,
-            memberTypeId: null,
+            memberTypeIds: [],
             prefix: null,
             prefixBN: null,
             startNumber: null,

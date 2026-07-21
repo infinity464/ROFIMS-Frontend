@@ -138,6 +138,7 @@ export class PostingNotesheetGenerateComponent implements OnInit {
             referenceNumber: [''],
             noteSheetNo: [''],
             noteSheetNumberConfigId: [null as number | null, Validators.required],
+            noteSheetNoStaticWord: [''],
             mainText: [''],
             note: [''],
             preparedBy: [''],
@@ -464,6 +465,7 @@ export class PostingNotesheetGenerateComponent implements OnInit {
             textType: 'bn',
             noteSheetNo: '',
             noteSheetNumberConfigId: null,
+            noteSheetNoStaticWord: '',
             noteSheetDate: null,
             referenceNumber: '',
             subject: '',
@@ -525,9 +527,9 @@ export class PostingNotesheetGenerateComponent implements OnInit {
             const prefix = isBn
                 ? (c.prefixBN ?? c.PrefixBN ?? c.prefix ?? c.Prefix ?? '')
                 : (c.prefix ?? c.Prefix ?? '');
-            const memberTypeId = c.memberTypeId ?? c.MemberTypeId;
-            const mt = this.memberTypeMap.get(memberTypeId);
-            const memberLabel = mt ? (isBn ? mt.bn : mt.en) : '';
+            const memberLabel = (c.memberTypeIds ?? c.MemberTypeIds ?? '').split(',').filter(Boolean)
+                .map((id: string) => { const mt = this.memberTypeMap.get(+id); return mt ? (isBn ? mt.bn : mt.en) : ''; })
+                .filter(Boolean).join(', ');
             const includeDate = c.includeDateInNumber ?? c.IncludeDateInNumber ?? false;
 
             let pattern: string;
@@ -727,6 +729,7 @@ export class PostingNotesheetGenerateComponent implements OnInit {
             noteSheetType: NoteSheetType.NewPosting,
             noteSheetNo,
             noteSheetNumberConfigId: d.noteSheetNumberConfigId ?? null,
+            noteSheetNoStaticWord: (d.noteSheetNoStaticWord && String(d.noteSheetNoStaticWord).trim()) || null,
             noteSheetDate: dateStr,
             noteSheetTemplateId: null,
             referenceNumber: d.referenceNumber != null ? String(d.referenceNumber) : null,

@@ -132,6 +132,7 @@ export class InterPostingNotesheetGenerateComponent implements OnInit {
             referenceNumber: [''],
             noteSheetNo: [''],
             noteSheetNumberConfigId: [null as number | null, Validators.required],
+            noteSheetNoStaticWord: [''],
             subject: [''],
             mainText: [''],
             note: [''],
@@ -321,10 +322,12 @@ export class InterPostingNotesheetGenerateComponent implements OnInit {
 
     private rebuildConfigOptions(): void {
         const bangla = this.isBangla;
-        this.configOptions = this._allConfigs.map((c) => ({
-            label: `${(bangla && c.prefixBN) ? c.prefixBN : c.prefix}${this._typeMap[c.memberTypeId] ? ' — ' + this._typeMap[c.memberTypeId] : ''}`,
-            value: c.configId
-        }));
+        this.configOptions = this._allConfigs.map((c) => {
+            const prefix = (bangla && c.prefixBN) ? c.prefixBN : c.prefix;
+            const memberLabel = (c.memberTypeIds ?? '').split(',').filter(Boolean)
+                .map(id => this._typeMap[+id]).filter(Boolean).join(', ');
+            return { label: memberLabel ? `${prefix}  ${memberLabel}` : prefix, value: c.configId };
+        });
     }
 
     preparedByOptions: { label: string; value: number }[] = [];
@@ -476,6 +479,7 @@ export class InterPostingNotesheetGenerateComponent implements OnInit {
             textType: 'bn',
             noteSheetNo: '',
             noteSheetNumberConfigId: null,
+            noteSheetNoStaticWord: '',
             noteSheetDate: null,
             referenceNumber: '',
             subject: '',
@@ -626,6 +630,7 @@ export class InterPostingNotesheetGenerateComponent implements OnInit {
         const payload: Record<string, unknown> = {
             noteSheetId: 0,
             noteSheetType: NoteSheetType.InterPosting,
+            noteSheetNoStaticWord: (d.noteSheetNoStaticWord && String(d.noteSheetNoStaticWord).trim()) || null,
             noteSheetNo,
             noteSheetNumberConfigId: d.noteSheetNumberConfigId ?? null,
             noteSheetDate: dateStr,

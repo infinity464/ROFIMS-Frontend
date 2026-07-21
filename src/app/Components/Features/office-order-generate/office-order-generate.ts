@@ -19,6 +19,8 @@ import { TooltipModule } from 'primeng/tooltip';
 import { MessageService, ConfirmationService } from 'primeng/api';
 import { environment } from '@/Core/Environments/environment';
 import { OfficeOrderService } from '@/services/office-order.service';
+import { IdentityService } from '@/services/identity.service';
+import { IdentityUserMappingService } from '@/services/identity-user-mapping.service';
 import { mainTextBlocksToHtml } from '@/shared/utils/notesheet-main-text';
 import { MasterBasicSetupService } from '@/Components/basic-setup/shared/services/MasterBasicSetupService';
 import { ApprovedNoteSheetItem } from '@/models/posting.model';
@@ -132,6 +134,8 @@ export class OfficeOrderGenerateComponent implements OnInit {
     constructor(
         private officeOrderService: OfficeOrderService,
         private masterBasicSetupService: MasterBasicSetupService,
+        private identityService: IdentityService,
+        private identityMappingService: IdentityUserMappingService,
         private empService: EmpService,
         private http: HttpClient,
         private router: Router,
@@ -212,13 +216,49 @@ export class OfficeOrderGenerateComponent implements OnInit {
 
     loadApprovalEmployees(): void {
         this.loadingApprovalEmployees = true;
-        this.officeOrderService.getApprovalEmployees().subscribe({
-            next: (list) => {
-                this.approvalEmployees = list ?? [];
+        forkJoin({
+            users: this.identityService.getAllUsers(),
+            mappings: this.identityMappingService.getMappings()
+        }).subscribe({
+            next: ({ users, mappings }) => {
+                this.approvalEmployees = this.buildApprovalOptions(
+                    Array.isArray(users) ? users : [],
+                    Array.isArray(mappings) ? mappings : []
+                );
                 this.loadingApprovalEmployees = false;
             },
             error: () => { this.loadingApprovalEmployees = false; }
         });
+    }
+
+    private buildApprovalOptions(userList: any[], mappingList: any[]): { label: string; value: number }[] {
+        const userEmpMap = new Map<string, number>();
+        for (const m of mappingList) {
+            const empId = m.employeeId ?? m.EmployeeId;
+            const uid = m.userId ?? m.UserId;
+            if (uid && typeof empId === 'number' && empId > 0) userEmpMap.set(uid, empId);
+        }
+        const pick = (o: any, ...keys: string[]): string | null => {
+            for (const k of keys) { const v = o?.[k]; if (v != null && String(v).trim() !== '') return String(v); }
+            return null;
+        };
+        const opts: { label: string; value: number }[] = [];
+        for (const u of userList) {
+            const empId = userEmpMap.get(u.id);
+            if (!empId) continue;
+            const m = mappingList.find((x: any) => (x.userId ?? x.UserId) === u.id);
+            const appointment = pick(m, 'appointment', 'Appointment');
+            const norm = (appointment ?? '').trim().toLowerCase();
+            if (!norm || norm === 'n/a' || norm === 'na' || norm === 'not applicable') continue;
+            const name = pick(m, 'employeeName', 'EmployeeName') || u.userName;
+            const rank = pick(m, 'rank', 'Rank');
+            const serviceId = pick(m, 'serviceId', 'ServiceId');
+            const rabId = pick(m, 'rabID', 'rABID', 'rabid', 'RABID', 'RabID');
+            let head = [rank, name].filter(Boolean).join(' ');
+            if (appointment) head = head ? `${head} (${appointment})` : `(${appointment})`;
+            opts.push({ label: [head, serviceId ? `SVC: ${serviceId}` : '', rabId ? `RAB: ${rabId}` : ''].filter(Boolean).join(' | '), value: empId });
+        }
+        return opts.sort((a, b) => a.label.localeCompare(b.label));
     }
 
     loadApprovedNoteSheets(): void {
@@ -272,9 +312,11 @@ export class OfficeOrderGenerateComponent implements OnInit {
                 const previewNo = c.includeDate
                     ? `${prefixLabel}/${yearStr}/${monthStr}/${numStr}`
                     : `${prefixLabel}/${numStr}`;
-                const memberTypeLabel = this.memberTypeMap[c.memberTypeId] ? ` — ${this.memberTypeMap[c.memberTypeId]}` : '';
+                const memberTypeLabel = (c.memberTypeIds ?? '').split(',').filter(Boolean)
+                    .map(id => this.memberTypeMap[+id]).filter(Boolean).join(', ');
+                const memberTypeSuffix = memberTypeLabel ? `  ${memberTypeLabel}` : '';
                 return {
-                    label: `${previewNo}${memberTypeLabel}`,
+                    label: `${previewNo}${memberTypeSuffix}`,
                     value: c.configId
                 };
             });

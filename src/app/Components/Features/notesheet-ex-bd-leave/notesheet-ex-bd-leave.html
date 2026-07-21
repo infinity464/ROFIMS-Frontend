@@ -213,6 +213,14 @@
             }
           </div>
 
+          @if (!editMode) {
+          <div class="ns-gen-field">
+            <label class="ns-gen-label">Static Word</label>
+            <input pInputText formControlName="noteSheetNoStaticWord" placeholder="Optional word" class="w-full" maxlength="50" />
+            <small class="text-500">Added before the serial (prefix/word/serial)</small>
+          </div>
+          }
+
           <!-- Application Info Panel (flat text, shown when app selected) -->
           @if (selectedExBdLeaveAppId) {
             <div class="ns-gen-full ns-app-info-panel">

@@ -406,6 +406,8 @@ export class AddDraftNewPostingComponent implements OnInit {
     employeeModalHasNoteSheet = false;
     /** Detail id currently being removed (for per-row button loading state). */
     removingMemberId: number | null = null;
+    /** Employee id currently being removed from the draft top list (per-row loading state). */
+    removingEmployeeId: number | null = null;
 
     viewEmployees(row: DraftPostingMasterDto): void {
         if (!this.canView) return;
@@ -424,6 +426,48 @@ export class AddDraftNewPostingComponent implements OnInit {
             error: () => {
                 this.employeeModalLoading = false;
                 this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to load employees.' });
+            }
+        });
+    }
+
+    /** Remove an employee from the draft top list (add mode). Clears their sending status
+     *  so they leave this "draft" list and return to the Supernumerary List. */
+    removeFromDraftList(row: EmployeeList): void {
+        if (!this.canDelete) {
+            this.messageService.add({ severity: 'warn', summary: 'Permission Denied', detail: 'You do not have permission to perform this action.' });
+            return;
+        }
+        const name = row.fullNameEN || 'this member';
+        this.confirmationService.confirm({
+            header: 'Remove from Draft',
+            message: `Remove ${name} from the draft list? They will return to the Supernumerary List.`,
+            icon: 'pi pi-exclamation-triangle',
+            acceptButtonProps: { label: 'Remove', severity: 'danger' },
+            rejectButtonProps: { label: 'Cancel', severity: 'secondary', outlined: true },
+            accept: () => this.doRemoveFromDraftList(row)
+        });
+    }
+
+    private doRemoveFromDraftList(row: EmployeeList): void {
+        this.removingEmployeeId = row.employeeID;
+        // Empty status = "not sent"; the Supernumerary List includes null/empty status.
+        this.employeeListService.setIsSendingNotesheetStatus(row.employeeID, '').subscribe({
+            next: (res: { statusCode?: number; description?: string }) => {
+                this.removingEmployeeId = null;
+                const ok = (res?.statusCode ?? 200) === 200;
+                this.messageService.add({
+                    severity: ok ? 'success' : 'warn',
+                    summary: 'Remove',
+                    detail: res?.description ?? (ok ? 'Member returned to Supernumerary List.' : 'Remove failed.')
+                });
+                if (ok) {
+                    this.selectedRows = this.selectedRows.filter((r) => r.employeeID !== row.employeeID);
+                    this.loadData();
+                }
+            },
+            error: (err: { error?: { description?: string }; message?: string }) => {
+                this.removingEmployeeId = null;
+                this.messageService.add({ severity: 'error', summary: 'Remove', detail: err?.error?.description ?? err?.message ?? 'Failed to remove.' });
             }
         });
     }

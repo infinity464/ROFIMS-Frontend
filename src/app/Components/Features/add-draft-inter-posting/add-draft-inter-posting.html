@@ -77,6 +77,7 @@
                     <th *ngIf="!isEditMode" style="min-width: 140px">Remarks</th>
                     <th *ngIf="isEditMode" style="min-width: 140px">Transfer Unit</th>
                     <th *ngIf="isEditMode" style="min-width: 140px">Remarks</th>
+                    <th *ngIf="!isEditMode && canDelete" style="width: 90px">Action</th>
                 </tr>
             </ng-template>
             <ng-template pTemplate="body" let-row let-rowIndex="rowIndex">
@@ -97,11 +98,17 @@
                     <td *ngIf="!isEditMode">{{ row.interPostingRemark || '-' }}</td>
                     <td *ngIf="isEditMode">{{ row.transferRabUnitName || '-' }}</td>
                     <td *ngIf="isEditMode">{{ row.remarks || '-' }}</td>
+                    <td *ngIf="!isEditMode && canDelete" class="text-center">
+                        <p-button icon="pi pi-trash" severity="danger" size="small" [text]="true"
+                                  [loading]="removingEmployeeId === row.employeeID"
+                                  (onClick)="removeFromDraftList(row)"
+                                  pTooltip="Remove (return to Presently Serving)"></p-button>
+                    </td>
                 </tr>
             </ng-template>
             <ng-template pTemplate="emptymessage">
                 <tr>
-                    <td [attr.colspan]="isEditMode ? 11 : 12" class="text-center p-4">
+                    <td [attr.colspan]="isEditMode ? 11 : (canDelete ? 13 : 12)" class="text-center p-4">
                         <div class="flex flex-column align-items-center gap-3 py-5">
                             <i class="pi pi-inbox text-5xl text-400"></i>
                             <span class="text-lg text-500">No serving employees available for inter posting.</span>
