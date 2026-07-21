@@ -1,4 +1,4 @@
-import { Component, Input, OnInit , inject } from '@angular/core';
+﻿import { Component, Input, OnInit , inject } from '@angular/core';
 import { UserMenuService } from '@/services/user-menu.service';
 import { CommonModule } from '@angular/common';
 import { HttpClient } from '@angular/common/http';
@@ -1102,7 +1102,7 @@ export class NotesheetListComponent implements OnInit {
     const ns = this.previewNoteSheet;
     if (!ns) return;
     const bn = !this.isPreviewEnglish();
-    const fontFamily = bn ? "'Times New Roman', 'Nirmala UI', sans-serif" : "'Times New Roman', serif";
+    const fontFamily = bn ? "'Times New Roman', 'SolaimanLipi', sans-serif" : "'Times New Roman', serif";
     const title = bn ? 'মন্তব্যপত্র' : 'NOTE SHEET';
 
     const metaParts: string[] = [];
@@ -1175,7 +1175,7 @@ export class NotesheetListComponent implements OnInit {
     const ns = this.previewNoteSheet;
     if (!ns) return;
     const bn = !this.isPreviewEnglish();
-    const fontFamily = bn ? "'Times New Roman', 'Nirmala UI', sans-serif" : "'Times New Roman', serif";
+    const fontFamily = bn ? "'Times New Roman', 'SolaimanLipi', sans-serif" : "'Times New Roman', serif";
     const title = bn ? 'মন্তব্যপত্র' : 'NOTE SHEET';
 
     const metaParts: string[] = [];

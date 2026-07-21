@@ -1,4 +1,4 @@
-import { Component, EventEmitter, Input, OnChanges, OnInit, Output, SimpleChanges , inject } from '@angular/core';
+﻿import { Component, EventEmitter, Input, OnChanges, OnInit, Output, SimpleChanges , inject } from '@angular/core';
 import { UserMenuService } from '@/services/user-menu.service';
 import { Router } from '@angular/router';
 import { CommonModule } from '@angular/common';
@@ -329,7 +329,7 @@ export class PostingOrderPreviewComponent implements OnChanges, OnInit {
 
     async exportPdfDirect(): Promise<void> {
         const bn = !this.isEnglish;
-        const fontFamily = bn ? "'Times New Roman', 'Nirmala UI', sans-serif" : "'Times New Roman', serif";
+        const fontFamily = bn ? "'Times New Roman', 'SolaimanLipi', sans-serif" : "'Times New Roman', serif";
         const title = bn ? 'মন্তব্যপত্র' : 'NOTE SHEET';
 
         // ── Build meta ──
@@ -438,7 +438,7 @@ export class PostingOrderPreviewComponent implements OnChanges, OnInit {
 
     exportPdf(): void {
         const bn = !this.isEnglish;
-        const fontFamily = bn ? "'Times New Roman', 'Nirmala UI', sans-serif" : "'Times New Roman', serif";
+        const fontFamily = bn ? "'Times New Roman', 'SolaimanLipi', sans-serif" : "'Times New Roman', serif";
         const title = bn ? 'মন্তব্যপত্র' : 'NOTE SHEET';
 
         const metaParts: string[] = [];

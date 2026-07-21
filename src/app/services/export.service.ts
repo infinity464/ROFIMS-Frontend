@@ -1,4 +1,4 @@
-import { Injectable } from '@angular/core';
+﻿import { Injectable } from '@angular/core';
 import {
     Document,
     Packer,
@@ -148,8 +148,8 @@ export class ExportService {
         const dateText = dateStr;
         const columns = config.columns;
         const rows = config.rows;
-        // Same font as Word: Nirmala UI (Bangla) / Times New Roman (English)
-        const fontFamily = config.lang === 'bn' ? "'Times New Roman', 'Nirmala UI', serif" : "'Times New Roman', serif";
+        // Same font as Word: SolaimanLipi (Bangla) / Times New Roman (English)
+        const fontFamily = config.lang === 'bn' ? "'Times New Roman', 'SolaimanLipi', serif" : "'Times New Roman', serif";
         // Same sizes as Word: page header 14pt, table header 10pt, content 8pt (bn) / 11pt (en)
         const sizeContentPt = config.lang === 'bn' ? '8pt' : '11pt';
         const pageSize = config.landscape ? 'A4 landscape' : 'A4';
@@ -248,8 +248,8 @@ export class ExportService {
             month: 'long',
             day: 'numeric',
         });
-        // Use Nirmala UI for Bangla so Word renders Bengali Unicode without font embedding (ships with Windows 8+ / Office).
-        const font = config.lang === 'bn' ? { ascii: 'Times New Roman', hAnsi: 'Times New Roman', cs: 'Nirmala UI', hint: 'cs' as const } : 'Times New Roman';
+        // Use SolaimanLipi for Bangla so Word renders Bengali Unicode without font embedding (ships with Windows 8+ / Office).
+        const font = config.lang === 'bn' ? { ascii: 'Times New Roman', hAnsi: 'Times New Roman', cs: 'SolaimanLipi', hint: 'cs' as const } : 'Times New Roman';
         const title = config.title;
         const dateText = dateStr;
         const columns = config.columns;
@@ -481,7 +481,7 @@ export class ExportService {
         const dateStr = new Date().toLocaleDateString(config.lang === 'bn' ? 'bn-BD' : 'en-US', {
             year: 'numeric', month: 'long', day: 'numeric',
         });
-        const font = config.lang === 'bn' ? { ascii: 'Times New Roman', hAnsi: 'Times New Roman', cs: 'Nirmala UI', hint: 'cs' as const } : 'Times New Roman';
+        const font = config.lang === 'bn' ? { ascii: 'Times New Roman', hAnsi: 'Times New Roman', cs: 'SolaimanLipi', hint: 'cs' as const } : 'Times New Roman';
         // Sizes in half-points: 24 = 12pt, 16 = 8pt, 18 = 9pt, 12 = 6pt.
         const sizePageHeader = 24;
         const sizeTableHeader = 16;
@@ -760,7 +760,7 @@ export class ExportService {
         const dateStr = new Date().toLocaleDateString(config.lang === 'bn' ? 'bn-BD' : 'en-US', {
             year: 'numeric', month: 'long', day: 'numeric',
         });
-        const font = config.lang === 'bn' ? { ascii: 'Times New Roman', hAnsi: 'Times New Roman', cs: 'Nirmala UI', hint: 'cs' as const } : 'Times New Roman';
+        const font = config.lang === 'bn' ? { ascii: 'Times New Roman', hAnsi: 'Times New Roman', cs: 'SolaimanLipi', hint: 'cs' as const } : 'Times New Roman';
         // A4 landscape ≈ 297mm, portrait ≈ 210mm. After ~1" margins the usable width in DXA
         // (1/20 pt; 1440 DXA = 1 inch) is ~13900 (landscape) / ~9000 (portrait).
         const totalDxa = config.landscape ? 13900 : 9000;
@@ -1113,7 +1113,7 @@ export class ExportService {
     }
 
     exportProfilePDF(config: ProfileExportConfig): void {
-        const fontFamily = config.lang === 'bn' ? "'Times New Roman', 'Nirmala UI', serif" : "'Times New Roman', serif";
+        const fontFamily = config.lang === 'bn' ? "'Times New Roman', 'SolaimanLipi', serif" : "'Times New Roman', serif";
         const sizeContentPt = config.lang === 'bn' ? '8pt' : '11pt';
         const pageFooter = config.showPageNumbers
             ? `
@@ -1195,7 +1195,7 @@ ${sectionBlocks}
     }
 
     async exportProfileWord(config: ProfileExportConfig): Promise<void> {
-        const font = config.lang === 'bn' ? { ascii: 'Times New Roman', hAnsi: 'Times New Roman', cs: 'Nirmala UI', hint: 'cs' as const } : 'Times New Roman';
+        const font = config.lang === 'bn' ? { ascii: 'Times New Roman', hAnsi: 'Times New Roman', cs: 'SolaimanLipi', hint: 'cs' as const } : 'Times New Roman';
         const sizePageHeader = 28;
         const sizeSectionHeader = 28; // 14pt for Basic Service, Own Address, etc.
         const sizeAddrSubheader = 24; // 12pt for Permanent/Present Address headings
@@ -1409,7 +1409,7 @@ ${sectionBlocks}
     /** Generate a real PDF (html2canvas + jsPDF) and open it in a new browser tab. */
     async generatePDF(config: ReportConfig): Promise<void> {
         const fontFamily = config.lang === 'bn'
-            ? "'Times New Roman', 'Nirmala UI', sans-serif"
+            ? "'Times New Roman', 'SolaimanLipi', sans-serif"
             : "'Times New Roman', serif";
         const sizeContentPt = config.lang === 'bn' ? '8pt' : '9pt';
         const orientation = config.landscape ? 'landscape' : 'portrait';

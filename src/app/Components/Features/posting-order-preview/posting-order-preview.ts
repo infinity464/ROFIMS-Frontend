@@ -1,4 +1,4 @@
-import { Component, OnInit, ViewChild, ElementRef } from '@angular/core';
+﻿import { Component, OnInit, ViewChild, ElementRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
@@ -1640,7 +1640,7 @@ html, body { margin: 0; padding: 0; background: transparent; }
     private buildWordDocument(): Document {
         const bn = this.isBangla;
         const font = bn
-            ? { ascii: 'Times New Roman', hAnsi: 'Times New Roman', cs: 'Nirmala UI', hint: 'cs' as const }
+            ? { ascii: 'Times New Roman', hAnsi: 'Times New Roman', cs: 'SolaimanLipi', hint: 'cs' as const }
             : 'Times New Roman';
         const csSize = bn ? 18 : undefined;   // 9pt for order context (complex script)
         const hdrSize = 18;                     // 9pt for header

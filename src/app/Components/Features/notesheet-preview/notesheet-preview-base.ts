@@ -1,4 +1,4 @@
-import { inject, Injectable, OnInit } from '@angular/core';
+﻿import { inject, Injectable, OnInit } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { ActivatedRoute, Router } from '@angular/router';
 import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
@@ -745,7 +745,7 @@ export abstract class NotesheetPreviewBase implements OnInit {
 
         // Shared run properties: font + language so Word uses correct word-breaking
         const runProps: IRunPropertiesOptions = {
-            font: { ascii: 'Times New Roman', hAnsi: 'Times New Roman', eastAsia: 'Times New Roman', cs: 'Nirmala UI' },
+            font: { ascii: 'Times New Roman', hAnsi: 'Times New Roman', eastAsia: 'Times New Roman', cs: 'SolaimanLipi' },
             language: { value: lang, eastAsia: lang, bidirectional: lang },
             size: 20,  // 10pt = 20 half-points
         };

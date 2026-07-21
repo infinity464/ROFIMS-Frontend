@@ -1,4 +1,4 @@
-import { Component, OnInit, ViewChild , inject } from '@angular/core';
+﻿import { Component, OnInit, ViewChild , inject } from '@angular/core';
 import { UserMenuService } from '@/services/user-menu.service';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { MasterBasicSetupService } from '@/Components/basic-setup/shared/services/MasterBasicSetupService';
@@ -1724,7 +1724,7 @@ export class NotesheetExBdLeaveComponent implements OnInit {
         const ns = this.viewNoteSheet;
         if (!ns) return;
         const bn = !this.isViewEnglish();
-        const fontFamily = bn ? "'Times New Roman', 'Nirmala UI', sans-serif" : "'Times New Roman', serif";
+        const fontFamily = bn ? "'Times New Roman', 'SolaimanLipi', sans-serif" : "'Times New Roman', serif";
         const title = bn ? 'মন্তব্যপত্র' : 'NOTE SHEET';
 
         const metaParts: string[] = [];
@@ -1797,7 +1797,7 @@ export class NotesheetExBdLeaveComponent implements OnInit {
         const ns = this.viewNoteSheet;
         if (!ns) return;
         const bn = !this.isViewEnglish();
-        const fontFamily = bn ? "'Times New Roman', 'Nirmala UI', sans-serif" : "'Times New Roman', serif";
+        const fontFamily = bn ? "'Times New Roman', 'SolaimanLipi', sans-serif" : "'Times New Roman', serif";
         const title = bn ? 'মন্তব্যপত্র' : 'NOTE SHEET';
 
         const metaParts: string[] = [];

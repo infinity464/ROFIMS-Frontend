@@ -1,4 +1,4 @@
-:host {
+﻿:host {
     display: block;
 }
 
@@ -879,7 +879,7 @@
     .rab-personnel-name,
     .rab-personnel-meta {
         letter-spacing: 0;
-        font-family: 'Times New Roman', 'Nirmala UI', sans-serif;
+        font-family: 'Times New Roman', 'SolaimanLipi', sans-serif;
     }
 
     /* Personnel meta loses uppercasing in Bangla too. */
@@ -889,7 +889,7 @@
     .rab-criteria-cell-label,
     .rab-foot-row {
         letter-spacing: 0.04em;
-        font-family: 'Times New Roman', 'Nirmala UI', sans-serif;
+        font-family: 'Times New Roman', 'SolaimanLipi', sans-serif;
         text-transform: none;
     }
 
@@ -900,7 +900,7 @@
 
 :host ::ng-deep .rab-paper.rab-lang-bn .rab-data-table .p-datatable-thead > tr > th {
     letter-spacing: 0.04em;
-    font-family: 'Times New Roman', 'Nirmala UI', sans-serif;
+    font-family: 'Times New Roman', 'SolaimanLipi', sans-serif;
 }
 
 /* ----- Data table ----- */

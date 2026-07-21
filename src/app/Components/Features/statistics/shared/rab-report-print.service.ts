@@ -1,4 +1,4 @@
-import { Injectable } from '@angular/core';
+﻿import { Injectable } from '@angular/core';
 
 export type CellAlign = 'left' | 'center' | 'right';
 
@@ -79,10 +79,10 @@ export class RabReportPrintService {
         const esc = (s: string) => this.esc(s);
         const isBn = cfg.lang === 'bn';
         const serif = isBn
-            ? "'Times New Roman', 'Nirmala UI', serif"
+            ? "'Times New Roman', 'SolaimanLipi', serif"
             : "'Times New Roman', serif";
         const sans = isBn
-            ? "'Times New Roman', 'Nirmala UI', sans-serif"
+            ? "'Times New Roman', 'SolaimanLipi', sans-serif"
             : "'Times New Roman', sans-serif";
         const mono = "'JetBrains Mono', 'Consolas', 'Courier New', monospace";
 

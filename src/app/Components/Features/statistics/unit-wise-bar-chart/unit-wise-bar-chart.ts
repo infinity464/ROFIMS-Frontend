@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+﻿import { Component, OnInit } from '@angular/core';
 import { Router } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -322,7 +322,7 @@ export class UnitWiseBarChartComponent implements OnInit {
         if (!canvas) return;
         const imgData = canvas.toDataURL('image/png');
         const fontFamily = this.lang === 'bn'
-            ? "'Times New Roman', 'Nirmala UI', sans-serif"
+            ? "'Times New Roman', 'SolaimanLipi', sans-serif"
             : "'Times New Roman', serif";
 
         const scope = this.scopeLine;

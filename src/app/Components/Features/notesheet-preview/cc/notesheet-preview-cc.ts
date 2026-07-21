@@ -687,9 +687,9 @@ html, body { margin: 0; padding: 0; background: transparent; }
     /** Build the Word document (landscape, mirrors the on-screen CC layout). */
     private buildWordDocument(): Document {
         const m = this.movement!;
-        // Word-friendly Bangla font (Nirmala UI ships with Windows 10+);
+        // Word-friendly Bangla font (SolaimanLipi ships with Windows 10+);
         // `cs` covers complex-script shaping needed for Bangla.
-        const font = { ascii: 'Times New Roman', hAnsi: 'Times New Roman', cs: 'Nirmala UI', hint: 'cs' as const };
+        const font = { ascii: 'Times New Roman', hAnsi: 'Times New Roman', cs: 'SolaimanLipi', hint: 'cs' as const };
         const dims = this.getPageDimensions();
         // Printable width in landscape = page-height twips minus 2 × 0.5" margins (1440 twips).
         // getPageDimensions() returns *portrait* dims, so `height` is the longer side.

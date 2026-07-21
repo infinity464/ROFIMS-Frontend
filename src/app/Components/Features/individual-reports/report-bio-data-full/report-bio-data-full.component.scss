@@ -1,4 +1,4 @@
-:host {
+﻿:host {
     display: block;
 }
 
@@ -853,7 +853,7 @@
     .rab-personnel-name,
     .rab-personnel-meta {
         letter-spacing: 0;
-        font-family: 'Times New Roman', 'Nirmala UI', sans-serif;
+        font-family: 'Times New Roman', 'SolaimanLipi', sans-serif;
     }
 
     /* Personnel meta loses uppercasing in Bangla too. */
@@ -863,7 +863,7 @@
     .rab-criteria-cell-label,
     .rab-foot-row {
         letter-spacing: 0.04em;
-        font-family: 'Times New Roman', 'Nirmala UI', sans-serif;
+        font-family: 'Times New Roman', 'SolaimanLipi', sans-serif;
         text-transform: none;
     }
 
@@ -874,7 +874,7 @@
 
 :host ::ng-deep .rab-paper.rab-lang-bn .rab-data-table .p-datatable-thead > tr > th {
     letter-spacing: 0.04em;
-    font-family: 'Times New Roman', 'Nirmala UI', sans-serif;
+    font-family: 'Times New Roman', 'SolaimanLipi', sans-serif;
 }
 
 /* ----- Data table ----- */
@@ -1458,9 +1458,9 @@
 
 /* Bangla overrides — Bangla-aware family, drop Latin tracking. */
 .bd-sheet.bd-lang-bn {
-    .bd-name, .bd-name-bn, .bd-v, .bd-chip { font-family: 'Times New Roman', 'Nirmala UI', var(--bd-display); }
+    .bd-name, .bd-name-bn, .bd-v, .bd-chip { font-family: 'Times New Roman', 'SolaimanLipi', var(--bd-display); }
     .bd-meta-bar, .bd-lead, .bd-postnom, .bd-head-meta, .bd-sec-title, .bd-k, .bd-ik, .bd-iv, .bd-pill {
-        font-family: 'Times New Roman', 'Nirmala UI', var(--bd-mono);
+        font-family: 'Times New Roman', 'SolaimanLipi', var(--bd-mono);
         letter-spacing: 0.04em;
         text-transform: none;
     }
@@ -1566,8 +1566,8 @@
     }
     .bd-tbl-ser { width: 2.4rem; color: var(--bd-muted); font-family: var(--bd-mono); }
 }
-.bd-sheet.bd-lang-bn .bd-tbl { font-family: 'Times New Roman', 'Nirmala UI', var(--bd-display); }
-.bd-sheet.bd-lang-bn .bd-tbl th { font-family: 'Times New Roman', 'Nirmala UI', var(--bd-mono); letter-spacing: 0.04em; }
+.bd-sheet.bd-lang-bn .bd-tbl { font-family: 'Times New Roman', 'SolaimanLipi', var(--bd-display); }
+.bd-sheet.bd-lang-bn .bd-tbl th { font-family: 'Times New Roman', 'SolaimanLipi', var(--bd-mono); letter-spacing: 0.04em; }
 
 /* =============================================================
    Detailed Bio-Data — section design follows profile.css

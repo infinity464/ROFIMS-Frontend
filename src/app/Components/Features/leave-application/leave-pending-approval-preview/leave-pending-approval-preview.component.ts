@@ -1,4 +1,4 @@
-import { Component, HostListener, OnInit } from '@angular/core';
+﻿import { Component, HostListener, OnInit } from '@angular/core';
 import { CommonModule, Location } from '@angular/common';
 import { Router, ActivatedRoute, RouterModule } from '@angular/router';
 import { FormsModule } from '@angular/forms';
@@ -276,7 +276,7 @@ ${this.getPrintStyles()}</style>
     private async exportWord(): Promise<void> {
         if (!this.application) return;
         try {
-            const FONT = { ascii: 'Times New Roman', hAnsi: 'Times New Roman', cs: 'Nirmala UI', hint: 'cs' as const };
+            const FONT = { ascii: 'Times New Roman', hAnsi: 'Times New Roman', cs: 'SolaimanLipi', hint: 'cs' as const };
             const isBn = this.lang === 'bn';
             const appId = this.application.applicantEmployeeId;
             const relieverId = this.getRelieverId();

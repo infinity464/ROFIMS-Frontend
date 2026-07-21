@@ -1,4 +1,4 @@
-import { Component, EventEmitter, HostListener, Input, OnInit, Output, OnDestroy } from '@angular/core';
+﻿import { Component, EventEmitter, HostListener, Input, OnInit, Output, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { HttpClient } from '@angular/common/http';
 import { FormsModule } from '@angular/forms';
@@ -1033,8 +1033,8 @@ export class ReportBioDataFullIndividualComponent implements OnInit, OnDestroy {
     private buildPrintHtml(): string {
         const esc = (s: unknown) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;');
         const isBn = this.isBn;
-        const grotesk = isBn ? "'Times New Roman', 'Nirmala UI', sans-serif" : "'Space Grotesk', 'Helvetica Neue', Helvetica, sans-serif";
-        const mono = isBn ? "'Times New Roman', 'Nirmala UI', monospace" : "'IBM Plex Mono', ui-monospace, 'SF Mono', Menlo, monospace";
+        const grotesk = isBn ? "'Times New Roman', 'SolaimanLipi', sans-serif" : "'Space Grotesk', 'Helvetica Neue', Helvetica, sans-serif";
+        const mono = isBn ? "'Times New Roman', 'SolaimanLipi', monospace" : "'IBM Plex Mono', ui-monospace, 'SF Mono', Menlo, monospace";
 
         const photo = this.profileImageUrl
             ? `<div class="photo"><img src="${this.profileImageUrl}" alt="Photo" /></div>`
@@ -1142,7 +1142,7 @@ export class ReportBioDataFullIndividualComponent implements OnInit, OnDestroy {
         this.exporting = true;
         try {
             const isBn = this.isBn;
-            const bnFont = { ascii: 'Times New Roman', hAnsi: 'Times New Roman', cs: 'Nirmala UI', eastAsia: 'Nirmala UI', hint: 'cs' as const };
+            const bnFont = { ascii: 'Times New Roman', hAnsi: 'Times New Roman', cs: 'SolaimanLipi', eastAsia: 'SolaimanLipi', hint: 'cs' as const };
             const bnLang = { value: 'bn-BD', bidirectional: 'bn-BD', eastAsia: 'bn-BD' } as any;
             const sans = isBn ? (bnFont as any) : 'Calibri';
             const serif = isBn ? (bnFont as any) : 'Cambria';
