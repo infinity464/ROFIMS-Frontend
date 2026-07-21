@@ -57,21 +57,42 @@
    cc / mo / article-47 previews are untouched. styleUrls load this file AFTER the
    shared sheet, so these rules win on equal specificity. */
 .ns-title-en,
-.ns-title-bn { font-size: 11pt; }          /* document title — match প্রজ্ঞাপন (11pt) */
+.ns-title-bn { font-size: 11pt; }          /* document title (HEADER) — kept */
 
-.ns-sanglagni-col { font-size: 9pt; }      /* সংলগ্নী নং column */
-
-.ns-cell-ref { font-size: 9pt; }           /* সূত্র */
-
-.ns-para { font-size: 9pt; }               /* body paragraphs */
-
-.ns-note { font-size: 9pt; }               /* note */
-
-.ns-initiator-area { font-size: 9pt; }     /* signature block base (sig lines already 9pt) */
+/* Body: everything except the document header + table column headers → 10pt. */
+.ns-sanglagni-col { font-size: 10pt; }     /* সংলগ্নী নং column */
+.ns-cell-ref { font-size: 10pt; }          /* সূত্র */
+.ns-para { font-size: 10pt; }              /* body paragraphs */
+.ns-note { font-size: 10pt; }              /* note */
+.ns-initiator-area { font-size: 10pt; }    /* signature block */
+.ns-closing-text { font-size: 10pt; }      /* closing line */
 
 .ns-posting-table {
-    th { font-size: 6.5pt; }               /* table header (cells stay 7pt) */
-    .ns-posting-note { font-size: 9pt; }
+    /* Table content 8pt; column headers (table information) keep their own size. */
+    table { font-size: 8pt; }
+    td { font-size: 8pt; }
+    th { font-size: 6.5pt; }
+    .ns-posting-note { font-size: 10pt; }
+
+    /* No shading — plain white rows and header (no zebra, no grey header). */
+    th { background: transparent !important; }
+    tr:nth-child(even) { background: transparent !important; }
+    tr { background: transparent !important; }
+
+    /* Hairline cell borders (lighter grey reads even thinner in print/PDF). */
+    th,
+    td { border: 0.25px solid #888 !important; }
+}
+
+/* New posting: table content + column headers 9pt (inter posting stays 8pt / 6.5pt).
+   Header is NOT bold — same weight/size as the content. */
+.ns-posting-table.ns-posting-new {
+    table { font-size: 9pt; }
+    td { font-size: 9pt; }
+    th {
+        font-size: 9pt;
+        font-weight: normal;
+    }
 }
 
 /* ── Document font ─────────────────────────────────────

@@ -1642,16 +1642,16 @@ html, body { margin: 0; padding: 0; background: transparent; }
         const font = bn
             ? { ascii: 'Times New Roman', hAnsi: 'Times New Roman', cs: 'SolaimanLipi', hint: 'cs' as const }
             : 'Times New Roman';
-        const csSize = bn ? 18 : undefined;   // 9pt for order context (complex script)
-        const hdrSize = 18;                     // 9pt for header
-        const hdrCsSize = bn ? 18 : undefined;
-        const tblSize = 14;                     // 7pt for table content
-        const tblCsSize = bn ? 14 : undefined;
-        const tblHdrSize = 13;                  // 6.5pt for table header
-        const tblHdrCsSize = bn ? 13 : undefined;
-        const ctxSize = 18;                     // 9pt for order context
+        const csSize = bn ? 20 : undefined;   // 10pt for order context (complex script)
+        const hdrSize = 20;                     // 10pt for org header
+        const hdrCsSize = bn ? 20 : undefined;
+        const tblSize = 18;                     // 9pt for table content
+        const tblCsSize = bn ? 18 : undefined;
+        const tblHdrSize = 18;                  // 9pt for table header
+        const tblHdrCsSize = bn ? 18 : undefined;
+        const ctxSize = 20;                     // 10pt for order context
         const lang = bn ? { value: 'bn-BD', bidirectional: 'bn-BD' } : undefined;
-        const thinBorder = { style: BorderStyle.SINGLE, size: 1, color: '000000' };
+        const thinBorder = { style: BorderStyle.SINGLE, size: 1, color: '888888' };
         const cellBorders = { top: thinBorder, bottom: thinBorder, left: thinBorder, right: thinBorder };
 
         // ── Government Header (9pt, bold, centered) ──
@@ -1723,14 +1723,14 @@ html, body { margin: 0; padding: 0; background: transparent; }
         const tblContentWidth = this.selectedPageSize === 'legal' ? 11106 : 10772;
         const buildColW = (): number[] => {
             if (isInter) {
-                const base = [500, 1050, 900];
-                const rem = tblContentWidth - 500 - 1050 - 900;
+                const base = [600, 1300, 1000];   // ক্রমিক / ব্যক্তিগত নং / পদবি — wider
+                const rem = tblContentWidth - 600 - 1300 - 1000;
                 const optCols = (sd ? 1 : 0) + (sp ? 1 : 0) + (sr ? 1 : 0);
                 const nameW = 2200;
-                const transferW = 1500;
-                const distW = sd ? 1200 : 0;
-                const prevW = sp ? 1500 : 0;
-                const remW = sr ? 1200 : 0;
+                const transferW = 1200;            // বদলিকৃত কর্মস্থল — smaller
+                const distW = sd ? 1000 : 0;       // নিজ জেলা — smaller
+                const prevW = sp ? 1200 : 0;       // পূর্ববতী কর্মস্থল — smaller
+                const remW = sr ? 1000 : 0;        // মন্তব্য — smaller
                 const fixedW = nameW + transferW + distW + prevW + remW;
                 const adjust = rem - fixedW;
                 return [...base, nameW + adjust, ...(sd ? [distW] : []), ...(sp ? [prevW] : []), transferW, ...(sr ? [remW] : [])];
@@ -1749,7 +1749,7 @@ html, body { margin: 0; padding: 0; background: transparent; }
         };
         const colW = buildColW();
 
-        const hdrPara = (text: string) => new Paragraph({ children: [new TextRun({ text, bold: true, size: tblHdrSize, sizeComplexScript: tblHdrCsSize, font, language: lang })], alignment: AlignmentType.CENTER });
+        const hdrPara = (text: string) => new Paragraph({ children: [new TextRun({ text, size: tblHdrSize, sizeComplexScript: tblHdrCsSize, font, language: lang })], alignment: AlignmentType.CENTER });
         const hdrCell = (text: string, ci: number, extra?: Partial<ConstructorParameters<typeof TableCell>[0]>) => new TableCell({
             children: [hdrPara(text)], borders: cellBorders, width: { size: colW[ci], type: WidthType.DXA }, ...extra
         });

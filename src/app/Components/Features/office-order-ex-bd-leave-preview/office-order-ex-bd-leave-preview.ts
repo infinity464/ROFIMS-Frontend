@@ -578,8 +578,8 @@ export class OfficeOrderExBdLeavePreviewComponent implements OnInit {
     private async buildWordDocument(): Promise<Document> {
         if (!this.order) throw new Error('No order loaded');
         const font = this.isBangla ? { ascii: 'Times New Roman', hAnsi: 'Times New Roman', cs: 'SolaimanLipi', hint: 'cs' as const } : 'Times New Roman';
-        const titleSize = 18;
-        const contentSize = 16;
+        const titleSize = 24;    // 12pt — government header (larger than body)
+        const contentSize = 20;  // 10pt — all body content (uniform)
         const children: (Paragraph | Table)[] = [];
         const pageSize = this.selectedPageSize === 'legal'
             ? { width: 12240, height: 20160 }
@@ -618,7 +618,7 @@ export class OfficeOrderExBdLeavePreviewComponent implements OnInit {
         }
 
         if (this.order.subject) {
-            children.push(new Paragraph({ children: [new TextRun({ text: `${this.isBangla ? 'বিষয়: ' : 'Subject: '}`, font, size: contentSize, bold: true }), new TextRun({ text: this.order.subject, font, size: contentSize, bold: true, underline: {} })], spacing: { after: 100 } }));
+            children.push(new Paragraph({ children: [new TextRun({ text: `${this.isBangla ? 'বিষয়: ' : 'Subject: '}`, font, size: contentSize, bold: true }), new TextRun({ text: this.order.subject, font, size: contentSize, bold: true })], spacing: { after: 100 } }));
         }
 
         // Compact serial→text tab stop (0.3") so the gap after ক।/১।/২। is small and uniform,

@@ -1653,18 +1653,25 @@ html, body { margin: 0; padding: 0; background: transparent; }
 .pdf-flow .ns-sig-date,
 .pdf-flow .ns-sig-name,
 .pdf-flow .ns-sig-paren,
-.pdf-flow .ns-sig-rank { font-size: 9pt !important; }
+.pdf-flow .ns-sig-rank { font-size: 10pt !important; }
 
-.pdf-flow .ns-closing-text { font-size: 8pt !important; }
+.pdf-flow .ns-closing-text { font-size: 10pt !important; }
 
 .pdf-flow .ns-members-preview-table,
 .pdf-flow .ns-members-preview-table th,
 .pdf-flow .ns-members-preview-table td,
-.pdf-flow .ns-posting-table td,
 .pdf-flow .ns-ref-file-btn,
 .pdf-flow .ns-ref-file-btn i { font-size: 7pt !important; }
 
-.pdf-flow .ns-posting-table th { font-size: 6.5pt !important; }   /* table header */
+.pdf-flow .ns-posting-table td { font-size: 8pt !important; }    /* table content (inter) */
+.pdf-flow .ns-posting-table.ns-posting-new td { font-size: 9pt !important; }  /* new posting content */
+.pdf-flow .ns-posting-table th { font-size: 6.5pt !important; }  /* table header (inter) */
+.pdf-flow .ns-posting-table.ns-posting-new th { font-size: 9pt !important; font-weight: normal !important; }  /* new posting header (not bold) */
+
+/* No shading — plain white rows and header (no zebra, no grey header). */
+.pdf-flow .ns-posting-table th,
+.pdf-flow .ns-posting-table tr,
+.pdf-flow .ns-posting-table tr:nth-child(even) { background: transparent !important; }
 
 /* Keep column widths (colgroup) identical to the on-screen preview */
 .pdf-flow .ns-posting-table table { table-layout: fixed; width: 100%; }
@@ -1702,7 +1709,7 @@ html, body { margin: 0; padding: 0; background: transparent; }
 .pdf-flow .ns-posting-table thead { display: table-header-group !important; }
 .pdf-flow .ns-posting-table tfoot { display: table-footer-group; }
 .pdf-flow .ns-posting-table th,
-.pdf-flow .ns-posting-table td { border: 1px solid #000 !important; }
+.pdf-flow .ns-posting-table td { border: 0.25px solid #888 !important; }
 /* Normal block flow (not flex) around the table so Chromium fragments it across
    pages and repeats <thead> reliably — a table inside a flex column may not. */
 .pdf-flow .ns-doc-box,
@@ -1991,16 +1998,16 @@ html, body { margin: 0; padding: 0; background: transparent; }
             ? { ascii: 'Times New Roman', hAnsi: 'Times New Roman', cs: 'SolaimanLipi', hint: 'cs' as const }
             : 'Times New Roman';
         // Font sizes in half-points (1pt = 2 half-pts) — matched to posting-order-preview
-        const ORG_SZ = 18;      // 9pt — org header
-        const BODY_SZ = 18;     // 9pt — body text, paragraphs, note, reference
-        const TBL_SZ = 14;      // 7pt — table cells
-        const TBL_HDR_SZ = 13;  // 6.5pt — table header
-        const SIG_SZ = 18;      // 9pt — signature & approver
-        const NODATE_SZ = BODY_SZ - 2;  // 8pt — notesheet no + date (-1pt)
+        const ORG_SZ = 18;      // 9pt — org header (HEADER — kept)
+        const BODY_SZ = 20;     // 10pt — body text, paragraphs, note, reference
+        const TBL_SZ = this.isInterPosting() ? 16 : 18;  // 8pt inter / 9pt new posting — table content
+        const TBL_HDR_SZ = this.isInterPosting() ? 13 : 18;  // 6.5pt inter / 9pt new posting — table header
+        const SIG_SZ = 20;      // 10pt — signature & approver
+        const NODATE_SZ = BODY_SZ;  // 10pt — notesheet no + date (matches body)
         const csSize = bn ? BODY_SZ : undefined;
         const csNoDate = bn ? NODATE_SZ : undefined;
         const lang = bn ? { value: 'bn-BD', bidirectional: 'bn-BD' } : undefined;
-        const thinBorder = { style: BorderStyle.SINGLE, size: 1, color: '000000' };
+        const thinBorder = { style: BorderStyle.SINGLE, size: 1, color: '888888' };
         const cellBorders = { top: thinBorder, bottom: thinBorder, left: thinBorder, right: thinBorder };
 
         const mainChildren: (Paragraph | Table)[] = [];
@@ -2115,8 +2122,8 @@ html, body { margin: 0; padding: 0; background: transparent; }
                 // When tenure is hidden, give the freed width to Name / Previous
                 // Workplace / Transfer Station (idx 3 / 10 / 11).
                 const iBase = this.showTenure
-                    ? [300, 1150, 700, 1000, 900, 900, 800, 400, 400, 400, 700, 900, 800]
-                    : [300, 1150, 700, 1600, 900, 900, 800, 400, 400, 400, 1300, 1400, 800];
+                    ? [300, 1150, 850, 1000, 900, 900, 800, 400, 400, 400, 700, 900, 650]
+                    : [300, 1150, 850, 1600, 900, 900, 800, 400, 400, 400, 1300, 1400, 650];
                 const iBnHdr = ['ক্রমিক','ব্যক্তিগত নং','পদবি','নাম','নিজ জেলা (দায়িত্বপূর্ণ এলাকা)','স্বামী/স্ত্রীর জেলা (দায়িত্বপূর্ণ এলাকা)','','','','','পূর্ববতী কর্মস্থল','বদলিকৃত কর্মস্থল','মন্তব্য'];
                 const iEnHdr = ['Ser','Service ID','Rank','Name','Own District (Responsible Area)',"Husband/Wife's District (Responsible Area)",'','','','','Previous Workplace','Transfer Station','Remarks'];
                 const iVisIdx = iBase.map((_, i) => i).filter(i => {
@@ -2211,7 +2218,7 @@ html, body { margin: 0; padding: 0; background: transparent; }
                     ? ['ক্রমিক','ব্যক্তিগত নম্বর','পদবি','ট্রেড','নাম','নিজ জেলা (দায়িত্বপূর্ণ এলাকা)','স্পাউস জেলা (দায়িত্বপূর্ণ এলাকা)','পূর্ববতী কর্মস্থল','বদলি ইউনিট','মন্তব্য']
                     : ['Ser','Service ID','Rank','Trade','Name','Own District (Responsible Area)','Spouse District (Responsible Area)','Previous Workplace','Transfer Unit','Remarks'];
                 //                    ser  svcId rank trade name  own   spouse prev  unit  rem
-                const allBaseWidths = [490, 1550, 850,  820, 1380, 1220, 1220, 1040, 1060, 1100];
+                const allBaseWidths = [620, 1480, 850,  820, 1380, 1400, 1220, 1040,  780,  800];
 
                 const visibleIndices = allColKeys.map((k, i) => {
                     if (k === 'remarks' && !this.showRemarks) return -1;

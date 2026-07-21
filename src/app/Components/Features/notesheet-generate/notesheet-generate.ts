@@ -1641,6 +1641,14 @@ export class NotesheetGenerateComponent implements OnInit {
         return col.width ?? this.getDefaultColWidth();
     }
 
+    /** Explicitly set a column's width as a percentage (3–80). Renders live and persists on save. */
+    setColWidth(col: MemberColumnDef, value: number | string): void {
+        const n = Number(value);
+        if (isNaN(n)) return;
+        col.width = Math.max(3, Math.min(80, Math.round(n * 10) / 10));
+        this.columnsAreDefault = false;
+    }
+
     // ── Merge Columns ─────────────────────────────────────────────────────
 
     openMergeColumnDialog(): void {
@@ -1776,7 +1784,26 @@ export class NotesheetGenerateComponent implements OnInit {
                                 ? this.editId
                                 : (res?.data?.noteSheetId ?? res?.data?.NoteSheetId ?? res?.Data?.NoteSheetId ?? null);
 
-                            // Sync members to NoteSheetReferenceEmployee with InformationJson
+                            this.messageService.add({
+                                severity: 'success',
+                                summary: 'Note Sheet',
+                                detail: this.editMode ? 'Note Sheet updated successfully.' : 'Note Sheet generated successfully.'
+                            });
+                            this.isSubmitting = false;
+
+                            // Save → jump straight to preview mode for the saved note-sheet.
+                            const goToPreview = () => {
+                                if (noteSheetId) {
+                                    this.router.navigate(['/notesheet-preview/general'], { queryParams: { id: noteSheetId } });
+                                } else if (this.editMode) {
+                                    this.router.navigate(['/notesheet-list/draft']);
+                                } else {
+                                    this.resetForm();
+                                }
+                            };
+
+                            // Sync members to NoteSheetReferenceEmployee, then open the preview so it
+                            // reflects the freshly-synced members.
                             if (noteSheetId) {
                                 const refApi = `${environment.apis.core}/NoteSheetReferenceEmployee`;
                                 const employees = this.membersData.members.map(m => ({
@@ -1793,20 +1820,14 @@ export class NotesheetGenerateComponent implements OnInit {
                                     updatedBy: payload.createdBy ?? payload.lastUpdatedBy ?? 'system'
                                 };
                                 this.http.post(refApi + '/Sync', syncPayload).subscribe({
-                                    error: () => this.messageService.add({ severity: 'warn', summary: 'Warning', detail: 'Saved but failed to sync members.' })
+                                    next: () => goToPreview(),
+                                    error: () => {
+                                        this.messageService.add({ severity: 'warn', summary: 'Warning', detail: 'Saved but failed to sync members.' });
+                                        goToPreview();
+                                    }
                                 });
-                            }
-
-                            this.messageService.add({
-                                severity: 'success',
-                                summary: 'Note Sheet',
-                                detail: this.editMode ? 'Note Sheet updated successfully.' : 'Note Sheet generated successfully.'
-                            });
-                            this.isSubmitting = false;
-                            if (this.editMode) {
-                                this.router.navigate(['/notesheet-list/draft']);
                             } else {
-                                this.resetForm();
+                                goToPreview();
                             }
                         },
                         error: (err) => {

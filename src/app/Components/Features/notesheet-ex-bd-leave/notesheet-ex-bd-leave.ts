@@ -1153,8 +1153,8 @@ export class NotesheetExBdLeaveComponent implements OnInit {
             if (this.editMode && this.editId != null) (payload as any).noteSheetId = this.editId;
             const api = `${environment.apis.core}/NoteSheetInfo`;
             const endpoint = this.editMode && this.editId != null ? '/UpdateAsyn' : '/SaveAsyn';
-            this.http.post(api + endpoint, payload).subscribe({
-                next: () => {
+            this.http.post<any>(api + endpoint, payload).subscribe({
+                next: (resp) => {
                     this.messageService.add({
                         severity: 'success',
                         summary: 'Note Sheet',
@@ -1163,7 +1163,15 @@ export class NotesheetExBdLeaveComponent implements OnInit {
                             : 'Ex-BD Leave Note Sheet generated successfully.'
                     });
                     this.isSubmitting = false;
-                    this.router.navigate(['/notesheet-list/draft-ex-bd-leave']);
+                    const savedId = this.editMode && this.editId != null
+                        ? this.editId
+                        : (resp?.data?.noteSheetId ?? resp?.data?.NoteSheetId ?? null);
+                    // Save → jump straight to preview mode for the saved note-sheet.
+                    if (savedId != null && savedId > 0) {
+                        this.router.navigate(['/notesheet-preview/exbd'], { queryParams: { id: savedId } });
+                    } else {
+                        this.router.navigate(['/notesheet-list/draft-ex-bd-leave']);
+                    }
                 },
                 error: (err) => {
                     const detail = err?.error?.message || err?.message || 'Failed to generate note sheet.';

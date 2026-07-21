@@ -34,7 +34,7 @@ import { JsReportService } from '@/services/jsreport.service';
 import {
     Document, Packer, Paragraph, TextRun, Table, TableRow, TableCell,
     WidthType, BorderStyle, AlignmentType, PageOrientation, ImageRun,
-    VerticalAlign, TableLayoutType, HeightRule
+    VerticalAlign, TableLayoutType, HeightRule, TabStopType
 } from 'docx';
 import { saveAs } from 'file-saver';
 import type {
@@ -1102,6 +1102,13 @@ export class NotesheetPreviewGeneralComponent extends NotesheetPreviewBase imple
         return col.width ?? this.defaultColWidthByKey[col.key] ?? this.getDefaultColWidth(this.editMembersData.columns.length);
     }
 
+    /** Explicitly set a column's width as a percentage (3–80). Renders live and persists on save. */
+    setColWidth(col: MemberColumnDef, value: number | string): void {
+        const n = Number(value);
+        if (isNaN(n)) return;
+        col.width = Math.max(3, Math.min(80, Math.round(n * 10) / 10));
+    }
+
     getPreviewColWidth(col: { key: string; width?: number }): number {
         return col.width ?? this.defaultColWidthByKey[col.key] ?? this.getDefaultColWidth(this.previewMembersColumns.length);
     }
@@ -1135,6 +1142,16 @@ export class NotesheetPreviewGeneralComponent extends NotesheetPreviewBase imple
     getMemberColHeader(col: { key: string; label: string }): string {
         if (this.isEnglish()) return col.label;
         return this.memberColHeaderBN[col.key] ?? col.label;
+    }
+
+    /** Column keys that hold a person's name — their cells are left-aligned. */
+    private readonly nameColumnKeys = ['nameEnglish', 'nameBN', 'formattedName', 'formattedNameBN'];
+
+    /** True for the members-table "name" column (direct or merged) so its cells
+     *  can start from the left instead of centered. */
+    isNameColumn(col: { key: string; mergedFrom?: string[] }): boolean {
+        if (this.nameColumnKeys.includes(col.key)) return true;
+        return !!col.mergedFrom?.some(k => this.nameColumnKeys.includes(k));
     }
 
     /** Auto serial for members table rows: Bangla numerals when Bangla, English otherwise */
@@ -1898,8 +1915,6 @@ html, body { margin: 0; padding: 0; background: transparent; }
         const csTbl = bn ? tblSize : undefined;
         const csSig = bn ? sigSize : undefined;
         const titleHdrSize = titleSize + 2;   // 10pt — NOTE SHEET / মন্তব্য পত্র (HEADER — kept)
-        const noDateSize = bodySize - 2;      // 9pt — notesheet no + date
-        const csNoDate = bn ? noDateSize : undefined;
         const lang = bn ? { value: 'bn-BD', bidirectional: 'bn-BD' } : undefined;
 
         // Page size follows the selected option (A4 default / Legal). Margins are
@@ -1922,12 +1937,19 @@ html, body { margin: 0; padding: 0; background: transparent; }
             alignment: AlignmentType.CENTER, spacing: { before: 0, after: 100 }
         }));
 
-        // Notesheet number (8pt — same as body)
-        if (this.noteSheet?.noteSheetNo) {
+        // Notesheet number (left) + date (right, on the same line via a right tab stop)
+        if (this.noteSheet?.noteSheetNo || this.noteSheet?.noteSheetDate) {
+            const numDateChildren: TextRun[] = [];
+            if (this.noteSheet?.noteSheetNo) {
+                numDateChildren.push(new TextRun({ text: this.noteSheet.noteSheetNo, size: bodySize, sizeComplexScript: csBody, font, language: lang }));
+            }
+            if (this.noteSheet?.noteSheetDate) {
+                numDateChildren.push(new TextRun({ text: '\t', size: bodySize, sizeComplexScript: csBody, font, language: lang }));
+                numDateChildren.push(new TextRun({ text: `${model.dateLabel}${model.dateValue}`, size: bodySize, sizeComplexScript: csBody, font, language: lang }));
+            }
             mainChildren.push(new Paragraph({
-                children: [
-                    new TextRun({ text: this.noteSheet.noteSheetNo, size: bodySize, sizeComplexScript: csBody, font, language: lang })
-                ],
+                tabStops: [{ type: TabStopType.RIGHT, position: wordCellWidth - 280 }],
+                children: numDateChildren,
                 indent: { left: 40 }, spacing: { before: 60, after: 40 }
             }));
         }
@@ -1965,14 +1987,6 @@ html, body { margin: 0; padding: 0; background: transparent; }
                     indent: { left: 480 }, spacing: { after: 40 }
                 }));
             }
-        } else if (this.noteSheet?.noteSheetDate) {
-            mainChildren.push(new Paragraph({
-                children: [
-                    new TextRun({ text: model.dateLabel, bold: true, size: noDateSize, sizeComplexScript: csNoDate, font, language: lang }),
-                    new TextRun({ text: model.dateValue, size: noDateSize, sizeComplexScript: csNoDate, font, language: lang })
-                ],
-                indent: { left: 40 }, spacing: { after: 80 }
-            }));
         }
 
         // Main Text — one numbered section per block (১।, ২।, …). The serial is
@@ -2051,7 +2065,8 @@ html, body { margin: 0; padding: 0; background: transparent; }
                     children: [slCell, ...cols.map((c, ci) => {
                         let val = c.mergedFrom ? c.mergedFrom.map((k: string) => row[k] || '').filter(Boolean).join(' ') : (row[c.key] || '');
                         val = convertDigits(val);
-                        return new TableCell({ width: mkWidth(colPcts[ci]), children: [new Paragraph({ children: [new TextRun({ text: val, size: tblSize, sizeComplexScript: csTbl, font, language: lang })], alignment: AlignmentType.CENTER })], borders: { top: thinBorder, bottom: thinBorder, left: thinBorder, right: thinBorder } });
+                        const cellAlign = this.isNameColumn(c) ? AlignmentType.LEFT : AlignmentType.CENTER;
+                        return new TableCell({ width: mkWidth(colPcts[ci]), children: [new Paragraph({ children: [new TextRun({ text: val, size: tblSize, sizeComplexScript: csTbl, font, language: lang })], alignment: cellAlign })], borders: { top: thinBorder, bottom: thinBorder, left: thinBorder, right: thinBorder } });
                     })]
                 });
             });

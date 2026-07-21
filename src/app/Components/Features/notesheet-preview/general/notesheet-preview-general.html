@@ -260,6 +260,14 @@
                                                             <i class="pi pi-times"></i>
                                                         </button>
                                                     </div>
+                                                    <div class="ns-edit-col-width" title="Column width (%)"
+                                                         (click)="$event.stopPropagation()" (mousedown)="$event.stopPropagation()">
+                                                        <button type="button" class="ns-edit-col-width-btn" (click)="setColWidth(col, getEditColWidth(col) - 1)" title="Narrower">−</button>
+                                                        <input type="number" min="3" max="80" step="0.5"
+                                                            [ngModel]="getEditColWidth(col)" (ngModelChange)="setColWidth(col, $event)" [ngModelOptions]="{standalone:true}" />
+                                                        <span class="ns-edit-col-width-pct">%</span>
+                                                        <button type="button" class="ns-edit-col-width-btn" (click)="setColWidth(col, getEditColWidth(col) + 1)" title="Wider">+</button>
+                                                    </div>
                                                     <span style="position:absolute;top:0;right:-2px;bottom:0;width:5px;cursor:col-resize;z-index:1;" (mousedown)="onResizeStart(ci, $event)"></span>
                                                 </th>
                                             }
@@ -387,8 +395,11 @@
                     <div style="border-bottom:1.5px solid #000; display:inline-block; padding-bottom:2px;">{{ getOrgHeaderLine2() }}</div>
                 </div>
 
-                <div class="ns-notesheet-no" *ngIf="noteSheet.noteSheetNo" style="padding:4px 2px 2px 4px; font-size:10pt;">
-                    {{ noteSheet.noteSheetNo }}
+                <!-- Notesheet no (left) + date (right), same line -->
+                <div class="ns-notesheet-no" *ngIf="noteSheet.noteSheetNo || noteSheet.noteSheetDate"
+                     style="display:flex; justify-content:space-between; align-items:baseline; gap:1rem; padding:4px 2px 2px 4px; font-size:10pt;">
+                    <span>{{ noteSheet.noteSheetNo }}</span>
+                    <span *ngIf="noteSheet.noteSheetDate" style="white-space:nowrap;">{{ isEnglish() ? 'Date: ' : 'তারিখঃ ' }}{{ formatDate(noteSheet.noteSheetDate) }}</span>
                 </div>
 
                 <!-- ── Subject ── -->
@@ -396,25 +407,19 @@
                     <strong><u>{{ displaySubject }}</u></strong>
                 </div>
 
-                <!-- ── Reference / Date ── -->
-                <div class="ns-cell-ref">
-                    <ng-container *ngIf="parsedReferences.length > 0">
-                        <span class="ns-ref-key">{{ isEnglish() ? 'Reference:' : 'সূত্রঃ' }}</span>
-                        <div class="ns-ref-content">
-                            <ng-container *ngIf="parsedReferences.length === 1">
-                                {{ parsedReferences[0] }}
-                            </ng-container>
-                            <ng-container *ngIf="parsedReferences.length > 1">
-                                <div *ngFor="let ref of parsedReferences; let ri = index" class="ns-ref-item">
-                                    <span class="ns-ref-serial">{{ refSerialLabel(ri) }}</span> {{ ref }}
-                                </div>
-                            </ng-container>
-                        </div>
-                    </ng-container>
-                    <ng-container *ngIf="parsedReferences.length === 0 && noteSheet.noteSheetDate">
-                        <span class="ns-ref-key">{{ isEnglish() ? 'Date:' : 'তারিখঃ' }}</span>
-                        {{ formatDate(noteSheet.noteSheetDate) }}
-                    </ng-container>
+                <!-- ── Reference (date now sits with the notesheet no above) ── -->
+                <div class="ns-cell-ref" *ngIf="parsedReferences.length > 0">
+                    <span class="ns-ref-key">{{ isEnglish() ? 'Reference:' : 'সূত্রঃ' }}</span>
+                    <div class="ns-ref-content">
+                        <ng-container *ngIf="parsedReferences.length === 1">
+                            {{ parsedReferences[0] }}
+                        </ng-container>
+                        <ng-container *ngIf="parsedReferences.length > 1">
+                            <div *ngFor="let ref of parsedReferences; let ri = index" class="ns-ref-item">
+                                <span class="ns-ref-serial">{{ refSerialLabel(ri) }}</span> {{ ref }}
+                            </div>
+                        </ng-container>
+                    </div>
                 </div>
 
                 <!-- ── ১।..N। Main Text blocks ── -->
@@ -437,7 +442,7 @@
                         <tbody>
                             <tr *ngFor="let row of previewMembersRows; let ri = index">
                                 <td style="text-align:center;">{{ memberSerial(ri) }}</td>
-                                <td *ngFor="let col of previewMembersColumns">
+                                <td *ngFor="let col of previewMembersColumns" [style.text-align]="isNameColumn(col) ? 'left' : null">
                                     {{ formatMemberCell(row, col) }}
                                 </td>
                             </tr>

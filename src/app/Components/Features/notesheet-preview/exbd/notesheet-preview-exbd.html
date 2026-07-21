@@ -233,7 +233,7 @@
                 </div>
 
                 <!-- ── Notesheet No & Date ── -->
-                <div style="display:flex; justify-content:space-between; padding:4px 2px 2px; font-size:9pt;">
+                <div style="display:flex; justify-content:space-between; padding:4px 2px 2px; font-size:10pt;">
                     <span *ngIf="noteSheet.noteSheetNo">{{ noteSheet.noteSheetNo }}</span>
                     <span *ngIf="!noteSheet.noteSheetNo"></span>
                     <span *ngIf="noteSheet.noteSheetDate">{{ isEnglish() ? 'Date:' : 'তারিখ :' }} {{ formatDate(noteSheet.noteSheetDate) }}</span>
@@ -252,17 +252,8 @@
                             <span class="ns-ref-serial">{{ refSerialLabel(0) }}</span> {{ parsedReferences[0] }}
                         </ng-container>
                         <ng-container *ngIf="parsedReferences.length > 1 || parsedReferenceFiles[0]?.length">
-                            <div *ngFor="let ref of parsedReferences; let ri = index" class="ns-ref-item" style="display:flex; align-items:center; gap:6px;">
-                                <span><span class="ns-ref-serial">{{ refSerialLabel(ri) }}</span> {{ ref }}</span>
-                                <ng-container *ngIf="parsedReferenceFiles[ri]?.length">
-                                    <button *ngFor="let file of parsedReferenceFiles[ri]"
-                                            class="ns-ref-file-btn no-print"
-                                            (click)="downloadRefFile(file)"
-                                            pTooltip="Download {{ file.fileName }}">
-                                        <i class="pi pi-download"></i>
-                                        <span class="ns-ref-file-name">{{ file.fileName }}</span>
-                                    </button>
-                                </ng-container>
+                            <div *ngFor="let ref of parsedReferences; let ri = index" class="ns-ref-item">
+                                <span class="ns-ref-serial">{{ refSerialLabel(ri) }}</span> {{ ref }}
                             </div>
                         </ng-container>
                     </div>
@@ -341,7 +332,11 @@
 
     <!-- ── Supporting Documents (attached files from references) ── -->
     <div class="ns-supporting-docs no-print" *ngIf="allReferenceFiles.length > 0">
-        <h3><i class="pi pi-paperclip"></i> Supporting Documents</h3>
+        <div style="display:flex; align-items:center; justify-content:space-between; gap:1rem; flex-wrap:wrap;">
+            <h3><i class="pi pi-paperclip"></i> Supporting Documents</h3>
+            <p-button icon="pi pi-download" label="Download All" size="small" [outlined]="true"
+                      (onClick)="downloadAllRefFiles()" pTooltip="Download all attached files"></p-button>
+        </div>
         <div class="ns-docs-list">
             <div class="ns-doc-item" *ngFor="let file of allReferenceFiles">
                 <i class="pi pi-file"></i>

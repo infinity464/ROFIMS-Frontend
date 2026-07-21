@@ -271,6 +271,19 @@
                             <i class="pi pi-times"></i>
                           </button>
                         </div>
+                        <div class="members-table__col-width" title="Column width (%)"
+                             (click)="$event.stopPropagation()" (mousedown)="$event.stopPropagation()">
+                          <button type="button" class="members-table__col-width-btn"
+                                  (click)="setColWidth(col, getColWidth(col) - 1)" title="Narrower">−</button>
+                          <input
+                            type="number" min="3" max="80" step="0.5"
+                            [ngModel]="getColWidth(col)"
+                            (ngModelChange)="setColWidth(col, $event)"
+                            [ngModelOptions]="{standalone: true}" />
+                          <span class="members-table__col-width-pct">%</span>
+                          <button type="button" class="members-table__col-width-btn"
+                                  (click)="setColWidth(col, getColWidth(col) + 1)" title="Wider">+</button>
+                        </div>
                         <span class="members-table__col-resize" (mousedown)="onResizeStart(ci, $event)"></span>
                       </th>
                     }

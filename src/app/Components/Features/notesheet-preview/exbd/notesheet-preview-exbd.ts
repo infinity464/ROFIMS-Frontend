@@ -157,6 +157,16 @@ export class NotesheetPreviewExbdComponent extends NotesheetPreviewBase implemen
         });
     }
 
+    /** Download every attached reference file (from the bottom Supporting Documents section). */
+    downloadAllRefFiles(): void {
+        const files = this.allReferenceFiles;
+        if (!files.length) {
+            this.messageService.add({ severity: 'info', summary: 'No files', detail: 'There are no attached files to download.' });
+            return;
+        }
+        files.forEach(file => this.downloadRefFile(file));
+    }
+
     // ── Edit state ─────────────────────────────────────────────
     editing = false;
     saving = false;
@@ -1042,7 +1052,17 @@ html, body { margin: 0; padding: 0; background: transparent; }
 
 /* Match the on-screen gap between the left border and the text
    (see notesheet-preview-exbd.scss → :host .ns-main-col). */
-.pdf-flow .ns-main-col { padding-left: 5px; }
+.pdf-flow .ns-main-col { padding-left: 5px; padding-right: 5px; }
+
+/* Uniform body size — everything except the NOTE SHEET title renders at 10pt,
+   matching the on-screen preview. The collected page styles pin some blocks
+   smaller (7-9pt); these higher-specificity rules restore uniformity. The title
+   (.ns-title-*) keeps its own inline size, so it is unaffected. */
+.pdf-flow .ns-para, .pdf-flow .ns-para-no,
+.pdf-flow .ns-cell-ref, .pdf-flow .ns-note,
+.pdf-flow .ns-approver-role, .pdf-flow .ns-approver-left, .pdf-flow .ns-approver-remark,
+.pdf-flow .ns-sig-name, .pdf-flow .ns-sig-rank, .pdf-flow .ns-sig-paren,
+.pdf-flow .ns-sig-appoint, .pdf-flow .ns-sig-date { font-size: 10pt; }
 
 .ns-posting-table tr,
 .ns-approver-section,
@@ -1270,12 +1290,13 @@ html, body { margin: 0; padding: 0; background: transparent; }
         const font = bn
             ? { ascii: 'Times New Roman', hAnsi: 'Times New Roman', cs: 'SolaimanLipi', hint: 'cs' as const }
             : 'Times New Roman';
-        // Font sizes (half-points): Header=10pt, Content=8pt, Signature=9pt
-        const hdrSize = 20;        // 10pt - org header, title
-        const contentSize = 16;    // 8pt  - body content
-        const sigSize = 18;        // 9pt  - signature/approver block
-        const titleHdrSize = hdrSize + 2;     // 11pt — NOTE SHEET / মন্তব্য পত্র (+1pt)
-        const noDateSize = contentSize - 2;   // 7pt  — notesheet no + date (-1pt)
+        // Font sizes (half-points). Everything except the NOTE SHEET title is
+        // uniform at the body size (10pt), matching the on-screen preview.
+        const hdrSize = 20;                   // 10pt - org header
+        const contentSize = 20;               // 10pt - body content (uniform base)
+        const sigSize = contentSize;          // signature/approver = body size
+        const noDateSize = contentSize;       // notesheet no + date = body size
+        const titleHdrSize = hdrSize + 2;     // 11pt — NOTE SHEET / মন্তব্য পত্র (header)
         const csContent = bn ? contentSize : undefined;
         const csNoDate = bn ? noDateSize : undefined;
         const csSig = bn ? sigSize : undefined;
@@ -1520,8 +1541,8 @@ html, body { margin: 0; padding: 0; background: transparent; }
         const thinBorder = { style: BorderStyle.SINGLE, size: 1, color: '000000' };
         const cellBorders = { top: thinBorder, bottom: thinBorder, left: thinBorder, right: thinBorder };
         const lang = bn ? { value: 'bn-BD', bidirectional: 'bn-BD' } : undefined;
-        const contentSize = 16; // 8pt
-        const csContent = bn ? 16 : undefined;
+        const contentSize = 20; // 10pt — uniform body size
+        const csContent = bn ? 20 : undefined;
 
         for (const b of blocks) {
             if (b.type === 'table' && b.rows?.length) {
