@@ -1016,6 +1016,10 @@ export class MovementInfoComponent implements OnInit {
 
     // ── Submit ────────────────────────────────────────────────────────────
     submit() {
+        // Guard against double submission while a save is already in flight.
+        if (this.saving) {
+            return;
+        }
         if (this.form.invalid) {
             this.form.markAllAsTouched();
             this.messageService.add({

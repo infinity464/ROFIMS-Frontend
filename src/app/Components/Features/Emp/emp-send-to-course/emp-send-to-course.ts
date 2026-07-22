@@ -328,6 +328,8 @@ export class EmpSendToCourseComponent implements OnInit {
     }
 
     addToDraft(): void {
+        // Guard against double submission while a save is already in flight.
+        if (this.isAddingToDraft) return;
         if (!this.courseNo?.trim()) {
             this.messageService.add({ severity: 'warn', summary: 'Warning', detail: 'CourseNo is required.' });
             return;

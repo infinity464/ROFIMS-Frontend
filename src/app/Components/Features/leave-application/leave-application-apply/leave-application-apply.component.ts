@@ -644,6 +644,8 @@ export class LeaveApplicationApplyComponent implements OnInit {
     }
 
     submitForApproval(): void {
+        // Guard against double submission while a save is already in flight.
+        if (this.isSaving) return;
         if (this.editMode ? !this.canUpdate : !this.canInsert) {
             this.messageService.add({ severity: 'warn', summary: 'Permission Denied', detail: 'You do not have permission to perform this action.' });
             return;
@@ -662,6 +664,8 @@ export class LeaveApplicationApplyComponent implements OnInit {
 
     /** Saves the current form as a Draft (status 1) without triggering the approval workflow. */
     saveDraft(): void {
+        // Guard against double submission while a save is already in flight.
+        if (this.isSaving) return;
         if (this.editMode ? !this.canUpdate : !this.canInsert) {
             this.messageService.add({ severity: 'warn', summary: 'Permission Denied', detail: 'You do not have permission to perform this action.' });
             return;

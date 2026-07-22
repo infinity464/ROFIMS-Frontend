@@ -327,6 +327,8 @@ export class ExBdLeaveApplyComponent implements OnInit {
     }
 
     submit(): void {
+        // Guard against double submission while a save is already in flight.
+        if (this.isSubmitting) return;
         if (this.form.invalid) {
             Object.values(this.form.controls).forEach(c => c.markAsTouched());
             return;

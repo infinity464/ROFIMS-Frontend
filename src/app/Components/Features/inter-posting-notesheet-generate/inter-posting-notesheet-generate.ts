@@ -513,6 +513,8 @@ export class InterPostingNotesheetGenerateComponent implements OnInit {
     }
 
     submit(): void {
+        // Guard against double submission while a save is already in flight.
+        if (this.isSubmitting) return;
         if (this.form.invalid) {
             this.form.markAllAsTouched();
             this.messageService.add({ severity: 'warn', summary: 'Validation', detail: 'Please select Draft Inter Posting List and Date.' });

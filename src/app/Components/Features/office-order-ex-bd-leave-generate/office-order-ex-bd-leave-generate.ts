@@ -511,6 +511,8 @@ export class OfficeOrderExBdLeaveGenerateComponent implements OnInit {
     }
 
     onGenerate(): void {
+        // Guard against double submission while a save is already in flight.
+        if (this.saving) return;
         if (!this.selectedNoteSheetId) {
             this.messageService.add({ severity: 'warn', summary: 'Warning', detail: 'Please select a notesheet.' });
             return;

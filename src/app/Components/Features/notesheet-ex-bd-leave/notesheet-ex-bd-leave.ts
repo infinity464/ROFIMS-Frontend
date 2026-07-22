@@ -1120,6 +1120,8 @@ export class NotesheetExBdLeaveComponent implements OnInit {
     }
 
     async submit(): Promise<void> {
+        // Guard against double submission while a save is already in flight.
+        if (this.isSubmitting) return;
         if (this.form.invalid) {
             this.form.markAllAsTouched();
             this.messageService.add({ severity: 'warn', summary: 'Validation', detail: 'Please fill required fields.' });
@@ -1538,6 +1540,8 @@ export class NotesheetExBdLeaveComponent implements OnInit {
 
     saveViewChanges(): void {
         if (!this.viewNoteSheet) return;
+        // Guard against double submission while a save is already in flight.
+        if (this.savingView) return;
         this.savingView = true;
         const resolvedSubject = this.getSubjectLabel(this.editExBdLeaveSubjectId) || this.editSubject;
         const payload = {
