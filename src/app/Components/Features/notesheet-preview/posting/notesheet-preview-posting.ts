@@ -2118,7 +2118,7 @@ html, body { margin: 0; padding: 0; background: transparent; }
             const pageUsable = isA4 ? 10772 : 11106;
             const cellMargins = { top: 30, bottom: 30, left: 0, right: 0 };
             const cellSpacing = { before: 0, after: 0, line: 220 };
-            const hdrParaFn = (text: string) => new Paragraph({ children: [new TextRun({ text, size: TBL_HDR_SZ, sizeComplexScript: bn ? TBL_HDR_SZ : undefined, font, language: lang })], alignment: AlignmentType.CENTER, spacing: cellSpacing });
+            const hdrParaFn = (text: string) => new Paragraph({ children: [new TextRun({ text, bold: true, size: TBL_HDR_SZ, sizeComplexScript: bn ? TBL_HDR_SZ : undefined, font, language: lang })], alignment: AlignmentType.CENTER, spacing: cellSpacing });
             const dataCellFn = (v: string, w: number, align: (typeof AlignmentType)[keyof typeof AlignmentType] = AlignmentType.CENTER) => {
                 const lines = v.split('\n');
                 const cellParas = lines.map(line => new Paragraph({ children: [new TextRun({ text: line, size: TBL_SZ, sizeComplexScript: bn ? TBL_SZ : undefined, font, language: lang })], alignment: align, spacing: cellSpacing }));

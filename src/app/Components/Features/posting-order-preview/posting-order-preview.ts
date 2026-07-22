@@ -1752,7 +1752,7 @@ html, body { margin: 0; padding: 0; background: transparent; }
         };
         const colW = buildColW();
 
-        const hdrPara = (text: string) => new Paragraph({ children: [new TextRun({ text, size: tblHdrSize, sizeComplexScript: tblHdrCsSize, font, language: lang })], alignment: AlignmentType.CENTER });
+        const hdrPara = (text: string) => new Paragraph({ children: [new TextRun({ text, bold: true, size: tblHdrSize, sizeComplexScript: tblHdrCsSize, font, language: lang })], alignment: AlignmentType.CENTER });
         const hdrCell = (text: string, ci: number, extra?: Partial<ConstructorParameters<typeof TableCell>[0]>) => new TableCell({
             children: [hdrPara(text)], borders: cellBorders, width: { size: colW[ci], type: WidthType.DXA }, ...extra
         });

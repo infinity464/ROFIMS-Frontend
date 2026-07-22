@@ -112,10 +112,8 @@ export class NoteSheetNumberConfigComponent implements OnInit {
         const prefix = (raw as string).replace(/[\s\/\-]+$/, '');
         const startNumber = this.configForm.get('startNumber')?.value || '10001';
         if (this.configForm.get('includeDateInNumber')?.value) {
-            const now = new Date();
-            const year = now.getFullYear();
-            const month = String(now.getMonth() + 1).padStart(2, '0');
-            return `${prefix}/${year}/${month}/${startNumber}`;
+            const year = new Date().getFullYear();
+            return `${prefix}/${year}/${startNumber}`;
         }
         return `${prefix}/${startNumber}`;
     }
