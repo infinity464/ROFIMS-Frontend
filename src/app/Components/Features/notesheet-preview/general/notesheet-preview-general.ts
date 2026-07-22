@@ -357,7 +357,7 @@ export class NotesheetPreviewGeneralComponent extends NotesheetPreviewBase imple
     getRefSerialLabel(index: number): string {
         if (this.editTextType === 'bn') {
             const banglaLetters = ['ক', 'খ', 'গ', 'ঘ', 'ঙ', 'চ', 'ছ', 'জ', 'ঝ', 'ঞ', 'ট', 'ঠ', 'ড', 'ঢ', 'ণ', 'ত', 'থ', 'দ', 'ধ', 'ন'];
-            return (banglaLetters[index] ?? String(index + 1)) + '.';
+            return (banglaLetters[index] ?? String(index + 1)) + '।';
         }
         return String.fromCharCode(65 + index) + '.';
     }
@@ -1199,7 +1199,7 @@ export class NotesheetPreviewGeneralComponent extends NotesheetPreviewBase imple
     refSerialLabel(index: number): string {
         if (!this.isEnglish()) {
             const banglaLetters = ['ক', 'খ', 'গ', 'ঘ', 'ঙ', 'চ', 'ছ', 'জ', 'ঝ', 'ঞ', 'ট', 'ঠ', 'ড', 'ঢ', 'ণ', 'ত', 'থ', 'দ', 'ধ', 'ন'];
-            return (banglaLetters[index] ?? String(index + 1)) + '.';
+            return (banglaLetters[index] ?? String(index + 1)) + '।';
         }
         return String.fromCharCode(97 + index) + '.'; // a, b, c...
     }

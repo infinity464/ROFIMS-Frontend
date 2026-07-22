@@ -2507,7 +2507,10 @@ html, body { margin: 0; padding: 0; background: transparent; }
         const sid = emp.serviceId || '';
         const prefix = bn ? (emp.prefixNameBN || emp.prefixName || '') : (emp.prefixName || '');
         const displayId = bn && sid ? this.toBanglaDigits(sid) : sid;
-        return prefix ? `${prefix}-${displayId}` : (displayId || '-');
+        if (!prefix) return displayId || '-';
+        const full = `${prefix}-${displayId}`;
+        // Long IDs: put the prefix (with dash) on its own line, number on the next.
+        return full.length > 10 ? `${prefix}-\n${displayId}` : full;
     }
 
     private base64ToBytes(dataUrl: string): Uint8Array {

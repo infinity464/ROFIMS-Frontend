@@ -39,6 +39,21 @@
    keep their own spacing. Loaded after notesheet-preview.scss, so it wins. */
 .ns-para-no {
     margin-right: 0.8em;
+    font-weight: normal;   /* serial numbers (১। ২। …) not bold */
+}
+
+/* Reference serials (ক। খ। …) not bold either. */
+.ns-ref-serial {
+    font-weight: normal;
+}
+
+/* Signature block: one size larger (9pt → 10pt) and bold. */
+.ns-sig-name,
+.ns-sig-rank,
+.ns-sig-appoint,
+.ns-sig-date {
+    font-size: 10pt;
+    font-weight: 700;
 }
 
 /* Note has no serial — give it a left gap so it lines up with the members table. */
