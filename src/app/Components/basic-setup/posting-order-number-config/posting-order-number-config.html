@@ -28,19 +28,20 @@
 
                 <!-- Member Type -->
                 <div class="field">
-                    <label for="memberTypeId" class="block mb-2">
+                    <label for="memberTypeIds" class="block mb-2">
                         Member Type <span class="text-red-500">*</span>
                     </label>
-                    <p-select
-                        id="memberTypeId"
-                        formControlName="memberTypeId"
+                    <p-multiselect
+                        id="memberTypeIds"
+                        formControlName="memberTypeIds"
                         [options]="memberTypeOptions"
                         optionLabel="label"
                         optionValue="value"
                         placeholder="Select Member Type"
+                        display="chip"
                         class="w-full">
-                    </p-select>
-                    @if (configForm.get('memberTypeId')?.invalid && configForm.get('memberTypeId')?.touched) {
+                    </p-multiselect>
+                    @if (configForm.get('memberTypeIds')?.touched && !configForm.get('memberTypeIds')?.value?.length) {
                         <small class="text-red-500 block mt-1">
                             Member Type is required
                         </small>
@@ -185,7 +186,7 @@
             <tr>
                 <td>{{ first + rowIndex + 1 }}</td>
                 <td>{{ row.postingType }}</td>
-                <td>{{ getMemberTypeLabel(row.memberTypeId) }}</td>
+                <td>{{ getMemberTypeLabel(row.memberTypeIds) }}</td>
                 <td>{{ row.prefix }}</td>
                 <td>{{ row.prefixBN || '-' }}</td>
                 <td>{{ row.startNumber }}</td>

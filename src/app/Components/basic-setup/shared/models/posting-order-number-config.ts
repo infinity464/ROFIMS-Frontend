@@ -1,7 +1,7 @@
 export interface PostingOrderNumberConfigModel {
     configId: number;
     postingType: string;
-    memberTypeId: number;
+    memberTypeIds: string;
     prefix: string;
     prefixBN: string;
     startNumber: number;

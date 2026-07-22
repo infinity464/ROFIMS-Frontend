@@ -56,6 +56,13 @@
               <small class="form-error">Note Sheet No Config is required</small>
             }
           </div>
+          @if (!editMode) {
+          <div class="form-field" style="flex: 0 1 200px;">
+            <label class="form-label">Static Word</label>
+            <input pInputText formControlName="noteSheetNoStaticWord" placeholder="Optional word" class="w-full" maxlength="50" />
+            <small class="text-500">Added before the serial (prefix/word/serial)</small>
+          </div>
+          }
         </div>
 
         <!-- Row 2: Reference Number (full width) -->

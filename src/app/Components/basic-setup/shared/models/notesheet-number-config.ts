@@ -1,7 +1,7 @@
 export interface NoteSheetNumberConfigModel {
     configId: number;
     noteSheetType: string;
-    memberTypeId: number;
+    memberTypeIds: string;
     prefix: string;
     prefixBN: string;
     startNumber: number;

@@ -113,6 +113,14 @@
             }
           </div>
 
+          @if (!editMode) {
+          <div class="form-field" style="flex: 0 1 200px;">
+            <label class="form-label">Static Word</label>
+            <input pInputText formControlName="noteSheetNoStaticWord" placeholder="Optional word" class="w-full" maxlength="50" />
+            <small class="text-500">Added before the serial (prefix/word/serial)</small>
+          </div>
+          }
+
           <div class="form-field" style="flex: 2 1 0%;">
             <label class="form-label">Subject <span class="form-label-required">*</span></label>
             @if (editMode) {

@@ -73,6 +73,8 @@ export class AddDraftInterPostingComponent implements OnInit {
     employeeModalHasNoteSheet = false;
     /** Detail id currently being removed (for per-row button loading state). */
     removingMemberId: number | null = null;
+    /** Employee id currently being removed from the draft top list (per-row loading state). */
+    removingEmployeeId: number | null = null;
 
     /** All active Member Types (CommonCode 'EmployeeType'); `memberTypeOptions` exposes the accessible subset. */
     allMemberTypeOptions: { label: string; value: number }[] = [];
@@ -296,20 +298,23 @@ export class AddDraftInterPostingComponent implements OnInit {
 
     private generateDraftPostingListNo(): void {
         const now = new Date();
-        const datePrefix = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}`;
+        const dd = String(now.getDate()).padStart(2, '0');
+        const mm = String(now.getMonth() + 1).padStart(2, '0');
+        const yyyy = now.getFullYear();
+        const datePrefix = `${dd}/${mm}/${yyyy}`;
 
         let maxSeq = 0;
         for (const m of this.draftMastersList) {
             const no = m.draftInterPostingNo ?? '';
-            if (!no.startsWith(datePrefix + '/')) continue;
-            const parts = no.substring(datePrefix.length + 1).split('/');
+            if (!no.startsWith(datePrefix + '//')) continue;
+            const parts = no.substring(datePrefix.length + 2).split('/');
             const seq = parseInt(parts[0], 10);
             if (!isNaN(seq) && seq > maxSeq) maxSeq = seq;
         }
 
         const seq = String(maxSeq + 1).padStart(3, '0');
         const rand = String(Math.floor(1000 + Math.random() * 9000));
-        this.draftPostingListNo = `${datePrefix}/${seq}/${rand}`;
+        this.draftPostingListNo = `${datePrefix}//${seq}/${rand}`;
     }
 
     viewEmployees(row: DraftInterPostingMasterDto): void {
@@ -329,6 +334,48 @@ export class AddDraftInterPostingComponent implements OnInit {
             error: () => {
                 this.employeeModalLoading = false;
                 this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to load employees.' });
+            }
+        });
+    }
+
+    /** Remove an employee from the inter-posting draft top list (add mode). Clears their
+     *  sending status so they leave this list and return to the Presently Serving list. */
+    removeFromDraftList(row: EmployeeList): void {
+        if (!this.canDelete) {
+            this.messageService.add({ severity: 'warn', summary: 'Permission Denied', detail: 'You do not have permission to perform this action.' });
+            return;
+        }
+        const name = row.fullNameEN || 'this member';
+        this.confirmationService.confirm({
+            header: 'Remove from Draft',
+            message: `Remove ${name} from the list? They will return to the Presently Serving list.`,
+            icon: 'pi pi-exclamation-triangle',
+            acceptButtonProps: { label: 'Remove', severity: 'danger' },
+            rejectButtonProps: { label: 'Cancel', severity: 'secondary', outlined: true },
+            accept: () => this.doRemoveFromDraftList(row)
+        });
+    }
+
+    private doRemoveFromDraftList(row: EmployeeList): void {
+        this.removingEmployeeId = row.employeeID;
+        // Empty status = "not sent"; the member becomes available again in Presently Serving.
+        this.employeeListService.setIsSendingNotesheetStatus(row.employeeID, '').subscribe({
+            next: (res: { statusCode?: number; description?: string }) => {
+                this.removingEmployeeId = null;
+                const ok = (res?.statusCode ?? 200) === 200;
+                this.messageService.add({
+                    severity: ok ? 'success' : 'warn',
+                    summary: 'Remove',
+                    detail: res?.description ?? (ok ? 'Member returned to Presently Serving list.' : 'Remove failed.')
+                });
+                if (ok) {
+                    this.selectedRows = this.selectedRows.filter((r) => r.employeeID !== row.employeeID);
+                    this.loadData();
+                }
+            },
+            error: (err: { error?: { description?: string }; message?: string }) => {
+                this.removingEmployeeId = null;
+                this.messageService.add({ severity: 'error', summary: 'Remove', detail: err?.error?.description ?? err?.message ?? 'Failed to remove.' });
             }
         });
     }
