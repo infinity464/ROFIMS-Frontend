@@ -30,7 +30,7 @@ import { FlexibleDateDirective } from '@/shared/directives/flexible-date.directi
     imports: [CommonModule, FormsModule, RouterModule, TableModule, ButtonModule, SelectModule, InputTextModule, DatePickerModule, CheckboxModule, Toast, TooltipModule, FlexibleDateDirective],
     providers: [MessageService],
     templateUrl: './new-joinee-sending-notesheet.html',
-    styleUrls: ['./new-joinee-sending-notesheet.scss', '../employee-reports/report-theme-common.scss'],
+    styleUrls: ['./new-joinee-sending-notesheet.scss'],
 })
 export class NewJoineeSendingNotesheet implements OnInit {
     list: EmployeeList[] = [];

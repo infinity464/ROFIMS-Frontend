@@ -1,11 +1,12 @@
 <p-toast position="top-center"></p-toast>
 
 <div class="employee-reports-page">
-    <!-- Title + filter in same card -->
-    <div class="report-type-card">
-        <div class="report-page-header">
+    <!-- Filter card -->
+    <div class="report-filter-card">
+        <div class="report-filter-card-title">
             <h1 class="report-page-title">New Joinee Sending Notesheet</h1>
         </div>
+
         <div class="report-filter-header" [class.open]="filterOpen" (click)="toggleFilter()" role="button" tabindex="0" (keydown.enter)="toggleFilter()" (keydown.space)="toggleFilter()">
             <div class="report-filter-header-left">
                 <div class="report-filter-icon">
@@ -158,39 +159,28 @@
                 </div>
 
                 <div class="report-filter-actions">
-                    <button type="button" class="report-btn-clear" (click)="clearFilters()">
-                        <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
-                            <path d="M1 1l10 10M11 1L1 11" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
-                        </svg>
-                        Clear
-                    </button>
-                    <button type="button" class="report-btn-search" (click)="loadData()" [disabled]="loading">
-                        <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-                            <circle cx="6" cy="6" r="4.5" stroke="white" stroke-width="1.6"/>
-                            <path d="M10 10l2.5 2.5" stroke="white" stroke-width="1.6" stroke-linecap="round"/>
-                        </svg>
-                        Search
-                    </button>
+                    <button type="button" class="report-btn-secondary" (click)="clearFilters()"><i class="pi pi-times mr-1"></i>Clear</button>
+                    <button type="button" class="report-btn-primary" (click)="loadData()" [disabled]="loading"><i class="pi pi-search mr-1"></i>Search</button>
                 </div>
             </div>
         </div>
     </div>
 
     <!-- Results card -->
-    <div class="report-results-card">
-        <div class="report-results-header">
-            <div class="report-results-title">
+    <div class="report-filter-card">
+        <div class="psm-results-header">
+            <h3 class="report-panel-title">
                 Results
                 <span class="report-results-count">{{ filteredList.length }} record(s)</span>
-            </div>
-            <div class="report-results-actions">
+            </h3>
+            <div class="njn-results-actions">
                 @if (selectedCount > 0) {
                     <button type="button"
-                        class="report-btn-secondary report-btn-blue report-btn-send-selected"
+                        class="report-btn-primary"
                         [disabled]="isSendingSelection"
                         [class.perm-hidden]="!canUpdate"
                         (click)="sendSelectedToPosting()">
-                        <i class="pi pi-send" style="margin-right: 6px;"></i>
+                        <i class="pi pi-send mr-1"></i>
                         Send {{ selectedCount }} to Posting
                     </button>
                     <button type="button"
