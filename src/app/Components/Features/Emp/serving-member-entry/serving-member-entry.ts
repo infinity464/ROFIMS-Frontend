@@ -237,6 +237,11 @@ export class ServingMemberEntry implements OnInit {
 
     // Save All - Employee + All Addresses
     saveAll(): void {
+        // Guard against double submission while a save is already in flight.
+        if (this.isSaving) {
+            return;
+        }
+
         if (this.postingForm.invalid) {
             Object.keys(this.postingForm.controls).forEach((key) => {
                 this.postingForm.get(key)?.markAsTouched();
@@ -296,6 +301,9 @@ export class ServingMemberEntry implements OnInit {
             return;
         }
 
+        // From here on a request will be issued — lock the Save button until the flow settles.
+        this.isSaving = true;
+
         const doSave = (profileImgsJson: string | null) => {
             this.saveEmployeeWithFilesRefs(this.formattedDataForEmployee(), null, profileImgsJson, permanentData!, presentData!, spousePermanentData, spousePresentData);
         };
@@ -308,6 +316,7 @@ export class ServingMemberEntry implements OnInit {
                     doSave(profileImagesJson);
                 },
                 error: (err) => {
+                    this.isSaving = false;
                     console.error('Error uploading profile image', err);
                     this.messageService.add({
                         severity: 'error',
@@ -443,6 +452,7 @@ export class ServingMemberEntry implements OnInit {
                         )
                     ).subscribe();
                 } else {
+                    this.isSaving = false;
                     this.messageService.add({
                         severity: 'error',
                         summary: 'Error',
@@ -451,6 +461,7 @@ export class ServingMemberEntry implements OnInit {
                 }
             },
             error: (err) => {
+                this.isSaving = false;
                 console.error('Error saving employee', err);
                 this.messageService.add({
                     severity: 'error',
@@ -553,6 +564,7 @@ export class ServingMemberEntry implements OnInit {
 
         forkJoin(saveRequests).subscribe({
             next: (results: any) => {
+                this.isSaving = false;
                 this.permanentAddress = permanent;
                 this.presentAddress = present;
                 if (spousePermanent) this.spousePermanentAddress = spousePermanent;
@@ -573,6 +585,7 @@ export class ServingMemberEntry implements OnInit {
                 this.resetForNewEntry();
             },
             error: (err: any) => {
+                this.isSaving = false;
                 console.error('Error saving addresses', err);
                 this.messageService.add({
                     severity: 'error',
@@ -651,6 +664,8 @@ export class ServingMemberEntry implements OnInit {
     newLastUnitNameEN: string = '';
     newLastUnitNameBN: string = '';
     isSavingLastUnit: boolean = false;
+    /** True while a Save All request is in flight — disables the Save button to prevent double submits. */
+    isSaving: boolean = false;
 
     constructor(
         private fb: FormBuilder,

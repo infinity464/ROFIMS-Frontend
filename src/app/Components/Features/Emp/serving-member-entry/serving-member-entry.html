@@ -698,7 +698,7 @@
         <!-- Actions -->
         <div class="form-actions">
             <p-button type="button" label="Reset" icon="pi pi-refresh" severity="secondary" [outlined]="true" styleClass="form-btn-secondary" (onClick)="onReset()"> </p-button>
-            <p-button type="button" label="Save Serving Member" icon="pi pi-check-circle" styleClass="form-btn-primary" [disabled]="isDuplicateCombo || isCheckingCombo || isDuplicateRabId || isCheckingRabId" (onClick)="saveAll()"> </p-button>
+            <p-button type="button" label="Save Serving Member" icon="pi pi-check-circle" styleClass="form-btn-primary" [loading]="isSaving" [disabled]="isSaving || isDuplicateCombo || isCheckingCombo || isDuplicateRabId || isCheckingRabId" (onClick)="saveAll()"> </p-button>
         </div>
     </div>
 </p-fluid>

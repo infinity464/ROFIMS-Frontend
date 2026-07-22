@@ -120,7 +120,7 @@
                     [label]="currentSignatureUrl ? 'Update Signature' : 'Upload Signature'"
                     icon="pi pi-upload"
                     [loading]="uploading"
-                    [disabled]="!hasImageReady"
+                    [disabled]="!hasImageReady || uploading"
                     [class.perm-hidden]="!canUpdate"
                     (onClick)="upload()">
                 </p-button>

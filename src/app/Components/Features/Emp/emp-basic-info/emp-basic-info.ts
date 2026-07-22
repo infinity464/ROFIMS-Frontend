@@ -594,6 +594,11 @@ export class EmpBasicInfo implements OnInit {
 
     // Save All - Employee + All Addresses
     saveAll(): void {
+        // Guard against double submission while a save is already in flight.
+        if (this.isSaving) {
+            return;
+        }
+
         // Validate employee form first
         if (this.postingForm.invalid) {
             Object.keys(this.postingForm.controls).forEach((key) => {
@@ -653,6 +658,9 @@ export class EmpBasicInfo implements OnInit {
         const existingRefs = this.fileReferencesForm?.getExistingFileReferences() || [];
         const filesToUpload = this.fileReferencesForm?.getFilesToUpload() || [];
 
+        // From here on a request will be issued — lock the Save button until the flow settles.
+        this.isSaving = true;
+
         const doSave = (filesRefsJson: string | null, profileImgsJson: string | null) => {
             this.saveEmployeeWithFilesRefs(this.formattedDataForEmployee(), filesRefsJson, profileImgsJson, permanentData!, presentData!, spousePermanentData, spousePresentData);
         };
@@ -678,6 +686,7 @@ export class EmpBasicInfo implements OnInit {
                     doSave(filesReferencesJson, profileImagesJson);
                 },
                 error: (err) => {
+                    this.isSaving = false;
                     console.error('Error uploading files', err);
                     this.messageService.add({
                         severity: 'error',
@@ -836,6 +845,7 @@ export class EmpBasicInfo implements OnInit {
                         )
                     ).subscribe();
                 } else {
+                    this.isSaving = false;
                     this.messageService.add({
                         severity: 'error',
                         summary: 'Error',
@@ -844,6 +854,7 @@ export class EmpBasicInfo implements OnInit {
                 }
             },
             error: (err) => {
+                this.isSaving = false;
                 console.error('Error saving/updating employee', err);
                 this.messageService.add({
                     severity: 'error',
@@ -964,6 +975,7 @@ export class EmpBasicInfo implements OnInit {
 
         forkJoin(saveRequests).subscribe({
             next: (results: any) => {
+                this.isSaving = false;
                 this.permanentAddress = permanent;
                 this.presentAddress = present;
                 if (spousePermanent) this.spousePermanentAddress = spousePermanent;
@@ -995,6 +1007,7 @@ export class EmpBasicInfo implements OnInit {
                 }
             },
             error: (err: any) => {
+                this.isSaving = false;
                 console.error('Error saving/updating addresses', err);
                 this.messageService.add({
                     severity: 'error',
@@ -1048,6 +1061,8 @@ export class EmpBasicInfo implements OnInit {
     newLastUnitNameEN: string = '';
     newLastUnitNameBN: string = '';
     isSavingLastUnit: boolean = false;
+    /** True while a Save/Update All request is in flight — disables the Save button to prevent double submits. */
+    isSaving: boolean = false;
 
     constructor(
         private fb: FormBuilder,
