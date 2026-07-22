@@ -144,31 +144,20 @@
                 </div>
 
                 <div class="report-filter-actions">
-                    <button type="button" class="report-btn-clear" (click)="clearFilter()">
-                        <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
-                            <path d="M1 1l10 10M11 1L1 11" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
-                        </svg>
-                        Clear
-                    </button>
-                    <button type="button" class="report-btn-search" (click)="search()" [disabled]="loading">
-                        <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-                            <circle cx="6" cy="6" r="4.5" stroke="white" stroke-width="1.6"/>
-                            <path d="M10 10l2.5 2.5" stroke="white" stroke-width="1.6" stroke-linecap="round"/>
-                        </svg>
-                        Search
-                    </button>
+                    <button type="button" class="report-btn-secondary" (click)="clearFilter()"><i class="pi pi-times mr-1"></i>Clear</button>
+                    <button type="button" class="report-btn-primary" (click)="search()" [disabled]="loading"><i class="pi pi-search mr-1"></i>Search</button>
                 </div>
             </div>
         </div>
     </div>
 
     <!-- Results card -->
-    <div class="report-results-card">
-        <div class="report-results-header">
-            <div class="report-results-title">
+    <div class="report-filter-card">
+        <div class="psm-results-header">
+            <h3 class="report-panel-title">
                 Results
                 <span class="report-results-count">{{ totalRecords }} record(s)</span>
-            </div>
+            </h3>
         </div>
 
         <div class="report-table-wrap">
@@ -211,7 +200,7 @@
                             @if (row.corps) {
                                 <span class="report-badge-corps">{{ row.corps }}</span>
                             } @else {
-                                <span>—</span>
+                                <span class="report-dash">—</span>
                             }
                         </td>
                         <td>{{ row.trade || '—' }}</td>
@@ -220,7 +209,7 @@
                             @if (row.motherOrganization || row.motherUnit) {
                                 <span class="report-badge-unit">{{ row.motherOrganization || row.motherUnit }}</span>
                             } @else {
-                                <span>—</span>
+                                <span class="report-dash">—</span>
                             }
                         </td>
                         <td>{{ formatDate(row.joiningDate) }}</td>
