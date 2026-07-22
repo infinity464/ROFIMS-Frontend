@@ -588,7 +588,7 @@
                 <tbody>
                     <ng-container *ngIf="isInterPosting">
                         <tr *ngFor="let emp of filteredEmployees; let i = index">
-                            <td class="text-center">{{ isBangla ? toBanglaDigits('' + (i + 1)) : (i + 1) }}</td>
+                            <td class="text-center">{{ isBangla ? (toBanglaDigits('' + (i + 1)) + '।') : (i + 1) }}</td>
                             <td>{{ empServiceId(emp) }}</td>
                             <td>{{ empRank(emp) }}</td>
                             <td class="po-doc-name-cell">{{ empName(emp) }}{{ empNameQuals(emp) }}</td>
@@ -600,7 +600,7 @@
                     </ng-container>
                     <ng-container *ngIf="!isInterPosting">
                         <tr *ngFor="let emp of filteredEmployees; let i = index">
-                            <td class="text-center">{{ isBangla ? toBanglaDigits('' + (i + 1)) : (i + 1) }}</td>
+                            <td class="text-center">{{ isBangla ? (toBanglaDigits('' + (i + 1)) + '।') : (i + 1) }}</td>
                             <td>{{ empServiceId(emp) }}</td>
                             <td>{{ empRank(emp) }}</td>
                             <td *ngIf="showTradeColumn">{{ empTrade(emp) }}</td>

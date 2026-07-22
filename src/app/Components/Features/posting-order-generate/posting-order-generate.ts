@@ -361,8 +361,8 @@ export class PostingOrderGenerateComponent implements OnInit {
                 const yearStr = String(nowYear);
                 const monthStr = String(nowMonth).padStart(2, '0');
                 const previewNo = c.includeDate
-                    ? `${prefixLabel}/${yearStr}/${monthStr}/${nextNum}`
-                    : `${prefixLabel}/${nextNum}`;
+                    ? `${prefixLabel} ${yearStr}/${monthStr}/${nextNum}`
+                    : `${prefixLabel} ${nextNum}`;
                 const memberLabel = (c.memberTypeIds ?? '').split(',').filter(Boolean)
                     .map(id => this.memberTypeMap[+id]).filter(Boolean).join(', ');
                 return { label: memberLabel ? `${previewNo}  ${memberLabel}` : previewNo, value: c.configId };

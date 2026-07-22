@@ -1758,7 +1758,7 @@ html, body { margin: 0; padding: 0; background: transparent; }
 
         const nameIdx = isInter ? 3 : (st ? 4 : 3);   // নাম column index (left-aligned)
         const dataRows = this.filteredEmployees.map((emp, i) => {
-            const serial = bn ? this.toBanglaDigits(String(i + 1)) : String(i + 1);
+            const serial = bn ? this.toBanglaDigits(String(i + 1)) + '।' : String(i + 1);
             const vals = isInter
                 ? [
                     serial, this.empServiceId(emp), this.empRank(emp), this.empName(emp),
