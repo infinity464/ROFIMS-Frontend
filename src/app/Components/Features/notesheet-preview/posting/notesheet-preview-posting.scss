@@ -80,9 +80,9 @@
     tr:nth-child(even) { background: transparent !important; }
     tr { background: transparent !important; }
 
-    /* Hairline cell borders (lighter grey reads even thinner in print/PDF). */
+    /* Hairline cell borders — deep black. */
     th,
-    td { border: 0.25px solid #888 !important; }
+    td { border: 0.25px solid #000 !important; }
 }
 
 /* New posting: table content + column headers 9pt (inter posting stays 8pt / 6.5pt).

@@ -1714,15 +1714,26 @@ html, body { margin: 0; padding: 0; background: transparent; }
    pages and repeats <thead> reliably — a table inside a flex column may not. */
 .pdf-flow .ns-doc-box,
 .pdf-flow .ns-main-col { display: block !important; }
-/* Show the header gap row (hidden on screen) as a borderless white band, so the
+/* Show the header gap row (hidden on screen) as a borderless band, so the
    repeated header has a gap below the page frame on every continuation page. */
+.pdf-flow .ns-posting-table { --ns-head-gap-h: 6mm; }
 .pdf-flow .ns-posting-table thead tr.ns-head-gap { display: table-row !important; }
 .pdf-flow .ns-posting-table thead tr.ns-head-gap td {
     border: 0 !important;
     padding: 0 !important;
-    height: 6mm;
-    background: #fff;
+    height: var(--ns-head-gap-h);
+    /* Transparent (not white): on page 1 the negative margin below overlaps this
+       row into the paragraph above, so a white fill would mask the last line. */
+    background: transparent;
 }
+/* Chromium repeats the whole <thead> — including the gap row — on EVERY page the
+   table spans, so the gap also renders once at the table's natural start on
+   page 1, adding a gap between the last paragraph and the table that the web
+   view (where .ns-head-gap is display:none) never has. A negative top margin of
+   exactly one gap-row height cancels it. Margins apply only to a box's first
+   fragment, so page 1 matches the web spacing while continuation pages keep
+   their gap below the page frame. */
+.pdf-flow .ns-posting-table { margin-top: calc(-1 * var(--ns-head-gap-h)); }
 </style>
 </head>
 <body>
@@ -2007,7 +2018,7 @@ html, body { margin: 0; padding: 0; background: transparent; }
         const csSize = bn ? BODY_SZ : undefined;
         const csNoDate = bn ? NODATE_SZ : undefined;
         const lang = bn ? { value: 'bn-BD', bidirectional: 'bn-BD' } : undefined;
-        const thinBorder = { style: BorderStyle.SINGLE, size: 1, color: '888888' };
+        const thinBorder = { style: BorderStyle.SINGLE, size: 1, color: '000000' };
         const cellBorders = { top: thinBorder, bottom: thinBorder, left: thinBorder, right: thinBorder };
 
         const mainChildren: (Paragraph | Table)[] = [];

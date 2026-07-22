@@ -801,7 +801,10 @@ export class PostingOrderPreviewPageComponent implements OnInit {
         const prefix = this.isBangla ? (emp.prefixNameBN || emp.prefixName) : emp.prefixName;
         let sid = emp.serviceId || '-';
         if (this.isBangla && sid !== '-') sid = this.toBanglaDigits(sid);
-        return prefix ? `${prefix}-${sid}` : sid;
+        if (!prefix) return sid;
+        const full = `${prefix}-${sid}`;
+        // Long IDs: put the prefix (with dash) on its own line, number on the next.
+        return full.length > 10 ? `${prefix}-\n${sid}` : full;
     }
 
     empRank(emp: PostingOrderEmployeeRow): string {
@@ -1651,7 +1654,7 @@ html, body { margin: 0; padding: 0; background: transparent; }
         const tblHdrCsSize = bn ? 18 : undefined;
         const ctxSize = 20;                     // 10pt for order context
         const lang = bn ? { value: 'bn-BD', bidirectional: 'bn-BD' } : undefined;
-        const thinBorder = { style: BorderStyle.SINGLE, size: 1, color: '888888' };
+        const thinBorder = { style: BorderStyle.SINGLE, size: 1, color: '000000' };
         const cellBorders = { top: thinBorder, bottom: thinBorder, left: thinBorder, right: thinBorder };
 
         // ── Government Header (9pt, bold, centered) ──

@@ -445,12 +445,12 @@
             <!-- ক্রমিক (একটু বড়) -->
             <col style="width: 86px" />
             <!-- ব্যক্তিগত নম্বর -->
-            <col />
-            <!-- পদবি -->
+            <col style="width: 90px" />
+            <!-- পদবি (fixed so it stays constant whether ট্রেড is shown or hidden) -->
             <col *ngIf="showTradeColumn" style="width: 58px" />
             <!-- ট্রেড (ছোট করা) -->
             <col />
-            <!-- নাম -->
+            <!-- নাম (auto — sole absorber; widens when ট্রেড is hidden) -->
             <col style="width: 58px" />
             <!-- নিজ জেলা (একটু বড়) -->
             <col style="width: 56px" />
