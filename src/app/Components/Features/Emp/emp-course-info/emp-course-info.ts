@@ -34,6 +34,8 @@ interface DropdownOption {
 
 interface CourseNameOption extends DropdownOption {
     parentCodeId: number | null;
+    /** Mother Org that owns this Course Name. null/0 = global (available to every org). */
+    orgId: number | null;
 }
 
 interface TrainingInstituteOption extends DropdownOption {
@@ -87,6 +89,8 @@ export class EmpCourseInfoComponent implements OnInit {
     courseNameOptions: DropdownOption[] = [];
     /** Full Course Name list kept around so the table can resolve labels for rows whose type isn't currently selected. */
     private allCourseNameOptions: CourseNameOption[] = [];
+    /** Selected employee's Mother Org — Course Names are scoped to this org (plus global ones). */
+    private employeeOrgId: number | null = null;
     trainingInstituteOptions: TrainingInstituteOption[] = [];
     countryOptions: DropdownOption[] = [];
     courseResultOptions: { label: string; value: string }[] = [];
@@ -145,9 +149,7 @@ export class EmpCourseInfoComponent implements OnInit {
             );
         });
         this.courseForm.get('courseType')?.valueChanges.subscribe((courseTypeId: number | null) => {
-            this.courseNameOptions = courseTypeId != null
-                ? this.allCourseNameOptions.filter((o) => o.parentCodeId === courseTypeId)
-                : [];
+            this.courseNameOptions = this.filterCourseNames(courseTypeId);
             // Clear the selected Course Name if it no longer belongs to the new Course Type.
             const currentName = this.courseForm.get('courseName')?.value;
             if (currentName != null && !this.courseNameOptions.some((o) => o.value === currentName)) {
@@ -221,12 +223,13 @@ export class EmpCourseInfoComponent implements OnInit {
                 this.allCourseNameOptions = (data || []).map((d: any) => ({
                     label: d.codeValueEN || d.displayCodeValueEN || String(d.codeId),
                     value: d.codeId,
-                    parentCodeId: d.parentCodeId ?? null
+                    parentCodeId: d.parentCodeId ?? null,
+                    orgId: d.orgId ?? d.OrgId ?? null
                 }));
                 // If a Course Type is already selected (edit flow), populate the filtered list now.
                 const currentType: number | null = this.courseForm.get('courseType')?.value ?? null;
                 if (currentType != null) {
-                    this.courseNameOptions = this.allCourseNameOptions.filter((o) => o.parentCodeId === currentType);
+                    this.courseNameOptions = this.filterCourseNames(currentType);
                 }
             }
         });
@@ -241,6 +244,19 @@ export class EmpCourseInfoComponent implements OnInit {
                 }));
             }
         });
+    }
+
+    /**
+     * Course Names available for a given Course Type, scoped to the selected employee's Mother Org.
+     * A Course Name is shown when its parentCodeId matches the Course Type AND it either belongs to
+     * the employee's Mother Org or is global (orgId null/0, i.e. Mother Org not set).
+     */
+    private filterCourseNames(courseTypeId: number | null): DropdownOption[] {
+        if (courseTypeId == null) return [];
+        const orgId = this.employeeOrgId;
+        return this.allCourseNameOptions.filter(
+            (o) => o.parentCodeId === courseTypeId && (o.orgId == null || o.orgId === 0 || o.orgId === orgId)
+        );
     }
 
     checkRouteParams(): void {
@@ -262,6 +278,9 @@ export class EmpCourseInfoComponent implements OnInit {
                     this.employeeFound = true;
                     this.selectedEmployeeId = employee.employeeID || employee.EmployeeID;
                     this.employeeBasicInfo = employee;
+                    this.employeeOrgId = employee.orgId ?? employee.OrgId ?? null;
+                    // Re-apply the Mother Org scope to the Course Name list now that the org is known.
+                    this.courseNameOptions = this.filterCourseNames(this.courseForm.get('courseType')?.value ?? null);
                     this.loadCourseList();
                 }
             },
@@ -513,6 +532,9 @@ export class EmpCourseInfoComponent implements OnInit {
         this.employeeFound = true;
         this.selectedEmployeeId = employee.employeeID;
         this.employeeBasicInfo = employee;
+        this.employeeOrgId = employee.orgId ?? employee.motherOrganization ?? null;
+        // Re-apply the Mother Org scope to the Course Name list now that the org is known.
+        this.courseNameOptions = this.filterCourseNames(this.courseForm.get('courseType')?.value ?? null);
         this.isReadonly = true;
         this.loadCourseList();
     }
@@ -521,6 +543,7 @@ export class EmpCourseInfoComponent implements OnInit {
         this.employeeFound = false;
         this.selectedEmployeeId = null;
         this.employeeBasicInfo = null;
+        this.employeeOrgId = null;
         this.courseList = [];
     }
 
@@ -586,7 +609,8 @@ export class EmpCourseInfoComponent implements OnInit {
         const currentUser = this.sharedService.getCurrentUser();
         const nowIso = new Date().toISOString();
         const payload: CommonCode = {
-            orgId: 0,
+            // Course Names are scoped to the employee's Mother Org; other code types stay global (0).
+            orgId: this.addingCodeType === 'CourseName' ? (this.employeeOrgId ?? 0) : 0,
             codeId: 0,
             codeType: this.addingCodeType,
             codeValueEN: this.newCodeValueEN.trim(),
@@ -635,11 +659,12 @@ export class EmpCourseInfoComponent implements OnInit {
                     this.allCourseNameOptions = (data || []).map((d: any) => ({
                         label: d.codeValueEN || d.displayCodeValueEN || String(d.codeId),
                         value: d.codeId,
-                        parentCodeId: d.parentCodeId ?? null
+                        parentCodeId: d.parentCodeId ?? null,
+                        orgId: d.orgId ?? d.OrgId ?? null
                     }));
                     const currentType: number | null = this.courseForm.get('courseType')?.value ?? null;
                     if (currentType != null) {
-                        this.courseNameOptions = this.allCourseNameOptions.filter((o) => o.parentCodeId === currentType);
+                        this.courseNameOptions = this.filterCourseNames(currentType);
                     }
                     if (newId != null) this.courseForm.patchValue({ courseName: newId });
                 } else if (codeType === 'CourseGrade') {
