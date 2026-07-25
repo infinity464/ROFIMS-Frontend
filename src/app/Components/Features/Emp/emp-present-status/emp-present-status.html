@@ -1,0 +1,495 @@
+<p-toast position="top-center"></p-toast>
+<p-fluid>
+    <div class="form-card">
+        <div class="form-card-header">
+            <h3 class="form-card-title">
+                Employee Present Status
+                @if (mode === 'view') {
+                    <span class="text-500 text-base font-normal">(View Mode)</span>
+                }
+                @if (mode === 'edit') {
+                    <span class="text-primary text-base font-normal">(Edit Mode)</span>
+                }
+            </h3>
+            @if (mode === 'view') {
+                <div class="form-card-actions">
+                    <p-button
+                        label="Edit"
+                        icon="pi pi-pencil" [class.perm-hidden]="!canUpdate"
+                        (onClick)="enableEditMode()">
+                    </p-button>
+                </div>
+            }
+        </div>
+
+        <!-- Search Section -->
+        @if (mode === 'search') {
+            <div class="form-section">
+                <app-employee-search
+                    (onEmployeeFound)="onEmployeeSearchFound($event)"
+                    (onSearchReset)="onEmployeeSearchReset()">
+                </app-employee-search>
+            </div>
+        }
+
+        <!-- Employee Info (when not in search) -->
+        @if (mode !== 'search' && employeeBasicInfo) {
+            <div class="form-section">
+                <div class="flex flex-wrap gap-4">
+                    <div>
+                        <span class="text-500 text-sm">Name:</span>
+                        <span class="ml-2 font-semibold">{{ employeeBasicInfo.fullNameEN || employeeBasicInfo.FullNameEN || 'N/A' }}</span>
+                    </div>
+                    <div>
+                        <span class="text-500 text-sm">RAB ID:</span>
+                        <span class="ml-2 font-semibold">{{ employeeBasicInfo.rabid || employeeBasicInfo.RABID || employeeBasicInfo.Rabid || 'N/A' }}</span>
+                    </div>
+                    <div>
+                        <span class="text-500 text-sm">Service ID:</span>
+                        <span class="ml-2 font-semibold">{{ employeeBasicInfo.serviceId || employeeBasicInfo.ServiceId || 'N/A' }}</span>
+                    </div>
+                </div>
+            </div>
+        }
+
+        <!-- Records Table -->
+        @if (employeeFound) {
+            <div class="form-section">
+                <div class="flex align-items-center gap-3 mb-3 flex-wrap">
+                    <h3 class="form-subtitle m-0 white-space-nowrap">Present Status Records</h3>
+                    @if (!isReadonly) {
+                        <div class="ml-auto">
+                            <p-button label="Add New" icon="pi pi-plus" [disabled]="!canAddStatus"
+                                [pTooltip]="!canAddStatus ? 'Only presently serving employees can have a present status added.' : ''"
+                                tooltipPosition="left" tooltipStyleClass="ps-tip"
+                                (onClick)="openAddDialog()"></p-button>
+                        </div>
+                    }
+                </div>
+
+                <p-table [value]="recordList" [loading]="isLoading" [paginator]="recordList.length > 10" [rows]="10" [tableStyle]="{'min-width': '60rem'}" styleClass="p-datatable-sm">
+                    <ng-template pTemplate="header">
+                        <tr>
+                            <th>Status Type</th>
+                            <th>Date</th>
+                            <th>Profile Shift</th>
+                            <th>Active</th>
+                            <th style="width: 280px">Actions</th>
+                        </tr>
+                    </ng-template>
+
+                    <ng-template pTemplate="body" let-record>
+                        <tr>
+                            <td>{{ getStatusLabel(record.presentStatusType) }}</td>
+                            <td>{{ formatDate(record.dated) }}</td>
+                            <td>{{ record.profileShift ? 'Yes' : 'No' }}</td>
+                            <td>{{ record.isActive ? 'Yes' : 'No' }}</td>
+                            <td>
+                                <div class="flex gap-2">
+                                    <p-button icon="pi pi-eye" [rounded]="true" [text]="true" severity="secondary" pTooltip="View" (onClick)="openViewDialog(record)"></p-button>
+                                    <p-button icon="pi pi-pencil" [class.perm-hidden]="!canUpdate" [rounded]="true" [text]="true" severity="info"
+                                        [disabled]="!record.isActive"
+                                        [pTooltip]="record.isActive ? 'Edit' : 'Inactive records cannot be edited'"
+                                        (onClick)="openEditDialog(record)"></p-button>
+                                    @if (record.presentStatusType === PresentStatusType.Arrested && !isReadonly && !record.profileShift && !hasBackFromRecord(record)) {
+                                        <p-button label="Back From Arrested" icon="pi pi-arrow-circle-left" [class.perm-hidden]="!canInsert"
+                                            severity="success" size="small" [outlined]="true"
+                                            (onClick)="openBackFromArrestedDialog(record)"></p-button>
+                                    }
+                                    @if (record.presentStatusType === PresentStatusType.Absent && !isReadonly && !record.profileShift && !hasBackFromRecord(record)) {
+                                        <p-button label="Back From Absent" icon="pi pi-arrow-circle-left" [class.perm-hidden]="!canInsert"
+                                            severity="success" size="small" [outlined]="true"
+                                            (onClick)="openBackFromAbsentDialog(record)"></p-button>
+                                    }
+                                </div>
+                            </td>
+                        </tr>
+                    </ng-template>
+
+                    <ng-template pTemplate="emptymessage">
+                        <tr>
+                            <td colspan="5" class="text-center py-4">
+                                <span class="text-500">No present status records found.</span>
+                            </td>
+                        </tr>
+                    </ng-template>
+                </p-table>
+            </div>
+
+            <div class="form-actions">
+                @if (mode === 'view') {
+                    <p-button type="button" label="Back to List" icon="pi pi-arrow-left" severity="secondary" [outlined]="true" styleClass="form-btn-secondary" (onClick)="goBack()"></p-button>
+                    <p-button type="button" label="Edit" icon="pi pi-pencil" [class.perm-hidden]="!canUpdate" (onClick)="enableEditMode()"></p-button>
+                } @else if (mode === 'edit') {
+                    <p-button type="button" label="Reset" icon="pi pi-refresh" severity="secondary" [outlined]="true" styleClass="form-btn-secondary" (onClick)="onEmployeeSearchReset()"></p-button>
+                    <p-button type="button" label="Back to List" icon="pi pi-arrow-left" severity="secondary" [outlined]="true" styleClass="form-btn-secondary" (onClick)="goBack()"></p-button>
+                } @else {
+                    <p-button type="button" label="Reset" icon="pi pi-refresh" severity="secondary" [outlined]="true" styleClass="form-btn-secondary" (onClick)="onEmployeeSearchReset()"></p-button>
+                }
+            </div>
+        }
+    </div>
+</p-fluid>
+
+<!-- ========== Add/Edit Dialog ========== -->
+<p-dialog
+    [header]="isEditMode ? 'Edit Present Status' : 'Add Present Status'"
+    [(visible)]="displayDialog"
+    [modal]="true"
+    [style]="{width: '780px', minHeight: '480px', maxHeight: '90vh'}"
+    [closable]="true"
+    [contentStyle]="{'overflow-y': 'auto', 'border-top': '2px solid var(--primary-color)'}">
+
+    <p-fluid>
+    <form [formGroup]="presentStatusForm">
+        <div class="grid grid-cols-2 gap-4 p-2">
+
+            <!-- Present Status Type -->
+            <div class="col-span-2">
+                <label class="font-semibold block mb-2 text-700">Present Status Type <span class="text-red-500">*</span></label>
+                <p-select formControlName="presentStatusType" [options]="statusTypes" optionLabel="label" optionValue="value" placeholder="Select Status Type" styleClass="w-full" [filter]="true" [readonly]="isEditMode"></p-select>
+            </div>
+
+            <!-- ========== Regular Posting Out ========== -->
+            @if (selectedStatusType === PresentStatusType.RegularPostingOut) {
+                <div>
+                    <label class="font-semibold block mb-2 text-700">Date <span class="text-red-500">*</span></label>
+                    <p-datepicker formControlName="rpoDate" dateFormat="dd-mm-yy" placeholder="Select Date" appendTo="body" styleClass="w-full"></p-datepicker>
+                </div>
+                <div>
+                    <label class="font-semibold block mb-2 text-700">Transferred Unit <span class="text-red-500">*</span></label>
+                    <p-select formControlName="transferredUnit" [options]="motherOrgUnits" optionLabel="label" optionValue="value" placeholder="Select Unit" styleClass="w-full" [filter]="true"></p-select>
+                </div>
+                <div>
+                    <label class="font-semibold block mb-2 text-700">Date of Release</label>
+                    <p-datepicker formControlName="dateOfRelease" dateFormat="dd-mm-yy" placeholder="Select Date" appendTo="body" styleClass="w-full"></p-datepicker>
+                </div>
+                <div>
+                    <label class="font-semibold block mb-2 text-700">Date of Reduce from RAB Strength</label>
+                    <p-datepicker formControlName="dateOfReduceFromRabStrength" dateFormat="dd-mm-yy" placeholder="Select Date" appendTo="body" styleClass="w-full"></p-datepicker>
+                </div>
+                <div class="col-span-2 flex align-items-center gap-2">
+                    <p-checkbox formControlName="rpoProfileShift" [binary]="true" inputId="rpoProfileShift"></p-checkbox>
+                    <label for="rpoProfileShift" class="font-semibold text-700">Profile Shift (Present to Ex Member)</label>
+                </div>
+            }
+
+            <!-- ========== RTU on Discipline Issue ========== -->
+            @if (selectedStatusType === PresentStatusType.RTUOnDisciplineIssue) {
+                <div>
+                    <label class="font-semibold block mb-2 text-700">Date <span class="text-red-500">*</span></label>
+                    <p-datepicker formControlName="rtuDate" dateFormat="dd-mm-yy" placeholder="Select Date" appendTo="body" styleClass="w-full"></p-datepicker>
+                </div>
+                <div>
+                    <label class="font-semibold block mb-2 text-700">Transferred Unit <span class="text-red-500">*</span></label>
+                    <p-select formControlName="rtuTransferredUnit" [options]="transferredUnits" optionLabel="label" optionValue="value" placeholder="Select Unit" styleClass="w-full" [filter]="true"></p-select>
+                </div>
+                <div class="col-span-2">
+                    <label class="font-semibold block mb-2 text-700">RTU Cause</label>
+                    <input pInputText class="w-full" placeholder="Enter RTU Cause" formControlName="rtuCause" />
+                </div>
+                <div class="col-span-2 flex align-items-center gap-2">
+                    <p-checkbox formControlName="rtuProfileShift" [binary]="true" inputId="rtuProfileShift"></p-checkbox>
+                    <label for="rtuProfileShift" class="font-semibold text-700">Profile Shift (Present to Ex Member)</label>
+                </div>
+            }
+
+            <!-- ========== Deceased ========== -->
+            @if (selectedStatusType === PresentStatusType.Deceased) {
+                <div>
+                    <label class="font-semibold block mb-2 text-700">Date <span class="text-red-500">*</span></label>
+                    <p-datepicker formControlName="deceasedDate" dateFormat="dd-mm-yy" placeholder="Select Date" appendTo="body" styleClass="w-full"></p-datepicker>
+                </div>
+                <div>
+                    <label class="font-semibold block mb-2 text-700">Deceased Place <span class="text-red-500">*</span></label>
+                    <input pInputText class="w-full" placeholder="Enter Deceased Place" formControlName="deceasedPlace" />
+                </div>
+                <div class="col-span-2">
+                    <label class="font-semibold block mb-2 text-700">Deceased Reason</label>
+                    <input pInputText class="w-full" placeholder="Enter Reason" formControlName="deceasedReason" />
+                </div>
+                <div class="col-span-2 flex align-items-center gap-2">
+                    <p-checkbox formControlName="deceasedProfileShift" [binary]="true" inputId="deceasedProfileShift"></p-checkbox>
+                    <label for="deceasedProfileShift" class="font-semibold text-700">Profile Shift (Present to Ex Member)</label>
+                </div>
+            }
+
+            <!-- ========== Absent ========== -->
+            @if (selectedStatusType === PresentStatusType.Absent) {
+                <div>
+                    <label class="font-semibold block mb-2 text-700">Date <span class="text-red-500">*</span></label>
+                    <p-datepicker formControlName="absentDate" dateFormat="dd-mm-yy" placeholder="Select Date" appendTo="body" styleClass="w-full"></p-datepicker>
+                </div>
+                <div>
+                    <label class="font-semibold block mb-2 text-700">Absent Type <span class="text-red-500">*</span></label>
+                    <p-select formControlName="absentType" [options]="absentTypes" optionLabel="label" optionValue="value" placeholder="Select Absent Type" styleClass="w-full" [filter]="true"></p-select>
+                </div>
+                <div>
+                    <label class="font-semibold block mb-2 text-700">Incident/Absent Report</label>
+                    <input pInputText class="w-full" placeholder="Enter Report" formControlName="incidentAbsentReport" />
+                </div>
+                <div>
+                    <label class="font-semibold block mb-2 text-700">Court of Inquiry Report</label>
+                    <input pInputText class="w-full" placeholder="Enter Report" formControlName="absentCourtOfInquiryReport" />
+                </div>
+                <div class="col-span-2 flex align-items-center gap-2">
+                    <p-checkbox formControlName="absentProfileShift" [binary]="true" inputId="absentProfileShift"></p-checkbox>
+                    <label for="absentProfileShift" class="font-semibold text-700">Profile Shift (Present to Ex Member)</label>
+                </div>
+            }
+
+            <!-- ========== Arrested ========== -->
+            @if (selectedStatusType === PresentStatusType.Arrested) {
+                <div>
+                    <label class="font-semibold block mb-2 text-700">Date <span class="text-red-500">*</span></label>
+                    <p-datepicker formControlName="arrestedDate" dateFormat="dd-mm-yy" placeholder="Select Date" appendTo="body" styleClass="w-full"></p-datepicker>
+                </div>
+                <div>
+                    <label class="font-semibold block mb-2 text-700">Incident Details</label>
+                    <input pInputText class="w-full" placeholder="Enter Incident Details" formControlName="incidentDetails" />
+                </div>
+                <div class="col-span-2">
+                    <label class="font-semibold block mb-2 text-700">Court of Inquiry Report</label>
+                    <input pInputText class="w-full" placeholder="Enter Report" formControlName="arrestedCourtOfInquiryReport" />
+                </div>
+                <div class="col-span-2 flex align-items-center gap-2">
+                    <p-checkbox formControlName="arrestedProfileShift" [binary]="true" inputId="arrestedProfileShift"></p-checkbox>
+                    <label for="arrestedProfileShift" class="font-semibold text-700">Profile Shift (Present to Ex Member)</label>
+                </div>
+            }
+
+            <!-- File Upload -->
+            <div class="col-span-2 file-section-compact">
+                <app-file-references-form
+                    #fileReferencesForm
+                    [fileRows]="fileRows"
+                    [isViewMode]="false"
+                    title="Supporting Documents"
+                    (fileRowsChange)="onFileRowsChange($event)"
+                    (onDownloadFile)="onDownloadFile($event)">
+                </app-file-references-form>
+            </div>
+        </div>
+    </form>
+    </p-fluid>
+
+    <ng-template pTemplate="footer">
+        <p-button label="Cancel" icon="pi pi-times" severity="secondary" [outlined]="true" (onClick)="closeDialog()" [disabled]="isSaving"></p-button>
+        <p-button [label]="isEditMode ? 'Update' : 'Save'" icon="pi pi-check" (onClick)="saveRecord()" [loading]="isSaving" [disabled]="isSaving || isUpdateDisabled"></p-button>
+    </ng-template>
+</p-dialog>
+
+<!-- ========== View (read-only) Dialog ========== -->
+<p-dialog
+    header="Present Status Details"
+    [(visible)]="displayViewDialog"
+    [modal]="true"
+    [style]="{width: '640px', maxHeight: '90vh'}"
+    [closable]="true"
+    [contentStyle]="{'overflow-y': 'auto', 'border-top': '2px solid var(--primary-color)'}">
+
+    @if (viewRecord) {
+        <div class="ps-view">
+            <!-- Hero header -->
+            <div class="ps-view__hero">
+                <div class="ps-view__hero-icon">
+                    <i class="pi" [ngClass]="getStatusIcon(viewRecord.presentStatusType)"></i>
+                </div>
+                <div class="ps-view__hero-main">
+                    <div class="ps-view__hero-title">{{ getStatusLabel(viewRecord.presentStatusType) }}</div>
+                    <div class="ps-view__hero-date"><i class="pi pi-calendar"></i> {{ formatDate(viewRecord.dated) }}</div>
+                </div>
+                <span class="ps-chip" [class.ps-chip--active]="viewRecord.isActive" [class.ps-chip--inactive]="!viewRecord.isActive">
+                    <i class="pi" [ngClass]="viewRecord.isActive ? 'pi-check-circle' : 'pi-ban'"></i>
+                    {{ viewRecord.isActive ? 'Active' : 'Inactive' }}
+                </span>
+            </div>
+
+            <!-- Detail grid -->
+            <div class="ps-view__grid">
+                <!-- Regular Posting Out -->
+                @if (viewRecord.presentStatusType === PresentStatusType.RegularPostingOut) {
+                    <div class="ps-field">
+                        <span class="ps-field__label">Transferred Unit</span>
+                        <span class="ps-field__value">{{ getUnitLabel(viewRecord.motherOrgTransferredUnitID ?? viewRecord.transferredUnitID) }}</span>
+                    </div>
+                    <div class="ps-field">
+                        <span class="ps-field__label">Date of Release</span>
+                        <span class="ps-field__value">{{ formatDate(viewRecord.dateOfRelease) }}</span>
+                    </div>
+                    <div class="ps-field">
+                        <span class="ps-field__label">Date of Reduce from RAB Strength</span>
+                        <span class="ps-field__value">{{ formatDate(viewRecord.reduceFromRABStrength) }}</span>
+                    </div>
+                }
+
+                <!-- RTU on Discipline Issue -->
+                @if (viewRecord.presentStatusType === PresentStatusType.RTUOnDisciplineIssue) {
+                    <div class="ps-field">
+                        <span class="ps-field__label">Transferred Unit</span>
+                        <span class="ps-field__value">{{ getUnitLabel(viewRecord.motherOrgTransferredUnitID ?? viewRecord.transferredUnitID) }}</span>
+                    </div>
+                    <div class="ps-field ps-field--full">
+                        <span class="ps-field__label">RTU Cause</span>
+                        <span class="ps-field__value">{{ viewRecord.rtuCause || 'N/A' }}</span>
+                    </div>
+                }
+
+                <!-- Deceased -->
+                @if (viewRecord.presentStatusType === PresentStatusType.Deceased) {
+                    <div class="ps-field">
+                        <span class="ps-field__label">Deceased Place</span>
+                        <span class="ps-field__value">{{ viewRecord.deceasedPlace || 'N/A' }}</span>
+                    </div>
+                    <div class="ps-field">
+                        <span class="ps-field__label">Deceased Reason</span>
+                        <span class="ps-field__value">{{ viewRecord.deceasedReason || 'N/A' }}</span>
+                    </div>
+                }
+
+                <!-- Absent -->
+                @if (viewRecord.presentStatusType === PresentStatusType.Absent) {
+                    <div class="ps-field">
+                        <span class="ps-field__label">Absent Type</span>
+                        <span class="ps-field__value">{{ getAbsentTypeLabel(viewRecord.absentTypeID) }}</span>
+                    </div>
+                    <div class="ps-field">
+                        <span class="ps-field__label">Incident/Absent Report</span>
+                        <span class="ps-field__value">{{ viewRecord.absentReport || 'N/A' }}</span>
+                    </div>
+                    <div class="ps-field ps-field--full">
+                        <span class="ps-field__label">Court of Inquiry Report</span>
+                        <span class="ps-field__value">{{ viewRecord.inquiryReport || 'N/A' }}</span>
+                    </div>
+                }
+
+                <!-- Arrested -->
+                @if (viewRecord.presentStatusType === PresentStatusType.Arrested) {
+                    <div class="ps-field">
+                        <span class="ps-field__label">Incident Details</span>
+                        <span class="ps-field__value">{{ viewRecord.incidentDetails || 'N/A' }}</span>
+                    </div>
+                    <div class="ps-field">
+                        <span class="ps-field__label">Court of Inquiry Report</span>
+                        <span class="ps-field__value">{{ viewRecord.inquiryReport || 'N/A' }}</span>
+                    </div>
+                }
+
+                @if (viewRecord.presentStatusType === PresentStatusType.BackFromArrested) {
+                    <div class="ps-field">
+                        <span class="ps-field__label">Arrested Record ID</span>
+                        <span class="ps-field__value">{{ viewRecord.arrestedPresentStatusID || 'N/A' }}</span>
+                    </div>
+                    <div class="ps-field">
+                        <span class="ps-field__label">Reason of Back</span>
+                        <span class="ps-field__value">{{ viewRecord.backFromArrestedReason || 'N/A' }}</span>
+                    </div>
+                    <div class="ps-field">
+                        <span class="ps-field__label">Court Order Reference</span>
+                        <span class="ps-field__value">{{ viewRecord.courtOrderReference || 'N/A' }}</span>
+                    </div>
+                }
+
+                @if (viewRecord.presentStatusType === PresentStatusType.BackFromAbsent) {
+                    <div class="ps-field">
+                        <span class="ps-field__label">Absent Record ID</span>
+                        <span class="ps-field__value">{{ viewRecord.absentPresentStatusID || 'N/A' }}</span>
+                    </div>
+                    <div class="ps-field">
+                        <span class="ps-field__label">Reason of Back</span>
+                        <span class="ps-field__value">{{ viewRecord.backFromAbsentReason || 'N/A' }}</span>
+                    </div>
+                }
+
+                @if (viewRecord.presentStatusType !== PresentStatusType.OnDuty && viewRecord.presentStatusType !== PresentStatusType.BackFromArrested && viewRecord.presentStatusType !== PresentStatusType.BackFromAbsent) {
+                    <div class="ps-field ps-field--full">
+                        <span class="ps-field__label">Profile Shift (Present to Ex Member)</span>
+                        <span class="ps-field__value">
+                            <span class="ps-pill" [class.ps-pill--yes]="viewRecord.profileShift" [class.ps-pill--no]="!viewRecord.profileShift">
+                                {{ viewRecord.profileShift ? 'Yes' : 'No' }}
+                            </span>
+                        </span>
+                    </div>
+                }
+            </div>
+
+            <!-- Supporting Documents -->
+            <div class="ps-view__docs">
+                <div class="ps-view__section-title"><i class="pi pi-paperclip"></i> Supporting Documents</div>
+                @if (viewFileRows.length > 0) {
+                    <div class="ps-docs">
+                        @for (f of viewFileRows; track $index) {
+                            <div class="ps-doc">
+                                <i class="pi pi-file ps-doc__icon"></i>
+                                <span class="ps-doc__name">{{ f.fileName }}</span>
+                                @if (f.fileId) {
+                                    <p-button icon="pi pi-download" [rounded]="true" [text]="true" size="small" pTooltip="Download"
+                                        (onClick)="onDownloadFile({ fileId: f.fileId!, fileName: f.fileName })"></p-button>
+                                }
+                            </div>
+                        }
+                    </div>
+                } @else {
+                    <div class="ps-view__empty"><i class="pi pi-inbox"></i> No documents attached.</div>
+                }
+            </div>
+        </div>
+    }
+
+    <ng-template pTemplate="footer">
+        <p-button label="Close" icon="pi pi-times" severity="secondary" [outlined]="true" (onClick)="displayViewDialog = false"></p-button>
+    </ng-template>
+</p-dialog>
+
+<!-- ========== Back From Arrested Dialog ========== -->
+<p-dialog
+    [header]="bfaDialogHeader"
+    [(visible)]="displayBfaDialog"
+    [modal]="true"
+    [style]="{width: '640px', maxHeight: '90vh'}"
+    [closable]="true"
+    [focusOnShow]="false"
+    [contentStyle]="{'overflow-y': 'auto', 'border-top': '2px solid var(--primary-color)'}">
+
+    <p-fluid>
+    <form [formGroup]="bfaForm">
+        <div class="grid grid-cols-2 gap-4 p-2">
+            <div class="col-span-2">
+                <label class="font-semibold block mb-2 text-700">{{ bfaSourceLabel }} Record</label>
+                <span class="text-900">{{ bfaLinkedArrestedLabel }}</span>
+            </div>
+            <div>
+                <label class="font-semibold block mb-2 text-700">Back Date <span class="text-red-500">*</span></label>
+                <p-datepicker formControlName="backFromArrestedDate" dateFormat="dd-mm-yy" placeholder="Select Date" appendTo="body" styleClass="w-full"></p-datepicker>
+            </div>
+            <div>
+                <label class="font-semibold block mb-2 text-700">Reason of Back</label>
+                <input pInputText class="w-full" placeholder="Enter Reason" formControlName="backFromArrestedReason" />
+            </div>
+            @if (bfaStatusType === PresentStatusType.BackFromArrested) {
+                <div class="col-span-2">
+                    <label class="font-semibold block mb-2 text-700">Court Order Reference</label>
+                    <input pInputText class="w-full" placeholder="Enter Court Order Reference" formControlName="courtOrderReference" />
+                </div>
+            }
+            <div class="col-span-2 file-section-compact">
+                <app-file-references-form
+                    #bfaFileReferencesForm
+                    [fileRows]="bfaFileRows"
+                    [isViewMode]="false"
+                    title="Supporting Documents"
+                    (fileRowsChange)="onBfaFileRowsChange($event)"
+                    (onDownloadFile)="onDownloadFile($event)">
+                </app-file-references-form>
+            </div>
+        </div>
+    </form>
+    </p-fluid>
+
+    <ng-template pTemplate="footer">
+        <p-button label="Cancel" icon="pi pi-times" severity="secondary" [outlined]="true" (onClick)="displayBfaDialog = false" [disabled]="bfaSaving"></p-button>
+        <p-button [label]="bfaEditMode ? 'Update' : 'Save'" icon="pi pi-check" (onClick)="saveBfa()" [loading]="bfaSaving" [disabled]="bfaSaving"></p-button>
+    </ng-template>
+</p-dialog>
+
+<p-confirmDialog></p-confirmDialog>

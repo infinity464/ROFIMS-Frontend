@@ -1,0 +1,121 @@
+<p-fluid>
+    <p-toast position="top-center" />
+    <p-confirmDialog />
+
+    <div class="vd-card">
+
+        <div class="vd-header">
+            <span class="vd-header__eyebrow">Personnel Management</span>
+            <h2 class="vd-header__title">{{ title }}</h2>
+        </div>
+
+        <div class="vd-grid">
+
+            <div class="vd-controls">
+                <div class="vd-field">
+                    <label class="vd-label">Mother Organization</label>
+                    <p-select
+                        [options]="orgList"
+                        [(ngModel)]="selectedOrg"
+                        optionLabel="orgNameEN"
+                        [placeholder]="'Select organization'"
+                        [filter]="true"
+                        filterBy="orgNameEN"
+                        (ngModelChange)="onOrgChange()"
+                        styleClass="vd-select w-full">
+                    </p-select>
+                </div>
+                <div class="vd-field">
+                    <label class="vd-label">Mother Org Rank</label>
+                    <p-select
+                        [options]="rankOptions"
+                        [(ngModel)]="selectedRank"
+                        optionLabel="label"
+                        [placeholder]="'Select rank'"
+                        [filter]="true"
+                        filterBy="label"
+                        [disabled]="!selectedOrg || rankOptions.length === 0"
+                        (ngModelChange)="onRankChange()"
+                        styleClass="vd-select w-full">
+                        <ng-template let-r pTemplate="label">
+                            <span>{{ r?.label }}</span>
+                        </ng-template>
+                    </p-select>
+                </div>
+
+                <form [formGroup]="distributionForm" class="vd-form-row">
+                    <div class="vd-field vd-field--qty">
+                        <label class="vd-label">Quantity</label>
+                        <input
+                            type="number"
+                            pInputText
+                            class="vd-input w-full"
+                            formControlName="quantity"
+                            min="0"
+                            placeholder="0" />
+                    </div>
+                    <div class="vd-field vd-field--save">
+                        <p-button
+                            label="Save"
+                            icon="pi pi-check"
+                            (onClick)="addDistribution()"
+                            [loading]="isSubmitting"
+                            styleClass="vd-btn-save w-full">
+                        </p-button>
+                    </div>
+                </form>
+
+                @if (selectedOrgRank) {
+                    <div class="vd-stats">
+                        <div class="vd-stat">
+                            <span class="vd-stat__label">Distributed Total</span>
+                            <span class="vd-stat__value">{{ distributedTotal }}</span>
+                        </div>
+                    </div>
+                }
+            </div>
+
+            <div class="vd-tree-panel">
+                <label class="vd-label">RAB Unit / Wing / Branch</label>
+
+                @if (rabTreeLoading) {
+                    <div class="vd-tree-loading">
+                        <i class="pi pi-spin pi-spinner"></i>
+                        <span>Loading tree…</span>
+                    </div>
+                } @else {
+                    <div class="vd-tree-wrap">
+                        <p-tree
+                            [value]="rabTreeNodes"
+                            selectionMode="single"
+                            [(selection)]="selectedRabNode"
+                            (onNodeSelect)="onRabNodeSelect($event.node)"
+                            styleClass="vd-tree w-full">
+                        </p-tree>
+                    </div>
+                }
+            </div>
+        </div>
+
+        @if (selectedOrgRank) {
+            <div class="vd-table-section">
+                <div class="vd-table-header">
+                    <span class="vd-table-header__title">Distribution Records</span>
+                    <span class="vd-table-header__count">{{ totalRecords }} entries</span>
+                </div>
+                <app-data-table
+                    [config]="tableConfig"
+                    [data]="distributionData"
+                    [first]="first"
+                    [totalRecords]="totalRecords"
+                    [rows]="rows"
+                    [loading]="loading"
+                    (edit)="editDistribution($event)"
+                    (delete)="deleteDistribution($event.row, $event.event)"
+                    (lazyLoad)="loadDistribution()"
+    [canUpdate]="canUpdate" [canDelete]="canDelete">
+                </app-data-table>
+            </div>
+        }
+    </div>
+</p-fluid>

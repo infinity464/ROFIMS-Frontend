@@ -1,0 +1,29 @@
+:host ::ng-deep .p-treetable .p-treetable-tbody > tr > td {
+    vertical-align: middle;
+    padding: 0.5rem 0.75rem;
+}
+
+:host ::ng-deep .p-treetable .p-treetable-thead > tr > th {
+    padding: 0.6rem 0.75rem;
+    font-size: 0.85rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    color: var(--text-color-secondary);
+    background: var(--surface-ground);
+}
+
+.parent-row {
+    background: var(--surface-50, #fafafa);
+}
+
+.cell-nowrap {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 0;
+}
+
+.header-checkbox-col {
+    vertical-align: middle;
+}

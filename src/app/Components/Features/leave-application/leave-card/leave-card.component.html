@@ -1,0 +1,177 @@
+<div class="leave-card-page">
+    <div class="leave-card-toolbar no-print">
+        <button type="button" class="report-btn-back" (click)="goBack()">
+            <i class="pi pi-arrow-left" style="font-size:0.75rem"></i> Back
+        </button>
+        <div class="leave-card-toolbar-right">
+            <button type="button" class="report-lang-toggle" (click)="toggleLang()">
+                {{ lang === 'bn' ? 'English' : 'বাংলা' }}
+            </button>
+            @if (row) {
+                <div class="report-export-wrap">
+                    <button type="button" class="report-btn-export" (click)="toggleExportDropdown($event)" [disabled]="exporting">
+                        @if (exporting) {
+                            <i class="pi pi-spin pi-spinner" style="font-size:13px"></i>
+                            Generating...
+                        } @else {
+                            <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
+                                <path d="M6.5 1v7M3.5 5.5l3 3 3-3M1.5 10.5h10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                            Export
+                        }
+                    </button>
+                    @if (exportDropdownOpen) {
+                        <div class="report-export-dropdown" (click)="$event.stopPropagation()">
+                            <button type="button" class="report-export-item report-export-print" (click)="exportAs('print')">
+                                <i class="pi pi-print" style="font-size:0.75rem"></i> Print Preview
+                            </button>
+                            <button type="button" class="report-export-item report-export-pdf" (click)="exportAs('pdf')">
+                                <span class="report-export-icon">⬇</span> PDF
+                            </button>
+                            <button type="button" class="report-export-item report-export-word" (click)="exportAs('word')">
+                                <span class="report-export-icon">⬇</span> Word
+                            </button>
+                        </div>
+                    }
+                </div>
+            }
+        </div>
+    </div>
+
+    @if (loading) {
+        <div class="leave-card-loading">
+            <i class="pi pi-spin pi-spinner"></i> Loading...
+        </div>
+    } @else if (!row) {
+        <div class="leave-card-empty">Application not found.</div>
+    } @else {
+        <div class="lc-paper-container">
+            <div class="lc-paper" id="leave-card-print">
+
+                <!-- ── Org Header ─────────────────────────────────── -->
+                <div class="lc-org-header">
+                    @if (lang === 'bn') {
+                        <div class="lc-org-line">গণপ্রজাতন্ত্রী বাংলাদেশ সরকার</div>
+                        <div class="lc-org-line">বাংলাদেশ পুলিশ</div>
+                        <div class="lc-org-row"><span class="lc-org-line">{{ getUnitName() || '...........................' }}</span></div>
+                        <div class="lc-org-row"><span class="lc-org-line">{{ getUnitAddress() || '...........................' }}</span></div>
+                    } @else {
+                        <div class="lc-org-line">Government of the People's Republic of Bangladesh</div>
+                        <div class="lc-org-line">Bangladesh Police</div>
+                        <div class="lc-org-row"><span class="lc-org-line">{{ getUnitName() || '...........................' }}</span></div>
+                        <div class="lc-org-row"><span class="lc-org-line">{{ getUnitAddress() || '...........................' }}</span></div>
+                    }
+                </div>
+
+                <!-- ── Title ───────────────────────────────────────── -->
+                <div class="lc-title">
+                    <span class="lc-title__text">{{ lang === 'bn' ? 'ছুটির সনদপত্র/অফিস আদেশ' : 'Leave Certificate / Office Order' }}</span>
+                </div>
+
+                <!-- ── Number / Date row ───────────────────────────── -->
+                <div class="lc-meta-row">
+                    <span class="lc-meta-no">
+                        {{ lang === 'bn' ? 'ছুটির সনদপত্র নং-' : 'Leave Certificate No.-' }}{{ getCertificateNoDisplay() }}
+                    </span>
+                    <span class="lc-meta-date">
+                        {{ lang === 'bn' ? 'তারিখঃ' : 'Date:' }} {{ formatDate(row.approvedDate) }}
+                    </span>
+                </div>
+
+                <!-- ── Body intro paragraph ────────────────────────── -->
+                <!-- After the rank+name, descriptors render in order: Decoration, ProfessionalQualification, Corps, Appointment, RAB Unit. -->
+                <div class="lc-body-text">
+                    @if (lang === 'bn') {
+                        {{ getPrefix(row.applicantEmployeeId) }}-{{ getServiceId(row.applicantEmployeeId) }}
+                        {{ getRank(row.applicantEmployeeId) }} {{ getName(row.applicantEmployeeId) }}{{ getDescriptors(row.applicantEmployeeId) ? ', ' + getDescriptors(row.applicantEmployeeId) : '' }}'কে নিম্নবর্নিত তারিখে মোট
+                        {{ getTotalDays() }} ({{ getTotalDaysWord() }}) দিনের ছুটি ভোগের মঞ্জুরী প্রদান করা হয়েছেঃ
+                    } @else {
+                        {{ getPrefix(row.applicantEmployeeId) }}-{{ getServiceId(row.applicantEmployeeId) }}
+                        {{ getRank(row.applicantEmployeeId) }} {{ getName(row.applicantEmployeeId) }}{{ getDescriptors(row.applicantEmployeeId) ? ', ' + getDescriptors(row.applicantEmployeeId) : '' }} has been granted a total of
+                        {{ getTotalDays() }} ({{ getTotalDaysWord() }}) days of leave on the dates noted below:
+                    }
+                </div>
+
+                <!-- ── Leave detail table ──────────────────────────── -->
+                <div class="lc-table-wrap">
+                    <table class="lc-table">
+                        <thead>
+                            <tr>
+                                <th>{{ lang === 'bn' ? 'ছুটির ধরন' : 'Leave Type' }}</th>
+                                <th>{{ lang === 'bn' ? 'হইতে' : 'From' }}</th>
+                                <th>{{ lang === 'bn' ? 'পর্যন্ত' : 'To' }}</th>
+                                <th>{{ lang === 'bn' ? 'দিন' : 'Days' }}</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @for (det of getLeaveDetails(); track $index) {
+                                <tr>
+                                    <td>{{ getLeaveType(det.leaveTypeId) }}</td>
+                                    <td>{{ formatTableDate(det.fromDate) }}</td>
+                                    <td>{{ formatTableDate(det.toDate) }}</td>
+                                    <td>{{ formatDays(getDetailDays(det)) }}</td>
+                                </tr>
+                            }
+                            <tr class="lc-table__total">
+                                <td colspan="3">{{ lang === 'bn' ? 'সর্বমোট' : 'Total' }}</td>
+                                <td>{{ formatDays(getTotalDaysNumeric()) }}</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- ── Reliever paragraph ──────────────────────────── -->
+                @if (getReliever()) {
+                    <div class="lc-body-text">
+                        @if (lang === 'bn') {
+                            উক্ত অফিসার ছুটিতে থাকাকালীন {{ getPrefix(getRelieverId()) }}-{{ getServiceId(getRelieverId()) }}
+                            {{ getRank(getRelieverId()) }} {{ getName(getRelieverId()) }}{{ getDescriptors(getRelieverId()) ? ', ' + getDescriptors(getRelieverId()) : '' }} নিজ দায়িত্ব ছাড়াও
+                            @if (getAppointment(row.applicantEmployeeId)) {
+                                ভারপ্রাপ্ত {{ getAppointment(row.applicantEmployeeId) }} এর দায়িত্ব পালন করবেন।
+                            } @else {
+                                তার দায়িত্ব পালন করবেন।
+                            }
+                            ছুটি শেষে উক্ত অফিসার প্রত্যাবর্তনের পর উভয়েই স্ব স্ব দায়িত্বে বহাল থাকছেন।
+                        } @else {
+                            While the above officer is on leave, {{ getPrefix(getRelieverId()) }}-{{ getServiceId(getRelieverId()) }}
+                            {{ getRank(getRelieverId()) }} {{ getName(getRelieverId()) }}{{ getDescriptors(getRelieverId()) ? ', ' + getDescriptors(getRelieverId()) : '' }} will
+                            @if (getAppointment(row.applicantEmployeeId)) {
+                                perform the duties of acting {{ getAppointment(row.applicantEmployeeId) }}
+                            } @else {
+                                perform their duties
+                            }
+                            in addition to their own duties. After the leave, both officers will resume their respective duties.
+                        }
+                    </div>
+                }
+
+                <!-- ── Address during leave ────────────────────────── -->
+                @if (row.addressDuringLeave) {
+                    <div class="lc-address-block">
+                        <div class="lc-address-label">{{ lang === 'bn' ? 'ছুটি থাকাকালীন ঠিকানাঃ' : 'Address during leave:' }}</div>
+                        <div class="lc-address-text">{{ row.addressDuringLeave }}</div>
+                    </div>
+                }
+
+                <!-- ── Signature footer ──────────────────────────────
+                     Manual leaves have no approver, so we only show the system-generated note. -->
+                <div class="lc-footer">
+                    <div class="lc-footer__signature">
+                        <div class="lc-footer__sysnote">
+                            ({{ lang === 'bn' ? 'সিস্টেম জেনারেটেড লিভ কার্ড, স্বাক্ষর প্রয়োজন নেই' : 'System Generated Leave Card, Signature not Required' }})
+                        </div>
+                        @if (!isManualProcess()) {
+                            <div class="lc-footer__name">{{ getName(getApproverId()) }}</div>
+                            <div class="lc-footer__rank">{{ getRank(getApproverId()) }}</div>
+                            <div class="lc-footer__appointment">{{ getAppointment(getApproverId()) }}</div>
+                            <div class="lc-footer__date">
+                                {{ lang === 'bn' ? 'তারিখঃ' : 'Date:' }} {{ formatLongDate(row.approvedDate) }}
+                            </div>
+                        }
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    }
+</div>

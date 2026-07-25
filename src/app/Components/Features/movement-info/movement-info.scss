@@ -1,0 +1,173 @@
+.movement-form {
+    .mv-card {
+        padding: 1.25rem 1.5rem;
+        border-radius: 12px;
+        border: 1px solid var(--p-content-border-color, rgba(255, 255, 255, 0.08));
+        background: var(--p-content-background, transparent);
+        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
+    }
+
+    .mv-card-header {
+        display: flex;
+        align-items: center;
+        gap: 0.55rem;
+        margin-bottom: 1rem;
+
+        .mv-card-icon {
+            font-size: 1rem;
+            opacity: 0.85;
+        }
+
+        .mv-card-title {
+            font-weight: 600;
+            font-size: 1rem;
+        }
+
+        .mv-chip {
+            margin-left: 0.6rem;
+            font-size: 0.72rem;
+            font-weight: 500;
+            background: var(--p-surface-200, rgba(255, 255, 255, 0.08));
+            color: var(--p-text-muted-color, #9ca3af);
+            padding: 0.18rem 0.55rem;
+            border-radius: 999px;
+            line-height: 1;
+        }
+
+        .mv-optional {
+            margin-left: auto;
+            font-size: 0.78rem;
+            color: var(--p-text-muted-color, #9ca3af);
+            font-style: italic;
+        }
+    }
+
+    .mv-destined-banner {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        margin-top: 0.85rem;
+        padding: 0.6rem 0.9rem;
+        border-radius: 10px;
+        border: 1px solid var(--p-primary-color, #10b981);
+        // Translucent primary tint instead of --p-primary-50: the -50 shade is a
+        // fixed LIGHT tint that doesn't invert in dark mode. A transparent mix
+        // sits on the theme's own surface, so it works in both themes.
+        background: rgba(16, 185, 129, 0.1);
+        background: color-mix(in srgb, var(--p-primary-color, #10b981) 12%, transparent);
+
+        .pi { color: var(--p-primary-color, #10b981); }
+
+        .mv-destined-label {
+            font-size: 0.82rem;
+            color: var(--p-text-muted-color, #9ca3af);
+        }
+
+        .mv-destined-value {
+            font-weight: 600;
+            font-size: 0.9rem;
+            color: var(--p-text-color, inherit);
+        }
+    }
+
+    .mv-field {
+        display: flex;
+        flex-direction: column;
+
+        label {
+            display: block;
+            margin-bottom: 0.4rem;
+            font-size: 0.85rem;
+            color: var(--p-text-muted-color, #9ca3af);
+            font-weight: 500;
+
+            &.mv-label-blank {
+                visibility: hidden;
+            }
+        }
+    }
+
+    .mv-subsection {
+        & + .mv-subsection {
+            margin-top: 1.5rem;
+            padding-top: 1.5rem;
+            border-top: 1px solid var(--p-content-border-color, rgba(255, 255, 255, 0.08));
+        }
+    }
+
+    .mv-subsection-title {
+        font-size: 0.95rem;
+        font-weight: 600;
+        margin: 0 0 0.85rem 0;
+        color: var(--p-text-color, inherit);
+    }
+
+    .mv-hint {
+        display: block;
+        margin-top: 0.4rem;
+        font-size: 0.78rem;
+        color: var(--p-text-muted-color, #9ca3af);
+    }
+
+    .mv-question {
+        display: block;
+        font-size: 0.85rem;
+        color: var(--p-text-muted-color, #9ca3af);
+        margin-bottom: 0.5rem;
+        font-weight: 500;
+    }
+
+    :host ::ng-deep .mv-yesno {
+        .p-selectbutton,
+        & {
+            display: inline-flex;
+        }
+        .p-button {
+            min-width: 64px;
+        }
+    }
+
+    :host ::ng-deep .mv-toggle {
+        .p-selectbutton,
+        & {
+            display: inline-flex;
+            align-self: flex-start;
+        }
+    }
+
+    .mv-emp-table {
+        margin-top: 1rem;
+
+        :host ::ng-deep .p-datatable-thead > tr > th {
+            font-size: 0.72rem;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+            font-weight: 600;
+            color: var(--p-text-muted-color, #9ca3af);
+        }
+    }
+
+    :host ::ng-deep .mv-avatar {
+        width: 32px;
+        height: 32px;
+        font-size: 0.72rem;
+        font-weight: 600;
+    }
+
+    .mv-takeover-card {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        padding: 0.65rem 0.85rem;
+        background: var(--p-surface-100, rgba(255, 255, 255, 0.04));
+        border: 1px solid var(--p-content-border-color, rgba(255, 255, 255, 0.08));
+        border-radius: 8px;
+        font-size: 0.9rem;
+
+        .mv-takeover-info {
+            display: flex;
+            flex-direction: column;
+            line-height: 1.3;
+        }
+    }
+}

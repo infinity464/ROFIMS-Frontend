@@ -1,0 +1,272 @@
+<p-toast position="top-center"></p-toast>
+
+<p-fluid>
+  <div class="form-card">
+    <div class="form-card-header">
+      <h3 class="form-card-title">{{ title }}</h3>
+    </div>
+
+    <form [formGroup]="form" (ngSubmit)="submit()">
+      <div class="form-section">
+        <!-- Row 1: Draft Posting List No, Text Type, Date -->
+        <div class="form-row">
+          <div class="form-field">
+            <label class="form-label">Draft Posting List No <span class="form-label-required">*</span></label>
+            <p-select
+              formControlName="draftPostingMasterId"
+              [options]="draftPostingOptions"
+              optionLabel="label"
+              optionValue="value"
+              [filter]="true"
+              filterBy="label"
+              placeholder="Search & Select"
+              [loading]="loadingDraftList"
+              [showClear]="true"
+              styleClass="w-full">
+            </p-select>
+            @if (form.get('draftPostingMasterId')?.invalid && form.get('draftPostingMasterId')?.touched) {
+              <small class="form-error">Draft Posting List is required</small>
+            }
+          </div>
+          <div class="form-field" style="flex: 0 0 140px; max-width: 140px;">
+            <label class="form-label">Note-Sheet Text Type</label>
+            <p-select
+              formControlName="textType"
+              [options]="textTypeOptions"
+              optionLabel="label"
+              optionValue="value"
+              styleClass="w-full">
+            </p-select>
+          </div>
+          <div class="form-field" style="flex: 0 0 160px; max-width: 160px;">
+            <label class="form-label">Select Date <span class="form-label-required">*</span></label>
+            <p-datepicker formControlName="noteSheetDate" dateFormat="dd-mm-yy" styleClass="w-full" placeholder="Select Date" appendTo="body"></p-datepicker>
+            @if (form.get('noteSheetDate')?.invalid && form.get('noteSheetDate')?.touched) {
+              <small class="form-error">Date is required</small>
+            }
+          </div>
+          <div class="form-field" style="flex: 2 1 0%;">
+            <label class="form-label">Note Sheet No <span class="form-label-required">*</span></label>
+            @if (editMode) {
+              <input pInputText formControlName="noteSheetNo" placeholder="Auto generated" class="w-full" [readonly]="true" />
+            } @else {
+              <p-select
+                formControlName="noteSheetNumberConfigId"
+                [options]="noteSheetConfigOptions"
+                optionLabel="label"
+                optionValue="value"
+                [filter]="true"
+                filterBy="label"
+                placeholder="Select Pattern"
+                [showClear]="true"
+                styleClass="w-full">
+              </p-select>
+              @if (form.get('noteSheetNumberConfigId')?.invalid && form.get('noteSheetNumberConfigId')?.touched) {
+                <small class="form-error">Note Sheet No is required</small>
+              }
+            }
+          </div>
+          @if (!editMode) {
+          <div class="form-field" style="flex: 0 1 200px;">
+            <label class="form-label">Static Word</label>
+            <input pInputText formControlName="noteSheetNoStaticWord" placeholder="Optional word" class="w-full" maxlength="50" />
+            <small class="text-500">Added before the serial (prefix/word/serial)</small>
+          </div>
+          }
+        </div>
+
+        <!-- Row 2: Reference Number (full width) -->
+        <div class="form-row">
+          <div class="form-field" style="flex-basis: 100%">
+            <label class="form-label">Reference Number</label>
+            <app-rich-editor formControlName="referenceNumber" [hideTable]="true" height="120px" placeholder="Enter reference number..."></app-rich-editor>
+          </div>
+        </div>
+
+        <!-- Prepared by / Initiator / Recommender / Final Approver -->
+        <app-notesheet-approver-select
+          [noteSheetType]="'NewPosting'"
+          [useUserList]="true"
+          [(initiatorId)]="form.controls['initiatorId'].value"
+          (initiatorIdChange)="form.controls['initiatorId'].setValue($event); form.controls['initiatorId'].markAsTouched()"
+          [(recommenderIds)]="form.controls['recommenderIds'].value"
+          (recommenderIdsChange)="form.controls['recommenderIds'].setValue($event)"
+          [(finalApproverId)]="form.controls['finalApproverId'].value"
+          (finalApproverIdChange)="form.controls['finalApproverId'].setValue($event); form.controls['finalApproverId'].markAsTouched()"
+          [showErrors]="!!(form.get('initiatorId')?.touched || form.get('finalApproverId')?.touched)">
+          <div class="form-field">
+            <label class="form-label">Prepared by</label>
+            @if (isPreparedByMapped) {
+              <input pInputText class="w-full" formControlName="preparedBy" readonly />
+            } @else {
+              <p-select
+                formControlName="preparedByEmployeeId"
+                [options]="preparedByOptions"
+                optionLabel="label"
+                optionValue="value"
+                [filter]="true"
+                filterBy="label"
+                placeholder="Search & Select"
+                [showClear]="true"
+                styleClass="w-full">
+              </p-select>
+            }
+          </div>
+        </app-notesheet-approver-select>
+
+        <!-- Row 3b: Subject, Operation Type, Is Secret -->
+        <div class="form-row">
+          <div class="form-field" style="flex: 2 1 0%">
+            <label class="form-label">Subject</label>
+            <div class="subject-input-row">
+              <input pInputText formControlName="subject" placeholder="Enter subject or click search" class="w-full" />
+              <button pButton type="button" icon="pi pi-search" class="p-button-outlined subject-search-btn"
+                title="Pick subject from list" (click)="openSubjectDialog()"></button>
+            </div>
+          </div>
+          <div class="form-field">
+            <label class="form-label">Operation Type <span class="form-label-required">*</span></label>
+            <p-select
+              formControlName="noteSheetOperationType"
+              [options]="noteSheetOperationTypeOptions"
+              optionLabel="label"
+              optionValue="value"
+              [showClear]="true"
+              placeholder="Select type"
+              styleClass="w-full">
+            </p-select>
+            @if (form.get('noteSheetOperationType')?.invalid && form.get('noteSheetOperationType')?.touched) {
+              <small class="form-error">Operation Type is required</small>
+            }
+          </div>
+          <div class="form-field">
+            <label class="form-label">Secret</label>
+            <div style="display: flex; align-items: center; gap: 0.5rem; padding-top: 0.5rem;">
+              <p-checkbox formControlName="isSecret" [binary]="true" inputId="isSecret"></p-checkbox>
+              <label for="isSecret">Mark as Secret</label>
+            </div>
+          </div>
+        </div>
+
+        <!-- Row 4: Main Text (full width) -->
+        <div class="form-row">
+          <div class="form-field" style="flex-basis: 100%">
+            <label class="form-label">Main Text</label>
+            <app-rich-editor formControlName="mainText" height="220px" placeholder="Add content using the text editor..."></app-rich-editor>
+          </div>
+        </div>
+
+        <!-- Note/Remarks (full width) -->
+        <div class="form-row">
+          <div class="form-field" style="flex-basis: 100%">
+            <label class="form-label">Note/Remarks</label>
+            <textarea pInputTextarea formControlName="note" rows="3" class="w-full" placeholder="Enter note..."></textarea>
+          </div>
+        </div>
+
+        <!-- Notesheet Paragraphs -->
+        <div class="form-row">
+          <div class="form-field" style="flex-basis: 100%">
+            <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem;">
+              <label class="form-label" style="margin-bottom: 0;">Notesheet Paragraph</label>
+              <p-button icon="pi pi-plus" [rounded]="true" [text]="true" severity="success" (onClick)="addParagraph()"></p-button>
+            </div>
+            @for (p of paragraphs; track trackByIndex($index)) {
+              <div style="display: flex; align-items: start; gap: 0.5rem; margin-bottom: 0.5rem;">
+                <span style="min-width: 1.5rem; padding-top: 0.6rem; font-weight: 600;">{{ $index + 1 }}.</span>
+                <textarea pInputTextarea class="w-full" rows="2" [value]="paragraphs[$index]" (input)="paragraphs[$index] = $any($event.target).value" [placeholder]="'Paragraph ' + ($index + 1)"></textarea>
+                @if (paragraphs.length > 1) {
+                  <p-button icon="pi pi-trash" [class.perm-hidden]="!canDelete" [rounded]="true" [text]="true" severity="danger" (onClick)="removeParagraph($index)"></p-button>
+                }
+              </div>
+            }
+          </div>
+        </div>
+
+        <!-- Row 6: Supporting Document (full width) -->
+        <div class="form-row">
+          <div class="form-field" style="flex-basis: 100%">
+            <label class="form-label">Upload Supporting Document</label>
+            <app-file-references-form
+              #fileReferencesForm
+              [fileRows]="fileRows"
+              [isViewMode]="false"
+              title="Supporting Document"
+              (fileRowsChange)="onFileRowsChange($event)"
+              (onDownloadFile)="onDownloadFile($event)">
+            </app-file-references-form>
+          </div>
+        </div>
+      </div>
+
+      <div class="form-actions">
+        <p-button type="submit" [label]="editMode ? 'Update Note Sheet' : 'Generate Note Sheet'" [icon]="editMode ? 'pi pi-check' : 'pi pi-file-edit'" [loading]="isSubmitting" [disabled]="form.invalid" />
+      </div>
+    </form>
+
+    <!-- Selected draft's employees — collapsible preview shown once a Draft Posting List is picked -->
+    @if (form.get('draftPostingMasterId')?.value) {
+      <p-panel styleClass="draft-employees-panel" [header]="draftEmployeesPanelHeader" [toggleable]="true" [collapsed]="false">
+        <p-table
+          [value]="draftEmployees"
+          [loading]="loadingDraftEmployees"
+          [tableStyle]="{ 'min-width': '50rem' }"
+          styleClass="p-datatable-striped p-datatable-gridlines p-datatable-sm"
+          [paginator]="draftEmployees.length > 10"
+          [rows]="10"
+          [rowsPerPageOptions]="[10, 25, 50]">
+          <ng-template pTemplate="header">
+            <tr>
+              <th style="width: 50px">Ser</th>
+              <th>Service ID</th>
+              <th>Rank</th>
+              <th>Corps</th>
+              <th>Trade</th>
+              <th>Name</th>
+              <th>Member Type</th>
+              <th>Mother Unit</th>
+              <th>Remarks</th>
+            </tr>
+          </ng-template>
+          <ng-template pTemplate="body" let-row let-rowIndex="rowIndex">
+            <tr>
+              <td>{{ rowIndex + 1 }}</td>
+              <td class="font-semibold">{{ row.serviceId || '-' }}</td>
+              <td>{{ row.rank || '-' }}</td>
+              <td>{{ row.corps || '-' }}</td>
+              <td>{{ row.trade || '-' }}</td>
+              <td>{{ row.name || '-' }}</td>
+              <td>{{ memberTypeName(row.memberTypeId) }}</td>
+              <td>{{ row.motherUnit || '-' }}</td>
+              <td>{{ row.remarks || '-' }}</td>
+            </tr>
+          </ng-template>
+          <ng-template pTemplate="emptymessage">
+            <tr>
+              <td colspan="9" class="text-center p-4 text-500">No employees found for this draft.</td>
+            </tr>
+          </ng-template>
+        </p-table>
+      </p-panel>
+    }
+  </div>
+</p-fluid>
+
+<p-dialog header="Select Subject" [(visible)]="showSubjectDialog" [modal]="true" [draggable]="false"
+  [dismissableMask]="true" [style]="{ width: '34rem' }" styleClass="subject-pick-dialog">
+  <div class="subject-pick">
+    <span class="subject-pick-search">
+      <i class="pi pi-search"></i>
+      <input pInputText type="text" [(ngModel)]="subjectSearch" [ngModelOptions]="{ standalone: true }"
+        placeholder="Search subject..." class="w-full" autofocus />
+    </span>
+
+    <ul class="subject-pick-list">
+      @for (opt of filteredSubjects; track opt.value) {
+        <li (click)="pickSubject(opt)">{{ opt.label }}</li>
+      } @empty {
+        <li class="subject-pick-empty">No subjects found</li>
+      }
+    </ul>
+  </div>
+</p-dialog>

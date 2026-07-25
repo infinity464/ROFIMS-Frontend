@@ -1,0 +1,191 @@
+<p-toast position="top-center"></p-toast>
+
+<div class="preview-page">
+
+    @if (loading) {
+        <div class="preview-state"><i class="pi pi-spin pi-spinner mr-2"></i>Loading…</div>
+    } @else if (notFound) {
+        <div class="preview-state error"><i class="pi pi-exclamation-triangle mr-2"></i>Application not found.</div>
+    } @else if (application) {
+        <!-- Letter card -->
+        <div class="letter-card">
+            <!-- Header bar with Back button + screen title + language toggle + export dropdown. -->
+            <div class="preview-header no-print">
+                <button type="button" class="toolbar-btn" (click)="back()">
+                    <i class="pi pi-arrow-left" style="font-size:0.75rem; margin-right:4px"></i>Back
+                </button>
+                <div class="preview-header-title">Review Leave Application</div>
+                <span class="spacer"></span>
+                <button type="button" class="toolbar-btn" (click)="toggleLang()">
+                    {{ lang === 'bn' ? 'English' : 'বাংলা' }}
+                </button>
+                <div class="report-export-wrap">
+                    <button type="button" class="report-btn-export" (click)="toggleExportDropdown($event)" [disabled]="exporting">
+                        @if (exporting) {
+                            <i class="pi pi-spin pi-spinner" style="font-size:13px"></i>
+                            Generating...
+                        } @else {
+                            <i class="pi pi-download" style="font-size:0.75rem"></i>
+                            Export
+                        }
+                    </button>
+                    @if (exportDropdownOpen) {
+                        <div class="report-export-dropdown" (click)="$event.stopPropagation()">
+                            <button type="button" class="report-export-item" (click)="exportAs('print')">
+                                <i class="pi pi-print" style="font-size:0.75rem"></i> Print Preview
+                            </button>
+                            <button type="button" class="report-export-item" (click)="exportAs('pdf')">
+                                <i class="pi pi-file-pdf" style="font-size:0.75rem"></i> PDF
+                            </button>
+                            <button type="button" class="report-export-item" (click)="exportAs('word')">
+                                <i class="pi pi-file-word" style="font-size:0.75rem"></i> Word
+                            </button>
+                        </div>
+                    }
+                </div>
+            </div>
+
+            <div id="leave-preview-print" class="leave-letter" [class.is-bn]="lang === 'bn'">
+                <h2 class="letter-title">{{ lang === 'bn' ? 'ছুটির আবেদন' : 'Leave Application' }}</h2>
+
+                <p class="letter-para">
+                    @if (lang === 'bn') {
+                        {{ getPrefix(application.applicantEmployeeId) }}-{{ getServiceId(application.applicantEmployeeId) }}
+                        {{ getRank(application.applicantEmployeeId) }} {{ getName(application.applicantEmployeeId) }}{{ getDescriptors(application.applicantEmployeeId) ? ', ' + getDescriptors(application.applicantEmployeeId) : '' }} নিম্নবর্নিত তারিখে মোট
+                        <strong>{{ getTotalDays() }} ({{ getTotalDaysWord() }})</strong> দিনের ছুটির আবেদন করেছেনঃ
+                    } @else {
+                        {{ getPrefix(application.applicantEmployeeId) }}-{{ getServiceId(application.applicantEmployeeId) }}
+                        {{ getRank(application.applicantEmployeeId) }} {{ getName(application.applicantEmployeeId) }}{{ getDescriptors(application.applicantEmployeeId) ? ', ' + getDescriptors(application.applicantEmployeeId) : '' }} has applied for leave for the dates mentioned below totaling
+                        <strong>{{ getTotalDays() }} ({{ getTotalDaysWord() }})</strong> days:
+                    }
+                </p>
+
+                <table class="letter-table">
+                    <thead>
+                        <tr>
+                            <th>{{ lang === 'bn' ? 'ছুটির ধরন' : 'Leave Type' }}</th>
+                            <th>{{ lang === 'bn' ? 'হইতে' : 'From' }}</th>
+                            <th>{{ lang === 'bn' ? 'পর্যন্ত' : 'To' }}</th>
+                            <th>{{ lang === 'bn' ? 'দিন' : 'Days' }}</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @for (d of getLeaveDetails(); track $index) {
+                            <tr>
+                                <td>{{ getLeaveType(d.leaveTypeId) }}</td>
+                                <td>{{ formatTableDate(d.fromDate) }}</td>
+                                <td>{{ formatTableDate(d.toDate) }}</td>
+                                <td>{{ formatDays(getDetailDays(d)) }}</td>
+                            </tr>
+                        }
+                        @if (getLeaveDetails().length === 0) {
+                            <tr><td colspan="4" class="text-center">{{ lang === 'bn' ? 'কোনো ছুটি নেই।' : 'No leave entries.' }}</td></tr>
+                        }
+                    </tbody>
+                    <tfoot>
+                        <tr>
+                            <td colspan="3" class="total-label">{{ lang === 'bn' ? 'সর্বমোট' : 'Total' }}</td>
+                            <td class="total-value">{{ formatDays(getTotalDaysNumeric()) }}</td>
+                        </tr>
+                    </tfoot>
+                </table>
+
+                @if (getReliever()) {
+                    <p class="letter-para">
+                        @if (lang === 'bn') {
+                            উক্ত অফিসার ছুটিতে থাকাকালীন {{ getPrefix(getRelieverId()) }}-{{ getServiceId(getRelieverId()) }}
+                            {{ getRank(getRelieverId()) }} {{ getName(getRelieverId()) }}{{ getDescriptors(getRelieverId()) ? ', ' + getDescriptors(getRelieverId()) : '' }} নিজ দায়িত্ব ছাড়াও
+                            @if (getAppointment(application.applicantEmployeeId)) {
+                                ভারপ্রাপ্ত {{ getAppointment(application.applicantEmployeeId) }} এর দায়িত্ব পালন করবেন।
+                            } @else {
+                                তার দায়িত্ব পালন করবেন।
+                            }
+                        } @else {
+                            While the above officer is on leave, {{ getPrefix(getRelieverId()) }}-{{ getServiceId(getRelieverId()) }}
+                            {{ getRank(getRelieverId()) }} {{ getName(getRelieverId()) }}{{ getDescriptors(getRelieverId()) ? ', ' + getDescriptors(getRelieverId()) : '' }} will
+                            @if (getAppointment(application.applicantEmployeeId)) {
+                                perform the duties of acting {{ getAppointment(application.applicantEmployeeId) }}
+                            } @else {
+                                perform their duties
+                            }
+                            in addition to their own duties.
+                        }
+                    </p>
+                }
+
+                @if (application.addressDuringLeave) {
+                    <div class="letter-section">
+                        <h4 class="letter-section-title">{{ lang === 'bn' ? 'ছুটি থাকাকালীন ঠিকানাঃ' : 'Address During Leave:' }}</h4>
+                        <p class="letter-section-body">{{ application.addressDuringLeave }}</p>
+                    </div>
+                }
+
+                @if (application.remarks) {
+                    <div class="letter-section">
+                        <h4 class="letter-section-title">{{ lang === 'bn' ? 'মন্তব্য:' : 'Remark:' }}</h4>
+                        <p class="letter-section-body">{{ application.remarks }}</p>
+                    </div>
+                }
+
+            </div>
+        </div>
+
+        <!-- Approval flow: recommenders (in order) + final approver, each with status. -->
+        <div class="approval-card">
+            @if ((application.attachments?.length ?? 0) > 0) {
+                <h4 class="approval-card-title">Attached Files</h4>
+                <ul class="attachment-list">
+                    @for (a of application.attachments; track a.fileId) {
+                        <li class="attachment-item">
+                            <i class="pi pi-paperclip attachment-icon"></i>
+                            <span class="attachment-name">{{ a.fileName || 'file-' + a.fileId }}</span>
+                            <button type="button" class="attachment-download" (click)="previewAttachment(a.fileId, a.fileName)" [title]="isPreviewableFile(a.fileName) ? 'Open in new tab' : 'Download'">
+                                <i [class]="isPreviewableFile(a.fileName) ? 'pi pi-external-link' : 'pi pi-download'"></i>
+                            </button>
+                        </li>
+                    }
+                </ul>
+            }
+
+            <h4 class="approval-card-title">Approval Flow</h4>
+            <ol class="approval-chain">
+                @for (r of recommenderRows; track $index) {
+                    <li class="approval-step">
+                        <span class="step-role">Recommender {{ r.sequenceNo }}</span>
+                        <span class="step-name">{{ formatEmpFullEn(r.employeeId) }}</span>
+                        <span class="step-status" [ngClass]="getRecommenderStatusClass(r.status)">{{ getRecommenderStatusLabel(r.status) }}</span>
+                        @if (r.remarkText) {
+                            <span class="step-remark">— {{ r.remarkText }}</span>
+                        }
+                    </li>
+                }
+                @if (application.finalApproverId) {
+                    <li class="approval-step">
+                        <span class="step-role">Final Approver</span>
+                        <span class="step-name">{{ formatEmpFullEn(application.finalApproverId) }}</span>
+                        <span class="step-status" [ngClass]="finalApproverStatusClass">{{ finalApproverStatusLabel }}</span>
+                        @if (application.remark) {
+                            <span class="step-remark">— {{ application.remark }}</span>
+                        }
+                    </li>
+                }
+                @if (recommenderRows.length === 0 && !application.finalApproverId) {
+                    <li class="approval-step muted">No approval chain configured.</li>
+                }
+            </ol>
+        </div>
+
+        <!-- Reviewer's remark + actions — visible only to the next pending recommender or to the final approver (after all recommenders have approved). -->
+        @if (canActOnApplication) {
+            <div class="review-card">
+                <label class="review-label">Your Remark <span class="text-xs">(optional)</span></label>
+                <textarea pTextarea [(ngModel)]="remarkText" rows="3" class="w-full" placeholder="Add a remark with your decision"></textarea>
+                <div class="review-actions">
+                    <p-button label="Reject" icon="pi pi-times" severity="danger" [loading]="submitting" [class.perm-hidden]="!canUpdate" (onClick)="reject()"></p-button>
+                    <p-button label="Return" icon="pi pi-undo" severity="warn" [loading]="submitting" [class.perm-hidden]="!canUpdate" (onClick)="returnToApplicant()"></p-button>
+                    <p-button [label]="acceptLabel" icon="pi pi-check" severity="success" [loading]="submitting" [class.perm-hidden]="!canUpdate" (onClick)="accept()"></p-button>
+                </div>
+            </div>
+        }
+    }
+</div>

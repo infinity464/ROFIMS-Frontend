@@ -22,6 +22,16 @@ export class OrganizationService {
         return this.http.get<OrganizationModel[]>(`${this.apiUrl}/GetAllOrgUnit`);
     }
 
+    /** Get active organization units (children) for a mother organization. */
+    getAllActiveOrgUnitByOrgId(orgId: number): Observable<OrganizationModel[]> {
+        return this.http.get<OrganizationModel[]>(`${this.apiUrl}/GetAllActiveOrgUnitByOrgId/${orgId}`);
+    }
+
+    /** Get active org units for the mother organization that the given employee belongs to. */
+    getOrgUnitsByEmployeeId(employeeId: number): Observable<OrganizationModel[]> {
+        return this.http.get<OrganizationModel[]>(`${this.apiUrl}/GetOrgUnitsByEmployeeId/${employeeId}`);
+    }
+
     getWithKeywordAndPaging(keyword: string, pageNumber: number, pageSize: number): Observable<OrganizationModel[]> {
         return this.http.get<OrganizationModel[]>(`${this.apiUrl}/  GetPaginatedOnSearchAsyn?searchValue=${keyword}&page_no=${pageNumber}&row_per_page=${pageSize}`);
     }

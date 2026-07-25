@@ -2,12 +2,32 @@ import { environment } from '@/Core/Environments/environment';
 import { HttpClient } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
 import { CommonCode } from '../models/common-code';
-import { Observable } from 'rxjs';
+import { Observable, forkJoin } from 'rxjs';
+import { map } from 'rxjs/operators';
 import { PagedResponse } from '@/Core/Models/Pagination';
 import { OrganizationModel } from '../../organization-setup/models/organization';
 import { BankModel } from '../models/bank';
+import { BankBranchModel } from '../models/bank-branch';
 import { TrainingInstituteModel } from '../models/training-institution';
 import { RabIdSerialModel } from '../models/rab-id-serial';
+import { LeaveCardNumberConfigModel } from '../models/leave-card-number-config';
+import { EquivalentRankModel } from '../models/equivalent-rank';
+import { MotherOrgRankVacancyDistributionModel, MotherOrgVacancyLockModel } from '../models/mother-org-rank-vacancy';
+import { EquivalentNameVacancyDistributionModel, EquivalentNameVacancyLockModel } from '../models/equivalent-name-vacancy';
+
+import { NoteSheetTemplateModel } from '../models/notesheet-template';
+import { NoteSheetNumberConfigModel } from '../models/notesheet-number-config';
+import { NoteSheetApproverConfigModel } from '../models/notesheet-approver-config';
+import { RABUnitAORModel, ResultViewModel } from '../models/rab-unit-aor';
+import { PostingOrderNumberConfigModel } from '../models/posting-order-number-config';
+import { MovementLetterNumberConfigModel } from '../models/movement-letter-number-config';
+import { OnulipiConfigModel } from '../models/onulipi-config';
+
+export interface AuthorizedCountItem {
+    codeId: number;
+    authorizedCount: number;
+}
+
 
 @Injectable({
     providedIn: 'root'
@@ -16,8 +36,24 @@ export class MasterBasicSetupService {
     private http = inject(HttpClient);
     private apiUrl = `${environment.apis.core}/CommonCode`;
     private apiUrlBank = `${environment.apis.core}/Bank`;
+    private apiUrlBankBranch = `${environment.apis.core}/BankBranch`;
     private apiUrlTraining = `${environment.apis.core}/TrainingInstitute`;
     private apiUrlRabIdSerial = `${environment.apis.core}/RabIdSerial`;
+    private apiUrlLeaveCardNumberConfig = `${environment.apis.core}/LeaveCardNumberConfig`;
+    private apiUrlRankEquivalent = `${environment.apis.core}/RankEquivalent`;
+    private apiUrlMotherOrgRankVacancyDistribution = `${environment.apis.core}/MotherOrgRankVacancyDistribution`;
+    private apiUrlMotherOrgVacancyLock = `${environment.apis.core}/MotherOrgVacancyLock`;
+    private apiUrlEquivalentNameVacancyDistribution = `${environment.apis.core}/EquivalentNameVacancyDistribution`;
+    private apiUrlEquivalentNameVacancyLock = `${environment.apis.core}/EquivalentNameVacancyLock`;
+    private apiUrlNoteSheetTemplate = `${environment.apis.core}/NoteSheetTemplate`;
+    private apiUrlNoteSheetNumberConfig = `${environment.apis.core}/NoteSheetNumberConfig`;
+    private apiUrlNoteSheetApproverConfig = `${environment.apis.core}/NoteSheetApproverConfig`;
+    private apiUrlRABUnitAOR = `${environment.apis.core}/RABUnitAOR`;
+    private apiUrlPostingOrderNumberConfig = `${environment.apis.core}/PostingOrderNumberConfig`;
+    private apiUrlMovementLetterNumberConfig = `${environment.apis.core}/MovementLetterNumberConfig`;
+    private apiUrlOnulipiConfig = `${environment.apis.core}/OnulipiConfig`;
+    private apiUrlEduQualDept = `${environment.apis.core}/EducationQualificationDepartment`;
+
 
     getAllByType(codeType: string): Observable<CommonCode[]> {
         return this.http.get<CommonCode[]>(`${this.apiUrl}/GetByTypeAsyn/${codeType}`);
@@ -58,6 +94,121 @@ export class MasterBasicSetupService {
         return this.http.delete<void>(`${this.apiUrl}/DeleteAsyn/${id}`);
     }
 
+    // RankEquivalent
+    getAllRankEquivalents(): Observable<EquivalentRankModel[]> {
+        return this.http.get<EquivalentRankModel[]>(`${this.apiUrlRankEquivalent}/GetAll`);
+    }
+
+    getRankEquivalentByKeys(equivalentNameID: number, motherOrgRankId: number): Observable<EquivalentRankModel[]> {
+        return this.http.get<EquivalentRankModel[]>(`${this.apiUrlRankEquivalent}/GetFilteredByKeysAsyn/${equivalentNameID}/${motherOrgRankId}`);
+    }
+
+    saveRankEquivalent(model: EquivalentRankModel): Observable<{ statusCode: number; description?: string }> {
+        return this.http.post<{ statusCode: number; description?: string }>(`${this.apiUrlRankEquivalent}/SaveAsyn`, model);
+    }
+
+    updateRankEquivalent(model: EquivalentRankModel): Observable<{ statusCode: number; description?: string }> {
+        return this.http.post<{ statusCode: number; description?: string }>(`${this.apiUrlRankEquivalent}/UpdateAsyn`, model);
+    }
+
+    deleteRankEquivalent(equivalentNameID: number, motherOrgRankId: number): Observable<{ statusCode: number; description?: string }> {
+        return this.http.delete<{ statusCode: number; description?: string }>(`${this.apiUrlRankEquivalent}/DeleteAsyn/${equivalentNameID}/${motherOrgRankId}`);
+    }
+
+    // MotherOrgRankVacancyDistribution
+    getMotherOrgRankVacancyDistributionByVacancy(orgId: number, motherOrgRankId: number): Observable<MotherOrgRankVacancyDistributionModel[]> {
+        return this.http.get<MotherOrgRankVacancyDistributionModel[]>(`${this.apiUrlMotherOrgRankVacancyDistribution}/GetByVacancy/${orgId}/${motherOrgRankId}`);
+    }
+    saveMotherOrgRankVacancyDistribution(model: MotherOrgRankVacancyDistributionModel): Observable<{ statusCode: number; description?: string }> {
+        return this.http.post<{ statusCode: number; description?: string }>(`${this.apiUrlMotherOrgRankVacancyDistribution}/Save`, model);
+    }
+    updateMotherOrgRankVacancyDistribution(model: MotherOrgRankVacancyDistributionModel): Observable<{ statusCode: number; description?: string }> {
+        return this.http.put<{ statusCode: number; description?: string }>(`${this.apiUrlMotherOrgRankVacancyDistribution}/Update`, model);
+    }
+    deleteMotherOrgRankVacancyDistribution(id: number): Observable<{ statusCode: number; description?: string }> {
+        return this.http.delete<{ statusCode: number; description?: string }>(`${this.apiUrlMotherOrgRankVacancyDistribution}/Delete/${id}`);
+    }
+
+    // MotherOrgVacancyLock — per-office entry lock
+    getMotherOrgVacancyLocksByOrg(orgId: number): Observable<MotherOrgVacancyLockModel[]> {
+        return this.http.get<MotherOrgVacancyLockModel[]>(`${this.apiUrlMotherOrgVacancyLock}/GetByOrg/${orgId}`);
+    }
+    setMotherOrgVacancyLock(model: MotherOrgVacancyLockModel): Observable<{ statusCode: number; description?: string }> {
+        return this.http.post<{ statusCode: number; description?: string }>(`${this.apiUrlMotherOrgVacancyLock}/Set`, model);
+    }
+
+    // EquivalentNameVacancyDistribution
+    getEquivalentNameVacancyDistributionByVacancy(orgId: number, equivalentNameId: number): Observable<EquivalentNameVacancyDistributionModel[]> {
+        return this.http.get<EquivalentNameVacancyDistributionModel[]>(`${this.apiUrlEquivalentNameVacancyDistribution}/GetByVacancy/${orgId}/${equivalentNameId}`);
+    }
+    saveEquivalentNameVacancyDistribution(model: EquivalentNameVacancyDistributionModel): Observable<{ statusCode: number; description?: string }> {
+        return this.http.post<{ statusCode: number; description?: string }>(`${this.apiUrlEquivalentNameVacancyDistribution}/Save`, model);
+    }
+    updateEquivalentNameVacancyDistribution(model: EquivalentNameVacancyDistributionModel): Observable<{ statusCode: number; description?: string }> {
+        return this.http.put<{ statusCode: number; description?: string }>(`${this.apiUrlEquivalentNameVacancyDistribution}/Update`, model);
+    }
+    deleteEquivalentNameVacancyDistribution(id: number): Observable<{ statusCode: number; description?: string }> {
+        return this.http.delete<{ statusCode: number; description?: string }>(`${this.apiUrlEquivalentNameVacancyDistribution}/Delete/${id}`);
+    }
+
+    // EquivalentNameVacancyLock — per-office entry lock
+    getEquivalentNameVacancyLocksByOrg(orgId: number): Observable<EquivalentNameVacancyLockModel[]> {
+        return this.http.get<EquivalentNameVacancyLockModel[]>(`${this.apiUrlEquivalentNameVacancyLock}/GetByOrg/${orgId}`);
+    }
+    setEquivalentNameVacancyLock(model: EquivalentNameVacancyLockModel): Observable<{ statusCode: number; description?: string }> {
+        return this.http.post<{ statusCode: number; description?: string }>(`${this.apiUrlEquivalentNameVacancyLock}/Set`, model);
+    }
+
+    getAuthorizedOrganogramCounts(): Observable<AuthorizedCountItem[]> {
+        const rabOrgTypes = new Set([
+            'RabUnit', 'RABUNIT', 'RabWing', 'RABWING',
+            'RabBranch', 'RABBRANCH', 'RabSubBranch', 'RABSUBBRANCH',
+            'RabSection', 'RABSECTION', 'RabSubSection', 'RABSUBSECTION'
+        ]);
+
+        return forkJoin({
+            distributions: this.http.get<EquivalentNameVacancyDistributionModel[]>(`${this.apiUrlEquivalentNameVacancyDistribution}/GetAll`),
+            allCodes: this.http.get<CommonCode[]>(`${this.apiUrl}/GetAll`)
+        }).pipe(
+            map(({ distributions, allCodes }) => {
+                // Build parent lookup from full org hierarchy
+                const parentByCodeId = new Map<number, number | null>();
+                for (const n of allCodes) {
+                    if (rabOrgTypes.has(n.codeType)) {
+                        parentByCodeId.set(n.codeId, n.parentCodeId ?? null);
+                    }
+                }
+
+                // Direct counts per leaf node
+                const directCounts = new Map<number, number>();
+                for (const d of distributions) {
+                    if (d.rabCodeId && d.quantity) {
+                        directCounts.set(d.rabCodeId, (directCounts.get(d.rabCodeId) || 0) + d.quantity);
+                    }
+                }
+
+                // Rollup: walk up parent chain for each direct count
+                const rollup = new Map<number, number>();
+                directCounts.forEach((cnt, codeId) => {
+                    let cur: number | null | undefined = codeId;
+                    let guard = 0;
+                    while (cur != null && guard++ < 500) {
+                        rollup.set(cur, (rollup.get(cur) || 0) + cnt);
+                        const parent = parentByCodeId.get(cur);
+                        if (parent === undefined) break;
+                        cur = parent;
+                    }
+                });
+
+                const result: AuthorizedCountItem[] = [];
+                rollup.forEach((authorizedCount, codeId) => {
+                    result.push({ codeId, authorizedCount });
+                });
+                return result;
+            })
+        );
+    }
+
     // Bank
 
     // GET: all banks
@@ -83,6 +234,24 @@ export class MasterBasicSetupService {
     // DELETE: delete bank
     deleteBank(id: number): Observable<any> {
         return this.http.delete(`${this.apiUrlBank}/DeleteAsyn/${id}`);
+    }
+
+    // BankBranch
+
+    getAllBankBranch(): Observable<BankBranchModel[]> {
+        return this.http.get<BankBranchModel[]>(`${this.apiUrlBankBranch}/GetAll`);
+    }
+
+    createBankBranch(model: BankBranchModel): Observable<any> {
+        return this.http.post(`${this.apiUrlBankBranch}/SaveAsyn`, model);
+    }
+
+    updateBankBranch(model: BankBranchModel): Observable<any> {
+        return this.http.put(`${this.apiUrlBankBranch}/UpdateAsyn`, model);
+    }
+
+    deleteBankBranch(id: number): Observable<any> {
+        return this.http.delete(`${this.apiUrlBankBranch}/DeleteAsyn/${id}`);
     }
 
     // GET: all training institutes
@@ -130,5 +299,206 @@ export class MasterBasicSetupService {
     // DELETE: delete RabIdSerial
     deleteRabIdSerial(id: number): Observable<any> {
         return this.http.delete(`${this.apiUrlRabIdSerial}/DeleteAsyn/${id}`);
+    }
+
+    // LeaveCardNumberConfig CRUD (singleton — backend rejects a second insert)
+
+    getAllLeaveCardNumberConfig(): Observable<LeaveCardNumberConfigModel[]> {
+        return this.http.get<LeaveCardNumberConfigModel[]>(`${this.apiUrlLeaveCardNumberConfig}/GetAll`);
+    }
+
+    getLeaveCardNumberConfigById(id: number): Observable<LeaveCardNumberConfigModel> {
+        return this.http.get<LeaveCardNumberConfigModel>(`${this.apiUrlLeaveCardNumberConfig}/GetFilteredByKeysAsyn/${id}`);
+    }
+
+    createLeaveCardNumberConfig(model: LeaveCardNumberConfigModel): Observable<any> {
+        return this.http.post(`${this.apiUrlLeaveCardNumberConfig}/SaveAsyn`, model);
+    }
+
+    updateLeaveCardNumberConfig(model: LeaveCardNumberConfigModel): Observable<any> {
+        return this.http.post(`${this.apiUrlLeaveCardNumberConfig}/UpdateAsyn`, model);
+    }
+
+    deleteLeaveCardNumberConfig(id: number): Observable<any> {
+        return this.http.delete(`${this.apiUrlLeaveCardNumberConfig}/DeleteAsyn/${id}`);
+    }
+
+    getNoteSheetTemplates(): Observable<NoteSheetTemplateModel[]> {
+        return this.http.get<NoteSheetTemplateModel[]>(`${this.apiUrlNoteSheetTemplate}/GetAll`);
+    }
+    getNoteSheetTemplateById(id: number): Observable<NoteSheetTemplateModel[]> {
+        return this.http.get<NoteSheetTemplateModel[]>(`${this.apiUrlNoteSheetTemplate}/GetFilteredByKeysAsyn/${id}`);
+    }
+    createNoteSheetTemplate(model: NoteSheetTemplateModel): Observable<any> {
+        return this.http.post(`${this.apiUrlNoteSheetTemplate}/SaveAsyn`, model);
+    }
+    updateNoteSheetTemplate(model: NoteSheetTemplateModel): Observable<any> {
+        return this.http.put(`${this.apiUrlNoteSheetTemplate}/UpdateAsyn`, model);
+    }
+    deleteNoteSheetTemplate(id: number): Observable<any> {
+        return this.http.delete(`${this.apiUrlNoteSheetTemplate}/DeleteAsyn/${id}`);
+    }
+
+    // NoteSheetNumberConfig CRUD
+
+    getAllNoteSheetNumberConfig(): Observable<NoteSheetNumberConfigModel[]> {
+        return this.http.get<NoteSheetNumberConfigModel[]>(`${this.apiUrlNoteSheetNumberConfig}/GetAll`);
+    }
+
+    getNoteSheetNumberConfigById(id: number): Observable<NoteSheetNumberConfigModel> {
+        return this.http.get<NoteSheetNumberConfigModel>(`${this.apiUrlNoteSheetNumberConfig}/GetFilteredByKeysAsyn/${id}`);
+    }
+
+    createNoteSheetNumberConfig(model: NoteSheetNumberConfigModel): Observable<any> {
+        return this.http.post(`${this.apiUrlNoteSheetNumberConfig}/SaveAsyn`, model);
+    }
+
+    updateNoteSheetNumberConfig(model: NoteSheetNumberConfigModel): Observable<any> {
+        return this.http.post(`${this.apiUrlNoteSheetNumberConfig}/UpdateAsyn`, model);
+    }
+
+    deleteNoteSheetNumberConfig(id: number): Observable<any> {
+        return this.http.delete(`${this.apiUrlNoteSheetNumberConfig}/DeleteAsyn/${id}`);
+    }
+
+    // NoteSheetApproverConfig CRUD
+
+    getAllNoteSheetApproverConfig(): Observable<NoteSheetApproverConfigModel[]> {
+        return this.http.get<NoteSheetApproverConfigModel[]>(`${this.apiUrlNoteSheetApproverConfig}/GetAll`);
+    }
+
+    getNoteSheetApproverConfigById(id: number): Observable<NoteSheetApproverConfigModel> {
+        return this.http.get<NoteSheetApproverConfigModel>(`${this.apiUrlNoteSheetApproverConfig}/GetFilteredByKeysAsyn/${id}`);
+    }
+
+    getNoteSheetApproverConfigByType(noteSheetType: string): Observable<NoteSheetApproverConfigModel[]> {
+        return this.http.get<NoteSheetApproverConfigModel[]>(`${this.apiUrlNoteSheetApproverConfig}/GetByNoteSheetType/${noteSheetType}`);
+    }
+
+    createNoteSheetApproverConfig(model: NoteSheetApproverConfigModel): Observable<any> {
+        return this.http.post(`${this.apiUrlNoteSheetApproverConfig}/SaveAsyn`, model);
+    }
+
+    updateNoteSheetApproverConfig(model: NoteSheetApproverConfigModel): Observable<any> {
+        return this.http.post(`${this.apiUrlNoteSheetApproverConfig}/UpdateAsyn`, model);
+    }
+
+    deleteNoteSheetApproverConfig(id: number): Observable<any> {
+        return this.http.delete(`${this.apiUrlNoteSheetApproverConfig}/DeleteAsyn/${id}`);
+    }
+
+    getAllRABUnitAOR(): Observable<RABUnitAORModel[]> {
+        return this.http.get<RABUnitAORModel[]>(`${this.apiUrlRABUnitAOR}/GetAll`);
+    }
+
+    getRABUnitAORByUpazila(upazilaId: number): Observable<RABUnitAORModel[]> {
+        return this.http.get<RABUnitAORModel[]>(`${this.apiUrlRABUnitAOR}/GetByUpazila/${upazilaId}`);
+    }
+
+    getRABUnitAORByRabUnit(rabUnitId: number): Observable<RABUnitAORModel[]> {
+        return this.http.get<RABUnitAORModel[]>(`${this.apiUrlRABUnitAOR}/GetByRabUnit/${rabUnitId}`);
+    }
+
+    saveRABUnitAOR(model: RABUnitAORModel): Observable<ResultViewModel> {
+        return this.http.post<ResultViewModel>(`${this.apiUrlRABUnitAOR}/SaveAsyn`, model);
+    }
+
+    updateRABUnitAOR(model: RABUnitAORModel): Observable<ResultViewModel> {
+        return this.http.post<ResultViewModel>(`${this.apiUrlRABUnitAOR}/UpdateAsyn`, model);
+    }
+
+    deleteRABUnitAOR(aorId: number): Observable<ResultViewModel> {
+        return this.http.delete<ResultViewModel>(`${this.apiUrlRABUnitAOR}/DeleteAsyn/${aorId}`);
+    }
+
+    // PostingOrderNumberConfig CRUD
+
+    getAllPostingOrderNumberConfig(): Observable<PostingOrderNumberConfigModel[]> {
+        return this.http.get<PostingOrderNumberConfigModel[]>(`${this.apiUrlPostingOrderNumberConfig}/GetAll`);
+    }
+
+    getPostingOrderNumberConfigById(id: number): Observable<PostingOrderNumberConfigModel> {
+        return this.http.get<PostingOrderNumberConfigModel>(`${this.apiUrlPostingOrderNumberConfig}/GetFilteredByKeysAsyn/${id}`);
+    }
+
+    createPostingOrderNumberConfig(model: PostingOrderNumberConfigModel): Observable<any> {
+        return this.http.post(`${this.apiUrlPostingOrderNumberConfig}/SaveAsyn`, model);
+    }
+
+    updatePostingOrderNumberConfig(model: PostingOrderNumberConfigModel): Observable<any> {
+        return this.http.post(`${this.apiUrlPostingOrderNumberConfig}/UpdateAsyn`, model);
+    }
+
+    deletePostingOrderNumberConfig(id: number): Observable<any> {
+        return this.http.delete(`${this.apiUrlPostingOrderNumberConfig}/DeleteAsyn/${id}`);
+    }
+
+    // MovementLetterNumberConfig CRUD
+
+    getAllMovementLetterNumberConfig(): Observable<MovementLetterNumberConfigModel[]> {
+        return this.http.get<MovementLetterNumberConfigModel[]>(`${this.apiUrlMovementLetterNumberConfig}/GetAll`);
+    }
+
+    getMovementLetterNumberConfigById(id: number): Observable<MovementLetterNumberConfigModel> {
+        return this.http.get<MovementLetterNumberConfigModel>(`${this.apiUrlMovementLetterNumberConfig}/GetFilteredByKeysAsyn/${id}`);
+    }
+
+    createMovementLetterNumberConfig(model: MovementLetterNumberConfigModel): Observable<any> {
+        return this.http.post(`${this.apiUrlMovementLetterNumberConfig}/SaveAsyn`, model);
+    }
+
+    updateMovementLetterNumberConfig(model: MovementLetterNumberConfigModel): Observable<any> {
+        return this.http.post(`${this.apiUrlMovementLetterNumberConfig}/UpdateAsyn`, model);
+    }
+
+    deleteMovementLetterNumberConfig(id: number): Observable<any> {
+        return this.http.delete(`${this.apiUrlMovementLetterNumberConfig}/DeleteAsyn/${id}`);
+    }
+
+    // OnulipiConfig CRUD
+
+    getAllOnulipiConfig(): Observable<OnulipiConfigModel[]> {
+        return this.http.get<OnulipiConfigModel[]>(`${this.apiUrlOnulipiConfig}/GetAll`);
+    }
+
+    getOnulipiConfigByPostingType(postingType: string): Observable<OnulipiConfigModel[]> {
+        return this.http.get<OnulipiConfigModel[]>(`${this.apiUrlOnulipiConfig}/GetByPostingType/${postingType}`);
+    }
+
+    getOnulipiConfigById(id: number): Observable<OnulipiConfigModel> {
+        return this.http.get<OnulipiConfigModel>(`${this.apiUrlOnulipiConfig}/GetFilteredByKeysAsyn/${id}`);
+    }
+
+    createOnulipiConfig(model: OnulipiConfigModel): Observable<any> {
+        return this.http.post(`${this.apiUrlOnulipiConfig}/SaveAsyn`, model);
+    }
+
+    updateOnulipiConfig(model: OnulipiConfigModel): Observable<any> {
+        return this.http.post(`${this.apiUrlOnulipiConfig}/UpdateAsyn`, model);
+    }
+
+    deleteOnulipiConfig(id: number): Observable<any> {
+        return this.http.delete(`${this.apiUrlOnulipiConfig}/DeleteAsyn/${id}`);
+    }
+
+    // EducationQualificationDepartment (join table — qualification ⇄ departments)
+
+    getAllQualificationDepartments(): Observable<any[]> {
+        return this.http.get<any[]>(`${this.apiUrlEduQualDept}/GetAll`);
+    }
+
+    getQualificationDepartments(qualificationCodeId: number): Observable<any[]> {
+        return this.http.get<any[]>(`${this.apiUrlEduQualDept}/GetByQualification/${qualificationCodeId}`);
+    }
+
+    saveQualificationDepartments(payload: {
+        qualificationCodeId: number;
+        departmentCodeIds: number[];
+        orgId: number;
+        status: boolean;
+        createdBy: string;
+        lastUpdatedBy: string;
+    }): Observable<{ statusCode: number; description?: string }> {
+        return this.http.post<{ statusCode: number; description?: string }>(`${this.apiUrlEduQualDept}/SaveAsyn`, payload);
     }
 }

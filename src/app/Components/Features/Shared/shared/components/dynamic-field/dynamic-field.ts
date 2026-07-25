@@ -6,6 +6,7 @@ import { InputTextModule } from 'primeng/inputtext';
 import { SelectModule } from 'primeng/select';
 import { DatePickerModule } from 'primeng/datepicker';
 import { InputNumberModule } from 'primeng/inputnumber';
+import { FlexibleDateDirective } from '@/shared/directives/flexible-date.directive';
 // import { InputTextareaModule } from 'primeng/inputtextarea';
 
 export type DynamicFieldType = 'text' | 'select' | 'date' | 'number' | 'textarea';
@@ -18,7 +19,7 @@ export type DynamicFieldType = 'text' | 'select' | 'date' | 'number' | 'textarea
     ReactiveFormsModule,
     InputTextModule,
     SelectModule,
-    DatePickerModule,
+    DatePickerModule, FlexibleDateDirective,
     InputNumberModule,
     // InputTextareaModule
   ],

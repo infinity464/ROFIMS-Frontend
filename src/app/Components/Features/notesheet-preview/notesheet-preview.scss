@@ -1,0 +1,1390 @@
+:host {
+    display: block;
+    min-height: 100vh;
+    background: #d8d8d8;
+}
+
+/* ── Toolbar ──────────────────────────────────────── */
+.preview-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.6rem 1.5rem;
+    background: #fff;
+    border-bottom: 1px solid var(--surface-border);
+    position: sticky;
+    top: 0;
+    z-index: 100;
+}
+.preview-actions {
+    display: flex;
+    gap: 0.5rem;
+}
+.preview-status-actions {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+    margin-left: auto;
+}
+
+.ns-status-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.35rem 0.75rem;
+    border-radius: 999px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    line-height: 1;
+    background: var(--surface-200);
+    color: var(--text-color);
+}
+.ns-status-badge--pending {
+    background: #fff3cd;
+    color: #664d03;
+}
+
+/* ── Loading / Error ──────────────────────────────── */
+.preview-loading,
+.preview-error {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 60vh;
+    gap: 1rem;
+    color: var(--text-color-secondary);
+}
+
+/* ── Legal Paper Container ────────────────────────── */
+.a4-paper-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 2rem;
+    min-height: calc(100vh - 60px);
+    gap: 2rem;
+}
+
+/* Force normal weight on rich-text content inside Article 47 previews so any
+   bold formatting baked into Auth / Remarks Quill HTML doesn't render bold. */
+.mv-rich,
+.mv-rich * {
+    font-weight: normal !important;
+}
+
+.a4-paper {
+    width: 210mm;
+    min-height: 297mm;
+    padding: 14mm 6mm 20mm;
+    background: #fff;
+    box-shadow: 0 6px 24px rgba(0, 0, 0, 0.25);
+    box-sizing: border-box;
+    /* SolaimanLipi (bundled, see styles.scss) is the Bangla face for every
+       notesheet preview. Times New Roman remains the primary for Latin text —
+       Bangla codepoints have no Times glyphs and fall through to SolaimanLipi. */
+    font-family: 'Times New Roman', 'SolaimanLipi', Times, serif;
+    font-size: 10pt;
+    color: #000;
+    line-height: 1.7;
+    position: relative;
+    overflow-x: hidden;
+    display: flex;
+    flex-direction: column;
+}
+
+/* ── Legal page-size modifier ──────────────────────────
+   Default `.a4-paper` renders A4 (210mm × 297mm). When Legal is selected the
+   subclass binds `.a4-paper--legal`, switching to Legal (215.9mm × 355.6mm).
+   Pagination math (computePageContentHeightPx) branches on the same flag. */
+.a4-paper--legal {
+    width: 215.9mm;
+    min-height: 355.6mm;
+}
+
+/* Rich-text (Quill) content keeps the document's crisp Bangla-capable font.
+   Editor font choices (e.g. ql-font-arial) and pasted inline font-family/color
+   lack Bangla glyphs and fall back to a thin system font, making Bengali text
+   look faint ("japsa"). Force the same stack + pure black inside the printed
+   notesheet only — the editor itself is untouched. */
+.a4-paper,
+.page-measure,
+.pdf-flow {
+    ::ng-deep .ns-para-text,
+    ::ng-deep .ns-para-text *,
+    ::ng-deep .ns-ref-content,
+    ::ng-deep .ns-ref-content *,
+    ::ng-deep .ns-note,
+    ::ng-deep .ns-note * {
+        font-family: 'Times New Roman', 'SolaimanLipi', Times, serif !important;
+        color: #000 !important;
+    }
+
+    /* The blanket rule above also hits the download button's <i>, which needs the
+       primeicons font to render its glyph — restore the icon font and button colour. */
+    ::ng-deep .ns-ref-file-btn .pi {
+        font-family: 'primeicons' !important;
+        color: inherit !important;
+    }
+}
+
+/* ── Pagination (posting notesheet) ──────────────── */
+.a4-paper.paginated {
+    height: 297mm;
+    min-height: 297mm;
+    overflow: hidden;
+
+    .ns-doc-box {
+        border: none;
+    }
+}
+
+/* Legal paginated page height (matches Legal paper) */
+.a4-paper.paginated.a4-paper--legal {
+    height: 355.6mm;
+    min-height: 355.6mm;
+}
+
+.page-viewport {
+    flex: 1;
+    overflow: hidden;
+    position: relative;
+    border: 1.5px solid #000;
+
+    &::before,
+    &::after {
+        content: '';
+        position: absolute;
+        left: 0;
+        right: 0;
+        height: 4mm;
+        background: #fff;
+        z-index: 2;
+    }
+    &::before {
+        top: 0;
+    }
+    &::after {
+        bottom: 0;
+    }
+}
+
+.page-inner {
+    position: absolute;
+    top: 4mm;
+    left: 0;
+    width: 100%;
+
+    /* Title is rendered outside viewport on page 1; hide it inside to preserve layout */
+    .ns-title-block {
+        visibility: hidden;
+    }
+}
+
+.page-bottom-cover {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: #fff;
+    z-index: 1;
+}
+
+/* When the employee table continues onto the next page, close it with a bottom
+   border on this page. The line sits at the top of the white cover (i.e. right
+   under the last visible row) and is inset to match the table's column edges
+   (.ns-posting-table padding: left 20px, right 16px). */
+.page-bottom-cover--close-table::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 20px;
+    right: 16px;
+    border-top: 1px solid #000;
+}
+
+/* Spacer row that only renders in the PDF/Print export (see buildJsReportPdf).
+   Hidden everywhere on screen and in Word so those surfaces are unchanged. */
+.ns-head-gap {
+    display: none;
+}
+
+/* Repeated employee-table column header on continuation pages. Sits just below
+   the top inset band, over the clipped content. Same .ns-doc-box > .ns-main-col
+   > .ns-posting-table nesting as the real table so columns line up; vertical
+   padding is zeroed so its height matches the reserved header space (the thead
+   height) and the first data row lands flush beneath it. */
+.page-repeat-header {
+    position: absolute;
+    top: 4mm;
+    left: 0;
+    right: 0;
+    z-index: 1;
+    background: #fff;
+
+    .ns-doc-box,
+    .ns-main-col {
+        padding-top: 0 !important;
+        padding-bottom: 0 !important;
+        margin-top: 0 !important;
+        margin-bottom: 0 !important;
+    }
+    .ns-posting-table {
+        padding-top: 0 !important;
+        padding-bottom: 0 !important;
+    }
+    table {
+        margin: 0 !important;
+    }
+}
+
+.page-measure {
+    position: absolute;
+    left: -9999px;
+    top: 0;
+    width: 210mm;
+    padding: 0 6mm;
+    box-sizing: border-box;
+    font-family: 'Times New Roman', Times, serif;
+    font-size: 10pt;
+    line-height: 1.7;
+    visibility: hidden;
+    pointer-events: none;
+}
+
+/* Legal measure width — must match the Legal paper so the unpaginated
+   measurement (used to compute page breaks) wraps text identically. */
+.page-measure--legal {
+    width: 215.9mm;
+}
+
+/* ── Document number – top right ─────────────────── */
+.ns-page-no {
+    position: absolute;
+    top: 10mm;
+    right: 10mm;
+    font-size: 10pt;
+}
+
+/* ── Title block (posting – rendered above the box) ────── */
+.ns-title-block {
+    text-align: center;
+    padding: 8px 16px;
+}
+/* ── Title area (general – rendered INSIDE the box, above org header) ── */
+.ns-title-area {
+    text-align: center;
+    padding: 8px 2px 4px;
+}
+.ns-title-en {
+    font-size: 10pt;
+    font-weight: bold;
+    letter-spacing: 2px;
+    line-height: 1.1;
+}
+.ns-title-bn {
+    font-size: 10pt;
+    margin-top: -1px;
+    line-height: 1.1;
+}
+
+/* ── Full-height sanglagni vertical divider (general paginated, every page) ── */
+.ns-general-page .ns-page-sanglagni-line {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    right: 60px;
+    width: 1.5px;
+    background: #000;
+    z-index: 3;
+    pointer-events: none;
+}
+/* Avoid double line – hide the content-flow border-left in general paginated mode */
+.ns-general-page .ns-sanglagni-col {
+    border-left: none;
+}
+
+/* ── Outer document box ───────────────────────────── */
+.ns-doc-box {
+    border: 1.5px solid #000;
+    flex: 1;
+    display: flex;
+    align-items: stretch;
+}
+
+/* Left column: all content */
+.ns-main-col {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+}
+
+/* Right column: সংলগ্নী নং — full height border (kept for exbd/posting) */
+.ns-sanglagni-col {
+    border-left: 1.5px solid #000;
+    width: 60px;
+    min-width: 60px;
+    font-size: 10pt;
+    text-align: center;
+    padding: 6px 12px;
+    line-height: 1.4;
+}
+
+/* ── Members preview table inside ns-para ─── */
+.ns-members-preview-table-wrap {
+    width: 100%;
+    overflow-x: auto;
+}
+.ns-members-preview-table {
+    // Left-aligned with a left gap from the border (matches Word); extends toward the right.
+    width: 97%;
+    border-collapse: collapse;
+    font-size: 7pt;
+    margin: 6px auto 6px 16px;
+    table-layout: fixed;
+    th,
+    td {
+        border: 0.25px solid #888;  // finer/thinner grid lines
+        padding: 4px 6px;
+        text-align: center;
+        word-break: break-word;
+        overflow-wrap: break-word;
+    }
+    th {
+        font-weight: 600;
+        background: transparent;   // no shaded header — plain white like the paper
+        font-size: 7pt;
+        text-transform: uppercase;
+    }
+    // Serial column stays narrow (just wide enough for "ক্রমিক" / "১।")
+    th:first-child,
+    td:first-child {
+        width: 36px;
+        min-width: 36px;
+        padding: 4px 3px;
+    }
+}
+
+/* Header rows (subject + reference) */
+.ns-cell-subject {
+    padding: 7px 2px 7px 4px;
+    font-size: 10pt;
+    font-weight: bold;
+    text-decoration: underline;
+}
+@counter-style ns-bangla-alpha {
+    system: alphabetic;
+    symbols: 'অ' 'আ' 'ই' 'ঈ' 'উ' 'ঊ' 'ঋ' 'এ' 'ঐ' 'ও' 'ঔ' 'ক' 'খ' 'গ' 'ঘ' 'ঙ' 'চ' 'ছ' 'জ' 'ঝ' 'ঞ' 'ট' 'ঠ' 'ড' 'ঢ' 'ণ' 'ত' 'থ' 'দ' 'ধ' 'ন' 'প' 'ফ' 'ব' 'ভ' 'ম' 'য' 'র' 'ল' 'শ' 'ষ' 'স' 'হ';
+    suffix: ' ';
+}
+@counter-style ns-bangla-ka {
+    system: alphabetic;
+    symbols: 'ক' 'খ' 'গ' 'ঘ' 'ঙ' 'চ' 'ছ' 'জ' 'ঝ' 'ঞ' 'ট' 'ঠ' 'ড' 'ঢ' 'ণ' 'ত' 'থ' 'দ' 'ধ' 'ন' 'প' 'ফ' 'ব' 'ভ' 'ম' 'য' 'র' 'ল' 'শ' 'ষ' 'স' 'হ';
+    suffix: ' ';
+}
+
+@mixin ns-rich-list-styles() {
+    ::ng-deep ol,
+    ::ng-deep ul {
+        padding-left: 1.5em;
+        margin: 0.4rem 0;
+    }
+    ::ng-deep ol > li,
+    ::ng-deep ul > li {
+        list-style: none !important;
+    }
+    ::ng-deep ol {
+        counter-reset: ns-list-0;
+    }
+    ::ng-deep li[data-list='ordered'] {
+        counter-increment: ns-list-0;
+    }
+    ::ng-deep li[data-list='ordered']::before {
+        content: counter(ns-list-0, decimal) '. ';
+        margin-right: 0.3em;
+    }
+    ::ng-deep li[data-list='upper-roman'] {
+        counter-increment: ns-list-0;
+    }
+    ::ng-deep li[data-list='upper-roman']::before {
+        content: counter(ns-list-0, upper-roman) '. ';
+        margin-right: 0.3em;
+    }
+    ::ng-deep li[data-list='lower-roman'] {
+        counter-increment: ns-list-0;
+    }
+    ::ng-deep li[data-list='lower-roman']::before {
+        content: counter(ns-list-0, lower-roman) '. ';
+        margin-right: 0.3em;
+    }
+    ::ng-deep li[data-list='upper-alpha'] {
+        counter-increment: ns-list-0;
+    }
+    ::ng-deep li[data-list='upper-alpha']::before {
+        content: counter(ns-list-0, upper-alpha) '. ';
+        margin-right: 0.3em;
+    }
+    ::ng-deep li[data-list='lower-alpha'] {
+        counter-increment: ns-list-0;
+    }
+    ::ng-deep li[data-list='lower-alpha']::before {
+        content: counter(ns-list-0, lower-alpha) '. ';
+        margin-right: 0.3em;
+    }
+    ::ng-deep li[data-list='bangla-number'] {
+        counter-increment: ns-list-0;
+    }
+    ::ng-deep li[data-list='bangla-number']::before {
+        content: counter(ns-list-0, bengali) '. ';
+        margin-right: 0.3em;
+    }
+    ::ng-deep li[data-list='bullet']::before {
+        content: '• ';
+        margin-right: 0.3em;
+    }
+    ::ng-deep li[data-list='bangla-alpha'] {
+        counter-increment: ns-list-0;
+    }
+    ::ng-deep li[data-list='bangla-alpha']::before {
+        content: counter(ns-list-0, ns-bangla-alpha);
+        margin-right: 0.3em;
+    }
+    ::ng-deep li[data-list='bangla-ka'] {
+        counter-increment: ns-list-0;
+    }
+    ::ng-deep li[data-list='bangla-ka']::before {
+        content: counter(ns-list-0, ns-bangla-ka);
+        margin-right: 0.3em;
+    }
+    /* Fallback: ol/ul li without data-list (Quill default) */
+    ::ng-deep ol > li:not([data-list]) {
+        counter-increment: ns-list-0;
+    }
+    ::ng-deep ol > li:not([data-list])::before {
+        content: counter(ns-list-0, decimal) '. ' !important;
+        margin-right: 0.3em;
+        display: inline;
+    }
+    ::ng-deep ul > li:not([data-list])::before {
+        content: '• ' !important;
+        margin-right: 0.3em;
+        display: inline;
+    }
+}
+
+.ns-cell-ref {
+    padding: 5px 2px 0 4px;
+    font-size: 7pt;
+
+    .ns-ref-content { margin-left: 0; }
+    ::ng-deep .ns-ref-content p { margin: 0 0 0.2rem; }
+    ::ng-deep .ns-ref-content p:last-child { margin-bottom: 0; }
+    .ns-ref-content {
+        flex: 1;
+        min-width: 0;
+    }
+    ::ng-deep .ns-ref-content p {
+        margin: 0 0 0.2rem;
+    }
+    ::ng-deep .ns-ref-content p:last-child {
+        margin-bottom: 0;
+    }
+    @include ns-rich-list-styles();
+}
+.ns-ref-key {
+    font-weight: 700;
+}
+.ns-ref-serial {
+    font-weight: 600;
+    margin-right: 1em;
+}
+.ns-ref-file-btn {
+    background: #eff6ff;
+    border: 1px solid #3b82f6;
+    color: #3b82f6;
+    font-size: 11px;
+    line-height: 1;
+    padding: 4px 9px;
+    border-radius: 5px;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    max-width: 220px;
+    white-space: nowrap;
+    transition: background .15s ease, color .15s ease;
+    &:hover {
+        background: #3b82f6;
+        color: #fff;
+    }
+    i {
+        font-size: 13px;
+        line-height: 1;
+        flex-shrink: 0;
+    }
+    .ns-ref-file-name {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+}
+
+/* Body paragraph (serial + text) */
+.ns-para {
+    padding: 10px 2px 10px 1px;
+    font-size: 8pt;
+    line-height: 1.85;
+    text-align: justify;
+}
+.ns-para-no {
+    font-weight: 700;
+    margin-right: 2em;
+}
+.ns-para-text {
+    display: inline;
+    text-align: justify;
+    overflow-wrap: break-word;
+
+    word-break: normal;
+    hyphens: none;
+
+    ::ng-deep * {
+        white-space: pre-wrap;
+        hyphens: none;
+    }
+
+    ::ng-deep p:first-child {
+        display: inline;
+    }
+
+    ::ng-deep p,
+    ::ng-deep li,
+    ::ng-deep div {
+        overflow-wrap: break-word;
+        word-break: normal;
+        hyphens: none;
+    }
+
+    ::ng-deep table {
+        width: 100%;
+        table-layout: fixed;
+        border-collapse: collapse !important;
+        margin: 6px 0;
+    }
+    ::ng-deep table td,
+    ::ng-deep table th {
+        border: 1px solid #000 !important;
+        padding: 5px 8px;
+        overflow-wrap: break-word;
+        word-break: normal;
+        hyphens: none;
+        white-space: normal;
+    }
+    ::ng-deep p {
+        margin: 0 0 0.4rem;
+    }
+    ::ng-deep p:last-child {
+        margin-bottom: 0;
+    }
+
+    /* Preserve rich editor alignment (Quill classes + inline styles) */
+    ::ng-deep .ql-align-justify {
+        text-align: justify !important;
+    }
+    ::ng-deep .ql-align-center {
+        text-align: center !important;
+    }
+    ::ng-deep .ql-align-right {
+        text-align: right !important;
+    }
+
+    @include ns-rich-list-styles();
+}
+
+/* ── Ex-BD Leave details ──────────────────────────── */
+.ns-exbd-info {
+    padding: 4px 16px 10px 56px;
+    font-size: 10pt;
+}
+.ns-exbd-row {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 4px;
+}
+.ns-exbd-label {
+    font-weight: 700;
+    min-width: 150px;
+    flex-shrink: 0;
+}
+
+/* ── New Posting table ────────────────────────────── */
+.ns-posting-table {
+    padding: 4px 16px 10px 20px;
+    overflow-x: hidden;
+
+    table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 7pt;
+        line-height: 1.2;
+        table-layout: fixed;
+    }
+    th,
+    td {
+        border: 1px solid #000;
+        padding: 1px 2px;
+        text-align: center;
+        vertical-align: middle;
+        white-space: pre-line;
+        word-break: break-word;
+        overflow-wrap: anywhere;
+    }
+    th {
+        font-weight: bold;
+        background: #f0f0f0;
+        font-size: 7pt;
+        text-transform: uppercase;
+    }
+    /* নাম column: value left-aligned (header stays centered). */
+    td.ns-name-cell {
+        text-align: left;
+    }
+    tr:nth-child(even) {
+        background: #fafafa;
+    }
+
+    .ns-posting-note {
+        font-size: 10pt;
+        background: #fff !important;
+    }
+}
+
+/* ── Note ─────────────────────────────────────────── */
+.ns-note {
+    padding: 6px 2px 6px 4px;
+    font-size: 8pt;
+}
+
+/* ── Closing + Initiator signature ───────────────── */
+.ns-initiator-area {
+    padding: 14px 2px 18px 4px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+.ns-closing-text {
+    font-size: 8pt;
+    text-indent: 2em;
+}
+.ns-initiator-sig {
+    align-self: flex-start;
+    text-align: left;
+    margin-left: 70%;
+}
+.ns-preparedby-sig {
+    align-self: flex-start;
+    text-align: center;
+    min-width: 200px;
+    max-width: 260px;
+}
+
+/* ── Approver sections ────────────────────────────── */
+/* First signature (initiator) stays right-aligned; approver signatures (২।, ৩।, …) are centered. */
+.ns-approver-section {
+    padding: 10px 2px 24px 4px;
+    min-height: 90px;
+}
+.ns-approver-role {
+    font-size: 9pt;
+    text-decoration: underline;
+    margin-bottom: 6px;
+}
+.ns-approver-body {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    min-height: 60px;
+    gap: 0;
+
+    &--left {
+        gap: 12px;
+    }
+}
+.ns-approver-left {
+    display: flex;
+    gap: 6px;
+    font-size: 9pt;
+    flex-wrap: wrap;
+    align-items: flex-start;
+}
+.ns-approver-remark {
+    font-size: 9pt;
+}
+.ns-approver-sig-area {
+    width: 100%;
+    text-align: center;
+    margin-top: 10px;
+    min-width: 0;
+}
+
+/* ── Shared signature styles ──────────────────────── */
+.ns-sig-img {
+    max-width: 100px;
+    max-height: 40px;
+    object-fit: contain;
+    display: block;
+    margin: 0 auto 4px;
+}
+.ns-initiator-sig .ns-sig-img {
+    margin: 0 auto 4px 0;
+}
+/* Tight line spacing so the name / rank / appointment lines sit close together. */
+.ns-sig-name {
+    font-size: 9pt;
+    margin-bottom: 0;
+    line-height: 1.2;
+}
+.ns-sig-rank {
+    font-size: 9pt;
+    margin-bottom: 0;
+    line-height: 1.2;
+}
+.ns-sig-paren {
+    font-size: 9pt;
+    margin-bottom: 0;
+    line-height: 1.2;
+}
+.ns-sig-appoint {
+    font-size: 9pt;
+    line-height: 1.2;
+}
+.ns-sig-date {
+    font-size: 9pt;
+    margin-top: 2em;
+}
+
+/* ── Edit Mode ────────────────────────────────────── */
+.ns-edit-field {
+    padding: 8px 16px;
+
+    .ns-edit-label {
+        display: block;
+        font-size: 0.8rem;
+        font-weight: 600;
+        color: var(--text-color-secondary, #64748b);
+        margin-bottom: 4px;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+
+    input,
+    textarea {
+        font-size: 10pt;
+        font-family: 'Times New Roman', Times, serif;
+    }
+
+    ::ng-deep app-file-references-form h3 {
+        font-size: 0.85rem !important;
+    }
+}
+
+/* ── Application Info Panel (read-only display in edit mode) ── */
+.ns-app-info-panel {
+    background: var(--surface-50, #f8fafc);
+    border: 1px solid var(--surface-border, #dee2e6);
+    border-radius: 0.5rem;
+    border-left: 3px solid var(--primary-color, #3b82f6);
+}
+
+.ns-app-info-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0.5rem 1.5rem;
+}
+
+.ns-app-info-item {
+    display: flex;
+    flex-direction: column;
+    gap: 0.125rem;
+}
+
+.ns-app-info-full {
+    grid-column: 1 / -1;
+}
+
+.ns-app-info-label {
+    font-weight: 600;
+    font-size: 0.75rem;
+    color: var(--text-color-secondary, #64748b);
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+}
+
+.ns-app-info-value {
+    font-size: 0.875rem;
+    color: var(--text-color, #1e293b);
+    font-weight: 500;
+}
+
+.ns-edit-row {
+    display: flex;
+    gap: 1rem;
+    flex-wrap: wrap;
+}
+
+.ns-edit-col {
+    flex: 1;
+    min-width: 200px;
+}
+
+.ns-approval-edit {
+    padding: 12px 16px;
+    border-top: 1px dashed #aaa;
+    margin-top: 8px;
+
+    ::ng-deep .form-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 1rem;
+    }
+
+    ::ng-deep .form-field {
+        flex: 1 1 0%;
+        display: flex;
+        flex-direction: column;
+        gap: 0.25rem;
+        min-width: 180px;
+    }
+
+    ::ng-deep .form-label {
+        font-weight: 500;
+        font-size: 0.8125rem;
+        color: var(--text-color-secondary, #64748b);
+    }
+
+    ::ng-deep .form-label-required {
+        color: var(--red-500, #ef4444);
+    }
+
+    ::ng-deep .form-error {
+        color: var(--red-500, #ef4444);
+        font-size: 0.75rem;
+    }
+}
+
+.ns-approval-edit-title {
+    margin: 0 0 12px;
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--text-color, #1e293b);
+}
+
+// ═══ Supporting Documents Section ═══
+.ns-supporting-docs {
+    margin-top: 1.5rem;
+    padding: 1rem 1.25rem;
+    background: var(--surface-50, #f8fafc);
+    border: 1px solid var(--surface-border, #dee2e6);
+    border-radius: 0.5rem;
+
+    h3 {
+        margin: 0 0 0.75rem;
+        font-size: 0.9rem;
+        font-weight: 600;
+        color: var(--text-color, #1e293b);
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+}
+
+.ns-docs-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.ns-doc-item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.4rem 0.75rem;
+    background: #fff;
+    border: 1px solid var(--surface-border, #dee2e6);
+    border-radius: 0.375rem;
+
+    .pi-file {
+        color: var(--text-color-secondary, #64748b);
+    }
+
+    .ns-doc-name {
+        flex: 1;
+        font-size: 0.8125rem;
+        color: var(--text-color, #1e293b);
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+}
+
+// ═══ Reference Paragraph Rows ═══
+.ref-paragraph-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.5rem;
+    margin-bottom: 0.75rem;
+    padding: 0.5rem;
+    border: 1px solid var(--surface-border, #dee2e6);
+    border-radius: 0.5rem;
+    background: var(--surface-50, #f8fafc);
+}
+
+.ref-serial {
+    min-width: 1.5rem;
+    padding-top: 0.6rem;
+    font-weight: 700;
+    font-size: 0.9rem;
+    color: var(--primary-color, #3b82f6);
+}
+
+.ref-paragraph-content {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+/* ── Print ────────────────────────────────────────── */
+/* Default browser @page is A4 (matches the default on-screen paper). The
+   primary Print Preview path goes through JsReport (size-aware), so this
+   browser-print fallback only needs to track the default. A Legal override is
+   provided below via the .a4-paper--legal flag on the printed pages. */
+@page {
+    size: 210mm 297mm;
+    margin: 0;
+}
+
+@media print {
+    .no-print {
+        display: none !important;
+    }
+
+    :host {
+        background: #fff !important;
+        min-height: auto !important;
+    }
+
+    .a4-paper-container {
+        padding: 0 !important;
+        min-height: auto !important;
+        gap: 0 !important;
+    }
+
+    /* Each paginated page = one printed page (exact same as screen) */
+    .a4-paper {
+        width: 210mm !important;
+        box-shadow: none !important;
+        margin: 0 !important;
+        page-break-after: always;
+        break-after: page;
+    }
+
+    .a4-paper--legal {
+        width: 215.9mm !important;
+    }
+
+    .a4-paper.paginated {
+        height: 297mm !important;
+        min-height: 297mm !important;
+        overflow: hidden !important;
+    }
+
+    .a4-paper.paginated.a4-paper--legal {
+        height: 355.6mm !important;
+        min-height: 355.6mm !important;
+    }
+
+    .a4-paper:last-child {
+        page-break-after: auto;
+        break-after: auto;
+    }
+
+    /* Keep pagination exactly as screen — no unwinding */
+    .page-viewport {
+        overflow: hidden !important;
+    }
+
+    .page-measure {
+        display: none !important;
+    }
+
+    .page-bottom-cover {
+        background: #fff !important;
+    }
+
+    /* Hide back history in print */
+    .ns-back-history {
+        display: none !important;
+    }
+}
+
+/* ── Responsive ───────────────────────────────────── */
+@media screen and (max-width: 1200px) {
+    .a4-paper-container {
+        padding: 1rem;
+    }
+    .a4-paper {
+        width: 100%;
+        min-height: auto;
+        height: auto !important;
+        padding: 12mm 8mm;
+        overflow: visible !important;
+    }
+    .a4-paper.paginated {
+        height: auto !important;
+        overflow: visible !important;
+    }
+    .page-viewport {
+        overflow: visible !important;
+    }
+    .page-inner {
+        position: static !important;
+        transform: none !important;
+    }
+}
+
+/* ── Back History Timeline ─────────────────────────── */
+.ns-back-history {
+    max-width: 215.9mm;
+    margin: 1.5rem auto 2rem;
+    padding: 1.25rem 1.5rem;
+    background: var(--surface-card, #fff);
+    border: 1px solid var(--surface-border, #dee2e6);
+    border-radius: 0.75rem;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+
+    h3 {
+        margin: 0 0 1rem;
+        font-size: 1rem;
+        font-weight: 600;
+        color: var(--text-color, #1e293b);
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+
+        i {
+            color: var(--primary-color);
+        }
+    }
+}
+
+.ns-back-timeline {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.ns-back-entry {
+    padding: 0.75rem 1rem;
+    background: var(--surface-50, #f8fafc);
+    border: 1px solid var(--surface-200, #e2e8f0);
+    border-left: 3px solid #f97316;
+    border-radius: 0.5rem;
+}
+
+.ns-back-entry-header {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+    font-size: 0.875rem;
+    font-weight: 600;
+
+    .pi-arrow-right {
+        font-size: 0.75rem;
+        color: var(--text-color-secondary, #64748b);
+    }
+}
+
+.ns-back-from {
+    color: #dc2626;
+}
+
+.ns-back-to {
+    color: #2563eb;
+}
+
+.ns-back-date {
+    margin-left: auto;
+    font-weight: 400;
+    font-size: 0.8125rem;
+    color: var(--text-color-secondary, #64748b);
+}
+
+.ns-back-entry-by {
+    font-size: 0.8125rem;
+    color: var(--text-color-secondary, #64748b);
+    margin-top: 0.25rem;
+}
+
+.ns-back-entry-reason {
+    font-size: 0.875rem;
+    color: var(--text-color, #334155);
+    margin-top: 0.25rem;
+    padding: 0.375rem 0.5rem;
+    background: var(--surface-100, #f1f5f9);
+    border-radius: 0.25rem;
+}
+
+/* Dark mode */
+:host-context(.app-dark) {
+    .ns-back-entry {
+        background: rgba(255, 255, 255, 0.04);
+        border-color: rgba(255, 255, 255, 0.1);
+        border-left-color: #fb923c;
+    }
+
+    .ns-back-entry-reason {
+        background: rgba(255, 255, 255, 0.06);
+    }
+
+    .ns-back-from {
+        color: #fca5a5;
+    }
+    .ns-back-to {
+        color: #93c5fd;
+    }
+}
+
+/* ── File Attachments (view mode, outside page) ──────── */
+.ns-file-attachments {
+    width: 210mm;
+    max-width: 100%;
+    margin: 1.5rem auto 0;
+    padding: 16px 24px;
+    background: #fff;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+
+    .ns-file-attachments-label {
+        font-weight: 600;
+        font-size: 10pt;
+        margin-bottom: 10px;
+        color: #374151;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+
+        i {
+            font-size: 1rem;
+        }
+    }
+
+    .ns-file-list {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+    }
+
+    .ns-file-item {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 8px 12px;
+        background: #f8fafc;
+        border: 1px solid #e2e8f0;
+        border-radius: 6px;
+        font-size: 9pt;
+
+        > i.pi-file {
+            color: #64748b;
+            font-size: 1rem;
+        }
+
+        .ns-file-name {
+            flex: 1;
+            color: #1e293b;
+            word-break: break-word;
+        }
+
+        .ns-file-download-btn {
+            background: none;
+            border: none;
+            cursor: pointer;
+            color: #3b82f6;
+            padding: 6px 8px;
+            border-radius: 4px;
+            transition: background 0.15s;
+
+            &:hover {
+                background: #eff6ff;
+            }
+
+            i {
+                font-size: 0.9rem;
+            }
+        }
+    }
+}
+
+/* ════════════════════════════════════════════════════════════════════
+   DARK MODE  (active when an ancestor carries .app-dark)
+   The note-sheet paper itself stays WHITE — only the surrounding
+   chrome (toolbar, filter bar, preview backdrop) is darkened.
+   ════════════════════════════════════════════════════════════════════ */
+:host-context(.app-dark) {
+    /* Preview backdrop — ROFIMS standard dark navy */
+    background: #2a2d35;
+
+    /* ── Top toolbar ───────────────────────────────────────── */
+    .preview-header {
+        background: #12151a;
+        border-bottom: 1px solid #3a3f4e;
+    }
+
+    /* Icon / outlined buttons in the toolbar: subtle bordered chips */
+    .preview-header ::ng-deep .p-button.p-button-outlined,
+    .preview-header ::ng-deep .p-button.p-button-text {
+        border: 1px solid #3a3f4e;
+        background: #1a1e27;
+        color: #cbd5e1;
+
+        &:hover {
+            background: #232838;
+            border-color: #4a5062;
+        }
+    }
+
+    /* ── Action buttons — clearly distinguishable dark tints ── */
+    // Approve / Submit / Save → dark green
+    .preview-header ::ng-deep .p-button.p-button-success {
+        background: rgba(34, 197, 94, 0.14);
+        border: 1px solid #2e7d32;
+        color: #4ade80;
+        &:hover {
+            background: rgba(34, 197, 94, 0.24);
+            border-color: #388e3c;
+        }
+    }
+    // Decline → dark red
+    .preview-header ::ng-deep .p-button.p-button-danger {
+        background: rgba(239, 68, 68, 0.14);
+        border: 1px solid #b71c1c;
+        color: #f87171;
+        &:hover {
+            background: rgba(239, 68, 68, 0.24);
+            border-color: #c62828;
+        }
+    }
+    // Back → dark slate
+    .preview-header ::ng-deep .p-button.p-button-secondary {
+        background: #232834;
+        border: 1px solid #3a3f4e;
+        color: #cbd5e1;
+        &:hover {
+            background: #2c3340;
+            border-color: #4a5062;
+        }
+    }
+    // Edit → dark amber
+    .preview-header ::ng-deep .p-button.p-button-warning {
+        background: rgba(245, 158, 11, 0.14);
+        border: 1px solid #b45309;
+        color: #fbbf24;
+        &:hover {
+            background: rgba(245, 158, 11, 0.24);
+            border-color: #d97706;
+        }
+    }
+    // Print Preview (info) → dark blue
+    .preview-header ::ng-deep .p-button.p-button-info {
+        background: rgba(59, 130, 246, 0.14);
+        border: 1px solid #1d4ed8;
+        color: #60a5fa;
+        &:hover {
+            background: rgba(59, 130, 246, 0.24);
+            border-color: #2563eb;
+        }
+    }
+
+    /* Status / step chips in the toolbar */
+    .ns-status-badge {
+        background: #1e2230;
+        color: #cbd5e1;
+        border: 1px solid #3a3f4e;
+    }
+    .ns-status-badge--pending {
+        background: rgba(234, 179, 8, 0.16);
+        color: #fcd34d;
+        border-color: #92670c;
+    }
+    .ns-status-badge--step {
+        background: rgba(34, 197, 94, 0.14);
+        color: #4ade80;
+        border-color: #2e7d32;
+    }
+
+    /* ── Filter / export bar ───────────────────────────────── */
+    .export-options-bar {
+        background: #1e2230 !important;
+        border: 1px solid #3a3f4e;
+        color: #cbd5e1;
+
+        span,
+        label {
+            color: #cbd5e1;
+        }
+
+        /* Selected checkboxes → green chips with dark green border */
+        ::ng-deep .p-checkbox.p-checkbox-checked .p-checkbox-box {
+            background: rgba(34, 197, 94, 0.18);
+            border-color: #2e7d32;
+        }
+        ::ng-deep .p-checkbox.p-checkbox-checked .p-checkbox-icon {
+            color: #4ade80;
+        }
+    }
+
+    /* ── Loading / error states on the dark backdrop ───────── */
+    .preview-loading,
+    .preview-error {
+        color: #94a3b8;
+    }
+
+    /* ── Supporting Documents section ──────────────────────── */
+    .ns-supporting-docs {
+        background: #1e2230;
+        border: 1px solid #3a3f4e;
+
+        h3 {
+            color: #e2e8f0;
+        }
+    }
+    .ns-doc-item {
+        background: #12151a;
+        border: 1px solid #3a3f4e;
+
+        .ns-doc-name {
+            color: #cbd5e1;
+        }
+        i {
+            color: #94a3b8;
+        }
+
+        &:hover {
+            background: #232838;
+            border-color: #4a5062;
+        }
+    }
+
+    /* ════════════════════════════════════════════════════════
+       Note-sheet paper: stays WHITE. Just a stronger drop shadow
+       so it reads clearly against the dark backdrop.
+       ════════════════════════════════════════════════════════ */
+    .a4-paper {
+        background: #fff;
+        color: #000;
+        box-shadow: 0 10px 40px rgba(0, 0, 0, 0.6);
+    }
+}

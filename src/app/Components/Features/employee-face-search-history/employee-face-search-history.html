@@ -1,0 +1,125 @@
+<p-toast position="top-center"></p-toast>
+
+<div class="fsh-shell">
+    <!-- Header -->
+    <div class="fsh-header">
+        <div>
+            <h2 class="fsh-title">Face Search History</h2>
+            <div class="fsh-subtitle">ROFIMS · BIOMETRIC AUDIT LOG</div>
+        </div>
+        <button type="button" class="fsh-refresh" (click)="refresh()">
+            <i class="pi pi-refresh"></i> Refresh
+        </button>
+    </div>
+
+    <!-- Retention notice -->
+    <div class="fsh-notice">
+        <i class="pi pi-info-circle"></i>
+        <span>Records (with query image) are kept for <strong>{{ retentionDays }} days</strong>, then auto-deleted.</span>
+    </div>
+
+    <!-- Table -->
+    <div class="fsh-table">
+        <!-- Column headers -->
+        <div class="fsh-row fsh-head">
+            <div class="c-photo">Photo</div>
+            <div class="c-date">Date &amp; Time</div>
+            <div class="c-result">Result</div>
+            <div class="c-person">Matched Person</div>
+            <div class="c-conf">Confidence</div>
+            <div class="c-by">Searched By</div>
+        </div>
+
+        @if (loading) {
+            <div class="fsh-state"><i class="pi pi-spin pi-spinner"></i> Loading…</div>
+        } @else if (rows.length === 0) {
+            <div class="fsh-state">No search history yet.</div>
+        } @else {
+            @for (row of rows; track row.id) {
+                <div class="fsh-row">
+                    <!-- Photo -->
+                    <div class="c-photo">
+                        <div class="fsh-thumb" [class.clickable]="thumbUrl(row.id)" (click)="openPreview(row.id)">
+                            <span class="corner tl"></span><span class="corner tr"></span>
+                            <span class="corner bl"></span><span class="corner br"></span>
+                            @if (thumbUrl(row.id)) {
+                                <img [src]="thumbUrl(row.id)" alt="Query" />
+                            } @else {
+                                <i class="pi pi-user"></i>
+                            }
+                        </div>
+                    </div>
+
+                    <!-- Date & time -->
+                    <div class="c-date">
+                        <div class="fsh-date">{{ row.searchedAt | date: 'dd MMM yyyy' }}</div>
+                        <div class="fsh-time">{{ row.searchedAt | date: 'HH:mm:ss' }}</div>
+                    </div>
+
+                    <!-- Result -->
+                    <div class="c-result">
+                        @if (row.isMatched) {
+                            <span class="fsh-pill ok"><i class="pi pi-check"></i> Match</span>
+                        } @else {
+                            <span class="fsh-pill no"><i class="pi pi-times"></i> No Match</span>
+                        }
+                    </div>
+
+                    <!-- Matched person -->
+                    <div class="c-person">
+                        @if (row.isMatched && row.matchedName) {
+                            <div class="fsh-name">{{ row.matchedName }}</div>
+                            <div class="fsh-sub">{{ row.matchedRank || 'N/A' }}@if (row.matchedServiceId) { · {{ row.matchedServiceId }} }</div>
+                            @if (row.matchedEmployeeId) {
+                                <a class="fsh-link" (click)="viewProfile(row.matchedEmployeeId)"><i class="pi pi-external-link"></i> View Profile</a>
+                            }
+                        } @else {
+                            <span class="fsh-empty">No record found</span>
+                        }
+                    </div>
+
+                    <!-- Confidence -->
+                    <div class="c-conf">
+                        @if (row.isMatched) {
+                            <span class="fsh-conf" [attr.data-sev]="confidenceSeverity(row.confidence)">
+                                {{ row.confidence * 100 | number: '1.0-0' }}%
+                            </span>
+                        } @else {
+                            <span class="fsh-conf" data-sev="none">-</span>
+                        }
+                    </div>
+
+                    <!-- Searched by -->
+                    <div class="c-by">
+                        <div class="fsh-by-name">{{ row.searchedByName || 'N/A' }}</div>
+                        <div class="fsh-sub">{{ row.searchedByRank || '' }}@if (row.searchedByServiceId) { · {{ row.searchedByServiceId }} }</div>
+                    </div>
+                </div>
+            }
+        }
+    </div>
+
+    <!-- Pagination -->
+    @if (totalRecords > 0) {
+        <p-paginator
+            [first]="first"
+            [rows]="rowsPerPage"
+            [totalRecords]="totalRecords"
+            [rowsPerPageOptions]="[5, 10, 20]"
+            [showPageLinks]="true"
+            [pageLinkSize]="5"
+            [showFirstLastIcon]="true"
+            [showCurrentPageReport]="true"
+            currentPageReportTemplate="Showing {first} – {last} of {totalRecords}"
+            (onPageChange)="onPageChange($event)"
+            styleClass="fsh-paginator">
+        </p-paginator>
+    }
+</div>
+
+<!-- Large preview -->
+<p-dialog [(visible)]="showPreview" header="Query Image" [modal]="true" [style]="{ width: '480px' }" [draggable]="false">
+    @if (previewUrl) {
+        <img [src]="previewUrl" alt="Query image" style="width: 100%; border-radius: 8px;" />
+    }
+</p-dialog>

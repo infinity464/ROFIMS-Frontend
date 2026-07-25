@@ -1,40 +1,83 @@
-import { Component, OnInit, ViewChild } from '@angular/core';
+import { Component, OnInit, ViewChild, inject } from '@angular/core';
+import { UserMenuService } from '@/services/user-menu.service';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators, FormsModule } from '@angular/forms';
-import { ActivatedRoute, Router } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { FileUpload } from 'primeng/fileupload';
 import { Select } from 'primeng/select';
 import { DatePicker } from 'primeng/datepicker';
 import { InputTextModule } from 'primeng/inputtext';
+import { MultiSelectModule } from 'primeng/multiselect';
 import { Button, ButtonModule } from 'primeng/button';
 import { CommonCodeModel } from '@/models/common-code-model';
 import { EmpService } from '@/services/emp-service';
+import { FamilyInfoService } from '@/services/family-info-service';
 import { MotherOrganizationModel } from '@/models/mother-org-model';
 import { CommonCodeService } from '@/services/common-code-service';
 import { MessageService } from 'primeng/api';
 import { Fluid } from 'primeng/fluid';
 import { Checkbox } from 'primeng/checkbox';
 import { Dialog } from 'primeng/dialog';
+import { TooltipModule } from 'primeng/tooltip';
 import { AddressData, AddressFormConfig, AddressFormComponent } from '../../EmployeeInfo/address-form/address-form';
-import { forkJoin } from 'rxjs';
+import { forkJoin, of, Subject } from 'rxjs';
+import { catchError, debounceTime, distinctUntilChanged, finalize, map, switchMap, tap } from 'rxjs/operators';
 import { LocationType, PostingStatus } from '@/models/enums';
-
+import { EmpPresentMemberCheckComponent } from '../emp-present-member-check/emp-present-member-check.component';
+import { FileReferencesFormComponent } from '@components/Common/file-references-form/file-references-form';
+import { OrganizationService } from '@/Components/basic-setup/organization-setup/services/organization-service';
+import { MasterBasicSetupService } from '@/Components/basic-setup/shared/services/MasterBasicSetupService';
+import { EquivalentRankModel } from '@/Components/basic-setup/shared/models/equivalent-rank';
+import { SharedService } from '@/shared/services/shared-service';
+import { IdentityUserMemberTypeAccessService } from '@/services/identity-user-member-type-access.service';
+import { FlexibleDateDirective } from '@/shared/directives/flexible-date.directive';
+import { PermanentPostingJoineeDetailService, PermanentPostingJoineeDetailModel } from '@/services/permanent-posting-joinee-detail.service';
 @Component({
     selector: 'app-emp-basic-info',
-    imports: [FileUpload, Fluid, Button, ButtonModule, Select, DatePicker, ReactiveFormsModule, FormsModule, InputTextModule, AddressFormComponent, Checkbox, Dialog],
+    imports: [FileUpload, Fluid, Button, ButtonModule, Select, MultiSelectModule, DatePicker, ReactiveFormsModule, FormsModule, InputTextModule, AddressFormComponent, Checkbox, Dialog, TooltipModule, EmpPresentMemberCheckComponent, FileReferencesFormComponent, FlexibleDateDirective, RouterLink],
     templateUrl: './emp-basic-info.html',
-    styleUrl: './emp-basic-info.scss'
+    styleUrl: './emp-basic-info.scss',
+    standalone: true
 })
 export class EmpBasicInfo implements OnInit {
+    private _router = inject(Router);
+    private _userMenuService = inject(UserMenuService);
+    canInsert = true;
+    canUpdate = true;
+    canDelete = true;
+
     @ViewChild('fileUpload') fileUpload!: FileUpload;
+    @ViewChild(EmpPresentMemberCheckComponent) presentMemberCheck?: EmpPresentMemberCheckComponent;
+    @ViewChild('fileReferencesForm') fileReferencesForm!: any; // FileReferencesFormComponent
     @ViewChild('permanentAddressForm') permanentAddressForm!: AddressFormComponent;
     @ViewChild('presentAddressForm') presentAddressForm!: AddressFormComponent;
-    @ViewChild('wifePermanentAddressForm') wifePermanentAddressForm!: AddressFormComponent;
-    @ViewChild('wifePresentAddressForm') wifePresentAddressForm!: AddressFormComponent;
+    @ViewChild('spousePermanentAddressForm') spousePermanentAddressForm!: AddressFormComponent;
+    @ViewChild('spousePresentAddressForm') spousePresentAddressForm!: AddressFormComponent;
 
     // View/Edit mode
     isViewMode: boolean = false;
     isEditMode: boolean = false;
     pageTitle: string = 'New Posting Entry Form';
+
+    /** When false, the entry form is hidden until search returns "employee not found". When true (or when opening with id in route), form is shown. */
+    showEntryForm: boolean = false;
+    /** Hide search section when opened via query params (view/edit from another tab). */
+    hideSearchSection: boolean = false;
+
+    /** Called when emp-present-member-check emits employeeNotFound with motherOrgId + serviceId. */
+    onEmployeeNotFound(data: { motherOrgId: number | null; serviceId: string }): void {
+        this.showEntryForm = true;
+        // Set motherOrganization first so dependent dropdowns load
+        if (data.motherOrgId) {
+            this.postingForm.patchValue({ motherOrganization: data.motherOrgId, orgId: data.motherOrgId });
+            this.onMotherOrgChange(data.motherOrgId);
+        }
+        if (data.serviceId) {
+            setTimeout(() => {
+                this.postingForm.patchValue({ serviceId: data.serviceId });
+                this.checkJoineeDetail(data.serviceId);
+            }, 100);
+        }
+    }
 
     // Image preview modal
     showImagePreviewModal: boolean = false;
@@ -43,601 +86,1095 @@ export class EmpBasicInfo implements OnInit {
     employeeId = 0; // Will be set after save
     generatedEmployeeId: number | null = null;
 
-  // Store addresses
-  presentAddress?: AddressData;
-  permanentAddress?: AddressData;
-  wifePermanentAddress?: AddressData;
-  wifePresentAddress?: AddressData;
+    // Store addresses
+    presentAddress?: AddressData;
+    permanentAddress?: AddressData;
+    spousePermanentAddress?: AddressData;
+    spousePresentAddress?: AddressData;
 
-  // Store generated AddressIds
-  permanentAddressId?: number;
-  presentAddressId?: number;
-  wifePermanentAddressId?: number;
-  wifePresentAddressId?: number;
+    // Store generated AddressIds
+    permanentAddressId?: number;
+    presentAddressId?: number;
+    spousePermanentAddressId?: number;
+    spousePresentAddressId?: number;
 
-  // Permanent address config (first)
-  permanentAddressConfig: AddressFormConfig = {
-    title: 'Permanent Address',
-    addressType: 'permanent',
-    employeeId: this.employeeId
-  };
+    // Permanent address config (first)
+    permanentAddressConfig: AddressFormConfig = {
+        title: 'Permanent Address',
+        addressType: 'permanent',
+        employeeId: this.employeeId
+    };
 
-  // Present address config (second, with "Same as Permanent" option)
-  presentAddressConfig: AddressFormConfig = {
-    title: 'Present Address',
-    addressType: 'present',
-    showSameAsPresent: true,
-    employeeId: this.employeeId
-  };
+    // Present address config (second, with "Same as Permanent" option)
+    presentAddressConfig: AddressFormConfig = {
+        title: 'Present Address',
+        addressType: 'present',
+        showSameAsPresent: true,
+        employeeId: this.employeeId
+    };
 
-  // Wife Permanent address config
-  wifePermanentAddressConfig: AddressFormConfig = {
-    title: 'Wife Permanent Address',
-    addressType: 'wife',
-    employeeId: this.employeeId
-  };
+    // Spouse Permanent address config (with "Same as Member Permanent" option)
+    spousePermanentAddressConfig: AddressFormConfig = {
+        title: 'Spouse Permanent Address',
+        addressType: 'spouse',
+        showSameAsPresent: true,
+        sameAsLabel: 'Same As Member Permanent Address',
+        employeeId: this.employeeId
+    };
 
-  // Wife Present address config (with "Same as Wife Permanent" option)
-  wifePresentAddressConfig: AddressFormConfig = {
-    title: 'Wife Present Address',
-    addressType: 'wifePresent',
-    showSameAsPresent: true,
-    sameAsLabel: 'Same as Wife Permanent Address',
-    employeeId: this.employeeId
-  };
+    // Spouse Present address config (with "Same As Member Present" option)
+    spousePresentAddressConfig: AddressFormConfig = {
+        title: 'Spouse Present Address',
+        addressType: 'spousePresent',
+        showSameAsPresent: true,
+        sameAsLabel: 'Same As Member Present Address',
+        showSameAsSecondary: true,
+        sameAsSecondaryLabel: 'Same As Permanent Address',
+        employeeId: this.employeeId
+    };
 
-  // Service ID validation
-  isServiceIdDuplicate: boolean = false;
-  isCheckingServiceId: boolean = false;
+    // New Joining Person: found in PermanentPostingJoineeDetail
+    joineeRecord: PermanentPostingJoineeDetailModel | null = null;
+    isCheckingJoinee: boolean = false;
 
-  checkServiceIdDuplicate(serviceId: string): void {
-    if (!serviceId || serviceId.trim() === '') {
-      this.isServiceIdDuplicate = false;
-      return;
-    }
+    // Duplicate check on (Mother Organization + Prefix + Service ID)
+    isDuplicateCombo: boolean = false;
+    isCheckingCombo: boolean = false;
 
-    this.isCheckingServiceId = true;
-    this.empService.searchEmployees({ serviceId: serviceId }).subscribe({
-      next: (res) => {
-        // If any employee found with same serviceId, it's a duplicate
-        this.isServiceIdDuplicate = res && res.length > 0;
-        this.isCheckingServiceId = false;
+    checkDuplicateCombo(): void {
+        const motherOrg = this.postingForm?.get('motherOrganization')?.value;
+        const prefix = this.postingForm?.get('prefix')?.value;
+        const serviceId = this.postingForm?.get('serviceId')?.value;
 
-        if (this.isServiceIdDuplicate) {
-          this.messageService.add({
-            severity: 'warn',
-            summary: 'Duplicate Service ID',
-            detail: 'This Service ID already exists in the system'
-          });
+        const motherOrgNum = Number(motherOrg);
+        const prefixNum = Number(prefix);
+        const serviceIdStr = serviceId != null ? String(serviceId).trim() : '';
+
+        if (!motherOrgNum || !prefixNum || !serviceIdStr) {
+            this.isDuplicateCombo = false;
+            this.isCheckingCombo = false;
+            return;
         }
-      },
-      error: (err) => {
-        console.error('Error checking service ID', err);
-        this.isCheckingServiceId = false;
-      }
-    });
-  }
 
-  // Reliever section
-  isReliever: boolean = false;
-  existingEmployees: any[] = [];
-  selectedRelieverEmployeeId: number | null = null;
-  selectedRelieverEmployee: any = null;
+        this.isCheckingCombo = true;
+        const selfId = this.generatedEmployeeId != null ? Number(this.generatedEmployeeId) : null;
+        this.empService
+            .searchListByRabIdOrServiceId(undefined, serviceIdStr, undefined, motherOrgNum, undefined, prefixNum, selfId)
+            .subscribe({
+                next: (employees) => {
+                    this.isDuplicateCombo = (employees ?? []).length > 0;
+                    this.isCheckingCombo = false;
 
-  onRelieverCheckChange(checked: boolean): void {
-    this.isReliever = checked;
-    if (checked && this.existingEmployees.length === 0) {
-      this.loadExistingEmployees();
+                    if (this.isDuplicateCombo) {
+                        this.messageService.add({
+                            severity: 'warn',
+                            summary: 'Duplicate Entry',
+                            detail: 'A member with the same Mother Organization + Prefix + Service ID already exists'
+                        });
+                    }
+                },
+                error: (err) => {
+                    console.error('Error checking duplicate combination', err);
+                    this.isCheckingCombo = false;
+                }
+            });
     }
-    if (!checked) {
-      this.selectedRelieverEmployeeId = null;
-      this.selectedRelieverEmployee = null;
+
+    // Duplicate check on RAB ID (mirrors serving-member-entry, where RAB ID is also user-entered)
+    isDuplicateRabId: boolean = false;
+    isCheckingRabId: boolean = false;
+
+    checkDuplicateRabId(): void {
+        const rabId = this.postingForm?.get('rabid')?.value;
+        const rabIdStr = rabId != null ? String(rabId).trim() : '';
+
+        // Blank is valid — the backend auto-generates a RAB ID when none is supplied.
+        if (!rabIdStr) {
+            this.isDuplicateRabId = false;
+            this.isCheckingRabId = false;
+            return;
+        }
+
+        this.isCheckingRabId = true;
+        // selfId excludes this employee's own record, so editing without changing
+        // the RAB ID does not flag itself as a duplicate.
+        const selfId = this.generatedEmployeeId != null ? Number(this.generatedEmployeeId) : null;
+        this.empService
+            .searchListByRabIdOrServiceId(rabIdStr, undefined, undefined, undefined, undefined, undefined, selfId)
+            .subscribe({
+                next: (employees) => {
+                    // Match exactly (API search may be partial); compare trimmed RAB IDs.
+                    this.isDuplicateRabId = (employees ?? []).some(
+                        (e: any) => String(e.rabid ?? e.RABID ?? e.rabId ?? '').trim() === rabIdStr
+                    );
+                    this.isCheckingRabId = false;
+
+                    if (this.isDuplicateRabId) {
+                        this.messageService.add({
+                            severity: 'warn',
+                            summary: 'Duplicate RAB ID',
+                            detail: `RAB ID "${rabIdStr}" already exists`
+                        });
+                    }
+                },
+                error: (err) => {
+                    console.error('Error checking duplicate RAB ID', err);
+                    this.isCheckingRabId = false;
+                }
+            });
     }
-  }
 
-  loadExistingEmployees(): void {
-    this.empService.getAll().subscribe({
-      next: (res) => {
-        this.existingEmployees = res;
-      },
-      error: (err) => {
-        console.error('Failed to load employees', err);
-      }
-    });
-  }
+    checkJoineeDetail(serviceId: string): void {
+        const sid = serviceId?.trim();
+        if (!sid) { this.joineeRecord = null; return; }
 
-  onRelieverEmployeeSelect(employeeId: number): void {
-    this.selectedRelieverEmployeeId = employeeId;
-    this.selectedRelieverEmployee = this.existingEmployees.find(e => e.employeeID === employeeId);
-  }
-
-  // Save handlers
-  savePresentAddress(data: AddressData) {
-    if (!this.generatedEmployeeId) {
-        this.messageService.add({
-            severity: 'warn',
-            summary: 'Warning',
-            detail: 'Please save employee first'
+        this.isCheckingJoinee = true;
+        this.joineeDetailService.getPendingByServiceId(sid).subscribe({
+            next: (record) => {
+                this.isCheckingJoinee = false;
+                if (record) {
+                    this.joineeRecord = record;
+                    this.loadAndPatchJoineeData(record);
+                    this.messageService.add({
+                        severity: 'info',
+                        summary: 'New Joinee Data Loaded',
+                        detail: 'This member was found in the "New Joining Person" list. Data has been loaded automatically.',
+                        life: 6000
+                    });
+                } else {
+                    this.joineeRecord = null;
+                }
+            },
+            error: (err: any) => { this.isCheckingJoinee = false; this.joineeRecord = null; }
         });
-        return;
     }
 
-    const addressPayload = {
-        EmployeeID: this.generatedEmployeeId,
-        AddressId: 0,
-        FMID: 0,
-        LocationType: LocationType.Present,
-        LocationCode: `${data.division}-${data.district}-${data.upazila}`,
-        PostCode: data.postCode || '',
-        AddressAreaEN: data.villageEnglish || '',
-        AddressAreaBN: data.villageBangla || '',
-        DivisionType: data.division,
-        DistrictType: data.district,
-        ThanType: data.upazila,
-        PostOfficeType: data.postOffice,
-        HouseRoad: data.houseRoad || '',
-        Active: true,  // New addresses are active by default
-        CreatedBy: 'system',
-        CreatedDate: new Date().toISOString(),
-        LastUpdatedBy: 'system',
-        Lastupdate: new Date().toISOString()
-    };
-
-    this.empService.saveAddress(addressPayload).subscribe({
-        next: (res) => {
-            this.presentAddress = data;
-            // Capture generated AddressId
-            const addressId = res?.data?.addressId || res?.Data?.AddressId || res?.addressId;
-            if (addressId) this.presentAddressId = addressId;
-            this.messageService.add({
-                severity: 'success',
-                summary: 'Success',
-                detail: 'Present address saved successfully'
-            });
-        },
-        error: (err) => {
-            console.error('Error saving address', err);
-            this.messageService.add({
-                severity: 'error',
-                summary: 'Error',
-                detail: 'Failed to save address'
-            });
-        }
-    });
-  }
-
-  savePermanentAddress(data: AddressData) {
-    if (!this.generatedEmployeeId) {
-        this.messageService.add({
-            severity: 'warn',
-            summary: 'Warning',
-            detail: 'Please save employee first'
+    /** Patch form with joinee data, then load dependent dropdowns (same pattern as loadEmployeeData). */
+    private loadAndPatchJoineeData(record: PermanentPostingJoineeDetailModel): void {
+        // Patch all values first
+        this.postingForm.patchValue({
+            ...(record.motherOrgId      != null && { motherOrganization: record.motherOrgId, orgId: record.motherOrgId }),
+            ...(record.motherOrgUnitId  != null && { lastMotherUnit: record.motherOrgUnitId }),
+            ...(record.memberType       != null && { memberType: record.memberType }),
+            ...(record.prefixId         != null && { prefix: record.prefixId }),
+            ...(record.rank             != null && { rank: record.rank }),
+            ...(record.corps            != null && { branch: record.corps }),
+            ...(record.trade            != null && { trade: record.trade }),
+            ...(record.nameBangla       != null && record.nameBangla.trim() && { fullNameBN: record.nameBangla }),
         });
-        return;
+
+        // Load dependent dropdowns based on joinee data
+        if (record.motherOrgId != null) {
+            // Load units, then auto-fill district from selected unit
+            this.commonCodeService.getAllActiveMotherOrgUnits(record.motherOrgId).subscribe({
+                next: (res) => {
+                    this.lastUnitOrganizations = res;
+                    if (record.motherOrgUnitId != null) {
+                        this.onLastUnitChange(record.motherOrgUnitId);
+                    }
+                }
+            });
+            this.loadMotherOrgRank(record.motherOrgId);
+            this.loadMotherOrgCorps(record.motherOrgId);
+            this.loadMotherOrgPrefix(record.motherOrgId);
+            this.loadMotherOrgBatch(record.motherOrgId);
+        }
+        if (record.memberType != null) {
+            this.loadOfficerType(record.memberType, record.motherOrgId);
+        }
+        if (record.corps != null) {
+            this.loadTrade(record.corps);
+        }
     }
 
-    const addressPayload = {
-        EmployeeID: this.generatedEmployeeId,
-        AddressId: 0,
-        FMID: 0,
-        LocationType: LocationType.Permanent,
-        LocationCode: `${data.division}-${data.district}-${data.upazila}`,
-        PostCode: data.postCode || '',
-        AddressAreaEN: data.villageEnglish || '',
-        AddressAreaBN: data.villageBangla || '',
-        DivisionType: data.division,
-        DistrictType: data.district,
-        ThanType: data.upazila,
-        PostOfficeType: data.postOffice,
-        HouseRoad: data.houseRoad || '',
-        Active: true,  // New addresses are active by default
-        CreatedBy: 'system',
-        CreatedDate: new Date().toISOString(),
-        LastUpdatedBy: 'system',
-        Lastupdate: new Date().toISOString()
-    };
+    // Reliever section
+    isReliever: boolean = false;
+    existingEmployees: any[] = [];
+    selectedRelieverEmployeeId: number | null = null;
+    selectedRelieverEmployee: any = null;
 
-    this.empService.saveAddress(addressPayload).subscribe({
-        next: (res) => {
-            this.permanentAddress = data;
-            // Capture generated AddressId
-            const addressId = res?.data?.addressId || res?.Data?.AddressId || res?.addressId;
-            if (addressId) this.permanentAddressId = addressId;
-            this.messageService.add({
-                severity: 'success',
-                summary: 'Success',
-                detail: 'Permanent address saved successfully'
-            });
-        },
-        error: (err) => {
-            console.error('Error saving address', err);
-            this.messageService.add({
-                severity: 'error',
-                summary: 'Error',
-                detail: 'Failed to save address'
-            });
+    onRelieverCheckChange(checked: boolean): void {
+        this.isReliever = checked;
+        if (checked && this.existingEmployees.length === 0) {
+            this.loadExistingEmployees();
         }
-    });
-  }
+        if (!checked) {
+            this.selectedRelieverEmployeeId = null;
+            this.selectedRelieverEmployee = null;
+        }
+    }
 
-  // Wife Permanent Address save handler
-  saveWifePermanentAddress(data: AddressData) {
-    if (!this.generatedEmployeeId) {
-        this.messageService.add({
-            severity: 'warn',
-            summary: 'Warning',
-            detail: 'Please save employee first'
+    loadExistingEmployees(): void {
+        this.empService.getAll().subscribe({
+            next: (res) => {
+                this.existingEmployees = res;
+            },
+            error: (err) => {
+                console.error('Failed to load employees', err);
+            }
         });
-        return;
     }
 
-    const addressPayload = {
-        EmployeeID: this.generatedEmployeeId,
-        AddressId: 0,
-        FMID: 0,
-        LocationType: LocationType.WifePermanent,
-        LocationCode: `${data.division}-${data.district}-${data.upazila}`,
-        PostCode: data.postCode || '',
-        AddressAreaEN: data.villageEnglish || '',
-        AddressAreaBN: data.villageBangla || '',
-        DivisionType: data.division,
-        DistrictType: data.district,
-        ThanType: data.upazila,
-        PostOfficeType: data.postOffice,
-        HouseRoad: data.houseRoad || '',
-        Active: true,  // New addresses are active by default
-        CreatedBy: 'system',
-        CreatedDate: new Date().toISOString(),
-        LastUpdatedBy: 'system',
-        Lastupdate: new Date().toISOString()
-    };
+    onRelieverEmployeeSelect(employeeId: number): void {
+        this.selectedRelieverEmployeeId = employeeId;
+        this.selectedRelieverEmployee = this.existingEmployees.find((e) => e.employeeID === employeeId);
+    }
 
-    this.empService.saveAddress(addressPayload).subscribe({
-        next: (res) => {
-            this.wifePermanentAddress = data;
-            // Capture generated AddressId
-            const addressId = res?.data?.addressId || res?.Data?.AddressId || res?.addressId;
-            if (addressId) this.wifePermanentAddressId = addressId;
+    // Save handlers
+    savePresentAddress(data: AddressData) {
+        if (!this.generatedEmployeeId) {
             this.messageService.add({
-                severity: 'success',
-                summary: 'Success',
-                detail: 'Wife permanent address saved successfully'
+                severity: 'warn',
+                summary: 'Warning',
+                detail: 'Please save employee first'
             });
-        },
-        error: (err) => {
-            console.error('Error saving address', err);
-            this.messageService.add({
-                severity: 'error',
-                summary: 'Error',
-                detail: 'Failed to save address'
-            });
+            return;
         }
-    });
-  }
 
-  // Wife Present Address save handler
-  saveWifePresentAddress(data: AddressData) {
-    if (!this.generatedEmployeeId) {
-        this.messageService.add({
-            severity: 'warn',
-            summary: 'Warning',
-            detail: 'Please save employee first'
+        const addressPayload = {
+            EmployeeID: this.generatedEmployeeId,
+            AddressId: 0,
+            FMID: 0,
+            LocationType: LocationType.Present,
+            LocationCode: `${data.division}-${data.district}-${data.upazila}`,
+            PostCode: data.postCode || '',
+            AddressAreaEN: data.villageEnglish || '',
+            AddressAreaBN: data.villageBangla || '',
+            DivisionType: data.division,
+            DistrictType: data.district,
+            ThanaType: data.upazila,
+            PostOfficeType: data.postOffice,
+            HouseRoad: data.houseRoad || '',
+            Active: true, // New addresses are active by default
+            CreatedBy: 'system',
+            CreatedDate: new Date().toISOString(),
+            LastUpdatedBy: 'system',
+            Lastupdate: new Date().toISOString()
+        };
+
+        this.empService.saveAddress(addressPayload).subscribe({
+            next: (res) => {
+                this.presentAddress = data;
+                // Capture generated AddressId
+                const addressId = res?.data?.addressId || res?.Data?.AddressId || res?.addressId;
+                if (addressId) this.presentAddressId = addressId;
+                this.messageService.add({
+                    severity: 'success',
+                    summary: 'Success',
+                    detail: 'Present address saved successfully'
+                });
+            },
+            error: (err) => {
+                console.error('Error saving address', err);
+                this.messageService.add({
+                    severity: 'error',
+                    summary: 'Error',
+                    detail: err?.error?.message || 'Failed to save address'
+                });
+            }
         });
-        return;
     }
 
-    const addressPayload = {
-        EmployeeID: this.generatedEmployeeId,
-        AddressId: 0,
-        FMID: 0,
-        LocationType: LocationType.WifePresent,
-        LocationCode: `${data.division}-${data.district}-${data.upazila}`,
-        PostCode: data.postCode || '',
-        AddressAreaEN: data.villageEnglish || '',
-        AddressAreaBN: data.villageBangla || '',
-        DivisionType: data.division,
-        DistrictType: data.district,
-        ThanType: data.upazila,
-        PostOfficeType: data.postOffice,
-        HouseRoad: data.houseRoad || '',
-        Active: true,  // New addresses are active by default
-        CreatedBy: 'system',
-        CreatedDate: new Date().toISOString(),
-        LastUpdatedBy: 'system',
-        Lastupdate: new Date().toISOString()
-    };
-
-    this.empService.saveAddress(addressPayload).subscribe({
-        next: (res) => {
-            this.wifePresentAddress = data;
-            // Capture generated AddressId
-            const addressId = res?.data?.addressId || res?.Data?.AddressId || res?.addressId;
-            if (addressId) this.wifePresentAddressId = addressId;
+    savePermanentAddress(data: AddressData) {
+        if (!this.generatedEmployeeId) {
             this.messageService.add({
-                severity: 'success',
-                summary: 'Success',
-                detail: 'Wife present address saved successfully'
+                severity: 'warn',
+                summary: 'Warning',
+                detail: 'Please save employee first'
             });
-        },
-        error: (err) => {
-            console.error('Error saving address', err);
-            this.messageService.add({
-                severity: 'error',
-                summary: 'Error',
-                detail: 'Failed to save address'
-            });
+            return;
         }
-    });
-  }
 
-  cancelAddress() {
-    console.log('Address editing cancelled');
-  }
+        const addressPayload = {
+            EmployeeID: this.generatedEmployeeId,
+            AddressId: 0,
+            FMID: 0,
+            LocationType: LocationType.Permanent,
+            LocationCode: `${data.division}-${data.district}-${data.upazila}`,
+            PostCode: data.postCode || '',
+            AddressAreaEN: data.villageEnglish || '',
+            AddressAreaBN: data.villageBangla || '',
+            DivisionType: data.division,
+            DistrictType: data.district,
+            ThanaType: data.upazila,
+            PostOfficeType: data.postOffice,
+            HouseRoad: data.houseRoad || '',
+            Active: true, // New addresses are active by default
+            CreatedBy: 'system',
+            CreatedDate: new Date().toISOString(),
+            LastUpdatedBy: 'system',
+            Lastupdate: new Date().toISOString()
+        };
 
-  // Copy permanent address data to present address form
-  copyPermanentToPresent(): void {
-    const permanentData = this.permanentAddressForm?.getFormData();
-    if (permanentData?.data) {
-      this.presentAddressForm?.populateFromSourceAddress(permanentData.data);
-    }
-  }
-
-  // Copy wife permanent address data to wife present address form
-  copyWifePermanentToWifePresent(): void {
-    const wifePermanentData = this.wifePermanentAddressForm?.getFormData();
-    if (wifePermanentData?.data) {
-      this.wifePresentAddressForm?.populateFromSourceAddress(wifePermanentData.data);
-    }
-  }
-
-  // Save All - Employee + All Addresses
-  saveAll(): void {
-    // Validate employee form first
-    if (this.postingForm.invalid) {
-      Object.keys(this.postingForm.controls).forEach((key) => {
-        this.postingForm.get(key)?.markAsTouched();
-      });
-      this.messageService.add({
-        severity: 'warn',
-        summary: 'Validation Error',
-        detail: 'Please fill all required employee fields'
-      });
-      return;
-    }
-
-    // Check for duplicate service ID
-    if (this.isServiceIdDuplicate) {
-      this.messageService.add({
-        severity: 'warn',
-        summary: 'Duplicate Service ID',
-        detail: 'Please use a unique Service ID'
-      });
-      return;
+        this.empService.saveAddress(addressPayload).subscribe({
+            next: (res) => {
+                this.permanentAddress = data;
+                // Capture generated AddressId
+                const addressId = res?.data?.addressId || res?.Data?.AddressId || res?.addressId;
+                if (addressId) this.permanentAddressId = addressId;
+                this.messageService.add({
+                    severity: 'success',
+                    summary: 'Success',
+                    detail: 'Permanent address saved successfully'
+                });
+            },
+            error: (err) => {
+                console.error('Error saving address', err);
+                this.messageService.add({
+                    severity: 'error',
+                    summary: 'Error',
+                    detail: err?.error?.message || 'Failed to save address'
+                });
+            }
+        });
     }
 
-    // Get form data from all address forms
-    const permanentData = this.permanentAddressForm?.getFormData();
-    const presentData = this.presentAddressForm?.getFormData();
-    const wifePermanentData = this.wifePermanentAddressForm?.getFormData();
-    const wifePresentData = this.wifePresentAddressForm?.getFormData();
+    // Spouse Permanent Address save handler
+    saveSpousePermanentAddress(data: AddressData) {
+        if (!this.generatedEmployeeId) {
+            this.messageService.add({
+                severity: 'warn',
+                summary: 'Warning',
+                detail: 'Please save employee first'
+            });
+            return;
+        }
 
-    // Only validate required addresses (permanent and present)
-    // Wife addresses are optional
-    const requiredAddressesValid = permanentData?.valid && presentData?.valid;
+        const addressPayload = {
+            EmployeeID: this.generatedEmployeeId,
+            AddressId: 0,
+            FMID: 0,
+            LocationType: LocationType.SpousePermanent,
+            LocationCode: `${data.division}-${data.district}-${data.upazila}`,
+            PostCode: data.postCode || '',
+            AddressAreaEN: data.villageEnglish || '',
+            AddressAreaBN: data.villageBangla || '',
+            DivisionType: data.division,
+            DistrictType: data.district,
+            ThanaType: data.upazila,
+            PostOfficeType: data.postOffice,
+            HouseRoad: data.houseRoad || '',
+            Active: true, // New addresses are active by default
+            CreatedBy: 'system',
+            CreatedDate: new Date().toISOString(),
+            LastUpdatedBy: 'system',
+            Lastupdate: new Date().toISOString()
+        };
 
-    if (!requiredAddressesValid) {
-      this.permanentAddressForm?.markAsTouched();
-      this.presentAddressForm?.markAsTouched();
-
-      this.messageService.add({
-        severity: 'warn',
-        summary: 'Validation Error',
-        detail: 'Please fill all required address fields (Permanent and Present)'
-      });
-      return;
+        this.empService.saveAddress(addressPayload).subscribe({
+            next: (res) => {
+                this.spousePermanentAddress = data;
+                // Capture generated AddressId
+                const addressId = res?.data?.addressId || res?.Data?.AddressId || res?.addressId;
+                if (addressId) this.spousePermanentAddressId = addressId;
+                this.messageService.add({
+                    severity: 'success',
+                    summary: 'Success',
+                    detail: 'Spouse permanent address saved successfully'
+                });
+            },
+            error: (err) => {
+                console.error('Error saving address', err);
+                this.messageService.add({
+                    severity: 'error',
+                    summary: 'Error',
+                    detail: err?.error?.message || 'Failed to save address'
+                });
+            }
+        });
     }
 
-    // Step 1: Save or Update Employee
-    const formValue = this.postingForm.getRawValue();
-    const formattedData = {
-      ...formValue,
-      employeeID: this.generatedEmployeeId || 0,
-      joiningDate: this.formatDate(formValue.joiningDate),
-      // Set PostingStatus to Supernumerary by default for new employees
-      postingStatus: formValue.postingStatus || PostingStatus.Supernumerary,
-      // Include isReliever boolean and relieverId
-      isReliever: this.isReliever,
-      relieverId: (this.isReliever && this.selectedRelieverEmployeeId) ? this.selectedRelieverEmployeeId : null
-    };
+    // Spouse Present Address save handler
+    saveSpousePresentAddress(data: AddressData) {
+        if (!this.generatedEmployeeId) {
+            this.messageService.add({
+                severity: 'warn',
+                summary: 'Warning',
+                detail: 'Please save employee first'
+            });
+            return;
+        }
 
-    // Determine whether to save or update
-    const employeeRequest = this.isEditMode
-      ? this.empService.updateEmployee(formattedData)
-      : this.empService.saveEmployee(formattedData);
+        const addressPayload = {
+            EmployeeID: this.generatedEmployeeId,
+            AddressId: 0,
+            FMID: 0,
+            LocationType: LocationType.SpousePresent,
+            LocationCode: `${data.division}-${data.district}-${data.upazila}`,
+            PostCode: data.postCode || '',
+            AddressAreaEN: data.villageEnglish || '',
+            AddressAreaBN: data.villageBangla || '',
+            DivisionType: data.division,
+            DistrictType: data.district,
+            ThanaType: data.upazila,
+            PostOfficeType: data.postOffice,
+            HouseRoad: data.houseRoad || '',
+            Active: true, // New addresses are active by default
+            CreatedBy: 'system',
+            CreatedDate: new Date().toISOString(),
+            LastUpdatedBy: 'system',
+            Lastupdate: new Date().toISOString()
+        };
 
-    employeeRequest.subscribe({
-      next: (res) => {
-        // For new employee, get ID from response; for update, use existing ID
-        const employeeId = this.isEditMode
-          ? this.generatedEmployeeId
-          : (res?.data?.employeeID || res?.Data?.EmployeeID);
+        this.empService.saveAddress(addressPayload).subscribe({
+            next: (res) => {
+                this.spousePresentAddress = data;
+                // Capture generated AddressId
+                const addressId = res?.data?.addressId || res?.Data?.AddressId || res?.addressId;
+                if (addressId) this.spousePresentAddressId = addressId;
+                this.messageService.add({
+                    severity: 'success',
+                    summary: 'Success',
+                    detail: 'Spouse present address saved successfully'
+                });
+            },
+            error: (err) => {
+                console.error('Error saving address', err);
+                this.messageService.add({
+                    severity: 'error',
+                    summary: 'Error',
+                    detail: err?.error?.message || 'Failed to save address'
+                });
+            }
+        });
+    }
 
-        if (employeeId) {
-          this.generatedEmployeeId = employeeId;
-          this.presentAddressConfig.employeeId = employeeId;
-          this.permanentAddressConfig.employeeId = employeeId;
-          this.wifePermanentAddressConfig.employeeId = employeeId;
-          this.wifePresentAddressConfig.employeeId = employeeId;
+    cancelAddress() {
+        console.log('Address editing cancelled');
+    }
 
-          // Step 2: Save or Update addresses (only those with data)
-          this.saveAllAddressesInternal(
-            permanentData!.data,
-            presentData!.data,
-            this.wifePermanentAddressForm?.hasData() ? wifePermanentData!.data : null,
-            this.wifePresentAddressForm?.hasData() ? wifePresentData!.data : null
-          );
+    onFileRowsChange(event: any): void {
+        // Handle the event emitted from FileReferencesFormComponent
+        if (event && Array.isArray(event)) {
+            this.fileRows = event;
+        }
+    }
+
+    onDownloadFile(payload: { fileId: number; fileName: string }): void {
+        this.empService.downloadFile(payload.fileId).subscribe({
+            next: (blob) => this.empService.triggerFileDownload(blob, payload.fileName || 'download'),
+            error: (err) => {
+                console.error('Download failed', err);
+                this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.message || 'Failed to download file' });
+            }
+        });
+    }
+
+    // Copy permanent address data to present address form
+    copyPermanentToPresent(): void {
+        const permanentData = this.permanentAddressForm?.getFormData();
+        if (permanentData?.data) {
+            this.presentAddressForm?.populateFromSourceAddress(permanentData.data);
+        }
+    }
+
+    // Copy spouse permanent address data to spouse present address form
+    copySpousePermanentToSpousePresent(): void {
+        const spousePermanentData = this.spousePermanentAddressForm?.getFormData();
+        if (spousePermanentData?.data) {
+            this.spousePresentAddressForm?.populateFromSourceAddress(spousePermanentData.data);
+        }
+    }
+
+    // Copy member present address data to spouse present address form
+    copyMemberPresentToSpousePresent(): void {
+        const presentData = this.presentAddressForm?.getFormData();
+        if (presentData?.data) {
+            this.spousePresentAddressForm?.populateFromSourceAddress(presentData.data);
+        }
+    }
+
+    // Copy member permanent address data to spouse permanent address form
+    copyMemberPermanentToSpousePermanent(): void {
+        const permanentData = this.permanentAddressForm?.getFormData();
+        if (permanentData?.data) {
+            this.spousePermanentAddressForm?.populateFromSourceAddress(permanentData.data);
+        }
+    }
+
+    // Save All - Employee + All Addresses
+    saveAll(): void {
+        // Guard against double submission while a save is already in flight.
+        if (this.isSaving) {
+            return;
+        }
+
+        // Validate employee form first
+        if (this.postingForm.invalid) {
+            Object.keys(this.postingForm.controls).forEach((key) => {
+                this.postingForm.get(key)?.markAsTouched();
+            });
+            this.messageService.add({
+                severity: 'warn',
+                summary: 'Validation Error',
+                detail: 'Please fill all required employee fields'
+            });
+            return;
+        }
+
+        // Check for duplicate (Mother Org + Prefix + Service ID)
+        if (this.isDuplicateCombo) {
+            this.messageService.add({
+                severity: 'warn',
+                summary: 'Duplicate Entry',
+                detail: 'A member with the same Mother Organization + Prefix + Service ID already exists'
+            });
+            return;
+        }
+
+        // Check for duplicate RAB ID
+        if (this.isDuplicateRabId) {
+            this.messageService.add({
+                severity: 'warn',
+                summary: 'Duplicate RAB ID',
+                detail: 'A member with the same RAB ID already exists'
+            });
+            return;
+        }
+
+        // Get form data from all address forms
+        const permanentData = this.permanentAddressForm?.getFormData();
+        const presentData = this.presentAddressForm?.getFormData();
+        const spousePermanentData = this.spousePermanentAddressForm?.getFormData();
+        const spousePresentData = this.spousePresentAddressForm?.getFormData();
+
+        // Only validate required addresses (permanent and present)
+        // Wife addresses are optional
+        const requiredAddressesValid = permanentData?.valid && presentData?.valid;
+
+        if (!requiredAddressesValid) {
+            this.permanentAddressForm?.markAsTouched();
+            this.presentAddressForm?.markAsTouched();
+
+            this.messageService.add({
+                severity: 'warn',
+                summary: 'Validation Error',
+                detail: 'Please fill all required address fields (Permanent and Present)'
+            });
+            return;
+        }
+
+        // Step 1: Build filesReferences (existing refs + upload new files)
+        const existingRefs = this.fileReferencesForm?.getExistingFileReferences() || [];
+        const filesToUpload = this.fileReferencesForm?.getFilesToUpload() || [];
+
+        // From here on a request will be issued — lock the Save button until the flow settles.
+        this.isSaving = true;
+
+        const doSave = (filesRefsJson: string | null, profileImgsJson: string | null) => {
+            this.saveEmployeeWithFilesRefs(this.formattedDataForEmployee(), filesRefsJson, profileImgsJson, permanentData!, presentData!, spousePermanentData, spousePresentData);
+        };
+
+        if (filesToUpload.length > 0 || this.selectedFile) {
+            const fileRefUploads = filesToUpload.map((r: any) => this.empService.uploadEmployeeFile(r.file!, r.displayName?.trim() || r.file!.name));
+            const profileUpload$ = this.selectedFile ? this.empService.uploadEmployeeFile(this.selectedFile, this.selectedFileName || this.selectedFile.name) : null;
+
+            const allUploads = profileUpload$ ? [...fileRefUploads, profileUpload$] : fileRefUploads;
+
+            forkJoin(allUploads).subscribe({
+                next: (results: unknown) => {
+                    const resultsArray = Array.isArray(results) ? results : [];
+                    const filesRefResults = profileUpload$ ? resultsArray.slice(0, -1) : resultsArray;
+                    const profileResult = profileUpload$ ? resultsArray[resultsArray.length - 1] : null;
+
+                    const newRefs = (filesRefResults as any[]).map((r: any) => ({ FileId: r.fileId, fileName: r.fileName }));
+                    const allRefs = [...existingRefs, ...newRefs];
+                    const filesReferencesJson = allRefs.length > 0 ? JSON.stringify(allRefs) : null;
+
+                    const profileImagesJson = profileResult ? JSON.stringify([{ FileId: (profileResult as any).fileId, fileName: (profileResult as any).fileName }]) : this.getProfileImagesJson();
+
+                    doSave(filesReferencesJson, profileImagesJson);
+                },
+                error: (err) => {
+                    this.isSaving = false;
+                    console.error('Error uploading files', err);
+                    this.messageService.add({
+                        severity: 'error',
+                        summary: 'Error',
+                        detail: err?.error?.message || 'Failed to upload one or more files'
+                    });
+                }
+            });
+            return;
+        }
+
+        const filesReferencesJson = existingRefs.length > 0 ? JSON.stringify(existingRefs) : null;
+        const profileImagesJson = this.getProfileImagesJson();
+        doSave(filesReferencesJson, profileImagesJson);
+    }
+
+    private formattedDataForEmployee(): any {
+        const formValue = this.postingForm.getRawValue();
+        const specialQualsArr = Array.isArray(formValue.specialQualifications) ? formValue.specialQualifications : [];
+        const specialQualsCsv = specialQualsArr.length > 0 ? specialQualsArr.join(',') : null;
+        return {
+            ...formValue,
+            employeeID: this.generatedEmployeeId || 0,
+            joiningDate: this.formatDate(formValue.joiningDate),
+            postingStatus: formValue.postingStatus || PostingStatus.Supernumerary,
+            isReliever: this.isReliever,
+            relieverId: this.isReliever && this.selectedRelieverEmployeeId ? this.selectedRelieverEmployeeId : null,
+            maritalStatus: formValue.maritalStatus ?? null,
+            batch: formValue.batch ?? null,
+            specialQualifications: specialQualsCsv
+        };
+    }
+
+    /** Build ProfileImages JSON from existing ref (no new upload). Returns null if no profile image. */
+    private getProfileImagesJson(): string | null {
+        if (this.profileImageRef) {
+            return JSON.stringify([{ FileId: this.profileImageRef.fileId, fileName: this.profileImageRef.fileName }]);
+        }
+        return null;
+    }
+
+    /**
+     * When a (new) profile image is uploaded/updated, also enroll it into the
+     * face-recognition DB so the employee can be identified by face. Best-effort:
+     * a face-service failure (no face detected, low quality, photo limit, service
+     * down) must never block saving the employee — it only shows a toast.
+     */
+    private enrollProfileFace(employeeId: number, file: File | null): void {
+        if (!employeeId || !file) return;
+
+        // Validate the per-employee photo limit first so we don't blindly hit a
+        // 409 from the face service when the employee is already at the cap.
+        this.empService.getEnrolledFaceCount(employeeId).subscribe({
+            next: (res) => {
+                const count = res?.photoCount ?? 0;
+                if (count >= this.MAX_FACES_PER_EMPLOYEE) {
+                    this.messageService.add({
+                        severity: 'warn',
+                        summary: 'Face Limit Reached',
+                        detail: `This employee already has the maximum of ${this.MAX_FACES_PER_EMPLOYEE} face images. The profile photo was not added to face recognition — remove some from the Face Images screen first.`,
+                        life: 7000
+                    });
+                    return;
+                }
+                this.doEnrollProfileFace(employeeId, file);
+            },
+            // If the count check itself fails (service down), skip silently.
+            error: () => {}
+        });
+    }
+
+    private doEnrollProfileFace(employeeId: number, file: File): void {
+        this.empService.enrollFaces(employeeId, [file], 'id_card').subscribe({
+            next: (res: any) => {
+                if ((res?.photos_enrolled ?? 0) > 0) {
+                    this.messageService.add({
+                        severity: 'info',
+                        summary: 'Face Enrolled',
+                        detail: 'Profile photo was also added to the face-recognition database.'
+                    });
+                } else {
+                    this.messageService.add({
+                        severity: 'warn',
+                        summary: 'Face Not Enrolled',
+                        detail: 'Profile photo was saved but could not be used for face recognition (no clear face detected).'
+                    });
+                }
+            },
+            error: (err: any) => {
+                // Surface the cap explicitly if the service still reports it (race);
+                // otherwise stay silent — the employee is already saved.
+                if (err?.status === 409) {
+                    this.messageService.add({
+                        severity: 'warn',
+                        summary: 'Face Limit Reached',
+                        detail: `This employee already has the maximum of ${this.MAX_FACES_PER_EMPLOYEE} face images. The profile photo was not added to face recognition.`,
+                        life: 7000
+                    });
+                }
+            }
+        });
+    }
+
+    private saveEmployeeWithFilesRefs(
+        formattedData: any,
+        filesReferencesJson: string | null,
+        profileImagesJson: string | null,
+        permanentData: { data: AddressData },
+        presentData: { data: AddressData },
+        spousePermanentData: { data: AddressData } | null,
+        spousePresentData: { data: AddressData } | null
+    ): void {
+        if (filesReferencesJson != null) {
+            formattedData.filesReferences = filesReferencesJson;
+        }
+        if (profileImagesJson != null) {
+            formattedData.profileImages = profileImagesJson;
+        }
+
+        // Capture the newly chosen profile image (if any) so we can also enroll
+        // it into the face-recognition DB after the employee is saved.
+        const profileFaceFile: File | null = this.selectedFile;
+
+        // Determine whether to save or update
+        const employeeRequest = this.isEditMode ? this.empService.updateEmployee(formattedData) : this.empService.saveEmployee(formattedData);
+
+        employeeRequest.subscribe({
+            next: (res) => {
+                // For new employee, get ID from response; for update, use existing ID
+                const employeeId = this.isEditMode ? this.generatedEmployeeId : res?.data?.employeeID || res?.Data?.EmployeeID;
+
+                if (employeeId) {
+                    this.generatedEmployeeId = employeeId;
+                    // Mirror the profile image into the face-recognition DB (best-effort).
+                    this.enrollProfileFace(employeeId, profileFaceFile);
+                    this.presentAddressConfig.employeeId = employeeId;
+                    this.permanentAddressConfig.employeeId = employeeId;
+                    this.spousePermanentAddressConfig.employeeId = employeeId;
+                    this.spousePresentAddressConfig.employeeId = employeeId;
+
+                    // Step 1.5: If Married, save/update spouse in FamilyInfo first so we have FMID for spouse addresses
+                    // Step 2: Then save addresses (spouse addresses will include spouse FMID in AddressInfo)
+                    this.saveSpouseIfMarried(employeeId).pipe(
+                        switchMap((spouseFmidFromApi) =>
+                            of(null).pipe(
+                                finalize(() =>
+                                    this.saveAllAddressesInternal(
+                                        permanentData.data,
+                                        presentData.data,
+                                        this.spousePermanentAddressForm?.hasData() && spousePermanentData ? spousePermanentData.data : null,
+                                        this.spousePresentAddressForm?.hasData() && spousePresentData ? spousePresentData.data : null,
+                                        spouseFmidFromApi
+                                    )
+                                )
+                            )
+                        )
+                    ).subscribe();
+                } else {
+                    this.isSaving = false;
+                    this.messageService.add({
+                        severity: 'error',
+                        summary: 'Error',
+                        detail: 'Failed to get Employee ID from response'
+                    });
+                }
+            },
+            error: (err) => {
+                this.isSaving = false;
+                console.error('Error saving/updating employee', err);
+                this.messageService.add({
+                    severity: 'error',
+                    summary: 'Error',
+                    detail: this.isEditMode ? 'Failed to update employee' : 'Failed to save employee'
+                });
+            }
+        });
+    }
+
+    /** When Marital Status is not Unmarried, save or update spouse row in FamilyInfo. Returns Observable that emits the FMID to use for spouse addresses (from API on insert, or existing spouseFmid on update). */
+    private saveSpouseIfMarried(employeeId: number): import('rxjs').Observable<number | null> {
+        const formValue = this.postingForm.getRawValue();
+        const maritalId = formValue.maritalStatus;
+        const spouseName = (formValue.spouseName || '').trim();
+        const isNotUnmarried = this.isMaritalStatusNotUnmarried;
+        const hasSpouseAddress = this.spousePermanentAddressForm?.hasData() || this.spousePresentAddressForm?.hasData();
+        const relationCodeId = formValue.relationship;
+        const shouldSave = relationCodeId != null && (isNotUnmarried || spouseName.length > 0 || this.spouseFmid != null);
+        if (!shouldSave) return of(null);
+
+        const resolvedSpouseName = spouseName.length > 0 ? spouseName : '';
+
+        const nowIso = new Date().toISOString();
+        const payload: Record<string, unknown> = {
+            EmployeeId: employeeId,
+            Relation: relationCodeId,
+            NameEN: resolvedSpouseName,
+            NameBN: null,
+            DOB: null,
+            MaritalStatus: null,
+            Occupation: null,
+            NID: null,
+            MobileNo: null,
+            PassportNo: null,
+            Email: null,
+            CreatedDate: nowIso,
+            LastUpdatedBy: 'system',
+            Lastupdate: nowIso,
+            StatusDate: nowIso
+        };
+        if (this.spouseFmid != null) {
+            payload['FMID'] = this.spouseFmid;
         } else {
-          this.messageService.add({
-            severity: 'error',
-            summary: 'Error',
-            detail: 'Failed to get Employee ID from response'
-          });
+            payload['FMID'] = 0;
         }
-      },
-      error: (err) => {
-        console.error('Error saving/updating employee', err);
-        this.messageService.add({
-          severity: 'error',
-          summary: 'Error',
-          detail: this.isEditMode ? 'Failed to update employee' : 'Failed to save employee'
-        });
-      }
-    });
-  }
 
-  // Internal method to save or update all addresses
-  private saveAllAddressesInternal(
-    permanent: AddressData,
-    present: AddressData,
-    wifePermanent: AddressData | null,
-    wifePresent: AddressData | null
-  ): void {
-    const buildPayload = (data: AddressData, locationType: string, existingAddressId?: number) => {
-      const payload: any = {
-        EmployeeID: this.generatedEmployeeId,
-        AddressId: existingAddressId || 0,
-        FMID: 0,
-        LocationType: locationType,
-        LocationCode: `${data.division}-${data.district}-${data.upazila}`,
-        PostCode: data.postCode || '',
-        AddressAreaEN: data.villageEnglish || '',
-        AddressAreaBN: data.villageBangla || '',
-        DivisionType: data.division,
-        DistrictType: data.district,
-        ThanType: data.upazila,
-        PostOfficeType: data.postOffice,
-        HouseRoad: data.houseRoad || '',
-        Active: true,  // New addresses are active by default
-        CreatedBy: 'system',
-        CreatedDate: new Date().toISOString(),
-        LastUpdatedBy: 'system',
-        Lastupdate: new Date().toISOString()
-      };
-      console.log('Address payload:', payload);
-      return payload;
-    };
-
-    // For edit mode, use update if addressId exists; otherwise save
-    const getAddressRequest = (data: AddressData, locationType: string, existingAddressId?: number) => {
-      const payload = buildPayload(data, locationType, existingAddressId);
-      return (this.isEditMode && existingAddressId)
-        ? this.empService.updateAddress(payload)
-        : this.empService.saveAddress(payload);
-    };
-
-    // Build save requests - only include addresses that have data
-    const saveRequests: { [key: string]: any } = {
-      permanent: getAddressRequest(permanent, LocationType.Permanent, this.permanentAddressId),
-      present: getAddressRequest(present, LocationType.Present, this.presentAddressId)
-    };
-
-    // Add wife addresses only if they have data
-    if (wifePermanent) {
-      saveRequests['wifePermanent'] = getAddressRequest(wifePermanent, LocationType.WifePermanent, this.wifePermanentAddressId);
-    }
-    if (wifePresent) {
-      saveRequests['wifePresent'] = getAddressRequest(wifePresent, LocationType.WifePresent, this.wifePresentAddressId);
+        const req = this.spouseFmid ? this.familyInfoService.update(payload) : this.familyInfoService.save(payload);
+        return req.pipe(
+            map((res: any) => {
+                // API returns ResultViewModel { Data = saved entity }; entity may use PascalCase or camelCase
+                const data = res?.data ?? res?.Data;
+                const fmid = data != null
+                    ? (data.FMID ?? data.fmid ?? (typeof data === 'number' ? data : undefined))
+                    : (res?.FMID ?? res?.fmid);
+                const resolved = fmid != null && fmid !== 0 ? +fmid : (this.spouseFmid ?? null);
+                if (this.spouseFmid == null && resolved != null) this.spouseFmid = resolved;
+                return resolved;
+            }),
+            catchError((err) => {
+                console.error('Error saving spouse', err);
+                return of(this.spouseFmid);
+            })
+        );
     }
 
-    forkJoin(saveRequests).subscribe({
-      next: (results: any) => {
-        this.permanentAddress = permanent;
-        this.presentAddress = present;
-        if (wifePermanent) this.wifePermanentAddress = wifePermanent;
-        if (wifePresent) this.wifePresentAddress = wifePresent;
+    // Internal method to save or update all addresses (spouse addresses include spouse FMID for AddressInfo)
+    /** spouseFmidFromApi: FMID from spouse save response (use this for new spouse so address gets the generated FMID) */
+    private saveAllAddressesInternal(permanent: AddressData, present: AddressData, spousePermanent: AddressData | null, spousePresent: AddressData | null, spouseFmidFromApi?: number | null): void {
+        const buildPayload = (data: AddressData, locationType: string, existingAddressId?: number, fmid?: number) => {
+            const fmidVal = fmid ?? 0;
+            const payload: any = {
+                EmployeeID: this.generatedEmployeeId,
+                AddressId: existingAddressId || 0,
+                FMID: fmidVal,
+                fmid: fmidVal,
+                LocationType: locationType,
+                LocationCode: `${data.division}-${data.district}-${data.upazila}`,
+                PostCode: data.postCode || '',
+                AddressAreaEN: data.villageEnglish || '',
+                AddressAreaBN: data.villageBangla || '',
+                DivisionType: data.division,
+                DistrictType: data.district,
+                ThanaType: data.upazila,
+                PostOfficeType: data.postOffice,
+                HouseRoad: data.houseRoad || '',
+                Active: true, // New addresses are active by default
+                CreatedBy: 'system',
+                CreatedDate: new Date().toISOString(),
+                LastUpdatedBy: 'system',
+                Lastupdate: new Date().toISOString()
+            };
+            console.log('Address payload:', payload);
+            return payload;
+        };
 
-        // Only update addressIds for NEW addresses (not when updating existing ones)
-        const getAddressId = (res: any) => res?.data?.addressId || res?.Data?.AddressId || res?.addressId;
-        if (!this.permanentAddressId && results.permanent) this.permanentAddressId = getAddressId(results.permanent);
-        if (!this.presentAddressId && results.present) this.presentAddressId = getAddressId(results.present);
-        if (!this.wifePermanentAddressId && results.wifePermanent) this.wifePermanentAddressId = getAddressId(results.wifePermanent);
-        if (!this.wifePresentAddressId && results.wifePresent) this.wifePresentAddressId = getAddressId(results.wifePresent);
+        // For edit mode, use update if addressId exists; otherwise save. Wife addresses pass spouse FMID for AddressInfo.
+        // Prefer FMID from API response (spouseFmidFromApi) so new spouse insert gets the generated FMID.
+        const spouseFmid = (spouseFmidFromApi != null && spouseFmidFromApi !== 0 ? spouseFmidFromApi : this.spouseFmid) ?? 0;
+        const getAddressRequest = (data: AddressData, locationType: string, existingAddressId?: number, fmid?: number) => {
+            const payload = buildPayload(data, locationType, existingAddressId, fmid);
+            return this.isEditMode && existingAddressId ? this.empService.updateAddress(payload) : this.empService.saveAddress(payload);
+        };
 
-        this.messageService.add({
-          severity: 'success',
-          summary: 'Success',
-          detail: this.isEditMode
-            ? 'Employee and addresses updated successfully!'
-            : 'Employee and addresses saved successfully!'
+        // Build save requests - only include addresses that have data
+        const saveRequests: { [key: string]: any } = {
+            permanent: getAddressRequest(permanent, LocationType.Permanent, this.permanentAddressId),
+            present: getAddressRequest(present, LocationType.Present, this.presentAddressId)
+        };
+
+        // Add spouse addresses only if they have data; include spouse FMID so AddressInfo links to family member
+        if (spousePermanent) {
+            saveRequests['spousePermanent'] = getAddressRequest(spousePermanent, LocationType.SpousePermanent, this.spousePermanentAddressId, spouseFmid);
+        }
+        if (spousePresent) {
+            saveRequests['spousePresent'] = getAddressRequest(spousePresent, LocationType.SpousePresent, this.spousePresentAddressId, spouseFmid);
+        }
+
+        forkJoin(saveRequests).subscribe({
+            next: (results: any) => {
+                this.isSaving = false;
+                this.permanentAddress = permanent;
+                this.presentAddress = present;
+                if (spousePermanent) this.spousePermanentAddress = spousePermanent;
+                if (spousePresent) this.spousePresentAddress = spousePresent;
+
+                // Only update addressIds for NEW addresses (not when updating existing ones)
+                const getAddressId = (res: any) => res?.data?.addressId || res?.Data?.AddressId || res?.addressId;
+                if (!this.permanentAddressId && results.permanent) this.permanentAddressId = getAddressId(results.permanent);
+                if (!this.presentAddressId && results.present) this.presentAddressId = getAddressId(results.present);
+                if (!this.spousePermanentAddressId && results.spousePermanent) this.spousePermanentAddressId = getAddressId(results.spousePermanent);
+                if (!this.spousePresentAddressId && results.spousePresent) this.spousePresentAddressId = getAddressId(results.spousePresent);
+
+                this.messageService.add({
+                    severity: 'success',
+                    summary: 'Success',
+                    detail: this.isEditMode ? 'Employee and addresses updated successfully!' : 'Employee and addresses saved successfully!'
+                });
+
+                // Mark joinee detail as added — only after full save succeeds
+                if (!this.isEditMode && this.joineeRecord) {
+                    this.joineeDetailService.saveUpdate({
+                        ...this.joineeRecord,
+                        isAddedInNewJoineeDataEntry: true
+                    }).subscribe();
+                }
+
+                if (!this.isEditMode) {
+                    this.resetForNewEntry();
+                }
+            },
+            error: (err: any) => {
+                this.isSaving = false;
+                console.error('Error saving/updating addresses', err);
+                this.messageService.add({
+                    severity: 'error',
+                    summary: 'Error',
+                    detail: this.isEditMode ? 'Employee updated but failed to update one or more addresses' : 'Employee saved but failed to save one or more addresses'
+                });
+            }
         });
-      },
-      error: (err: any) => {
-        console.error('Error saving/updating addresses', err);
-        this.messageService.add({
-          severity: 'error',
-          summary: 'Error',
-          detail: this.isEditMode
-            ? 'Employee updated but failed to update one or more addresses'
-            : 'Employee saved but failed to save one or more addresses'
-        });
-      }
-    });
-  }
+    }
 
     postingForm!: FormGroup;
     imagePreview: string | null = null;
     selectedFile: File | null = null;
+    /** Per-employee face-image cap (mirrors the Face Images screen + face API). */
+    private readonly MAX_FACES_PER_EMPLOYEE = 10;
+
+    // File references (for FilesReferences JSON). fileId set when loading existing refs.
+    fileRows: { displayName: string; file: File | null; fileId?: number }[] = [];
+
+    // Profile image: single item, same JSON shape as FilesReferences [{"FileId":2,"fileName":"..."}]
+    profileImageRef: { fileId: number; fileName: string } | null = null;
 
     // Dropdown options
     motherOrganizations: MotherOrganizationModel[] = [];
     lastUnitOrganizations: MotherOrganizationModel[] = [];
     memberTypes: CommonCodeModel[] = [];
+    batches: CommonCodeModel[] = [];
+    specialQualificationOptions: CommonCodeModel[] = [];
     officerTypes: CommonCodeModel[] = [];
     appointments: CommonCodeModel[] = [];
     ranks: CommonCodeModel[] = [];
     corps: CommonCodeModel[] = [];
-    trades: CommonCodeModel[] = [];
+    tradeOptions: { label: string; value: number }[] = [];
     genders: CommonCodeModel[] = [];
+    maritalStatusOptions: CommonCodeModel[] = [];
+    relationOptions: CommonCodeModel[] = [];
+    /** When editing, FMID of existing spouse row in FamilyInfo (for update). */
+    spouseFmid: number | null = null;
     prefixes: CommonCodeModel[] = [];
+    districtOptions: { label: string; value: number }[] = [];
+    rabRankEquivalentDisplay: string = '';
+    rabRankDropdownOptions: { label: string; value: number }[] = [];
+    selectedRabEquivalentNameId: number | null = null;
+    private rankEquivalentList: Array<{ equivalentNameID: number; motherOrgRankId: number; sortOrder: number | null }> = [];
+    private rankEquivalentListWithOrg: Array<{ equivalentNameID: number; motherOrgRankId: number; motherOrgId: number; sortOrder: number | null }> = [];
+    private rabMotherOrgId: number | null = null;
+    private motherOrgRankNameById = new Map<number, string>();
+
+    // Add Last Unit of Mother Organization dialog (same pattern as Post Office setup)
+    showLastUnitDialog: boolean = false;
+    newLastUnitNameEN: string = '';
+    newLastUnitNameBN: string = '';
+    isSavingLastUnit: boolean = false;
+    /** True while a Save/Update All request is in flight — disables the Save button to prevent double submits. */
+    isSaving: boolean = false;
 
     constructor(
         private fb: FormBuilder,
         private empService: EmpService,
+        private familyInfoService: FamilyInfoService,
         private commonCodeService: CommonCodeService,
         private messageService: MessageService,
         private route: ActivatedRoute,
-        private router: Router
+        private router: Router,
+        private organizationService: OrganizationService,
+        private masterBasicSetupService: MasterBasicSetupService,
+        private sharedService: SharedService,
+        private memberTypeAccess: IdentityUserMemberTypeAccessService,
+        private joineeDetailService: PermanentPostingJoineeDetailService
     ) {}
 
+    /** CodeIds of Member Types the current user is allowed to use. `null` means "not yet loaded" (fail-open). */
+    private allowedMemberTypeIds: number[] | null = null;
+
+    /** Raw ranks for the currently selected mother org (before member-type filter). */
+    private allRanksForOrg: CommonCodeModel[] = [];
+
+    /** Tracks the last employeeId we fetched, so route mode-only changes (e.g., view → edit
+     * via Edit button) don't trigger a redundant refetch that would snap mode back to view. */
+    private _lastLoadedEmployeeId: number | null = null;
+
     ngOnInit(): void {
+        const _perms = this._userMenuService.getPermissionsByRoute(this._router.url);
+        this.canInsert = _perms.canInsert;
+        this.canUpdate = _perms.canUpdate;
+        this.canDelete = _perms.canDelete;
+
         this.initializeForm();
+        this.loadCurrentUserMemberTypePermissions();
+
+        // Real-time duplicate check on (Mother Org + Prefix + Service ID) as user fills any of the three
+        ['motherOrganization', 'prefix', 'serviceId'].forEach((field) => {
+            this.postingForm.get(field)?.valueChanges.pipe(
+                debounceTime(500),
+                distinctUntilChanged()
+            ).subscribe(() => this.checkDuplicateCombo());
+        });
+
+        // Real-time duplicate check on RAB ID (now user-editable)
+        this.postingForm.get('rabid')?.valueChanges.pipe(
+            debounceTime(500),
+            distinctUntilChanged()
+        ).subscribe(() => this.checkDuplicateRabId());
+
+        this.postingForm.get('rank')?.valueChanges.subscribe((rankId) => this.updateRabRankEquivalent(rankId));
+
         this.loadMotherOrg();
+        this.loadDistricts();
         this.loadMemberType();
+        this.loadSpecialQualifications();
         this.loadAppointment();
         this.loadGender();
+        this.loadMaritalStatus();
+        this.loadRelationshipOptions();
+        this.loadRankEquivalentMappings();
 
         // Check for query params (view/edit mode)
-        this.route.queryParams.subscribe(params => {
+        this.route.queryParams.subscribe((params) => {
             const employeeId = params['id'];
             const mode = params['mode'];
 
             if (employeeId) {
-                this.generatedEmployeeId = +employeeId;
+                const idNum = +employeeId;
 
-                if (mode === 'edit') {
-                    this.isEditMode = true;
-                    this.isViewMode = false;
-                    this.pageTitle = 'Edit Employee';
-                } else {
+                if (this._lastLoadedEmployeeId !== idNum) {
+                    // First load (or new employee) — always start in view mode so the user
+                    // explicitly opts into editing via the Edit button. URL's mode is ignored
+                    // here intentionally; clicking Edit will navigate to mode=edit.
+                    this._lastLoadedEmployeeId = idNum;
+                    this.generatedEmployeeId = idNum;
+                    this.showEntryForm = true;
+                    this.hideSearchSection = true;
                     this.isViewMode = true;
                     this.isEditMode = false;
                     this.pageTitle = 'View Employee Details';
+                    this.loadEmployeeData(idNum);
+                } else {
+                    // Same employee, mode-only change (e.g., Edit click) — toggle state
+                    // without refetching, so the form doesn't snap back to view.
+                    if (mode === 'edit') {
+                        this.isEditMode = true;
+                        this.isViewMode = false;
+                        this.pageTitle = 'Edit Employee';
+                        this.enableForm();
+                    } else {
+                        this.isViewMode = true;
+                        this.isEditMode = false;
+                        this.pageTitle = 'View Employee Details';
+                        this.disableForm();
+                    }
                 }
-
-                // Load employee data
-                this.loadEmployeeData(+employeeId);
             }
         });
+    }
+
+    /** Called when user clicks View Old Profile in present-member-check: show form and load ex-member data. */
+    onLoadOldProfile(employeeId: number): void {
+        this.showEntryForm = true;
+        this.generatedEmployeeId = employeeId;
+        this.isViewMode = true;
+        this.isEditMode = false;
+        this.pageTitle = 'View Old Profile';
+        this.presentAddressConfig.employeeId = employeeId;
+        this.permanentAddressConfig.employeeId = employeeId;
+        this.spousePermanentAddressConfig.employeeId = employeeId;
+        this.spousePresentAddressConfig.employeeId = employeeId;
+        this.loadEmployeeData(employeeId);
     }
 
     // Load employee data for view/edit mode
@@ -646,18 +1183,26 @@ export class EmpBasicInfo implements OnInit {
         this.empService.getEmployeeById(employeeId).subscribe({
             next: (employee: any) => {
                 // Populate form with employee data
+                const specialQualsRaw = employee.specialQualifications ?? employee.SpecialQualifications ?? '';
+                const specialQualIds = typeof specialQualsRaw === 'string' && specialQualsRaw.trim().length > 0
+                    ? specialQualsRaw.split(',').map((s: string) => Number(s.trim())).filter((n: number) => !Number.isNaN(n))
+                    : [];
+
                 this.postingForm.patchValue({
                     employeeID: employee.employeeID,
                     motherOrganization: employee.orgId,
                     lastMotherUnit: employee.lastMotherUnit,
                     memberType: employee.memberType,
+                    batch: employee.batch ?? employee.Batch ?? null,
                     appointment: employee.appointment,
                     joiningDate: employee.joiningDate ? new Date(employee.joiningDate) : null,
                     rank: employee.rank,
                     branch: employee.branch,
                     trade: employee.trade,
+                    specialQualifications: specialQualIds,
                     tradeMark: employee.tradeMark,
                     gender: employee.gender,
+                    maritalStatus: employee.maritalStatus ?? employee.MaritalStatus ?? null,
                     prefix: employee.prefix,
                     serviceId: employee.serviceId,
                     rabid: employee.rabid,
@@ -667,8 +1212,69 @@ export class EmpBasicInfo implements OnInit {
                     postingStatus: employee.postingStatus,
                     status: employee.status,
                     officerType: employee.officerType,
-                    orgId: employee.orgId
+                    orgId: employee.orgId,
+                    lastMotherUnitDistrictId: employee.lastMotherUnitDistrictId ?? null,
+                    spouseName: employee.spouseName ?? employee.wifeName ?? ''
                 });
+                this.spouseFmid = null;
+
+                // Load file references (display names from JSON; files are not re-fetched)
+                const refsJson = employee.filesReferences || employee.FilesReferences;
+                if (refsJson && typeof refsJson === 'string') {
+                    try {
+                        const refs = JSON.parse(refsJson) as { FileId?: number; fileName?: string }[];
+                        if (Array.isArray(refs)) {
+                            this.fileRows = refs.map((r) => ({ displayName: r.fileName || '', file: null, fileId: r.FileId }));
+                        }
+                    } catch {
+                        this.fileRows = [];
+                    }
+                } else {
+                    this.fileRows = [];
+                }
+
+                // Load profile image ref (single item: [{"FileId":2,"fileName":"..."}])
+                const profileJson = employee.profileImages || employee.ProfileImages;
+                if (profileJson && typeof profileJson === 'string') {
+                    try {
+                        const arr = JSON.parse(profileJson) as { FileId?: number; fileName?: string }[];
+                        if (Array.isArray(arr) && arr.length > 0) {
+                            const first = arr[0];
+                            this.profileImageRef = { fileId: first.FileId ?? 0, fileName: first.fileName || '' };
+                            this.selectedFileName = this.profileImageRef.fileName;
+                            // Download and display the profile image
+                            if (this.profileImageRef.fileId) {
+                                this.empService.downloadFile(this.profileImageRef.fileId).subscribe({
+                                    next: (blob) => {
+                                        const reader = new FileReader();
+                                        reader.onload = (e: any) => {
+                                            this.imagePreview = e.target.result;
+                                        };
+                                        reader.readAsDataURL(blob);
+                                    },
+                                    error: (err) => {
+                                        console.error('Failed to load profile image', err);
+                                        this.imagePreview = null;
+                                    }
+                                });
+                            } else {
+                                this.imagePreview = null;
+                            }
+                        } else {
+                            this.profileImageRef = null;
+                            this.selectedFileName = '';
+                            this.imagePreview = null;
+                        }
+                    } catch {
+                        this.profileImageRef = null;
+                        this.selectedFileName = '';
+                        this.imagePreview = null;
+                    }
+                } else {
+                    this.profileImageRef = null;
+                    this.selectedFileName = '';
+                    this.imagePreview = null;
+                }
 
                 // Load dependent dropdowns based on employee data
                 if (employee.orgId) {
@@ -676,13 +1282,55 @@ export class EmpBasicInfo implements OnInit {
                     this.loadMotherOrgRank(employee.orgId);
                     this.loadMotherOrgCorps(employee.orgId);
                     this.loadMotherOrgPrefix(employee.orgId);
+                    this.loadMotherOrgBatch(employee.orgId);
                 }
                 if (employee.memberType) {
-                    this.loadOfficerType(employee.memberType);
+                    this.loadOfficerType(employee.memberType, employee.orgId);
                 }
                 if (employee.branch) {
                     this.loadTrade(employee.branch);
                 }
+
+                // Load spouse (Wife Name) from FamilyInfo when marital status is Married
+                const applySpouseFromFamilyList = (familyList: any[]) => {
+                    if (!familyList || !Array.isArray(familyList)) return;
+                    // Prefer matching by "Spouse" relation when options are loaded; else use first family member with Relation set so relationship gets a value
+                    const spouseCodeId = this.relationOptions.length > 0
+                        ? this.relationOptions.find((r) => (r.codeValueEN || (r as any).codeValueEn || '').toLowerCase() === 'spouse')?.codeId
+                        : undefined;
+                    let spouseRow = spouseCodeId != null
+                        ? familyList.find((f: any) => {
+                            const rel = f.relation ?? f.Relation;
+                            return rel != null && rel === spouseCodeId;
+                        })
+                        : null;
+                    if (!spouseRow && familyList.length > 0)
+                        spouseRow = familyList.find((f: any) => (f.relation ?? f.Relation) != null) ?? familyList[0];
+                    if (spouseRow) {
+                        const name = spouseRow.NameEN ?? (spouseRow as any).nameEN ?? '';
+                        const rawRel = spouseRow.Relation ?? (spouseRow as any).relation;
+                        const relationId = rawRel != null ? +rawRel : null;
+                        this.postingForm.patchValue({ spouseName: name, relationship: relationId });
+                        this.spouseFmid = spouseRow.FMID ?? (spouseRow as any).fmid ?? null;
+                    }
+                };
+                this.familyInfoService.getByEmployeeId(employeeId).subscribe({
+                    next: (familyList) => {
+                        if (this.relationOptions.length > 0) {
+                            applySpouseFromFamilyList(familyList);
+                        } else {
+                            // Relationship dropdown not loaded yet; load it then apply spouse so relation is set correctly
+                            this.commonCodeService.getAllActiveCommonCodesType('Relationship').subscribe({
+                                next: (res) => {
+                                    this.relationOptions = res;
+                                    applySpouseFromFamilyList(familyList);
+                                },
+                                error: (err: any) => applySpouseFromFamilyList(familyList)
+                            });
+                        }
+                    },
+                    error: (err: any) => {}
+                });
 
                 // Check reliever
                 if (employee.relieverId) {
@@ -701,7 +1349,7 @@ export class EmpBasicInfo implements OnInit {
                 this.messageService.add({
                     severity: 'error',
                     summary: 'Error',
-                    detail: 'Failed to load employee data'
+                    detail: err?.error?.message || 'Failed to load employee data'
                 });
             }
         });
@@ -711,14 +1359,14 @@ export class EmpBasicInfo implements OnInit {
             next: (addresses: any[]) => {
                 console.log('Loaded addresses:', addresses);
 
-                addresses.forEach(addr => {
+                addresses.forEach((addr) => {
                     // Handle both camelCase and PascalCase property names
                     const locationCode = addr.locationCode || addr.LocationCode || '';
                     const locationType = addr.locationType || addr.LocationType || '';
                     const addressId = addr.addressId || addr.AddressId;
                     const empId = addr.employeeID || addr.EmployeeID;
                     const divisionType = addr.divisionType || addr.DivisionType;
-                    const thanType = addr.thanType || addr.ThanType;
+                    const ThanaType = addr.thanaType || addr.ThanaType;
                     const postOfficeType = addr.postOfficeType || addr.PostOfficeType;
                     const postCode = addr.postCode || addr.PostCode || '';
                     const addressAreaEN = addr.addressAreaEN || addr.AddressAreaEN || '';
@@ -738,7 +1386,7 @@ export class EmpBasicInfo implements OnInit {
                         employeeId: empId,
                         division: divisionType,
                         district: districtValue,
-                        upazila: thanType,
+                        upazila: ThanaType,
                         postOffice: postOfficeType,
                         postCode: postCode,
                         villageEnglish: addressAreaEN,
@@ -756,12 +1404,12 @@ export class EmpBasicInfo implements OnInit {
                     } else if (normalizedType === LocationType.Present.toLowerCase()) {
                         this.presentAddress = addressData;
                         this.presentAddressId = addressId;
-                    } else if (normalizedType === LocationType.WifePermanent.toLowerCase()) {
-                        this.wifePermanentAddress = addressData;
-                        this.wifePermanentAddressId = addressId;
-                    } else if (normalizedType === LocationType.WifePresent.toLowerCase()) {
-                        this.wifePresentAddress = addressData;
-                        this.wifePresentAddressId = addressId;
+                    } else if (normalizedType === LocationType.SpousePermanent.toLowerCase()) {
+                        this.spousePermanentAddress = addressData;
+                        this.spousePermanentAddressId = addressId;
+                    } else if (normalizedType === LocationType.SpousePresent.toLowerCase()) {
+                        this.spousePresentAddress = addressData;
+                        this.spousePresentAddressId = addressId;
                     }
 
                     console.log(`Address loaded - Type: ${locationType}, AddressId: ${addressId}`);
@@ -781,8 +1429,11 @@ export class EmpBasicInfo implements OnInit {
     // Enable form for edit mode
     enableForm(): void {
         this.postingForm.enable();
-        // Keep rabid disabled as it's always readonly
-        this.postingForm.get('rabid')?.disable();
+        // serviceId stays disabled in edit mode (relationship is readonly in UI when Married, not disabled).
+        // rabid is editable — see checkDuplicateRabId() for its uniqueness guard.
+        if (this.isEditMode) {
+            this.postingForm.get('serviceId')?.disable();
+        }
     }
 
     // Go back to list
@@ -797,7 +1448,6 @@ export class EmpBasicInfo implements OnInit {
         this.pageTitle = 'Edit Employee';
         this.enableForm();
 
-        // Update URL without reloading
         this.router.navigate([], {
             relativeTo: this.route,
             queryParams: { id: this.generatedEmployeeId, mode: 'edit' },
@@ -811,16 +1461,21 @@ export class EmpBasicInfo implements OnInit {
             picture: [null],
             lastMotherUnit: [null, Validators.required],
             memberType: [null, Validators.required],
-            appointment: [null, Validators.required],
+            batch: [null],
+            appointment: [null],
             joiningDate: [null, Validators.required],
             rank: [null, Validators.required],
             branch: [null, Validators.required],
             trade: [null, Validators.required],
+            specialQualifications: [[] as number[]],
             tradeMark: [''],
             gender: [null, Validators.required],
+            maritalStatus: [null],
+            relationship: [null],
+            spouseName: [''],
             prefix: [null, Validators.required],
-            serviceId: ['', [Validators.required, Validators.pattern(/^\d+$/)]],
-            rabid: [{ value: '', disabled: true }],
+            serviceId: ['', [Validators.required]],
+            rabid: [''],
             nid: [''],
             fullNameEN: ['', [Validators.required, Validators.minLength(2)]],
             fullNameBN: ['', [Validators.required, Validators.minLength(2)]],
@@ -832,11 +1487,11 @@ export class EmpBasicInfo implements OnInit {
             lastupdate: [new Date()],
             statusDate: [new Date()],
             lastMotherUnitLocation: [''],
+            lastMotherUnitDistrictId: [null],
             motherOrganization: [''],
             officerType: [''],
             orgId: [null]
         });
-
     }
 
     onFileSelect(event: any): void {
@@ -887,6 +1542,7 @@ export class EmpBasicInfo implements OnInit {
         this.imagePreview = null;
         this.selectedFile = null;
         this.selectedFileName = '';
+        this.profileImageRef = null;
         this.postingForm.patchValue({ picture: null });
 
         // Clear the file upload component
@@ -899,6 +1555,8 @@ export class EmpBasicInfo implements OnInit {
         this.commonCodeService.getAllActiveMotherOrgs().subscribe({
             next: (res: MotherOrganizationModel[]) => {
                 this.motherOrganizations = res;
+                this.rabMotherOrgId = this.motherOrganizations.find((org) => (org?.orgNameEN || '').toLowerCase().includes('rab'))?.orgId ?? null;
+                this.updateRabRankEquivalent(this.postingForm?.get('rank')?.value);
             },
             error: (error) => {
                 console.error('Failed to load mother organizations', error);
@@ -917,23 +1575,208 @@ export class EmpBasicInfo implements OnInit {
         });
     }
 
+    loadDistricts(): void {
+        this.masterBasicSetupService.getAllByType('District').subscribe({
+            next: (districts) => {
+                const list = Array.isArray(districts) ? districts : [];
+                this.districtOptions = list.map((d: any) => ({
+                    label: d.codeValueBN ? `${d.codeValueEN} (${d.codeValueBN})` : d.codeValueEN,
+                    value: d.codeId
+                }));
+            },
+            error: (err) => {
+                console.error('Error loading districts:', err);
+            }
+        });
+    }
+
+    private loadRankEquivalentMappings(): void {
+        forkJoin({
+            equivalentNames: this.masterBasicSetupService.getAllByType('EquivalentName').pipe(catchError(() => of([]))),
+            rankEquivalents: this.masterBasicSetupService.getAllRankEquivalents().pipe(catchError(() => of([] as EquivalentRankModel[]))),
+            allMotherOrgRanks: this.masterBasicSetupService.getAllByType('MotherOrgRank').pipe(catchError(() => of([])))
+        }).subscribe({
+            next: ({ equivalentNames, rankEquivalents, allMotherOrgRanks }) => {
+                const eqNames = Array.isArray(equivalentNames) ? equivalentNames : [];
+                this.rabRankDropdownOptions = eqNames.map((item: any) => ({
+                    label: item?.codeValueEN ?? '',
+                    value: Number(item?.codeId ?? item?.CodeId)
+                })).filter((x) => x.label && Number.isFinite(x.value));
+
+                const rawRankEquivalents = Array.isArray(rankEquivalents) ? rankEquivalents : [];
+                this.rankEquivalentListWithOrg = rawRankEquivalents
+                    .map((row: any) => ({
+                        equivalentNameID: Number(row?.equivalentNameID ?? row?.EquivalentNameID),
+                        motherOrgRankId: Number(row?.motherOrgRankId ?? row?.MotherOrgRankId),
+                        motherOrgId: Number(row?.motherOrgId ?? row?.MotherOrgId),
+                        sortOrder: row?.sortOrder ?? row?.SortOrder ?? null
+                    }))
+                    .filter((row) => Number.isFinite(row.equivalentNameID) && Number.isFinite(row.motherOrgRankId) && Number.isFinite(row.motherOrgId));
+                this.rankEquivalentList = this.rankEquivalentListWithOrg.map((row) => ({
+                    equivalentNameID: row.equivalentNameID,
+                    motherOrgRankId: row.motherOrgRankId,
+                    sortOrder: row.sortOrder
+                }));
+
+                const allRanks = Array.isArray(allMotherOrgRanks) ? allMotherOrgRanks : [];
+                this.motherOrgRankNameById.clear();
+                allRanks.forEach((rank: any) => {
+                    const codeId = Number(rank?.codeId ?? rank?.CodeId);
+                    const codeValue = rank?.codeValueEN ?? rank?.CodeValueEN ?? '';
+                    if (Number.isFinite(codeId) && codeValue) {
+                        this.motherOrgRankNameById.set(codeId, codeValue);
+                    }
+                });
+                this.updateRabRankEquivalent(this.postingForm.get('rank')?.value);
+            },
+            error: () => {
+                this.rankEquivalentList = [];
+                this.rankEquivalentListWithOrg = [];
+                this.rabRankEquivalentDisplay = '';
+            }
+        });
+    }
+
+    private updateRabRankEquivalent(selectedRankId: number | null): void {
+        const selectedRankCodeId = selectedRankId != null ? Number(selectedRankId) : null;
+        if (!selectedRankCodeId || this.rankEquivalentListWithOrg.length === 0) {
+            this.rabRankEquivalentDisplay = '';
+            this.selectedRabEquivalentNameId = null;
+            console.log('[RAB Rank Mapping] No mapping context', {
+                selectedRankId: selectedRankCodeId,
+                equivalentNameOptions: this.rabRankDropdownOptions.length,
+                rankEquivalentCount: this.rankEquivalentListWithOrg.length
+            });
+            return;
+        }
+
+        const selectedRankEquivalent = this.rankEquivalentListWithOrg.find((row) => Number(row.motherOrgRankId) === selectedRankCodeId);
+        if (!selectedRankEquivalent) {
+            this.rabRankEquivalentDisplay = '';
+            this.selectedRabEquivalentNameId = null;
+            console.log('[RAB Rank Mapping] Selected rank has no equivalent setup', {
+                selectedRankId: selectedRankCodeId
+            });
+            return;
+        }
+
+        this.selectedRabEquivalentNameId = Number(selectedRankEquivalent.equivalentNameID);
+        this.rabRankEquivalentDisplay =
+            this.rabRankDropdownOptions.find((x) => Number(x.value) === Number(this.selectedRabEquivalentNameId))?.label ?? '';
+
+        console.log('[RAB Rank Mapping] Resolved equivalent rank', {
+            selectedRankId: selectedRankCodeId,
+            selectedEquivalentNameId: this.selectedRabEquivalentNameId,
+            resolvedEquivalentName: this.rabRankEquivalentDisplay
+        });
+    }
+
     onMotherOrgChange(orgId: number): void {
         // Set orgId in form
-        this.postingForm.patchValue({ orgId: orgId });
+        this.postingForm.patchValue({ orgId: orgId, batch: null });
 
         this.loadMotherOrgUnits(orgId);
         this.loadMotherOrgRank(orgId);
         this.loadMotherOrgCorps(orgId);
         this.loadMotherOrgPrefix(orgId);
+        this.loadMotherOrgBatch(orgId);
+
+        const memberType = this.postingForm.get('memberType')?.value;
+        this.postingForm.patchValue({ officerType: null });
+        if (memberType) {
+            this.loadOfficerType(memberType, orgId);
+        } else {
+            this.officerTypes = [];
+        }
     }
 
     onLastUnitChange(unit: any): void {
-        console.log(unit);
-
-        const location = this.lastUnitOrganizations.find((x) => x.orgId === unit)?.locationEN;
-        console.log(location);
+        const selectedUnit = this.lastUnitOrganizations.find((x) => x.orgId === unit);
         this.postingForm.patchValue({
-            lastMotherUnitLocation: location
+            lastMotherUnitLocation: selectedUnit?.locationEN,
+            lastMotherUnitDistrictId: selectedUnit?.districtId ?? null
+        });
+    }
+
+    openAddLastUnitDialog(): void {
+        const parentOrgId = this.postingForm.get('motherOrganization')?.value;
+        if (!parentOrgId) return;
+        this.newLastUnitNameEN = '';
+        this.newLastUnitNameBN = '';
+        this.showLastUnitDialog = true;
+    }
+
+    getSelectedMotherOrgName(): string {
+        const orgId = this.postingForm.get('motherOrganization')?.value;
+        const org = this.motherOrganizations.find((o) => o.orgId === orgId);
+        return org?.orgNameEN ?? '';
+    }
+
+    saveNewLastUnit(): void {
+        if (!this.newLastUnitNameEN?.trim()) return;
+
+        const parentOrgId = this.postingForm.get('motherOrganization')?.value;
+        if (!parentOrgId) {
+            this.messageService.add({
+                severity: 'warn',
+                summary: 'Warning',
+                detail: 'Please select Mother Organization first'
+            });
+            return;
+        }
+
+        this.isSavingLastUnit = true;
+        const currentUser = this.sharedService.getCurrentUser();
+        const currentDateTime = this.sharedService.getCurrentDateTime();
+
+        const payload = {
+            orgId: 0,
+            orgNameEN: this.newLastUnitNameEN.trim(),
+            orgNameBN: this.newLastUnitNameBN?.trim() || '',
+            locationEN: '',
+            locationBN: '',
+            districtId: null,
+            parentOrg: parentOrgId,
+            status: true,
+            createdBy: currentUser,
+            createdDate: currentDateTime,
+            lastUpdatedBy: currentUser,
+            lastupdate: currentDateTime
+        };
+
+        this.organizationService.post(payload as any).subscribe({
+            next: (res: any) => {
+                this.messageService.add({
+                    severity: 'success',
+                    summary: 'Success',
+                    detail: 'Last Unit of Mother Organization created successfully'
+                });
+                this.showLastUnitDialog = false;
+                this.isSavingLastUnit = false;
+
+                const newOrgId = res?.orgId ?? res?.OrgId;
+                this.commonCodeService.getAllActiveMotherOrgUnits(parentOrgId).subscribe({
+                    next: (units) => {
+                        this.lastUnitOrganizations = units;
+                        if (newOrgId) {
+                            this.postingForm.patchValue({
+                                lastMotherUnit: newOrgId,
+                                lastMotherUnitLocation: '',
+                                lastMotherUnitDistrictId: null
+                            });
+                        }
+                    }
+                });
+            },
+            error: (err) => {
+                console.error('Error creating last unit:', err);
+                this.messageService.add({
+                    severity: 'error',
+                    summary: 'Error',
+                    detail: err?.error?.message || 'Failed to create Last Unit of Mother Organization'
+                });
+                this.isSavingLastUnit = false;
+            }
         });
     }
 
@@ -947,6 +1790,20 @@ export class EmpBasicInfo implements OnInit {
             }
         });
     }
+
+    loadMotherOrgBatch(orgId: number): void {
+        this.commonCodeService.getAllActiveCommonCodesByOrgIdAndType(orgId, 'Batch').subscribe({
+            next: (res) => (this.batches = res ?? []),
+            error: (err) => console.log(err)
+        });
+    }
+
+    loadSpecialQualifications(): void {
+        this.commonCodeService.getAllActiveCommonCodesType('SpecialQualification').subscribe({
+            next: (res) => (this.specialQualificationOptions = res ?? []),
+            error: (err) => console.log(err)
+        });
+    }
     loadGender() {
         this.commonCodeService.getAllActiveCommonCodesType('Gender').subscribe({
             next: (res) => {
@@ -958,14 +1815,89 @@ export class EmpBasicInfo implements OnInit {
         });
     }
 
-    loadOfficerType(codeId: number) {
-        this.commonCodeService.getAllActiveCommonCodesByParentId(codeId).subscribe({
+    loadMaritalStatus(): void {
+        this.commonCodeService.getAllActiveCommonCodesType('MaritalStatus').subscribe({
             next: (res) => {
-                this.officerTypes = res;
+                this.maritalStatusOptions = res;
             },
             error: (err) => {
-                console.error(err);
+                console.error('Failed to load marital status', err);
             }
+        });
+    }
+
+    loadRelationshipOptions(): void {
+        this.commonCodeService.getAllActiveCommonCodesType('Relationship').subscribe({
+            next: (res) => {
+                this.relationOptions = res;
+                // When saving new employee: if Marital Status is already Married but relationship was null (dropdown just loaded), set it to Spouse so spouse info saves
+                this.setRelationshipToSpouseIfMarried();
+            },
+            error: (err) => {
+                console.error('Failed to load relationship options', err);
+            }
+        });
+    }
+
+    /** Sets relationship form control to Spouse codeId when Marital Status is not Unmarried and relationship is not set (so spouse info and addresses save). */
+    private setRelationshipToSpouseIfMarried(): void {
+        if (this.relationOptions.length === 0) return;
+        if (!this.isMaritalStatusNotUnmarried) return;
+        const currentRel = this.postingForm.get('relationship')?.value;
+        if (currentRel != null) return;
+        const spouseCodeId = this.relationOptions.find((r) => (r.codeValueEN || (r as any).codeValueEn || '').toLowerCase().trim() === 'spouse')?.codeId;
+        if (spouseCodeId != null)
+            this.postingForm.patchValue({ relationship: spouseCodeId });
+    }
+
+    onMaritalStatusChange(value: number | null): void {
+        const isUnmarried = value != null && this.maritalStatusOptions.some((m) => m.codeId === value && (m.codeValueEN || (m as any).codeValueEn || '').toLowerCase().trim() === 'unmarried');
+        if (value == null || isUnmarried) {
+            this.postingForm.patchValue({ relationship: null, spouseName: '' });
+        } else {
+            // When user selects any non-Unmarried status, set Relationship to Spouse so spouse info and addresses save
+            this.setRelationshipToSpouseIfMarried();
+        }
+    }
+
+    /** True when Marital Status is Married (by commonCode codeValueEN). */
+    get isMaritalStatusMarried(): boolean {
+        const maritalStatusId = this.postingForm.get('maritalStatus')?.value;
+        if (maritalStatusId == null) return false;
+        return this.maritalStatusOptions.some((m) => m.codeId === maritalStatusId && (m.codeValueEN || '').toLowerCase() === 'married');
+    }
+
+    /** True when a Marital Status is selected and it is NOT Unmarried. */
+    get isMaritalStatusNotUnmarried(): boolean {
+        const maritalStatusId = this.postingForm.get('maritalStatus')?.value;
+        if (maritalStatusId == null) return false;
+        const selected = this.maritalStatusOptions.find((m) => m.codeId === maritalStatusId);
+        if (!selected) return false;
+        return (selected.codeValueEN || '').toLowerCase() !== 'unmarried';
+    }
+
+    /**
+     * Officer Types come from basic-setup/officer-type, stored as CommonCode rows with
+     * codeType="OfficerType", orgId=mother org and parentCodeId=member type (EmployeeType).
+     * So we fetch the org's OfficerType rows and filter them by the selected member type.
+     */
+    loadOfficerType(codeId: number, orgId?: number | null) {
+        const filterByMemberType = (res: CommonCodeModel[]) => {
+            this.officerTypes = (res ?? []).filter((item) => item.parentCodeId === codeId);
+        };
+
+        if (orgId == null) {
+            // No org yet — fall back to all OfficerType rows for this member type.
+            this.commonCodeService.getAllActiveCommonCodesType('OfficerType').subscribe({
+                next: filterByMemberType,
+                error: (err) => console.error(err)
+            });
+            return;
+        }
+
+        this.commonCodeService.getAllActiveCommonCodesByOrgIdAndType(orgId, 'OfficerType').subscribe({
+            next: filterByMemberType,
+            error: (err) => console.error(err)
         });
     }
     loadAppointment() {
@@ -982,9 +1914,20 @@ export class EmpBasicInfo implements OnInit {
     loadMotherOrgRank(orgId: number) {
         this.commonCodeService.getAllActiveCommonCodesByOrgIdAndType(orgId, 'MotherOrgRank').subscribe({
             next: (res) => {
-                this.ranks = res;
+                this.allRanksForOrg = res ?? [];
+                this.applyRankMemberTypeFilter();
             }
         });
+    }
+
+    /** Filter the org-scoped ranks further by the currently selected Member Type (rank.parentCodeId === memberType). */
+    private applyRankMemberTypeFilter() {
+        const memberType = this.postingForm?.get('memberType')?.value;
+        if (memberType == null) {
+            this.ranks = this.allRanksForOrg;
+            return;
+        }
+        this.ranks = this.allRanksForOrg.filter((r) => r.parentCodeId === memberType);
     }
     loadMotherOrgPrefix(orgId: number) {
         this.commonCodeService.getAllActiveCommonCodesByOrgIdAndType(orgId, 'Prefix').subscribe({
@@ -1004,7 +1947,11 @@ export class EmpBasicInfo implements OnInit {
     loadTrade(codeId: number) {
         this.commonCodeService.getAllActiveCommonCodesByParentId(codeId).subscribe({
             next: (res) => {
-                this.trades = res;
+                const list = Array.isArray(res) ? res : [];
+                this.tradeOptions = list.map((t: CommonCodeModel) => ({
+                    label: t.codeValueBN ? `${t.codeValueEN} (${t.codeValueBN})` : t.codeValueEN,
+                    value: t.codeId
+                }));
             },
             error: (err) => {
                 console.error(err);
@@ -1016,37 +1963,84 @@ export class EmpBasicInfo implements OnInit {
         this.loadTrade(codeId);
     }
 
+    /** Show Officer Type unless a non-"Officer" Member Type is selected. */
+    get isOfficerMemberType(): boolean {
+        const id = this.postingForm?.get('memberType')?.value;
+        if (id == null) return true;
+        const mt = this.memberTypes?.find((m: CommonCodeModel) => m.codeId === id);
+        return (mt?.codeValueEN ?? '').trim().toLowerCase() === 'officer';
+    }
+
     onMemberTypeChange(codeId: number) {
-        this.loadOfficerType(codeId);
+        if (codeId != null && this.allowedMemberTypeIds !== null && !this.allowedMemberTypeIds.includes(codeId)) {
+            const typeName =
+                this.memberTypes?.find((m: CommonCodeModel) => m.codeId === codeId)?.codeValueEN ?? 'this member type';
+            this.messageService.add({
+                severity: 'warn',
+                summary: 'No Permission',
+                detail: `You do not have permission to use ${typeName}.`,
+                life: 6000
+            });
+            this.postingForm.patchValue({ memberType: null, officerType: null, rank: null });
+            this.applyRankMemberTypeFilter();
+            return;
+        }
+
+        const motherOrgId = this.postingForm.get('motherOrganization')?.value;
+        this.postingForm.patchValue({ officerType: null, rank: null });
+        this.loadOfficerType(codeId, motherOrgId);
+        this.applyRankMemberTypeFilter();
+    }
+
+    private loadCurrentUserMemberTypePermissions(): void {
+        const userId = this.sharedService.getCurrentUserId?.() ?? null;
+        if (!userId) {
+            this.allowedMemberTypeIds = null;
+            return;
+        }
+        const cached = this.memberTypeAccess.getCachedMemberTypeIds(userId);
+        if (cached !== null) {
+            this.allowedMemberTypeIds = cached;
+            return;
+        }
+        this.memberTypeAccess.cacheForUser(userId).subscribe({
+            next: (ids) => {
+                this.allowedMemberTypeIds = Array.isArray(ids) ? ids : [];
+            },
+            error: (err: any) => {
+                this.allowedMemberTypeIds = null;
+            }
+        });
     }
 
     onSubmit(): void {
         if (this.postingForm.valid) {
-            // Get the form value
-            const formValue = this.postingForm.getRawValue();
+            const formValueAfter = this.postingForm.getRawValue();
 
-            // Format the date to YYYY-MM-DD for backend
             const formattedData = {
-                ...formValue,
-                joiningDate: this.formatDate(formValue.joiningDate),
-                // Set PostingStatus to Supernumerary by default
-                postingStatus: formValue.postingStatus || PostingStatus.Supernumerary
+                ...formValueAfter,
+                employeeID: this.generatedEmployeeId || 0,
+                joiningDate: this.formatDate(formValueAfter.joiningDate),
+                postingStatus: formValueAfter.postingStatus || PostingStatus.Supernumerary,
+                maritalStatus: formValueAfter.maritalStatus ?? null,
+                relationship: formValueAfter.relationship ?? null
             };
 
             this.empService.saveEmployee(formattedData).subscribe({
                 next: (res) => {
                     console.log('Saved successfully', res);
 
-                    // Get generated EmployeeID from response
                     const employeeId = res?.data?.employeeID || res?.Data?.EmployeeID;
 
                     if (employeeId) {
                         this.generatedEmployeeId = employeeId;
-                        // Update address config with new EmployeeID
                         this.presentAddressConfig.employeeId = employeeId;
                         this.permanentAddressConfig.employeeId = employeeId;
-                        this.wifePermanentAddressConfig.employeeId = employeeId;
-                        this.wifePresentAddressConfig.employeeId = employeeId;
+                        this.spousePermanentAddressConfig.employeeId = employeeId;
+                        this.spousePresentAddressConfig.employeeId = employeeId;
+
+                        // Save spouse (Spouse Name) to FamilyInfo when Marital Status is Married
+                        this.saveSpouseIfMarried(employeeId);
                     }
 
                     this.messageService.add({
@@ -1060,7 +2054,7 @@ export class EmpBasicInfo implements OnInit {
                     this.messageService.add({
                         severity: 'error',
                         summary: 'Error',
-                        detail: 'Failed to save employee'
+                        detail: err?.error?.message || 'Failed to save employee'
                     });
                 }
             });
@@ -1071,7 +2065,6 @@ export class EmpBasicInfo implements OnInit {
             });
         }
     }
-
 
     formatDate(date: Date | string | null): string | null {
         if (!date) return null;
@@ -1084,8 +2077,19 @@ export class EmpBasicInfo implements OnInit {
         return `${year}-${month}-${day}`;
     }
 
+
     onReset(): void {
-        this.postingForm.reset();
+        const now = new Date();
+        this.postingForm.reset({
+            employeeID: 0,
+            status: true,
+            specialQualifications: [],
+            createdBy: 'system',
+            createdDate: now,
+            lastUpdatedBy: 'system',
+            lastupdate: now,
+            statusDate: now
+        });
         this.imagePreview = null;
         this.selectedFile = null;
         this.selectedFileName = '';
@@ -1095,9 +2099,62 @@ export class EmpBasicInfo implements OnInit {
         }
     }
 
+    /** Reset all state so the form is ready for a brand-new employee entry, then focus Service ID. Clears IDs that would otherwise cause the next save to update the previous record. */
+    private resetForNewEntry(): void {
+        this.onReset();
+
+        this.generatedEmployeeId = null;
+        this.permanentAddressId = undefined;
+        this.presentAddressId = undefined;
+        this.spousePermanentAddressId = undefined;
+        this.spousePresentAddressId = undefined;
+        this.spouseFmid = null;
+        this.profileImageRef = null;
+        this.fileRows = [];
+        this.permanentAddress = undefined;
+        this.presentAddress = undefined;
+        this.spousePermanentAddress = undefined;
+        this.spousePresentAddress = undefined;
+        this.isDuplicateCombo = false;
+        this.isDuplicateRabId = false;
+        this.isCheckingRabId = false;
+
+        this.presentAddressConfig.employeeId = 0;
+        this.permanentAddressConfig.employeeId = 0;
+        this.spousePermanentAddressConfig.employeeId = 0;
+        this.spousePresentAddressConfig.employeeId = 0;
+
+        this.permanentAddressForm?.reset();
+        this.presentAddressForm?.reset();
+        this.spousePermanentAddressForm?.reset();
+        this.spousePresentAddressForm?.reset();
+
+        // Hide the form so the search section is the active surface; focus the search Service ID input.
+        this.showEntryForm = false;
+        this.presentMemberCheck?.resetForNewSearch();
+    }
+
     /**
      * Check if a field is invalid
      */
+    /**
+     * Capitalize the first letter of each word in the given text field (fixes
+     * casing mistakes like "john doe" → "John Doe"). Runs on blur.
+     */
+    capitalizeWords(fieldName: string): void {
+        const field = this.postingForm.get(fieldName);
+        const value = field?.value;
+        if (typeof value !== 'string' || !value.trim()) return;
+        const formatted = value
+            .replace(/\s+/g, ' ')
+            .trim()
+            .toLowerCase()
+            .replace(/\b\p{L}/gu, (ch) => ch.toUpperCase());
+        if (formatted !== value) {
+            field!.setValue(formatted);
+        }
+    }
+
     isFieldInvalid(fieldName: string): boolean {
         const field = this.postingForm.get(fieldName);
         return !!(field && field.invalid && (field.dirty || field.touched));
@@ -1118,6 +2175,9 @@ export class EmpBasicInfo implements OnInit {
         }
 
         if (field?.hasError('minlength')) {
+            if (fieldName === 'serviceId') {
+                return 'Minimum 10 digits required';
+            }
             return `Minimum length is ${field.errors?.['minlength']?.requiredLength} characters`;
         }
 

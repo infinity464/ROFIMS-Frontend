@@ -1,0 +1,297 @@
+<p-toast position="top-center"></p-toast>
+
+<div class="employee-reports-page">
+    <div class="report-filter-card">
+        <div class="report-filter-card-title">
+            <h1 class="report-page-title">{{ lang === 'bn' ? 'বিস্তারিত জীবনবৃত্তান্ত' : 'Detailed Bio-Data' }}</h1>
+        </div>
+
+        <div class="report-filter-header" [class.open]="filterOpen" (click)="toggleFilter()" role="button" tabindex="0" (keydown.enter)="toggleFilter()" (keydown.space)="toggleFilter()">
+            <div class="report-filter-header-left">
+                <div class="report-filter-icon">
+                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                        <path d="M2 4h12M4 8h8M6 12h4" stroke="var(--primary-color)" stroke-width="1.8" stroke-linecap="round"/>
+                    </svg>
+                </div>
+                <div>
+                    <div class="report-filter-title">Search &amp; filter</div>
+                    <div class="report-filter-subtitle">{{ filterSubtitle() }}</div>
+                </div>
+            </div>
+            <div class="report-filter-header-right">
+                @if (activeFilterCount > 0) {
+                    <span class="ds-field-count">{{ activeFilterCount }} active</span>
+                }
+                <div class="report-chevron">
+                    <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+                        <path d="M2 4l4 4 4-4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                </div>
+            </div>
+        </div>
+
+        <div class="report-filter-body" [class.open]="filterOpen">
+            <div class="report-filter-body-inner">
+                <div class="ds-criteria-section">
+                    <div class="ds-field-group">
+                        <div class="ds-group-divider">
+                            <span class="ds-group-label">Identification</span>
+                            <span class="ds-group-line"></span>
+                        </div>
+                        <div class="ds-criteria-grid">
+                            <div class="ds-field">
+                                <label class="ds-field-label">RAB ID</label>
+                                <input pInputText type="text" [(ngModel)]="searchRabId" placeholder="Enter RAB ID" class="w-full" />
+                            </div>
+                            <div class="ds-field">
+                                <label class="ds-field-label">Service ID</label>
+                                <input pInputText type="text" [(ngModel)]="searchServiceId" placeholder="Enter Service ID" class="w-full" />
+                            </div>
+                            <div class="ds-field">
+                                <label class="ds-field-label">NID</label>
+                                <input pInputText type="text" [(ngModel)]="searchNid" placeholder="Enter NID (new or old)" class="w-full" />
+                            </div>
+                        </div>
+                    </div>
+
+                    @if (profile) {
+                    <div class="ds-field-group">
+                        <div class="ds-group-divider">
+                            <span class="ds-group-label">Sections &amp; Fields</span>
+                            <span class="ds-group-line"></span>
+                            <button type="button" class="bd-fields-toggle" [class.on]="showFieldEditor" (click)="showFieldEditor = !showFieldEditor">
+                                <i class="pi" [class.pi-pencil]="!showFieldEditor" [class.pi-check]="showFieldEditor"></i>
+                                {{ showFieldEditor ? (lang === 'bn' ? 'সম্পন্ন' : 'Done') : (lang === 'bn' ? 'কাস্টমাইজ করুন' : 'Customize') }}
+                            </button>
+                        </div>
+                        @if (showFieldEditor) {
+                        <div class="ds-criteria-grid">
+                            <div class="ds-field">
+                                <label class="ds-field-label">{{ lang === 'bn' ? 'দৃশ্যমান সেকশন' : 'Visible sections' }}</label>
+                                <p-multiSelect [options]="sectionOptions" [(ngModel)]="visiblePanelIds" optionLabel="label" optionValue="value" display="chip" [filter]="true" placeholder="Sections…" styleClass="w-full" appendTo="body"></p-multiSelect>
+                            </div>
+                            <div class="ds-field">
+                                <label class="ds-field-label">{{ lang === 'bn' ? 'সেকশন কনফিগার করুন' : 'Configure section' }}</label>
+                                <p-select [options]="sectionOptions" [(ngModel)]="editPanelId" optionLabel="label" optionValue="value" appendTo="body" styleClass="w-full"></p-select>
+                            </div>
+                        </div>
+                        @if (editPanel) {
+                        <div class="ds-field">
+                            <label class="ds-field-label">{{ lang === 'bn' ? 'ক্ষেত্র যোগ / সরান' : 'Add / remove fields' }} — {{ panelTitle(editPanel) }}</label>
+                            <p-multiSelect [options]="editPanelColumnOptions" [(ngModel)]="editPanelModel" optionLabel="label" optionValue="value" display="chip" [filter]="true" placeholder="Pick fields…" styleClass="w-full" appendTo="body"></p-multiSelect>
+                        </div>
+                        <div class="ds-field">
+                            <label class="ds-field-label column-order-label">{{ lang === 'bn' ? 'ক্রম — টেনে সাজান' : 'Field order — drag to rearrange' }}</label>
+                            <div class="column-order-strip" (dragover)="onColumnDragOver($event)">
+                                @for (col of editPanelVisibleCols(); track col.key) {
+                                    <span class="column-order-chip" [class.dragging]="draggingColKey === col.key" draggable="true" (dragstart)="onColumnDragStart(col.key, $event)" (dragend)="onColumnDragEnd()" (dragover)="onColumnDragOver($event)" (drop)="onColumnDrop(col.key, $event)">
+                                        <i class="pi pi-bars chip-handle" aria-hidden="true"></i>
+                                        <span class="chip-label">{{ colLabel(col) }}</span>
+                                        <button type="button" class="chip-remove" (click)="removeColumn(col.key)" title="Remove field">
+                                            <i class="pi pi-times" aria-hidden="true"></i>
+                                        </button>
+                                    </span>
+                                }
+                                @if (editPanelVisibleCols().length === 0) {
+                                    <span class="column-order-empty">Pick fields above.</span>
+                                }
+                            </div>
+                        </div>
+                        }
+                        }
+                    </div>
+                    }
+                </div>
+
+                <div class="ds-actions">
+                    <button type="button" class="ds-btn-clear" (click)="clearFilters()">
+                        <i class="pi pi-times"></i> Clear All
+                    </button>
+                    <button type="button" class="ds-btn-search" (click)="load()" [disabled]="loading">
+                        <i class="pi pi-search"></i> Search
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    @if (loading) {
+        <div class="flex align-items-center justify-content-center p-5">
+            <i class="pi pi-spin pi-spinner text-4xl text-500"></i>
+        </div>
+    }
+
+    @if (searched && !loading && profile) {
+    <div class="rab-report-document">
+        <div class="rab-toolbar">
+            <button type="button" class="report-lang-toggle" (click)="langToggle.emit()">
+                {{ lang === 'en' ? 'বাংলা' : 'English' }}
+            </button>
+            <div class="report-export-wrap">
+                <button type="button" class="report-btn-export" (click)="toggleExportDropdown($event)" [disabled]="exporting">
+                    @if (exporting) {
+                        <i class="pi pi-spin pi-spinner" style="font-size:13px"></i> Generating...
+                    } @else {
+                        <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
+                            <path d="M6.5 1v7M3.5 5.5l3 3 3-3M1.5 10.5h10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                        Export
+                    }
+                </button>
+                @if (exportDropdownOpen) {
+                <div class="report-export-dropdown" (click)="$event.stopPropagation()">
+                    <button type="button" class="report-export-item report-export-print" (click)="exportAs('print')">
+                        <i class="pi pi-print" style="font-size:0.75rem"></i> Print / PDF
+                    </button>
+                    <button type="button" class="report-export-item report-export-word" (click)="exportAs('word')">
+                        <span class="report-export-icon">⬇</span> Word
+                    </button>
+                </div>
+                }
+            </div>
+        </div>
+
+        <div class="bd-sheet" [class.bd-lang-bn]="lang === 'bn'">
+            <div class="bd-meta-bar">
+                <span class="bd-lead">{{ docTypeLabel }}</span>
+                <span>{{ confidentialLine }}</span>
+            </div>
+
+            <header class="bd-head">
+                <div class="bd-head-main">
+                    <div class="bd-name">{{ heroName }}</div>
+                    @if (postNom) { <div class="bd-postnom">{{ postNom }}</div> }
+                    <div class="bd-head-meta">
+                        @for (part of headMetaParts; track part; let last = $last) {
+                            <span>{{ part }}</span>
+                            @if (!last) { <span class="bd-dot"></span> }
+                        }
+                    </div>
+                    <div class="bd-id-strip">
+                        @for (b of idStrip; track b.k) {
+                            <div class="bd-blk"><span class="bd-ik">{{ b.k }}</span><span class="bd-iv">{{ b.v }}</span></div>
+                        }
+                    </div>
+                </div>
+                <div class="bd-photo">
+                    @if (profileImageUrl) {
+                        <img [src]="profileImageUrl" alt="Photo" />
+                    } @else {
+                        <div class="bd-photo-ph">{{ lang === 'bn' ? 'ছবি' : 'PHOTO' }}</div>
+                    }
+                </div>
+            </header>
+
+            @for (p of visiblePanels; track p.id) {
+                @if (p.id === 'address') {
+                <section class="bd-section bd-section-addr">
+                    @for (g of addressGroups(); track g.key) {
+                        <div class="bd-sec-head bd-sec-head-sub">
+                            <span class="bd-sec-title">{{ g.heading }}</span>
+                            <span class="bd-sec-rule"></span>
+                        </div>
+                        <div class="bd-addr-grid">
+                            @for (row of g.cards; track $index) {
+                                <div class="bd-addr-card">
+                                    <div class="bd-addr-type">{{ addrTypeLabel(row) }}</div>
+                                    @for (col of addrCardCols(); track col.key) {
+                                        <div class="bd-f">
+                                            <span class="bd-k">{{ colLabel(col) }}</span>
+                                            <span class="bd-v" [class.empty]="addrFieldValue(row, col) === '-'">{{ addrFieldValue(row, col) === '-' ? '—' : addrFieldValue(row, col) }}</span>
+                                        </div>
+                                    }
+                                </div>
+                            }
+                        </div>
+                    }
+                </section>
+                } @else {
+                <section class="bd-section">
+                    <div class="bd-sec-head">
+                        <span class="bd-sec-title">{{ panelTitle(p) }}</span>
+                        <span class="bd-sec-rule"></span>
+                    </div>
+
+                    @if (p.type === 'fields') {
+                        <div class="bd-grid">
+                            @for (col of visibleCols(p); track col.key) {
+                                <div class="bd-f">
+                                    <span class="bd-k">{{ colLabel(col) }}</span>
+                                    <span class="bd-v" [class.empty]="cellText(p, col) === '-'">{{ cellText(p, col) === '-' ? '—' : cellText(p, col) }}</span>
+                                </div>
+                            }
+                        </div>
+                    } @else {
+                        <div class="bd-table-wrap">
+                            <table class="bd-tbl">
+                                <thead>
+                                    <tr>
+                                        <th class="bd-tbl-ser">#</th>
+                                        @for (col of visibleCols(p); track col.key) { <th>{{ colLabel(col) }}</th> }
+                                        @if (p.id === 'documents') { <th class="bd-tbl-action">{{ lang === 'bn' ? 'কার্যক্রম' : 'Action' }}</th> }
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @for (row of rowsFor(p); track $index) {
+                                        <tr>
+                                            <td class="bd-tbl-ser">{{ displayNum($index + 1) }}</td>
+                                            @for (col of visibleCols(p); track col.key) { <td>{{ cellText(p, col, row) }}</td> }
+                                            @if (p.id === 'documents') {
+                                                <td class="bd-tbl-action">
+                                                    @if (row._fileId != null) {
+                                                        <button type="button" class="bd-doc-download" (click)="downloadDocument(row)" title="Download">
+                                                            <i class="pi pi-download"></i> {{ lang === 'bn' ? 'ডাউনলোড' : 'Download' }}
+                                                        </button>
+                                                    } @else { — }
+                                                </td>
+                                            }
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    }
+                </section>
+                }
+            }
+        </div>
+    </div>
+    }
+</div>
+
+<p-dialog [(visible)]="showPickerDialog" header="Multiple Members Found — Please Select" [modal]="true" [closable]="false" [style]="{ width: '820px' }" [draggable]="false" [resizable]="false" [contentStyle]="{ 'border-top': '2px solid var(--primary-color)' }">
+    <p class="m-0 mt-3 mb-3 text-600">The search matched more than one member. Pick the correct one to continue.</p>
+    <p-table [value]="pickerRows" styleClass="p-datatable-sm">
+        <ng-template pTemplate="header">
+            <tr><th style="width: 5%">#</th><th>Name</th><th>Mother Organization</th><th>Status</th><th style="width: 110px">Action</th></tr>
+        </ng-template>
+        <ng-template pTemplate="body" let-row let-i="rowIndex">
+            <tr>
+                <td>{{ i + 1 }}</td>
+                <td class="font-semibold">{{ row.displayName || '-' }}</td>
+                <td>{{ row.orgName || '-' }}</td>
+                <td>{{ row.status || '-' }}</td>
+                <td><p-button type="button" label="Select" size="small" (onClick)="pickerSelect(row.employeeId)"></p-button></td>
+            </tr>
+        </ng-template>
+    </p-table>
+    <ng-template pTemplate="footer">
+        <p-button type="button" label="Cancel" severity="secondary" [outlined]="true" (onClick)="pickerClose()"></p-button>
+    </ng-template>
+</p-dialog>
+
+<p-dialog [(visible)]="showAccessDeniedDialog" header="Error" [modal]="true" [closable]="false" [style]="{ width: '420px' }" [draggable]="false" [resizable]="false" [contentStyle]="{ 'border-top': '2px solid var(--primary-color)' }">
+    <div class="flex align-items-center gap-3 mt-4">
+        <i class="pi pi-times-circle" style="font-size: 1.5rem; line-height: 1; color: var(--red-500)"></i>
+        <p class="m-0" style="line-height: 1.5">{{ accessDeniedMessage }}</p>
+    </div>
+    <ng-template pTemplate="footer"><p-button label="OK" (onClick)="showAccessDeniedDialog = false"></p-button></ng-template>
+</p-dialog>
+
+<p-dialog [(visible)]="showNotFoundDialog" header="Member Not Found" [modal]="true" [closable]="false" [style]="{ width: '420px' }" [draggable]="false" [resizable]="false" [contentStyle]="{ 'border-top': '2px solid var(--primary-color)' }">
+    <div class="flex align-items-center gap-3 mt-4">
+        <i class="pi pi-info-circle" style="font-size: 1.5rem; line-height: 1; color: var(--blue-500)"></i>
+        <p class="m-0" style="line-height: 1.5">{{ notFoundMessage }}</p>
+    </div>
+    <ng-template pTemplate="footer"><p-button label="OK" (onClick)="showNotFoundDialog = false"></p-button></ng-template>
+</p-dialog>

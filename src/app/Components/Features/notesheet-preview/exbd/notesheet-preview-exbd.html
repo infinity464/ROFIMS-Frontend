@@ -1,0 +1,445 @@
+<p-toast position="top-center"></p-toast>
+<p-confirmDialog></p-confirmDialog>
+
+<div class="preview-page">
+
+    <div class="preview-header no-print">
+        <div class="preview-actions" *ngIf="noteSheet && !loading && !error">
+            <p-button *ngIf="canEdit && !editing" icon="pi pi-pencil" label="Edit" (onClick)="toggleEdit()" styleClass="p-button-outlined p-button-warning"></p-button>
+            <p-button *ngIf="editing" icon="pi pi-times" label="Cancel" (onClick)="cancelEdit()" styleClass="p-button-outlined p-button-secondary"></p-button>
+            <p-button *ngIf="editing" icon="pi pi-check" label="Save" (onClick)="saveChanges()" [loading]="saving" styleClass="p-button-success"></p-button>
+            <p-select *ngIf="!editing" [options]="pageSizeOptions" [(ngModel)]="selectedPageSize" (onChange)="onPageSizeChange()" optionLabel="label" optionValue="value"
+                      [style]="{'width':'95px'}" pTooltip="Page size for PDF / Print Preview"></p-select>
+            <p-button *ngIf="!editing" icon="pi pi-print" label="Print Preview" (onClick)="printPreview()" [loading]="printingPreview" styleClass="p-button-outlined p-button-info"></p-button>
+            <p-button *ngIf="!editing" icon="pi pi-file-word" label="Word"  (onClick)="exportWord()" styleClass="p-button-outlined"></p-button>
+            <p-button *ngIf="!editing" icon="pi pi-file-pdf"  label="PDF"   (onClick)="exportPdf()" [loading]="exportingPdf" styleClass="p-button-outlined"></p-button>
+        </div>
+        <div class="preview-status-actions" *ngIf="noteSheet && !loading && !error && !editing">
+            @if (isDraftStatus) {
+                <p-button icon="pi pi-send" label="Submit" severity="success" [outlined]="true" [loading]="submitting"
+                          pTooltip="Submit for approval" (onClick)="submitForApproval()"></p-button>
+            } @else if (fromPending) {
+                @if (currentApproverLabel) {
+                    <span class="ns-status-badge ns-status-badge--step">
+                        <i class="pi pi-user-edit"></i> Acting as: {{ currentApproverLabel }}
+                    </span>
+                }
+                <p-button type="button" icon="pi pi-list" [rounded]="true" [text]="true" size="small" severity="info"
+                          pTooltip="Approval Log" (onClick)="openApprovalLog()"></p-button>
+                <p-button type="button" icon="pi pi-check"
+                          [label]="currentApproverLabel ? ('Approve as ' + currentApproverLabel) : 'Approve'"
+                          severity="success" [outlined]="true"
+                          [pTooltip]="currentApproverLabel ? ('Approve as ' + currentApproverLabel) : 'Approve'"
+                          (onClick)="openRemarkDialog(NoteSheetRemarkAction.Approve)"></p-button>
+                <p-button type="button" icon="pi pi-times"
+                          [label]="currentApproverLabel ? ('Decline as ' + currentApproverLabel) : 'Decline'"
+                          severity="danger" [outlined]="true"
+                          [pTooltip]="currentApproverLabel ? ('Decline as ' + currentApproverLabel) : 'Decline'"
+                          (onClick)="openRemarkDialog(NoteSheetRemarkAction.Decline)"></p-button>
+                <p-button type="button" icon="pi pi-replay"
+                          [label]="currentApproverLabel ? ('Back as ' + currentApproverLabel) : 'Back'"
+                          severity="secondary" [outlined]="true"
+                          [pTooltip]="currentApproverLabel ? ('Back as ' + currentApproverLabel) : 'Back'"
+                          (onClick)="openRemarkDialog(NoteSheetRemarkAction.Back)"></p-button>
+            } @else {
+                <span class="ns-status-badge ns-status-badge--pending">
+                    <i class="pi pi-clock"></i> {{ currentStatusLabel }}
+                </span>
+            }
+        </div>
+    </div>
+
+    <div class="preview-loading" *ngIf="loading">
+        <i class="pi pi-spin pi-spinner" style="font-size:2rem"></i>
+        <p>Loading...</p>
+    </div>
+
+    <div class="preview-error" *ngIf="error && !loading">
+        <i class="pi pi-exclamation-circle" style="font-size:3rem; color:var(--red-500)"></i>
+        <p>Failed to load note-sheet.</p>
+        <p-button label="Go Back" icon="pi pi-arrow-left" (onClick)="goBack()"></p-button>
+    </div>
+
+    <!-- ══════════════════════════════════════════════════════════ -->
+    <!-- VIEW MODE: paginated legal pages                          -->
+    <!-- ══════════════════════════════════════════════════════════ -->
+    <ng-container *ngIf="noteSheet && !loading && !error && !editing">
+
+        <!-- Hidden: measure full content height -->
+        <div class="page-measure" #contentMeasure [class.page-measure--legal]="selectedPageSize === 'Legal'">
+            <ng-container *ngTemplateOutlet="viewContent"></ng-container>
+        </div>
+
+        <!-- Visible: paginated pages -->
+        <div class="a4-paper-container" #pagesContainer>
+            <div *ngFor="let offset of pageOffsets; let i = index; trackBy: trackByIndex" class="a4-paper paginated" [class.a4-paper--legal]="selectedPageSize === 'Legal'">
+                <div class="page-viewport ns-general-page">
+                    <div class="page-inner" [style.transform]="'translateY(-' + offset + 'px)'">
+                        <ng-container *ngTemplateOutlet="viewContent"></ng-container>
+                    </div>
+                    <div class="page-bottom-cover"
+                         *ngIf="getPageCoverHeight(i) > 0"
+                         [style.height.px]="getPageCoverHeight(i)">
+                    </div>
+                </div>
+            </div>
+        </div>
+    </ng-container>
+
+    <!-- ══════════════════════════════════════════════════════════ -->
+    <!-- EDIT MODE: single page, no pagination                     -->
+    <!-- ══════════════════════════════════════════════════════════ -->
+    <div class="a4-paper-container" *ngIf="noteSheet && !loading && !error && editing">
+        <div class="a4-paper">
+
+            <div class="ns-doc-box">
+                <div class="ns-main-col">
+
+                    <!-- Title INSIDE the border -->
+                    <div class="ns-title-area">
+                        <div class="ns-title-en" style="font-size:13pt; text-decoration:underline; font-weight:bold;">NOTE SHEET</div>
+                        <div class="ns-title-bn" style="font-size:13pt; text-decoration:underline; font-weight:bold;">মন্তব্য পত্র</div>
+                    </div>
+
+                    <div class="ns-edit-field">
+                        <label class="ns-edit-label">Subject</label>
+                        <p-select
+                            [(ngModel)]="editExBdLeaveSubjectId"
+                            [options]="subjectTypeOptions"
+                            optionLabel="label"
+                            optionValue="value"
+                            [filter]="true"
+                            filterBy="label"
+                            [showClear]="true"
+                            placeholder="Select Subject"
+                            appendTo="body"
+                            styleClass="w-full">
+                        </p-select>
+                    </div>
+
+                    <div class="ns-edit-field">
+                        <p-fieldset legend="Reference Number" [toggleable]="true" [collapsed]="false">
+                            <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem;">
+                                <p-button icon="pi pi-plus" label="Add Reference" [rounded]="false" [text]="true" severity="success" size="small" (onClick)="addEditReferenceParagraph()" pTooltip="Add Reference"></p-button>
+                            </div>
+                            @for (para of editReferenceParagraphs; track trackByIndex($index)) {
+                                <div class="ref-paragraph-row">
+                                    <span class="ref-serial">{{ getEditSerialLabel($index) }}</span>
+                                    <div class="ref-paragraph-content">
+                                        <textarea pInputText class="w-full" rows="2" [value]="editReferenceParagraphs[$index].text" (input)="editReferenceParagraphs[$index].text = $any($event.target).value" [placeholder]="'Reference ' + getEditSerialLabel($index)"></textarea>
+                                        <app-file-references-form
+                                            [fileRows]="editReferenceParagraphs[$index].fileRows"
+                                            [isViewMode]="false"
+                                            title=""
+                                            (fileRowsChange)="onEditRefFileRowsChange($event, $index)"
+                                            (onDownloadFile)="onEditRefDownloadFile($event)">
+                                        </app-file-references-form>
+                                    </div>
+                                    @if (editReferenceParagraphs.length > 1) {
+                                        <p-button icon="pi pi-trash" [rounded]="true" [text]="true" severity="danger" (onClick)="removeEditReferenceParagraph($index)"></p-button>
+                                    }
+                                </div>
+                            }
+                        </p-fieldset>
+                    </div>
+                    <div class="ns-edit-field ns-edit-row">
+                        <div class="ns-edit-col">
+                            <label class="ns-edit-label">Date</label>
+                            <p-datepicker [(ngModel)]="editNoteSheetDate" dateFormat="dd-mm-yy" [showIcon]="true" styleClass="w-full" appendTo="body"></p-datepicker>
+                        </div>
+                        <div class="ns-edit-col">
+                            <label class="ns-edit-label">Text Type</label>
+                            <p-select [(ngModel)]="editTextType" [options]="textTypeOptions" optionLabel="label" optionValue="value"
+                                      styleClass="w-full" appendTo="body"></p-select>
+                        </div>
+                        <div class="ns-edit-col">
+                            <label class="ns-edit-label">Operation Type</label>
+                            <p-select [(ngModel)]="editOperationType" [options]="operationTypeOptions" optionLabel="label" optionValue="value"
+                                      placeholder="Select Operation Type" [showClear]="true" styleClass="w-full" appendTo="body"
+                                      [disabled]="isInitiatorStatus"></p-select>
+                        </div>
+                    </div>
+
+                    <!-- ── Ex-BD Leave: Application Info Panel (read-only) ── -->
+                    <div class="ns-edit-field ns-app-info-panel">
+                        <div class="ns-app-info-grid">
+                            <div class="ns-app-info-item">
+                                <span class="ns-app-info-label">RAB Employee</span>
+                                <span class="ns-app-info-value">{{ getEditEmployeeDisplay() }}</span>
+                            </div>
+                            <div class="ns-app-info-item">
+                                <span class="ns-app-info-label">Purpose of Ex-BD Leave</span>
+                                <span class="ns-app-info-value">{{ getEditPurposeDisplay() }}</span>
+                            </div>
+                            <div class="ns-app-info-item">
+                                <span class="ns-app-info-label">Destination Country</span>
+                                <span class="ns-app-info-value">{{ getEditCountryDisplay() }}</span>
+                            </div>
+                            <div class="ns-app-info-item">
+                                <span class="ns-app-info-label">Total Days</span>
+                                <span class="ns-app-info-value">{{ exBdApplication?.totalDays || '—' }}</span>
+                            </div>
+                            <div class="ns-app-info-item">
+                                <span class="ns-app-info-label">Date of Visit (From)</span>
+                                <span class="ns-app-info-value">{{ formatDateView(exBdApplication?.fromDate) }}</span>
+                            </div>
+                            <div class="ns-app-info-item">
+                                <span class="ns-app-info-label">Date of Visit (To)</span>
+                                <span class="ns-app-info-value">{{ formatDateView(exBdApplication?.toDate) }}</span>
+                            </div>
+                            <div class="ns-app-info-item ns-app-info-full">
+                                <span class="ns-app-info-label">Family Members</span>
+                                <span class="ns-app-info-value">{{ getEditFamilyDisplay() || '—' }}</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="ns-edit-field">
+                        <label class="ns-edit-label">Main Text</label>
+                        <app-rich-editor [(ngModel)]="editMainText"></app-rich-editor>
+                    </div>
+
+                    <!-- ── Approval Chain Edit ── -->
+                    <div class="ns-approval-edit">
+                        <h4 class="ns-approval-edit-title">Approval Chain</h4>
+                        <app-notesheet-approver-select
+                            [noteSheetType]="'ExBDLeave'"
+                            [useUserList]="true"
+                            [(initiatorId)]="editInitiatorId"
+                            [(recommenderIds)]="editRecommenderIds"
+                            [(finalApproverId)]="editFinalApproverId"
+                            [disableInitiator]="isInitiatorStatus"
+                            [showErrors]="false">
+                        </app-notesheet-approver-select>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ══════════════════════════════════════════════════════════ -->
+    <!-- Shared view-mode content template (used by pagination)    -->
+    <!-- ══════════════════════════════════════════════════════════ -->
+    <ng-template #viewContent>
+      <ng-container *ngIf="noteSheet">
+        <div class="ns-doc-box">
+            <div class="ns-main-col">
+
+                <!-- Title INSIDE the border -->
+                <div class="ns-title-area">
+                    <div class="ns-title-en" style="font-size:13pt; text-decoration:underline; font-weight:bold;">NOTE SHEET</div>
+                    <div class="ns-title-bn" style="font-size:13pt; text-decoration:underline; font-weight:bold;">মন্তব্য পত্র</div>
+                </div>
+
+                <!-- ── Notesheet No & Date ── -->
+                <div style="display:flex; justify-content:space-between; padding:4px 2px 2px; font-size:10pt;">
+                    <span *ngIf="noteSheet.noteSheetNo">{{ noteSheet.noteSheetNo }}</span>
+                    <span *ngIf="!noteSheet.noteSheetNo"></span>
+                    <span *ngIf="noteSheet.noteSheetDate">{{ isEnglish() ? 'Date:' : 'তারিখ :' }} {{ formatDate(noteSheet.noteSheetDate) }}</span>
+                </div>
+
+                <!-- ── Subject ── -->
+                <div *ngIf="getSubjectLabel(noteSheet.exBdLeaveSubjectId) || noteSheet.subject" style="padding:2px 2px 4px; font-size:10pt;">
+                    <strong><u style="text-underline-offset:2px; text-decoration-skip-ink:none;">{{ getSubjectLabel(noteSheet.exBdLeaveSubjectId) || noteSheet.subject }}</u></strong>
+                </div>
+
+                <!-- ── Reference ── -->
+                <div class="ns-cell-ref" *ngIf="parsedReferences.length > 0">
+                    <span class="ns-ref-key">{{ isEnglish() ? 'Reference:' : 'সূত্রঃ' }}</span>
+                    <div class="ns-ref-content">
+                        <ng-container *ngIf="parsedReferences.length === 1 && !parsedReferenceFiles[0]?.length">
+                            <span class="ns-ref-serial">{{ refSerialLabel(0) }}</span> {{ parsedReferences[0] }}
+                        </ng-container>
+                        <ng-container *ngIf="parsedReferences.length > 1 || parsedReferenceFiles[0]?.length">
+                            <div *ngFor="let ref of parsedReferences; let ri = index" class="ns-ref-item">
+                                <span class="ns-ref-serial">{{ refSerialLabel(ri) }}</span> {{ ref }}
+                            </div>
+                        </ng-container>
+                    </div>
+                </div>
+
+                <!-- ── ১। Main Text (formatted paragraph) ── -->
+                <div class="ns-para">
+                    <span class="ns-para-no">{{ serial(1) }}</span>
+                    <div class="ns-para-text" [innerHTML]="getFormattedParagraphHtml()"></div>
+                </div>
+
+                <!-- ── ২। Note (numbered paragraph) ── -->
+                <div class="ns-para" *ngIf="noteSheet.note">
+                    <span class="ns-para-no">{{ serial(2) }}</span>
+                    <div class="ns-para-text">{{ noteSheet.note }}</div>
+                </div>
+
+                <!-- ── Initiator area ── -->
+                <div class="ns-initiator-area">
+                    <div class="ns-initiator-sig" *ngIf="initiatorDetails">
+                        <img *ngIf="isInitiatorApproved() && shouldShowSignature(initiatorDetails.step) && initiatorDetails.signatureDataUrl"
+                             [src]="initiatorDetails.signatureDataUrl" class="ns-sig-img" alt="Signature" />
+                        <div class="ns-sig-name">
+                            {{ isEnglish() ? initiatorDetails.name : (initiatorDetails.nameBN || initiatorDetails.name) }}
+                        </div>
+                        <div class="ns-sig-rank" *ngIf="initiatorDetails.rank && initiatorDetails.rank !== '-'">
+                            {{ isEnglish() ? initiatorDetails.rank : (initiatorDetails.rankBN || initiatorDetails.rank) }}
+                        </div>
+                        <div class="ns-sig-appoint" *ngIf="initiatorDetails.appointment || initiatorDetails.appointmentBN">
+                            {{ isEnglish() ? initiatorDetails.appointment : (initiatorDetails.appointmentBN || initiatorDetails.appointment) }}
+                        </div>
+                        <div class="ns-sig-date" *ngIf="isInitiatorApproved() && noteSheet.noteSheetDate">{{ formatMonthYear(noteSheet.noteSheetDate) }}</div>
+                    </div>
+                </div>
+
+                <!-- ── Approver Sections ── -->
+                <div class="ns-approver-section" *ngFor="let approver of approversDetails; let i = index">
+                    <div class="ns-approver-role">
+                        {{ isEnglish() ? approver.appointment : (approver.appointmentBN || approver.appointment) }}
+                    </div>
+                    <div class="ns-approver-body" [class.ns-approver-body--left]="i >= approversDetails.length - 2">
+                        <div class="ns-approver-left">
+                            <span class="ns-para-no">{{ serial(approverStartSerial + i) }}</span>
+                            <span class="ns-approver-remark" *ngIf="getApproverRemark(approver.step)">{{ getApproverRemark(approver.step) }}</span>
+                        </div>
+                        <div class="ns-approver-sig-area">
+                            <img *ngIf="shouldShowSignature(approver.step) && approver.signatureDataUrl"
+                                 [src]="approver.signatureDataUrl" class="ns-sig-img" alt="Signature" />
+                            <div class="ns-sig-date" *ngIf="getApproverDate(approver.step)">{{ getApproverDate(approver.step) }}</div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+
+        </div>
+      </ng-container>
+    </ng-template>
+
+    <!-- ── Back History Timeline (not printed) ── -->
+    <div class="ns-back-history no-print" *ngIf="backHistory.length > 0">
+        <h3><i class="pi pi-history"></i> Back History</h3>
+        <div class="ns-back-timeline">
+            <div class="ns-back-entry" *ngFor="let entry of backHistory">
+                <div class="ns-back-entry-header">
+                    <span class="ns-back-from">{{ getStatusLabel(entry.backedFromStatus) }}</span>
+                    <i class="pi pi-arrow-right"></i>
+                    <span class="ns-back-to">{{ getStatusLabel(entry.backedToStatus) }}</span>
+                    <span class="ns-back-date">{{ formatDate(entry.backedDate) }}</span>
+                </div>
+                <div class="ns-back-entry-by" *ngIf="entry.backedByName">Backed by: {{ entry.backedByName }}</div>
+                <div class="ns-back-entry-reason" *ngIf="entry.backReason">Reason: {{ entry.backReason }}</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ── Supporting Documents (attached files from references) ── -->
+    <div class="ns-supporting-docs no-print" *ngIf="allReferenceFiles.length > 0">
+        <div style="display:flex; align-items:center; justify-content:space-between; gap:1rem; flex-wrap:wrap;">
+            <h3><i class="pi pi-paperclip"></i> Supporting Documents</h3>
+            <p-button icon="pi pi-download" label="Download All" size="small" [outlined]="true"
+                      (onClick)="downloadAllRefFiles()" pTooltip="Download all attached files"></p-button>
+        </div>
+        <div class="ns-docs-list">
+            <div class="ns-doc-item" *ngFor="let file of allReferenceFiles">
+                <i class="pi pi-file"></i>
+                <span class="ns-doc-name">{{ file.fileName }}</span>
+                <p-button icon="pi pi-download" [rounded]="true" [text]="true" size="small" pTooltip="Download" (onClick)="downloadRefFile(file)"></p-button>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<!-- ══════════════════════════════════════════════════════════ -->
+<!-- Remark dialog for Approve / Decline / Back                -->
+<!-- ══════════════════════════════════════════════════════════ -->
+<p-dialog header="{{ remarkAction === NoteSheetRemarkAction.Approve ? 'Approve' : remarkAction === NoteSheetRemarkAction.Decline ? 'Decline' : 'Back' }} with Remark"
+          [(visible)]="showRemarkDialog" [modal]="true" [style]="{ width: '28rem' }"
+          [contentStyle]="{ 'border-top': '2px solid var(--primary-color)' }"
+          (onHide)="remarkAction = null; remarkText = ''"
+          [draggable]="false" [resizable]="false">
+    <div class="flex flex-col gap-2">
+        <label class="font-medium">
+            Remark
+            @if (remarkAction === NoteSheetRemarkAction.Decline) {
+                <span class="text-red-500"> * required</span>
+            } @else {
+                <span class="text-500"> (optional)</span>
+            }
+        </label>
+        <textarea pTextarea [(ngModel)]="remarkText" rows="3" class="w-full"></textarea>
+    </div>
+    <ng-template pTemplate="footer">
+        <p-button type="button" label="Cancel" [text]="true" (onClick)="showRemarkDialog = false"></p-button>
+        <p-button type="button" label="Submit" icon="pi pi-check"
+                  [loading]="actionSubmitting"
+                  [disabled]="remarkAction === NoteSheetRemarkAction.Decline && !remarkText?.trim()"
+                  (onClick)="submitRemark()"></p-button>
+    </ng-template>
+</p-dialog>
+
+<!-- ══════════════════════════════════════════════════════════ -->
+<!-- Approval Log dialog                                        -->
+<!-- ══════════════════════════════════════════════════════════ -->
+<p-dialog header="Approval Log — {{ approvalLogNoteSheetNo }}"
+          [(visible)]="showApprovalLogDialog" [modal]="true"
+          [style]="{ width: '680px', maxHeight: '85vh' }"
+          [draggable]="false" [resizable]="false" [closable]="true"
+          styleClass="ns-approval-log-dialog">
+    @if (approvalLogLoading) {
+        <div class="flex justify-content-center align-items-center py-5">
+            <i class="pi pi-spin pi-spinner" style="font-size:1.5rem"></i>
+            <span class="ml-2">Loading approval log...</span>
+        </div>
+    }
+    @if (!approvalLogLoading && approvalLogEntries.length === 0) {
+        <div class="text-center text-500 py-4">No approval log entries found.</div>
+    }
+    @if (!approvalLogLoading && approvalLogEntries.length > 0) {
+        <div class="ns-approval-log">
+            @for (entry of approvalLogEntries; track entry; let i = $index) {
+                <div class="ns-log-entry" [class.ns-log-entry--back]="entry.action === ApprovalLogAction.Back">
+                    <div class="ns-log-marker">
+                        <i [class]="getActionIcon(entry.action)" [ngClass]="{
+                            'text-green-500': entry.action === ApprovalLogAction.Approve,
+                            'text-red-500': entry.action === ApprovalLogAction.Cancel,
+                            'text-orange-500': entry.action === ApprovalLogAction.Back,
+                            'text-blue-400': entry.action === ApprovalLogAction.Pending
+                        }"></i>
+                        @if (i < approvalLogEntries.length - 1) {
+                            <div class="ns-log-line"></div>
+                        }
+                    </div>
+                    <div class="ns-log-content">
+                        <div class="ns-log-header">
+                            <span class="ns-log-step">{{ entry.step }}</span>
+                            <span class="ns-log-action" [ngClass]="{
+                                'ns-log-action--approve': entry.action === ApprovalLogAction.Approve,
+                                'ns-log-action--cancel': entry.action === ApprovalLogAction.Cancel,
+                                'ns-log-action--back': entry.action === ApprovalLogAction.Back,
+                                'ns-log-action--pending': entry.action === ApprovalLogAction.Pending
+                            }">{{ getActionLabel(entry.action) }}</span>
+                        </div>
+                        @if (entry.serviceId || entry.name) {
+                            <div class="ns-log-user">
+                                @if (entry.serviceId) {
+                                    <span class="ns-log-sid">{{ entry.serviceId }}</span>
+                                }
+                                @if (entry.name) {
+                                    <span>{{ entry.name }}</span>
+                                }
+                                @if (entry.rank && entry.rank !== '-') {
+                                    <span class="text-500">({{ entry.rank }})</span>
+                                }
+                            </div>
+                        }
+                        @if (entry.date) {
+                            <div class="ns-log-date"><i class="pi pi-calendar"></i> {{ formatDateShort(entry.date) }}</div>
+                        }
+                        @if (entry.remark) {
+                            <div class="ns-log-remark">{{ entry.remark }}</div>
+                        }
+                    </div>
+                </div>
+            }
+        </div>
+    }
+</p-dialog>

@@ -1,519 +1,557 @@
 <p-fluid>
-    <div class="mb-5 card">
-        <div class="flex flex-wrap align-items-center justify-content-between gap-3 mb-4">
-            <h3 class="m-0 text-xl font-bold text-900">{{ pageTitle }}</h3>
-            <!-- View mode buttons -->
+    @if (!hideSearchSection) {
+    <app-emp-present-member-check (employeeNotFound)="onEmployeeNotFound($event)" (employeeFound)="showEntryForm = false" (loadOldProfile)="onLoadOldProfile($event)" />
+    } @if (showEntryForm) {
+    <div class="form-card">
+        <div class="form-card-header">
+            <h3 class="form-card-title">{{ pageTitle }}</h3>
             @if (isViewMode || isEditMode) {
-                <div class="flex flex-wrap gap-2">
-                    <p-button
-                        label="Back to List"
-                        icon="pi pi-arrow-left"
-                        severity="secondary"
-                        [outlined]="true"
-                        (onClick)="goBackToList()">
-                    </p-button>
-                    @if (isViewMode) {
-                        <p-button
-                            label="Edit"
-                            icon="pi pi-pencil"
-                            (onClick)="switchToEditMode()">
-                        </p-button>
-                    }
-                </div>
+            <div class="form-card-actions">
+                @if (isViewMode) { @if (generatedEmployeeId) {
+                <a [routerLink]="['/members/profile', generatedEmployeeId]" class="report-link-profile"> <i class="pi pi-user"></i> Profile </a>
+                }
+                <p-button label="Edit" icon="pi pi-pencil" [class.perm-hidden]="!canUpdate" (onClick)="switchToEditMode()"> </p-button>
+                }
+            </div>
             }
         </div>
 
-        <form [formGroup]="postingForm" (ngSubmit)="onSubmit()">
-            <div class="surface-50 border-round-2xl p-4">
+        <form class [formGroup]="postingForm" (ngSubmit)="onSubmit()">
+            <div class="form-section">
                 <!-- Row 1: 4 Fields -->
-                <div class="flex flex-wrap gap-3 mb-4">
-                    <div class="flex-1" style="min-width: 200px; max-width: 250px;">
-                        <label class="font-semibold block mb-2 text-700">Add Picture</label>
-
+                <div class="form-row">
+                    <div class="form-field form-field-fixed">
+                        @if (!imagePreview) {
+                        <label class="form-label">Add Picture <small class="text-500 font-normal">(Max: 5MB)</small></label>
                         @if (!isViewMode) {
-                            <!-- Show upload button if no image -->
-                            @if (!imagePreview) {
-                                <p-fileUpload #fileUpload mode="basic" chooseLabel="Upload Picture" chooseIcon="pi pi-upload"
-                                    name="picture" accept="image/*" [auto]="true" (onSelect)="onFileSelect($event)"
-                                    maxFileSize="5000000" styleClass="w-full">
-                                </p-fileUpload>
-                                <small class="text-500">Max size: 5MB (JPG, PNG, GIF)</small>
-                            } @else {
-                                <!-- Show filename with preview and remove buttons -->
-                                <div class="flex align-items-center gap-2 surface-100 border-round p-2">
-                                    <i class="pi pi-image text-primary"></i>
-                                    <span class="text-700 font-medium flex-1" style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
-                                        {{ selectedFileName || 'image.png' }}
-                                    </span>
-                                    <p-button
-                                        icon="pi pi-eye"
-                                        [rounded]="true"
-                                        [text]="true"
-                                        severity="info"
-                                        size="small"
-                                        pTooltip="Preview"
-                                        (onClick)="showImagePreviewModal = true">
-                                    </p-button>
-                                    <p-button
-                                        icon="pi pi-times"
-                                        [rounded]="true"
-                                        [text]="true"
-                                        severity="danger"
-                                        size="small"
-                                        pTooltip="Remove"
-                                        (onClick)="removeImage()">
-                                    </p-button>
-                                </div>
-                            }
+                        <p-fileUpload #fileUpload mode="basic" chooseLabel="Upload Picture" chooseIcon="pi pi-upload" name="picture" accept="image/*" [auto]="true" (onSelect)="onFileSelect($event)" maxFileSize="5000000" styleClass="w-full">
+                        </p-fileUpload>
                         } @else {
-                            <!-- View mode: show filename if image exists -->
-                            @if (imagePreview) {
-                                <div class="flex align-items-center gap-2 surface-100 border-round p-2">
-                                    <i class="pi pi-image text-primary"></i>
-                                    <span class="text-700 font-medium flex-1">{{ selectedFileName || 'image.png' }}</span>
-                                    <p-button
-                                        icon="pi pi-eye"
-                                        [rounded]="true"
-                                        [text]="true"
-                                        severity="info"
-                                        size="small"
-                                        pTooltip="Preview"
-                                        (onClick)="showImagePreviewModal = true">
-                                    </p-button>
-                                </div>
-                            } @else {
-                                <span class="text-500">No picture uploaded</span>
+                        <span class="text-500">No picture uploaded</span>
+                        } } @else {
+                        <div style="position: relative; display: inline-block">
+                            <div class="profile-photo-container" (click)="showImagePreviewModal = true" pTooltip="Click to enlarge">
+                                <img [src]="imagePreview" alt="Preview" class="profile-photo" />
+                            </div>
+                            @if (!isViewMode) {
+                            <p-button
+                                icon="pi pi-times"
+                                [rounded]="true"
+                                severity="danger"
+                                size="small"
+                                pTooltip="Remove"
+                                (onClick)="removeImage()"
+                                [style]="{'position': 'absolute', 'top': '-8px', 'right': '-8px', 'width': '22px', 'height': '22px'}"
+                            >
+                            </p-button>
                             }
+                        </div>
                         }
                     </div>
-
-                    <div class="flex-1" style="min-width: 200px">
-                        <label class="font-semibold block mb-2 text-700">
-                            Mother Organization <span class="text-red-500">*</span>
-                        </label>
-                        <p-select [options]="motherOrganizations" formControlName="motherOrganization"
-                            optionLabel="orgNameEN" optionValue="orgId" placeholder="Select Mother Organization"
-                            styleClass="w-full" (onChange)="onMotherOrgChange($event.value)"
-                            [filter]="true" filterPlaceholder="Search">
+                    <div class="form-field">
+                        <label class="form-label"> Mother Organization <span class="form-label-required">*</span> </label>
+                        <p-select
+                            [options]="motherOrganizations"
+                            formControlName="motherOrganization"
+                            optionLabel="orgNameEN"
+                            optionValue="orgId"
+                            placeholder="Select Mother Organization"
+                            styleClass="w-full"
+                            (onChange)="onMotherOrgChange($event.value)"
+                            [filter]="true"
+                            filterPlaceholder="Search"
+                        >
                         </p-select>
                         @if (isFieldInvalid('motherOrganization')) {
-                        <small class="text-red-500">
-                            {{ getErrorMessage('motherOrganization') }}
-                        </small>
+                        <small class="form-error">{{ getErrorMessage('motherOrganization') }}</small>
                         }
                     </div>
 
-                    <div class="flex-1" style="min-width: 200px">
-                        <label class="font-semibold block mb-2 text-700">
-                            Last Unit of Mother Organization <span class="text-red-500">*</span>
-                        </label>
-                        <p-select [options]="lastUnitOrganizations" optionLabel="orgNameEN" optionValue="orgId"
-                            placeholder="Select Last Unit" styleClass="w-full" formControlName="lastMotherUnit"
-                            (onChange)="onLastUnitChange($event.value)"
-                            [filter]="true" filterPlaceholder="Search">
-                        </p-select>
+                    <div class="form-field">
+                        <label class="form-label"> Last Unit of Mother Organization <span class="form-label-required">*</span> </label>
+                        <div style="display: flex; align-items: center; gap: 0.35rem">
+                            <div style="flex: 1; min-width: 0">
+                                <p-select
+                                    [options]="lastUnitOrganizations"
+                                    optionLabel="orgNameEN"
+                                    optionValue="orgId"
+                                    placeholder="Select Last Unit"
+                                    styleClass="w-full"
+                                    formControlName="lastMotherUnit"
+                                    (onChange)="onLastUnitChange($event.value)"
+                                    [filter]="true"
+                                    filterPlaceholder="Search"
+                                    [virtualScroll]="true"
+                                    [virtualScrollItemSize]="38"
+                                    [disabled]="!postingForm.get('motherOrganization')?.value"
+                                >
+                                </p-select>
+                            </div>
+                            <!-- <button
+                                type="button"
+                                pButton
+                                icon="pi pi-plus"
+                                class="p-button-sm p-button-outlined p-button-success"
+                                style="flex-shrink: 0; width: 2rem; height: 2rem; padding: 0"
+                                pTooltip="Add Last Unit of Mother Organization setup"
+                                tooltipPosition="top"
+                                (click)="openAddLastUnitDialog()"
+                                [disabled]="!postingForm.get('motherOrganization')?.value || isViewMode"
+                            ></button> -->
+                        </div>
                         @if (isFieldInvalid('lastMotherUnit')) {
-                        <small class="text-red-500">
-                            {{ getErrorMessage('lastMotherUnit') }}
-                        </small>
+                        <small class="form-error">{{ getErrorMessage('lastMotherUnit') }}</small>
                         }
                     </div>
 
-                    <div class="flex-1" style="min-width: 200px">
-                        <label class="font-semibold block mb-2 text-700">
-                            Last Mother Unit Location <span class="text-red-500">*</span>
+                    <!-- Last Mother Unit Location (hidden) -->
+                    <!-- <div class="form-field">
+                        <label class="form-label">
+                            Last Mother Unit Location <span class="form-label-required">*</span>
                         </label>
                         <input pInputText class="w-full" placeholder="Manual Entry / Auto Select"
                             formControlName="lastMotherUnitLocation" readonly />
                         @if (isFieldInvalid('lastMotherUnitLocation')) {
-                        <small class="text-red-500">
-                            {{ getErrorMessage('lastMotherUnitLocation') }}
-                        </small>
+                        <small class="form-error">{{ getErrorMessage('lastMotherUnitLocation') }}</small>
+                        }
+                    </div> -->
+
+                    <div class="form-field">
+                        <label class="form-label"> Last Mother Unit District </label>
+                        <p-select [options]="districtOptions" formControlName="lastMotherUnitDistrictId" optionLabel="label" optionValue="value" placeholder="Select District" styleClass="w-full" [filter]="true" filterPlaceholder="Search"> </p-select>
+                    </div>
+
+                    <div class="form-field">
+                        <label class="form-label"> Date of Joining in RAB <span class="form-label-required">*</span> </label>
+                        <p-datepicker formControlName="joiningDate" dateFormat="dd-mm-yy" placeholder="Select Date" styleClass="w-full"> </p-datepicker>
+                        @if (isFieldInvalid('joiningDate')) {
+                        <small class="form-error">{{ getErrorMessage('joiningDate') }}</small>
                         }
                     </div>
                 </div>
 
-                <!-- Row 2: 4 Fields -->
-                <div class="flex flex-wrap gap-3 mb-4">
-                    <div class="flex-1" style="min-width: 200px">
-                        <label class="font-semibold block mb-2 text-700">
-                            Member Type <span class="text-red-500">*</span>
-                        </label>
-                        <p-select [options]="memberTypes" optionLabel="codeValueEN" optionValue="codeId"
-                            placeholder="Select Member Type" styleClass="w-full" formControlName="memberType"
+                <!-- Row 2: 5 Fields -->
+                <div class="form-row">
+                    <div class="form-field">
+                        <label class="form-label"> Member Type <span class="form-label-required">*</span> </label>
+                        <p-select
+                            [options]="memberTypes"
+                            optionLabel="codeValueEN"
+                            optionValue="codeId"
+                            placeholder="Select Member Type"
+                            styleClass="w-full"
+                            formControlName="memberType"
                             (onChange)="onMemberTypeChange($event.value)"
-                            [filter]="true" filterPlaceholder="Search">
+                            [filter]="true"
+                            filterPlaceholder="Search"
+                        >
                         </p-select>
                         @if (isFieldInvalid('memberType')) {
-                        <small class="text-red-500">
-                            {{ getErrorMessage('memberType') }}
-                        </small>
+                        <small class="form-error">{{ getErrorMessage('memberType') }}</small>
                         }
                     </div>
 
-                    <div class="flex-1" style="min-width: 200px">
-                        <label class="font-semibold block mb-2 text-700">
-                            Officer Type <span class="text-red-500">*</span>
-                        </label>
-                        <p-select [options]="officerTypes" optionLabel="codeValueEN" optionValue="codeId"
-                            placeholder="Select Officer Type" styleClass="w-full" formControlName="officerType"
-                            [filter]="true" filterPlaceholder="Search">
-                        </p-select>
+                    @if (isOfficerMemberType) {
+                    <div class="form-field">
+                        <label class="form-label"> Officer Type <span class="form-label-required">*</span> </label>
+                        <p-select [options]="officerTypes" optionLabel="codeValueEN" optionValue="codeId" placeholder="Select Officer Type" styleClass="w-full" formControlName="officerType" [filter]="true" filterPlaceholder="Search"> </p-select>
                         @if (isFieldInvalid('officerType')) {
-                        <small class="text-red-500">
-                            {{ getErrorMessage('officerType') }}
-                        </small>
+                        <small class="form-error">{{ getErrorMessage('officerType') }}</small>
                         }
                     </div>
+                    }
 
-                    <div class="flex-1" style="min-width: 200px">
-                        <label class="font-semibold block mb-2 text-700">
-                            Appointment <span class="text-red-500">*</span>
-                        </label>
-                        <p-select [options]="appointments" optionLabel="codeValueEN" optionValue="codeId"
-                            placeholder="Select Appointment" styleClass="w-full" formControlName="appointment"
-                            [filter]="true" filterPlaceholder="Search">
+                    <div class="form-field">
+                        <label class="form-label">Batch</label>
+                        <p-select [options]="batches" optionLabel="codeValueEN" optionValue="codeId" placeholder="Select Batch" styleClass="w-full" formControlName="batch" [filter]="true" filterPlaceholder="Search" [showClear]="true"> </p-select>
+                    </div>
+
+                    <div class="form-field">
+                        <label class="form-label"> Appointment <span style="color: #b45309; font-size: 0.8em; font-style: italic; font-weight: 500">(readonly)</span> </label>
+                        <p-select
+                            [options]="appointments"
+                            optionLabel="codeValueEN"
+                            optionValue="codeId"
+                            placeholder="Select Appointment"
+                            styleClass="w-full"
+                            [class.surface-100]="true"
+                            formControlName="appointment"
+                            [filter]="true"
+                            filterPlaceholder="Search"
+                            [showClear]="false"
+                            [readonly]="true"
+                        >
                         </p-select>
                         @if (isFieldInvalid('appointment')) {
-                        <small class="text-red-500">
-                            {{ getErrorMessage('appointment') }}
-                        </small>
-                        }
-                    </div>
-
-                    <div class="flex-1" style="min-width: 200px">
-                        <label class="font-semibold block mb-2 text-700">
-                            Date of Joining in RAB <span class="text-red-500">*</span>
-                        </label>
-                        <p-datepicker formControlName="joiningDate" dateFormat="dd-mm-yy" placeholder="Select Date"
-                            styleClass="w-full">
-                        </p-datepicker>
-                        @if (isFieldInvalid('joiningDate')) {
-                        <small class="text-red-500">
-                            {{ getErrorMessage('joiningDate') }}
-                        </small>
+                        <small class="form-error">{{ getErrorMessage('appointment') }}</small>
                         }
                     </div>
                 </div>
 
                 <!-- Row 3: 4 Fields -->
-                <div class="flex flex-wrap gap-3 mb-4">
-                    <div class="flex-1" style="min-width: 200px">
-                        <label class="font-semibold block mb-2 text-700">
-                            Rank <span class="text-red-500">*</span>
-                        </label>
-                        <p-select [options]="ranks" optionLabel="codeValueEN" optionValue="codeId"
-                            placeholder="Select Rank" styleClass="w-full" formControlName="rank"
-                            [filter]="true" filterPlaceholder="Search">
-                        </p-select>
+                <div class="form-row">
+                    <div class="form-field">
+                        <label class="form-label"> Rank <span class="form-label-required">*</span> </label>
+                        <p-select [options]="ranks" optionLabel="codeValueEN" optionValue="codeId" placeholder="Select Rank" styleClass="w-full" formControlName="rank" [filter]="true" filterPlaceholder="Search"> </p-select>
                         @if (isFieldInvalid('rank')) {
-                        <small class="text-red-500">
-                            {{ getErrorMessage('rank') }}
-                        </small>
+                        <small class="form-error">{{ getErrorMessage('rank') }}</small>
                         }
                     </div>
 
-                    <div class="flex-1" style="min-width: 200px">
-                        <label class="font-semibold block mb-2 text-700">
-                            Corps <span class="text-red-500">*</span>
-                        </label>
-                        <p-select [options]="corps" optionLabel="codeValueEN" optionValue="codeId"
-                            placeholder="Select Corps" styleClass="w-full" formControlName="branch"
+                    <div class="form-field">
+                        <label class="form-label">RAB Rank</label>
+                        <p-select
+                            [options]="rabRankDropdownOptions"
+                            optionLabel="label"
+                            optionValue="value"
+                            placeholder="Auto"
+                            styleClass="w-full"
+                            [(ngModel)]="selectedRabEquivalentNameId"
+                            [ngModelOptions]="{ standalone: true }"
+                            [disabled]="true"
+                            [filter]="true"
+                            filterPlaceholder="Search"
+                        >
+                        </p-select>
+                    </div>
+
+                    <div class="form-field">
+                        <label class="form-label"> Corps/Branch <span class="form-label-required">*</span> </label>
+                        <p-select
+                            [options]="corps"
+                            optionLabel="codeValueEN"
+                            optionValue="codeId"
+                            placeholder="Select Corps"
+                            styleClass="w-full"
+                            formControlName="branch"
                             (onChange)="onChangeCorps($event.value)"
-                            [filter]="true" filterPlaceholder="Search">
+                            [filter]="true"
+                            filterPlaceholder="Search"
+                        >
                         </p-select>
                         @if (isFieldInvalid('branch')) {
-                        <small class="text-red-500">
-                            {{ getErrorMessage('branch') }}
-                        </small>
+                        <small class="form-error">{{ getErrorMessage('branch') }}</small>
                         }
                     </div>
 
-                    <div class="flex-1" style="min-width: 200px">
-                        <label class="font-semibold block mb-2 text-700">
-                            Trade <span class="text-red-500">*</span>
-                        </label>
-                        <p-select [options]="trades" optionLabel="codeValueEN" optionValue="codeId"
-                            placeholder="Select Trade" styleClass="w-full" formControlName="trade"
-                            [filter]="true" filterPlaceholder="Search">
-                        </p-select>
+                    <div class="form-field">
+                        <label class="form-label"> Trade <span class="form-label-required">*</span> </label>
+                        <p-select [options]="tradeOptions" optionLabel="label" optionValue="value" placeholder="Select Trade" styleClass="w-full" formControlName="trade" [filter]="true" filterPlaceholder="Search"> </p-select>
                         @if (isFieldInvalid('trade')) {
-                        <small class="text-red-500">
-                            {{ getErrorMessage('trade') }}
-                        </small>
+                        <small class="form-error">{{ getErrorMessage('trade') }}</small>
                         }
                     </div>
 
-                    <div class="flex-1" style="min-width: 200px">
-                        <label class="font-semibold block mb-2 text-700">Trade Remarks</label>
+                    <div class="form-field">
+                        <label class="form-label">Special Qualifications</label>
+                        <p-multiSelect
+                            [options]="specialQualificationOptions"
+                            optionLabel="codeValueEN"
+                            optionValue="codeId"
+                            placeholder="Select Special Qualifications"
+                            styleClass="w-full"
+                            formControlName="specialQualifications"
+                            [filter]="true"
+                            filterPlaceholder="Search"
+                            display="chip"
+                        >
+                        </p-multiSelect>
+                    </div>
+
+                    <div class="form-field">
+                        <label class="form-label">Trade Remarks</label>
                         <input pInputText class="w-full" placeholder="Enter remarks" formControlName="tradeMark" />
                     </div>
                 </div>
 
                 <!-- Row 4: 4 Fields -->
-                <div class="flex flex-wrap gap-3 mb-4">
-                    <div class="flex-1" style="min-width: 200px">
-                        <label class="font-semibold block mb-2 text-700">
-                            Gender <span class="text-red-500">*</span>
-                        </label>
-                        <p-select [options]="genders" optionLabel="codeValueEN" optionValue="codeId"
-                            placeholder="Select Gender" styleClass="w-full" formControlName="gender"
-                            [filter]="true" filterPlaceholder="Search">
-                        </p-select>
+                <div class="form-row">
+                    <div class="form-field">
+                        <label class="form-label"> Gender <span class="form-label-required">*</span> </label>
+                        <p-select [options]="genders" optionLabel="codeValueEN" optionValue="codeId" placeholder="Select Gender" styleClass="w-full" formControlName="gender" [filter]="true" filterPlaceholder="Search"> </p-select>
                         @if (isFieldInvalid('gender')) {
-                        <small class="text-red-500">
-                            {{ getErrorMessage('gender') }}
-                        </small>
+                        <small class="form-error">{{ getErrorMessage('gender') }}</small>
                         }
                     </div>
 
-                    <div class="flex-1" style="min-width: 200px">
-                        <label class="font-semibold block mb-2 text-700">
-                            Select Prefix <span class="text-red-500">*</span>
-                        </label>
-                        <p-select [options]="prefixes" optionLabel="codeValueEN" optionValue="codeId"
-                            placeholder="Select Prefix" styleClass="w-full" formControlName="prefix"
-                            [filter]="true" filterPlaceholder="Search">
-                        </p-select>
+                    <div class="form-field">
+                        <label class="form-label"> Select Prefix <span class="form-label-required">*</span> </label>
+                        <p-select [options]="prefixes" optionLabel="codeValueEN" optionValue="codeId" placeholder="Select Prefix" styleClass="w-full" formControlName="prefix" [filter]="true" filterPlaceholder="Search"> </p-select>
                         @if (isFieldInvalid('prefix')) {
-                        <small class="text-red-500">
-                            {{ getErrorMessage('prefix') }}
-                        </small>
+                        <small class="form-error">{{ getErrorMessage('prefix') }}</small>
                         }
                     </div>
 
-                    <div class="flex-1" style="min-width: 200px">
-                        <label class="font-semibold block mb-2 text-700">
-                            Service ID <span class="text-red-500">*</span>
-                        </label>
+                    <div class="form-field">
+                        <label class="form-label"> Service ID <span class="form-label-required">*</span> </label>
                         <div class="p-inputgroup">
-                            <input pInputText class="w-full" placeholder="Only Number" formControlName="serviceId"
-                                (blur)="checkServiceIdDuplicate($event.target.value)" />
-                            @if (isCheckingServiceId) {
-                                <span class="p-inputgroup-addon">
-                                    <i class="pi pi-spin pi-spinner"></i>
-                                </span>
+                            <input pInputText class="w-full" [class.surface-100]="isEditMode" placeholder="Only Number" formControlName="serviceId" [readonly]="isEditMode" />
+                            @if (isCheckingCombo) {
+                            <span class="p-inputgroup-addon">
+                                <i class="pi pi-spin pi-spinner"></i>
+                            </span>
                             }
                         </div>
                         @if (isFieldInvalid('serviceId')) {
-                        <small class="text-red-500">
-                            {{ getErrorMessage('serviceId') }}
-                        </small>
-                        }
-                        @if (isServiceIdDuplicate) {
-                        <small class="text-red-500">
-                            This Service ID already exists in the system
-                        </small>
+                        <small class="form-error">{{ getErrorMessage('serviceId') }}</small>
+                        } @if (isDuplicateCombo) {
+                        <small class="form-error">A member with the same Mother Organization + Prefix + Service ID already exists</small>
                         }
                     </div>
 
-                    <div class="flex-1" style="min-width: 200px">
-                        <label class="font-semibold block mb-2 text-700">RAB ID</label>
-                        <input pInputText class="w-full surface-100" placeholder="Auto Generated"
-                            formControlName="rabid" readonly />
+                    <div class="form-field">
+                        <label class="form-label">RAB ID</label>
+                        <div class="p-inputgroup">
+                            <input pInputText class="w-full" placeholder="Auto Generated if left blank" formControlName="rabid" />
+                            @if (isCheckingRabId) {
+                            <span class="p-inputgroup-addon">
+                                <i class="pi pi-spin pi-spinner"></i>
+                            </span>
+                            }
+                        </div>
+                        @if (isDuplicateRabId) {
+                        <small class="form-error">This RAB ID already exists</small>
+                        }
                     </div>
                 </div>
 
-                <!-- Row 5: Name English, Name Bangla -->
-                <div class="flex flex-wrap gap-3 mb-4">
-                    <div class="flex-1" style="min-width: 200px">
-                        <label class="font-semibold block mb-2 text-700">
-                            Name English <span class="text-red-500">*</span>
-                        </label>
-                        <input pInputText class="w-full" placeholder="Enter name in English"
-                            formControlName="fullNameEN" />
+                <!-- Row 5: Name English, Name Bangla, Marital Status -->
+                <div class="form-row">
+                    <div class="form-field">
+                        <label class="form-label"> Name English <span class="form-label-required">*</span> </label>
+                        <input pInputText class="w-full" placeholder="Enter name in English" formControlName="fullNameEN" (blur)="capitalizeWords('fullNameEN')" />
                         @if (isFieldInvalid('fullNameEN')) {
-                        <small class="text-red-500">
-                            {{ getErrorMessage('fullNameEN') }}
-                        </small>
+                        <small class="form-error">{{ getErrorMessage('fullNameEN') }}</small>
                         }
                     </div>
 
-                    <div class="flex-1" style="min-width: 200px">
-                        <label class="font-semibold block mb-2 text-700">
-                            Name Bangla <span class="text-red-500">*</span>
-                        </label>
+                    <div class="form-field">
+                        <label class="form-label"> Name Bangla <span class="form-label-required">*</span> </label>
                         <input pInputText class="w-full" placeholder="বাংলায় নাম লিখুন" formControlName="fullNameBN" />
                         @if (isFieldInvalid('fullNameBN')) {
-                        <small class="text-red-500">
-                            {{ getErrorMessage('fullNameBN') }}
-                        </small>
+                        <small class="form-error">{{ getErrorMessage('fullNameBN') }}</small>
                         }
                     </div>
-                </div>
-            </div>
 
+                    <div class="form-field">
+                        <label class="form-label">Marital Status</label>
+                        <p-select
+                            [options]="maritalStatusOptions"
+                            optionLabel="codeValueEN"
+                            optionValue="codeId"
+                            placeholder="Select Marital Status"
+                            styleClass="w-full"
+                            formControlName="maritalStatus"
+                            (onChange)="onMaritalStatusChange($event.value)"
+                            [filter]="true"
+                            filterPlaceholder="Search"
+                        >
+                        </p-select>
+                    </div>
+                </div>
+
+                @if (isMaritalStatusNotUnmarried) {
+                <div class="form-row">
+                    <div class="form-field">
+                        <label class="form-label">Relationship</label>
+                        <p-select [options]="relationOptions" optionLabel="codeValueEN" optionValue="codeId" styleClass="w-full" formControlName="relationship" placeholder="Spouse" [disabled]="true"> </p-select>
+                    </div>
+                    <div class="form-field">
+                        <label class="form-label">Spouse Name English</label>
+                        <input pInputText class="w-full" placeholder="Enter spouse name" formControlName="spouseName" (blur)="capitalizeWords('spouseName')" />
+                    </div>
+                </div>
+                }
+            </div>
         </form>
 
         <!-- Permanent Address Section -->
-        <div class="mt-1">
-          <app-address-form
-            #permanentAddressForm
-            [config]="permanentAddressConfig"
-            [savedAddressId]="permanentAddressId"
-            [showButtons]="false"
-            [showCard]="false"
-            [isReadonly]="isViewMode"
-            [initialAddressData]="permanentAddress"
-            (onSave)="savePermanentAddress($event)"
-            (onCancel)="cancelAddress()">
-          </app-address-form>
+        <div class="form-section form-section-spacer-first">
+            <app-address-form
+                #permanentAddressForm
+                [config]="permanentAddressConfig"
+                [savedAddressId]="permanentAddressId"
+                [showButtons]="false"
+                [showCard]="false"
+                [isReadonly]="isViewMode"
+                [initialAddressData]="permanentAddress"
+                (onSave)="savePermanentAddress($event)"
+                (onCancel)="cancelAddress()"
+            >
+            </app-address-form>
         </div>
 
         <!-- Present Address Section -->
-        <div class="mt-1">
-          <app-address-form
-            #presentAddressForm
-            [config]="presentAddressConfig"
-            [savedAddressId]="presentAddressId"
-            [showButtons]="false"
-            [showCard]="false"
-            [isReadonly]="isViewMode"
-            [initialAddressData]="presentAddress"
-            (onSave)="savePresentAddress($event)"
-            (onCancel)="cancelAddress()"
-            (onSameAsPresentRequest)="copyPermanentToPresent()">
-          </app-address-form>
+        <div class="form-section">
+            <app-address-form
+                #presentAddressForm
+                [config]="presentAddressConfig"
+                [savedAddressId]="presentAddressId"
+                [showButtons]="false"
+                [showCard]="false"
+                [isReadonly]="isViewMode"
+                [initialAddressData]="presentAddress"
+                (onSave)="savePresentAddress($event)"
+                (onCancel)="cancelAddress()"
+                (onSameAsPresentRequest)="copyPermanentToPresent()"
+            >
+            </app-address-form>
         </div>
 
-        <!-- Wife Permanent Address Section (Optional) -->
-        <div class="mt-1">
-          <app-address-form
-            #wifePermanentAddressForm
-            [config]="wifePermanentAddressConfig"
-            [savedAddressId]="wifePermanentAddressId"
-            [showButtons]="false"
-            [showCard]="false"
-            [isReadonly]="isViewMode"
-            [isOptional]="true"
-            [initialAddressData]="wifePermanentAddress"
-            (onSave)="saveWifePermanentAddress($event)"
-            (onCancel)="cancelAddress()">
-          </app-address-form>
+        @if (isMaritalStatusNotUnmarried) {
+        <!-- Spouse Permanent Address Section (Optional) -->
+        <div class="form-section">
+            <app-address-form
+                #spousePermanentAddressForm
+                [config]="spousePermanentAddressConfig"
+                [savedAddressId]="spousePermanentAddressId"
+                [showButtons]="false"
+                [showCard]="false"
+                [isReadonly]="isViewMode"
+                [isOptional]="true"
+                [initialAddressData]="spousePermanentAddress"
+                (onSave)="saveSpousePermanentAddress($event)"
+                (onCancel)="cancelAddress()"
+                (onSameAsPresentRequest)="copyMemberPermanentToSpousePermanent()"
+            >
+            </app-address-form>
         </div>
 
-        <!-- Wife Present Address Section (Optional) -->
-        <div class="mt-1">
-          <app-address-form
-            #wifePresentAddressForm
-            [config]="wifePresentAddressConfig"
-            [savedAddressId]="wifePresentAddressId"
-            [showButtons]="false"
-            [showCard]="false"
-            [isReadonly]="isViewMode"
-            [isOptional]="true"
-            [initialAddressData]="wifePresentAddress"
-            (onSave)="saveWifePresentAddress($event)"
-            (onCancel)="cancelAddress()"
-            (onSameAsPresentRequest)="copyWifePermanentToWifePresent()">
-          </app-address-form>
+        <!-- Spouse Present Address Section (Optional) -->
+        <div class="form-section">
+            <app-address-form
+                #spousePresentAddressForm
+                [config]="spousePresentAddressConfig"
+                [savedAddressId]="spousePresentAddressId"
+                [showButtons]="false"
+                [showCard]="false"
+                [isReadonly]="isViewMode"
+                [isOptional]="true"
+                [initialAddressData]="spousePresentAddress"
+                (onSave)="saveSpousePresentAddress($event)"
+                (onCancel)="cancelAddress()"
+                (onSameAsPresentRequest)="copyMemberPresentToSpousePresent()"
+                (onSameAsSecondaryRequest)="copySpousePermanentToSpousePresent()"
+            >
+            </app-address-form>
+        </div>
+        }
+
+        <!-- File References Section -->
+        <div class="form-section file-section-compact">
+            <app-file-references-form #fileReferencesForm [fileRows]="fileRows" [isViewMode]="isViewMode" title="Files" (fileRowsChange)="onFileRowsChange($event)" (onDownloadFile)="onDownloadFile($event)"> </app-file-references-form>
         </div>
 
-        <!-- Reliever Section -->
-        <div class="mt-1">
-            <div class="mb-2">
-                <h3 class="m-0 text-xl font-bold text-900">Reliever Information</h3>
+        <!-- Reliever Section (hidden for now)
+        <div class="form-section form-section-sm form-section-spacer">
+            <h3 class="form-subtitle">Reliever Information</h3>
+            <div class="flex align-items-center gap-2 mb-4">
+                <p-checkbox
+                    [(ngModel)]="isReliever"
+                    [binary]="true"
+                    inputId="isReliever"
+                    [disabled]="isViewMode"
+                    (onChange)="onRelieverCheckChange($event.checked)">
+                </p-checkbox>
+                <label for="isReliever" class="cursor-pointer form-label" style="margin-bottom: 0;">
+                    Is he a reliever of any presently serving member?
+                </label>
             </div>
 
-            <div class="surface-50 border-round-xl p-3">
-                <!-- Checkbox: Is he a reliever? -->
-                <div class="flex align-items-center gap-2 mb-4">
-                    <p-checkbox
-                        [(ngModel)]="isReliever"
-                        [binary]="true"
-                        inputId="isReliever"
-                        [disabled]="isViewMode"
-                        (onChange)="onRelieverCheckChange($event.checked)">
-                    </p-checkbox>
-                    <label for="isReliever" class="cursor-pointer font-semibold text-700">
-                        Is he a reliever of any presently serving member?
-                    </label>
+            @if (isReliever) {
+                <div class="form-row">
+                    <div class="form-field" style="min-width: 300px; max-width: 400px;">
+                        <label class="form-label">
+                            Select Presently Serving Member <span class="form-label-required">*</span>
+                        </label>
+                        <p-select
+                            [options]="existingEmployees"
+                            [(ngModel)]="selectedRelieverEmployeeId"
+                            optionLabel="fullNameEN"
+                            optionValue="employeeID"
+                            placeholder="Search by RAB ID / Service ID / Name"
+                            styleClass="w-full"
+                            [filter]="true"
+                            filterPlaceholder="Search employee..."
+                            [disabled]="isViewMode"
+                            (onChange)="onRelieverEmployeeSelect($event.value)">
+                            <ng-template let-emp pTemplate="item">
+                                <div class="flex flex-column">
+                                    <span class="font-semibold">{{ emp.fullNameEN }}</span>
+                                    <small class="text-500">Service ID: {{ emp.serviceId }} | RAB ID: {{ emp.rabid }}</small>
+                                </div>
+                            </ng-template>
+                        </p-select>
+                    </div>
                 </div>
 
-                <!-- Show dropdown if checked -->
-                @if (isReliever) {
-                    <div class="flex flex-wrap gap-3 mb-4">
-                        <div class="flex-1" style="min-width: 300px; max-width: 400px;">
-                            <label class="font-semibold block mb-2 text-700">
-                                Select Presently Serving Member <span class="text-red-500">*</span>
-                            </label>
-                            <p-select
-                                [options]="existingEmployees"
-                                [(ngModel)]="selectedRelieverEmployeeId"
-                                optionLabel="fullNameEN"
-                                optionValue="employeeID"
-                                placeholder="Search by RAB ID / Service ID / Name"
-                                styleClass="w-full"
-                                [filter]="true"
-                                filterPlaceholder="Search employee..."
-                                [disabled]="isViewMode"
-                                (onChange)="onRelieverEmployeeSelect($event.value)">
-                                <ng-template let-emp pTemplate="item">
-                                    <div class="flex flex-column">
-                                        <span class="font-semibold">{{ emp.fullNameEN }}</span>
-                                        <small class="text-500">Service ID: {{ emp.serviceId }} | RAB ID: {{ emp.rabid }}</small>
-                                    </div>
-                                </ng-template>
-                            </p-select>
-                        </div>
-                    </div>
-
-                    <!-- Show selected employee details -->
-                    @if (selectedRelieverEmployee) {
-                        <div class="surface-100 border-round p-3">
-                            <h4 class="m-0 mb-2 text-700">Selected Member Details</h4>
-                            <div class="flex flex-wrap gap-4">
-                                <div>
-                                    <span class="text-500 text-sm">Service ID:</span>
-                                    <span class="ml-2 font-semibold">{{ selectedRelieverEmployee.serviceId }}</span>
-                                </div>
-                                <div>
-                                    <span class="text-500 text-sm">RAB ID:</span>
-                                    <span class="ml-2 font-semibold">{{ selectedRelieverEmployee.rabid || 'N/A' }}</span>
-                                </div>
-                                <div>
-                                    <span class="text-500 text-sm">Name:</span>
-                                    <span class="ml-2 font-semibold">{{ selectedRelieverEmployee.fullNameEN }}</span>
-                                </div>
-                                <div>
-                                    <span class="text-500 text-sm">Rank:</span>
-                                    <span class="ml-2 font-semibold">{{ selectedRelieverEmployee.rank || 'N/A' }}</span>
-                                </div>
+                @if (selectedRelieverEmployee) {
+                    <div class="form-summary">
+                        <h4 class="form-summary-title">Selected Member Details</h4>
+                        <div class="form-summary-row">
+                            <div class="form-summary-item">
+                                <span class="label">Service ID:</span>
+                                <span class="value">{{ selectedRelieverEmployee.serviceId }}</span>
+                            </div>
+                            <div class="form-summary-item">
+                                <span class="label">RAB ID:</span>
+                                <span class="value">{{ selectedRelieverEmployee.rabid || 'N/A' }}</span>
+                            </div>
+                            <div class="form-summary-item">
+                                <span class="label">Name:</span>
+                                <span class="value">{{ selectedRelieverEmployee.fullNameEN }}</span>
+                            </div>
+                            <div class="form-summary-item">
+                                <span class="label">Rank:</span>
+                                <span class="value">{{ selectedRelieverEmployee.rank || 'N/A' }}</span>
                             </div>
                         </div>
-                    }
+                    </div>
                 }
-            </div>
+            }
         </div>
+        -->
 
-        <!-- Save All Information Button - hidden in view mode -->
+        <!-- Save / Reset Buttons - hidden in view mode -->
         @if (!isViewMode) {
-            <div class="flex justify-end mt-4">
-                <p-button
-                    type="button"
-                    label="Save All Information"
-                    icon="pi pi-check-circle"
-                    size="large"
-                    [disabled]="isServiceIdDuplicate || isCheckingServiceId"
-                    (onClick)="saveAll()">
-                </p-button>
-            </div>
+        <div class="form-actions">
+            @if (!isEditMode) {
+            <p-button type="button" label="Reset" icon="pi pi-refresh" severity="secondary" [outlined]="true" styleClass="form-btn-secondary" (onClick)="onReset()"> </p-button>
+            }
+            <p-button type="button" [label]="isEditMode ? 'Update All Information' : 'Save All Information'" icon="pi pi-check-circle" styleClass="form-btn-primary" [loading]="isSaving" [disabled]="isSaving || isDuplicateCombo || isCheckingCombo || isDuplicateRabId || isCheckingRabId" (onClick)="saveAll()"> </p-button>
+        </div>
         }
     </div>
+    }
 </p-fluid>
 
+<!-- Add Last Unit of Mother Organization Dialog -->
+<p-dialog header="Add Last Unit of Mother Organization setup" [(visible)]="showLastUnitDialog" [modal]="true" [style]="{ width: '672px' }" [closable]="true" [contentStyle]="{'border-top': '2px solid var(--primary-color)'}" appendTo="body">
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
+        <div>
+            <label class="font-semibold block mb-2 text-700">Mother Organization</label>
+            <input pInputText class="w-full" [value]="getSelectedMotherOrgName()" [disabled]="true" />
+        </div>
+        <div>
+            <label class="font-semibold block mb-2 text-700">Last Unit Name (English) <span class="text-red-500">*</span></label>
+            <input pInputText class="w-full" [(ngModel)]="newLastUnitNameEN" placeholder="Enter last unit name in English" />
+        </div>
+        <div>
+            <label class="font-semibold block mb-2 text-700">Last Unit Name (Bangla)</label>
+            <input pInputText class="w-full" [(ngModel)]="newLastUnitNameBN" placeholder="Enter last unit name in Bangla" />
+        </div>
+    </div>
+    <ng-template pTemplate="footer">
+        <p-button label="Cancel" icon="pi pi-times" severity="secondary" [outlined]="true" (onClick)="showLastUnitDialog = false"></p-button>
+        <p-button label="Save" icon="pi pi-check" [loading]="isSavingLastUnit" [disabled]="!newLastUnitNameEN?.trim()" (onClick)="saveNewLastUnit()"></p-button>
+    </ng-template>
+</p-dialog>
+
 <!-- Image Preview Modal -->
-<p-dialog
-    header="Picture Preview"
-    [(visible)]="showImagePreviewModal"
-    [modal]="true"
-    [style]="{ width: '500px', maxWidth: '90vw' }"
-    [closable]="true"
-    [draggable]="false">
+<p-dialog header="Picture Preview" [(visible)]="showImagePreviewModal" [modal]="true" [style]="{ width: '500px', maxWidth: '90vw' }" [closable]="true" [draggable]="false" [contentStyle]="{'border-top': '2px solid var(--primary-color)'}">
     <div class="flex justify-content-center">
         @if (imagePreview) {
-            <img [src]="imagePreview" alt="Profile Picture"
-                style="max-width: 100%; max-height: 400px; object-fit: contain; border-radius: 8px;" />
+        <img [src]="imagePreview" alt="Profile Picture" style="max-width: 100%; max-height: 400px; object-fit: contain; border-radius: 8px" />
         }
     </div>
 </p-dialog>

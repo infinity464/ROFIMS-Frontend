@@ -1,22 +1,22 @@
 export interface AddressInfoModel {
-  employeeID: number;
-  addressId: number;
-  fmid: number;
+    employeeID: number;
+    addressId: number;
+    fmid: number;
 
-  locationType: string;
-  locationCode: string;
-  postCode: string;
+    locationType: string;
+    locationCode: string;
+    postCode: string;
 
-  addressAreaEN: string;
-  addressAreaBN: string;
+    addressAreaEN: string;
+    addressAreaBN: string;
 
-  divisionType?: number;
-  thanType?: number;
-  postOfficeType?: number;
+    divisionType?: number;
+    ThanaType?: number;
+    postOfficeType?: number;
 
-  createdBy: string;
-  createdDate: string;
+    createdBy: string;
+    createdDate: string;
 
-  lastUpdatedBy: string;
-  lastupdate: string;
+    lastUpdatedBy: string;
+    lastupdate: string;
 }

@@ -1,0 +1,521 @@
+<p-toast position="center"></p-toast>
+<p-confirmDialog></p-confirmDialog>
+
+<form [formGroup]="form" (ngSubmit)="submit()" class="movement-form flex flex-col gap-4">
+
+    <!-- ── Card 1: Personnel ─────────────────────────────────────────── -->
+    <section class="mv-card">
+        <header class="mv-card-header">
+            <i class="pi pi-users mv-card-icon"></i>
+            <span class="mv-card-title">Personnel</span>
+            @if (selectedEmployees.length > 0) {
+                <span class="mv-chip">{{ selectedEmployees.length }} selected</span>
+            }
+        </header>
+
+        <app-employee-search (onEmployeeFound)="onEmployeeSelected($event)"></app-employee-search>
+
+        @if (selectedEmployees.length > 0) {
+            <p-table [value]="selectedEmployees" styleClass="p-datatable-sm mv-emp-table">
+                <ng-template pTemplate="header">
+                    <tr>
+                        <th style="width: 48px">#</th>
+                        <th>RAB ID</th>
+                        <th>SVC ID</th>
+                        <th>Name</th>
+                        <th>Rank</th>
+                        <th>Corps</th>
+                        <th>Trade</th>
+                        <th>Org</th>
+                        @if (hideDestination && hasMixedTransferUnits) {
+                            <th>Transfer Unit</th>
+                        }
+                        <th style="width: 60px"></th>
+                    </tr>
+                </ng-template>
+                <ng-template pTemplate="body" let-row let-i="rowIndex">
+                    <tr>
+                        <td>{{ i + 1 }}</td>
+                        <td>{{ row.rabid || '—' }}</td>
+                        <td>{{ row.serviceId || '—' }}</td>
+                        <td class="font-semibold">{{ row.fullNameEN }}</td>
+                        <td>{{ row.rankDisplay || 'N/A' }}</td>
+                        <td>{{ row.corpsDisplay || 'N/A' }}</td>
+                        <td>{{ row.tradeDisplay || 'N/A' }}</td>
+                        <td>{{ row.motherOrganizationDisplay || '—' }}</td>
+                        @if (hideDestination && hasMixedTransferUnits) {
+                            <td>{{ transferUnitLabel(row.employeeID) }}</td>
+                        }
+                        <td>
+                            <button type="button" pButton
+                                    icon="pi pi-trash" severity="danger"
+                                    [text]="true" [rounded]="true" size="small"
+                                    pTooltip="Remove"
+                                    (click)="removeEmployee(row)"></button>
+                        </td>
+                    </tr>
+                </ng-template>
+            </p-table>
+        }
+
+        @if (hideDestination && !hasMixedTransferUnits) {
+            <div class="mv-destined-banner">
+                <i class="pi pi-map-marker"></i>
+                <span class="mv-destined-label">Transfer To (RAB Unit):</span>
+                <span class="mv-destined-value">{{ destinedRABUnitLabel || '—' }}</span>
+            </div>
+        }
+    </section>
+
+    <!-- ── Card 2: Movement details ──────────────────────────────────── -->
+    <section class="mv-card">
+        <header class="mv-card-header">
+            <i class="pi pi-arrow-right-arrow-left mv-card-icon"></i>
+            <span class="mv-card-title">Movement details</span>
+        </header>
+
+        <!-- ── Order information ──────────────────────────────────────── -->
+        <div class="mv-subsection">
+            <h3 class="mv-subsection-title">Order information</h3>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div class="mv-field">
+                    <label>Movement type <span class="p-error">*</span></label>
+                    <p-select
+                        formControlName="movementType"
+                        [options]="movementTypeOptions"
+                        optionLabel="label" optionValue="value"
+                        placeholder="Select"
+                        [showClear]="!lockOrderFields && !lockMovementType" appendTo="body"
+                        [disabled]="lockOrderFields || lockMovementType"
+                        styleClass="w-full"></p-select>
+                </div>
+
+                <div class="mv-field">
+                    <label>Order type <span class="p-error">*</span></label>
+                    <p-select
+                        formControlName="moveOrderType"
+                        [options]="moveOrderTypeOptions"
+                        optionLabel="label" optionValue="value"
+                        placeholder="Select"
+                        [showClear]="!lockOrderFields" appendTo="body"
+                        [disabled]="lockOrderFields"
+                        styleClass="w-full"></p-select>
+                </div>
+            </div>
+
+            <div class="mv-field mt-3">
+                <label>Reason</label>
+                <div class="flex gap-2">
+                    <div class="flex-1">
+                        <p-select
+                            formControlName="movementReasonId"
+                            [options]="movementReasonOptions"
+                            optionLabel="label" optionValue="value"
+                            placeholder="Select a reason"
+                            [showClear]="true" [filter]="true" appendTo="body"
+                            styleClass="w-full"></p-select>
+                    </div>
+                    <p-button type="button"
+                              icon="pi pi-plus"
+                              pTooltip="Add new reason"
+                              tooltipPosition="top"
+                              severity="secondary"
+                              [outlined]="true"
+                              (onClick)="openAddReasonDialog()"></p-button>
+                </div>
+                <small class="mv-hint">Add a custom reason if none of the listed options apply.</small>
+            </div>
+        </div>
+
+        <!-- ── Destination ────────────────────────────────────────────── -->
+        @if (!hideDestination) {
+        <div class="mv-subsection">
+            <h3 class="mv-subsection-title">Destination</h3>
+
+            <div class="mv-field">
+                <label>Destined unit <span class="p-error">*</span></label>
+                <div class="flex flex-col gap-2">
+                    <p-selectbutton
+                        formControlName="destinedUnitTarget"
+                        [options]="destinedUnitOptions"
+                        optionLabel="label" optionValue="value"
+                        [allowEmpty]="false"
+                        styleClass="mv-toggle"></p-selectbutton>
+
+                    @if (form.get('destinedUnitTarget')?.value === 'mother') {
+                        <p-select
+                            formControlName="destinedMotherUnitId"
+                            [options]="motherUnitOptions"
+                            optionLabel="label" optionValue="value"
+                            placeholder="Select mother unit..."
+                            [filter]="true" [showClear]="true" appendTo="body"
+                            [virtualScroll]="true" [virtualScrollItemSize]="38"
+                            styleClass="w-full"></p-select>
+                    } @else {
+                        <p-select
+                            formControlName="destinedRABUnitId"
+                            [options]="rabUnitOptions"
+                            optionLabel="label" optionValue="value"
+                            placeholder="Select RAB unit..."
+                            [filter]="true" [showClear]="true" appendTo="body"
+                            [virtualScroll]="true" [virtualScrollItemSize]="38"
+                            styleClass="w-full"></p-select>
+                    }
+                </div>
+            </div>
+
+            @if (showPostOutType) {
+                <div class="mv-field" style="margin-top: 1rem;">
+                    <label>Post-out status <span class="p-error">*</span></label>
+                    <p-select
+                        formControlName="postOutStatusType"
+                        [options]="postOutTypeOptions"
+                        optionLabel="label" optionValue="value"
+                        placeholder="Select status..."
+                        appendTo="body"
+                        styleClass="w-full"></p-select>
+                </div>
+            }
+        </div>
+        }
+
+        <!-- ── Effective dates ────────────────────────────────────────── -->
+        <div class="mv-subsection">
+            <h3 class="mv-subsection-title">Effective dates</h3>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div class="mv-field">
+                    <label>Date of release</label>
+                    <p-datepicker
+                        formControlName="dateOfRelease"
+                        appendTo="body" dateFormat="dd/mm/yy"
+                        [showIcon]="true" iconDisplay="input"
+                        placeholder="dd/mm/yyyy" [inputStyle]="{ width: '100%' }"
+                        class="w-full"></p-datepicker>
+                </div>
+                @if (showDateOfReduce) {
+                    <div class="mv-field">
+                        <label>Reduce from strength</label>
+                        <p-datepicker
+                            formControlName="dateOfReduce"
+                            appendTo="body" dateFormat="dd/mm/yy"
+                            [showIcon]="true" iconDisplay="input"
+                        placeholder="dd/mm/yyyy" [inputStyle]="{ width: '100%' }"
+                            class="w-full"></p-datepicker>
+                    </div>
+                }
+            </div>
+
+            @if (showHandover || showTakeover) {
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-3">
+                    @if (showHandover) {
+                        <div class="mv-field">
+                            <label>Handover of charge</label>
+                            <p-datepicker
+                                formControlName="handoverDate"
+                                appendTo="body" dateFormat="dd/mm/yy"
+                                [showIcon]="true" iconDisplay="input"
+                            placeholder="dd/mm/yyyy" [inputStyle]="{ width: '100%' }"
+                                class="w-full"></p-datepicker>
+                        </div>
+                    }
+                    @if (showTakeover) {
+                        <div class="mv-field">
+                            <label>Takeover of charge</label>
+                            <p-datepicker
+                                formControlName="takeoverDate"
+                                appendTo="body" dateFormat="dd/mm/yy"
+                                [showIcon]="true" iconDisplay="input"
+                            placeholder="dd/mm/yyyy" [inputStyle]="{ width: '100%' }"
+                                class="w-full"></p-datepicker>
+                        </div>
+                    }
+                </div>
+            }
+        </div>
+
+        <!-- ── Takeover person (only when Permanent + Article 47 Takeover) ─ -->
+        <!-- Takeover person (optional) section commented out
+        @if (showTakeover) {
+            <div class="mv-subsection">
+                <h3 class="mv-subsection-title">Takeover person (optional)</h3>
+
+                <app-employee-search (onEmployeeFound)="onTakeoverPersonSelected($event)"></app-employee-search>
+                @if (takeoverPerson) {
+                    <div class="mt-2 mv-takeover-card">
+                        <p-avatar
+                            [label]="getInitials(takeoverPerson.fullNameEN)"
+                            shape="circle"
+                            styleClass="mv-avatar"
+                            [style]="getAvatarStyle(takeoverPerson.employeeID)"></p-avatar>
+                        <div class="mv-takeover-info">
+                            <strong>{{ takeoverPerson.fullNameEN }}</strong>
+                            <div class="text-muted-color text-sm">
+                                RAB {{ takeoverPerson.rabid || '—' }}
+                                · Svc {{ takeoverPerson.serviceId || '—' }}
+                                · {{ takeoverPerson.rankDisplay }}
+                            </div>
+                        </div>
+                    </div>
+                }
+            </div>
+        }
+        -->
+
+        <!-- ── CC-only: Release Time + Vehicle ─────────────────────────── -->
+        @if (isCC) {
+            <div class="mv-subsection">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div class="mv-field">
+                        <label>Release time</label>
+                        <input type="time" pInputText class="w-full"
+                               formControlName="releaseTime" />
+                    </div>
+                    <div class="mv-field">
+                        <label>Vehicle</label>
+                        <p-select formControlName="vehicle"
+                                  [options]="movementVehicleOptions"
+                                  optionLabel="label" optionValue="value"
+                                  placeholder="Select vehicle"
+                                  [showClear]="true"
+                                  appendTo="body"
+                                  styleClass="w-full"></p-select>
+                    </div>
+                </div>
+            </div>
+        }
+
+        <!-- ── Joining leave ──────────────────────────────────────────── -->
+        <div class="mv-subsection">
+            <h3 class="mv-subsection-title">Joining leave</h3>
+
+            <div class="mv-field">
+                <span class="mv-question">Will the person take joining leave?</span>
+                <p-selectbutton
+                    formControlName="isJoiningLeave"
+                    [options]="joiningLeaveOptions"
+                    optionLabel="label" optionValue="value"
+                    [allowEmpty]="false"
+                    styleClass="mv-yesno"></p-selectbutton>
+            </div>
+
+            @if (showJoiningLeaveDates) {
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-3">
+                    <div class="mv-field">
+                        <label>Joining leave from</label>
+                        <p-datepicker
+                            formControlName="joiningLeaveFrom"
+                            appendTo="body" dateFormat="dd/mm/yy"
+                            [showIcon]="true" iconDisplay="input"
+                        placeholder="dd/mm/yyyy" [inputStyle]="{ width: '100%' }"
+                            class="w-full"></p-datepicker>
+                    </div>
+                    <div class="mv-field">
+                        <label>Joining leave to</label>
+                        <p-datepicker
+                            formControlName="joiningLeaveTo"
+                            appendTo="body" dateFormat="dd/mm/yy"
+                            [showIcon]="true" iconDisplay="input"
+                        placeholder="dd/mm/yyyy" [inputStyle]="{ width: '100%' }"
+                            class="w-full"></p-datepicker>
+                    </div>
+                </div>
+            }
+        </div>
+
+        <!-- ── MO-only fields ──────────────────────────────────────────── -->
+        @if (isMO) {
+            <div class="mv-subsection">
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div class="mv-field">
+                        <label>শেষ রসদ সনদপত্র</label>
+                        <input pInputText class="w-full"
+                               formControlName="lastRationCertificate" />
+                    </div>
+                    <div class="mv-field">
+                        <label>বেতন ও ভাতা</label>
+                        <input pInputText class="w-full"
+                               formControlName="payAndAllowance" />
+                    </div>
+                    <div class="mv-field">
+                        <label>রেলওয়ে আজ্ঞাপত্র</label>
+                        <input pInputText class="w-full"
+                               formControlName="railwayWarrant" />
+                    </div>
+                </div>
+            </div>
+        }
+    </section>
+
+    <!-- ── Card 4: Additional details ────────────────────────────────── -->
+    <section class="mv-card">
+        <header class="mv-card-header">
+            <i class="pi pi-file-edit mv-card-icon"></i>
+            <span class="mv-card-title">Details</span>
+        </header>
+
+        <div class="mv-field">
+            <label>Auth</label>
+            <app-rich-editor formControlName="auth" height="140px"
+                             placeholder="Enter authorization..."></app-rich-editor>
+        </div>
+        <div class="mv-field mt-3">
+            <label>Details information</label>
+            <app-rich-editor formControlName="detailsInformation" height="180px"
+                             placeholder="Enter movement notes, special instructions, or context..."></app-rich-editor>
+        </div>
+        <div class="mv-field mt-3">
+            <label>Remarks</label>
+            <app-rich-editor formControlName="remarks" height="140px"
+                             placeholder="Enter remarks..."></app-rich-editor>
+        </div>
+    </section>
+
+    <!-- ── Letter Recipients (Article 47 only) ───────────────────────── -->
+    @if (showLetterRecipients) {
+        <section class="mv-card">
+            <header class="mv-card-header">
+                <i class="pi pi-list mv-card-icon"></i>
+                <span class="mv-card-title">Letter Recipients</span>
+                <button type="button" pButton
+                        icon="pi pi-plus"
+                        [rounded]="true" [text]="true"
+                        severity="success"
+                        size="small"
+                        pTooltip="Add recipient"
+                        (click)="addLetterRecipient()"
+                        style="margin-left:0.5rem;"></button>
+            </header>
+
+            @for (recipient of letterRecipientsList; track trackByIndex($index); let i = $index) {
+                <div style="display:flex; align-items:start; gap:0.25rem; margin-bottom:0.5rem;">
+                    <span style="min-width:1.75rem; padding-top:0.55rem; font-weight:600;">{{ i + 1 }}.</span>
+                    <input pInputText
+                           class="w-full"
+                           [(ngModel)]="letterRecipientsList[i]"
+                           [ngModelOptions]="{ standalone: true }"
+                           [placeholder]="'Recipient ' + (i + 1)" />
+                    <button type="button" pButton
+                            icon="pi pi-arrow-up"
+                            severity="secondary"
+                            [text]="true" [rounded]="true" size="small"
+                            pTooltip="Move up"
+                            [disabled]="i === 0"
+                            (click)="moveLetterRecipient(i, -1)"></button>
+                    <button type="button" pButton
+                            icon="pi pi-arrow-down"
+                            severity="secondary"
+                            [text]="true" [rounded]="true" size="small"
+                            pTooltip="Move down"
+                            [disabled]="i === letterRecipientsList.length - 1"
+                            (click)="moveLetterRecipient(i, 1)"></button>
+                    <button type="button" pButton
+                            icon="pi pi-trash"
+                            severity="danger"
+                            [text]="true" [rounded]="true" size="small"
+                            pTooltip="Remove"
+                            (click)="removeLetterRecipient(i)"></button>
+                </div>
+            }
+
+            @if (letterRecipientsList.length === 0) {
+                <small class="mv-hint">No recipients yet. Click + to add one.</small>
+            }
+        </section>
+    }
+
+    <!-- ── Files ─────────────────────────────────────────────────────── -->
+    <section class="mv-card">
+        <header class="mv-card-header">
+            <i class="pi pi-paperclip mv-card-icon"></i>
+            <span class="mv-card-title">Files</span>
+            <span class="mv-optional">Optional</span>
+        </header>
+
+        <app-file-references-form
+            #filesForm
+            [fileRows]="fileRows"
+            namePlaceholder="e.g. Posting order, Annexure"
+            (fileRowsChange)="onFilesChange($event)"
+            (onDownloadFile)="onDownloadFile($event)">
+        </app-file-references-form>
+    </section>
+
+    <!-- ── Final Approvers ───────────────────────────────────────────── -->
+    <section class="mv-card">
+        <header class="mv-card-header">
+            <i class="pi pi-check-square mv-card-icon"></i>
+            <span class="mv-card-title">Final Approvers</span>
+        </header>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div class="mv-field md:col-span-2">
+                <label>Approvers</label>
+                <p-multiselect
+                    formControlName="finalApproverIds"
+                    [options]="approverOptions"
+                    optionLabel="label"
+                    optionValue="value"
+                    placeholder="Select one or more final approvers (optional)"
+                    styleClass="w-full"
+                    [filter]="true"
+                    display="chip"
+                    appendTo="body"></p-multiselect>
+                <small class="mv-hint">Optional. Only employees with an Identity user account are shown.</small>
+            </div>
+
+            <div class="mv-field">
+                <label>Approval date</label>
+                <p-datepicker
+                    formControlName="letterDate"
+                    appendTo="body" dateFormat="dd/mm/yy"
+                    [showIcon]="true" iconDisplay="input"
+                    placeholder="dd/mm/yyyy" [inputStyle]="{ width: '100%' }"
+                    class="w-full"></p-datepicker>
+                <small class="mv-hint">Defaults to today; printed as the Letter Date.</small>
+            </div>
+        </div>
+    </section>
+
+    <!-- ── Footer actions ───────────────────────────────────────────── -->
+    <div class="flex justify-end gap-2 mt-3">
+        <button type="button" pButton label="Reset" severity="secondary" [outlined]="true"
+                (click)="resetForm()"></button>
+        @if (editingId ? canUpdate : canInsert) {
+            <button type="submit" pButton
+                    [label]="editingId ? 'Update' : 'Save'"
+                    icon="pi pi-save"
+                    [loading]="saving"></button>
+        }
+    </div>
+</form>
+
+<!-- ── Add Movement Reason Dialog ───────────────────────────── -->
+<p-dialog [(visible)]="showAddReasonDialog"
+          header="Add Movement Reason"
+          [modal]="true"
+          [closable]="true"
+          [style]="{ width: '520px' }"
+          appendTo="body">
+    <div class="mt-2">
+        <div class="mv-field">
+            <label>Reason <span class="p-error">*</span></label>
+            <input pInputText class="w-full"
+                   [(ngModel)]="newReasonNameBN"
+                   placeholder="Enter reason" />
+        </div>
+    </div>
+    <ng-template pTemplate="footer">
+        <p-button label="Cancel"
+                  icon="pi pi-times"
+                  severity="secondary"
+                  [outlined]="true"
+                  (onClick)="showAddReasonDialog = false"></p-button>
+        <p-button label="Save"
+                  icon="pi pi-check"
+                  [loading]="isSavingReason"
+                  [disabled]="!newReasonNameBN?.trim()"
+                  (onClick)="saveNewReason()"></p-button>
+    </ng-template>
+</p-dialog>

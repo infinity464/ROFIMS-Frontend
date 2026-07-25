@@ -1,0 +1,210 @@
+<!-- ── Regiment & Rank Wise Manpower State Report ─────────────────────── -->
+<div class="report-results-card">
+
+    <!-- Header -->
+    <div class="report-results-header">
+
+        <!-- Row 1: multiselect left | buttons right -->
+        <div class="report-toolbar-row">
+
+            <!-- Left group: Mother Org multi-select + column-visibility toggles -->
+            <div class="report-toolbar-left">
+                <!-- Mother Org multi-select -->
+                <div class="org-filter-wrap">
+                    <p-multiselect
+                        [(ngModel)]="selectedOrgIds"
+                        [options]="orgOptions"
+                        optionLabel="orgName"
+                        optionValue="orgId"
+                        placeholder="All Organizations"
+                        [showClear]="true"
+                        [filter]="true"
+                        filterBy="orgName,orgNameBN"
+                        display="chip"
+                        appendTo="body"
+                        scrollHeight=""
+                        (onChange)="onOrgFilterChange()"
+                        styleClass="org-filter-select"
+                        [disabled]="loadingOrgs || loading">
+                    </p-multiselect>
+                </div>
+
+                <!-- Check/uncheck which Regiment / Corps to show -->
+                <div class="col-vis-field">
+                    <label class="col-vis-label">{{ corpsColLabel }}</label>
+                    <p-multiselect
+                        [(ngModel)]="selectedCorpsIds"
+                        [options]="corpsVisOptions"
+                        optionLabel="label"
+                        optionValue="value"
+                        [placeholder]="corpsColLabel"
+                        [filter]="true"
+                        filterBy="label"
+                        display="comma"
+                        appendTo="body"
+                        styleClass="col-vis-select"
+                        [disabled]="filteredOrgs.length === 0">
+                    </p-multiselect>
+                </div>
+
+                <!-- Check/uncheck which Ranks to show -->
+                <div class="col-vis-field">
+                    <label class="col-vis-label">{{ lang === 'en' ? 'Rank' : 'পদবি' }}</label>
+                    <p-multiselect
+                        [(ngModel)]="selectedRankIds"
+                        [options]="rankVisOptions"
+                        optionLabel="label"
+                        optionValue="value"
+                        [placeholder]="lang === 'en' ? 'Rank' : 'পদবি'"
+                        [filter]="true"
+                        filterBy="label"
+                        display="comma"
+                        appendTo="body"
+                        styleClass="col-vis-select"
+                        [disabled]="filteredOrgs.length === 0">
+                    </p-multiselect>
+                </div>
+            </div>
+
+            <!-- Lang + Export -->
+            <div class="report-results-actions">
+                <button type="button" class="report-lang-toggle" (click)="toggleRankMode()"
+                        [title]="showMotherOrgRank ? 'Switch to RAB Rank (Equivalent Name)' : 'Switch to Mother Org Rank'">
+                    {{ showMotherOrgRank
+                        ? (lang === 'en' ? 'Mother Org Rank' : 'মাতৃ বাহিনীর পদবী')
+                        : (lang === 'en' ? 'RAB Rank' : 'র‍্যাব পদবী') }}
+                </button>
+
+                <button type="button" class="report-lang-toggle" (click)="toggleLang()">
+                    {{ lang === 'en' ? 'বাংলা' : 'English' }}
+                </button>
+
+                <div class="report-export-wrap">
+                    <button type="button" class="report-btn-export"
+                            (click)="toggleExportDropdown($event)"
+                            [disabled]="loading || exporting || filteredOrgs.length === 0">
+                        @if (exporting) {
+                            <i class="pi pi-spin pi-spinner" style="font-size:13px"></i>
+                            Generating...
+                        } @else {
+                            <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
+                                <path d="M6.5 1v7M3.5 5.5l3 3 3-3M1.5 10.5h10"
+                                      stroke="currentColor" stroke-width="1.5"
+                                      stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                            Export
+                        }
+                    </button>
+
+                    @if (exportDropdownOpen) {
+                        <div class="report-export-dropdown" (click)="$event.stopPropagation()">
+                            <button type="button" class="report-export-item report-export-print"
+                                    (click)="exportAs('print')">
+                                <i class="pi pi-print" style="font-size:0.75rem"></i> Print
+                            </button>
+                            <button type="button" class="report-export-item report-export-word"
+                                    (click)="exportAs('word')">
+                                <span class="report-export-icon">⬇</span> Word
+                            </button>
+                            <button type="button" class="report-export-item report-export-excel"
+                                    (click)="exportAs('excel')">
+                                <span class="report-export-icon">⬇</span> Excel
+                            </button>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+
+        <!-- RAB org-tree cascade filter (collapsible) -->
+        <app-org-tree-filter (filterChange)="onOrgTreeFilter($event)"></app-org-tree-filter>
+
+        <!-- Row 2: centered title -->
+        <div class="report-header-title-block">
+            <div class="report-main-title">{{ titleLabel }}</div>
+            @if (scopeLine) {
+                <div class="report-scope-line">{{ scopeLine }}</div>
+            }
+            <div class="report-date-line">{{ dateLine }}</div>
+        </div>
+
+    </div>
+
+    <!-- Loading skeleton -->
+    <div *ngIf="loading" class="skeleton-wrapper">
+        <div *ngFor="let i of [1,2,3,4,5,6,7,8]" class="skeleton-row"></div>
+    </div>
+
+    <!-- Report body -->
+    <div class="report-body" *ngIf="!loading">
+
+        <!-- Empty state: nothing selected yet -->
+        <div *ngIf="selectedOrgIds.length === 0" class="empty-state">
+            <i class="pi pi-filter"></i>
+            <p>Please select one or more Mother Organizations.</p>
+        </div>
+
+        <!-- Empty state: selection made but no data -->
+        <div *ngIf="selectedOrgIds.length > 0 && filteredOrgs.length === 0" class="empty-state">
+            <i class="pi pi-inbox"></i>
+            <p>No data found.</p>
+        </div>
+
+        <!-- One table per mother org -->
+        <div *ngFor="let org of filteredOrgs" class="org-section">
+
+            <!-- Org name banner -->
+            <div class="org-banner">{{ orgLabel(org) }}</div>
+
+            <div class="report-table-wrap">
+                <table class="report-table">
+                    <thead>
+                        <tr>
+                            <th class="col-ser">{{ serLabel }}</th>
+                            <th class="col-unit">{{ corpsColLabel }}</th>
+                            <th *ngFor="let rank of visibleRanks(org)">{{ rankLabel(rank) }}</th>
+                            <th class="col-total">{{ totalLabel }}</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr *ngFor="let c of visibleCorps(org); let i = index">
+                            <td class="num-cell">{{ fmt(i + 1) }}</td>
+                            <td class="unit-name">{{ corpsNameLabel(c) }}</td>
+                            <td *ngFor="let rank of visibleRanks(org)" class="num-cell"
+                                [class.cell-zero]="cellValue(c, rank.rankId) === 0">
+                                {{ fmt(cellValue(c, rank.rankId)) }}
+                            </td>
+                            <td class="num-cell col-total-cell">{{ fmt(rowTotal(org, c)) }}</td>
+                        </tr>
+                    </tbody>
+                    <tfoot>
+                        <tr class="subtotals-row">
+                            <td></td>
+                            <td class="totals-label">{{ totalLabel }}</td>
+                            <td *ngFor="let rank of visibleRanks(org)" class="num-cell">
+                                {{ fmt(colSubtotal(org, rank.rankId)) }}
+                            </td>
+                            <td class="num-cell col-total-cell">{{ fmt(orgGrandTotal(org)) }}</td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+        </div>
+
+        <!-- Grand total across all filtered orgs -->
+        <div class="grand-total-section" *ngIf="filteredOrgs.length > 0">
+            <div class="report-table-wrap">
+                <table class="report-table">
+                    <tbody>
+                        <tr class="grand-total-row">
+                            <td class="totals-label">{{ grandTotalLabel }}</td>
+                            <td class="num-cell col-total-cell">{{ fmt(visibleGrandTotal) }}</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+    </div>
+
+</div>

@@ -1,4 +1,6 @@
-import { Component } from '@angular/core';
+import { Component, inject } from '@angular/core';
+import { UserMenuService } from '@/services/user-menu.service';
+import { Router } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { TrainingInstituteModel } from '../shared/models/training-institution';
@@ -21,6 +23,12 @@ import { InputTextModule } from 'primeng/inputtext';
   styleUrl: './training-institution.scss',
 })
 export class TrainingInstitution {
+    private _router = inject(Router);
+    private _userMenuService = inject(UserMenuService);
+    canInsert = true;
+    canUpdate = true;
+    canDelete = true;
+
  trainingForm! : FormGroup
   institutes: TrainingInstituteModel[] = [];
   filteredInstitutes: TrainingInstituteModel[] = [];
@@ -46,6 +54,11 @@ export class TrainingInstitution {
   ) {}
 
   ngOnInit(): void {
+        const _perms = this._userMenuService.getPermissionsByRoute(this._router.url);
+        this.canInsert = _perms.canInsert;
+        this.canUpdate = _perms.canUpdate;
+        this.canDelete = _perms.canDelete;
+
     this.currentUser = this.sharedService.getCurrentUser();
     this.initForm();
     this.getAll();
@@ -73,11 +86,11 @@ export class TrainingInstitution {
         this.filteredInstitutes = [...res];
         this.totalRecords = res.length;
       },
-      error: () => {
+      error: (err: any) => {
         this.messageService.add({
           severity: 'error',
           summary: 'Error',
-          detail: 'Failed to fetch institutes'
+          detail: err?.error?.message || 'Failed to fetch institutes'
         });
       }
     });
@@ -138,11 +151,11 @@ export class TrainingInstitution {
         this.getAll();
         this.isSubmitting = false;
       },
-      error: () => {
+      error: (err: any) => {
         this.messageService.add({
           severity: 'error',
           summary: 'Error',
-          detail: 'Failed to create institute'
+          detail: err?.error?.message || 'Failed to create institute'
         });
         this.isSubmitting = false;
       }
@@ -168,11 +181,11 @@ export class TrainingInstitution {
         this.getAll();
         this.isSubmitting = false;
       },
-      error: () => {
+      error: (err: any) => {
         this.messageService.add({
           severity: 'error',
           summary: 'Error',
-          detail: 'Failed to update institute'
+          detail: err?.error?.message || 'Failed to update institute'
         });
         this.isSubmitting = false;
       }
@@ -214,11 +227,11 @@ export class TrainingInstitution {
             });
             this.getAll();
           },
-          error: () => {
+          error: (err: any) => {
             this.messageService.add({
               severity: 'error',
               summary: 'Error',
-              detail: 'Failed to delete institute'
+              detail: err?.error?.message || 'Failed to delete institute'
             });
           }
         });

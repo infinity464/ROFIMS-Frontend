@@ -1,0 +1,128 @@
+﻿.ns-cell-ref {
+    padding: 5px 16px 0 20px;
+}
+.ns-para {
+    padding: 10px 16px 10px 20px;
+}
+.ns-note {
+    padding: 6px 16px 6px 20px;
+}
+.ns-initiator-area {
+    padding: 14px 16px 18px 20px;
+}
+.ns-approver-section {
+    padding: 10px 16px 24px 20px;
+}
+
+/* ── Edit mode: full-width sheet ───────────────────────
+   In edit mode the posting table has many columns plus a "Transfer Unit"
+   dropdown and a remarks input per row. Locking it to A4 width (215.9mm)
+   cramps everything, so let the edit sheet span the full page width. */
+.ns-edit-container {
+    padding: 1rem;
+    align-items: stretch;   /* sheet fills the row instead of centering at A4 width */
+    min-height: auto;
+}
+
+.a4-paper.ns-edit-paper {
+    width: 100%;
+    max-width: 100%;
+    min-height: auto;       /* drop the fixed A4 page height — no empty trailing page */
+}
+
+/* Edit mode is interactive (not printed), so make it fully responsive:
+   the wide posting table scrolls horizontally on small screens instead of
+   crushing columns / overflowing the sheet. */
+.ns-edit-paper .ns-posting-table {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+
+    table {
+        min-width: 760px;   /* keep columns legible; wrapper scrolls below this */
+    }
+}
+
+/* Phones / small tablets: tighten the sheet so it uses the available width. */
+@media screen and (max-width: 768px) {
+    .ns-edit-container {
+        padding: 0.5rem;
+    }
+    .a4-paper.ns-edit-paper {
+        padding: 8mm 4mm 12mm;
+    }
+}
+
+/* ── Match posting-order-preview document font sizes (posting notesheet ONLY) ──
+   Scoped here instead of the shared ../notesheet-preview.scss so general / exbd /
+   cc / mo / article-47 previews are untouched. styleUrls load this file AFTER the
+   shared sheet, so these rules win on equal specificity. */
+.ns-title-en,
+.ns-title-bn { font-size: 13pt; }          /* document title (HEADER) — +2pt */
+
+/* Body: everything except the document header + table column headers → 10pt. */
+.ns-sanglagni-col { font-size: 10pt; }     /* সংলগ্নী নং column */
+.ns-cell-ref { font-size: 10pt; }          /* সূত্র */
+.ns-para { font-size: 10pt; }              /* body paragraphs */
+.ns-para-no { font-weight: normal; }       /* serial numbers (১। ২। …) not bold */
+.ns-note { font-size: 10pt; }              /* note */
+.ns-initiator-area { font-size: 10pt; }    /* signature block */
+.ns-closing-text { font-size: 10pt; }      /* closing line */
+
+.ns-posting-table {
+    /* Table content 8pt; column headers (table information) keep their own size. */
+    table { font-size: 8pt; }
+    td { font-size: 8pt; }
+    th { font-size: 6.5pt; font-weight: 700; }
+    .ns-posting-note { font-size: 10pt; }
+
+    /* No shading — plain white rows and header (no zebra, no grey header). */
+    th { background: transparent !important; }
+    tr:nth-child(even) { background: transparent !important; }
+    tr { background: transparent !important; }
+
+    /* Hairline cell borders — deep black. */
+    th,
+    td { border: 0.25px solid #000 !important; }
+}
+
+/* New posting: table content + column headers 9pt (inter posting stays 8pt / 6.5pt).
+   Header is bold. */
+.ns-posting-table.ns-posting-new {
+    table { font-size: 9pt; }
+    td { font-size: 9pt; }
+    th {
+        font-size: 9pt;
+        font-weight: 700;
+    }
+}
+
+/* ── Document font ─────────────────────────────────────
+   SolaimanLipi (bundled, see styles.scss) replaces SolaimanLipi as the Bangla
+   face for this preview. Times New Roman stays first so Latin text and digits
+   are unchanged — Bangla codepoints have no Times glyphs and fall through to
+   SolaimanLipi.
+
+   .page-measure carries the SAME stack as the visible .a4-paper on purpose: it
+   is the hidden div the page-break math measures, and it is also the source
+   snapshot for the JsReport PDF. A different Bangla face there would compute
+   breaks against text of a different height than what is shown and printed. */
+.a4-paper,
+.page-measure {
+    font-family: 'Times New Roman', 'SolaimanLipi', Times, serif;
+
+    /* Beats the shared preview's !important rule that pins rich-text (Quill)
+       content to SolaimanLipi. */
+    ::ng-deep .ns-para-text,
+    ::ng-deep .ns-para-text *,
+    ::ng-deep .ns-ref-content,
+    ::ng-deep .ns-ref-content *,
+    ::ng-deep .ns-note,
+    ::ng-deep .ns-note * {
+        font-family: 'Times New Roman', 'SolaimanLipi', Times, serif !important;
+    }
+
+    /* Restore the icon font the blanket rule above would otherwise clobber. */
+    ::ng-deep .ns-ref-file-btn .pi {
+        font-family: 'primeicons' !important;
+    }
+}

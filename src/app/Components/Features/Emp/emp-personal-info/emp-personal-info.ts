@@ -1,14 +1,17 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, EventEmitter, Input, OnInit, Output, ViewChild , inject } from '@angular/core';
+import { UserMenuService } from '@/services/user-menu.service';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { FormsModule } from '@angular/forms';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router } from '@angular/router';
+import { forkJoin } from 'rxjs';
 
 import { InputTextModule } from 'primeng/inputtext';
 import { ButtonModule } from 'primeng/button';
 import { Fluid } from 'primeng/fluid';
 import { MessageService } from 'primeng/api';
 import { SelectModule } from 'primeng/select';
+import { MultiSelectModule } from 'primeng/multiselect';
 import { DatePickerModule } from 'primeng/datepicker';
 import { InputNumberModule } from 'primeng/inputnumber';
 import { TextareaModule } from 'primeng/textarea';
@@ -18,8 +21,10 @@ import { TooltipModule } from 'primeng/tooltip';
 
 import { EmpService } from '@/services/emp-service';
 import { CommonCodeService } from '@/services/common-code-service';
-import { MedicalCategoryOptions } from '@/models/enums';
 import { EmployeeSearchComponent, EmployeeBasicInfo } from '@/Components/Shared/employee-search/employee-search';
+import { FileReferencesFormComponent, FileRowData } from '@components/Common/file-references-form/file-references-form';
+import { FlexibleDateDirective } from '@/shared/directives/flexible-date.directive';
+import { PresentStatusTypeOptions } from '@/models/enums';
 
 @Component({
     selector: 'app-emp-personal-info',
@@ -32,21 +37,50 @@ import { EmployeeSearchComponent, EmployeeBasicInfo } from '@/Components/Shared/
         ButtonModule,
         Fluid,
         SelectModule,
+        MultiSelectModule,
         DatePickerModule,
         InputNumberModule,
         TextareaModule,
         FileUploadModule,
         RadioButtonModule,
         TooltipModule,
-        EmployeeSearchComponent
+        EmployeeSearchComponent,
+        FileReferencesFormComponent,
+        FlexibleDateDirective
     ],
     templateUrl: './emp-personal-info.html',
     styleUrl: './emp-personal-info.scss'
 })
 export class EmpPersonalInfo implements OnInit {
+    private _router = inject(Router);
+    private _userMenuService = inject(UserMenuService);
+    canInsert = true;
+    canUpdate = true;
+    canDelete = true;
+
+    @ViewChild('fileReferencesForm') fileReferencesForm!: any; // FileReferencesFormComponent
+
+    /** When true (e.g. inside tab view), the "Employee Personal Info" title and header actions are hidden. */
+    @Input() hideTitle = false;
+
+    /** When true, component is embedded (e.g. in ex-member profile). Use externalEmployeeId, hide search, emit saved/cancelled. */
+    @Input() embedMode = false;
+
+    /** When embedMode is true, load and edit this employee's personal info. */
+    @Input() externalEmployeeId: number | null = null;
+
+    /** Emitted after successful save when embedMode is true. */
+    @Output() saved = new EventEmitter<void>();
+
+    /** Emitted when user cancels edit when embedMode is true. */
+    @Output() cancelled = new EventEmitter<void>();
+
     // Employee lookup
     employeeFound: boolean = false;
     selectedEmployeeId: number | null = null;
+
+    // File references (FilesReferences JSON) – same approach as emp-basic-info
+    fileRows: FileRowData[] = [];
 
     // Employee basic info (auto-loaded from search)
     employeeBasicInfo: any = null;
@@ -63,7 +97,7 @@ export class EmpPersonalInfo implements OnInit {
     personalQualifications: any[] = [];
     gallantryAwards: any[] = [];
     educationQualifications: any[] = [];
-    medicalCategories = MedicalCategoryOptions;
+    medicalCategories: { label: string; value: number }[] = [];
     tribalOptions: any[] = [
         { label: 'No', value: 0 },
         { label: 'Yes', value: 1 }
@@ -76,12 +110,14 @@ export class EmpPersonalInfo implements OnInit {
         { label: 'No', value: false },
         { label: 'Yes', value: true }
     ];
+    leavingStatusOptions: { label: string; value: boolean }[] = [
+        { label: 'In Leaving', value: true },
+        { label: 'Out Leaving', value: false }
+    ];
+    presentStatusTypes: any[] = PresentStatusTypeOptions;
 
     // Investigation Experience toggle
     showInvestigationExperience: boolean = false;
-
-    // File upload
-    uploadedFiles: any[] = [];
 
     // Mode: 'search' (default), 'view' (readonly), 'edit'
     mode: 'search' | 'view' | 'edit' = 'search';
@@ -89,6 +125,10 @@ export class EmpPersonalInfo implements OnInit {
 
     // Track if personal info record exists (for save vs update)
     personalInfoExists: boolean = false;
+
+    // Tracks the last employeeId we fetched, so route mode-only changes (e.g., view → edit
+    // via Edit button) don't trigger a redundant refetch that would snap mode back to view.
+    private _lastLoadedEmployeeId: number | null = null;
 
     constructor(
         private fb: FormBuilder,
@@ -100,21 +140,53 @@ export class EmpPersonalInfo implements OnInit {
     ) {}
 
     ngOnInit(): void {
+        const _perms = this._userMenuService.getPermissionsByRoute(this._router.url);
+        this.canInsert = _perms.canInsert;
+        this.canUpdate = _perms.canUpdate;
+        this.canDelete = _perms.canDelete;
+
         this.initializeForm();
         this.loadDropdownData();
+        if (this.embedMode && this.externalEmployeeId != null) {
+            this.mode = 'edit';
+            this.isReadonly = false;
+            this.selectedEmployeeId = this.externalEmployeeId;
+            this._lastLoadedEmployeeId = this.externalEmployeeId;
+            this.employeeFound = true;
+            this.loadEmployeeById(this.externalEmployeeId);
+            return;
+        }
         this.checkRouteParams();
     }
 
     checkRouteParams(): void {
-        this.route.queryParams.subscribe(params => {
+        this.route.queryParams.subscribe((params) => {
             const employeeId = params['id'];
             const mode = params['mode'];
 
             if (employeeId) {
-                this.mode = mode === 'edit' ? 'edit' : 'view';
-                this.isReadonly = this.mode === 'view';
-                this.loadEmployeeById(parseInt(employeeId, 10));
+                const idNum = parseInt(employeeId, 10);
+                const newMode: 'view' | 'edit' = mode === 'edit' ? 'edit' : 'view';
+
+                if (this._lastLoadedEmployeeId !== idNum) {
+                    // New employee — load fresh.
+                    this._lastLoadedEmployeeId = idNum;
+                    this.mode = newMode;
+                    this.isReadonly = this.mode === 'view';
+                    this.loadEmployeeById(idNum);
+                } else {
+                    // Same employee, mode-only change (e.g., user clicked Edit) — just
+                    // toggle form state without refetching.
+                    this.mode = newMode;
+                    this.isReadonly = this.mode === 'view';
+                    if (this.isReadonly) {
+                        this.personalInfoForm.disable();
+                    } else {
+                        this.personalInfoForm.enable();
+                    }
+                }
             } else {
+                this._lastLoadedEmployeeId = null;
                 this.mode = 'search';
                 this.isReadonly = false;
             }
@@ -122,6 +194,7 @@ export class EmpPersonalInfo implements OnInit {
     }
 
     loadEmployeeById(employeeId: number): void {
+        console.log('Loading employee by id', employeeId);
         this.empService.getEmployeeById(employeeId).subscribe({
             next: (employee: any) => {
                 if (employee) {
@@ -133,7 +206,9 @@ export class EmpPersonalInfo implements OnInit {
                     this.loadPersonalInfo(employee);
 
                     // Load batches by mother org
-                    const orgId = employee.orgId || employee.OrgId || employee.lastMotherUnit || employee.LastMotherUnit;
+                    const orgId = employee.orgId;
+                    console.log('orgId', orgId);
+
                     if (orgId) {
                         this.loadBatchesByMotherOrg(orgId);
                     }
@@ -149,7 +224,7 @@ export class EmpPersonalInfo implements OnInit {
                 this.messageService.add({
                     severity: 'error',
                     summary: 'Error',
-                    detail: 'Failed to load employee data'
+                    detail: err?.error?.message || 'Failed to load employee data'
                 });
             }
         });
@@ -167,14 +242,20 @@ export class EmpPersonalInfo implements OnInit {
     }
 
     goBack(): void {
+        if (this.embedMode) {
+            this.cancelled.emit();
+            return;
+        }
         this.router.navigate(['/emp-list']);
     }
 
     initializeForm(): void {
         this.personalInfoForm = this.fb.group({
             bloodGroup: [null],
+            nidOld: ['', [Validators.pattern('^[0-9]{0,17}$'), Validators.maxLength(17)]],
             nid: ['', [Validators.pattern('^[0-9]{0,17}$'), Validators.maxLength(17)]],
             mobileNo: ['', [Validators.pattern('^01[3-9][0-9]{8}$')]],
+            mobileNoOfficial: ['', [Validators.pattern('^01[3-9][0-9]{8}$')]],
             emailAddress: ['', [Validators.email]],
             dateOfBirth: [null],
             religion: [null],
@@ -187,23 +268,25 @@ export class EmpPersonalInfo implements OnInit {
             batch: [null],
             investigationExperience: [false],
             investigationExperienceDetails: [''],
-            professionalQualification: [null],
-            personalQualification: [null],
-            gallantryAward: [null],
+            professionalQualification: [[] as number[]],
+            personalQualification: [[] as number[]],
+            gallantryAward: [[] as number[]],
             lastEducationQualification: [null],
-            medicalCategory: [1],  // Default to A (AYEE) - value is integer ID
+            medicalCategory: [null], // Loaded from API (Medical Category Type)
             tribal: [null],
             freedomFighter: [null],
             heightFeet: [null, [Validators.min(0), Validators.max(8)]],
-            heightInch: [null, [Validators.min(0), Validators.max(11)]],
+            heightInch: [null, [Validators.min(0), Validators.max(11.5)]],
             weightKg: [null, [Validators.min(0), Validators.max(200)]],
             weightLbs: [null, [Validators.min(0), Validators.max(440)]],
+            leavingStatus: [null],
             drivingLicenseNo: [''],
-            serviceIdCardNo: ['']
+            serviceIdCardNo: [''],
+            presentStatus: [null]
         });
 
         // Weight auto-conversion: KG to Lbs
-        this.personalInfoForm.get('weightKg')?.valueChanges.subscribe(kg => {
+        this.personalInfoForm.get('weightKg')?.valueChanges.subscribe((kg) => {
             if (kg !== null && kg !== undefined) {
                 const lbs = Math.round(kg * 2.20462);
                 this.personalInfoForm.patchValue({ weightLbs: lbs }, { emitEvent: false });
@@ -211,7 +294,7 @@ export class EmpPersonalInfo implements OnInit {
         });
 
         // Weight auto-conversion: Lbs to KG
-        this.personalInfoForm.get('weightLbs')?.valueChanges.subscribe(lbs => {
+        this.personalInfoForm.get('weightLbs')?.valueChanges.subscribe((lbs) => {
             if (lbs !== null && lbs !== undefined) {
                 const kg = Math.round(lbs / 2.20462);
                 this.personalInfoForm.patchValue({ weightKg: kg }, { emitEvent: false });
@@ -219,7 +302,7 @@ export class EmpPersonalInfo implements OnInit {
         });
 
         // Watch for investigation experience change
-        this.personalInfoForm.get('investigationExperience')?.valueChanges.subscribe(value => {
+        this.personalInfoForm.get('investigationExperience')?.valueChanges.subscribe((value) => {
             this.showInvestigationExperience = value;
             if (!value) {
                 this.personalInfoForm.patchValue({ investigationExperienceDetails: '' });
@@ -230,16 +313,16 @@ export class EmpPersonalInfo implements OnInit {
     loadDropdownData(): void {
         // Load Blood Groups from database (BloodGroup field is varchar(5), stores actual value like "A+", "B+")
         this.commonCodeService.getAllActiveCommonCodesType('BloodGroup').subscribe({
-            next: (data) => this.bloodGroups = data.map(d => ({ label: d.codeValueEN, value: d.codeValueEN })),
+            next: (data) => (this.bloodGroups = data.map((d) => ({ label: d.codeValueEN, value: d.codeValueEN }))),
             error: (err) => console.error('Failed to load blood groups', err)
         });
 
         // Load Religions
         this.commonCodeService.getAllActiveCommonCodesType('Religion').subscribe({
             next: (data) => {
-                this.religions = data.map(d => ({ label: d.codeValueEN, value: d.codeId }));
+                this.religions = data.map((d) => ({ label: d.codeValueEN, value: d.codeId }));
                 // Set default to Islam if found
-                const islam = this.religions.find(r => r.label?.toLowerCase() === 'islam');
+                const islam = this.religions.find((r) => r.label?.toLowerCase() === 'islam');
                 if (islam && !this.personalInfoForm.get('religion')?.value) {
                     this.personalInfoForm.patchValue({ religion: islam.value });
                 }
@@ -249,7 +332,7 @@ export class EmpPersonalInfo implements OnInit {
 
         // Load Marital Statuses
         this.commonCodeService.getAllActiveCommonCodesType('MaritalStatus').subscribe({
-            next: (data) => this.maritalStatuses = data.map(d => ({ label: d.codeValueEN, value: d.codeId })),
+            next: (data) => (this.maritalStatuses = data.map((d) => ({ label: d.codeValueEN, value: d.codeId }))),
             error: (err) => console.error('Failed to load marital statuses', err)
         });
 
@@ -258,34 +341,39 @@ export class EmpPersonalInfo implements OnInit {
 
         // Load Professional Qualifications
         this.commonCodeService.getAllActiveCommonCodesType('ProfessionalQualification').subscribe({
-            next: (data) => this.professionalQualifications = data.map(d => ({ label: d.codeValueEN, value: d.codeId })),
+            next: (data) => (this.professionalQualifications = data.map((d) => ({ label: d.codeValueEN, value: d.codeId }))),
             error: (err) => console.error('Failed to load professional qualifications', err)
         });
 
         // Load Personal Qualifications
         this.commonCodeService.getAllActiveCommonCodesType('PersonalQualification').subscribe({
-            next: (data) => this.personalQualifications = data.map(d => ({ label: d.codeValueEN, value: d.codeId })),
+            next: (data) => (this.personalQualifications = data.map((d) => ({ label: d.codeValueEN, value: d.codeId }))),
             error: (err) => console.error('Failed to load personal qualifications', err)
         });
 
         // Load Gallantry Awards / Decorations
         this.commonCodeService.getAllActiveCommonCodesType('Decoration').subscribe({
-            next: (data) => this.gallantryAwards = data.map(d => ({ label: d.codeValueEN, value: d.codeId })),
+            next: (data) => (this.gallantryAwards = data.map((d) => ({ label: d.codeValueEN, value: d.codeId }))),
             error: (err) => console.error('Failed to load gallantry awards', err)
         });
 
         // Load Education Qualifications
         this.commonCodeService.getAllActiveCommonCodesType('EducationQualification').subscribe({
-            next: (data) => this.educationQualifications = data.map(d => ({ label: d.codeValueEN, value: d.codeId })),
+            next: (data) => (this.educationQualifications = data.map((d) => ({ label: d.codeValueEN, value: d.codeId }))),
             error: (err) => console.error('Failed to load education qualifications', err)
         });
 
-        // Medical Categories loaded from enum (MedicalCategoryOptions) with default A (AYEE)
+        // Load Medical Category Type from API (Basic Setup → Medical Category Type)
+        this.commonCodeService.getAllActiveCommonCodesType('MedicalCategoryType').subscribe({
+            next: (data) => (this.medicalCategories = (data || []).map((d) => ({ label: d.codeValueEN || String(d.codeId), value: d.codeId }))),
+            error: (err) => console.error('Failed to load medical categories', err)
+        });
     }
 
     loadBatchesByMotherOrg(orgId: number): void {
+        console.log('Loading batches by mother org', orgId);
         this.commonCodeService.getAllActiveCommonCodesByOrgIdAndType(orgId, 'Batch').subscribe({
-            next: (data) => this.batches = data.map(d => ({ label: d.codeValueEN, value: d.codeId })),
+            next: (data) => (this.batches = data.map((d) => ({ label: d.codeValueEN, value: d.codeId }))),
             error: (err) => console.error('Failed to load batches by org', err)
         });
     }
@@ -294,13 +382,14 @@ export class EmpPersonalInfo implements OnInit {
     onEmployeeSearchFound(employee: EmployeeBasicInfo): void {
         this.employeeFound = true;
         this.selectedEmployeeId = employee.employeeID;
+        this._lastLoadedEmployeeId = employee.employeeID;
         this.employeeBasicInfo = employee;
 
         // Load personal info if exists
         this.loadPersonalInfo(employee);
 
         // Load batches by mother org if available
-        const orgId = (employee as any).orgId || (employee as any).OrgId || (employee as any).lastMotherUnit || (employee as any).LastMotherUnit;
+        const orgId = (employee as any).orgId;
         if (orgId) {
             this.loadBatchesByMotherOrg(orgId);
         }
@@ -320,8 +409,17 @@ export class EmpPersonalInfo implements OnInit {
                 if (personalInfo) {
                     this.personalInfoExists = true;
                     this.populateFormWithPersonalInfo(personalInfo);
+                    // When a record already exists, start in view (readonly) mode so the user
+                    // explicitly opts into editing via the Edit button. Skip for embedMode,
+                    // which is intentionally direct-edit (e.g., ex-member profile).
+                    if (!this.embedMode) {
+                        this.mode = 'view';
+                        this.isReadonly = true;
+                        this.personalInfoForm.disable();
+                    }
                 } else {
                     this.personalInfoExists = false;
+                    this.fileRows = [];
                 }
             },
             error: (err) => {
@@ -348,60 +446,92 @@ export class EmpPersonalInfo implements OnInit {
             return isNaN(num) ? val : num;
         };
 
-        this.personalInfoForm.patchValue({
-            bloodGroup: data.BloodGroup || data.bloodGroup || null,
-            nid: data.Nid || data.nid || '',
-            mobileNo: data.MobileNo || data.mobileNo || '',
-            emailAddress: data.Email || data.email || '',
-            dateOfBirth: data.DOB ? new Date(data.DOB) : (data.dob ? new Date(data.dob) : null),
-            religion: parseDropdownValue(data.Religion || data.religion),
-            passportNo: data.PassportNo || data.passportNo || '',
-            identificationMark: data.IdentificationMark || data.identificationMark || '',
-            maritalStatus: parseDropdownValue(data.MaritalStatus || data.maritalStatus),
-            emergencyContactNo: data.EmergencyContact || data.emergencyContact || '',
-            dateOfJoining: data.JoiningDate ? new Date(data.JoiningDate) : (data.joiningDate ? new Date(data.joiningDate) : null),
-            dateOfCommission: data.CommissionDate ? new Date(data.CommissionDate) : (data.commissionDate ? new Date(data.commissionDate) : null),
-            batch: parseDropdownValue(data.Batch || data.batch),
-            investigationExperience: data.HasInvestigationExp || data.hasInvestigationExp || false,
-            investigationExperienceDetails: data.InvestigationExpDetails || data.investigationExpDetails || '',
-            professionalQualification: parseDropdownValue(data.ProfessionalQualification || data.professionalQualification),
-            personalQualification: parseDropdownValue(data.PersonalQualification || data.personalQualification),
-            gallantryAward: parseDropdownValue(data.Awards || data.awards),
-            lastEducationQualification: parseDropdownValue(data.LastEducationalQualification || data.lastEducationalQualification),
-            medicalCategory: data.MedicalCategory || data.medicalCategory || 1,
-            tribal: data.Tribal !== undefined ? data.Tribal : (data.tribal !== undefined ? data.tribal : null),
-            freedomFighter: data.FreedomFighter !== undefined ? data.FreedomFighter : (data.freedomFighter !== undefined ? data.freedomFighter : null),
-            heightFeet: heightFeet || null,
-            heightInch: heightInch || null,
-            weightKg: weightKg,
-            weightLbs: weightLbs,
-            drivingLicenseNo: data.DrivingLicenseNo || data.drivingLicenseNo || '',
-            serviceIdCardNo: data.ServiceIdCardNo || data.serviceIdCardNo || ''
-        }, { emitEvent: false }); // Prevent auto-conversion trigger during load
+        // Multi-select fields are stored as a comma-separated id CSV (e.g. "12,45").
+        // Parse into number[] for p-multiSelect; tolerate already-array values.
+        const parseCsvIds = (val: any): number[] => {
+            if (val === null || val === undefined || val === '') return [];
+            if (Array.isArray(val)) return val.map((v) => parseInt(v, 10)).filter((n) => !isNaN(n));
+            return String(val)
+                .split(',')
+                .map((s) => parseInt(s.trim(), 10))
+                .filter((n) => !isNaN(n));
+        };
+
+        this.personalInfoForm.patchValue(
+            {
+                bloodGroup: data.BloodGroup || data.bloodGroup || null,
+                nidOld: data.NidOld || data.nidOld || '',
+                nid: data.Nid || data.nid || '',
+                mobileNo: data.MobileNo || data.mobileNo || '',
+                mobileNoOfficial: data.MobileNoOfficial || data.mobileNoOfficial || '',
+                emailAddress: data.Email || data.email || '',
+                dateOfBirth: data.DOB ? new Date(data.DOB) : data.dob ? new Date(data.dob) : null,
+                religion: parseDropdownValue(data.Religion || data.religion),
+                passportNo: data.PassportNo || data.passportNo || '',
+                identificationMark: data.IdentificationMark || data.identificationMark || '',
+                maritalStatus: parseDropdownValue(data.MaritalStatus || data.maritalStatus),
+                emergencyContactNo: data.EmergencyContact || data.emergencyContact || '',
+                dateOfJoining: data.JoiningDate ? new Date(data.JoiningDate) : data.joiningDate ? new Date(data.joiningDate) : null,
+                dateOfCommission: data.CommissionDate ? new Date(data.CommissionDate) : data.commissionDate ? new Date(data.commissionDate) : null,
+                batch: parseDropdownValue(data.Batch || data.batch),
+                investigationExperience: data.HasInvestigationExp || data.hasInvestigationExp || false,
+                investigationExperienceDetails: data.InvestigationExpDetails || data.investigationExpDetails || '',
+                professionalQualification: parseCsvIds(data.ProfessionalQualification || data.professionalQualification),
+                personalQualification: parseCsvIds(data.PersonalQualification || data.personalQualification),
+                gallantryAward: parseCsvIds(data.Awards || data.awards),
+                lastEducationQualification: parseDropdownValue(data.LastEducationalQualification || data.lastEducationalQualification),
+                medicalCategory: data.MedicalCategory ?? data.medicalCategory ?? null,
+                tribal: data.Tribal !== undefined ? data.Tribal : data.tribal !== undefined ? data.tribal : null,
+                freedomFighter: data.FreedomFighter !== undefined ? data.FreedomFighter : data.freedomFighter !== undefined ? data.freedomFighter : null,
+                heightFeet: heightFeet || null,
+                heightInch: heightInch || null,
+                weightKg: weightKg,
+                weightLbs: weightLbs,
+                leavingStatus: data.LeavingStatus !== undefined ? data.LeavingStatus : data.leavingStatus !== undefined ? data.leavingStatus : null,
+                drivingLicenseNo: data.DrivingLicenseNo || data.drivingLicenseNo || '',
+                serviceIdCardNo: data.ServiceIdCardNo || data.serviceIdCardNo || '',
+                presentStatus: data.PresentStatus || data.presentStatus || null
+            },
+            { emitEvent: false }
+        ); // Prevent auto-conversion trigger during load
 
         this.showInvestigationExperience = data.HasInvestigationExp || data.hasInvestigationExp || false;
+
+        // Load file references (same shape as emp-basic-info: [{ FileId, fileName }])
+        const refsJson = data.FilesReferences || data.filesReferences;
+        if (refsJson && typeof refsJson === 'string') {
+            try {
+                const refs = JSON.parse(refsJson) as { FileId?: number; fileName?: string }[];
+                if (Array.isArray(refs)) {
+                    this.fileRows = refs.map((r) => ({ displayName: r.fileName || '', file: null, fileId: r.FileId }));
+                } else {
+                    this.fileRows = [];
+                }
+            } catch {
+                this.fileRows = [];
+            }
+        } else {
+            this.fileRows = [];
+        }
     }
 
-    // File upload handler
-    onFileUpload(event: any): void {
-        for (let file of event.files) {
-            this.uploadedFiles.push(file);
+    onFileRowsChange(event: FileRowData[]): void {
+        if (event && Array.isArray(event)) {
+            this.fileRows = event;
         }
-        this.messageService.add({
-            severity: 'info',
-            summary: 'File Uploaded',
-            detail: 'File uploaded successfully'
+    }
+
+    onDownloadFile(payload: { fileId: number; fileName: string }): void {
+        this.empService.downloadFile(payload.fileId).subscribe({
+            next: (blob) => this.empService.triggerFileDownload(blob, payload.fileName || 'download'),
+            error: (err) => {
+                console.error('Download failed', err);
+                this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.message || 'Failed to download file' });
+            }
         });
     }
 
-    onFileRemove(event: any): void {
-        const index = this.uploadedFiles.indexOf(event.file);
-        if (index > -1) {
-            this.uploadedFiles.splice(index, 1);
-        }
-    }
-
-    // Save or Update personal information
+    // Save or Update personal information (with file uploads like emp-basic-info)
     saveAll(): void {
         if (!this.selectedEmployeeId) {
             this.messageService.add({
@@ -412,40 +542,69 @@ export class EmpPersonalInfo implements OnInit {
             return;
         }
 
-        const personalInfoPayload = this.buildPersonalInfoPayload();
+        const existingRefs = this.fileReferencesForm?.getExistingFileReferences() || [];
+        const filesToUpload = this.fileReferencesForm?.getFilesToUpload() || [];
 
-        // Call UpdateAsyn if record exists, otherwise SaveAsyn
-        const saveOrUpdate$ = this.personalInfoExists
-            ? this.empService.updatePersonalInfo(personalInfoPayload)
-            : this.empService.savePersonalInfo(personalInfoPayload);
+        const doSave = (filesReferencesJson: string | null) => {
+            const personalInfoPayload = this.buildPersonalInfoPayload(filesReferencesJson);
+            const saveOrUpdate$ = this.personalInfoExists ? this.empService.updatePersonalInfo(personalInfoPayload) : this.empService.savePersonalInfo(personalInfoPayload);
 
-        saveOrUpdate$.subscribe({
-            next: (res) => {
-                this.personalInfoExists = true; // After save, record now exists
-                this.messageService.add({
-                    severity: 'success',
-                    summary: 'Success',
-                    detail: this.personalInfoExists ? 'Personal information updated successfully!' : 'Personal information saved successfully!'
-                });
-            },
-            error: (err) => {
-                console.error('Failed to save/update personal info', err);
-                this.messageService.add({
-                    severity: 'error',
-                    summary: 'Error',
-                    detail: 'Failed to save personal information'
-                });
-            }
-        });
+            saveOrUpdate$.subscribe({
+                next: (res) => {
+                    this.personalInfoExists = true;
+                    this.messageService.add({
+                        severity: 'success',
+                        summary: 'Success',
+                        detail: 'Personal information saved successfully!'
+                    });
+                    if (this.embedMode) {
+                        this.saved.emit();
+                    }
+                },
+                error: (err) => {
+                    console.error('Failed to save/update personal info', err);
+                    this.messageService.add({
+                        severity: 'error',
+                        summary: 'Error',
+                        detail: err?.error?.message || 'Failed to save personal information'
+                    });
+                }
+            });
+        };
+
+        if (filesToUpload.length > 0) {
+            const uploads = filesToUpload.map((r: FileRowData) => this.empService.uploadEmployeeFile(r.file!, r.displayName?.trim() || r.file!.name));
+            forkJoin(uploads).subscribe({
+                next: (results: unknown) => {
+                    const resultsArray = Array.isArray(results) ? results : [];
+                    const newRefs = (resultsArray as { fileId: number; fileName: string }[]).map((r) => ({ FileId: r.fileId, fileName: r.fileName }));
+                    const allRefs: { FileId: number; fileName: string }[] = [...existingRefs.map((r: { FileId: number; fileName: string }) => ({ FileId: r.FileId, fileName: r.fileName })), ...newRefs];
+                    const filesReferencesJson = allRefs.length > 0 ? JSON.stringify(allRefs) : null;
+                    doSave(filesReferencesJson);
+                },
+                error: (err) => {
+                    console.error('Error uploading files', err);
+                    this.messageService.add({
+                        severity: 'error',
+                        summary: 'Error',
+                        detail: err?.error?.message || 'Failed to upload one or more files'
+                    });
+                }
+            });
+            return;
+        }
+
+        const filesReferencesJson = existingRefs.length > 0 ? JSON.stringify(existingRefs) : null;
+        doSave(filesReferencesJson);
     }
 
-    buildPersonalInfoPayload(): any {
+    buildPersonalInfoPayload(filesReferencesJson?: string | null): any {
         const formValue = this.personalInfoForm.getRawValue();
 
         // Convert Feet/Inch to total inches for Height
         const heightFeet = formValue.heightFeet || 0;
         const heightInch = formValue.heightInch || 0;
-        const totalHeightInches = (heightFeet * 12) + heightInch;
+        const totalHeightInches = heightFeet * 12 + heightInch;
 
         // Weight stored in KG
         const weightKg = formValue.weightKg || null;
@@ -453,9 +612,11 @@ export class EmpPersonalInfo implements OnInit {
         return {
             EmployeeID: this.selectedEmployeeId,
             Nid: formValue.nid,
+            NidOld: formValue.nidOld,
             Email: formValue.emailAddress,
-            BloodGroup: formValue.bloodGroup,  // varchar(5) - value from CommonCode (e.g., "A+", "B+")
+            BloodGroup: formValue.bloodGroup, // varchar(5) - value from CommonCode (e.g., "A+", "B+")
             MobileNo: formValue.mobileNo,
+            MobileNoOfficial: formValue.mobileNoOfficial,
             DOB: formValue.dateOfBirth ? new Date(formValue.dateOfBirth).toISOString().split('T')[0] : null,
             Religion: formValue.religion ? formValue.religion.toString() : null,
             PassportNo: formValue.passportNo,
@@ -467,17 +628,21 @@ export class EmpPersonalInfo implements OnInit {
             Batch: formValue.batch ? formValue.batch.toString() : null,
             HasInvestigationExp: formValue.investigationExperience,
             InvestigationExpDetails: formValue.investigationExperienceDetails,
-            ProfessionalQualification: formValue.professionalQualification ? formValue.professionalQualification.toString() : null,
-            PersonalQualification: formValue.personalQualification ? formValue.personalQualification.toString() : null,
-            Awards: formValue.gallantryAward ? formValue.gallantryAward.toString() : null,
+            // Multi-select: join selected ids into a CSV string, null when empty.
+            ProfessionalQualification: formValue.professionalQualification?.length ? formValue.professionalQualification.join(',') : null,
+            PersonalQualification: formValue.personalQualification?.length ? formValue.personalQualification.join(',') : null,
+            Awards: formValue.gallantryAward?.length ? formValue.gallantryAward.join(',') : null,
             LastEducationalQualification: formValue.lastEducationQualification ? formValue.lastEducationQualification.toString() : null,
             MedicalCategory: formValue.medicalCategory,
             Tribal: formValue.tribal,
             FreedomFighter: formValue.freedomFighter,
             Height: totalHeightInches > 0 ? totalHeightInches : null,
             Weight: weightKg,
+            LeavingStatus: formValue.leavingStatus,
             DrivingLicenseNo: formValue.drivingLicenseNo,
             ServiceIdCardNo: formValue.serviceIdCardNo,
+            PresentStatus: formValue.presentStatus || null,
+            FilesReferences: filesReferencesJson ?? undefined,
             CreatedBy: 'system',
             CreatedDate: new Date().toISOString(),
             LastUpdatedBy: 'system',
@@ -494,12 +659,12 @@ export class EmpPersonalInfo implements OnInit {
             heightInch: null,
             weightKg: null,
             weightLbs: null,
-            medicalCategory: 1  // Default to A (AYEE) - value is integer ID
+            medicalCategory: null
         });
         this.employeeFound = false;
         this.selectedEmployeeId = null;
         this.employeeBasicInfo = null;
-        this.uploadedFiles = [];
+        this.fileRows = [];
         this.showInvestigationExperience = false;
         this.personalInfoExists = false;
     }

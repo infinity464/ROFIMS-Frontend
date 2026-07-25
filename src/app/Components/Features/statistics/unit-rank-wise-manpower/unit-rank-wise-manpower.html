@@ -1,0 +1,159 @@
+<!-- ── Results card ─────────────────────────────────────────────────────── -->
+<div class="report-results-card">
+
+    <!-- Header: toolbar row (right-aligned) then centered title row -->
+    <div class="report-results-header">
+
+        <div class="report-toolbar-row">
+            <div class="report-filter-block">
+                <label class="filter-label">{{ lang === 'en' ? 'RAB Unit:' : 'র‍্যাব ইউনিট:' }}</label>
+                <p-multiSelect
+                    [options]="rabUnitOptions"
+                    [(ngModel)]="selectedRabUnitIds"
+                    optionLabel="label"
+                    optionValue="value"
+                    [placeholder]="lang === 'en' ? 'All RAB Units (top-level)' : 'সকল র‍্যাব ইউনিট'"
+                    [showClear]="true"
+                    [filter]="true"
+                    display="chip"
+                    appendTo="body"
+                    styleClass="rab-unit-select"
+                    (onChange)="onRabUnitChange()"
+                    (onClear)="onRabUnitChange()">
+                </p-multiSelect>
+
+                <label class="filter-label">{{ lang === 'en' ? 'Merge:' : 'একত্রীকরণ:' }}</label>
+                <p-multiSelect
+                    [options]="memberTypeOptions"
+                    [(ngModel)]="selectedMergeMemberTypeIds"
+                    optionLabel="label"
+                    optionValue="value"
+                    [placeholder]="lang === 'en' ? 'Member types to merge' : 'একত্রিত করার সদস্য ধরন'"
+                    [showClear]="true"
+                    [filter]="true"
+                    appendTo="body"
+                    styleClass="rab-unit-select merge-multiselect"
+                    (onChange)="onMergeMemberTypesChange()"
+                    (onClear)="onMergeMemberTypesChange()">
+                </p-multiSelect>
+            </div>
+            <div class="report-results-actions">
+                <button type="button" class="report-lang-toggle" (click)="toggleLang()">
+                    {{ lang === 'en' ? 'বাংলা' : 'English' }}
+                </button>
+
+                <div class="report-export-wrap">
+                    <button type="button" class="report-btn-export"
+                            (click)="toggleExportDropdown($event)"
+                            [disabled]="loading || exporting || !hasAnyData || ranks.length === 0">
+                        @if (exporting) {
+                            <i class="pi pi-spin pi-spinner" style="font-size:13px"></i>
+                            Generating...
+                        } @else {
+                            <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
+                                <path d="M6.5 1v7M3.5 5.5l3 3 3-3M1.5 10.5h10"
+                                      stroke="currentColor" stroke-width="1.5"
+                                      stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                            Export
+                        }
+                    </button>
+
+                    @if (exportDropdownOpen) {
+                        <div class="report-export-dropdown" (click)="$event.stopPropagation()">
+                            <button type="button" class="report-export-item report-export-print"
+                                    (click)="exportAs('print')">
+                                <i class="pi pi-print" style="font-size:0.75rem"></i> Print
+                            </button>
+                            <button type="button" class="report-export-item report-export-word"
+                                    (click)="exportAs('word')">
+                                <span class="report-export-icon">⬇</span> Word
+                            </button>
+                            <button type="button" class="report-export-item report-export-excel"
+                                    (click)="exportAs('excel')">
+                                <span class="report-export-icon">⬇</span> Excel
+                            </button>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+
+        <div class="report-header-title-block">
+            <div class="report-main-title">{{ titleLabel }}</div>
+            @if (scopeLine) {
+                <div class="report-scope-line">{{ scopeLine }}</div>
+            }
+            <div class="report-date-line">{{ dateLine }}</div>
+        </div>
+    </div>
+
+    <!-- Loading skeleton -->
+    <div *ngIf="loading" class="skeleton-wrapper">
+        <div *ngFor="let i of [1,2,3,4,5]" class="skeleton-row"></div>
+    </div>
+
+    <!-- Tables: one per drill-down section (or one anonymous section when nothing is selected) -->
+    <div *ngIf="!loading">
+        <div *ngFor="let section of sections" class="section-block">
+            <div class="section-banner" *ngIf="section.titleEN">{{ sectionTitle(section) }}</div>
+
+            <div class="report-table-wrap">
+                <table class="report-table matrix-table">
+                    <thead>
+                        <tr>
+                            <th rowspan="2" class="unit-col">{{ unitHeader }}</th>
+                            <th *ngFor="let col of ranks" colspan="2" class="rank-col">
+                                <div class="rank-head">
+                                    <span class="rank-name">{{ rankLabel(col) }}</span>
+                                    <span class="rank-abbr" *ngIf="col.abbreviation">{{ col.abbreviation }}</span>
+                                </div>
+                            </th>
+                            <th colspan="2" class="rank-col total-col">
+                                <div class="rank-head">
+                                    <span class="rank-name">{{ totalHeader }}</span>
+                                </div>
+                            </th>
+                        </tr>
+                        <tr>
+                            <ng-container *ngFor="let col of ranks">
+                                <th class="sub-col">{{ authHeader }}</th>
+                                <th class="sub-col">{{ heldHeader }}</th>
+                            </ng-container>
+                            <th class="sub-col total-col">{{ authHeader }}</th>
+                            <th class="sub-col total-col">{{ heldHeader }}</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr *ngFor="let row of section.units">
+                            <td class="unit-name">{{ unitLabel(row) }}</td>
+                            <ng-container *ngFor="let col of ranks">
+                                <td class="num-cell">{{ fmt(cell(row, col.equivalentNameId).auth) }}</td>
+                                <td class="num-cell">{{ fmt(cell(row, col.equivalentNameId).held) }}</td>
+                            </ng-container>
+                            <td class="num-cell total-col">{{ fmt(row.total.auth) }}</td>
+                            <td class="num-cell total-col">{{ fmt(row.total.held) }}</td>
+                        </tr>
+                    </tbody>
+                    <tfoot>
+                        <tr class="totals-row">
+                            <td class="totals-label">{{ totalHeader }}</td>
+                            <ng-container *ngFor="let col of ranks">
+                                <td class="num-cell">{{ fmt(colTotal(section, col.equivalentNameId).auth) }}</td>
+                                <td class="num-cell">{{ fmt(colTotal(section, col.equivalentNameId).held) }}</td>
+                            </ng-container>
+                            <td class="num-cell total-col">{{ fmt(section.grandTotal.auth) }}</td>
+                            <td class="num-cell total-col">{{ fmt(section.grandTotal.held) }}</td>
+                        </tr>
+                    </tfoot>
+                </table>
+
+                <div *ngIf="section.units.length === 0 || ranks.length === 0" class="empty-state">
+                    <i class="pi pi-inbox"></i>
+                    <p>No data found.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</div>

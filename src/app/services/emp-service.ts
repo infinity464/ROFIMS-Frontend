@@ -1,11 +1,11 @@
 import { Injectable } from '@angular/core';
 import { environment } from '@/Core/Environments/environment';
-import { Observable, forkJoin } from 'rxjs';
+import { Observable, forkJoin, of } from 'rxjs';
 import { HttpClient } from '@angular/common/http';
-import { switchMap, map } from 'rxjs/operators';
+import { switchMap, map, catchError, tap } from 'rxjs/operators';
 import { from } from 'rxjs';
 import { concatMap, toArray } from 'rxjs/operators';
-import { AddressInfoModel, EmpModel } from '@/models/EmpModel';
+import { AddressInfoModel, EmpModel, EmployeeSearchInfoModel } from '@/models/EmpModel';
 
 // Pagination interfaces
 export interface PaginationParams {
@@ -21,6 +21,57 @@ export interface PaginatedResponse<T> {
     totalRecords: number;
     pageNumber: number;
     pageSize: number;
+}
+
+/** One row from vw_EmployeeDocumentReferences: file reference from PersonalInfo, EmployeeInfo, etc. */
+export interface EmployeeDocumentReferenceItem {
+    employeeID: number;
+    sourceTable: string;
+    fileId: number;
+    fileName: string;
+}
+
+/** One candidate from a face-recognition search. */
+export interface FaceCandidate {
+    employee_id: number | null;
+    confidence: number;
+}
+
+/** One row of the face-search history (from GetFaceSearchHistory). */
+export interface FaceSearchHistoryItem {
+    id: number;
+    searchedAt: string;
+    isMatched: boolean;
+    confidence: number;
+    hasImage: boolean;
+    matchedEmployeeId: number | null;
+    matchedName: string | null;
+    matchedRank: string | null;
+    matchedServiceId: string | null;
+    matchedRabId: string | null;
+    searchedByName: string | null;
+    searchedByRank: string | null;
+    searchedByServiceId: string | null;
+}
+
+/** One enrolled face photo's metadata (from GetEnrolledFacePhotos). */
+export interface EnrolledFacePhoto {
+    photo_id: string;
+    quality_score: number;
+    source: string;
+    created_at: string;
+}
+
+/** Result of POST /EmployeeInfo/RecognizeFace. */
+export interface FaceRecognizeResult {
+    matched: boolean;
+    employee_id: number | null;
+    confidence: number;
+    matched_photo_path?: string | null;
+    processing_ms?: number;
+    threshold?: number;
+    log_id?: string | null;
+    candidates: FaceCandidate[];
 }
 
 @Injectable({
@@ -42,7 +93,7 @@ export class EmpService {
 
     getEmployeeById(employeeId: number): Observable<EmpModel> {
         return this.http.get<EmpModel[]>(`${this.empApi}/EmployeeInfo/GetFilteredByKeysAsyn/${employeeId}`).pipe(
-            map(data => data[0]) // API returns array, get first element
+            map((data) => data[0]) // API returns array, get first element
         );
     }
 
@@ -50,14 +101,58 @@ export class EmpService {
         return this.http.post<EmpModel[]>(`${this.empApi}/EmployeeInfo/Search`, criteria);
     }
 
-    // Search by RAB ID or Service ID
-    searchByRabIdOrServiceId(rabId?: string, serviceId?: string): Observable<EmpModel | null> {
+    // Search by RAB ID, NID or Service ID. When presentMemberOnly is true, backend returns only if PostingStatus is Servings. Optional motherOrganization filters by OrgId.
+    searchByRabIdOrServiceId(rabId?: string, serviceId?: string, presentMemberOnly?: boolean, motherOrganization?: number | null, nid?: string): Observable<EmpModel | null> {
         const params: any = {};
         if (rabId) params.rabId = rabId;
         if (serviceId) params.serviceId = serviceId;
+        if (nid) params.nid = nid;
+        if (presentMemberOnly === true) params.presentMemberOnly = 'true';
+        if (motherOrganization != null && motherOrganization > 0) params.motherOrganization = String(motherOrganization);
 
-        return this.http.get<EmpModel[]>(`${this.empApi}/EmployeeInfo/SearchByIdAsyn`, { params }).pipe(
-            map(data => data && data.length > 0 ? data[0] : null)
+        return this.http.get<EmpModel[]>(`${this.empApi}/EmployeeInfo/SearchByIdAsyn`, { params }).pipe(map((data) => (data && data.length > 0 ? data[0] : null)));
+    }
+
+    // Same as searchByRabIdOrServiceId but returns the full matching list (e.g. when ServiceId repeats across Mother Org + Prefix combinations).
+    // Optional prefix filters by Prefix code id (used for composite uniqueness check); excludeEmployeeId drops one record from the result (useful in edit-mode duplicate checks so the record doesn't match itself).
+    searchListByRabIdOrServiceId(
+        rabId?: string,
+        serviceId?: string,
+        presentMemberOnly?: boolean,
+        motherOrganization?: number | null,
+        nid?: string,
+        prefix?: number | null,
+        excludeEmployeeId?: number | null
+    ): Observable<EmpModel[]> {
+        const params: any = {};
+        if (rabId) params.rabId = rabId;
+        if (serviceId) params.serviceId = serviceId;
+        if (nid) params.nid = nid;
+        if (presentMemberOnly === true) params.presentMemberOnly = 'true';
+        if (motherOrganization != null && motherOrganization > 0) params.motherOrganization = String(motherOrganization);
+        if (prefix != null && prefix > 0) params.prefix = String(prefix);
+        if (excludeEmployeeId != null && excludeEmployeeId > 0) params.excludeEmployeeId = String(excludeEmployeeId);
+
+        return this.http.get<EmpModel[]>(`${this.empApi}/EmployeeInfo/SearchByIdAsyn`, { params }).pipe(map((data) => data ?? []));
+    }
+
+    /**
+     * Single-box personnel lookup — matches the term against any unique identifier
+     * (RAB ID, Service ID, Service ID Card No, NID / Old NID, Mobile, Office Mobile,
+     * Passport, Email). Returns all matches (Service ID can repeat).
+     */
+    searchByUniqueIdentifier(term: string, presentMemberOnly = false): Observable<EmpModel[]> {
+        const params: any = { term };
+        if (presentMemberOnly) params.presentMemberOnly = 'true';
+        return this.http
+            .get<EmpModel[]>(`${this.empApi}/EmployeeInfo/SearchByUniqueIdentifierAsyn`, { params })
+            .pipe(map((data) => data ?? []));
+    }
+
+    /** Gets display info from vw_EmployeeSearchInfo (Rank, Corps, Trade, MotherOrganization, MemberType). Call after search when employee is found. */
+    getEmployeeSearchInfo(employeeId: number): Observable<EmployeeSearchInfoModel | null> {
+        return this.http.get<EmployeeSearchInfoModel>(`${this.empApi}/EmployeeInfo/GetEmployeeSearchInfo/${employeeId}`).pipe(
+            catchError(() => of(null))
         );
     }
 
@@ -122,7 +217,7 @@ export class EmpService {
     updateCompleteProfile(employeePayload: any, addressPayload: any[]): Observable<any> {
         return forkJoin({
             employee: this.updateEmployee(employeePayload),
-            addresses: forkJoin(addressPayload.map(addr => this.updateAddress(addr)))
+            addresses: forkJoin(addressPayload.map((addr) => this.updateAddress(addr)))
         });
     }
 
@@ -140,21 +235,19 @@ export class EmpService {
     }
 
     getPersonalInfoByEmployeeId(employeeId: number): Observable<any> {
-        return this.http.get<any[]>(`${this.empApi}/PersonalInfo/GetFilteredByKeysAsyn/${employeeId}`).pipe(
-            map(data => data && data.length > 0 ? data[0] : null)
-        );
+        return this.http.get<any[]>(`${this.empApi}/PersonalInfo/GetFilteredByKeysAsyn/${employeeId}`).pipe(map((data) => (data && data.length > 0 ? data[0] : null)));
     }
 
-    // Get active addresses by employee ID (only Present and Permanent, not Wife addresses)
+    // Get active addresses by employee ID (only Present and Permanent, not Spouse addresses)
     getActiveAddressesByEmployeeId(employeeId: number): Observable<any[]> {
         return this.http.get<any[]>(`${this.empApi}/AddressInfo/GetByEmployeeId/${employeeId}`).pipe(
-            map(addresses => {
+            map((addresses) => {
                 // Filter only active addresses and exclude wife addresses
-                return addresses.filter(addr => {
+                return addresses.filter((addr) => {
                     const locationType = (addr.locationType || addr.LocationType || '').toLowerCase();
                     const isActive = addr.active !== false && addr.Active !== false;
-                    const isNotWifeAddress = !locationType.includes('wife');
-                    return isActive && isNotWifeAddress;
+                    const isNotSpouseAddress = !locationType.includes('spouse');
+                    return isActive && isNotSpouseAddress;
                 });
             })
         );
@@ -163,5 +256,227 @@ export class EmpService {
     // Deactivate an address (set Active = false)
     deactivateAddress(addressId: number): Observable<any> {
         return this.http.post(`${this.empApi}/AddressInfo/Deactivate/${addressId}`, {});
+    }
+
+    // Additional Remarks API methods
+    getAdditionalRemarksByEmployeeId(employeeId: number): Observable<any[]> {
+        return this.http.get<any>(`${this.empApi}/AdditionalRemarksInfo/GetByEmployeeId/${employeeId}`).pipe(
+            tap((data) => console.log('Raw API response:', data, 'Type:', typeof data, 'IsArray:', Array.isArray(data))),
+            map((data) => {
+                // Handle IQueryable response - it might come as an object with array properties
+                if (Array.isArray(data)) {
+                    console.log('Data is array, returning as-is');
+                    return data;
+                }
+                // If response is an object, check for common array properties
+                if (data && typeof data === 'object') {
+                    console.log('Data is object, checking properties:', Object.keys(data));
+                    // Try common property names
+                    if (Array.isArray(data.value)) {
+                        console.log('Found data.value array');
+                        return data.value;
+                    }
+                    if (Array.isArray(data.data)) {
+                        console.log('Found data.data array');
+                        return data.data;
+                    }
+                    if (Array.isArray(data.items)) {
+                        console.log('Found data.items array');
+                        return data.items;
+                    }
+                    // If it's a single object with ID, wrap in array
+                    if (data.additionalRemarksId || data.AdditionalRemarksId) {
+                        console.log('Single object found, wrapping in array');
+                        return [data];
+                    }
+                    // Check if object has enumerable properties that might be the array
+                    const entries = Object.entries(data);
+                    if (entries.length > 0) {
+                        console.log('Object entries:', entries);
+                        // Check if any value is an array
+                        for (const [key, value] of entries) {
+                            if (Array.isArray(value)) {
+                                console.log(`Found array in property: ${key}`);
+                                return value;
+                            }
+                        }
+                    }
+                }
+                console.log('No array found, returning empty array');
+                return [];
+            }),
+            catchError((error) => {
+                console.error('Error fetching additional remarks:', error);
+                return of([]);
+            })
+        );
+    }
+
+    saveAdditionalRemarks(payload: any): Observable<any> {
+        return this.http.post(`${this.empApi}/AdditionalRemarksInfo/SaveAsyn`, payload);
+    }
+
+    updateAdditionalRemarks(payload: any): Observable<any> {
+        return this.http.post(`${this.empApi}/AdditionalRemarksInfo/UpdateAsyn`, payload);
+    }
+
+    saveUpdateAdditionalRemarks(payload: any): Observable<any> {
+        return this.http.post(`${this.empApi}/AdditionalRemarksInfo/SaveUpdateAsyn`, payload);
+    }
+
+    deleteAdditionalRemarks(additionalRemarksId: number): Observable<any> {
+        return this.http.delete(`${this.empApi}/AdditionalRemarksInfo/DeleteAsyn/${additionalRemarksId}`);
+    }
+
+    // Confidential Remarks API methods (same table, IsConfidential = true)
+    getConfidentialRemarksByEmployeeId(employeeId: number): Observable<any[]> {
+        return this.http.get<any>(`${this.empApi}/AdditionalRemarksInfo/GetConfidentialByEmployeeId/${employeeId}`).pipe(
+            map((data) => {
+                if (Array.isArray(data)) return data;
+                if (data && typeof data === 'object') {
+                    if (Array.isArray(data.value)) return data.value;
+                    if (Array.isArray(data.data)) return data.data;
+                    if (Array.isArray(data.items)) return data.items;
+                    if (data.additionalRemarksId || data.AdditionalRemarksId) return [data];
+                    for (const value of Object.values(data)) {
+                        if (Array.isArray(value)) return value;
+                    }
+                }
+                return [];
+            }),
+            catchError((error) => {
+                console.error('Error fetching confidential remarks:', error);
+                return of([]);
+            })
+        );
+    }
+
+    /** Upload a file for employee references. File is stored on server (path from appsettings) and a FileInformation record is created. Returns { fileId, fileName } for FilesReferences JSON. */
+    uploadEmployeeFile(file: File, displayName?: string): Observable<{ fileId: number; fileName: string }> {
+        const form = new FormData();
+        form.append('file', file);
+        if (displayName != null && displayName.trim() !== '') form.append('fileName', displayName.trim());
+        return this.http.post<{ fileId: number; fileName: string }>(`${this.empApi}/FileInformation/Upload`, form);
+    }
+
+    /** Download a file by FileID. Returns blob. Use with triggerFileDownload(blob, fileName) to save. */
+    downloadFile(fileId: number): Observable<Blob> {
+        return this.http.get(`${this.empApi}/FileInformation/Download/${fileId}`, { responseType: 'blob' });
+    }
+
+    /** Delete a file by FileID. Removes the physical file and database record from the server. */
+    deleteFile(fileId: number): Observable<any> {
+        return this.http.delete(`${this.empApi}/FileInformation/Delete/${fileId}`);
+    }
+
+    /** Get all document references (file id and file name) for an employee from vw_EmployeeDocumentReferences. */
+    getEmployeeDocumentReferences(employeeId: number): Observable<EmployeeDocumentReferenceItem[]> {
+        return this.http.get<EmployeeDocumentReferenceItem[]>(`${this.empApi}/FileInformation/GetEmployeeDocumentReferences`, {
+            params: { employeeId: String(employeeId) }
+        });
+    }
+
+    /** Upload signature image for an employee. Accepts a Blob (cropped image). */
+    uploadSignature(employeeId: number, file: Blob): Observable<any> {
+        const form = new FormData();
+        form.append('employeeId', String(employeeId));
+        form.append('file', file, 'signature.png');
+        return this.http.post(`${this.empApi}/EmployeeInfo/UploadSignature`, form);
+    }
+
+    /**
+     * Enroll one or more face images for an employee into the Face Recognition
+     * service (proxied through the .NET backend). Used for later face search.
+     */
+    enrollFaces(employeeId: number, files: File[], source: string = 'enrollment'): Observable<any> {
+        const form = new FormData();
+        form.append('employeeId', String(employeeId));
+        files.forEach((f) => form.append('files', f, f.name));
+        form.append('source', source);
+        return this.http.post(`${this.empApi}/EmployeeInfo/EnrollFaces`, form);
+    }
+
+    /** Get the number of face images currently enrolled for an employee. */
+    getEnrolledFaceCount(employeeId: number): Observable<{ employeeId: number; photoCount: number }> {
+        return this.http.get<{ employeeId: number; photoCount: number }>(
+            `${this.empApi}/EmployeeInfo/GetEnrolledFaceCount/${employeeId}`
+        );
+    }
+
+    /** Remove all enrolled face images (and search vectors) for an employee. */
+    deleteEnrolledFaces(employeeId: number): Observable<any> {
+        return this.http.delete(`${this.empApi}/EmployeeInfo/DeleteEnrolledFaces/${employeeId}`);
+    }
+
+    /** Remove a single enrolled face image (and its search vector). */
+    deleteEnrolledFace(employeeId: number, photoId: string): Observable<any> {
+        return this.http.delete(`${this.empApi}/EmployeeInfo/DeleteEnrolledFace`, {
+            params: { employeeId: String(employeeId), photoId }
+        });
+    }
+
+    /**
+     * Recognize the most prominent face in an image against enrolled employees.
+     * Returns { matched, employee_id, confidence, candidates, ... }.
+     */
+    recognizeFace(file: File, sourceType: string = 'portal'): Observable<FaceRecognizeResult> {
+        const form = new FormData();
+        form.append('file', file, file.name);
+        form.append('sourceType', sourceType);
+        return this.http.post<FaceRecognizeResult>(`${this.empApi}/EmployeeInfo/RecognizeFace`, form);
+    }
+
+    /** Check whether the Face Recognition service is online. */
+    getFaceServiceHealth(): Observable<{ online: boolean }> {
+        return this.http.get<{ online: boolean }>(`${this.empApi}/EmployeeInfo/FaceServiceHealth`);
+    }
+
+    /** List enrolled face photos (metadata) for an employee. */
+    getEnrolledFacePhotos(employeeId: number): Observable<EnrolledFacePhoto[]> {
+        return this.http.get<EnrolledFacePhoto[]>(
+            `${this.empApi}/EmployeeInfo/GetEnrolledFacePhotos/${employeeId}`
+        );
+    }
+
+    /** Fetch a single enrolled face image as a Blob (auth header via interceptor). */
+    getEnrolledFaceImageBlob(employeeId: number, photoId: string): Observable<Blob> {
+        return this.http.get(`${this.empApi}/EmployeeInfo/GetEnrolledFaceImage`, {
+            params: { employeeId: String(employeeId), photoId },
+            responseType: 'blob'
+        });
+    }
+
+    /** Paginated global face-search history. */
+    getFaceSearchHistory(pageNo: number, rowPerPage: number): Observable<{ datalist: FaceSearchHistoryItem[]; pages: { rows: number; totalPages: number }; retentionDays: number }> {
+        return this.http.get<{ datalist: FaceSearchHistoryItem[]; pages: { rows: number; totalPages: number }; retentionDays: number }>(
+            `${this.empApi}/EmployeeInfo/GetFaceSearchHistory`,
+            { params: { page_no: String(pageNo), row_per_page: String(rowPerPage) } }
+        );
+    }
+
+    /** The query image for a single history row, as a Blob. */
+    getFaceSearchImageBlob(id: number): Observable<Blob> {
+        return this.http.get(`${this.empApi}/EmployeeInfo/GetFaceSearchImage/${id}`, { responseType: 'blob' });
+    }
+
+    /** Get signature image URL for an employee. Returns the API URL string (not an Observable). */
+    getSignatureUrl(employeeId: number): string {
+        return `${this.empApi}/EmployeeInfo/GetSignature/${employeeId}`;
+    }
+
+    /** Get signature image as a Blob (uses HttpClient with auth headers). */
+    getSignatureBlob(employeeId: number): Observable<Blob> {
+        return this.http.get(`${this.empApi}/EmployeeInfo/GetSignature/${employeeId}`, { responseType: 'blob' });
+    }
+
+    /** Trigger browser download of a blob with the given file name. */
+    triggerFileDownload(blob: Blob, fileName: string): void {
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = fileName || 'download';
+        a.click();
+        // Revoke after a short delay so the browser can start the download before the URL is invalidated
+        setTimeout(() => URL.revokeObjectURL(url), 500);
     }
 }

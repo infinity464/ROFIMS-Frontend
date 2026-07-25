@@ -1,0 +1,188 @@
+<p-toast position="top-center"></p-toast>
+<p-confirmDialog></p-confirmDialog>
+
+<p-fluid>
+    <p-card>
+        <ng-template pTemplate="header">
+            <div class="flex items-center gap-2 p-3">
+                <span class="text-xl font-semibold">Create Orientation Training List of RFTS</span>
+            </div>
+        </ng-template>
+
+        <!-- ============== Course details ============== -->
+        <div class="rounded-xl border border-surface bg-surface-50 dark:bg-surface-800 p-4 mb-4">
+            <div class="flex items-center gap-2 mb-3">
+                <i class="pi pi-book text-color-secondary"></i>
+                <span class="font-semibold text-lg">Course details</span>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+                <div>
+                    <label class="font-semibold block mb-2 text-700">Course No <span class="text-red-500">*</span></label>
+                    <input pInputText [(ngModel)]="courseNo" class="w-full" placeholder="e.g. CL-2025-001" />
+                </div>
+                <div>
+                    <label class="font-semibold block mb-2 text-700">From <span class="text-red-500">*</span></label>
+                    <p-datepicker [(ngModel)]="draftDateFrom" dateFormat="dd-mm-yy" [showIcon]="true" placeholder="mm/dd/yyyy" styleClass="w-full" [style]="{'width': '100%'}"></p-datepicker>
+                </div>
+                <div>
+                    <label class="font-semibold block mb-2 text-700">To <span class="text-red-500">*</span></label>
+                    <p-datepicker [(ngModel)]="draftDateTo" dateFormat="dd-mm-yy" [showIcon]="true" placeholder="mm/dd/yyyy" styleClass="w-full" [style]="{'width': '100%'}"></p-datepicker>
+                </div>
+            </div>
+        </div>
+
+        <!-- ============== Filter panel ==============
+             Members pending RFTS (IsRFTSComplted null or false). Loads the full
+             pending list on init; filters narrow it server-side, the search box
+             narrows the loaded list client-side. -->
+        <div class="rounded-xl border border-surface bg-surface-50 dark:bg-surface-800 p-4 mb-4">
+            <div class="flex items-center justify-between mb-3 cursor-pointer" (click)="toggleFilter()">
+                <div class="flex items-center gap-2">
+                    <i class="pi pi-filter text-color-secondary"></i>
+                    <span class="font-semibold text-lg">Search &amp; filter</span>
+                    @if (activeFilterCount > 0) {
+                        <span class="inline-flex items-center justify-center bg-primary-100 text-primary-700 dark:bg-primary-900 dark:text-primary-100 rounded-full px-2 text-sm font-semibold">{{ activeFilterCount }} active</span>
+                    }
+                </div>
+                <i class="pi" [ngClass]="filterOpen ? 'pi-chevron-up' : 'pi-chevron-down'"></i>
+            </div>
+
+            @if (filterOpen) {
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-3 mb-3">
+                    <div>
+                        <label class="font-semibold block mb-2 text-700">Mother Organization</label>
+                        <p-select [options]="orgOptions" [(ngModel)]="selectedOrgId" (ngModelChange)="onOrgChange()"
+                            optionLabel="orgNameEN" optionValue="orgId" placeholder="Select" styleClass="w-full"
+                            [filter]="true" [showClear]="true" appendTo="body"></p-select>
+                    </div>
+                    <div>
+                        <label class="font-semibold block mb-2 text-700">Member Type</label>
+                        <p-select [options]="memberTypeOptions" [(ngModel)]="selectedMemberTypeId" (ngModelChange)="onFilterChange()"
+                            optionLabel="label" optionValue="value" placeholder="Select" styleClass="w-full"
+                            [showClear]="true" appendTo="body"></p-select>
+                    </div>
+                    <div>
+                        <label class="font-semibold block mb-2 text-700">Rank</label>
+                        <p-select [options]="rankOptions" [(ngModel)]="selectedRankId" (ngModelChange)="onFilterChange()"
+                            optionLabel="label" optionValue="value" placeholder="Select" styleClass="w-full"
+                            [disabled]="selectedOrgId == null" [showClear]="true" appendTo="body"></p-select>
+                    </div>
+                    <div>
+                        <label class="font-semibold block mb-2 text-700">Trade</label>
+                        <p-select [options]="tradeOptions" [(ngModel)]="selectedTradeId" (ngModelChange)="onFilterChange()"
+                            optionLabel="label" optionValue="value" placeholder="Select" styleClass="w-full"
+                            [disabled]="selectedOrgId == null" [showClear]="true" appendTo="body"></p-select>
+                    </div>
+                    <div>
+                        <label class="font-semibold block mb-2 text-700">Date of joining from</label>
+                        <p-datepicker [(ngModel)]="joiningDateFrom" (ngModelChange)="onFilterChange()" dateFormat="dd-mm-yy"
+                            [showIcon]="true" placeholder="dd-mm-yyyy" appendTo="body" styleClass="w-full"></p-datepicker>
+                    </div>
+                    <div>
+                        <label class="font-semibold block mb-2 text-700">Date of joining to</label>
+                        <p-datepicker [(ngModel)]="joiningDateTo" (ngModelChange)="onFilterChange()" dateFormat="dd-mm-yy"
+                            [showIcon]="true" placeholder="dd-mm-yyyy" appendTo="body" styleClass="w-full"></p-datepicker>
+                    </div>
+                </div>
+                <div class="flex justify-end gap-2">
+                    <p-button label="Clear" icon="pi pi-times" severity="secondary" [outlined]="true" size="small" [fluid]="false" (onClick)="clearFilters()"></p-button>
+                    <p-button label="Search" icon="pi pi-search" size="small" [fluid]="false" (onClick)="onFilterChange()" [loading]="loading"></p-button>
+                </div>
+            }
+        </div>
+
+        <!-- ============== Members Eligible for RFTS ============== -->
+        <div class="rounded-xl border border-surface bg-surface-50 dark:bg-surface-800 p-4 mb-4">
+            <div class="flex items-center justify-between mb-3 flex-wrap gap-2">
+                <div class="flex items-center gap-2">
+                    <i class="pi pi-users text-color-secondary"></i>
+                    <span class="font-semibold text-lg">Members Eligible for RFTS</span>
+                    <span class="inline-flex items-center justify-center bg-primary-100 text-primary-700 dark:bg-primary-900 dark:text-primary-100 rounded-full px-2 text-sm font-semibold" style="min-width: 1.5rem; height: 1.5rem;">
+                        {{ filteredList.length }}
+                    </span>
+                    @if (selectedCount > 0) {
+                        <span class="text-sm text-color-secondary">· {{ selectedCount }} selected</span>
+                        <p-button label="Clear selection" severity="secondary" [outlined]="true" size="small" [fluid]="false" (onClick)="clearSelection()"></p-button>
+                    }
+                </div>
+                <p-iconfield iconPosition="left">
+                    <p-inputicon styleClass="pi pi-search"></p-inputicon>
+                    <input pInputText type="text" placeholder="Search by Name / Service ID / RAB ID"
+                        [(ngModel)]="searchText" (ngModelChange)="onSearchChange()" [style]="{ paddingLeft: '2.5rem' }" />
+                </p-iconfield>
+            </div>
+
+            <p-table
+                [value]="filteredList"
+                [loading]="loading"
+                dataKey="employeeID"
+                [first]="first"
+                [rows]="rows"
+                [paginator]="true"
+                (onPage)="onPage($event)"
+                [rowsPerPageOptions]="[10, 20, 50, 100, 500]"
+                [tableStyle]="{ 'min-width': '60rem' }"
+                styleClass="p-datatable-sm"
+                paginatorDropdownAppendTo="body"
+                currentPageReportTemplate="Showing {first} – {last} of {totalRecords}"
+                [showCurrentPageReport]="true">
+                <ng-template pTemplate="header">
+                    <tr>
+                        <th style="width: 2.5rem">
+                            <input #selectAllCb type="checkbox"
+                                [checked]="isAllVisibleSelected"
+                                [indeterminate]="isVisibleIndeterminate"
+                                [disabled]="(filteredList?.length ?? 0) === 0"
+                                (change)="toggleSelectAllVisible(selectAllCb.checked)"
+                                pTooltip="Select all on this page" tooltipPosition="top" />
+                        </th>
+                        <th style="width: 4rem">Ser</th>
+                        <th>Service ID</th>
+                        <th>Rank</th>
+                        <th>Corps</th>
+                        <th>Trade</th>
+                        <th>Name</th>
+                        <th>Mother Unit</th>
+                        <th>Date of Joining</th>
+                        <th>RAB ID</th>
+                    </tr>
+                </ng-template>
+                <ng-template pTemplate="body" let-row let-rowIndex="rowIndex">
+                    <tr>
+                        <td>
+                            <input #cb type="checkbox"
+                                [checked]="isRowSelected(row)"
+                                (change)="onRowSelectionChange(row, cb.checked)" />
+                        </td>
+                        <td>{{ rowIndex + 1 }}</td>
+                        <td style="white-space: nowrap"><span class="font-semibold">{{ getVal(row, 'serviceId', 'ServiceId') || '—' }}</span></td>
+                        <td>{{ getVal(row, 'rank', 'Rank') || '—' }}</td>
+                        <td>{{ getVal(row, 'corps', 'Corps') || '—' }}</td>
+                        <td>{{ getVal(row, 'trade', 'Trade') || '—' }}</td>
+                        <td>{{ getVal(row, 'fullNameEN', 'FullNameEN') || '—' }}{{ getVal(row, 'fullNameBN', 'FullNameBN') ? ' (' + getVal(row, 'fullNameBN', 'FullNameBN') + ')' : '' }}</td>
+                        <td>{{ getVal(row, 'motherOrganization', 'MotherOrganization') || '—' }}</td>
+                        <td style="white-space: nowrap">{{ formatDate(getVal(row, 'joiningDate', 'JoiningDate')) }}</td>
+                        <td style="white-space: nowrap">{{ getVal(row, 'rabid', 'rabId', 'rabID', 'RABID') || '—' }}</td>
+                    </tr>
+                </ng-template>
+                <ng-template pTemplate="emptymessage">
+                    <tr>
+                        <td colspan="10" class="text-center p-4">No members eligible for RFTS found.</td>
+                    </tr>
+                </ng-template>
+            </p-table>
+        </div>
+
+        <div class="flex justify-end">
+            <p-button
+                label="Save as Draft"
+                icon="pi pi-check"
+                severity="success"
+                [fluid]="false"
+                (onClick)="addToDraft()"
+                [loading]="isAddingToDraft"
+                [disabled]="!courseNo?.trim() || !draftDateFrom || !draftDateTo || selectedCount === 0 || isAddingToDraft">
+            </p-button>
+        </div>
+    </p-card>
+</p-fluid>

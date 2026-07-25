@@ -1,0 +1,721 @@
+<p-toast position="top-center"></p-toast>
+<p-confirmDialog></p-confirmDialog>
+
+<div class="preview-page">
+
+    <div class="preview-header no-print">
+        <div class="preview-actions" *ngIf="!loading && !error">
+            <ng-container *ngIf="!editing">
+                <ng-container *ngIf="employees.length > 0">
+                    <p-select [options]="pageSizeOptions" [(ngModel)]="selectedPageSize" optionLabel="label" optionValue="value" [style]="{'width': '90px'}"></p-select>
+                    <p-button icon="pi pi-file-word" label="Word" (onClick)="exportWord()" styleClass="p-button-outlined"></p-button>
+                    <p-button icon="pi pi-file-pdf" label="PDF" (onClick)="exportPdf()" [loading]="exportingPdf" styleClass="p-button-outlined"></p-button>
+                    <p-button icon="pi pi-print" label="Print Preview" (onClick)="printPreview()" [loading]="printingPreview" styleClass="p-button-outlined"></p-button>
+                </ng-container>
+                <p-button *ngIf="canEdit" icon="pi pi-pencil" label="Edit" [outlined]="true" (onClick)="toggleEdit()"></p-button>
+            </ng-container>
+            <ng-container *ngIf="editing">
+                <p-button icon="pi pi-times" label="Cancel" severity="secondary" [outlined]="true" (onClick)="cancelEdit()"></p-button>
+                <p-button icon="pi pi-check" label="Save" severity="success" [loading]="saving" (onClick)="saveChanges()"></p-button>
+            </ng-container>
+        </div>
+
+        <!-- Approval Status (right side) -->
+        <div class="approval-header-right" *ngIf="approvalEmployeeId || approvalStatus">
+            <p-tag [value]="approvalStatusLabel(approvalStatus)" [severity]="approvalStatusSeverity(approvalStatus)"></p-tag>
+            <span *ngIf="approvalStatus === ApprovalStatus.Cancel && cancelReason" class="text-500 text-xs">{{ cancelReason }}</span>
+            <ng-container *ngIf="!approvalStatus || approvalStatus === ApprovalStatus.Pending">
+                <p-button
+                    icon="pi pi-check"
+                    label="Approve"
+                    severity="success"
+                    size="small"
+                    (onClick)="selectApprovalAction(ApprovalStatus.Approve); showApprovalModal = true"
+                ></p-button>
+                <p-button
+                    icon="pi pi-times"
+                    label="Cancel"
+                    severity="danger"
+                    size="small"
+                    (onClick)="selectApprovalAction(ApprovalStatus.Cancel); showApprovalModal = true"
+                ></p-button>
+            </ng-container>
+        </div>
+    </div>
+
+    <div class="preview-loading" *ngIf="loading">
+        <i class="pi pi-spin pi-spinner" style="font-size:2rem"></i>
+        <p>Loading posting order...</p>
+    </div>
+
+    <div class="preview-error" *ngIf="error && !loading">
+        <i class="pi pi-exclamation-circle" style="font-size:3rem; color:var(--red-500)"></i>
+        <p>Failed to load posting order.</p>
+        <p-button label="Go Back" icon="pi pi-arrow-left" (onClick)="goBack()"></p-button>
+    </div>
+
+    <!-- ─── Edit Form ───────────────────────────────────────────── -->
+    <div class="edit-form-container" *ngIf="editing && !loading && !error">
+        <div class="form-card">
+            <div class="form-card-header">
+                <h3 class="form-card-title">Edit Posting Order</h3>
+            </div>
+
+            <div class="draft-master-section mb-4 p-4 surface-50 border-round">
+                <div class="edit-master-grid">
+                    <div class="field edit-field-po-no">
+                        <label class="font-semibold block mb-2 text-700">Posting Order No</label>
+                        <input pInputText [value]="postingOrderNo" [readonly]="true" class="w-full" style="background: var(--surface-100); cursor: default;" />
+                    </div>
+                    <div class="field edit-field-date">
+                        <label class="font-semibold block mb-2 text-700">Posting Order Date <span class="text-red-500">*</span></label>
+                        <p-datepicker
+                            [(ngModel)]="editPostingOrderDate"
+                            dateFormat="dd-mm-yy"
+                            styleClass="w-full"
+                            placeholder="Select date"
+                        ></p-datepicker>
+                    </div>
+                    <div class="field edit-field-approval">
+                        <label class="font-semibold block mb-2 text-700">Approval Person <span class="text-red-500">*</span></label>
+                        <p-select
+                            [options]="approvalEmployees"
+                            [(ngModel)]="editApprovalEmployeeId"
+                            optionLabel="label"
+                            optionValue="value"
+                            placeholder="{{ loadingApprovalEmployees ? 'Loading...' : 'Select Approval Person' }}"
+                            [disabled]="loadingApprovalEmployees"
+                            [showClear]="true"
+                            [filter]="true"
+                            filterBy="label"
+                            styleClass="w-full"
+                            appendTo="body"
+                        ></p-select>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Posting Text (rich editor) -->
+            <div class="mt-4 p-4 surface-50 border-round">
+                <label class="font-semibold block mb-2 text-700">{{ isBangla ? 'পোস্টিং টেক্সট' : 'Posting Text' }}</label>
+                <p-editor [(ngModel)]="editPostingText" [style]="{ height: '120px' }">
+                    <ng-template pTemplate="header">
+                        <span class="ql-formats">
+                            <select class="ql-header">
+                                <option value="1"></option>
+                                <option value="2"></option>
+                                <option selected></option>
+                            </select>
+                            <select class="ql-font"></select>
+                        </span>
+                        <span class="ql-formats">
+                            <button class="ql-bold"></button>
+                            <button class="ql-italic"></button>
+                            <button class="ql-underline"></button>
+                        </span>
+                        <span class="ql-formats">
+                            <button class="ql-list" value="bullet"></button>
+                        </span>
+                        <span class="ql-formats">
+                            <button class="ql-clean"></button>
+                        </span>
+                    </ng-template>
+                </p-editor>
+            </div>
+
+            <!-- Employee table (edit mode) -->
+            <div class="flex flex-wrap gap-4 align-items-center mb-3">
+                <span class="font-semibold text-700">Employees</span>
+                <span class="text-500 text-sm">({{ editEmployees.length }} member(s))</span>
+            </div>
+
+            <!-- Add Member — inline dropdown (same pattern as notesheet-list) -->
+            <div class="mb-3 p-3" style="background:var(--surface-50); border-radius:8px; border:1px solid var(--surface-200);">
+                <div class="flex align-items-center gap-2 mb-2">
+                    <i class="pi pi-user-plus text-primary" style="font-size:1rem"></i>
+                    <span class="font-semibold text-sm text-900">Add Employee to Posting Order</span>
+                    <span class="text-400 text-xs">({{ isInterPosting ? 'presently serving employees marked for inter posting' : 'employees with draft status' }})</span>
+                </div>
+                <div class="flex align-items-center gap-2">
+                    <div style="flex:1; min-width:0; display:flex; gap:0.5rem;">
+                    <div style="flex:0 0 calc(50% - 0.25rem); min-width:0; overflow:hidden;">
+                        @if (addMemberLoading) {
+                            <div class="flex align-items-center gap-2 text-500 text-sm p-2">
+                                <i class="pi pi-spin pi-spinner"></i> Loading employees...
+                            </div>
+                        } @else {
+                            <p-select
+                                [(ngModel)]="selectedAddEmployee"
+                                [options]="addMemberList"
+                                optionLabel="serviceId"
+                                [filter]="true"
+                                filterBy="serviceId,fullNameEN,rankName,corpsName,tradeName,motherUnitName,RABID,rabID"
+                                placeholder="Service ID, Name, Rank, Corps অনুযায়ী খুঁজুন..."
+                                [style]="{ width: '100%' }"
+                                appendTo="body"
+                                [showClear]="true">
+                                <ng-template let-emp pTemplate="selectedItem">
+                                    <span class="text-500 text-xs">Name&nbsp;:</span>
+                                    <span class="font-semibold text-900 ml-1 mr-3">{{ emp.fullNameEN }}</span>
+                                    <span class="text-500 text-xs">Service ID&nbsp;:</span>
+                                    <span class="font-semibold text-primary ml-1 mr-3">{{ emp.serviceId }}</span>
+                                    <span class="text-500 text-xs">Rank&nbsp;:</span>
+                                    <span class="font-medium text-700 ml-1 mr-3">{{ emp.rankName || '—' }}</span>
+                                    <span class="text-500 text-xs">Unit&nbsp;:</span>
+                                    <span class="font-medium text-700 ml-1">{{ emp.motherUnitName || '—' }}</span>
+                                </ng-template>
+                                <ng-template let-emp pTemplate="item">
+                                    <div class="flex flex-column gap-1 py-1">
+                                        <div class="flex align-items-center flex-wrap gap-2">
+                                            <span class="text-500 text-xs">Name&nbsp;:</span>
+                                            <span class="font-semibold text-900 mr-2">{{ emp.fullNameEN }}</span>
+                                            <span class="text-500 text-xs">Service ID&nbsp;:</span>
+                                            <span class="font-semibold text-primary mr-2">{{ emp.serviceId }}</span>
+                                            <span class="text-500 text-xs">Rank&nbsp;:</span>
+                                            <span class="font-medium text-700 mr-2">{{ emp.rankName || '—' }}</span>
+                                            <span class="text-500 text-xs">Unit&nbsp;:</span>
+                                            <span class="font-medium text-700">{{ emp.motherUnitName || '—' }}</span>
+                                        </div>
+                                        <div class="flex align-items-center flex-wrap gap-2 text-xs text-500">
+                                            <span class="text-400">Corps&nbsp;:</span>
+                                            <span class="mr-2">{{ emp.corpsName || '—' }}</span>
+                                            <span class="text-400">Trade&nbsp;:</span>
+                                            <span class="mr-2">{{ emp.tradeName || '—' }}</span>
+                                            <span class="text-400 ml-auto">{{ emp.RABID || emp.rabID || '' }}</span>
+                                        </div>
+                                    </div>
+                                </ng-template>
+                            </p-select>
+                        }
+                    </div>
+                    <div style="flex:0 0 calc(50% - 0.25rem); min-width:0; overflow:hidden;">
+                        @if (addMemberTreeLoading) {
+                            <div class="text-500 text-xs p-2"><i class="pi pi-spin pi-spinner mr-1"></i>Loading units...</div>
+                        } @else {
+                            <p-treeSelect
+                                [(ngModel)]="selectedAddUnitNode"
+                                [options]="addMemberUnitTreeNodes"
+                                [placeholder]="isBangla ? 'বদলি ইউনিট' : 'Transfer Unit'"
+                                [filter]="true"
+                                [filterInputAutoFocus]="true"
+                                [showClear]="true"
+                                selectionMode="single"
+                                styleClass="w-full"
+                                appendTo="body"
+                                (onNodeExpand)="onAddMemberNodeExpand($event)"
+                                (onNodeSelect)="onAddMemberNodeSelect($event)"
+                                (onClear)="onAddMemberNodeClear()">
+                                <ng-template pTemplate="value" let-node>
+                                    <span style="display:block; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">
+                                        {{ node ? getAddMemberUnitFullPath(node) : (isBangla ? 'বদলি ইউনিট' : 'Transfer Unit') }}
+                                    </span>
+                                </ng-template>
+                            </p-treeSelect>
+                        }
+                    </div>
+                    </div>
+                </div>
+                <div class="flex align-items-center gap-2 mt-2">
+                    <div style="flex:1; min-width:0;">
+                        <textarea
+                            pTextarea
+                            [(ngModel)]="addMemberRemarks"
+                            [rows]="2"
+                            [autoResize]="true"
+                            placeholder="{{ isBangla ? 'মন্তব্য (ঐচ্ছিক)' : 'Remarks (optional)' }}"
+                            [style]="{ width: '100%' }"
+                            [maxlength]="500"
+                        ></textarea>
+                    </div>
+                    <p-button
+                        [icon]="addMemberSaving ? 'pi pi-spin pi-spinner' : 'pi pi-plus'"
+                        label="Add Member"
+                        severity="success"
+                        size="small"
+                        [disabled]="!selectedAddEmployee || !addMemberTransferUnitId || addMemberSaving"
+                        (onClick)="addMemberToList()">
+                    </p-button>
+                </div>
+            </div>
+
+            <p-table
+                [value]="editEmployees"
+                dataKey="employeeId"
+                [tableStyle]="{ 'min-width': '60rem' }"
+                styleClass="p-datatable-striped p-datatable-gridlines p-datatable-sm"
+                [paginator]="true"
+                [rows]="10"
+                [rowsPerPageOptions]="[10, 25, 50]"
+            >
+                <ng-template pTemplate="header">
+                    <tr>
+                        <th style="width: 50px">{{ isBangla ? 'ক্রমিক' : 'Ser' }}</th>
+                        <th style="min-width: 120px">{{ isBangla ? 'ব্যক্তিগত নম্বর' : 'Service ID' }}</th>
+                        <th style="min-width: 80px">{{ isBangla ? 'পদবি' : 'Rank' }}</th>
+                        <th style="min-width: 170px">{{ isBangla ? 'নাম' : 'Name' }}</th>
+                        <th style="min-width: 130px">{{ isBangla ? 'নিজ জেলা' : 'Own District' }}</th>
+                        <th style="min-width: 130px">{{ isBangla ? 'পূর্ববর্তী কর্মস্থল' : 'Previous Workplace' }}</th>
+                        <th style="min-width: 100px">{{ isBangla ? 'বদলি ইউনিট' : 'Transfer Unit' }}</th>
+                        <th style="width: 50px"></th>
+                    </tr>
+                </ng-template>
+                <ng-template pTemplate="body" let-row let-rowIndex="rowIndex">
+                    <tr>
+                        <td>{{ rowIndex + 1 }}</td>
+                        <td><span class="font-semibold">{{ empServiceId(row) }}</span></td>
+                        <td>{{ empRank(row) }}</td>
+                        <td>{{ empName(row) }}</td>
+                        <td style="white-space: pre-line;">{{ empDistrict(row) }}</td>
+                        <td style="white-space: pre-line;">{{ empPrevWorkplace(row) }}</td>
+                        <td>{{ empTransferUnit(row) }}</td>
+                        <td class="text-center">
+                            <p-button
+                                [icon]="removingEmployeeId === row.employeeId ? 'pi pi-spin pi-spinner' : 'pi pi-trash'"
+                                severity="danger"
+                                [rounded]="true"
+                                [text]="true"
+                                size="small"
+                                [disabled]="removingEmployeeId !== null"
+                                (onClick)="removeEditEmployee(row)">
+                            </p-button>
+                        </td>
+                    </tr>
+                </ng-template>
+                <ng-template pTemplate="emptymessage">
+                    <tr>
+                        <td colspan="8" class="text-center p-4">
+                            <div class="flex flex-column align-items-center gap-3 py-5">
+                                <i class="pi pi-inbox text-5xl text-400"></i>
+                                <span class="text-lg text-500">No employees in this posting order.</span>
+                            </div>
+                        </td>
+                    </tr>
+                </ng-template>
+            </p-table>
+
+            <!-- Main Text (rich editor) -->
+            <div class="field mt-4 p-4 surface-50 border-round">
+                <label class="font-semibold block mb-2 text-700">{{ isBangla ? 'মূল বক্তব্য' : 'Main Text' }}</label>
+                <p-editor [(ngModel)]="editRemarks" [style]="{ height: '100px' }">
+                    <ng-template pTemplate="header">
+                        <span class="ql-formats">
+                            <select class="ql-header">
+                                <option value="1"></option>
+                                <option value="2"></option>
+                                <option selected></option>
+                            </select>
+                            <select class="ql-font"></select>
+                        </span>
+                        <span class="ql-formats">
+                            <button class="ql-bold"></button>
+                            <button class="ql-italic"></button>
+                            <button class="ql-underline"></button>
+                        </span>
+                        <span class="ql-formats">
+                            <button class="ql-list" value="bullet"></button>
+                        </span>
+                        <span class="ql-formats">
+                            <button class="ql-clean"></button>
+                        </span>
+                    </ng-template>
+                </p-editor>
+            </div>
+
+            <!-- Sub Text (rich editor) -->
+            <div class="mt-4 p-4 surface-50 border-round">
+                <label class="font-semibold block mb-2 text-700">{{ isBangla ? 'সাব টেক্সট' : 'Sub Text' }}</label>
+                <p-editor [(ngModel)]="editSubText" [style]="{ height: '120px' }">
+                    <ng-template pTemplate="header">
+                        <span class="ql-formats">
+                            <select class="ql-header">
+                                <option value="1"></option>
+                                <option value="2"></option>
+                                <option selected></option>
+                            </select>
+                            <select class="ql-font"></select>
+                        </span>
+                        <span class="ql-formats">
+                            <button class="ql-bold"></button>
+                            <button class="ql-italic"></button>
+                            <button class="ql-underline"></button>
+                        </span>
+                        <span class="ql-formats">
+                            <button class="ql-list" value="bullet"></button>
+                        </span>
+                        <span class="ql-formats">
+                            <button class="ql-clean"></button>
+                        </span>
+                    </ng-template>
+                </p-editor>
+            </div>
+
+            <!-- Footer paragraphs (Onulipi) -->
+            <div class="footer-section mt-4 p-4 surface-50 border-round">
+                <div class="flex align-items-center gap-2 mb-3">
+                    <span class="font-semibold text-700">{{ isBangla ? 'অনুলিপি' : 'Onulipi' }}</span>
+                    <p-button
+                        icon="pi pi-plus"
+                        [rounded]="true"
+                        [text]="true"
+                        size="small"
+                        pTooltip="Add paragraph"
+                        (onClick)="addEditFooterParagraph()"
+                    ></p-button>
+                    <span *ngIf="editHasMultipleTransferUnits" class="text-500 text-sm ml-2">
+                        {{ isBangla ? '(প্রতিটি অনুচ্ছেদের জন্য বদলি ইউনিট নির্বাচন করুন)' : '(Select a transfer unit for each paragraph)' }}
+                    </span>
+                    <span *ngIf="!editHasMultipleTransferUnits && editAvailableTransferUnits.length === 1" class="text-500 text-sm ml-2">
+                        {{ isBangla ? '(স্বয়ংক্রিয়ভাবে লিঙ্ক:' : '(Auto-linked to:' }} <strong>{{ editAvailableTransferUnits[0].name }}</strong>)
+                    </span>
+                </div>
+
+                @for (para of editFooterParagraphs; track trackByIndex($index); let i = $index) {
+                    <div class="footer-para-row flex gap-2 align-items-start mb-2">
+                        <span class="para-number font-semibold text-600 mt-2">{{ i + 1 }}.</span>
+                        <textarea
+                            pTextarea
+                            [(ngModel)]="editFooterParagraphs[i].text"
+                            rows="3"
+                            class="flex-1"
+                            placeholder="{{ isBangla ? 'অনুচ্ছেদ লিখুন...' : 'Enter paragraph text...' }}"
+                            [autoResize]="true"
+                        ></textarea>
+                        <p-select
+                            *ngIf="editHasMultipleTransferUnits"
+                            [options]="editAvailableTransferUnits"
+                            [(ngModel)]="editFooterParagraphs[i].transferRabUnitId"
+                            optionLabel="name"
+                            optionValue="id"
+                            placeholder="{{ isBangla ? 'ইউনিট নির্বাচন' : 'Select Unit' }}"
+                            [showClear]="false"
+                            styleClass="footer-unit-select"
+                            [style]="{ 'min-width': '160px' }"
+                            (onChange)="onEditFooterUnitChange(i)"
+                        ></p-select>
+                        <p-button
+                            icon="pi pi-times"
+                            severity="danger"
+                            [rounded]="true"
+                            [text]="true"
+                            size="small"
+                            pTooltip="Remove"
+                            (onClick)="removeEditFooterParagraph(i)"
+                        ></p-button>
+                    </div>
+                }
+
+                @if (editFooterParagraphs.length === 0) {
+                    <div class="text-500 text-sm py-2">
+                        {{ isBangla ? 'কোনো অনুলিপি প্যারাগ্রাফ নেই। "+" বোতামে ক্লিক করে যোগ করুন।' : 'No Onulipi paragraphs. Click "+" to add one.' }}
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+
+    <!-- Per-unit filter chips (shown only when the order has employees in more than one transfer unit) -->
+    <div class="unit-filter-bar no-print" *ngIf="!editing && !loading && !error && hasMultipleTransferUnits">
+        <span class="unit-filter-label">{{ isBangla ? 'বদলিকৃত কর্মস্থল ফিল্টার:' : 'Transfer Unit:' }}</span>
+        <p-button
+            [label]="isBangla ? 'সব' : 'All'"
+            size="small"
+            [outlined]="selectedFilterUnitId !== null"
+            (onClick)="selectFilterUnit(null)"
+        ></p-button>
+        <p-button
+            *ngFor="let u of availableTransferUnits"
+            [label]="u.name"
+            size="small"
+            [outlined]="selectedFilterUnitId !== u.id"
+            (onClick)="selectFilterUnit(u.id)"
+        ></p-button>
+    </div>
+
+    <!-- অনুলিপি paragraph filter (collapsed by default) -->
+    <div class="unit-filter-bar no-print" *ngIf="!editing && !loading && !error && (autoCopyLines.length > 0 || filteredFooterParagraphs.length > 0)"
+         style="flex-direction:column; align-items:flex-start;">
+        <span style="font-weight:600; font-size:0.85rem; cursor:pointer;" (click)="showOnulipiFilter = !showOnulipiFilter">
+            <i class="pi" [ngClass]="showOnulipiFilter ? 'pi-chevron-down' : 'pi-chevron-right'" style="margin-right:0.3rem;"></i>{{ isBangla ? 'অনুলিপি ফিল্টার' : 'Copy Filter' }}
+        </span>
+        <div *ngIf="showOnulipiFilter" style="display:flex; flex-direction:column; gap:0.3rem; margin-top:0.4rem; width:100%;">
+            <span *ngIf="autoCopyLines.length > 0"
+                  style="display:inline-flex; align-items:flex-start; gap:0.4rem; font-size:0.82rem; line-height:1.4;">
+                <p-checkbox [(ngModel)]="showTransferUnitsCopy" [binary]="true" inputId="chkTransferUnitsCopy"></p-checkbox>
+                <label for="chkTransferUnitsCopy" style="cursor:pointer;">
+                    <span *ngFor="let line of autoCopyLines; let i = index" style="display:block;">{{ isBangla ? toBanglaDigits('' + (i + 1)) : (i + 1) }}। {{ line }}</span>
+                </label>
+            </span>
+            <span *ngFor="let para of filteredFooterParagraphs; let pi = index"
+                  style="display:inline-flex; align-items:flex-start; gap:0.4rem; font-size:0.82rem; line-height:1.4;">
+                <p-checkbox [(ngModel)]="paragraphChecked[pi]" [binary]="true" [inputId]="'chkPara' + pi"></p-checkbox>
+                <label [for]="'chkPara' + pi" style="cursor:pointer;">{{ isBangla ? toBanglaDigits('' + (pi + 1 + autoCopyOffset)) : (pi + 1 + autoCopyOffset) }}। {{ para.text }}</label>
+            </span>
+        </div>
+    </div>
+
+    <!-- Column visibility filter -->
+    <div class="unit-filter-bar no-print" *ngIf="!editing && !loading && !error && employees.length > 0"
+         style="flex-direction:column; align-items:flex-start;">
+        <div style="display:flex; align-items:center; gap:0.8rem; font-size:0.82rem;">
+            <span *ngIf="!isInterPosting" style="display:inline-flex; align-items:center; gap:0.4rem;">
+                <p-checkbox [(ngModel)]="showTradeColumn" [binary]="true" inputId="chkTradeCol"></p-checkbox>
+                <label for="chkTradeCol" style="cursor:pointer;">{{ isBangla ? 'ট্রেড' : 'Trade' }}</label>
+            </span>
+            <span style="display:inline-flex; align-items:center; gap:0.4rem;">
+                <p-checkbox [(ngModel)]="showOwnDistrict" [binary]="true" inputId="chkOwnDistrict"></p-checkbox>
+                <label for="chkOwnDistrict" style="cursor:pointer;">{{ isBangla ? 'নিজ জেলা' : 'Own District' }}</label>
+            </span>
+            <span style="display:inline-flex; align-items:center; gap:0.4rem;">
+                <p-checkbox [(ngModel)]="showPrevWorkplaceUnit" [binary]="true" inputId="chkPrevUnit"></p-checkbox>
+                <label for="chkPrevUnit" style="cursor:pointer;">{{ isBangla ? 'পূর্ববতী কর্মস্থল' : 'Previous Workplace' }}</label>
+            </span>
+            <span style="display:inline-flex; align-items:center; gap:0.4rem;">
+                <p-checkbox [(ngModel)]="showRemarks" [binary]="true" inputId="chkRemarks"></p-checkbox>
+                <label for="chkRemarks" style="cursor:pointer;">{{ isBangla ? 'মন্তব্য' : 'Remarks' }}</label>
+            </span>
+            <span style="display:inline-flex; align-items:center; gap:0.4rem;">
+                <p-checkbox [(ngModel)]="showGallantryAwards" [binary]="true" inputId="chkGallantry"></p-checkbox>
+                <label for="chkGallantry" style="cursor:pointer;">{{ isBangla ? 'খেতাব/পদক' : 'Gallantry Awards' }}</label>
+            </span>
+            <span style="display:inline-flex; align-items:center; gap:0.4rem;">
+                <p-checkbox [(ngModel)]="showProfQualification" [binary]="true" inputId="chkProfQ"></p-checkbox>
+                <label for="chkProfQ" style="cursor:pointer;">{{ isBangla ? 'পেশাগত যোগ্যতা' : 'Professional Qual.' }}</label>
+            </span>
+            <span style="display:inline-flex; align-items:center; gap:0.4rem;">
+                <p-checkbox [(ngModel)]="showCorps" [binary]="true" inputId="chkCorps"></p-checkbox>
+                <label for="chkCorps" style="cursor:pointer;">{{ isBangla ? 'কোর' : 'Corps' }}</label>
+            </span>
+            <span style="display:inline-flex; align-items:center; gap:0.4rem;">
+                <p-checkbox [(ngModel)]="showUpperSignature" [binary]="true" inputId="chkUpperSig"></p-checkbox>
+                <label for="chkUpperSig" style="cursor:pointer;">{{ isBangla ? 'স্বাক্ষর' : 'Signature' }}</label>
+            </span>
+        </div>
+    </div>
+
+    <!-- Empty state — order loaded but no employees yet -->
+    <div *ngIf="!editing && !loading && !error && employees.length === 0" class="flex flex-column align-items-center justify-content-center gap-3 py-6 text-center">
+        <i [class]="isApproved ? 'pi pi-users text-6xl text-orange-400' : 'pi pi-inbox text-6xl text-400'"></i>
+        <span class="text-xl text-600 font-semibold">{{ postingOrderNo || 'Posting Order' }}</span>
+        <span *ngIf="!isApproved" class="text-500">No employees in this posting order yet.</span>
+        <span *ngIf="isApproved" class="text-500">All members have been removed from this posting order.</span>
+        <p-button *ngIf="canEdit" icon="pi pi-pencil" label="Edit to Add Employees" severity="primary" (onClick)="toggleEdit()"></p-button>
+    </div>
+
+    <div class="legal-paper-container" *ngIf="!editing && !loading && !error && employees.length > 0">
+        <div class="legal-paper" [class.legal-paper--legal]="selectedPageSize === 'legal'" #legalPaper>
+          <div class="po-doc-box">
+
+            <!-- Government Header -->
+            <div class="po-doc-header">
+                <ng-container *ngIf="isBangla">
+                    <div class="po-doc-header-line">গণপ্রজাতন্ত্রী বাংলাদেশ সরকার</div>
+                    <div class="po-doc-header-line">বাংলাদেশ পুলিশ</div>
+                    <div class="po-doc-header-line">র‌্যাব ফোর্সেস সদর দপ্তর</div>
+                    <div class="po-doc-header-line">কুর্মিটোলা, ঢাকা</div>
+                </ng-container>
+                <ng-container *ngIf="!isBangla">
+                    <div class="po-doc-header-line">Government of the People's Republic of Bangladesh</div>
+                    <div class="po-doc-header-line">Bangladesh Police</div>
+                    <div class="po-doc-header-line">RAB Forces Headquarters</div>
+                    <div class="po-doc-header-line">Kurmitola, Dhaka</div>
+                </ng-container>
+            </div>
+
+            <!-- Title -->
+            <div class="po-doc-title">{{ isBangla ? 'প্রজ্ঞাপন' : 'NOTIFICATION' }}</div>
+
+            <!-- Order No & Date -->
+            <div class="po-doc-meta">
+                <span>{{ postingOrderNo || '.............' }}</span>
+                <span><strong>{{ isBangla ? 'তারিখ' : 'Date' }}:</strong> {{ previewDate }}</span>
+            </div>
+
+            <!-- Reference / সূত্র : linked Note-Sheet No + final approval date -->
+            <div class="po-doc-reference" *ngIf="referenceLine">
+                <span class="po-doc-reference-label">{{ isBangla ? 'সূত্র' : 'Reference' }}:</span>
+                <span class="po-doc-reference-value">{{ referenceLine }}</span>
+            </div>
+
+            <!-- Posting Text (rich HTML from editor) — shown after সূত্র -->
+            <div class="po-doc-posting-text" *ngIf="postingText" [innerHTML]="postingText"></div>
+
+            <!-- Employee Table -->
+            <table class="po-doc-table">
+                <thead>
+                    <!-- Inter-posting: single-row header (no Trade, no RAB ID) -->
+                    <ng-container *ngIf="isInterPosting">
+                        <tr>
+                            <th style="width:6%">{{ isBangla ? 'ক্রমিক' : 'Ser' }}</th>
+                            <th style="width:13%">{{ isBangla ? 'ব্যক্তিগত নং' : 'Service ID' }}</th>
+                            <th style="width:10%">{{ isBangla ? 'পদবি' : 'Rank' }}</th>
+                            <th style="width:16%">{{ isBangla ? 'নাম' : 'Name' }}</th>
+                            <th *ngIf="showOwnDistrict" style="width:8%">{{ isBangla ? 'নিজ জেলা' : 'Own District' }}</th>
+                            <th *ngIf="showPrevWorkplaceUnit" style="width:12%">{{ isBangla ? 'পূর্ববতী কর্মস্থল' : 'Previous Workplace' }}</th>
+                            <th style="width:12%">{{ isBangla ? 'বদলিকৃত কর্মস্থল' : 'Transfer Station' }}</th>
+                            <th *ngIf="showRemarks" style="width:8%">{{ isBangla ? 'মন্তব্য' : 'Remarks' }}</th>
+                        </tr>
+                    </ng-container>
+                    <!-- Non-inter-posting: single header row -->
+                    <ng-container *ngIf="!isInterPosting">
+                        <tr>
+                            <ng-container *ngIf="isBangla">
+                                <th style="width:6%">ক্রমিক</th>
+                                <th style="width:9%">ব্যক্তিগত নম্বর</th>
+                                <th style="width:9%">পদবি</th>
+                                <th *ngIf="showTradeColumn" style="width:8%">ট্রেড</th>
+                                <th style="width:12%">নাম</th>
+                                <th *ngIf="showOwnDistrict" style="width:8%">নিজ জেলা</th>
+                                <th *ngIf="showPrevWorkplaceUnit" style="width:11%">পূর্ববতী কর্মস্থল</th>
+                                <th style="width:11%">বদলিকৃত কর্মস্থল</th>
+                                <th style="width:9%">র‌্যাব আইডি</th>
+                                <th *ngIf="showRemarks" style="width:8%">মন্তব্য</th>
+                            </ng-container>
+                            <ng-container *ngIf="!isBangla">
+                                <th style="width:6%">Ser</th>
+                                <th style="width:9%">Service ID</th>
+                                <th style="width:9%">Rank</th>
+                                <th *ngIf="showTradeColumn" style="width:8%">Trade</th>
+                                <th style="width:12%">Name</th>
+                                <th *ngIf="showOwnDistrict" style="width:8%">Own District</th>
+                                <th *ngIf="showPrevWorkplaceUnit" style="width:11%">Previous Workplace</th>
+                                <th style="width:11%">Transfer Unit</th>
+                                <th style="width:9%">RAB ID</th>
+                                <th *ngIf="showRemarks" style="width:10%">Remarks</th>
+                            </ng-container>
+                        </tr>
+                    </ng-container>
+                </thead>
+                <tbody>
+                    <ng-container *ngIf="isInterPosting">
+                        <tr *ngFor="let emp of filteredEmployees; let i = index">
+                            <td class="text-center">{{ isBangla ? (toBanglaDigits('' + (i + 1)) + '।') : (i + 1) }}</td>
+                            <td style="white-space: pre-line;">{{ empServiceId(emp) }}</td>
+                            <td>{{ empRank(emp) }}</td>
+                            <td class="po-doc-name-cell">{{ empName(emp) }}{{ empNameQuals(emp) }}</td>
+                            <td *ngIf="showOwnDistrict" style="white-space: pre-line;">{{ empDistrict(emp) }}</td>
+                            <td *ngIf="showPrevWorkplaceUnit" style="white-space: pre-line;">{{ empPrevWorkplace(emp) }}</td>
+                            <td>{{ empTransferUnit(emp) }}</td>
+                            <td *ngIf="showRemarks" style="white-space: pre-line; word-break: break-word;">{{ empCombinedRemarks(emp) }}</td>
+                        </tr>
+                    </ng-container>
+                    <ng-container *ngIf="!isInterPosting">
+                        <tr *ngFor="let emp of filteredEmployees; let i = index">
+                            <td class="text-center">{{ isBangla ? (toBanglaDigits('' + (i + 1)) + '।') : (i + 1) }}</td>
+                            <td style="white-space: pre-line;">{{ empServiceId(emp) }}</td>
+                            <td>{{ empRank(emp) }}</td>
+                            <td *ngIf="showTradeColumn">{{ empTrade(emp) }}</td>
+                            <td class="po-doc-name-cell">{{ empName(emp) }}{{ empNameQuals(emp) }}</td>
+                            <td *ngIf="showOwnDistrict" style="white-space: pre-line;">{{ empDistrict(emp) }}</td>
+                            <td *ngIf="showPrevWorkplaceUnit" style="white-space: pre-line;">{{ empPrevWorkplace(emp) }}</td>
+                            <td>{{ empTransferUnit(emp) }}</td>
+                            <td>{{ empRabId(emp) }}</td>
+                            <td *ngIf="showRemarks">{{ empCombinedRemarks(emp) }}</td>
+                        </tr>
+                    </ng-container>
+                </tbody>
+            </table>
+
+            <!-- Main Text (Remarks) -->
+            <div class="po-doc-master-remarks" *ngIf="masterRemarks" [innerHTML]="masterRemarks"></div>
+
+            <!-- Sub Text (rich HTML from editor) -->
+            <div class="po-doc-sub-text" *ngIf="subText" [innerHTML]="subText"></div>
+
+            <!-- Signature Block (top right, standalone). Date is omitted here; it is
+                 rendered separately on the অনুলিপি title line below. -->
+            <div class="po-doc-signature">
+                <div>স্বাক্ষরিত/-</div>
+                <div>{{ (isBangla ? approverNameBN : approverName) || approverName || '...................................' }}</div>
+                <div>{{ (isBangla ? approverRankBN : approverRank) || approverRank || '............................' }}</div>
+                <div>{{ (isBangla ? approverAppointmentBN : approverAppointment) || approverAppointment || '............................' }}</div>
+                <div>{{ isBangla ? 'টেলিঃ' : 'Tel:' }} {{ approverPhoneText }}</div>
+            </div>
+
+            <!-- Copy Distribution + Footer - mirrors Word two-column table exactly -->
+            <div class="po-doc-copy">
+                <!-- Head: prefix + অনুলিপি title (left); only the তারিখ line (right) sits
+                     here, top-aligned so it is exactly level with the prefix line. -->
+                <div class="po-doc-copy-head">
+                    <div class="po-doc-copy-head-left">
+                        <div *ngIf="noteSheetPrefix" style="margin-bottom:0.3rem;">{{ noteSheetPrefix }}</div>
+                        <div class="po-doc-copy-title">{{ isBangla ? 'অনুলিপি (জ্যেষ্ঠতার ভিত্তিতে নহে)' : 'Copy (not in order of seniority):' }}</div>
+                    </div>
+                    <div class="po-doc-signature-date">
+                        <div>{{ isBangla ? 'তারিখঃ' : 'Date:' }} {{ previewDate }}</div>
+                    </div>
+                </div>
+                <table class="po-doc-copy-table">
+                    <tr>
+                        <td class="po-doc-copy-left">
+                            <div class="po-doc-copy-list">
+                                <ng-container *ngIf="showTransferUnitsCopy">
+                                    <p *ngFor="let line of autoCopyLines; let i = index"><span class="po-copy-no">{{ isBangla ? toBanglaDigits('' + (i + 1)) : (i + 1) }}।</span>{{ line }}</p>
+                                </ng-container>
+                                <p *ngFor="let para of exportFooterParagraphs; let i = index"><span class="po-copy-no">{{ isBangla ? toBanglaDigits('' + (i + 1 + autoCopyOffset)) : (i + 1 + autoCopyOffset) }}।</span>{{ para.text }}</p>
+                            </div>
+                        </td>
+                        <td class="po-doc-copy-right">
+                            <div class="po-doc-copy-sig" *ngIf="approvalEmployeeId">
+                                <img *ngIf="approvalPersonSignatureUrl && showUpperSignature && isApproved" [src]="approvalPersonSignatureUrl" class="approver-signature-img" alt="Signature" />
+                                <div class="sig-name">{{ (isBangla ? approvalPersonNameBN : approvalPersonName) || approvalPersonName || '...................................' }}</div>
+                                <div class="sig-rank">{{ (isBangla ? approvalPersonRankBN : approvalPersonRank) || approvalPersonRank || '............................' }}</div>
+                                <div class="sig-appointment">{{ (isBangla ? approvalPersonAppointmentBN : approvalPersonAppointment) || approvalPersonAppointment || '............................' }}</div>
+                            </div>
+                        </td>
+                    </tr>
+                </table>
+            </div>
+
+          </div><!-- /po-doc-box -->
+        </div>
+    </div>
+
+
+</div>
+
+<!-- ─── Approval Modal ─── -->
+<p-dialog
+    [header]="approvalModalAction === ApprovalStatus.Approve ? 'Approve Posting Order' : 'Cancel Posting Order'"
+    [(visible)]="showApprovalModal"
+    [modal]="true"
+    [style]="{ width: '500px' }"
+    [closable]="true"
+>
+    <div class="mb-3">
+        <div class="flex gap-3 mb-2">
+            <span class="text-600">Order No:</span>
+            <strong>{{ postingOrderNo }}</strong>
+        </div>
+        <div class="flex gap-3 mb-3">
+            <span class="text-600">Date:</span>
+            <strong>{{ postingOrderDate }}</strong>
+        </div>
+
+        <!-- Remarks textarea -->
+        @if (approvalModalAction) {
+            <div class="field">
+                <label class="font-semibold block mb-2 text-700">
+                    {{ approvalModalAction === ApprovalStatus.Approve ? 'Approval Note' : 'Cancel Reason' }}
+                </label>
+                <textarea
+                    pTextarea
+                    [(ngModel)]="approvalModalRemarks"
+                    rows="4"
+                    class="w-full"
+                    placeholder="{{ approvalModalAction === ApprovalStatus.Approve ? 'Enter approval note...' : 'Enter cancel reason...' }}"
+                    [autoResize]="true"
+                ></textarea>
+            </div>
+
+            <div class="flex justify-content-end mt-3">
+                <p-button
+                    [label]="approvalModalAction === ApprovalStatus.Approve ? 'Approve' : 'Cancel Order'"
+                    [icon]="approvalModalAction === ApprovalStatus.Approve ? 'pi pi-check' : 'pi pi-times'"
+                    [severity]="approvalModalAction === ApprovalStatus.Approve ? 'success' : 'danger'"
+                    [loading]="savingApproval"
+                    (onClick)="saveApproval()"
+                ></p-button>
+            </div>
+        }
+    </div>
+</p-dialog>

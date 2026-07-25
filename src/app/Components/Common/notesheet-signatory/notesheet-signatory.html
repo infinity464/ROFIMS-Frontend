@@ -1,0 +1,23 @@
+<div class="ns-signatory" [class.align-right]="align === 'right'">
+    @if (detail) {
+        @if (detail.signatureDataUrl && showSignature) {
+            <img [src]="detail.signatureDataUrl" class="ns-signatory-signature" alt="Signature" />
+        }
+        <div class="ns-signatory-line"></div>
+        <span class="ns-signatory-role">{{ getDisplayRole() }}</span>
+        <span class="font-medium">{{ detail.name }}</span>
+        <span class="text-600 text-sm">RAB ID: {{ detail.rabId }}</span>
+        <span class="text-600 text-sm">{{ isEnglish ? 'Rank:' : 'পদ:' }} {{ detail.rank }}</span>
+        <span class="text-600 text-sm">{{ isEnglish ? 'Current Service Rank:' : 'বর্তমান সেবা পদ:' }} {{ detail.serviceRank }}</span>
+        @if (showDate && dateValue) {
+            <span class="text-500 text-sm">{{ dateValue }}</span>
+        }
+    } @else if (fallbackName) {
+        <div class="ns-signatory-line"></div>
+        <span class="ns-signatory-role">{{ roleLabel }}</span>
+        <span class="font-medium">{{ fallbackName }}</span>
+        @if (showDate && dateValue) {
+            <span class="text-500 text-sm">{{ dateValue }}</span>
+        }
+    }
+</div>

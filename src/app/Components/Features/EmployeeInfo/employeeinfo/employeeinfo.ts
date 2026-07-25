@@ -12,35 +12,38 @@ import { FileUploadModule } from 'primeng/fileupload';
 import { TabsModule, Tab, TabList, Tabs, TabPanels, TabPanel } from 'primeng/tabs';
 import { DatePickerModule } from 'primeng/datepicker';
 
+import { Router } from '@angular/router';
+import { UserMenuService } from '@/services/user-menu.service';
 import { ConfirmationService, MessageService } from 'primeng/api';
 import { switchMap } from 'rxjs/operators';
 import { AddressSectionComponent } from '../../Shared/address-section/address-section';
 import { EmployeeinfoService } from '../Services/employeeinfo.service';
 import { EmployeeInfoModel } from '../model/employeeinfo.model';
-import { NomineeInfo } from "../../PersonalInfo/nominee-info/nominee-info";
+import { NomineeInfo } from '../../PersonalInfo/nominee-info/nominee-info';
+import { FlexibleDateDirective } from '@/shared/directives/flexible-date.directive';
 
 @Component({
     selector: 'app-employeeinfo',
     standalone: true,
     imports: [
-    CommonModule,
-    ReactiveFormsModule,
-    CardModule,
-    DividerModule,
-    SelectModule,
-    InputTextModule,
-    DatePickerModule,
-    TableModule,
-    ButtonModule,
-    CheckboxModule,
-    FileUploadModule,
-    AddressSectionComponent,
-    Tab,
-    TabList,
-    Tabs,
-    TabPanels,
-    TabPanel,
-],
+        CommonModule,
+        ReactiveFormsModule,
+        CardModule,
+        DividerModule,
+        SelectModule,
+        InputTextModule,
+        DatePickerModule, FlexibleDateDirective,
+        TableModule,
+        ButtonModule,
+        CheckboxModule,
+        FileUploadModule,
+        AddressSectionComponent,
+        Tab,
+        TabList,
+        Tabs,
+        TabPanels,
+        TabPanel
+    ],
     providers: [ConfirmationService, MessageService],
     templateUrl: './employeeinfo.html',
     styleUrl: './employeeinfo.scss'
@@ -61,6 +64,9 @@ export class Employeeinfo implements OnInit {
     ];
 
     employees: EmployeeInfoModel[] = [];
+    canInsert = true;
+    canUpdate = true;
+    canDelete = true;
 
     lastUnitOrganizations = [
         { label: 'Unit A', value: 1 },
@@ -143,10 +149,16 @@ export class Employeeinfo implements OnInit {
         private fb: FormBuilder,
         private employeeService: EmployeeinfoService,
         private confirmationService: ConfirmationService,
-        private messageService: MessageService
+        private messageService: MessageService,
+        private _router: Router,
+        private _userMenuService: UserMenuService
     ) {}
 
     ngOnInit(): void {
+        const _perms = this._userMenuService.getPermissionsByRoute(this._router.url);
+        this.canInsert = _perms.canInsert;
+        this.canUpdate = _perms.canUpdate;
+        this.canDelete = _perms.canDelete;
         this.buildForm();
         this.handleSameAsPermanent();
         this.handleWifeSameAsPermanent();
@@ -283,96 +295,96 @@ export class Employeeinfo implements OnInit {
         return `${yyyy}-${mm}-${dd}`;
     }
 
-  private buildAddressPayload(employeeID: number): any[] {
-    const v = this.form.getRawValue();
-    const now = new Date().toISOString();
+    private buildAddressPayload(employeeID: number): any[] {
+        const v = this.form.getRawValue();
+        const now = new Date().toISOString();
 
-    const addresses: any[] = [];
+        const addresses: any[] = [];
 
-    // 1) Permanent Address
-    addresses.push({
-        EmployeeID: employeeID,
-        AddressId: 0,
-        FMID: 0,
-        LocationType: "PERMANENT",
-        LocationCode: `${v.perDivision}-${v.perDistrict}-${v.perUpazila}`,
-        PostCode: v.perPostOffice?.toString() || '',
-        AddressAreaEN: v.perVillageEnglish || '',
-        AddressAreaBN: v.perVillageBangla || '',
-        DivisionType: v.perDivision || null,
-        ThanType: v.perUpazila || null,
-        PostOfficeType: v.perPostOffice || null,
-        CreatedBy: 'system',
-        CreatedDate: now,
-        LastUpdatedBy: 'system',
-        Lastupdate: now
-    });
-
-    // 2) Present Address (if different)
-    if (!v.sameAsPermanent && v.preUpazila) {
+        // 1) Permanent Address
         addresses.push({
             EmployeeID: employeeID,
             AddressId: 0,
             FMID: 0,
-            LocationType: 'PRESENT',
-            LocationCode: `${v.preDivision}-${v.preDistrict}-${v.preUpazila}`,
-            PostCode: v.prePostOffice?.toString() || '',
-            AddressAreaEN: v.preVillageEnglish || '',
-            AddressAreaBN: v.preVillageBangla || '',
-            DivisionType: v.preDivision || null,
-            ThanType: v.preUpazila || null,
-            PostOfficeType: v.prePostOffice || null,
+            LocationType: 'PERMANENT',
+            LocationCode: `${v.perDivision}-${v.perDistrict}-${v.perUpazila}`,
+            PostCode: v.perPostOffice?.toString() || '',
+            AddressAreaEN: v.perVillageEnglish || '',
+            AddressAreaBN: v.perVillageBangla || '',
+            DivisionType: v.perDivision || null,
+            ThanaType: v.perUpazila || null,
+            PostOfficeType: v.perPostOffice || null,
             CreatedBy: 'system',
             CreatedDate: now,
             LastUpdatedBy: 'system',
             Lastupdate: now
         });
-    }
 
-    // 3) Wife Permanent Address
-    if (v.wifePerUpazila) {
-        addresses.push({
-            EmployeeID: employeeID,
-            AddressId: 0,
-            FMID: 1,
-            LocationType: 'WIFE_PERMANENT',
-            LocationCode: `${v.wifePerDivision}-${v.wifePerDistrict}-${v.wifePerUpazila}`,
-            PostCode: v.wifePerPostOffice?.toString() || '',
-            AddressAreaEN: v.wifePerVillageEnglish || '',
-            AddressAreaBN: v.wifePerVillageBangla || '',
-            DivisionType: v.wifePerDivision || null,
-            ThanType: v.wifePerUpazila || null,
-            PostOfficeType: v.wifePerPostOffice || null,
-            CreatedBy: 'system',
-            CreatedDate: now,
-            LastUpdatedBy: 'system',
-            Lastupdate: now
-        });
-    }
+        // 2) Present Address (if different)
+        if (!v.sameAsPermanent && v.preUpazila) {
+            addresses.push({
+                EmployeeID: employeeID,
+                AddressId: 0,
+                FMID: 0,
+                LocationType: 'PRESENT',
+                LocationCode: `${v.preDivision}-${v.preDistrict}-${v.preUpazila}`,
+                PostCode: v.prePostOffice?.toString() || '',
+                AddressAreaEN: v.preVillageEnglish || '',
+                AddressAreaBN: v.preVillageBangla || '',
+                DivisionType: v.preDivision || null,
+                ThanaType: v.preUpazila || null,
+                PostOfficeType: v.prePostOffice || null,
+                CreatedBy: 'system',
+                CreatedDate: now,
+                LastUpdatedBy: 'system',
+                Lastupdate: now
+            });
+        }
 
-    // 4) Wife Present Address (if different)
-    if (!v.wifeSameAsPermanent && v.wifePreUpazila) {
-        addresses.push({
-            EmployeeID: employeeID,
-            AddressId: 0,
-            FMID: 1,
-            LocationType: 'WIFE_PRESENT',
-            LocationCode: `${v.wifePreDivision}-${v.wifePreDistrict}-${v.wifePreUpazila}`,
-            PostCode: v.wifePrePostOffice?.toString() || '',
-            AddressAreaEN: v.wifePreVillageEnglish || '',
-            AddressAreaBN: v.wifePreVillageBangla || '',
-            DivisionType: v.wifePreDivision || null,
-            ThanType: v.wifePreUpazila || null,
-            PostOfficeType: v.wifePrePostOffice || null,
-            CreatedBy: 'system',
-            CreatedDate: now,
-            LastUpdatedBy: 'system',
-            Lastupdate: now
-        });
-    }
+        // 3) Wife Permanent Address
+        if (v.wifePerUpazila) {
+            addresses.push({
+                EmployeeID: employeeID,
+                AddressId: 0,
+                FMID: 1,
+                LocationType: 'WIFE_PERMANENT',
+                LocationCode: `${v.wifePerDivision}-${v.wifePerDistrict}-${v.wifePerUpazila}`,
+                PostCode: v.wifePerPostOffice?.toString() || '',
+                AddressAreaEN: v.wifePerVillageEnglish || '',
+                AddressAreaBN: v.wifePerVillageBangla || '',
+                DivisionType: v.wifePerDivision || null,
+                ThanaType: v.wifePerUpazila || null,
+                PostOfficeType: v.wifePerPostOffice || null,
+                CreatedBy: 'system',
+                CreatedDate: now,
+                LastUpdatedBy: 'system',
+                Lastupdate: now
+            });
+        }
 
-    return addresses;
-}
+        // 4) Wife Present Address (if different)
+        if (!v.wifeSameAsPermanent && v.wifePreUpazila) {
+            addresses.push({
+                EmployeeID: employeeID,
+                AddressId: 0,
+                FMID: 1,
+                LocationType: 'WIFE_PRESENT',
+                LocationCode: `${v.wifePreDivision}-${v.wifePreDistrict}-${v.wifePreUpazila}`,
+                PostCode: v.wifePrePostOffice?.toString() || '',
+                AddressAreaEN: v.wifePreVillageEnglish || '',
+                AddressAreaBN: v.wifePreVillageBangla || '',
+                DivisionType: v.wifePreDivision || null,
+                ThanaType: v.wifePreUpazila || null,
+                PostOfficeType: v.wifePrePostOffice || null,
+                CreatedBy: 'system',
+                CreatedDate: now,
+                LastUpdatedBy: 'system',
+                Lastupdate: now
+            });
+        }
+
+        return addresses;
+    }
     loadEmployeeInfo(): void {
         this.loading = true;
         this.employeeService.getAll().subscribe({
@@ -530,6 +542,10 @@ export class Employeeinfo implements OnInit {
     }
 
     onSubmit(): void {
+        if (this.mode === 'edit' ? !this.canUpdate : !this.canInsert) {
+            this.messageService.add({ severity: 'warn', summary: 'Permission Denied', detail: 'You do not have permission to perform this action.' });
+            return;
+        }
         if (this.form.invalid) {
             this.form.markAllAsTouched();
             this.showError('Please fill all required fields');

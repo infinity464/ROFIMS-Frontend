@@ -1,4 +1,6 @@
-import { Component } from '@angular/core';
+import { Component, inject } from '@angular/core';
+import { UserMenuService } from '@/services/user-menu.service';
+import { Router } from '@angular/router';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { FormConfig } from '../shared/models/formConfig';
 import { TableConfig } from '../shared/models/dataTableConfig';
@@ -7,18 +9,23 @@ import { ConfirmationService, MessageService } from 'primeng/api';
 import { DynamicFormComponent } from '../shared/componets/dynamic-form-component/dynamic-form';
 import { DataTable } from '../shared/componets/data-table/data-table';
 import { Fluid } from 'primeng/fluid';
-
-import { CommonCode } from '../shared/models/common-code';
 import { SharedService } from '@/shared/services/shared-service';
 
 @Component({
     selector: 'app-educational-department',
-    imports: [DynamicFormComponent, DataTable, Fluid, ],
+    imports: [DynamicFormComponent, DataTable, Fluid],
     templateUrl: './educational-department.html',
     styleUrl: './educational-department.scss',
     providers: []
 })
 export class EducationalDepartment {
+    private _router = inject(Router);
+    private _userMenuService = inject(UserMenuService);
+    canInsert = true;
+    canUpdate = true;
+    canDelete = true;
+
+    allData: any[] = [];
     commonData: any[] = [];
     editingId: number | null = null;
     commonForm!: FormGroup;
@@ -30,29 +37,10 @@ export class EducationalDepartment {
     first = 0;
     loading = false;
     searchValue: string = '';
-
-    InstitutionTypeOptions: { label: string; value: any }[] = [];
-    institutionNameOptions: { label: string; value: any }[] = [];
-    ancestors: CommonCode[] = [];
+    isSubmitting = false;
 
     formConfig: FormConfig = {
         formFields: [
-            {
-                name: 'InstitutionTypeId',
-                label: 'Institution Type',
-                type: 'select',
-                required: true,
-                options: []
-            },
-            {
-                name: 'institutionNameId',
-                label: 'Institution Name',
-                type: 'select',
-                required: true,
-                options: [],
-                dependsOn: 'InstitutionTypeId',
-                cascadeLoad: true
-            },
             {
                 name: 'codeValueEN',
                 label: 'EducationalDepartment Name (English)',
@@ -69,8 +57,8 @@ export class EducationalDepartment {
                 name: 'status',
                 label: 'Status',
                 type: 'select',
-                required: true,
-                default: true,
+                required: false,
+                default: null,
                 options: [
                     { label: 'Active', value: true },
                     { label: 'Inactive', value: false }
@@ -81,8 +69,6 @@ export class EducationalDepartment {
 
     tableConfig: TableConfig = {
         tableColumns: [
-            // { field: 'InstitutionTypeName', header: 'InstitutionType' },
-            // { field: 'institutionNameName', header: 'InstitutionName' },
             { field: 'codeValueEN', header: 'Educational Department Name (EN)' },
             { field: 'codeValueBN', header: 'Educational Department Name (BN)' },
             {
@@ -105,25 +91,29 @@ export class EducationalDepartment {
     ) {}
 
     ngOnInit(): void {
+        const _perms = this._userMenuService.getPermissionsByRoute(this._router.url);
+        this.canInsert = _perms.canInsert;
+        this.canUpdate = _perms.canUpdate;
+        this.canDelete = _perms.canDelete;
+
         this.initForm();
-        this.loadInstitutionTypes(); // Load InstitutionTypes on init
-        this.getUpazilaWithPaging({
-            first: this.first,
-            rows: this.rows
-        });
+        this.setupFormFilterListeners();
+        this.getAllData();
+    }
+
+    private setupFormFilterListeners() {
+        this.commonForm.get('status')?.valueChanges.subscribe(() => { this.first = 0; this.buildTableData(); });
     }
 
     initForm() {
         this.commonForm = this.fb.group({
-            InstitutionTypeId: [null, Validators.required],
-            institutionNameId: [null, Validators.required],
             codeValueEN: ['', Validators.required],
             codeValueBN: ['', Validators.required],
-            status: [true, Validators.required],
+            status: [null],
             orgId: [0],
             codeId: [0],
             codeType: ['EducationalDepartment'],
-            parentCodeId: [null], // Will store institutionNameId
+            parentCodeId: [null],
             commCode: [null],
             displayCodeValueEN: [null],
             displayCodeValueBN: [null],
@@ -136,229 +126,96 @@ export class EducationalDepartment {
         });
     }
 
+    onFieldChange(_event: { fieldName: string; value: any }) {}
 
-    loadInstitutionTypes() {
-        this.masterBasicSetupService.getAllByType('EducationInstitutionType').subscribe({
-            next: (InstitutionTypes) => {
-                this.InstitutionTypeOptions = InstitutionTypes.map((d) => ({
-                    label: d.codeValueEN,
-                    value: d.codeId
-                }));
-                const InstitutionTypeField = this.formConfig.formFields.find((f) => f.name === 'InstitutionTypeId');
-                if (InstitutionTypeField) {
-                    InstitutionTypeField.options = this.InstitutionTypeOptions;
-                }
-            },
-            error: (err) => {
-                console.error('Error loading InstitutionTypes:', err);
-                this.messageService.add({
-                    severity: 'error',
-                    summary: 'Error',
-                    detail: 'Failed to load InstitutionTypes'
-                });
-            }
-        });
-    }
-
-    loadInstitutionNames(InstitutionTypeId: number) {
-        this.masterBasicSetupService.getByParentId(InstitutionTypeId).subscribe({
-            next: (institutionNames) => {
-                this.institutionNameOptions = institutionNames.map((d) => ({
-                    label: d.codeValueEN,
-                    value: d.codeId
-                }));
-                const institutionNameField = this.formConfig.formFields.find((f) => f.name === 'institutionNameId');
-                if (institutionNameField) {
-                    institutionNameField.options = this.institutionNameOptions;
-                }
-            },
-            error: (err) => {
-                console.error('Error loading institutionNames:', err);
-                this.messageService.add({
-                    severity: 'error',
-                    summary: 'Error',
-                    detail: 'Failed to load institutionNames'
-                });
-            }
-        });
-    }
-
-    // Handle field changes (for cascading dropdowns)
-    onFieldChange(event: { fieldName: string; value: any }) {
-        console.log('Field changed:', event);
-
-        // When institutionNameId field needs to be updated (because InstitutionTypeId changed)
-        if (event.fieldName === 'institutionNameId' && event.value.parentField === 'InstitutionTypeId') {
-            const InstitutionTypeId = event.value.parentValue;
-            this.loadInstitutionNames(InstitutionTypeId);
-        }
-    }
-
-    loadAnscestors(codeId: number) {
-        this.masterBasicSetupService.getAncestorsOfCommonCode(codeId).subscribe({
-            next: (res) => {
-                this.ancestors = res;
-                console.log('Ancestors:', this.ancestors);
-            },
-            error: (err) => {
-                console.error('Error loading ancestors:');
-            }
-        });
-    }
-
-    getUpazilaWithPaging(event?: any) {
+    getAllData() {
         this.loading = true;
-        const pageNo = event ? event.first / event.rows + 1 : 1;
-        const pageSize = event?.rows ?? this.rows;
-
-        const apiCall = this.searchValue ? this.masterBasicSetupService.getByKeyordWithPaging('EducationalDepartment', this.searchValue, pageNo, pageSize) : this.masterBasicSetupService.getAllWithPaging('EducationalDepartment', pageNo, pageSize);
-
-        apiCall.subscribe({
+        this.masterBasicSetupService.getAllByType('EducationalDepartment').subscribe({
             next: (res) => {
-                this.commonData = res.datalist;
-                this.totalRecords = res.pages.rows;
-                this.rows = pageSize;
+                this.allData = Array.isArray(res) ? res : [];
+                this.buildTableData();
                 this.loading = false;
             },
             error: (err) => {
                 console.error('Error fetching data:', err);
-                this.messageService.add({
-                    severity: 'error',
-                    summary: 'Error',
-                    detail: 'Failed to load data'
-                });
+                this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.message || 'Failed to load data' });
                 this.loading = false;
             }
         });
     }
 
+    private buildTableData() {
+        let list = [...this.allData];
+        const status = this.commonForm?.get('status')?.value;
+        if (status != null) list = list.filter((r: any) => r.status === status);
+        const q = (this.searchValue ?? '').toLowerCase().trim();
+        if (q) list = list.filter((r: any) => r.codeValueEN?.toLowerCase().includes(q) || r.codeValueBN?.toLowerCase().includes(q));
+        this.commonData = list;
+        this.totalRecords = list.length;
+        this.first = 0;
+    }
+
     submit(data: any) {
+        const status = this.commonForm.get('status')?.value;
+        if (status == null) {
+            this.messageService.add({ severity: 'warn', summary: 'Validation', detail: 'Please select Status' });
+            return;
+        }
         if (this.commonForm.invalid) {
             this.commonForm.markAllAsTouched();
             return;
         }
 
         const currentUser = this.getCurrentUser();
-        const currentDateTime = this.shareService.getCurrentDateTime()
-
-        // Set parentCodeId to selected institutionNameId
-        this.commonForm.patchValue({
-            parentCodeId: this.commonForm.value.institutionNameId
-        });
+        const currentDateTime = this.shareService.getCurrentDateTime();
+        // Educational Department is an independent (flat) list — no parent institution.
+        this.commonForm.patchValue({ parentCodeId: null });
 
         if (this.editingId) {
-            this.updateUpazila(currentUser, currentDateTime);
+            this.updateDepartment(currentUser, currentDateTime);
         } else {
-            this.createUpazila(currentUser, currentDateTime);
+            this.createDepartment(currentUser, currentDateTime);
         }
     }
 
-    private createUpazila(currentUser: string, currentDateTime: string) {
-        const createPayload = {
-            ...this.commonForm.value,
-            createdBy: currentUser,
-            createdDate: currentDateTime,
-            lastUpdatedBy: currentUser,
-            lastupdate: currentDateTime
-        };
-
+    private createDepartment(currentUser: string, currentDateTime: string) {
+        const createPayload = { ...this.commonForm.value, createdBy: currentUser, createdDate: currentDateTime, lastUpdatedBy: currentUser, lastupdate: currentDateTime };
         this.masterBasicSetupService.create(createPayload).subscribe({
-            next: (res) => {
-                console.log('Created:', res);
+            next: () => {
                 this.resetForm();
-                this.getUpazilaWithPaging({
-                    first: this.first,
-                    rows: this.rows
-                });
-                this.messageService.add({
-                    severity: 'success',
-                    summary: 'Success',
-                    detail: 'EducationalDepartment created successfully'
-                });
+                this.getAllData();
+                this.messageService.add({ severity: 'success', summary: 'Success', detail: 'EducationalDepartment created successfully' });
             },
             error: (err) => {
                 console.error('Error creating:', err);
-                this.messageService.add({
-                    severity: 'error',
-                    summary: 'Error',
-                    detail: 'Failed to create educational-department'
-                });
+                this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.message || 'Failed to create educational-department' });
             }
         });
     }
 
-    private updateUpazila(currentUser: string, currentDateTime: string) {
-        const updatePayload = {
-            ...this.commonForm.value,
-            codeId: this.editingId,
-            lastUpdatedBy: currentUser,
-            lastupdate: currentDateTime,
-            createdDate: currentDateTime,
-            createdBy: currentUser
-        };
-
+    private updateDepartment(currentUser: string, currentDateTime: string) {
+        const updatePayload = { ...this.commonForm.value, codeId: this.editingId, lastUpdatedBy: currentUser, lastupdate: currentDateTime, createdDate: currentDateTime, createdBy: currentUser };
         this.masterBasicSetupService.update(updatePayload).subscribe({
-            next: (res) => {
-                console.log('Updated:', res);
+            next: () => {
                 this.resetForm();
-                this.getUpazilaWithPaging({
-                    first: this.first,
-                    rows: this.rows
-                });
-                this.messageService.add({
-                    severity: 'success',
-                    summary: 'Success',
-                    detail: 'EducationalDepartment updated successfully'
-                });
+                this.getAllData();
+                this.messageService.add({ severity: 'success', summary: 'Success', detail: 'EducationalDepartment updated successfully' });
             },
             error: (err) => {
                 console.error('Error updating:', err);
-                this.messageService.add({
-                    severity: 'error',
-                    summary: 'Error',
-                    detail: 'Failed to update educational-department'
-                });
+                this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.message || 'Failed to update educational-department' });
             }
         });
     }
 
     update(row: any) {
-    this.editingId = row.codeId;
-
-    this.loadAnscestors(row.codeId);
-
-    // Move the logic inside the loadAnscestors subscribe callback
-    this.masterBasicSetupService.getAncestorsOfCommonCode(row.codeId).subscribe({
-        next: (ancestors) => {
-            this.ancestors = ancestors;
-            console.log('Ancestors:', this.ancestors);
-
-            const InstitutionTypeId = this.ancestors[0]?.codeId;
-
-            if (InstitutionTypeId) {
-                console.log('Loading institutionNames for InstitutionTypeId:', InstitutionTypeId);
-                this.loadInstitutionNames(InstitutionTypeId);
-
-                // Patch the form after institutionNames are loaded
-                // Use setTimeout or subscribe to loadInstitutionNames completion
-
-                    this.commonForm.patchValue({
-                        InstitutionTypeId: InstitutionTypeId,
-                        institutionNameId: row.parentCodeId,
-                        codeValueEN: row.codeValueEN,
-                        codeValueBN: row.codeValueBN,
-                        status: row.status
-                    });
-
-            }
-        },
-        error: (err) => {
-            console.error('Error loading ancestors:', err);
-        }
-    });
-
-    console.log('Edit:', row);
-}
+        this.editingId = row.codeId;
+        this.commonForm.patchValue({
+            codeValueEN: row.codeValueEN,
+            codeValueBN: row.codeValueBN,
+            status: row.status
+        });
+    }
 
     delete(row: any, event: Event) {
         this.confirmationService.confirm({
@@ -367,35 +224,17 @@ export class EducationalDepartment {
             header: 'Delete Confirmation',
             icon: 'pi pi-info-circle',
             rejectLabel: 'Cancel',
-            rejectButtonProps: {
-                label: 'Cancel',
-                severity: 'secondary',
-                outlined: true
-            },
-            acceptButtonProps: {
-                label: 'Delete',
-                severity: 'danger'
-            },
+            rejectButtonProps: { label: 'Cancel', severity: 'secondary', outlined: true },
+            acceptButtonProps: { label: 'Delete', severity: 'danger' },
             accept: () => {
                 this.masterBasicSetupService.delete(row.codeId).subscribe({
                     next: () => {
-                        this.getUpazilaWithPaging({
-                            first: this.first,
-                            rows: this.rows
-                        });
-                        this.messageService.add({
-                            severity: 'success',
-                            summary: 'Success',
-                            detail: 'EducationalDepartment deleted successfully'
-                        });
+                        this.getAllData();
+                        this.messageService.add({ severity: 'success', summary: 'Success', detail: 'EducationalDepartment deleted successfully' });
                     },
                     error: (err) => {
                         console.error('Error deleting:', err);
-                        this.messageService.add({
-                            severity: 'error',
-                            summary: 'Error',
-                            detail: 'Failed to delete educational-department'
-                        });
+                        this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.message || 'Failed to delete educational-department' });
                     }
                 });
             }
@@ -404,20 +243,13 @@ export class EducationalDepartment {
 
     resetForm() {
         this.editingId = null;
-
-        // Clear institutionName options when resetting
-        const institutionNameField = this.formConfig.formFields.find((f) => f.name === 'institutionNameId');
-        if (institutionNameField) {
-            institutionNameField.options = [];
-        }
-
+        this.isSubmitting = false;
+        this.searchValue = '';
         this.commonForm.reset({
-            InstitutionTypeId: null,
-            institutionNameId: null,
             orgId: 0,
             codeId: 0,
             codeType: 'EducationalDepartment',
-            status: true,
+            status: null,
             parentCodeId: null,
             commCode: null,
             displayCodeValueEN: null,
@@ -429,16 +261,16 @@ export class EducationalDepartment {
             lastUpdatedBy: '',
             lastupdate: ''
         });
+        this.buildTableData();
     }
 
     onSearch(keyword: string) {
-        this.searchValue = keyword;
+        this.searchValue = keyword ?? '';
         this.first = 0;
-        this.getUpazilaWithPaging({ first: 0, rows: this.rows });
+        this.buildTableData();
     }
 
     private getCurrentUser(): string {
-        // TODO: Get from authentication service
-        return this.shareService.getCurrentUser()
+        return this.shareService.getCurrentUser();
     }
 }

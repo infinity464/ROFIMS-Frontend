@@ -1,0 +1,1851 @@
+﻿import { Component, OnInit, ViewChild , inject } from '@angular/core';
+import { UserMenuService } from '@/services/user-menu.service';
+import { FormBuilder, FormGroup, Validators } from '@angular/forms';
+import { MasterBasicSetupService } from '@/Components/basic-setup/shared/services/MasterBasicSetupService';
+import { MessageService } from 'primeng/api';
+import { SharedService } from '@/shared/services/shared-service';
+import { FlexibleDateDirective } from '@/shared/directives/flexible-date.directive';
+import { CommonModule } from '@angular/common';
+import { ReactiveFormsModule, FormsModule } from '@angular/forms';
+import { FluidModule } from 'primeng/fluid';
+import { InputTextModule } from 'primeng/inputtext';
+import { ButtonModule } from 'primeng/button';
+import { SelectModule } from 'primeng/select';
+import { MultiSelectModule } from 'primeng/multiselect';
+import { DatePickerModule } from 'primeng/datepicker';
+import { RichEditorComponent } from '@/Components/Common/rich-editor/rich-editor';
+import { ToastModule } from 'primeng/toast';
+import { TooltipModule } from 'primeng/tooltip';
+import { CheckboxModule } from 'primeng/checkbox';
+import { DialogModule } from 'primeng/dialog';
+import { FieldsetModule } from 'primeng/fieldset';
+import { CommonCode } from '@/Components/basic-setup/shared/models/common-code';
+import { environment } from '@/Core/Environments/environment';
+import { HttpClient } from '@angular/common/http';
+import { forkJoin, of } from 'rxjs';
+import { FileReferencesFormComponent, FileRowData } from '@/Components/Common/file-references-form/file-references-form';
+import { EmpService } from '@/services/emp-service';
+import { CommonCodeService } from '@/services/common-code-service';
+import { FamilyInfoService, FamilyInfoModel } from '@/services/family-info-service';
+import { ActivatedRoute, Router } from '@angular/router';
+import { take, map, catchError } from 'rxjs/operators';
+import { RouterLink } from '@angular/router';
+import { NoteSheetEditCacheService } from '@/services/note-sheet-edit-cache.service';
+import { IdentityUserMappingService } from '@/services/identity-user-mapping.service';
+import { PostingService } from '@/services/posting.service';
+import { ExBdLeaveApplicationService, ExBdLeaveApplicationListViewModel, ExBdLeaveNoteSheetBodyData } from '@/services/ex-bd-leave-application.service';
+import { NoteSheetType, NoteSheetCurrentStatus, ApprovalStatus, NoteSheetOperationType, NoteSheetOperationTypeOptions, CodeType } from '@/models/enums';
+import { BanglaNumerals, toBanglaWords, toEnglishWords, formatDateBangla, formatDateEnglish } from '@/Core/i18n/bangla-numerals';
+import { NotesheetApproverSelectComponent } from '@/Components/Common/notesheet-approver-select/notesheet-approver-select';
+import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
+import { NotesheetSignatoryComponent, SignatoryDetail } from '@/Components/Common/notesheet-signatory/notesheet-signatory';
+import {
+    Document, Packer, Paragraph, TextRun,
+    AlignmentType, PageOrientation, ImageRun
+} from 'docx';
+import { saveAs } from 'file-saver';
+import jsPDF from 'jspdf';
+import html2canvas from 'html2canvas';
+
+/** Reference paragraph row (serial + text + optional file) */
+interface ReferenceParagraph {
+    text: string;
+    fileRows: FileRowData[];
+}
+
+@Component({
+    selector: 'app-notesheet-ex-bd-leave',
+    standalone: true,
+    imports: [
+        CommonModule,
+        ReactiveFormsModule,
+        FormsModule,
+        FluidModule,
+        InputTextModule,
+        ButtonModule,
+        SelectModule,
+        MultiSelectModule,
+        DatePickerModule, FlexibleDateDirective,
+        RichEditorComponent,
+        ToastModule,
+        TooltipModule,
+        FileReferencesFormComponent,
+        RouterLink,
+        NotesheetSignatoryComponent,
+        CheckboxModule,
+        NotesheetApproverSelectComponent,
+        DialogModule,
+        FieldsetModule
+    ],
+    templateUrl: './notesheet-ex-bd-leave.html',
+    providers: [MessageService],
+    styleUrl: './notesheet-ex-bd-leave.scss'
+})
+export class NotesheetExBdLeaveComponent implements OnInit {
+    private _router = inject(Router);
+    private _userMenuService = inject(UserMenuService);
+    canInsert = true;
+    canUpdate = true;
+    canDelete = true;
+
+    title = 'Generate Ex-Bd Leave NoteSheet';
+    form!: FormGroup;
+    isSubmitting = false;
+    editMode = false;
+    editId: number | null = null;
+    editLoading = false;
+    editLoadFailed = false;
+    textTypeOptions = [
+        { label: 'English', value: 'en' },
+        { label: 'Bangla', value: 'bn' }
+    ];
+    readonly noteSheetOperationTypeOptions = NoteSheetOperationTypeOptions;
+    /** Ex-BD Leave Application selector */
+    exBdLeaveAppOptions: { label: string; value: number }[] = [];
+    allExBdLeaveApps: ExBdLeaveApplicationListViewModel[] = [];
+    selectedExBdLeaveAppId: number | null = null;
+
+    /** NoteSheet Number Config */
+    allNoteSheetConfigs: any[] = [];
+    noteSheetConfigOptions: { label: string; value: number }[] = [];
+    memberTypeMap = new Map<number, { en: string; bn: string }>();
+    noteSheetPrefixEN = '';
+    noteSheetPrefixBN = '';
+    unitOptions: { label: string; labelBn: string | null; value: number }[] = [];
+    wingOptions: { label: string; labelBn: string | null; value: number }[] = [];
+    branchOptions: { label: string; labelBn: string | null; value: number }[] = [];
+    purposeOfLeaveOptions: { label: string; labelBn: string | null; value: number }[] = [];
+    countryOptions: { label: string; labelBn: string | null; value: number }[] = [];
+    preparedByOptions: { label: string; value: number }[] = [];
+    familyMemberOptions: { label: string; labelBn?: string; value: number; fmid: number; employeeId: number; relationLabel?: string; nameRaw?: string; nameBnRaw?: string; relationLabelBn?: string }[] = [];
+    relationshipOptions: { label: string; labelBn: string | null; value: number }[] = [];
+    subjectTypeOptions: { label: string; labelBn: string | null; value: number }[] = [];
+    showSubjectDialog = false;
+    newSubject: Partial<CommonCode> = { codeValueEN: '', codeValueBN: '' };
+    isSavingSubject = false;
+    referenceParagraphs: ReferenceParagraph[] = [{ text: '', fileRows: [] }];
+    fileRows: FileRowData[] = [];
+    /** Selected employee from RAB dropdown (auto-fill wing, branch, etc.) */
+    selectedEmployee: any = null;
+    selectedEmployeeId: number | null = null;
+    /** Whether the logged-in user has an employee mapping (show readonly vs dropdown for Prepared By) */
+    isPreparedByMapped = false;
+
+    /** View mode */
+    viewMode = false;
+    viewNoteSheet: any = null;
+    viewLoading = false;
+    initiatorDetails: SignatoryDetail | null = null;
+    approversDetails: SignatoryDetail[] = [];
+    preparedByDetails: SignatoryDetail | null = null;
+    /** Inline edit in view mode */
+    viewEditing = false;
+    savingView = false;
+    editSubject = '';
+    editExBdLeaveSubjectId: number | null = null;
+    editMainText = '';
+    editReferenceNumber = '';
+
+    private generatedMainTextBN = '';
+    private generatedMainTextEN = '';
+
+    private readonly defaultMainTextBN =
+        'ছুটি মঞ্জুরের নিমিত্তে সিনিয়র সচিব, জননিরাপত্তা বিভাগ, স্বরাষ্ট্র মন্ত্রণালয়, বাংলাদেশ সচিবালয়, ঢাকা বরাবর আবেদন করেছেন। তার স্বাক্ষ্যায়িত আবেদন সংশ্লিষ্ট নথিপত্র সূত্র স্মারক মোতাবেক অত্র কার্যালয়ে গৃহীত হয়েছে।' +
+        '<br><br>' +
+        'এমতাবস্থায়, উল্লিখিত পুলিশ কর্মকর্তার স্বাক্ষ্যায়িত আবেদনপত্র এবং সংশ্লিষ্ট নথিপত্র পুলিশ হেডকোয়ার্টার্স, ঢাকা বরাবর প্রেরণ করা যেতে পারে।';
+
+    private readonly defaultMainTextEN =
+        'Has applied to the Senior Secretary, Public Security Division, Ministry of Home Affairs, Bangladesh Secretariat, Dhaka, for the grant of leave. ' +
+        'His/Her attested application, along with the relevant documents, has been received in this office in accordance with the reference memo.' +
+        '<br><br>' +
+        'In these circumstances, the attested application and relevant documents of the aforementioned police officer may be forwarded to the Police Headquarters, Dhaka.';
+
+    private readonly stepTranslations: Record<string, string> = {
+        'Prepared by': 'প্রস্তুতকারী',
+        'Initiator': 'সূচনাকারী',
+        'Final Approver': 'চূড়ান্ত অনুমোদনকারী'
+    };
+
+    @ViewChild('fileReferencesForm') fileReferencesForm!: FileReferencesFormComponent;
+
+    constructor(
+        private masterBasicSetupService: MasterBasicSetupService,
+        private messageService: MessageService,
+        private fb: FormBuilder,
+        private sharedService: SharedService,
+        private http: HttpClient,
+        private empService: EmpService,
+        private familyInfoService: FamilyInfoService,
+        private route: ActivatedRoute,
+        private router: Router,
+        private noteSheetEditCache: NoteSheetEditCacheService,
+        private sanitizer: DomSanitizer,
+        private identityMappingService: IdentityUserMappingService,
+        private commonCodeService: CommonCodeService,
+        private postingService: PostingService,
+        private exBdLeaveAppService: ExBdLeaveApplicationService
+    ) {
+        this.form = this.fb.group({
+            exBdLeaveApplicationId: [null as number | null, Validators.required],
+            textType: ['bn'],
+            noteSheetDate: [null as Date | null, Validators.required],
+            noteSheetNumberConfigId: [null as number | null, Validators.required],
+            noteSheetNoStaticWord: [''],
+            unitId: [null as number | null],
+            wingBattalionId: [null as number | null],
+            branchId: [null as number | null],
+            referenceNumber: [''],
+            noteSheetNo: [''],
+            noteSheetOperationType: [NoteSheetOperationType.Manual as string | null, Validators.required],
+            isSecret: [false],
+            rabIdEmployeeId: [null as number | null, Validators.required], // employee ID when RAB ID selected
+            subject: [''],
+            exBdLeaveSubjectId: [null as number | null, Validators.required],
+            purposeOfExBdLeaveId: [null as number | null, Validators.required],
+            destinationCountryIds: [[] as number[], Validators.required],
+            dateOfVisitFrom: [null as Date | null, Validators.required],
+            dateOfVisitTo: [null as Date | null, Validators.required],
+            totalDays: [0],
+            familyMemberIds: [[] as number[]], // selected FMIDs for family list
+            mainText: [''],
+            preparedBy: [''],
+            preparedByEmployeeId: [null as number | null],
+            initiatorId: [null as number | null, Validators.required],
+            recommenderIds: [[] as number[]],
+            finalApproverId: [null as number | null, Validators.required]
+        });
+    }
+
+    get unitOptionsDisplay(): { label: string; value: number }[] {
+        return this.unitOptions.map((o) => ({ label: o.label, value: o.value }));
+    }
+    get wingOptionsDisplay(): { label: string; value: number }[] {
+        return this.wingOptions.map((o) => ({ label: o.label, value: o.value }));
+    }
+    get branchOptionsDisplay(): { label: string; value: number }[] {
+        return this.branchOptions.map((o) => ({ label: o.label, value: o.value }));
+    }
+    get purposeOptionsDisplay(): { label: string; value: number }[] {
+        return this.purposeOfLeaveOptions.map((o) => ({ label: o.label, value: o.value }));
+    }
+    get countryOptionsDisplay(): { label: string; value: number }[] {
+        return this.countryOptions.map((o) => ({ label: o.label, value: o.value }));
+    }
+    /** RAB employee dropdown uses the same approval employee options */
+    get rabEmployeeOptionsDisplay(): { label: string; value: number }[] {
+        return this.preparedByOptions;
+    }
+    /** Subject options localized to the selected Text Type: Bangla label when bn (falls back to
+     *  English if a subject has no Bangla value). In view mode the note sheet's own language wins. */
+    get subjectTypeOptionsDisplay(): { label: string; value: number }[] {
+        const isBn = this.viewMode ? !this.isViewEnglish() : this.isBangla;
+        return this.subjectTypeOptions.map((o) => ({
+            label: isBn ? (o.labelBn || o.label) : o.label,
+            value: o.value
+        }));
+    }
+
+    /** Initiator/final approver are required only for manual note sheets. System-generate note
+     *  sheets get the chain from config, so the pickers are hidden and these validators dropped. */
+    ngOnInit(): void {
+        const _perms = this._userMenuService.getPermissionsByRoute(this._router.url);
+        this.canInsert = _perms.canInsert;
+        this.canUpdate = _perms.canUpdate;
+        this.canDelete = _perms.canDelete;
+
+        this.route.queryParams.pipe(take(1)).subscribe((params) => {
+            const mode = params['mode'];
+            const id = params['id'];
+            if (mode === 'view' && id != null && id !== '') {
+                const numId = Number(id);
+                if (!isNaN(numId) && numId > 0) {
+                    this.viewMode = true;
+                    this.title = 'Ex-BD Leave Note Sheet – Preview';
+                    this.loadPurposeOfLeave();
+                    this.loadCountries();
+                    this.loadSubjectTypes();
+                    this.loadNoteSheetForView(numId);
+                    return;
+                }
+            }
+            // Form mode (create / edit)
+            this.loadUnits();
+            this.loadBranches();
+            this.loadRelationships();
+            this.loadPurposeOfLeave();
+            this.loadCountries();
+            this.loadSubjectTypes();
+            this.loadNoteSheetNumberConfig();
+            this.loadExBdLeaveApplications();
+            this.loadApproverOptions();
+            const user = this.sharedService.getCurrentUser?.() ?? '';
+            this.form.get('preparedBy')?.setValue(user);
+            this.resolvePreparedByMapping();
+            this.form.get('dateOfVisitFrom')?.valueChanges.subscribe(() => this.calculateTotalDays());
+            this.form.get('dateOfVisitTo')?.valueChanges.subscribe(() => this.calculateTotalDays());
+            this.form.get('textType')?.valueChanges.subscribe(() => {
+                this.buildNoteSheetConfigOptions();
+            });
+            this.form.get('unitId')?.valueChanges.subscribe(() => {
+                this.onUnitChange();
+            });
+            if (id != null && id !== '') {
+                const numId = Number(id);
+                if (!isNaN(numId) && numId > 0) {
+                    this.editId = numId;
+                    this.editMode = true;
+                    this.title = 'Update Draft Note-Sheet (Ex-BD Leave)';
+                    // In edit mode the number is already assigned (shown read-only as Note Sheet No),
+                    // so the numbering-config picker is hidden and no longer required.
+                    this.form.get('noteSheetNumberConfigId')?.clearValidators();
+                    this.form.get('noteSheetNumberConfigId')?.updateValueAndValidity();
+                    this.loadNoteSheetForEdit(numId);
+                }
+            } else {
+                // New notesheet: set default main text based on textType
+                const textType = this.form.get('textType')?.value;
+                this.form.patchValue({ mainText: textType === 'en' ? this.defaultMainTextEN : this.defaultMainTextBN });
+            }
+            // Update default main text when textType changes (only for new notesheets)
+            this.form.get('textType')?.valueChanges.subscribe((val) => {
+                if (!this.editMode) {
+                    const currentText = this.form.get('mainText')?.value ?? '';
+                    const isDefault = !currentText || currentText === this.defaultMainTextBN || currentText === this.defaultMainTextEN;
+                    const isGenerated = currentText === this.generatedMainTextBN || currentText === this.generatedMainTextEN;
+                    if (isGenerated && (this.generatedMainTextBN || this.generatedMainTextEN)) {
+                        this.form.patchValue({ mainText: val === 'en' ? this.generatedMainTextEN : this.generatedMainTextBN });
+                    } else if (isDefault) {
+                        this.form.patchValue({ mainText: val === 'en' ? this.defaultMainTextEN : this.defaultMainTextBN });
+                    }
+                }
+            });
+        });
+    }
+
+    private parseDate(value: string | Date | null | undefined): Date | null {
+        if (value == null) return null;
+        if (value instanceof Date) return value;
+        const dt = new Date(value);
+        return isNaN(dt.getTime()) ? null : dt;
+    }
+
+    private toNum(v: unknown): number | null {
+        if (v == null) return null;
+        if (typeof v === 'number' && !isNaN(v)) return v;
+        const n = Number(v);
+        return isNaN(n) ? null : n;
+    }
+
+    private applyNoteSheetToForm(d: any): void {
+        let recommenderIds: number[] = [];
+        const rawJson = d.recommendersJson ?? d.RecommendersJson ?? d.recommenderIdsJson ?? d.RecommenderIdsJson;
+        try {
+            if (rawJson && typeof rawJson === 'string') {
+                const arr = JSON.parse(rawJson) as any[];
+                if (Array.isArray(arr) && arr.length > 0) {
+                    if (typeof arr[0] === 'object' && arr[0] !== null) {
+                        recommenderIds = arr.map((r: any) => r.recomender_id ?? r.recomenderId ?? r.employeeId ?? r.EmployeeId ?? 0).filter(Boolean);
+                    } else {
+                        recommenderIds = arr.filter((x: any) => typeof x === 'number');
+                    }
+                }
+            }
+        } catch { /* ignore */ }
+        let familyMemberIds: number[] = [];
+        const familyInfoJson = d.familyInfoJson ?? d.FamilyInfoJson;
+        try {
+            if (familyInfoJson && typeof familyInfoJson === 'string') {
+                const arr = JSON.parse(familyInfoJson) as { familyMemberId?: number; FamilyMemberId?: number; fmid?: number; FMID?: number; employeeId?: number }[];
+                if (Array.isArray(arr)) {
+                    familyMemberIds = arr
+                        .map((f) => this.toNum(f.familyMemberId ?? f.FamilyMemberId ?? f.fmid ?? f.FMID) ?? 0)
+                        .filter((id) => id > 0);
+                }
+            }
+        } catch { /* ignore */ }
+        const empId = this.toNum(d.employeeId ?? d.EmployeeId);
+        this.selectedEmployeeId = empId && empId > 0 ? empId : null;
+        const appIdForEdit = this.toNum(d.exBdLeaveApplicationId ?? d.ExBdLeaveApplicationId);
+        // Leave details (purpose, visit dates, countries, total days, family) live on
+        // ExBdLeaveApplication, not NoteSheetInfo — they are fetched separately below.
+        // Only load family directly here when there is no linked application to source it from.
+        if (this.selectedEmployeeId && !(appIdForEdit && appIdForEdit > 0)) {
+            this.loadFamilyMembersForEmployee(this.selectedEmployeeId, familyMemberIds);
+        }
+        const noteSheetDate = d.noteSheetDate ?? d.NoteSheetDate;
+        const fromDate = d.dateOfVisitFrom ?? d.FromDate ?? d.fromDate;
+        const toDate = d.dateOfVisitTo ?? d.ToDate ?? d.toDate;
+        const purposeId = this.toNum(d.purposeOfExBdLeaveId ?? d.PurposeId ?? d.purposeId);
+        // Destination countries: may come as single id or JSON array
+        let destCountryIds: number[] = [];
+        const rawDestCountryId = this.toNum(d.destinationCountryId ?? d.DestinationCountryId);
+        if (rawDestCountryId && rawDestCountryId > 0) destCountryIds = [rawDestCountryId];
+        try {
+            const dcJson = d.destinationCountriesJson ?? d.DestinationCountriesJson;
+            if (dcJson && typeof dcJson === 'string') {
+                const arr = JSON.parse(dcJson) as { countryId?: number; CountryId?: number }[];
+                if (Array.isArray(arr) && arr.length > 0) {
+                    destCountryIds = arr.map((c) => c.countryId ?? c.CountryId ?? 0).filter((id) => id > 0);
+                }
+            }
+        } catch { /* ignore */ }
+        let totalDays = this.toNum(d.totalDays ?? d.TotalDays) ?? 0;
+        if (totalDays === 0 && fromDate && toDate) {
+            const from = this.parseDate(fromDate);
+            const to = this.parseDate(toDate);
+            if (from && to) totalDays = Math.max(0, Math.ceil((to.getTime() - from.getTime()) / (1000 * 60 * 60 * 24)) + 1);
+        }
+        const unitIdVal = this.toNum(d.unitId ?? d.UnitId);
+        const wingId = this.toNum(d.wingBattalionId ?? d.WingBattalionId ?? d.WingsBattalionId);
+        const branchIdVal = this.toNum(d.branchId ?? d.BranchId);
+        if (unitIdVal != null && unitIdVal > 0) this.loadWingsForUnit(unitIdVal, () => {});
+        const initiatorIdVal = this.toNum(d.initiatorId ?? d.InitiatorId);
+        const finalApproverIdVal = this.toNum(d.finalApprovalId ?? d.FinalApprovalId ?? d.finalApproverId ?? d.FinalApproverId);
+        const refNum = d.referenceNumber ?? d.ReferenceNumber;
+        // Parse reference number: JSON array of paragraphs or legacy plain string
+        if (refNum) {
+            try {
+                const arr = JSON.parse(refNum);
+                if (Array.isArray(arr) && arr.length > 0) {
+                    this.referenceParagraphs = arr.map((item: any) => ({
+                        text: item.text ?? item.Text ?? '',
+                        fileRows: (item.files ?? item.Files ?? []).map((f: any) => ({
+                            displayName: f.fileName ?? f.FileName ?? '',
+                            fileId: f.FileId ?? f.fileId ?? null,
+                            file: null
+                        }))
+                    }));
+                }
+            } catch {
+                this.referenceParagraphs = [{ text: String(refNum), fileRows: [] }];
+            }
+        }
+        const noteNo = d.noteSheetNo ?? d.NoteSheetNo;
+        this.form.patchValue({
+            exBdLeaveApplicationId: this.toNum(d.exBdLeaveApplicationId ?? d.ExBdLeaveApplicationId),
+            textType: (d.textType ?? d.TextType) === 1 ? 'bn' : 'en',
+            noteSheetDate: this.parseDate(noteSheetDate),
+            noteSheetNumberConfigId: this.toNum(d.noteSheetNumberConfigId ?? d.NoteSheetNumberConfigId),
+            unitId: unitIdVal,
+            wingBattalionId: wingId,
+            branchId: branchIdVal,
+            noteSheetNo: noteNo != null ? String(noteNo) : '',
+            noteSheetOperationType: d.noteSheetOperationType ?? d.NoteSheetOperationType ?? null,
+            isSecret: !!(d.isSecret ?? d.IsSecret ?? false),
+            rabIdEmployeeId: this.selectedEmployeeId,
+            subject: String(d.subject ?? d.Subject ?? ''),
+            exBdLeaveSubjectId: d.exBdLeaveSubjectId ?? d.ExBdLeaveSubjectId ?? null,
+            purposeOfExBdLeaveId: purposeId,
+            destinationCountryIds: destCountryIds,
+            dateOfVisitFrom: this.parseDate(fromDate),
+            dateOfVisitTo: this.parseDate(toDate),
+            totalDays,
+            familyMemberIds: familyMemberIds,
+            mainText: String(d.mainText ?? d.MainText ?? ''),
+            preparedBy: String(d.createdBy ?? d.CreatedBy ?? d.lastUpdatedBy ?? d.LastUpdatedBy ?? this.sharedService.getCurrentUser?.() ?? ''),
+            preparedByEmployeeId: d.preparedByEmployeeId ?? d.PreparedByEmployeeId ?? null,
+            initiatorId: initiatorIdVal,
+            recommenderIds,
+            finalApproverId: finalApproverIdVal
+        });
+        this.calculateTotalDays();
+        const filesRefs = d.filesReferences ?? d.FilesReferences;
+        try {
+            if (filesRefs && typeof filesRefs === 'string') {
+                const refs = JSON.parse(filesRefs) as { FileId?: number; fileId?: number; fileName?: string; FileName?: string }[];
+                this.fileRows = Array.isArray(refs)
+                    ? refs.map((r) => ({
+                          displayName: String(r.fileName ?? r.FileName ?? ''),
+                          file: null,
+                          fileId: r.FileId ?? r.fileId ?? 0
+                      }))
+                    : [];
+            }
+        } catch { /* ignore */ }
+
+        if (appIdForEdit && appIdForEdit > 0) {
+            this.loadExBdLeaveApplicationDetails(appIdForEdit);
+        }
+    }
+
+    /**
+     * Leave-specific fields (purpose, visit dates, destination countries, total days and
+     * family members) live on ExBdLeaveApplication, not NoteSheetInfo. The edit payload from
+     * GetFilteredByKeysAsyn doesn't carry them, so fetch the linked application and patch them.
+     */
+    private loadExBdLeaveApplicationDetails(appId: number): void {
+        this.selectedExBdLeaveAppId = appId;
+        this.exBdLeaveAppService.getById(appId).subscribe({
+            next: (app) => {
+                if (!app) return;
+                const empId = this.toNum(app.applicantEmployeeId);
+                if (empId && empId > 0) {
+                    this.selectedEmployeeId = empId;
+                    this.form.patchValue({ rabIdEmployeeId: empId });
+                }
+
+                let countryIds: number[] = [];
+                try {
+                    if (app.destinationCountriesJson) {
+                        const arr = JSON.parse(app.destinationCountriesJson) as any[];
+                        countryIds = (Array.isArray(arr) ? arr : [])
+                            .map((c) => typeof c === 'number' ? c : (this.toNum(c.countryId ?? c.CountryId) ?? 0))
+                            .filter((id) => id > 0);
+                    }
+                } catch { /* ignore */ }
+
+                this.form.patchValue({
+                    purposeOfExBdLeaveId: this.toNum(app.visitTypeId),
+                    destinationCountryIds: countryIds,
+                    dateOfVisitFrom: this.parseDate(app.fromDate),
+                    dateOfVisitTo: this.parseDate(app.toDate),
+                    totalDays: app.totalDays ?? 0
+                });
+                this.calculateTotalDays();
+
+                let fmids: number[] = [];
+                try {
+                    if (app.familyMembersJson) {
+                        const members = JSON.parse(app.familyMembersJson) as any[];
+                        fmids = (Array.isArray(members) ? members : [])
+                            .map((m) => typeof m === 'number' ? m : (this.toNum(m.fmid ?? m.FMID) ?? 0))
+                            .filter((id) => id > 0);
+                    }
+                } catch { /* ignore */ }
+
+                if (empId && empId > 0) {
+                    this.loadFamilyMembersForEmployee(empId, fmids.length ? fmids : undefined);
+                }
+            },
+            error: () => { /* leave-specific fields stay empty if the application can't be loaded */ }
+        });
+    }
+
+    private loadNoteSheetForEdit(noteSheetId: number): void {
+        const cached = this.noteSheetEditCache.get(noteSheetId);
+        if (cached != null && typeof cached === 'object') {
+            this.editLoading = false;
+            this.applyNoteSheetToForm(cached);
+            return;
+        }
+        this.editLoading = true;
+        const api = `${environment.apis.core}/NoteSheetInfo`;
+        this.http.get<any>(`${api}/GetFilteredByKeysAsyn/${noteSheetId}`).subscribe({
+            next: (data) => {
+                try {
+                    this.editLoading = false;
+                    const raw = data != null && typeof data === 'object'
+                        ? (data.data ?? data.value ?? data.result ?? data.items ?? data) : data;
+                    const list = Array.isArray(raw) ? raw : (raw != null && typeof raw === 'object' && !Array.isArray(raw) ? [raw] : []);
+                    const d = list[0];
+                    if (!d) {
+                        this.editLoadFailed = true;
+                        this.messageService.add({ severity: 'warn', summary: 'No data', detail: 'Note sheet not found or no data returned for update.' });
+                        return;
+                    }
+                    this.noteSheetEditCache.set(noteSheetId, d);
+                    this.applyNoteSheetToForm(d);
+                } catch (e) {
+                    this.editLoading = false;
+                    this.editLoadFailed = true;
+                    this.messageService.add({
+                        severity: 'error',
+                        summary: 'Load failed',
+                        detail: e instanceof Error ? e.message : 'Could not load note sheet data.'
+                    });
+                }
+            },
+            error: (err) => {
+                this.editLoading = false;
+                this.editLoadFailed = true;
+                const detail = err?.error?.message ?? err?.message ?? 'Failed to load note-sheet for edit.';
+                this.messageService.add({ severity: 'error', summary: 'Error', detail });
+            }
+        });
+    }
+
+    loadUnits(): void {
+        const mapList = (list: CommonCode[] | unknown) =>
+            (Array.isArray(list) ? list : []).map((c: CommonCode) => ({
+                label: c.codeValueEN || c.codeValueBN || String(c.codeId),
+                labelBn: c.codeValueBN ?? null,
+                value: c.codeId
+            }));
+        this.masterBasicSetupService.getAllByType('RabUnit').subscribe({
+            next: (list) => {
+                const opts = mapList(list);
+                if (opts.length > 0) {
+                    this.unitOptions = opts;
+                    return;
+                }
+                this.masterBasicSetupService.getAllByType('RABUNIT').subscribe({
+                    next: (list2) => {
+                        this.unitOptions = mapList(list2);
+                    },
+                    error: (err: any) => {}
+                });
+            },
+            error: (err: any) => {
+                this.masterBasicSetupService.getAllByType('RABUNIT').subscribe({
+                    next: (list) => {
+                        this.unitOptions = mapList(list);
+                    },
+                    error: (err: any) => {}
+                });
+            }
+        });
+    }
+
+    onUnitChange(): void {
+        const unitId = this.form.get('unitId')?.value;
+        this.form.patchValue({ wingBattalionId: null }, { emitEvent: false });
+        this.loadWingsForUnit(unitId ?? null);
+    }
+
+    loadWingsForUnit(unitId: number | null, done?: () => void): void {
+        if (unitId == null || unitId <= 0) {
+            this.wingOptions = [];
+            done?.();
+            return;
+        }
+        this.masterBasicSetupService.getByParentId(unitId).subscribe({
+            next: (list) => {
+                this.wingOptions = (Array.isArray(list) ? list : []).map((c: CommonCode) => ({
+                    label: c.codeValueEN || c.codeValueBN || String(c.codeId),
+                    labelBn: c.codeValueBN ?? null,
+                    value: c.codeId
+                }));
+                done?.();
+            },
+            error: (err: any) => {
+                this.wingOptions = [];
+                done?.();
+            }
+        });
+    }
+
+    loadBranches(): void {
+        this.masterBasicSetupService.getAllByType('RabBranch').subscribe({
+            next: (list) => {
+                this.branchOptions = (Array.isArray(list) ? list : []).map((c: CommonCode) => ({
+                    label: c.codeValueEN || c.codeValueBN || String(c.codeId),
+                    labelBn: c.codeValueBN ?? null,
+                    value: c.codeId
+                }));
+            },
+            error: (err: any) => {}
+        });
+    }
+
+    loadPurposeOfLeave(): void {
+        this.commonCodeService.getAllActiveCommonCodesType('VisitType').subscribe({
+            next: (list) => {
+                this.purposeOfLeaveOptions = (Array.isArray(list) ? list : []).map((c: any) => ({
+                    label: c.codeValueEN || c.displayCodeValueEN || c.codeValueBN || String(c.codeId),
+                    labelBn: c.codeValueBN ?? null,
+                    value: c.codeId
+                }));
+            },
+            error: (err: any) => {}
+        });
+    }
+
+    loadCountries(): void {
+        this.commonCodeService.getAllActiveCommonCodesType('Country').subscribe({
+            next: (list) => {
+                this.countryOptions = (Array.isArray(list) ? list : []).map((c: any) => ({
+                    label: c.codeValueEN || c.displayCodeValueEN || c.codeValueBN || String(c.codeId),
+                    labelBn: c.codeValueBN ?? null,
+                    value: c.codeId
+                }));
+            },
+            error: (err: any) => {}
+        });
+    }
+
+    loadSubjectTypes(): void {
+        this.commonCodeService.getAllActiveCommonCodesType('SubjectType').subscribe({
+            next: (list) => {
+                this.subjectTypeOptions = (Array.isArray(list) ? list : []).map((c: any) => ({
+                    label: c.codeValueEN || c.displayCodeValueEN || String(c.codeId),
+                    labelBn: c.codeValueBN ?? null,
+                    value: c.codeId
+                }));
+            },
+            error: (err: any) => {}
+        });
+    }
+
+    showAddSubjectDialog(): void {
+        this.newSubject = { codeValueEN: '', codeValueBN: '' };
+        this.showSubjectDialog = true;
+    }
+
+    saveNewSubject(): void {
+        if (!this.newSubject.codeValueEN?.trim()) return;
+
+        this.isSavingSubject = true;
+        const data: any = {
+            codeId: 0,
+            codeType: 'SubjectType',
+            codeValueEN: this.newSubject.codeValueEN!.trim(),
+            codeValueBN: this.newSubject.codeValueBN?.trim() || null,
+            status: true,
+            createdBy: this.sharedService.getCurrentUser(),
+            createdDate: this.sharedService.getCurrentDateTime()
+        };
+
+        this.masterBasicSetupService.create(data).subscribe({
+            next: () => {
+                this.isSavingSubject = false;
+                this.messageService.add({ severity: 'success', summary: 'Success', detail: 'Subject added successfully.' });
+                this.showSubjectDialog = false;
+                // Reload subjects and auto-select the new one
+                this.commonCodeService.getAllActiveCommonCodesType('SubjectType').subscribe((list: any) => {
+                    this.subjectTypeOptions = (Array.isArray(list) ? list : []).map((c: any) => ({
+                        label: c.codeValueEN || c.displayCodeValueEN || String(c.codeId),
+                        labelBn: c.codeValueBN ?? null,
+                        value: c.codeId
+                    }));
+                    // Auto-select the newly added entry (highest codeId)
+                    const newest = this.subjectTypeOptions.reduce((max, opt) => opt.value > max.value ? opt : max, this.subjectTypeOptions[0]);
+                    if (newest) {
+                        this.form.patchValue({ exBdLeaveSubjectId: newest.value });
+                    }
+                });
+            },
+            error: () => {
+                this.isSavingSubject = false;
+                this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to save subject.' });
+            }
+        });
+    }
+
+    /** Build the application display label (applicant, RAB id, purpose, countries, dates). */
+    private buildAppLabel(app: ExBdLeaveApplicationListViewModel): string {
+        const parts = [
+            app.applicantName || '',
+            app.rabid ? `RAB: ${app.rabid}` : '',
+            app.visitTypeName || '',
+            app.destinationCountriesDisplay || '',
+            `${app.fromDate?.slice(0, 10) ?? ''} ~ ${app.toDate?.slice(0, 10) ?? ''}`
+        ].filter(Boolean);
+        return parts.join(' | ');
+    }
+
+    /** Load Ex-BD Leave applications. Keep the full list (for edit-mode label lookup); only
+     *  applications without a notesheet are offered in the create dropdown. */
+    private loadExBdLeaveApplications(): void {
+        this.exBdLeaveAppService.getListView().subscribe({
+            next: (list) => {
+                this.allExBdLeaveApps = (list ?? []).filter((app) => !app.isDeleted);
+                this.exBdLeaveAppOptions = this.allExBdLeaveApps
+                    .filter((app) => !app.noteSheetId)
+                    .map((app) => ({ label: this.buildAppLabel(app), value: app.exBdLeaveApplicationId }));
+            },
+            error: () => {}
+        });
+    }
+
+    /** Full application label for the read-only field shown in edit mode (matches the
+     *  create-mode dropdown option); falls back to the applicant name if not yet loaded. */
+    getEditApplicationLabel(): string {
+        const appId = this.form?.get('exBdLeaveApplicationId')?.value;
+        if (appId == null) return this.getEmployeeDisplayName();
+        const app = this.allExBdLeaveApps.find((a) => a.exBdLeaveApplicationId === appId);
+        return app ? this.buildAppLabel(app) : this.getEmployeeDisplayName();
+    }
+
+    /** When an Ex-BD Leave application is selected, auto-fill the form */
+    onExBdLeaveAppChange(appId: number | null): void {
+        this.selectedExBdLeaveAppId = appId;
+        if (!appId) return;
+
+        const app = this.allExBdLeaveApps.find((a) => a.exBdLeaveApplicationId === appId);
+        if (!app) return;
+
+        // Auto-fill RAB Employee
+        this.selectedEmployeeId = app.applicantEmployeeId;
+        this.form.patchValue({ rabIdEmployeeId: app.applicantEmployeeId });
+
+        // Auto-fill purpose (visitTypeId)
+        if (app.visitTypeId) {
+            this.form.patchValue({ purposeOfExBdLeaveId: app.visitTypeId });
+        }
+
+        // Auto-fill destination countries (all from JSON array)
+        try {
+            if (app.destinationCountriesJson) {
+                const countries = JSON.parse(app.destinationCountriesJson) as any[];
+                if (Array.isArray(countries) && countries.length > 0) {
+                    const countryIds = countries
+                        .map((c) => typeof c === 'number' ? c : (c.countryId ?? c.CountryId ?? 0))
+                        .filter((id) => id > 0);
+                    if (countryIds.length) this.form.patchValue({ destinationCountryIds: countryIds });
+                }
+            }
+        } catch { /* ignore */ }
+
+        // Auto-fill dates and total days
+        this.form.patchValue({
+            dateOfVisitFrom: this.parseDate(app.fromDate),
+            dateOfVisitTo: this.parseDate(app.toDate),
+            totalDays: app.totalDays ?? 0
+        });
+
+        // Auto-fill unit/wing from employee lookup
+        const emp = this.allEmployees.find((e: any) => (e.employeeID ?? e.EmployeeID) === app.applicantEmployeeId);
+        const wingId = emp?.unit ?? emp?.Unit ?? null;
+        if (emp) {
+            this.form.patchValue({
+                wingBattalionId: wingId,
+                branchId: emp.branch ?? emp.Branch ?? null
+            });
+        }
+
+        // Fetch body data from backend API (has correct BN hierarchy from DB)
+        // and load family members in parallel
+        let bodyData: ExBdLeaveNoteSheetBodyData | null = null;
+        let bodyDataReady = false;
+        let familyReady = false;
+        const tryGenerate = () => {
+            if (bodyDataReady && familyReady && bodyData) this.generateMainText(app, emp, bodyData);
+        };
+
+        this.exBdLeaveAppService.getNoteSheetBodyData(appId).subscribe({
+            next: (data) => { bodyData = data; bodyDataReady = true; tryGenerate(); },
+            error: () => { bodyDataReady = true; tryGenerate(); }
+        });
+
+        // Auto-fill family members, then signal ready
+        const onFamilyLoaded = () => { familyReady = true; tryGenerate(); };
+        try {
+            if (app.familyMembersJson) {
+                const members = JSON.parse(app.familyMembersJson) as any[];
+                if (Array.isArray(members) && members.length > 0) {
+                    const fmids = members
+                        .map((m) => typeof m === 'number' ? m : (m.fmid ?? m.FMID ?? 0))
+                        .filter((id) => id > 0);
+                    this.loadFamilyMembersForEmployee(app.applicantEmployeeId, fmids, onFamilyLoaded);
+                } else {
+                    this.loadFamilyMembersForEmployee(app.applicantEmployeeId, undefined, onFamilyLoaded);
+                }
+            } else {
+                this.loadFamilyMembersForEmployee(app.applicantEmployeeId, undefined, onFamilyLoaded);
+            }
+        } catch {
+            this.loadFamilyMembersForEmployee(app.applicantEmployeeId, undefined, onFamilyLoaded);
+        }
+    }
+
+    /** Build the notesheet body text using backend-resolved bilingual data. */
+    private generateMainText(app: ExBdLeaveApplicationListViewModel, emp: any, bodyData: ExBdLeaveNoteSheetBodyData): void {
+        const textType = this.form.get('textType')?.value ?? 'bn';
+        const fromDate = this.parseDate(app.fromDate);
+        const toDate = this.parseDate(app.toDate);
+        const totalDays = bodyData.totalDays ?? app.totalDays ?? 0;
+
+        const nameBN = bodyData.empNameBN || app.applicantName || '';
+        const nameEN = bodyData.empNameEN || app.applicantName || '';
+        const serviceId = bodyData.serviceId || app.applicantServiceId || '';
+        const prefixEN = bodyData.prefixEN || '';
+        const prefixBN = bodyData.prefixBN || '';
+        const rabUnitBN = bodyData.placementBN || app.applicantPlacement || '';
+        const rabUnitEN = bodyData.placementEN || app.applicantPlacement || '';
+        const purposeBN = bodyData.visitTypeNameBN || '';
+        const purposeEN = bodyData.visitTypeNameEN || '';
+        const countriesBN = bodyData.countriesDisplayBN || '';
+        const countriesEN = bodyData.countriesDisplayEN || '';
+
+        const daysBN = BanglaNumerals.toBangla(String(totalDays));
+        const daysWordsBN = toBanglaWords(totalDays);
+        const daysWordsEN = toEnglishWords(totalDays);
+
+        // Family members from backend (DB-resolved with BN names/relations)
+        let familySectionBN = '';
+        let familySectionEN = '';
+        if (bodyData.familyMembersDisplayBN) {
+            familySectionBN = ` নিজ এবং পরিবারবর্গ (${bodyData.familyMembersDisplayBN})`;
+        }
+        if (bodyData.familyMembersDisplayEN) {
+            familySectionEN = ` self and family members (${bodyData.familyMembersDisplayEN})`;
+        }
+
+        // Person identifier: Prefix → ServiceId → Name (empties skipped to avoid stray spaces)
+        const personBN = [prefixBN, BanglaNumerals.toBangla(serviceId), nameBN].filter(Boolean).join(' ');
+        const personEN = [prefixEN, serviceId, nameEN].filter(Boolean).join(' ');
+
+        const dynamicBN = `র‍্যাব প্রেষণে নিয়োজিত বর্তমানে ${rabUnitBN} এ কর্মরত ${personBN} এর ${purposeBN} জন্য${familySectionBN} আগামী ${formatDateBangla(fromDate)} হতে ${formatDateBangla(toDate)} তারিখ পর্যন্ত ${daysBN} (${daysWordsBN}) দিন অথবা উল্লিখিত সময়ের মধ্যে যাত্রার তারিখ হতে ${daysBN} (${daysWordsBN}) দিন ${countriesBN} গমনের জন্য অর্জিত `;
+
+        const dynamicEN = `Currently serving at ${rabUnitEN} under RAB deputation, ${personEN} has applied for ${purposeEN}${familySectionEN}, for ${totalDays} (${daysWordsEN}) days from ${formatDateEnglish(fromDate)} to ${formatDateEnglish(toDate)}, or ${totalDays} (${daysWordsEN}) days from the date of journey within the aforementioned period, to ${countriesEN} for earned `;
+
+        this.generatedMainTextBN = dynamicBN + this.defaultMainTextBN;
+        this.generatedMainTextEN = dynamicEN + this.defaultMainTextEN;
+
+        this.form.patchValue({ mainText: textType === 'en' ? this.generatedMainTextEN : this.generatedMainTextBN });
+    }
+
+    /** Load NoteSheet Number Config for ExBDLeave type (same pattern as notesheet-generate) */
+    private loadNoteSheetNumberConfig(): void {
+        const configApi = `${environment.apis.core}/NoteSheetNumberConfig`;
+        forkJoin([
+            this.http.get<any[]>(`${configApi}/GetAll`),
+            this.masterBasicSetupService.getAllByType(CodeType.EmployeeType)
+        ]).subscribe({
+            next: ([configs, memberTypes]) => {
+                (memberTypes ?? []).forEach((mt: any) => {
+                    this.memberTypeMap.set(mt.codeId, {
+                        en: mt.codeValueEN ?? '',
+                        bn: mt.codeValueBN ?? mt.codeValueEN ?? ''
+                    });
+                });
+
+                this.allNoteSheetConfigs = (configs ?? []).filter(
+                    (c: any) => (c.noteSheetType ?? c.NoteSheetType) === 'ExBDLeave'
+                        && (c.status ?? c.Status) !== false
+                );
+
+                const first = this.allNoteSheetConfigs[0];
+                if (first) {
+                    this.noteSheetPrefixEN = first.prefix ?? first.Prefix ?? '';
+                    this.noteSheetPrefixBN = first.prefixBN ?? first.PrefixBN ?? '';
+                }
+
+                this.buildNoteSheetConfigOptions();
+            }
+        });
+    }
+
+    private buildNoteSheetConfigOptions(): void {
+        const isBn = this.form.get('textType')?.value === 'bn';
+
+        this.noteSheetConfigOptions = this.allNoteSheetConfigs.map((c: any) => {
+            const configId = c.configId ?? c.ConfigId;
+            const prefix = isBn
+                ? (c.prefixBN ?? c.PrefixBN ?? c.prefix ?? c.Prefix ?? '')
+                : (c.prefix ?? c.Prefix ?? '');
+            const memberLabel = (c.memberTypeIds ?? c.MemberTypeIds ?? '').split(',').filter(Boolean)
+                .map((id: string) => { const mt = this.memberTypeMap.get(+id); return mt ? (isBn ? mt.bn : mt.en) : ''; })
+                .filter(Boolean).join(', ');
+            const includeDate = c.includeDateInNumber ?? c.IncludeDateInNumber ?? false;
+
+            let pattern: string;
+            if (includeDate) {
+                const now = new Date();
+                const year = now.getFullYear();
+                const month = String(now.getMonth() + 1).padStart(2, '0');
+                const yearStr = isBn ? BanglaNumerals.toBangla(String(year)) : String(year);
+                const monthStr = isBn ? BanglaNumerals.toBangla(month) : month;
+                pattern = `${prefix}/${yearStr}/${monthStr}/***`;
+            } else {
+                pattern = `${prefix}/***`;
+            }
+            const label = memberLabel ? `${pattern}  (${memberLabel})` : pattern;
+            return { label, value: configId };
+        });
+
+        const ctrl = this.form.get('noteSheetNumberConfigId');
+        const currentVal = ctrl?.value;
+        if (this.noteSheetConfigOptions.length === 1) {
+            ctrl?.setValue(this.noteSheetConfigOptions[0].value);
+        } else if (currentVal != null && this.noteSheetConfigOptions.some(o => o.value === currentVal)) {
+            ctrl?.setValue(currentVal);
+        }
+    }
+
+    /** Raw employee list from API, kept for lookup when RAB dropdown changes */
+    private allEmployees: any[] = [];
+
+    loadApproverOptions(): void {
+        // Load all employees for RAB employee lookup (onRabEmployeeChange)
+        this.http.get<any[]>(`${environment.apis.core}/EmployeeInfo/GetAll`).subscribe({
+            next: (list) => { this.allEmployees = Array.isArray(list) ? list : []; },
+            error: () => {}
+        });
+        // Load options for Prepared By and RAB Employee dropdowns
+        this.postingService.getApprovalEmployees().subscribe({
+            next: (opts) => { this.preparedByOptions = opts ?? []; },
+            error: () => {}
+        });
+    }
+
+    /** Called when the RAB employee dropdown value changes */
+    onRabEmployeeChange(employeeId: number | null): void {
+        this.selectedEmployeeId = employeeId;
+        this.form.patchValue({ rabIdEmployeeId: employeeId });
+        if (employeeId) {
+            const emp = this.allEmployees.find((e: any) => (e.employeeID ?? e.EmployeeID) === employeeId);
+            if (emp) {
+                this.form.patchValue({
+                    wingBattalionId: emp.unit ?? emp.Unit ?? null,
+                    branchId: emp.branch ?? emp.Branch ?? null
+                });
+            }
+            this.loadFamilyMembersForEmployee(employeeId);
+        } else {
+            this.familyMemberOptions = [];
+            this.form.patchValue({ familyMemberIds: [] });
+        }
+    }
+
+    /** Check if logged-in user has an employee mapping. If yes, auto-set Prepared By (readonly). If not, show dropdown. */
+    private resolvePreparedByMapping(): void {
+        const userId = this.sharedService.getCurrentUserId?.();
+        if (!userId) {
+            this.isPreparedByMapped = false;
+            return;
+        }
+        this.identityMappingService.getEmployeeIdForUser(userId).subscribe({
+            next: (empId) => {
+                if (empId) {
+                    this.isPreparedByMapped = true;
+                    this.form.get('preparedByEmployeeId')?.setValue(empId);
+                    this.empService.getEmployeeById(empId).subscribe({
+                        next: (emp: any) => {
+                            const name = emp?.FullNameEN || emp?.fullNameEN || '';
+                            const rabId = emp?.RABID || emp?.Rabid || emp?.rabid || '';
+                            const serviceId = emp?.ServiceId || emp?.serviceId || '';
+                            const parts = [name, rabId ? `RAB: ${rabId}` : '', serviceId ? `SVC: ${serviceId}` : ''].filter(Boolean);
+                            this.form.get('preparedBy')?.setValue(parts.join(' | ') || `Employee #${empId}`);
+                        }
+                    });
+                } else {
+                    this.isPreparedByMapped = false;
+                }
+            },
+            error: (err: any) => {
+                this.isPreparedByMapped = false;
+            }
+        });
+    }
+
+    loadRelationships(): void {
+        this.masterBasicSetupService.getAllByType('Relationship').subscribe({
+            next: (list) => {
+                this.relationshipOptions = (Array.isArray(list) ? list : []).map((c: CommonCode) => ({
+                    label: c.codeValueEN || c.codeValueBN || String(c.codeId),
+                    labelBn: c.codeValueBN ?? null,
+                    value: c.codeId
+                }));
+            },
+            error: (err: any) => {}
+        });
+    }
+
+    private getRelationLabel(relationId: number | null | undefined, forBangla: boolean): string {
+        if (relationId == null) return '';
+        const o = this.relationshipOptions.find((r) => r.value === relationId);
+        if (!o) return '';
+        return forBangla && o.labelBn ? o.labelBn : o.label;
+    }
+
+    loadFamilyMembersForEmployee(employeeId: number, restoreSelectedIds?: number[], onLoaded?: () => void): void {
+        this.familyInfoService.getByEmployeeId(employeeId).subscribe({
+            next: (data: FamilyInfoModel[] | any) => {
+                const list = Array.isArray(data) ? data : (data?.data ?? data?.value ?? []);
+                this.familyMemberOptions = (list || []).map((item: any) => {
+                    const fmid = item.fmid ?? item.FMID ?? 0;
+                    const nameEN = (item.nameEN ?? item.NameEN ?? item.nameBN ?? item.NameBN ?? `FM ${fmid}`) || `FM ${fmid}`;
+                    const nameBN = item.nameBN ?? item.NameBN ?? nameEN;
+                    const relationId = item.relation ?? item.Relation;
+                    const relationEn = this.getRelationLabel(relationId, false);
+                    const relationBn = this.getRelationLabel(relationId, true);
+                    const relationPart = relationEn ? ` (${relationEn})` : '';
+                    const relationPartBn = relationBn ? ` (${relationBn})` : '';
+                    const label = String(nameEN).trim() + relationPart;
+                    const labelBn = relationPartBn ? String(nameEN).trim() + relationPartBn : undefined;
+                    return {
+                        label,
+                        labelBn,
+                        value: fmid,
+                        fmid,
+                        employeeId: item.employeeId ?? item.EmployeeId ?? employeeId,
+                        relationLabel: relationEn || relationBn || undefined,
+                        nameRaw: String(nameEN).trim(),
+                        nameBnRaw: String(nameBN).trim(),
+                        relationLabelBn: relationBn || undefined,
+                    };
+                });
+                const ids = restoreSelectedIds ?? this.form.get('familyMemberIds')?.value ?? [];
+                const toSet = Array.isArray(ids) ? ids : [];
+                this.form.patchValue({ familyMemberIds: toSet });
+                setTimeout(() => this.form.patchValue({ familyMemberIds: toSet }), 0);
+                onLoaded?.();
+            },
+            error: (err: any) => {
+                this.familyMemberOptions = [];
+                onLoaded?.();
+            }
+        });
+    }
+
+    calculateTotalDays(): void {
+        const from = this.form.get('dateOfVisitFrom')?.value;
+        const to = this.form.get('dateOfVisitTo')?.value;
+        if (!from || !to) {
+            this.form.patchValue({ totalDays: 0 }, { emitEvent: false });
+            return;
+        }
+        const fromDate = from instanceof Date ? from : new Date(from);
+        const toDate = to instanceof Date ? to : new Date(to);
+        if (isNaN(fromDate.getTime()) || isNaN(toDate.getTime())) {
+            this.form.patchValue({ totalDays: 0 }, { emitEvent: false });
+            return;
+        }
+        const diff = Math.ceil((toDate.getTime() - fromDate.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+        this.form.patchValue({ totalDays: diff >= 0 ? diff : 0 }, { emitEvent: false });
+    }
+
+    /** Selected family members with relation, e.g. "Name (Son)", "Name (Wife)" - like recommender list. */
+    getSelectedFamilyMemberLabels(): string[] {
+        const ids = this.form.get('familyMemberIds')?.value as number[] | null;
+        if (!Array.isArray(ids) || ids.length === 0) return [];
+        return ids
+            .map((id) => {
+                const o = this.familyMemberOptions.find((op) => op.value === id);
+                return o ? o.label : '';
+            })
+            .filter((l) => !!l);
+    }
+
+    onFileRowsChange(event: FileRowData[]): void {
+        if (event && Array.isArray(event)) this.fileRows = event;
+    }
+
+    onDownloadFile(payload: { fileId: number; fileName: string }): void {
+        this.empService.downloadFile(payload.fileId).subscribe({
+            next: (blob) => this.empService.triggerFileDownload(blob, payload.fileName || 'download'),
+            error: (err: any) => this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.message || 'Failed to download file.' })
+        });
+    }
+
+    async submit(): Promise<void> {
+        // Guard against double submission while a save is already in flight.
+        if (this.isSubmitting) return;
+        if (this.form.invalid) {
+            this.form.markAllAsTouched();
+            this.messageService.add({ severity: 'warn', summary: 'Validation', detail: 'Please fill required fields.' });
+            return;
+        }
+        this.isSubmitting = true;
+        try {
+            // Upload reference paragraph files and get JSON
+            const referenceNumberJson = await this.uploadReferenceParagraphFiles();
+
+            // Upload general file references
+            const existingRefs = this.fileReferencesForm?.getExistingFileReferences() || [];
+            const filesToUpload = this.fileReferencesForm?.getFilesToUpload() || [];
+            let filesReferencesJson: string | null = null;
+            if (filesToUpload.length > 0) {
+                const uploads = filesToUpload.map((r: FileRowData) =>
+                    this.empService.uploadEmployeeFile(r.file!, r.displayName?.trim() || r.file!.name)
+                );
+                const results = await forkJoin(uploads).toPromise();
+                const arr = Array.isArray(results) ? results : [];
+                const newRefs = (arr as { fileId: number; fileName: string }[]).map((r) => ({ FileId: r.fileId, fileName: r.fileName }));
+                const allRefs = [...existingRefs.map((r) => ({ FileId: r.FileId, fileName: r.fileName })), ...newRefs];
+                filesReferencesJson = JSON.stringify(allRefs);
+            } else if (existingRefs.length > 0) {
+                filesReferencesJson = JSON.stringify(existingRefs);
+            }
+
+            // Set reference number from paragraphs
+            this.form.patchValue({ referenceNumber: referenceNumberJson });
+
+            const payload = this.buildPayload(filesReferencesJson);
+            if (this.editMode && this.editId != null) (payload as any).noteSheetId = this.editId;
+            const api = `${environment.apis.core}/NoteSheetInfo`;
+            const endpoint = this.editMode && this.editId != null ? '/UpdateAsyn' : '/SaveAsyn';
+            this.http.post<any>(api + endpoint, payload).subscribe({
+                next: (resp) => {
+                    this.messageService.add({
+                        severity: 'success',
+                        summary: 'Note Sheet',
+                        detail: this.editMode
+                            ? 'Note Sheet updated successfully.'
+                            : 'Ex-BD Leave Note Sheet generated successfully.'
+                    });
+                    this.isSubmitting = false;
+                    const savedId = this.editMode && this.editId != null
+                        ? this.editId
+                        : (resp?.data?.noteSheetId ?? resp?.data?.NoteSheetId ?? null);
+                    // Save → jump straight to preview mode for the saved note-sheet.
+                    if (savedId != null && savedId > 0) {
+                        this.router.navigate(['/notesheet-preview/exbd'], { queryParams: { id: savedId } });
+                    } else {
+                        this.router.navigate(['/notesheet-list/draft-ex-bd-leave']);
+                    }
+                },
+                error: (err) => {
+                    const detail = err?.error?.message || err?.message || 'Failed to generate note sheet.';
+                    this.messageService.add({ severity: 'error', summary: 'Error', detail });
+                    this.isSubmitting = false;
+                }
+            });
+        } catch (e) {
+            this.messageService.add({ severity: 'error', summary: 'Error', detail: e instanceof Error ? e.message : 'Failed.' });
+            this.isSubmitting = false;
+        }
+    }
+
+    private formatDate(value: Date | string | null | undefined): string {
+        if (value instanceof Date) {
+            const y = value.getFullYear(), m = value.getMonth(), d = value.getDate();
+            return `${y}-${String(m + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+        }
+        if (typeof value === 'string' && /^\d{4}-\d{2}-\d{2}/.test(value)) return value.slice(0, 10);
+        const today = new Date();
+        return `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+    }
+
+    private buildPayload(filesReferencesJson: string | null): any {
+        const d = this.form.getRawValue();
+        const now = new Date().toISOString();
+        const preparedBy = (d.preparedBy && String(d.preparedBy).trim()) || 'system';
+        const recommenderIds: number[] = Array.isArray(d.recommenderIds) ? d.recommenderIds : [];
+        const recommendersJson = recommenderIds.length
+            ? JSON.stringify(recommenderIds.map((id: number, idx: number) => ({
+                recomender_no: idx + 1,
+                recomender_id: id,
+                recomender_status: ApprovalStatus.Pending,
+                recomender_approve_remark: '',
+                recomender_cancel_remark: '',
+                recomender_approved_date: null
+            })))
+            : null;
+
+        // Resolve subject label from SubjectType dropdown in the note sheet's language
+        const subjOpt = this.subjectTypeOptions.find(o => o.value === d.exBdLeaveSubjectId);
+        const subjectLabel = subjOpt
+            ? (d.textType === 'bn' ? (subjOpt.labelBn || subjOpt.label) : subjOpt.label)
+            : '';
+
+        const payload: Record<string, unknown> = {
+            noteSheetId: 0,
+            exBdLeaveApplicationId: d.exBdLeaveApplicationId ?? null,
+            noteSheetType: NoteSheetType.ExBDLeave,
+            noteSheetNo: this.editMode ? (d.noteSheetNo || 'AUTO') : 'AUTO',
+            noteSheetNumberConfigId: d.noteSheetNumberConfigId ?? null,
+            noteSheetNoStaticWord: (d.noteSheetNoStaticWord && String(d.noteSheetNoStaticWord).trim()) || null,
+            noteSheetDate: this.formatDate(d.noteSheetDate),
+            noteSheetTemplateId: null,
+            referenceNumber: d.referenceNumber != null ? String(d.referenceNumber) : null,
+            subject: subjectLabel,
+            exBdLeaveSubjectId: d.exBdLeaveSubjectId ?? null,
+            mainText: d.mainText != null ? String(d.mainText) : '',
+            note: null,
+            textType: d.textType === 'bn' ? 1 : 0,
+            isSecret: d.isSecret ?? false,
+            noteSheetOperationType: d.noteSheetOperationType ?? null,
+            employeeId: d.rabIdEmployeeId ?? null,
+            preparedByEmployeeId: d.preparedByEmployeeId ?? null,
+            unitId: d.unitId ?? null,
+            wingBattalionId: d.wingBattalionId ?? null,
+            branchId: d.branchId ?? null,
+            initiatorId: d.initiatorId ?? 0,
+            recommendersJson,
+            finalApprovalId: d.finalApproverId ?? null,
+            createdBy: preparedBy,
+            lastUpdatedBy: preparedBy,
+            createdDate: now,
+            lastupdate: now
+        };
+        if (filesReferencesJson != null && filesReferencesJson !== '') {
+            payload['filesReferences'] = filesReferencesJson;
+        }
+        return payload;
+    }
+
+    // ─── View Mode ──────────────────────────────────────────────
+
+    private loadNoteSheetForView(noteSheetId: number): void {
+        this.viewLoading = true;
+        const api = `${environment.apis.core}/NoteSheetInfo`;
+        this.http.get<any>(`${api}/GetFilteredByKeysAsyn/${noteSheetId}`).subscribe({
+            next: (data) => {
+                const raw = data != null && typeof data === 'object' ? (data.data ?? data.value ?? data.result ?? data) : data;
+                const list = Array.isArray(raw) ? raw : (raw != null && typeof raw === 'object' ? [raw] : []);
+                this.viewNoteSheet = list[0] ?? null;
+                if (this.viewNoteSheet) this.loadApprovalChain(this.viewNoteSheet);
+                this.viewLoading = false;
+            },
+            error: (err: any) => {
+                this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.message || 'Failed to load note sheet.' });
+                this.viewLoading = false;
+            }
+        });
+    }
+
+    private loadApprovalChain(ns: any): void {
+        const preparedByEmpId = ns.preparedByEmployeeId && ns.preparedByEmployeeId > 0 ? ns.preparedByEmployeeId : null;
+        const initiatorId = ns.initiatorId && ns.initiatorId > 0 ? ns.initiatorId : null;
+        const approverIds: { empId: number; step: string }[] = [];
+        try {
+            const json = ns.recommenderIdsJson;
+            if (json && typeof json === 'string') {
+                const arr = JSON.parse(json) as number[] | { EmployeeId?: number; employeeId?: number }[];
+                if (Array.isArray(arr)) {
+                    arr.forEach((r, i) => {
+                        const id = typeof r === 'number' ? r : (r.EmployeeId ?? r.employeeId);
+                        if (id && id > 0) approverIds.push({ empId: id, step: `Recommender ${arr.length > 1 ? i + 1 : ''}`.trim() });
+                    });
+                }
+            }
+        } catch { /* ignore */ }
+        const finalApproverEmpId = (ns.approvedByEmployeeId && ns.approvedByEmployeeId > 0)
+            ? ns.approvedByEmployeeId
+            : (ns.finalApproverId && ns.finalApproverId > 0 ? ns.finalApproverId : null);
+        if (finalApproverEmpId) approverIds.push({ empId: finalApproverEmpId, step: 'Final Approver' });
+
+        const allIds = [
+            ...(preparedByEmpId ? [{ empId: preparedByEmpId, step: 'Prepared by' }] : []),
+            ...(initiatorId ? [{ empId: initiatorId, step: 'Initiator' }] : []),
+            ...approverIds
+        ];
+        if (allIds.length === 0) return;
+        const obs = allIds.map(({ empId, step }) =>
+            forkJoin({
+                searchInfo: this.empService.getEmployeeSearchInfo(empId),
+                empInfo: this.empService.getEmployeeById(empId).pipe(catchError(() => of(null)))
+            }).pipe(
+                map(({ searchInfo, empInfo }) => {
+                    const emp = empInfo as any;
+                    const info = searchInfo as any;
+                    const name = info?.fullNameEN ?? info?.FullNameEN ?? emp?.FullNameEN ?? emp?.fullNameEN ?? '-';
+                    const rabId = emp?.RABID || emp?.Rabid || emp?.rabid || emp?.rabID || emp?.rabId
+                        || info?.rabID || info?.RABID || info?.rabid || info?.Rabid || info?.rabId || '-';
+                    const rank = info?.rank ?? info?.Rank ?? '-';
+                    const appointment = info?.appointment ?? info?.Appointment ?? emp?.Appointment ?? '';
+                    return { step, name, rabId, rank, serviceRank: rank, appointment, employeeId: empId } as SignatoryDetail;
+                })
+            )
+        );
+        forkJoin(obs).subscribe({
+            next: (results) => {
+                let idx = 0;
+                this.preparedByDetails = preparedByEmpId ? results[idx++] ?? null : null;
+                this.initiatorDetails = initiatorId ? results[idx++] ?? null : null;
+                this.approversDetails = approverIds.length > 0 ? results.slice(idx) : [];
+                this.loadSignaturesForChain();
+            },
+            error: (err: any) => {}
+        });
+    }
+
+    private loadSignaturesForChain(): void {
+        const allDetails = [
+            ...(this.preparedByDetails ? [this.preparedByDetails] : []),
+            ...(this.initiatorDetails ? [this.initiatorDetails] : []),
+            ...this.approversDetails
+        ].filter(d => d.employeeId && d.employeeId > 0);
+
+        for (const detail of allDetails) {
+            this.empService.getSignatureBlob(detail.employeeId!).subscribe({
+                next: (blob) => {
+                    if (blob && blob.size > 0) {
+                        const reader = new FileReader();
+                        reader.onloadend = () => { detail.signatureDataUrl = reader.result as string; };
+                        reader.readAsDataURL(blob);
+                    }
+                },
+                error: (err: any) => { /* no signature available */ }
+            });
+        }
+    }
+
+    isViewEnglish(): boolean {
+        return (this.viewNoteSheet?.textType ?? 0) === 0;
+    }
+
+    isViewDraft(): boolean {
+        return this.viewNoteSheet?.currentStatus === NoteSheetCurrentStatus.Draft;
+    }
+
+    shouldShowSignature(step: string): boolean {
+        const ns = this.viewNoteSheet;
+        if (!ns) return false;
+        if (step === 'Prepared by' || step === 'প্রস্তুতকারী') return true;
+        if (step === 'Initiator') return ns.initiatorStatus === ApprovalStatus.Approve;
+        if (step.startsWith('Recommender')) {
+            const cs: string = ns.currentStatus ?? '';
+            return cs === NoteSheetCurrentStatus.Recommender
+                || cs === NoteSheetCurrentStatus.FinalApproval
+                || cs === NoteSheetCurrentStatus.Cancel;
+        }
+        if (step === 'Final Approver') return ns.finalApprovalStatus === ApprovalStatus.Approve;
+        return false;
+    }
+
+    getViewMainTextSafe(): SafeHtml {
+        return this.sanitizer.bypassSecurityTrustHtml(this.viewNoteSheet?.mainText ?? '');
+    }
+
+    getViewSupportingDocs(): { fileId: number; fileName: string }[] {
+        const json = this.viewNoteSheet?.filesReferences;
+        if (!json || typeof json !== 'string') return [];
+        try {
+            const arr = JSON.parse(json) as { FileId?: number; fileId?: number; fileName?: string; FileName?: string }[];
+            if (!Array.isArray(arr)) return [];
+            return arr
+                .filter((r) => (r.FileId ?? r.fileId) != null)
+                .map((r) => ({ fileId: r.FileId ?? r.fileId ?? 0, fileName: (r.fileName ?? r.FileName ?? '').trim() || 'download' }))
+                .filter((d) => d.fileId > 0);
+        } catch { return []; }
+    }
+
+    onViewDownloadDoc(fileId: number, fileName: string): void {
+        this.empService.downloadFile(fileId).subscribe({
+            next: (blob) => this.empService.triggerFileDownload(blob, fileName),
+            error: (err: any) => this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.message || 'Failed to download file.' })
+        });
+    }
+
+    onViewPreviewDoc(fileId: number, fileName: string): void {
+        this.empService.downloadFile(fileId).subscribe({
+            next: (blob) => {
+                const url = URL.createObjectURL(blob);
+                window.open(url, '_blank');
+                setTimeout(() => URL.revokeObjectURL(url), 60000);
+            },
+            error: (err: any) => this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.message || 'Failed to open file.' })
+        });
+    }
+
+    // ─── View inline edit ───
+
+    toggleViewEdit(): void {
+        const ns = this.viewNoteSheet;
+        this.editSubject = ns?.subject ?? '';
+        this.editExBdLeaveSubjectId = ns?.exBdLeaveSubjectId ?? null;
+        this.editMainText = ns?.mainText ?? '';
+        this.editReferenceNumber = ns?.referenceNumber ?? '';
+        this.viewEditing = true;
+    }
+
+    cancelViewEdit(): void {
+        this.viewEditing = false;
+    }
+
+    /** Resolve a codeId to its label from dropdown options */
+    getPurposeLabel(id: number | null | undefined): string {
+        if (id == null) return '—';
+        const o = this.purposeOfLeaveOptions.find((opt) => opt.value === id);
+        return o ? o.label : String(id);
+    }
+
+    getCountryLabel(id: number | null | undefined): string {
+        if (id == null) return '—';
+        const o = this.countryOptions.find((opt) => opt.value === id);
+        return o ? o.label : String(id);
+    }
+
+    getSubjectLabel(id: number | null | undefined): string {
+        if (id == null) return '';
+        const o = this.subjectTypeOptions.find((opt) => opt.value === id);
+        if (!o) return '';
+        const isBn = this.viewMode ? !this.isViewEnglish() : this.isBangla;
+        return isBn ? (o.labelBn || o.label) : o.label;
+    }
+
+    get isBangla(): boolean {
+        return this.form?.get('textType')?.value === 'bn';
+    }
+
+    /** Display name for selected RAB Employee */
+    getEmployeeDisplayName(): string {
+        const id = this.form?.get('rabIdEmployeeId')?.value;
+        if (id == null) return '—';
+        const emp = this.allEmployees.find((e: any) => (e.employeeID ?? e.EmployeeID) === id);
+        const name = emp?.fullNameEN ?? emp?.FullNameEN ?? null;
+        if (name) return name;
+        const o = this.preparedByOptions.find((opt) => opt.value === id);
+        return o ? o.label : String(id);
+    }
+
+    /** Comma-separated country labels for selected destination countries */
+    getCountryLabels(): string {
+        const ids = this.form?.get('destinationCountryIds')?.value as number[] | null;
+        if (!Array.isArray(ids) || ids.length === 0) return '—';
+        return ids.map((id) => {
+            const o = this.countryOptions.find((opt) => opt.value === id);
+            return o ? o.label : String(id);
+        }).join(', ');
+    }
+
+    /** Comma-separated family member labels */
+    getFamilyMemberDisplayNames(): string {
+        const ids = this.form?.get('familyMemberIds')?.value as number[] | null;
+        if (!Array.isArray(ids) || ids.length === 0) return '';
+        return ids.map((id) => {
+            const o = this.familyMemberOptions.find((opt) => opt.value === id);
+            return o ? o.label : String(id);
+        }).join(', ');
+    }
+
+    // ── Reference Paragraphs ────────────────────────────────────────────
+
+    addReferenceParagraph(): void {
+        this.referenceParagraphs.push({ text: '', fileRows: [] });
+    }
+
+    removeReferenceParagraph(index: number): void {
+        if (this.referenceParagraphs.length > 1) {
+            this.referenceParagraphs.splice(index, 1);
+        }
+    }
+
+    getSerialLabel(index: number): string {
+        if (this.isBangla) {
+            const banglaLetters = ['ক', 'খ', 'গ', 'ঘ', 'ঙ', 'চ', 'ছ', 'জ', 'ঝ', 'ঞ', 'ট', 'ঠ', 'ড', 'ঢ', 'ণ', 'ত', 'থ', 'দ', 'ধ', 'ন'];
+            return (banglaLetters[index] ?? String(index + 1)) + '.';
+        } else {
+            return String.fromCharCode(65 + index) + '.';
+        }
+    }
+
+    trackByIndex(index: number): number {
+        return index;
+    }
+
+    onRefFileRowsChange(event: FileRowData[], index: number): void {
+        if (event && Array.isArray(event)) {
+            this.referenceParagraphs[index].fileRows = event;
+        }
+    }
+
+    onRefDownloadFile(payload: { fileId: number; fileName: string }): void {
+        this.empService.downloadFile(payload.fileId).subscribe({
+            next: (blob) => this.empService.triggerFileDownload(blob, payload.fileName || 'download'),
+            error: (err: any) => this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.message || 'Failed to download file.' })
+        });
+    }
+
+    /** Upload files in reference paragraphs and return the final JSON string */
+    private async uploadReferenceParagraphFiles(): Promise<string> {
+        const result: { text: string; files: { FileId: number; fileName: string }[] }[] = [];
+        for (const para of this.referenceParagraphs) {
+            const existingFiles = para.fileRows.filter(r => r.fileId != null).map(r => ({ FileId: r.fileId!, fileName: r.displayName ?? '' }));
+            const newFiles = para.fileRows.filter(r => r.file != null);
+            if (newFiles.length > 0) {
+                const uploads = newFiles.map(r => this.empService.uploadEmployeeFile(r.file!, r.displayName?.trim() || r.file!.name).toPromise());
+                const uploaded = await Promise.all(uploads);
+                const uploadedRefs = (uploaded as any[]).map(r => ({ FileId: r.fileId, fileName: r.fileName }));
+                result.push({ text: para.text, files: [...existingFiles, ...uploadedRefs] });
+            } else {
+                result.push({ text: para.text, files: existingFiles });
+            }
+        }
+        return JSON.stringify(result);
+    }
+
+    saveViewChanges(): void {
+        if (!this.viewNoteSheet) return;
+        // Guard against double submission while a save is already in flight.
+        if (this.savingView) return;
+        this.savingView = true;
+        const resolvedSubject = this.getSubjectLabel(this.editExBdLeaveSubjectId) || this.editSubject;
+        const payload = {
+            ...this.viewNoteSheet,
+            subject: resolvedSubject,
+            exBdLeaveSubjectId: this.editExBdLeaveSubjectId,
+            mainText: this.editMainText,
+            referenceNumber: this.editReferenceNumber
+        };
+        const api = `${environment.apis.core}/NoteSheetInfo`;
+        this.http.post<{ statusCode?: number }>(`${api}/UpdateAsyn`, payload).subscribe({
+            next: (res) => {
+                this.savingView = false;
+                if (res?.statusCode === 200) {
+                    this.viewNoteSheet.subject = resolvedSubject;
+                    this.viewNoteSheet.exBdLeaveSubjectId = this.editExBdLeaveSubjectId;
+                    this.viewNoteSheet.mainText = this.editMainText;
+                    this.viewNoteSheet.referenceNumber = this.editReferenceNumber;
+                    this.viewEditing = false;
+                    this.messageService.add({ severity: 'success', summary: 'Success', detail: 'Note sheet updated.' });
+                } else {
+                    this.messageService.add({ severity: 'warn', summary: 'Notice', detail: 'Update may not have saved.' });
+                }
+            },
+            error: (err: any) => {
+                this.savingView = false;
+                this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Update failed.' });
+            }
+        });
+    }
+
+    goToEditForm(): void {
+        const id = this.viewNoteSheet?.noteSheetId;
+        if (id) this.router.navigate(['/notesheet-ex-bd-leave'], { queryParams: { id } });
+    }
+
+    // ─── Exports ────────────────────────────────────────────────
+
+    private translateStep(step: string): string {
+        if (this.isViewEnglish()) return step;
+        if (step.startsWith('Recommender')) {
+            const suffix = step.replace('Recommender', '').trim();
+            return suffix ? `সুপারিশকারী ${suffix}` : 'সুপারিশকারী';
+        }
+        return this.stepTranslations[step] ?? step;
+    }
+
+    private stripHtml(html: string): string {
+        const div = document.createElement('div');
+        div.innerHTML = html;
+        return div.textContent || div.innerText || '';
+    }
+
+    private escapeHtml(s: string): string {
+        return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    }
+
+    private dataUrlToUint8Array(dataUrl: string): Uint8Array {
+        const base64 = dataUrl.split(',')[1];
+        const binary = atob(base64);
+        const array = new Uint8Array(binary.length);
+        for (let i = 0; i < binary.length; i++) { array[i] = binary.charCodeAt(i); }
+        return array;
+    }
+
+    formatDateView(value: any): string {
+        if (!value) return '—';
+        const dt = value instanceof Date ? value : new Date(value);
+        if (isNaN(dt.getTime())) return String(value);
+        return `${String(dt.getDate()).padStart(2, '0')}/${String(dt.getMonth() + 1).padStart(2, '0')}/${dt.getFullYear()}`;
+    }
+
+    private buildSignatoriesHtml(): string {
+        const sigImg = (detail: any, align: string) => detail?.signatureDataUrl && this.shouldShowSignature(detail.step)
+            ? `<img src="${detail.signatureDataUrl}" style="width:150px;height:50px;object-fit:contain;display:block;${align === 'right' ? 'margin-left:auto' : ''}" />`
+            : '';
+        const sigBlock = (detail: any, align: string) => {
+            if (!detail) return '';
+            const lines = [
+                detail.rabId && detail.rabId !== '-' ? `RAB ID: ${detail.rabId}` : '',
+                detail.rank && detail.rank !== '-' ? detail.rank : '',
+                detail.appointment && detail.appointment !== '-' ? detail.appointment : ''
+            ].filter(Boolean);
+            return `<div style="text-align:${align};margin-top:20px;line-height:1.6">
+                ${sigImg(detail, align)}
+                <div style="width:160px;border-bottom:1.5px solid #000;margin-bottom:4px;${align === 'right' ? 'margin-left:auto' : ''}"></div>
+                <div style="font-weight:600;font-size:9pt;text-transform:uppercase;color:#000">${this.escapeHtml(this.translateStep(detail.step))}</div>
+                <div><strong>${this.escapeHtml(detail.name)}</strong></div>
+                ${lines.map((l: string) => `<div style="font-size:10pt">${this.escapeHtml(l)}</div>`).join('')}
+            </div>`;
+        };
+
+        let rightHtml = '';
+        if (this.initiatorDetails) rightHtml += sigBlock(this.initiatorDetails, 'right');
+        let leftHtml = '';
+        for (const approver of this.approversDetails) leftHtml += sigBlock(approver, 'left');
+
+        if (!leftHtml && !rightHtml) return '';
+        return `<div style="margin-top:30px">
+            ${rightHtml ? `<div>${rightHtml}</div>` : ''}
+            ${leftHtml ? `<div style="margin-top:24px">${leftHtml}</div>` : ''}
+        </div>`;
+    }
+
+    async exportWord(): Promise<void> {
+        const ns = this.viewNoteSheet;
+        if (!ns) return;
+        const bn = !this.isViewEnglish();
+        const font = bn ? 'SutonnyMJ' : 'Times New Roman';
+
+        const titlePara = new Paragraph({
+            children: [new TextRun({ text: bn ? 'মন্তব্যপত্র' : 'NOTE SHEET', bold: true, size: 32, font })],
+            alignment: AlignmentType.CENTER, spacing: { after: 200 }
+        });
+
+        const metaParts: string[] = [];
+        if (ns.noteSheetNo) metaParts.push(`${bn ? 'মন্তব্যপত্র নং:' : 'Note-Sheet No:'} ${ns.noteSheetNo}`);
+        if (ns.noteSheetDate) metaParts.push(`${bn ? 'তারিখ:' : 'Date:'} ${this.formatDateView(ns.noteSheetDate)}`);
+        if (ns.referenceNumber) metaParts.push(`${bn ? 'সুত্র:' : 'Reference:'} ${ns.referenceNumber}`);
+        const metaPara = new Paragraph({
+            children: [new TextRun({ text: metaParts.join('    '), size: 20, font })],
+            spacing: { after: 200 }
+        });
+
+        const children: Paragraph[] = [titlePara, metaPara];
+
+        if (ns.subject) {
+            children.push(new Paragraph({
+                children: [new TextRun({ text: ns.subject, bold: true, size: 24, font })],
+                alignment: AlignmentType.CENTER, spacing: { after: 200 }
+            }));
+        }
+
+        const mainTextPlain = this.stripHtml(ns.mainText ?? '');
+        if (mainTextPlain) {
+            children.push(new Paragraph({
+                children: [new TextRun({ text: mainTextPlain, size: 22, font })],
+                spacing: { after: 200 }
+            }));
+        }
+
+        children.push(new Paragraph({
+            children: [new TextRun({ text: bn ? 'আপনার সদয় অনুমোদনের জন্য উপস্থাপন করা হলো।' : 'Presented for your kind approval.', italics: true, size: 20, font })],
+            spacing: { before: 200, after: 300 }
+        }));
+
+        const buildSigParas = (detail: any, roleLabel: string, align: (typeof AlignmentType)[keyof typeof AlignmentType]): Paragraph[] => {
+            const paras: Paragraph[] = [];
+            if (!detail) return paras;
+            const showSig = detail.signatureDataUrl && this.shouldShowSignature(detail.step ?? roleLabel);
+            if (showSig) {
+                paras.push(new Paragraph({
+                    children: [new ImageRun({ type: 'png', data: this.dataUrlToUint8Array(detail.signatureDataUrl), transformation: { width: 150, height: 50 } })],
+                    alignment: align, spacing: { before: 200 }
+                }));
+            }
+            paras.push(new Paragraph({
+                children: [new TextRun({ text: '______________________________', size: 20, font })],
+                alignment: align, spacing: showSig ? {} : { before: 200 }
+            }));
+            paras.push(new Paragraph({
+                children: [new TextRun({ text: roleLabel, bold: true, size: 20, font })],
+                alignment: align
+            }));
+            const lines = [
+                detail.name,
+                detail.rabId && detail.rabId !== '-' ? `RAB ID: ${detail.rabId}` : '',
+                detail.rank && detail.rank !== '-' ? detail.rank : '',
+                detail.appointment && detail.appointment !== '-' ? detail.appointment : ''
+            ].filter((l: string) => l && l !== '-' && l !== '—');
+            lines.forEach((line: string) => {
+                paras.push(new Paragraph({ children: [new TextRun({ text: line, size: 20, font })], alignment: align }));
+            });
+            return paras;
+        };
+
+        if (this.initiatorDetails) {
+            children.push(...buildSigParas(this.initiatorDetails, this.translateStep(this.initiatorDetails.step), AlignmentType.RIGHT));
+            children.push(new Paragraph({ spacing: { before: 300 } }));
+        }
+        for (const approver of this.approversDetails) {
+            children.push(...buildSigParas(approver, this.translateStep(approver.step), AlignmentType.LEFT));
+            children.push(new Paragraph({ spacing: { before: 200 } }));
+        }
+
+        const doc = new Document({
+            sections: [{ properties: { page: { size: { orientation: PageOrientation.PORTRAIT } } }, children }]
+        });
+        const blob = await Packer.toBlob(doc);
+        saveAs(blob, `NoteSheet_ExBD_${ns.noteSheetNo ?? 'export'}.docx`);
+    }
+
+    async exportPdf(): Promise<void> {
+        const ns = this.viewNoteSheet;
+        if (!ns) return;
+        const bn = !this.isViewEnglish();
+        const fontFamily = bn ? "'Times New Roman', 'SolaimanLipi', sans-serif" : "'Times New Roman', serif";
+        const title = bn ? 'মন্তব্যপত্র' : 'NOTE SHEET';
+
+        const metaParts: string[] = [];
+        if (ns.noteSheetNo) metaParts.push(`<span><strong>${bn ? 'মন্তব্যপত্র নং:' : 'Note-Sheet No:'}</strong> ${this.escapeHtml(ns.noteSheetNo)}</span>`);
+        if (ns.noteSheetDate) metaParts.push(`<span><strong>${bn ? 'তারিখ:' : 'Date:'}</strong> ${this.escapeHtml(this.formatDateView(ns.noteSheetDate))}</span>`);
+        if (ns.referenceNumber) metaParts.push(`<span><strong>${bn ? 'সুত্র:' : 'Reference:'}</strong> ${this.escapeHtml(ns.referenceNumber)}</span>`);
+
+        const sigHtml = this.buildSignatoriesHtml();
+        const subjectHtml = ns.subject ? `<div style="text-align:center;font-weight:700;font-size:12pt;margin-bottom:10px;padding:6px;background:#f8fafc;border-radius:4px">${this.escapeHtml(ns.subject)}</div>` : '';
+        const closingText = bn ? 'আপনার সদয় অনুমোদনের জন্য উপস্থাপন করা হলো।' : 'Presented for your kind approval.';
+
+        const container = document.createElement('div');
+        container.style.cssText = 'position:absolute;left:-9999px;top:0;width:760px;padding:30px;background:#fff;z-index:-1;overflow:visible;box-sizing:border-box';
+        container.innerHTML = `
+            <style>
+                .ns-pdf-wrap, .ns-pdf-wrap * { word-wrap:break-word!important; overflow-wrap:break-word!important; white-space:normal!important; max-width:100%!important; box-sizing:border-box!important; }
+                .ns-pdf-wrap img { max-width:100%!important; height:auto!important; }
+            </style>
+            <div class="ns-pdf-wrap" style="font-family:${fontFamily};font-size:11pt;color:#000;line-height:1.6;width:100%">
+                <h1 style="font-size:16pt;text-align:center;margin:0 0 10px 0">${this.escapeHtml(title)}</h1>
+                <div style="font-size:10pt;margin-bottom:12px;display:flex;gap:24px;flex-wrap:wrap">${metaParts.join('')}</div>
+                ${subjectHtml}
+                <div style="margin-bottom:12px">${ns.mainText ?? ''}</div>
+                <p style="font-style:italic;color:#64748b;margin-top:16px;padding-top:10px;border-top:1px dashed #ccc">${this.escapeHtml(closingText)}</p>
+                ${sigHtml}
+            </div>`;
+        document.body.appendChild(container);
+
+        try {
+            await new Promise(resolve => setTimeout(resolve, 300));
+            const canvas = await html2canvas(container, { scale: 2, useCORS: true, backgroundColor: '#ffffff', logging: false, scrollY: -window.scrollY, height: container.scrollHeight, windowHeight: container.scrollHeight });
+            const imgData = canvas.toDataURL('image/jpeg', 0.92);
+            const imgWidth = canvas.width;
+            const imgHeight = canvas.height;
+
+            const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+            const pdfWidth = pdf.internal.pageSize.getWidth() - 20;
+            const pdfPageHeight = pdf.internal.pageSize.getHeight() - 20;
+            const ratio = pdfWidth / imgWidth;
+            const scaledHeight = imgHeight * ratio;
+
+            if (scaledHeight <= pdfPageHeight) {
+                pdf.addImage(imgData, 'JPEG', 10, 10, pdfWidth, scaledHeight);
+            } else {
+                let remainingHeight = imgHeight;
+                let srcY = 0;
+                let page = 0;
+                const sliceHeight = Math.floor(pdfPageHeight / ratio);
+                while (remainingHeight > 0) {
+                    if (page > 0) pdf.addPage();
+                    const currentSlice = Math.min(sliceHeight, remainingHeight);
+                    const sliceCanvas = document.createElement('canvas');
+                    sliceCanvas.width = imgWidth;
+                    sliceCanvas.height = currentSlice;
+                    const ctx = sliceCanvas.getContext('2d')!;
+                    ctx.drawImage(canvas, 0, srcY, imgWidth, currentSlice, 0, 0, imgWidth, currentSlice);
+                    pdf.addImage(sliceCanvas.toDataURL('image/jpeg', 0.92), 'JPEG', 10, 10, pdfWidth, currentSlice * ratio);
+                    srcY += currentSlice;
+                    remainingHeight -= currentSlice;
+                    page++;
+                }
+            }
+            pdf.save(`NoteSheet_ExBD_${ns.noteSheetNo ?? 'export'}.pdf`);
+        } finally {
+            document.body.removeChild(container);
+        }
+    }
+
+    printView(): void {
+        const ns = this.viewNoteSheet;
+        if (!ns) return;
+        const bn = !this.isViewEnglish();
+        const fontFamily = bn ? "'Times New Roman', 'SolaimanLipi', sans-serif" : "'Times New Roman', serif";
+        const title = bn ? 'মন্তব্যপত্র' : 'NOTE SHEET';
+
+        const metaParts: string[] = [];
+        if (ns.noteSheetNo) metaParts.push(`<strong>${bn ? 'মন্তব্যপত্র নং:' : 'Note-Sheet No:'}</strong> ${this.escapeHtml(ns.noteSheetNo)}`);
+        if (ns.noteSheetDate) metaParts.push(`<strong>${bn ? 'তারিখ:' : 'Date:'}</strong> ${this.escapeHtml(this.formatDateView(ns.noteSheetDate))}`);
+        if (ns.referenceNumber) metaParts.push(`<strong>${bn ? 'সুত্র:' : 'Reference:'}</strong> ${this.escapeHtml(ns.referenceNumber)}`);
+
+        const sigHtml = this.buildSignatoriesHtml();
+        const subjectHtml = ns.subject ? `<div style="text-align:center;font-weight:700;font-size:12pt;margin-bottom:12px;padding:6px;background:#f8fafc;border-radius:4px">${this.escapeHtml(ns.subject)}</div>` : '';
+        const closingText = bn ? 'আপনার সদয় অনুমোদনের জন্য উপস্থাপন করা হলো।' : 'Presented for your kind approval.';
+
+        const html = `<!DOCTYPE html>
+<html><head><meta charset="UTF-8"><title>${this.escapeHtml(title)}</title>
+<style>
+    @page { size: A4 portrait; margin: 15mm; }
+    body { font-family: ${fontFamily}; font-size: 11pt; margin: 0; padding: 20px; color: #000; line-height: 1.6; }
+    h1 { font-size: 16pt; text-align: center; margin: 0 0 12px 0; }
+    .meta { font-size: 10pt; margin-bottom: 14px; display: flex; gap: 28px; flex-wrap: wrap; }
+    .content { margin-bottom: 14px; }
+    .content p { margin: 0 0 0.5rem 0; }
+    @media print { body { padding: 0; } }
+</style></head><body>
+    <h1>${this.escapeHtml(title)}</h1>
+    <div class="meta">${metaParts.map(p => `<span>${p}</span>`).join('')}</div>
+    ${subjectHtml}
+    <div class="content">${ns.mainText ?? ''}</div>
+    <p style="font-style:italic;color:#64748b;margin-top:16px;padding-top:10px;border-top:1px dashed #ccc">${this.escapeHtml(closingText)}</p>
+    ${sigHtml}
+</body></html>`;
+
+        const win = window.open('', '_blank', 'width=800,height=700');
+        if (!win) return;
+        win.document.write(html);
+        win.document.close();
+        setTimeout(() => { win.print(); }, 600);
+    }
+}

@@ -1,0 +1,432 @@
+:host {
+    display: block;
+    min-height: 100vh;
+    background: #d8d8d8;
+}
+
+.preview-page {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 2rem;
+    min-height: calc(100vh - 60px);
+    gap: 1rem;
+    max-width: none;
+    margin: 0;
+}
+
+// Header sits inside the white letter card — neutral colors so it reads against the sheet.
+.preview-header {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin: -0.75rem 0 1.25rem 0;
+    padding-bottom: 0.75rem;
+    border-bottom: 1px solid #e5e7eb;
+    font-family: 'Times New Roman', sans-serif;
+
+    .spacer { flex: 1; }
+}
+
+.preview-header-title {
+    font-size: 1rem;
+    font-weight: 600;
+    color: #1f2937;
+}
+
+// Shared toolbar button style — used for Back and the language toggle so they match visually.
+.toolbar-btn {
+    display: inline-flex;
+    align-items: center;
+    background: #fff;
+    border: 1px solid #d1d5db;
+    border-radius: 0.4rem;
+    padding: 0.4rem 0.85rem;
+    font-size: 0.85rem;
+    font-weight: 500;
+    color: #1f2937;
+    cursor: pointer;
+    transition: all 0.18s;
+
+    &:hover {
+        background: #f3f4f6;
+        border-color: #9ca3af;
+    }
+}
+
+// ───────── Export dropdown (matches leave-card toolbar) ─────────
+.report-export-wrap {
+    position: relative;
+    display: inline-block;
+}
+
+.report-btn-export {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    background: var(--primary-color, #4f46e5);
+    color: #fff;
+    border: none;
+    border-radius: 0.4rem;
+    padding: 0.45rem 0.9rem;
+    font-size: 0.85rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.18s;
+
+    &:hover:not(:disabled) {
+        filter: brightness(1.05);
+    }
+
+    &:disabled {
+        opacity: 0.7;
+        cursor: not-allowed;
+    }
+}
+
+.report-export-dropdown {
+    position: absolute;
+    top: calc(100% + 4px);
+    right: 0;
+    min-width: 140px;
+    background: #fff;
+    border: 1px solid #e5e7eb;
+    border-radius: 0.4rem;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+    z-index: 1000;
+    overflow: hidden;
+}
+
+.report-export-item {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.55rem 0.85rem;
+    background: #fff;
+    border: none;
+    cursor: pointer;
+    font-size: 0.85rem;
+    color: #1f2937;
+    text-align: left;
+    transition: background 0.15s;
+
+    &:hover {
+        background: #f3f4f6;
+    }
+
+    & + & {
+        border-top: 1px solid #f1f5f9;
+    }
+}
+
+.preview-state {
+    padding: 2rem;
+    text-align: center;
+    color: var(--text-color-secondary, #777);
+
+    &.error { color: var(--red-400, #f87171); }
+}
+
+// ───────── Letter card (legal-size sheet, matches notesheet preview) ─────────
+.letter-card {
+    width: 215.9mm;
+    padding: 14mm 10mm 20mm;
+    background: #fff;
+    color: #000;
+    box-shadow: 0 6px 24px rgba(0, 0, 0, 0.25);
+    box-sizing: border-box;
+    font-family: 'Times New Roman', Times, serif;
+    font-size: 10pt;
+    line-height: 1.7;
+    position: relative;
+    overflow-x: hidden;
+    display: flex;
+    flex-direction: column;
+}
+
+.leave-letter {
+    font-family: 'Times New Roman', Times, serif;
+    font-size: 10pt;
+    line-height: 1.7;
+    color: #000;
+
+    // When language is Bangla, swap to a Bangla-friendly font stack.
+    // SolaimanLipi (bundled, see styles.scss) shapes Bangla clusters correctly
+    // while Latin stays Times New Roman.
+    &.is-bn {
+        font-family: 'Times New Roman', 'SolaimanLipi', sans-serif;
+    }
+}
+
+.letter-title {
+    text-align: center;
+    font-size: 11pt;
+    font-weight: 700;
+    color: #000;
+    margin: 0 0 1rem;
+    border-bottom: 1.5px solid #000;
+    padding-bottom: 0.4rem;
+    display: inline-block;
+    width: 100%;
+    letter-spacing: 1px;
+}
+
+.letter-para {
+    font-size: 10pt;
+    line-height: 1.85;
+    text-align: justify;
+    margin: 0.6rem 0;
+}
+
+// ── Letter table (leave-detail rows) ─────────────────────────────
+.letter-table {
+    width: calc(100% - 40px);
+    margin: 0.75rem auto;
+    border-collapse: collapse;
+    font-size: 9pt;
+
+    th, td {
+        border: 1px solid #000;
+        padding: 4px 8px;
+        text-align: center;
+        vertical-align: middle;
+    }
+
+    th {
+        font-weight: 700;
+        background: #f0f0f0;
+        font-size: 9pt;
+    }
+
+    .total-label, .total-value {
+        font-weight: 700;
+    }
+}
+
+.text-center { text-align: center; }
+
+// ── Generic letter section (address / attachments / remarks / approval) ─────
+.letter-section {
+    margin: 0.9rem 0 0;
+}
+
+// Global _typography.scss applies `color: var(--text-color)` to all h1–h6 — that
+// overrides our inherited #000 and can render as a near-invisible themed color.
+// Explicitly set color + a Bangla-shaping font chain so the h4 always renders.
+.letter-section-title {
+    font-weight: 700;
+    margin: 0 0 0.3rem;
+    font-size: 10pt;
+    color: #000;
+    font-family: 'Times New Roman', 'SolaimanLipi', sans-serif;
+    line-height: 1.5;
+    display: inline-block;
+    border-bottom: 1px solid #000;
+    padding-bottom: 1px;
+}
+
+.letter-section-body {
+    margin: 0;
+    font-size: 10pt;
+    white-space: pre-line;
+}
+
+// ── Attachments ────────────────────────────────────────────────
+.attachment-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+.attachment-item {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    padding: 0.4rem 0.6rem;
+    border: 1px solid #e5e7eb;
+    border-radius: 0.4rem;
+    font-size: 9pt;
+
+    & + & { margin-top: 0.35rem; }
+}
+
+.attachment-icon { color: #6366f1; font-size: 0.9rem; }
+
+.attachment-name { flex: 1; color: #1f2937; font-size: 9pt; word-break: break-all; }
+
+.attachment-download {
+    background: transparent;
+    border: 1px solid #d1d5db;
+    border-radius: 0.3rem;
+    padding: 0.25rem 0.45rem;
+    cursor: pointer;
+    color: #4f46e5;
+    font-size: 9pt;
+
+    &:hover {
+        background: #eef2ff;
+        border-color: #c7d2fe;
+    }
+}
+
+// ── Approval chain ─────────────────────────────────────────────
+.approval-chain {
+    list-style: decimal inside;
+    margin: 0;
+    padding: 0;
+    font-size: 10pt;
+}
+
+.approval-step {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.4rem 0;
+    border-bottom: 1px solid #f3f4f6;
+
+    &:last-child { border-bottom: none; }
+
+    &.muted { color: #6b7280; font-style: italic; }
+}
+
+.step-role {
+    font-weight: 700;
+    font-size: 9pt;
+    color: #4b5563;
+    min-width: 130px;
+}
+
+.step-name { color: #000; font-size: 10pt; flex: 1; }
+
+.step-status {
+    display: inline-block;
+    padding: 0.12rem 0.5rem;
+    border-radius: 0.5rem;
+    font-size: 8pt;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+
+    &.is-pending { background: #fef3c7; color: #92400e; }
+    &.is-waiting { background: #e5e7eb; color: #4b5563; }
+    &.is-approved { background: #d1fae5; color: #065f46; }
+    &.is-declined { background: #fee2e2; color: #991b1b; }
+    &.is-skipped { background: #f3f4f6; color: #6b7280; text-decoration: line-through; }
+}
+
+.step-remark {
+    width: 100%;
+    margin-left: calc(130px + 0.5rem);
+    color: #6b7280;
+    font-size: 9pt;
+    font-style: italic;
+}
+
+// ───────── Approval flow card (separate from the letter sheet) ─────────
+.approval-card {
+    width: 215.9mm;
+    box-sizing: border-box;
+    background: #ffffff;
+    border-radius: 0.5rem;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    padding: 1.25rem 1.5rem;
+    font-family: 'Times New Roman', sans-serif;
+}
+
+.approval-card-title {
+    margin: 0 0 0.75rem;
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: #1f2937;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid #e5e7eb;
+
+    & + & {
+        margin-top: 1.25rem;
+    }
+}
+
+.approval-card .attachment-list {
+    margin-bottom: 0.25rem;
+}
+
+// ───────── Review remark + actions ─────────
+.review-card {
+    width: 215.9mm;
+    box-sizing: border-box;
+    background: #ffffff;
+    border-radius: 0.5rem;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    padding: 1.25rem 1.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    font-family: 'Times New Roman', sans-serif;
+}
+
+.review-label {
+    font-weight: 600;
+    color: #374151;
+    font-size: 0.9rem;
+
+    .text-xs { color: #6b7280; font-weight: 400; font-size: 0.75rem; margin-left: 0.4rem; }
+}
+
+.review-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}
+
+.perm-hidden { display: none !important; }
+
+// ── Responsive (matches notesheet behavior on narrow viewports) ──
+@media screen and (max-width: 1200px) {
+    .preview-page { padding: 1rem; }
+    .letter-card,
+    .approval-card,
+    .review-card {
+        width: 100%;
+    }
+    .letter-card {
+        padding: 12mm 8mm;
+    }
+}
+
+/* ════════════════════════════════════════════════════════════════════
+   DARK MODE — backdrop + the cards below the sheet. The letter sheet
+   (.letter-card, which also holds the toolbar) stays WHITE.
+   ════════════════════════════════════════════════════════════════════ */
+:host-context(.app-dark) {
+
+    /* Backdrop — ROFIMS standard dark navy */
+    background: #2a2d35;
+
+    /* Letter sheet stays white; just a stronger shadow on the dark backdrop */
+    .letter-card {
+        box-shadow: 0 10px 40px rgba(0, 0, 0, 0.6);
+    }
+
+    /* Approval-flow + review cards sit on the dark backdrop → darken them */
+    .approval-card,
+    .review-card {
+        background: #1e2230;
+        border: 1px solid #3a3f4e;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+    }
+    .approval-card-title {
+        color: #e2e8f0;
+        border-bottom-color: #3a3f4e;
+    }
+    .review-label {
+        color: #cbd5e1;
+        .text-xs { color: #94a3b8; }
+    }
+    .step-name { color: #cbd5e1; }
+    .step-remark { color: #94a3b8; }
+
+    .preview-state { color: #94a3b8; }
+}

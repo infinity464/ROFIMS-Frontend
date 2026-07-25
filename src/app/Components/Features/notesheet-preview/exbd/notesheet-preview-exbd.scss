@@ -1,0 +1,68 @@
+﻿/* ── Document font ─────────────────────────────────────
+   SolaimanLipi (bundled, see styles.scss) replaces SolaimanLipi as the Bangla
+   face for this preview. Times New Roman stays first so Latin text and digits
+   are unchanged — Bangla codepoints have no Times glyphs and fall through to
+   SolaimanLipi.
+
+   The `:host` prefix raises specificity above the shared notesheet-preview.scss
+   rule (`.a4-paper` alone), so this override wins no matter the stylesheet
+   order. .page-measure carries the SAME stack as the visible .a4-paper on
+   purpose: it is the hidden div the page-break math measures and the source
+   snapshot for the JsReport PDF — a different Bangla face there would compute
+   breaks against text of a different height than what is shown and printed. */
+:host .a4-paper,
+:host .page-measure {
+    font-family: 'Times New Roman', 'SolaimanLipi', Times, serif;
+
+    /* Beats the shared preview's !important rule that pins rich-text (Quill)
+       content to SolaimanLipi. */
+    ::ng-deep .ns-para-text,
+    ::ng-deep .ns-para-text *,
+    ::ng-deep .ns-ref-content,
+    ::ng-deep .ns-ref-content *,
+    ::ng-deep .ns-note,
+    ::ng-deep .ns-note * {
+        font-family: 'Times New Roman', 'SolaimanLipi', Times, serif !important;
+    }
+
+    /* Restore the icon font the blanket rule above would otherwise clobber. */
+    ::ng-deep .ns-ref-file-btn .pi {
+        font-family: 'primeicons' !important;
+    }
+}
+
+/* Push the document text 10px in from the left border. Padding on the content
+   column (`.ns-main-col` has none by default) opens a gap between the border and
+   the text; `:host` scopes it to this screen only. The matching PDF/Print rule
+   lives in buildJsReportPdf() (`.pdf-flow .ns-main-col`). */
+:host .ns-main-col {
+    padding-left: 5px;
+    padding-right: 5px;   /* small gap so justified text doesn't touch the right border */
+}
+
+/* ── Ex-BD Leave body tweaks (this screen only) ──────────
+   Uniform body size: everything except the NOTE SHEET title/header renders at
+   10pt (the body size). Applied to BOTH .a4-paper (visible) and .page-measure
+   (the hidden pagination source) so the page-break math matches what is shown. */
+:host .a4-paper,
+:host .page-measure {
+    font-size: 10pt;                          /* base — anything without its own size */
+
+    /* Blocks the shared stylesheet pins smaller (7–9pt) — force them to body size. */
+    .ns-para,
+    .ns-para-no,
+    .ns-cell-ref,
+    .ns-note,
+    .ns-approver-role,
+    .ns-approver-left,
+    .ns-approver-remark,
+    .ns-sig-name,
+    .ns-sig-rank,
+    .ns-sig-paren,
+    .ns-sig-appoint,
+    .ns-sig-date { font-size: 10pt; }
+
+    /* Tighter serial indents. */
+    .ns-para-no    { margin-right: 1em; }     /* was 2em — tighter ১। indent */
+    .ns-ref-serial { margin-right: 0.5em; }   /* was 1em — tighter ক. indent */
+}

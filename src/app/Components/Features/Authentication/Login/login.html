@@ -1,4 +1,4 @@
-<p-toast position="top-right"></p-toast>
+<p-toast position="top-center"></p-toast>
 <app-floating-configurator />
 <div class="bg-surface-50 dark:bg-surface-950 flex items-center justify-center min-h-screen min-w-screen overflow-hidden">
     <div class="flex flex-col items-center justify-center">
@@ -22,15 +22,15 @@
                             />
                         </g>
                     </svg> -->
-                    <img style="width: 100px;" class="mx-auto mb-5" src="https://upload.wikimedia.org/wikipedia/en/thumb/d/d0/Rapid_Action_Battalion_%28RAB%29_Emblem.svg/250px-Rapid_Action_Battalion_%28RAB%29_Emblem.svg.png" alt="logo" />
+                    <img style="width: 100px;" class="mx-auto mb-5" src="assets/images/Rapid_Action_Battalion.png" alt="logo" />
                 <!-- <span>ROFIMS</span> -->
                     <div class="text-surface-900 dark:text-surface-0 text-3xl font-medium mb-4">Welcome to ROFIMS!</div>
                     <span class="text-muted-color font-medium">Sign in to continue</span>
                 </div>
 
                 <div>
-                    <label for="email1" class="block text-surface-900 dark:text-surface-0 text-xl font-medium mb-2">Email</label>
-                    <input pInputText id="email1" type="text" placeholder="Email address" class="w-full md:w-120 mb-8" [(ngModel)]="email" />
+                    <label for="email1" class="block text-surface-900 dark:text-surface-0 text-xl font-medium mb-2">Email or Username</label>
+                    <input pInputText id="email1" type="text" placeholder="Email or username" class="w-full md:w-120 mb-8" [(ngModel)]="email" />
 
                     <label for="password1" class="block text-surface-900 dark:text-surface-0 font-medium text-xl mb-2">Password</label>
                     <p-password id="password1" [(ngModel)]="password" placeholder="Password" [toggleMask]="true" styleClass="mb-4" [fluid]="true" [feedback]="false"></p-password>
@@ -40,11 +40,55 @@
                             <p-checkbox [(ngModel)]="checked" id="rememberme1" binary class="mr-2"></p-checkbox>
                             <label for="rememberme1">Remember me</label>
                         </div>
-                        <span class="font-medium no-underline ml-2 text-right cursor-pointer text-primary">Forgot password?</span>
+                        <button type="button" class="font-medium no-underline ml-2 text-right cursor-pointer text-primary border-none bg-transparent p-0" (click)="openForgotPassword()">Forgot password?</button>
                     </div>
-                    <p-button label="Sign In" styleClass="w-full" (onClick)="onLogin()"></p-button>
+                    <p-button
+                        label="Sign In"
+                        styleClass="w-full"
+                        [loading]="isLoading"
+                        [disabled]="isLoading"
+                        (onClick)="onLogin()">
+                    </p-button>
                 </div>
             </div>
         </div>
     </div>
 </div>
+
+<!-- Forgot Password Dialog -->
+<p-dialog
+    header="Forgot Password"
+    [(visible)]="forgotPasswordVisible"
+    [modal]="true"
+    [style]="{ width: 'min(420px, 95vw)' }"
+    [closable]="true"
+    (onHide)="closeForgotPassword()"
+    styleClass="rounded-lg">
+    <div class="flex flex-col gap-4">
+        @if (forgotStep === 'request') {
+            <p class="text-muted-color mb-2">Enter your email to receive a password reset link.</p>
+            <label for="forgot-email" class="block text-surface-900 dark:text-surface-0 font-medium">Email</label>
+            <input pInputText id="forgot-email" type="email" placeholder="Email address" class="w-full" [(ngModel)]="forgotEmail" />
+            @if (forgotDenialMessage) {
+                <div class="flex items-start gap-2 p-3 rounded border border-amber-300 bg-amber-50 dark:bg-amber-900/30 dark:border-amber-700">
+                    <i class="pi pi-info-circle text-amber-600 mt-0.5"></i>
+                    <div class="text-sm text-amber-900 dark:text-amber-100">
+                        {{ forgotDenialMessage }}
+                    </div>
+                </div>
+            }
+            <p-button label="Send reset link" styleClass="w-full" [loading]="forgotLoading" [disabled]="forgotLoading" (onClick)="onForgotRequestSubmit()"></p-button>
+        } @else {
+            <p class="text-muted-color mb-2">Enter the token from your email and choose a new password.</p>
+            <label for="forgot-email-ro" class="block text-surface-900 dark:text-surface-0 font-medium">Email</label>
+            <input pInputText id="forgot-email-ro" type="email" class="w-full" [(ngModel)]="forgotEmail" [readonly]="true" />
+            <label for="forgot-token" class="block text-surface-900 dark:text-surface-0 font-medium">Reset token (from email)</label>
+            <input pInputText id="forgot-token" type="text" placeholder="Paste token from email" class="w-full mb-2" [(ngModel)]="forgotToken" />
+            <label for="forgot-new-pwd" class="block text-surface-900 dark:text-surface-0 font-medium">New password</label>
+            <p-password id="forgot-new-pwd" [(ngModel)]="forgotNewPassword" placeholder="New password" [toggleMask]="true" [feedback]="true" [fluid]="true" styleClass="mb-2"></p-password>
+            <label for="forgot-confirm-pwd" class="block text-surface-900 dark:text-surface-0 font-medium">Confirm password</label>
+            <p-password id="forgot-confirm-pwd" [(ngModel)]="forgotConfirmPassword" placeholder="Confirm" [toggleMask]="true" [feedback]="false" [fluid]="true"></p-password>
+            <p-button label="Reset password" styleClass="w-full mt-2" [loading]="forgotLoading" [disabled]="forgotLoading" (onClick)="onForgotResetSubmit()"></p-button>
+        }
+    </div>
+</p-dialog>

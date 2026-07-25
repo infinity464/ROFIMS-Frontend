@@ -1,48 +1,327 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, EventEmitter, Input, OnInit, Output , inject } from '@angular/core';
+import { UserMenuService } from '@/services/user-menu.service';
 import { CommonModule } from '@angular/common';
-import { FormsModule, ReactiveFormsModule } from '@angular/forms';
+import { FormsModule, ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
+
 import { InputTextModule } from 'primeng/inputtext';
 import { ButtonModule } from 'primeng/button';
 import { Fluid } from 'primeng/fluid';
-import { MessageService } from 'primeng/api';
+import { MessageService, ConfirmationService } from 'primeng/api';
 import { TooltipModule } from 'primeng/tooltip';
+import { TableModule } from 'primeng/table';
+import { SelectModule } from 'primeng/select';
+import { DialogModule } from 'primeng/dialog';
+import { ConfirmDialogModule } from 'primeng/confirmdialog';
+import { DatePickerModule } from 'primeng/datepicker';
+import { TextareaModule } from 'primeng/textarea';
+
 import { EmpService } from '@/services/emp-service';
+import { LeaveInfoService, LeaveInfoModel } from '@/services/leave-info-service';
+import { CommonCodeService } from '@/services/common-code-service';
+import { CommonCodeModel } from '@/models/common-code-model';
+import { CodeType } from '@/models/enums';
 import { EmployeeSearchComponent, EmployeeBasicInfo } from '@/Components/Shared/employee-search/employee-search';
+import { FlexibleDateDirective } from '@/shared/directives/flexible-date.directive';
 
 @Component({
     selector: 'app-emp-leave-info',
     standalone: true,
-    imports: [CommonModule, FormsModule, ReactiveFormsModule, InputTextModule, ButtonModule, Fluid, TooltipModule, EmployeeSearchComponent],
+    imports: [CommonModule, FormsModule, ReactiveFormsModule, InputTextModule, ButtonModule, Fluid, TooltipModule, TableModule, SelectModule, DialogModule, ConfirmDialogModule, DatePickerModule, TextareaModule, EmployeeSearchComponent, FlexibleDateDirective],
+    providers: [ConfirmationService],
     templateUrl: './emp-leave-info.component.html',
     styleUrl: './emp-leave-info.component.scss'
 })
 export class EmpLeaveInfo implements OnInit {
+    private _router = inject(Router);
+    private _userMenuService = inject(UserMenuService);
+    canInsert = true;
+    canUpdate = true;
+    canDelete = true;
+
+    @Input() hideTitle = false;
+
+    @Input() embedMode = false;
+    @Input() externalEmployeeId: number | null = null;
+    @Output() saved = new EventEmitter<void>();
+    @Output() cancelled = new EventEmitter<void>();
+
     employeeFound = false;
     selectedEmployeeId: number | null = null;
     employeeBasicInfo: any = null;
     mode: 'search' | 'view' | 'edit' = 'search';
     isReadonly = false;
 
-    constructor(private empService: EmpService, private messageService: MessageService, private route: ActivatedRoute, private router: Router) {}
-    ngOnInit(): void { this.checkRouteParams(); }
-    checkRouteParams(): void { this.route.queryParams.subscribe(params => { if (params['id']) { this.mode = params['mode'] === 'edit' ? 'edit' : 'view'; this.isReadonly = this.mode === 'view'; this.loadEmployeeById(parseInt(params['id'], 10)); } }); }
-    loadEmployeeById(employeeId: number): void { this.empService.getEmployeeById(employeeId).subscribe({ next: (e: any) => { if (e) { this.employeeFound = true; this.selectedEmployeeId = e.employeeID || e.EmployeeID; this.employeeBasicInfo = e; } } }); }
+    leaveList: LeaveInfoModel[] = [];
+    isLoading = false;
+
+    displayDialog = false;
+    showInlineForm = false;
+    isEditMode = false;
+    isSaving = false;
+    leaveForm!: FormGroup;
+    editingLeaveId: number | null = null;
+
+    leaveTypes: CommonCodeModel[] = [];
+
+    constructor(
+        private empService: EmpService,
+        private leaveInfoService: LeaveInfoService,
+        private commonCodeService: CommonCodeService,
+        private messageService: MessageService,
+        private confirmationService: ConfirmationService,
+        private route: ActivatedRoute,
+        private router: Router,
+        private fb: FormBuilder
+    ) {
+        this.initForm();
+    }
+
+    ngOnInit(): void {
+        const _perms = this._userMenuService.getPermissionsByRoute(this._router.url);
+        this.canInsert = _perms.canInsert;
+        this.canUpdate = _perms.canUpdate;
+        this.canDelete = _perms.canDelete;
+
+        this.loadLeaveTypes();
+        if (this.embedMode && this.externalEmployeeId != null) {
+            this.mode = 'edit';
+            this.isReadonly = false;
+            this.selectedEmployeeId = this.externalEmployeeId;
+            this.employeeFound = true;
+            this.loadEmployeeById(this.externalEmployeeId);
+            return;
+        }
+        this.checkRouteParams();
+    }
+
+    initForm(): void {
+        this.leaveForm = this.fb.group({
+            employeeId: [0],
+            leaveId: [0],
+            leaveTypeId: [null, Validators.required],
+            fromDate: [null, Validators.required],
+            toDate: [null, Validators.required],
+            remarks: ['']
+        });
+    }
+
+    loadLeaveTypes(): void {
+        this.commonCodeService.getAllActiveCommonCodesType(CodeType.LeaveType).subscribe({
+            next: (data) => {
+                this.leaveTypes = Array.isArray(data) ? data : [];
+            },
+            error: (err: any) => this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.message || 'Failed to load leave types' })
+        });
+    }
+
+    checkRouteParams(): void {
+        this.route.queryParams.subscribe((params) => {
+            const employeeId = params['id'];
+            const mode = params['mode'];
+            if (employeeId) {
+                this.mode = mode === 'edit' ? 'edit' : 'view';
+                this.isReadonly = this.mode === 'view';
+                this.loadEmployeeById(parseInt(employeeId, 10));
+            }
+        });
+    }
+
+    loadEmployeeById(employeeId: number): void {
+        this.empService.getEmployeeById(employeeId).subscribe({
+            next: (employee: any) => {
+                if (employee) {
+                    this.employeeFound = true;
+                    this.selectedEmployeeId = employee.employeeID || employee.EmployeeID;
+                    this.employeeBasicInfo = employee;
+                    this.loadLeaveList();
+                }
+            },
+            error: (err: any) => this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.message || 'Failed to load employee' })
+        });
+    }
+
+    loadLeaveList(): void {
+        if (!this.selectedEmployeeId) return;
+        this.isLoading = true;
+        this.leaveInfoService.getByEmployeeId(this.selectedEmployeeId).subscribe({
+            next: (data: any) => {
+                const list = Array.isArray(data) ? data : [];
+                this.leaveList = list.map((item: any) => ({
+                    employeeId: item.employeeId ?? item.EmployeeId,
+                    leaveId: item.leaveId ?? item.LeaveId,
+                    leaveTypeId: item.leaveTypeId ?? item.LeaveTypeId,
+                    fromDate: item.fromDate ?? item.FromDate ?? '',
+                    toDate: item.toDate ?? item.ToDate ?? '',
+                    auth: item.auth ?? item.Auth ?? null,
+                    remarks: item.remarks ?? item.Remarks ?? null
+                }));
+                this.isLoading = false;
+            },
+            error: (err: any) => {
+                this.isLoading = false;
+            }
+        });
+    }
+
+    getLeaveTypeName(leaveTypeId: number): string {
+        const lt = this.leaveTypes.find((x) => x.codeId === leaveTypeId);
+        return lt ? lt.codeValueEN || lt.codeValueBN || '' : 'N/A';
+    }
+
+    formatDate(val: string | Date | null): string {
+        if (!val) return 'N/A';
+        const d = typeof val === 'string' ? new Date(val) : val;
+        if (isNaN(d.getTime())) return 'N/A';
+        const day = String(d.getDate()).padStart(2, '0');
+        const month = String(d.getMonth() + 1).padStart(2, '0');
+        const year = d.getFullYear();
+        return `${day}-${month}-${year}`;
+    }
+
+    /**
+     * Serializes a calendar date as midnight-UTC ISO of the *local* calendar day.
+     * The LeaveInfo column is DateTimeOffset, but logically these are calendar dates.
+     * Using `.toISOString()` directly would shift the day for positive-offset timezones
+     * (e.g. BD +06:00 turning June 1 local into May 31 UTC) and break overlap comparisons
+     * that read `DateTimeOffset.UtcDateTime` server-side.
+     */
+    private toCalendarDateIso(d: Date): string {
+        const y = d.getFullYear();
+        const m = String(d.getMonth() + 1).padStart(2, '0');
+        const day = String(d.getDate()).padStart(2, '0');
+        return `${y}-${m}-${day}T00:00:00.000Z`;
+    }
+
+    calculateDays(fromDate: string | Date | null, toDate: string | Date | null): number | string {
+        if (!fromDate || !toDate) return '—';
+        const from = typeof fromDate === 'string' ? new Date(fromDate) : fromDate;
+        const to = typeof toDate === 'string' ? new Date(toDate) : toDate;
+        const diffMs = to.getTime() - from.getTime();
+        return Math.max(Math.ceil(diffMs / (1000 * 60 * 60 * 24)) + 1, 0);
+    }
+
+    openAddDialog(): void {
+        this.isEditMode = false;
+        this.editingLeaveId = null;
+        this.leaveForm.reset({
+            employeeId: this.selectedEmployeeId ?? 0,
+            leaveId: 0,
+            leaveTypeId: null,
+            fromDate: null,
+            toDate: null,
+            remarks: ''
+        });
+        this.showInlineForm = true;
+    }
+
+    openEditDialog(row: LeaveInfoModel): void {
+        this.isEditMode = true;
+        this.editingLeaveId = row.leaveId;
+        this.leaveForm.patchValue({
+            employeeId: row.employeeId,
+            leaveId: row.leaveId,
+            leaveTypeId: row.leaveTypeId,
+            fromDate: row.fromDate ? new Date(row.fromDate) : null,
+            toDate: row.toDate ? new Date(row.toDate) : null,
+            remarks: row.remarks || ''
+        });
+        this.showInlineForm = true;
+    }
+
+    saveLeave(): void {
+        if (this.leaveForm.invalid) {
+            this.leaveForm.markAllAsTouched();
+            this.messageService.add({ severity: 'warn', summary: 'Warning', detail: 'Please fill required fields' });
+            return;
+        }
+        if (this.selectedEmployeeId == null) {
+            this.messageService.add({ severity: 'warn', summary: 'Warning', detail: 'No employee selected' });
+            return;
+        }
+        const formValue = this.leaveForm.value;
+        const fromDate = formValue.fromDate instanceof Date ? formValue.fromDate : new Date(formValue.fromDate);
+        const toDate = formValue.toDate instanceof Date ? formValue.toDate : new Date(formValue.toDate);
+        if (toDate < fromDate) {
+            this.messageService.add({ severity: 'warn', summary: 'Warning', detail: 'To date cannot be before From date' });
+            return;
+        }
+
+        const payload: Partial<LeaveInfoModel> = {
+            employeeId: this.selectedEmployeeId,
+            leaveId: this.isEditMode ? (this.editingLeaveId ?? 0) : 0,
+            leaveTypeId: formValue.leaveTypeId,
+            fromDate: this.toCalendarDateIso(fromDate),
+            toDate: this.toCalendarDateIso(toDate),
+            remarks: formValue.remarks || null,
+            auth: null,
+            createdBy: 'system',
+            lastUpdatedBy: 'system'
+        };
+
+        this.isSaving = true;
+        const req = this.isEditMode ? this.leaveInfoService.update(payload) : this.leaveInfoService.save(payload);
+
+        req.subscribe({
+            next: () => {
+                this.messageService.add({ severity: 'success', summary: 'Success', detail: this.isEditMode ? 'Leave record updated.' : 'Leave record added.' });
+                this.showInlineForm = false;
+                this.loadLeaveList();
+                this.isSaving = false;
+            },
+            error: (err: any) => {
+                this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.message || 'Failed to save leave record' });
+                this.isSaving = false;
+            }
+        });
+    }
+
+    confirmDelete(row: LeaveInfoModel): void {
+        this.confirmationService.confirm({
+            message: `Delete leave record (${this.getLeaveTypeName(row.leaveTypeId)} - ${this.formatDate(row.fromDate)} to ${this.formatDate(row.toDate)})?`,
+            header: 'Delete Confirmation',
+            icon: 'pi pi-exclamation-triangle',
+            rejectButtonProps: { label: 'Cancel', severity: 'secondary', outlined: true },
+            acceptButtonProps: { label: 'Delete', severity: 'danger' },
+            accept: () => this.deleteLeave(row)
+        });
+    }
+
+    deleteLeave(row: LeaveInfoModel): void {
+        this.leaveInfoService.delete(row.employeeId, row.leaveId).subscribe({
+            next: () => {
+                this.messageService.add({ severity: 'success', summary: 'Success', detail: 'Leave record deleted.' });
+                this.loadLeaveList();
+            },
+            error: (err: any) => this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.message || 'Failed to delete' })
+        });
+    }
 
     onEmployeeSearchFound(employee: EmployeeBasicInfo): void {
         this.employeeFound = true;
         this.selectedEmployeeId = employee.employeeID;
         this.employeeBasicInfo = employee;
         this.isReadonly = true;
+        this.loadLeaveList();
     }
 
     onEmployeeSearchReset(): void {
-        this.resetForm();
+        this.employeeFound = false;
+        this.selectedEmployeeId = null;
+        this.employeeBasicInfo = null;
+        this.leaveList = [];
     }
 
-    enableEditMode(): void { this.mode = 'edit'; this.isReadonly = false; }
-    enableSearchEditMode(): void { this.isReadonly = false; }
-    goBack(): void { this.router.navigate(['/emp-list']); }
-    resetForm(): void { this.employeeFound = false; this.selectedEmployeeId = null; this.employeeBasicInfo = null; }
-    saveData(): void { this.messageService.add({ severity: 'info', summary: 'Info', detail: 'Save functionality to be implemented' }); }
+    enableEditMode(): void {
+        this.mode = 'edit';
+        this.isReadonly = false;
+    }
+
+    goBack(): void {
+        if (this.embedMode) {
+            this.cancelled.emit();
+            return;
+        }
+        this.router.navigate(['/emp-list']);
+    }
 }

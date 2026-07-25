@@ -1,0 +1,553 @@
+<p-toast position="top-center"></p-toast>
+
+<div class="pending-inter-posting-joining">
+    <div class="form-card">
+        <div class="form-card-header flex justify-between items-center">
+            <div>
+                <h3 class="form-card-title">Pending List for Joining — Inter Posting</h3>
+            </div>
+            <div class="flex gap-2">
+                <p-button
+                    icon="pi pi-arrow-right-arrow-left"
+                    label="Issue Movement Order ({{ movableRows.length }})"
+                    severity="info"
+                    [outlined]="true"
+                    [disabled]="!movableRows.length"
+                    (onClick)="openMovementDialog()"
+                ></p-button>
+                <p-button
+                    icon="pi pi-check-square"
+                    label="Join Member ({{ selectedRows.length }})"
+                    severity="success"
+                    [disabled]="!selectedRows.length"
+                    [class.perm-hidden]="!canUpdate"
+                    (onClick)="openReceiveDialog()"
+                ></p-button>
+            </div>
+        </div>
+
+        <!-- Filters -->
+        <div class="filter-bar">
+            <div class="filter-row">
+                <div class="filter-item">
+                    <label class="filter-label">NoteSheet</label>
+                    <p-select
+                        [options]="noteSheetOptions"
+                        [(ngModel)]="noteSheetFilter"
+                        optionLabel="label"
+                        optionValue="value"
+                        placeholder="All NoteSheets"
+                        [showClear]="true"
+                        [filter]="true"
+                        filterPlaceholder="Search..."
+                        (onChange)="applyFilters()"
+                        styleClass="w-full"
+                    ></p-select>
+                </div>
+                <div class="filter-item">
+                    <label class="filter-label">Posting Order No</label>
+                    <p-select
+                        [options]="postingOrderOptions"
+                        [(ngModel)]="postingOrderFilter"
+                        optionLabel="label"
+                        optionValue="value"
+                        placeholder="All Posting Orders"
+                        [showClear]="true"
+                        [filter]="true"
+                        filterPlaceholder="Search..."
+                        (onChange)="applyFilters()"
+                        styleClass="w-full"
+                    ></p-select>
+                </div>
+                <div class="filter-item">
+                    <label class="filter-label">Mother Organization</label>
+                    <p-select
+                        [options]="motherOrgOptions"
+                        [(ngModel)]="motherOrgFilter"
+                        optionLabel="label"
+                        optionValue="value"
+                        placeholder="All Mother Organizations"
+                        [showClear]="true"
+                        [filter]="true"
+                        filterPlaceholder="Search..."
+                        (onChange)="applyFilters()"
+                        styleClass="w-full"
+                    ></p-select>
+                </div>
+                <div class="filter-item">
+                    <label class="filter-label">Transfer Unit</label>
+                    <p-select
+                        [options]="transferUnitOptions"
+                        [(ngModel)]="transferUnitFilter"
+                        optionLabel="label"
+                        optionValue="value"
+                        placeholder="All Transfer Units"
+                        [showClear]="true"
+                        [filter]="true"
+                        filterPlaceholder="Search..."
+                        (onChange)="applyFilters()"
+                        styleClass="w-full"
+                    ></p-select>
+                </div>
+                <div class="filter-item filter-action">
+                    <p-button
+                        icon="pi pi-filter-slash"
+                        label="Clear"
+                        severity="secondary"
+                        [text]="true"
+                        size="small"
+                        (onClick)="clearFilters()"
+                    ></p-button>
+                </div>
+            </div>
+        </div>
+
+        <p-table
+            #dt
+            [value]="rows"
+            [loading]="loading"
+            dataKey="postingReceiveId"
+            [tableStyle]="{ 'min-width': '85rem' }"
+            styleClass="p-datatable-striped p-datatable-gridlines"
+            [paginator]="true"
+            [rows]="15"
+            [rowsPerPageOptions]="[15, 25, 50, 100]"
+            [selection]="selectedRows"
+            (selectionChange)="onSelectionChange($event)"
+            [globalFilterFields]="[
+                'postingOrderNo',
+                'noteSheetNo',
+                'serviceId',
+                'fullNameEN',
+                'rankName',
+                'motherOrganization',
+                'motherUnitName',
+                'fromRabUnitName',
+                'transferRabUnitName',
+                'transferToHierarchy'
+            ]"
+        >
+            <ng-template pTemplate="caption">
+                <div class="flex justify-content-between align-items-center flex-wrap gap-3">
+                    <span class="text-600 white-space-nowrap">
+                        Total pending: <b>{{ rows.length }}</b>
+                        <span *ngIf="rows.length !== allRows.length">
+                            (filtered from {{ allRows.length }})
+                        </span>
+                    </span>
+                    <p-iconfield>
+                        <p-inputicon styleClass="pi pi-search"></p-inputicon>
+                        <input
+                            pInputText
+                            type="text"
+                            placeholder="Search..."
+                            (input)="onGlobalFilter(dt, $event)"
+                        />
+                    </p-iconfield>
+                </div>
+            </ng-template>
+            <ng-template pTemplate="header">
+                <tr>
+                    <th style="width: 3rem">
+                        <p-tableHeaderCheckbox></p-tableHeaderCheckbox>
+                    </th>
+                    <th style="width: 45px">Ser</th>
+                    <th style="min-width: 260px">Posting Order No</th>
+                    <th style="min-width: 95px">Order Date</th>
+                    <th style="min-width: 100px">Service ID</th>
+                    <th style="min-width: 90px">RAB ID</th>
+                    <th style="min-width: 90px">Rank</th>
+                    <th style="min-width: 150px">Full Name</th>
+                    <th style="min-width: 120px">Mother Organization</th>
+                    <th style="min-width: 120px">Mother Unit</th>
+                    <th style="min-width: 120px">From RAB Unit</th>
+                    <th style="min-width: 230px">Transfer To</th>
+                    <th style="width: 100px">Action</th>
+                </tr>
+            </ng-template>
+            <ng-template pTemplate="body" let-row let-rowIndex="rowIndex">
+                <tr>
+                    <td>
+                        <!-- Row stays selectable even after a movement order exists —
+                             the member can still be received; only the Movement action
+                             is gated on movement-less rows. -->
+                        <p-tableCheckbox
+                            [value]="row"
+                            [pTooltip]="hasMovement(row) ? 'Movement order already generated — can still be received' : ''"
+                        ></p-tableCheckbox>
+                    </td>
+                    <td>{{ rowIndex + 1 }}</td>
+                    <td>
+                        {{ row.postingOrderNo || '-' }}
+                    </td>
+                    <td>{{ formatDate(row.postingOrderDate) }}</td>
+                    <td>{{ row.serviceId || '-' }}</td>
+                    <td>{{ row.rabID || '-' }}</td>
+                    <td>{{ row.rankName || '-' }}</td>
+                    <td>{{ row.fullNameEN || '-' }}</td>
+                    <td>{{ row.motherOrganization || '-' }}</td>
+                    <td>{{ row.motherUnitName || '-' }}</td>
+                    <td>{{ row.fromRabUnitName || '-' }}</td>
+                    <td>{{ row.transferToHierarchy || '-' }}</td>
+                    <td>
+                        <div class="flex gap-1">
+                            <p-button
+                                icon="pi pi-user"
+                                [rounded]="true"
+                                [text]="true"
+                                size="small"
+                                pTooltip="View Profile"
+                                (onClick)="openProfile(row)"
+                            ></p-button>
+                            <p-button
+                                icon="pi pi-eye"
+                                [rounded]="true"
+                                [text]="true"
+                                size="small"
+                                pTooltip="View Posting Order"
+                                (onClick)="openPostingOrder(row)"
+                            ></p-button>
+                            <!-- Disabled button ignores pointer events, so the wrapper span
+                                 catches the click and surfaces the permission message. -->
+                            <span (click)="!canDelete && notifyNoCancelPermission()">
+                                <p-button
+                                    icon="pi pi-ban"
+                                    severity="danger"
+                                    [rounded]="true"
+                                    [text]="true"
+                                    size="small"
+                                    [pTooltip]="canDelete ? 'Cancel Joining' : 'You did not have cancel permission'"
+                                    tooltipPosition="top"
+                                    [disabled]="!canDelete"
+                                    (onClick)="openCancelDialog(row)"
+                                ></p-button>
+                            </span>
+                        </div>
+                    </td>
+                </tr>
+            </ng-template>
+            <ng-template pTemplate="emptymessage">
+                <tr>
+                    <td colspan="13" class="text-center p-4">
+                        <div class="flex flex-column align-items-center gap-3 py-5">
+                            <i class="pi pi-check-circle text-5xl text-400"></i>
+                            <span class="text-lg text-500">
+                                No pending joinings. All inter-posting employees have been received.
+                            </span>
+                        </div>
+                    </td>
+                </tr>
+            </ng-template>
+        </p-table>
+    </div>
+
+    <!-- Cancelled Joinings (collapsible) -->
+    <div class="form-card mt-3">
+        <div class="cancelled-header" (click)="toggleCancelled()">
+            <!-- Left: chevron + label, vertically aligned -->
+            <div class="cancelled-header__left">
+                <i class="pi" [ngClass]="showCancelled ? 'pi-chevron-down' : 'pi-chevron-right'"></i>
+                <span class="cancelled-header__title">Cancelled Joinings</span>
+            </div>
+
+            <!-- Right: theme-coloured count badge + action -->
+            <div class="cancelled-header__right">
+                <span *ngIf="cancelledLoaded" class="cancelled-header__badge">{{ cancelledTotal }}</span>
+                <p-button
+                    *ngIf="!cancelledLoaded"
+                    icon="pi pi-download"
+                    label="Load"
+                    severity="secondary"
+                    [outlined]="true"
+                    size="small"
+                    [loading]="cancelledLoading"
+                    pTooltip="Load cancelled joinings"
+                    (onClick)="$event.stopPropagation(); loadCancelled()"
+                ></p-button>
+                <p-button
+                    *ngIf="cancelledLoaded"
+                    icon="pi pi-refresh"
+                    [rounded]="true"
+                    severity="secondary"
+                    [text]="true"
+                    size="small"
+                    [loading]="cancelledLoading"
+                    pTooltip="Reload cancelled list"
+                    (onClick)="$event.stopPropagation(); reloadCancelled()"
+                ></p-button>
+            </div>
+        </div>
+
+        <div *ngIf="showCancelled && cancelledLoaded" class="mt-3">
+            <p-table
+                [value]="cancelledRows"
+                [loading]="cancelledLoading"
+                dataKey="postingReceiveId"
+                [tableStyle]="{ 'min-width': '90rem' }"
+                styleClass="p-datatable-striped p-datatable-gridlines p-datatable-sm"
+                [lazy]="true"
+                (onLazyLoad)="loadCancelledLazy($event)"
+                [paginator]="true"
+                [rows]="cancelledPageSize"
+                [first]="cancelledFirst"
+                [totalRecords]="cancelledTotal"
+                [rowsPerPageOptions]="[10, 25, 50]"
+            >
+                <ng-template pTemplate="header">
+                    <tr>
+                        <th style="width: 50px">Ser</th>
+                        <th style="min-width: 260px">Posting Order No</th>
+                        <th style="min-width: 110px; white-space: nowrap">Order Date</th>
+                        <th style="min-width: 90px">Service ID</th>
+                        <th style="min-width: 80px">Rank</th>
+                        <th style="min-width: 140px">Full Name</th>
+                        <th style="min-width: 120px">From RAB Unit</th>
+                        <th style="min-width: 200px">Transfer To</th>
+                        <th style="min-width: 110px; white-space: nowrap">Cancelled Date</th>
+                        <th style="min-width: 110px">Cancelled By</th>
+                        <th style="min-width: 160px">Reason</th>
+                        <th style="width: 90px">Action</th>
+                    </tr>
+                </ng-template>
+                <ng-template pTemplate="body" let-row let-rowIndex="rowIndex">
+                    <tr>
+                        <td>{{ rowIndex + 1 }}</td>
+                        <td>{{ row.postingOrderNo || '-' }}</td>
+                        <td>{{ formatDate(row.postingOrderDate) }}</td>
+                        <td>{{ row.serviceId || '-' }}</td>
+                        <td>{{ row.rankName || '-' }}</td>
+                        <td>{{ row.fullNameEN || '-' }}</td>
+                        <td>{{ row.fromRabUnitName || '-' }}</td>
+                        <td>{{ row.transferToHierarchy || row.transferRabUnitName || '-' }}</td>
+                        <td>{{ formatDate(row.cancelledDate) }}</td>
+                        <td>{{ row.cancelledBy || '-' }}</td>
+                        <td>{{ row.cancelReason || '-' }}</td>
+                        <td>
+                            <div class="flex gap-1">
+                                <p-button
+                                    icon="pi pi-user"
+                                    [rounded]="true"
+                                    [text]="true"
+                                    size="small"
+                                    pTooltip="View Profile"
+                                    (onClick)="openProfile(row)"
+                                ></p-button>
+                                <p-button
+                                    icon="pi pi-eye"
+                                    [rounded]="true"
+                                    [text]="true"
+                                    size="small"
+                                    pTooltip="View Posting Order"
+                                    (onClick)="openPostingOrder(row)"
+                                ></p-button>
+                            </div>
+                        </td>
+                    </tr>
+                </ng-template>
+                <ng-template pTemplate="emptymessage">
+                    <tr>
+                        <td colspan="12" class="text-center p-4">
+                            <div class="flex flex-column align-items-center gap-3 py-4">
+                                <i class="pi pi-ban text-4xl text-400"></i>
+                                <span class="text-500">No cancelled joinings.</span>
+                            </div>
+                        </td>
+                    </tr>
+                </ng-template>
+            </p-table>
+        </div>
+    </div>
+</div>
+
+<!-- Movement Dialog -->
+<p-dialog
+    header="Movement"
+    [(visible)]="showMovementDialog"
+    [modal]="true"
+    [style]="{ width: '30rem' }"
+    [breakpoints]="{ '640px': '95vw' }"
+    [draggable]="false"
+    [resizable]="false"
+>
+    <div class="receive-form">
+        <p class="receive-info">
+            Move <b>{{ movableRows.length }}</b> selected employee(s). Choose the order type to continue.
+        </p>
+        <div class="receive-field">
+            <label for="movementOrderType">Order Type <span class="required">*</span></label>
+            <p-select
+                inputId="movementOrderType"
+                [options]="moveOrderTypeOptions"
+                [(ngModel)]="movementOrderType"
+                optionLabel="label"
+                optionValue="value"
+                placeholder="Select order type"
+                appendTo="body"
+                styleClass="w-full"
+            ></p-select>
+        </div>
+    </div>
+    <ng-template pTemplate="footer">
+        <p-button
+            label="Cancel"
+            icon="pi pi-times"
+            severity="secondary"
+            [outlined]="true"
+            (onClick)="closeMovementDialog()"
+        ></p-button>
+        <p-button
+            label="Continue"
+            icon="pi pi-arrow-right"
+            severity="info"
+            [disabled]="!movementOrderType"
+            (onClick)="confirmMovement()"
+        ></p-button>
+    </ng-template>
+</p-dialog>
+
+<!-- Receive Posting Order Dialog -->
+<p-dialog
+    header="Receive Inter Posting Order"
+    styleClass="receive-dialog"
+    [(visible)]="showReceiveDialog"
+    [modal]="true"
+    [style]="{ width: '32rem' }"
+    [breakpoints]="{ '960px': '90vw', '640px': '95vw' }"
+    [draggable]="false"
+    [resizable]="false"
+    [closable]="!saving"
+    [dismissableMask]="!saving"
+>
+    <div class="receive-form">
+        <p class="receive-info">
+            You are about to receive <b>{{ selectedRows.length }}</b> employee(s) as joined.
+        </p>
+
+        <div class="receive-field">
+            <label for="joiningDate">Joining Date <span class="required">*</span></label>
+            <p-datepicker
+                inputId="joiningDate"
+                [(ngModel)]="joiningDate"
+                dateFormat="dd M yy"
+                [showIcon]="true"
+                iconDisplay="input"
+                [showOnFocus]="false"
+                appendTo="body"
+                placeholder="Select joining date"
+                styleClass="w-full"
+            ></p-datepicker>
+        </div>
+
+        <div class="receive-field">
+            <label for="remarks">Remarks</label>
+            <textarea
+                id="remarks"
+                pTextarea
+                [(ngModel)]="remarks"
+                rows="4"
+                placeholder="Optional remarks"
+            ></textarea>
+        </div>
+    </div>
+    <ng-template pTemplate="footer">
+        <p-button
+            label="Cancel"
+            icon="pi pi-times"
+            severity="secondary"
+            [outlined]="true"
+            [disabled]="saving"
+            (onClick)="closeReceiveDialog()"
+        ></p-button>
+        <p-button
+            label="Confirm Receive"
+            icon="pi pi-check"
+            severity="success"
+            [loading]="saving"
+            (onClick)="confirmReceive()"
+        ></p-button>
+    </ng-template>
+</p-dialog>
+
+<!-- Cancel Joining Dialog -->
+<p-dialog
+    [(visible)]="showCancelDialog"
+    [modal]="true"
+    [showHeader]="false"
+    styleClass="cancel-dialog"
+    [style]="{ width: '34rem' }"
+    [breakpoints]="{ '960px': '90vw', '640px': '95vw' }"
+    [draggable]="false"
+    [resizable]="false"
+    [closable]="!cancelling"
+    [dismissableMask]="!cancelling"
+>
+    <div class="cancel-body" *ngIf="cancelTarget">
+        <!-- Hero header -->
+        <div class="cancel-hero">
+            <div class="cancel-hero-icon">
+                <i class="pi pi-ban"></i>
+            </div>
+            <div class="cancel-hero-text">
+                <h3>Cancel Joining</h3>
+                <span>The member stays in the inter-posting notesheet and order; only their joining is cancelled.</span>
+            </div>
+        </div>
+
+        <!-- Member card -->
+        <div class="cancel-member-card">
+            <div class="cancel-avatar">{{ (cancelTarget.fullNameEN || '?').charAt(0) }}</div>
+            <div class="cancel-member-info">
+                <div class="cancel-member-name">
+                    {{ cancelTarget.rankName ? cancelTarget.rankName + ' ' : '' }}{{ cancelTarget.fullNameEN || '-' }}
+                </div>
+                <div class="cancel-member-meta">
+                    <span><i class="pi pi-id-card"></i> {{ cancelTarget.serviceId || '-' }}</span>
+                    <span *ngIf="cancelTarget.rabID"><i class="pi pi-hashtag"></i> {{ cancelTarget.rabID }}</span>
+                </div>
+                <div class="cancel-route">
+                    <span class="cancel-chip from">{{ cancelTarget.fromRabUnitName || '—' }}</span>
+                    <i class="pi pi-arrow-right"></i>
+                    <span class="cancel-chip to">{{ cancelTarget.transferRabUnitName || cancelTarget.transferToHierarchy || '—' }}</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Order reference -->
+        <div class="cancel-order-ref">
+            <i class="pi pi-file"></i>
+            <span>Posting Order <b>{{ cancelTarget.postingOrderNo }}</b></span>
+        </div>
+
+        <!-- Remarks -->
+        <div class="cancel-field">
+            <label for="cancelRemarks">Reason <span class="optional">(optional)</span></label>
+            <textarea
+                id="cancelRemarks"
+                pTextarea
+                [(ngModel)]="cancelRemarks"
+                rows="3"
+                placeholder="Why is this joining being cancelled?"
+            ></textarea>
+        </div>
+    </div>
+
+    <ng-template pTemplate="footer">
+        <div class="cancel-actions">
+            <p-button
+                label="Keep"
+                icon="pi pi-arrow-left"
+                severity="secondary"
+                [text]="true"
+                [disabled]="cancelling"
+                (onClick)="closeCancelDialog()"
+            ></p-button>
+            <p-button
+                label="Cancel Joining"
+                icon="pi pi-ban"
+                severity="danger"
+                [loading]="cancelling"
+                (onClick)="confirmCancel()"
+            ></p-button>
+        </div>
+    </ng-template>
+</p-dialog>

@@ -1,0 +1,531 @@
+:host {
+    display: block;
+    min-height: 100vh;
+    background: #f4f4f4;
+}
+
+/* ── List Mode ───────────────────────────────────── */
+.office-order-list {
+    padding: 1.5rem;
+
+    .form-card {
+        background: #fff;
+        border-radius: 8px;
+        padding: 1.5rem;
+        box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
+    }
+
+    .form-card-header {
+        margin-bottom: 1rem;
+    }
+
+    .form-card-title {
+        margin: 0;
+        font-size: 1.25rem;
+        font-weight: 600;
+    }
+}
+
+/* ── Toolbar ──────────────────────────────────────── */
+.preview-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.6rem 1.5rem;
+    background: #fff;
+    border-bottom: 1px solid var(--surface-border);
+    position: sticky;
+    top: 0;
+    z-index: 100;
+}
+
+.preview-actions {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+}
+
+.page-size-select {
+    padding: 0.4rem 0.6rem;
+    border: 1px solid var(--surface-border, #dee2e6);
+    border-radius: 6px;
+    font-size: 0.875rem;
+    background: var(--surface-card, #fff);
+    color: var(--text-color, #1e293b);
+    cursor: pointer;
+    outline: none;
+    &:focus { border-color: var(--primary-color, #3b82f6); }
+}
+
+.approval-header-right {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-shrink: 0;
+}
+
+/* ── Loading / Error ──────────────────────────────── */
+.preview-loading,
+.preview-error {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 60vh;
+    gap: 1rem;
+    color: var(--text-color-secondary);
+}
+
+/* ── Onulipi Filter ──────────────────────────────── */
+.oo-onulipi-filter {
+    max-width: 210mm;
+    margin: 0 auto;
+    padding: 12px 24px;
+    background: #fff;
+    border-radius: 8px;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+    margin-top: 1rem;
+
+    .oo-onulipi-filter-toggle {
+        font-weight: 600;
+        font-size: 0.85rem;
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.3rem;
+        user-select: none;
+        color: #374151;
+
+        i { font-size: 0.75rem; }
+    }
+
+    .oo-onulipi-filter-list {
+        display: flex;
+        flex-direction: column;
+        gap: 0.4rem;
+        margin-top: 0.5rem;
+        padding-left: 0.2rem;
+    }
+
+    .oo-onulipi-filter-item {
+        display: inline-flex;
+        align-items: flex-start;
+        gap: 0.5rem;
+        font-size: 0.82rem;
+        line-height: 1.5;
+
+        label {
+            cursor: pointer;
+            color: #1e293b;
+        }
+    }
+}
+
+/* ── Legal Paper Container ────────────────────────── */
+.legal-paper-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 2rem;
+    min-height: calc(100vh - 60px);
+    gap: 2rem;
+}
+
+.legal-paper {
+    width: 210mm;
+    min-height: 297mm;
+    padding: 14mm 10mm 20mm;
+    background: #fff;
+    box-shadow: 0 6px 24px rgba(0, 0, 0, 0.25);
+    box-sizing: border-box;
+    /* SolaimanLipi (bundled, see styles.scss) is the Bangla face. Times New Roman
+       stays first so Latin text and digits are unchanged — Bangla codepoints have
+       no Times glyphs and fall through to SolaimanLipi. */
+    font-family: 'Times New Roman', 'SolaimanLipi', Times, serif;
+    font-size: 9pt;
+    color: #000;
+    line-height: 1.7;
+    position: relative;
+    overflow-x: hidden;
+    display: flex;
+    flex-direction: column;
+
+    /* Rich-text blocks rendered via [innerHTML]: editor font choices and pasted
+       inline font-family would otherwise override the stack above and drop Bangla
+       back to a system fallback. */
+    ::ng-deep .oo-doc-rich-content,
+    ::ng-deep .oo-doc-rich-content * {
+        font-family: 'Times New Roman', 'SolaimanLipi', Times, serif !important;
+    }
+}
+
+/* Legal page size override (A4 is the default above) */
+.legal-paper.legal-paper--legal {
+    width: 215.9mm;
+    min-height: 355.6mm;
+}
+
+/* ── Document Box ─────────────────────────────────── */
+.oo-doc-box {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    padding: 10px 16px 18px 20px;
+    max-width: 100%;
+    overflow: hidden;
+    word-break: normal;
+}
+
+/* ── Document Styles ──────────────────────────────── */
+.oo-doc-header {
+    text-align: center;
+    margin-bottom: 4px;
+}
+
+.oo-doc-header-line {
+    font-weight: 700;
+    font-size: 9pt;
+    line-height: 1.5;
+}
+
+.oo-doc-title {
+    text-align: center;
+    font-size: 11pt;
+    font-weight: 700;
+    text-decoration: underline;
+    margin: 12px 0;
+}
+
+.oo-doc-meta {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 6px;
+    font-size: 9pt;
+}
+
+.oo-doc-reference {
+    margin-bottom: 10px;
+    font-size: 9pt;
+    font-style: italic;
+
+    .oo-doc-reference-label {
+        font-weight: 700;
+        margin-right: 4px;
+        font-style: normal;
+    }
+}
+
+/* ── Sections (Address To, Reference No, Attachment, Onulipi) ── */
+.oo-doc-section {
+    margin: 10px 0;
+    font-size: 9pt;
+}
+
+.oo-doc-section-label {
+    font-weight: 700;
+    margin-bottom: 4px;
+    font-size: 9pt;
+}
+
+.oo-doc-list {
+    padding-left: 16px;
+    line-height: 2;
+
+    p {
+        margin: 2px 0;
+    }
+}
+
+/* ── Subject ──────────────────────────────────────── */
+.oo-doc-subject {
+    margin: 10px 0;
+    font-size: 9pt;
+}
+
+.oo-doc-subject-label {
+    font-weight: 700;
+}
+
+.oo-doc-subject-text {
+    font-weight: 700;
+    text-decoration: underline;
+}
+
+/* ── Numbered Paragraphs (from notesheet) ─────────── */
+.oo-doc-para {
+    display: flex;
+    gap: 8px;
+    margin: 10px 0;
+    font-size: 9pt;
+    line-height: 1.8;
+}
+
+.oo-doc-para-no {
+    font-weight: 700;
+    min-width: 28px;
+    flex-shrink: 0;
+}
+
+.oo-doc-para-text {
+    flex: 1;
+    text-align: justify;
+}
+
+/* ── Body ─────────────────────────────────────────── */
+.oo-doc-body {
+    margin: 12px 0;
+    line-height: 1.8;
+    text-align: justify;
+    font-size: 9pt;
+}
+
+/* ── Signature Area ──────────────────────────────── */
+.oo-doc-signature-area {
+    display: flex;
+    justify-content: flex-end;
+    margin: 40px 0 20px;
+}
+
+.oo-doc-signature-block {
+    text-align: center;
+    min-width: 200px;
+}
+
+.oo-doc-sig-name {
+    font-weight: 700;
+    font-size: 9pt;
+    border-top: 1px solid transparent;
+    padding-top: 4px;
+}
+
+.oo-doc-sig-rank,
+.oo-doc-sig-appointment,
+.oo-doc-sig-unit {
+    font-size: 9pt;
+    line-height: 1.5;
+}
+
+/* ── Onulipi spacing ─────────────────────────────── */
+.oo-doc-onulipi {
+    margin-top: 30px;
+    padding-top: 10px;
+
+    /* Tab gap after the serial (১।, ২।…) so অনুলিপি text starts at a fixed stop. */
+    .oo-copy-no {
+        display: inline-block;
+        min-width: 2.2em;
+    }
+}
+
+/* ── File Attachments ────────────────────────────── */
+.oo-file-attachments {
+    width: 210mm;
+    background: #fff;
+    border-radius: 8px;
+    padding: 16px 24px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+
+    .oo-file-attachments-label {
+        font-weight: 600;
+        font-size: 9pt;
+        margin-bottom: 10px;
+        color: #374151;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+
+        i { font-size: 1rem; }
+    }
+
+    .oo-file-list {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+    }
+
+    .oo-file-item {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 8px 12px;
+        background: #f8fafc;
+        border: 1px solid #e2e8f0;
+        border-radius: 6px;
+        font-size: 9pt;
+
+        > i.pi-file {
+            color: #64748b;
+            font-size: 1rem;
+        }
+
+        .oo-file-name {
+            flex: 1;
+            color: #1e293b;
+            word-break: break-word;
+        }
+
+        .oo-file-download-btn {
+            background: none;
+            border: none;
+            cursor: pointer;
+            color: #3b82f6;
+            padding: 6px 8px;
+            border-radius: 4px;
+            transition: background 0.15s;
+
+            &:hover {
+                background: #eff6ff;
+            }
+
+            i { font-size: 0.9rem; }
+        }
+    }
+}
+
+/* ── Rich HTML sections (innerHTML) ── */
+:host ::ng-deep {
+    .oo-doc-rich-content {
+        font-size: 9pt;
+        line-height: 1.8;
+        width: 100%;
+        max-width: 100%;
+        text-align: justify;
+        word-break: normal;
+        overflow-wrap: break-word;
+
+        p { margin: 4px 0; text-align: justify; }
+        ul, ol { padding-left: 24px !important; margin: 4px 0; list-style-type: disc !important; }
+        li { display: list-item !important; list-style-type: disc !important; }
+        strong { font-weight: 700; }
+        em { font-style: italic; }
+        u { text-decoration: underline; }
+        s { text-decoration: line-through; }
+        blockquote { border-left: 4px solid #ccc; margin: 4px 0; padding-left: 16px; }
+    }
+}
+
+/* ── Print ────────────────────────────────────────── */
+@page {
+    size: A4;
+    margin: 0;
+}
+
+@media print {
+    .no-print,
+    .oo-file-attachments {
+        display: none !important;
+    }
+
+    :host {
+        background: #fff !important;
+        min-height: auto !important;
+    }
+
+    .legal-paper-container {
+        padding: 0 !important;
+        min-height: auto !important;
+    }
+
+    .legal-paper {
+        width: 210mm !important;
+        box-shadow: none !important;
+        margin: 0 !important;
+        page-break-after: always;
+        break-after: page;
+    }
+
+    .legal-paper.legal-paper--legal {
+        width: 215.9mm !important;
+    }
+
+    .legal-paper:last-child {
+        page-break-after: auto;
+        break-after: auto;
+    }
+}
+
+/* ── Responsive ───────────────────────────────────── */
+@media screen and (max-width: 1200px) {
+    .legal-paper-container {
+        padding: 1rem;
+    }
+
+    .legal-paper {
+        width: 100%;
+        min-height: auto;
+        padding: 12mm 8mm;
+    }
+
+    .oo-file-attachments {
+        width: 100%;
+    }
+}
+
+/* ════════════════════════════════════════════════════════════════════
+   DARK MODE — surrounding chrome only. The legal paper stays WHITE.
+   ════════════════════════════════════════════════════════════════════ */
+:host-context(.app-dark) {
+
+    /* Backdrop — ROFIMS standard dark navy */
+    background: #2a2d35;
+
+    /* List-view card */
+    .card { background: #1e2230; border: 1px solid #3a3f4e; }
+
+    /* ── Top toolbar ───────────────────────────────────────── */
+    .preview-header {
+        background: #12151a;
+        border-bottom: 1px solid #3a3f4e;
+    }
+
+    /* Page-size native select */
+    .page-size-select {
+        background: #1a1e27;
+        color: #cbd5e1;
+        border: 1px solid #3a3f4e;
+    }
+
+    /* Outlined / icon buttons → subtle bordered chips */
+    .preview-header ::ng-deep .p-button.p-button-outlined,
+    .preview-header ::ng-deep .p-button.p-button-text {
+        border: 1px solid #3a3f4e;
+        background: #1a1e27;
+        color: #cbd5e1;
+        &:hover { background: #232838; border-color: #4a5062; }
+    }
+
+    /* Action-button dark tints */
+    .preview-header ::ng-deep .p-button.p-button-success {
+        background: rgba(34, 197, 94, 0.14); border: 1px solid #2e7d32; color: #4ade80;
+        &:hover { background: rgba(34, 197, 94, 0.24); border-color: #388e3c; }
+    }
+    .preview-header ::ng-deep .p-button.p-button-danger {
+        background: rgba(239, 68, 68, 0.14); border: 1px solid #b71c1c; color: #f87171;
+        &:hover { background: rgba(239, 68, 68, 0.24); border-color: #c62828; }
+    }
+    .preview-header ::ng-deep .p-button.p-button-info {
+        background: rgba(59, 130, 246, 0.14); border: 1px solid #1d4ed8; color: #60a5fa;
+        &:hover { background: rgba(59, 130, 246, 0.24); border-color: #2563eb; }
+    }
+
+    /* ── Copy (onulipi) filter bar ─────────────────────────── */
+    .oo-onulipi-filter {
+        background: #1e2230;
+        border: 1px solid #3a3f4e;
+        .oo-onulipi-filter-toggle,
+        .oo-onulipi-filter-item label { color: #cbd5e1; }
+    }
+
+    /* Loading / error states */
+    .preview-loading,
+    .preview-error { color: #94a3b8; }
+
+    /* ════════════════════════════════════════════════════════
+       Legal paper: stays WHITE — only a stronger drop shadow.
+       ════════════════════════════════════════════════════════ */
+    .legal-paper {
+        background: #fff;
+        color: #000;
+        box-shadow: 0 10px 40px rgba(0, 0, 0, 0.6);
+    }
+}

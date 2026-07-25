@@ -1,8 +1,8 @@
 export interface RabIdSerialModel {
     rabIdSerialId: number;
-    officerTypeId: number;
+    employeeTypeId: number;
+    motherOrgIds?: string | null; // comma-separated OrgIds e.g. "1,2,3"
     minId: number;
-    maxId: number;
     currentId: number | null;
 
     createdBy: string;
@@ -11,7 +11,7 @@ export interface RabIdSerialModel {
     lastupdate: string;
 
     // Navigation property (optional, for display)
-    officerType?: {
+    employeeType?: {
         codeId: number;
         codeValueEN: string;
         codeValueBN: string;

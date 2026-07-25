@@ -1,0 +1,61 @@
+<p-toast position="top-center" />
+<p-fluid>
+    <div class="mb-5 card">
+        <div class="flex align-items-center gap-3 mb-4">
+            <h3 class="m-0 text-xl font-bold text-900" style="display: inline-flex; align-items: center; gap: 0.5rem;">
+                <i class="pi pi-users text-primary"></i>
+                Data Entry (Personal & Service)
+            </h3>
+        </div>
+
+        <app-employee-search
+            [initialEmployeeId]="selectedEmployeeId"
+            (onEmployeeFound)="onEmployeeFound($event)"
+            (onSearchReset)="onSearchReset()">
+        </app-employee-search>
+
+        @if (permissionDenied) {
+            <div class="flex items-start gap-3 p-3 mt-4 rounded border border-red-200 bg-red-50 text-red-700">
+                <i class="pi pi-lock mt-1"></i>
+                <div>
+                    <div class="font-semibold">No Permission</div>
+                    <div class="text-sm">
+                        @if (permissionDeniedTypeName) {
+                            You do not have permission to view {{ permissionDeniedTypeName }} data.
+                        } @else {
+                            You do not have permission to view this member type's data.
+                        }
+                    </div>
+                </div>
+            </div>
+        }
+
+        @if (employeeBasicInfo && selectedEmployeeId) {
+            <div class="tab-menu-container mt-2">
+                <p-megamenu [model]="menuItems" styleClass="emp-tab-megamenu"></p-megamenu>
+
+                <div class="tab-content-panel mt-4">
+                    @switch (activeTab) {
+                        @case (0) { <app-emp-basic-info></app-emp-basic-info> }
+                        @case (1) { <app-emp-personal-info [hideTitle]="true"></app-emp-personal-info> }
+                        @case (2) { <app-emp-address-info [hideTitle]="true"></app-emp-address-info> }
+                        @case (3) { <app-emp-family-info [hideTitle]="true"></app-emp-family-info> }
+                        @case (4) { <app-emp-nominee-info [hideTitle]="true"></app-emp-nominee-info> }
+                        @case (5) { <app-emp-previous-rab-service [hideTitle]="true"></app-emp-previous-rab-service> }
+                        @case (6) { <app-emp-service-history [hideTitle]="true"></app-emp-service-history> }
+                        @case (7) { <app-emp-promotion-info [hideTitle]="true"></app-emp-promotion-info> }
+                        @case (8) { <app-emp-rank-confirmation [hideTitle]="true"></app-emp-rank-confirmation> }
+                        @case (9) { <app-emp-education-info [hideTitle]="true"></app-emp-education-info> }
+                        @case (10) { <app-emp-course-info [hideTitle]="true"></app-emp-course-info> }
+                        @case (11) { <app-emp-discipline-info [hideTitle]="true"></app-emp-discipline-info> }
+                        @case (12) { <app-emp-bank-account [hideTitle]="true"></app-emp-bank-account> }
+                        @case (13) { <app-emp-foreign-visit [hideTitle]="true"></app-emp-foreign-visit> }
+                        @case (14) { <app-emp-leave-info [hideTitle]="true"></app-emp-leave-info> }
+                        @case (15) { <app-emp-medical-category [hideTitle]="true"></app-emp-medical-category> }
+                        @case (16) { <app-emp-additional-remarks [hideTitle]="true"></app-emp-additional-remarks> }
+                    }
+                </div>
+            </div>
+        }
+    </div>
+</p-fluid>

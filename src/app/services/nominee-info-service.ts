@@ -11,6 +11,8 @@ export interface NomineeInfoModel {
     lastUpdatedBy?: string;
     lastupdate?: string;
     statusDate?: string;
+    /** JSON array of { FileId, fileName } from FileInformation (supporting documents). */
+    filesReferences?: string | null;
 }
 
 @Injectable({
@@ -22,7 +24,7 @@ export class NomineeInfoService {
     constructor(private http: HttpClient) {}
 
     getByEmployeeId(employeeId: number): Observable<NomineeInfoModel[]> {
-        return this.http.get<NomineeInfoModel[]>(`${this.apiUrl}/GetByEmployeeId/ByEmployee/${employeeId}`);
+        return this.http.get<NomineeInfoModel[]>(`${this.apiUrl}/GetByEmployeeId/${employeeId}`);
     }
 
     save(payload: Partial<NomineeInfoModel>): Observable<any> {
@@ -40,11 +42,16 @@ export class NomineeInfoService {
     }
 
     private toApiPayload(payload: Partial<NomineeInfoModel>): any {
+        const now = new Date().toISOString();
         return {
             EmployeeID: payload.employeeID,
             FMID: payload.fmid,
             SharePercent: payload.sharePercent ?? null,
-            LastUpdatedBy: payload.lastUpdatedBy ?? 'user'
+            LastUpdatedBy: payload.lastUpdatedBy ?? 'user',
+            CreatedDate: payload.createdDate ?? now,
+            Lastupdate: payload.lastupdate ?? now,
+            StatusDate: payload.statusDate ?? now,
+            FilesReferences: payload.filesReferences ?? undefined
         };
     }
 }

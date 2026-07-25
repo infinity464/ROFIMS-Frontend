@@ -1,4 +1,5 @@
-import { Component, OnInit, ViewChild } from '@angular/core';
+import { Component, EventEmitter, Input, OnInit, Output, ViewChild , inject } from '@angular/core';
+import { UserMenuService } from '@/services/user-menu.service';
 import { CommonModule } from '@angular/common';
 import { FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
@@ -17,23 +18,36 @@ import { EmployeeSearchComponent, EmployeeBasicInfo } from '@/Components/Shared/
 @Component({
     selector: 'app-emp-address-info',
     standalone: true,
-    imports: [
-        CommonModule,
-        FormsModule,
-        ReactiveFormsModule,
-        InputTextModule,
-        ButtonModule,
-        Fluid,
-        TooltipModule,
-        AddressFormComponent,
-        EmployeeSearchComponent
-    ],
+    imports: [CommonModule, FormsModule, ReactiveFormsModule, InputTextModule, ButtonModule, Fluid, TooltipModule, AddressFormComponent, EmployeeSearchComponent],
     templateUrl: './emp-address-info.html',
     styleUrl: './emp-address-info.scss'
 })
 export class EmpAddressInfo implements OnInit {
+    private _router = inject(Router);
+    private _userMenuService = inject(UserMenuService);
+    canInsert = true;
+    canUpdate = true;
+    canDelete = true;
+
     @ViewChild('permanentAddressForm') permanentAddressForm!: AddressFormComponent;
     @ViewChild('presentAddressForm') presentAddressForm!: AddressFormComponent;
+    @ViewChild('spousePermanentAddressForm') spousePermanentAddressForm!: AddressFormComponent;
+    @ViewChild('spousePresentAddressForm') spousePresentAddressForm!: AddressFormComponent;
+
+    /** When true (e.g. inside tab view), the "Employee Address Information" title and header actions are hidden. */
+    @Input() hideTitle = false;
+
+    /** When true, component is embedded (e.g. in ex-member profile). Use externalEmployeeId, hide search, emit saved/cancelled. */
+    @Input() embedMode = false;
+
+    /** When embedMode is true, load and edit this employee's addresses. */
+    @Input() externalEmployeeId: number | null = null;
+
+    /** When embedMode is true: 'own' = Permanent+Present, 'spouse' = SpousePermanent+SpousePresent. */
+    @Input() addressScope: 'own' | 'spouse' = 'own';
+
+    @Output() saved = new EventEmitter<void>();
+    @Output() cancelled = new EventEmitter<void>();
 
     // Employee lookup
     employeeFound: boolean = false;
@@ -45,14 +59,25 @@ export class EmpAddressInfo implements OnInit {
     // Address data for forms
     permanentAddressData: AddressData | undefined = undefined;
     presentAddressData: AddressData | undefined = undefined;
+    spousePermanentAddressData: AddressData | undefined = undefined;
+    spousePresentAddressData: AddressData | undefined = undefined;
 
     // Address IDs for updates
     permanentAddressId: number | null = null;
     presentAddressId: number | null = null;
+    spousePermanentAddressId: number | null = null;
+    spousePresentAddressId: number | null = null;
+
+    // FMID carried on existing spouse address rows; preserved when saving spouse addresses.
+    spouseFmid: number | null = null;
 
     // Mode: 'search' (default), 'view' (readonly), 'edit'
     mode: 'search' | 'view' | 'edit' = 'search';
     isReadonly: boolean = false;
+
+    // Tracks the last employeeId we fetched, so route mode-only changes (e.g., view → edit
+    // via Edit button) don't trigger a redundant refetch that would snap mode back to view.
+    private _lastLoadedEmployeeId: number | null = null;
 
     // Address form configs
     permanentAddressConfig: AddressFormConfig = {
@@ -69,6 +94,27 @@ export class EmpAddressInfo implements OnInit {
         sameAsLabel: 'Same as Permanent Address'
     };
 
+    spousePermanentAddressConfig: AddressFormConfig = {
+        title: 'Spouse Permanent Address',
+        addressType: 'spouse',
+        employeeId: 0,
+        showSameAsPresent: true,
+        sameAsLabel: 'Same As Member Permanent Address'
+    };
+
+    spousePresentAddressConfig: AddressFormConfig = {
+        title: 'Spouse Present Address',
+        addressType: 'spousePresent',
+        employeeId: 0,
+        showSameAsPresent: true,
+        sameAsLabel: 'Same As Spouse Permanent Address'
+    };
+
+    /** Spouse forms are shown only in the member's own-address scope (not in spouse embed mode). */
+    get showSpouseAddresses(): boolean {
+        return this.addressScope === 'own';
+    }
+
     constructor(
         private empService: EmpService,
         private messageService: MessageService,
@@ -77,19 +123,46 @@ export class EmpAddressInfo implements OnInit {
     ) {}
 
     ngOnInit(): void {
+        const _perms = this._userMenuService.getPermissionsByRoute(this._router.url);
+        this.canInsert = _perms.canInsert;
+        this.canUpdate = _perms.canUpdate;
+        this.canDelete = _perms.canDelete;
+
+        if (this.embedMode && this.externalEmployeeId != null) {
+            this.mode = 'edit';
+            this.isReadonly = false;
+            this.selectedEmployeeId = this.externalEmployeeId;
+            this.employeeFound = true;
+            this.updateAddressConfigs();
+            this.loadEmployeeById(this.externalEmployeeId);
+            return;
+        }
         this.checkRouteParams();
     }
 
     checkRouteParams(): void {
-        this.route.queryParams.subscribe(params => {
+        this.route.queryParams.subscribe((params) => {
             const employeeId = params['id'];
             const mode = params['mode'];
 
             if (employeeId) {
-                this.mode = mode === 'edit' ? 'edit' : 'view';
-                this.isReadonly = this.mode === 'view';
-                this.loadEmployeeById(parseInt(employeeId, 10));
+                const idNum = parseInt(employeeId, 10);
+                const newMode: 'view' | 'edit' = mode === 'edit' ? 'edit' : 'view';
+
+                if (this._lastLoadedEmployeeId !== idNum) {
+                    // New employee — load fresh.
+                    this._lastLoadedEmployeeId = idNum;
+                    this.mode = newMode;
+                    this.isReadonly = this.mode === 'view';
+                    this.loadEmployeeById(idNum);
+                } else {
+                    // Same employee, mode-only change (e.g., Edit click) — just toggle
+                    // readonly without refetching.
+                    this.mode = newMode;
+                    this.isReadonly = this.mode === 'view';
+                }
             } else {
+                this._lastLoadedEmployeeId = null;
                 this.mode = 'search';
                 this.isReadonly = false;
             }
@@ -112,7 +185,7 @@ export class EmpAddressInfo implements OnInit {
                 this.messageService.add({
                     severity: 'error',
                     summary: 'Error',
-                    detail: 'Failed to load employee data'
+                    detail: err?.error?.message || 'Failed to load employee data'
                 });
             }
         });
@@ -122,7 +195,13 @@ export class EmpAddressInfo implements OnInit {
         if (this.selectedEmployeeId) {
             this.permanentAddressConfig.employeeId = this.selectedEmployeeId;
             this.presentAddressConfig.employeeId = this.selectedEmployeeId;
+            this.spousePermanentAddressConfig.employeeId = this.selectedEmployeeId;
+            this.spousePresentAddressConfig.employeeId = this.selectedEmployeeId;
         }
+        const permType = this.addressScope === 'spouse' ? LocationType.SpousePermanent : LocationType.Permanent;
+        const presType = this.addressScope === 'spouse' ? LocationType.SpousePresent : LocationType.Present;
+        (this.permanentAddressConfig as { addressType: string }).addressType = permType;
+        (this.presentAddressConfig as { addressType: string }).addressType = presType;
     }
 
     // Handle employee search component events
@@ -145,7 +224,7 @@ export class EmpAddressInfo implements OnInit {
         this.empService.getAddressesByEmployeeId(this.selectedEmployeeId).subscribe({
             next: (addresses: any[]) => {
                 // Find active permanent and present addresses
-                addresses.forEach(addr => {
+                addresses.forEach((addr) => {
                     const locationType = (addr.locationType || addr.LocationType || '').toLowerCase();
                     const isActive = addr.active !== false && addr.Active !== false;
 
@@ -153,7 +232,7 @@ export class EmpAddressInfo implements OnInit {
                         const addressData: AddressData = {
                             division: addr.divisionType || addr.DivisionType,
                             district: addr.districtType || addr.DistrictType,
-                            upazila: addr.thanType || addr.ThanType,
+                            upazila: addr.thanaType || addr.ThanaType,
                             postOffice: addr.postOfficeType || addr.PostOfficeType,
                             postCode: addr.postCode || addr.PostCode || '',
                             villageEnglish: addr.addressAreaEN || addr.AddressAreaEN || '',
@@ -161,15 +240,39 @@ export class EmpAddressInfo implements OnInit {
                             houseRoad: addr.houseRoad || addr.HouseRoad || ''
                         };
 
-                        if (locationType === LocationType.Permanent.toLowerCase()) {
+                        const permMatch = this.addressScope === 'spouse'
+                            ? locationType === LocationType.SpousePermanent.toLowerCase()
+                            : locationType === LocationType.Permanent.toLowerCase();
+                        const presMatch = this.addressScope === 'spouse'
+                            ? locationType === LocationType.SpousePresent.toLowerCase()
+                            : locationType === LocationType.Present.toLowerCase();
+                        if (permMatch) {
                             this.permanentAddressData = addressData;
                             this.permanentAddressId = addr.addressId || addr.AddressId;
-                        } else if (locationType === LocationType.Present.toLowerCase()) {
+                        } else if (presMatch) {
                             this.presentAddressData = addressData;
                             this.presentAddressId = addr.addressId || addr.AddressId;
+                        } else if (this.showSpouseAddresses && locationType === LocationType.SpousePermanent.toLowerCase()) {
+                            this.spousePermanentAddressData = addressData;
+                            this.spousePermanentAddressId = addr.addressId || addr.AddressId;
+                            this.spouseFmid = addr.fmid ?? addr.FMID ?? this.spouseFmid;
+                        } else if (this.showSpouseAddresses && locationType === LocationType.SpousePresent.toLowerCase()) {
+                            this.spousePresentAddressData = addressData;
+                            this.spousePresentAddressId = addr.addressId || addr.AddressId;
+                            this.spouseFmid = addr.fmid ?? addr.FMID ?? this.spouseFmid;
                         }
                     }
                 });
+
+                // When a record already exists, start in view (readonly) mode so the user
+                // explicitly opts into editing via the Edit button. Skip for embedMode and
+                // for the standalone search flow (which uses its own search-mode readonly).
+                const hasAddress = !!this.permanentAddressData || !!this.presentAddressData
+                    || !!this.spousePermanentAddressData || !!this.spousePresentAddressData;
+                if (hasAddress && !this.embedMode && this.mode !== 'search') {
+                    this.mode = 'view';
+                    this.isReadonly = true;
+                }
             },
             error: (err) => {
                 console.error('Failed to load addresses', err);
@@ -202,6 +305,10 @@ export class EmpAddressInfo implements OnInit {
     }
 
     goBack(): void {
+        if (this.embedMode) {
+            this.cancelled.emit();
+            return;
+        }
         this.router.navigate(['/emp-list']);
     }
 
@@ -209,6 +316,20 @@ export class EmpAddressInfo implements OnInit {
         const permanentData = this.permanentAddressForm?.getFormData();
         if (permanentData?.data) {
             this.presentAddressForm?.populateFromSourceAddress(permanentData.data);
+        }
+    }
+
+    copyMemberPermanentToSpousePermanent(): void {
+        const permanentData = this.permanentAddressForm?.getFormData();
+        if (permanentData?.data) {
+            this.spousePermanentAddressForm?.populateFromSourceAddress(permanentData.data);
+        }
+    }
+
+    copySpousePermanentToSpousePresent(): void {
+        const spousePermanentData = this.spousePermanentAddressForm?.getFormData();
+        if (spousePermanentData?.data) {
+            this.spousePresentAddressForm?.populateFromSourceAddress(spousePermanentData.data);
         }
     }
 
@@ -222,11 +343,14 @@ export class EmpAddressInfo implements OnInit {
             return;
         }
 
-        // Get form data from both forms
+        // Get form data from all forms
         const permanentData = this.permanentAddressForm?.getFormData();
         const presentData = this.presentAddressForm?.getFormData();
+        const spousePermanentData = this.showSpouseAddresses ? this.spousePermanentAddressForm?.getFormData() : undefined;
+        const spousePresentData = this.showSpouseAddresses ? this.spousePresentAddressForm?.getFormData() : undefined;
 
-        if (!permanentData?.data?.division && !presentData?.data?.division) {
+        if (!permanentData?.data?.division && !presentData?.data?.division
+            && !spousePermanentData?.data?.division && !spousePresentData?.data?.division) {
             this.messageService.add({
                 severity: 'warn',
                 summary: 'Warning',
@@ -242,6 +366,8 @@ export class EmpAddressInfo implements OnInit {
         // Count total operations needed
         if (permanentData?.data?.division) totalOperations++;
         if (presentData?.data?.division) totalOperations++;
+        if (spousePermanentData?.data?.division) totalOperations++;
+        if (spousePresentData?.data?.division) totalOperations++;
 
         const checkComplete = () => {
             completedOperations++;
@@ -252,8 +378,11 @@ export class EmpAddressInfo implements OnInit {
                         summary: 'Success',
                         detail: 'Addresses saved successfully'
                     });
-                    this.isReadonly = true; // Back to readonly mode
-                    this.loadAddresses(); // Reload to get new data
+                    this.isReadonly = true;
+                    this.loadAddresses();
+                    if (this.embedMode) {
+                        this.saved.emit();
+                    }
                 }
             }
         };
@@ -262,10 +391,13 @@ export class EmpAddressInfo implements OnInit {
         if (permanentData?.data?.division) {
             this.deactivateAndCreateNew(
                 permanentData.data,
-                LocationType.Permanent,
+                this.permanentAddressConfig.addressType,
                 this.permanentAddressId,
                 () => checkComplete(),
-                () => { errorCount++; checkComplete(); }
+                () => {
+                    errorCount++;
+                    checkComplete();
+                }
             );
         }
 
@@ -273,27 +405,49 @@ export class EmpAddressInfo implements OnInit {
         if (presentData?.data?.division) {
             this.deactivateAndCreateNew(
                 presentData.data,
-                LocationType.Present,
+                this.presentAddressConfig.addressType,
                 this.presentAddressId,
                 () => checkComplete(),
-                () => { errorCount++; checkComplete(); }
+                () => {
+                    errorCount++;
+                    checkComplete();
+                }
+            );
+        }
+
+        // Save spouse permanent address (FMID preserved from the existing spouse row).
+        if (spousePermanentData?.data?.division) {
+            this.deactivateAndCreateNew(
+                spousePermanentData.data,
+                LocationType.SpousePermanent,
+                this.spousePermanentAddressId,
+                () => checkComplete(),
+                () => { errorCount++; checkComplete(); },
+                this.spouseFmid ?? 0
+            );
+        }
+
+        // Save spouse present address (FMID preserved from the existing spouse row).
+        if (spousePresentData?.data?.division) {
+            this.deactivateAndCreateNew(
+                spousePresentData.data,
+                LocationType.SpousePresent,
+                this.spousePresentAddressId,
+                () => checkComplete(),
+                () => { errorCount++; checkComplete(); },
+                this.spouseFmid ?? 0
             );
         }
     }
 
     // Deactivate old address and create new one
-    private deactivateAndCreateNew(
-        data: AddressData,
-        locationType: string,
-        existingAddressId: number | null,
-        onSuccess: () => void,
-        onError: () => void
-    ): void {
+    private deactivateAndCreateNew(data: AddressData, locationType: string, existingAddressId: number | null, onSuccess: () => void, onError: () => void, fmid: number = 0): void {
         // New address payload (always create new with Active = true)
         const newAddressPayload = {
             EmployeeID: this.selectedEmployeeId,
             AddressId: 0, // New record
-            FMID: 0,
+            fmid: fmid,
+            FMID: fmid,
             LocationType: locationType,
             LocationCode: `${data.division}-${data.district}-${data.upazila}`,
             PostCode: data.postCode || '',
@@ -301,7 +455,7 @@ export class EmpAddressInfo implements OnInit {
             AddressAreaBN: data.villageBangla || '',
             DivisionType: data.division,
             DistrictType: data.district,
-            ThanType: data.upazila,
+            ThanaType: data.upazila,
             PostOfficeType: data.postOffice,
             HouseRoad: data.houseRoad || '',
             Active: true,
@@ -316,11 +470,30 @@ export class EmpAddressInfo implements OnInit {
             this.empService.getAddressesByEmployeeId(this.selectedEmployeeId!).subscribe({
                 next: (addresses: any[]) => {
                     // Find the existing address
-                    const existingAddress = addresses.find(
-                        addr => (addr.addressId || addr.AddressId) === existingAddressId
-                    );
+                    const existingAddress = addresses.find((addr) => (addr.addressId || addr.AddressId) === existingAddressId);
 
                     if (existingAddress) {
+                        // If the edit only fills in fields that were previously null/empty
+                        // (e.g. adding Upazila to a Division+District-only record), update the
+                        // existing row in place so NO history entry is created. History (deactivate
+                        // old + create new) is only kept when an already-populated field changes.
+                        if (this.isPureAddition(existingAddress, data)) {
+                            const updatePayload = {
+                                ...newAddressPayload,
+                                AddressId: existingAddressId,
+                                CreatedBy: existingAddress.createdBy || existingAddress.CreatedBy || 'system',
+                                CreatedDate: existingAddress.createdDate || existingAddress.CreatedDate
+                            };
+                            this.empService.updateAddress(updatePayload).subscribe({
+                                next: () => onSuccess(),
+                                error: (err) => {
+                                    console.error('Failed to update address in place', err);
+                                    onError();
+                                }
+                            });
+                            return;
+                        }
+
                         // Create full deactivate payload with all fields
                         const deactivatePayload = {
                             EmployeeID: existingAddress.employeeID || existingAddress.EmployeeID,
@@ -333,7 +506,7 @@ export class EmpAddressInfo implements OnInit {
                             AddressAreaBN: existingAddress.addressAreaBN || existingAddress.AddressAreaBN || '',
                             DivisionType: existingAddress.divisionType || existingAddress.DivisionType,
                             DistrictType: existingAddress.districtType || existingAddress.DistrictType,
-                            ThanType: existingAddress.thanType || existingAddress.ThanType,
+                            ThanaType: existingAddress.thanaType || existingAddress.ThanaType,
                             PostOfficeType: existingAddress.postOfficeType || existingAddress.PostOfficeType,
                             HouseRoad: existingAddress.houseRoad || existingAddress.HouseRoad || '',
                             Active: false, // Deactivate
@@ -388,13 +561,52 @@ export class EmpAddressInfo implements OnInit {
         }
     }
 
+    private isNullOrEmpty(value: any): boolean {
+        return value === null || value === undefined || value === '';
+    }
+
+    /**
+     * Returns true when the new data only fills in fields that were previously
+     * null/empty (a pure addition) and leaves every already-populated field
+     * unchanged. In that case the record can be updated in place with no history.
+     * Returns false if any previously non-null field was changed or cleared,
+     * which requires keeping history (deactivate old + create new).
+     */
+    private isPureAddition(existing: any, data: AddressData): boolean {
+        const pairs: Array<[any, any]> = [
+            [existing.divisionType ?? existing.DivisionType, data.division],
+            [existing.districtType ?? existing.DistrictType, data.district],
+            [existing.thanaType ?? existing.ThanaType, data.upazila],
+            [existing.postOfficeType ?? existing.PostOfficeType, data.postOffice],
+            [existing.postCode ?? existing.PostCode, data.postCode],
+            [existing.addressAreaEN ?? existing.AddressAreaEN, data.villageEnglish],
+            [existing.addressAreaBN ?? existing.AddressAreaBN, data.villageBangla],
+            [existing.houseRoad ?? existing.HouseRoad, data.houseRoad]
+        ];
+
+        for (const [oldVal, newVal] of pairs) {
+            // Field was empty before -> any new value is a pure addition (allowed).
+            if (this.isNullOrEmpty(oldVal)) continue;
+            // Field had a value before -> it must stay exactly the same.
+            if (String(oldVal) !== String(this.isNullOrEmpty(newVal) ? '' : newVal)) {
+                return false;
+            }
+        }
+        return true;
+    }
+
     resetForm(): void {
         this.employeeFound = false;
         this.selectedEmployeeId = null;
         this.employeeBasicInfo = null;
         this.permanentAddressData = undefined;
         this.presentAddressData = undefined;
+        this.spousePermanentAddressData = undefined;
+        this.spousePresentAddressData = undefined;
         this.permanentAddressId = null;
         this.presentAddressId = null;
+        this.spousePermanentAddressId = null;
+        this.spousePresentAddressId = null;
+        this.spouseFmid = null;
     }
 }

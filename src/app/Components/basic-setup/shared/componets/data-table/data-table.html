@@ -9,7 +9,7 @@
     </div>
 
     <p-table [value]="data"
-             [lazy]="true"
+             [lazy]="lazy"
              [paginator]="true"
              [first]="first"
              [rows]="rows"
@@ -26,7 +26,9 @@
                         <th>{{ col.header }}</th>
                     }
                 }
-                <th>Action</th>
+                @if (canUpdate || canDelete) {
+                    <th>Action</th>
+                }
             </tr>
         </ng-template>
 
@@ -52,10 +54,18 @@
                     }
                 }
 
-                <td>
-                    <button class="mx-2" pButton icon="pi pi-pencil" (click)="onEdit(row)"></button>
-                    <button pButton icon="pi pi-trash" (click)="onDelete(row, $event)" class="p-button-danger"></button>
-                </td>
+                @if (canUpdate || canDelete) {
+                    <td>
+                        <div class="flex items-center gap-2">
+                            @if (canUpdate) {
+                                <button pButton icon="pi pi-pencil" (click)="onEdit(row)"></button>
+                            }
+                            @if (canDelete) {
+                                <button pButton icon="pi pi-trash" (click)="onDelete(row, $event)" class="p-button-danger"></button>
+                            }
+                        </div>
+                    </td>
+                }
             </tr>
         </ng-template>
     </p-table>

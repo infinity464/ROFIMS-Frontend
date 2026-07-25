@@ -9,9 +9,10 @@ import { ButtonModule } from 'primeng/button';
 import { SelectModule } from 'primeng/select';
 import { DatePickerModule } from 'primeng/datepicker';
 import { TableModule } from 'primeng/table';
+import { FlexibleDateDirective } from '@/shared/directives/flexible-date.directive';
 @Component({
     selector: 'app-promotion-info',
-    imports: [CommonModule, ReactiveFormsModule, CardModule, DividerModule, InputTextModule, ButtonModule, SelectModule, DatePickerModule, TableModule],
+    imports: [CommonModule, ReactiveFormsModule, CardModule, DividerModule, InputTextModule, ButtonModule, SelectModule, DatePickerModule, FlexibleDateDirective, TableModule],
     templateUrl: './promotion-info.html',
     styleUrl: './promotion-info.scss'
 })

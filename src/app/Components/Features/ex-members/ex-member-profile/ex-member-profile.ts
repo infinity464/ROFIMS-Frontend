@@ -1,0 +1,1327 @@
+import { Component, HostListener, OnDestroy, OnInit, inject } from '@angular/core';
+import { HttpClient } from '@angular/common/http';
+import { UserMenuService } from '@/services/user-menu.service';
+import { CommonModule, Location } from '@angular/common';
+import { ActivatedRoute, Router, RouterModule } from '@angular/router';
+import { environment } from '@/Core/Environments/environment';
+import { ButtonModule } from 'primeng/button';
+import { TableModule } from 'primeng/table';
+import { MessageService } from 'primeng/api';
+import { Toast } from 'primeng/toast';
+import { of, Observable } from 'rxjs';
+import { catchError } from 'rxjs/operators';
+import { ServingMembersService } from '@/services/serving-members.service';
+import { EmpService, EmployeeDocumentReferenceItem } from '@/services/emp-service';
+import { FamilyInfoService, FamilyInfoByEmployeeView } from '@/services/family-info-service';
+import { PreviousRABServiceService, VwPreviousRABServiceInfoModel } from '@/services/previous-rab-service.service';
+import { BankAccInfoService, BankAccInfoByEmployeeView } from '@/services/bank-acc-info-service';
+import { EducationInfoService, EducationInfoByEmployeeView } from '@/services/education-info-service';
+import { ForeignVisitInfoService, ForeignVisitInfoByEmployeeView } from '@/services/foreign-visit-info.service';
+import { LeaveInfoService, LeaveInfoByEmployeeView, LeaveInfoSummaryItem } from '@/services/leave-info.service';
+import { AdditionalRemarksInfoService, AdditionalRemarksInfo } from '@/services/additional-remarks-info.service';
+import { AddressInfoService, AddressInfoByEmployeeView } from '@/services/address-info.service';
+import { MOServHistoryService, MOServHistoryByEmployeeView } from '@/services/mo-serv-history.service';
+import { DisciplineInfoService, DisciplineInfoByEmployeeView } from '@/services/discipline-info.service';
+import { CourseInfoService, CourseInfoByEmployeeView } from '@/services/course-info-service';
+import { DraftCourseService } from '@/services/draft-course.service';
+import { RftsTrainingRow } from '@/models/draft-course.model';
+import { PromotionInfoService, PromotionInfoByEmployeeView } from '@/services/promotion-info.service';
+import { ExBdLeaveApplicationService, ExBdLeaveApplicationProgressView } from '@/services/ex-bd-leave-application.service';
+import { MovementInfoService, MovementInfoByEmployeeDto } from '@/services/movement-info.service';
+import { PostingService } from '@/services/posting.service';
+import { EmployeePostingProcessingStatusDto } from '@/models/posting.model';
+import { PermanentPostingMORecordService, EmployeeClearanceStatus } from '@/services/permanent-posting-mo-record.service';
+import { MovementType, MoveOrderType } from '@/models/enums';
+import { EmployeePersonalServiceOverview } from '@/models/employee-personal-service-overview.model';
+import { getFormattedMemberName } from '@/shared/utils/member-display-name.util';
+import { LocationType } from '@/models/enums';
+import { PresentStatusInfoService } from '@/services/present-status-info.service';
+import { DialogModule } from 'primeng/dialog';
+import { TooltipModule } from 'primeng/tooltip';
+import { PROFILE_LABELS, type ProfileLabelKey, type ProfileLang } from '@/Core/i18n/profile-labels';
+import { BanglaNumerals } from '@/Core/i18n/bangla-numerals';
+import { EmpPersonalInfo } from '@/Components/Features/Emp/emp-personal-info/emp-personal-info';
+import { EmpAddressInfo } from '@/Components/Features/Emp/emp-address-info/emp-address-info';
+import { EmpFamilyInfo } from '@/Components/Features/Emp/emp-family-info/emp-family-info';
+import { EmpPreviousRabService } from '@/Components/Features/Emp/emp-previous-rab-service/emp-previous-rab-service';
+import { EmpServiceHistory } from '@/Components/Features/Emp/emp-service-history/emp-service-history';
+import { EmpPromotionInfo } from '@/Components/Features/Emp/emp-promotion-info/emp-promotion-info';
+import { EmpEducationInfoComponent } from '@/Components/Features/Emp/emp-education-info/emp-education-info';
+import { EmpCourseInfoComponent } from '@/Components/Features/Emp/emp-course-info/emp-course-info';
+import { EmpForeignVisit } from '@/Components/Features/Emp/emp-foreign-visit/emp-foreign-visit.component';
+import { EmpLeaveInfo } from '@/Components/Features/Emp/emp-leave-info/emp-leave-info.component';
+import { EmpDisciplineInfoComponent } from '@/Components/Features/Emp/emp-discipline-info/emp-discipline-info';
+import { EmpBankAccount } from '@/Components/Features/Emp/emp-bank-account/emp-bank-account.component';
+import { EmpAdditionalRemarks } from '@/Components/Features/Emp/emp-additional-remarks/emp-additional-remarks.component';
+import { ExportService, type ProfileExportConfig, type ProfileExportSection } from '@/services/export.service';
+import { PartialDatePipe } from '@/shared/pipes/partial-date.pipe';
+import { formatPartialDate } from '@/shared/utils/partial-date.util';
+
+export interface EmployeeApprovedNoteSheetRow {
+    noteSheetId: number;
+    noteSheetNo: string;
+    noteSheetDate: string;
+    subject: string;
+    finalApprovalApprovedDate: string | null;
+    officeOrderId: number | null;
+    officeOrderLetterNo: string | null;
+    officeOrderLetterDate: string | null;
+    officeOrderStatus: string | null;
+}
+
+/** One row from usp_GetEmployeeNoteSheetProcessingList (all note-sheet types + downstream status). */
+export interface EmployeeNoteSheetProcessingRow {
+    documentCategory: string;
+    noteSheetType: string;
+    noteSheetId: number | null;
+    noteSheetNo: string | null;
+    noteSheetDate: string | null;
+    subject: string | null;
+    downstreamDocType: string | null;
+    downstreamDocNo: string | null;
+    downstreamDocDate: string | null;
+    downstreamApprovalStatus: string | null;
+    processingStatus: string;
+}
+
+@Component({
+    selector: 'app-ex-member-profile',
+    standalone: true,
+    imports: [
+        CommonModule,
+        RouterModule,
+        ButtonModule,
+        TableModule,
+        Toast,
+        DialogModule,
+        TooltipModule,
+        EmpPersonalInfo,
+        EmpAddressInfo,
+        EmpFamilyInfo,
+        EmpPreviousRabService,
+        EmpServiceHistory,
+        EmpPromotionInfo,
+        EmpEducationInfoComponent,
+        EmpCourseInfoComponent,
+        EmpForeignVisit,
+        EmpLeaveInfo,
+        EmpDisciplineInfoComponent,
+        EmpBankAccount,
+        EmpAdditionalRemarks,
+        PartialDatePipe
+    ],
+    providers: [MessageService],
+    templateUrl: './ex-member-profile.html',
+    styleUrl: './ex-member-profile.scss'
+})
+export class ExMemberProfile implements OnInit, OnDestroy {
+    private _router = inject(Router);
+    private _userMenuService = inject(UserMenuService);
+    canInsert = true;
+    canUpdate = true;
+    canDelete = true;
+
+    employeeId: number | null = null;
+    profile: EmployeePersonalServiceOverview | null = null;
+    profileImageUrl: string | null = null;
+    familyList: FamilyInfoByEmployeeView[] = [];
+    previousRabList: VwPreviousRABServiceInfoModel[] = [];
+    bankAccList: BankAccInfoByEmployeeView[] = [];
+    educationList: EducationInfoByEmployeeView[] = [];
+    foreignVisitList: ForeignVisitInfoByEmployeeView[] = [];
+    leaveList: LeaveInfoByEmployeeView[] = [];
+    additionalRemarksList: AdditionalRemarksInfo[] = [];
+    addressList: AddressInfoByEmployeeView[] = [];
+    moServHistoryList: MOServHistoryByEmployeeView[] = [];
+    disciplineList: DisciplineInfoByEmployeeView[] = [];
+    courseList: CourseInfoByEmployeeView[] = [];
+    rftsTrainingList: RftsTrainingRow[] = [];
+    promotionList: PromotionInfoByEmployeeView[] = [];
+    documentList: EmployeeDocumentReferenceItem[] = [];
+    approvedNoteSheetList: EmployeeNoteSheetProcessingRow[] = [];
+    exBdLeaveProgressList: ExBdLeaveApplicationProgressView[] = [];
+    permanentMovementList: MovementInfoByEmployeeDto[] = [];
+    temporaryMovementList: MovementInfoByEmployeeDto[] = [];
+    previousYearSummary: LeaveInfoSummaryItem[] = [];
+    previousYearSummaryDialogVisible = false;
+    previousYearSummaryLoading = false;
+    loading = false;
+    /** Per-section spinner flags so each detail table loads/independently shows its own loading state. */
+    sectionLoading: Record<string, boolean> = {};
+    activePresentStatus: string | null = null;
+    presentStatusList: any[] = [];
+    postingProcessingStatus: EmployeePostingProcessingStatusDto | null = null;
+    /** Step-wise clearance workflow status (posted-out → note-sheet → approved). */
+    clearanceStatus: EmployeeClearanceStatus | null = null;
+
+    /** Presently-on-leave window (today falls inside it); null when not on leave. */
+    currentLeave: { type: string; from: string | null; to: string | null } | null = null;
+    /** Destination unit of an un-returned temporary movement; null when none. */
+    currentMovementDestination: string | null = null;
+
+    /** Which section is in edit mode; null = all view. Only one section at a time. */
+    editingSection: string | null = null;
+
+    profileLang: ProfileLang = 'en';
+    exportDropdownOpen = false;
+
+    constructor(
+        private route: ActivatedRoute,
+        private router: Router,
+        private location: Location,
+        private servingMembersService: ServingMembersService,
+        private familyInfoService: FamilyInfoService,
+        private previousRabService: PreviousRABServiceService,
+        private bankAccInfoService: BankAccInfoService,
+        private educationInfoService: EducationInfoService,
+        private foreignVisitInfoService: ForeignVisitInfoService,
+        private leaveInfoService: LeaveInfoService,
+        private additionalRemarksInfoService: AdditionalRemarksInfoService,
+        private addressInfoService: AddressInfoService,
+        private moServHistoryService: MOServHistoryService,
+        private disciplineInfoService: DisciplineInfoService,
+        private courseInfoService: CourseInfoService,
+        private promotionInfoService: PromotionInfoService,
+        private draftCourseService: DraftCourseService,
+        private messageService: MessageService,
+        private empService: EmpService,
+        private exportService: ExportService,
+        private presentStatusInfoService: PresentStatusInfoService,
+        private exBdLeaveAppService: ExBdLeaveApplicationService,
+        private movementInfoService: MovementInfoService,
+        private postingService: PostingService,
+        private permanentPostingMORecordService: PermanentPostingMORecordService,
+        private http: HttpClient
+    ) {}
+
+    @HostListener('document:click')
+    onDocumentClick(): void {
+        this.exportDropdownOpen = false;
+    }
+
+    toggleExportDropdown(event: Event): void {
+        event.stopPropagation();
+        this.exportDropdownOpen = !this.exportDropdownOpen;
+    }
+
+    getExportData(): ProfileExportConfig {
+        const L = this.L;
+        const p = this.profile;
+        const title = p ? `${L['pageTitle.exMember']} - ${this.getFormattedName(p)}` : L['pageTitle.exMember'];
+        const sections: ProfileExportSection[] = [];
+        const addSection = (secTitle: string, columns: string[], rows: string[][], noTableHeader?: boolean, addressSection?: boolean, colsPerRow?: 2 | 3) => sections.push({ title: secTitle, columns, rows, noTableHeader, addressSection, colsPerRow });
+        const kv = (label: string, value: string): [string, string] => [label, value];
+
+        if (!p) return { title, lang: this.profileLang, sections, showPageNumbers: true };
+
+        // Basic Service (same as web: label-value block, no "Field"/"Value" header)
+        addSection(
+            L['section.basicService'],
+            [L['table.field'], L['table.value']],
+            [
+                kv(this.isBn ? L['field.nameBangla'] : L['field.nameEnglish'], this.getFormattedName(p)),
+                kv(L['field.serviceId'], this.valDisplay(p.serviceId)),
+                kv(L['field.rabId'], this.valDisplay(p.rabId)),
+                kv(L['field.appointment'], this.codeValue(p.appointment, p.appointmentBN)),
+                kv(L['field.memberType'], this.codeValue(p.memberType, p.memberTypeBN)),
+                kv(L['field.motherOrganization'], this.codeValue(p.motherOrganization, p.motherOrganizationBN)),
+                kv(L['field.rank'], this.codeValue(p.armyRank, p.armyRankBN)),
+                kv(L['field.corps'], this.codeValue(p.corps, p.corpsBN)),
+                kv(L['field.trade'], this.tradeDisplay(p)),
+                kv(L['field.specialQualification'], this.codeValue(p.specialQualifications, p.specialQualificationsBN)),
+                kv(L['field.dateOfCommission'], this.formatDateDisplay(p.dateOfCommission)),
+                kv(L['field.dateOfJoiningInServiceTraining'], this.formatDateDisplay(p.dateOfJoiningInServiceTraining)),
+                kv(L['field.motherUnit'], this.codeValue(p.motherUnit, p.motherUnitBN)),
+                kv(L['field.location'], this.codeValue(p.location, p.locationBN)),
+                kv(this.rabUnitFieldLabel, this.displayRabUnit),
+                kv(L['field.joiningDate'], this.formatDateDisplay(p.joiningDate)),
+                kv(L['field.maritalStatus'], this.codeValue(p.maritalStatus, p.maritalStatusBN)),
+                ...this.getPostingStatusExportRows(L)
+            ],
+            true
+        );
+
+        // Own Address (label-value; one block per address)
+        const ownAddrRows: string[][] = [];
+        this.ownAddressList.forEach((addr) => {
+            ownAddrRows.push(kv(L['addressType.address'], this.getAddressTypeLabel(addr)));
+            ownAddrRows.push(kv(L['address.houseArea'], this.val(addr.houseRoad)));
+            ownAddrRows.push(kv(L['address.village'], this.val(addr.addressAreaEN)));
+            ownAddrRows.push(kv(L['address.postOffice'], this.codeValue(addr.postOffice, addr.postOfficeBN)));
+            ownAddrRows.push(kv(L['address.thana'], this.codeValue(addr.thana, addr.thanaBN)));
+            ownAddrRows.push(kv(L['address.district'], this.codeValue(addr.district, addr.districtBN)));
+            ownAddrRows.push(kv(L['address.division'], this.codeValue(addr.division, addr.divisionBN)));
+        });
+        if (ownAddrRows.length === 0) ownAddrRows.push([L['empty.noOwnAddress'], '']);
+        addSection(L['section.ownAddress'], [L['table.field'], L['table.value']], ownAddrRows, true, true);
+
+        // Spouse Address
+        const spouseAddrRows: string[][] = [];
+        this.spouseAddressList.forEach((addr) => {
+            spouseAddrRows.push(kv(L['addressType.address'], this.getAddressTypeLabel(addr)));
+            spouseAddrRows.push(kv(L['address.houseArea'], this.val(addr.houseRoad)));
+            spouseAddrRows.push(kv(L['address.village'], this.val(addr.addressAreaEN)));
+            spouseAddrRows.push(kv(L['address.postOffice'], this.codeValue(addr.postOffice, addr.postOfficeBN)));
+            spouseAddrRows.push(kv(L['address.thana'], this.codeValue(addr.thana, addr.thanaBN)));
+            spouseAddrRows.push(kv(L['address.district'], this.codeValue(addr.district, addr.districtBN)));
+            spouseAddrRows.push(kv(L['address.division'], this.codeValue(addr.division, addr.divisionBN)));
+        });
+        if (spouseAddrRows.length === 0) spouseAddrRows.push([L['empty.noSpouseAddress'], '']);
+        addSection(L['section.spouseAddress'], [L['table.field'], L['table.value']], spouseAddrRows, true, true);
+
+        // Other Personal (label-value)
+        addSection(
+            L['section.otherPersonal'],
+            [L['table.field'], L['table.value']],
+            [
+                kv(L['field.courseBatch'], this.codeValue(p.batch, p.batchBN)),
+                kv(L['field.dateOfJoinInService'], this.formatDateDisplay(p.dateOfJoiningInServiceTraining)),
+                kv(L['field.dateOfCommission'], this.formatDateDisplay(p.dateOfCommission)),
+                kv(L['field.educationQualification'], this.codeValue(p.educationQualification, p.educationQualificationBN)),
+                kv(L['field.professionalQualification'], this.codeValue(p.professionalQualification, p.professionalQualificationBN)),
+                kv(L['field.personalQualification'], this.codeValue(p.personalQualification, p.personalQualificationBN)),
+                kv(L['field.gallantryAwards'], this.codeValue(p.gallantryAwardsDecoration, p.gallantryAwardsDecorationBN)),
+                kv(L['field.bloodGroup'], this.bloodGroupDisplay(p.bloodGroup)),
+                kv(L['field.nid'], this.valDisplay(p.nid)),
+                kv(L['field.nidOld'], this.valDisplay(p.nidOld)),
+                kv(L['field.emailAddress'], this.val(p.emailAddress)),
+                kv(L['field.dateOfBirth'], this.formatDateDisplay(p.dateOfBirth)),
+                kv(L['field.passportNo'], this.valDisplay(p.passportNo)),
+                kv(L['field.height'], this.heightDisplay(p)),
+                kv(L['field.medicalCategory'], this.codeValue(p.medicalCategory, p.medicalCategoryBN)),
+                kv(L['field.mobileNo'], this.valDisplay(p.mobileNo)),
+                kv(L['field.mobileNoOfficial'], this.valDisplay(p.mobileNoOfficial)),
+                kv(L['field.emergencyContactNo'], this.valDisplay(p.emergencyContactNo)),
+                kv(L['field.religion'], this.codeValue(p.religion, p.religionBN)),
+                kv(L['field.weight'], this.weightDisplay(p)),
+                kv(L['field.identificationMark'], this.val(p.identificationMark))
+            ],
+            true,
+            false,
+            2
+        );
+
+        // Family Info (table: Ser, Name, Relation, DOB, Occupation, Mobile)
+        const familyRows = this.familyInfoList.map((row, i) => [
+            this.rowNum(i) + '.',
+            this.codeValue(row.name, row.nameBN),
+            this.codeValue(row.relation, row.relationBN),
+            this.formatFamilyDob(row.dateOfBirth),
+            this.codeValue(row.occupation, row.occupationBN),
+            this.familyMobile(row)
+        ]);
+        if (familyRows.length === 0) familyRows.push([L['empty.noFamilyRecords']]);
+        addSection(L['section.familyInfo'], [L['table.ser'], L['table.name'], L['table.relation'], L['table.dateOfBirth'], L['table.occupation'], L['table.mobileNo']], familyRows);
+
+        // Spouse Family Info
+        const spouseFamilyRows = this.spouseFamilyInfoList.map((row, i) => [
+            this.rowNum(i) + '.',
+            this.codeValue(row.name, row.nameBN),
+            this.codeValue(row.relation, row.relationBN),
+            this.formatFamilyDob(row.dateOfBirth),
+            this.codeValue(row.occupation, row.occupationBN),
+            this.familyMobile(row)
+        ]);
+        if (spouseFamilyRows.length === 0) spouseFamilyRows.push([L['empty.noSpouseFamilyRecords']]);
+        addSection(L['section.spouseFamilyInfo'], [L['table.ser'], L['table.name'], L['table.relation'], L['table.dateOfBirth'], L['table.occupation'], L['table.mobileNo']], spouseFamilyRows);
+
+        // Previous RAB Service
+        const prevRabRows = this.previousOnlyRabList.map((row, i) => [
+            this.rowNum(i) + '.',
+            this.rabOrgChain(row),
+            formatPartialDate(row.serviceFrom, row.serviceFromPrecision),
+            formatPartialDate(row.serviceTo, row.serviceToPrecision),
+            this.codeValue(row.appointmentName, row.appointmentNameBN),
+            this.val(row.postingAuth),
+            this.val(row.remarks)
+        ]);
+        if (prevRabRows.length === 0) prevRabRows.push([L['empty.noPreviousRabRecords']]);
+        addSection(L['section.previousRabService'], [L['table.ser'], L['table.rabUnit'], L['table.serviceFrom'], L['table.serviceTo'], L['table.appointment'], L['table.postingAuth'], L['table.remarks']], prevRabRows);
+
+        // Service History MO
+        const moRows = this.moServHistoryList.map((row, i) => [
+            this.rowNum(i) + '.',
+            this.val(row.organizationName),
+            this.val(row.locationName),
+            formatPartialDate(row.serviceFrom, (row as any).serviceFromPrecision),
+            formatPartialDate(row.serviceTo, (row as any).serviceToPrecision),
+            this.codeValue(row.appointment, row.appointmentBN),
+            this.val(row.auth),
+            this.val(row.remarks)
+        ]);
+        if (moRows.length === 0) moRows.push([L['empty.noServiceHistoryRecords']]);
+        addSection(L['section.serviceHistoryMo'], [L['table.ser'], L['table.organization'], L['table.location'], L['table.serviceFrom'], L['table.serviceTo'], L['table.appointment'], L['table.auth'], L['table.remarks']], moRows);
+
+        // Promotion
+        const promRows = this.promotionList.map((row, i) => [
+            this.rowNum(i) + '.',
+            this.codeValue(row.previousRank, row.previousRankBN),
+            this.codeValue(row.promotedRank, row.promotedRankBN),
+            this.formatDateOnly(row.promotedDate),
+            this.formatDateOnly(row.fromDate),
+            this.formatDateOnly(row.toDate),
+            this.val(row.probationaryPeriod),
+            this.val(row.auth),
+            this.val(row.remarks)
+        ]);
+        if (promRows.length === 0) promRows.push([L['empty.noPromotionRecords']]);
+        addSection(
+            L['section.promotion'],
+            [L['table.ser'], L['table.previousRank'], L['table.promotedRank'], L['table.promotedDate'], L['table.fromDate'], L['table.toDate'], L['table.probationaryPeriod'], L['table.auth'], L['table.remarks']],
+            promRows
+        );
+
+        // Education
+        const eduRows = this.educationList.map((row, i) => [
+            this.rowNum(i) + '.',
+            this.formatDateOnly(row.durationFrom),
+            this.formatDateOnly(row.durationTo),
+            this.codeValue(row.schoolCollegeUniversity, row.schoolCollegeUniversityBN),
+            this.codeValue(row.nameOfExamDegree, row.nameOfExamDegreeBN),
+            this.codeValue(row.subjectsDepartments, row.subjectsDepartmentsBN),
+            this.codeValue(row.result, row.resultBN),
+            this.valDisplay(row.gradePoint),
+            this.valDisplay(row.passingYear)
+        ]);
+        if (eduRows.length === 0) eduRows.push([L['empty.noEducationRecords']]);
+        addSection(
+            L['section.education'],
+            [L['table.ser'], L['table.durationFrom'], L['table.durationTo'], L['table.schoolCollegeUniversity'], L['table.examDegree'], L['table.subjectDepartment'], L['table.result'], L['table.gradePoint'], L['table.passingYear']],
+            eduRows
+        );
+
+        // Course
+        const courseRows = this.courseList.map((row, i) => [
+            this.rowNum(i) + '.',
+            this.codeValue(row.courseType, row.courseTypeBN),
+            this.codeValue(row.courseName, row.courseNameBN),
+            this.val(row.trainingInstituteName),
+            this.formatDateOnly(row.dateFrom),
+            this.formatDateOnly(row.dateTo),
+            this.val(row.result),
+            this.val(row.auth),
+            this.val(row.remarks)
+        ]);
+        if (courseRows.length === 0) courseRows.push([L['empty.noCourseRecords']]);
+        addSection(L['section.course'], [L['table.ser'], L['table.courseType'], L['table.courseName'], L['table.trainingInstitute'], L['table.dateFrom'], L['table.dateTo'], L['table.result'], L['table.auth'], L['table.remarks']], courseRows);
+
+        // Investigation (label-value, no header row)
+        addSection(L['section.investigation'], [L['table.field'], L['table.value']], [p.hasInvestigationExp === true ? kv(L['field.details'], this.val(p.investigationExpDetails)) : [L['empty.noInvestigationRecorded'], '']], true);
+
+        // Official Foreign Visit
+        const offFvRows = this.officialForeignVisitList.map((row, i) => [
+            this.rowNum(i) + '.',
+            this.codeValue(row.nameOfCountry, row.nameOfCountryBN),
+            this.formatDateOnly(row.durationFrom),
+            this.formatDateOnly(row.durationTo),
+            this.codeValue(row.reasonForVisiting, row.reasonForVisitingBN),
+            this.val(row.relatedDocuments)
+        ]);
+        if (offFvRows.length === 0) offFvRows.push([L['empty.noOfficialForeignVisit']]);
+        addSection(L['section.officialForeignVisit'], [L['table.ser'], L['table.country'], L['table.durationFrom'], L['table.durationTo'], L['table.reasonForVisiting'], L['table.relatedDocuments']], offFvRows);
+
+        // Unofficial Foreign Visit
+        const unoffFvRows = this.unofficialForeignVisitList.map((row, i) => [
+            this.rowNum(i) + '.',
+            this.codeValue(row.nameOfCountry, row.nameOfCountryBN),
+            this.formatDateOnly(row.durationFrom),
+            this.formatDateOnly(row.durationTo),
+            this.codeValue(row.reasonForVisiting, row.reasonForVisitingBN),
+            this.val(row.relatedDocuments)
+        ]);
+        if (unoffFvRows.length === 0) unoffFvRows.push([L['empty.noUnofficialForeignVisit']]);
+        addSection(L['section.unofficialForeignVisit'], [L['table.ser'], L['table.country'], L['table.durationFrom'], L['table.durationTo'], L['table.reasonForVisiting'], L['table.relatedDocuments']], unoffFvRows);
+
+        // Leave
+        const leaveRows = this.leaveList.map((row, i) => [this.rowNum(i) + '.', this.codeValue(row.typeOfLeave, row.typeOfLeaveBN), this.formatDateOnly(row.durationFrom), this.formatDateOnly(row.durationTo)]);
+        if (leaveRows.length === 0) leaveRows.push([L['empty.noLeaveCurrentYear']]);
+        addSection(`${L['section.leave']} (${this.currentYearDisplay})`, [L['table.ser'], L['table.typeOfLeave'], L['table.durationFrom'], L['table.durationTo']], leaveRows);
+
+        // Discipline
+        const discRows = this.disciplineList.map((row, i) => [
+            this.rowNum(i) + '.',
+            this.formatDateOnly(row.offenseDate),
+            this.codeValue(row.offenseType, row.offenseTypeBN),
+            this.codeValue(row.briefStatementOfOffence, row.briefStatementOfOffenceBN),
+            this.val(row.offenseDetails),
+            this.codeValue(row.punishmentTypeRAB, row.punishmentTypeRABBN),
+            this.formatDateOnly(row.punishmentDate),
+            this.codeValue(row.punishmentTypeMotherOrg, row.punishmentTypeMotherOrgBN),
+            this.formatDateOnly(row.punishmentDateMotherOrg),
+            this.val(row.auth),
+            this.val(row.remarks)
+        ]);
+        if (discRows.length === 0) discRows.push([L['empty.noDisciplineRecords']]);
+        addSection(
+            L['section.discipline'],
+            [
+                L['table.ser'],
+                L['table.offenseDate'],
+                L['table.offenseType'],
+                L['table.briefStatement'],
+                L['table.offenseDetails'],
+                L['table.punishmentRab'],
+                L['table.punishmentDate'],
+                L['table.punishmentMo'],
+                L['table.punishmentDateMo'],
+                L['table.auth'],
+                L['table.remarks']
+            ],
+            discRows
+        );
+
+        // Bank Account
+        const bankRows = this.bankAccList.map((row, i) => [
+            this.rowNum(i) + '.',
+            this.codeValue(row.bankName, row.bankNameBN),
+            this.codeValue(row.branchName, row.branchNameBN),
+            this.codeValue(row.accountName, row.accountNameBN),
+            this.valDisplay(row.accountNumber),
+            this.val(row.remarks)
+        ]);
+        if (bankRows.length === 0) bankRows.push([L['empty.noBankAccountRecords']]);
+        addSection(L['section.bankAccount'], [L['table.ser'], L['table.bankName'], L['table.branchName'], L['table.accountName'], L['table.accountNumber'], L['table.remarks']], bankRows);
+
+        // Additional Remarks
+        const remRows = this.additionalRemarksList.map((row, i) => [this.rowNum(i) + '.', this.val(row.additionalRemarks)]);
+        if (remRows.length === 0) remRows.push([L['empty.noAdditionalRemarks']]);
+        addSection(L['section.additionalRemarks'], [L['table.ser'], L['table.additionalRemarks']], remRows);
+
+        // Note Sheets (all types + downstream status)
+        const nsRows = this.approvedNoteSheetList.map((row, i) => [
+            this.rowNum(i) + '.',
+            this.getNoteSheetTypeLabel(row.noteSheetType),
+            row.noteSheetNo || '—',
+            this.formatDateOnly(row.noteSheetDate),
+            row.subject || '—',
+            this.getPostingStepLabel(row.processingStatus),
+            row.downstreamDocNo || '—',
+            row.downstreamApprovalStatus || '—'
+        ]);
+        if (nsRows.length === 0) nsRows.push([L['empty.noNoteSheets']]);
+        addSection(L['section.noteSheets'], [L['table.ser'], L['table.type'], L['table.noteSheetNo'], L['table.noteSheetDate'], L['table.subject'], L['table.processingStatus'], L['table.documentNo'], L['table.documentStatus']], nsRows);
+
+        // Documents
+        const docRows = this.documentList.map((row, i) => [this.rowNum(i) + '.', this.getDocumentSourceLabel(row), this.getDocumentFileName(row)]);
+        if (docRows.length === 0) docRows.push([L['empty.noDocuments']]);
+        addSection(L['section.documents'], [L['table.ser'], L['table.section'], L['table.fileName']], docRows);
+
+        return { title, lang: this.profileLang, sections, showPageNumbers: true };
+    }
+
+    async exportAs(type: 'pdf' | 'word'): Promise<void> {
+        const config: ProfileExportConfig = { ...this.getExportData(), lang: this.profileLang };
+        if (this.profileImageUrl) {
+            try {
+                const blob = await fetch(this.profileImageUrl).then((r) => r.blob());
+                const dataUrl = await new Promise<string>((res, rej) => {
+                    const r = new FileReader();
+                    r.onload = () => res(r.result as string);
+                    r.onerror = rej;
+                    r.readAsDataURL(blob);
+                });
+                config.imageDataUrl = dataUrl;
+            } catch {
+                // omit image if fetch/read fails
+            }
+        }
+        if (type === 'pdf') this.exportService.exportProfilePDF(config);
+        else if (type === 'word') await this.exportService.exportProfileWord(config);
+        this.exportDropdownOpen = false;
+    }
+
+    readonly LocationType = LocationType;
+
+    get L(): (typeof PROFILE_LABELS)[ProfileLang] {
+        return PROFILE_LABELS[this.profileLang];
+    }
+
+    get isBn(): boolean {
+        return this.profileLang === 'bn';
+    }
+
+    get translatedPresentStatus(): string | null {
+        if (!this.activePresentStatus) return null;
+        const key = `presentStatus.${this.activePresentStatus}` as ProfileLabelKey;
+        return this.L[key] ?? this.activePresentStatus;
+    }
+
+    /** Employee status from the EmployeeInfo table (PostingStatus), translated. */
+    get translatedEmployeeStatus(): string | null {
+        const status = this.profile?.postingStatus;
+        if (!status) return null;
+        const key = `employeeStatus.${status}` as ProfileLabelKey;
+        return this.L[key] ?? status;
+    }
+
+    toggleProfileLang(): void {
+        this.profileLang = this.profileLang === 'en' ? 'bn' : 'en';
+    }
+
+    codeValue(enVal: string | null | undefined, bnVal: string | null | undefined): string {
+        if (this.isBn && bnVal != null && bnVal !== '') return bnVal;
+        return enVal != null && enVal !== '' ? enVal : '-';
+    }
+
+    /**
+     * RAB org chain for a Previous RAB Service row: Unit, Wing, Branch, Sub Branch,
+     * Section, Sub Section — comma-joined, including only the levels that are filled in.
+     */
+    rabOrgChain(row: VwPreviousRABServiceInfoModel): string {
+        const parts = [
+            this.codeValue(row.rabUnitName, row.rabUnitNameBN),
+            this.codeValue(row.rabWingName, row.rabWingNameBN),
+            this.codeValue(row.rabBranchName, row.rabBranchNameBN),
+            this.codeValue(row.rabSubBranchName, row.rabSubBranchNameBN),
+            this.codeValue(row.rabSectionName, row.rabSectionNameBN),
+            this.codeValue(row.rabSubSectionName, row.rabSubSectionNameBN),
+        ].filter((p) => p && p !== '-');
+        return parts.length ? parts.join(', ') : '-';
+    }
+
+    valDisplay(v: string | number | null | undefined): string {
+        const s = this.val(v);
+        if (s === '-') return s;
+        return this.isBn ? BanglaNumerals.toBangla(s) : s;
+    }
+
+    formatDateDisplay(value: string | null | undefined): string {
+        const s = this.formatDateShort(value ?? null);
+        return this.isBn ? BanglaNumerals.toBangla(s) : s;
+    }
+
+    get currentYear(): number {
+        return new Date().getFullYear();
+    }
+
+    get currentYearDisplay(): string {
+        return this.isBn ? BanglaNumerals.toBangla(String(this.currentYear)) : String(this.currentYear);
+    }
+
+    get previousYearDisplay(): string {
+        return this.isBn ? BanglaNumerals.toBangla(String(this.previousYear)) : String(this.previousYear);
+    }
+
+    rowNum(i: number): string {
+        return this.isBn ? BanglaNumerals.toBangla(String(i + 1)) : String(i + 1);
+    }
+
+    /** Label for MoveOrderType (1=CC, 2=MO, 3=Article47Handover, 4=Article47Takeover). */
+    moveOrderTypeLabel(value: number | null | undefined): string {
+        switch (value) {
+            case MoveOrderType.CC:
+                return 'CC';
+            case MoveOrderType.MO:
+                return 'MO';
+            case MoveOrderType.Article47Handover:
+                return 'Article 47 (Handover)';
+            case MoveOrderType.Article47Takeover:
+                return 'Article 47 (Takeover)';
+            default:
+                return '—';
+        }
+    }
+
+    /** Movement destination is either a Mother Unit (org) or a RAB unit (CommonCode). */
+    movementDestination(m: MovementInfoByEmployeeDto): string {
+        if (m.destinedMotherUnitId != null) {
+            return this.codeValue(m.destinedMotherUnit, m.destinedMotherUnitBN);
+        }
+        if (m.destinedRABUnitId != null) {
+            return this.codeValue(m.destinedRABUnit, m.destinedRABUnitBN);
+        }
+        return '—';
+    }
+
+    /** True for members who are still serving (profile.status === true). False/unknown for ex-members. */
+    get isPresentMember(): boolean {
+        return this.profile?.status === true;
+    }
+
+    /** Label for the RAB Unit field: drops "(Last Posting)" for present members. */
+    get rabUnitFieldLabel(): string {
+        return this.isPresentMember ? this.L['field.rabUnit'] : this.L['field.rabUnitLastPosting'];
+    }
+
+    /**
+     * RAB Unit display:
+     *  - Present members → current `profile.rabUnit` (their present working unit).
+     *  - Ex members → most recent entry from previousServiceInfo (sorted by durationFrom DESC), falling back to profile.rabUnit.
+     */
+    get displayRabUnit(): string {
+        if (this.isPresentMember) {
+            return this.codeValue(this.profile?.rabUnit ?? null, this.profile?.rabUnitBN ?? null);
+        }
+        if (!this.previousRabList?.length) return this.codeValue(this.profile?.rabUnit ?? null, this.profile?.rabUnitBN ?? null);
+        const sorted = [...this.previousRabList].sort((a, b) => {
+            const fromA = a.serviceFrom ?? '';
+            const fromB = b.serviceFrom ?? '';
+            return fromB.localeCompare(fromA);
+        });
+        const first = sorted[0];
+        const nameEn = first?.rabUnitName ?? (first as { RABUnitName?: string })?.RABUnitName;
+        const nameBn = first?.rabUnitNameBN ?? (first as { RABUnitNameBN?: string })?.RABUnitNameBN;
+        return this.codeValue(nameEn ?? this.profile?.rabUnit ?? null, nameBn ?? this.profile?.rabUnitBN ?? null);
+    }
+
+    /** Own addresses: one active Permanent and one active Present. */
+    /**
+     * Latest ACTIVE address of a given location type. Address edits deactivate the old
+     * row and insert a new active one, so the read view must skip inactive history rows —
+     * otherwise it shows a stale address that differs from what the Edit form loads.
+     */
+    private latestActiveAddress(type: string): AddressInfoByEmployeeView | undefined {
+        const matches = this.addressList.filter((a) => (a.locationType ?? '').trim() === type && a.active !== false);
+        return matches.length ? matches[matches.length - 1] : undefined;
+    }
+
+    get ownAddressList(): AddressInfoByEmployeeView[] {
+        if (!this.addressList?.length) return [];
+        const result: AddressInfoByEmployeeView[] = [];
+        const permanent = this.latestActiveAddress(LocationType.Permanent);
+        const present = this.latestActiveAddress(LocationType.Present);
+        if (permanent) result.push(permanent);
+        if (present) result.push(present);
+        return result;
+    }
+
+    get spouseAddressList(): AddressInfoByEmployeeView[] {
+        if (!this.addressList?.length) return [];
+        const result: AddressInfoByEmployeeView[] = [];
+        const permanent = this.latestActiveAddress(LocationType.SpousePermanent);
+        const present = this.latestActiveAddress(LocationType.SpousePresent);
+        if (permanent) result.push(permanent);
+        if (present) result.push(present);
+        return result;
+    }
+
+    getAddressTypeLabel(addr: AddressInfoByEmployeeView): string {
+        const t = (addr.locationType ?? '').trim();
+        if (t === LocationType.Permanent || t === LocationType.SpousePermanent) return this.L['addressType.permanent'];
+        if (t === LocationType.Present || t === LocationType.SpousePresent) return this.L['addressType.present'];
+        return t || this.L['addressType.address'];
+    }
+
+    /** Matches "in-law" / "in law" / "inlaw" (any spacing/hyphen), case-insensitive. */
+    private readonly inLawPattern = /in[\s-]*law/i;
+
+    get familyInfoList(): FamilyInfoByEmployeeView[] {
+        if (!this.familyList?.length) return [];
+        return this.familyList.filter((f) => !this.inLawPattern.test((f.relation ?? '').trim()));
+    }
+
+    get spouseFamilyInfoList(): FamilyInfoByEmployeeView[] {
+        if (!this.familyList?.length) return [];
+        return this.familyList.filter((f) => this.inLawPattern.test((f.relation ?? '').trim()));
+    }
+
+    /** Ex-member: all RAB service records are "previous" (no present section). */
+    get previousOnlyRabList(): VwPreviousRABServiceInfoModel[] {
+        return this.previousRabList ?? [];
+    }
+
+    get officialForeignVisitList(): ForeignVisitInfoByEmployeeView[] {
+        if (!this.foreignVisitList?.length) return [];
+        return this.foreignVisitList.filter((v) => (v.visitType ?? '').toString().trim().toLowerCase() === 'official');
+    }
+
+    get unofficialForeignVisitList(): ForeignVisitInfoByEmployeeView[] {
+        if (!this.foreignVisitList?.length) return [];
+        return this.foreignVisitList.filter((v) => (v.visitType ?? '').toString().trim().toLowerCase() !== 'official');
+    }
+
+    private readonly progressStatusMap: Record<string, { en: string; bn: string }> = {
+        ApplicationReceived: { en: 'Application Received', bn: 'আবেদন গৃহীত' },
+        NoteSheetDraft: { en: 'Notesheet Draft', bn: 'নোটশিট খসড়া' },
+        Submitted: { en: 'Submitted (Initiator)', bn: 'জমা দেওয়া হয়েছে (উদ্যোক্তা)' },
+        UnderRecommendation: { en: 'Under Recommendation', bn: 'সুপারিশাধীন' },
+        FinalApprovalPending: { en: 'Final Approval Pending', bn: 'চূড়ান্ত অনুমোদন মুলতুবি' },
+        NoteSheetApproved: { en: 'Notesheet Approved', bn: 'নোটশিট অনুমোদিত' },
+        OfficeOrderGenerated: { en: 'Office Order Generated', bn: 'অফিস আদেশ তৈরি' },
+        OfficeOrderApproved: { en: 'Office Order Approved', bn: 'অফিস আদেশ অনুমোদিত' },
+        Cancelled: { en: 'Cancelled', bn: 'বাতিল' }
+    };
+
+    private readonly availStatusMap: Record<string, { en: string; bn: string }> = {
+        Availed: { en: 'Availed', bn: 'গ্রহণকৃত' },
+        NotAvailed: { en: 'Not Availed', bn: 'গ্রহণ করা হয়নি' }
+    };
+
+    getProgressStatusLabel(status: string): string {
+        const entry = this.progressStatusMap[status];
+        return entry ? entry[this.profileLang] : (status ?? '-');
+    }
+
+    getAvailStatusLabel(status: string | null): string {
+        if (!status) return '';
+        const entry = this.availStatusMap[status];
+        return entry ? entry[this.profileLang] : status;
+    }
+
+    getProgressStatusSeverity(status: string): string {
+        switch (status) {
+            case 'OfficeOrderApproved':
+                return 'success';
+            case 'NoteSheetApproved':
+            case 'OfficeOrderGenerated':
+                return 'info';
+            case 'Submitted':
+            case 'UnderRecommendation':
+            case 'FinalApprovalPending':
+                return 'warn';
+            case 'Cancelled':
+                return 'danger';
+            default:
+                return 'secondary';
+        }
+    }
+
+    get previousYear(): number {
+        return this.currentYear - 1;
+    }
+
+    ngOnInit(): void {
+        const _perms = this._userMenuService.getPermissionsByRoute(this._router.url);
+        this.canInsert = _perms.canInsert;
+        this.canUpdate = _perms.canUpdate;
+        this.canDelete = _perms.canDelete;
+
+        const id = this.route.snapshot.paramMap.get('employeeId');
+        if (id != null) {
+            this.employeeId = +id;
+            if (!isNaN(this.employeeId)) this.loadProfile();
+            else this.onError('Invalid employee ID');
+        } else {
+            this.onError('Missing employee ID');
+        }
+    }
+
+    loadProfile(onComplete?: () => void): void {
+        if (this.employeeId == null) return;
+        const id = this.employeeId;
+        this.loading = true;
+
+        // Two-stage load: fetch the access-gated profile first. Backend returns
+        // 404 for both "not found" and "out of scope" — either way we must NOT
+        // fan out the per-employee detail calls (each was leaking data into
+        // the Network tab even when the caller lacked access).
+        this.servingMembersService.getEmployeePersonalServiceOverview(id).subscribe({
+            next: (profile) => {
+                if (!profile) {
+                    this.profile = null;
+                    this.onError('This profile is not available or you do not have access to it.');
+                    onComplete?.();
+                    return;
+                }
+                this.profile = profile;
+                this.loadProfileImage(profile);
+                this.loadRelatedProfileData(id, onComplete);
+            },
+            error: (err) => {
+                this.profile = null;
+                if (err?.status === 404 || err?.status === 403) {
+                    this.onError('This profile is not available or you do not have access to it.');
+                } else {
+                    console.error('Failed to load profile', err);
+                    this.onError(err?.error?.message || 'Failed to load profile');
+                }
+                onComplete?.();
+            }
+        });
+    }
+
+    /**
+     * Stage-2: fan-out of per-employee detail endpoints, only after the
+     * primary profile call (and its access check) succeeded.
+     *
+     * Each section loads independently so the hero/identity area is interactive
+     * immediately (loading is cleared as soon as the primary profile resolved)
+     * and a slow endpoint can no longer hold back the whole page. Every section
+     * carries its own spinner flag (sectionLoading) and its own error handling,
+     * so one failing call only blanks its own table.
+     */
+    private loadRelatedProfileData(id: number, onComplete?: () => void): void {
+        const currentYear = this.currentYear;
+
+        // Hero/identity is already available from the stage-1 profile call — reveal it now
+        // instead of waiting for the detail tables below.
+        this.loading = false;
+        onComplete?.();
+
+        this.loadSection('family', this.familyInfoService.getFamilyInfoByEmployeeView(id), (v) => (this.familyList = v ?? []));
+        this.loadSection('previousRab', this.previousRabService.getViewByEmployeeId(id), (v) => (this.previousRabList = v ?? []));
+        this.loadSection('bankAcc', this.bankAccInfoService.getViewByEmployeeId(id), (v) => (this.bankAccList = v ?? []));
+        this.loadSection('education', this.educationInfoService.getViewByEmployeeId(id), (v) => (this.educationList = v ?? []));
+        this.loadSection('foreignVisit', this.foreignVisitInfoService.getViewByEmployeeId(id), (v) => (this.foreignVisitList = v ?? []));
+        this.loadSection('leave', this.leaveInfoService.getViewByEmployeeIdAndYear(id, currentYear), (v) => {
+            this.leaveList = v ?? [];
+            this.computePresentLeaveAndMovement();
+        });
+        this.loadSection('additionalRemarks', this.additionalRemarksInfoService.getByEmployeeId(id), (v) => (this.additionalRemarksList = v ?? []));
+        this.loadSection('address', this.addressInfoService.getViewByEmployeeId(id), (v) => (this.addressList = v ?? []));
+        this.loadSection('moServHistory', this.moServHistoryService.getViewByEmployeeId(id), (v) => (this.moServHistoryList = v ?? []));
+        this.loadSection('discipline', this.disciplineInfoService.getViewByEmployeeId(id), (v) => (this.disciplineList = v ?? []));
+        this.loadSection('course', this.courseInfoService.getViewByEmployeeId(id), (v) => (this.courseList = v ?? []));
+        this.loadSection('promotion', this.promotionInfoService.getViewByEmployeeId(id), (v) => (this.promotionList = v ?? []));
+        this.loadSection('documents', this.empService.getEmployeeDocumentReferences(id), (v) => (this.documentList = v ?? []));
+        this.loadSection('rftsTraining', this.draftCourseService.getRftsTrainingByEmployeeId(id), (v) => (this.rftsTrainingList = v ?? []));
+        this.loadSection(
+            'approvedNoteSheets',
+            this.http.get<EmployeeNoteSheetProcessingRow[]>(`${environment.apis.core}/Posting/GetEmployeeNoteSheetProcessingList/${id}`),
+            (v) => (this.approvedNoteSheetList = Array.isArray(v) ? v : [])
+        );
+        this.loadSection('exBdLeaveProgress', this.exBdLeaveAppService.getProgressByEmployee(id), (v) => (this.exBdLeaveProgressList = Array.isArray(v) ? v : []));
+        this.loadSection('movements', this.movementInfoService.getByEmployeeId(id), (v) => {
+            const movementsArr = Array.isArray(v) ? v : [];
+            this.permanentMovementList = movementsArr.filter((m) => m.movementType === MovementType.Permanent);
+            this.temporaryMovementList = movementsArr.filter((m) => m.movementType === MovementType.Temporary);
+            this.computePresentLeaveAndMovement();
+        });
+        this.loadSection('presentStatus', this.presentStatusInfoService.getAllByEmployeeId(id), (v) => {
+            const psList = (v ?? []).map((r: any) => ({
+                presentStatusID: r.PresentStatusID ?? r.presentStatusID,
+                presentStatusType: r.PresentStatusType ?? r.presentStatusType,
+                dated: r.Dated ?? r.dated,
+                profileShift: r.ProfileShift ?? r.profileShift ?? false,
+                isActive: r.IsActive ?? r.isActive ?? false,
+                dateOfRelease: r.DateOfRelease ?? r.dateOfRelease,
+                reduceFromRABStrength: r.ReduceFromRABStrength ?? r.reduceFromRABStrength,
+                rtuCause: r.RTUCause ?? r.rtuCause,
+                absentReport: r.AbsentReport ?? r.absentReport,
+                inquiryReport: r.InquiryReport ?? r.inquiryReport,
+                incidentDetails: r.IncidentDetails ?? r.incidentDetails,
+                deceasedPlace: r.DeceasedPlace ?? r.deceasedPlace,
+                deceasedReason: r.DeceasedReason ?? r.deceasedReason,
+                backFromArrestedReason: r.BackFromArrestedReason ?? r.backFromArrestedReason,
+                courtOrderReference: r.CourtOrderReference ?? r.courtOrderReference,
+                backFromAbsentReason: r.BackFromAbsentReason ?? r.backFromAbsentReason,
+                supportingDocFilesReferences: r.SupportingDocFilesReferences ?? r.supportingDocFilesReferences
+            }));
+            this.presentStatusList = psList;
+            this.activePresentStatus = psList.find((r: any) => r.isActive)?.presentStatusType || null;
+        });
+        this.loadSection('postingStatus', this.postingService.getEmployeePostingProcessingStatus(id), (v) => (this.postingProcessingStatus = v ?? null));
+        this.loadSection('clearanceStatus', this.permanentPostingMORecordService.getEmployeeClearanceStatus(id), (v) => (this.clearanceStatus = v ?? null));
+    }
+
+    /**
+     * Subscribes to a single detail endpoint, toggling its sectionLoading flag and
+     * swallowing errors so a failure only affects that one section.
+     */
+    private loadSection<T>(key: string, source: Observable<T>, assign: (value: T | null) => void): void {
+        this.sectionLoading[key] = true;
+        source
+            .pipe(
+                catchError((err) => {
+                    console.error(`Failed to load profile section "${key}"`, err);
+                    return of(null as T | null);
+                })
+            )
+            .subscribe((value) => {
+                assign(value);
+                this.sectionLoading[key] = false;
+            });
+    }
+
+    goBack(): void {
+        this.location.back();
+    }
+
+    getPostingStepLabel(step: string): string {
+        const key = `posting.step.${step}` as any;
+        return (this.L as any)[key] ?? step;
+    }
+
+    /** Friendly label for a note-sheet type (NewPosting / InterPosting / General / ExBDLeave). */
+    getNoteSheetTypeLabel(type: string): string {
+        const key = `notesheet.type.${type}` as any;
+        return (this.L as any)[key] ?? type;
+    }
+
+    /** Terminal exit states (cancelled/removed) — hide the Force Order / Received sub-flags. */
+    isPostingTerminalState(step: string | null | undefined): boolean {
+        return step === 'PostingOrderCancelled'
+            || step === 'JoiningCancelled'
+            || step === 'RemovedFromPosting';
+    }
+
+    /**
+     * Derives the live "On Leave" / "Present Location" hero badges from the already-loaded
+     * current-year leave list and temporary-movement list.
+     */
+    private computePresentLeaveAndMovement(): void {
+        this.currentLeave = null;
+        this.currentMovementDestination = null;
+
+        const today = this.toDateOnly(new Date());
+        const leave = (this.leaveList ?? []).find((r) => {
+            const from = r.durationFrom ? this.toDateOnly(new Date(r.durationFrom)) : null;
+            const to = r.durationTo ? this.toDateOnly(new Date(r.durationTo)) : null;
+            return from !== null && to !== null && from <= today && today <= to;
+        });
+        if (leave) {
+            this.currentLeave = { type: (leave.typeOfLeave ?? '').toString(), from: leave.durationFrom, to: leave.durationTo };
+        }
+
+        // temporaryMovementList is newest-first; first un-returned one is the active movement.
+        const movement = (this.temporaryMovementList ?? []).find((m) => !m.isReturned);
+        if (movement) {
+            this.currentMovementDestination = (movement.destinedRABUnit || movement.destinedMotherUnit || '').toString();
+        }
+    }
+
+    /** Local YYYY-MM-DD string for date-only comparison (avoids UTC drift). */
+    private toDateOnly(d: Date): string {
+        const m = `${d.getMonth() + 1}`.padStart(2, '0');
+        const day = `${d.getDate()}`.padStart(2, '0');
+        return `${d.getFullYear()}-${m}-${day}`;
+    }
+
+    goToLeaveHistory(): void {
+        this.router.navigate(['/leave-application/history']);
+    }
+
+    goToMovementList(): void {
+        this.router.navigate(['/movement-list']);
+    }
+
+    private getPostingStatusExportRows(L: any): string[][] {
+        const rows: string[][] = [];
+        const s = this.postingProcessingStatus;
+        if (!s) return rows;
+        if (s.newPostingStep && !s.newPostingOrderReceived) {
+            let val = this.getPostingStepLabel(s.newPostingStep);
+            if (s.newPostingForceOrderGenerated) {
+                val += ` | ${L['posting.forceOrderGenerated']}`;
+                if (!s.newPostingOrderReceived) val += ` · ${s.newPostingForceOrderApproved ? L['posting.approved'] : L['posting.notApproved']}`;
+                val += ` · ${s.newPostingOrderReceived ? L['posting.received'] : L['posting.notReceived']}`;
+            }
+            rows.push([L['posting.newPosting'], val]);
+        }
+        if (s.interPostingStep && !s.interPostingOrderReceived) {
+            let val = this.getPostingStepLabel(s.interPostingStep);
+            if (s.interPostingForceOrderGenerated) {
+                val += ` | ${L['posting.forceOrderGenerated']}`;
+                if (!s.interPostingOrderReceived) val += ` · ${s.interPostingForceOrderApproved ? L['posting.approved'] : L['posting.notApproved']}`;
+                val += ` · ${s.interPostingOrderReceived ? L['posting.received'] : L['posting.notReceived']}`;
+            }
+            rows.push([L['posting.interPosting'], val]);
+        }
+        return rows;
+    }
+
+    setEditingSection(section: string | null): void {
+        this.editingSection = section;
+    }
+
+    onSectionSaved(section: string): void {
+        this.editingSection = null;
+        if (this.employeeId != null) {
+            this.loadProfile();
+        }
+    }
+
+    /** Close edit mode and refresh profile (e.g. when user clicks Cancel/Back in embedded form). Preserves scroll position. */
+    closeSectionAndRefresh(): void {
+        const scrollY = window.scrollY;
+        this.editingSection = null;
+        if (this.employeeId != null) {
+            this.loadProfile(() => {
+                requestAnimationFrame(() => window.scrollTo(0, scrollY));
+            });
+        }
+    }
+
+    ngOnDestroy(): void {
+        if (this.profileImageUrl) {
+            URL.revokeObjectURL(this.profileImageUrl);
+            this.profileImageUrl = null;
+        }
+    }
+
+    private loadProfileImage(profile: EmployeePersonalServiceOverview | null): void {
+        if (this.profileImageUrl) {
+            URL.revokeObjectURL(this.profileImageUrl);
+            this.profileImageUrl = null;
+        }
+        const json = profile?.profileImages ?? (profile as { ProfileImages?: string })?.ProfileImages ?? null;
+        if (!json || typeof json !== 'string') return;
+        let refs: { FileId?: number; fileName?: string }[];
+        try {
+            refs = JSON.parse(json) as { FileId?: number; fileName?: string }[];
+        } catch {
+            return;
+        }
+        const first = Array.isArray(refs) && refs.length > 0 ? refs[0] : null;
+        const fileId = first?.FileId ?? (first as { fileId?: number })?.fileId;
+        if (fileId == null || fileId <= 0) return;
+        this.empService.downloadFile(fileId).subscribe({
+            next: (blob) => {
+                if (blob && blob.size > 0) {
+                    this.profileImageUrl = URL.createObjectURL(blob);
+                }
+            },
+            error: (err: any) => {}
+        });
+    }
+
+    private onError(message: string): void {
+        this.messageService.add({ severity: 'error', summary: 'Error', detail: message });
+        this.loading = false;
+    }
+
+    formatDateShort(value: string | null | undefined): string {
+        if (value == null || value === '') return '-';
+        try {
+            const d = new Date(value);
+            if (isNaN(d.getTime())) return value;
+            const day = String(d.getDate()).padStart(2, '0');
+            const month = String(d.getMonth() + 1).padStart(2, '0');
+            const year = d.getFullYear();
+            return `${day}-${month}-${year}`;
+        } catch {
+            return value;
+        }
+    }
+
+    val(v: string | number | null | undefined): string {
+        if (v == null || v === '') return '-';
+        return String(v);
+    }
+
+    tradeDisplay(p: EmployeePersonalServiceOverview | null): string {
+        if (!p) return '-';
+        const t = this.isBn ? (p.tradeBN ?? p.trade)?.trim() : p.trade?.trim();
+        const r = p.tradeRemarks?.trim();
+        if (t) return t;
+        if (r) return `N/A (${r})`;
+        return '-';
+    }
+
+    /** Blood group shown in Bangla words when in BN mode (e.g. AB+ → এবি পজিটিভ). */
+    bloodGroupDisplay(value: string | null | undefined): string {
+        const v = (value ?? '').toString().trim();
+        if (!v) return '-';
+        if (!this.isBn) return v;
+        const m = v.toUpperCase().match(/^(AB|A|B|O)\s*([+-]|POS(?:ITIVE)?|NEG(?:ATIVE)?)?$/);
+        if (!m) return v;
+        const letterMap: Record<string, string> = { A: 'এ', B: 'বি', AB: 'এবি', O: 'ও' };
+        const sign = m[2] ?? '';
+        const signBn = sign === '+' || sign.startsWith('POS') ? ' পজিটিভ' : sign === '-' || sign.startsWith('NEG') ? ' নেগেটিভ' : '';
+        return `${letterMap[m[1]]}${signBn}`;
+    }
+
+    heightDisplay(p: EmployeePersonalServiceOverview | null): string {
+        if (!p || p.height == null) return '-';
+        // Stored height is in inches → show as feet + inches.
+        const totalInches = Number(p.height);
+        if (isNaN(totalInches)) return '-';
+        const feet = Math.floor(totalInches / 12);
+        // Round the remainder to 1 decimal (drops trailing ".0") — a raw
+        // modulo leaks float error, e.g. 65.4 % 12 -> 5.400000000000006.
+        const inches = Math.round((totalInches - feet * 12) * 10) / 10;
+        if (this.isBn) {
+            const f = BanglaNumerals.toBangla(String(feet));
+            const i = BanglaNumerals.toBangla(String(inches));
+            return `${f} ফুট ${i} ইঞ্চি`;
+        }
+        return `${feet} ft ${inches} in`;
+    }
+
+    weightDisplay(p: EmployeePersonalServiceOverview | null): string {
+        if (!p || p.weight == null) return '-';
+        const w = this.isBn ? BanglaNumerals.toBangla(String(p.weight)) : String(p.weight);
+        return this.isBn ? `${w} কেজি` : `${w} kg`;
+    }
+
+    formatFamilyDob(value: string | null | undefined): string {
+        return this.formatDateDisplay(value);
+    }
+
+    familyMobile(row: FamilyInfoByEmployeeView): string {
+        return this.valDisplay(row.mobileNo);
+    }
+
+    formatDateOnly(value: string | null | undefined): string {
+        const s = this.formatDateShort(value);
+        return this.isBn ? BanglaNumerals.toBangla(s) : s;
+    }
+
+    formatDateTime(value: string | null | undefined): string {
+        if (value == null || value === '') return '-';
+        try {
+            const d = new Date(value);
+            if (isNaN(d.getTime())) return value;
+            const s = d.toLocaleString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+            return this.isBn ? BanglaNumerals.toBangla(s) : s;
+        } catch {
+            return value;
+        }
+    }
+
+    openPreviousYearLeaveSummary(): void {
+        if (this.employeeId == null) return;
+        this.previousYearSummaryDialogVisible = true;
+        this.previousYearSummaryLoading = true;
+        this.previousYearSummary = [];
+        this.leaveInfoService.getSummaryByEmployeeAndYear(this.employeeId, this.previousYear).subscribe({
+            next: (list) => {
+                this.previousYearSummary = list ?? [];
+                this.previousYearSummaryLoading = false;
+            },
+            error: (err: any) => {
+                this.previousYearSummaryLoading = false;
+                this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.message || 'Failed to load previous year leave summary.' });
+            }
+        });
+    }
+
+    closePreviousYearSummaryDialog(): void {
+        this.previousYearSummaryDialogVisible = false;
+    }
+
+    private readonly presentStatusLabelMap: Record<string, string> = {
+        OnDuty: 'On Duty',
+        RegularPostingOut: 'Regular Posting Out',
+        RTUOnDisciplineIssue: 'RTU',
+        Deceased: 'Deceased',
+        Absent: 'Absent',
+        Arrested: 'Arrested',
+        BackFromArrested: 'Back From Arrested',
+        BackFromAbsent: 'Back From Absent'
+    };
+
+    getPresentStatusLabel(type: string): string {
+        return this.presentStatusLabelMap[type] ?? type ?? '-';
+    }
+
+    private readonly presentStatusIconMap: Record<string, string> = {
+        OnDuty: 'pi-check-circle',
+        RegularPostingOut: 'pi-sign-out',
+        RTUOnDisciplineIssue: 'pi-replay',
+        Deceased: 'pi-info-circle',
+        Absent: 'pi-user-minus',
+        Arrested: 'pi-lock',
+        BackFromArrested: 'pi-unlock',
+        BackFromAbsent: 'pi-user-plus'
+    };
+
+    getPresentStatusIcon(type: string): string {
+        return this.presentStatusIconMap[type] ?? 'pi-flag';
+    }
+
+    getPresentStatusDetails(row: any): string {
+        const parts: string[] = [];
+        const add = (label: string, value: any) => {
+            if (value != null && value !== '') parts.push(`${label}: ${value}`);
+        };
+
+        switch (row.presentStatusType) {
+            case 'RegularPostingOut':
+                add('Date of Release', this.formatDateOnly(row.dateOfRelease));
+                add('Reduce from RAB Strength', this.formatDateOnly(row.reduceFromRABStrength));
+                break;
+            case 'RTUOnDisciplineIssue':
+                add('RTU Cause', row.rtuCause);
+                break;
+            case 'Deceased':
+                add('Place', row.deceasedPlace);
+                add('Reason', row.deceasedReason);
+                break;
+            case 'Absent':
+                add('Absent Report', row.absentReport);
+                add('Inquiry Report', row.inquiryReport);
+                break;
+            case 'Arrested':
+                add('Incident Details', row.incidentDetails);
+                add('Inquiry Report', row.inquiryReport);
+                break;
+            case 'BackFromArrested':
+                add('Reason', row.backFromArrestedReason);
+                add('Court Order', row.courtOrderReference);
+                break;
+            case 'BackFromAbsent':
+                add('Reason', row.backFromAbsentReason);
+                break;
+        }
+
+        return parts.join(' | ') || '-';
+    }
+
+    getInitials(name: string | null | undefined): string {
+        if (!name) return '?';
+        const parts = name.trim().split(/\s+/);
+        if (parts.length === 1) return parts[0].charAt(0).toUpperCase();
+        return (parts[0].charAt(0) + parts[parts.length - 1].charAt(0)).toUpperCase();
+    }
+
+    getFormattedName(profile: EmployeePersonalServiceOverview | null): string {
+        return getFormattedMemberName(profile, this.isBn);
+    }
+
+    getDocumentSourceLabel(row: { sourceTable?: string; SourceTable?: string }): string {
+        const sourceTable = row?.sourceTable ?? row?.SourceTable ?? '';
+        const labels: Record<string, string> = {
+            PersonalInfo: 'Personal Info',
+            EmployeeInfo: 'Employee Info',
+            PreviousRABServiceInfo: 'Previous RAB Service',
+            PromotionInfo: 'Promotion',
+            RankConfirmationInfo: 'Rank Confirmation',
+            BankAccInfo: 'Bank Account',
+            CourseInfo: 'Course',
+            DisciplineInfo: 'Discipline',
+            EducationInfo: 'Education',
+            ForeignVisitInfo: 'Foreign Visit',
+            MedicalInfo: 'Medical',
+            MOServHistory: 'MO Service History',
+            NomineeInfo: 'Nominee'
+        };
+        return labels[sourceTable] ?? (sourceTable || 'Document');
+    }
+
+    getDocumentFileName(row: { fileName?: string; FileName?: string }): string {
+        return row?.fileName ?? row?.FileName ?? '-';
+    }
+
+    parseDocRefs(json: string | null | undefined): { fileId: number; fileName: string }[] {
+        if (!json || typeof json !== 'string') return [];
+        let refs: { FileId?: number; fileId?: number; fileName?: string; FileName?: string }[];
+        try {
+            refs = JSON.parse(json);
+        } catch {
+            return [];
+        }
+        if (!Array.isArray(refs)) return [];
+        return refs
+            .map((r) => ({
+                fileId: r.FileId ?? r.fileId ?? 0,
+                fileName: r.fileName ?? r.FileName ?? 'download'
+            }))
+            .filter((r) => r.fileId > 0);
+    }
+
+    downloadDocRef(doc: { fileId: number; fileName: string }): void {
+        if (doc?.fileId == null || doc.fileId <= 0) return;
+        this.empService.downloadFile(doc.fileId).subscribe({
+            next: (blob) => this.empService.triggerFileDownload(blob, doc.fileName || 'download'),
+            error: (err: any) => this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.message || 'Failed to download file.' })
+        });
+    }
+
+    downloadAllDocs(refsJson: string | null | undefined): void {
+        const docs = this.parseDocRefs(refsJson);
+        for (const doc of docs) {
+            this.downloadDocRef(doc);
+        }
+    }
+
+    downloadDocument(item: EmployeeDocumentReferenceItem): void {
+        const fileId = item.fileId ?? (item as { FileId?: number }).FileId;
+        const fileName = item.fileName ?? (item as { FileName?: string }).FileName ?? 'download';
+        if (fileId == null) return;
+        this.empService.downloadFile(fileId).subscribe({
+            next: (blob) => this.empService.triggerFileDownload(blob, fileName),
+            error: (err: any) => this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.message || 'Failed to download file.' })
+        });
+    }
+}

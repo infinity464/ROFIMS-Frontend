@@ -1,0 +1,828 @@
+<p-toast position="top-center"></p-toast>
+<p-confirmDialog></p-confirmDialog>
+
+<div class="preview-page">
+    <div class="preview-header no-print">
+        <div class="preview-actions" *ngIf="noteSheet && isFullyLoaded && !error">
+            <p-button *ngIf="showEdit && canEdit && !editing" icon="pi pi-pencil" label="Edit" (onClick)="toggleEdit()" styleClass="p-button-outlined p-button-warning"></p-button>
+            <p-button *ngIf="editing" icon="pi pi-times" label="Cancel" (onClick)="cancelEdit()" styleClass="p-button-outlined p-button-secondary"></p-button>
+            <p-button *ngIf="editing" icon="pi pi-check" label="Save" (onClick)="saveChanges()" [loading]="saving" styleClass="p-button-success"></p-button>
+            <p-button *ngIf="showWord && !editing" icon="pi pi-file-word" label="Word" (onClick)="exportWord()" styleClass="p-button-outlined"></p-button>
+            <p-button *ngIf="showPdf && !editing" icon="pi pi-file-pdf" label="PDF" (onClick)="exportPdf()" [loading]="exportingPdf" styleClass="p-button-outlined"></p-button>
+            <p-button *ngIf="showPdf && !editing" icon="pi pi-print" label="Print Preview" (onClick)="exportPdfWithJsReport()" [loading]="exportingPdfJsReport" styleClass="p-button-outlined p-button-info"></p-button>
+        </div>
+        <div class="preview-status-actions" *ngIf="noteSheet && isFullyLoaded && !error && !editing">
+            @if (isDraftStatus) {
+            <p-button icon="pi pi-send" label="Submit" severity="success" [outlined]="true" [loading]="submitting" pTooltip="Submit for approval" (onClick)="submitForApproval()"></p-button>
+            } @else if (fromPending) { @if (currentApproverLabel) {
+            <span class="ns-status-badge ns-status-badge--step"> <i class="pi pi-user-edit"></i> Acting as: {{ currentApproverLabel }} </span>
+            }
+            <p-button type="button" icon="pi pi-list" [rounded]="true" [text]="true" size="small" severity="info" pTooltip="Approval Log" (onClick)="openApprovalLog()"></p-button>
+            <p-button
+                type="button"
+                icon="pi pi-check"
+                [label]="currentApproverLabel ? ('Approve as ' + currentApproverLabel) : 'Approve'"
+                severity="success"
+                [outlined]="true"
+                [pTooltip]="currentApproverLabel ? ('Approve as ' + currentApproverLabel) : 'Approve'"
+                (onClick)="openRemarkDialog(NoteSheetRemarkAction.Approve)"
+            ></p-button>
+            <p-button
+                type="button"
+                icon="pi pi-times"
+                [label]="currentApproverLabel ? ('Decline as ' + currentApproverLabel) : 'Decline'"
+                severity="danger"
+                [outlined]="true"
+                [pTooltip]="currentApproverLabel ? ('Decline as ' + currentApproverLabel) : 'Decline'"
+                (onClick)="openRemarkDialog(NoteSheetRemarkAction.Decline)"
+            ></p-button>
+            <p-button
+                type="button"
+                icon="pi pi-replay"
+                [label]="currentApproverLabel ? ('Back as ' + currentApproverLabel) : 'Back'"
+                severity="secondary"
+                [outlined]="true"
+                [pTooltip]="currentApproverLabel ? ('Back as ' + currentApproverLabel) : 'Back'"
+                (onClick)="openRemarkDialog(NoteSheetRemarkAction.Back)"
+            ></p-button>
+            } @else {
+            <span class="ns-status-badge ns-status-badge--pending"> <i class="pi pi-clock"></i> {{ currentStatusLabel }} </span>
+            }
+        </div>
+    </div>
+
+    <div class="preview-loading" *ngIf="!isFullyLoaded && !error">
+        <i class="pi pi-spin pi-spinner" style="font-size: 2rem"></i>
+        <p>Loading...</p>
+    </div>
+
+    <div class="preview-error" *ngIf="error && isFullyLoaded">
+        <i class="pi pi-exclamation-circle" style="font-size: 3rem; color: var(--red-500)"></i>
+        <p>Failed to load note-sheet.</p>
+        <p-button label="Go Back" icon="pi pi-arrow-left" (onClick)="goBack()"></p-button>
+    </div>
+
+    <!-- Export options -->
+    <div
+        class="export-options-bar no-print"
+        *ngIf="noteSheet && isFullyLoaded && !error && !editing"
+        style="display: flex; gap: 0.75rem; flex-wrap: wrap; align-items: center; padding: 0.5rem 1rem; background: var(--surface-ground); border-radius: 6px; margin-bottom: 0.5rem"
+    >
+        <span style="font-weight: 600; font-size: 0.85rem"><i class="pi pi-cog" style="margin-right: 0.3rem"></i>Export:</span>
+        <p-select [options]="pageSizeOptions" [(ngModel)]="selectedPageSize" (onChange)="onPageSizeChange()" optionLabel="label" optionValue="value" [style]="{'width': '90px'}"></p-select>
+        <ng-container *ngIf="isPostingType() && postingEmployees.length > 0">
+            <span style="border-left: 1px solid var(--surface-border); height: 1.5rem"></span>
+            <span style="display: inline-flex; align-items: center; gap: 0.3rem"><p-checkbox [(ngModel)]="showRankQualifications" [binary]="true" inputId="chkRankQ"></p-checkbox><label for="chkRankQ" style="cursor: pointer">পদবি বিবরণ</label></span>
+            <ng-container *ngIf="!isInterPosting()">
+                <span style="display: inline-flex; align-items: center; gap: 0.3rem"><p-checkbox [(ngModel)]="showTradeColumn" [binary]="true" inputId="chkTradeCol"></p-checkbox><label for="chkTradeCol" style="cursor: pointer">ট্রেড</label></span>
+                <span style="display: inline-flex; align-items: center; gap: 0.3rem"
+                    ><p-checkbox [(ngModel)]="showTradeRemarks" [binary]="true" inputId="chkTradeR" [disabled]="!showTradeColumn"></p-checkbox><label for="chkTradeR" style="cursor: pointer">ট্রেড বিবরণ</label></span
+                >
+            </ng-container>
+            <span *ngIf="isInterPosting()" style="display: inline-flex; align-items: center; gap: 0.3rem"
+                ><p-checkbox [(ngModel)]="showTenure" [binary]="true" inputId="chkTenure"></p-checkbox><label for="chkTenure" style="cursor: pointer">র‌্যাবে অবস্থানকাল</label></span
+            >
+            <span style="display: inline-flex; align-items: center; gap: 0.3rem"
+                ><p-checkbox [(ngModel)]="showOwnDistrictDetail" [binary]="true" inputId="chkOwnDist"></p-checkbox><label for="chkOwnDist" style="cursor: pointer">নিজ জেলা বিবরণ</label></span
+            >
+            <span style="display: inline-flex; align-items: center; gap: 0.3rem"
+                ><p-checkbox [(ngModel)]="showSpouseDistrictDetail" [binary]="true" inputId="chkSpDist"></p-checkbox><label for="chkSpDist" style="cursor: pointer">স্পাউস জেলা বিবরণ</label></span
+            >
+            <span style="display: inline-flex; align-items: center; gap: 0.3rem"
+                ><p-checkbox [(ngModel)]="showPrevWorkplaceDetail" [binary]="true" inputId="chkPrevWp"></p-checkbox><label for="chkPrevWp" style="cursor: pointer">পূর্ববতী কর্মস্থল বিবরণ</label></span
+            >
+            <span style="display: inline-flex; align-items: center; gap: 0.3rem"><p-checkbox [(ngModel)]="showRemarks" [binary]="true" inputId="chkRemarks"></p-checkbox><label for="chkRemarks" style="cursor: pointer">মন্তব্য</label></span>
+            <span style="border-left: 1px solid var(--surface-border); height: 1.5rem"></span>
+            <span style="display: inline-flex; align-items: center; gap: 0.3rem"><p-checkbox [(ngModel)]="showCorps" [binary]="true" inputId="chkCorps"></p-checkbox><label for="chkCorps" style="cursor: pointer">কোর</label></span>
+            <span style="display: inline-flex; align-items: center; gap: 0.3rem"
+                ><p-checkbox [(ngModel)]="showProfQualification" [binary]="true" inputId="chkProfQ"></p-checkbox><label for="chkProfQ" style="cursor: pointer">পেশাগত যোগ্যতা</label></span
+            >
+            <span style="display: inline-flex; align-items: center; gap: 0.3rem"
+                ><p-checkbox [(ngModel)]="showGallantryAwards" [binary]="true" inputId="chkGallantry"></p-checkbox><label for="chkGallantry" style="cursor: pointer">খেতাব/পদক</label></span
+            >
+            <span style="border-left: 1px solid var(--surface-border); height: 1.5rem"></span>
+            <span style="display: inline-flex; align-items: center; gap: 0.3rem"><p-checkbox [(ngModel)]="showSignatureImage" [binary]="true" inputId="chkSigImg"></p-checkbox><label for="chkSigImg" style="cursor: pointer">স্বাক্ষর ছবি</label></span>
+        </ng-container>
+    </div>
+
+    <!-- ══════════════════════════════════════════════════════════ -->
+    <!-- VIEW MODE: paginated legal pages                          -->
+    <!-- ══════════════════════════════════════════════════════════ -->
+    <ng-container *ngIf="noteSheet && isFullyLoaded && !error && !editing">
+        <!-- Hidden: measure full content height -->
+        <div class="page-measure" #contentMeasure [class.page-measure--legal]="selectedPageSize === 'Legal'">
+            <ng-container *ngTemplateOutlet="viewContent"></ng-container>
+        </div>
+
+        <!-- Visible: paginated pages -->
+        <div class="a4-paper-container" #pagesContainer>
+            <div *ngFor="let offset of pageOffsets; let i = index; trackBy: trackByIndex" class="a4-paper paginated" [class.a4-paper--legal]="selectedPageSize === 'Legal'">
+                <div class="page-viewport">
+                    <!-- Repeated column header when this page continues the employee table -->
+                    <div class="page-repeat-header ns-doc-box" *ngIf="pageNeedsTableHeader[i]">
+                        <div class="ns-main-col">
+                            <div class="ns-posting-table" [class.ns-posting-new]="!isInterPosting()">
+                                <table>
+                                    <ng-container *ngTemplateOutlet="postingTableHead"></ng-container>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- On header pages the content is pushed down by the header height (translate less) -->
+                    <div class="page-inner" [style.transform]="'translateY(-' + (pageNeedsTableHeader[i] ? (offset - tableHeaderHeightPx) : offset) + 'px)'">
+                        <ng-container *ngTemplateOutlet="viewContent"></ng-container>
+                    </div>
+                    <div class="page-bottom-cover" *ngIf="getPageCoverHeight(i) > 0" [class.page-bottom-cover--close-table]="pageNeedsTableHeader[i + 1]" [style.height.px]="getPageCoverHeight(i)"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ── File Attachments (outside page border) ── -->
+        <div class="ns-file-attachments" *ngIf="viewFileAttachments.length > 0">
+            <div class="ns-file-attachments-label">
+                <i class="pi pi-paperclip"></i>
+                {{ isEnglish() ? 'Attachments' : 'সংযুক্তি' }} ({{ viewFileAttachments.length }})
+            </div>
+            <div class="ns-file-list">
+                <div class="ns-file-item" *ngFor="let file of viewFileAttachments; let fi = index">
+                    <i class="pi pi-file"></i>
+                    <span class="ns-file-name">{{ fi + 1 }}. {{ file.fileName }}</span>
+                    <button class="ns-file-download-btn" (click)="onDownloadFile(file)" pTooltip="Download">
+                        <i class="pi pi-download"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </ng-container>
+
+    <!-- ══════════════════════════════════════════════════════════ -->
+    <!-- EDIT MODE: single page, no pagination                     -->
+    <!-- ══════════════════════════════════════════════════════════ -->
+    <div class="a4-paper-container ns-edit-container" *ngIf="noteSheet && isFullyLoaded && !error && editing">
+        <div class="a4-paper ns-edit-paper">
+            <div class="ns-doc-box">
+                <div class="ns-main-col">
+                    <div class="ns-title-area">
+                        <div class="ns-title-en">NOTE SHEET</div>
+                        <div class="ns-title-bn">মন্তব্য পত্র</div>
+                    </div>
+
+                    <div class="ns-org-header" style="text-align: center; padding: 8px 16px 4px; font-weight: 700; font-size: 11pt; line-height: 1.5">
+                        <div>{{ getOrgHeaderLine1() }}</div>
+                        <div style="border-bottom: 1.5px solid #000; display: inline-block; padding-bottom: 2px">{{ getOrgHeaderLine2() }}</div>
+                    </div>
+
+                    <div class="ns-edit-field">
+                        <label class="ns-edit-label">Text Type</label>
+                        <p-select [(ngModel)]="editTextType" [options]="textTypeOptions" optionLabel="label" optionValue="value" styleClass="w-full" appendTo="body"></p-select>
+                    </div>
+
+                    <div class="ns-edit-field">
+                        <label class="ns-edit-label">{{ isEnglish() ? 'Subject' : 'বিষয়' }}</label>
+                        <input pInputText [(ngModel)]="editSubject" class="w-full" placeholder="{{ isEnglish() ? 'Subject' : 'বিষয়' }}" />
+                    </div>
+
+                    <div class="ns-edit-field">
+                        <label class="ns-edit-label">Reference Number</label>
+                        <app-rich-editor [(ngModel)]="editReferenceNumber" [hideTable]="true" height="120px"></app-rich-editor>
+                    </div>
+
+                    <div class="ns-edit-field">
+                        <label class="ns-edit-label">Main Text</label>
+                        <app-rich-editor [(ngModel)]="editMainText"></app-rich-editor>
+                    </div>
+
+                    <div class="ns-edit-field">
+                        <label class="ns-edit-label">{{ isEnglish() ? 'Note' : 'নোট' }}</label>
+                        <textarea pInputTextarea [(ngModel)]="editNote" rows="3" class="w-full" placeholder="{{ isEnglish() ? 'Note' : 'নোট' }}"></textarea>
+                    </div>
+
+                    <!-- ── Paragraphs (editable) ── -->
+                    <div class="ns-edit-field">
+                        <label class="ns-edit-label">{{ isEnglish() ? 'Paragraphs' : 'অনুচ্ছেদসমূহ' }}</label>
+                        <div *ngFor="let p of editParagraphs; let pi = index; trackBy: trackByIndex" style="display: flex; gap: 8px; align-items: start; margin-bottom: 8px">
+                            <span style="font-weight: 700; min-width: 28px; padding-top: 8px">{{ serial(pi + 2) }}</span>
+                            <textarea pInputTextarea [(ngModel)]="editParagraphs[pi]" rows="2" class="w-full" placeholder="{{ isEnglish() ? 'Paragraph ' + (pi + 1) : 'অনুচ্ছেদ ' + (pi + 1) }}"></textarea>
+                            <p-button icon="pi pi-trash" (onClick)="removeParagraph(pi)" styleClass="p-button-danger p-button-text p-button-sm" [style]="{'margin-top': '4px'}"></p-button>
+                        </div>
+                        <p-button icon="pi pi-plus" [label]="isEnglish() ? 'Add Paragraph' : 'অনুচ্ছেদ যোগ করুন'" (onClick)="addParagraph()" styleClass="p-button-outlined p-button-sm"></p-button>
+                    </div>
+
+                    <!-- ── Posting: employee table (edit) ── -->
+                    <div class="ns-posting-table" [class.ns-posting-new]="!isInterPosting()" *ngIf="postingEmployees.length > 0">
+                        <table>
+                            <colgroup *ngIf="isInterPosting()">
+                                <col style="width: 30px" />
+                                <!-- ক্রমিক -->
+                                <col style="width: 60px" />
+                                <!-- ব্যক্তিগত নং -->
+                                <col />
+                                <!-- পদবি -->
+                                <col />
+                                <!-- নাম -->
+                                <col style="width: 50px" />
+                                <!-- নিজ জেলা -->
+                                <col style="width: 60px" />
+                                <!-- স্বামী/স্ত্রীর জেলা -->
+                                <col style="width: 74px" />
+                                <!-- যোগদানের তারিখ -->
+                                <col style="width: 34px" />
+                                <!-- বছর -->
+                                <col style="width: 26px" />
+                                <!-- মাস -->
+                                <col style="width: 26px" />
+                                <!-- দিন -->
+                                <col style="width: 110px" />
+                                <!-- পূর্ববতী কর্মস্থল -->
+                                <col style="width: 130px" />
+                                <!-- বদলিকৃত কর্মস্থল (treeselect) -->
+                                <col style="width: 130px" />
+                                <!-- মন্তব্য (input) -->
+                            </colgroup>
+                            <colgroup *ngIf="!isInterPosting()">
+                                <col style="width: 30px" />
+                                <!-- ক্রমিক -->
+                                <col style="width: 60px" />
+                                <!-- ব্যক্তিগত নম্বর -->
+                                <col />
+                                <!-- পদবি -->
+                                <col />
+                                <!-- ট্রেড -->
+                                <col />
+                                <!-- নাম -->
+                                <col style="width: 50px" />
+                                <!-- নিজ জেলা -->
+                                <col style="width: 60px" />
+                                <!-- স্পাউস জেলা -->
+                                <col style="width: 110px" />
+                                <!-- পূর্ববতী কর্মস্থল -->
+                                <col style="width: 130px" />
+                                <!-- বদলি ইউনিট (treeselect) -->
+                                <col style="width: 130px" />
+                                <!-- মন্তব্য (input) -->
+                            </colgroup>
+                            <thead>
+                                <ng-container *ngIf="isInterPosting()">
+                                    <tr>
+                                        <th rowspan="3" style="width: 28px">{{ isEnglish() ? 'Ser' : 'ক্রমিক' }}</th>
+                                        <th rowspan="3">{{ isEnglish() ? 'Service ID' : 'ব্যক্তিগত নং' }}</th>
+                                        <th rowspan="3">{{ isEnglish() ? 'Rank' : 'পদবি' }}</th>
+                                        <th rowspan="3">{{ isEnglish() ? 'Name' : 'নাম' }}</th>
+                                        <th rowspan="3" style="width: 45px; max-width: 45px; word-break: break-word">{{ isEnglish() ? 'Own District (Responsible Area)' : 'নিজ জেলা (দায়িত্বপূর্ণ এলাকা)' }}</th>
+                                        <th rowspan="3">{{ isEnglish() ? "Husband/Wife's District (Responsible Area)" : 'স্বামী/স্ত্রীর জেলা (দায়িত্বপূর্ণ এলাকা)' }}</th>
+                                        <th colspan="4">{{ isEnglish() ? 'Tenure in RAB' : 'র‌্যাবে অবস্থানকাল' }}</th>
+                                        <th rowspan="3" style="width: 100px">{{ isEnglish() ? 'Previous Workplace' : 'পূর্ববতী কর্মস্থল' }}</th>
+                                        <th rowspan="3">{{ isEnglish() ? 'Transfer Station' : 'বদলিকৃত কর্মস্থল' }}</th>
+                                        <th rowspan="3" style="min-width: 200px">{{ isEnglish() ? 'Remarks' : 'মন্তব্য' }}</th>
+                                    </tr>
+                                    <tr>
+                                        <th rowspan="2" style="width: 82px">{{ isEnglish() ? 'Joining Date' : 'যোগদানের তারিখ' }}</th>
+                                        <th colspan="3">{{ isEnglish() ? 'Duration' : 'অবস্থানকাল' }}</th>
+                                    </tr>
+                                    <tr>
+                                        <th style="width: 22px">{{ isEnglish() ? 'Year' : 'বছর' }}</th>
+                                        <th style="width: 22px">{{ isEnglish() ? 'Month' : 'মাস' }}</th>
+                                        <th style="width: 22px">{{ isEnglish() ? 'Day' : 'দিন' }}</th>
+                                    </tr>
+                                </ng-container>
+                                <ng-container *ngIf="!isInterPosting()">
+                                    <tr>
+                                        <th style="width: 28px">{{ isEnglish() ? 'Ser' : 'ক্রমিক' }}</th>
+                                        <th>{{ isEnglish() ? 'Service ID' : 'ব্যক্তিগত নম্বর' }}</th>
+                                        <th>{{ isEnglish() ? 'Rank' : 'পদবি' }}</th>
+                                        <th>{{ isEnglish() ? 'Trade' : 'ট্রেড' }}</th>
+                                        <th>{{ isEnglish() ? 'Name' : 'নাম' }}</th>
+                                        <th style="width: 45px; max-width: 45px; word-break: break-word">{{ isEnglish() ? 'Own District (Responsible Area)' : 'নিজ জেলা (দায়িত্বপূর্ণ এলাকা)' }}</th>
+                                        <th>{{ isEnglish() ? 'Spouse District (Responsible Area)' : 'স্পাউস জেলা (দায়িত্বপূর্ণ এলাকা)' }}</th>
+                                        <th style="width: 100px">{{ isEnglish() ? 'Previous Workplace' : 'পূর্ববতী কর্মস্থল' }}</th>
+                                        <th>{{ isEnglish() ? 'Transfer Unit' : 'বদলি ইউনিট' }}</th>
+                                        <th style="min-width: 200px">{{ isEnglish() ? 'Remarks' : 'মন্তব্য' }}</th>
+                                    </tr>
+                                </ng-container>
+                            </thead>
+                            <tbody>
+                                <ng-container *ngIf="isInterPosting()">
+                                    <tr *ngFor="let emp of postingEmployees; let i = index">
+                                        <td>{{ isEnglish() ? (i + 1) : serial(i + 1) }}</td>
+                                        <td style="white-space: pre-line">{{ getServiceIdDisplay(emp) }}</td>
+                                        <td>
+                                            {{ isEnglish() ? (emp.rankName || '-') : (emp.rankNameBN || emp.rankName || '-') }}<span *ngIf="showRankQualifications && getRankQualifications(emp)"><br />({{ getRankQualifications(emp) }})</span>
+                                        </td>
+                                        <td class="ns-name-cell">{{ isEnglish() ? (emp.fullNameEN || '-') : (emp.fullNameBN || emp.fullNameEN || '-') }}</td>
+                                        <td style="white-space: pre-line">{{ getOwnDistrict(emp) || '-' }}</td>
+                                        <td style="white-space: pre-line">{{ getSpouseDistrict(emp) || '-' }}</td>
+                                        <td>{{ isEnglish() ? formatJoiningDate(emp.joiningDateInRAB) : toBnDigits(formatJoiningDate(emp.joiningDateInRAB)) }}</td>
+                                        <td>{{ tenure(emp.joiningDateInRAB, 'y') }}</td>
+                                        <td>{{ tenure(emp.joiningDateInRAB, 'm') }}</td>
+                                        <td>{{ tenure(emp.joiningDateInRAB, 'd') }}</td>
+                                        <td style="white-space: pre-line">{{ getInterPrevWorkplace(emp) || '-' }}</td>
+                                        <td>
+                                            <p-treeSelect
+                                                [(ngModel)]="selectedUnitNodes[emp.employeeId]"
+                                                [options]="unitTreeNodes"
+                                                placeholder="Select Unit"
+                                                [filter]="true"
+                                                [filterInputAutoFocus]="true"
+                                                [showClear]="true"
+                                                selectionMode="single"
+                                                styleClass="w-full"
+                                                appendTo="body"
+                                                (onNodeExpand)="onUnitNodeExpand($event)"
+                                                (onNodeSelect)="onTreeUnitSelect(emp, $event)"
+                                                (onClear)="onTreeUnitClear(emp)"
+                                            >
+                                                <ng-template pTemplate="value" let-node> {{ node ? getUnitFullPath(node) : 'Select Unit' }} </ng-template>
+                                            </p-treeSelect>
+                                        </td>
+                                        <td style="min-width: 200px">
+                                            <div *ngIf="originalRemarks[emp.employeeId]" style="font-size: 0.85rem; color: #555; margin-bottom: 4px">{{ originalRemarks[emp.employeeId] }}</div>
+                                            <input pInputText [(ngModel)]="newRemarks[emp.employeeId]" placeholder="{{ isEnglish() ? 'Add Remarks' : 'মন্তব্য যোগ করুন' }}" class="w-full" />
+                                        </td>
+                                    </tr>
+                                </ng-container>
+                                <ng-container *ngIf="!isInterPosting()">
+                                    <tr *ngFor="let emp of postingEmployees; let i = index">
+                                        <td>{{ isEnglish() ? (i + 1) : serial(i + 1) }}</td>
+                                        <td style="white-space: pre-line">{{ getServiceIdDisplay(emp) }}</td>
+                                        <td>
+                                            {{ isEnglish() ? (emp.rankName || '-') : (emp.rankNameBN || emp.rankName || '-') }}<span *ngIf="showRankQualifications && getRankQualifications(emp)"><br />({{ getRankQualifications(emp) }})</span>
+                                        </td>
+                                        <td>
+                                            {{ isEnglish() ? (emp.tradeName || '-') : (emp.tradeNameBN || emp.tradeName || '-') }}<span *ngIf="showTradeRemarks && emp.tradeRemarks"><br />({{ emp.tradeRemarks }})</span>
+                                        </td>
+                                        <td class="ns-name-cell">{{ isEnglish() ? (emp.fullNameEN || '-') : (emp.fullNameBN || emp.fullNameEN || '-') }}</td>
+                                        <td style="white-space: pre-line">{{ getOwnDistrict(emp) || '-' }}</td>
+                                        <td style="white-space: pre-line">{{ getSpouseDistrict(emp) || '-' }}</td>
+                                        <td style="white-space: pre-line">{{ getPreviousWorkplace(emp) || '-' }}</td>
+                                        <td>
+                                            <p-treeSelect
+                                                [(ngModel)]="selectedUnitNodes[emp.employeeId]"
+                                                [options]="unitTreeNodes"
+                                                placeholder="Select Unit"
+                                                [filter]="true"
+                                                [filterInputAutoFocus]="true"
+                                                [showClear]="true"
+                                                selectionMode="single"
+                                                styleClass="w-full"
+                                                appendTo="body"
+                                                (onNodeExpand)="onUnitNodeExpand($event)"
+                                                (onNodeSelect)="onTreeUnitSelect(emp, $event)"
+                                                (onClear)="onTreeUnitClear(emp)"
+                                            >
+                                                <ng-template pTemplate="value" let-node> {{ node ? getUnitFullPath(node) : 'Select Unit' }} </ng-template>
+                                            </p-treeSelect>
+                                        </td>
+                                        <td style="min-width: 200px">
+                                            <div *ngIf="originalRemarks[emp.employeeId]" style="font-size: 0.85rem; color: #555; margin-bottom: 4px">{{ originalRemarks[emp.employeeId] }}</div>
+                                            <input pInputText [(ngModel)]="newRemarks[emp.employeeId]" placeholder="{{ isEnglish() ? 'Add Remarks' : 'মন্তব্য যোগ করুন' }}" class="w-full" />
+                                        </td>
+                                    </tr>
+                                </ng-container>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- ── Supporting Documents ── -->
+                    <div class="ns-edit-field">
+                        <app-file-references-form #fileReferencesForm [fileRows]="fileRows" [isViewMode]="false" title="Supporting Documents" (fileRowsChange)="onFileRowsChange($event)" (onDownloadFile)="onDownloadFile($event)">
+                        </app-file-references-form>
+                    </div>
+
+                    <!-- ── Approval Chain Edit ── -->
+                    <div class="ns-approval-edit">
+                        <h4 class="ns-approval-edit-title">Approval Chain</h4>
+                        <app-notesheet-approver-select
+                            [noteSheetType]="noteSheet.noteSheetType || 'NewPosting'"
+                            [useUserList]="true"
+                            [(initiatorId)]="editInitiatorId"
+                            [(recommenderIds)]="editRecommenderIds"
+                            [(finalApproverId)]="editFinalApproverId"
+                            [disableInitiator]="isInitiatorStatus"
+                            [showErrors]="false"
+                        >
+                        </app-notesheet-approver-select>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ══════════════════════════════════════════════════════════ -->
+    <!-- Employee-table header (colgroups + thead) — single source,  -->
+    <!-- used by the main table AND repeated on continuation pages.  -->
+    <!-- ══════════════════════════════════════════════════════════ -->
+    <ng-template #postingTableHead>
+        <colgroup *ngIf="isInterPosting()">
+            <col style="width: 30px" />
+            <!-- ক্রমিক -->
+            <col style="width: 80px" />
+            <!-- ব্যক্তিগত নং -->
+            <col />
+            <!-- পদবি (auto — absorbs balance so table stays 100%) -->
+            <col [style.width]="showTenure ? '82px' : '130px'" />
+            <!-- নাম (tenure লুকালে চওড়া) -->
+            <col style="width: 48px" />
+            <!-- নিজ জেলা -->
+            <col style="width: 56px" />
+            <!-- স্বামী/স্ত্রীর জেলা -->
+            <col *ngIf="showTenure" style="width: 64px" />
+            <!-- যোগদানের তারিখ (ছোট করা) -->
+            <col *ngIf="showTenure" style="width: 32px" />
+            <!-- বছর -->
+            <col *ngIf="showTenure" style="width: 24px" />
+            <!-- মাস -->
+            <col *ngIf="showTenure" style="width: 24px" />
+            <!-- দিন -->
+            <col [style.width]="showTenure ? '85px' : '125px'" />
+            <!-- পূর্ববতী কর্মস্থল (tenure লুকালে চওড়া) -->
+            <col [style.width]="showTenure ? '48px' : '90px'" />
+            <!-- বদলিকৃত কর্মস্থল (tenure লুকালে চওড়া) -->
+            <col *ngIf="showRemarks" style="width: 58px" />
+            <!-- মন্তব্য (ছোট করা; পদবি auto বাকি জায়গা পায়) -->
+        </colgroup>
+        <colgroup *ngIf="!isInterPosting()">
+            <col style="width: 38px" />
+            <!-- ক্রমিক (একটু বড়) -->
+            <col style="width: 86px" />
+            <!-- ব্যক্তিগত নম্বর -->
+            <col style="width: 90px" />
+            <!-- পদবি (fixed so it stays constant whether ট্রেড is shown or hidden) -->
+            <col *ngIf="showTradeColumn" style="width: 58px" />
+            <!-- ট্রেড (ছোট করা) -->
+            <col />
+            <!-- নাম (auto — sole absorber; widens when ট্রেড is hidden) -->
+            <col style="width: 58px" />
+            <!-- নিজ জেলা (একটু বড়) -->
+            <col style="width: 56px" />
+            <!-- স্পাউস জেলা -->
+            <col style="width: 85px" />
+            <!-- পূর্ববতী কর্মস্থল (ছোট করা) -->
+            <col style="width: 88px" />
+            <!-- বদলি ইউনিট (একটু ছোট) -->
+            <col *ngIf="showRemarks" style="width: 66px" />
+            <!-- মন্তব্য (একটু ছোট) -->
+        </colgroup>
+        <thead>
+            <!-- PDF/Print only: borderless white gap row above the repeated header
+                 (hidden on screen & in the main table via `.ns-head-gap`). Because
+                 Chromium repeats the whole <thead>, this puts a gap above the header
+                 on every continuation page. colspan MUST equal the real column count
+                 or table-layout:fixed invents phantom columns and squishes the table. -->
+            <tr class="ns-head-gap">
+                <td [attr.colspan]="postingColumnCount"></td>
+            </tr>
+            <ng-container *ngIf="isInterPosting()">
+                <tr>
+                    <th [attr.rowspan]="showTenure ? 3 : 1" style="width: 28px">{{ isEnglish() ? 'Ser' : 'ক্রমিক' }}</th>
+                    <th [attr.rowspan]="showTenure ? 3 : 1">{{ isEnglish() ? 'Service ID' : 'ব্যক্তিগত নং' }}</th>
+                    <th [attr.rowspan]="showTenure ? 3 : 1">{{ isEnglish() ? 'Rank' : 'পদবি' }}</th>
+                    <th [attr.rowspan]="showTenure ? 3 : 1">{{ isEnglish() ? 'Name' : 'নাম' }}</th>
+                    <th [attr.rowspan]="showTenure ? 3 : 1" style="width: 45px; max-width: 45px; word-break: break-word">{{ isEnglish() ? 'Own District (Responsible Area)' : 'নিজ জেলা (দায়িত্বপূর্ণ এলাকা)' }}</th>
+                    <th [attr.rowspan]="showTenure ? 3 : 1">{{ isEnglish() ? "Husband/Wife's District (Responsible Area)" : 'স্বামী/স্ত্রীর জেলা (দায়িত্বপূর্ণ এলাকা)' }}</th>
+                    <th *ngIf="showTenure" colspan="4">{{ isEnglish() ? 'Tenure in RAB' : 'র‌্যাবে অবস্থানকাল' }}</th>
+                    <th [attr.rowspan]="showTenure ? 3 : 1" style="width: 100px">{{ isEnglish() ? 'Previous Workplace' : 'পূর্ববতী কর্মস্থল' }}</th>
+                    <th [attr.rowspan]="showTenure ? 3 : 1">{{ isEnglish() ? 'Transfer Station' : 'বদলিকৃত কর্মস্থল' }}</th>
+                    <th *ngIf="showRemarks" [attr.rowspan]="showTenure ? 3 : 1" style="min-width: 90px">{{ isEnglish() ? 'Remarks' : 'মন্তব্য' }}</th>
+                </tr>
+                <tr *ngIf="showTenure">
+                    <th rowspan="2" style="width: 82px">{{ isEnglish() ? 'Joining Date' : 'যোগদানের তারিখ' }}</th>
+                    <th colspan="3">{{ isEnglish() ? 'Duration' : 'অবস্থানকাল' }}</th>
+                </tr>
+                <tr *ngIf="showTenure">
+                    <th style="width: 22px">{{ isEnglish() ? 'Year' : 'বছর' }}</th>
+                    <th style="width: 22px">{{ isEnglish() ? 'Month' : 'মাস' }}</th>
+                    <th style="width: 22px">{{ isEnglish() ? 'Day' : 'দিন' }}</th>
+                </tr>
+            </ng-container>
+            <ng-container *ngIf="!isInterPosting()">
+                <tr>
+                    <th style="width: 28px">{{ isEnglish() ? 'Ser' : 'ক্রমিক' }}</th>
+                    <th>{{ isEnglish() ? 'Service ID' : 'ব্যক্তিগত নম্বর' }}</th>
+                    <th>{{ isEnglish() ? 'Rank' : 'পদবি' }}</th>
+                    <th *ngIf="showTradeColumn">{{ isEnglish() ? 'Trade' : 'ট্রেড' }}</th>
+                    <th>{{ isEnglish() ? 'Name' : 'নাম' }}</th>
+                    <th style="width: 45px; max-width: 45px; word-break: break-word">{{ isEnglish() ? 'Own District (Responsible Area)' : 'নিজ জেলা (দায়িত্বপূর্ণ এলাকা)' }}</th>
+                    <th>{{ isEnglish() ? 'Spouse District (Responsible Area)' : 'স্পাউস জেলা (দায়িত্বপূর্ণ এলাকা)' }}</th>
+                    <th style="width: 100px">{{ isEnglish() ? 'Previous Workplace' : 'পূর্ববতী কর্মস্থল' }}</th>
+                    <th>{{ isEnglish() ? 'Transfer Unit' : 'বদলি ইউনিট' }}</th>
+                    <th *ngIf="showRemarks" style="min-width: 90px">{{ isEnglish() ? 'Remarks' : 'মন্তব্য' }}</th>
+                </tr>
+            </ng-container>
+        </thead>
+    </ng-template>
+
+    <!-- ══════════════════════════════════════════════════════════ -->
+    <!-- Shared view-mode content template (used by pagination)    -->
+    <!-- ══════════════════════════════════════════════════════════ -->
+    <ng-template #viewContent>
+        <ng-container *ngIf="noteSheet">
+            <div class="ns-doc-box">
+                <div class="ns-main-col">
+                    <div class="ns-title-area">
+                        <div class="ns-title-en">NOTE SHEET</div>
+                        <div class="ns-title-bn">মন্তব্য পত্র</div>
+                    </div>
+
+                    <div class="ns-org-header" style="text-align: center; padding: 8px 16px 4px; font-weight: 700; font-size: 11pt; line-height: 1.5">
+                        <div>{{ getOrgHeaderLine1() }}</div>
+                        <div style="border-bottom: 1.5px solid #000; display: inline-block; padding-bottom: 2px">{{ getOrgHeaderLine2() }}</div>
+                    </div>
+
+                    <div *ngIf="noteSheet.noteSheetNo" style="padding: 4px 16px 2px; font-size: 10pt; display: flex; justify-content: space-between; align-items: baseline">
+                        <span>{{ noteSheet.noteSheetNo }}</span>
+                        <span *ngIf="noteSheet.noteSheetDate">{{ isEnglish() ? 'Date:' : 'তারিখঃ' }} {{ formatFullDate(noteSheet.noteSheetDate) }}</span>
+                    </div>
+
+                    <div *ngIf="noteSheet.subject" style="padding: 2px 16px 4px; font-size: 10pt">
+                        <strong><u style="text-underline-offset: 3px; text-decoration-skip-ink: none">{{ noteSheet.subject }}</u></strong>
+                    </div>
+
+                    <!-- ── Reference (nothing shown when no reference number) ── -->
+                    <div class="ns-cell-ref" *ngIf="noteSheet.referenceNumber">
+                        <span class="ns-ref-key">{{ isEnglish() ? 'Reference:' : 'সূত্রঃ' }}</span>
+                        <div class="ns-ref-content" [innerHTML]="getReferenceNumberSafe()"></div>
+                    </div>
+
+                    <!-- ── Main Text ── -->
+                    <div class="ns-para">
+                        <span class="ns-para-no">{{ serial(1) }}</span>
+                        <div class="ns-para-text" [innerHTML]="getMainTextSafe()"></div>
+                    </div>
+
+                    <!-- ── Posting: employee table ── -->
+                    <div class="ns-posting-table" [class.ns-posting-new]="!isInterPosting()" *ngIf="postingEmployees.length > 0">
+                        <table>
+                            <ng-container *ngTemplateOutlet="postingTableHead"></ng-container>
+                            <tbody>
+                                <ng-container *ngIf="isInterPosting()">
+                                    <tr *ngFor="let emp of postingEmployees; let i = index">
+                                        <td>{{ isEnglish() ? (i + 1) : serial(i + 1) }}</td>
+                                        <td style="white-space: pre-line">{{ getServiceIdDisplay(emp) }}</td>
+                                        <td>
+                                            {{ isEnglish() ? (emp.rankName || '') : (emp.rankNameBN || emp.rankName || '') }}<span *ngIf="showRankQualifications && getRankQualifications(emp)"><br />({{ getRankQualifications(emp) }})</span>
+                                        </td>
+                                        <td class="ns-name-cell">
+                                            {{ isEnglish() ? (emp.fullNameEN || '') : (emp.fullNameBN || emp.fullNameEN || '') }}<span *ngIf="showGallantryAwards && getGallantryAwards(emp)">, {{ getGallantryAwards(emp) }}</span
+                                            ><span *ngIf="showProfQualification && getProfQualification(emp)">, {{ getProfQualification(emp) }}</span><span *ngIf="showCorps && getCorps(emp)">, {{ getCorps(emp) }}</span>
+                                        </td>
+                                        <td style="white-space: pre-line">{{ getOwnDistrict(emp) }}</td>
+                                        <td style="white-space: pre-line">{{ getSpouseDistrict(emp) }}</td>
+                                        <td *ngIf="showTenure">{{ isEnglish() ? formatJoiningDate(emp.joiningDateInRAB) : toBnDigits(formatJoiningDate(emp.joiningDateInRAB)) }}</td>
+                                        <td *ngIf="showTenure">{{ tenure(emp.joiningDateInRAB, 'y') }}</td>
+                                        <td *ngIf="showTenure">{{ tenure(emp.joiningDateInRAB, 'm') }}</td>
+                                        <td *ngIf="showTenure">{{ tenure(emp.joiningDateInRAB, 'd') }}</td>
+                                        <td style="white-space: pre-line">{{ getInterPrevWorkplace(emp) }}</td>
+                                        <td>{{ getTransferUnitShort(emp) }}</td>
+                                        <td *ngIf="showRemarks">{{ getCombinedRemarks(emp) }}</td>
+                                    </tr>
+                                </ng-container>
+                                <ng-container *ngIf="!isInterPosting()">
+                                    <tr *ngFor="let emp of postingEmployees; let i = index">
+                                        <td>{{ isEnglish() ? (i + 1) : serial(i + 1) }}</td>
+                                        <td style="white-space: pre-line">{{ getServiceIdDisplay(emp) }}</td>
+                                        <td>
+                                            {{ isEnglish() ? (emp.rankName || '') : (emp.rankNameBN || emp.rankName || '') }}<span *ngIf="showRankQualifications && getRankQualifications(emp)"><br />({{ getRankQualifications(emp) }})</span>
+                                        </td>
+                                        <td *ngIf="showTradeColumn">
+                                            {{ isEnglish() ? (emp.tradeName || '') : (emp.tradeNameBN || emp.tradeName || '') }}<span *ngIf="showTradeRemarks && emp.tradeRemarks"><br />({{ emp.tradeRemarks }})</span>
+                                        </td>
+                                        <td class="ns-name-cell">
+                                            {{ isEnglish() ? (emp.fullNameEN || '') : (emp.fullNameBN || emp.fullNameEN || '') }}<span *ngIf="showGallantryAwards && getGallantryAwards(emp)">, {{ getGallantryAwards(emp) }}</span
+                                            ><span *ngIf="showProfQualification && getProfQualification(emp)">, {{ getProfQualification(emp) }}</span><span *ngIf="showCorps && getCorps(emp)">, {{ getCorps(emp) }}</span>
+                                        </td>
+                                        <td style="white-space: pre-line">{{ getOwnDistrict(emp) }}</td>
+                                        <td style="white-space: pre-line">{{ getSpouseDistrict(emp) }}</td>
+                                        <td style="white-space: pre-line">{{ getPreviousWorkplace(emp) }}</td>
+                                        <td>{{ getTransferUnitShort(emp) }}</td>
+                                        <td *ngIf="showRemarks">{{ getCombinedRemarks(emp) }}</td>
+                                    </tr>
+                                </ng-container>
+                            </tbody>
+                            <!-- tfoot note hidden for now -->
+                        </table>
+                    </div>
+
+                    <!-- ── Note (above paragraphs) ── -->
+                    <div class="ns-note" *ngIf="noteSheet.note" style="white-space: pre-line">{{ noteSheet.note }}</div>
+
+                    <!-- ── Paragraphs (after employee table) ── -->
+                    <ng-container *ngIf="parsedParagraphs.length > 0">
+                        <div class="ns-para" *ngFor="let para of parsedParagraphs; let pi = index">
+                            <span class="ns-para-no">{{ serial(pi + 2) }}</span>
+                            <div class="ns-para-text">{{ para }}</div>
+                        </div>
+                    </ng-container>
+
+                    <!-- ── Initiator area ── -->
+                    <div class="ns-initiator-area">
+                        <div class="ns-initiator-sig" *ngIf="initiatorDetails">
+                            <img *ngIf="showSignatureImage && isInitiatorApproved() && shouldShowSignature(initiatorDetails.step) && initiatorDetails.signatureDataUrl" [src]="initiatorDetails.signatureDataUrl" class="ns-sig-img" alt="Signature" />
+                            <div class="ns-sig-name">{{ isEnglish() ? initiatorDetails.name : (initiatorDetails.nameBN || initiatorDetails.name) }}</div>
+                            <div class="ns-sig-rank" *ngIf="initiatorDetails.rank && initiatorDetails.rank !== '-'">{{ isEnglish() ? initiatorDetails.rank : (initiatorDetails.rankBN || initiatorDetails.rank) }}</div>
+                            <div class="ns-sig-appoint" *ngIf="initiatorDetails.appointment || initiatorDetails.appointmentBN">{{ isEnglish() ? initiatorDetails.appointment : (initiatorDetails.appointmentBN || initiatorDetails.appointment) }}</div>
+                            <div class="ns-sig-date" *ngIf="isInitiatorApproved() && noteSheet.noteSheetDate">{{ formatFullDate(noteSheet.noteSheetDate) }}</div>
+                        </div>
+                    </div>
+
+                    <!-- ── Approver Sections ── -->
+                    <div class="ns-approver-section" *ngFor="let approver of approversDetails; let i = index">
+                        <div class="ns-approver-role">{{ isEnglish() ? approver.appointment : (approver.appointmentBN || approver.appointment) }}</div>
+                        <div class="ns-approver-body" [class.ns-approver-body--left]="i >= approversDetails.length - 2">
+                            <div class="ns-approver-left">
+                                <span class="ns-para-no">{{ serial(i + 2 + parsedParagraphs.length) }}</span>
+                                <span class="ns-approver-remark" *ngIf="getApproverRemark(approver.step)">{{ getApproverRemark(approver.step) }}</span>
+                            </div>
+                            <div class="ns-approver-sig-area">
+                                <img *ngIf="showSignatureImage && shouldShowSignature(approver.step) && approver.signatureDataUrl" [src]="approver.signatureDataUrl" class="ns-sig-img" alt="Signature" />
+                                <div class="ns-sig-date" *ngIf="getApproverDate(approver.step)">{{ getApproverDate(approver.step) }}</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </ng-container>
+    </ng-template>
+
+    <!-- ── Back History Timeline (not printed) ── -->
+    <div class="ns-back-history no-print" *ngIf="backHistory.length > 0">
+        <h3><i class="pi pi-history"></i> Back History</h3>
+        <div class="ns-back-timeline">
+            <div class="ns-back-entry" *ngFor="let entry of backHistory">
+                <div class="ns-back-entry-header">
+                    <span class="ns-back-from">{{ getStatusLabel(entry.backedFromStatus) }}</span>
+                    <i class="pi pi-arrow-right"></i>
+                    <span class="ns-back-to">{{ getStatusLabel(entry.backedToStatus) }}</span>
+                    <span class="ns-back-date">{{ formatDate(entry.backedDate) }}</span>
+                </div>
+                <div class="ns-back-entry-by" *ngIf="entry.backedByName">Backed by: {{ entry.backedByName }}</div>
+                <div class="ns-back-entry-reason" *ngIf="entry.backReason">Reason: {{ entry.backReason }}</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════ -->
+<!-- Pending-list inline action dialogs (only used when         -->
+<!-- navigated from /notesheet-list/pending-new-posting)        -->
+<!-- ══════════════════════════════════════════════════════════ -->
+
+<!-- Remark dialog for Approve / Decline / Back -->
+<p-dialog
+    header="{{ remarkAction === NoteSheetRemarkAction.Approve ? 'Approve' : remarkAction === NoteSheetRemarkAction.Decline ? 'Decline' : 'Back' }} with Remark"
+    [(visible)]="showRemarkDialog"
+    [modal]="true"
+    [style]="{ width: '28rem' }"
+    [contentStyle]="{ 'border-top': '2px solid var(--primary-color)' }"
+    (onHide)="remarkAction = null; remarkText = ''"
+    [draggable]="false"
+    [resizable]="false"
+>
+    <div class="flex flex-col gap-2">
+        <label class="font-medium">
+            Remark @if (remarkAction === NoteSheetRemarkAction.Decline) {
+            <span class="text-red-500"> * required</span>
+            } @else {
+            <span class="text-500"> (optional)</span>
+            }
+        </label>
+        <textarea pTextarea [(ngModel)]="remarkText" rows="3" class="w-full"></textarea>
+    </div>
+    <ng-template pTemplate="footer">
+        <p-button type="button" label="Cancel" [text]="true" (onClick)="showRemarkDialog = false"></p-button>
+        <p-button type="button" label="Submit" icon="pi pi-check" [loading]="actionSubmitting" [disabled]="remarkAction === NoteSheetRemarkAction.Decline && !remarkText?.trim()" (onClick)="submitRemark()"></p-button>
+    </ng-template>
+</p-dialog>
+
+<!-- View Members dialog -->
+<p-dialog header="Posting Members — {{ membersNoteSheetNo }}" [(visible)]="showMembersDialog" [modal]="true" [style]="{ width: '95vw', maxHeight: '85vh' }" [draggable]="false" [resizable]="false" [closable]="true">
+    @if (membersLoading) {
+    <div class="flex justify-content-center align-items-center py-5">
+        <i class="pi pi-spin pi-spinner" style="font-size: 1.5rem"></i>
+        <span class="ml-2">Loading members...</span>
+    </div>
+    } @if (!membersLoading && membersList.length === 0) {
+    <div class="text-center text-500 py-4">No members found.</div>
+    } @if (!membersLoading && membersList.length > 0) {
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem">
+        <span class="text-500" style="font-size: 0.85rem">{{ membersList.length }} member(s) in posting list</span>
+        <p-button
+            *ngIf="selectedMembers.length > 0"
+            icon="pi pi-trash"
+            label="Remove Selected ({{ selectedMembers.length }})"
+            severity="danger"
+            [outlined]="true"
+            size="small"
+            [loading]="removingMembers"
+            (onClick)="removeSelectedMembers()"
+        ></p-button>
+    </div>
+    <p-table [value]="membersList" [(selection)]="selectedMembers" dataKey="draftPostingDetailId" [tableStyle]="{ 'min-width': '60rem' }" styleClass="p-datatable-striped p-datatable-gridlines p-datatable-sm">
+        <ng-template pTemplate="header">
+            <tr>
+                <th style="width: 3rem"><p-tableHeaderCheckbox></p-tableHeaderCheckbox></th>
+                <th>Ser</th>
+                <th>Service ID</th>
+                <th>Rank</th>
+                <th>Trade</th>
+                <th>Name</th>
+                <th>Mother Unit</th>
+                <th>Own District</th>
+                <th>Mother Unit Location</th>
+                <th>Transfer Unit</th>
+                <th>Remarks</th>
+            </tr>
+        </ng-template>
+        <ng-template pTemplate="body" let-emp let-i="rowIndex">
+            <tr>
+                <td><p-tableCheckbox [value]="emp"></p-tableCheckbox></td>
+                <td>{{ i + 1 }}</td>
+                <td>{{ emp.serviceId || '-' }}</td>
+                <td>
+                    {{ emp.rankName || '-' }}<span *ngIf="emp.specialQualifications"><br />({{ emp.specialQualifications }})</span>
+                </td>
+                <td>
+                    {{ emp.tradeName || '-' }}<span *ngIf="emp.tradeRemarks"><br />({{ emp.tradeRemarks }})</span>
+                </td>
+                <td>{{ emp.fullNameEN || '-' }}</td>
+                <td>{{ emp.motherUnitName || '-' }}</td>
+                <td>{{ emp.permanentDistrictName || '-' }}</td>
+                <td>{{ emp.motherOrgLocationName || '-' }}</td>
+                <td>{{ isEnglish() ? (emp.transferRabUnitName || '-') : (emp.transferRabUnitNameBN || emp.transferRabUnitName || '-') }}</td>
+                <td>{{ getCombinedRemarks(emp) || '-' }}</td>
+            </tr>
+        </ng-template>
+    </p-table>
+    }
+</p-dialog>
+
+<!-- Approval Log dialog -->
+<p-dialog
+    header="Approval Log — {{ approvalLogNoteSheetNo }}"
+    [(visible)]="showApprovalLogDialog"
+    [modal]="true"
+    [style]="{ width: '680px', maxHeight: '85vh' }"
+    [draggable]="false"
+    [resizable]="false"
+    [closable]="true"
+    styleClass="ns-approval-log-dialog"
+>
+    @if (approvalLogLoading) {
+    <div class="flex justify-content-center align-items-center py-5">
+        <i class="pi pi-spin pi-spinner" style="font-size: 1.5rem"></i>
+        <span class="ml-2">Loading approval log...</span>
+    </div>
+    } @if (!approvalLogLoading && approvalLogEntries.length === 0) {
+    <div class="text-center text-500 py-4">No approval log entries found.</div>
+    } @if (!approvalLogLoading && approvalLogEntries.length > 0) {
+    <div class="ns-approval-log">
+        @for (entry of approvalLogEntries; track entry; let i = $index) {
+        <div class="ns-log-entry" [class.ns-log-entry--back]="entry.action === ApprovalLogAction.Back">
+            <div class="ns-log-marker">
+                <i
+                    [class]="getActionIcon(entry.action)"
+                    [ngClass]="{
+                            'text-green-500': entry.action === ApprovalLogAction.Approve,
+                            'text-red-500': entry.action === ApprovalLogAction.Cancel,
+                            'text-orange-500': entry.action === ApprovalLogAction.Back,
+                            'text-blue-400': entry.action === ApprovalLogAction.Pending
+                        }"
+                ></i>
+                @if (i < approvalLogEntries.length - 1) {
+                <div class="ns-log-line"></div>
+                }
+            </div>
+            <div class="ns-log-content">
+                <div class="ns-log-header">
+                    <span class="ns-log-step">{{ entry.step }}</span>
+                    <span
+                        class="ns-log-action"
+                        [ngClass]="{
+                                'ns-log-action--approve': entry.action === ApprovalLogAction.Approve,
+                                'ns-log-action--cancel': entry.action === ApprovalLogAction.Cancel,
+                                'ns-log-action--back': entry.action === ApprovalLogAction.Back,
+                                'ns-log-action--pending': entry.action === ApprovalLogAction.Pending
+                            }"
+                        >{{ getActionLabel(entry.action) }}</span
+                    >
+                </div>
+                @if (entry.serviceId || entry.name) {
+                <div class="ns-log-user">
+                    @if (entry.serviceId) {
+                    <span class="ns-log-sid">{{ entry.serviceId }}</span>
+                    } @if (entry.name) {
+                    <span>{{ entry.name }}</span>
+                    } @if (entry.rank && entry.rank !== '-') {
+                    <span class="text-500">({{ entry.rank }})</span>
+                    }
+                </div>
+                } @if (entry.date) {
+                <div class="ns-log-date"><i class="pi pi-calendar"></i> {{ formatDateShort(entry.date) }}</div>
+                } @if (entry.remark) {
+                <div class="ns-log-remark">{{ entry.remark }}</div>
+                }
+            </div>
+        </div>
+        }
+    </div>
+    }
+</p-dialog>

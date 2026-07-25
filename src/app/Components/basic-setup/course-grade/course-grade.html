@@ -10,7 +10,9 @@
             [form]="commonCodeForm"
             [editingId]="editingId"
             (save)="submit($event)"
-            (reset)="resetForm()">
+            (reset)="resetForm()"
+            [canInsert]="canInsert"
+            [canUpdate]="canUpdate">
             [isSubmitting]="isSubmitting">
         </app-dynamic-form>
           </div>
@@ -26,5 +28,6 @@
             (edit)="update($event)"
              (delete)="delete($event.row, $event.event)"
             (lazyLoad)="getCommonCodeWithPaging($event)"
-            (search)="onSearch($event)">
+            (search)="onSearch($event)"
+    [canUpdate]="canUpdate" [canDelete]="canDelete">
         </app-data-table>
