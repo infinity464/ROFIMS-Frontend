@@ -640,7 +640,7 @@ export class ServingMemberEntry implements OnInit {
     lastUnitOrganizations: MotherOrganizationModel[] = [];
     memberTypes: CommonCodeModel[] = [];
     batches: CommonCodeModel[] = [];
-    specialQualificationOptions: CommonCodeModel[] = [];
+    specialQualificationOptions: (CommonCodeModel & { displayLabel?: string })[] = [];
     officerTypes: CommonCodeModel[] = [];
     appointments: CommonCodeModel[] = [];
     ranks: CommonCodeModel[] = [];
@@ -1259,7 +1259,11 @@ export class ServingMemberEntry implements OnInit {
 
     loadSpecialQualifications(): void {
         this.commonCodeService.getAllActiveCommonCodesType('SpecialQualification').subscribe({
-            next: (res) => (this.specialQualificationOptions = res ?? []),
+            next: (res) =>
+                (this.specialQualificationOptions = (res ?? []).map((item: any) => ({
+                    ...item,
+                    displayLabel: item.codeValueBN ? `${item.codeValueEN} (${item.codeValueBN})` : item.codeValueEN
+                }))),
             error: (err) => console.log(err)
         });
     }

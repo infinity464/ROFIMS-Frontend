@@ -174,7 +174,9 @@ export class EmpDisciplineInfoComponent implements OnInit {
     }
 
     private mapCommonCodeToOption(item: any): { label: string; value: number } {
-        const label = item?.codeValueEN ?? item?.CodeValueEN ?? item?.displayCodeValueEN ?? String(item?.codeId ?? item?.CodeId ?? '');
+        const en = item?.codeValueEN ?? item?.CodeValueEN ?? item?.displayCodeValueEN ?? String(item?.codeId ?? item?.CodeId ?? '');
+        const bn = item?.codeValueBN ?? item?.CodeValueBN ?? item?.displayCodeValueBN;
+        const label = bn ? `${en} (${bn})` : en;
         const value = item?.codeId ?? item?.CodeId ?? 0;
         return { label, value };
     }

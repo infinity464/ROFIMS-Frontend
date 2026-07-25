@@ -62,7 +62,7 @@ export class EmpLeaveInfo implements OnInit {
     leaveForm!: FormGroup;
     editingLeaveId: number | null = null;
 
-    leaveTypes: CommonCodeModel[] = [];
+    leaveTypes: (CommonCodeModel & { displayLabel?: string })[] = [];
 
     constructor(
         private empService: EmpService,
@@ -109,7 +109,10 @@ export class EmpLeaveInfo implements OnInit {
     loadLeaveTypes(): void {
         this.commonCodeService.getAllActiveCommonCodesType(CodeType.LeaveType).subscribe({
             next: (data) => {
-                this.leaveTypes = Array.isArray(data) ? data : [];
+                this.leaveTypes = (Array.isArray(data) ? data : []).map((item: any) => ({
+                    ...item,
+                    displayLabel: item.codeValueBN ? `${item.codeValueEN} (${item.codeValueBN})` : item.codeValueEN
+                }));
             },
             error: (err: any) => this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.message || 'Failed to load leave types' })
         });
@@ -166,7 +169,7 @@ export class EmpLeaveInfo implements OnInit {
 
     getLeaveTypeName(leaveTypeId: number): string {
         const lt = this.leaveTypes.find((x) => x.codeId === leaveTypeId);
-        return lt ? lt.codeValueEN || lt.codeValueBN || '' : 'N/A';
+        return lt ? lt.displayLabel || lt.codeValueEN || lt.codeValueBN || '' : 'N/A';
     }
 
     formatDate(val: string | Date | null): string {
