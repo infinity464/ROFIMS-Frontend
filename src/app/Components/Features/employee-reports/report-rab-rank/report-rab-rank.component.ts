@@ -139,12 +139,16 @@ export class ReportRabRankComponent implements OnInit, OnChanges, OnDestroy {
 
     /** Keystroke in the toolbar search — debounced auto-search. */
     onIdSearchInput(): void {
-        this.idSearchInput$.next((this.idSearchText ?? '').trim());
+        // Bangla digits typed/pasted into the ID search are normalized to
+        // Western digits so they match the stored Service ID / RAB ID.
+        this.idSearchText = BanglaNumerals.toWestern(this.idSearchText ?? '');
+        this.idSearchInput$.next(this.idSearchText.trim());
     }
 
     /** Enter / search icon — search immediately, skipping the debounce. */
     onIdSearch(): void {
-        this.applyIdSearch((this.idSearchText ?? '').trim());
+        this.idSearchText = BanglaNumerals.toWestern(this.idSearchText ?? '');
+        this.applyIdSearch(this.idSearchText.trim());
     }
 
     clearIdSearch(): void {
@@ -262,7 +266,7 @@ export class ReportRabRankComponent implements OnInit, OnChanges, OnDestroy {
         if (key === 'serviceId') {
             const r = row as any;
             const prefix = this.codeValue(r.prefix, r.prefixBN);
-            const svc = r.serviceId != null && r.serviceId !== '' ? String(r.serviceId) : '';
+            const svc = r.serviceId != null && r.serviceId !== '' ? this.displayNum(r.serviceId) : '';
             const px = prefix && prefix !== '-' && prefix !== '—' ? prefix : '';
             return [px, svc].filter((s) => s).join(' ') || '—';
         }
@@ -270,7 +274,7 @@ export class ReportRabRankComponent implements OnInit, OnChanges, OnDestroy {
         if (!map) return '—';
         const en = (row as any)[map.en] as string | null | undefined;
         const bn = map.bn ? (row as any)[map.bn] as string | null | undefined : undefined;
-        const value = this.codeValue(en, bn);
+        const value = (key === 'nid' || key === 'mobileNo') ? this.displayNum(this.codeValue(en, bn)) : this.codeValue(en, bn);
         // RAB Unit hierarchy is a comma-joined chain (Battalion, Wing, Branch,
         // Sub-Branch, Section, Sub-Section). Show only the first two levels
         // (Unit, Wing) + the deepest level instead of the full chain.
