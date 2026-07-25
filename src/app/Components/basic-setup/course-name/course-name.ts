@@ -144,9 +144,18 @@ export class CourseName {
     }
 
     private setupFormFilterListeners() {
-        this.commonCodeForm.get('orgId')?.valueChanges.subscribe(() => { this.first = 0; this.buildTableData(); });
-        this.commonCodeForm.get('parentCodeId')?.valueChanges.subscribe(() => { this.first = 0; this.buildTableData(); });
-        this.commonCodeForm.get('status')?.valueChanges.subscribe(() => { this.first = 0; this.buildTableData(); });
+        this.commonCodeForm.get('orgId')?.valueChanges.subscribe(() => {
+            this.first = 0;
+            this.buildTableData();
+        });
+        this.commonCodeForm.get('parentCodeId')?.valueChanges.subscribe(() => {
+            this.first = 0;
+            this.buildTableData();
+        });
+        this.commonCodeForm.get('status')?.valueChanges.subscribe(() => {
+            this.first = 0;
+            this.buildTableData();
+        });
     }
 
     initForm() {
@@ -208,13 +217,9 @@ export class CourseName {
     }
 
     submit(data: any) {
-        const orgId = this.commonCodeForm.get('orgId')?.value;
         const parentCodeId = this.commonCodeForm.get('parentCodeId')?.value;
         const status = this.commonCodeForm.get('status')?.value;
-        if (orgId == null || orgId === '') {
-            this.messageService.add({ severity: 'warn', summary: 'Validation', detail: 'Please select Organization' });
-            return;
-        }
+        // Organization is optional: a Course Name with no Org is treated as global (available to every org).
         if (parentCodeId == null || parentCodeId === '') {
             this.messageService.add({ severity: 'warn', summary: 'Validation', detail: 'Please select Course Type' });
             return;
@@ -242,6 +247,7 @@ export class CourseName {
         this.isSubmitting = true;
         const createPayload = {
             ...this.commonCodeForm.value,
+            orgId: this.commonCodeForm.get('orgId')?.value ?? 0,
             createdBy: currentUser,
             createdDate: currentDateTime,
             lastUpdatedBy: currentUser,
@@ -267,6 +273,7 @@ export class CourseName {
         this.isSubmitting = true;
         const updatePayload = {
             ...this.commonCodeForm.value,
+            orgId: this.commonCodeForm.get('orgId')?.value ?? 0,
             codeId: this.editingId,
             lastUpdatedBy: currentUser,
             lastupdate: currentDateTime,
@@ -296,7 +303,7 @@ export class CourseName {
             parentCodeId: row.parentCodeId,
             codeValueEN: row.codeValueEN,
             codeValueBN: row.codeValueBN,
-            status: row.status,
+            status: row.status
         });
     }
 
