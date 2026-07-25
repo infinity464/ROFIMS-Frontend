@@ -32,3 +32,18 @@ export const environment = {
 //     // to the jsReport Node process on localhost:5488 (see public/web.config).
 //     jsreportUrl: '/jsreport-api'
 // };
+
+
+//Test Server
+
+
+// export const environment = {
+//     production: true,
+//     apis: {
+//         core: 'http://192.168.9.103:19910/rab/api',
+//         auth: 'http://192.168.9.103:19910'
+//     },
+//     // Relative path → same origin as the site; IIS reverse-proxies /jsreport-api
+//     // to the jsReport Node process on localhost:5488 (see public/web.config).
+//     jsreportUrl: '/jsreport-api'
+// };
