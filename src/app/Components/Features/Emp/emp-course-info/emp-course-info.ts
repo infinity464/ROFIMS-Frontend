@@ -221,7 +221,7 @@ export class EmpCourseInfoComponent implements OnInit {
         this.commonCodeService.getAllActiveCommonCodesType('CourseName').subscribe({
             next: (data) => {
                 this.allCourseNameOptions = (data || []).map((d: any) => ({
-                    label: d.codeValueEN || d.displayCodeValueEN || String(d.codeId),
+                    label: this.buildCourseNameLabel(d),
                     value: d.codeId,
                     parentCodeId: d.parentCodeId ?? null,
                     orgId: d.orgId ?? d.OrgId ?? null
@@ -251,6 +251,13 @@ export class EmpCourseInfoComponent implements OnInit {
      * A Course Name is shown when its parentCodeId matches the Course Type AND it either belongs to
      * the employee's Mother Org or is global (orgId null/0, i.e. Mother Org not set).
      */
+    /** Course Name display label: "CodeValueEN (CodeValueBN)" when a Bangla value exists, else English only. */
+    private buildCourseNameLabel(d: any): string {
+        const en = d.codeValueEN || d.displayCodeValueEN || String(d.codeId);
+        const bn = d.codeValueBN || d.displayCodeValueBN;
+        return bn ? `${en} (${bn})` : en;
+    }
+
     private filterCourseNames(courseTypeId: number | null): DropdownOption[] {
         if (courseTypeId == null) return [];
         const orgId = this.employeeOrgId;
@@ -657,7 +664,7 @@ export class EmpCourseInfoComponent implements OnInit {
                     if (newId != null) this.courseForm.patchValue({ courseType: newId });
                 } else if (codeType === 'CourseName') {
                     this.allCourseNameOptions = (data || []).map((d: any) => ({
-                        label: d.codeValueEN || d.displayCodeValueEN || String(d.codeId),
+                        label: this.buildCourseNameLabel(d),
                         value: d.codeId,
                         parentCodeId: d.parentCodeId ?? null,
                         orgId: d.orgId ?? d.OrgId ?? null

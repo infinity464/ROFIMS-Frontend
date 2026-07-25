@@ -42,65 +42,25 @@
                             <div class="grid grid-cols-2 gap-4">
                                 <div>
                                     <label class="font-semibold block mb-2 text-700">Course Type <span class="text-red-500">*</span></label>
-                                    <div style="display: flex; align-items: center; gap: 0.35rem;">
-                                        <div style="flex: 1; min-width: 0;">
-                                            <p-select formControlName="courseType" [options]="courseTypeOptions" optionLabel="label" optionValue="value" placeholder="Select Course Type" styleClass="w-full" [filter]="true" appendTo="body"></p-select>
-                                        </div>
-                                        <button type="button" pButton icon="pi pi-plus"
-                                            class="p-button-sm p-button-outlined p-button-success"
-                                            style="flex-shrink: 0; width: 2rem; height: 2rem; padding: 0;"
-                                            pTooltip="Add New Course Type" tooltipPosition="top"
-                                            (click)="openAddCourseTypeDialog()">
-                                        </button>
-                                    </div>
+                                    <p-select formControlName="courseType" [options]="courseTypeOptions" optionLabel="label" optionValue="value" placeholder="Select Course Type" styleClass="w-full" [filter]="true" appendTo="body"></p-select>
                                     @if (courseForm.get('courseType')?.invalid && courseForm.get('courseType')?.touched) {
                                         <small class="text-red-500">Course Type is required</small>
                                     }
                                 </div>
                                 <div>
                                     <label class="font-semibold block mb-2 text-700">Course Name <span class="text-red-500">*</span></label>
-                                    <div style="display: flex; align-items: center; gap: 0.35rem;">
-                                        <div style="flex: 1; min-width: 0;">
-                                            <p-select formControlName="courseName" [options]="courseNameOptions" optionLabel="label" optionValue="value" placeholder="Select / Enter Course Name" styleClass="w-full" [filter]="true" appendTo="body"></p-select>
-                                        </div>
-                                        <button type="button" pButton icon="pi pi-plus"
-                                            class="p-button-sm p-button-outlined p-button-success"
-                                            style="flex-shrink: 0; width: 2rem; height: 2rem; padding: 0;"
-                                            pTooltip="Add New Course Name" tooltipPosition="top"
-                                            (click)="openAddCourseNameDialog()">
-                                        </button>
-                                    </div>
+                                    <p-select formControlName="courseName" [options]="courseNameOptions" optionLabel="label" optionValue="value" placeholder="Select / Enter Course Name" styleClass="w-full" [filter]="true" appendTo="body"></p-select>
                                     @if (courseForm.get('courseName')?.invalid && courseForm.get('courseName')?.touched) {
                                         <small class="text-red-500">Course Name is required</small>
                                     }
                                 </div>
                                 <div>
                                     <label class="font-semibold block mb-2 text-700">Training Institute Name</label>
-                                    <div style="display: flex; align-items: center; gap: 0.35rem;">
-                                        <div style="flex: 1; min-width: 0;">
-                                            <p-select formControlName="trainingInstitueName" [options]="trainingInstituteOptions" optionLabel="label" optionValue="value" placeholder="Select Institute" styleClass="w-full" [filter]="true" filterPlaceholder="Search Institute" appendTo="body"></p-select>
-                                        </div>
-                                        <button type="button" pButton icon="pi pi-plus"
-                                            class="p-button-sm p-button-outlined p-button-success"
-                                            style="flex-shrink: 0; width: 2rem; height: 2rem; padding: 0;"
-                                            pTooltip="Add New Institute" tooltipPosition="top"
-                                            (click)="openAddInstituteDialog()">
-                                        </button>
-                                    </div>
+                                    <p-select formControlName="trainingInstitueName" [options]="trainingInstituteOptions" optionLabel="label" optionValue="value" placeholder="Select Institute" styleClass="w-full" [filter]="true" filterPlaceholder="Search Institute" appendTo="body"></p-select>
                                 </div>
                                 <div>
                                     <label class="font-semibold block mb-2 text-700">Country</label>
-                                    <div style="display: flex; align-items: center; gap: 0.35rem;">
-                                        <div style="flex: 1; min-width: 0;">
-                                            <p-select formControlName="country" [options]="countryOptions" optionLabel="label" optionValue="value" placeholder="Select Country" styleClass="w-full" [filter]="true" filterPlaceholder="Search Country" appendTo="body" [showClear]="true"></p-select>
-                                        </div>
-                                        <button type="button" pButton icon="pi pi-plus"
-                                            class="p-button-sm p-button-outlined p-button-success"
-                                            style="flex-shrink: 0; width: 2rem; height: 2rem; padding: 0;"
-                                            pTooltip="Add New Country" tooltipPosition="top"
-                                            (click)="openAddCountryDialog()">
-                                        </button>
-                                    </div>
+                                    <p-select formControlName="country" [options]="countryOptions" optionLabel="label" optionValue="value" placeholder="Select Country" styleClass="w-full" [filter]="true" filterPlaceholder="Search Country" appendTo="body" [showClear]="true"></p-select>
                                 </div>
                                 <div>
                                     <label class="font-semibold block mb-2 text-700">Address</label>
