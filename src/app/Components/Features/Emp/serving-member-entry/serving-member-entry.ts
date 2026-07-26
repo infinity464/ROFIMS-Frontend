@@ -582,7 +582,7 @@ export class ServingMemberEntry implements OnInit {
                     detail: 'Serving member and addresses saved successfully!'
                 });
 
-                this.resetForNewEntry();
+                this.onReset();
             },
             error: (err: any) => {
                 this.isSaving = false;
@@ -882,6 +882,28 @@ export class ServingMemberEntry implements OnInit {
         });
     }
 
+    /**
+     * Preselects the personal-info defaults (Religion = Islam, Medical Category =
+     * "A (AYEE)"). Both come from common-code lookups, so this runs once the
+     * options arrive and again after every reset. Existing values are never
+     * overwritten, so a user's own choice — including clearing a field — sticks.
+     */
+    private applyPersonalDefaults(): void {
+        if (!this.personalInfoForm) return;
+
+        const religionControl = this.personalInfoForm.get('religion');
+        if (religionControl && religionControl.value == null) {
+            const islam = this.religions.find((r) => r.label?.trim().toLowerCase().startsWith('islam'));
+            if (islam) religionControl.setValue(islam.value);
+        }
+
+        const medicalControl = this.personalInfoForm.get('medicalCategory');
+        if (medicalControl && medicalControl.value == null) {
+            const defaultCat = this.medicalCategories.find((c) => (c.label ?? '').trim().toLowerCase() === 'a (ayee)');
+            if (defaultCat) medicalControl.setValue(defaultCat.value);
+        }
+    }
+
     private loadPersonalDropdownData(): void {
         const map = (d: any) => ({ label: d.codeValueEN ?? d.CodeValueEN ?? '', value: d.codeId ?? d.CodeId });
         this.commonCodeService.getAllActiveCommonCodesType('BloodGroup').subscribe({
@@ -889,7 +911,10 @@ export class ServingMemberEntry implements OnInit {
             error: (err) => console.error(err)
         });
         this.commonCodeService.getAllActiveCommonCodesType('Religion').subscribe({
-            next: (res) => (this.religions = (res ?? []).map(map)),
+            next: (res) => {
+                this.religions = (res ?? []).map(map);
+                this.applyPersonalDefaults();
+            },
             error: (err) => console.error(err)
         });
         this.commonCodeService.getAllActiveCommonCodesType('ProfessionalQualification').subscribe({
@@ -911,12 +936,7 @@ export class ServingMemberEntry implements OnInit {
         this.commonCodeService.getAllActiveCommonCodesType('MedicalCategoryType').subscribe({
             next: (res) => {
                 this.medicalCategories = (res ?? []).map((d: any) => ({ label: d.codeValueEN ?? String(d.codeId), value: d.codeId }));
-                // Default-select "A (AYEE)" (case-insensitive match on label).
-                const ctrl = this.personalInfoForm.get('medicalCategory');
-                if (ctrl && ctrl.value == null) {
-                    const defaultCat = this.medicalCategories.find((c) => (c.label ?? '').trim().toLowerCase() === 'a (ayee)');
-                    if (defaultCat) ctrl.setValue(defaultCat.value);
-                }
+                this.applyPersonalDefaults();
             },
             error: (err) => console.error(err)
         });
@@ -1271,9 +1291,21 @@ export class ServingMemberEntry implements OnInit {
 
     loadGender() {
         this.commonCodeService.getAllActiveCommonCodesType('Gender').subscribe({
-            next: (res) => { this.genders = res; },
+            next: (res) => {
+                this.genders = res;
+                this.applyDefaultGender();
+            },
             error: (err) => console.log(err)
         });
+    }
+
+    /** Preselects Male when no gender has been chosen yet. */
+    private applyDefaultGender(): void {
+        const genderControl = this.postingForm?.get('gender');
+        if (!genderControl || genderControl.value != null) return;
+
+        const male = this.genders.find((g) => g.codeValueEN?.trim().toLowerCase() === 'male');
+        if (male) genderControl.setValue(male.codeId);
     }
 
     loadMaritalStatus(): void {
@@ -1436,7 +1468,7 @@ export class ServingMemberEntry implements OnInit {
             tradeMark: [''],
             gender: [null, Validators.required],
             maritalStatus: [null],
-            isRFTSComplted: [null],
+            isRFTSComplted: [true],
             relationship: [null],
             spouseName: [''],
             prefix: [null, Validators.required],
@@ -1470,27 +1502,12 @@ export class ServingMemberEntry implements OnInit {
         return `${year}-${month}-${day}`;
     }
 
+    /**
+     * Reset button and post-save cleanup share one path so every section of the
+     * page (posting, service, personal, addresses) returns to its default state.
+     */
     onReset(): void {
-        const now = new Date();
-        this.postingForm.reset({
-            employeeID: 0,
-            status: true,
-            specialQualifications: [],
-            postingStatus: PostingStatus.Servings,
-            createdBy: 'system',
-            createdDate: now,
-            lastUpdatedBy: 'system',
-            lastupdate: now,
-            statusDate: now
-        });
-        this.imagePreview = null;
-        this.selectedFile = null;
-        this.selectedFileName = '';
-        if (this.fileUpload) this.fileUpload.clear();
-    }
-
-    private resetForNewEntry(): void {
-        this.onReset();
+        this.resetPostingSection();
 
         this.generatedEmployeeId = null;
         this.permanentAddressId = undefined;
@@ -1523,8 +1540,38 @@ export class ServingMemberEntry implements OnInit {
         this.rabSectionOptions = [];
         this.rabSubSectionOptions = [];
 
-        this.personalInfoForm.reset({ investigationExperience: false, presentStatus: PresentStatusType.OnDuty });
+        this.personalInfoForm.reset({
+            investigationExperience: false,
+            presentStatus: PresentStatusType.OnDuty,
+            tribal: 0,
+            freedomFighter: 0,
+            professionalQualification: [],
+            personalQualification: [],
+            gallantryAward: []
+        });
+        this.applyPersonalDefaults();
         this.showInvestigationExperience = false;
+    }
+
+    private resetPostingSection(): void {
+        const now = new Date();
+        this.postingForm.reset({
+            employeeID: 0,
+            status: true,
+            specialQualifications: [],
+            postingStatus: PostingStatus.Servings,
+            createdBy: 'system',
+            createdDate: now,
+            lastUpdatedBy: 'system',
+            lastupdate: now,
+            statusDate: now,
+            isRFTSComplted: true
+        });
+        this.applyDefaultGender();
+        this.imagePreview = null;
+        this.selectedFile = null;
+        this.selectedFileName = '';
+        if (this.fileUpload) this.fileUpload.clear();
     }
 
     capitalizeWords(fieldName: string): void {
