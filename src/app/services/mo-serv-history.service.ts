@@ -12,8 +12,12 @@ export interface MOServHistoryByEmployeeView {
     organizationName: string | null;
     organizationNameBN?: string | null;
     orgUnitId?: number | null;
+    orgUnitName?: string | null;
+    orgUnitNameBN?: string | null;
+    /** District name (from CommonCode 'District'); falls back to the legacy free-text location. */
     locationName: string | null;
     locationNameBN?: string | null;
+    districtId?: number | null;
     serviceFrom: string | null;
     serviceTo: string | null;
     serviceFromPrecision?: 'D' | 'M' | 'Y' | null;

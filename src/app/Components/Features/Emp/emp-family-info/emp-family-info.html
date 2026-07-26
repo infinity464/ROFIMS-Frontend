@@ -73,7 +73,7 @@
                                             </div>
                                             <div class="col-span-1">
                                                 <label class="font-semibold block mb-2 text-700">Name (English) <span class="text-red-500">*</span></label>
-                                                <input pInputText formControlName="nameEN" class="w-full" placeholder="Enter name in English" />
+                                                <input pInputText formControlName="nameEN" class="w-full" placeholder="Enter name in English" (blur)="capitalizeWords('nameEN')" />
                                                 @if (familyForm.get('nameEN')?.invalid && familyForm.get('nameEN')?.touched) {
                                                     <small class="text-red-500">Name is required</small>
                                                 }

@@ -244,7 +244,7 @@ export class ServingMemberProfile implements OnInit, OnDestroy {
         // Service History MO
         const moRows = this.moServHistoryList.map((row, i) => [
             this.rowNum(i) + '.',
-            this.val(row.organizationName),
+            this.val(row.orgUnitName || row.organizationName),
             this.val(row.locationName),
             formatPartialDate(row.serviceFrom, (row as any).serviceFromPrecision),
             formatPartialDate(row.serviceTo, (row as any).serviceToPrecision),
@@ -253,7 +253,7 @@ export class ServingMemberProfile implements OnInit, OnDestroy {
             this.val(row.remarks),
         ]);
         if (moRows.length === 0) moRows.push([L['empty.noServiceHistoryRecords']]);
-        addSection(L['section.serviceHistoryMo'], [L['table.ser'], L['table.organization'], L['table.location'], L['table.serviceFrom'], L['table.serviceTo'], L['table.appointment'], L['table.auth'], L['table.remarks']], moRows);
+        addSection(L['section.serviceHistoryMo'], [L['table.ser'], L['table.orgUnit'], L['table.location'], L['table.serviceFrom'], L['table.serviceTo'], L['table.appointment'], L['table.auth'], L['table.remarks']], moRows);
 
         // Promotion
         const promRows = this.promotionList.map((row, i) => [
@@ -273,17 +273,17 @@ export class ServingMemberProfile implements OnInit, OnDestroy {
         // Education
         const eduRows = this.educationList.map((row, i) => [
             this.rowNum(i) + '.',
-            this.formatDateOnly(row.durationFrom),
-            this.formatDateOnly(row.durationTo),
-            this.codeValue(row.schoolCollegeUniversity, row.schoolCollegeUniversityBN),
             this.codeValue(row.nameOfExamDegree, row.nameOfExamDegreeBN),
             this.codeValue(row.subjectsDepartments, row.subjectsDepartmentsBN),
+            this.codeValue(row.schoolCollegeUniversity, row.schoolCollegeUniversityBN),
+            this.formatDateOnly(row.durationFrom),
+            this.formatDateOnly(row.durationTo),
             this.codeValue(row.result, row.resultBN),
             this.valDisplay(row.gradePoint),
             this.valDisplay(row.passingYear),
         ]);
         if (eduRows.length === 0) eduRows.push([L['empty.noEducationRecords']]);
-        addSection(L['section.education'], [L['table.ser'], L['table.durationFrom'], L['table.durationTo'], L['table.schoolCollegeUniversity'], L['table.examDegree'], L['table.subjectDepartment'], L['table.result'], L['table.gradePoint'], L['table.passingYear']], eduRows);
+        addSection(L['section.education'], [L['table.ser'], L['table.examDegree'], L['table.subjectDepartment'], L['table.schoolCollegeUniversity'], L['table.durationFrom'], L['table.durationTo'], L['table.result'], L['table.gradePoint'], L['table.passingYear']], eduRows);
 
         // Course
         const courseRows = this.courseList.map((row, i) => [

@@ -199,6 +199,24 @@ export class EmpFamilyInfo implements OnInit {
         });
     }
 
+    /**
+     * Capitalize the first letter of each word in the given text field (fixes
+     * casing mistakes like "john doe" → "John Doe"). Runs on blur.
+     */
+    capitalizeWords(fieldName: string): void {
+        const field = this.familyForm.get(fieldName);
+        const value = field?.value;
+        if (typeof value !== 'string' || !value.trim()) return;
+        const formatted = value
+            .replace(/\s+/g, ' ')
+            .trim()
+            .toLowerCase()
+            .replace(/\b\p{L}/gu, (ch) => ch.toUpperCase());
+        if (formatted !== value) {
+            field!.setValue(formatted);
+        }
+    }
+
     loadDropdowns(): void {
         // Load Relation dropdown
         this.commonCodeService.getAllActiveCommonCodesType('Relationship').subscribe({

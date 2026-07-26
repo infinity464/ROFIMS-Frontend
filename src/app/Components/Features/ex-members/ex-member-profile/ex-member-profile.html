@@ -69,8 +69,7 @@
                         @if (postingProcessingStatus!.newPostingForceOrderApproved) {
                         <span class="sp-chip-sep"></span>
                         <span class="sp-chip-val">{{ postingProcessingStatus!.newPostingOrderReceived ? L['posting.postingReceived'] : L['posting.postingNotReceived'] }}</span>
-                        }
-                        }
+                        } }
                     </span>
                 </div>
                 }
@@ -87,8 +86,7 @@
                         @if (postingProcessingStatus!.interPostingForceOrderApproved) {
                         <span class="sp-chip-sep"></span>
                         <span class="sp-chip-val">{{ postingProcessingStatus!.interPostingOrderReceived ? L['posting.postingReceived'] : L['posting.postingNotReceived'] }}</span>
-                        }
-                        }
+                        } }
                     </span>
                 </div>
                 }
@@ -117,25 +115,22 @@
                      Note-sheet no is shown only on hover (tooltip). -->
                 @if (clearanceStatus?.hasPostedOut) {
                 <div class="sp-chip-row">
-                    <span class="sp-chip sp-chip--clearance"
-                          [class.sp-chip--clearance-done]="clearanceStatus!.clearanceApproved"
-                          [class.sp-chip--clearance-cancelled]="clearanceStatus!.clearanceCancelled"
-                          [title]="clearanceStatus!.clearanceNoteSheetNo || L['clearance.label']">
-                        <i class="pi"
-                           [class.pi-check-circle]="clearanceStatus!.clearanceApproved"
-                           [class.pi-times-circle]="clearanceStatus!.clearanceCancelled"
-                           [class.pi-clock]="!clearanceStatus!.clearanceApproved && !clearanceStatus!.clearanceCancelled"></i>
+                    <span
+                        class="sp-chip sp-chip--clearance"
+                        [class.sp-chip--clearance-done]="clearanceStatus!.clearanceApproved"
+                        [class.sp-chip--clearance-cancelled]="clearanceStatus!.clearanceCancelled"
+                        [title]="clearanceStatus!.clearanceNoteSheetNo || L['clearance.label']"
+                    >
+                        <i
+                            class="pi"
+                            [class.pi-check-circle]="clearanceStatus!.clearanceApproved"
+                            [class.pi-times-circle]="clearanceStatus!.clearanceCancelled"
+                            [class.pi-clock]="!clearanceStatus!.clearanceApproved && !clearanceStatus!.clearanceCancelled"
+                        ></i>
                         <span class="sp-chip-key">{{ L['clearance.label'] }}</span>
                         <span class="sp-chip-val">
-                            @if (clearanceStatus!.clearanceCancelled) {
-                                {{ L['clearance.cancelled'] }}
-                            } @else if (clearanceStatus!.clearanceApproved) {
-                                {{ L['clearance.generated'] }}
-                            } @else if (clearanceStatus!.hasClearanceNoteSheet) {
-                                {{ L['clearance.noteSheet'] }}
-                            } @else {
-                                {{ L['clearance.postedOut'] }}
-                            }
+                            @if (clearanceStatus!.clearanceCancelled) { {{ L['clearance.cancelled'] }} } @else if (clearanceStatus!.clearanceApproved) { {{ L['clearance.generated'] }} } @else if (clearanceStatus!.hasClearanceNoteSheet) { {{
+                            L['clearance.noteSheet'] }} } @else { {{ L['clearance.postedOut'] }} }
                         </span>
                     </span>
                 </div>
@@ -628,7 +623,7 @@
                 <ng-template pTemplate="header">
                     <tr>
                         <th style="width: 4rem">{{ L['table.ser'] }}</th>
-                        <th>{{ L['table.organization'] }}</th>
+                        <th>{{ L['table.orgUnit'] }}</th>
                         <th>{{ L['table.location'] }}</th>
                         <th>{{ L['table.serviceFrom'] }}</th>
                         <th>{{ L['table.serviceTo'] }}</th>
@@ -640,7 +635,7 @@
                 <ng-template pTemplate="body" let-row let-rowIndex="rowIndex">
                     <tr>
                         <td>{{ rowNum(rowIndex) }}.</td>
-                        <td>{{ codeValue(row.organizationName, row.organizationNameBN) }}</td>
+                        <td>{{ codeValue(row.orgUnitName || row.organizationName, row.orgUnitNameBN || row.organizationNameBN) }}</td>
                         <td>{{ codeValue(row.locationName, row.locationNameBN) }}</td>
                         <td>{{ row.serviceFrom | partialDate: row.serviceFromPrecision : (isBn ? 'bn' : 'en') }}</td>
                         <td>{{ row.serviceTo | partialDate: row.serviceToPrecision : (isBn ? 'bn' : 'en') }}</td>
@@ -728,11 +723,11 @@
                 <ng-template pTemplate="header">
                     <tr>
                         <th style="width: 4rem">{{ L['table.ser'] }}</th>
-                        <th>{{ L['table.durationFrom'] }}</th>
-                        <th>{{ L['table.durationTo'] }}</th>
-                        <th>{{ L['table.schoolCollegeUniversity'] }}</th>
                         <th>{{ L['table.examDegree'] }}</th>
                         <th>{{ L['table.subjectDepartment'] }}</th>
+                        <th>{{ L['table.schoolCollegeUniversity'] }}</th>
+                        <th>{{ L['table.durationFrom'] }}</th>
+                        <th>{{ L['table.durationTo'] }}</th>
                         <th>{{ L['table.result'] }}</th>
                         <th>{{ L['table.gradePoint'] }}</th>
                         <th>{{ L['table.passingYear'] }}</th>
@@ -743,11 +738,11 @@
                 <ng-template pTemplate="body" let-row let-rowIndex="rowIndex">
                     <tr>
                         <td>{{ rowNum(rowIndex) }}.</td>
-                        <td>{{ formatDateOnly(row.durationFrom) }}</td>
-                        <td>{{ formatDateOnly(row.durationTo) }}</td>
-                        <td>{{ codeValue(row.schoolCollegeUniversity, row.schoolCollegeUniversityBN) }}</td>
                         <td>{{ codeValue(row.nameOfExamDegree, row.nameOfExamDegreeBN) }}</td>
                         <td>{{ codeValue(row.subjectsDepartments, row.subjectsDepartmentsBN) }}</td>
+                        <td>{{ codeValue(row.schoolCollegeUniversity, row.schoolCollegeUniversityBN) }}</td>
+                        <td>{{ formatDateOnly(row.durationFrom) }}</td>
+                        <td>{{ formatDateOnly(row.durationTo) }}</td>
                         <td>{{ codeValue(row.result, row.resultBN) }}</td>
                         <td>{{ valDisplay(row.gradePoint) }}</td>
                         <td>{{ valDisplay(row.passingYear) }}</td>
