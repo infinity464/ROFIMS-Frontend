@@ -10,6 +10,7 @@
             <!-- Org filter multiselect -->
             <div class="org-filter-wrap">
                 <p-multiselect
+                    #orgSelect
                     [(ngModel)]="selectedOrgIds"
                     [options]="orgOptions"
                     optionLabel="label"

@@ -1,9 +1,9 @@
-import { Component, HostListener, OnInit, inject } from '@angular/core';
+import { Component, HostListener, OnDestroy, OnInit, QueryList, ViewChildren, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Router } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { MultiSelectModule } from 'primeng/multiselect';
+import { MultiSelect, MultiSelectModule } from 'primeng/multiselect';
 import { forkJoin, of, firstValueFrom } from 'rxjs';
 import { catchError } from 'rxjs/operators';
 import { Packer } from 'docx';
@@ -27,7 +27,7 @@ type TradeOrgBlock = TradeWiseManpowerResponse;
     templateUrl: './trade-wise-manpower.html',
     styleUrl: './trade-wise-manpower.scss'
 })
-export class TradeWiseManpowerComponent implements OnInit {
+export class TradeWiseManpowerComponent implements OnInit, OnDestroy {
     canInsert = true;
     canUpdate = true;
     canDelete = true;
@@ -170,13 +170,41 @@ export class TradeWiseManpowerComponent implements OnInit {
         this.exportDropdownOpen = false;
     }
 
+    /** Org / Trade / Rank multiselects — all three close on an outside click. */
+    @ViewChildren(MultiSelect) private multiSelects?: QueryList<MultiSelect>;
+
+    /**
+     * PrimeNG closes a multiselect panel from a bubble-phase listener on `document`, so any
+     * ancestor calling stopPropagation() (the org-tree filter does) leaves the panel stuck open.
+     * Listening in the capture phase closes it on a click anywhere on the page.
+     */
+    private readonly closeMultiSelectsOnOutsideClick = (event: Event): void => {
+        const target = event.target as Node | null;
+        if (!target) return;
+
+        this.multiSelects?.forEach(ms => {
+            if (!ms.overlayVisible) return;
+            if (ms.el.nativeElement.contains(target)) return;
+            // appendTo="body" moves the panel out of the host, so match the real overlay element.
+            const panel = ms.overlayViewChild?.overlayEl as HTMLElement | undefined;
+            if (panel?.contains(target)) return;
+            ms.hide();
+        });
+    };
+
     ngOnInit(): void {
         const _perms = this._userMenuService.getPermissionsByRoute(this._router.url);
         this.canInsert = _perms.canInsert;
         this.canUpdate = _perms.canUpdate;
         this.canDelete = _perms.canDelete;
 
+        document.addEventListener('click', this.closeMultiSelectsOnOutsideClick, true);
+
         this.loadOrgOptions();
+    }
+
+    ngOnDestroy(): void {
+        document.removeEventListener('click', this.closeMultiSelectsOnOutsideClick, true);
     }
 
     /** Loads the dropdown options only — data is fetched on-demand when the user selects orgs. */
