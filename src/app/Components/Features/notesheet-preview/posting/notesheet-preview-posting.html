@@ -443,19 +443,19 @@
         <colgroup *ngIf="!isInterPosting()">
             <col style="width: 38px" />
             <!-- ক্রমিক (একটু বড়) -->
-            <col style="width: 86px" />
-            <!-- ব্যক্তিগত নম্বর -->
-            <col style="width: 90px" />
+            <col style="width: 94px" />
+            <!-- ব্যক্তিগত নম্বর (মূল ৮৬px থেকে +১%) -->
+            <col style="width: 80px" />
             <!-- পদবি (fixed so it stays constant whether ট্রেড is shown or hidden) -->
-            <col *ngIf="showTradeColumn" style="width: 58px" />
+            <col *ngIf="showTradeColumn" style="width: 56px" />
             <!-- ট্রেড (ছোট করা) -->
             <col />
-            <!-- নাম (auto — sole absorber; widens when ট্রেড is hidden) -->
-            <col style="width: 58px" />
-            <!-- নিজ জেলা (একটু বড়) -->
-            <col style="width: 56px" />
-            <!-- স্পাউস জেলা -->
-            <col style="width: 85px" />
+            <!-- নাম (auto — sole absorber; ব্যক্তিগত নম্বরের বাড়তি অংশ এখান থেকেই যায়) -->
+            <col style="width: 64px" />
+            <!-- নিজ জেলা (পদবি থেকে অর্ধেক পেয়েছে) -->
+            <col style="width: 64px" />
+            <!-- স্পাউস জেলা (পূর্ববতী কর্মস্থল থেকে ২px পেয়েছে) -->
+            <col style="width: 83px" />
             <!-- পূর্ববতী কর্মস্থল (ছোট করা) -->
             <col style="width: 88px" />
             <!-- বদলি ইউনিট (একটু ছোট) -->

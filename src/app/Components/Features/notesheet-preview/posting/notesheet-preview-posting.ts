@@ -1570,13 +1570,15 @@ export class NotesheetPreviewPostingComponent extends NotesheetPreviewBase imple
         const fontCss = await this.embedBanglaFontCss();
         const body = this.contentMeasure.nativeElement.innerHTML;
         const isLegal = this.selectedPageSize === 'Legal';
-        // Match the on-screen .a4-paper exactly: Legal is 215.9mm × 355.6mm
-        // with 10mm side / 14mm top / 20mm bottom insets → 195.9mm text column.
+        // Page margins are HALF the on-screen .a4-paper insets (5mm side / 7mm top /
+        // 10mm bottom instead of 10 / 14 / 20) so the printed sheet uses more of the
+        // page. The text column widens to match: Legal 215.9 - 2*5 = 205.9mm.
         const pageWidth = isLegal ? '215.9mm' : '210mm';
         const pageHeight = isLegal ? '355.6mm' : '297mm';
-        const padX = isLegal ? 10 : 10; // mm — .a4-paper horizontal padding
-        const padTop = 14;              // mm — .a4-paper top padding
-        const padBottom = 20;           // mm — .a4-paper bottom padding
+        const padX = 5;                 // mm — horizontal page margin
+        const padTop = 7;               // mm — top page margin
+        const padBottom = 10;           // mm — bottom page margin
+        const contentWidth = `${(isLegal ? 215.9 : 210) - 2 * padX}mm`;
 
         const html = `<!DOCTYPE html>
 <html>
@@ -1591,10 +1593,10 @@ ${styles}
    server — the embedded copy below is what Chromium actually loads. */
 ${fontCss}
 
-/* @page insets mirror .a4-paper's padding so the text column width matches the
-   web view exactly (215.9 - 2*10 = 195.9mm). The top margin (uniform across all
-   pages) gives the gap above the content — incl. the repeated table header on
-   continuation pages. */
+/* @page insets are half the .a4-paper padding; .pdf-flow's width is derived from
+   the same padX so the text column always equals page width - 2*padX. The top
+   margin (uniform across all pages) gives the gap above the content — incl. the
+   repeated table header on continuation pages. */
 @page { size: ${pageWidth} ${pageHeight}; margin: ${padTop}mm ${padX}mm ${padBottom}mm ${padX}mm; }
 
 /* No body background — it would cover the position:fixed frame. */
@@ -1622,7 +1624,7 @@ html, body { margin: 0; padding: 0; background: transparent; }
     margin: 0;
     padding: 0;
     box-sizing: border-box;
-    width: ${pageWidth === '215.9mm' ? '195.9mm' : '190mm'};
+    width: ${contentWidth};
     font-family: 'Times New Roman', 'SolaimanLipi', Times, serif;
     font-size: 10pt;
     line-height: 1.7;
