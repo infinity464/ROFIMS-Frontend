@@ -9,7 +9,6 @@ import { MessageModule } from 'primeng/message';
 import { MasterBasicSetupService } from '../shared/services/MasterBasicSetupService';
 import { CommonCode } from '../shared/models/common-code';
 import { RABUnitAORModel } from '../shared/models/rab-unit-aor';
-import { DUPLICATE_UPAZILA_NAMES } from './upazila-duplicate-names';
 
 type LngLat = [number, number];
 type Ring = LngLat[];
@@ -242,12 +241,16 @@ export class RabUnitAorMap implements OnInit {
             .sort((a, b) => a.sortOrder - b.sortOrder || a.name.localeCompare(b.name));
     }
 
-  private resolveUpazilaId(upazilaKey: string, districtEN: string): number | undefined {
-        if (DUPLICATE_UPAZILA_NAMES.has(upazilaKey)) {
-            const districtKey = this.normalizeName(districtEN);
-            if (!districtKey) return undefined;
-            return this._districtUpazilaToId.get(`${districtKey}|${upazilaKey}`);
-        }
+  /**
+     * A `d` (district) property is present on exactly the GeoJSON features whose upazila name is
+     * shared with another upazila, so its presence — not a hardcoded name list — decides the
+     * lookup: tagged features MUST match on district + name, untagged ones match on name alone.
+     * Never fall back to name-only for a tagged feature, or e.g. Mirpur (Dhaka) would inherit the
+     * AOR of Mirpur (Kushtia), the only Mirpur the backend seeds.
+     */
+    private resolveUpazilaId(upazilaKey: string, districtEN: string): number | undefined {
+        const districtKey = this.normalizeName(districtEN);
+        if (districtKey) return this._districtUpazilaToId.get(`${districtKey}|${upazilaKey}`);
         return this._upazilaNameToId.get(upazilaKey);
     }
 
@@ -320,9 +323,18 @@ export class RabUnitAorMap implements OnInit {
     /**
      * Collapse a name to a compact, lowercase, non-alphanumeric-stripped key so spacing variants
      * like "Alikadam" vs "Ali Kadam" or "Cox's Bazar Sadar" vs "Coxs-Bazar Sadar" all match.
+     *
+     * The GeoJSON and the CommonCode seed romanize the same Bengali name inconsistently, so the
+     * key also folds the two vowel choices that differ between them — "Pirgonj" (CommonCode,
+     * Rangpur) vs "Pirganj" (GeoJSON), "Doulatpur" (CommonCode, Manikganj) vs "Daulatpur". Both
+     * sides go through this method, so folding stays symmetric.
      */
     private normalizeName(s: string): string {
-        return (s || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+        return (s || '')
+            .toLowerCase()
+            .replace(/[^a-z0-9]/g, '')
+            .replace(/gonj/g, 'ganj')
+            .replace(/ou/g, 'au');
     }
 
     private fallbackColor(seed: number): string {
