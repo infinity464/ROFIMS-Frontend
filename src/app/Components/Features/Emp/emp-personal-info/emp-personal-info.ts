@@ -598,6 +598,17 @@ export class EmpPersonalInfo implements OnInit {
         doSave(filesReferencesJson);
     }
 
+    /**
+     * Formats a picked date as YYYY-MM-DD using local Y/M/D.
+     * toISOString() would convert to UTC first and shift the date back a day in UTC+ zones.
+     */
+    private toLocalDateOnly(date: Date | string | null | undefined): string | null {
+        if (!date) return null;
+        const d = date instanceof Date ? date : new Date(date);
+        if (isNaN(d.getTime())) return null;
+        return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    }
+
     buildPersonalInfoPayload(filesReferencesJson?: string | null): any {
         const formValue = this.personalInfoForm.getRawValue();
 
@@ -617,14 +628,14 @@ export class EmpPersonalInfo implements OnInit {
             BloodGroup: formValue.bloodGroup, // varchar(5) - value from CommonCode (e.g., "A+", "B+")
             MobileNo: formValue.mobileNo,
             MobileNoOfficial: formValue.mobileNoOfficial,
-            DOB: formValue.dateOfBirth ? new Date(formValue.dateOfBirth).toISOString().split('T')[0] : null,
+            DOB: this.toLocalDateOnly(formValue.dateOfBirth),
             Religion: formValue.religion ? formValue.religion.toString() : null,
             PassportNo: formValue.passportNo,
             IdentificationMark: formValue.identificationMark,
             MaritalStatus: formValue.maritalStatus ? formValue.maritalStatus.toString() : null,
             EmergencyContact: formValue.emergencyContactNo,
-            JoiningDate: formValue.dateOfJoining ? new Date(formValue.dateOfJoining).toISOString().split('T')[0] : null,
-            CommissionDate: formValue.dateOfCommission ? new Date(formValue.dateOfCommission).toISOString().split('T')[0] : null,
+            JoiningDate: this.toLocalDateOnly(formValue.dateOfJoining),
+            CommissionDate: this.toLocalDateOnly(formValue.dateOfCommission),
             Batch: formValue.batch ? formValue.batch.toString() : null,
             HasInvestigationExp: formValue.investigationExperience,
             InvestigationExpDetails: formValue.investigationExperienceDetails,

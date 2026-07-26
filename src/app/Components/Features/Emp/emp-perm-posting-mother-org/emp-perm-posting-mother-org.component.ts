@@ -409,7 +409,9 @@ export class EmpPermPostingMotherOrg implements OnInit, OnDestroy {
                 const toDateStr = (d: Date | null): string | null => {
                     if (!d) return null;
                     const x = new Date(d);
-                    return isNaN(x.getTime()) ? null : x.toISOString().split('T')[0];
+                    if (isNaN(x.getTime())) return null;
+                    // Local Y/M/D — toISOString() converts to UTC and shifts the date back a day in UTC+ zones.
+                    return `${x.getFullYear()}-${String(x.getMonth() + 1).padStart(2, '0')}-${String(x.getDate()).padStart(2, '0')}`;
                 };
 
                 const payload: Partial<PermPostingMotherOrgModel> = {

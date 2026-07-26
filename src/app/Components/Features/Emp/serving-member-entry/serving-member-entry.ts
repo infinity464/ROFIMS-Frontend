@@ -925,7 +925,8 @@ export class ServingMemberEntry implements OnInit {
     /** Save personal information for the just-saved member (Supporting Documents excluded → FilesReferences null). */
     private savePersonalInfo(employeeId: number): void {
         const formValue = this.personalInfoForm.getRawValue();
-        const toIso = (d: any) => (d ? new Date(d).toISOString().split('T')[0] : null);
+        // Use local Y/M/D — toISOString() would shift the picked date back a day in UTC+ zones.
+        const toIso = (d: any) => this.formatDate(d);
 
         const feet = Number(formValue.heightFeet) || 0;
         const inch = Number(formValue.heightInch) || 0;

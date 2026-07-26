@@ -543,7 +543,9 @@ export class EmpFamilyInfo implements OnInit {
     formatDate(date: Date): string {
         if (!date) return '';
         const d = new Date(date);
-        return d.toISOString().split('T')[0];
+        if (isNaN(d.getTime())) return '';
+        // Local Y/M/D — toISOString() converts to UTC and shifts the date back a day in UTC+ zones.
+        return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
     }
 
     enableEditMode(): void {
