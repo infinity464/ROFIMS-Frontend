@@ -856,10 +856,25 @@ export class EmpBasicInfo implements OnInit {
             error: (err) => {
                 this.isSaving = false;
                 console.error('Error saving/updating employee', err);
+
+                // 409 = server-side duplicate guard (RAB ID / Mother Org + Prefix + Service ID).
+                // Another operator can claim the same ids between our on-type check and this save.
+                if (err?.status === 409) {
+                    this.checkDuplicateRabId();
+                    this.checkDuplicateCombo();
+                    this.messageService.add({
+                        severity: 'warn',
+                        summary: 'Duplicate Entry',
+                        detail: err?.error?.description || 'This member was just entered by someone else. Please re-check the RAB ID and Service ID.',
+                        life: 10000
+                    });
+                    return;
+                }
+
                 this.messageService.add({
                     severity: 'error',
                     summary: 'Error',
-                    detail: this.isEditMode ? 'Failed to update employee' : 'Failed to save employee'
+                    detail: err?.error?.description || (this.isEditMode ? 'Failed to update employee' : 'Failed to save employee')
                 });
             }
         });

@@ -251,7 +251,7 @@
                     <div class="form-field">
                         <label class="form-label">Service ID <span class="form-label-required">*</span></label>
                         <div class="p-inputgroup">
-                            <input pInputText class="w-full" placeholder="Only Number" formControlName="serviceId" />
+                            <input pInputText class="w-full" placeholder="Only Number" formControlName="serviceId" inputmode="numeric" (input)="onDigitsOnlyInput($event, 'serviceId')" />
                             @if (isCheckingCombo) {
                             <span class="p-inputgroup-addon"><i class="pi pi-spin pi-spinner"></i></span>
                             }
@@ -267,7 +267,7 @@
                     <div class="form-field">
                         <label class="form-label">RAB ID <span class="form-label-required">*</span></label>
                         <div class="p-inputgroup">
-                            <input pInputText class="w-full" placeholder="Enter existing RAB ID" formControlName="rabid" />
+                            <input pInputText class="w-full" placeholder="Only Number" formControlName="rabid" inputmode="numeric" (input)="onDigitsOnlyInput($event, 'rabid')" />
                             @if (isCheckingRabId) {
                             <span class="p-inputgroup-addon"><i class="pi pi-spin pi-spinner"></i></span>
                             }

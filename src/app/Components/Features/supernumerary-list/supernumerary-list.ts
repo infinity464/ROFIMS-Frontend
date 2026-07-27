@@ -629,6 +629,20 @@ export class SupernumeraryList implements OnInit {
         this.loadData();
     }
 
+    /**
+     * Generation was rejected — most often no Movement number is configured for the
+     * members' RAB unit. Shown on this page's toast (the modal's own toast renders
+     * inside the dialog) and the dialog stays open so the selection isn't lost.
+     */
+    onArticle47Failed(detail: string): void {
+        this.messageService.add({
+            severity: 'error',
+            summary: 'Article 47 (Takeover) not generated',
+            detail: detail || 'Failed to generate Article 47 (Takeover).',
+            life: 10000
+        });
+    }
+
     /** Bulk send: fire SetIsSendingNotesheetStatus=Draft for every selected ID in parallel. */
     sendSelectedToPosting(): void {
         if (!this.canUpdate) {

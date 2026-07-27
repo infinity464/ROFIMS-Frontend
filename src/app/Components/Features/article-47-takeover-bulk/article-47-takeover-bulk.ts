@@ -48,6 +48,9 @@ interface TakeoverEmployeeRow {
     motherUnitDisplay?: string | null;
     /** Current Mother Unit id (lastMotherUnitId) — hydrated on init. */
     unit?: number | null;
+    /** CommonCode 'AppointmentCategory' label, Bangla preferred. Often null —
+     *  EmployeeInfo.Appointment is optional. Hydrated on init. */
+    appointmentBn?: string | null;
 }
 
 @Component({
@@ -102,6 +105,12 @@ export class Article47TakeoverBulkComponent implements OnInit {
     @Output() closed = new EventEmitter<void>();
     /** Emitted after a successful (or partially successful) generation. */
     @Output() saved = new EventEmitter<void>();
+    /**
+     * Emitted with the rejection reason when generation fails outright. As a modal
+     * this component's own <p-toast> renders inside the host's dialog, where the
+     * message is easy to miss — the host relays it to its own toast instead.
+     */
+    @Output() failed = new EventEmitter<string>();
 
     form!: FormGroup;
     employees: TakeoverEmployeeRow[] = [];
@@ -152,11 +161,13 @@ export class Article47TakeoverBulkComponent implements OnInit {
 
         this.initForm();
 
-        // In modal mode the Effective dates and Destination sections are hidden:
-        // takeover date defaults to today (release/reduce stay null) and the
-        // destination is forced to RAB Unit (first option, set once loaded).
+        // In modal mode the Effective dates and Destination sections are hidden.
+        // Generated date and Takeover date are surfaced on their own instead:
+        // Generated date defaults to now, Takeover date is left blank for the user
+        // to fill in. Release/reduce stay null and the destination is forced to RAB
+        // Unit (first option, set once loaded).
         if (this.asModal) {
-            this.form.patchValue({ takeoverDate: new Date(), destinedUnitTarget: 'rab' });
+            this.form.patchValue({ takeoverDate: null, destinedUnitTarget: 'rab' });
         }
 
         this.loadDropdowns();
@@ -186,7 +197,11 @@ export class Article47TakeoverBulkComponent implements OnInit {
             detailsInformation: [null],
             remarks: [null],
             finalApproverIds: [[] as number[]],
-            letterDate: [new Date()]
+            letterDate: [new Date()],
+            // Generated date = the record's Created date, carried on the existing
+            // MovementInfo.CreatedDate column (no new backend field). Date + time,
+            // defaulted to now.
+            generatedDate: [new Date()]
         });
 
         this.form.get('destinedUnitTarget')!.valueChanges.subscribe((v) => this.onDestinedUnitTargetChange(v));
@@ -280,6 +295,8 @@ export class Article47TakeoverBulkComponent implements OnInit {
                 next: (info: any) => {
                     if (!info) return;
                     emp.unit = info.lastMotherUnitId ?? info.LastMotherUnitId ?? null;
+                    emp.appointmentBn = (info.appointmentBN ?? info.AppointmentBN
+                        ?? info.appointment ?? info.Appointment ?? null) as string | null;
                 }
             });
         }
@@ -400,8 +417,8 @@ export class Article47TakeoverBulkComponent implements OnInit {
         const letterRecipients = this.serialiseLetterRecipients();
 
         // In modal mode the Remarks field is hidden; persist the standard Bengali
-        // Article 47 takeover declaration (with today's date and AM/PM) behind the scenes.
-        const remarks = this.asModal && !v.remarks ? this.buildDefaultRemark() : (v.remarks ?? null);
+        // Article 47 takeover declaration behind the scenes. It names the member's own
+        // appointment, so it is built per employee inside the map below.
 
         // Build one payload per employee, sharing the common given input.
         const payloads: MovementInfoModel[] = this.employees.map((emp) => ({
@@ -423,7 +440,10 @@ export class Article47TakeoverBulkComponent implements OnInit {
             takeoverDate: this.toIsoDate(v.takeoverDate),
             handoverDate: null,
             takeoverPersonEmpId: null,
-            releaseTime: null,
+            // Release time is editable for Article 47 (Takeover) on the movement form,
+            // so store the Generated date's clock time — otherwise the field would be
+            // blank when one of these records is opened for edit.
+            releaseTime: this.toTimeString(v.generatedDate),
             vehicle: null,
             isJoiningLeave: !!v.isJoiningLeave,
             joiningLeaveFrom: this.toIsoDate(v.joiningLeaveFrom),
@@ -433,11 +453,15 @@ export class Article47TakeoverBulkComponent implements OnInit {
             railwayWarrant: null,
             auth: v.auth ?? null,
             detailsInformation: v.detailsInformation ?? null,
-            remarks,
+            remarks: this.asModal && !v.remarks
+                ? this.buildDefaultRemark(v.generatedDate, emp.appointmentBn)
+                : (v.remarks ?? null),
             filesReferences: null,
             status: true,
             createdBy: currentUser,
-            createdDate: now,
+            // Generated date drives CreatedDate — that is what "generated" means here,
+            // so no extra column is needed. Falls back to now if the field was cleared.
+            createdDate: this.toIsoDateTime(v.generatedDate) ?? now,
             lastUpdatedBy: currentUser,
             lastupdate: now
         }));
@@ -453,9 +477,15 @@ export class Article47TakeoverBulkComponent implements OnInit {
                         const code = res?.statusCode ?? 200;
                         const ok = code >= 200 && code < 300;
                         const id = res?.data?.movementId ?? res?.Data?.MovementId ?? null;
-                        return { ok, id: ok ? id : null };
+                        // Keep the rejection reason (no number configured for the unit,
+                        // members spanning two units) — a bare "failed" isn't actionable.
+                        return { ok, id: ok ? id : null, reason: ok ? null : (res?.description ?? null) };
                     }),
-                    catchError(() => of({ ok: false, id: null as number | null }))
+                    catchError((err: any) => of({
+                        ok: false,
+                        id: null as number | null,
+                        reason: err?.error?.description || err?.error?.message || null
+                    }))
                 )
             ),
             toArray()
@@ -463,6 +493,10 @@ export class Article47TakeoverBulkComponent implements OnInit {
             const total = results.length;
             const okCount = results.filter((r) => r.ok).length;
             const failCount = total - okCount;
+            // Every failure in a batch normally shares one cause (the unit has no
+            // number configuration), so the first reason explains the rest.
+            const firstReason = results.find((r) => !r.ok && r.reason)?.reason ?? null;
+            const reasonSuffix = firstReason ? ` ${firstReason}` : '';
             this.saving = false;
 
             // Open each newly-created Article 47 (Takeover) preview in its own tab.
@@ -482,17 +516,25 @@ export class Article47TakeoverBulkComponent implements OnInit {
                 this.messageService.add({
                     severity: 'warn',
                     summary: 'Partially Generated',
-                    detail: `Article 47 (Takeover) generated for ${okCount} of ${total} member(s); ${failCount} failed.`,
-                    life: 7000
+                    detail: `Article 47 (Takeover) generated for ${okCount} of ${total} member(s); ${failCount} failed.${reasonSuffix}`,
+                    life: 9000
                 });
             } else {
-                // All failed.
-                this.messageService.add({
-                    severity: 'error',
-                    summary: 'Generation Failed',
-                    detail: `Failed to generate Article 47 (Takeover) for all ${failCount} member(s). Please try again.`,
-                    life: 7000
-                });
+                // All failed — typically one shared cause, e.g. no Movement number
+                // configured for the members' unit.
+                const detail = `Failed to generate Article 47 (Takeover) for all ${failCount} member(s).${reasonSuffix || ' Please try again.'}`;
+                if (this.asModal) {
+                    // Hand it to the host: this component's toast sits inside the
+                    // host's dialog, where an error is easily missed.
+                    this.failed.emit(detail);
+                } else {
+                    this.messageService.add({
+                        severity: 'error',
+                        summary: 'Generation Failed',
+                        detail,
+                        life: 9000
+                    });
+                }
                 return;
             }
             // On (at least partial) success: as a modal, notify the host so it can
@@ -526,14 +568,21 @@ export class Article47TakeoverBulkComponent implements OnInit {
 
     /**
      * Standard Bengali Article 47 (Takeover) declaration saved silently in modal
-     * mode. The date is today's date in Bengali; the time-of-day word is
-     * "পূর্বাহ্নে" before 12 PM and "অপরাহ্ণে" from 12 PM onwards.
+     * mode. Both the date and the time-of-day word come from the Generated date
+     * field, so the declaration always matches the timestamp on the record:
+     * "পূর্বাহ্নে" for an AM time, "অপরাহ্ণে" from 12 PM onwards.
+     * Falls back to now when the field was cleared. The role named is the member's
+     * own Appointment; EmployeeInfo.Appointment is optional, so when it is absent
+     * the phrase drops out entirely and the sentence still reads correctly.
      */
-    private buildDefaultRemark(): string {
-        const now = new Date();
+    private buildDefaultRemark(generatedDate: Date | string | null | undefined, appointment: string | null | undefined): string {
+        const parsed = generatedDate ? new Date(generatedDate) : null;
+        const now = parsed && !Number.isNaN(parsed.getTime()) ? parsed : new Date();
         const dateBn = this.toBengaliDate(now);
         const timeOfDay = now.getHours() < 12 ? 'পূর্বাহ্নে' : 'অপরাহ্ণে';
-        return `বেসামরিক হিসাব পদ্ধতির ৪৭ নং অনুচ্ছেদের বিধি অনুযায়ী আমি নিম্নস্বাক্ষরকারী এই মর্মে বিবরণ দিচ্ছি যে, অদ্য ${dateBn} তারিখ (${timeOfDay}) র‍্যাব ফোর্সেস সদর দপ্তর, কুর্মিটোলা, ঢাকায় উপপরিচালক হিসেবে কার্যভার গ্রহণ করিলাম।`;
+        const appt = (appointment ?? '').trim();
+        const role = appt ? `${appt} হিসেবে ` : '';
+        return `বেসামরিক হিসাব পদ্ধতির ৪৭ নং অনুচ্ছেদের বিধি অনুযায়ী আমি নিম্নস্বাক্ষরকারী এই মর্মে বিবরণ দিচ্ছি যে, অদ্য ${dateBn} তারিখ (${timeOfDay}) র‍্যাব ফোর্সেস সদর দপ্তর, কুর্মিটোলা, ঢাকায় ${role}কার্যভার গ্রহণ করিলাম।`;
     }
 
     /** Formats a date as Bengali "dd MonthName yyyy" with Bengali digits. */
@@ -557,5 +606,26 @@ export class Article47TakeoverBulkComponent implements OnInit {
         const mm = `${d.getMonth() + 1}`.padStart(2, '0');
         const dd = `${d.getDate()}`.padStart(2, '0');
         return `${yyyy}-${mm}-${dd}`;
+    }
+
+    /**
+     * Full ISO timestamp for fields that carry a time as well as a date (Generated
+     * date → CreatedDate). Unlike toIsoDate this keeps the clock component.
+     */
+    private toIsoDateTime(d: Date | string | null | undefined): string | null {
+        if (!d) return null;
+        if (typeof d === 'string') return d;
+        return d.toISOString();
+    }
+
+    /**
+     * "HH:mm" clock component of a date — the format MovementInfo.ReleaseTime is
+     * stored in and that `<input type="time">` on the movement form expects.
+     */
+    private toTimeString(d: Date | string | null | undefined): string | null {
+        if (!d) return null;
+        const date = typeof d === 'string' ? new Date(d) : d;
+        if (Number.isNaN(date.getTime())) return null;
+        return `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
     }
 }

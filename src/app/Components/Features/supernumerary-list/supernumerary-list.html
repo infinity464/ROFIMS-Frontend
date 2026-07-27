@@ -350,7 +350,8 @@
             [asModal]="true"
             [employeesInput]="article47Employees"
             (closed)="onArticle47Closed()"
-            (saved)="onArticle47Saved()">
+            (saved)="onArticle47Saved()"
+            (failed)="onArticle47Failed($event)">
         </app-article-47-takeover-bulk>
     }
 </p-dialog>

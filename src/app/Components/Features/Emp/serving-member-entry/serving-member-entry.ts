@@ -463,10 +463,27 @@ export class ServingMemberEntry implements OnInit {
             error: (err) => {
                 this.isSaving = false;
                 console.error('Error saving employee', err);
+
+                // 409 = the server rejected this member as a duplicate. That happens when another
+                // operator saved the same RAB ID / Service ID between our on-type duplicate check
+                // and this Save, so show the server's reason instead of a generic failure and
+                // re-run the checks so the form marks the offending fields.
+                if (err?.status === 409) {
+                    this.checkDuplicateRabId();
+                    this.checkDuplicateCombo();
+                    this.messageService.add({
+                        severity: 'warn',
+                        summary: 'Duplicate Entry',
+                        detail: err?.error?.description || 'This member was just entered by someone else. Please re-check the RAB ID and Service ID.',
+                        life: 10000
+                    });
+                    return;
+                }
+
                 this.messageService.add({
                     severity: 'error',
                     summary: 'Error',
-                    detail: 'Failed to save employee'
+                    detail: err?.error?.description || 'Failed to save employee'
                 });
             }
         });
@@ -1472,9 +1489,10 @@ export class ServingMemberEntry implements OnInit {
             relationship: [null],
             spouseName: [''],
             prefix: [null, Validators.required],
-            serviceId: ['', [Validators.required]],
+            // Digits only, kept as a string so leading zeros (e.g. "0012345") survive.
+            serviceId: ['', [Validators.required, Validators.pattern(/^\d+$/)]],
             // Serving Member form: RAB ID is editable AND required (real IDs already exist).
-            rabid: ['', [Validators.required]],
+            rabid: ['', [Validators.required, Validators.pattern(/^\d+$/)]],
             nid: [''],
             fullNameEN: ['', [Validators.required, Validators.minLength(2)]],
             fullNameBN: ['', [Validators.required, Validators.minLength(2)]],
@@ -1584,6 +1602,18 @@ export class ServingMemberEntry implements OnInit {
             .toLowerCase()
             .replace(/\b\p{L}/gu, (ch) => ch.toUpperCase());
         if (formatted !== value) field!.setValue(formatted);
+    }
+
+    /**
+     * Strip everything but digits as the user types. The control stays a string so
+     * leading zeros are preserved (a numeric input/parse would drop them).
+     */
+    onDigitsOnlyInput(event: Event, fieldName: string): void {
+        const input = event.target as HTMLInputElement;
+        const digitsOnly = (input.value ?? '').replace(/\D/g, '');
+        if (digitsOnly === input.value) return;
+        input.value = digitsOnly;
+        this.postingForm.get(fieldName)?.setValue(digitsOnly);
     }
 
     isFieldInvalid(fieldName: string): boolean {

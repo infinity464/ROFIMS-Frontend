@@ -86,8 +86,8 @@
                         [options]="movementTypeOptions"
                         optionLabel="label" optionValue="value"
                         placeholder="Select"
-                        [showClear]="!lockOrderFields && !lockMovementType" appendTo="body"
-                        [disabled]="lockOrderFields || lockMovementType"
+                        [showClear]="!lockOrderFields && !lockMovementType && !lockOnEdit" appendTo="body"
+                        [disabled]="lockOrderFields || lockMovementType || lockOnEdit"
                         styleClass="w-full"></p-select>
                 </div>
 
@@ -98,8 +98,8 @@
                         [options]="moveOrderTypeOptions"
                         optionLabel="label" optionValue="value"
                         placeholder="Select"
-                        [showClear]="!lockOrderFields" appendTo="body"
-                        [disabled]="lockOrderFields"
+                        [showClear]="!lockOrderFields && !lockOnEdit" appendTo="body"
+                        [disabled]="lockOrderFields || lockOnEdit"
                         styleClass="w-full"></p-select>
                 </div>
             </div>
@@ -141,6 +141,7 @@
                         [options]="destinedUnitOptions"
                         optionLabel="label" optionValue="value"
                         [allowEmpty]="false"
+                        [disabled]="lockOnEdit"
                         styleClass="mv-toggle"></p-selectbutton>
 
                     @if (form.get('destinedUnitTarget')?.value === 'mother') {
@@ -149,7 +150,8 @@
                             [options]="motherUnitOptions"
                             optionLabel="label" optionValue="value"
                             placeholder="Select mother unit..."
-                            [filter]="true" [showClear]="true" appendTo="body"
+                            [filter]="true" [showClear]="!lockOnEdit" appendTo="body"
+                            [disabled]="lockOnEdit"
                             [virtualScroll]="true" [virtualScrollItemSize]="38"
                             styleClass="w-full"></p-select>
                     } @else {
@@ -158,7 +160,8 @@
                             [options]="rabUnitOptions"
                             optionLabel="label" optionValue="value"
                             placeholder="Select RAB unit..."
-                            [filter]="true" [showClear]="true" appendTo="body"
+                            [filter]="true" [showClear]="!lockOnEdit" appendTo="body"
+                            [disabled]="lockOnEdit"
                             [virtualScroll]="true" [virtualScrollItemSize]="38"
                             styleClass="w-full"></p-select>
                     }
@@ -185,6 +188,20 @@
             <h3 class="mv-subsection-title">Effective dates</h3>
 
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <!-- Generated date = the record's Created date, on the existing
+                     MovementInfo.CreatedDate column. Date only here (the supernumerary
+                     list's Article 47 modal also captures a time). showOnFocus off so
+                     tabbing through the form doesn't pop the calendar open. -->
+                <div class="mv-field">
+                    <label>Generated date</label>
+                    <p-datepicker
+                        formControlName="generatedDate"
+                        appendTo="body" dateFormat="dd/mm/yy"
+                        [showOnFocus]="false"
+                        [showIcon]="true" iconDisplay="input"
+                        placeholder="dd/mm/yyyy" [inputStyle]="{ width: '100%' }"
+                        class="w-full"></p-datepicker>
+                </div>
                 <div class="mv-field">
                     <label>Date of release</label>
                     <p-datepicker
@@ -263,8 +280,8 @@
         }
         -->
 
-        <!-- ── CC-only: Release Time + Vehicle ─────────────────────────── -->
-        @if (isCC) {
+        <!-- ── Release Time (CC + MO + both Article 47 variants) + Vehicle (CC only) ── -->
+        @if (isCC || isMO || isArticle47Variant) {
             <div class="mv-subsection">
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div class="mv-field">
@@ -272,6 +289,7 @@
                         <input type="time" pInputText class="w-full"
                                formControlName="releaseTime" />
                     </div>
+                    @if (isCC) {
                     <div class="mv-field">
                         <label>Vehicle</label>
                         <p-select formControlName="vehicle"
@@ -282,6 +300,7 @@
                                   appendTo="body"
                                   styleClass="w-full"></p-select>
                     </div>
+                    }
                 </div>
             </div>
         }
@@ -360,11 +379,15 @@
             <app-rich-editor formControlName="auth" height="140px"
                              placeholder="Enter authorization..."></app-rich-editor>
         </div>
+        <!-- Details information is not printed on the MO or Article 47 letters, so it
+             is hidden for those order types. -->
+        @if (!isMO && !isArticle47Variant) {
         <div class="mv-field mt-3">
             <label>Details information</label>
             <app-rich-editor formControlName="detailsInformation" height="180px"
                              placeholder="Enter movement notes, special instructions, or context..."></app-rich-editor>
         </div>
+        }
         <div class="mv-field mt-3">
             <label>Remarks</label>
             <app-rich-editor formControlName="remarks" height="140px"

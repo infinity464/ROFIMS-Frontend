@@ -78,6 +78,19 @@ export class NotesheetPreviewArticle47HandoverComponent implements OnInit {
     battalionHqEn = '';
     battalionHqBn = '';
 
+    /** First Final Approver on the movement — rendered as the left signature block,
+     *  in the same shape as the member's block on the right. Same three sources the
+     *  member uses: search info, serving-members overview and personal overview. */
+    approver: EmployeeSearchInfoModel | null = null;
+    approverOverview: EmployeeServiceOverview | null = null;
+    approverPersonalOverview: any | null = null;
+    approverBattalionHqEn = '';
+    approverBattalionHqBn = '';
+    /** True once an approver has been resolved — the left block is hidden until then. */
+    get hasApprover(): boolean {
+        return this.approver != null;
+    }
+
     /** Final recipient list — same positioning rule as Takeover. */
     recipientLines: string[] = [];
 
@@ -110,6 +123,7 @@ export class NotesheetPreviewArticle47HandoverComponent implements OnInit {
                 this.buildRecipientList();
                 this.buildHeaderLines();
                 this.loadEmployee();
+                this.loadApprover();
                 this.loading = false;
             },
             error: (err) => {
@@ -150,6 +164,62 @@ export class NotesheetPreviewArticle47HandoverComponent implements OnInit {
 
     /** Load the EmployeeServiceOverview row for the employee (matches /presently-serving-members
      *  data) so we can pull the RAB unit name. Filters by RAB ID or Service ID. */
+    /** Same three lookups as loadEmployee(), for the first Final Approver. */
+    private loadApprover(): void {
+        const ids = this.parseIntArray(this.movement?.finalApproverIds);
+        const firstId = ids.length > 0 ? ids[0] : 0;
+        if (!firstId) return;
+
+        this.empService.getEmployeeSearchInfo(firstId).subscribe({
+            next: (info) => {
+                this.approver = info ?? null;
+                this.loadApproverOverview();
+            },
+            error: () => { this.approver = null; }
+        });
+
+        this.servingMembersService.getEmployeePersonalServiceOverview(firstId).subscribe({
+            next: (po: any) => { this.approverPersonalOverview = po ?? null; },
+            error: () => { this.approverPersonalOverview = null; }
+        });
+    }
+
+    private loadApproverOverview(): void {
+        const e: any = this.approver || {};
+        const rabId: string = e.rabID ?? e.RABID ?? '';
+        const serviceId: string = e.serviceId ?? e.ServiceId ?? '';
+        if (!rabId && !serviceId) return;
+
+        this.servingMembersService.getPresentlyServingMembersPaginatedFiltered({
+            pagination: { page_no: 1, row_per_page: 5 },
+            filter: rabId ? { rabId } : { serviceId }
+        }).subscribe({
+            next: (res: any) => {
+                const list: EmployeeServiceOverview[] =
+                    (res?.datalist ?? res?.data ?? res ?? []) as EmployeeServiceOverview[];
+                this.approverOverview = Array.isArray(list) && list.length ? list[0] : null;
+                this.loadApproverBattalionHq();
+            },
+            error: () => { this.approverOverview = null; }
+        });
+    }
+
+    /** GetByRabUnit returns an ARRAY of AOR rows — take the first carrying a value. */
+    private loadApproverBattalionHq(): void {
+        const rabUnitId = (this.approverOverview as any)?.rabUnitId ?? (this.approverOverview as any)?.RabUnitId;
+        if (!rabUnitId) return;
+        this.masterBasicSetup.getRABUnitAORByRabUnit(rabUnitId).subscribe({
+            next: (rows: any[]) => {
+                if (!Array.isArray(rows) || rows.length === 0) return;
+                const firstEn = rows.find((r) => !!(r?.locationOfBattalionHQ ?? r?.LocationOfBattalionHQ));
+                if (firstEn) this.approverBattalionHqEn = String(firstEn.locationOfBattalionHQ ?? firstEn.LocationOfBattalionHQ ?? '');
+                const firstBn = rows.find((r) => !!(r?.locationOfBattalionHQBangla ?? r?.LocationOfBattalionHQBangla));
+                if (firstBn) this.approverBattalionHqBn = String(firstBn.locationOfBattalionHQBangla ?? firstBn.LocationOfBattalionHQBangla ?? '');
+            },
+            error: () => { /* leave blank */ }
+        });
+    }
+
     private loadOverview(): void {
         const e: any = this.employee || {};
         const rabId: string = e.rabID ?? e.RABID ?? '';
@@ -237,59 +307,71 @@ export class NotesheetPreviewArticle47HandoverComponent implements OnInit {
         });
     }
 
-    /** Field accessors for the signature block. Fall back to '---' / '—' when empty. */
-    get employeeIdLineBn(): string {
-        const e = this.employee as any;
-        const o = this.overview as any;
-        const po = this.personalOverview as any;
-        const id = e ? (e.rabID ?? e.RABID ?? e.serviceId ?? e.ServiceId ?? '') : '';
+    /* ── Signature-block fields ─────────────────────────────────────────────────
+       Built once against an (employee, overview, personalOverview) triple so the
+       member block on the right and the approver block on the left render
+       identically from their own sources. */
+
+    private idLineBn(emp: any, ovw: any, personal: any): string {
+        const id = emp ? (emp.rabID ?? emp.RABID ?? emp.serviceId ?? emp.ServiceId ?? '') : '';
 
         // Prefix is the CommonCode label behind EmployeeInfo.Prefix (an id), not a
-        // fixed "বিএ". Resolve from the personal overview, then the serving-members
+        // fixed value. Resolve from the personal overview, then the serving-members
         // overview, falling back to '' when genuinely absent.
-        const prefix = (po?.prefixBN || po?.PrefixBN || po?.prefixEN || po?.PrefixEN || po?.prefix || po?.Prefix
-            || o?.prefixBN || o?.PrefixBN || o?.prefix || o?.Prefix || '') as string;
+        const prefix = (personal?.prefixBN || personal?.PrefixBN || personal?.prefixEN || personal?.PrefixEN
+            || personal?.prefix || personal?.Prefix
+            || ovw?.prefixBN || ovw?.PrefixBN || ovw?.prefix || ovw?.Prefix || '') as string;
 
         if (!id) return prefix ? `${prefix}-----` : '-----';
         return prefix ? `${prefix}-${this.toBn(id)}` : this.toBn(id);
     }
-    get employeeRankBn(): string {
-        const e = this.employee as any;
-        const o = this.overview as any;
+
+    private rankBn(emp: any, ovw: any): string {
         // Prefer overview.armyRankId (matches /presently-serving-members);
-        // fall back to search-info rankId. Look up Bangla label from the rank map.
-        const rankId: number | undefined =
-            o?.armyRankId ?? o?.ArmyRankId ?? e?.rankId ?? e?.RankId;
+        // fall back to search-info rankId. Look up the Bangla label from the map.
+        const rankId: number | undefined = ovw?.armyRankId ?? ovw?.ArmyRankId ?? emp?.rankId ?? emp?.RankId;
         if (rankId != null) {
             const labels = this.rankLabels.get(rankId);
             if (labels?.bn) return labels.bn;
             if (labels?.en) return labels.en;
         }
-        // Last-resort: whatever English rank the API returned.
-        return (e?.rank ?? e?.Rank ?? o?.armyRank ?? o?.ArmyRank ?? 'ক্যাপ্টেন') as string;
+        return (emp?.rank ?? emp?.Rank ?? ovw?.armyRank ?? ovw?.ArmyRank ?? 'ক্যাপ্টেন') as string;
     }
-    get employeeNameBn(): string {
-        const e = this.employee as any;
-        if (!e) return '-- -- --';
-        return (e.fullNameBN ?? e.FullNameBN ?? e.fullNameEN ?? e.FullNameEN ?? '-- -- --') as string;
+
+    private nameBn(emp: any): string {
+        if (!emp) return '-- -- --';
+        return (emp.fullNameBN ?? emp.FullNameBN ?? emp.fullNameEN ?? emp.FullNameEN ?? '-- -- --') as string;
     }
-    get employeeCorpsBn(): string {
-        const e = this.employee as any;
-        const o = this.overview as any;
-        // Prefer overview.corpsId (matches /presently-serving-members);
-        // search-info exposes the same id under `branchId`.
-        const corpsId: number | undefined =
-            o?.corpsId ?? o?.CorpsId ?? e?.branchId ?? e?.BranchId;
+
+    private corpsBn(emp: any, ovw: any): string {
+        const corpsId: number | undefined = ovw?.corpsId ?? ovw?.CorpsId ?? emp?.branchId ?? emp?.BranchId;
         let value = '';
         if (corpsId != null) {
             const labels = this.corpsLabels.get(corpsId);
             value = labels?.bn || labels?.en || '';
         }
         if (!value) {
-            value = (e?.corps ?? e?.Corps ?? o?.corps ?? o?.Corps ?? '') as string;
+            value = (emp?.corps ?? emp?.Corps ?? ovw?.corps ?? ovw?.Corps ?? '') as string;
         }
         // Don't render a "not applicable" placeholder as a corps name.
         return this.isNotApplicable(value) ? '' : value;
+    }
+
+    private unitBn(ovw: any): string {
+        const rabUnitId: number | undefined = ovw?.rabUnitId ?? ovw?.RabUnitId;
+        if (rabUnitId != null) {
+            const labels = this.rabUnitLabels.get(rabUnitId);
+            if (labels?.bn) return labels.bn;
+            if (labels?.en) return labels.en;
+        }
+        const rabUnit = (ovw?.rabUnit ?? ovw?.RabUnit ?? '') as string;
+        return rabUnit || 'র‍্যাব ফোর্সেস সদর দপ্তর';
+    }
+
+    private unitLocationBn(ovw: any, hqBn: string, hqEn: string): string {
+        if (hqBn) return hqBn;
+        if (hqEn) return hqEn;
+        return (ovw?.location ?? ovw?.Location ?? '') as string;
     }
 
     /** True when a label is an N/A placeholder (in either language) and shouldn't be shown. */
@@ -297,30 +379,26 @@ export class NotesheetPreviewArticle47HandoverComponent implements OnInit {
         const v = (value ?? '').trim().toLowerCase();
         return v === '' || v === 'n/a' || v === 'na' || v === 'অপ্রযোজ্য';
     }
-    get employeeUnitBn(): string {
-        // Same lookup chain the leave card uses for the unit name:
-        // 1) CommonCode 'RabUnit' Bangla label by rabUnitId from overview
-        // 2) overview.rabUnit (whatever the view returns)
-        // 3) RabUnit English label as a final fallback
-        const o = this.overview as any;
-        const rabUnitId: number | undefined = o?.rabUnitId ?? o?.RabUnitId;
-        if (rabUnitId != null) {
-            const labels = this.rabUnitLabels.get(rabUnitId);
-            if (labels?.bn) return labels.bn;
-            if (labels?.en) return labels.en;
-        }
-        const rabUnit = (o?.rabUnit ?? o?.RabUnit ?? '') as string;
-        return rabUnit || 'র‍্যাব ফোর্সেস সদর দপ্তর';
+
+    // Member (right-hand block).
+    get employeeIdLineBn(): string { return this.idLineBn(this.employee, this.overview, this.personalOverview); }
+    get employeeRankBn(): string { return this.rankBn(this.employee, this.overview); }
+    get employeeNameBn(): string { return this.nameBn(this.employee); }
+    get employeeCorpsBn(): string { return this.corpsBn(this.employee, this.overview); }
+    get employeeUnitBn(): string { return this.unitBn(this.overview); }
+    /** Second signature line under the RAB Unit — Battalion HQ location. */
+    get employeeUnitLocationBn(): string {
+        return this.unitLocationBn(this.overview, this.battalionHqBn, this.battalionHqEn);
     }
 
-    /** Second signature line under the RAB Unit — Battalion HQ location
-     *  (same source as the leave card: RABUnitAOR for the employee's RAB unit). */
-    get employeeUnitLocationBn(): string {
-        if (this.battalionHqBn) return this.battalionHqBn;
-        if (this.battalionHqEn) return this.battalionHqEn;
-        // Final fallback to whatever the overview row carries.
-        const o = this.overview as any;
-        return (o?.location ?? o?.Location ?? '') as string;
+    // Final Approver (left-hand block).
+    get approverIdLineBn(): string { return this.idLineBn(this.approver, this.approverOverview, this.approverPersonalOverview); }
+    get approverRankBn(): string { return this.rankBn(this.approver, this.approverOverview); }
+    get approverNameBn(): string { return this.nameBn(this.approver); }
+    get approverCorpsBn(): string { return this.corpsBn(this.approver, this.approverOverview); }
+    get approverUnitBn(): string { return this.unitBn(this.approverOverview); }
+    get approverUnitLocationBn(): string {
+        return this.unitLocationBn(this.approverOverview, this.approverBattalionHqBn, this.approverBattalionHqEn);
     }
 
     private parseIntArray(json: string | null | undefined): number[] {
@@ -616,7 +694,8 @@ html, body { margin: 0; padding: 0; background: transparent; }
         // (matches the on-screen `[innerHTML]` rendering).
         const sutroParas = m.auth
             ? htmlToParagraphs(m.auth, { lineTwips: 280, firstPrefix: 'সূত্র: ' })
-            : [para('সূত্র: ---', { lineTwips: 280 })];
+            // Blank when no Auth was entered — no --- placeholder.
+            : [para('সূত্র: ', { lineTwips: 280 })];
         const remarksParas = htmlToParagraphs(m.remarks, { lineTwips: 280 });
 
         // অগ্রগামী
@@ -625,22 +704,35 @@ html, body { margin: 0; padding: 0; background: transparent; }
         // Signature block — sits on the right side of the page (empty left
         // column takes ~60% width), with its lines centered within the right
         // column. Matches the on-screen `text-align:right > inline-block` pattern.
-        const sigLeftW = Math.round(contentWidth * 0.6);
+        // Two equal columns: Final Approver on the left, member on the right.
+        const sigLeftW = Math.round(contentWidth / 2);
         const sigRightW = contentWidth - sigLeftW;
-        const sigInnerParas: Paragraph[] = [];
-        sigInnerParas.push(para('অর্পণকারী কর্মকর্তা', { align: AlignmentType.CENTER, spacingBefore: 240 }));
-        sigInnerParas.push(para('________________________', { align: AlignmentType.CENTER, spacingBefore: 720 }));
-        sigInnerParas.push(para(`${this.employeeIdLineBn} ${this.employeeRankBn}`.trim(), { align: AlignmentType.CENTER }));
-        sigInnerParas.push(para(`${this.employeeNameBn}${this.employeeCorpsBn ? ', ' + this.employeeCorpsBn : ''}`, { align: AlignmentType.CENTER }));
-        sigInnerParas.push(para(this.employeeUnitBn, { align: AlignmentType.CENTER }));
-        if (this.employeeUnitLocationBn) sigInnerParas.push(para(this.employeeUnitLocationBn, { align: AlignmentType.CENTER }));
+
+        /** One signature stack. No caption and no rule above the name — the leading
+         *  empty paragraph keeps the signing space the underscores used to occupy. */
+        const sigStack = (idLine: string, rank: string, name: string, corps: string, unit: string, location: string): Paragraph[] => {
+            const out: Paragraph[] = [];
+            out.push(para('', { align: AlignmentType.CENTER, spacingBefore: 720 }));
+            out.push(para(`${idLine} ${rank}`.trim(), { align: AlignmentType.CENTER }));
+            out.push(para(`${name}${corps ? ', ' + corps : ''}`, { align: AlignmentType.CENTER }));
+            out.push(para(`${unit}${location ? ', ' + location : ''}`, { align: AlignmentType.CENTER }));
+            return out;
+        };
+
+        const approverParas: Paragraph[] = this.hasApprover
+            ? sigStack(this.approverIdLineBn, this.approverRankBn, this.approverNameBn,
+                       this.approverCorpsBn, this.approverUnitBn, this.approverUnitLocationBn)
+            : [para('')];
+        const sigInnerParas: Paragraph[] = sigStack(
+            this.employeeIdLineBn, this.employeeRankBn, this.employeeNameBn,
+            this.employeeCorpsBn, this.employeeUnitBn, this.employeeUnitLocationBn);
         const sigRow = new Table({
             width: { size: contentWidth, type: WidthType.DXA },
             columnWidths: [sigLeftW, sigRightW],
             layout: TableLayoutType.FIXED,
             borders: { ...noBorder, insideHorizontal: { style: BorderStyle.NONE, size: 0, color: 'FFFFFF' }, insideVertical: { style: BorderStyle.NONE, size: 0, color: 'FFFFFF' } },
             rows: [new TableRow({ children: [
-                new TableCell({ width: { size: sigLeftW, type: WidthType.DXA }, borders: noBorder, children: [para('')] }),
+                new TableCell({ width: { size: sigLeftW, type: WidthType.DXA }, borders: noBorder, children: approverParas }),
                 new TableCell({ width: { size: sigRightW, type: WidthType.DXA }, borders: noBorder, children: sigInnerParas })
             ] })]
         });
