@@ -429,16 +429,21 @@ export class StatisticsService {
         return this.http.get<MemberTypeWiseManpowerResponse>(`${this.apiUrl}/GetMemberTypeWiseManpowerByEquivalentName`, { params });
     }
 
+    /** `filterMemberTypeIds` restricts the rank columns to ranks under those member types. */
     getUnitRankWiseManpower(
         excludeEquivalentNames?: string,
         rabUnitId?: number | null,
-        mergeMemberTypeIds?: number[] | null
+        mergeMemberTypeIds?: number[] | null,
+        filterMemberTypeIds?: number[] | null
     ): Observable<UnitRankWiseManpowerResponse> {
         const params: any = {};
         if (excludeEquivalentNames != null) params.excludeEquivalentNames = excludeEquivalentNames;
         if (rabUnitId != null) params.rabUnitId = rabUnitId;
         if (mergeMemberTypeIds && mergeMemberTypeIds.length > 0) {
             params.mergeMemberTypeIds = mergeMemberTypeIds.join(',');
+        }
+        if (filterMemberTypeIds && filterMemberTypeIds.length > 0) {
+            params.filterMemberTypeIds = filterMemberTypeIds.join(',');
         }
         return this.http.get<UnitRankWiseManpowerResponse>(
             `${this.apiUrl}/GetUnitRankWiseManpower`, { params }
@@ -449,13 +454,17 @@ export class StatisticsService {
     getUnitRankWiseManpowerByEquivalentName(
         excludeEquivalentNames?: string,
         rabUnitId?: number | null,
-        mergeMemberTypeIds?: number[] | null
+        mergeMemberTypeIds?: number[] | null,
+        filterMemberTypeIds?: number[] | null
     ): Observable<UnitRankWiseManpowerResponse> {
         const params: any = {};
         if (excludeEquivalentNames != null) params.excludeEquivalentNames = excludeEquivalentNames;
         if (rabUnitId != null) params.rabUnitId = rabUnitId;
         if (mergeMemberTypeIds && mergeMemberTypeIds.length > 0) {
             params.mergeMemberTypeIds = mergeMemberTypeIds.join(',');
+        }
+        if (filterMemberTypeIds && filterMemberTypeIds.length > 0) {
+            params.filterMemberTypeIds = filterMemberTypeIds.join(',');
         }
         return this.http.get<UnitRankWiseManpowerResponse>(
             `${this.apiUrl}/GetUnitRankWiseManpowerByEquivalentName`, { params }

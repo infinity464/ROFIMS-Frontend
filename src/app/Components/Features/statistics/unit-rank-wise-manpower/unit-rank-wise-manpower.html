@@ -22,6 +22,21 @@
                     (onClear)="onRabUnitChange()">
                 </p-multiSelect>
 
+                <label class="filter-label">{{ lang === 'en' ? 'Member Type:' : 'সদস্য ধরন:' }}</label>
+                <p-multiSelect
+                    [options]="memberTypeOptions"
+                    [(ngModel)]="selectedFilterMemberTypeIds"
+                    optionLabel="label"
+                    optionValue="value"
+                    [placeholder]="lang === 'en' ? 'All member types' : 'সকল সদস্য ধরন'"
+                    [showClear]="true"
+                    [filter]="true"
+                    appendTo="body"
+                    styleClass="rab-unit-select merge-multiselect"
+                    (onChange)="onFilterMemberTypesChange()"
+                    (onClear)="onFilterMemberTypesChange()">
+                </p-multiSelect>
+
                 <label class="filter-label">{{ lang === 'en' ? 'Merge:' : 'একত্রীকরণ:' }}</label>
                 <p-multiSelect
                     [options]="memberTypeOptions"

@@ -13,13 +13,7 @@ import { BanglaNumerals } from '@/Core/i18n/bangla-numerals';
 import { environment } from '@/Core/Environments/environment';
 import { MasterBasicSetupService } from '@/Components/basic-setup/shared/services/MasterBasicSetupService';
 import { CommonCode } from '@/Components/basic-setup/shared/models/common-code';
-import {
-    StatisticsService,
-    type UnitRankColumn,
-    type UnitRankRow,
-    type UnitRankCell,
-    type UnitRankWiseManpowerResponse
-} from '@/services/statistics.service';
+import { StatisticsService, type UnitRankColumn, type UnitRankRow, type UnitRankCell, type UnitRankWiseManpowerResponse } from '@/services/statistics.service';
 import { RabReportPrintService } from '../shared/rab-report-print.service';
 
 /** One block in the report — wings of a selected RAB Unit, or top-level units
@@ -76,6 +70,10 @@ export class UnitRankWiseEquivalentManpowerComponent implements OnInit {
 
     /** Member-type CodeIds the user picked to MERGE. */
     selectedMergeMemberTypeIds: number[] = [];
+
+    /** Member-type CodeIds the user picked to FILTER BY. Empty = every rank column. */
+    selectedFilterMemberTypeIds: number[] = [];
+
     memberTypeOptions: { label: string; value: number }[] = [];
     private memberTypes: CommonCode[] = [];
 
@@ -94,13 +92,17 @@ export class UnitRankWiseEquivalentManpowerComponent implements OnInit {
         const bn = this.lang === 'bn';
         const items: { label: string; value: string }[] = [];
         if (this.selectedRabUnitIds.length > 0) {
-            const names = this.rabUnitOptions.filter(o => this.selectedRabUnitIds.includes(o.value)).map(o => o.label);
+            const names = this.rabUnitOptions.filter((o) => this.selectedRabUnitIds.includes(o.value)).map((o) => o.label);
             if (names.length) items.push({ label: bn ? 'ইউনিট' : 'UNIT', value: names.join(', ') });
         }
         const accessNames = (bn ? this.accessibleRabUnitNamesBN : this.accessibleRabUnitNames) ?? this.accessibleRabUnitNames;
         if (accessNames && accessNames.length > 0) items.push({ label: bn ? 'এক্সেস ইউনিট' : 'ACCESS UNITS', value: accessNames.join(', ') });
+        if (this.selectedFilterMemberTypeIds.length > 0) {
+            const names = this.memberTypeOptions.filter((o) => this.selectedFilterMemberTypeIds.includes(o.value)).map((o) => o.label);
+            if (names.length) items.push({ label: bn ? 'সদস্য ধরণ' : 'MEMBER TYPE', value: names.join(', ') });
+        }
         if (this.selectedMergeMemberTypeIds.length > 0) {
-            const names = this.memberTypeOptions.filter(o => this.selectedMergeMemberTypeIds.includes(o.value)).map(o => o.label);
+            const names = this.memberTypeOptions.filter((o) => this.selectedMergeMemberTypeIds.includes(o.value)).map((o) => o.label);
             if (names.length) items.push({ label: bn ? 'একীভূত সদস্য ধরণ' : 'MERGED MEMBER TYPES', value: names.join(', ') });
         }
         if (items.length === 0) items.push({ label: bn ? 'পরিসর' : 'SCOPE', value: bn ? 'সকল ইউনিট' : 'All Unit' });
@@ -126,19 +128,20 @@ export class UnitRankWiseEquivalentManpowerComponent implements OnInit {
     private loadMemberTypeOptions(): void {
         this.masterBasicSetup.getAllByType('EmployeeType').subscribe({
             next: (res) => {
-                this.memberTypes = (Array.isArray(res) ? res : []).filter(m => m.status !== false);
-                this.memberTypes.sort((a, b) =>
-                    (a.sortOrder ?? Number.MAX_SAFE_INTEGER) - (b.sortOrder ?? Number.MAX_SAFE_INTEGER)
-                );
+                this.memberTypes = (Array.isArray(res) ? res : []).filter((m) => m.status !== false);
+                this.memberTypes.sort((a, b) => (a.sortOrder ?? Number.MAX_SAFE_INTEGER) - (b.sortOrder ?? Number.MAX_SAFE_INTEGER));
                 this.rebuildMemberTypeOptions();
             },
-            error: () => { this.memberTypes = []; this.rebuildMemberTypeOptions(); }
+            error: () => {
+                this.memberTypes = [];
+                this.rebuildMemberTypeOptions();
+            }
         });
     }
 
     private rebuildMemberTypeOptions(): void {
-        this.memberTypeOptions = this.memberTypes.map(m => ({
-            label: this.lang === 'en' ? (m.codeValueEN ?? '') : (m.codeValueBN || m.codeValueEN || ''),
+        this.memberTypeOptions = this.memberTypes.map((m) => ({
+            label: this.lang === 'en' ? (m.codeValueEN ?? '') : m.codeValueBN || m.codeValueEN || '',
             value: m.codeId
         }));
     }
@@ -147,23 +150,27 @@ export class UnitRankWiseEquivalentManpowerComponent implements OnInit {
         this.loadData();
     }
 
+    onFilterMemberTypesChange(): void {
+        this.loadData();
+    }
+
     private loadRabUnitOptions(): void {
         this.masterBasicSetup.getAllByType('RabUnit').subscribe({
             next: (res) => {
-                this.rabUnits = (Array.isArray(res) ? res : [])
-                    .filter(u => u.status !== false && u.parentCodeId == null);
-                this.rabUnits.sort((a, b) =>
-                    (a.sortOrder ?? Number.MAX_SAFE_INTEGER) - (b.sortOrder ?? Number.MAX_SAFE_INTEGER)
-                );
+                this.rabUnits = (Array.isArray(res) ? res : []).filter((u) => u.status !== false && u.parentCodeId == null);
+                this.rabUnits.sort((a, b) => (a.sortOrder ?? Number.MAX_SAFE_INTEGER) - (b.sortOrder ?? Number.MAX_SAFE_INTEGER));
                 this.rebuildRabUnitOptions();
             },
-            error: () => { this.rabUnits = []; this.rebuildRabUnitOptions(); }
+            error: () => {
+                this.rabUnits = [];
+                this.rebuildRabUnitOptions();
+            }
         });
     }
 
     private rebuildRabUnitOptions(): void {
-        this.rabUnitOptions = this.rabUnits.map(u => ({
-            label: this.lang === 'en' ? (u.codeValueEN ?? '') : (u.codeValueBN || u.codeValueEN || ''),
+        this.rabUnitOptions = this.rabUnits.map((u) => ({
+            label: this.lang === 'en' ? (u.codeValueEN ?? '') : u.codeValueBN || u.codeValueEN || '',
             value: u.codeId
         }));
     }
@@ -177,32 +184,32 @@ export class UnitRankWiseEquivalentManpowerComponent implements OnInit {
         const ids = this.selectedRabUnitIds ?? [];
 
         if (ids.length === 0) {
-            this.statisticsService
-                .getUnitRankWiseManpowerByEquivalentName(this.excludeRanks, null, this.selectedMergeMemberTypeIds)
-                .subscribe({
-                    next: (res: UnitRankWiseManpowerResponse) => {
-                        this.ranks = res.ranks ?? [];
-                        this.sections = [{
+            this.statisticsService.getUnitRankWiseManpowerByEquivalentName(this.excludeRanks, null, this.selectedMergeMemberTypeIds, this.selectedFilterMemberTypeIds).subscribe({
+                next: (res: UnitRankWiseManpowerResponse) => {
+                    this.ranks = res.ranks ?? [];
+                    this.sections = [
+                        {
                             titleEN: '',
                             titleBN: '',
                             units: res.units ?? [],
                             columnTotals: res.columnTotals ?? {},
                             grandTotal: res.grandTotal ?? { auth: 0, held: 0 }
-                        }];
-                        this.accessibleRabUnitNames   = res.accessibleRabUnitNames ?? null;
-                        this.accessibleRabUnitNamesBN = res.accessibleRabUnitNamesBN ?? null;
-                        this.loading = false;
-                    },
-                    error: () => { this.loading = false; }
-                });
+                        }
+                    ];
+                    this.accessibleRabUnitNames = res.accessibleRabUnitNames ?? null;
+                    this.accessibleRabUnitNamesBN = res.accessibleRabUnitNamesBN ?? null;
+                    this.loading = false;
+                },
+                error: () => {
+                    this.loading = false;
+                }
+            });
             return;
         }
 
         forkJoin(
-            ids.map(id =>
-                this.statisticsService
-                    .getUnitRankWiseManpowerByEquivalentName(this.excludeRanks, id, this.selectedMergeMemberTypeIds)
-                    .pipe(catchError(() => of(null as UnitRankWiseManpowerResponse | null)))
+            ids.map((id) =>
+                this.statisticsService.getUnitRankWiseManpowerByEquivalentName(this.excludeRanks, id, this.selectedMergeMemberTypeIds, this.selectedFilterMemberTypeIds).pipe(catchError(() => of(null as UnitRankWiseManpowerResponse | null)))
             )
         ).subscribe({
             next: (results) => {
@@ -213,9 +220,9 @@ export class UnitRankWiseEquivalentManpowerComponent implements OnInit {
                 results.forEach((res, i) => {
                     if (!res) return;
                     if (firstRanks.length === 0) firstRanks = res.ranks ?? [];
-                    if (scopeEN == null) scopeEN = res.accessibleRabUnitNames   ?? null;
+                    if (scopeEN == null) scopeEN = res.accessibleRabUnitNames ?? null;
                     if (scopeBN == null) scopeBN = res.accessibleRabUnitNamesBN ?? null;
-                    const unit = this.rabUnits.find(u => u.codeId === ids[i]);
+                    const unit = this.rabUnits.find((u) => u.codeId === ids[i]);
                     built.push({
                         titleEN: unit?.codeValueEN ?? `Unit ${ids[i]}`,
                         titleBN: unit?.codeValueBN || unit?.codeValueEN || `Unit ${ids[i]}`,
@@ -226,18 +233,18 @@ export class UnitRankWiseEquivalentManpowerComponent implements OnInit {
                 });
                 this.ranks = firstRanks;
                 this.sections = built;
-                this.accessibleRabUnitNames   = scopeEN;
+                this.accessibleRabUnitNames = scopeEN;
                 this.accessibleRabUnitNamesBN = scopeBN;
                 this.loading = false;
             },
-            error: () => { this.loading = false; }
+            error: () => {
+                this.loading = false;
+            }
         });
     }
 
     get scopeLine(): string | null {
-        const names = this.lang === 'bn'
-            ? (this.accessibleRabUnitNamesBN ?? this.accessibleRabUnitNames)
-            : this.accessibleRabUnitNames;
+        const names = this.lang === 'bn' ? (this.accessibleRabUnitNamesBN ?? this.accessibleRabUnitNames) : this.accessibleRabUnitNames;
         if (!names || names.length === 0) return null;
         return names.join(', ');
     }
@@ -262,23 +269,23 @@ export class UnitRankWiseEquivalentManpowerComponent implements OnInit {
     }
 
     sectionTitle(section: UnitRankSection): string {
-        return this.lang === 'en' ? section.titleEN : (section.titleBN || section.titleEN);
+        return this.lang === 'en' ? section.titleEN : section.titleBN || section.titleEN;
     }
 
     get hasSectionBanners(): boolean {
-        return this.sections.some(s => !!s.titleEN);
+        return this.sections.some((s) => !!s.titleEN);
     }
 
     get hasAnyData(): boolean {
-        return this.sections.some(s => s.units.length > 0);
+        return this.sections.some((s) => s.units.length > 0);
     }
 
     unitLabel(row: UnitRankRow): string {
-        return this.lang === 'en' ? row.unitNameEN : (row.unitNameBN || row.unitNameEN);
+        return this.lang === 'en' ? row.unitNameEN : row.unitNameBN || row.unitNameEN;
     }
 
     rankLabel(col: UnitRankColumn): string {
-        return this.lang === 'en' ? col.equivalentNameEN : (col.equivalentNameBN || col.equivalentNameEN);
+        return this.lang === 'en' ? col.equivalentNameEN : col.equivalentNameBN || col.equivalentNameEN;
     }
 
     fmt(n: number | undefined | null): string {
@@ -286,22 +293,14 @@ export class UnitRankWiseEquivalentManpowerComponent implements OnInit {
         return this.lang === 'bn' ? BanglaNumerals.toBangla(s) : s;
     }
 
-    private static readonly EN_MONTHS = [
-        'JANUARY','FEBRUARY','MARCH','APRIL','MAY','JUNE',
-        'JULY','AUGUST','SEPTEMBER','OCTOBER','NOVEMBER','DECEMBER'
-    ];
-    private static readonly BN_MONTHS = [
-        'জানুয়ারি','ফেব্রুয়ারি','মার্চ','এপ্রিল','মে','জুন',
-        'জুলাই','আগস্ট','সেপ্টেম্বর','অক্টোবর','নভেম্বর','ডিসেম্বর'
-    ];
+    private static readonly EN_MONTHS = ['JANUARY', 'FEBRUARY', 'MARCH', 'APRIL', 'MAY', 'JUNE', 'JULY', 'AUGUST', 'SEPTEMBER', 'OCTOBER', 'NOVEMBER', 'DECEMBER'];
+    private static readonly BN_MONTHS = ['জানুয়ারি', 'ফেব্রুয়ারি', 'মার্চ', 'এপ্রিল', 'মে', 'জুন', 'জুলাই', 'আগস্ট', 'সেপ্টেম্বর', 'অক্টোবর', 'নভেম্বর', 'ডিসেম্বর'];
 
     get titleLabel(): string {
         const isWingMode = this.selectedRabUnitIds.length > 0;
         const rowEN = isWingMode ? 'WING' : 'UNIT';
-        const rowBN = isWingMode ? 'উইং'   : 'ইউনিট';
-        return this.lang === 'en'
-            ? `${rowEN}-WISE MANPOWER STATE BY RAB RANK`
-            : `${rowBN} অনুযায়ী র‍্যাব পদবী ভিত্তিক জনবলের পরিসংখ্যান`;
+        const rowBN = isWingMode ? 'উইং' : 'ইউনিট';
+        return this.lang === 'en' ? `${rowEN}-WISE MANPOWER STATE BY RAB RANK` : `${rowBN} অনুযায়ী র‍্যাব পদবী ভিত্তিক জনবলের পরিসংখ্যান`;
     }
 
     get unitHeader(): string {
@@ -311,26 +310,32 @@ export class UnitRankWiseEquivalentManpowerComponent implements OnInit {
 
     get dateLine(): string {
         const now = new Date();
-        const day  = now.getDate();
-        const mon  = now.getMonth();
+        const day = now.getDate();
+        const mon = now.getMonth();
         const year = now.getFullYear();
         if (this.lang === 'en') {
             return `${day} ${UnitRankWiseEquivalentManpowerComponent.EN_MONTHS[mon]} ${year}`;
         }
-        const dayBN  = BanglaNumerals.toBangla(String(day));
+        const dayBN = BanglaNumerals.toBangla(String(day));
         const yearBN = BanglaNumerals.toBangla(String(year));
         return `${dayBN} ${UnitRankWiseEquivalentManpowerComponent.BN_MONTHS[mon]} ${yearBN}`;
     }
 
-    get authHeader(): string { return this.lang === 'en' ? 'Auth' : 'প্রাধিকার'; }
-    get heldHeader(): string { return this.lang === 'en' ? 'Held' : 'বিদ্যমান'; }
-    get totalHeader(): string { return this.lang === 'en' ? 'Total' : 'মোট'; }
+    get authHeader(): string {
+        return this.lang === 'en' ? 'Auth' : 'প্রাধিকার';
+    }
+    get heldHeader(): string {
+        return this.lang === 'en' ? 'Held' : 'বিদ্যমান';
+    }
+    get totalHeader(): string {
+        return this.lang === 'en' ? 'Total' : 'মোট';
+    }
 
     async exportAs(type: 'pdf' | 'print' | 'word' | 'excel'): Promise<void> {
         this.exportDropdownOpen = false;
 
         const scope = this.scopeLine;
-        const matrixSections = this.sections.map(sec => ({
+        const matrixSections = this.sections.map((sec) => ({
             title: this.sectionTitle(sec),
             rows: this.getMatrixRowsForSection(sec)
         }));
@@ -338,7 +343,7 @@ export class UnitRankWiseEquivalentManpowerComponent implements OnInit {
             title: this.titleLabel,
             lang: this.lang,
             leadingColumns: [this.unitHeader],
-            groupColumns: [...this.ranks.map(c => this.rankLabel(c)), this.totalHeader],
+            groupColumns: [...this.ranks.map((c) => this.rankLabel(c)), this.totalHeader],
             subHeaders: [this.authHeader, this.heldHeader],
             rows: matrixSections.length === 1 ? matrixSections[0].rows : [],
             sections: matrixSections.length > 1 ? matrixSections : undefined,
@@ -357,7 +362,7 @@ export class UnitRankWiseEquivalentManpowerComponent implements OnInit {
                 columns: [],
                 groupedHeader: {
                     leading: [{ label: this.unitHeader, align: 'left' }],
-                    groups: [...this.ranks.map(c => this.rankLabel(c)), this.totalHeader],
+                    groups: [...this.ranks.map((c) => this.rankLabel(c)), this.totalHeader],
                     subHeaders: [this.authHeader, this.heldHeader]
                 },
                 sections: matrixSections
@@ -393,13 +398,11 @@ export class UnitRankWiseEquivalentManpowerComponent implements OnInit {
     private async convertDocxToPdf(docxBlob: Blob): Promise<Blob> {
         const form = new FormData();
         form.append('file', docxBlob, 'document.docx');
-        return await firstValueFrom(
-            this.http.post(`${environment.apis.core}/Document/ConvertToPdf`, form, { responseType: 'blob' })
-        );
+        return await firstValueFrom(this.http.post(`${environment.apis.core}/Document/ConvertToPdf`, form, { responseType: 'blob' }));
     }
 
     private getMatrixRowsForSection(section: UnitRankSection): string[][] {
-        const dataRows: string[][] = section.units.map(row => {
+        const dataRows: string[][] = section.units.map((row) => {
             const cells: string[] = [this.unitLabel(row)];
             for (const col of this.ranks) {
                 const c = this.cell(row, col.equivalentNameId);

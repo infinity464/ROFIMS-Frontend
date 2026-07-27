@@ -1137,17 +1137,42 @@ export class ExportService {
                         const r = padRow(row, 2);
                         return { label: r[0], value: r[1] };
                     });
-                    const pairItems = pairs
-                        .map(
-                            (p) =>
-                                `<span style="font-size:${sizeContentPt};"><span style="font-weight:400">${escapeHtml(p.label.endsWith(':') ? p.label : p.label + ':')} </span><strong>${escapeHtml(p.value)}</strong></span>`
-                        )
-                        .join('');
+                    const pairSpan = (p: { label: string; value: string }) =>
+                        `<span style="font-size:${sizeContentPt};"><span style="font-weight:400">${escapeHtml(p.label.endsWith(':') ? p.label : p.label + ':')} </span><strong>${escapeHtml(p.value)}</strong></span>`;
+                    const pairGrid = (items: { label: string; value: string }[]) =>
+                        `<div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px 1.5em;">${items.map(pairSpan).join('')}</div>`;
+
+                    // Address sections carry several addresses in one list; each one starts with the
+                    // address-type row (e.g. "Address: Permanent Address"). Give every address its own
+                    // boxed block with the type as a heading, otherwise Permanent/Present run together.
+                    if (sec.addressSection && pairs.length > 0) {
+                        const typeLabel = pairs[0].label;
+                        const blocks: { head: { label: string; value: string }; items: { label: string; value: string }[] }[] = [];
+                        pairs.forEach((p) => {
+                            if (blocks.length === 0 || p.label === typeLabel) blocks.push({ head: p, items: [] });
+                            else blocks[blocks.length - 1].items.push(p);
+                        });
+                        const blockHtml = blocks
+                            .map(
+                                (b) => `
+                            <div style="border: 1px solid #d0d0d0; border-radius: 4px; padding: 10px 12px; margin-bottom: 8px; background: #fafafa; page-break-inside: avoid;">
+                                <div style="font-size:${sizeContentPt}; font-weight: bold; border-bottom: 1px solid #d0d0d0; padding-bottom: 4px; margin-bottom: 8px;">${escapeHtml(b.head.value || b.head.label)}</div>
+                                ${b.items.length ? pairGrid(b.items) : ''}
+                            </div>`
+                            )
+                            .join('');
+                        return `
+                    <div class="profile-section" style="margin-bottom: 1.5rem; page-break-inside: avoid;">
+                        <h2 style="font-family: ${fontFamily}; font-size: 12pt; font-weight: bold; margin-bottom: 0.5rem; border-bottom: 1px solid #ccc; page-break-after: avoid;">${escapeHtml(sec.title)}</h2>
+                        <div style="font-family: ${fontFamily};">${blockHtml}</div>
+                    </div>`;
+                    }
+
                     return `
                     <div class="profile-section" style="margin-bottom: 1.5rem; page-break-inside: avoid;">
                         <h2 style="font-family: ${fontFamily}; font-size: 12pt; font-weight: bold; margin-bottom: 0.5rem; border-bottom: 1px solid #ccc; page-break-after: avoid;">${escapeHtml(sec.title)}</h2>
                         <div style="font-family: ${fontFamily}; border: 1px solid #e0e0e0; border-radius: 4px; padding: 12px 14px; background: #fafafa;">
-                            <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px 1.5em;">${pairItems}</div>
+                            ${pairGrid(pairs)}
                         </div>
                     </div>`;
                 }
