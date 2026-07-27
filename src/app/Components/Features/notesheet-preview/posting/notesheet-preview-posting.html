@@ -304,8 +304,8 @@
                                 <ng-container *ngIf="isInterPosting()">
                                     <tr *ngFor="let emp of postingEmployees; let i = index">
                                         <td>{{ isEnglish() ? (i + 1) : serial(i + 1) }}</td>
-                                        <td style="white-space: pre-line">{{ getServiceIdDisplay(emp) }}</td>
-                                        <td>
+                                        <td class="ns-left-cell" style="white-space: pre-line">{{ getServiceIdDisplay(emp) }}</td>
+                                        <td class="ns-left-cell">
                                             {{ isEnglish() ? (emp.rankName || '-') : (emp.rankNameBN || emp.rankName || '-') }}<span *ngIf="showRankQualifications && getRankQualifications(emp)"><br />({{ getRankQualifications(emp) }})</span>
                                         </td>
                                         <td class="ns-name-cell">{{ isEnglish() ? (emp.fullNameEN || '-') : (emp.fullNameBN || emp.fullNameEN || '-') }}</td>
@@ -343,11 +343,11 @@
                                 <ng-container *ngIf="!isInterPosting()">
                                     <tr *ngFor="let emp of postingEmployees; let i = index">
                                         <td>{{ isEnglish() ? (i + 1) : serial(i + 1) }}</td>
-                                        <td style="white-space: pre-line">{{ getServiceIdDisplay(emp) }}</td>
-                                        <td>
+                                        <td class="ns-left-cell" style="white-space: pre-line">{{ getServiceIdDisplay(emp) }}</td>
+                                        <td class="ns-left-cell">
                                             {{ isEnglish() ? (emp.rankName || '-') : (emp.rankNameBN || emp.rankName || '-') }}<span *ngIf="showRankQualifications && getRankQualifications(emp)"><br />({{ getRankQualifications(emp) }})</span>
                                         </td>
-                                        <td>
+                                        <td class="ns-left-cell">
                                             {{ isEnglish() ? (emp.tradeName || '-') : (emp.tradeNameBN || emp.tradeName || '-') }}<span *ngIf="showTradeRemarks && emp.tradeRemarks"><br />({{ emp.tradeRemarks }})</span>
                                         </td>
                                         <td class="ns-name-cell">{{ isEnglish() ? (emp.fullNameEN || '-') : (emp.fullNameBN || emp.fullNameEN || '-') }}</td>
@@ -557,8 +557,8 @@
                                 <ng-container *ngIf="isInterPosting()">
                                     <tr *ngFor="let emp of postingEmployees; let i = index">
                                         <td>{{ isEnglish() ? (i + 1) : serial(i + 1) }}</td>
-                                        <td style="white-space: pre-line">{{ getServiceIdDisplay(emp) }}</td>
-                                        <td>
+                                        <td class="ns-left-cell" style="white-space: pre-line">{{ getServiceIdDisplay(emp) }}</td>
+                                        <td class="ns-left-cell">
                                             {{ isEnglish() ? (emp.rankName || '') : (emp.rankNameBN || emp.rankName || '') }}<span *ngIf="showRankQualifications && getRankQualifications(emp)"><br />({{ getRankQualifications(emp) }})</span>
                                         </td>
                                         <td class="ns-name-cell">
@@ -579,11 +579,11 @@
                                 <ng-container *ngIf="!isInterPosting()">
                                     <tr *ngFor="let emp of postingEmployees; let i = index">
                                         <td>{{ isEnglish() ? (i + 1) : serial(i + 1) }}</td>
-                                        <td style="white-space: pre-line">{{ getServiceIdDisplay(emp) }}</td>
-                                        <td>
+                                        <td class="ns-left-cell" style="white-space: pre-line">{{ getServiceIdDisplay(emp) }}</td>
+                                        <td class="ns-left-cell">
                                             {{ isEnglish() ? (emp.rankName || '') : (emp.rankNameBN || emp.rankName || '') }}<span *ngIf="showRankQualifications && getRankQualifications(emp)"><br />({{ getRankQualifications(emp) }})</span>
                                         </td>
-                                        <td *ngIf="showTradeColumn">
+                                        <td class="ns-left-cell" *ngIf="showTradeColumn">
                                             {{ isEnglish() ? (emp.tradeName || '') : (emp.tradeNameBN || emp.tradeName || '') }}<span *ngIf="showTradeRemarks && emp.tradeRemarks"><br />({{ emp.tradeRemarks }})</span>
                                         </td>
                                         <td class="ns-name-cell">

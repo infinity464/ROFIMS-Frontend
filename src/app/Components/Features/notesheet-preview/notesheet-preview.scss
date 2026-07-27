@@ -345,7 +345,7 @@
     table-layout: fixed;
     th,
     td {
-        border: 0.25px solid #888;  // finer/thinner grid lines
+        border: 0.25px solid #888; // finer/thinner grid lines
         padding: 4px 6px;
         text-align: center;
         word-break: break-word;
@@ -353,7 +353,7 @@
     }
     th {
         font-weight: 600;
-        background: transparent;   // no shaded header — plain white like the paper
+        background: transparent; // no shaded header — plain white like the paper
         font-size: 7pt;
         text-transform: uppercase;
     }
@@ -477,9 +477,15 @@
     padding: 5px 2px 0 4px;
     font-size: 7pt;
 
-    .ns-ref-content { margin-left: 0; }
-    ::ng-deep .ns-ref-content p { margin: 0 0 0.2rem; }
-    ::ng-deep .ns-ref-content p:last-child { margin-bottom: 0; }
+    .ns-ref-content {
+        margin-left: 0;
+    }
+    ::ng-deep .ns-ref-content p {
+        margin: 0 0 0.2rem;
+    }
+    ::ng-deep .ns-ref-content p:last-child {
+        margin-bottom: 0;
+    }
     .ns-ref-content {
         flex: 1;
         min-width: 0;
@@ -513,7 +519,9 @@
     gap: 5px;
     max-width: 220px;
     white-space: nowrap;
-    transition: background .15s ease, color .15s ease;
+    transition:
+        background 0.15s ease,
+        color 0.15s ease;
     &:hover {
         background: #3b82f6;
         color: #fff;
@@ -648,6 +656,11 @@
     }
     /* নাম column: value left-aligned (header stays centered). */
     td.ns-name-cell {
+        text-align: left;
+    }
+    /* ব্যক্তিগত নম্বর / পদবি / ট্রেড columns: same treatment as নাম — value
+       left-aligned, header centered. */
+    td.ns-left-cell {
         text-align: left;
     }
     tr:nth-child(even) {

@@ -213,6 +213,12 @@
         text-align: left;
     }
 
+    /* ব্যক্তিগত নম্বর / পদবি / ট্রেড / নিজ জেলা / পূর্ববতী কর্মস্থল / বদলিকৃত কর্মস্থল:
+       same treatment as নাম — value left-aligned, header stays centered. */
+    td.po-doc-left-cell {
+        text-align: left;
+    }
+
     th {
         font-weight: 700;      /* header bold */
         background: transparent;

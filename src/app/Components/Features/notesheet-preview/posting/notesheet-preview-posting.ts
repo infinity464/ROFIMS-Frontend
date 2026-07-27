@@ -772,8 +772,14 @@ export class NotesheetPreviewPostingComponent extends NotesheetPreviewBase imple
 
     getInterPrevWorkplace(emp: DraftPostingEmployeeRow): string {
         const bn = !this.isEnglish();
+        // Mother unit carries its district after a comma: "বানৌজা হাজী মহসীন, চট্টগ্রাম",
+        // then the present RAB hierarchy follows separated by "/".
+        const motherUnit = bn ? (emp.motherUnitNameBN || emp.motherUnitName || '') : (emp.motherUnitName || '');
+        const district = bn
+            ? (emp.motherUnitDistrictNameBN || emp.motherUnitDistrictName || '')
+            : (emp.motherUnitDistrictName || '');
         const parts = [
-            bn ? (emp.motherUnitNameBN || emp.motherUnitName || '') : (emp.motherUnitName || ''),
+            motherUnit && district ? motherUnit + ', ' + district : (motherUnit || district),
             bn ? (emp.presentRabUnitNameBN || emp.presentRabUnitName || '') : (emp.presentRabUnitName || ''),
             bn ? (emp.presentRabWingNameBN || emp.presentRabWingName || '') : (emp.presentRabWingName || ''),
             bn ? (emp.presentRabBranchNameBN || emp.presentRabBranchName || '') : (emp.presentRabBranchName || ''),
@@ -1159,9 +1165,16 @@ export class NotesheetPreviewPostingComponent extends NotesheetPreviewBase imple
         const rabUnit = this.showPrevWorkplaceDetail
             ? (bn ? (emp.motherOrgLocationNameBN || emp.motherOrgLocationName || '') : (emp.motherOrgLocationName || ''))
             : '';
-        const motherOrg = bn
+        let motherOrg = bn
             ? (emp.motherUnitNameBN || emp.motherUnitName || '')
             : (emp.motherUnitName || '');
+        // Mother unit's district (EmployeeInfo.LastMotherUnitDistrictId) after a comma:
+        // "বানৌজা হাজী মহসীন, চট্টগ্রাম".
+        const district = bn
+            ? (emp.motherUnitDistrictNameBN || emp.motherUnitDistrictName || '')
+            : (emp.motherUnitDistrictName || '');
+        if (motherOrg && district) motherOrg = motherOrg + ', ' + district;
+        else if (district) motherOrg = district;
         if (motherOrg && rabUnit) return motherOrg + '\n(' + rabUnit + ')';
         if (motherOrg) return motherOrg;
         if (rabUnit) return rabUnit;
@@ -2217,7 +2230,8 @@ html, body { margin: 0; padding: 0; background: transparent; }
                     // cantSplit: keep each employee row whole — Word must not break a
                     // multi-line row across pages (that leaves a stray fragment after
                     // the repeated header on the next page).
-                    return new TableRow({ cantSplit: true, children: iVisIdx.map(oi => dataCellFn(allV[oi], iW[oi], oi === 3 ? AlignmentType.LEFT : AlignmentType.CENTER)) });
+                    // ব্যক্তিগত নং / পদবি / নাম (1–3) left-aligned, matching the preview.
+                    return new TableRow({ cantSplit: true, children: iVisIdx.map(oi => dataCellFn(allV[oi], iW[oi], oi >= 1 && oi <= 3 ? AlignmentType.LEFT : AlignmentType.CENTER)) });
                 });
 
                 const iTotalW = iVisIdx.reduce((a, oi) => a + iW[oi], 0);
@@ -2268,7 +2282,8 @@ html, body { margin: 0; padding: 0; background: transparent; }
                 const dataRows = this.postingEmployees.map((emp, i) => {
                     const allVals = buildAllCellValues(emp, i);
                     // cantSplit: keep each employee row whole across page breaks.
-                    return new TableRow({ cantSplit: true, children: visibleIndices.map((oi, vi) => dataCellFn(allVals[oi], colWidths[vi], oi === 4 ? AlignmentType.LEFT : AlignmentType.CENTER)) });
+                    // ব্যক্তিগত নম্বর / পদবি / ট্রেড / নাম (1–4) left-aligned, matching the preview.
+                    return new TableRow({ cantSplit: true, children: visibleIndices.map((oi, vi) => dataCellFn(allVals[oi], colWidths[vi], oi >= 1 && oi <= 4 ? AlignmentType.LEFT : AlignmentType.CENTER)) });
                 });
                 const tableRows = [...headerRows, ...dataRows];
                 mainChildren.push(new Paragraph({ spacing: { before: 200 }, children: [] }));

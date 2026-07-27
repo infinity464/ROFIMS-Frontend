@@ -842,7 +842,11 @@ export class PostingOrderPreviewPageComponent implements OnInit {
 
     empPrevWorkplace(emp: PostingOrderEmployeeRow): string {
         const bn = this.isBangla;
-        const motherUnit = (bn ? (emp.motherUnitNameBN || emp.motherUnitName) : emp.motherUnitName) || '';
+        const unit = (bn ? (emp.motherUnitNameBN || emp.motherUnitName) : emp.motherUnitName) || '';
+        // Mother unit's district (EmployeeInfo.LastMotherUnitDistrictId) after a
+        // comma: "বানৌজা হাজী মহসীন, চট্টগ্রাম" — matches the posting notesheet.
+        const district = (bn ? (emp.motherUnitDistrictNameBN || emp.motherUnitDistrictName) : emp.motherUnitDistrictName) || '';
+        const motherUnit = unit && district ? unit + ', ' + district : (unit || district);
         if (!this.isInterPosting) return motherUnit;
         // Inter-posting: পূর্ববতী কর্মস্থল = mother unit + present RAB unit hierarchy (matches the notesheet).
         const parts = [
@@ -1760,6 +1764,10 @@ html, body { margin: 0; padding: 0; background: transparent; }
         const headerRows = [new TableRow({ tableHeader: true, children: cols.map((col, ci) => hdrCell(col, ci)) })];
 
         const nameIdx = isInter ? 3 : (st ? 4 : 3);   // নাম column index (left-aligned)
+        // Left-aligned span (matches the preview): ব্যক্তিগত নং → বদলিকৃত কর্মস্থল.
+        // ক্রমিক / র‌্যাব আইডি / মন্তব্য stay centered.
+        const transferIdx = nameIdx + (sd ? 1 : 0) + (sp ? 1 : 0) + 1;
+        const isLeftCol = (ci: number) => ci >= 1 && ci <= transferIdx;
         const dataRows = this.filteredEmployees.map((emp, i) => {
             const serial = bn ? this.toBanglaDigits(String(i + 1)) + '।' : String(i + 1);
             const vals = isInter
@@ -1783,7 +1791,7 @@ html, body { margin: 0; padding: 0; background: transparent; }
                     const lines = val.split('\n');
                     const cellParas = lines.map(line => new Paragraph({
                         children: [new TextRun({ text: line, size: tblSize, sizeComplexScript: tblCsSize, font, language: lang })],
-                        alignment: ci === nameIdx ? AlignmentType.LEFT : AlignmentType.CENTER,
+                        alignment: isLeftCol(ci) ? AlignmentType.LEFT : AlignmentType.CENTER,
                         spacing: { after: 20 }
                     }));
                     return new TableCell({
