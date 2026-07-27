@@ -1200,10 +1200,14 @@ export class MovementInfoComponent implements OnInit {
                 },
                 error: (err) => {
                     console.error('Movement save failed', err);
+                    // Validation rejections (mixed RAB units on one CC, no number
+                    // configured for the unit) come back as a ResultViewModel — the
+                    // message lands in `description`.
                     this.messageService.add({
                         severity: 'error',
                         summary: 'Error',
-                        detail: err?.error?.message || 'Failed to save movement.'
+                        detail: err?.error?.description || err?.error?.message || 'Failed to save movement.',
+                        life: 8000
                     });
                     this.saving = false;
                 }

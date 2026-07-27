@@ -17,6 +17,12 @@ export interface MovementLetterNumberConfigModel {
     includeDateInNumber: boolean;
     /** Unit contact number printed on the movement letter. Free text. */
     telephoneNo: string | null;
+    /**
+     * Fallback config for this move-order type — used when the issuing unit has no
+     * config of its own. Only one config per move-order type can hold it; saving a
+     * new default clears the previous one.
+     */
+    isDefault: boolean;
     status: boolean;
     createdBy: string;
     createdDate: string;

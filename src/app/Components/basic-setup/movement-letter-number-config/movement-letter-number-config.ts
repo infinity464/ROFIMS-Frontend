@@ -80,7 +80,8 @@ export class MovementLetterNumberConfigComponent implements OnInit {
             // padding width ("001" → 3 wide). Digits only, at least one non-zero.
             startNumber: [null, [Validators.required, Validators.pattern(/^\d+$/), this.nonZeroValidator]],
             includeDateInNumber: [false],
-            telephoneNo: [null]
+            telephoneNo: [null],
+            isDefault: [false]
         });
     }
 
@@ -175,6 +176,17 @@ export class MovementLetterNumberConfigComponent implements OnInit {
         return `${rawPrefix}${sep}${sequence}`;
     }
 
+    /**
+     * The config already flagged as default for the move-order type being edited,
+     * ignoring the row on screen. Only one config per move-order type may be the
+     * default — one CC default, one MO default, and so on.
+     */
+    getExistingDefault(): MovementLetterNumberConfigModel | undefined {
+        const val = this.configForm.getRawValue();
+        if (val.moveOrderType == null) return undefined;
+        return this.configs.find((c) => c.configId !== this.editingConfigId && c.moveOrderType === val.moveOrderType && c.isDefault);
+    }
+
     /** A unit may hold only one config per move-order type — mirrors the DB unique key. */
     private findDuplicate(): MovementLetterNumberConfigModel | undefined {
         const val = this.configForm.getRawValue();
@@ -225,6 +237,22 @@ export class MovementLetterNumberConfigComponent implements OnInit {
             return;
         }
 
+        // Only one default per move-order type — mirrors the API check and the
+        // filtered unique index UQ_MovementLetterNumberConfig_Default.
+        if (this.configForm.getRawValue().isDefault) {
+            const currentDefault = this.getExistingDefault();
+            if (currentDefault) {
+                const typeLabel = this.getMoveOrderTypeLabel(currentDefault.moveOrderType);
+                this.messageService.add({
+                    severity: 'warn',
+                    summary: 'Default already set',
+                    detail: `${this.getRabUnitLabel(currentDefault.rabUnitId)} is already the default for ${typeLabel}. Only one ${typeLabel} configuration can be the default — clear that one first.`,
+                    life: 6000
+                });
+                return;
+            }
+        }
+
         if (this.isEditMode) {
             this.update();
         } else {
@@ -256,7 +284,8 @@ export class MovementLetterNumberConfigComponent implements OnInit {
             createdDate: currentDateTime,
             lastUpdatedBy: this.currentUser,
             lastupdate: currentDateTime,
-            includeDateInNumber: this.configForm.value.includeDateInNumber ?? false
+            includeDateInNumber: this.configForm.value.includeDateInNumber ?? false,
+            isDefault: this.configForm.value.isDefault ?? false
         };
 
         this.masterBasicSetupService.createMovementLetterNumberConfig(payload).subscribe({
@@ -296,6 +325,7 @@ export class MovementLetterNumberConfigComponent implements OnInit {
             prefixBN: formVal.prefixBN ?? '',
             includeDateInNumber: formVal.includeDateInNumber ?? false,
             telephoneNo: formVal.telephoneNo ?? null,
+            isDefault: formVal.isDefault ?? false,
             lastUpdatedBy: this.currentUser,
             lastupdate: currentDateTime
         };
@@ -335,7 +365,8 @@ export class MovementLetterNumberConfigComponent implements OnInit {
             // shows "001" rather than "1".
             startNumber: this.padNumber(row.startNumber, row.numberPadding),
             includeDateInNumber: row.includeDateInNumber ?? false,
-            telephoneNo: row.telephoneNo ?? null
+            telephoneNo: row.telephoneNo ?? null,
+            isDefault: row.isDefault ?? false
         });
         // Unit + type + start-number locked after creation — they identify the
         // running sequence (matches notesheet-number-config).
@@ -353,7 +384,8 @@ export class MovementLetterNumberConfigComponent implements OnInit {
             prefixBN: null,
             startNumber: null,
             includeDateInNumber: false,
-            telephoneNo: null
+            telephoneNo: null,
+            isDefault: false
         });
         this.configForm.get('rabUnitId')?.enable();
         this.configForm.get('moveOrderType')?.enable();

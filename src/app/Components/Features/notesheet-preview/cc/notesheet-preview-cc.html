@@ -79,7 +79,7 @@
 
             <!-- Second header row: M CC No (left)  +  Govt vehicle / date (right) -->
             <div style="display:flex; align-items:flex-start; margin-top:8pt; font-size:12pt;">
-                <div style="flex:1;">এম সিসি নং {{ letterNoBn }}</div>
+                <div style="flex:1;">{{ ccNumberLineBn }}</div>
                 <div style="flex:0 0 auto; text-align:right; line-height:1.6;">
                     @if (vehicleLabelBn) {
                         <div>{{ vehicleLabelBn }}</div>
@@ -142,7 +142,8 @@
 
                         <!-- Col 4: কাজের বিবরণ (work description)
                              Line 1: সূত্রঃ {auth}
-                             Line 2: স্মারক নং - {letterNoBn} {remarks} (concatenated) -->
+                             Line 2: the Details captured on the movement form. Remarks
+                             belong in the মন্তব্য column, not here. -->
                         <td colspan="4" class="cc-cell" style="vertical-align:top; padding:6pt;">
                             <div style="display:flex; gap:4pt; align-items:flex-start;">
                                 <span>সূত্রঃ</span>
@@ -150,12 +151,9 @@
                                     <div class="mv-rich" style="flex:1;" [innerHTML]="movement.auth"></div>
                                 }
                             </div>
-                            <div class="cc-smarak-line" style="margin-top:2pt;">
-                                <span>স্মারক নং - {{ letterNoBn }}</span>
-                                @if (movement.remarks) {
-                                    <span class="mv-rich" [innerHTML]="movement.remarks"></span>
-                                }
-                            </div>
+                            @if (movement.detailsInformation) {
+                                <div class="mv-rich" style="margin-top:2pt;" [innerHTML]="movement.detailsInformation"></div>
+                            }
 
                             <!-- Signature block — one full block per approver (with their own unit/HQ).
                                  Falls back to a single default block when no approver is set. -->
@@ -164,7 +162,8 @@
                                     @for (block of approverBlocks; track $index) {
                                         <div style="display:inline-block; text-align:center; line-height:1.5; margin-left:18pt; vertical-align:top;">
                                             <div style="height:36pt;"></div>
-                                            <div>{{ block.name }}</div>
+                                            <!-- Name is deliberately omitted — the block carries
+                                                 the appointment and unit only. -->
                                             <div>নির্বাহী কর্মকর্তা</div>
                                             @for (line of districtAndStationLines; track $index) {
                                                 <div>{{ line }}</div>
@@ -183,8 +182,13 @@
                             </div>
                         </td>
 
-                        <!-- Col 8: মন্তব্য (left blank — filled in by hand) -->
-                        <td class="cc-cell" style="vertical-align:top;"></td>
+                        <!-- Col 8: মন্তব্য — Remarks captured on the movement form.
+                             Stays empty (for hand-written notes) when none were entered. -->
+                        <td class="cc-cell" style="vertical-align:top; padding:6pt;">
+                            @if (movement.remarks) {
+                                <div class="mv-rich" [innerHTML]="movement.remarks"></div>
+                            }
+                        </td>
                     </tr>
                 </tbody>
             </table>

@@ -60,6 +60,11 @@
         border: 0.75pt solid #000;
         padding: 4pt 6pt;
         box-sizing: border-box;
+        /* table-layout is fixed, so text that can't fit would otherwise spill past
+           the border. Wrap at word boundaries and only split a word when it alone
+           is wider than the column. */
+        overflow-wrap: break-word;
+        word-break: normal;
     }
     .cc-th {
         background: transparent;
@@ -72,6 +77,32 @@
     tbody .cc-cell {
         padding-bottom: 150pt !important;
     }
+    /* মন্তব্য — the form fixes this column at 4%, narrower than most single words.
+       Break mid-word rather than let Remarks overflow the cell border. Scoped to
+       this column only, so Bangla text in the wider columns still wraps normally. */
+    tbody .cc-cell:last-child {
+        word-break: break-all;
+        overflow-wrap: anywhere;
+        hyphens: none;
+    }
+}
+
+/* Quill wraps every typed line in its own <p>, which carries the browser's
+   default 1em top/bottom margin. At the grid's 12pt that spreads a short list
+   ("Note: / a. … / b. …") far wider than it looks in the editor, so collapse the
+   margins and tighten the leading — the preview should match what was typed.
+   ::ng-deep is required: [innerHTML] content is not touched by view encapsulation. */
+.cc-cell {
+    ::ng-deep .mv-rich {
+        line-height: 1.35;
+
+        p, div, ul, ol, h1, h2, h3, h4, h5, h6 {
+            margin: 0;
+        }
+        ul, ol {
+            padding-left: 18pt;
+        }
+    }
 }
 
 /* Footnote — inside the paper, directly below the table, like the reference. */
@@ -79,18 +110,6 @@
     margin-top: 6pt;
     font-size: 12pt;
     line-height: 1.5;
-}
-
-/* Render the স্মারক নং line as a single flowing paragraph — Quill remarks HTML
-   would otherwise break onto its own line because Quill wraps content in <p>. */
-.cc-smarak-line {
-    .mv-rich,
-    ::ng-deep .mv-rich p,
-    ::ng-deep .mv-rich div {
-        display: inline;
-        margin: 0;
-    }
-    ::ng-deep .mv-rich * { display: inline; }
 }
 
 /* QR-scan / mobile-portrait view — rotate the landscape paper 90° so its
