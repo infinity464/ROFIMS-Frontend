@@ -14,6 +14,7 @@ import { DatePickerModule } from 'primeng/datepicker';
 
 import { Router } from '@angular/router';
 import { UserMenuService } from '@/services/user-menu.service';
+import { SharedService } from '@/shared/services/shared-service';
 import { ConfirmationService, MessageService } from 'primeng/api';
 import { switchMap } from 'rxjs/operators';
 import { AddressSectionComponent } from '../../Shared/address-section/address-section';
@@ -151,8 +152,14 @@ export class Employeeinfo implements OnInit {
         private confirmationService: ConfirmationService,
         private messageService: MessageService,
         private _router: Router,
-        private _userMenuService: UserMenuService
+        private _userMenuService: UserMenuService,
+        private sharedService: SharedService
     ) {}
+
+    /** Logged-in user for CreatedBy / LastUpdatedBy. Falls back to 'system' only when nobody is signed in. */
+    private get auditUser(): string {
+        return this.sharedService.getCurrentUser() ?? 'system';
+    }
 
     ngOnInit(): void {
         const _perms = this._userMenuService.getPermissionsByRoute(this._router.url);
@@ -275,9 +282,9 @@ export class Employeeinfo implements OnInit {
             PostingStatus: 'New',
             Status: true,
 
-            CreatedBy: 'system',
+            CreatedBy: this.auditUser,
             CreatedDate: now,
-            LastUpdatedBy: 'system',
+            LastUpdatedBy: this.auditUser,
             Lastupdate: now,
             StatusDate: now
         };
@@ -314,9 +321,9 @@ export class Employeeinfo implements OnInit {
             DivisionType: v.perDivision || null,
             ThanaType: v.perUpazila || null,
             PostOfficeType: v.perPostOffice || null,
-            CreatedBy: 'system',
+            CreatedBy: this.auditUser,
             CreatedDate: now,
-            LastUpdatedBy: 'system',
+            LastUpdatedBy: this.auditUser,
             Lastupdate: now
         });
 
@@ -334,9 +341,9 @@ export class Employeeinfo implements OnInit {
                 DivisionType: v.preDivision || null,
                 ThanaType: v.preUpazila || null,
                 PostOfficeType: v.prePostOffice || null,
-                CreatedBy: 'system',
+                CreatedBy: this.auditUser,
                 CreatedDate: now,
-                LastUpdatedBy: 'system',
+                LastUpdatedBy: this.auditUser,
                 Lastupdate: now
             });
         }
@@ -355,9 +362,9 @@ export class Employeeinfo implements OnInit {
                 DivisionType: v.wifePerDivision || null,
                 ThanaType: v.wifePerUpazila || null,
                 PostOfficeType: v.wifePerPostOffice || null,
-                CreatedBy: 'system',
+                CreatedBy: this.auditUser,
                 CreatedDate: now,
-                LastUpdatedBy: 'system',
+                LastUpdatedBy: this.auditUser,
                 Lastupdate: now
             });
         }
@@ -376,9 +383,9 @@ export class Employeeinfo implements OnInit {
                 DivisionType: v.wifePreDivision || null,
                 ThanaType: v.wifePreUpazila || null,
                 PostOfficeType: v.wifePrePostOffice || null,
-                CreatedBy: 'system',
+                CreatedBy: this.auditUser,
                 CreatedDate: now,
-                LastUpdatedBy: 'system',
+                LastUpdatedBy: this.auditUser,
                 Lastupdate: now
             });
         }

@@ -76,6 +76,12 @@ export class ClearanceExBdLeaveGenerateComponent implements OnInit {
     private _userMenuService = inject(UserMenuService);
     private sharedService = inject(SharedService);
     private memberTypeAccess = inject(IdentityUserMemberTypeAccessService);
+
+    /** Logged-in user for createdBy / updatedBy. Falls back to 'system' only when nobody is signed in. */
+    private get auditUser(): string {
+        return this.sharedService.getCurrentUser() ?? 'system';
+    }
+
     allowedMemberTypeIds: number[] | null = null;
     canInsert = true;
     canUpdate = true;
@@ -583,7 +589,7 @@ export class ClearanceExBdLeaveGenerateComponent implements OnInit {
                     textType: 'en',
                     filesReferences: filesReferencesJson,
                     remarks: this.remarks || null,
-                    updatedBy: 'system',
+                    updatedBy: this.auditUser,
                     approvalEmployeeId: this.selectedApprovalEmployeeId ?? null
                 })
                 : this.exBdLeaveClearanceService.createClearance({
@@ -598,7 +604,7 @@ export class ClearanceExBdLeaveGenerateComponent implements OnInit {
                     textType: 'en',
                     filesReferences: filesReferencesJson,
                     remarks: this.remarks || null,
-                    createdBy: 'system',
+                    createdBy: this.auditUser,
                     postingOrderNumberConfigId: this.postingOrderNumberConfigId ?? null,
                     approvalEmployeeId: this.selectedApprovalEmployeeId ?? null
                 });

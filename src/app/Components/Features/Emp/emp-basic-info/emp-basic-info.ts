@@ -346,9 +346,9 @@ export class EmpBasicInfo implements OnInit {
             PostOfficeType: data.postOffice,
             HouseRoad: data.houseRoad || '',
             Active: true, // New addresses are active by default
-            CreatedBy: 'system',
+            CreatedBy: this.auditUser,
             CreatedDate: new Date().toISOString(),
-            LastUpdatedBy: 'system',
+            LastUpdatedBy: this.auditUser,
             Lastupdate: new Date().toISOString()
         };
 
@@ -400,9 +400,9 @@ export class EmpBasicInfo implements OnInit {
             PostOfficeType: data.postOffice,
             HouseRoad: data.houseRoad || '',
             Active: true, // New addresses are active by default
-            CreatedBy: 'system',
+            CreatedBy: this.auditUser,
             CreatedDate: new Date().toISOString(),
-            LastUpdatedBy: 'system',
+            LastUpdatedBy: this.auditUser,
             Lastupdate: new Date().toISOString()
         };
 
@@ -455,9 +455,9 @@ export class EmpBasicInfo implements OnInit {
             PostOfficeType: data.postOffice,
             HouseRoad: data.houseRoad || '',
             Active: true, // New addresses are active by default
-            CreatedBy: 'system',
+            CreatedBy: this.auditUser,
             CreatedDate: new Date().toISOString(),
-            LastUpdatedBy: 'system',
+            LastUpdatedBy: this.auditUser,
             Lastupdate: new Date().toISOString()
         };
 
@@ -510,9 +510,9 @@ export class EmpBasicInfo implements OnInit {
             PostOfficeType: data.postOffice,
             HouseRoad: data.houseRoad || '',
             Active: true, // New addresses are active by default
-            CreatedBy: 'system',
+            CreatedBy: this.auditUser,
             CreatedDate: new Date().toISOString(),
-            LastUpdatedBy: 'system',
+            LastUpdatedBy: this.auditUser,
             Lastupdate: new Date().toISOString()
         };
 
@@ -907,7 +907,7 @@ export class EmpBasicInfo implements OnInit {
             PassportNo: null,
             Email: null,
             CreatedDate: nowIso,
-            LastUpdatedBy: 'system',
+            LastUpdatedBy: this.auditUser,
             Lastupdate: nowIso,
             StatusDate: nowIso
         };
@@ -957,9 +957,9 @@ export class EmpBasicInfo implements OnInit {
                 PostOfficeType: data.postOffice,
                 HouseRoad: data.houseRoad || '',
                 Active: true, // New addresses are active by default
-                CreatedBy: 'system',
+                CreatedBy: this.auditUser,
                 CreatedDate: new Date().toISOString(),
-                LastUpdatedBy: 'system',
+                LastUpdatedBy: this.auditUser,
                 Lastupdate: new Date().toISOString()
             };
             console.log('Address payload:', payload);
@@ -1093,6 +1093,11 @@ export class EmpBasicInfo implements OnInit {
         private memberTypeAccess: IdentityUserMemberTypeAccessService,
         private joineeDetailService: PermanentPostingJoineeDetailService
     ) {}
+
+    /** Logged-in user for CreatedBy / LastUpdatedBy. Falls back to 'system' only when nobody is signed in. */
+    private get auditUser(): string {
+        return this.sharedService.getCurrentUser() ?? 'system';
+    }
 
     /** CodeIds of Member Types the current user is allowed to use. `null` means "not yet loaded" (fail-open). */
     private allowedMemberTypeIds: number[] | null = null;
@@ -1229,7 +1234,13 @@ export class EmpBasicInfo implements OnInit {
                     officerType: employee.officerType,
                     orgId: employee.orgId,
                     lastMotherUnitDistrictId: employee.lastMotherUnitDistrictId ?? null,
-                    spouseName: employee.spouseName ?? employee.wifeName ?? ''
+                    spouseName: employee.spouseName ?? employee.wifeName ?? '',
+                    // Carry the real creation audit back into the form. Without this the
+                    // form keeps its `new Date()` default and the update payload claims the
+                    // row was created today. The API ignores these on update anyway
+                    // (see Entity.ProtectEmployeeCreatedAudit), but don't send a lie.
+                    createdBy: employee.createdBy ?? employee.CreatedBy ?? 'system',
+                    createdDate: employee.createdDate ?? employee.CreatedDate ?? new Date()
                 });
                 this.spouseFmid = null;
 
@@ -1496,9 +1507,9 @@ export class EmpBasicInfo implements OnInit {
             fullNameBN: ['', [Validators.required, Validators.minLength(2)]],
             postingStatus: [''],
             status: [true],
-            createdBy: ['system'],
+            createdBy: [this.auditUser],
             createdDate: [new Date()],
-            lastUpdatedBy: ['system'],
+            lastUpdatedBy: [this.auditUser],
             lastupdate: [new Date()],
             statusDate: [new Date()],
             lastMotherUnitLocation: [''],
@@ -2103,9 +2114,9 @@ export class EmpBasicInfo implements OnInit {
             employeeID: 0,
             status: true,
             specialQualifications: [],
-            createdBy: 'system',
+            createdBy: this.auditUser,
             createdDate: now,
-            lastUpdatedBy: 'system',
+            lastUpdatedBy: this.auditUser,
             lastupdate: now,
             statusDate: now
         });

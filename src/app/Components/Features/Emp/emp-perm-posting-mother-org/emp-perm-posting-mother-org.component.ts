@@ -1,5 +1,6 @@
 import { Component, OnInit, OnDestroy, ViewChild , inject } from '@angular/core';
 import { UserMenuService } from '@/services/user-menu.service';
+import { SharedService } from '@/shared/services/shared-service';
 import { CommonModule } from '@angular/common';
 import { FormsModule, ReactiveFormsModule, FormBuilder, FormGroup } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
@@ -56,6 +57,13 @@ interface DropdownOption {
 export class EmpPermPostingMotherOrg implements OnInit, OnDestroy {
     private _router = inject(Router);
     private _userMenuService = inject(UserMenuService);
+    private sharedService = inject(SharedService);
+
+    /** Logged-in user for createdBy / lastUpdatedBy. Falls back to 'system' only when nobody is signed in. */
+    private get auditUser(): string {
+        return this.sharedService.getCurrentUser() ?? 'system';
+    }
+
     canInsert = true;
     canUpdate = true;
     canDelete = true;
@@ -427,8 +435,8 @@ export class EmpPermPostingMotherOrg implements OnInit, OnDestroy {
                     postingOrderFilesReferences: fileResults.postingOrder,
                     noteSheetFilesReferences: fileResults.noteSheet,
                     clearanceLatterFilesReferences: fileResults.clearanceLatter,
-                    createdBy: 'system',
-                    lastUpdatedBy: 'system'
+                    createdBy: this.auditUser,
+                    lastUpdatedBy: this.auditUser
                 };
 
                 const req = this.isEditMode

@@ -137,6 +137,11 @@ export class EmpForeignVisit implements OnInit, OnDestroy {
         this.initForm();
     }
 
+    /** Logged-in user for createdBy / lastUpdatedBy. Falls back to 'system' only when nobody is signed in. */
+    private get auditUser(): string {
+        return this.sharedService.getCurrentUser() ?? 'system';
+    }
+
     ngOnInit(): void {
         const _perms = this._userMenuService.getPermissionsByRoute(this._router.url);
         this.canInsert = _perms.canInsert;
@@ -539,8 +544,8 @@ export class EmpForeignVisit implements OnInit, OnDestroy {
                 remarks: (v.remarks && String(v.remarks).trim()) || null,
                 fileName: null,
                 filesReferences: filesReferencesJson ?? undefined,
-                createdBy: 'system',
-                lastUpdatedBy: 'system'
+                createdBy: this.auditUser,
+                lastUpdatedBy: this.auditUser
             };
 
             this.isSaving = true;
@@ -623,8 +628,8 @@ export class EmpForeignVisit implements OnInit, OnDestroy {
                     foreignVisitId,
                     familyId,
                     remarks: remarks || null,
-                    createdBy: 'system',
-                    lastUpdatedBy: 'system'
+                    createdBy: this.auditUser,
+                    lastUpdatedBy: this.auditUser
                 })
                 .subscribe({
                     next: () => done(),
@@ -724,8 +729,8 @@ export class EmpForeignVisit implements OnInit, OnDestroy {
                         foreignVisitId: this.editingVisitId!,
                         familyId: fid,
                         remarks: remarks || null,
-                        createdBy: 'system',
-                        lastUpdatedBy: 'system'
+                        createdBy: this.auditUser,
+                        lastUpdatedBy: this.auditUser
                     })
                     .subscribe({
                         next: () => {

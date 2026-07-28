@@ -275,6 +275,11 @@ export class PostingOrderPreviewPageComponent implements OnInit {
         private memberTypeAccess: IdentityUserMemberTypeAccessService
     ) {}
 
+    /** Logged-in user for createdBy / updatedBy. Falls back to 'system' only when nobody is signed in. */
+    private get auditUser(): string {
+        return this.sharedService.getCurrentUser() ?? 'system';
+    }
+
     /** Resolve the current user's accessible member type ids (cache first, then always refetch). */
     private loadCurrentUserMemberTypePermissions(): void {
         const userId = this.sharedService.getCurrentUserId?.() ?? null;
@@ -1422,7 +1427,7 @@ export class PostingOrderPreviewPageComponent implements OnInit {
             remarks: this.editRemarks || null,
             footerText: footerText,
             employeeIds: this.editEmployees.map(e => e.employeeId),
-            updatedBy: 'system',
+            updatedBy: this.auditUser,
             approvalEmployeeId: this.editApprovalEmployeeId ?? null
         };
     }

@@ -139,6 +139,11 @@ export class EmpEducationInfoComponent implements OnInit {
         this.initForm();
     }
 
+    /** Logged-in user for createdBy / lastUpdatedBy. Falls back to 'system' only when nobody is signed in. */
+    private get auditUser(): string {
+        return this.sharedService.getCurrentUser() ?? 'system';
+    }
+
     ngOnInit(): void {
         const _perms = this._userMenuService.getPermissionsByRoute(this._router.url);
         this.canInsert = _perms.canInsert;
@@ -453,8 +458,8 @@ export class EmpEducationInfoComponent implements OnInit {
                 gradePoint: formValue.gradePoint && String(formValue.gradePoint).trim() ? String(formValue.gradePoint).trim() : null,
                 remarks: formValue.remarks && String(formValue.remarks).trim() ? String(formValue.remarks).trim() : null,
                 filesReferences: filesReferencesJson ?? undefined,
-                createdBy: 'system',
-                lastUpdatedBy: 'system'
+                createdBy: this.auditUser,
+                lastUpdatedBy: this.auditUser
             };
 
             this.isSaving = true;

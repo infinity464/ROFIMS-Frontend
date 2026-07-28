@@ -1,5 +1,6 @@
 import { Component, EventEmitter, Input, OnInit, Output , inject } from '@angular/core';
 import { UserMenuService } from '@/services/user-menu.service';
+import { SharedService } from '@/shared/services/shared-service';
 import { CommonModule } from '@angular/common';
 import { FormsModule, ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
@@ -35,6 +36,13 @@ import { FlexibleDateDirective } from '@/shared/directives/flexible-date.directi
 export class EmpLeaveInfo implements OnInit {
     private _router = inject(Router);
     private _userMenuService = inject(UserMenuService);
+    private sharedService = inject(SharedService);
+
+    /** Logged-in user for createdBy / lastUpdatedBy. Falls back to 'system' only when nobody is signed in. */
+    private get auditUser(): string {
+        return this.sharedService.getCurrentUser() ?? 'system';
+    }
+
     canInsert = true;
     canUpdate = true;
     canDelete = true;
@@ -258,8 +266,8 @@ export class EmpLeaveInfo implements OnInit {
             toDate: this.toCalendarDateIso(toDate),
             remarks: formValue.remarks || null,
             auth: null,
-            createdBy: 'system',
-            lastUpdatedBy: 'system'
+            createdBy: this.auditUser,
+            lastUpdatedBy: this.auditUser
         };
 
         this.isSaving = true;

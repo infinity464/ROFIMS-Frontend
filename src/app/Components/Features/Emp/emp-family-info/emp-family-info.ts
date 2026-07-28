@@ -1,5 +1,6 @@
 import { Component, EventEmitter, Input, OnInit, Output, ViewChild , inject } from '@angular/core';
 import { UserMenuService } from '@/services/user-menu.service';
+import { SharedService } from '@/shared/services/shared-service';
 import { CommonModule } from '@angular/common';
 import { FormsModule, ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
@@ -71,6 +72,13 @@ interface FamilyMember {
 export class EmpFamilyInfo implements OnInit {
     private _router = inject(Router);
     private _userMenuService = inject(UserMenuService);
+    private sharedService = inject(SharedService);
+
+    /** Logged-in user for CreatedBy / LastUpdatedBy. Falls back to 'system' only when nobody is signed in. */
+    private get auditUser(): string {
+        return this.sharedService.getCurrentUser() ?? 'system';
+    }
+
     canInsert = true;
     canUpdate = true;
     canDelete = true;
@@ -466,7 +474,7 @@ export class EmpFamilyInfo implements OnInit {
             MobileNo: formValue.mobileNo || null,
             PassportNo: formValue.passportNo || null,
             Email: formValue.email || null,
-            LastUpdatedBy: 'system',
+            LastUpdatedBy: this.auditUser,
             Lastupdate: new Date().toISOString(),
             StatusDate: new Date().toISOString()
         };
@@ -758,9 +766,9 @@ export class EmpFamilyInfo implements OnInit {
             ThanaType: data.upazila,
             PostOfficeType: data.postOffice,
             Active: true,
-            CreatedBy: 'system',
+            CreatedBy: this.auditUser,
             CreatedDate: new Date().toISOString(),
-            LastUpdatedBy: 'system',
+            LastUpdatedBy: this.auditUser,
             Lastupdate: new Date().toISOString()
         };
 
@@ -824,7 +832,7 @@ export class EmpFamilyInfo implements OnInit {
             MobileNo: formValue.mobileNo || null,
             PassportNo: formValue.passportNo || null,
             Email: formValue.email || null,
-            LastUpdatedBy: 'system',
+            LastUpdatedBy: this.auditUser,
             Lastupdate: new Date().toISOString(),
             StatusDate: new Date().toISOString()
         };

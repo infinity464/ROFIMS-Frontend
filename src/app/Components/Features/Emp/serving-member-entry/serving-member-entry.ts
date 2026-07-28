@@ -546,7 +546,7 @@ export class ServingMemberEntry implements OnInit {
             PassportNo: null,
             Email: null,
             CreatedDate: nowIso,
-            LastUpdatedBy: 'system',
+            LastUpdatedBy: this.auditUser,
             Lastupdate: nowIso,
             StatusDate: nowIso,
             FMID: this.spouseFmid != null ? this.spouseFmid : 0
@@ -589,9 +589,9 @@ export class ServingMemberEntry implements OnInit {
                 PostOfficeType: data.postOffice,
                 HouseRoad: data.houseRoad || '',
                 Active: true,
-                CreatedBy: 'system',
+                CreatedBy: this.auditUser,
                 CreatedDate: new Date().toISOString(),
-                LastUpdatedBy: 'system',
+                LastUpdatedBy: this.auditUser,
                 Lastupdate: new Date().toISOString()
             };
         };
@@ -732,6 +732,11 @@ export class ServingMemberEntry implements OnInit {
         private previousRABService: PreviousRABServiceService,
         private presentStatusService: PresentStatusInfoService
     ) {}
+
+    /** Logged-in user for CreatedBy / LastUpdatedBy. Falls back to 'system' only when nobody is signed in. */
+    private get auditUser(): string {
+        return this.sharedService.getCurrentUser() ?? 'system';
+    }
 
     private allowedMemberTypeIds: number[] | null = null;
     private allRanksForOrg: CommonCodeModel[] = [];
@@ -875,9 +880,9 @@ export class ServingMemberEntry implements OnInit {
             postingAuth: v.postingAuth || null,
             remarks: v.remarks || null,
             filesReferences: null,
-            createdBy: 'system',
+            createdBy: this.auditUser,
             createdDate: now,
-            lastUpdatedBy: 'system',
+            lastUpdatedBy: this.auditUser,
             lastupdate: now
         };
 
@@ -1040,9 +1045,9 @@ export class ServingMemberEntry implements OnInit {
             ServiceIdCardNo: formValue.serviceIdCardNo,
             PresentStatus: formValue.presentStatus || null,
             FilesReferences: null,
-            CreatedBy: 'system',
+            CreatedBy: this.auditUser,
             CreatedDate: new Date().toISOString(),
-            LastUpdatedBy: 'system',
+            LastUpdatedBy: this.auditUser,
             Lastupdate: new Date().toISOString()
         };
 
@@ -1086,9 +1091,9 @@ export class ServingMemberEntry implements OnInit {
             DeceasedReason: null,
             SupportingDocFilesReferences: null,
             IsActive: true,
-            CreatedBy: 'system',
+            CreatedBy: this.auditUser,
             CreatedDate: now,
-            LastUpdatedBy: 'system',
+            LastUpdatedBy: this.auditUser,
             Lastupdate: now
         };
 
@@ -1536,9 +1541,9 @@ export class ServingMemberEntry implements OnInit {
             fullNameBN: ['', [Validators.required, Validators.minLength(2)]],
             postingStatus: [PostingStatus.Servings],
             status: [true],
-            createdBy: ['system'],
+            createdBy: [this.auditUser],
             createdDate: [new Date()],
-            lastUpdatedBy: ['system'],
+            lastUpdatedBy: [this.auditUser],
             lastupdate: [new Date()],
             statusDate: [new Date()],
             lastMotherUnitLocation: [''],
@@ -1618,9 +1623,9 @@ export class ServingMemberEntry implements OnInit {
             status: true,
             specialQualifications: [],
             postingStatus: PostingStatus.Servings,
-            createdBy: 'system',
+            createdBy: this.auditUser,
             createdDate: now,
-            lastUpdatedBy: 'system',
+            lastUpdatedBy: this.auditUser,
             lastupdate: now,
             statusDate: now,
             isRFTSComplted: true
