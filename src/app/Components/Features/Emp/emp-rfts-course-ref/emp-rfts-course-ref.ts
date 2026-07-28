@@ -287,9 +287,39 @@ export class EmpRftsCourseRefComponent implements OnInit {
         return this.selectedIds.has(this.idOf(row));
     }
 
-    onRowSelectionChange(row: EmployeeSearchInfoModel, checked: boolean): void {
+    /**
+     * A member with no RAB ID cannot go onto a course — the ID has not been
+     * generated for them yet.
+     */
+    isSelectable(row: EmployeeSearchInfoModel): boolean {
+        return this.getVal(row, 'rabid', 'rabId', 'rabID', 'RABID').trim() !== '';
+    }
+
+    selectTooltip(row: EmployeeSearchInfoModel): string {
+        return this.isSelectable(row) ? '' : 'RAB ID not generated yet';
+    }
+
+    /**
+     * The checkbox is left enabled rather than given the `disabled` attribute:
+     * a disabled input fires no events, so there would be no click to explain
+     * why the row cannot be picked. It is styled as unavailable, and the
+     * selection is refused here with a message instead.
+     */
+    onRowSelectionChange(row: EmployeeSearchInfoModel, checked: boolean, cb?: HTMLInputElement): void {
         const id = this.idOf(row);
         if (id <= 0) return;
+
+        if (checked && !this.isSelectable(row)) {
+            if (cb) cb.checked = false;
+            const who = this.getVal(row, 'fullNameEN', 'FullNameEN') || 'This member';
+            this.messageService.add({
+                severity: 'warn',
+                summary: 'Cannot select',
+                detail: `RAB ID not generated yet for ${who}.`
+            });
+            return;
+        }
+
         if (checked) {
             this.selectedIds.add(id);
             this.selectedRowMap.set(id, this.toMemberRow(row));
@@ -306,23 +336,50 @@ export class EmpRftsCourseRefComponent implements OnInit {
         return list.slice(start, end);
     }
 
+    /**
+     * Rows on this page that can actually be picked. Select-all and the header
+     * checkbox state both work off this, so rows without a RAB ID never make the
+     * header look half-selected or block it from ever reading "all".
+     */
+    private getSelectablePageRows(): EmployeeSearchInfoModel[] {
+        return this.getCurrentPageRows().filter((r) => this.idOf(r) > 0 && this.isSelectable(r));
+    }
+
     get isAllVisibleSelected(): boolean {
-        const rows = this.getCurrentPageRows().filter((r) => this.idOf(r) > 0);
+        const rows = this.getSelectablePageRows();
         if (rows.length === 0) return false;
         return rows.every((r) => this.selectedIds.has(this.idOf(r)));
     }
 
     get isVisibleIndeterminate(): boolean {
-        const rows = this.getCurrentPageRows().filter((r) => this.idOf(r) > 0);
+        const rows = this.getSelectablePageRows();
         if (rows.length === 0) return false;
         const picked = rows.filter((r) => this.selectedIds.has(this.idOf(r))).length;
         return picked > 0 && picked < rows.length;
     }
 
-    toggleSelectAllVisible(checked: boolean): void {
-        for (const r of this.getCurrentPageRows()) {
+    /** True when nothing on the current page has a RAB ID yet. */
+    get hasNoSelectableRows(): boolean {
+        return this.getSelectablePageRows().length === 0;
+    }
+
+    toggleSelectAllVisible(checked: boolean, cb?: HTMLInputElement): void {
+        const rows = this.getSelectablePageRows();
+
+        if (checked && rows.length === 0) {
+            // The binding alone would not clear it — isAllVisibleSelected is
+            // already false, so Angular sees no change to re-apply.
+            if (cb) cb.checked = false;
+            this.messageService.add({
+                severity: 'warn',
+                summary: 'Cannot select',
+                detail: 'RAB ID not generated yet for any member on this page.'
+            });
+            return;
+        }
+
+        for (const r of rows) {
             const id = this.idOf(r);
-            if (id <= 0) continue;
             if (checked) {
                 this.selectedIds.add(id);
                 this.selectedRowMap.set(id, this.toMemberRow(r));

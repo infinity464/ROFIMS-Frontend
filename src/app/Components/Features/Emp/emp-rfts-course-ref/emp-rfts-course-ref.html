@@ -150,12 +150,17 @@
                 <ng-template pTemplate="header">
                     <tr>
                         <th style="width: 2.5rem">
+                            <!-- Left enabled when the page has rows but none are
+                                 selectable, so the click can explain why. -->
                             <input #selectAllCb type="checkbox"
                                 [checked]="isAllVisibleSelected"
                                 [indeterminate]="isVisibleIndeterminate"
                                 [disabled]="(filteredList?.length ?? 0) === 0"
-                                (change)="toggleSelectAllVisible(selectAllCb.checked)"
-                                pTooltip="Select all on this page" tooltipPosition="top" />
+                                [class.opacity-40]="hasNoSelectableRows"
+                                [style.cursor]="hasNoSelectableRows ? 'not-allowed' : 'pointer'"
+                                (change)="toggleSelectAllVisible(selectAllCb.checked, selectAllCb)"
+                                [pTooltip]="hasNoSelectableRows ? 'RAB ID not generated yet for any member on this page' : 'Select all on this page'"
+                                tooltipPosition="top" />
                         </th>
                         <th style="width: 4rem">Ser</th>
                         <th>Service ID</th>
@@ -171,9 +176,15 @@
                 <ng-template pTemplate="body" let-row let-rowIndex="rowIndex">
                     <tr>
                         <td>
+                            <!-- Not [disabled]: a disabled input fires no events, so a
+                                 click could not explain why the row is unavailable.
+                                 The component refuses the selection instead. -->
                             <input #cb type="checkbox"
                                 [checked]="isRowSelected(row)"
-                                (change)="onRowSelectionChange(row, cb.checked)" />
+                                [class.opacity-40]="!isSelectable(row)"
+                                [style.cursor]="isSelectable(row) ? 'pointer' : 'not-allowed'"
+                                [pTooltip]="selectTooltip(row)" tooltipPosition="top"
+                                (change)="onRowSelectionChange(row, cb.checked, cb)" />
                         </td>
                         <td>{{ rowIndex + 1 }}</td>
                         <td style="white-space: nowrap"><span class="font-semibold">{{ getVal(row, 'serviceId', 'ServiceId') || '—' }}</span></td>
