@@ -566,7 +566,7 @@
                                             ><span *ngIf="showProfQualification && getProfQualification(emp)">, {{ getProfQualification(emp) }}</span><span *ngIf="showCorps && getCorps(emp)">, {{ getCorps(emp) }}</span>
                                         </td>
                                         <td style="white-space: pre-line">{{ getOwnDistrict(emp) }}</td>
-                                        <td style="white-space: pre-line">{{ getSpouseDistrict(emp) }}</td>
+                                        <td style="white-space: pre-line">{{ getSpouseDistrict(emp) || '-' }}</td>
                                         <td *ngIf="showTenure">{{ isEnglish() ? formatJoiningDate(emp.joiningDateInRAB) : toBnDigits(formatJoiningDate(emp.joiningDateInRAB)) }}</td>
                                         <td *ngIf="showTenure">{{ tenure(emp.joiningDateInRAB, 'y') }}</td>
                                         <td *ngIf="showTenure">{{ tenure(emp.joiningDateInRAB, 'm') }}</td>
@@ -591,7 +591,7 @@
                                             ><span *ngIf="showProfQualification && getProfQualification(emp)">, {{ getProfQualification(emp) }}</span><span *ngIf="showCorps && getCorps(emp)">, {{ getCorps(emp) }}</span>
                                         </td>
                                         <td style="white-space: pre-line">{{ getOwnDistrict(emp) }}</td>
-                                        <td style="white-space: pre-line">{{ getSpouseDistrict(emp) }}</td>
+                                        <td style="white-space: pre-line">{{ getSpouseDistrict(emp) || '-' }}</td>
                                         <td style="white-space: pre-line">{{ getPreviousWorkplace(emp) }}</td>
                                         <td>{{ getTransferUnitShort(emp) }}</td>
                                         <td *ngIf="showRemarks">{{ getCombinedRemarks(emp) }}</td>
