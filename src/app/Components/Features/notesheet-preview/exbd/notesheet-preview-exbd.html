@@ -82,6 +82,8 @@
                          [style.height.px]="getPageCoverHeight(i)">
                     </div>
                 </div>
+                <!-- Page number under the border — only when the note-sheet spans multiple pages -->
+                <div class="ns-page-footer" *ngIf="pageOffsets.length > 1">{{ pageLabel(i, pageOffsets.length) }}</div>
             </div>
         </div>
     </ng-container>

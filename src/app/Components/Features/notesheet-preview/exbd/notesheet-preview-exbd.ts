@@ -1,4 +1,4 @@
-﻿import { AfterViewChecked, ChangeDetectorRef, Component, ElementRef, ViewChild, inject } from '@angular/core';
+import { AfterViewChecked, ChangeDetectorRef, Component, ElementRef, ViewChild, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ConfirmationService, MessageService } from 'primeng/api';
@@ -947,9 +947,9 @@ export class NotesheetPreviewExbdComponent extends NotesheetPreviewBase implemen
         if (!this.noteSheet || !this.contentMeasure) return;
         this.printingPreview = true;
         try {
-            const { html, chrome } = await this.buildJsReportPdf();
+            const { html, chrome, templateExtras } = await this.buildJsReportPdf();
             await this.jsreportService.previewPdfInNewTab(
-                html, {}, `NoteSheet_${this.noteSheet.noteSheetNo ?? 'export'}`, chrome,
+                html, {}, `NoteSheet_${this.noteSheet.noteSheetNo ?? 'export'}`, chrome, templateExtras,
             );
         } catch (err: any) {
             this.messageService.add({
@@ -966,9 +966,9 @@ export class NotesheetPreviewExbdComponent extends NotesheetPreviewBase implemen
         if (!this.noteSheet || !this.contentMeasure) return;
         this.exportingPdf = true;
         try {
-            const { html, chrome } = await this.buildJsReportPdf();
+            const { html, chrome, templateExtras } = await this.buildJsReportPdf();
             await this.jsreportService.downloadPdf(
-                html, {}, `NoteSheet_${this.noteSheet.noteSheetNo ?? 'export'}.pdf`, chrome,
+                html, {}, `NoteSheet_${this.noteSheet.noteSheetNo ?? 'export'}.pdf`, chrome, templateExtras,
             );
         } catch (err: any) {
             this.messageService.add({
@@ -987,7 +987,7 @@ export class NotesheetPreviewExbdComponent extends NotesheetPreviewBase implemen
      * flow via @page rules; @page insets mirror .a4-paper's padding so the text
      * column matches the web view (Legal 215.9−2×10 = 195.9mm; A4 = 190mm).
      */
-    private async buildJsReportPdf(): Promise<{ html: string; chrome: Record<string, unknown> }> {
+    private async buildJsReportPdf(): Promise<{ html: string; chrome: Record<string, unknown>; templateExtras: Record<string, unknown> }> {
         const styles = this.collectDocumentStyles();
         const fontCss = await this.embedBanglaFontCss();
         const body = this.contentMeasure.nativeElement.innerHTML;
@@ -1081,13 +1081,25 @@ html, body { margin: 0; padding: 0; background: transparent; }
             width: pageWidth,
             height: pageHeight,
             landscape: false,
-            marginTop: '0', marginBottom: '0', marginLeft: '0', marginRight: '0',
+            // Same values as the @page rule above — Chromium sizes the footer band
+            // from these params, so a '0' bottom margin would clip the page number.
+            marginTop: `${padTop}mm`, marginBottom: `${padBottom}mm`,
+            marginLeft: `${padX}mm`, marginRight: `${padX}mm`,
             printBackground: true,
             displayHeaderFooter: false,
             headerTemplate: '', footerTemplate: ''
         };
 
-        return { html, chrome };
+        const templateExtras = {
+            pdfOperations: this.pdfPageNumberOperations({
+                multipage: this.pageOffsets.length > 1,
+                pageWidth, pageHeight,
+                bottomMarginMm: padBottom,
+                fontCss,
+            }),
+        };
+
+        return { html, chrome, templateExtras };
     }
 
     /** Concatenate every same-origin stylesheet loaded into the page. */

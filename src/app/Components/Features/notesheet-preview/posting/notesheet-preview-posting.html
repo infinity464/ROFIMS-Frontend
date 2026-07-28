@@ -134,6 +134,8 @@
                     </div>
                     <div class="page-bottom-cover" *ngIf="getPageCoverHeight(i) > 0" [class.page-bottom-cover--close-table]="pageNeedsTableHeader[i + 1]" [style.height.px]="getPageCoverHeight(i)"></div>
                 </div>
+                <!-- Page number under the border — only when the note-sheet spans multiple pages -->
+                <div class="ns-page-footer" *ngIf="pageOffsets.length > 1">{{ pageLabel(i, pageOffsets.length) }}</div>
             </div>
         </div>
 
@@ -598,7 +600,17 @@
                                     </tr>
                                 </ng-container>
                             </tbody>
-                            <!-- tfoot note hidden for now -->
+                            <!-- PDF/Print only: borderless white gap row below the table, mirroring
+                                 .ns-head-gap above it. Chromium repeats the whole <tfoot> at the
+                                 bottom of every page the table spans, so the last row on each page
+                                 clears the .pdf-page-frame border instead of butting against it —
+                                 the PDF equivalent of the web view's 4mm .page-viewport::after band.
+                                 Hidden on screen & in the main table via `.ns-foot-gap`. -->
+                            <tfoot>
+                                <tr class="ns-foot-gap">
+                                    <td [attr.colspan]="postingColumnCount"></td>
+                                </tr>
+                            </tfoot>
                         </table>
                     </div>
 

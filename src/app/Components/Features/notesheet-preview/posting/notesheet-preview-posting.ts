@@ -1532,9 +1532,9 @@ export class NotesheetPreviewPostingComponent extends NotesheetPreviewBase imple
         if (!this.noteSheet || !this.contentMeasure) return;
         this.exportingPdf = true;
         try {
-            const { html, chrome } = await this.buildJsReportPdf();
+            const { html, chrome, templateExtras } = await this.buildJsReportPdf();
             await this.jsreportService.downloadPdf(
-                html, {}, `NoteSheet_${this.noteSheet.noteSheetNo ?? 'export'}.pdf`, chrome,
+                html, {}, `NoteSheet_${this.noteSheet.noteSheetNo ?? 'export'}.pdf`, chrome, templateExtras,
             );
         } catch (err: any) {
             this.messageService.add({
@@ -1555,9 +1555,9 @@ export class NotesheetPreviewPostingComponent extends NotesheetPreviewBase imple
         if (!this.noteSheet || !this.contentMeasure) return;
         this.exportingPdfJsReport = true;
         try {
-            const { html, chrome } = await this.buildJsReportPdf();
+            const { html, chrome, templateExtras } = await this.buildJsReportPdf();
             await this.jsreportService.previewPdfInNewTab(
-                html, {}, `NoteSheet_${this.noteSheet.noteSheetNo ?? 'export'}`, chrome,
+                html, {}, `NoteSheet_${this.noteSheet.noteSheetNo ?? 'export'}`, chrome, templateExtras,
             );
         } catch (err: any) {
             this.messageService.add({
@@ -1578,7 +1578,7 @@ export class NotesheetPreviewPostingComponent extends NotesheetPreviewBase imple
      * in Chromium; contentMeasure holds the full content as one flow, which
      * Chromium paginates correctly via @page rules.
      */
-    private async buildJsReportPdf(): Promise<{ html: string; chrome: Record<string, unknown> }> {
+    private async buildJsReportPdf(): Promise<{ html: string; chrome: Record<string, unknown>; templateExtras: Record<string, unknown> }> {
         const styles = this.collectDocumentStyles();
         const fontCss = await this.embedBanglaFontCss();
         const body = this.contentMeasure.nativeElement.innerHTML;
@@ -1749,6 +1749,26 @@ html, body { margin: 0; padding: 0; background: transparent; }
    fragment, so page 1 matches the web spacing while continuation pages keep
    their gap below the page frame. */
 .pdf-flow .ns-posting-table { margin-top: calc(-1 * var(--ns-head-gap-h)); }
+
+/* Mirror of the head gap, at the bottom. Without it the last row on a page sits
+   flush against the .pdf-page-frame border — the frame fills the printable area
+   exactly, so nothing otherwise keeps content off it (the web view gets this gap
+   from .page-viewport::after, which the PDF flow has no equivalent of). Chromium
+   repeats <tfoot> at the bottom of every page the table spans, so a borderless
+   spacer row there reserves the gap on each one. */
+.pdf-flow .ns-posting-table { --ns-foot-gap-h: 4mm; }
+.pdf-flow .ns-posting-table tfoot tr.ns-foot-gap { display: table-row !important; }
+.pdf-flow .ns-posting-table tfoot tr.ns-foot-gap td {
+    border: 0 !important;
+    padding: 0 !important;
+    height: var(--ns-foot-gap-h);
+    background: transparent;
+}
+/* Same cancellation as the head gap: the repeated tfoot also renders once at the
+   table's natural end, which the web view never has. Margin-bottom applies only
+   to the box's LAST fragment, so this trims that trailing band while every
+   continuation page keeps its gap above the frame. */
+.pdf-flow .ns-posting-table { margin-bottom: calc(-1 * var(--ns-foot-gap-h)); }
 </style>
 </head>
 <body>
@@ -1762,17 +1782,30 @@ html, body { margin: 0; padding: 0; background: transparent; }
             width: pageWidth,
             height: pageHeight,
             landscape: false,
-            marginTop: '0',
-            marginBottom: '0',
-            marginLeft: '0',
-            marginRight: '0',
+            // Same values as the @page rule above. They used to be '0' (letting the
+            // CSS win), but Chromium sizes the header/footer bands from these
+            // params — a 0 bottom margin leaves the page number nowhere to render.
+            // Keeping the two in step means the printed geometry is unchanged.
+            marginTop: `${padTop}mm`,
+            marginBottom: `${padBottom}mm`,
+            marginLeft: `${padX}mm`,
+            marginRight: `${padX}mm`,
             printBackground: true,
             displayHeaderFooter: false,
             headerTemplate: '',
             footerTemplate: ''
         };
 
-        return { html, chrome };
+        const templateExtras = {
+            pdfOperations: this.pdfPageNumberOperations({
+                multipage: this.pageOffsets.length > 1,
+                pageWidth, pageHeight,
+                bottomMarginMm: padBottom,
+                fontCss,
+            }),
+        };
+
+        return { html, chrome, templateExtras };
     }
 
     /**
