@@ -128,6 +128,39 @@ export class ServingMemberEntry implements OnInit {
     isDuplicateRabId: boolean = false;
     isCheckingRabId: boolean = false;
 
+    // Duplicate reported by the server when Save was rejected (HTTP 409), held per field so the
+    // message can sit under the offending input. This is not the same as isDuplicate* above:
+    // the on-type check can come back clean and Save still be rejected, either because another
+    // operator saved the same ids in between, or because the conflicting member sits outside
+    // this operator's unit scope and so never appears in their search results.
+    // Cleared as soon as the operator edits the field — see wireDuplicateChecks().
+    serverDuplicateRabIdError: string | null = null;
+    serverDuplicateComboError: string | null = null;
+
+    /** True when either the on-type check or the server has flagged a duplicate. Blocks Save. */
+    get hasDuplicateBlock(): boolean {
+        return this.isDuplicateCombo || this.isDuplicateRabId || !!this.serverDuplicateRabIdError || !!this.serverDuplicateComboError;
+    }
+
+    /**
+     * Applies a 409 from SaveAsyn/UpdateAsyn to the form. The API names the offending control in
+     * Data.Field ('rabid' | 'serviceId'); anything else is shown against both id fields so the
+     * operator still sees where to look.
+     */
+    private applyServerDuplicate(err: any): void {
+        const message = err?.error?.description || 'RAB ID or Service ID already exist';
+        const field = err?.error?.data?.field ?? err?.error?.Data?.Field ?? null;
+
+        if (field === 'rabid') {
+            this.serverDuplicateRabIdError = message;
+        } else if (field === 'serviceId') {
+            this.serverDuplicateComboError = message;
+        } else {
+            this.serverDuplicateRabIdError = message;
+            this.serverDuplicateComboError = message;
+        }
+    }
+
     checkDuplicateRabId(): void {
         const rabId = this.postingForm?.get('rabid')?.value;
         const rabIdStr = rabId != null ? String(rabId).trim() : '';
@@ -254,20 +287,20 @@ export class ServingMemberEntry implements OnInit {
             return;
         }
 
-        if (this.isDuplicateCombo) {
+        if (this.isDuplicateCombo || this.serverDuplicateComboError) {
             this.messageService.add({
                 severity: 'warn',
                 summary: 'Duplicate Entry',
-                detail: 'A member with the same Mother Organization + Prefix + Service ID already exists'
+                detail: this.serverDuplicateComboError || 'A member with the same Mother Organization + Prefix + Service ID already exists'
             });
             return;
         }
 
-        if (this.isDuplicateRabId) {
+        if (this.isDuplicateRabId || this.serverDuplicateRabIdError) {
             this.messageService.add({
                 severity: 'warn',
                 summary: 'Duplicate RAB ID',
-                detail: 'A member with the same RAB ID already exists'
+                detail: this.serverDuplicateRabIdError || 'A member with the same RAB ID already exists'
             });
             return;
         }
@@ -464,17 +497,17 @@ export class ServingMemberEntry implements OnInit {
                 this.isSaving = false;
                 console.error('Error saving employee', err);
 
-                // 409 = the server rejected this member as a duplicate. That happens when another
-                // operator saved the same RAB ID / Service ID between our on-type duplicate check
-                // and this Save, so show the server's reason instead of a generic failure and
-                // re-run the checks so the form marks the offending fields.
+                // 409 = the server rejected this member as a duplicate, either because another
+                // operator saved the same RAB ID / Service ID between our on-type check and this
+                // Save, or because the conflicting member is outside our unit scope and never
+                // showed up in that check. Flag the field from the server response — re-running
+                // the client check would come back clean in the second case.
                 if (err?.status === 409) {
-                    this.checkDuplicateRabId();
-                    this.checkDuplicateCombo();
+                    this.applyServerDuplicate(err);
                     this.messageService.add({
                         severity: 'warn',
                         summary: 'Duplicate Entry',
-                        detail: err?.error?.description || 'This member was just entered by someone else. Please re-check the RAB ID and Service ID.',
+                        detail: err?.error?.description || 'RAB ID or Service ID already exist',
                         life: 10000
                     });
                     return;
@@ -713,6 +746,10 @@ export class ServingMemberEntry implements OnInit {
         this.loadCurrentUserMemberTypePermissions();
 
         ['motherOrganization', 'prefix', 'serviceId'].forEach((field) => {
+            // Drop a server-reported duplicate the moment the operator starts changing the
+            // combination — undebounced, so the message clears on the first keystroke.
+            this.postingForm.get(field)?.valueChanges.subscribe(() => (this.serverDuplicateComboError = null));
+
             this.postingForm.get(field)?.valueChanges.pipe(
                 debounceTime(500),
                 distinctUntilChanged()
@@ -720,6 +757,7 @@ export class ServingMemberEntry implements OnInit {
         });
 
         // Real-time duplicate check on RAB ID
+        this.postingForm.get('rabid')?.valueChanges.subscribe(() => (this.serverDuplicateRabIdError = null));
         this.postingForm.get('rabid')?.valueChanges.pipe(
             debounceTime(500),
             distinctUntilChanged()
@@ -1540,6 +1578,8 @@ export class ServingMemberEntry implements OnInit {
         this.spousePresentAddress = undefined;
         this.isDuplicateCombo = false;
         this.isDuplicateRabId = false;
+        this.serverDuplicateComboError = null;
+        this.serverDuplicateRabIdError = null;
 
         this.presentAddressConfig.employeeId = 0;
         this.permanentAddressConfig.employeeId = 0;

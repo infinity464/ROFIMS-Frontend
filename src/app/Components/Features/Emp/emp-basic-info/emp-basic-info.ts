@@ -865,7 +865,7 @@ export class EmpBasicInfo implements OnInit {
                     this.messageService.add({
                         severity: 'warn',
                         summary: 'Duplicate Entry',
-                        detail: err?.error?.description || 'This member was just entered by someone else. Please re-check the RAB ID and Service ID.',
+                        detail: err?.error?.description || 'RAB ID or Service ID already exist',
                         life: 10000
                     });
                     return;
