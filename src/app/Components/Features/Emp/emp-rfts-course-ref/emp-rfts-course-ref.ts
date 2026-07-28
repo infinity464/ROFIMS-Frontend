@@ -1,6 +1,6 @@
 import { Component, OnInit, inject } from '@angular/core';
 import { UserMenuService } from '@/services/user-menu.service';
-import { Router } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 
@@ -9,8 +9,8 @@ import { TableModule } from 'primeng/table';
 import { ButtonModule } from 'primeng/button';
 import { Fluid } from 'primeng/fluid';
 import { Toast } from 'primeng/toast';
-import { ConfirmDialogModule } from 'primeng/confirmdialog';
 import { InputTextModule } from 'primeng/inputtext';
+import { TextareaModule } from 'primeng/textarea';
 import { DatePickerModule } from 'primeng/datepicker';
 import { SelectModule } from 'primeng/select';
 import { TooltipModule } from 'primeng/tooltip';
@@ -19,26 +19,36 @@ import { InputIconModule } from 'primeng/inputicon';
 import { MessageService } from 'primeng/api';
 
 import { CourseInfoService, PendingRftsFilterParams } from '@/services/course-info-service';
-import { DraftCourseService } from '@/services/draft-course.service';
 import { CommonCodeService } from '@/services/common-code-service';
 import { MotherOrganizationModel } from '@/models/mother-org-model';
 import { CommonCodeModel } from '@/models/common-code-model';
 import { EmployeeSearchInfoModel } from '@/models/EmpModel';
-import { DraftCourseMemberRow } from '@/models/draft-course.model';
+import { RftsCourseRefService } from '@/services/rfts-course-ref.service';
+import { RftsCourseRefMember, RftsCourseRefPayload } from '@/models/rfts-course-ref.model';
 
+/**
+ * RFTS Course / Reference entry form.
+ *
+ * Same shell and member-selection flow as /emp-send-to-course, but the header
+ * is Course No / Reference No + a single Date (no from/to range).
+ *
+ * Saved courses are browsed on /emp-rfts-course-list, which links back here
+ * with ?id=<n> to edit one.
+ */
 @Component({
-    selector: 'app-emp-send-to-course',
+    selector: 'app-emp-rfts-course-ref',
     standalone: true,
     imports: [
         CommonModule,
         FormsModule,
+        RouterLink,
         CardModule,
         TableModule,
         ButtonModule,
         Fluid,
         Toast,
-        ConfirmDialogModule,
         InputTextModule,
+        TextareaModule,
         DatePickerModule,
         SelectModule,
         TooltipModule,
@@ -46,32 +56,42 @@ import { DraftCourseMemberRow } from '@/models/draft-course.model';
         InputIconModule
     ],
     providers: [MessageService],
-    templateUrl: './emp-send-to-course.html',
-    styleUrl: './emp-send-to-course.scss'
+    templateUrl: './emp-rfts-course-ref.html',
+    styleUrl: './emp-rfts-course-ref.scss'
 })
-export class EmpSendToCourseComponent implements OnInit {
+export class EmpRftsCourseRefComponent implements OnInit {
     private _router = inject(Router);
     private _userMenuService = inject(UserMenuService);
+
     canInsert = true;
     canUpdate = true;
     canDelete = true;
 
-    courseNo = '';
-    draftDateFrom: Date | null = null;
-    draftDateTo: Date | null = null;
+    // ===== Course header form =====
+    /** Id of the course being edited; null while adding a new one. */
+    editingId: number | null = null;
+    courseRefNo = '';
+    courseDate: Date | null = null;
+    remarks = '';
+    status = true;
+    isSubmitting = false;
 
-    // ===== Pending-RFTS table (replaces the old autocomplete) =====
+    readonly statusOptions = [
+        { label: 'Active', value: true },
+        { label: 'Inactive', value: false }
+    ];
+
+    // ===== Member selection (mirrors /emp-send-to-course) =====
     /** All members pending RFTS returned by the server (IsRFTSComplted null/false). */
     list: EmployeeSearchInfoModel[] = [];
-    loading = false;
-    first = 0;
-    rows = 20;
+    membersLoading = false;
+    memberFirst = 0;
+    memberRows = 20;
     /** Client-side quick search over the loaded list (Name / Service ID / RAB ID). */
-    searchText = '';
+    memberSearchText = '';
     /** Collapsible filter panel — open by default. */
     filterOpen = true;
 
-    // Filter options + selections (mirrors supernumerary-list).
     orgOptions: MotherOrganizationModel[] = [];
     selectedOrgId: number | null = null;
     memberTypeOptions: { label: string; value: number }[] = [];
@@ -90,15 +110,14 @@ export class EmpSendToCourseComponent implements OnInit {
     /** EmployeeIDs currently checked. */
     selectedIds = new Set<number>();
     /** Row data for checked employees, keyed by EmployeeID (survives filtering/paging). */
-    private selectedRowMap = new Map<number, EmployeeSearchInfoModel>();
-
-    isAddingToDraft = false;
+    private selectedRowMap = new Map<number, RftsCourseRefMember>();
 
     constructor(
+        private service: RftsCourseRefService,
         private courseInfoService: CourseInfoService,
-        private draftCourseService: DraftCourseService,
         private commonCodeService: CommonCodeService,
-        private messageService: MessageService
+        private messageService: MessageService,
+        private route: ActivatedRoute
     ) {}
 
     ngOnInit(): void {
@@ -108,7 +127,15 @@ export class EmpSendToCourseComponent implements OnInit {
         this.canDelete = _perms.canDelete;
         this.loadOrgOptions();
         this.loadMemberTypeOptions();
-        this.loadData();
+
+        // /emp-rfts-course-list links here with ?id=<n> to edit an existing course.
+        // The eligible list depends on editingId (the edited course is exempt from
+        // the "already booked elsewhere" filter), so when editing it is loaded only
+        // after the course comes back — otherwise the first fetch would wrongly
+        // exclude this course's own members.
+        const id = Number(this.route.snapshot.queryParamMap.get('id'));
+        if (Number.isFinite(id) && id > 0) this.loadForEdit(id);
+        else this.loadMembers();
     }
 
     // ---------- Filter option loading ----------
@@ -162,18 +189,18 @@ export class EmpSendToCourseComponent implements OnInit {
                 error: () => { this.tradeOptions = []; this.naTradeIds = []; }
             });
         }
-        this.first = 0;
-        this.loadData();
+        this.memberFirst = 0;
+        this.loadMembers();
     }
 
     onFilterChange(): void {
-        this.first = 0;
-        this.loadData();
+        this.memberFirst = 0;
+        this.loadMembers();
     }
 
-    onPage(event: { first: number; rows?: number }): void {
-        this.first = event.first;
-        if (event.rows != null) this.rows = event.rows;
+    onMemberPage(event: { first?: number; rows?: number }): void {
+        if (event.first != null) this.memberFirst = event.first;
+        if (event.rows != null) this.memberRows = event.rows;
     }
 
     get activeFilterCount(): number {
@@ -200,13 +227,13 @@ export class EmpSendToCourseComponent implements OnInit {
         this.selectedTradeId = null;
         this.joiningDateFrom = null;
         this.joiningDateTo = null;
-        this.first = 0;
-        this.loadData();
+        this.memberFirst = 0;
+        this.loadMembers();
     }
 
-    // ---------- Data ----------
-    loadData(): void {
-        this.loading = true;
+    // ---------- Eligible members ----------
+    loadMembers(): void {
+        this.membersLoading = true;
         const isNaTrade = this.selectedTradeId === this.NA_TRADE;
         const filter: PendingRftsFilterParams = {
             orgId: this.selectedOrgId,
@@ -216,17 +243,20 @@ export class EmpSendToCourseComponent implements OnInit {
             tradeIds: isNaTrade ? this.naTradeIds : null,
             joiningDateFrom: this.toLocalDateStr(this.joiningDateFrom),
             joiningDateTo: this.toLocalDateStr(this.joiningDateTo),
-            // Only members who came through /emp-rfts-course-ref are eligible here.
-            onlyCourseRefMembers: true
+            // One employee belongs to one course — hide anyone already booked
+            // onto another. The course being edited is exempt, so its own
+            // members can still be unchecked and re-checked here.
+            excludeCourseRefMembers: true,
+            currentCourseRefId: this.editingId
         };
         this.courseInfoService.getEmployeesPendingRfts(filter).subscribe({
             next: (data) => {
                 this.list = Array.isArray(data) ? data : [];
-                this.loading = false;
+                this.membersLoading = false;
             },
             error: (err) => {
                 this.list = [];
-                this.loading = false;
+                this.membersLoading = false;
                 this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.message || 'Failed to load members.' });
             }
         });
@@ -234,7 +264,7 @@ export class EmpSendToCourseComponent implements OnInit {
 
     /** Client-side filtered list bound to the table (quick search). */
     get filteredList(): EmployeeSearchInfoModel[] {
-        const q = this.searchText?.trim()?.toLowerCase() ?? '';
+        const q = this.memberSearchText?.trim()?.toLowerCase() ?? '';
         if (q === '') return this.list;
         return this.list.filter((row) => {
             const name = (this.getVal(row, 'fullNameEN', 'FullNameEN') + ' ' + this.getVal(row, 'fullNameBN', 'FullNameBN')).toLowerCase();
@@ -244,8 +274,8 @@ export class EmpSendToCourseComponent implements OnInit {
         });
     }
 
-    onSearchChange(): void {
-        this.first = 0;
+    onMemberSearchChange(): void {
+        this.memberFirst = 0;
     }
 
     // ---------- Selection ----------
@@ -262,7 +292,7 @@ export class EmpSendToCourseComponent implements OnInit {
         if (id <= 0) return;
         if (checked) {
             this.selectedIds.add(id);
-            this.selectedRowMap.set(id, row);
+            this.selectedRowMap.set(id, this.toMemberRow(row));
         } else {
             this.selectedIds.delete(id);
             this.selectedRowMap.delete(id);
@@ -271,8 +301,8 @@ export class EmpSendToCourseComponent implements OnInit {
 
     private getCurrentPageRows(): EmployeeSearchInfoModel[] {
         const list = this.filteredList ?? [];
-        const start = this.first ?? 0;
-        const end = start + (this.rows || list.length);
+        const start = this.memberFirst ?? 0;
+        const end = start + (this.memberRows || list.length);
         return list.slice(start, end);
     }
 
@@ -295,7 +325,7 @@ export class EmpSendToCourseComponent implements OnInit {
             if (id <= 0) continue;
             if (checked) {
                 this.selectedIds.add(id);
-                this.selectedRowMap.set(id, r);
+                this.selectedRowMap.set(id, this.toMemberRow(r));
             } else {
                 this.selectedIds.delete(id);
                 this.selectedRowMap.delete(id);
@@ -307,16 +337,28 @@ export class EmpSendToCourseComponent implements OnInit {
         return this.selectedIds.size;
     }
 
+    /**
+     * Members currently on the course. Rendered as its own table so members
+     * carried over from a saved course stay visible even when they fall outside
+     * the pending-RFTS list the filters return.
+     */
+    get selectedMembers(): RftsCourseRefMember[] {
+        return Array.from(this.selectedRowMap.values());
+    }
+
+    removeSelectedMember(employeeId: number): void {
+        this.selectedIds.delete(employeeId);
+        this.selectedRowMap.delete(employeeId);
+    }
+
     clearSelection(): void {
         this.selectedIds.clear();
         this.selectedRowMap.clear();
     }
 
-    // ---------- Save ----------
-    private toMemberRow(row: EmployeeSearchInfoModel): DraftCourseMemberRow {
-        const eid = this.idOf(row);
+    private toMemberRow(row: EmployeeSearchInfoModel): RftsCourseRefMember {
         return {
-            employeeId: eid,
+            employeeId: this.idOf(row),
             serviceId: row.serviceId ?? row.ServiceId ?? null,
             rabId: (row as { rabid?: string; rabId?: string; rabID?: string; RABID?: string }).rabid
                 ?? (row as { rabid?: string; rabId?: string; rabID?: string; RABID?: string }).rabId
@@ -329,61 +371,139 @@ export class EmpSendToCourseComponent implements OnInit {
         };
     }
 
-    addToDraft(): void {
+    // ---------- Create / Update ----------
+    get isFormValid(): boolean {
+        return !!this.courseRefNo?.trim() && !!this.courseDate && this.selectedCount > 0;
+    }
+
+    save(): void {
         // Guard against double submission while a save is already in flight.
-        if (this.isAddingToDraft) return;
-        if (!this.courseNo?.trim()) {
-            this.messageService.add({ severity: 'warn', summary: 'Warning', detail: 'CourseNo is required.' });
+        if (this.isSubmitting) return;
+
+        if (!this.courseRefNo?.trim()) {
+            this.messageService.add({ severity: 'warn', summary: 'Warning', detail: 'Course No / Reference No is required.' });
             return;
         }
-        if (!this.draftDateFrom || !this.draftDateTo) {
-            this.messageService.add({ severity: 'warn', summary: 'Warning', detail: 'From and To dates are required.' });
+        if (!this.courseDate) {
+            this.messageService.add({ severity: 'warn', summary: 'Warning', detail: 'Date is required.' });
             return;
         }
-        if (this.selectedIds.size === 0) {
+        if (this.selectedCount === 0) {
             this.messageService.add({ severity: 'warn', summary: 'Warning', detail: 'Please select at least one member.' });
             return;
         }
-        this.isAddingToDraft = true;
-        const members = Array.from(this.selectedRowMap.values()).map((r) => this.toMemberRow(r));
-        // Use local date components so the day the user picks is the day stored
-        // (toISOString() would shift the calendar day across timezones).
-        const dateFrom = this.toLocalDateStr(this.draftDateFrom);
-        const dateTo = this.toLocalDateStr(this.draftDateTo);
-        this.draftCourseService.addToDraftCourseList(this.courseNo.trim(), null, members, 'User', dateFrom, dateTo).subscribe({
+
+        const isEdit = this.editingId != null;
+        this.isSubmitting = true;
+
+        const payload: RftsCourseRefPayload = {
+            id: this.editingId ?? 0,
+            courseRefNo: this.courseRefNo.trim(),
+            // Local date components, so the day the user picks is the day stored
+            // (toISOString() would shift the calendar day across timezones).
+            courseDate: this.toLocalDateStr(this.courseDate)!,
+            remarks: this.remarks?.trim() ? this.remarks.trim() : null,
+            status: this.status,
+            members: this.selectedMembers
+        };
+
+        const call = isEdit ? this.service.update(payload) : this.service.create(payload);
+        call.subscribe({
             next: (res) => {
-                if (res.statusCode === 200 && res.id) {
+                this.isSubmitting = false;
+                if (res && typeof res.statusCode === 'number' && res.statusCode !== 200) {
                     this.messageService.add({
-                        severity: 'success',
-                        summary: 'Success',
-                        detail: `Added ${members.length} member(s) to draft (${res.listNo}).`
+                        severity: 'warn',
+                        summary: 'Warning',
+                        detail: res.description || 'Operation failed.'
                     });
-                    this.clearSelection();
-                    this.courseNo = '';
-                    this.draftDateFrom = null;
-                    this.draftDateTo = null;
-                    // The saved members are now in a draft list, which the server
-                    // excludes from this list — refetch so they disappear now
-                    // rather than on the next page load.
-                    this.first = 0;
-                    this.loadData();
-                } else {
-                    this.messageService.add({
-                        severity: 'error',
-                        summary: 'Error',
-                        detail: res.description ?? 'Failed to add to draft.'
-                    });
+                    return;
                 }
-                this.isAddingToDraft = false;
+                this.messageService.add({
+                    severity: 'success',
+                    summary: 'Success',
+                    detail: isEdit
+                        ? `Course / Reference updated with ${payload.members?.length ?? 0} member(s).`
+                        : `Course / Reference created with ${payload.members?.length ?? 0} member(s).`
+                });
+                this.resetForm();
+                if (isEdit) {
+                    // An edit was reached from the list page — go back to it so the
+                    // change is visible instead of leaving an empty form behind.
+                    this._router.navigate(['/emp-rfts-course-list']);
+                } else {
+                    // The saved members are now booked onto a course, which the
+                    // server excludes — refetch so they disappear now rather than
+                    // on the next page load.
+                    this.memberFirst = 0;
+                    this.loadMembers();
+                }
             },
             error: (err) => {
-                const msg = err?.error?.description ?? err?.error?.message ?? 'Failed to add to draft.';
-                this.messageService.add({ severity: 'error', summary: 'Error', detail: msg });
-                this.isAddingToDraft = false;
+                this.isSubmitting = false;
+                this.messageService.add({
+                    severity: 'error',
+                    summary: 'Error',
+                    detail: err?.error?.description || err?.error?.message || 'Operation failed.'
+                });
             }
         });
     }
 
+    /** Loads an existing course into the form (arrived here via ?id=<n>). */
+    private loadForEdit(id: number): void {
+        this.service.getById(id).subscribe({
+            next: (course) => {
+                if (!course || !course.id) {
+                    this.messageService.add({ severity: 'warn', summary: 'Warning', detail: 'Course / Reference not found.' });
+                    return;
+                }
+                this.editingId = course.id;
+                this.courseRefNo = course.courseRefNo ?? '';
+                this.courseDate = this.parseDate(course.courseDate);
+                this.remarks = course.remarks ?? '';
+                this.status = !!course.status;
+
+                this.selectedIds.clear();
+                this.selectedRowMap.clear();
+                for (const m of course.members ?? []) {
+                    if (m.employeeId > 0) {
+                        this.selectedIds.add(m.employeeId);
+                        this.selectedRowMap.set(m.employeeId, m);
+                    }
+                }
+                // editingId is set now, so the eligible list can exempt this course.
+                this.loadMembers();
+            },
+            error: (err) => {
+                this.messageService.add({
+                    severity: 'error',
+                    summary: 'Error',
+                    detail: err?.error?.description || err?.error?.message || 'Failed to load the course.'
+                });
+                // Still show a list — an unloadable course shouldn't leave a blank page.
+                this.loadMembers();
+            }
+        });
+    }
+
+    /** Leave edit mode and go back to the list. */
+    cancelEdit(): void {
+        this.resetForm();
+        this._router.navigate(['/emp-rfts-course-list']);
+    }
+
+    resetForm(): void {
+        this.isSubmitting = false;
+        this.editingId = null;
+        this.courseRefNo = '';
+        this.courseDate = null;
+        this.remarks = '';
+        this.status = true;
+        this.clearSelection();
+    }
+
+    // ---------- Helpers ----------
     private toLocalDateStr(d: Date | null): string | null {
         if (!d) return null;
         const x = new Date(d);
@@ -394,14 +514,23 @@ export class EmpSendToCourseComponent implements OnInit {
         return `${yyyy}-${mm}-${dd}`;
     }
 
+    /**
+     * The API returns a plain yyyy-MM-dd (DateOnly). Building it from parts
+     * keeps it a local date — `new Date('2026-01-12')` parses as UTC midnight
+     * and can render as the previous day west of Greenwich.
+     */
+    private parseDate(value: string | null | undefined): Date | null {
+        if (!value) return null;
+        const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(value);
+        if (m) return new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]));
+        const d = new Date(value);
+        return isNaN(d.getTime()) ? null : d;
+    }
+
     formatDate(value: string | null | undefined): string {
-        if (value == null || value === '') return '—';
-        try {
-            const d = new Date(value);
-            return isNaN(d.getTime()) ? value : d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
-        } catch {
-            return value;
-        }
+        const d = this.parseDate(value);
+        if (!d) return '—';
+        return d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
     }
 
     getVal(row: any, ...keys: string[]): string {
