@@ -19,6 +19,7 @@ import { ConfirmationService, MessageService } from 'primeng/api';
 
 import { RftsCourseRefService } from '@/services/rfts-course-ref.service';
 import { RftsCourseRefMember, RftsCourseRefModel } from '@/models/rfts-course-ref.model';
+import { RftsNominalRollService } from '@/services/rfts-nominal-roll.service';
 
 /** One course card. Members are fetched only when the card is expanded. */
 interface CourseGroup {
@@ -82,9 +83,66 @@ export class EmpRftsCourseListComponent implements OnInit {
 
     constructor(
         private service: RftsCourseRefService,
+        private nominalRoll: RftsNominalRollService,
         private messageService: MessageService,
         private confirmationService: ConfirmationService
     ) {}
+
+    // ---------- Nominal roll export ----------
+    /** Id of the selection whose export is currently being fetched. */
+    exportingId: number | null = null;
+
+    /**
+     * Fetches the roll then hands it to the chosen renderer. The data is read
+     * fresh each time rather than reusing the expanded panel's members, because
+     * the export needs the Bangla names and units the panel never loads.
+     */
+    exportRoll(group: CourseGroup, format: 'print' | 'word' | 'excel', event: Event): void {
+        event.stopPropagation();
+        if (this.exportingId != null) return;
+
+        if (group.memberCount === 0) {
+            this.messageService.add({
+                severity: 'warn',
+                summary: 'Nothing to export',
+                detail: `"${group.courseRefNo}" has no members.`
+            });
+            return;
+        }
+
+        this.exportingId = group.id;
+        this.service.getReport(group.id).subscribe({
+            next: async (roll) => {
+                try {
+                    if (format === 'print') {
+                        if (!this.nominalRoll.print(roll)) {
+                            this.messageService.add({
+                                severity: 'warn',
+                                summary: 'Popup blocked',
+                                detail: 'Allow popups for this site to open the print view.'
+                            });
+                        }
+                    } else if (format === 'word') {
+                        await this.nominalRoll.exportWord(roll);
+                    } else {
+                        this.nominalRoll.exportExcel(roll);
+                    }
+                } catch {
+                    this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to build the export.' });
+                } finally {
+                    this.exportingId = null;
+                }
+            },
+            error: (err) => {
+                this.exportingId = null;
+                this.messageService.add({
+                    severity: 'error',
+                    summary: 'Error',
+                    detail: err?.error?.description || err?.error?.message || 'Failed to load the export data.'
+                });
+            }
+        });
+    }
 
     ngOnInit(): void {
         // This page was split out of /emp-rfts-course-ref. Until it is added to
@@ -128,7 +186,7 @@ export class EmpRftsCourseListComponent implements OnInit {
                 this.messageService.add({
                     severity: 'error',
                     summary: 'Error',
-                    detail: err?.error?.description || err?.error?.message || 'Failed to load courses.'
+                    detail: err?.error?.description || err?.error?.message || 'Failed to load selections.'
                 });
             }
         });
@@ -173,7 +231,7 @@ export class EmpRftsCourseListComponent implements OnInit {
             },
             error: () => {
                 this.isLoadingMembers = false;
-                this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to load members for this course.' });
+                this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to load members for this selection.' });
             }
         });
     }
@@ -194,7 +252,7 @@ export class EmpRftsCourseListComponent implements OnInit {
 
     removeMemberTooltip(member: RftsCourseRefMember): string {
         return this.canRemoveMember(member)
-            ? 'Remove from course'
+            ? 'Remove from selection'
             : 'RFTS is already complete for this member — cannot be removed';
     }
 
@@ -204,7 +262,7 @@ export class EmpRftsCourseListComponent implements OnInit {
             this.messageService.add({
                 severity: 'warn',
                 summary: 'Not allowed',
-                detail: `RFTS is already complete for ${member.fullNameEN || 'this member'} — they cannot be removed from the course.`
+                detail: `RFTS is already complete for ${member.fullNameEN || 'this member'} — they cannot be removed from the selection.`
             });
             return;
         }
@@ -256,7 +314,7 @@ export class EmpRftsCourseListComponent implements OnInit {
             this.messageService.add({
                 severity: 'warn',
                 summary: 'Cannot delete',
-                detail: `"${group.courseRefNo}" still has ${group.memberCount} member(s). Remove all members before deleting the course.`
+                detail: `"${group.courseRefNo}" still has ${group.memberCount} member(s). Remove all members before deleting the selection.`
             });
             // Open the card so the member list — and its remove buttons — are right there.
             if (this.selectedGroup?.id !== group.id) this.toggleGroup(group);
@@ -265,7 +323,7 @@ export class EmpRftsCourseListComponent implements OnInit {
 
         this.confirmationService.confirm({
             target: event.target as EventTarget,
-            message: `Delete course / reference "${group.courseRefNo}"?`,
+            message: `Delete RFTS selection "${group.courseRefNo}"?`,
             header: 'Delete Confirmation',
             icon: 'pi pi-exclamation-triangle',
             rejectButtonProps: { label: 'Cancel', severity: 'secondary', outlined: true },

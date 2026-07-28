@@ -4,6 +4,7 @@ import { Observable } from 'rxjs';
 import { map } from 'rxjs/operators';
 import { environment } from '@/Core/Environments/environment';
 import { DraftCourseList, DraftCourseMemberRow, RftsCourseSummary, RftsTrainingRow, SendToCourseDetails } from '@/models/draft-course.model';
+import { RftsNominalRoll } from '@/models/rfts-course-ref-report.model';
 
 const API = `${environment.apis.core}/DraftCourse`;
 
@@ -82,6 +83,46 @@ export class DraftCourseService {
                 };
             })
         );
+    }
+
+    /** Shared shape for every nominal-roll endpoint (draft, completed course). */
+    private mapNominalRoll(r: any): RftsNominalRoll {
+        return {
+            id: r?.id ?? r?.Id ?? 0,
+            courseRefNo: r?.courseRefNo ?? r?.CourseRefNo ?? '',
+            courseDate: r?.courseDate ?? r?.CourseDate ?? '',
+            remarks: r?.remarks ?? r?.Remarks ?? null,
+            rows: (r?.rows ?? r?.Rows ?? []).map((x: any) => ({
+                employeeId: x.employeeId ?? x.EmployeeId ?? 0,
+                groupNameEN: x.groupNameEN ?? x.GroupNameEN ?? null,
+                groupNameBN: x.groupNameBN ?? x.GroupNameBN ?? null,
+                groupSortOrder: x.groupSortOrder ?? x.GroupSortOrder ?? null,
+                motherUnitNameEN: x.motherUnitNameEN ?? x.MotherUnitNameEN ?? null,
+                motherUnitNameBN: x.motherUnitNameBN ?? x.MotherUnitNameBN ?? null,
+                serviceId: x.serviceId ?? x.ServiceId ?? null,
+                rabId: x.rabId ?? x.RabId ?? null,
+                rankNameEN: x.rankNameEN ?? x.RankNameEN ?? null,
+                rankNameBN: x.rankNameBN ?? x.RankNameBN ?? null,
+                rankSortOrder: x.rankSortOrder ?? x.RankSortOrder ?? null,
+                fullNameEN: x.fullNameEN ?? x.FullNameEN ?? null,
+                fullNameBN: x.fullNameBN ?? x.FullNameBN ?? null
+            }))
+        };
+    }
+
+    /**
+     * Rows for the draft's nominal-roll export. Shares the RFTS roll shape —
+     * ListNo maps to courseRefNo, ListDate to courseDate — so every page renders
+     * through the same RftsNominalRollService.
+     */
+    getNominalRoll(draftListId: number): Observable<RftsNominalRoll> {
+        return this.http.get<any>(`${API}/GetNominalRoll/${draftListId}`).pipe(map((r) => this.mapNominalRoll(r)));
+    }
+
+    /** Rows for a completed course's nominal-roll export, keyed by course no. */
+    getRftsTrainingNominalRoll(courseNo: string | null): Observable<RftsNominalRoll> {
+        const qs = courseNo ? `?courseNo=${encodeURIComponent(courseNo)}` : '';
+        return this.http.get<any>(`${API}/GetRftsTrainingNominalRoll${qs}`).pipe(map((r) => this.mapNominalRoll(r)));
     }
 
     addToDraftCourseList(

@@ -7,11 +7,11 @@
         <ng-template pTemplate="header">
             <div class="flex items-center justify-between gap-3 p-4 flex-wrap">
                 <div>
-                    <h2 class="text-2xl font-bold m-0">RFTS Course / Reference</h2>
-                    <small class="text-color-secondary">Review courses and the members selected onto them</small>
+                    <h2 class="text-2xl font-bold m-0">Selection Member for RFTS List</h2>
+                    <small class="text-color-secondary">Review RFTS selections and the members on them</small>
                 </div>
                 @if (canInsert) {
-                    <p-button label="New Course" icon="pi pi-plus" [fluid]="false"
+                    <p-button label="New Selection" icon="pi pi-plus" [fluid]="false"
                         routerLink="/emp-rfts-course-ref"></p-button>
                 }
             </div>
@@ -19,7 +19,7 @@
 
         <!-- Count + search -->
         <div class="flex items-center justify-between mb-3 flex-wrap gap-2">
-            <span class="text-color-secondary">{{ totalRecords }} course{{ totalRecords === 1 ? '' : 's' }}</span>
+            <span class="text-color-secondary">{{ totalRecords }} selection{{ totalRecords === 1 ? '' : 's' }}</span>
             <div class="flex items-center gap-2">
                 <p-iconfield iconPosition="left">
                     <p-inputicon styleClass="pi pi-search"></p-inputicon>
@@ -35,13 +35,14 @@
             </div>
         </div>
 
-        <!-- Course cards. Click anywhere on the card to toggle the
-             members panel below. -->
+        <!-- Selection cards — accordion. Clicking a card toggles its own member
+             panel, which renders directly beneath that card. Only one is open at
+             a time; clicking the open card collapses it. -->
         @if (isLoading) {
-            <div class="text-center py-4 text-color-secondary"><i class="pi pi-spin pi-spinner mr-2"></i>Loading courses…</div>
+            <div class="text-center py-4 text-color-secondary"><i class="pi pi-spin pi-spinner mr-2"></i>Loading selections…</div>
         } @else if (courses.length === 0) {
             <div class="rounded-lg border border-surface p-6 text-center text-color-secondary">
-                No course / reference records found.
+                No RFTS selections found.
             </div>
         } @else {
             <div class="flex flex-col gap-2">
@@ -49,7 +50,13 @@
                     <div class="rounded-lg border border-surface hover:bg-surface-50 dark:hover:bg-surface-800 p-3 flex items-center gap-4 cursor-pointer transition-colors"
                          [class.border-l-4]="selectedGroup?.id === g.id"
                          [class.border-l-green-500]="selectedGroup?.id === g.id"
+                         [class.rounded-b-none]="selectedGroup?.id === g.id"
                          (click)="toggleGroup(g)">
+                        <!-- Expand/collapse chevron -->
+                        <i class="pi shrink-0 text-color-secondary"
+                           [class.pi-chevron-down]="selectedGroup?.id === g.id"
+                           [class.pi-chevron-right]="selectedGroup?.id !== g.id"></i>
+
                         <!-- Course no -->
                         <div class="flex flex-col min-w-20">
                             <span class="text-2xl font-bold leading-tight">{{ g.courseRefNo }}</span>
@@ -76,22 +83,124 @@
 
                         <!-- Actions -->
                         <div class="flex gap-1 shrink-0">
-                            @if (selectedGroup?.id !== g.id) {
-                                <p-button icon="pi pi-eye" [rounded]="true" [text]="true" severity="info" size="small"
-                                    pTooltip="View Members"
-                                    (onClick)="toggleGroup(g); $event.stopPropagation()"></p-button>
-                            }
+                            <p-button [icon]="selectedGroup?.id === g.id ? 'pi pi-eye-slash' : 'pi pi-eye'"
+                                [rounded]="true" [text]="true" severity="info" size="small"
+                                [pTooltip]="selectedGroup?.id === g.id ? 'Hide Members' : 'View Members'"
+                                (onClick)="toggleGroup(g); $event.stopPropagation()"></p-button>
+                            <!-- Nominal roll export — Bangla, grouped by mother org. -->
+                            <p-button icon="pi pi-print" [rounded]="true" [text]="true" severity="secondary" size="small"
+                                [disabled]="exportingId != null"
+                                [loading]="exportingId === g.id"
+                                pTooltip="Print / PDF — নামীয় তালিকা" tooltipPosition="top"
+                                (onClick)="exportRoll(g, 'print', $event)"></p-button>
+                            <p-button icon="pi pi-file-word" [rounded]="true" [text]="true" severity="info" size="small"
+                                [disabled]="exportingId != null"
+                                pTooltip="Export Word" tooltipPosition="top"
+                                (onClick)="exportRoll(g, 'word', $event)"></p-button>
+                            <p-button icon="pi pi-file-excel" [rounded]="true" [text]="true" severity="success" size="small"
+                                [disabled]="exportingId != null"
+                                pTooltip="Export Excel" tooltipPosition="top"
+                                (onClick)="exportRoll(g, 'excel', $event)"></p-button>
                             @if (canUpdate) {
                                 <p-button icon="pi pi-pencil" [rounded]="true" [text]="true" severity="secondary" size="small"
                                     pTooltip="Edit" (onClick)="edit(g, $event)"></p-button>
                             }
                             @if (canDelete) {
                                 <p-button icon="pi pi-trash" [rounded]="true" [text]="true" severity="danger" size="small"
-                                    [pTooltip]="g.memberCount > 0 ? 'Remove all members before deleting this course' : 'Delete'"
+                                    [pTooltip]="g.memberCount > 0 ? 'Remove all members before deleting this selection' : 'Delete'"
                                     (onClick)="delete(g, $event)"></p-button>
                             }
                         </div>
                     </div>
+
+                    <!-- Members for this selection — renders directly under its own card. -->
+                    @if (selectedGroup?.id === g.id) {
+                    <!-- Square top corners + no top margin so it reads as one
+                         piece with the card above (which drops its bottom radius). -->
+                    <div class="rounded-lg rounded-t-none border border-surface border-l-4 border-l-green-500 bg-surface-50 dark:bg-surface-800 p-4 -mt-2">
+                        <div class="flex items-center gap-2 mb-3 flex-wrap">
+                            <i class="pi pi-users text-color-secondary"></i>
+                            <span class="font-semibold text-lg">Members in</span>
+                            <span class="inline-block bg-primary-100 text-primary-700 dark:bg-primary-900 dark:text-primary-100 rounded-md px-2 py-1 font-semibold text-sm">
+                                {{ g.courseRefNo }}
+                            </span>
+                            <span class="text-color-secondary text-sm">· {{ formatDate(g.courseDate) }}</span>
+                        </div>
+
+                        @if (canDelete && g.memberCount > 0) {
+                            <div class="text-color-secondary text-sm mb-3 flex items-start gap-2">
+                                <i class="pi pi-info-circle mt-1"></i>
+                                <span>This selection can only be deleted once every member is removed. Members who have already completed RFTS cannot be removed.</span>
+                            </div>
+                        }
+
+                        @if (isLoadingMembers) {
+                            <div class="text-center py-4 text-color-secondary"><i class="pi pi-spin pi-spinner mr-2"></i>Loading members…</div>
+                        }
+                        <p-table
+                            [value]="g.members"
+                            [loading]="isLoadingMembers"
+                            styleClass="p-datatable-sm"
+                            dataKey="employeeId"
+                            [paginator]="g.members.length > 10"
+                            [rows]="10"
+                            [rowsPerPageOptions]="[10, 20, 50]"
+                            paginatorDropdownAppendTo="body">
+                            <!-- Same column set as the printed নামীয় তালিকা, in English. -->
+                            <ng-template pTemplate="header">
+                                <tr>
+                                    <th style="width: 4rem">Ser</th>
+                                    <th>Personal No</th>
+                                    <th>Rank</th>
+                                    <th>Name</th>
+                                    <th>Mother Unit</th>
+                                    <th>RAB ID</th>
+                                    <th>RFTS</th>
+                                    @if (canDelete) {
+                                        <th style="width: 6rem">Remove</th>
+                                    }
+                                </tr>
+                            </ng-template>
+                            <ng-template pTemplate="body" let-row let-rowIndex="rowIndex">
+                                <tr>
+                                    <td>{{ rowIndex + 1 }}</td>
+                                    <td>{{ row.serviceId || '—' }}</td>
+                                    <td>
+                                        @if (row.rankName) {
+                                            <span class="inline-block bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-100 rounded-md px-2 py-1 text-sm">{{ row.rankName }}</span>
+                                        } @else {
+                                            <span>N/A</span>
+                                        }
+                                    </td>
+                                    <td class="font-semibold">{{ row.fullNameEN || '—' }}</td>
+                                    <td>{{ row.motherUnitName || '—' }}</td>
+                                    <td>{{ row.rabId || 'N/A' }}</td>
+                                    <td>
+                                        @if (row.isRftsCompleted) {
+                                            <span class="inline-block bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-100 rounded-md px-2 py-1 text-xs font-semibold">Complete</span>
+                                        } @else {
+                                            <span class="text-color-secondary text-sm">Pending</span>
+                                        }
+                                    </td>
+                                    @if (canDelete) {
+                                        <td>
+                                            <p-button icon="pi pi-times" severity="danger" [rounded]="true" [text]="true"
+                                                [fluid]="false"
+                                                [disabled]="!canRemoveMember(row) || isRemovingMember"
+                                                [pTooltip]="removeMemberTooltip(row)" tooltipPosition="top"
+                                                (onClick)="removeMember(g, row, $event)"></p-button>
+                                        </td>
+                                    }
+                                </tr>
+                            </ng-template>
+                            <ng-template pTemplate="emptymessage">
+                                <tr>
+                                    <td [attr.colspan]="canDelete ? 8 : 7" class="text-center py-4 text-color-secondary">No members in this selection.</td>
+                                </tr>
+                            </ng-template>
+                        </p-table>
+                    </div>
+                    }
                 }
             </div>
 
@@ -110,97 +219,5 @@
             }
         }
 
-        <!-- ============== Members panel ============== -->
-        @if (selectedGroup; as sel) {
-            <div class="rounded-lg border border-surface bg-surface-50 dark:bg-surface-800 p-4 mt-4">
-                <div class="flex items-center gap-2 mb-3 flex-wrap">
-                    <i class="pi pi-users text-color-secondary"></i>
-                    <span class="font-semibold text-lg">Members in</span>
-                    <span class="inline-block bg-primary-100 text-primary-700 dark:bg-primary-900 dark:text-primary-100 rounded-md px-2 py-1 font-semibold text-sm">
-                        {{ sel.courseRefNo }}
-                    </span>
-                    <span class="text-color-secondary text-sm">· {{ formatDate(sel.courseDate) }}</span>
-                </div>
-
-                @if (canDelete && sel.memberCount > 0) {
-                    <div class="text-color-secondary text-sm mb-3 flex items-start gap-2">
-                        <i class="pi pi-info-circle mt-1"></i>
-                        <span>The course can only be deleted once every member is removed. Members who have already completed RFTS cannot be removed.</span>
-                    </div>
-                }
-
-                @if (isLoadingMembers) {
-                    <div class="text-center py-4 text-color-secondary"><i class="pi pi-spin pi-spinner mr-2"></i>Loading members…</div>
-                }
-                <p-table
-                    [value]="sel.members"
-                    [loading]="isLoadingMembers"
-                    styleClass="p-datatable-sm"
-                    dataKey="employeeId"
-                    [paginator]="sel.members.length > 10"
-                    [rows]="10"
-                    [rowsPerPageOptions]="[10, 20, 50]"
-                    paginatorDropdownAppendTo="body">
-                    <ng-template pTemplate="header">
-                        <tr>
-                            <th style="width: 4rem">Ser</th>
-                            <th>Member</th>
-                            <th>RAB ID</th>
-                            <th>Service ID</th>
-                            <th>Rank</th>
-                            <th>Corps</th>
-                            <th>Trade</th>
-                            <th>RFTS</th>
-                            @if (canDelete) {
-                                <th style="width: 6rem">Remove</th>
-                            }
-                        </tr>
-                    </ng-template>
-                    <ng-template pTemplate="body" let-row let-rowIndex="rowIndex">
-                        <tr>
-                            <td>{{ rowIndex + 1 }}</td>
-                            <td>
-                                <div class="flex flex-col">
-                                    <span class="font-semibold">{{ row.fullNameEN || '—' }}</span>
-                                    <small class="text-color-secondary">{{ row.motherUnitName || '—' }}</small>
-                                </div>
-                            </td>
-                            <td>{{ row.rabId || 'N/A' }}</td>
-                            <td>{{ row.serviceId || '—' }}</td>
-                            <td>
-                                @if (row.rankName) {
-                                    <span class="inline-block bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-100 rounded-md px-2 py-1 text-sm">{{ row.rankName }}</span>
-                                } @else {
-                                    <span>N/A</span>
-                                }
-                            </td>
-                            <td>{{ row.corpsName || 'N/A' }}</td>
-                            <td>{{ row.tradeName || '—' }}</td>
-                            <td>
-                                @if (row.isRftsCompleted) {
-                                    <span class="inline-block bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-100 rounded-md px-2 py-1 text-xs font-semibold">Complete</span>
-                                } @else {
-                                    <span class="text-color-secondary text-sm">Pending</span>
-                                }
-                            </td>
-                            @if (canDelete) {
-                                <td>
-                                    <p-button icon="pi pi-times" severity="danger" [rounded]="true" [text]="true"
-                                        [fluid]="false"
-                                        [disabled]="!canRemoveMember(row) || isRemovingMember"
-                                        [pTooltip]="removeMemberTooltip(row)" tooltipPosition="top"
-                                        (onClick)="removeMember(sel, row, $event)"></p-button>
-                                </td>
-                            }
-                        </tr>
-                    </ng-template>
-                    <ng-template pTemplate="emptymessage">
-                        <tr>
-                            <td [attr.colspan]="canDelete ? 9 : 8" class="text-center py-4 text-color-secondary">No members in this course.</td>
-                        </tr>
-                    </ng-template>
-                </p-table>
-            </div>
-        }
     </p-card>
 </p-fluid>

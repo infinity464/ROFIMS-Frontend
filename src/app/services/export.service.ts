@@ -55,6 +55,17 @@ export interface ReportConfig {
     rabLetterhead?: boolean;
     /** Label/value pairs shown in the SELECTION CRITERIA grid (letterhead mode). */
     criteriaItems?: { label: string; value: string }[];
+    /**
+     * Complex-script font used for `lang: 'bn'` Word exports. Defaults to
+     * 'SolaimanLipi'.
+     *
+     * Word cannot fall back through a font stack: if the named font is not
+     * REGISTERED on the reader's machine (having the .ttf in C:\Windows\Fonts is
+     * not enough), it silently drops to the Latin font and every Bengali glyph
+     * renders as a tofu box. Pass 'Nirmala UI' — which ships with Windows and is
+     * always registered — when the document must render on any machine.
+     */
+    bnFont?: string;
 }
 
 /** One section in a sectioned report: org-style heading + its own table. */
@@ -760,7 +771,9 @@ export class ExportService {
         const dateStr = new Date().toLocaleDateString(config.lang === 'bn' ? 'bn-BD' : 'en-US', {
             year: 'numeric', month: 'long', day: 'numeric',
         });
-        const font = config.lang === 'bn' ? { ascii: 'Times New Roman', hAnsi: 'Times New Roman', cs: 'SolaimanLipi', hint: 'cs' as const } : 'Times New Roman';
+        const font = config.lang === 'bn'
+            ? { ascii: 'Times New Roman', hAnsi: 'Times New Roman', cs: config.bnFont ?? 'SolaimanLipi', hint: 'cs' as const }
+            : 'Times New Roman';
         // A4 landscape ≈ 297mm, portrait ≈ 210mm. After ~1" margins the usable width in DXA
         // (1/20 pt; 1440 DXA = 1 inch) is ~13900 (landscape) / ~9000 (portrait).
         const totalDxa = config.landscape ? 13900 : 9000;
@@ -976,14 +989,22 @@ export class ExportService {
 
         // "Page X of Y" centred footer — only emitted when explicitly requested,
         // so callers that don't care (e.g. embedded snapshots) stay clean.
+        // Bangla documents get the "পাতা-X/Y" form instead. Word renders the field
+        // digits per its own locale, so these can still come out as 1/2 rather
+        // than ১/২ — only the print/PDF view guarantees Bangla numerals.
         const footers = config.showPageNumbers ? {
             default: new Footer({
                 children: [new Paragraph({
                     alignment: AlignmentType.CENTER,
-                    children: [
-                        new TextRun({ children: ['Page ', PageNumber.CURRENT], font, size: 16, color: '555555' }),
-                        new TextRun({ children: [' of ', PageNumber.TOTAL_PAGES], font, size: 16, color: '555555' }),
-                    ],
+                    children: config.lang === 'bn'
+                        ? [
+                            new TextRun({ children: ['পাতা-', PageNumber.CURRENT], font, size: 16, color: '555555' }),
+                            new TextRun({ children: ['/', PageNumber.TOTAL_PAGES], font, size: 16, color: '555555' }),
+                        ]
+                        : [
+                            new TextRun({ children: ['Page ', PageNumber.CURRENT], font, size: 16, color: '555555' }),
+                            new TextRun({ children: [' of ', PageNumber.TOTAL_PAGES], font, size: 16, color: '555555' }),
+                        ],
                 })],
             }),
         } : undefined;

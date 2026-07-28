@@ -27,6 +27,7 @@ import { CommonCodeService } from '@/services/common-code-service';
 import { MasterBasicSetupService } from '@/Components/basic-setup/shared/services/MasterBasicSetupService';
 import { EmployeeSearchInfoModel } from '@/models/EmpModel';
 import { DraftCourseList, DraftCourseMemberRow } from '@/models/draft-course.model';
+import { RftsNominalRollService } from '@/services/rfts-nominal-roll.service';
 
 interface DropdownOption {
     label: string;
@@ -102,11 +103,72 @@ export class EmpDraftListComponent implements OnInit {
         private draftCourseService: DraftCourseService,
         private commonCodeService: CommonCodeService,
         private masterBasicSetup: MasterBasicSetupService,
+        private nominalRoll: RftsNominalRollService,
         private messageService: MessageService,
         private confirmationService: ConfirmationService,
         private fb: FormBuilder
     ) {
         this.initCourseForm();
+    }
+
+    // ---------- Nominal roll export ----------
+    /** Id of the draft whose export is currently being fetched. */
+    exportingId: number | null = null;
+
+    /**
+     * Fetches the roll then hands it to the chosen renderer. Read fresh each
+     * time rather than reusing the panel's members, because the export needs the
+     * Bangla names and units the panel never loads.
+     *
+     * annexureLabel is null here: a draft is not an annexure to anything yet, so
+     * the roll drops the "ক্রোড়পত্র ক" line the RFTS course roll carries.
+     */
+    exportRoll(row: DraftCourseList, format: 'print' | 'word' | 'excel', event: Event): void {
+        event.stopPropagation();
+        if (this.exportingId != null) return;
+
+        if ((row.members?.length ?? 0) === 0) {
+            this.messageService.add({
+                severity: 'warn',
+                summary: 'Nothing to export',
+                detail: `"${row.listNo}" has no members.`
+            });
+            return;
+        }
+
+        this.exportingId = row.id;
+        this.draftCourseService.getNominalRoll(row.id).subscribe({
+            next: async (roll) => {
+                const opts = { annexureLabel: null };
+                try {
+                    if (format === 'print') {
+                        if (!this.nominalRoll.print(roll, opts)) {
+                            this.messageService.add({
+                                severity: 'warn',
+                                summary: 'Popup blocked',
+                                detail: 'Allow popups for this site to open the print view.'
+                            });
+                        }
+                    } else if (format === 'word') {
+                        await this.nominalRoll.exportWord(roll, opts);
+                    } else {
+                        this.nominalRoll.exportExcel(roll, opts);
+                    }
+                } catch {
+                    this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to build the export.' });
+                } finally {
+                    this.exportingId = null;
+                }
+            },
+            error: (err) => {
+                this.exportingId = null;
+                this.messageService.add({
+                    severity: 'error',
+                    summary: 'Error',
+                    detail: err?.error?.description || err?.error?.message || 'Failed to load the export data.'
+                });
+            }
+        });
     }
 
     ngOnInit(): void {

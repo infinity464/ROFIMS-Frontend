@@ -5,6 +5,7 @@ import { map } from 'rxjs/operators';
 import { environment } from '@/Core/Environments/environment';
 import { PagedResponse } from '@/Core/Models/Pagination';
 import { RftsCourseRefMember, RftsCourseRefModel, RftsCourseRefPayload } from '@/models/rfts-course-ref.model';
+import { RftsNominalRoll } from '@/models/rfts-course-ref-report.model';
 
 const API = `${environment.apis.core}/RftsCourseRef`;
 
@@ -60,6 +61,33 @@ export class RftsCourseRefService {
     /** Full row including its members — what the edit flow loads. */
     getById(id: number): Observable<RftsCourseRefModel> {
         return this.http.get<any>(`${API}/GetById/${id}`).pipe(map((r) => this.mapRow(r)));
+    }
+
+    /** Rows for the nominal-roll export (Print / Word / Excel). */
+    getReport(id: number): Observable<RftsNominalRoll> {
+        return this.http.get<any>(`${API}/GetReport/${id}`).pipe(
+            map((r) => ({
+                id: r?.id ?? r?.Id ?? 0,
+                courseRefNo: r?.courseRefNo ?? r?.CourseRefNo ?? '',
+                courseDate: r?.courseDate ?? r?.CourseDate ?? '',
+                remarks: r?.remarks ?? r?.Remarks ?? null,
+                rows: (r?.rows ?? r?.Rows ?? []).map((x: any) => ({
+                    employeeId: x.employeeId ?? x.EmployeeId ?? 0,
+                    groupNameEN: x.groupNameEN ?? x.GroupNameEN ?? null,
+                    groupNameBN: x.groupNameBN ?? x.GroupNameBN ?? null,
+                    groupSortOrder: x.groupSortOrder ?? x.GroupSortOrder ?? null,
+                    motherUnitNameEN: x.motherUnitNameEN ?? x.MotherUnitNameEN ?? null,
+                    motherUnitNameBN: x.motherUnitNameBN ?? x.MotherUnitNameBN ?? null,
+                    serviceId: x.serviceId ?? x.ServiceId ?? null,
+                    rabId: x.rabId ?? x.RabId ?? null,
+                    rankNameEN: x.rankNameEN ?? x.RankNameEN ?? null,
+                    rankNameBN: x.rankNameBN ?? x.RankNameBN ?? null,
+                    rankSortOrder: x.rankSortOrder ?? x.RankSortOrder ?? null,
+                    fullNameEN: x.fullNameEN ?? x.FullNameEN ?? null,
+                    fullNameBN: x.fullNameBN ?? x.FullNameBN ?? null
+                }))
+            }))
+        );
     }
 
     create(payload: RftsCourseRefPayload): Observable<{ statusCode: number; description?: string; data?: any }> {
