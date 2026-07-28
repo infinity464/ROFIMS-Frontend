@@ -148,18 +148,18 @@ export class NotesheetPreviewMOComponent implements OnInit {
     }
 
     private buildHeaderLines(): void {
-        this.topRightLabelBn = this.movement?.letterNo ? this.toBn(this.movement.letterNo) : '---';
+        this.topRightLabelBn = this.movement?.letterNo ? this.toBanglaLetterNo(this.movement.letterNo) : '---';
         const d = this.movement?.letterDate ? new Date(this.movement.letterDate) : new Date();
         this.letterDateBn = this.formatBnDate(d);
         this.resolveTelephone();
     }
 
     /**
-     * MO rows of MovementLetterNumberConfig, kept only to resolve তারালাপনী. Each row
-     * pairs the prefix its letter numbers are minted with against the unit's
-     * Telephone No.
+     * MO rows of MovementLetterNumberConfig. Each row pairs the prefix its letter
+     * numbers are minted with against that prefix's Bangla form (for নথি নং) and the
+     * unit's Telephone No (for তারালাপনী).
      */
-    private moLetterConfigs: { prefix: string; telephoneNo: string }[] = [];
+    private moLetterConfigs: { prefix: string; prefixBN: string; telephoneNo: string }[] = [];
 
     private loadMoLetterConfigs(): void {
         this.masterBasicSetup.getAllMovementLetterNumberConfig().subscribe({
@@ -168,10 +168,12 @@ export class NotesheetPreviewMOComponent implements OnInit {
                     .filter((r) => r.moveOrderType === MoveOrderType.MO)
                     .map((r) => ({
                         prefix: (r.prefix || '').trim(),
+                        prefixBN: (r.prefixBN || '').trim(),
                         telephoneNo: (r.telephoneNo || '').trim()
                     }));
-                // Configs may land after the movement — resolve again once they do.
-                if (this.movement) this.resolveTelephone();
+                // Configs may land after the movement — resolve again once they do,
+                // so both তারালাপনী and the Bangla prefix pick them up.
+                if (this.movement) this.buildHeaderLines();
             },
             // A lookup failure just leaves তারালাপনী blank; it must not break the preview.
             error: () => { /* leave blank */ }
@@ -497,6 +499,24 @@ export class NotesheetPreviewMOComponent implements OnInit {
         const month = months[d.getMonth()];
         const year = BanglaNumerals.toBangla(String(d.getFullYear()));
         return `${day} ${month} ${year}`;
+    }
+
+    /**
+     * Letter numbers are minted with the config's English prefix — "RAB HQ/Admin/…".
+     * The Bangla letter prints Prefix (Bangla) instead, so swap the leading prefix for
+     * its prefixBN and Bangla-ise only the digits that follow (the Bangla prefix is
+     * already Bangla text and must not go through the numeral converter).
+     *
+     * The config is identified by the prefix the number actually starts with — longest
+     * match wins — rather than by re-resolving the issuing unit, so the swap stays
+     * correct for movements whose unit config has since changed.
+     */
+    private toBanglaLetterNo(letterNo: string): string {
+        const match = this.moLetterConfigs
+            .filter((c) => c.prefix && c.prefixBN && letterNo.startsWith(c.prefix))
+            .sort((a, b) => b.prefix.length - a.prefix.length)[0];
+        if (!match) return this.toBn(letterNo);
+        return `${match.prefixBN}${this.toBn(letterNo.slice(match.prefix.length))}`;
     }
 
     toBn(input: string | number | null | undefined): string {

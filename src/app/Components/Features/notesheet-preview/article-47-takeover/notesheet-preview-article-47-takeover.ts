@@ -24,6 +24,7 @@ import { ServingMembersService } from '@/services/serving-members.service';
 import { EmployeeServiceOverview } from '@/models/employee-service-overview.model';
 import { MasterBasicSetupService } from '@/Components/basic-setup/shared/services/MasterBasicSetupService';
 import { BanglaNumerals } from '@/Core/i18n/bangla-numerals';
+import { MoveOrderType } from '@/models/enums';
 import { MovementReturnButtonComponent } from '../shared/movement-return-button';
 import { MovementFilesInfoComponent } from '../shared/movement-files-info';
 
@@ -103,6 +104,7 @@ export class NotesheetPreviewArticle47TakeoverComponent implements OnInit {
     ngOnInit(): void {
         this.loadRankLabels();
         this.loadRabUnitLabels();
+        this.loadLetterConfigs();
         this.loadCorpsLabels();
         const idParam = this.route.snapshot.queryParamMap.get('id');
         const id = idParam ? Number(idParam) : NaN;
@@ -443,9 +445,50 @@ export class NotesheetPreviewArticle47TakeoverComponent implements OnInit {
         this.recipientLines = this.parseStringArray(this.movement?.letterRecipients);
     }
 
+    /**
+     * Article47Takeover rows of MovementLetterNumberConfig, kept only to render the
+     * Bangla prefix on স্মারক নং. Each row pairs the prefix its letter numbers are
+     * minted with against that prefix's Bangla form.
+     */
+    private letterConfigs: { prefix: string; prefixBN: string }[] = [];
+
+    private loadLetterConfigs(): void {
+        this.masterBasicSetup.getAllMovementLetterNumberConfig().subscribe({
+            next: (rows: any[]) => {
+                this.letterConfigs = (rows || [])
+                    .filter((r) => r.moveOrderType === MoveOrderType.Article47Takeover)
+                    .map((r) => ({ prefix: (r.prefix || '').trim(), prefixBN: (r.prefixBN || '').trim() }))
+                    .filter((r) => r.prefix && r.prefixBN);
+                // Configs may land after the movement — rebuild so the Bangla prefix
+                // replaces the English one once it's known.
+                if (this.movement) this.buildHeaderLines();
+            },
+            // A lookup failure must not blank the header — the minted prefix stands.
+            error: () => { /* keep the minted prefix */ }
+        });
+    }
+
+    /**
+     * Letter numbers are minted with the config's English prefix. The Bangla letter
+     * prints Prefix (Bangla) instead, so swap the leading prefix for its prefixBN and
+     * Bangla-ise only the digits that follow (the Bangla prefix is already Bangla text
+     * and must not go through the numeral converter).
+     *
+     * The config is identified by the prefix the number actually starts with — longest
+     * match wins — rather than by re-resolving the issuing unit, so the swap stays
+     * correct for movements whose unit config has since changed.
+     */
+    private toBanglaLetterNo(letterNo: string): string {
+        const match = this.letterConfigs
+            .filter((c) => letterNo.startsWith(c.prefix))
+            .sort((a, b) => b.prefix.length - a.prefix.length)[0];
+        if (!match) return this.toBn(letterNo);
+        return `${match.prefixBN}${this.toBn(letterNo.slice(match.prefix.length))}`;
+    }
+
     private buildHeaderLines(): void {
         this.memoNoBn = this.movement?.letterNo
-            ? this.toBn(this.movement.letterNo)
+            ? this.toBanglaLetterNo(this.movement.letterNo)
             : '---';
 
         const d = this.movement?.letterDate ? new Date(this.movement.letterDate) : new Date();
