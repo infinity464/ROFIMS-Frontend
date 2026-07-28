@@ -52,7 +52,11 @@ export class Login implements OnInit {
   forgotConfirmPassword = '';
   forgotLoading = false;
   forgotRequestSent = false;
-  /** Set when the backend refuses self-service reset (role's `canSelfResetPassword === false`). */
+  /**
+   * Set when the backend refuses self-service reset — either the role's
+   * `canSelfResetPassword === false`, or the address is on a domain the mail relay
+   * cannot deliver to (`SmtpSettings:DeliverableDomains`).
+   */
   forgotDenialMessage = '';
 
   constructor(
@@ -201,8 +205,9 @@ export class Login implements OnInit {
           });
           this.forgotStep = 'reset';
         } else {
-          // Backend refused (most commonly: role's CanSelfResetPassword is false).
-          // Stay on step 1 and surface a clear in-modal banner.
+          // Backend refused — role's CanSelfResetPassword is false, or the mail relay
+          // cannot deliver to this address's domain. Either way the backend supplies a
+          // message the user can act on, so stay on step 1 and show it as a banner.
           this.forgotDenialMessage = res.message || 'Self-service password reset isn\'t available for this account. Please contact your administrator.';
           this.messageService.add({
             severity: 'warn',
