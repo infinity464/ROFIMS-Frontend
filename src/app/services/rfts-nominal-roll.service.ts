@@ -260,7 +260,10 @@ export class RftsNominalRollService {
     font-family: 'SolaimanLipi', 'Nirmala UI', 'Kalpurush', 'Nikosh', 'Noto Sans Bengali', serif;
     font-size: 11pt; color: #000; margin: 0;
   }
-  .memo { text-align: right; line-height: 1.55; margin-bottom: 14px; }
+  /* The block still sits against the right margin, but its lines are flush LEFT
+     with each other rather than ragged — display:table shrink-wraps to the widest
+     line and margin-left:auto pushes that box to the right edge. */
+  .memo { display: table; margin-left: auto; text-align: left; line-height: 1.55; margin-bottom: 14px; }
   .memo div { white-space: nowrap; }
   h1 { font-size: 12.5pt; font-weight: bold; text-align: center; margin: 0 0 12px; line-height: 1.5; }
   table { width: 100%; border-collapse: collapse; table-layout: fixed; }

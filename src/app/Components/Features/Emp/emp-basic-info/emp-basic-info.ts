@@ -1455,11 +1455,10 @@ export class EmpBasicInfo implements OnInit {
     // Enable form for edit mode
     enableForm(): void {
         this.postingForm.enable();
-        // serviceId stays disabled in edit mode (relationship is readonly in UI when Married, not disabled).
-        // rabid is editable — see checkDuplicateRabId() for its uniqueness guard.
-        if (this.isEditMode) {
-            this.postingForm.get('serviceId')?.disable();
-        }
+        // serviceId is editable in edit mode too — uniqueness is guarded by
+        // checkDuplicateCombo() (Mother Org + Prefix + Service ID, excluding this
+        // record), which runs live on valueChanges and again in onSubmit().
+        // rabid is likewise editable — see checkDuplicateRabId().
     }
 
     // Go back to list
