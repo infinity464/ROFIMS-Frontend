@@ -20,7 +20,18 @@ import { RichEditorComponent } from '@/Components/Common/rich-editor/rich-editor
 import { FileReferencesFormComponent, FileRowData } from '@/Components/Common/file-references-form/file-references-form';
 import { NotesheetApproverSelectComponent } from '@/Components/Common/notesheet-approver-select/notesheet-approver-select';
 import { NotesheetPreviewBase } from '../notesheet-preview-base';
-import { NoteSheetCurrentStatus, NoteSheetCurrentStatusOptions, NoteSheetOperationTypeOptions, ApprovalStatus, NoteSheetRemarkAction, NoteSheetType, ApprovalLogAction, ApprovalLogActionOptions, DraftPostingStatus, NoteSheetPreviewFrom } from '@/models/enums';
+import {
+    NoteSheetCurrentStatus,
+    NoteSheetCurrentStatusOptions,
+    NoteSheetOperationTypeOptions,
+    ApprovalStatus,
+    NoteSheetRemarkAction,
+    NoteSheetType,
+    ApprovalLogAction,
+    ApprovalLogActionOptions,
+    DraftPostingStatus,
+    NoteSheetPreviewFrom
+} from '@/models/enums';
 import { SharedService } from '@/shared/services/shared-service';
 import { FlexibleDateDirective } from '@/shared/directives/flexible-date.directive';
 import { DraftPostingEmployeeRow, EmployeeRemovalInfo, CancelledInterPostingInfo } from '@/models/posting.model';
@@ -29,18 +40,10 @@ import { JsReportService } from '@/services/jsreport.service';
 import { environment } from '@/Core/Environments/environment';
 import { forkJoin, of } from 'rxjs';
 import { catchError, map } from 'rxjs/operators';
-import {
-    Document, Packer, Paragraph, TextRun, Table, TableRow, TableCell,
-    WidthType, BorderStyle, AlignmentType, PageOrientation, ImageRun, VerticalMergeType
-} from 'docx';
+import { Document, Packer, Paragraph, TextRun, Table, TableRow, TableCell, WidthType, BorderStyle, AlignmentType, PageOrientation, ImageRun, VerticalMergeType } from 'docx';
 import { saveAs } from 'file-saver';
 
-import type {
-    NotesheetDocumentModel,
-    ContentBlock,
-    InlineRun,
-    TextAlignment
-} from '../notesheet-document-model';
+import type { NotesheetDocumentModel, ContentBlock, InlineRun, TextAlignment } from '../notesheet-document-model';
 
 interface ApprovalLogEntry {
     step: string;
@@ -57,17 +60,31 @@ interface ApprovalLogEntry {
     selector: 'app-notesheet-preview-posting',
     standalone: true,
     imports: [
-        CommonModule, FormsModule, ButtonModule, ToastModule, ConfirmDialogModule, DialogModule, TableModule, TooltipModule,
-        InputTextModule, TextareaModule, SelectModule, CheckboxModule, DatePickerModule, TreeSelectModule, FlexibleDateDirective,
-        NotesheetSignatoryComponent, RichEditorComponent, FileReferencesFormComponent, NotesheetApproverSelectComponent
+        CommonModule,
+        FormsModule,
+        ButtonModule,
+        ToastModule,
+        ConfirmDialogModule,
+        DialogModule,
+        TableModule,
+        TooltipModule,
+        InputTextModule,
+        TextareaModule,
+        SelectModule,
+        CheckboxModule,
+        DatePickerModule,
+        TreeSelectModule,
+        FlexibleDateDirective,
+        NotesheetSignatoryComponent,
+        RichEditorComponent,
+        FileReferencesFormComponent,
+        NotesheetApproverSelectComponent
     ],
     providers: [MessageService, ConfirmationService],
     templateUrl: './notesheet-preview-posting.html',
     styleUrls: ['../notesheet-preview.scss', './notesheet-preview-posting.scss']
 })
 export class NotesheetPreviewPostingComponent extends NotesheetPreviewBase implements AfterViewChecked {
-
-
     @ViewChild('fileReferencesForm') fileReferencesForm!: FileReferencesFormComponent;
     @ViewChild('contentMeasure') contentMeasure!: ElementRef<HTMLDivElement>;
     @ViewChild('pagesContainer') pagesContainer!: ElementRef<HTMLDivElement>;
@@ -123,6 +140,10 @@ export class NotesheetPreviewPostingComponent extends NotesheetPreviewBase imple
     tableHeaderHeightPx = 0;
     pageContentHeightPx = 0;
     titleBlockHeightPx = 0;
+    /** True when the web pagination put a page break immediately above the employee
+     *  table's last row, so the row leads the trailing section on a fresh page. The
+     *  PDF flow mirrors this — see buildPdfBodyHtml(). */
+    private tailStartsNewPage = false;
     private pageInsetPx = 0;
     private lastMeasuredHeight = 0;
 
@@ -136,7 +157,7 @@ export class NotesheetPreviewPostingComponent extends NotesheetPreviewBase imple
         { label: 'A4', value: 'A4' },
         { label: 'Legal', value: 'Legal' }
     ];
-    selectedPageSize = 'A4';
+    selectedPageSize = 'Legal';
 
     // ── Export detail toggles ──────────────────────────────────
     showRankQualifications = true;
@@ -183,13 +204,13 @@ export class NotesheetPreviewPostingComponent extends NotesheetPreviewBase imple
     }
 
     private loadCancelledInterPosting(emps: { employeeId: number }[]): void {
-        const ids = emps.map(e => e.employeeId).filter(Boolean);
+        const ids = emps.map((e) => e.employeeId).filter(Boolean);
         if (ids.length === 0) return;
         const postingType = this.isInterPosting() ? NoteSheetType.InterPosting : NoteSheetType.NewPosting;
         this.postingService.getLastCancelledInterPostingByEmployeeIds(ids, postingType).subscribe({
             next: (list) => {
                 this.cancelledInterMap = {};
-                for (const item of (list ?? [])) {
+                for (const item of list ?? []) {
                     if (item.postingOrderNo) this.cancelledInterMap[item.employeeId] = item;
                 }
             },
@@ -198,12 +219,12 @@ export class NotesheetPreviewPostingComponent extends NotesheetPreviewBase imple
     }
 
     private loadRemovalHistory(emps: { employeeId: number }[]): void {
-        const ids = emps.map(e => e.employeeId).filter(Boolean);
+        const ids = emps.map((e) => e.employeeId).filter(Boolean);
         if (ids.length === 0) return;
         this.postingService.getRemovalHistoryByEmployeeIds(ids).subscribe({
             next: (list) => {
                 this.removalHistoryMap = {};
-                for (const item of (list ?? [])) {
+                for (const item of list ?? []) {
                     if (item.postingOrderNo || item.draftPostingNo) {
                         this.removalHistoryMap[item.employeeId] = item;
                     }
@@ -247,12 +268,16 @@ export class NotesheetPreviewPostingComponent extends NotesheetPreviewBase imple
         try {
             const refs = JSON.parse(json) as { FileId?: number; fileId?: number; fileName?: string; FileName?: string }[];
             return Array.isArray(refs)
-                ? refs.filter(r => (r.FileId ?? r.fileId)).map(r => ({
-                    fileId: r.FileId ?? r.fileId ?? 0,
-                    fileName: r.fileName ?? r.FileName ?? 'File'
-                }))
+                ? refs
+                      .filter((r) => r.FileId ?? r.fileId)
+                      .map((r) => ({
+                          fileId: r.FileId ?? r.fileId ?? 0,
+                          fileName: r.fileName ?? r.FileName ?? 'File'
+                      }))
                 : [];
-        } catch { return []; }
+        } catch {
+            return [];
+        }
     }
 
     // ── Computed ─────────────────────────────────────────────
@@ -273,7 +298,7 @@ export class NotesheetPreviewPostingComponent extends NotesheetPreviewBase imple
     get currentStatusLabel(): string {
         const status = this.noteSheet?.currentStatus?.toLowerCase() ?? '';
         if (!status) return '';
-        return NoteSheetCurrentStatusOptions.find(o => o.value === status)?.label ?? status;
+        return NoteSheetCurrentStatusOptions.find((o) => o.value === status)?.label ?? status;
     }
 
     /**
@@ -297,7 +322,7 @@ export class NotesheetPreviewPostingComponent extends NotesheetPreviewBase imple
                     const arr = JSON.parse(json) as any[];
                     if (Array.isArray(arr) && arr.length > 0) {
                         // First recommender whose status is still pending (or blank) is the current step
-                        const pendingIdx = arr.findIndex(r => {
+                        const pendingIdx = arr.findIndex((r) => {
                             const s = (r?.recomender_status ?? '').toString().toLowerCase();
                             return !s || s === 'pending';
                         });
@@ -305,7 +330,9 @@ export class NotesheetPreviewPostingComponent extends NotesheetPreviewBase imple
                         return arr.length > 1 ? `Recommender ${idx + 1}` : 'Recommender';
                     }
                 }
-            } catch { /* ignore */ }
+            } catch {
+                /* ignore */
+            }
             return 'Recommender';
         }
         return '';
@@ -331,9 +358,7 @@ export class NotesheetPreviewPostingComponent extends NotesheetPreviewBase imple
             NoteSheetId: this.noteSheet.noteSheetId,
             LastUpdatedBy: this.sharedService.getCurrentUser?.() ?? 'system'
         };
-        this.http.post<{ statusCode?: number; StatusCode?: number; description?: string; Description?: string }>(
-            `${this.api}/SubmitForApproval`, req, { observe: 'response' }
-        ).subscribe({
+        this.http.post<{ statusCode?: number; StatusCode?: number; description?: string; Description?: string }>(`${this.api}/SubmitForApproval`, req, { observe: 'response' }).subscribe({
             next: (resp) => {
                 this.submitting = false;
                 const body = resp.body;
@@ -364,7 +389,7 @@ export class NotesheetPreviewPostingComponent extends NotesheetPreviewBase imple
     override ngOnInit(): void {
         super.ngOnInit();
         // Detect `from=pending` query param to enable inline approval actions
-        this.route.queryParams.subscribe(params => {
+        this.route.queryParams.subscribe((params) => {
             this.fromPending = (params['from'] ?? '').toString().toLowerCase() === NoteSheetPreviewFrom.Pending;
             this.returnUrl = params['returnUrl'] ?? null;
         });
@@ -401,12 +426,9 @@ export class NotesheetPreviewPostingComponent extends NotesheetPreviewBase imple
         }
 
         // Before Approve on a posting notesheet: validate all members have a transfer unit
-        if (this.remarkAction === NoteSheetRemarkAction.Approve
-            && (this.noteSheet.noteSheetType === NoteSheetType.InterPosting || this.noteSheet.noteSheetType === NoteSheetType.NewPosting)
-            && this.noteSheet.draftPostingMasterId) {
-            const employees$ = this.noteSheet.noteSheetType === NoteSheetType.InterPosting
-                ? this.postingService.getDraftInterPostingEmployees(this.noteSheet.draftPostingMasterId)
-                : this.postingService.getDraftPostingEmployees(this.noteSheet.draftPostingMasterId);
+        if (this.remarkAction === NoteSheetRemarkAction.Approve && (this.noteSheet.noteSheetType === NoteSheetType.InterPosting || this.noteSheet.noteSheetType === NoteSheetType.NewPosting) && this.noteSheet.draftPostingMasterId) {
+            const employees$ =
+                this.noteSheet.noteSheetType === NoteSheetType.InterPosting ? this.postingService.getDraftInterPostingEmployees(this.noteSheet.draftPostingMasterId) : this.postingService.getDraftPostingEmployees(this.noteSheet.draftPostingMasterId);
             employees$.subscribe({
                 next: (employees) => {
                     const missing = (employees ?? []).filter((e: any) => !e.transferRabUnitId);
@@ -442,8 +464,7 @@ export class NotesheetPreviewPostingComponent extends NotesheetPreviewBase imple
             LastUpdatedBy: this.sharedService.getCurrentUser?.() ?? 'system'
         };
         const ns = this.noteSheet;
-        const isFinalApproval = this.remarkAction === NoteSheetRemarkAction.Approve
-            && ns.currentStatus === NoteSheetCurrentStatus.FinalApproval;
+        const isFinalApproval = this.remarkAction === NoteSheetRemarkAction.Approve && ns.currentStatus === NoteSheetCurrentStatus.FinalApproval;
         const isPostingNoteSheet = (ns.noteSheetType === NoteSheetType.NewPosting || ns.noteSheetType === NoteSheetType.InterPosting) && !!ns.draftPostingMasterId;
         this.actionSubmitting = true;
 
@@ -464,9 +485,7 @@ export class NotesheetPreviewPostingComponent extends NotesheetPreviewBase imple
 
                     // Acted upon — the note-sheet is no longer pending for this user.
                     // Go back to the pending list so the user sees the updated list.
-                    const pendingRoute = ns.noteSheetType === NoteSheetType.InterPosting
-                        ? '/notesheet-list/pending-inter-posting'
-                        : '/notesheet-list/pending-new-posting';
+                    const pendingRoute = ns.noteSheetType === NoteSheetType.InterPosting ? '/notesheet-list/pending-inter-posting' : '/notesheet-list/pending-new-posting';
                     this.router.navigateByUrl(this.returnUrl || pendingRoute);
                 } else {
                     this.messageService.add({ severity: 'warn', summary: 'Notice', detail: msg || 'Action failed.' });
@@ -483,27 +502,15 @@ export class NotesheetPreviewPostingComponent extends NotesheetPreviewBase imple
     /** After final approval of a posting notesheet, update DraftPostingMaster status and employees PostingStatus. */
     private onPostingFinalApproval(masterId: number): void {
         const isInterPosting = this.noteSheet?.noteSheetType === NoteSheetType.InterPosting;
-        const empObs = isInterPosting
-            ? this.postingService.getDraftInterPostingEmployees(masterId)
-            : this.postingService.getDraftPostingEmployees(masterId);
+        const empObs = isInterPosting ? this.postingService.getDraftInterPostingEmployees(masterId) : this.postingService.getDraftPostingEmployees(masterId);
 
         empObs.subscribe({
             next: (employees: any[]) => {
                 const first = employees?.[0];
                 if (first) {
                     const updateObs = isInterPosting
-                        ? this.postingService.updateDraftInterPosting(
-                            masterId,
-                            first.draftInterPostingNo ?? first.draftPostingNo,
-                            first.draftInterPostingDate ?? first.draftPostingDate,
-                            DraftPostingStatus.Approved
-                        )
-                        : this.postingService.updateDraftNewPosting(
-                            masterId,
-                            first.draftPostingNo,
-                            first.draftPostingDate,
-                            DraftPostingStatus.Approved
-                        );
+                        ? this.postingService.updateDraftInterPosting(masterId, first.draftInterPostingNo ?? first.draftPostingNo, first.draftInterPostingDate ?? first.draftPostingDate, DraftPostingStatus.Approved)
+                        : this.postingService.updateDraftNewPosting(masterId, first.draftPostingNo, first.draftPostingDate, DraftPostingStatus.Approved);
                     updateObs.subscribe({
                         next: () => {},
                         error: (err: any) => this.messageService.add({ severity: 'warn', summary: 'Warning', detail: err?.error?.message || 'Failed to update Draft Posting status.' })
@@ -527,20 +534,18 @@ export class NotesheetPreviewPostingComponent extends NotesheetPreviewBase imple
         this.selectedMembers = [];
         this.showMembersDialog = true;
 
-        const obs = this.noteSheet.noteSheetType === NoteSheetType.InterPosting
-            ? this.postingService.getDraftInterPostingEmployees(this.noteSheet.draftPostingMasterId)
-            : this.postingService.getDraftPostingEmployees(this.noteSheet.draftPostingMasterId);
+        const obs =
+            this.noteSheet.noteSheetType === NoteSheetType.InterPosting ? this.postingService.getDraftInterPostingEmployees(this.noteSheet.draftPostingMasterId) : this.postingService.getDraftPostingEmployees(this.noteSheet.draftPostingMasterId);
 
         const isInter = this.noteSheet.noteSheetType === NoteSheetType.InterPosting;
         obs.subscribe({
             next: (list: any[]) => {
-                this.membersList = (list ?? []).map(e => isInter
-                    ? { ...e, draftPostingDetailId: e.draftInterPostingDetailId ?? e.draftPostingDetailId }
-                    : e
-                );
+                this.membersList = (list ?? []).map((e) => (isInter ? { ...e, draftPostingDetailId: e.draftInterPostingDetailId ?? e.draftPostingDetailId } : e));
                 this.membersLoading = false;
             },
-            error: (err: any) => { this.membersLoading = false; }
+            error: (err: any) => {
+                this.membersLoading = false;
+            }
         });
     }
 
@@ -556,7 +561,7 @@ export class NotesheetPreviewPostingComponent extends NotesheetPreviewBase imple
             accept: () => {
                 this.removingMembers = true;
                 const isInter = this.noteSheet!.noteSheetType === NoteSheetType.InterPosting;
-                const detailIds = this.selectedMembers.map(m => m.draftPostingDetailId);
+                const detailIds = this.selectedMembers.map((m) => m.draftPostingDetailId);
 
                 this.postingService.removeDraftPostingDetails(this.noteSheet!.draftPostingMasterId!, detailIds, isInter).subscribe({
                     next: (res) => {
@@ -590,25 +595,29 @@ export class NotesheetPreviewPostingComponent extends NotesheetPreviewBase imple
 
         forkJoin({
             noteSheet: this.http.get<any[]>(`${this.api}/GetFilteredByKeysAsyn/${this.noteSheet.noteSheetId}`).pipe(
-                map(data => (Array.isArray(data) ? data[0] : null) as any | null),
+                map((data) => (Array.isArray(data) ? data[0] : null) as any | null),
                 catchError(() => of(null as any | null))
             ),
-            backHistory: this.http.get<{ id: number; backedByEmployeeId: number; backedFromStatus: string; backedToStatus: string; backReason: string | null; backedDate: string; createdBy: string }[]>(
-                `${this.api}/GetBackHistory`, { params: { noteSheetId: this.noteSheet.noteSheetId.toString() } }
-            ).pipe(catchError(() => of([])))
+            backHistory: this.http
+                .get<
+                    { id: number; backedByEmployeeId: number; backedFromStatus: string; backedToStatus: string; backReason: string | null; backedDate: string; createdBy: string }[]
+                >(`${this.api}/GetBackHistory`, { params: { noteSheetId: this.noteSheet.noteSheetId.toString() } })
+                .pipe(catchError(() => of([])))
         }).subscribe({
             next: ({ noteSheet, backHistory }) => {
-                if (!noteSheet) { this.approvalLogLoading = false; return; }
+                if (!noteSheet) {
+                    this.approvalLogLoading = false;
+                    return;
+                }
                 this.buildApprovalLog(noteSheet, backHistory);
             },
-            error: (err: any) => { this.approvalLogLoading = false; }
+            error: (err: any) => {
+                this.approvalLogLoading = false;
+            }
         });
     }
 
-    private buildApprovalLog(
-        ns: any,
-        backHistory: { backedByEmployeeId: number; backedFromStatus: string; backedToStatus: string; backReason: string | null; backedDate: string }[]
-    ): void {
+    private buildApprovalLog(ns: any, backHistory: { backedByEmployeeId: number; backedFromStatus: string; backedToStatus: string; backReason: string | null; backedDate: string }[]): void {
         const entries: ApprovalLogEntry[] = [];
 
         if (ns.preparedByEmployeeId && ns.preparedByEmployeeId > 0) {
@@ -647,7 +656,9 @@ export class NotesheetPreviewPostingComponent extends NotesheetPreviewBase imple
                     });
                 }
             }
-        } catch { /* ignore */ }
+        } catch {
+            /* ignore */
+        }
 
         if (ns.finalApprovalId) {
             entries.push({
@@ -678,14 +689,13 @@ export class NotesheetPreviewPostingComponent extends NotesheetPreviewBase imple
 
         this.approvalLogEntries = entries;
 
-        const empIds = [...new Set(entries.filter(e => e.employeeId).map(e => e.employeeId!))];
-        if (empIds.length === 0) { this.approvalLogLoading = false; return; }
+        const empIds = [...new Set(entries.filter((e) => e.employeeId).map((e) => e.employeeId!))];
+        if (empIds.length === 0) {
+            this.approvalLogLoading = false;
+            return;
+        }
 
-        forkJoin(
-            empIds.map(id =>
-                this.servingMembersService.getEmployeePersonalServiceOverview(id).pipe(catchError(() => of(null)))
-            )
-        ).subscribe({
+        forkJoin(empIds.map((id) => this.servingMembersService.getEmployeePersonalServiceOverview(id).pipe(catchError(() => of(null))))).subscribe({
             next: (results) => {
                 const empMap = new Map<number, { serviceId: string; name: string; rank: string }>();
                 results.forEach((emp: any, idx: number) => {
@@ -707,25 +717,32 @@ export class NotesheetPreviewPostingComponent extends NotesheetPreviewBase imple
                 }
                 this.approvalLogLoading = false;
             },
-            error: (err: any) => { this.approvalLogLoading = false; }
+            error: (err: any) => {
+                this.approvalLogLoading = false;
+            }
         });
     }
 
     getApprovalStatusLabel(status: string): string {
-        return NoteSheetCurrentStatusOptions.find(o => o.value === status)?.label ?? status;
+        return NoteSheetCurrentStatusOptions.find((o) => o.value === status)?.label ?? status;
     }
 
     getActionLabel(action: ApprovalLogAction): string {
-        return ApprovalLogActionOptions.find(o => o.value === action)?.label ?? action;
+        return ApprovalLogActionOptions.find((o) => o.value === action)?.label ?? action;
     }
 
     getActionIcon(action: ApprovalLogAction): string {
         switch (action) {
-            case ApprovalLogAction.Approve: return 'pi pi-check-circle';
-            case ApprovalLogAction.Cancel:  return 'pi pi-times-circle';
-            case ApprovalLogAction.Back:    return 'pi pi-replay';
-            case ApprovalLogAction.Pending: return 'pi pi-clock';
-            default:                        return 'pi pi-circle';
+            case ApprovalLogAction.Approve:
+                return 'pi pi-check-circle';
+            case ApprovalLogAction.Cancel:
+                return 'pi pi-times-circle';
+            case ApprovalLogAction.Back:
+                return 'pi pi-replay';
+            case ApprovalLogAction.Pending:
+                return 'pi pi-clock';
+            default:
+                return 'pi pi-circle';
         }
     }
 
@@ -748,8 +765,8 @@ export class NotesheetPreviewPostingComponent extends NotesheetPreviewBase imple
     }
 
     toBnDigits(s: string): string {
-        const bn = ['০','১','২','৩','৪','৫','৬','৭','৮','৯'];
-        return s.replace(/\d/g, d => bn[+d]);
+        const bn = ['০', '১', '২', '৩', '৪', '৫', '৬', '৭', '৮', '৯'];
+        return s.replace(/\d/g, (d) => bn[+d]);
     }
 
     calcTenure(joinDateStr: string | null | undefined): { y: number; m: number; d: number } {
@@ -760,8 +777,14 @@ export class NotesheetPreviewPostingComponent extends NotesheetPreviewBase imple
         let y = now.getFullYear() - join.getFullYear();
         let mo = now.getMonth() - join.getMonth();
         let d = now.getDate() - join.getDate();
-        if (d < 0) { mo--; d += new Date(now.getFullYear(), now.getMonth(), 0).getDate(); }
-        if (mo < 0) { y--; mo += 12; }
+        if (d < 0) {
+            mo--;
+            d += new Date(now.getFullYear(), now.getMonth(), 0).getDate();
+        }
+        if (mo < 0) {
+            y--;
+            mo += 12;
+        }
         return { y, m: mo, d };
     }
 
@@ -774,20 +797,18 @@ export class NotesheetPreviewPostingComponent extends NotesheetPreviewBase imple
         const bn = !this.isEnglish();
         // Mother unit carries its district after a comma: "বানৌজা হাজী মহসীন, চট্টগ্রাম",
         // then the present RAB hierarchy follows separated by "/".
-        const motherUnit = bn ? (emp.motherUnitNameBN || emp.motherUnitName || '') : (emp.motherUnitName || '');
-        const district = bn
-            ? (emp.motherUnitDistrictNameBN || emp.motherUnitDistrictName || '')
-            : (emp.motherUnitDistrictName || '');
+        const motherUnit = bn ? emp.motherUnitNameBN || emp.motherUnitName || '' : emp.motherUnitName || '';
+        const district = bn ? emp.motherUnitDistrictNameBN || emp.motherUnitDistrictName || '' : emp.motherUnitDistrictName || '';
         const parts = [
-            motherUnit && district ? motherUnit + ', ' + district : (motherUnit || district),
-            bn ? (emp.presentRabUnitNameBN || emp.presentRabUnitName || '') : (emp.presentRabUnitName || ''),
-            bn ? (emp.presentRabWingNameBN || emp.presentRabWingName || '') : (emp.presentRabWingName || ''),
-            bn ? (emp.presentRabBranchNameBN || emp.presentRabBranchName || '') : (emp.presentRabBranchName || ''),
-            bn ? (emp.presentRabSubBranchNameBN || emp.presentRabSubBranchName || '') : (emp.presentRabSubBranchName || ''),
-            bn ? (emp.presentRabSectionNameBN || emp.presentRabSectionName || '') : (emp.presentRabSectionName || ''),
-            bn ? (emp.presentRabSubSectionNameBN || emp.presentRabSubSectionName || '') : (emp.presentRabSubSectionName || ''),
+            motherUnit && district ? motherUnit + ', ' + district : motherUnit || district,
+            bn ? emp.presentRabUnitNameBN || emp.presentRabUnitName || '' : emp.presentRabUnitName || '',
+            bn ? emp.presentRabWingNameBN || emp.presentRabWingName || '' : emp.presentRabWingName || '',
+            bn ? emp.presentRabBranchNameBN || emp.presentRabBranchName || '' : emp.presentRabBranchName || '',
+            bn ? emp.presentRabSubBranchNameBN || emp.presentRabSubBranchName || '' : emp.presentRabSubBranchName || '',
+            bn ? emp.presentRabSectionNameBN || emp.presentRabSectionName || '' : emp.presentRabSectionName || '',
+            bn ? emp.presentRabSubSectionNameBN || emp.presentRabSubSectionName || '' : emp.presentRabSubSectionName || ''
         ];
-        return parts.filter(p => p).join('/ ') || '';
+        return parts.filter((p) => p).join('/ ') || '';
     }
 
     /**
@@ -816,8 +837,7 @@ export class NotesheetPreviewPostingComponent extends NotesheetPreviewBase imple
         }
 
         const newOffsets = this.calculatePageOffsets(measured);
-        if (newOffsets.length !== this.pageOffsets.length ||
-            newOffsets.some((v: number, i: number) => v !== this.pageOffsets[i])) {
+        if (newOffsets.length !== this.pageOffsets.length || newOffsets.some((v: number, i: number) => v !== this.pageOffsets[i])) {
             this.pageOffsets = newOffsets;
             this.cdr.detectChanges();
         }
@@ -852,31 +872,33 @@ export class NotesheetPreviewPostingComponent extends NotesheetPreviewBase imple
     private calculatePageOffsets(totalHeight: number): number[] {
         const container = this.contentMeasure?.nativeElement;
         const pageH = this.pageContentHeightPx;
-        if (!container || pageH <= 0) { this.pageNeedsTableHeader = [false]; return [0]; }
+        if (!container || pageH <= 0) {
+            this.pageNeedsTableHeader = [false];
+            return [0];
+        }
 
         const containerTop = container.getBoundingClientRect().top;
 
         // Measure title block height (title is rendered outside viewport on page 1)
         const titleEl = container.querySelector('.ns-title-block') as HTMLElement;
         const docBox = container.querySelector('.ns-doc-box') as HTMLElement;
-        this.titleBlockHeightPx = docBox
-            ? docBox.getBoundingClientRect().top - containerTop
-            : titleEl ? titleEl.getBoundingClientRect().height + 8 : 0;
+        this.titleBlockHeightPx = docBox ? docBox.getBoundingClientRect().top - containerTop : titleEl ? titleEl.getBoundingClientRect().height + 8 : 0;
 
         // First page has less space because title is above the viewport
         const firstPageH = pageH - this.titleBlockHeightPx;
-        if (totalHeight <= firstPageH + this.titleBlockHeightPx) { this.pageNeedsTableHeader = [false]; return [this.titleBlockHeightPx]; }
+        if (totalHeight <= firstPageH + this.titleBlockHeightPx) {
+            this.pageNeedsTableHeader = [false];
+            return [this.titleBlockHeightPx];
+        }
 
         // Keep-together blocks (should not be split across pages)
-        const keepTogether = Array.from(
-            container.querySelectorAll(
-                '.ns-title-block, .ns-org-header, .ns-note, .ns-initiator-area, .ns-approver-section, .ns-posting-table tr'
-            ) as NodeListOf<HTMLElement>
-        ).map(el => {
-            const rect = el.getBoundingClientRect();
-            return { top: rect.top - containerTop, bottom: rect.top - containerTop + rect.height, height: rect.height };
-        }).filter(b => b.height > 0 && b.height < pageH)
-          .sort((a, b) => a.top - b.top);
+        const keepTogether = Array.from(container.querySelectorAll('.ns-title-block, .ns-org-header, .ns-note, .ns-initiator-area, .ns-approver-section, .ns-posting-table tr') as NodeListOf<HTMLElement>)
+            .map((el) => {
+                const rect = el.getBoundingClientRect();
+                return { top: rect.top - containerTop, bottom: rect.top - containerTop + rect.height, height: rect.height };
+            })
+            .filter((b) => b.height > 0 && b.height < pageH)
+            .sort((a, b) => a.top - b.top);
 
         // Collect per-line bottom positions from text blocks using getClientRects
         const textBlockInfo: { top: number; bottom: number; lineBottoms: number[] }[] = [];
@@ -889,7 +911,7 @@ export class NotesheetPreviewPostingComponent extends NotesheetPreviewBase imple
 
             const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
             let textNode: Node | null;
-            while (textNode = walker.nextNode()) {
+            while ((textNode = walker.nextNode())) {
                 if (!textNode.textContent?.trim()) continue;
                 const range = document.createRange();
                 range.selectNodeContents(textNode);
@@ -922,9 +944,40 @@ export class NotesheetPreviewPostingComponent extends NotesheetPreviewBase imple
         }
         const startsInTableBody = (pos: number): boolean => pos > tableBodyTop && pos < tableBodyBottom;
 
+        // Tail unit: the table's LAST row plus everything that trails it — the নোটঃ block,
+        // the paragraphs after the table, the initiator signature and the approver
+        // sections — must stay on one page. Registering it as a single keep-together
+        // block means that when the tail no longer fits, the break is pushed above the
+        // last row, so the row travels to the next page with the whole trailing section
+        // instead of that section being split across two pages.
+        //
+        // The unit runs to the end of the note-sheet, and its registered height is CLAMPED
+        // to one page. A tail taller than a page can never satisfy a literal keep-together,
+        // so an unclamped block would just be dropped and nothing would move; clamping keeps
+        // the rule active, because the goal is only to push the break above the last row so
+        // the tail restarts at the top of a fresh page with the most room available. Any
+        // remainder flows on normally from there.
+        const lastRowEl = tbodyEl?.querySelector('tr:last-child') as HTMLElement | null;
+        let lastRowTop = -1;
+        if (lastRowEl) {
+            const tailEls = container.querySelectorAll('.ns-approver-section, .ns-initiator-area, .ns-para, .ns-note') as NodeListOf<HTMLElement>;
+            const top = lastRowEl.getBoundingClientRect().top - containerTop;
+            lastRowTop = top;
+            let tailBottom = top;
+            for (const el of Array.from(tailEls)) {
+                tailBottom = Math.max(tailBottom, el.getBoundingClientRect().bottom - containerTop);
+            }
+            // A page opening inside the table body reserves room for the repeated header.
+            const bottom = Math.min(tailBottom, top + (pageH - this.tableHeaderHeightPx) - 1);
+            if (bottom > top) {
+                keepTogether.push({ top, bottom, height: bottom - top });
+                keepTogether.sort((a, b) => a.top - b.top);
+            }
+        }
+
         // Page 1 starts after the title block (title is rendered outside viewport)
         const offsets: number[] = [this.titleBlockHeightPx];
-        const needsHeader: boolean[] = [false];   // page 0 carries the table's own header
+        const needsHeader: boolean[] = [false]; // page 0 carries the table's own header
         let cursor = this.titleBlockHeightPx;
         let isFirstPage = true;
 
@@ -975,6 +1028,10 @@ export class NotesheetPreviewPostingComponent extends NotesheetPreviewBase imple
         }
 
         this.pageNeedsTableHeader = needsHeader;
+        // Did the tail rule above actually move a break onto the last row? The PDF
+        // flow reads this to decide whether to reproduce that break; it must not
+        // split the table when the web view didn't.
+        this.tailStartsNewPage = lastRowTop >= 0 && offsets.some(o => Math.abs(o - lastRowTop) < 1);
         return offsets;
     }
 
@@ -985,9 +1042,7 @@ export class NotesheetPreviewPostingComponent extends NotesheetPreviewBase imple
         // Header pages reserve space at the top for the repeated column header, so
         // the usable area (and thus the bottom cover) shrinks by that much.
         const headerReserve = this.pageNeedsTableHeader[pageIndex] ? this.tableHeaderHeightPx : 0;
-        const availHeight = (pageIndex === 0
-            ? this.pageContentHeightPx - this.titleBlockHeightPx
-            : this.pageContentHeightPx) - headerReserve;
+        const availHeight = (pageIndex === 0 ? this.pageContentHeightPx - this.titleBlockHeightPx : this.pageContentHeightPx) - headerReserve;
         return Math.max(0, availHeight - usedHeight + this.pageInsetPx);
     }
 
@@ -1017,9 +1072,7 @@ export class NotesheetPreviewPostingComponent extends NotesheetPreviewBase imple
         this.editNoteSheetDate = this.noteSheet.noteSheetDate ? new Date(this.noteSheet.noteSheetDate) : null;
         this.editInitiatorId = this.noteSheet.initiatorId ?? null;
         this.editRecommenderIds = this.parseRecommenderIds();
-        this.editFinalApproverId = (this.noteSheet.finalApprovalId && this.noteSheet.finalApprovalId > 0)
-            ? this.noteSheet.finalApprovalId
-            : (this.noteSheet.finalApproverId && this.noteSheet.finalApproverId > 0 ? this.noteSheet.finalApproverId : null);
+        this.editFinalApproverId = this.noteSheet.finalApprovalId && this.noteSheet.finalApprovalId > 0 ? this.noteSheet.finalApprovalId : this.noteSheet.finalApproverId && this.noteSheet.finalApproverId > 0 ? this.noteSheet.finalApproverId : null;
 
         this.editTextType = (this.noteSheet.textType ?? 0) === 1 ? 'bn' : 'en';
         this.editOperationType = this.noteSheet.noteSheetOperationType ?? null;
@@ -1048,7 +1101,7 @@ export class NotesheetPreviewPostingComponent extends NotesheetPreviewBase imple
     private loadRabUnitOptions(): void {
         this.masterBasicSetup.getAllByType('RabUnit').subscribe({
             next: (list) => {
-                this.rabUnitOptions = (list ?? []).map(c => ({
+                this.rabUnitOptions = (list ?? []).map((c) => ({
                     label: c.codeValueEN ?? c.codeValueBN ?? `ID ${c.codeId}`,
                     value: c.codeId
                 }));
@@ -1062,11 +1115,11 @@ export class NotesheetPreviewPostingComponent extends NotesheetPreviewBase imple
             this.preselectUnitNodes();
             return;
         }
-        this.orgService.getAll(0).subscribe(roots => {
+        this.orgService.getAll(0).subscribe((roots) => {
             this.unitTreeNodes = roots
-                .filter(r => r.status === 1)
+                .filter((r) => r.status === 1)
                 .sort((a, b) => a.sortOrder - b.sortOrder)
-                .map(r => this.orgNodeToTreeNode(r, null));
+                .map((r) => this.orgNodeToTreeNode(r, null));
             this.preselectUnitNodes();
         });
     }
@@ -1087,9 +1140,9 @@ export class NotesheetPreviewPostingComponent extends NotesheetPreviewBase imple
         const node: TreeNode = event.node;
         if (node.children && node.children.length > 0) return;
         const parentId = Number(node.key);
-        this.orgService.loadChildren(parentId).subscribe(children => {
-            const active = children.filter(c => c.status === 1).sort((a, b) => a.sortOrder - b.sortOrder);
-            node.children = active.map(c => this.orgNodeToTreeNode(c, node));
+        this.orgService.loadChildren(parentId).subscribe((children) => {
+            const active = children.filter((c) => c.status === 1).sort((a, b) => a.sortOrder - b.sortOrder);
+            node.children = active.map((c) => this.orgNodeToTreeNode(c, node));
             if (node.children!.length === 0) node.leaf = true;
             this.unitTreeNodes = [...this.unitTreeNodes];
         });
@@ -1125,9 +1178,7 @@ export class NotesheetPreviewPostingComponent extends NotesheetPreviewBase imple
     }
 
     getTransferUnitShort(emp: DraftPostingEmployeeRow): string {
-        const full = this.isEnglish()
-            ? (emp.transferRabUnitName || '')
-            : (emp.transferRabUnitNameBN || emp.transferRabUnitName || '');
+        const full = this.isEnglish() ? emp.transferRabUnitName || '' : emp.transferRabUnitNameBN || emp.transferRabUnitName || '';
         if (!full) return '';
         const parts = full.split(',');
         return parts[parts.length - 1].trim();
@@ -1135,16 +1186,14 @@ export class NotesheetPreviewPostingComponent extends NotesheetPreviewBase imple
 
     getCombinedRemarks(emp: DraftPostingEmployeeRow): string {
         const history = this.removalHistoryMap[emp.employeeId];
-        const removalRemark = this.isEnglish()
-            ? (history?.removalRemark || '')
-            : (history?.removalRemarkBN || history?.removalRemark || '');
+        const removalRemark = this.isEnglish() ? history?.removalRemark || '' : history?.removalRemarkBN || history?.removalRemark || '';
         // After the main remarks, append the "previous posting cancelled" note when this
         // member's last posting (of this type) was cancelled.
         const cancelNote = this.getCancelledInterNote(emp);
         if (this.isInterPosting()) {
-            return [emp.interPostingRemark, emp.remarks, removalRemark, cancelNote].filter(s => s?.trim()).join(', ');
+            return [emp.interPostingRemark, emp.remarks, removalRemark, cancelNote].filter((s) => s?.trim()).join(', ');
         }
-        return [emp.sendingRemark, emp.remarks, removalRemark, cancelNote].filter(s => s?.trim()).join(', ');
+        return [emp.sendingRemark, emp.remarks, removalRemark, cancelNote].filter((s) => s?.trim()).join(', ');
     }
 
     /**
@@ -1155,24 +1204,16 @@ export class NotesheetPreviewPostingComponent extends NotesheetPreviewBase imple
         const c = this.cancelledInterMap[emp.employeeId];
         if (!c?.postingOrderNo) return '';
         const no = c.postingOrderNo;
-        return this.isEnglish()
-            ? `The transfer order issued vide ${no} has been cancelled.`
-            : `${no} এর মাধ্যমে জারিকৃত বদলি আদেশ বাতিল করা হলো।`;
+        return this.isEnglish() ? `The transfer order issued vide ${no} has been cancelled.` : `${no} এর মাধ্যমে জারিকৃত বদলি আদেশ বাতিল করা হলো।`;
     }
 
     getPreviousWorkplace(emp: DraftPostingEmployeeRow): string {
         const bn = !this.isEnglish();
-        const rabUnit = this.showPrevWorkplaceDetail
-            ? (bn ? (emp.motherOrgLocationNameBN || emp.motherOrgLocationName || '') : (emp.motherOrgLocationName || ''))
-            : '';
-        let motherOrg = bn
-            ? (emp.motherUnitNameBN || emp.motherUnitName || '')
-            : (emp.motherUnitName || '');
+        const rabUnit = this.showPrevWorkplaceDetail ? (bn ? emp.motherOrgLocationNameBN || emp.motherOrgLocationName || '' : emp.motherOrgLocationName || '') : '';
+        let motherOrg = bn ? emp.motherUnitNameBN || emp.motherUnitName || '' : emp.motherUnitName || '';
         // Mother unit's district (EmployeeInfo.LastMotherUnitDistrictId) after a comma:
         // "বানৌজা হাজী মহসীন, চট্টগ্রাম".
-        const district = bn
-            ? (emp.motherUnitDistrictNameBN || emp.motherUnitDistrictName || '')
-            : (emp.motherUnitDistrictName || '');
+        const district = bn ? emp.motherUnitDistrictNameBN || emp.motherUnitDistrictName || '' : emp.motherUnitDistrictName || '';
         if (motherOrg && district) motherOrg = motherOrg + ', ' + district;
         else if (district) motherOrg = district;
         if (motherOrg && rabUnit) return motherOrg + '\n(' + rabUnit + ')';
@@ -1182,9 +1223,7 @@ export class NotesheetPreviewPostingComponent extends NotesheetPreviewBase imple
     }
 
     getRankQualifications(emp: DraftPostingEmployeeRow): string {
-        const q = this.isEnglish()
-            ? (emp.specialQualifications || '')
-            : (emp.specialQualificationsBN || emp.specialQualifications || '');
+        const q = this.isEnglish() ? emp.specialQualifications || '' : emp.specialQualificationsBN || emp.specialQualifications || '';
         return q.trim();
     }
 
@@ -1196,35 +1235,31 @@ export class NotesheetPreviewPostingComponent extends NotesheetPreviewBase imple
 
     /** Corps name (BN/EN); '' when not applicable. */
     getCorps(emp: DraftPostingEmployeeRow): string {
-        const v = (this.isEnglish() ? (emp.corpsName || '') : (emp.corpsNameBN || emp.corpsName || '')).trim();
+        const v = (this.isEnglish() ? emp.corpsName || '' : emp.corpsNameBN || emp.corpsName || '').trim();
         return this.notApplicable(v) ? '' : v;
     }
 
     /** Professional Qualification — comma-joined names (BN/EN); '' when not applicable. */
     getProfQualification(emp: DraftPostingEmployeeRow): string {
-        const v = (this.isEnglish() ? (emp.professionalQualification || '') : (emp.professionalQualificationBN || emp.professionalQualification || '')).trim();
+        const v = (this.isEnglish() ? emp.professionalQualification || '' : emp.professionalQualificationBN || emp.professionalQualification || '').trim();
         return this.notApplicable(v) ? '' : v;
     }
 
     /** Gallantry Awards / Decoration — comma-joined names (BN/EN); '' when not applicable. */
     getGallantryAwards(emp: DraftPostingEmployeeRow): string {
-        const v = (this.isEnglish() ? (emp.gallantryAwardsDecoration || '') : (emp.gallantryAwardsDecorationBN || emp.gallantryAwardsDecoration || '')).trim();
+        const v = (this.isEnglish() ? emp.gallantryAwardsDecoration || '' : emp.gallantryAwardsDecorationBN || emp.gallantryAwardsDecoration || '').trim();
         return this.notApplicable(v) ? '' : v;
     }
 
     /** Permanent (own) district display; drops the parenthetical detail when the toggle is off. */
     getOwnDistrict(emp: DraftPostingEmployeeRow): string {
-        const full = this.isEnglish()
-            ? (emp.permanentDistrictName || '')
-            : (emp.permanentDistrictNameBN || emp.permanentDistrictName || '');
+        const full = this.isEnglish() ? emp.permanentDistrictName || '' : emp.permanentDistrictNameBN || emp.permanentDistrictName || '';
         return this.showOwnDistrictDetail ? full : full.split('\n')[0].replace(/\s*\(.*$/, '');
     }
 
     /** Spouse district display; drops the parenthetical detail when the toggle is off. */
     getSpouseDistrict(emp: DraftPostingEmployeeRow): string {
-        const full = this.isEnglish()
-            ? (emp.spousePermanentDistrictName || '')
-            : (emp.spousePermanentDistrictNameBN || emp.spousePermanentDistrictName || '');
+        const full = this.isEnglish() ? emp.spousePermanentDistrictName || '' : emp.spousePermanentDistrictNameBN || emp.spousePermanentDistrictName || '';
         return this.showSpouseDistrictDetail ? full : full.split('\n')[0].replace(/\s*\(.*$/, '');
     }
 
@@ -1234,7 +1269,7 @@ export class NotesheetPreviewPostingComponent extends NotesheetPreviewBase imple
         let current: TreeNode | null = node;
         while (current) {
             const d: any = current.data;
-            parts.unshift(bn ? (d?.nameBN || d?.nameEN || current.label || '') : (d?.nameEN || current.label || ''));
+            parts.unshift(bn ? d?.nameBN || d?.nameEN || current.label || '' : d?.nameEN || current.label || '');
             current = d?.parent ?? null;
         }
         return parts.join(', ');
@@ -1253,7 +1288,7 @@ export class NotesheetPreviewPostingComponent extends NotesheetPreviewBase imple
     }
 
     private loadAndPreselectNode(emp: DraftPostingEmployeeRow): void {
-        this.masterBasicSetup.getAncestorsOfCommonCode(emp.transferRabUnitId!).subscribe(ancestors => {
+        this.masterBasicSetup.getAncestorsOfCommonCode(emp.transferRabUnitId!).subscribe((ancestors) => {
             if (!ancestors?.length) return;
             // ancestors come from root to leaf; build path and create temp node
             const sorted = [...ancestors].sort((a, b) => (a.level ?? 0) - (b.level ?? 0));
@@ -1282,7 +1317,7 @@ export class NotesheetPreviewPostingComponent extends NotesheetPreviewBase imple
     private loadDistrictMap(): void {
         this.masterBasicSetup.getAllByType('District').subscribe({
             next: (list) => {
-                (list ?? []).forEach(d => {
+                (list ?? []).forEach((d) => {
                     if (d.codeValueEN) this.districtNameToId[d.codeValueEN.trim().toLowerCase()] = d.codeId;
                     if (d.codeValueBN) this.districtNameToId[d.codeValueBN.trim().toLowerCase()] = d.codeId;
                 });
@@ -1300,10 +1335,11 @@ export class NotesheetPreviewPostingComponent extends NotesheetPreviewBase imple
 
         const checkAor = (districtIds: number[]) => {
             if (districtIds.includes(empDistrictId)) {
-                const unitName = this.getUnitFullPath(this.unitNodeMap[unitId] ?? null) || (this.rabUnitOptions.find(o => o.value === unitId)?.label ?? '');
+                const unitName = this.getUnitFullPath(this.unitNodeMap[unitId] ?? null) || (this.rabUnitOptions.find((o) => o.value === unitId)?.label ?? '');
                 const name = emp.fullNameBN || emp.fullNameEN || '';
                 this.messageService.add({
-                    severity: 'warn', summary: 'সতর্কতা / Warning',
+                    severity: 'warn',
+                    summary: 'সতর্কতা / Warning',
                     detail: `${name} এর নিজ জেলার অধীনে ${unitName} ইউনিট নির্বাচন করা হয়েছে।`,
                     life: 6000
                 });
@@ -1320,10 +1356,11 @@ export class NotesheetPreviewPostingComponent extends NotesheetPreviewBase imple
                 const ids: number[] = [];
                 (rows ?? []).forEach((r: any) => {
                     const csv = r.districtIds ?? r.DistrictIds ?? '';
-                    if (csv) csv.split(',').forEach((s: string) => {
-                        const n = parseInt(s.trim(), 10);
-                        if (!isNaN(n)) ids.push(n);
-                    });
+                    if (csv)
+                        csv.split(',').forEach((s: string) => {
+                            const n = parseInt(s.trim(), 10);
+                            if (!isNaN(n)) ids.push(n);
+                        });
                 });
                 this.aorCache[unitId] = ids;
                 checkAor(ids);
@@ -1360,7 +1397,6 @@ export class NotesheetPreviewPostingComponent extends NotesheetPreviewBase imple
         });
     }
 
-
     // ── Save changes ─────────────────────────────────────────
     saveChanges(): void {
         if (!this.noteSheet || this.saving) return;
@@ -1381,7 +1417,7 @@ export class NotesheetPreviewPostingComponent extends NotesheetPreviewBase imple
                 note: this.editNote || null,
                 textType: this.editTextType === 'bn' ? 1 : 0,
                 noteSheetOperationType: this.editOperationType,
-                paragraphText: this.editParagraphs.some(p => p.trim()) ? JSON.stringify(this.editParagraphs.filter(p => p.trim())) : null,
+                paragraphText: this.editParagraphs.some((p) => p.trim()) ? JSON.stringify(this.editParagraphs.filter((p) => p.trim())) : null,
                 noteSheetDate: this.editNoteSheetDate ? this.formatDateOnly(this.editNoteSheetDate) : this.noteSheet!.noteSheetDate,
                 initiatorId: this.editInitiatorId ?? 0,
                 recommendersJson,
@@ -1394,16 +1430,14 @@ export class NotesheetPreviewPostingComponent extends NotesheetPreviewBase imple
                 payload['filesReferences'] = filesReferencesJson;
             }
 
-            const postingDetailItems = this.postingEmployees.map(emp => ({
+            const postingDetailItems = this.postingEmployees.map((emp) => ({
                 id: emp.draftPostingDetailId,
                 transferRabUnitId: emp.transferRabUnitId,
                 remarks: (this.newRemarks[emp.employeeId] ?? '').trim() || null
             }));
 
             const noteSheetUpdate$ = this.http.post(`${this.api}/UpdateAsyn`, payload);
-            const postingUpdate$ = this.isInterPosting()
-                ? this.postingService.updateDraftInterPostingDetails(postingDetailItems)
-                : this.postingService.updateDraftPostingDetails(postingDetailItems);
+            const postingUpdate$ = this.isInterPosting() ? this.postingService.updateDraftInterPostingDetails(postingDetailItems) : this.postingService.updateDraftPostingDetails(postingDetailItems);
 
             forkJoin([noteSheetUpdate$, postingUpdate$]).subscribe({
                 next: () => {
@@ -1422,17 +1456,12 @@ export class NotesheetPreviewPostingComponent extends NotesheetPreviewBase imple
         };
 
         if (filesToUpload.length > 0) {
-            const uploads = filesToUpload.map((r: FileRowData) =>
-                this.empService.uploadEmployeeFile(r.file!, r.displayName?.trim() || r.file!.name)
-            );
+            const uploads = filesToUpload.map((r: FileRowData) => this.empService.uploadEmployeeFile(r.file!, r.displayName?.trim() || r.file!.name));
             forkJoin(uploads).subscribe({
                 next: (results: unknown) => {
                     const resultsArray = Array.isArray(results) ? results : [];
-                    const newRefs = (resultsArray as { fileId: number; fileName: string }[]).map(r => ({ FileId: r.fileId, fileName: r.fileName }));
-                    const allRefs = [
-                        ...existingRefs.map(r => ({ FileId: r.FileId, fileName: r.fileName })),
-                        ...newRefs
-                    ];
+                    const newRefs = (resultsArray as { fileId: number; fileName: string }[]).map((r) => ({ FileId: r.fileId, fileName: r.fileName }));
+                    const allRefs = [...existingRefs.map((r) => ({ FileId: r.FileId, fileName: r.fileName })), ...newRefs];
                     doSave(allRefs.length > 0 ? JSON.stringify(allRefs) : null);
                 },
                 error: (err: any) => {
@@ -1464,11 +1493,11 @@ export class NotesheetPreviewPostingComponent extends NotesheetPreviewBase imple
         try {
             const refs = JSON.parse(json) as { FileId?: number; fileId?: number; fileName?: string; FileName?: string }[];
             return Array.isArray(refs)
-                ? refs.map(r => ({
-                    displayName: r.fileName ?? r.FileName ?? '',
-                    file: null,
-                    fileId: r.FileId ?? r.fileId
-                }))
+                ? refs.map((r) => ({
+                      displayName: r.fileName ?? r.FileName ?? '',
+                      file: null,
+                      fileId: r.FileId ?? r.fileId
+                  }))
                 : [];
         } catch {
             return [];
@@ -1506,20 +1535,24 @@ export class NotesheetPreviewPostingComponent extends NotesheetPreviewBase imple
                         if (id) existingMap[id] = r;
                     });
                 }
-            } catch { /* ignore */ }
+            } catch {
+                /* ignore */
+            }
         }
 
-        return JSON.stringify(this.editRecommenderIds.map((id, idx) => {
-            const existing = existingMap[id];
-            return {
-                recomender_no: idx + 1,
-                recomender_id: id,
-                recomender_status: existing?.recomender_status ?? ApprovalStatus.Pending,
-                recomender_approve_remark: existing?.recomender_approve_remark ?? '',
-                recomender_cancel_remark: existing?.recomender_cancel_remark ?? '',
-                recomender_approved_date: existing?.recomender_approved_date ?? null
-            };
-        }));
+        return JSON.stringify(
+            this.editRecommenderIds.map((id, idx) => {
+                const existing = existingMap[id];
+                return {
+                    recomender_no: idx + 1,
+                    recomender_id: id,
+                    recomender_status: existing?.recomender_status ?? ApprovalStatus.Pending,
+                    recomender_approve_remark: existing?.recomender_approve_remark ?? '',
+                    recomender_cancel_remark: existing?.recomender_cancel_remark ?? '',
+                    recomender_approved_date: existing?.recomender_approved_date ?? null
+                };
+            })
+        );
     }
 
     /** Export PDF: builds Word document, sends to backend for conversion, downloads PDF. */
@@ -1533,9 +1566,7 @@ export class NotesheetPreviewPostingComponent extends NotesheetPreviewBase imple
         this.exportingPdf = true;
         try {
             const { html, chrome, templateExtras } = await this.buildJsReportPdf();
-            await this.jsreportService.downloadPdf(
-                html, {}, `NoteSheet_${this.noteSheet.noteSheetNo ?? 'export'}.pdf`, chrome, templateExtras,
-            );
+            await this.jsreportService.downloadPdf(html, {}, `NoteSheet_${this.noteSheet.noteSheetNo ?? 'export'}.pdf`, chrome, templateExtras);
         } catch (err: any) {
             this.messageService.add({
                 severity: 'error',
@@ -1556,9 +1587,7 @@ export class NotesheetPreviewPostingComponent extends NotesheetPreviewBase imple
         this.exportingPdfJsReport = true;
         try {
             const { html, chrome, templateExtras } = await this.buildJsReportPdf();
-            await this.jsreportService.previewPdfInNewTab(
-                html, {}, `NoteSheet_${this.noteSheet.noteSheetNo ?? 'export'}`, chrome, templateExtras,
-            );
+            await this.jsreportService.previewPdfInNewTab(html, {}, `NoteSheet_${this.noteSheet.noteSheetNo ?? 'export'}`, chrome, templateExtras);
         } catch (err: any) {
             this.messageService.add({
                 severity: 'error',
@@ -1568,6 +1597,82 @@ export class NotesheetPreviewPostingComponent extends NotesheetPreviewBase imple
         } finally {
             this.exportingPdfJsReport = false;
         }
+    }
+
+    /**
+     * Snapshot of the unpaginated content for the PDF flow, with everything that
+     * trails the employee table — the নোটঃ block, the paragraphs after it, the
+     * initiator signature and the approver sections — moved into one wrapper div.
+     *
+     * The PDF is paginated by Chromium from this flat flow, not by
+     * calculatePageOffsets, so the web view's keep-together rules do not apply
+     * here. Grouping the tail gives Chromium a single box to hold `break-inside:
+     * avoid` against, which is what stops that section from being split across
+     * two pages. The DOM is cloned first — the live preview must not be touched.
+     *
+     * The table's last body row is moved into that wrapper too, as a standalone
+     * one-row table: Chromium honours `break-inside` on a box but not
+     * `break-after: avoid` on a <tr>, so the row cannot be held to the tail while
+     * it stays in the main table. It carries a copy of the source <colgroup> and
+     * <thead>, which with table-layout:fixed reproduces the column widths exactly
+     * and gives the continuation page its column header — the same trick the web
+     * view's .page-repeat-header uses.
+     */
+    private buildPdfBodyHtml(): string {
+        const clone = this.contentMeasure.nativeElement.cloneNode(true) as HTMLElement;
+        const tableWrap = clone.querySelector('.ns-posting-table');
+        const col = tableWrap?.parentElement;
+        if (!tableWrap || !col) return clone.innerHTML;
+
+        const tail = document.createElement('div');
+        tail.className = 'ns-tail-keep';
+        // appendChild moves the node, so cache the next sibling before each move.
+        let node = tableWrap.nextSibling;
+        while (node) {
+            const next = node.nextSibling;
+            tail.appendChild(node);
+            node = next;
+        }
+
+        const srcTable = tableWrap.querySelector('table');
+        const lastRow = srcTable?.querySelector('tbody tr:last-child');
+        // Only when the web view broke there, and only when a row would be left
+        // behind — moving the sole row out would leave the main table as a bare
+        // header. Splitting unconditionally puts a second one-row table directly
+        // under the main one on pages where nothing breaks, which reads as two
+        // tables; the forced break below is what keeps the two halves apart.
+        if (this.tailStartsNewPage && srcTable && lastRow && srcTable.querySelectorAll('tbody tr').length > 1) {
+            // Shallow-clone the wrapper, table and tbody rather than creating fresh
+            // elements: Angular's emulated encapsulation scopes the component CSS to
+            // an _ngcontent-* attribute, so an element built with createElement gets
+            // none of it — the table would lose its padding and width:100% and sit
+            // flush against the page frame. cloneNode(false) copies the attributes
+            // (that one included) without the children.
+            const colgroup = srcTable.querySelector('colgroup');
+            const thead = srcTable.querySelector('thead');
+            const srcTbody = srcTable.querySelector('tbody');
+
+            const rowTable = srcTable.cloneNode(false) as HTMLElement;
+            if (colgroup) rowTable.appendChild(colgroup.cloneNode(true));
+            if (thead) rowTable.appendChild(thead.cloneNode(true));
+
+            const tbody = (srcTbody ? srcTbody.cloneNode(false) : document.createElement('tbody')) as HTMLElement;
+            tbody.appendChild(lastRow); // moves the row out of the main table
+            rowTable.appendChild(tbody);
+
+            const rowWrap = tableWrap.cloneNode(false) as HTMLElement;
+            rowWrap.classList.add('ns-tail-row-table');
+            rowWrap.appendChild(rowTable);
+            tail.insertBefore(rowWrap, tail.firstChild);
+            // The PDF page holds more than the web page (5/7/10mm margins vs
+            // 10/14/20mm), so break-inside alone would often leave room for the
+            // one-row table on the page the main table ends — the two tables would
+            // then abut. Force the break the web view already decided on.
+            tail.className += ' ns-tail-keep--page';
+        }
+
+        if (tail.childNodes.length > 0) col.appendChild(tail);
+        return clone.innerHTML;
     }
 
     /**
@@ -1581,16 +1686,16 @@ export class NotesheetPreviewPostingComponent extends NotesheetPreviewBase imple
     private async buildJsReportPdf(): Promise<{ html: string; chrome: Record<string, unknown>; templateExtras: Record<string, unknown> }> {
         const styles = this.collectDocumentStyles();
         const fontCss = await this.embedBanglaFontCss();
-        const body = this.contentMeasure.nativeElement.innerHTML;
+        const body = this.buildPdfBodyHtml();
         const isLegal = this.selectedPageSize === 'Legal';
         // Page margins are HALF the on-screen .a4-paper insets (5mm side / 7mm top /
         // 10mm bottom instead of 10 / 14 / 20) so the printed sheet uses more of the
         // page. The text column widens to match: Legal 215.9 - 2*5 = 205.9mm.
         const pageWidth = isLegal ? '215.9mm' : '210mm';
         const pageHeight = isLegal ? '355.6mm' : '297mm';
-        const padX = 5;                 // mm — horizontal page margin
-        const padTop = 7;               // mm — top page margin
-        const padBottom = 10;           // mm — bottom page margin
+        const padX = 5; // mm — horizontal page margin
+        const padTop = 7; // mm — top page margin
+        const padBottom = 10; // mm — bottom page margin
         const contentWidth = `${(isLegal ? 215.9 : 210) - 2 * padX}mm`;
 
         const html = `<!DOCTYPE html>
@@ -1710,6 +1815,23 @@ html, body { margin: 0; padding: 0; background: transparent; }
 .ns-org-header,
 .ns-title-block { page-break-inside: avoid; break-inside: avoid; }
 
+/* The whole block after the employee table (নোটঃ, the paragraphs, the initiator
+   signature, the approver sections) — plus the table's last row, re-emitted by
+   buildPdfBodyHtml() as a one-row .ns-tail-row-table — is wrapped in a single
+   .ns-tail-keep box, so Chromium moves the lot to the next page intact instead of
+   splitting it. That matches the web view, where calculatePageOffsets pushes the
+   break above the last row. Chromium drops break-inside on a box taller than the
+   printable area, so an over-long tail still fragments as it does today.
+
+   The head/foot gap margin cancellations above compensate for the repeated
+   thead/tfoot of a table Chromium fragments across pages. The one-row table is
+   never fragmented, so they must not apply to it: zeroing them keeps its header
+   gap (which spaces it below the page frame, exactly like a continuation page)
+   and leaves the normal spacing down to the নোটঃ block. */
+.pdf-flow .ns-tail-keep { page-break-inside: avoid; break-inside: avoid; }
+.pdf-flow .ns-tail-keep--page { page-break-before: always; break-before: page; }
+.pdf-flow .ns-tail-row-table { margin-top: 0 !important; margin-bottom: 0 !important; }
+
 /* ── Multi-page employee table ──────────────────────────────────────────────
    When the table spans 2+ pages: repeat the column header (<thead>) on every
    page, keep each row whole, and close the table with borders at each page
@@ -1799,10 +1921,11 @@ html, body { margin: 0; padding: 0; background: transparent; }
         const templateExtras = {
             pdfOperations: this.pdfPageNumberOperations({
                 multipage: this.pageOffsets.length > 1,
-                pageWidth, pageHeight,
+                pageWidth,
+                pageHeight,
                 bottomMarginMm: padBottom,
-                fontCss,
-            }),
+                fontCss
+            })
         };
 
         return { html, chrome, templateExtras };
@@ -1849,7 +1972,7 @@ html, body { margin: 0; padding: 0; background: transparent; }
 
         const faces = [
             { file: 'SolaimanLipi.ttf', weight: 400 },
-            { file: 'SolaimanLipi-Bold.ttf', weight: 700 },
+            { file: 'SolaimanLipi-Bold.ttf', weight: 700 }
         ];
 
         const rules: string[] = [];
@@ -1857,10 +1980,7 @@ html, body { margin: 0; padding: 0; background: transparent; }
             try {
                 const res = await fetch(`assets/fonts/${face.file}`);
                 if (!res.ok) continue;
-                rules.push(
-                    `@font-face { font-family: 'SolaimanLipi'; font-style: normal; font-weight: ${face.weight};` +
-                    ` src: url(data:font/ttf;base64,${this.toBase64(await res.arrayBuffer())}) format('truetype'); }`
-                );
+                rules.push(`@font-face { font-family: 'SolaimanLipi'; font-style: normal; font-weight: ${face.weight};` + ` src: url(data:font/ttf;base64,${this.toBase64(await res.arrayBuffer())}) format('truetype'); }`);
             } catch {
                 // font asset unavailable — fall back to a system Bangla face
             }
@@ -1913,15 +2033,15 @@ html, body { margin: 0; padding: 0; background: transparent; }
 
         if (this.initiatorDetails) {
             const d = this.initiatorDetails;
-            const nameStr = bn ? (d.nameBN || d.name) : d.name;
-            const rankStr = (d.rank && d.rank !== '-') ? (bn ? (d.rankBN || d.rank) : d.rank) : undefined;
+            const nameStr = bn ? d.nameBN || d.name : d.name;
+            const rankStr = d.rank && d.rank !== '-' ? (bn ? d.rankBN || d.rank : d.rank) : undefined;
             const approved = this.isInitiatorApproved();
             model.initiator = {
                 role: '',
                 serialText: '',
                 nameLine: nameStr,
                 rankLine: rankStr,
-                appointment: bn ? (d.appointmentBN || d.appointment) : d.appointment,
+                appointment: bn ? d.appointmentBN || d.appointment : d.appointment,
                 date: approved && this.noteSheet.noteSheetDate ? this.formatFullDate(this.noteSheet.noteSheetDate) : undefined,
                 align: 'right',
                 signatureDataUrl: approved && this.showSignatureImage && this.shouldShowSignature(d.step) ? d.signatureDataUrl : undefined
@@ -1931,7 +2051,7 @@ html, body { margin: 0; padding: 0; background: transparent; }
         const paraOffset = this.parsedParagraphs.length;
         for (let i = 0; i < this.approversDetails.length; i++) {
             const a = this.approversDetails[i];
-            const role = bn ? (a.appointmentBN || a.appointment) : a.appointment;
+            const role = bn ? a.appointmentBN || a.appointment : a.appointment;
             const remark = this.getApproverRemark(a.step);
             const approverDate = this.getApproverDate(a.step);
             model.approvers.push({
@@ -1965,9 +2085,9 @@ html, body { margin: 0; padding: 0; background: transparent; }
 
                 if (tag === 'table') {
                     const rows: string[][] = [];
-                    el.querySelectorAll('tr').forEach(tr => {
+                    el.querySelectorAll('tr').forEach((tr) => {
                         const cells: string[] = [];
-                        tr.querySelectorAll('td, th').forEach(td => {
+                        tr.querySelectorAll('td, th').forEach((td) => {
                             cells.push(this.normalizeTextForWord((td.textContent || '').trim()));
                         });
                         if (cells.length) rows.push(cells);
@@ -1975,7 +2095,7 @@ html, body { margin: 0; padding: 0; background: transparent; }
                     if (rows.length) blocks.push({ type: 'table', rows, alignment });
                 } else if (tag === 'ol' || tag === 'ul') {
                     let listCounter = 0;
-                    el.querySelectorAll(':scope > li').forEach(li => {
+                    el.querySelectorAll(':scope > li').forEach((li) => {
                         const text = this.normalizeTextForWord((li.textContent || '').trim());
                         if (!text) return;
                         listCounter++;
@@ -1992,14 +2112,13 @@ html, body { margin: 0; padding: 0; background: transparent; }
                     const text = this.normalizeTextForWord((el.textContent || '').trim());
                     if (text) {
                         // Check if the element is entirely bold/italic at the block level
-                        const blockBold = ['strong', 'b', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6'].includes(tag)
-                            || el.style.fontWeight === 'bold';
+                        const blockBold = ['strong', 'b', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6'].includes(tag) || el.style.fontWeight === 'bold';
                         const blockItalic = tag === 'em' || tag === 'i' || el.style.fontStyle === 'italic';
 
                         // Extract inline runs to preserve bold/italic/underline
                         const blockUnderline = tag === 'u' || el.style.textDecoration?.includes('underline');
                         const inlineRuns = this.extractInlineRuns(el, blockBold, blockItalic, blockUnderline);
-                        if (inlineRuns.length > 1 || inlineRuns.some(r => r.underline)) {
+                        if (inlineRuns.length > 1 || inlineRuns.some((r) => r.underline)) {
                             blocks.push({ type: 'paragraph', text, runs: inlineRuns, indent: 'normal', alignment });
                         } else {
                             const hasBold = blockBold || !!el.querySelector('strong, b');
@@ -2053,16 +2172,14 @@ html, body { margin: 0; padding: 0; background: transparent; }
     private async buildWordDocument(): Promise<Document> {
         const model = this.buildDocumentModel();
         const bn = model.isBangla;
-        const font = bn
-            ? { ascii: 'Times New Roman', hAnsi: 'Times New Roman', cs: 'SolaimanLipi', hint: 'cs' as const }
-            : 'Times New Roman';
+        const font = bn ? { ascii: 'Times New Roman', hAnsi: 'Times New Roman', cs: 'SolaimanLipi', hint: 'cs' as const } : 'Times New Roman';
         // Font sizes in half-points (1pt = 2 half-pts) — matched to posting-order-preview
-        const ORG_SZ = 18;      // 9pt — org header (HEADER — kept)
-        const BODY_SZ = 20;     // 10pt — body text, paragraphs, note, reference
-        const TBL_SZ = this.isInterPosting() ? 16 : 18;  // 8pt inter / 9pt new posting — table content
-        const TBL_HDR_SZ = this.isInterPosting() ? 13 : 18;  // 6.5pt inter / 9pt new posting — table header
-        const SIG_SZ = 20;      // 10pt — signature & approver
-        const NODATE_SZ = BODY_SZ;  // 10pt — notesheet no + date (matches body)
+        const ORG_SZ = 18; // 9pt — org header (HEADER — kept)
+        const BODY_SZ = 20; // 10pt — body text, paragraphs, note, reference
+        const TBL_SZ = this.isInterPosting() ? 16 : 18; // 8pt inter / 9pt new posting — table content
+        const TBL_HDR_SZ = this.isInterPosting() ? 13 : 18; // 6.5pt inter / 9pt new posting — table header
+        const SIG_SZ = 20; // 10pt — signature & approver
+        const NODATE_SZ = BODY_SZ; // 10pt — notesheet no + date (matches body)
         const csSize = bn ? BODY_SZ : undefined;
         const csNoDate = bn ? NODATE_SZ : undefined;
         const lang = bn ? { value: 'bn-BD', bidirectional: 'bn-BD' } : undefined;
@@ -2072,40 +2189,48 @@ html, body { margin: 0; padding: 0; background: transparent; }
         const mainChildren: (Paragraph | Table)[] = [];
 
         // Org header
-        mainChildren.push(new Paragraph({
-            children: [new TextRun({ text: this.getOrgHeaderLine1(), bold: true, size: ORG_SZ, sizeComplexScript: bn ? ORG_SZ : undefined, font, language: lang })],
-            alignment: AlignmentType.CENTER, spacing: { before: 80, after: 0 }
-        }));
-        mainChildren.push(new Paragraph({
-            children: [new TextRun({ text: this.getOrgHeaderLine2(), bold: true, size: ORG_SZ, sizeComplexScript: bn ? ORG_SZ : undefined, font, language: lang, underline: {} })],
-            alignment: AlignmentType.CENTER, spacing: { before: 0, after: 100 }
-        }));
+        mainChildren.push(
+            new Paragraph({
+                children: [new TextRun({ text: this.getOrgHeaderLine1(), bold: true, size: ORG_SZ, sizeComplexScript: bn ? ORG_SZ : undefined, font, language: lang })],
+                alignment: AlignmentType.CENTER,
+                spacing: { before: 80, after: 0 }
+            })
+        );
+        mainChildren.push(
+            new Paragraph({
+                children: [new TextRun({ text: this.getOrgHeaderLine2(), bold: true, size: ORG_SZ, sizeComplexScript: bn ? ORG_SZ : undefined, font, language: lang, underline: {} })],
+                alignment: AlignmentType.CENTER,
+                spacing: { before: 0, after: 100 }
+            })
+        );
 
         // Notesheet number + date on same line
         if (this.noteSheet?.noteSheetNo) {
-            const nsRuns: TextRun[] = [
-                new TextRun({ text: this.noteSheet.noteSheetNo, size: NODATE_SZ, sizeComplexScript: csNoDate, font, language: lang })
-            ];
+            const nsRuns: TextRun[] = [new TextRun({ text: this.noteSheet.noteSheetNo, size: NODATE_SZ, sizeComplexScript: csNoDate, font, language: lang })];
             if (this.noteSheet.noteSheetDate) {
                 const dateLabel = bn ? 'তারিখঃ ' : 'Date: ';
                 const dateVal = this.formatFullDate(this.noteSheet.noteSheetDate);
                 nsRuns.push(new TextRun({ text: '\t' + dateLabel + dateVal, size: NODATE_SZ, sizeComplexScript: csNoDate, font, language: lang }));
             }
-            mainChildren.push(new Paragraph({
-                children: nsRuns,
-                tabStops: [{ type: 'right' as any, position: 10800 }],
-                indent: { left: 100 }, spacing: { before: 60, after: 40 }
-            }));
+            mainChildren.push(
+                new Paragraph({
+                    children: nsRuns,
+                    tabStops: [{ type: 'right' as any, position: 10800 }],
+                    indent: { left: 100 },
+                    spacing: { before: 60, after: 40 }
+                })
+            );
         }
 
         // Subject
         if (this.noteSheet?.subject) {
-            mainChildren.push(new Paragraph({
-                children: [
-                    new TextRun({ text: this.noteSheet.subject, bold: true, underline: {}, size: BODY_SZ, sizeComplexScript: csSize, font, language: lang })
-                ],
-                indent: { left: 100 }, spacing: { before: 20, after: 60 }
-            }));
+            mainChildren.push(
+                new Paragraph({
+                    children: [new TextRun({ text: this.noteSheet.subject, bold: true, underline: {}, size: BODY_SZ, sizeComplexScript: csSize, font, language: lang })],
+                    indent: { left: 100 },
+                    spacing: { before: 20, after: 60 }
+                })
+            );
         }
 
         // Reference
@@ -2113,25 +2238,29 @@ html, body { margin: 0; padding: 0; background: transparent; }
             const refLabel = bn ? 'সূত্রঃ' : 'Reference:';
             const refHtml = this.fixBanglaWordBreaks(this.noteSheet.referenceNumber);
             const refBlocks = this.parseHtmlToContentBlocks(refHtml);
-            const validBlocks = refBlocks.filter(b => b.text);
+            const validBlocks = refBlocks.filter((b) => b.text);
             if (validBlocks.length > 0) {
                 // Label on its own line
-                mainChildren.push(new Paragraph({
-                    children: [
-                        new TextRun({ text: refLabel, bold: true, size: BODY_SZ, sizeComplexScript: csSize, font, language: lang })
-                    ],
-                    indent: { left: 100 }, spacing: { before: 40, after: 20 }
-                }));
+                mainChildren.push(
+                    new Paragraph({
+                        children: [new TextRun({ text: refLabel, bold: true, size: BODY_SZ, sizeComplexScript: csSize, font, language: lang })],
+                        indent: { left: 100 },
+                        spacing: { before: 40, after: 20 }
+                    })
+                );
                 // Content blocks as separate paragraphs below, preserving bold/italic
                 for (let ri = 0; ri < validBlocks.length; ri++) {
                     const rb = validBlocks[ri];
                     const children = rb.runs?.length
-                        ? rb.runs.map(r => new TextRun({ text: r.text, bold: r.bold, italics: r.italic, underline: r.underline ? {} : undefined, size: BODY_SZ, sizeComplexScript: csSize, font, language: lang }))
+                        ? rb.runs.map((r) => new TextRun({ text: r.text, bold: r.bold, italics: r.italic, underline: r.underline ? {} : undefined, size: BODY_SZ, sizeComplexScript: csSize, font, language: lang }))
                         : [new TextRun({ text: rb.text!, bold: rb.bold, italics: rb.italic, size: BODY_SZ, sizeComplexScript: csSize, font, language: lang })];
-                    mainChildren.push(new Paragraph({
-                        children,
-                        indent: { left: 100 }, spacing: { before: 20, after: ri === validBlocks.length - 1 ? 60 : 20 }
-                    }));
+                    mainChildren.push(
+                        new Paragraph({
+                            children,
+                            indent: { left: 100 },
+                            spacing: { before: 20, after: ri === validBlocks.length - 1 ? 60 : 20 }
+                        })
+                    );
                 }
             }
         }
@@ -2140,23 +2269,27 @@ html, body { margin: 0; padding: 0; background: transparent; }
         if (model.mainBlocks.length > 0 && model.mainBlocks[0].type === 'paragraph' && model.mainBlocks[0].text) {
             const firstBlock = model.mainBlocks[0];
             const firstBlockRuns = firstBlock.runs?.length
-                ? firstBlock.runs.map(r => new TextRun({ text: r.text, bold: r.bold, italics: r.italic, underline: r.underline ? {} : undefined, size: BODY_SZ, sizeComplexScript: csSize, font, language: lang }))
+                ? firstBlock.runs.map((r) => new TextRun({ text: r.text, bold: r.bold, italics: r.italic, underline: r.underline ? {} : undefined, size: BODY_SZ, sizeComplexScript: csSize, font, language: lang }))
                 : [new TextRun({ text: firstBlock.text!, bold: firstBlock.bold, italics: firstBlock.italic, size: BODY_SZ, sizeComplexScript: csSize, font, language: lang })];
-            mainChildren.push(new Paragraph({
-                children: [
-                    new TextRun({ text: `${model.mainSerialText}  `, bold: true, size: BODY_SZ, sizeComplexScript: csSize, font, language: lang }),
-                    ...firstBlockRuns
-                ],
-                indent: { left: 100 }, spacing: { before: 160, after: 80 }, alignment: AlignmentType.JUSTIFIED
-            }));
+            mainChildren.push(
+                new Paragraph({
+                    children: [new TextRun({ text: `${model.mainSerialText}  `, bold: true, size: BODY_SZ, sizeComplexScript: csSize, font, language: lang }), ...firstBlockRuns],
+                    indent: { left: 100 },
+                    spacing: { before: 160, after: 80 },
+                    alignment: AlignmentType.JUSTIFIED
+                })
+            );
             if (model.mainBlocks.length > 1) {
                 mainChildren.push(...this.contentBlocksToDocx(model.mainBlocks.slice(1), font, bn));
             }
         } else {
-            mainChildren.push(new Paragraph({
-                children: [new TextRun({ text: model.mainSerialText, bold: true, size: BODY_SZ, sizeComplexScript: csSize, font, language: lang })],
-                indent: { left: 100 }, spacing: { before: 160, after: 40 }
-            }));
+            mainChildren.push(
+                new Paragraph({
+                    children: [new TextRun({ text: model.mainSerialText, bold: true, size: BODY_SZ, sizeComplexScript: csSize, font, language: lang })],
+                    indent: { left: 100 },
+                    spacing: { before: 160, after: 40 }
+                })
+            );
             mainChildren.push(...this.contentBlocksToDocx(model.mainBlocks, font, bn));
         }
 
@@ -2166,10 +2299,11 @@ html, body { margin: 0; padding: 0; background: transparent; }
             const pageUsable = isA4 ? 10772 : 11106;
             const cellMargins = { top: 30, bottom: 30, left: 0, right: 0 };
             const cellSpacing = { before: 0, after: 0, line: 220 };
-            const hdrParaFn = (text: string) => new Paragraph({ children: [new TextRun({ text, bold: true, size: TBL_HDR_SZ, sizeComplexScript: bn ? TBL_HDR_SZ : undefined, font, language: lang })], alignment: AlignmentType.CENTER, spacing: cellSpacing });
+            const hdrParaFn = (text: string) =>
+                new Paragraph({ children: [new TextRun({ text, bold: true, size: TBL_HDR_SZ, sizeComplexScript: bn ? TBL_HDR_SZ : undefined, font, language: lang })], alignment: AlignmentType.CENTER, spacing: cellSpacing });
             const dataCellFn = (v: string, w: number, align: (typeof AlignmentType)[keyof typeof AlignmentType] = AlignmentType.CENTER) => {
                 const lines = v.split('\n');
-                const cellParas = lines.map(line => new Paragraph({ children: [new TextRun({ text: line, size: TBL_SZ, sizeComplexScript: bn ? TBL_SZ : undefined, font, language: lang })], alignment: align, spacing: cellSpacing }));
+                const cellParas = lines.map((line) => new Paragraph({ children: [new TextRun({ text: line, size: TBL_SZ, sizeComplexScript: bn ? TBL_SZ : undefined, font, language: lang })], alignment: align, spacing: cellSpacing }));
                 return new TableCell({ children: cellParas, borders: cellBorders, width: { size: w, type: WidthType.DXA }, margins: cellMargins });
             };
 
@@ -2180,24 +2314,29 @@ html, body { margin: 0; padding: 0; background: transparent; }
                 //          ser svcId rank name own  spo  jdt  yr  mo  day prev unit rem
                 // When tenure is hidden, give the freed width to Name / Previous
                 // Workplace / Transfer Station (idx 3 / 10 / 11).
-                const iBase = this.showTenure
-                    ? [300, 1150, 850, 1000, 900, 900, 800, 400, 400, 400, 700, 900, 650]
-                    : [300, 1150, 850, 1600, 900, 900, 800, 400, 400, 400, 1300, 1400, 650];
-                const iBnHdr = ['ক্রমিক','ব্যক্তিগত নং','পদবি','নাম','নিজ জেলা (দায়িত্বপূর্ণ এলাকা)','স্বামী/স্ত্রীর জেলা (দায়িত্বপূর্ণ এলাকা)','','','','','পূর্ববতী কর্মস্থল','বদলিকৃত কর্মস্থল','মন্তব্য'];
-                const iEnHdr = ['Ser','Service ID','Rank','Name','Own District (Responsible Area)',"Husband/Wife's District (Responsible Area)",'','','','','Previous Workplace','Transfer Station','Remarks'];
-                const iVisIdx = iBase.map((_, i) => i).filter(i => {
-                    if (i === 12) return this.showRemarks;          // Remarks
-                    if (i >= 6 && i <= 9) return this.showTenure;   // Tenure group (join date + Y/M/D)
-                    return true;
-                });
+                const iBase = this.showTenure ? [300, 1150, 850, 1000, 900, 900, 800, 400, 400, 400, 700, 900, 650] : [300, 1150, 850, 1600, 900, 900, 800, 400, 400, 400, 1300, 1400, 650];
+                const iBnHdr = ['ক্রমিক', 'ব্যক্তিগত নং', 'পদবি', 'নাম', 'নিজ জেলা (দায়িত্বপূর্ণ এলাকা)', 'স্বামী/স্ত্রীর জেলা (দায়িত্বপূর্ণ এলাকা)', '', '', '', '', 'পূর্ববতী কর্মস্থল', 'বদলিকৃত কর্মস্থল', 'মন্তব্য'];
+                const iEnHdr = ['Ser', 'Service ID', 'Rank', 'Name', 'Own District (Responsible Area)', "Husband/Wife's District (Responsible Area)", '', '', '', '', 'Previous Workplace', 'Transfer Station', 'Remarks'];
+                const iVisIdx = iBase
+                    .map((_, i) => i)
+                    .filter((i) => {
+                        if (i === 12) return this.showRemarks; // Remarks
+                        if (i >= 6 && i <= 9) return this.showTenure; // Tenure group (join date + Y/M/D)
+                        return true;
+                    });
                 // Scale to the VISIBLE columns so the table fills the page width even
                 // when the tenure (or remarks) columns are hidden.
                 const iBaseTotal = iVisIdx.reduce((a, oi) => a + iBase[oi], 0);
-                const iW = iBase.map(w => Math.round(w * pageUsable / iBaseTotal));
+                const iW = iBase.map((w) => Math.round((w * pageUsable) / iBaseTotal));
 
-                const iMkHdrCell = (text: string, w: number, extra?: any) => new TableCell({
-                    children: [hdrParaFn(text)], borders: cellBorders, width: { size: w, type: WidthType.DXA }, margins: cellMargins, ...extra
-                });
+                const iMkHdrCell = (text: string, w: number, extra?: any) =>
+                    new TableCell({
+                        children: [hdrParaFn(text)],
+                        borders: cellBorders,
+                        width: { size: w, type: WidthType.DXA },
+                        margins: cellMargins,
+                        ...extra
+                    });
                 const iContCell = (w: number) => new TableCell({ children: [new Paragraph({})], verticalMerge: VerticalMergeType.CONTINUE, borders: cellBorders, width: { size: w, type: WidthType.DXA }, margins: cellMargins });
 
                 let iHdrRows: TableRow[];
@@ -2207,7 +2346,7 @@ html, body { margin: 0; padding: 0; background: transparent; }
                     for (const oi of iVisIdx) {
                         if (oi >= 7 && oi <= 9) continue; // covered by colspan=4 from oi=6
                         if (oi === 6) {
-                            r1.push(iMkHdrCell(bn ? 'র‌্যাবে অবস্থানকাল' : 'Tenure in RAB', iW[6]+iW[7]+iW[8]+iW[9], { columnSpan: 4 }));
+                            r1.push(iMkHdrCell(bn ? 'র‌্যাবে অবস্থানকাল' : 'Tenure in RAB', iW[6] + iW[7] + iW[8] + iW[9], { columnSpan: 4 }));
                         } else {
                             r1.push(iMkHdrCell(bn ? iBnHdr[oi] : iEnHdr[oi], iW[oi], { verticalMerge: VerticalMergeType.RESTART }));
                         }
@@ -2216,30 +2355,34 @@ html, body { margin: 0; padding: 0; background: transparent; }
                     // Row 2: joining date spans 2 rows, duration colspan=3
                     const r2: TableCell[] = [];
                     for (const oi of iVisIdx) {
-                        if (oi < 6 || oi >= 10) { r2.push(iContCell(iW[oi])); }
-                        else if (oi === 6) { r2.push(iMkHdrCell(bn ? 'যোগদানের তারিখ' : 'Joining Date', iW[6], { verticalMerge: VerticalMergeType.RESTART })); }
-                        else if (oi === 7) { r2.push(iMkHdrCell(bn ? 'অবস্থানকাল' : 'Duration', iW[7]+iW[8]+iW[9], { columnSpan: 3 })); }
+                        if (oi < 6 || oi >= 10) {
+                            r2.push(iContCell(iW[oi]));
+                        } else if (oi === 6) {
+                            r2.push(iMkHdrCell(bn ? 'যোগদানের তারিখ' : 'Joining Date', iW[6], { verticalMerge: VerticalMergeType.RESTART }));
+                        } else if (oi === 7) {
+                            r2.push(iMkHdrCell(bn ? 'অবস্থানকাল' : 'Duration', iW[7] + iW[8] + iW[9], { columnSpan: 3 }));
+                        }
                         // oi 8,9: skipped (covered by colspan=3)
                     }
 
                     // Row 3: joining date continues, বছর/মাস/দিন cells
                     const r3: TableCell[] = [];
-                    const subBn = ['বছর','মাস','দিন'];
-                    const subEn = ['Year','Month','Day'];
+                    const subBn = ['বছর', 'মাস', 'দিন'];
+                    const subEn = ['Year', 'Month', 'Day'];
                     for (const oi of iVisIdx) {
-                        if (oi < 6 || oi >= 10) { r3.push(iContCell(iW[oi])); }
-                        else if (oi === 6) { r3.push(iContCell(iW[6])); }
-                        else { r3.push(iMkHdrCell(bn ? subBn[oi-7] : subEn[oi-7], iW[oi])); }
+                        if (oi < 6 || oi >= 10) {
+                            r3.push(iContCell(iW[oi]));
+                        } else if (oi === 6) {
+                            r3.push(iContCell(iW[6]));
+                        } else {
+                            r3.push(iMkHdrCell(bn ? subBn[oi - 7] : subEn[oi - 7], iW[oi]));
+                        }
                     }
 
-                    iHdrRows = [
-                        new TableRow({ tableHeader: true, children: r1 }),
-                        new TableRow({ tableHeader: true, children: r2 }),
-                        new TableRow({ tableHeader: true, children: r3 }),
-                    ];
+                    iHdrRows = [new TableRow({ tableHeader: true, children: r1 }), new TableRow({ tableHeader: true, children: r2 }), new TableRow({ tableHeader: true, children: r3 })];
                 } else {
                     // Tenure hidden → single-row header (indices 6-9 already dropped from iVisIdx)
-                    const r1 = iVisIdx.map(oi => iMkHdrCell(bn ? iBnHdr[oi] : iEnHdr[oi], iW[oi]));
+                    const r1 = iVisIdx.map((oi) => iMkHdrCell(bn ? iBnHdr[oi] : iEnHdr[oi], iW[oi]));
                     iHdrRows = [new TableRow({ tableHeader: true, children: r1 })];
                 }
 
@@ -2248,10 +2391,10 @@ html, body { margin: 0; padding: 0; background: transparent; }
                     const allV: string[] = [
                         bn ? this.serial(i + 1) : String(i + 1),
                         this.getServiceIdDisplay(emp),
-                        (bn?(emp.rankNameBN||emp.rankName||''):(emp.rankName??'')) + (this.showRankQualifications && this.getRankQualifications(emp) ? '\n(' + this.getRankQualifications(emp) + ')' : ''),
-                        bn?(emp.fullNameBN||emp.fullNameEN||''):(emp.fullNameEN??''),
-                        bn?(emp.permanentDistrictNameBN||emp.permanentDistrictName||''):(emp.permanentDistrictName??''),
-                        bn?(emp.spousePermanentDistrictNameBN||emp.spousePermanentDistrictName||''):(emp.spousePermanentDistrictName??''),
+                        (bn ? emp.rankNameBN || emp.rankName || '' : (emp.rankName ?? '')) + (this.showRankQualifications && this.getRankQualifications(emp) ? '\n(' + this.getRankQualifications(emp) + ')' : ''),
+                        bn ? emp.fullNameBN || emp.fullNameEN || '' : (emp.fullNameEN ?? ''),
+                        bn ? emp.permanentDistrictNameBN || emp.permanentDistrictName || '' : (emp.permanentDistrictName ?? ''),
+                        bn ? emp.spousePermanentDistrictNameBN || emp.spousePermanentDistrictName || '' : (emp.spousePermanentDistrictName ?? ''),
                         bn ? this.toBnDigits(this.formatJoiningDate(emp.joiningDateInRAB)) : this.formatJoiningDate(emp.joiningDateInRAB),
                         bn ? this.toBnDigits(String(t.y)) : String(t.y),
                         bn ? this.toBnDigits(String(t.m)) : String(t.m),
@@ -2264,48 +2407,58 @@ html, body { margin: 0; padding: 0; background: transparent; }
                     // multi-line row across pages (that leaves a stray fragment after
                     // the repeated header on the next page).
                     // ব্যক্তিগত নং / পদবি / নাম (1–3) left-aligned, matching the preview.
-                    return new TableRow({ cantSplit: true, children: iVisIdx.map(oi => dataCellFn(allV[oi], iW[oi], oi >= 1 && oi <= 3 ? AlignmentType.LEFT : AlignmentType.CENTER)) });
+                    return new TableRow({ cantSplit: true, children: iVisIdx.map((oi) => dataCellFn(allV[oi], iW[oi], oi >= 1 && oi <= 3 ? AlignmentType.LEFT : AlignmentType.CENTER)) });
                 });
 
                 const iTotalW = iVisIdx.reduce((a, oi) => a + iW[oi], 0);
                 mainChildren.push(new Paragraph({ spacing: { before: 200 }, children: [] }));
-                mainChildren.push(new Table({ width: { size: iTotalW, type: WidthType.DXA }, rows: [...iHdrRows, ...iDataRows], columnWidths: iVisIdx.map(oi => iW[oi]), alignment: AlignmentType.LEFT, indent: { size: 100, type: WidthType.DXA } }));
-
+                mainChildren.push(new Table({ width: { size: iTotalW, type: WidthType.DXA }, rows: [...iHdrRows, ...iDataRows], columnWidths: iVisIdx.map((oi) => iW[oi]), alignment: AlignmentType.LEFT, indent: { size: 100, type: WidthType.DXA } }));
             } else {
                 // ── New posting: 10-column, single-row header ──
                 const allColKeys = ['ser', 'serviceId', 'rank', 'trade', 'name', 'ownDistrict', 'spouseDistrict', 'prevWorkplace', 'transferUnit', 'remarks'];
                 const allColHeaders = bn
-                    ? ['ক্রমিক','ব্যক্তিগত নম্বর','পদবি','ট্রেড','নাম','নিজ জেলা (দায়িত্বপূর্ণ এলাকা)','স্পাউস জেলা (দায়িত্বপূর্ণ এলাকা)','পূর্ববতী কর্মস্থল','বদলি ইউনিট','মন্তব্য']
-                    : ['Ser','Service ID','Rank','Trade','Name','Own District (Responsible Area)','Spouse District (Responsible Area)','Previous Workplace','Transfer Unit','Remarks'];
+                    ? ['ক্রমিক', 'ব্যক্তিগত নম্বর', 'পদবি', 'ট্রেড', 'নাম', 'নিজ জেলা (দায়িত্বপূর্ণ এলাকা)', 'স্পাউস জেলা (দায়িত্বপূর্ণ এলাকা)', 'পূর্ববতী কর্মস্থল', 'বদলি ইউনিট', 'মন্তব্য']
+                    : ['Ser', 'Service ID', 'Rank', 'Trade', 'Name', 'Own District (Responsible Area)', 'Spouse District (Responsible Area)', 'Previous Workplace', 'Transfer Unit', 'Remarks'];
                 //                    ser  svcId rank trade name  own   spouse prev  unit  rem
-                const allBaseWidths = [620, 1480, 850,  820, 1380, 1400, 1220, 1040,  780,  800];
+                const allBaseWidths = [620, 1480, 850, 820, 1380, 1400, 1220, 1040, 780, 800];
 
-                const visibleIndices = allColKeys.map((k, i) => {
-                    if (k === 'remarks' && !this.showRemarks) return -1;
-                    if (k === 'trade' && !this.showTradeColumn) return -1;
-                    return i;
-                }).filter(i => i >= 0);
-                const cols = visibleIndices.map(i => allColHeaders[i]);
-                const baseWidths = visibleIndices.map(i => allBaseWidths[i]);
+                const visibleIndices = allColKeys
+                    .map((k, i) => {
+                        if (k === 'remarks' && !this.showRemarks) return -1;
+                        if (k === 'trade' && !this.showTradeColumn) return -1;
+                        return i;
+                    })
+                    .filter((i) => i >= 0);
+                const cols = visibleIndices.map((i) => allColHeaders[i]);
+                const baseWidths = visibleIndices.map((i) => allBaseWidths[i]);
                 const baseTotal = baseWidths.reduce((a, b) => a + b, 0);
-                const colWidths = baseWidths.map(w => Math.round(w * pageUsable / baseTotal));
+                const colWidths = baseWidths.map((w) => Math.round((w * pageUsable) / baseTotal));
 
-                const hdrCell = (text: string, wi: number, extra?: any) => new TableCell({
-                    children: [hdrParaFn(text)], borders: cellBorders, width: { size: colWidths[wi], type: WidthType.DXA }, margins: cellMargins, ...extra
-                });
+                const hdrCell = (text: string, wi: number, extra?: any) =>
+                    new TableCell({
+                        children: [hdrParaFn(text)],
+                        borders: cellBorders,
+                        width: { size: colWidths[wi], type: WidthType.DXA },
+                        margins: cellMargins,
+                        ...extra
+                    });
 
                 const buildAllCellValues = (emp: any, i: number): string[] => [
                     bn ? this.serial(i + 1) : String(i + 1),
                     this.getServiceIdDisplay(emp),
-                    (bn?(emp.rankNameBN||emp.rankName||''):(emp.rankName??'')) + (this.showRankQualifications && this.getRankQualifications(emp) ? '\n(' + this.getRankQualifications(emp) + ')' : ''),
-                    (bn?(emp.tradeNameBN||emp.tradeName||''):(emp.tradeName??'')) + (this.showTradeRemarks && emp.tradeRemarks ? '\n(' + emp.tradeRemarks + ')' : ''),
-                    bn?(emp.fullNameBN||emp.fullNameEN||''):(emp.fullNameEN??''),
+                    (bn ? emp.rankNameBN || emp.rankName || '' : (emp.rankName ?? '')) + (this.showRankQualifications && this.getRankQualifications(emp) ? '\n(' + this.getRankQualifications(emp) + ')' : ''),
+                    (bn ? emp.tradeNameBN || emp.tradeName || '' : (emp.tradeName ?? '')) + (this.showTradeRemarks && emp.tradeRemarks ? '\n(' + emp.tradeRemarks + ')' : ''),
+                    bn ? emp.fullNameBN || emp.fullNameEN || '' : (emp.fullNameEN ?? ''),
                     this.showOwnDistrictDetail
-                        ? (bn?(emp.permanentDistrictNameBN||emp.permanentDistrictName||''):(emp.permanentDistrictName??''))
-                        : (bn?(emp.permanentDistrictNameBN||emp.permanentDistrictName||''):(emp.permanentDistrictName??'')).split('\n')[0].replace(/\s*\(.*$/, ''),
+                        ? bn
+                            ? emp.permanentDistrictNameBN || emp.permanentDistrictName || ''
+                            : (emp.permanentDistrictName ?? '')
+                        : (bn ? emp.permanentDistrictNameBN || emp.permanentDistrictName || '' : (emp.permanentDistrictName ?? '')).split('\n')[0].replace(/\s*\(.*$/, ''),
                     this.showSpouseDistrictDetail
-                        ? (bn?(emp.spousePermanentDistrictNameBN||emp.spousePermanentDistrictName||''):(emp.spousePermanentDistrictName??''))
-                        : (bn?(emp.spousePermanentDistrictNameBN||emp.spousePermanentDistrictName||''):(emp.spousePermanentDistrictName??'')).split('\n')[0].replace(/\s*\(.*$/, ''),
+                        ? bn
+                            ? emp.spousePermanentDistrictNameBN || emp.spousePermanentDistrictName || ''
+                            : (emp.spousePermanentDistrictName ?? '')
+                        : (bn ? emp.spousePermanentDistrictNameBN || emp.spousePermanentDistrictName || '' : (emp.spousePermanentDistrictName ?? '')).split('\n')[0].replace(/\s*\(.*$/, ''),
                     this.getPreviousWorkplace(emp),
                     this.getTransferUnitShort(emp),
                     this.getCombinedRemarks(emp)
@@ -2315,8 +2468,8 @@ html, body { margin: 0; padding: 0; background: transparent; }
                 const dataRows = this.postingEmployees.map((emp, i) => {
                     const allVals = buildAllCellValues(emp, i);
                     // cantSplit: keep each employee row whole across page breaks.
-                    // ব্যক্তিগত নম্বর / পদবি / ট্রেড / নাম (1–4) left-aligned, matching the preview.
-                    return new TableRow({ cantSplit: true, children: visibleIndices.map((oi, vi) => dataCellFn(allVals[oi], colWidths[vi], oi >= 1 && oi <= 4 ? AlignmentType.LEFT : AlignmentType.CENTER)) });
+                    // Every column except ক্রমিক (0) is left-aligned, matching the preview.
+                    return new TableRow({ cantSplit: true, children: visibleIndices.map((oi, vi) => dataCellFn(allVals[oi], colWidths[vi], oi >= 1 ? AlignmentType.LEFT : AlignmentType.CENTER)) });
                 });
                 const tableRows = [...headerRows, ...dataRows];
                 mainChildren.push(new Paragraph({ spacing: { before: 200 }, children: [] }));
@@ -2329,112 +2482,161 @@ html, body { margin: 0; padding: 0; background: transparent; }
         if (model.note) {
             const noteLines = model.note.split('\n').filter((l: string) => l.trim());
             for (const line of noteLines) {
-                mainChildren.push(new Paragraph({
-                    children: [new TextRun({ text: line, size: BODY_SZ, sizeComplexScript: csSize, font, language: lang })],
-                    indent: { left: 100 }, spacing: { before: 40, after: 40 }
-                }));
+                mainChildren.push(
+                    new Paragraph({
+                        children: [new TextRun({ text: line, size: BODY_SZ, sizeComplexScript: csSize, font, language: lang })],
+                        indent: { left: 100 },
+                        spacing: { before: 40, after: 40 }
+                    })
+                );
             }
         }
 
         // Paragraphs (after employee table)
         const wordParagraphs = this.parsedParagraphs;
         wordParagraphs.forEach((para: string, pi: number) => {
-            mainChildren.push(new Paragraph({
-                children: [
-                    new TextRun({ text: `${this.serial(pi + 2)}  `, bold: true, size: BODY_SZ, sizeComplexScript: csSize, font, language: lang }),
-                    new TextRun({ text: para, size: BODY_SZ, sizeComplexScript: csSize, font, language: lang })
-                ],
-                indent: { left: 100 }, spacing: { before: 120, after: 80 }, alignment: AlignmentType.JUSTIFIED
-            }));
+            mainChildren.push(
+                new Paragraph({
+                    children: [
+                        new TextRun({ text: `${this.serial(pi + 2)}  `, bold: true, size: BODY_SZ, sizeComplexScript: csSize, font, language: lang }),
+                        new TextRun({ text: para, size: BODY_SZ, sizeComplexScript: csSize, font, language: lang })
+                    ],
+                    indent: { left: 100 },
+                    spacing: { before: 120, after: 80 },
+                    alignment: AlignmentType.JUSTIFIED
+                })
+            );
         });
 
-
         if (model.closingText) {
-            mainChildren.push(new Paragraph({
-                children: [new TextRun({ text: model.closingText, size: BODY_SZ, sizeComplexScript: csSize, font, language: lang })],
-                indent: { left: 240, firstLine: 480 }, spacing: { before: 200 }
-            }));
+            mainChildren.push(
+                new Paragraph({
+                    children: [new TextRun({ text: model.closingText, size: BODY_SZ, sizeComplexScript: csSize, font, language: lang })],
+                    indent: { left: 240, firstLine: 480 },
+                    spacing: { before: 200 }
+                })
+            );
         }
 
         // Initiator — right-positioned, keep entire block together
         if (model.initiator) {
-            const initIndent = { left: 6300 };  // ~70% from left — matches the on-screen preview
+            const initIndent = { left: 6300 }; // ~70% from left — matches the on-screen preview
             // Signature image or spacer
             if (model.initiator.signatureDataUrl) {
                 try {
-                    mainChildren.push(new Paragraph({
-                        children: [new ImageRun({
-                            type: 'png', data: this.base64ToBytes(model.initiator.signatureDataUrl),
-                            transformation: { width: 100, height: 40 }
-                        })],
-                        alignment: AlignmentType.LEFT, indent: initIndent, spacing: { before: 280, after: 80 },
-                        keepNext: true, keepLines: true
-                    }));
-                } catch { /* no sig */ }
+                    mainChildren.push(
+                        new Paragraph({
+                            children: [
+                                new ImageRun({
+                                    type: 'png',
+                                    data: this.base64ToBytes(model.initiator.signatureDataUrl),
+                                    transformation: { width: 100, height: 40 }
+                                })
+                            ],
+                            alignment: AlignmentType.LEFT,
+                            indent: initIndent,
+                            spacing: { before: 280, after: 80 },
+                            keepNext: true,
+                            keepLines: true
+                        })
+                    );
+                } catch {
+                    /* no sig */
+                }
             } else {
                 mainChildren.push(new Paragraph({ spacing: { before: 280, after: 80 }, keepNext: true }));
             }
 
             // Name
-            mainChildren.push(new Paragraph({
-                children: [new TextRun({ text: model.initiator.nameLine, size: SIG_SZ, sizeComplexScript: bn ? SIG_SZ : undefined, font, language: lang })],
-                alignment: AlignmentType.LEFT, indent: initIndent, keepNext: true
-            }));
+            mainChildren.push(
+                new Paragraph({
+                    children: [new TextRun({ text: model.initiator.nameLine, size: SIG_SZ, sizeComplexScript: bn ? SIG_SZ : undefined, font, language: lang })],
+                    alignment: AlignmentType.LEFT,
+                    indent: initIndent,
+                    keepNext: true
+                })
+            );
 
             // Rank
             if (model.initiator.rankLine) {
-                mainChildren.push(new Paragraph({
-                    children: [new TextRun({ text: model.initiator.rankLine, size: SIG_SZ, sizeComplexScript: bn ? SIG_SZ : undefined, font, language: lang })],
-                    alignment: AlignmentType.LEFT, indent: initIndent, keepNext: true
-                }));
+                mainChildren.push(
+                    new Paragraph({
+                        children: [new TextRun({ text: model.initiator.rankLine, size: SIG_SZ, sizeComplexScript: bn ? SIG_SZ : undefined, font, language: lang })],
+                        alignment: AlignmentType.LEFT,
+                        indent: initIndent,
+                        keepNext: true
+                    })
+                );
             }
 
             // Appointment
             if (model.initiator.appointment) {
-                mainChildren.push(new Paragraph({
-                    children: [new TextRun({ text: model.initiator.appointment, size: SIG_SZ, sizeComplexScript: bn ? SIG_SZ : undefined, font, language: lang })],
-                    alignment: AlignmentType.LEFT, indent: initIndent, keepNext: true
-                }));
+                mainChildren.push(
+                    new Paragraph({
+                        children: [new TextRun({ text: model.initiator.appointment, size: SIG_SZ, sizeComplexScript: bn ? SIG_SZ : undefined, font, language: lang })],
+                        alignment: AlignmentType.LEFT,
+                        indent: initIndent,
+                        keepNext: true
+                    })
+                );
             }
 
             // Date (last item — no keepNext needed)
             if (model.initiator.date) {
-                mainChildren.push(new Paragraph({
-                    children: [new TextRun({ text: model.initiator.date, size: SIG_SZ, sizeComplexScript: bn ? SIG_SZ : undefined, font, language: lang })],
-                    alignment: AlignmentType.LEFT, indent: initIndent, spacing: { before: 400 }
-                }));
+                mainChildren.push(
+                    new Paragraph({
+                        children: [new TextRun({ text: model.initiator.date, size: SIG_SZ, sizeComplexScript: bn ? SIG_SZ : undefined, font, language: lang })],
+                        alignment: AlignmentType.LEFT,
+                        indent: initIndent,
+                        spacing: { before: 400 }
+                    })
+                );
             }
         }
 
         // Approvers — keep each approver block together
         for (const ap of model.approvers) {
-            mainChildren.push(new Paragraph({
-                children: [new TextRun({ text: ap.role, underline: {}, size: SIG_SZ, sizeComplexScript: bn ? SIG_SZ : undefined, font, language: lang })],
-                indent: { left: 100 }, spacing: { before: 280 }, keepNext: true, keepLines: true
-            }));
+            mainChildren.push(
+                new Paragraph({
+                    children: [new TextRun({ text: ap.role, underline: {}, size: SIG_SZ, sizeComplexScript: bn ? SIG_SZ : undefined, font, language: lang })],
+                    indent: { left: 100 },
+                    spacing: { before: 280 },
+                    keepNext: true,
+                    keepLines: true
+                })
+            );
             const runs: TextRun[] = [new TextRun({ text: ap.serialText, bold: true, size: SIG_SZ, sizeComplexScript: bn ? SIG_SZ : undefined, font, language: lang })];
             if (ap.remark) runs.push(new TextRun({ text: ` ${ap.remark}`, size: SIG_SZ, sizeComplexScript: bn ? SIG_SZ : undefined, font, language: lang }));
             mainChildren.push(new Paragraph({ children: runs, indent: { left: 100 }, keepNext: true }));
             if (ap.signatureDataUrl) {
                 try {
-                    mainChildren.push(new Paragraph({
-                        children: [new ImageRun({
-                            type: 'png', data: this.base64ToBytes(ap.signatureDataUrl),
-                            transformation: { width: 100, height: 40 }
-                        })],
-                        alignment: AlignmentType.CENTER,
-                        spacing: { before: 100, after: 40 },
-                        keepNext: true
-                    }));
-                } catch { /* no sig */ }
+                    mainChildren.push(
+                        new Paragraph({
+                            children: [
+                                new ImageRun({
+                                    type: 'png',
+                                    data: this.base64ToBytes(ap.signatureDataUrl),
+                                    transformation: { width: 100, height: 40 }
+                                })
+                            ],
+                            alignment: AlignmentType.CENTER,
+                            spacing: { before: 100, after: 40 },
+                            keepNext: true
+                        })
+                    );
+                } catch {
+                    /* no sig */
+                }
             } else {
                 mainChildren.push(new Paragraph({ alignment: AlignmentType.CENTER, spacing: { before: 100, after: 40 }, keepNext: true }));
             }
             if (ap.date) {
-                mainChildren.push(new Paragraph({
-                    children: [new TextRun({ text: ap.date, size: SIG_SZ, sizeComplexScript: bn ? SIG_SZ : undefined, font, language: lang })],
-                    alignment: AlignmentType.CENTER
-                }));
+                mainChildren.push(
+                    new Paragraph({
+                        children: [new TextRun({ text: ap.date, size: SIG_SZ, sizeComplexScript: bn ? SIG_SZ : undefined, font, language: lang })],
+                        alignment: AlignmentType.CENTER
+                    })
+                );
             }
         }
 
@@ -2442,12 +2644,14 @@ html, body { margin: 0; padding: 0; background: transparent; }
         const titleChildren: (Paragraph | Table)[] = [
             new Paragraph({
                 children: [new TextRun({ text: 'NOTE SHEET', bold: true, size: 24, font: 'Times New Roman' })],
-                alignment: AlignmentType.CENTER, spacing: { before: 80, after: 40 }
+                alignment: AlignmentType.CENTER,
+                spacing: { before: 80, after: 40 }
             }),
             new Paragraph({
                 children: [new TextRun({ text: 'মন্তব্য পত্র', size: 24, font: { ascii: 'Times New Roman', hAnsi: 'Times New Roman', cs: 'SolaimanLipi', hint: 'cs' as const } })],
-                alignment: AlignmentType.CENTER, spacing: { after: 100 }
-            }),
+                alignment: AlignmentType.CENTER,
+                spacing: { after: 100 }
+            })
         ];
 
         const docChildren: (Paragraph | Table)[] = [...titleChildren, ...mainChildren];
@@ -2456,26 +2660,28 @@ html, body { margin: 0; padding: 0; background: transparent; }
         const pageBorder = { style: BorderStyle.SINGLE, size: 6, color: '000000', space: 10 };
 
         // Page dimensions: A4 = 8.27" x 11.69", Legal = 8.5" x 14"
-        const pageWidth = this.selectedPageSize === 'A4' ? 11906 : 12240;   // twips
-        const pageHeight = this.selectedPageSize === 'A4' ? 16838 : 20160;  // twips
+        const pageWidth = this.selectedPageSize === 'A4' ? 11906 : 12240; // twips
+        const pageHeight = this.selectedPageSize === 'A4' ? 16838 : 20160; // twips
 
         return new Document({
             styles: bn ? { default: { document: { run: { language: { value: 'bn-BD', bidirectional: 'bn-BD' } } } } } : undefined,
-            sections: [{
-                properties: {
-                    page: {
-                        size: { width: pageWidth, height: pageHeight, orientation: PageOrientation.PORTRAIT },
-                        margin: { top: 567, right: 567, bottom: 567, left: 567 },
-                        borders: {
-                            pageBorderTop: pageBorder,
-                            pageBorderBottom: pageBorder,
-                            pageBorderLeft: pageBorder,
-                            pageBorderRight: pageBorder,
-                        },
-                    }
-                },
-                children: docChildren
-            }]
+            sections: [
+                {
+                    properties: {
+                        page: {
+                            size: { width: pageWidth, height: pageHeight, orientation: PageOrientation.PORTRAIT },
+                            margin: { top: 567, right: 567, bottom: 567, left: 567 },
+                            borders: {
+                                pageBorderTop: pageBorder,
+                                pageBorderBottom: pageBorder,
+                                pageBorderLeft: pageBorder,
+                                pageBorderRight: pageBorder
+                            }
+                        }
+                    },
+                    children: docChildren
+                }
+            ]
         });
     }
 
@@ -2489,26 +2695,36 @@ html, body { margin: 0; padding: 0; background: transparent; }
         const thinBorder = { style: BorderStyle.SINGLE, size: 1, color: '000000' };
         const cellBorders = { top: thinBorder, bottom: thinBorder, left: thinBorder, right: thinBorder };
         const lang = bn ? { value: 'bn-BD', bidirectional: 'bn-BD' } : undefined;
-        const bodySize = 16;  // 8pt
+        const bodySize = 16; // 8pt
         const csSize = bn ? bodySize : undefined;
 
         for (const b of blocks) {
             if (b.type === 'table' && b.rows?.length) {
-                const rows: TableRow[] = b.rows.map((row, rowIdx) => new TableRow({
-                    children: row.map(cell => new TableCell({
-                        children: [new Paragraph({
-                            children: [new TextRun({
-                                text: cell,
-                                bold: rowIdx === 0,
-                                size: bodySize,
-                                sizeComplexScript: csSize,
-                                font,
-                                language: lang
-                            })]
-                        })],
-                        borders: cellBorders
-                    }))
-                }));
+                const rows: TableRow[] = b.rows.map(
+                    (row, rowIdx) =>
+                        new TableRow({
+                            children: row.map(
+                                (cell) =>
+                                    new TableCell({
+                                        children: [
+                                            new Paragraph({
+                                                children: [
+                                                    new TextRun({
+                                                        text: cell,
+                                                        bold: rowIdx === 0,
+                                                        size: bodySize,
+                                                        sizeComplexScript: csSize,
+                                                        font,
+                                                        language: lang
+                                                    })
+                                                ]
+                                            })
+                                        ],
+                                        borders: cellBorders
+                                    })
+                            )
+                        })
+                );
                 result.push(new Table({ width: { size: 90, type: WidthType.PERCENTAGE }, rows, alignment: AlignmentType.CENTER }));
             } else if (b.text) {
                 let align: (typeof AlignmentType)[keyof typeof AlignmentType];
@@ -2519,14 +2735,16 @@ html, body { margin: 0; padding: 0; background: transparent; }
                 const indent = b.indent === 'list' ? { left: 720 } : { left: 480 };
                 // Use inline runs if available for mixed bold/italic formatting
                 const children = b.runs?.length
-                    ? b.runs.map(r => new TextRun({ text: r.text, bold: r.bold, italics: r.italic, underline: r.underline ? {} : undefined, size: bodySize, sizeComplexScript: csSize, font, language: lang }))
+                    ? b.runs.map((r) => new TextRun({ text: r.text, bold: r.bold, italics: r.italic, underline: r.underline ? {} : undefined, size: bodySize, sizeComplexScript: csSize, font, language: lang }))
                     : [new TextRun({ text: b.text, bold: b.bold, italics: b.italic, size: bodySize, sizeComplexScript: csSize, font, language: lang })];
-                result.push(new Paragraph({
-                    children,
-                    indent,
-                    spacing: { after: b.indent === 'list' ? 60 : 80 },
-                    alignment: align
-                } as any));
+                result.push(
+                    new Paragraph({
+                        children,
+                        indent,
+                        spacing: { after: b.indent === 'list' ? 60 : 80 },
+                        alignment: align
+                    } as any)
+                );
             }
         }
         return result;
@@ -2534,12 +2752,18 @@ html, body { margin: 0; padding: 0; background: transparent; }
 
     private getListPrefix(listType: string, index: number): string {
         switch (listType) {
-            case 'ordered': return `${index}. `;
-            case 'upper-roman': return `${this.toRoman(index).toUpperCase()}. `;
-            case 'lower-roman': return `${this.toRoman(index).toLowerCase()}. `;
-            case 'upper-alpha': return `${String.fromCharCode(64 + index)}. `;
-            case 'bangla-number': return `${this.toBanglaDigits(index)}. `;
-            case 'lower-alpha': return `${String.fromCharCode(96 + index)}. `;
+            case 'ordered':
+                return `${index}. `;
+            case 'upper-roman':
+                return `${this.toRoman(index).toUpperCase()}. `;
+            case 'lower-roman':
+                return `${this.toRoman(index).toLowerCase()}. `;
+            case 'upper-alpha':
+                return `${String.fromCharCode(64 + index)}. `;
+            case 'bangla-number':
+                return `${this.toBanglaDigits(index)}. `;
+            case 'lower-alpha':
+                return `${String.fromCharCode(96 + index)}. `;
             case 'bangla-alpha': {
                 const letters = 'অআইঈউঊঋএঐওঔকখগঘঙচছজঝঞটঠডঢণতথদধনপফবভমযরলশষসহড়ঢ়য়ৎংঃঁ';
                 return `${[...letters][index - 1] ?? index} `;
@@ -2548,8 +2772,10 @@ html, body { margin: 0; padding: 0; background: transparent; }
                 const letters = 'কখগঘঙচছজঝঞটঠডঢণতথদধনপফবভমযরলশষসহড়ঢ়য়ৎংঃঁ';
                 return `${[...letters][index - 1] ?? index} `;
             }
-            case 'bullet': return '• ';
-            default: return `${index}. `;
+            case 'bullet':
+                return '• ';
+            default:
+                return `${index}. `;
         }
     }
 
@@ -2558,7 +2784,10 @@ html, body { margin: 0; padding: 0; background: transparent; }
         const syms = ['M', 'CM', 'D', 'CD', 'C', 'XC', 'L', 'XL', 'X', 'IX', 'V', 'IV', 'I'];
         let result = '';
         for (let i = 0; i < vals.length; i++) {
-            while (num >= vals[i]) { result += syms[i]; num -= vals[i]; }
+            while (num >= vals[i]) {
+                result += syms[i];
+                num -= vals[i];
+            }
         }
         return result;
     }
@@ -2566,7 +2795,7 @@ html, body { margin: 0; padding: 0; background: transparent; }
     getServiceIdDisplay(emp: DraftPostingEmployeeRow): string {
         const bn = !this.isEnglish();
         const sid = emp.serviceId || '';
-        const prefix = bn ? (emp.prefixNameBN || emp.prefixName || '') : (emp.prefixName || '');
+        const prefix = bn ? emp.prefixNameBN || emp.prefixName || '' : emp.prefixName || '';
         const displayId = bn && sid ? this.toBanglaDigits(sid) : sid;
         if (!prefix) return displayId || '-';
         const full = `${prefix}-${displayId}`;

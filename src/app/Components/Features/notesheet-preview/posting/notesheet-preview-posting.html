@@ -174,9 +174,15 @@
                         <div style="border-bottom: 1.5px solid #000; display: inline-block; padding-bottom: 2px">{{ getOrgHeaderLine2() }}</div>
                     </div>
 
-                    <div class="ns-edit-field">
-                        <label class="ns-edit-label">Text Type</label>
-                        <p-select [(ngModel)]="editTextType" [options]="textTypeOptions" optionLabel="label" optionValue="value" styleClass="w-full" appendTo="body"></p-select>
+                    <div class="ns-edit-field ns-edit-row">
+                        <div class="ns-edit-col">
+                            <label class="ns-edit-label">Date</label>
+                            <p-datepicker [(ngModel)]="editNoteSheetDate" dateFormat="dd-mm-yy" [showIcon]="true" styleClass="w-full" [inputStyleClass]="'w-full'" appendTo="body"></p-datepicker>
+                        </div>
+                        <div class="ns-edit-col">
+                            <label class="ns-edit-label">Text Type</label>
+                            <p-select [(ngModel)]="editTextType" [options]="textTypeOptions" optionLabel="label" optionValue="value" styleClass="w-full" appendTo="body"></p-select>
+                        </div>
                     </div>
 
                     <div class="ns-edit-field">
@@ -592,11 +598,11 @@
                                             {{ isEnglish() ? (emp.fullNameEN || '') : (emp.fullNameBN || emp.fullNameEN || '') }}<span *ngIf="showGallantryAwards && getGallantryAwards(emp)">, {{ getGallantryAwards(emp) }}</span
                                             ><span *ngIf="showProfQualification && getProfQualification(emp)">, {{ getProfQualification(emp) }}</span><span *ngIf="showCorps && getCorps(emp)">, {{ getCorps(emp) }}</span>
                                         </td>
-                                        <td style="white-space: pre-line">{{ getOwnDistrict(emp) }}</td>
-                                        <td style="white-space: pre-line">{{ getSpouseDistrict(emp) || 'অপ্রযোজ্য' }}</td>
-                                        <td style="white-space: pre-line">{{ getPreviousWorkplace(emp) }}</td>
-                                        <td>{{ getTransferUnitShort(emp) }}</td>
-                                        <td *ngIf="showRemarks">{{ getCombinedRemarks(emp) }}</td>
+                                        <td class="ns-left-cell" style="white-space: pre-line">{{ getOwnDistrict(emp) }}</td>
+                                        <td class="ns-left-cell" style="white-space: pre-line">{{ getSpouseDistrict(emp) || 'অপ্রযোজ্য' }}</td>
+                                        <td class="ns-left-cell" style="white-space: pre-line">{{ getPreviousWorkplace(emp) }}</td>
+                                        <td class="ns-left-cell">{{ getTransferUnitShort(emp) }}</td>
+                                        <td class="ns-left-cell" *ngIf="showRemarks">{{ getCombinedRemarks(emp) }}</td>
                                     </tr>
                                 </ng-container>
                             </tbody>
