@@ -171,6 +171,9 @@
                         <th>Mother Unit</th>
                         <th>Date of Joining</th>
                         <th>RAB ID</th>
+                        @if (canUpdate) {
+                            <th style="width: 12rem">Action</th>
+                        }
                     </tr>
                 </ng-template>
                 <ng-template pTemplate="body" let-row let-rowIndex="rowIndex">
@@ -195,11 +198,19 @@
                         <td>{{ getVal(row, 'motherOrganization', 'MotherOrganization') || '—' }}</td>
                         <td style="white-space: nowrap">{{ formatDate(getVal(row, 'joiningDate', 'JoiningDate')) }}</td>
                         <td style="white-space: nowrap">{{ getVal(row, 'rabid', 'rabId', 'rabID', 'RABID') || '—' }}</td>
+                        @if (canUpdate) {
+                            <td style="white-space: nowrap">
+                                <p-button label="Not Applicable" icon="pi pi-ban" severity="warn" [outlined]="true"
+                                    size="small" [fluid]="false" (onClick)="openMarkNotApplicable(row)"
+                                    pTooltip="Exempt this member from RAB Orientation Training"
+                                    tooltipPosition="top"></p-button>
+                            </td>
+                        }
                     </tr>
                 </ng-template>
                 <ng-template pTemplate="emptymessage">
                     <tr>
-                        <td colspan="10" class="text-center p-4">No members eligible for RFTS found.</td>
+                        <td [attr.colspan]="canUpdate ? 11 : 10" class="text-center p-4">No members eligible for RFTS found.</td>
                     </tr>
                 </ng-template>
             </p-table>
@@ -284,3 +295,29 @@
 
     </p-card>
 </p-fluid>
+
+<!-- ============== Mark as Not Applicable ==============
+     The remark is the only record of why a member was exempted, and the member
+     leaves the pending list for good once saved — so it is required, and the
+     dialog says as much before the user commits. -->
+<p-dialog header="Mark as Not Applicable" [(visible)]="naDialogVisible" [modal]="true" [draggable]="false"
+    [style]="{ width: '32rem' }" [breakpoints]="{ '640px': '92vw' }" (onHide)="closeMarkNotApplicable()">
+    <div class="flex flex-col gap-3">
+        <p class="m-0">
+            <span class="font-semibold">{{ naTargetName }}</span> will be exempted from RAB Orientation Training
+            and will no longer appear in this list.
+        </p>
+        <div>
+            <label class="font-semibold block mb-2 text-700">Remark <span class="text-red-500">*</span></label>
+            <textarea pTextarea [(ngModel)]="naRemark" rows="3" class="w-full" maxlength="500"
+                placeholder="Why is this member exempt?"></textarea>
+        </div>
+    </div>
+    <ng-template pTemplate="footer">
+        <p-button label="Cancel" icon="pi pi-times" severity="secondary" [outlined]="true" [fluid]="false"
+            (onClick)="closeMarkNotApplicable()"></p-button>
+        <p-button label="Mark as Not Applicable" icon="pi pi-check" severity="warn" [fluid]="false"
+            (onClick)="confirmMarkNotApplicable()" [loading]="naSubmitting"
+            [disabled]="!canConfirmNotApplicable"></p-button>
+    </ng-template>
+</p-dialog>

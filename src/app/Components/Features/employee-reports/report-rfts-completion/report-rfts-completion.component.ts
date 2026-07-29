@@ -29,9 +29,17 @@ import * as XLSX from 'xlsx';
 type Lang = 'en' | 'bn';
 
 /**
- * RFTS Completion Report — list of members who have (Completed) or have not
- * (NotCompleted) completed RFTS. RAB-formal paper layout, dynamic column
- * picker, drag-to-reorder, self-contained Print/Word/Excel exports.
+ * The three buckets of EmployeeInfo.IsRFTSComplted. Mutually exclusive and
+ * between them they cover everyone — members who are exempt get their own list
+ * rather than padding the NotCompleted action list.
+ */
+type CompletionStatus = 'Completed' | 'NotCompleted' | 'NotApplicable';
+
+/**
+ * RFTS Completion Report — list of members who have (Completed), have not
+ * (NotCompleted), or are exempt from (NotApplicable) RFTS. RAB-formal paper
+ * layout, dynamic column picker, drag-to-reorder, self-contained
+ * Print/Word/Excel exports.
  */
 @Component({
     selector: 'app-report-rfts-completion',
@@ -57,12 +65,13 @@ export class ReportRftsCompletionComponent implements OnInit, OnDestroy {
     canUpdate = true;
     canDelete = true;
 
-    /** Primary filter — switches the report between the two lists. */
-    statusOptions: { label: string; labelBn: string; value: 'Completed' | 'NotCompleted' }[] = [
+    /** Primary filter — switches the report between the three lists. */
+    statusOptions: { label: string; labelBn: string; value: CompletionStatus }[] = [
         { label: 'Completed RFTS', labelBn: 'আরএফটিএস সম্পন্ন', value: 'Completed' },
         { label: 'Not Completed RFTS', labelBn: 'আরএফটিএস সম্পন্ন হয়নি', value: 'NotCompleted' },
+        { label: 'Not Applicable', labelBn: 'প্রযোজ্য নয়', value: 'NotApplicable' },
     ];
-    selectedCompletionStatus: 'Completed' | 'NotCompleted' = 'Completed';
+    selectedCompletionStatus: CompletionStatus = 'Completed';
 
     /** Org / role dropdowns — loaded from CommonCode + MotherOrg endpoints. All multi-select. */
     motherOrgOptions: { label: string; labelBn: string; value: number }[] = [];
@@ -169,14 +178,14 @@ export class ReportRftsCompletionComponent implements OnInit, OnDestroy {
     selectedColumnKeys: string[] = this.defaultColumnsFor('Completed');
     draggingColumnKey: string | null = null;
 
-    /** Default visible columns for a view — drops course columns in NotCompleted. */
-    private defaultColumnsFor(status: 'Completed' | 'NotCompleted'): string[] {
+    /** Default visible columns for a view — only Completed has course data to show. */
+    private defaultColumnsFor(status: CompletionStatus): string[] {
         return this.columnCatalog
             .filter(c => c.defaultVisible && (status === 'Completed' || !c.courseOnly))
             .map(c => c.key);
     }
 
-    /** Picker options — hide course-only fields in the NotCompleted view. */
+    /** Picker options — only Completed has course data, so hide course-only fields elsewhere. */
     get columnPickerOptions(): { label: string; value: string }[] {
         return this.columnCatalog
             .filter(c => this.isCompletedView || !c.courseOnly)
@@ -540,8 +549,8 @@ export class ReportRftsCompletionComponent implements OnInit, OnDestroy {
 
     /**
      * Completion status is the report mode. Reset the visible columns to the
-     * view's defaults (course columns are dropped for NotCompleted, restored
-     * for Completed).
+     * view's defaults (course columns are dropped for NotCompleted and
+     * NotApplicable, restored for Completed).
      */
     onCompletionStatusChange(): void {
         this.selectedColumnKeys = this.defaultColumnsFor(this.selectedCompletionStatus);

@@ -173,4 +173,16 @@ export class CourseInfoService {
             .get<EmployeeSearchInfoModel[]>(url)
             .pipe(map((res) => (Array.isArray(res) ? res : [])));
     }
+
+    /**
+     * Marks a member exempt from RAB Orientation Training — the API sets
+     * IsRFTSComplted to NotApplicable and stores `remark` in RftsRemark, after
+     * which the member no longer appears in any pending-RFTS list.
+     *
+     * The API answers 409 when RFTS is already complete for the member, or when
+     * they are already selected onto a course.
+     */
+    markRftsNotApplicable(employeeId: number, remark: string): Observable<any> {
+        return this.http.post(`${this.apiUrl}/MarkRftsNotApplicable`, { employeeId, remark });
+    }
 }

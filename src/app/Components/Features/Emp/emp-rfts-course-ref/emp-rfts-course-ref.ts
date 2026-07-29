@@ -16,6 +16,7 @@ import { SelectModule } from 'primeng/select';
 import { TooltipModule } from 'primeng/tooltip';
 import { IconFieldModule } from 'primeng/iconfield';
 import { InputIconModule } from 'primeng/inputicon';
+import { DialogModule } from 'primeng/dialog';
 import { MessageService } from 'primeng/api';
 
 import { CourseInfoService, PendingRftsFilterParams } from '@/services/course-info-service';
@@ -53,7 +54,8 @@ import { RftsCourseRefMember, RftsCourseRefPayload } from '@/models/rfts-course-
         SelectModule,
         TooltipModule,
         IconFieldModule,
-        InputIconModule
+        InputIconModule,
+        DialogModule
     ],
     providers: [MessageService],
     templateUrl: './emp-rfts-course-ref.html',
@@ -106,6 +108,17 @@ export class EmpRftsCourseRefComponent implements OnInit {
     private naTradeIds: number[] = [];
     joiningDateFrom: Date | null = null;
     joiningDateTo: Date | null = null;
+
+    // ===== Mark as Not Applicable =====
+    /**
+     * Exempting a member is permanent from this screen's point of view — the
+     * pending list is defined as "not exempt", so once marked they never come
+     * back here. The remark is therefore mandatory: it is the only record of why.
+     */
+    naDialogVisible = false;
+    naRow: EmployeeSearchInfoModel | null = null;
+    naRemark = '';
+    naSubmitting = false;
 
     /** EmployeeIDs currently checked. */
     selectedIds = new Set<number>();
@@ -411,6 +424,74 @@ export class EmpRftsCourseRefComponent implements OnInit {
     clearSelection(): void {
         this.selectedIds.clear();
         this.selectedRowMap.clear();
+    }
+
+    // ---------- Mark as Not Applicable ----------
+    get naTargetName(): string {
+        if (!this.naRow) return '';
+        return this.getVal(this.naRow, 'fullNameEN', 'FullNameEN') || 'this member';
+    }
+
+    openMarkNotApplicable(row: EmployeeSearchInfoModel): void {
+        this.naRow = row;
+        this.naRemark = '';
+        this.naSubmitting = false;
+        this.naDialogVisible = true;
+    }
+
+    closeMarkNotApplicable(): void {
+        this.naDialogVisible = false;
+        this.naRow = null;
+        this.naRemark = '';
+        this.naSubmitting = false;
+    }
+
+    get canConfirmNotApplicable(): boolean {
+        return !this.naSubmitting && this.naRemark.trim().length > 0;
+    }
+
+    confirmMarkNotApplicable(): void {
+        if (this.naSubmitting || !this.naRow) return;
+
+        const remark = this.naRemark.trim();
+        if (remark.length === 0) {
+            this.messageService.add({ severity: 'warn', summary: 'Warning', detail: 'A remark is required.' });
+            return;
+        }
+
+        const id = this.idOf(this.naRow);
+        if (id <= 0) return;
+        const who = this.naTargetName;
+        this.naSubmitting = true;
+
+        this.courseInfoService.markRftsNotApplicable(id, remark).subscribe({
+            next: (res) => {
+                this.naSubmitting = false;
+                if (res && typeof res.statusCode === 'number' && res.statusCode !== 200) {
+                    this.messageService.add({ severity: 'warn', summary: 'Warning', detail: res.description || 'Operation failed.' });
+                    return;
+                }
+                // Drop the row here rather than refetching: the server now excludes
+                // them, so a reload would only confirm what we already know, and it
+                // would reset the user's page position mid-task.
+                this.list = this.list.filter((r) => this.idOf(r) !== id);
+                this.removeSelectedMember(id);
+                this.messageService.add({
+                    severity: 'success',
+                    summary: 'Success',
+                    detail: `${who} marked as Not Applicable.`
+                });
+                this.closeMarkNotApplicable();
+            },
+            error: (err) => {
+                this.naSubmitting = false;
+                this.messageService.add({
+                    severity: 'error',
+                    summary: 'Error',
+                    detail: err?.error?.description || err?.error?.message || 'Failed to mark as Not Applicable.'
+                });
+            }
+        });
     }
 
     private toMemberRow(row: EmployeeSearchInfoModel): RftsCourseRefMember {

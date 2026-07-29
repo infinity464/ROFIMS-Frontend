@@ -59,6 +59,17 @@ export class EmpBasicInfo implements OnInit {
     isEditMode: boolean = false;
     pageTitle: string = 'New Posting Entry Form';
 
+    /**
+     * RAB Orientation Training status + remark of the loaded employee. This form
+     * has no control for either (status is edited on /serving-member-entry, the
+     * remark is written when marking Not Applicable on /emp-rfts-course-ref), but
+     * the update endpoint replaces every column — so the loaded values have to be
+     * carried back out or an edit here silently resets them. Null on a new entry,
+     * which the API reads as "not set". See RftsStatus on the API side.
+     */
+    private loadedRftsStatus: number | null = null;
+    private loadedRftsRemark: string | null = null;
+
     /** When false, the entry form is hidden until search returns "employee not found". When true (or when opening with id in route), form is shown. */
     showEntryForm: boolean = false;
     /** Hide search section when opened via query params (view/edit from another tab). */
@@ -725,7 +736,10 @@ export class EmpBasicInfo implements OnInit {
             relieverId: this.isReliever && this.selectedRelieverEmployeeId ? this.selectedRelieverEmployeeId : null,
             maritalStatus: formValue.maritalStatus ?? null,
             batch: formValue.batch ?? null,
-            specialQualifications: specialQualsCsv
+            specialQualifications: specialQualsCsv,
+            // Not editable here — echo back what was loaded so the update doesn't blank them.
+            isRFTSComplted: this.loadedRftsStatus,
+            rftsRemark: this.loadedRftsRemark
         };
     }
 
@@ -1254,6 +1268,9 @@ export class EmpBasicInfo implements OnInit {
                     createdDate: employee.createdDate ?? employee.CreatedDate ?? new Date()
                 });
                 this.spouseFmid = null;
+                // Not form controls — stashed so formattedDataForEmployee can echo them back.
+                this.loadedRftsStatus = employee.isRFTSComplted ?? employee.IsRFTSComplted ?? null;
+                this.loadedRftsRemark = employee.rftsRemark ?? employee.RftsRemark ?? null;
 
                 // Load file references (display names from JSON; files are not re-fetched)
                 const refsJson = employee.filesReferences || employee.FilesReferences;

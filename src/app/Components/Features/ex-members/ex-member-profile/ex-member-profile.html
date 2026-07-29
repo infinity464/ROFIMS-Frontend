@@ -815,6 +815,16 @@
     <!-- RFTS Training -->
     <div class="sp-section">
         <div class="sp-section-header"><span class="sp-section-heading">{{ L['section.rfts'] }}</span></div>
+        @if (isRftsNotApplicable) {
+        <div class="sp-field">
+            <span class="sp-field-label">{{ L['field.rftsStatus'] }}</span>
+            <span class="sp-field-value">{{ L['value.notApplicable'] }}</span>
+        </div>
+        <div class="sp-field">
+            <span class="sp-field-label">{{ L['table.remarks'] }}</span>
+            <span class="sp-field-value">{{ val(profile?.rftsRemark) }}</span>
+        </div>
+        } @else {
         <div class="sp-table-wrap">
             <p-table [value]="rftsTrainingList" [loading]="sectionLoading['rftsTraining']" [tableStyle]="{ 'min-width': '30rem' }" styleClass="p-datatable-sm p-datatable-gridlines family-info-table">
                 <ng-template pTemplate="header">
@@ -842,6 +852,7 @@
                 </ng-template>
             </p-table>
         </div>
+        }
     </div>
 
     <!-- Investigation Experience -->

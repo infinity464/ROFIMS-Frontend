@@ -136,6 +136,15 @@ export class ExMemberProfile implements OnInit, OnDestroy {
     disciplineList: DisciplineInfoByEmployeeView[] = [];
     courseList: CourseInfoByEmployeeView[] = [];
     rftsTrainingList: RftsTrainingRow[] = [];
+    /**
+     * Member is exempt from RAB Orientation Training (RftsStatus.NotApplicable).
+     * They will never have course rows, so the profile shows the exemption and its
+     * remark instead of an empty "no RFTS records" table, which would read as
+     * "still outstanding".
+     */
+    get isRftsNotApplicable(): boolean {
+        return this.profile?.isRFTSComplted === 2;
+    }
     promotionList: PromotionInfoByEmployeeView[] = [];
     documentList: EmployeeDocumentReferenceItem[] = [];
     approvedNoteSheetList: EmployeeNoteSheetProcessingRow[] = [];

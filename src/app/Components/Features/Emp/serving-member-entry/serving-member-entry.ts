@@ -682,6 +682,17 @@ export class ServingMemberEntry implements OnInit {
     tribalOptions = [{ label: 'No', value: 0 }, { label: 'Yes', value: 1 }];
     freedomFighterOptions = [{ label: 'No', value: 0 }, { label: 'Yes', value: 1 }];
     yesNoOptions = [{ label: 'No', value: false }, { label: 'Yes', value: true }];
+    /**
+     * RAB Orientation Training — three states, not a yes/no. Values match the
+     * RftsStatus enum stored in EmployeeInfo.IsRFTSComplted (0/1/2); leaving the
+     * control empty sends null, which the API reads as "not set" and treats as No.
+     * Kept separate from yesNoOptions, which other fields share.
+     */
+    rftsStatusOptions = [
+        { label: 'No', value: 0 },
+        { label: 'Yes', value: 1 },
+        { label: 'Not Applicable', value: 2 }
+    ];
     leavingStatusOptions = [{ label: 'In Leaving', value: true }, { label: 'Out Leaving', value: false }];
     presentStatusTypes: any[] = PresentStatusTypeOptions;
 
@@ -1543,7 +1554,7 @@ export class ServingMemberEntry implements OnInit {
             tradeMark: [''],
             gender: [null, Validators.required],
             maritalStatus: [null],
-            isRFTSComplted: [true],
+            isRFTSComplted: [1],   // RftsStatus.Yes
             relationship: [null],
             spouseName: [''],
             prefix: [null, Validators.required],
@@ -1643,7 +1654,7 @@ export class ServingMemberEntry implements OnInit {
             lastUpdatedBy: this.auditUser,
             lastupdate: now,
             statusDate: now,
-            isRFTSComplted: true
+            isRFTSComplted: 1   // RftsStatus.Yes
         });
         this.applyDefaultGender();
         this.imagePreview = null;
