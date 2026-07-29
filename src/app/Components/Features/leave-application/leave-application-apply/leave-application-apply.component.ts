@@ -5,6 +5,7 @@ import { Router, ActivatedRoute } from '@angular/router';
 import { SharedService } from '@/shared/services/shared-service';
 import { FlexibleDateDirective } from '@/shared/directives/flexible-date.directive';
 import { EmpService } from '@/services/emp-service';
+import { buildUploadOwnerTag } from '@/shared/utils/upload-file-name.util';
 import { LeaveApplicationService, LeaveApplicationModel, LeaveApplicationDetailModel, LeaveApplicationRecommenderModel, LeaveApplicationReturnHistoryModel } from '@/services/leave-application.service';
 import { LeaveInfoService, LeaveInfoModel } from '@/services/leave-info-service';
 import { MasterBasicSetupService } from '@/Components/basic-setup/shared/services/MasterBasicSetupService';
@@ -772,7 +773,7 @@ export class LeaveApplicationApplyComponent implements OnInit {
 
         this.isSaving = true;
         const uploads = filesToUpload.map((r: FileRowData) =>
-            this.empService.uploadEmployeeFile(r.file!, r.displayName?.trim() || r.file!.name)
+            this.empService.uploadEmployeeFile(r.file!, r.displayName?.trim() || r.file!.name, buildUploadOwnerTag(this.applicantInfo?.rabid, this.applicantEmployeeId))
         );
         forkJoin(uploads).subscribe({
             next: (results: { fileId: number; fileName: string }[]) => {

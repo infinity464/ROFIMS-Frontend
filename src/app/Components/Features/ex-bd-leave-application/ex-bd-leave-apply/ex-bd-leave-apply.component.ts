@@ -18,6 +18,7 @@ import { FlexibleDateDirective } from '@/shared/directives/flexible-date.directi
 import { MasterBasicSetupService } from '@/Components/basic-setup/shared/services/MasterBasicSetupService';
 import { EmployeeSearchComponent, EmployeeBasicInfo } from '@/Components/Shared/employee-search/employee-search';
 import { EmpService } from '@/services/emp-service';
+import { buildUploadOwnerTag } from '@/shared/utils/upload-file-name.util';
 import { FamilyInfoService, FamilyInfoModel } from '@/services/family-info-service';
 import { SharedService } from '@/shared/services/shared-service';
 import { ExBdLeaveApplicationService, DestinationCountryItem, FamilyMemberItem, FileReferenceItem } from '@/services/ex-bd-leave-application.service';
@@ -317,7 +318,17 @@ export class ExBdLeaveApplyComponent implements OnInit {
     }
 
     onDownloadFile(event: { fileId: number; fileName: string }): void {
-        window.open(`${this.exBdLeaveService['baseUrl']}/../../FileInformation/Download/${event.fileId}`, '_blank');
+        this.empService.downloadFile(event.fileId).subscribe({
+            next: (blob) => this.empService.triggerFileDownload(blob, event.fileName || 'download'),
+            error: (err: any) => {
+                console.error('Download failed', err);
+                this.messageService.add({
+                    severity: 'error',
+                    summary: 'Error',
+                    detail: err?.error?.message || 'Failed to download file'
+                });
+            }
+        });
     }
 
     private formatDate(d: Date): string {
@@ -366,7 +377,38 @@ export class ExBdLeaveApplyComponent implements OnInit {
         });
     }
 
+    /** Uploads any newly picked attachments, then saves. Rows already carrying a FileId are left alone. */
     private performSave(v: any): void {
+        const pendingFiles = this.fileRows.filter((r) => r.file != null && r.fileId == null);
+
+        if (pendingFiles.length === 0) {
+            this.saveApplication(v);
+            return;
+        }
+
+        const owner = buildUploadOwnerTag(this.selectedApplicant?.rabid, v.applicantEmployeeId ?? this.editEmployeeId);
+
+        forkJoin(pendingFiles.map((r) => this.empService.uploadEmployeeFile(r.file!, r.displayName?.trim() || r.file!.name, owner))).subscribe({
+            next: (results) => {
+                // Stamp each row with its FileId so it serialises below and is never uploaded twice.
+                results.forEach((res, i) => {
+                    pendingFiles[i].fileId = res.fileId;
+                    pendingFiles[i].file = null;
+                });
+                this.saveApplication(v);
+            },
+            error: (err: any) => {
+                this.isSubmitting = false;
+                this.messageService.add({
+                    severity: 'error',
+                    summary: 'Error',
+                    detail: err?.error?.message || 'Failed to upload one or more files.'
+                });
+            }
+        });
+    }
+
+    private saveApplication(v: any): void {
         // Build JSON arrays
         const countriesJson = JSON.stringify(v.destinationCountryIds || []);
 

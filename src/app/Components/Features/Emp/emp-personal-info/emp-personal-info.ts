@@ -21,6 +21,7 @@ import { RadioButtonModule } from 'primeng/radiobutton';
 import { TooltipModule } from 'primeng/tooltip';
 
 import { EmpService } from '@/services/emp-service';
+import { buildUploadOwnerTag } from '@/shared/utils/upload-file-name.util';
 import { CommonCodeService } from '@/services/common-code-service';
 import { EmployeeSearchComponent, EmployeeBasicInfo } from '@/Components/Shared/employee-search/employee-search';
 import { FileReferencesFormComponent, FileRowData } from '@components/Common/file-references-form/file-references-form';
@@ -581,7 +582,7 @@ export class EmpPersonalInfo implements OnInit {
         };
 
         if (filesToUpload.length > 0) {
-            const uploads = filesToUpload.map((r: FileRowData) => this.empService.uploadEmployeeFile(r.file!, r.displayName?.trim() || r.file!.name));
+            const uploads = filesToUpload.map((r: FileRowData) => this.empService.uploadEmployeeFile(r.file!, r.displayName?.trim() || r.file!.name, buildUploadOwnerTag(this.employeeBasicInfo?.rabid, this.selectedEmployeeId)));
             forkJoin(uploads).subscribe({
                 next: (results: unknown) => {
                     const resultsArray = Array.isArray(results) ? results : [];

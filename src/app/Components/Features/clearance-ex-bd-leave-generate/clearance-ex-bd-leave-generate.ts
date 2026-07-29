@@ -28,6 +28,7 @@ import { CodeType, PostingType } from '@/models/enums';
 import { FlexibleDateDirective } from '@/shared/directives/flexible-date.directive';
 import { FileReferencesFormComponent, FileRowData } from '@/Components/Common/file-references-form/file-references-form';
 import { EmpService } from '@/services/emp-service';
+import { buildUploadOwnerTag } from '@/shared/utils/upload-file-name.util';
 import { EmployeeSearchInfoModel } from '@/models/EmpModel';
 import { ExBdLeaveApplicationService, ExBdLeaveNoteSheetBodyData } from '@/services/ex-bd-leave-application.service';
 import { OnulipiItem } from '@/Components/basic-setup/shared/models/onulipi-config';
@@ -628,7 +629,7 @@ export class ClearanceExBdLeaveGenerateComponent implements OnInit {
 
         if (filesToUpload.length > 0) {
             const uploads = filesToUpload.map((r: FileRowData) =>
-                this.empService.uploadEmployeeFile(r.file!, r.displayName?.trim() || r.file!.name)
+                this.empService.uploadEmployeeFile(r.file!, r.displayName?.trim() || r.file!.name, buildUploadOwnerTag(this.applicantInfo?.rabID ?? this.applicantInfo?.RABID, this.applicantInfo?.employeeID ?? this.applicantInfo?.EmployeeID))
             );
             forkJoin(uploads).subscribe({
                 next: (results: unknown) => {

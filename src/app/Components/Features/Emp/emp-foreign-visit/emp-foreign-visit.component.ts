@@ -22,6 +22,7 @@ import { DatePickerModule } from 'primeng/datepicker';
 import { ToastModule } from 'primeng/toast';
 
 import { EmpService } from '@/services/emp-service';
+import { buildUploadOwnerTag } from '@/shared/utils/upload-file-name.util';
 import { ForeignVisitInfoService, ForeignVisitInfoModel, ForeignVisitFamilyInfoModel } from '@/services/foreign-visit-info.service';
 import { CommonCodeService } from '@/services/common-code-service';
 import { FamilyInfoService, FamilyInfoModel } from '@/services/family-info-service';
@@ -575,7 +576,7 @@ export class EmpForeignVisit implements OnInit, OnDestroy {
 
         if (filesToUpload.length > 0) {
             const uploads = filesToUpload.map((r: FileRowData) =>
-                this.empService.uploadEmployeeFile(r.file!, r.displayName?.trim() || r.file!.name)
+                this.empService.uploadEmployeeFile(r.file!, r.displayName?.trim() || r.file!.name, buildUploadOwnerTag(this.employeeBasicInfo?.rabid, this.selectedEmployeeId))
             );
             forkJoin(uploads).subscribe({
                 next: (results: unknown) => {

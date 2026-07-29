@@ -22,6 +22,7 @@ import { ToastModule } from 'primeng/toast';
 import { UserMenuService } from '@/services/user-menu.service';
 import { SharedService } from '@/shared/services/shared-service';
 import { EmpService } from '@/services/emp-service';
+import { buildUploadOwnerTag } from '@/shared/utils/upload-file-name.util';
 import { PresentStatusInfoService } from '@/services/present-status-info.service';
 import { CommonCodeService } from '@/services/common-code-service';
 import { OrganizationService } from '@/Components/basic-setup/organization-setup/services/organization-service';
@@ -905,7 +906,7 @@ export class EmpPresentStatus implements OnInit {
 
         if (filesToUpload.length > 0) {
             const uploads = filesToUpload.map((r: FileRowData) =>
-                this.empService.uploadEmployeeFile(r.file!, r.displayName?.trim() || r.file!.name)
+                this.empService.uploadEmployeeFile(r.file!, r.displayName?.trim() || r.file!.name, buildUploadOwnerTag(this.employeeBasicInfo?.rabid, this.selectedEmployeeId))
             );
             forkJoin(uploads).subscribe({
                 next: (results: unknown) => {

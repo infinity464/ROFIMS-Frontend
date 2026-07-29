@@ -25,6 +25,7 @@ import { HttpClient } from '@angular/common/http';
 import { forkJoin, of } from 'rxjs';
 import { FileReferencesFormComponent, FileRowData } from '@/Components/Common/file-references-form/file-references-form';
 import { EmpService } from '@/services/emp-service';
+import { buildUploadOwnerTag } from '@/shared/utils/upload-file-name.util';
 import { CommonCodeService } from '@/services/common-code-service';
 import { FamilyInfoService, FamilyInfoModel } from '@/services/family-info-service';
 import { ActivatedRoute, Router } from '@angular/router';
@@ -1138,7 +1139,7 @@ export class NotesheetExBdLeaveComponent implements OnInit {
             let filesReferencesJson: string | null = null;
             if (filesToUpload.length > 0) {
                 const uploads = filesToUpload.map((r: FileRowData) =>
-                    this.empService.uploadEmployeeFile(r.file!, r.displayName?.trim() || r.file!.name)
+                    this.empService.uploadEmployeeFile(r.file!, r.displayName?.trim() || r.file!.name, buildUploadOwnerTag(null, this.selectedEmployeeId))
                 );
                 const results = await forkJoin(uploads).toPromise();
                 const arr = Array.isArray(results) ? results : [];
@@ -1527,7 +1528,7 @@ export class NotesheetExBdLeaveComponent implements OnInit {
             const existingFiles = para.fileRows.filter(r => r.fileId != null).map(r => ({ FileId: r.fileId!, fileName: r.displayName ?? '' }));
             const newFiles = para.fileRows.filter(r => r.file != null);
             if (newFiles.length > 0) {
-                const uploads = newFiles.map(r => this.empService.uploadEmployeeFile(r.file!, r.displayName?.trim() || r.file!.name).toPromise());
+                const uploads = newFiles.map(r => this.empService.uploadEmployeeFile(r.file!, r.displayName?.trim() || r.file!.name, buildUploadOwnerTag(null, this.selectedEmployeeId)).toPromise());
                 const uploaded = await Promise.all(uploads);
                 const uploadedRefs = (uploaded as any[]).map(r => ({ FileId: r.fileId, fileName: r.fileName }));
                 result.push({ text: para.text, files: [...existingFiles, ...uploadedRefs] });

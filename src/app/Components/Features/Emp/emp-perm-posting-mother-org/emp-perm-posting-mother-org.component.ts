@@ -20,6 +20,7 @@ import { DatePickerModule } from 'primeng/datepicker';
 import { ToastModule } from 'primeng/toast';
 
 import { EmpService } from '@/services/emp-service';
+import { buildUploadOwnerTag } from '@/shared/utils/upload-file-name.util';
 import { PermPostingMotherOrgService, PermPostingMotherOrgModel } from '@/services/perm-posting-mother-org.service';
 import { EmployeeSearchComponent, EmployeeBasicInfo } from '@/Components/Shared/employee-search/employee-search';
 import { FileReferencesFormComponent, FileRowData } from '@components/Common/file-references-form/file-references-form';
@@ -374,7 +375,7 @@ export class EmpPermPostingMotherOrg implements OnInit, OnDestroy {
         }
 
         const uploads = filesToUpload.map((r: FileRowData) =>
-            this.empService.uploadEmployeeFile(r.file!, r.displayName?.trim() || r.file!.name)
+            this.empService.uploadEmployeeFile(r.file!, r.displayName?.trim() || r.file!.name, buildUploadOwnerTag(this.employeeBasicInfo?.rabid, this.selectedEmployeeId))
         );
 
         return forkJoin(uploads).pipe(

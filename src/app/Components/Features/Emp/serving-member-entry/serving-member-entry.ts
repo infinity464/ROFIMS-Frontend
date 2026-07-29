@@ -14,6 +14,7 @@ import { RadioButtonModule } from 'primeng/radiobutton';
 import { Button, ButtonModule } from 'primeng/button';
 import { CommonCodeModel } from '@/models/common-code-model';
 import { EmpService } from '@/services/emp-service';
+import { buildProfileImageFile, buildUploadOwnerTag } from '@/shared/utils/upload-file-name.util';
 import { FamilyInfoService } from '@/services/family-info-service';
 import { MotherOrganizationModel } from '@/models/mother-org-model';
 import { CommonCodeService } from '@/services/common-code-service';
@@ -343,7 +344,12 @@ export class ServingMemberEntry implements OnInit {
 
         // Only the profile image is uploaded here (no Files/Supporting Documents section).
         if (this.selectedFile) {
-            this.empService.uploadEmployeeFile(this.selectedFile, this.selectedFileName || this.selectedFile.name).subscribe({
+            // Store the profile image as <RABID>_<timestamp>.<ext> instead of the user's original file name.
+            // Built once per picked image so a repeated Save re-uploads nothing (see EmpService.uploadEmployeeFile).
+            const renamedFile = (this.profileUploadFile ??= buildProfileImageFile(this.selectedFile, this.postingForm?.get('rabid')?.value, this.employeeId));
+            this.selectedFile = renamedFile;
+            this.selectedFileName = renamedFile.name;
+            this.empService.uploadEmployeeFile(renamedFile, renamedFile.name, this.uploadOwnerTag()).subscribe({
                 next: (profileResult: any) => {
                     const profileImagesJson = profileResult ? JSON.stringify([{ FileId: profileResult.fileId, fileName: profileResult.fileName }]) : this.getProfileImagesJson();
                     doSave(profileImagesJson);
@@ -681,6 +687,8 @@ export class ServingMemberEntry implements OnInit {
 
     imagePreview: string | null = null;
     selectedFile: File | null = null;
+    /** The picked image renamed for upload. Kept so repeated Saves reuse one upload; cleared whenever the image changes. */
+    private profileUploadFile: File | null = null;
     private readonly MAX_FACES_PER_EMPLOYEE = 10;
 
     profileImageRef: { fileId: number; fileName: string } | null = null;
@@ -1125,6 +1133,7 @@ export class ServingMemberEntry implements OnInit {
                 return;
             }
             this.selectedFile = file;
+            this.profileUploadFile = null;
             this.selectedFileName = file.name;
             this.postingForm.patchValue({ picture: file });
 
@@ -1134,9 +1143,15 @@ export class ServingMemberEntry implements OnInit {
         }
     }
 
+    /** Owner tag for uploads from this form — the RAB ID being entered, falling back to the saved employee id. */
+    private uploadOwnerTag(): string {
+        return buildUploadOwnerTag(this.postingForm?.get('rabid')?.value, this.employeeId);
+    }
+
     removeImage(): void {
         this.imagePreview = null;
         this.selectedFile = null;
+        this.profileUploadFile = null;
         this.selectedFileName = '';
         this.profileImageRef = null;
         this.postingForm.patchValue({ picture: null });
@@ -1633,6 +1648,7 @@ export class ServingMemberEntry implements OnInit {
         this.applyDefaultGender();
         this.imagePreview = null;
         this.selectedFile = null;
+        this.profileUploadFile = null;
         this.selectedFileName = '';
         if (this.fileUpload) this.fileUpload.clear();
     }

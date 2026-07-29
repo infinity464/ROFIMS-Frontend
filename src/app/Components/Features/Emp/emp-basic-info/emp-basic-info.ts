@@ -10,6 +10,7 @@ import { MultiSelectModule } from 'primeng/multiselect';
 import { Button, ButtonModule } from 'primeng/button';
 import { CommonCodeModel } from '@/models/common-code-model';
 import { EmpService } from '@/services/emp-service';
+import { buildProfileImageFile, buildUploadOwnerTag } from '@/shared/utils/upload-file-name.util';
 import { FamilyInfoService } from '@/services/family-info-service';
 import { MotherOrganizationModel } from '@/models/mother-org-model';
 import { CommonCodeService } from '@/services/common-code-service';
@@ -666,8 +667,16 @@ export class EmpBasicInfo implements OnInit {
         };
 
         if (filesToUpload.length > 0 || this.selectedFile) {
-            const fileRefUploads = filesToUpload.map((r: any) => this.empService.uploadEmployeeFile(r.file!, r.displayName?.trim() || r.file!.name));
-            const profileUpload$ = this.selectedFile ? this.empService.uploadEmployeeFile(this.selectedFile, this.selectedFileName || this.selectedFile.name) : null;
+            // Store the profile image as <RABID>_<timestamp>.<ext> instead of the user's original file name.
+            // Built once per picked image so a repeated Save re-uploads nothing (see EmpService.uploadEmployeeFile).
+            if (this.selectedFile) {
+                this.selectedFile = this.profileUploadFile ??= buildProfileImageFile(this.selectedFile, this.postingForm?.get('rabid')?.value, this.employeeId);
+                this.selectedFileName = this.selectedFile.name;
+            }
+
+            const owner = this.uploadOwnerTag();
+            const fileRefUploads = filesToUpload.map((r: any) => this.empService.uploadEmployeeFile(r.file!, r.displayName?.trim() || r.file!.name, owner));
+            const profileUpload$ = this.selectedFile ? this.empService.uploadEmployeeFile(this.selectedFile, this.selectedFile.name, owner) : null;
 
             const allUploads = profileUpload$ ? [...fileRefUploads, profileUpload$] : fileRefUploads;
 
@@ -1036,6 +1045,8 @@ export class EmpBasicInfo implements OnInit {
     postingForm!: FormGroup;
     imagePreview: string | null = null;
     selectedFile: File | null = null;
+    /** The picked image renamed for upload. Kept so repeated Saves reuse one upload; cleared whenever the image changes. */
+    private profileUploadFile: File | null = null;
     /** Per-employee face-image cap (mirrors the Face Images screen + face API). */
     private readonly MAX_FACES_PER_EMPLOYEE = 10;
 
@@ -1546,6 +1557,7 @@ export class EmpBasicInfo implements OnInit {
             }
 
             this.selectedFile = file;
+            this.profileUploadFile = null;
             this.selectedFileName = file.name;
             this.postingForm.patchValue({ picture: file });
 
@@ -1560,12 +1572,18 @@ export class EmpBasicInfo implements OnInit {
         }
     }
 
+    /** Owner tag for uploads from this form — the RAB ID on the form, falling back to the employee id. */
+    private uploadOwnerTag(): string {
+        return buildUploadOwnerTag(this.postingForm?.get('rabid')?.value, this.employeeId);
+    }
+
     /**
      * Remove selected image
      */
     removeImage(): void {
         this.imagePreview = null;
         this.selectedFile = null;
+        this.profileUploadFile = null;
         this.selectedFileName = '';
         this.profileImageRef = null;
         this.postingForm.patchValue({ picture: null });
@@ -2121,6 +2139,7 @@ export class EmpBasicInfo implements OnInit {
         });
         this.imagePreview = null;
         this.selectedFile = null;
+        this.profileUploadFile = null;
         this.selectedFileName = '';
 
         if (this.fileUpload) {
