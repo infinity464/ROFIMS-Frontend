@@ -26,7 +26,7 @@ import { EmployeeServiceOverview } from '@/models/employee-service-overview.mode
 import { MasterBasicSetupService } from '@/Components/basic-setup/shared/services/MasterBasicSetupService';
 import { OrganizationService } from '@/Components/basic-setup/organization-setup/services/organization-service';
 import { BanglaNumerals } from '@/Core/i18n/bangla-numerals';
-import { MovementVehicleOptions } from '@/models/enums';
+import { MovementVehicleOptions, MoveOrderType } from '@/models/enums';
 import { JsReportService } from '@/services/jsreport.service';
 import { embedBanglaFontCss, collectDocumentStyles, BANGLA_DOC_FONT_STACK } from '@/shared/utils/bangla-font.util';
 import { MovementReturnButtonComponent } from '../shared/movement-return-button';
@@ -102,6 +102,11 @@ export class NotesheetPreviewCCComponent implements OnInit {
 
     /** Header / column values. */
     letterNoBn = '';
+    /** The whole CC-number line: "<Movement Reason> সিসি নং <letter no>". The reason
+     *  is whatever was selected on /movement-info (CommonCode 'MovementReason',
+     *  Bangla value) — it replaced a hard-coded "এম". Drops to plain "সিসি নং …"
+     *  when no reason was picked, since the field is optional on the form. */
+    ccNumberLineBn = '';
     letterDateBn = '';
     departureTimeAndDateBn = '';   // "০৯:৩০ ঘটিকা সময় ও তারিখ ০৬/০৫/২০২৬"
     vehicleLabelBn = '';           // "সরকারী যানবাহন" / "বেসরকারী যানবাহন"
@@ -114,6 +119,11 @@ export class NotesheetPreviewCCComponent implements OnInit {
     private rabUnitLabels  = new Map<number, { en: string; bn: string }>();
     private rankLabels     = new Map<number, { en: string; bn: string }>();
     private prefixLabels   = new Map<number, { en: string; bn: string }>();
+    private reasonLabels   = new Map<number, { en: string; bn: string }>();
+
+    /** CC rows from MovementLetterNumberConfig, used only to swap the English prefix
+     *  a letter number was minted with for its Bangla counterpart. */
+    private ccPrefixPairs: { prefix: string; prefixBN: string }[] = [];
 
     /** Destination resolution (mother-unit / RAB-unit). */
     private destinedMotherUnitNameBn = '';
@@ -126,6 +136,8 @@ export class NotesheetPreviewCCComponent implements OnInit {
         this.loadRabUnitLabels();
         this.loadDistrictLabels();
         this.loadPrefixLabels();
+        this.loadMovementReasonLabels();
+        this.loadCcLetterPrefixes();
 
         // Accept either an opaque PublicToken in the path (`/cc/:token` — used by
         // the QR code) or a legacy numeric `?id=N` query param (used internally
@@ -194,7 +206,18 @@ export class NotesheetPreviewCCComponent implements OnInit {
     }
 
     private buildHeaderLines(): void {
-        this.letterNoBn = this.movement?.letterNo ? this.toBn(this.movement.letterNo) : '---';
+        this.letterNoBn = this.movement?.letterNo ? this.toBanglaLetterNo(this.movement.letterNo) : '---';
+
+        // The Movement Reason selected on /movement-info leads the CC number line.
+        // The reason master is Bangla-first (the form's dropdown shows codeValueBN),
+        // so prefer BN and fall back to EN for rows that only carry English.
+        const reasonId = this.movement?.movementReasonId ?? null;
+        const reason = reasonId != null ? this.reasonLabels.get(reasonId) : undefined;
+        const reasonBn = (reason?.bn || reason?.en || '').trim();
+        this.ccNumberLineBn = reasonBn
+            ? `${reasonBn} সিসি নং ${this.letterNoBn}`
+            : `সিসি নং ${this.letterNoBn}`;
+
         const d = this.movement?.letterDate ? new Date(this.movement.letterDate) : new Date();
         this.letterDateBn = this.formatBnDateShort(d);
 
@@ -482,6 +505,31 @@ export class NotesheetPreviewCCComponent implements OnInit {
             next: (rows: any[]) => this.fillMap(this.prefixLabels, rows)
         });
     }
+    private loadCcLetterPrefixes(): void {
+        this.masterBasicSetup.getAllMovementLetterNumberConfig().subscribe({
+            next: (rows: any[]) => {
+                this.ccPrefixPairs = (rows || [])
+                    .filter((r) => r.moveOrderType === MoveOrderType.CC)
+                    .map((r) => ({ prefix: (r.prefix || '').trim(), prefixBN: (r.prefixBN || '').trim() }))
+                    .filter((r) => r.prefix && r.prefixBN);
+                // Configs may land after the movement — rebuild so the Bangla prefix
+                // replaces the English one once it's known.
+                if (this.movement) this.buildHeaderLines();
+            },
+            // A lookup failure must not blank the header — the English prefix stands.
+            error: () => { /* keep the minted prefix */ }
+        });
+    }
+    private loadMovementReasonLabels(): void {
+        this.masterBasicSetup.getAllByType('MovementReason').subscribe({
+            next: (rows: any[]) => {
+                this.fillMap(this.reasonLabels, rows);
+                // Labels may land after the movement itself — rebuild so the CC
+                // number line picks the reason up once it's known.
+                if (this.movement) this.buildHeaderLines();
+            }
+        });
+    }
     private fillMap(target: Map<number, { en: string; bn: string }>, rows: any[]): void {
         target.clear();
         for (const r of rows || []) {
@@ -502,6 +550,24 @@ export class NotesheetPreviewCCComponent implements OnInit {
         const mm = String(d.getMonth() + 1).padStart(2, '0');
         const yyyy = String(d.getFullYear());
         return this.toBn(`${dd}/${mm}/${yyyy}`);
+    }
+
+    /**
+     * Letter numbers are minted with the config's English prefix — "A/B/C/D-2026/00002".
+     * The Bangla CC prints Prefix (Bangla) instead, so swap the leading prefix for its
+     * prefixBN and Bangla-ise only the digits that follow (the Bangla prefix is already
+     * Bangla text and must not be run through the numeral converter).
+     *
+     * The config is identified by the prefix the number actually starts with — longest
+     * match wins — rather than by re-resolving the issuing unit, so the swap stays
+     * correct for movements whose unit config has since changed.
+     */
+    private toBanglaLetterNo(letterNo: string): string {
+        const match = this.ccPrefixPairs
+            .filter((c) => letterNo.startsWith(c.prefix))
+            .sort((a, b) => b.prefix.length - a.prefix.length)[0];
+        if (!match) return this.toBn(letterNo);
+        return `${match.prefixBN}${this.toBn(letterNo.slice(match.prefix.length))}`;
     }
 
     toBn(input: string | number | null | undefined): string {
@@ -687,9 +753,9 @@ html, body { margin: 0; padding: 0; background: transparent; }
     /** Build the Word document (landscape, mirrors the on-screen CC layout). */
     private buildWordDocument(): Document {
         const m = this.movement!;
-        // Word-friendly Bangla font (Nirmala UI ships with Windows 10+);
+        // Word-friendly Bangla font (SolaimanLipi ships with Windows 10+);
         // `cs` covers complex-script shaping needed for Bangla.
-        const font = { ascii: 'Times New Roman', hAnsi: 'Times New Roman', cs: 'Nirmala UI', hint: 'cs' as const };
+        const font = { ascii: 'Times New Roman', hAnsi: 'Times New Roman', cs: 'SolaimanLipi', hint: 'cs' as const };
         const dims = this.getPageDimensions();
         // Printable width in landscape = page-height twips minus 2 × 0.5" margins (1440 twips).
         // getPageDimensions() returns *portrait* dims, so `height` is the longer side.
@@ -822,7 +888,7 @@ html, body { margin: 0; padding: 0; background: transparent; }
                         new TableCell({
                             width: { size: secondLeftW, type: WidthType.DXA },
                             borders: noBorder,
-                            children: [para(`এম সিসি নং ${this.letterNoBn}`, { size: SZ_BODY })]
+                            children: [para(this.ccNumberLineBn, { size: SZ_BODY })]
                         }),
                         new TableCell({
                             width: { size: secondRightW, type: WidthType.DXA },
@@ -913,25 +979,26 @@ html, body { margin: 0; padding: 0; background: transparent; }
         const sutroParas = m.auth
             ? htmlToParagraphs(m.auth, { firstPrefix: 'সূত্রঃ ', size: SZ_TABLE })
             : [para('সূত্রঃ', { size: SZ_TABLE })];
-        const smarakParas = m.remarks
-            ? htmlToParagraphs(m.remarks, { firstPrefix: `স্মারক নং - ${this.letterNoBn} `, size: SZ_TABLE })
-            : [para(`স্মারক নং - ${this.letterNoBn}`, { size: SZ_TABLE })];
+        // The Details captured on the movement form follow সূত্রঃ. Remarks are NOT
+        // shown here — they belong in the মন্তব্য column.
+        const detailsParas = m.detailsInformation
+            ? htmlToParagraphs(m.detailsInformation, { size: SZ_TABLE })
+            : [];
 
-        // The work-description cell mixes Paragraphs (sutro / smarak) with a
+        // The work-description cell mixes Paragraphs (sutro / details) with a
         // nested Table (the signature row). Side-by-side approver columns
         // mirror the on-screen `inline-block` layout.
         const workDescChildren: (Paragraph | Table)[] = [];
         workDescChildren.push(...sutroParas);
-        workDescChildren.push(...smarakParas);
+        workDescChildren.push(...detailsParas);
         // Larger top gap before the signature row.
         for (let i = 0; i < 6; i++) workDescChildren.push(para(''));
 
         // Build one cell per approver (or a single default cell when none).
-        const sigCellParas = (name: string, unitLines: string[]): Paragraph[] => {
+        // The approver's name is deliberately left out — the block shows the
+        // appointment and unit only.
+        const sigCellParas = (unitLines: string[]): Paragraph[] => {
             const out: Paragraph[] = [];
-            if (name) {
-                out.push(para(name, { size: SZ_TABLE, align: AlignmentType.CENTER }));
-            }
             out.push(para('নির্বাহী কর্মকর্তা', { size: SZ_TABLE, align: AlignmentType.CENTER }));
             for (const line of unitLines) {
                 out.push(para(line, { size: SZ_TABLE, align: AlignmentType.CENTER }));
@@ -942,18 +1009,17 @@ html, body { margin: 0; padding: 0; background: transparent; }
         // Each signature column gets a fixed width; the whole sub-table is
         // right-aligned within the work-description cell so the blocks sit
         // on the right side instead of spreading across the full cell width.
-        const SIG_COL_TWIPS = 3000; // ~150pt — enough for the longest expected name
+        const SIG_COL_TWIPS = 3000; // ~150pt — enough for the longest expected unit line
         const sigCells: TableCell[] = [];
-        const sigBlocks = this.approverBlocks.length > 0
-            ? this.approverBlocks.map((b) => ({ name: b.name }))
-            : [{ name: '' }];
-        for (const block of sigBlocks) {
+        // One column per approver; a single column when none is set.
+        const sigBlockCount = Math.max(1, this.approverBlocks.length);
+        for (let i = 0; i < sigBlockCount; i++) {
             sigCells.push(new TableCell({
                 width: { size: SIG_COL_TWIPS, type: WidthType.DXA },
                 borders: noBorder,
                 margins: cellMargins,
                 verticalAlign: 'top' as any,
-                children: sigCellParas(block.name, this.districtAndStationLines)
+                children: sigCellParas(this.districtAndStationLines)
             }));
         }
 
@@ -1002,11 +1068,13 @@ html, body { margin: 0; padding: 0; background: transparent; }
                     columnSpan: 4,
                     children: workDescChildren
                 }),
+                // মন্তব্য — Remarks from the movement form; blank for hand-written
+                // notes when none were entered.
                 new TableCell({
                     width: { size: colWidths[7], type: WidthType.DXA },
                     borders: allBorder,
                     margins: cellMargins,
-                    children: [para('')]
+                    children: bodyParagraphs(htmlToParagraphs(m.remarks, { size: SZ_TABLE }))
                 })
             ]
         });

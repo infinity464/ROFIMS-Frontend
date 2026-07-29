@@ -1,4 +1,4 @@
-import { Component, OnInit, ViewChild, ElementRef, inject } from '@angular/core';
+﻿import { Component, OnInit, ViewChild, ElementRef, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
@@ -7,7 +7,7 @@ import { ButtonModule } from 'primeng/button';
 import { SelectModule } from 'primeng/select';
 import { Toast } from 'primeng/toast';
 import { MessageService } from 'primeng/api';
-import { Document, Packer, Paragraph, TextRun, Table, TableRow, TableCell, WidthType, BorderStyle, AlignmentType, PageOrientation, TableLayoutType, HeightRule } from 'docx';
+import { Document, Packer, Paragraph, TextRun, Table, TableRow, TableCell, WidthType, BorderStyle, AlignmentType, PageOrientation, TableLayoutType, HeightRule, UnderlineType } from 'docx';
 import { saveAs } from 'file-saver';
 import { JsReportService } from '@/services/jsreport.service';
 import { embedBanglaFontCss, collectDocumentStyles, BANGLA_DOC_FONT_STACK } from '@/shared/utils/bangla-font.util';
@@ -21,6 +21,7 @@ import { EmployeeServiceOverview } from '@/models/employee-service-overview.mode
 import { MasterBasicSetupService } from '@/Components/basic-setup/shared/services/MasterBasicSetupService';
 import { OrganizationService } from '@/Components/basic-setup/organization-setup/services/organization-service';
 import { BanglaNumerals } from '@/Core/i18n/bangla-numerals';
+import { MoveOrderType } from '@/models/enums';
 import { MovementReturnButtonComponent } from '../shared/movement-return-button';
 import { MovementFilesInfoComponent } from '../shared/movement-files-info';
 
@@ -30,7 +31,11 @@ import { MovementFilesInfoComponent } from '../shared/movement-files-info';
     imports: [CommonModule, FormsModule, ButtonModule, SelectModule, Toast, MovementReturnButtonComponent, MovementFilesInfoComponent],
     providers: [MessageService],
     templateUrl: './notesheet-preview-mo.html',
-    styleUrls: ['../notesheet-preview.scss', '../notesheet-preview-toolbar-dark.scss']
+    styleUrls: [
+        '../notesheet-preview.scss',
+        '../notesheet-preview-toolbar-dark.scss',
+        './notesheet-preview-mo.scss'
+    ]
 })
 export class NotesheetPreviewMOComponent implements OnInit {
     private route = inject(ActivatedRoute);
@@ -69,6 +74,13 @@ export class NotesheetPreviewMOComponent implements OnInit {
 
     /** Top-right header label — pulled from letterNo if present, else placeholder. */
     topRightLabelBn = '---';
+    /**
+     * তারালাপনী — the issuing unit's Telephone No from the MO row of
+     * MovementLetterNumberConfig (Basic Setup → Movement Letter Number
+     * Configuration). Blank until the configs load, and stays blank when the
+     * matching config carries no number.
+     */
+    telephoneBn = '';
     /** Bottom-block date line. */
     letterDateBn = '';
     /** "Destined" mother-unit display name (resolved from destinedMotherUnitId). */
@@ -96,6 +108,7 @@ export class NotesheetPreviewMOComponent implements OnInit {
         this.loadCorpsLabels();
         this.loadDistrictLabels();
         this.loadPrefixLabels();
+        this.loadMoLetterConfigs();
 
         const idParam = this.route.snapshot.queryParamMap.get('id');
         const id = idParam ? Number(idParam) : NaN;
@@ -135,9 +148,58 @@ export class NotesheetPreviewMOComponent implements OnInit {
     }
 
     private buildHeaderLines(): void {
-        this.topRightLabelBn = this.movement?.letterNo ? this.toBn(this.movement.letterNo) : '---';
+        this.topRightLabelBn = this.movement?.letterNo ? this.toBanglaLetterNo(this.movement.letterNo) : '---';
         const d = this.movement?.letterDate ? new Date(this.movement.letterDate) : new Date();
         this.letterDateBn = this.formatBnDate(d);
+        this.resolveTelephone();
+    }
+
+    /**
+     * MO rows of MovementLetterNumberConfig. Each row pairs the prefix its letter
+     * numbers are minted with against that prefix's Bangla form (for নথি নং) and the
+     * unit's Telephone No (for তারালাপনী).
+     */
+    private moLetterConfigs: { prefix: string; prefixBN: string; telephoneNo: string }[] = [];
+
+    private loadMoLetterConfigs(): void {
+        this.masterBasicSetup.getAllMovementLetterNumberConfig().subscribe({
+            next: (rows: any[]) => {
+                this.moLetterConfigs = (rows || [])
+                    .filter((r) => r.moveOrderType === MoveOrderType.MO)
+                    .map((r) => ({
+                        prefix: (r.prefix || '').trim(),
+                        prefixBN: (r.prefixBN || '').trim(),
+                        telephoneNo: (r.telephoneNo || '').trim()
+                    }));
+                // Configs may land after the movement — resolve again once they do,
+                // so both তারালাপনী and the Bangla prefix pick them up.
+                if (this.movement) this.buildHeaderLines();
+            },
+            // A lookup failure just leaves তারালাপনী blank; it must not break the preview.
+            error: () => { /* leave blank */ }
+        });
+    }
+
+    /**
+     * Picks the config that minted this movement's number — matched on the prefix the
+     * LetterNo actually starts with, longest match first — and takes its Telephone No.
+     * Falls back to the only configured number when nothing matches (e.g. a letter
+     * number typed in by hand), so the common single-unit setup still prints.
+     */
+    private resolveTelephone(): void {
+        const letterNo = (this.movement?.letterNo || '').trim();
+        const withPhone = this.moLetterConfigs.filter((c) => c.telephoneNo);
+        if (withPhone.length === 0) {
+            this.telephoneBn = '';
+            return;
+        }
+
+        const match = withPhone
+            .filter((c) => c.prefix && letterNo.startsWith(c.prefix))
+            .sort((a, b) => b.prefix.length - a.prefix.length)[0]
+            ?? (withPhone.length === 1 ? withPhone[0] : undefined);
+
+        this.telephoneBn = match ? this.toBn(match.telephoneNo) : '';
     }
 
     private loadEmployee(): void {
@@ -380,10 +442,28 @@ export class NotesheetPreviewMOComponent implements OnInit {
         return this.resolveDestinationBn();
     }
 
-    /** Row 4: date of release in Bangla. */
+    /**
+     * Row 4 — date of release, followed by the time of day the Release time falls in:
+     * "০১ জুলাই ২০২৬ (সকালে)" before noon, "… (বিকালে)" from noon onwards. The bracketed
+     * suffix is dropped when no Release time was entered.
+     */
     get departureDateBn(): string {
         const d = this.movement?.dateOfRelease ? new Date(this.movement.dateOfRelease) : null;
-        return d ? this.formatBnDate(d) : '---';
+        if (!d) return '---';
+        const period = this.releasePeriodBn();
+        return period ? `${this.formatBnDate(d)} (${period})` : this.formatBnDate(d);
+    }
+
+    /**
+     * সকালে / বিকালে from MovementInfo.ReleaseTime — a free-form "HH:mm" string from the
+     * movement form's time input. Anything that isn't a readable hour yields '' so the
+     * date prints alone rather than with a wrong period.
+     */
+    private releasePeriodBn(): string {
+        const raw = (this.movement?.releaseTime || '').trim();
+        const hour = Number(raw.split(':')[0]);
+        if (!Number.isInteger(hour) || hour < 0 || hour > 23) return '';
+        return hour < 12 ? 'সকালে' : 'বিকালে';
     }
 
     /** Row 9: reception unit. */
@@ -419,6 +499,24 @@ export class NotesheetPreviewMOComponent implements OnInit {
         const month = months[d.getMonth()];
         const year = BanglaNumerals.toBangla(String(d.getFullYear()));
         return `${day} ${month} ${year}`;
+    }
+
+    /**
+     * Letter numbers are minted with the config's English prefix — "RAB HQ/Admin/…".
+     * The Bangla letter prints Prefix (Bangla) instead, so swap the leading prefix for
+     * its prefixBN and Bangla-ise only the digits that follow (the Bangla prefix is
+     * already Bangla text and must not go through the numeral converter).
+     *
+     * The config is identified by the prefix the number actually starts with — longest
+     * match wins — rather than by re-resolving the issuing unit, so the swap stays
+     * correct for movements whose unit config has since changed.
+     */
+    private toBanglaLetterNo(letterNo: string): string {
+        const match = this.moLetterConfigs
+            .filter((c) => c.prefix && c.prefixBN && letterNo.startsWith(c.prefix))
+            .sort((a, b) => b.prefix.length - a.prefix.length)[0];
+        if (!match) return this.toBn(letterNo);
+        return `${match.prefixBN}${this.toBn(letterNo.slice(match.prefix.length))}`;
     }
 
     toBn(input: string | number | null | undefined): string {
@@ -532,12 +630,18 @@ export class NotesheetPreviewMOComponent implements OnInit {
         const fontCss = await embedBanglaFontCss();
         const body = this.paper.nativeElement.innerHTML;
         const sz = this.selectedPageSize;
-        const pageWidth = sz === 'A4' ? '210mm' : '215.9mm';
+        const pageWidthMm = sz === 'A4' ? 210 : 215.9;
+        const pageWidth = `${pageWidthMm}mm`;
         const pageHeight = sz === 'A4' ? '297mm' : sz === 'Letter' ? '279.4mm' : '355.6mm';
-        const colWidth = sz === 'A4' ? '190mm' : '195.9mm';
-        const padX = 10,
+        // mm — must mirror .a4-paper's padding in notesheet-preview-mo.scss so the
+        // PDF's text column lines up with the web view. Horizontal margins are
+        // asymmetric on the MO letter: 1" left (binding), 0.4" right.
+        const padLeft = 25.4,
+            padRight = 10.16,
             padTop = 14,
-            padBottom = 20; // mm — .a4-paper padding
+            padBottom = 20;
+        // Derived, so the column can never drift out of step with the page margins.
+        const colWidth = `${+(pageWidthMm - padLeft - padRight).toFixed(2)}mm`;
 
         const html = `<!DOCTYPE html>
 <html>
@@ -550,7 +654,7 @@ ${styles}
    relative /assets/fonts reference. See bangla-font.util.ts. */
 ${fontCss}
 
-@page { size: ${pageWidth} ${pageHeight}; margin: ${padTop}mm ${padX}mm ${padBottom}mm ${padX}mm; }
+@page { size: ${pageWidth} ${pageHeight}; margin: ${padTop}mm ${padRight}mm ${padBottom}mm ${padLeft}mm; }
 html, body { margin: 0; padding: 0; background: transparent; }
 
 .no-print, .preview-header, .preview-actions { display: none !important; }
@@ -606,10 +710,23 @@ html, body { margin: 0; padding: 0; background: transparent; }
     /** Build the MO Word document (portrait, mirrors the on-screen layout). */
     private buildWordDocument(): Document {
         const m = this.movement!;
-        const font = { ascii: 'Times New Roman', hAnsi: 'Times New Roman', cs: 'Nirmala UI', hint: 'cs' as const };
+        const font = { ascii: 'Times New Roman', hAnsi: 'Times New Roman', cs: 'SolaimanLipi', hint: 'cs' as const };
         const bnLang = { value: 'bn-BD', bidirectional: 'bn-BD' } as any;
         const dims = this.getPageDimensions();
-        const contentWidth = dims.width - 1440;
+        // Page margins in twips (1440 = 1 inch). Asymmetric horizontally to match the
+        // preview and PDF: 1" left binding margin, 0.4" right.
+        const MARGIN_TOP = 720,
+            MARGIN_BOTTOM = 720,
+            MARGIN_LEFT = 1440,
+            MARGIN_RIGHT = 576;
+        // Derived, so the tables can never overflow the text column when the margins change.
+        const contentWidth = dims.width - MARGIN_LEFT - MARGIN_RIGHT;
+
+        // Label/value separator: Bangla বিসর্গ (U+0983), not an ASCII colon. Rendered
+        // one size below the body text (9pt vs 10pt) — docx sizes are half-points, so
+        // 18 = 9pt. Matches `font-size:9pt` on the separator cells in the template.
+        const SEP = 'ঃ';
+        const SZ_SEP = 18;
 
         const SZ_TITLE = 30; // 15pt — গমনাদেশ
         const SZ_BODY = 20; // 10pt — body rows
@@ -671,7 +788,14 @@ html, body { margin: 0; padding: 0; background: transparent; }
 
         const topRightLabel = new Paragraph({
             alignment: AlignmentType.RIGHT,
-            children: [new TextRun({ text: 'বিএফটি-১৭৬২ এর পরিবর্তে', size: SZ_BODY, sizeComplexScript: SZ_BODY, font, language: bnLang })]
+            children: [new TextRun({
+                text: 'বিএএফটি-১৭৬২ এর পরিবর্তে',
+                size: SZ_BODY,
+                sizeComplexScript: SZ_BODY,
+                font,
+                language: bnLang,
+                underline: { type: UnderlineType.SINGLE }
+            })]
         });
         const heading = new Paragraph({
             alignment: AlignmentType.CENTER,
@@ -679,9 +803,11 @@ html, body { margin: 0; padding: 0; background: transparent; }
             children: [new TextRun({ text: 'গমনাদেশ', size: SZ_TITLE, sizeComplexScript: SZ_TITLE, font, language: bnLang })]
         });
 
-        // Numbered-rows table (serial | label | : | value).
+        // Numbered-rows table (serial | label | : | value). Twips = pt × 20, and the
+        // widths mirror the <colgroup> in notesheet-preview-mo.html: 30pt / 135pt / 14pt.
+        // LABEL_W sits just past the longest label so the ঃ follows the text closely.
         const SERIAL_W = 600;
-        const LABEL_W = 3600;
+        const LABEL_W = 2700;
         const COLON_W = 280;
         const VALUE_W = contentWidth - SERIAL_W - LABEL_W - COLON_W;
 
@@ -689,7 +815,7 @@ html, body { margin: 0; padding: 0; background: transparent; }
         // single-line height (+ 2pt vs the default 12pt). Used for multi-line
         // values so wrapped lines (e.g. মন্তব্য, গমনের প্রাধিকার) breathe.
         const CELL_LINE = 280;
-        const rowCell = (text: string | Paragraph[], widthTwips: number): TableCell =>
+        const rowCell = (text: string | Paragraph[], widthTwips: number, size?: number): TableCell =>
             new TableCell({
                 width: { size: widthTwips, type: WidthType.DXA },
                 borders: noBorder,
@@ -697,19 +823,22 @@ html, body { margin: 0; padding: 0; background: transparent; }
                 // `padding:4pt 0` rule and gives ~2pt extra line gap per row.
                 margins: { top: 80, bottom: 80, left: 0, right: 0 },
                 verticalAlign: 'top' as any,
-                children: typeof text === 'string' ? [para(text, { lineTwips: CELL_LINE })] : text
+                children: typeof text === 'string' ? [para(text, { lineTwips: CELL_LINE, size })] : text
             });
         const dataRow = (serial: number, label: string, value: string | Paragraph[]): TableRow =>
             new TableRow({
-                children: [rowCell(this.serialBn(serial), SERIAL_W), rowCell(label, LABEL_W), rowCell(':', COLON_W), rowCell(value, VALUE_W)]
+                children: [rowCell(this.serialBn(serial), SERIAL_W), rowCell(label, LABEL_W), rowCell(SEP, COLON_W, SZ_SEP), rowCell(value, VALUE_W)]
             });
 
         // Rich-text cells (auth/remarks/details) now preserve Quill paragraph
         // structure — one docx Paragraph per top-level <p> — instead of being
         // flattened to a single line.
         const authParas = htmlToParagraphs(m.auth, { lineTwips: CELL_LINE });
-        const authValue: string | Paragraph[] = authParas.length > 0 ? authParas : '---';
-        const remarksParas = htmlToParagraphs(m.remarks, { lineTwips: CELL_LINE });
+        // Blank when no Auth was entered — no --- placeholder.
+        const authValue: string | Paragraph[] = authParas.length > 0 ? authParas : '';
+        // মন্তব্য is the one free-prose row — justified so it reads as a block with a
+        // flush right edge, matching `text-align:justify` on that cell in the template.
+        const remarksParas = htmlToParagraphs(m.remarks, { lineTwips: CELL_LINE, align: AlignmentType.JUSTIFIED });
         const remarksValue: string | Paragraph[] = remarksParas.length > 0 ? remarksParas : '---';
 
         const numberedTable = new Table({
@@ -732,27 +861,102 @@ html, body { margin: 0; padding: 0; background: transparent; }
         });
 
         // Bottom metadata block (label : value).
-        const metaLabelW = 1600;
+        // Single (1.0) line spacing — matches the block's `line-height:1` in
+        // notesheet-preview-mo.html. 240 twips = single.
+        const META_LINE = 240;
+        // The bottom area is two columns: metadata on the left, signature block on the
+        // right — the same split the flex row makes in notesheet-preview-mo.html.
+        const SIG_W = 2400; // 120pt
+        const metaTableW = contentWidth - SIG_W;
+        // 1100 twips = 55pt — mirrors the label column width in the template.
+        const metaLabelW = 1100;
         const metaColonW = 280;
-        const metaValueW = contentWidth - metaLabelW - metaColonW;
+        const metaValueW = metaTableW - metaLabelW - metaColonW;
+        const metaCell = (text: string | Paragraph[], widthTwips: number, size?: number): TableCell =>
+            new TableCell({
+                width: { size: widthTwips, type: WidthType.DXA },
+                borders: noBorder,
+                // No vertical margin — unlike the numbered rows (80 twips = 4pt each
+                // side), this block sits tight. That padding, not the line spacing,
+                // was what kept the rows apart.
+                margins: { top: 0, bottom: 0, left: 0, right: 0 },
+                verticalAlign: 'top' as any,
+                children: typeof text === 'string' ? [para(text, { lineTwips: META_LINE, size })] : text
+            });
         const metaRow = (label: string, value: string | Paragraph[]): TableRow =>
             new TableRow({
-                children: [rowCell(label, metaLabelW), rowCell(':', metaColonW), rowCell(value, metaValueW)]
+                children: [metaCell(label, metaLabelW), metaCell(SEP, metaColonW, SZ_SEP), metaCell(value, metaValueW)]
             });
-        const detailsParas = htmlToParagraphs(m.detailsInformation, { lineTwips: CELL_LINE });
-        const detailsValue: string | Paragraph[] = detailsParas.length > 0 ? detailsParas : '';
+        /** Full-width row — used for content that belongs UNDER a label, not beside it. */
+        const metaFullRow = (value: string | Paragraph[]): TableRow =>
+            new TableRow({
+                children: [
+                    new TableCell({
+                        width: { size: metaTableW, type: WidthType.DXA },
+                        columnSpan: 3,
+                        borders: noBorder,
+                        margins: { top: 0, bottom: 0, left: 0, right: 0 },
+                        verticalAlign: 'top' as any,
+                        children: typeof value === 'string' ? [para(value, { lineTwips: META_LINE })] : value
+                    })
+                ]
+            });
+        const detailsParas = htmlToParagraphs(m.detailsInformation, { lineTwips: META_LINE });
         const metaTable = new Table({
-            width: { size: contentWidth, type: WidthType.DXA },
+            width: { size: metaTableW, type: WidthType.DXA },
             columnWidths: [metaLabelW, metaColonW, metaValueW],
             layout: TableLayoutType.FIXED,
             borders: { ...noBorder, insideHorizontal: { style: BorderStyle.NONE, size: 0, color: 'FFFFFF' }, insideVertical: { style: BorderStyle.NONE, size: 0, color: 'FFFFFF' } },
             rows: [
                 metaRow('ইউনিট', this.rabUnitBn),
                 metaRow('স্থান', this.rabUnitLocationBn || '---'),
-                metaRow('তারালাপনী', '৮৯৬৫৩১৫০ বর্ধিত ৩৫১১'),
+                metaRow('তারালাপনী', this.telephoneBn),
                 metaRow('নথি নং', this.topRightLabelBn),
                 metaRow('তারিখ', this.letterDateBn),
-                metaRow('বিতরণ', detailsValue)
+                // One blank line between তারিখ and the বিতরণ list.
+                metaFullRow(''),
+                // বিতরণ heads its own list — label and colon alone, entries on the
+                // line below, flush with the label.
+                metaRow('বিতরণ', ''),
+                ...(detailsParas.length > 0 ? [metaFullRow(detailsParas)] : [])
+            ]
+        });
+
+        // Signature block, right of the metadata. নির্বাহী কর্মকর্তা must land on the
+        // বিতরণ line, so the cell is top-aligned and padded with one blank paragraph
+        // per meta row above বিতরণ (ইউনিট, স্থান, তারালাপনী, নথি নং, তারিখ, blank).
+        // The blanks share META_LINE so they track the metadata's line height exactly.
+        const META_ROWS_BEFORE_BITARAN = 6;
+        const sigParas = [
+            ...Array.from({ length: META_ROWS_BEFORE_BITARAN }, () => para('', { lineTwips: META_LINE })),
+            para('নির্বাহী কর্মকর্তা', { align: AlignmentType.CENTER }),
+            para(this.rabUnitBn, { align: AlignmentType.CENTER }),
+            ...(this.rabUnitLocationBn ? [para(this.rabUnitLocationBn, { align: AlignmentType.CENTER })] : [])
+        ];
+        const bottomTable = new Table({
+            width: { size: contentWidth, type: WidthType.DXA },
+            columnWidths: [metaTableW, SIG_W],
+            layout: TableLayoutType.FIXED,
+            borders: { ...noBorder, insideHorizontal: { style: BorderStyle.NONE, size: 0, color: 'FFFFFF' }, insideVertical: { style: BorderStyle.NONE, size: 0, color: 'FFFFFF' } },
+            rows: [
+                new TableRow({
+                    children: [
+                        new TableCell({
+                            width: { size: metaTableW, type: WidthType.DXA },
+                            borders: noBorder,
+                            margins: { top: 0, bottom: 0, left: 0, right: 0 },
+                            verticalAlign: 'top' as any,
+                            children: [metaTable]
+                        }),
+                        new TableCell({
+                            width: { size: SIG_W, type: WidthType.DXA },
+                            borders: noBorder,
+                            margins: { top: 0, bottom: 0, left: 0, right: 0 },
+                            verticalAlign: 'top' as any,
+                            children: sigParas
+                        })
+                    ]
+                })
             ]
         });
 
@@ -766,10 +970,12 @@ html, body { margin: 0; padding: 0; background: transparent; }
                     properties: {
                         page: {
                             size: { width: dims.width, height: dims.height, orientation: PageOrientation.PORTRAIT },
-                            margin: { top: 720, bottom: 720, left: 720, right: 720 }
+                            margin: { top: MARGIN_TOP, bottom: MARGIN_BOTTOM, left: MARGIN_LEFT, right: MARGIN_RIGHT }
                         }
                     },
-                    children: [topRightLabel, heading, numberedTable, para(''), metaTable, para(''), ...recipientParas]
+                    // No blank paragraph before the recipients: they are the বিতরণ list and
+                    // belong on the line directly under that label.
+                    children: [topRightLabel, heading, numberedTable, para(''), bottomTable, ...recipientParas]
                 }
             ]
         });

@@ -11,6 +11,7 @@ import { MessageService } from 'primeng/api';
 
 import { DraftCourseService } from '@/services/draft-course.service';
 import { RftsCourseSummary, RftsTrainingRow } from '@/models/draft-course.model';
+import { RftsNominalRollService } from '@/services/rfts-nominal-roll.service';
 
 interface RftsGroup {
     courseNo: string | null;
@@ -50,8 +51,70 @@ export class EmpRftsCompletedComponent implements OnInit {
 
     constructor(
         private draftCourseService: DraftCourseService,
+        private nominalRoll: RftsNominalRollService,
         private messageService: MessageService
     ) {}
+
+    // ---------- Nominal roll export ----------
+    /** Course no whose export is currently being fetched. */
+    exportingCourseNo: string | null = null;
+
+    /**
+     * Fetches the roll then hands it to the chosen renderer. Read fresh each
+     * time rather than reusing the expanded panel's members, because the export
+     * needs the Bangla names and units the panel never loads.
+     *
+     * annexureLabel is null: like the draft roll, a completed-course list is not
+     * an annexure, so it drops the "ক্রোড়পত্র ক" line.
+     */
+    exportRoll(group: RftsGroup, format: 'print' | 'word' | 'excel', event: Event): void {
+        event.stopPropagation();
+        if (this.exportingCourseNo != null) return;
+
+        if (group.memberCount === 0) {
+            this.messageService.add({
+                severity: 'warn',
+                summary: 'Nothing to export',
+                detail: `"${group.courseNo ?? '—'}" has no members.`
+            });
+            return;
+        }
+
+        // Sentinel, so an empty course no still marks an export in flight.
+        this.exportingCourseNo = group.courseNo ?? '';
+        this.draftCourseService.getRftsTrainingNominalRoll(group.courseNo).subscribe({
+            next: async (roll) => {
+                const opts = { annexureLabel: null };
+                try {
+                    if (format === 'print') {
+                        if (!this.nominalRoll.print(roll, opts)) {
+                            this.messageService.add({
+                                severity: 'warn',
+                                summary: 'Popup blocked',
+                                detail: 'Allow popups for this site to open the print view.'
+                            });
+                        }
+                    } else if (format === 'word') {
+                        await this.nominalRoll.exportWord(roll, opts);
+                    } else {
+                        this.nominalRoll.exportExcel(roll, opts);
+                    }
+                } catch {
+                    this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to build the export.' });
+                } finally {
+                    this.exportingCourseNo = null;
+                }
+            },
+            error: (err) => {
+                this.exportingCourseNo = null;
+                this.messageService.add({
+                    severity: 'error',
+                    summary: 'Error',
+                    detail: err?.error?.description || err?.error?.message || 'Failed to load the export data.'
+                });
+            }
+        });
+    }
 
     ngOnInit(): void {
         this.loadCourseSummaries();

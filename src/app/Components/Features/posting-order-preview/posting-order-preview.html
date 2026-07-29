@@ -588,26 +588,26 @@
                 <tbody>
                     <ng-container *ngIf="isInterPosting">
                         <tr *ngFor="let emp of filteredEmployees; let i = index">
-                            <td class="text-center">{{ isBangla ? toBanglaDigits('' + (i + 1)) : (i + 1) }}</td>
-                            <td>{{ empServiceId(emp) }}</td>
-                            <td>{{ empRank(emp) }}</td>
+                            <td class="text-center">{{ isBangla ? (toBanglaDigits('' + (i + 1)) + '।') : (i + 1) }}</td>
+                            <td class="po-doc-left-cell" style="white-space: pre-line;">{{ empServiceId(emp) }}</td>
+                            <td class="po-doc-left-cell">{{ empRank(emp) }}</td>
                             <td class="po-doc-name-cell">{{ empName(emp) }}{{ empNameQuals(emp) }}</td>
-                            <td *ngIf="showOwnDistrict" style="white-space: pre-line;">{{ empDistrict(emp) }}</td>
-                            <td *ngIf="showPrevWorkplaceUnit" style="white-space: pre-line;">{{ empPrevWorkplace(emp) }}</td>
-                            <td>{{ empTransferUnit(emp) }}</td>
+                            <td class="po-doc-left-cell" *ngIf="showOwnDistrict" style="white-space: pre-line;">{{ empDistrict(emp) }}</td>
+                            <td class="po-doc-left-cell" *ngIf="showPrevWorkplaceUnit" style="white-space: pre-line;">{{ empPrevWorkplace(emp) }}</td>
+                            <td class="po-doc-left-cell">{{ empTransferUnit(emp) }}</td>
                             <td *ngIf="showRemarks" style="white-space: pre-line; word-break: break-word;">{{ empCombinedRemarks(emp) }}</td>
                         </tr>
                     </ng-container>
                     <ng-container *ngIf="!isInterPosting">
                         <tr *ngFor="let emp of filteredEmployees; let i = index">
-                            <td class="text-center">{{ isBangla ? toBanglaDigits('' + (i + 1)) : (i + 1) }}</td>
-                            <td>{{ empServiceId(emp) }}</td>
-                            <td>{{ empRank(emp) }}</td>
-                            <td *ngIf="showTradeColumn">{{ empTrade(emp) }}</td>
+                            <td class="text-center">{{ isBangla ? (toBanglaDigits('' + (i + 1)) + '।') : (i + 1) }}</td>
+                            <td class="po-doc-left-cell" style="white-space: pre-line;">{{ empServiceId(emp) }}</td>
+                            <td class="po-doc-left-cell">{{ empRank(emp) }}</td>
+                            <td class="po-doc-left-cell" *ngIf="showTradeColumn">{{ empTrade(emp) }}</td>
                             <td class="po-doc-name-cell">{{ empName(emp) }}{{ empNameQuals(emp) }}</td>
-                            <td *ngIf="showOwnDistrict" style="white-space: pre-line;">{{ empDistrict(emp) }}</td>
-                            <td *ngIf="showPrevWorkplaceUnit" style="white-space: pre-line;">{{ empPrevWorkplace(emp) }}</td>
-                            <td>{{ empTransferUnit(emp) }}</td>
+                            <td class="po-doc-left-cell" *ngIf="showOwnDistrict" style="white-space: pre-line;">{{ empDistrict(emp) }}</td>
+                            <td class="po-doc-left-cell" *ngIf="showPrevWorkplaceUnit" style="white-space: pre-line;">{{ empPrevWorkplace(emp) }}</td>
+                            <td class="po-doc-left-cell">{{ empTransferUnit(emp) }}</td>
                             <td>{{ empRabId(emp) }}</td>
                             <td *ngIf="showRemarks">{{ empCombinedRemarks(emp) }}</td>
                         </tr>

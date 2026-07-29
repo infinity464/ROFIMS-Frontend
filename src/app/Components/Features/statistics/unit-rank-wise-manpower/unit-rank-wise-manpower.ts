@@ -77,6 +77,11 @@ export class UnitRankWiseManpowerComponent implements OnInit {
     /** Member-type CodeIds the user picked to MERGE. Default = empty = every rank shown as its
      *  own column; selecting a member type collapses every rank under it into one column. */
     selectedMergeMemberTypeIds: number[] = [];
+
+    /** Member-type CodeIds the user picked to FILTER BY. Default = empty = every rank column is
+     *  shown; selecting member types narrows the columns to the ranks under them. */
+    selectedFilterMemberTypeIds: number[] = [];
+
     memberTypeOptions: { label: string; value: number }[] = [];
     private memberTypes: CommonCode[] = [];
 
@@ -101,6 +106,10 @@ export class UnitRankWiseManpowerComponent implements OnInit {
         }
         const accessNames = (bn ? this.accessibleRabUnitNamesBN : this.accessibleRabUnitNames) ?? this.accessibleRabUnitNames;
         if (accessNames && accessNames.length > 0) items.push({ label: bn ? 'এক্সেস ইউনিট' : 'ACCESS UNITS', value: accessNames.join(', ') });
+        if (this.selectedFilterMemberTypeIds.length > 0) {
+            const names = this.memberTypeOptions.filter(o => this.selectedFilterMemberTypeIds.includes(o.value)).map(o => o.label);
+            if (names.length) items.push({ label: bn ? 'সদস্য ধরণ' : 'MEMBER TYPE', value: names.join(', ') });
+        }
         if (this.selectedMergeMemberTypeIds.length > 0) {
             const names = this.memberTypeOptions.filter(o => this.selectedMergeMemberTypeIds.includes(o.value)).map(o => o.label);
             if (names.length) items.push({ label: bn ? 'একীভূত সদস্য ধরণ' : 'MERGED MEMBER TYPES', value: names.join(', ') });
@@ -149,6 +158,10 @@ export class UnitRankWiseManpowerComponent implements OnInit {
         this.loadData();
     }
 
+    onFilterMemberTypesChange(): void {
+        this.loadData();
+    }
+
     private loadRabUnitOptions(): void {
         this.masterBasicSetup.getAllByType('RabUnit').subscribe({
             next: (res) => {
@@ -181,7 +194,7 @@ export class UnitRankWiseManpowerComponent implements OnInit {
         if (ids.length === 0) {
             // No selection → single anonymous section (top-level RAB Units).
             this.statisticsService
-                .getUnitRankWiseManpower(this.excludeRanks, null, this.selectedMergeMemberTypeIds)
+                .getUnitRankWiseManpower(this.excludeRanks, null, this.selectedMergeMemberTypeIds, this.selectedFilterMemberTypeIds)
                 .subscribe({
                     next: (res: UnitRankWiseManpowerResponse) => {
                         this.ranks = res.ranks ?? [];
@@ -205,7 +218,7 @@ export class UnitRankWiseManpowerComponent implements OnInit {
         forkJoin(
             ids.map(id =>
                 this.statisticsService
-                    .getUnitRankWiseManpower(this.excludeRanks, id, this.selectedMergeMemberTypeIds)
+                    .getUnitRankWiseManpower(this.excludeRanks, id, this.selectedMergeMemberTypeIds, this.selectedFilterMemberTypeIds)
                     .pipe(catchError(() => of(null as UnitRankWiseManpowerResponse | null)))
             )
         ).subscribe({

@@ -139,6 +139,8 @@ export interface ConfidentialRemarksReportParams {
   orgIds?: number[] | null;
   memberTypeIds?: number[] | null;
   rankIds?: number[] | null;
+  /** EquivalentName CodeIds — matched through RankEquivalent (RAB rank tier). */
+  rabRankIds?: number[] | null;
   corpsIds?: number[] | null;
   tradeIds?: number[] | null;
   rabOrgNodeIds?: number[] | null;

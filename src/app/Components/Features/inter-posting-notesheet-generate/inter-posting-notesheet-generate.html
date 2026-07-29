@@ -190,7 +190,7 @@
       </div>
 
       <div class="form-actions">
-        <p-button type="submit" [label]="editMode ? 'Update Note Sheet' : 'Generate Note Sheet'" [icon]="editMode ? 'pi pi-check' : 'pi pi-file-edit'" [loading]="isSubmitting" [disabled]="form.invalid" />
+        <p-button type="submit" [label]="editMode ? 'Update Note Sheet' : 'Generate Note Sheet'" [icon]="editMode ? 'pi pi-check' : 'pi pi-file-edit'" [loading]="isSubmitting" [disabled]="isSubmitting || form.invalid" />
       </div>
     </form>
 

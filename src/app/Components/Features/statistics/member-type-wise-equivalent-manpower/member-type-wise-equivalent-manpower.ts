@@ -1,9 +1,9 @@
-import { Component, HostListener, OnInit, inject } from '@angular/core';
+import { Component, HostListener, OnDestroy, OnInit, ViewChild, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Router } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { MultiSelectModule } from 'primeng/multiselect';
+import { MultiSelect, MultiSelectModule } from 'primeng/multiselect';
 import { firstValueFrom } from 'rxjs';
 import { Packer } from 'docx';
 import { ExportService } from '@/services/export.service';
@@ -34,7 +34,7 @@ type Lang = 'en' | 'bn';
     templateUrl: '../member-type-wise-manpower/member-type-wise-manpower.html',
     styleUrl: '../member-type-wise-manpower/member-type-wise-manpower.scss'
 })
-export class MemberTypeWiseEquivalentManpowerComponent implements OnInit {
+export class MemberTypeWiseEquivalentManpowerComponent implements OnInit, OnDestroy {
     canInsert = true;
     canUpdate = true;
     canDelete = true;
@@ -58,6 +58,8 @@ export class MemberTypeWiseEquivalentManpowerComponent implements OnInit {
     /** Options for p-multiselect */
     orgOptions: { label: string; value: number }[] = [];
     selectedOrgIds: number[] = [];
+
+    @ViewChild('orgSelect') private orgSelect?: MultiSelect;
 
     /** Org-tree node filter (Unit/Wing/Branch/…) — scopes Auth + Held server-side. */
     filterRabCodeId: number | null = null;
@@ -84,6 +86,25 @@ export class MemberTypeWiseEquivalentManpowerComponent implements OnInit {
 
     @HostListener('document:click')
     onDocumentClick(): void { this.exportDropdownOpen = false; }
+
+    /**
+     * PrimeNG closes the multiselect panel from a bubble-phase listener on `document`, so any
+     * ancestor calling stopPropagation() (the org-tree filter does) leaves the panel stuck open.
+     * Listening in the capture phase closes it on a click anywhere on the page.
+     */
+    private readonly closeOrgSelectOnOutsideClick = (event: Event): void => {
+        const ms = this.orgSelect;
+        if (!ms?.overlayVisible) return;
+
+        const target = event.target as Node | null;
+        if (!target) return;
+        if (ms.el.nativeElement.contains(target)) return;
+        // Panel renders inline by default; guard the appendTo="body" case too.
+        for (const panel of Array.from(document.querySelectorAll('.p-multiselect-overlay'))) {
+            if (panel.contains(target)) return;
+        }
+        ms.hide();
+    };
 
     onOrgTreeFilter(e: { codeId: number | null; label: string | null }): void {
         this.filterRabCodeId = e.codeId;
@@ -113,7 +134,13 @@ export class MemberTypeWiseEquivalentManpowerComponent implements OnInit {
         this.canUpdate = _perms.canUpdate;
         this.canDelete = _perms.canDelete;
 
+        document.addEventListener('click', this.closeOrgSelectOnOutsideClick, true);
+
         this.loadData();
+    }
+
+    ngOnDestroy(): void {
+        document.removeEventListener('click', this.closeOrgSelectOnOutsideClick, true);
     }
 
     loadData(): void {

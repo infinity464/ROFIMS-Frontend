@@ -240,6 +240,7 @@
                 [label]="editMode ? 'Update Office Order' : 'Generate Office Order'"
                 [icon]="editMode ? 'pi pi-save' : 'pi pi-file-export'"
                 [loading]="saving"
+                [disabled]="saving"
                 (onClick)="onGenerate()"
             ></p-button>
         </div>

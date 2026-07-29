@@ -21,6 +21,7 @@ import { ConfirmDialog } from 'primeng/confirmdialog';
 import { forkJoin, of } from 'rxjs';
 import { switchMap, catchError, map } from 'rxjs/operators';
 import { EmpService } from '@/services/emp-service';
+import { buildUploadOwnerTag } from '@/shared/utils/upload-file-name.util';
 import { SharedService } from '@/shared/services/shared-service';
 import { EmployeeBasicInfo } from '@/Components/Shared/employee-search/employee-search';
 import { FileReferencesFormComponent, FileRowData } from '@/Components/Common/file-references-form/file-references-form';
@@ -904,8 +905,8 @@ export class PermanentPostingMORecordComponent implements OnInit {
         const joExisting = this.joFileForm?.getExistingFileReferences() ?? [];
 
         const uploads$ = [
-            ...poNewFiles.map(r => this.empService.uploadEmployeeFile(r.file!)),
-            ...joNewFiles.map(r => this.empService.uploadEmployeeFile(r.file!))
+            ...poNewFiles.map(r => this.empService.uploadEmployeeFile(r.file!, undefined, buildUploadOwnerTag(this.postedOutEmployee?.rabid, this.postedOutEmployee?.employeeID))),
+            ...joNewFiles.map(r => this.empService.uploadEmployeeFile(r.file!, undefined, buildUploadOwnerTag(this.relieverEmployee?.rabid, this.joineeEmployeeId)))
         ];
 
         const proceed = (poUploaded: { fileId: number; fileName: string }[], joUploaded: { fileId: number; fileName: string }[]) => {

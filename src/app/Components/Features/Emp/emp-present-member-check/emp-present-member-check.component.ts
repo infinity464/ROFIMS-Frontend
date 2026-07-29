@@ -2,7 +2,6 @@ import { AfterViewInit, Component, ElementRef, OnInit, Output, EventEmitter, Vie
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
-import { InputNumberModule } from 'primeng/inputnumber';
 import { InputTextModule } from 'primeng/inputtext';
 import { ButtonModule } from 'primeng/button';
 import { SelectModule } from 'primeng/select';
@@ -25,7 +24,7 @@ import { UserMenuService } from '@/services/user-menu.service';
 @Component({
     selector: 'app-emp-present-member-check',
     standalone: true,
-    imports: [CommonModule, FormsModule, InputNumberModule, InputTextModule, ButtonModule, SelectModule, DialogModule, Fluid, TableModule, PartialDatePipe],
+    imports: [CommonModule, FormsModule, InputTextModule, ButtonModule, SelectModule, DialogModule, Fluid, TableModule, PartialDatePipe],
     templateUrl: './emp-present-member-check.component.html',
     styleUrl: './emp-present-member-check.component.scss'
 })
@@ -37,7 +36,7 @@ export class EmpPresentMemberCheckComponent implements OnInit, AfterViewInit {
     @ViewChild('serviceIdInput', { read: ElementRef }) serviceIdInput?: ElementRef<HTMLElement>;
 
     motherOrgId: number | null = null;
-    serviceId: number | null = null;
+    serviceId: string = '';
     nid: string = '';
 
     motherOrganizations: MotherOrganizationModel[] = [];
@@ -260,10 +259,20 @@ export class EmpPresentMemberCheckComponent implements OnInit, AfterViewInit {
         return rows;
     }
 
+    /** Keep only digits so leading zeros are preserved (a numeric input would strip them). */
+    onServiceIdInput(event: Event): void {
+        const input = event.target as HTMLInputElement;
+        const digitsOnly = (input.value ?? '').replace(/\D/g, '');
+        if (digitsOnly !== input.value) {
+            input.value = digitsOnly;
+        }
+        this.serviceId = digitsOnly;
+    }
+
     pickerYes(): void {
         this.showPickerDialog = false;
         this.pickerRows = [];
-        this.employeeNotFound.emit({ motherOrgId: this.motherOrgId, serviceId: this.serviceId != null ? String(this.serviceId) : '' });
+        this.employeeNotFound.emit({ motherOrgId: this.motherOrgId, serviceId: this.serviceId });
     }
 
     pickerNo(): void {
@@ -291,7 +300,7 @@ export class EmpPresentMemberCheckComponent implements OnInit, AfterViewInit {
         const empId = emp.EmployeeID ?? emp.employeeID;
         const orgId = emp.orgId ?? emp.OrgId;
         const prefixId = Number(emp.Prefix ?? emp.prefix);
-        const onYes = () => this.employeeNotFound.emit({ motherOrgId: this.motherOrgId, serviceId: this.serviceId != null ? String(this.serviceId) : '' });
+        const onYes = () => this.employeeNotFound.emit({ motherOrgId: this.motherOrgId, serviceId: this.serviceId });
 
         const rankInfo$ = empId != null && !Number.isNaN(Number(empId))
             ? this.empService.getEmployeeSearchInfo(Number(empId))
@@ -346,7 +355,7 @@ export class EmpPresentMemberCheckComponent implements OnInit, AfterViewInit {
     focusServiceId(): void {
         setTimeout(() => {
             const host = this.serviceIdInput?.nativeElement;
-            const input = host?.querySelector('input') as HTMLInputElement | null;
+            const input = (host instanceof HTMLInputElement ? host : host?.querySelector('input')) as HTMLInputElement | null;
             input?.focus();
         });
     }
@@ -354,7 +363,7 @@ export class EmpPresentMemberCheckComponent implements OnInit, AfterViewInit {
     /** Clear search inputs and ex-member results, then focus the Service ID input — use after save completes to start the next entry. */
     resetForNewSearch(): void {
         this.motherOrgId = null;
-        this.serviceId = null;
+        this.serviceId = '';
         this.nid = '';
         this.exMemberEmployee = null;
         this.exMemberViewList = [];
@@ -375,7 +384,7 @@ export class EmpPresentMemberCheckComponent implements OnInit, AfterViewInit {
 
     search(): void {
         const nidStr = (this.nid ?? '').trim();
-        const serviceIdStr = this.serviceId != null ? String(this.serviceId).trim() : '';
+        const serviceIdStr = (this.serviceId ?? '').trim();
 
         if (!nidStr && !serviceIdStr) {
             this.showInfo('Required', 'Please enter NID or Service ID (at least one)', 'warn');
@@ -439,7 +448,7 @@ export class EmpPresentMemberCheckComponent implements OnInit, AfterViewInit {
                         'Member Not Found',
                         'No Member found with the given NID/Service ID.',
                         'info',
-                        () => this.employeeNotFound.emit({ motherOrgId: this.motherOrgId, serviceId: this.serviceId != null ? String(this.serviceId) : '' })
+                        () => this.employeeNotFound.emit({ motherOrgId: this.motherOrgId, serviceId: this.serviceId })
                     );
                     return;
                 }

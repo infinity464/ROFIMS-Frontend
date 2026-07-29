@@ -22,6 +22,7 @@ import { DatePickerModule } from 'primeng/datepicker';
 import { ToastModule } from 'primeng/toast';
 
 import { EmpService } from '@/services/emp-service';
+import { buildUploadOwnerTag } from '@/shared/utils/upload-file-name.util';
 import { ForeignVisitInfoService, ForeignVisitInfoModel, ForeignVisitFamilyInfoModel } from '@/services/foreign-visit-info.service';
 import { CommonCodeService } from '@/services/common-code-service';
 import { FamilyInfoService, FamilyInfoModel } from '@/services/family-info-service';
@@ -135,6 +136,11 @@ export class EmpForeignVisit implements OnInit, OnDestroy {
         private fb: FormBuilder
     ) {
         this.initForm();
+    }
+
+    /** Logged-in user for createdBy / lastUpdatedBy. Falls back to 'system' only when nobody is signed in. */
+    private get auditUser(): string {
+        return this.sharedService.getCurrentUser() ?? 'system';
     }
 
     ngOnInit(): void {
@@ -539,8 +545,8 @@ export class EmpForeignVisit implements OnInit, OnDestroy {
                 remarks: (v.remarks && String(v.remarks).trim()) || null,
                 fileName: null,
                 filesReferences: filesReferencesJson ?? undefined,
-                createdBy: 'system',
-                lastUpdatedBy: 'system'
+                createdBy: this.auditUser,
+                lastUpdatedBy: this.auditUser
             };
 
             this.isSaving = true;
@@ -570,7 +576,7 @@ export class EmpForeignVisit implements OnInit, OnDestroy {
 
         if (filesToUpload.length > 0) {
             const uploads = filesToUpload.map((r: FileRowData) =>
-                this.empService.uploadEmployeeFile(r.file!, r.displayName?.trim() || r.file!.name)
+                this.empService.uploadEmployeeFile(r.file!, r.displayName?.trim() || r.file!.name, buildUploadOwnerTag(this.employeeBasicInfo?.rabid, this.selectedEmployeeId))
             );
             forkJoin(uploads).subscribe({
                 next: (results: unknown) => {
@@ -623,8 +629,8 @@ export class EmpForeignVisit implements OnInit, OnDestroy {
                     foreignVisitId,
                     familyId,
                     remarks: remarks || null,
-                    createdBy: 'system',
-                    lastUpdatedBy: 'system'
+                    createdBy: this.auditUser,
+                    lastUpdatedBy: this.auditUser
                 })
                 .subscribe({
                     next: () => done(),
@@ -724,8 +730,8 @@ export class EmpForeignVisit implements OnInit, OnDestroy {
                         foreignVisitId: this.editingVisitId!,
                         familyId: fid,
                         remarks: remarks || null,
-                        createdBy: 'system',
-                        lastUpdatedBy: 'system'
+                        createdBy: this.auditUser,
+                        lastUpdatedBy: this.auditUser
                     })
                     .subscribe({
                         next: () => {

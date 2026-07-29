@@ -79,6 +79,12 @@ export class AddDraftInterPostingComponent implements OnInit {
     /** All active Member Types (CommonCode 'EmployeeType'); `memberTypeOptions` exposes the accessible subset. */
     allMemberTypeOptions: { label: string; value: number }[] = [];
     selectedMemberTypeIds: number[] = [];
+    /** Previous selection — lets onMemberTypeChange tell an add apart from a remove. */
+    private prevMemberTypeIds: number[] = [];
+    /** Member types that must be selected/cleared together (all-or-none), matched
+     *  by English label so it works regardless of DB code ids. Officer is NOT here,
+     *  so it stays independently selectable. */
+    private static readonly GROUPED_MEMBER_TYPE_LABELS = ['dad', 'ors', 'civil'];
     /** Member type ids the logged-in user may access (null = not yet resolved / unrestricted). */
     allowedMemberTypeIds: number[] | null = null;
 
@@ -214,9 +220,15 @@ export class AddDraftInterPostingComponent implements OnInit {
             return;
         }
 
+        // Duplicate check is WITHIN THE SAME CATEGORY (skip if editing the same record). Officer and
+        // the DAD/ORs/Civil group have independent serials, so an identical number across categories
+        // is fine. The number itself is authoritative on the server; this is a friendly pre-check.
         const trimmedNo = this.draftPostingListNo.trim();
+        const currentIsOfficer = this.currentIsOfficer();
         const duplicate = this.draftMastersList.find(
-            (m) => m.draftInterPostingNo?.toLowerCase() === trimmedNo.toLowerCase() && m.id !== this.editDraftId
+            (m) => m.draftInterPostingNo?.toLowerCase() === trimmedNo.toLowerCase()
+                && m.id !== this.editDraftId
+                && this.masterIsOfficer(m) === currentIsOfficer
         );
         if (duplicate) {
             this.messageService.add({ severity: 'warn', summary: 'Duplicate', detail: `Draft Inter Posting List No "${trimmedNo}" already exists.` });
@@ -271,6 +283,7 @@ export class AddDraftInterPostingComponent implements OnInit {
                     this.loadDraftMasters();
                     this.selectedRows = [];
                     this.selectedMemberTypeIds = [];
+                    this.prevMemberTypeIds = [];
                     this.draftPostingDate = null;
                     this.draftPostingListNo = '';
                 }
@@ -296,25 +309,105 @@ export class AddDraftInterPostingComponent implements OnInit {
         });
     }
 
+    /** Officer's CommonCode id (matched by English label), if present. */
+    private getOfficerId(): number | undefined {
+        return this.allMemberTypeOptions.find((o) => (o.label || '').trim().toLowerCase() === 'officer')?.value;
+    }
+
+    /** The DAD / ORs / Civil ids (matched by English label). */
+    private getGroupIds(): number[] {
+        return this.allMemberTypeOptions
+            .filter((o) => AddDraftInterPostingComponent.GROUPED_MEMBER_TYPE_LABELS
+                .includes((o.label || '').trim().toLowerCase()))
+            .map((o) => o.value);
+    }
+
+    /** True when the current selection targets the Officer serial (any Officer type picked). */
+    private currentIsOfficer(): boolean {
+        const officerId = this.getOfficerId();
+        return officerId != null && this.selectedMemberTypeIds.includes(officerId);
+    }
+
+    /** True when a saved master belongs to the Officer serial (from its stored employeeTypeIds). */
+    private masterIsOfficer(m: DraftInterPostingMasterDto): boolean {
+        const officerId = this.getOfficerId();
+        if (officerId == null) return false;
+        return this.parseMemberTypeIds(m.employeeTypeIds).includes(officerId);
+    }
+
+    /**
+     * Member-type selection rules (mirrors Add Draft New Posting):
+     *  - Officer and the DAD/ORs/Civil group are MUTUALLY EXCLUSIVE — a draft is
+     *    for one category or the other, never both.
+     *  - The group is all-or-none: checking any of DAD/ORs/Civil selects all three;
+     *    unchecking any one clears all three.
+     * After normalizing, the previewed list number is refreshed for the chosen
+     * category (add mode), because Officer and Others have separate serials.
+     */
+    onMemberTypeChange(): void {
+        const officerId = this.getOfficerId();
+        const groupIds = this.getGroupIds();
+
+        const selected = new Set(this.selectedMemberTypeIds);
+        const prev = new Set(this.prevMemberTypeIds);
+        const added = [...selected].filter((id) => !prev.has(id));
+
+        const addedOfficer = officerId != null && added.includes(officerId);
+        const addedGroup = added.some((id) => groupIds.includes(id));
+
+        if (addedOfficer) {
+            // Officer chosen → Officer only (clear the group).
+            groupIds.forEach((id) => selected.delete(id));
+            selected.add(officerId!);
+        } else if (addedGroup) {
+            // A group member chosen → whole group, and clear Officer.
+            if (officerId != null) selected.delete(officerId);
+            groupIds.forEach((id) => selected.add(id));
+        } else {
+            // A removal happened → keep the group all-or-none.
+            const inGroup = groupIds.filter((id) => selected.has(id)).length;
+            if (inGroup > 0 && inGroup < groupIds.length) {
+                groupIds.forEach((id) => selected.delete(id));
+            }
+        }
+
+        // Re-materialize preserving catalog order.
+        this.selectedMemberTypeIds = this.allMemberTypeOptions
+            .map((o) => o.value)
+            .filter((v) => selected.has(v));
+        this.prevMemberTypeIds = [...this.selectedMemberTypeIds];
+
+        // The serial depends on the category, so refresh the preview (add mode only).
+        if (!this.isEditMode) this.generateDraftPostingListNo();
+    }
+
+    /**
+     * Preview of the next Draft Inter Posting List No as "<seq>/<year>" (e.g. 001/2026).
+     * PREVIEW ONLY — the authoritative number is assigned by the server on save (it ignores the
+     * value sent from the client). Officer and the other three member types (DAD/ORs/Civil) keep
+     * SEPARATE per-year serials that each start at 001 and reset when the year rolls over, so this
+     * mirrors the server: it counts only masters of the current year in the same (Officer / non-
+     * Officer) bucket. Empty until a member type is chosen.
+     */
     private generateDraftPostingListNo(): void {
-        const now = new Date();
-        const dd = String(now.getDate()).padStart(2, '0');
-        const mm = String(now.getMonth() + 1).padStart(2, '0');
-        const yyyy = now.getFullYear();
-        const datePrefix = `${dd}/${mm}/${yyyy}`;
+        if (!this.selectedMemberTypeIds || this.selectedMemberTypeIds.length === 0) {
+            this.draftPostingListNo = '';
+            return;
+        }
+        const year = new Date().getFullYear();
+        const isOfficer = this.currentIsOfficer();
 
         let maxSeq = 0;
         for (const m of this.draftMastersList) {
-            const no = m.draftInterPostingNo ?? '';
-            if (!no.startsWith(datePrefix + '//')) continue;
-            const parts = no.substring(datePrefix.length + 2).split('/');
-            const seq = parseInt(parts[0], 10);
+            const no = (m.draftInterPostingNo ?? '').trim();
+            const match = /^(\d+)\/(\d{4})$/.exec(no);
+            if (!match || parseInt(match[2], 10) !== year) continue;
+            if (this.masterIsOfficer(m) !== isOfficer) continue;
+            const seq = parseInt(match[1], 10);
             if (!isNaN(seq) && seq > maxSeq) maxSeq = seq;
         }
 
-        const seq = String(maxSeq + 1).padStart(3, '0');
-        const rand = String(Math.floor(1000 + Math.random() * 9000));
-        this.draftPostingListNo = `${datePrefix}//${seq}/${rand}`;
+        this.draftPostingListNo = `${String(maxSeq + 1).padStart(3, '0')}/${year}`;
     }
 
     viewEmployees(row: DraftInterPostingMasterDto): void {
@@ -470,6 +563,7 @@ export class AddDraftInterPostingComponent implements OnInit {
                 this.draftPostingDate = data.draftInterPostingDate ? this.parseDateFromApi(data.draftInterPostingDate) : null;
                 this.editDraftStatus = data.draftInterPostingStatus ?? '';
                 this.selectedMemberTypeIds = this.parseMemberTypeIds(data.employeeTypeIds);
+                this.prevMemberTypeIds = [...this.selectedMemberTypeIds];
                 this.loading = false;
             },
             error: (err: { error?: { description?: string }; message?: string }) => {
@@ -491,6 +585,7 @@ export class AddDraftInterPostingComponent implements OnInit {
         this.draftPostingListNo = '';
         this.selectedRows = [];
         this.selectedMemberTypeIds = [];
+        this.prevMemberTypeIds = [];
         this.loadData();
     }
 

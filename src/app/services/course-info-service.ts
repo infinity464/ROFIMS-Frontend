@@ -73,6 +73,22 @@ export interface PendingRftsFilterParams {
     joiningDateTo?: string | null;
     /** Optional hard cap. When omitted the server returns every pending member. */
     take?: number;
+    /**
+     * Restrict to employees already selected onto an RFTS Course / Reference.
+     * /emp-send-to-course sets this; /emp-rfts-course-ref must not, since it is
+     * the page that builds that selection.
+     */
+    onlyCourseRefMembers?: boolean;
+    /**
+     * Exclude employees already selected onto an RFTS Course / Reference — one
+     * employee, one course. /emp-rfts-course-ref sets this.
+     */
+    excludeCourseRefMembers?: boolean;
+    /**
+     * The course being edited. Its own members survive `excludeCourseRefMembers`
+     * so an edit can uncheck and re-check them. Omit when creating.
+     */
+    currentCourseRefId?: number | null;
 }
 
 @Injectable({
@@ -127,10 +143,14 @@ export class CourseInfoService {
     }
 
     /**
-     * Table view source for /emp-send-to-course: employees pending RFTS
+     * Table view source for the RFTS member pickers: employees pending RFTS
      * (IsRFTSComplted null or false). Unlike the autocomplete, an empty query
      * returns the full pending list. Optional filters narrow by org / member type /
      * rank / trade / joining-date range. Ex-members excluded; member-type scope applies.
+     *
+     * Pass `onlyCourseRefMembers` to further restrict to employees already selected
+     * onto an RFTS Course / Reference — /emp-send-to-course does, /emp-rfts-course-ref
+     * does not (it is the page that builds that selection).
      */
     getEmployeesPendingRfts(filter?: PendingRftsFilterParams): Observable<EmployeeSearchInfoModel[]> {
         let url = `${this.apiUrl}/GetEmployeesPendingRfts`;
@@ -144,10 +164,25 @@ export class CourseInfoService {
         if (filter?.joiningDateFrom) p.set('joiningDateFrom', filter.joiningDateFrom);
         if (filter?.joiningDateTo) p.set('joiningDateTo', filter.joiningDateTo);
         if (filter?.take != null) p.set('take', String(filter.take));
+        if (filter?.onlyCourseRefMembers) p.set('onlyCourseRefMembers', 'true');
+        if (filter?.excludeCourseRefMembers) p.set('excludeCourseRefMembers', 'true');
+        if (filter?.currentCourseRefId != null) p.set('currentCourseRefId', String(filter.currentCourseRefId));
         const qs = p.toString();
         if (qs) url += '?' + qs;
         return this.http
             .get<EmployeeSearchInfoModel[]>(url)
             .pipe(map((res) => (Array.isArray(res) ? res : [])));
+    }
+
+    /**
+     * Marks a member exempt from RAB Orientation Training — the API sets
+     * IsRFTSComplted to NotApplicable and stores `remark` in RftsRemark, after
+     * which the member no longer appears in any pending-RFTS list.
+     *
+     * The API answers 409 when RFTS is already complete for the member, or when
+     * they are already selected onto a course.
+     */
+    markRftsNotApplicable(employeeId: number, remark: string): Observable<any> {
+        return this.http.post(`${this.apiUrl}/MarkRftsNotApplicable`, { employeeId, remark });
     }
 }

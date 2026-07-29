@@ -89,6 +89,8 @@ import { EmpRankConfirmationComponent } from '@/Components/Features/Emp/emp-rank
 import { EmpEducationInfoComponent } from '@/Components/Features/Emp/emp-education-info/emp-education-info';
 import { EmpCourseInfoComponent } from '@/Components/Features/Emp/emp-course-info/emp-course-info';
 import { EmpSendToCourseComponent } from '@/Components/Features/Emp/emp-send-to-course/emp-send-to-course';
+import { EmpRftsCourseRefComponent } from '@/Components/Features/Emp/emp-rfts-course-ref/emp-rfts-course-ref';
+import { EmpRftsCourseListComponent } from '@/Components/Features/Emp/emp-rfts-course-list/emp-rfts-course-list';
 import { EmpDraftListComponent } from '@/Components/Features/Emp/emp-draft-list/emp-draft-list';
 import { EmpPendingFinalApprovalComponent } from '@/Components/Features/Emp/emp-pending-final-approval/emp-pending-final-approval';
 import { EmpRftsCompletedComponent } from '@/Components/Features/Emp/emp-rfts-completed/emp-rfts-completed';
@@ -361,10 +363,10 @@ export const appRoutes: Routes = [
             { path: 'notesheet-list/my-approval-ex-bd-leave', component: NotesheetListComponent, data: { section: 'my-pending', noteSheetTypeFilter: 'ExBDLeave' } },
             { path: 'notesheet-list/my-approval-new-posting', component: NotesheetListComponent, data: { section: 'my-pending', noteSheetTypeFilter: 'NewPosting' } },
             { path: 'notesheet-list/my-approval-inter-posting', component: NotesheetListComponent, data: { section: 'my-pending', noteSheetTypeFilter: 'InterPosting' } },
-            { path: 'notesheet-preview',         component: NotesheetPreviewComponent },
+            { path: 'notesheet-preview', component: NotesheetPreviewComponent },
             { path: 'notesheet-preview/general', component: NotesheetPreviewGeneralComponent },
             { path: 'notesheet-preview/posting', component: NotesheetPreviewPostingComponent },
-            { path: 'notesheet-preview/exbd',    component: NotesheetPreviewExbdComponent },
+            { path: 'notesheet-preview/exbd', component: NotesheetPreviewExbdComponent },
 
             // Leave Application (apply and approve/reject - standalone from notesheet)
             { path: 'leave-application/apply', component: LeaveApplicationApplyComponent },
@@ -376,7 +378,7 @@ export const appRoutes: Routes = [
             { path: 'leave-application/apply-for-other', component: LeaveApplyForOtherComponent },
             { path: 'leave-application/action-taken-by-me', component: LeaveActionTakenByMeComponent },
             { path: 'leave-application/card', component: LeaveCardComponent },
-            
+
             // EMP
             { path: 'emp-list', component: EmpList },
             { path: 'emp-basic-info', component: EmpBasicInfo, canActivate: [MemberTypePermissionGuard] },
@@ -395,6 +397,8 @@ export const appRoutes: Routes = [
             { path: 'emp-education-info', component: EmpEducationInfoComponent, canActivate: [MemberTypePermissionGuard] },
             { path: 'emp-course-info', component: EmpCourseInfoComponent, canActivate: [MemberTypePermissionGuard] },
             { path: 'emp-send-to-course', component: EmpSendToCourseComponent, canActivate: [MemberTypePermissionGuard] },
+            { path: 'emp-rfts-course-ref', component: EmpRftsCourseRefComponent, canActivate: [MemberTypePermissionGuard] },
+            { path: 'emp-rfts-course-list', component: EmpRftsCourseListComponent, canActivate: [MemberTypePermissionGuard] },
             { path: 'emp-draft-list', component: EmpDraftListComponent, canActivate: [MemberTypePermissionGuard] },
             { path: 'emp-pending-final-approval', component: EmpPendingFinalApprovalComponent, canActivate: [MemberTypePermissionGuard] },
             { path: 'emp-rfts-completed', component: EmpRftsCompletedComponent, canActivate: [MemberTypePermissionGuard] },

@@ -14,6 +14,7 @@ import { RadioButtonModule } from 'primeng/radiobutton';
 import { Button, ButtonModule } from 'primeng/button';
 import { CommonCodeModel } from '@/models/common-code-model';
 import { EmpService } from '@/services/emp-service';
+import { buildProfileImageFile, buildUploadOwnerTag } from '@/shared/utils/upload-file-name.util';
 import { FamilyInfoService } from '@/services/family-info-service';
 import { MotherOrganizationModel } from '@/models/mother-org-model';
 import { CommonCodeService } from '@/services/common-code-service';
@@ -128,6 +129,39 @@ export class ServingMemberEntry implements OnInit {
     isDuplicateRabId: boolean = false;
     isCheckingRabId: boolean = false;
 
+    // Duplicate reported by the server when Save was rejected (HTTP 409), held per field so the
+    // message can sit under the offending input. This is not the same as isDuplicate* above:
+    // the on-type check can come back clean and Save still be rejected, either because another
+    // operator saved the same ids in between, or because the conflicting member sits outside
+    // this operator's unit scope and so never appears in their search results.
+    // Cleared as soon as the operator edits the field — see wireDuplicateChecks().
+    serverDuplicateRabIdError: string | null = null;
+    serverDuplicateComboError: string | null = null;
+
+    /** True when either the on-type check or the server has flagged a duplicate. Blocks Save. */
+    get hasDuplicateBlock(): boolean {
+        return this.isDuplicateCombo || this.isDuplicateRabId || !!this.serverDuplicateRabIdError || !!this.serverDuplicateComboError;
+    }
+
+    /**
+     * Applies a 409 from SaveAsyn/UpdateAsyn to the form. The API names the offending control in
+     * Data.Field ('rabid' | 'serviceId'); anything else is shown against both id fields so the
+     * operator still sees where to look.
+     */
+    private applyServerDuplicate(err: any): void {
+        const message = err?.error?.description || 'RAB ID or Service ID already exist';
+        const field = err?.error?.data?.field ?? err?.error?.Data?.Field ?? null;
+
+        if (field === 'rabid') {
+            this.serverDuplicateRabIdError = message;
+        } else if (field === 'serviceId') {
+            this.serverDuplicateComboError = message;
+        } else {
+            this.serverDuplicateRabIdError = message;
+            this.serverDuplicateComboError = message;
+        }
+    }
+
     checkDuplicateRabId(): void {
         const rabId = this.postingForm?.get('rabid')?.value;
         const rabIdStr = rabId != null ? String(rabId).trim() : '';
@@ -237,6 +271,11 @@ export class ServingMemberEntry implements OnInit {
 
     // Save All - Employee + All Addresses
     saveAll(): void {
+        // Guard against double submission while a save is already in flight.
+        if (this.isSaving) {
+            return;
+        }
+
         if (this.postingForm.invalid) {
             Object.keys(this.postingForm.controls).forEach((key) => {
                 this.postingForm.get(key)?.markAsTouched();
@@ -249,20 +288,20 @@ export class ServingMemberEntry implements OnInit {
             return;
         }
 
-        if (this.isDuplicateCombo) {
+        if (this.isDuplicateCombo || this.serverDuplicateComboError) {
             this.messageService.add({
                 severity: 'warn',
                 summary: 'Duplicate Entry',
-                detail: 'A member with the same Mother Organization + Prefix + Service ID already exists'
+                detail: this.serverDuplicateComboError || 'A member with the same Mother Organization + Prefix + Service ID already exists'
             });
             return;
         }
 
-        if (this.isDuplicateRabId) {
+        if (this.isDuplicateRabId || this.serverDuplicateRabIdError) {
             this.messageService.add({
                 severity: 'warn',
                 summary: 'Duplicate RAB ID',
-                detail: 'A member with the same RAB ID already exists'
+                detail: this.serverDuplicateRabIdError || 'A member with the same RAB ID already exists'
             });
             return;
         }
@@ -296,18 +335,27 @@ export class ServingMemberEntry implements OnInit {
             return;
         }
 
+        // From here on a request will be issued — lock the Save button until the flow settles.
+        this.isSaving = true;
+
         const doSave = (profileImgsJson: string | null) => {
             this.saveEmployeeWithFilesRefs(this.formattedDataForEmployee(), null, profileImgsJson, permanentData!, presentData!, spousePermanentData, spousePresentData);
         };
 
         // Only the profile image is uploaded here (no Files/Supporting Documents section).
         if (this.selectedFile) {
-            this.empService.uploadEmployeeFile(this.selectedFile, this.selectedFileName || this.selectedFile.name).subscribe({
+            // Store the profile image as <RABID>_<timestamp>.<ext> instead of the user's original file name.
+            // Built once per picked image so a repeated Save re-uploads nothing (see EmpService.uploadEmployeeFile).
+            const renamedFile = (this.profileUploadFile ??= buildProfileImageFile(this.selectedFile, this.postingForm?.get('rabid')?.value, this.employeeId));
+            this.selectedFile = renamedFile;
+            this.selectedFileName = renamedFile.name;
+            this.empService.uploadEmployeeFile(renamedFile, renamedFile.name, this.uploadOwnerTag()).subscribe({
                 next: (profileResult: any) => {
                     const profileImagesJson = profileResult ? JSON.stringify([{ FileId: profileResult.fileId, fileName: profileResult.fileName }]) : this.getProfileImagesJson();
                     doSave(profileImagesJson);
                 },
                 error: (err) => {
+                    this.isSaving = false;
                     console.error('Error uploading profile image', err);
                     this.messageService.add({
                         severity: 'error',
@@ -443,6 +491,7 @@ export class ServingMemberEntry implements OnInit {
                         )
                     ).subscribe();
                 } else {
+                    this.isSaving = false;
                     this.messageService.add({
                         severity: 'error',
                         summary: 'Error',
@@ -451,11 +500,29 @@ export class ServingMemberEntry implements OnInit {
                 }
             },
             error: (err) => {
+                this.isSaving = false;
                 console.error('Error saving employee', err);
+
+                // 409 = the server rejected this member as a duplicate, either because another
+                // operator saved the same RAB ID / Service ID between our on-type check and this
+                // Save, or because the conflicting member is outside our unit scope and never
+                // showed up in that check. Flag the field from the server response — re-running
+                // the client check would come back clean in the second case.
+                if (err?.status === 409) {
+                    this.applyServerDuplicate(err);
+                    this.messageService.add({
+                        severity: 'warn',
+                        summary: 'Duplicate Entry',
+                        detail: err?.error?.description || 'RAB ID or Service ID already exist',
+                        life: 10000
+                    });
+                    return;
+                }
+
                 this.messageService.add({
                     severity: 'error',
                     summary: 'Error',
-                    detail: 'Failed to save employee'
+                    detail: err?.error?.description || 'Failed to save employee'
                 });
             }
         });
@@ -485,7 +552,7 @@ export class ServingMemberEntry implements OnInit {
             PassportNo: null,
             Email: null,
             CreatedDate: nowIso,
-            LastUpdatedBy: 'system',
+            LastUpdatedBy: this.auditUser,
             Lastupdate: nowIso,
             StatusDate: nowIso,
             FMID: this.spouseFmid != null ? this.spouseFmid : 0
@@ -528,9 +595,9 @@ export class ServingMemberEntry implements OnInit {
                 PostOfficeType: data.postOffice,
                 HouseRoad: data.houseRoad || '',
                 Active: true,
-                CreatedBy: 'system',
+                CreatedBy: this.auditUser,
                 CreatedDate: new Date().toISOString(),
-                LastUpdatedBy: 'system',
+                LastUpdatedBy: this.auditUser,
                 Lastupdate: new Date().toISOString()
             };
         };
@@ -553,6 +620,7 @@ export class ServingMemberEntry implements OnInit {
 
         forkJoin(saveRequests).subscribe({
             next: (results: any) => {
+                this.isSaving = false;
                 this.permanentAddress = permanent;
                 this.presentAddress = present;
                 if (spousePermanent) this.spousePermanentAddress = spousePermanent;
@@ -570,9 +638,10 @@ export class ServingMemberEntry implements OnInit {
                     detail: 'Serving member and addresses saved successfully!'
                 });
 
-                this.resetForNewEntry();
+                this.onReset();
             },
             error: (err: any) => {
+                this.isSaving = false;
                 console.error('Error saving addresses', err);
                 this.messageService.add({
                     severity: 'error',
@@ -613,11 +682,24 @@ export class ServingMemberEntry implements OnInit {
     tribalOptions = [{ label: 'No', value: 0 }, { label: 'Yes', value: 1 }];
     freedomFighterOptions = [{ label: 'No', value: 0 }, { label: 'Yes', value: 1 }];
     yesNoOptions = [{ label: 'No', value: false }, { label: 'Yes', value: true }];
+    /**
+     * RAB Orientation Training — three states, not a yes/no. Values match the
+     * RftsStatus enum stored in EmployeeInfo.IsRFTSComplted (0/1/2); leaving the
+     * control empty sends null, which the API reads as "not set" and treats as No.
+     * Kept separate from yesNoOptions, which other fields share.
+     */
+    rftsStatusOptions = [
+        { label: 'No', value: 0 },
+        { label: 'Yes', value: 1 },
+        { label: 'Not Applicable', value: 2 }
+    ];
     leavingStatusOptions = [{ label: 'In Leaving', value: true }, { label: 'Out Leaving', value: false }];
     presentStatusTypes: any[] = PresentStatusTypeOptions;
 
     imagePreview: string | null = null;
     selectedFile: File | null = null;
+    /** The picked image renamed for upload. Kept so repeated Saves reuse one upload; cleared whenever the image changes. */
+    private profileUploadFile: File | null = null;
     private readonly MAX_FACES_PER_EMPLOYEE = 10;
 
     profileImageRef: { fileId: number; fileName: string } | null = null;
@@ -627,7 +709,7 @@ export class ServingMemberEntry implements OnInit {
     lastUnitOrganizations: MotherOrganizationModel[] = [];
     memberTypes: CommonCodeModel[] = [];
     batches: CommonCodeModel[] = [];
-    specialQualificationOptions: CommonCodeModel[] = [];
+    specialQualificationOptions: (CommonCodeModel & { displayLabel?: string })[] = [];
     officerTypes: CommonCodeModel[] = [];
     appointments: CommonCodeModel[] = [];
     ranks: CommonCodeModel[] = [];
@@ -651,6 +733,8 @@ export class ServingMemberEntry implements OnInit {
     newLastUnitNameEN: string = '';
     newLastUnitNameBN: string = '';
     isSavingLastUnit: boolean = false;
+    /** True while a Save All request is in flight — disables the Save button to prevent double submits. */
+    isSaving: boolean = false;
 
     constructor(
         private fb: FormBuilder,
@@ -668,6 +752,11 @@ export class ServingMemberEntry implements OnInit {
         private presentStatusService: PresentStatusInfoService
     ) {}
 
+    /** Logged-in user for CreatedBy / LastUpdatedBy. Falls back to 'system' only when nobody is signed in. */
+    private get auditUser(): string {
+        return this.sharedService.getCurrentUser() ?? 'system';
+    }
+
     private allowedMemberTypeIds: number[] | null = null;
     private allRanksForOrg: CommonCodeModel[] = [];
 
@@ -681,6 +770,10 @@ export class ServingMemberEntry implements OnInit {
         this.loadCurrentUserMemberTypePermissions();
 
         ['motherOrganization', 'prefix', 'serviceId'].forEach((field) => {
+            // Drop a server-reported duplicate the moment the operator starts changing the
+            // combination — undebounced, so the message clears on the first keystroke.
+            this.postingForm.get(field)?.valueChanges.subscribe(() => (this.serverDuplicateComboError = null));
+
             this.postingForm.get(field)?.valueChanges.pipe(
                 debounceTime(500),
                 distinctUntilChanged()
@@ -688,6 +781,7 @@ export class ServingMemberEntry implements OnInit {
         });
 
         // Real-time duplicate check on RAB ID
+        this.postingForm.get('rabid')?.valueChanges.subscribe(() => (this.serverDuplicateRabIdError = null));
         this.postingForm.get('rabid')?.valueChanges.pipe(
             debounceTime(500),
             distinctUntilChanged()
@@ -805,9 +899,9 @@ export class ServingMemberEntry implements OnInit {
             postingAuth: v.postingAuth || null,
             remarks: v.remarks || null,
             filesReferences: null,
-            createdBy: 'system',
+            createdBy: this.auditUser,
             createdDate: now,
-            lastUpdatedBy: 'system',
+            lastUpdatedBy: this.auditUser,
             lastupdate: now
         };
 
@@ -867,6 +961,28 @@ export class ServingMemberEntry implements OnInit {
         });
     }
 
+    /**
+     * Preselects the personal-info defaults (Religion = Islam, Medical Category =
+     * "A (AYEE)"). Both come from common-code lookups, so this runs once the
+     * options arrive and again after every reset. Existing values are never
+     * overwritten, so a user's own choice — including clearing a field — sticks.
+     */
+    private applyPersonalDefaults(): void {
+        if (!this.personalInfoForm) return;
+
+        const religionControl = this.personalInfoForm.get('religion');
+        if (religionControl && religionControl.value == null) {
+            const islam = this.religions.find((r) => r.label?.trim().toLowerCase().startsWith('islam'));
+            if (islam) religionControl.setValue(islam.value);
+        }
+
+        const medicalControl = this.personalInfoForm.get('medicalCategory');
+        if (medicalControl && medicalControl.value == null) {
+            const defaultCat = this.medicalCategories.find((c) => (c.label ?? '').trim().toLowerCase() === 'a (ayee)');
+            if (defaultCat) medicalControl.setValue(defaultCat.value);
+        }
+    }
+
     private loadPersonalDropdownData(): void {
         const map = (d: any) => ({ label: d.codeValueEN ?? d.CodeValueEN ?? '', value: d.codeId ?? d.CodeId });
         this.commonCodeService.getAllActiveCommonCodesType('BloodGroup').subscribe({
@@ -874,7 +990,10 @@ export class ServingMemberEntry implements OnInit {
             error: (err) => console.error(err)
         });
         this.commonCodeService.getAllActiveCommonCodesType('Religion').subscribe({
-            next: (res) => (this.religions = (res ?? []).map(map)),
+            next: (res) => {
+                this.religions = (res ?? []).map(map);
+                this.applyPersonalDefaults();
+            },
             error: (err) => console.error(err)
         });
         this.commonCodeService.getAllActiveCommonCodesType('ProfessionalQualification').subscribe({
@@ -896,12 +1015,7 @@ export class ServingMemberEntry implements OnInit {
         this.commonCodeService.getAllActiveCommonCodesType('MedicalCategoryType').subscribe({
             next: (res) => {
                 this.medicalCategories = (res ?? []).map((d: any) => ({ label: d.codeValueEN ?? String(d.codeId), value: d.codeId }));
-                // Default-select "A (AYEE)" (case-insensitive match on label).
-                const ctrl = this.personalInfoForm.get('medicalCategory');
-                if (ctrl && ctrl.value == null) {
-                    const defaultCat = this.medicalCategories.find((c) => (c.label ?? '').trim().toLowerCase() === 'a (ayee)');
-                    if (defaultCat) ctrl.setValue(defaultCat.value);
-                }
+                this.applyPersonalDefaults();
             },
             error: (err) => console.error(err)
         });
@@ -910,7 +1024,8 @@ export class ServingMemberEntry implements OnInit {
     /** Save personal information for the just-saved member (Supporting Documents excluded → FilesReferences null). */
     private savePersonalInfo(employeeId: number): void {
         const formValue = this.personalInfoForm.getRawValue();
-        const toIso = (d: any) => (d ? new Date(d).toISOString().split('T')[0] : null);
+        // Use local Y/M/D — toISOString() would shift the picked date back a day in UTC+ zones.
+        const toIso = (d: any) => this.formatDate(d);
 
         const feet = Number(formValue.heightFeet) || 0;
         const inch = Number(formValue.heightInch) || 0;
@@ -949,9 +1064,9 @@ export class ServingMemberEntry implements OnInit {
             ServiceIdCardNo: formValue.serviceIdCardNo,
             PresentStatus: formValue.presentStatus || null,
             FilesReferences: null,
-            CreatedBy: 'system',
+            CreatedBy: this.auditUser,
             CreatedDate: new Date().toISOString(),
-            LastUpdatedBy: 'system',
+            LastUpdatedBy: this.auditUser,
             Lastupdate: new Date().toISOString()
         };
 
@@ -995,9 +1110,9 @@ export class ServingMemberEntry implements OnInit {
             DeceasedReason: null,
             SupportingDocFilesReferences: null,
             IsActive: true,
-            CreatedBy: 'system',
+            CreatedBy: this.auditUser,
             CreatedDate: now,
-            LastUpdatedBy: 'system',
+            LastUpdatedBy: this.auditUser,
             Lastupdate: now
         };
 
@@ -1029,6 +1144,7 @@ export class ServingMemberEntry implements OnInit {
                 return;
             }
             this.selectedFile = file;
+            this.profileUploadFile = null;
             this.selectedFileName = file.name;
             this.postingForm.patchValue({ picture: file });
 
@@ -1038,9 +1154,15 @@ export class ServingMemberEntry implements OnInit {
         }
     }
 
+    /** Owner tag for uploads from this form — the RAB ID being entered, falling back to the saved employee id. */
+    private uploadOwnerTag(): string {
+        return buildUploadOwnerTag(this.postingForm?.get('rabid')?.value, this.employeeId);
+    }
+
     removeImage(): void {
         this.imagePreview = null;
         this.selectedFile = null;
+        this.profileUploadFile = null;
         this.selectedFileName = '';
         this.profileImageRef = null;
         this.postingForm.patchValue({ picture: null });
@@ -1244,16 +1366,32 @@ export class ServingMemberEntry implements OnInit {
 
     loadSpecialQualifications(): void {
         this.commonCodeService.getAllActiveCommonCodesType('SpecialQualification').subscribe({
-            next: (res) => (this.specialQualificationOptions = res ?? []),
+            next: (res) =>
+                (this.specialQualificationOptions = (res ?? []).map((item: any) => ({
+                    ...item,
+                    displayLabel: item.codeValueBN ? `${item.codeValueEN} (${item.codeValueBN})` : item.codeValueEN
+                }))),
             error: (err) => console.log(err)
         });
     }
 
     loadGender() {
         this.commonCodeService.getAllActiveCommonCodesType('Gender').subscribe({
-            next: (res) => { this.genders = res; },
+            next: (res) => {
+                this.genders = res;
+                this.applyDefaultGender();
+            },
             error: (err) => console.log(err)
         });
+    }
+
+    /** Preselects Male when no gender has been chosen yet. */
+    private applyDefaultGender(): void {
+        const genderControl = this.postingForm?.get('gender');
+        if (!genderControl || genderControl.value != null) return;
+
+        const male = this.genders.find((g) => g.codeValueEN?.trim().toLowerCase() === 'male');
+        if (male) genderControl.setValue(male.codeId);
     }
 
     loadMaritalStatus(): void {
@@ -1416,21 +1554,22 @@ export class ServingMemberEntry implements OnInit {
             tradeMark: [''],
             gender: [null, Validators.required],
             maritalStatus: [null],
-            isRFTSComplted: [null],
+            isRFTSComplted: [1],   // RftsStatus.Yes
             relationship: [null],
             spouseName: [''],
             prefix: [null, Validators.required],
-            serviceId: ['', [Validators.required]],
+            // Digits only, kept as a string so leading zeros (e.g. "0012345") survive.
+            serviceId: ['', [Validators.required, Validators.pattern(/^\d+$/)]],
             // Serving Member form: RAB ID is editable AND required (real IDs already exist).
-            rabid: ['', [Validators.required]],
+            rabid: ['', [Validators.required, Validators.pattern(/^\d+$/)]],
             nid: [''],
             fullNameEN: ['', [Validators.required, Validators.minLength(2)]],
             fullNameBN: ['', [Validators.required, Validators.minLength(2)]],
             postingStatus: [PostingStatus.Servings],
             status: [true],
-            createdBy: ['system'],
+            createdBy: [this.auditUser],
             createdDate: [new Date()],
-            lastUpdatedBy: ['system'],
+            lastUpdatedBy: [this.auditUser],
             lastupdate: [new Date()],
             statusDate: [new Date()],
             lastMotherUnitLocation: [''],
@@ -1450,27 +1589,12 @@ export class ServingMemberEntry implements OnInit {
         return `${year}-${month}-${day}`;
     }
 
+    /**
+     * Reset button and post-save cleanup share one path so every section of the
+     * page (posting, service, personal, addresses) returns to its default state.
+     */
     onReset(): void {
-        const now = new Date();
-        this.postingForm.reset({
-            employeeID: 0,
-            status: true,
-            specialQualifications: [],
-            postingStatus: PostingStatus.Servings,
-            createdBy: 'system',
-            createdDate: now,
-            lastUpdatedBy: 'system',
-            lastupdate: now,
-            statusDate: now
-        });
-        this.imagePreview = null;
-        this.selectedFile = null;
-        this.selectedFileName = '';
-        if (this.fileUpload) this.fileUpload.clear();
-    }
-
-    private resetForNewEntry(): void {
-        this.onReset();
+        this.resetPostingSection();
 
         this.generatedEmployeeId = null;
         this.permanentAddressId = undefined;
@@ -1485,6 +1609,8 @@ export class ServingMemberEntry implements OnInit {
         this.spousePresentAddress = undefined;
         this.isDuplicateCombo = false;
         this.isDuplicateRabId = false;
+        this.serverDuplicateComboError = null;
+        this.serverDuplicateRabIdError = null;
 
         this.presentAddressConfig.employeeId = 0;
         this.permanentAddressConfig.employeeId = 0;
@@ -1503,8 +1629,39 @@ export class ServingMemberEntry implements OnInit {
         this.rabSectionOptions = [];
         this.rabSubSectionOptions = [];
 
-        this.personalInfoForm.reset({ investigationExperience: false, presentStatus: PresentStatusType.OnDuty });
+        this.personalInfoForm.reset({
+            investigationExperience: false,
+            presentStatus: PresentStatusType.OnDuty,
+            tribal: 0,
+            freedomFighter: 0,
+            professionalQualification: [],
+            personalQualification: [],
+            gallantryAward: []
+        });
+        this.applyPersonalDefaults();
         this.showInvestigationExperience = false;
+    }
+
+    private resetPostingSection(): void {
+        const now = new Date();
+        this.postingForm.reset({
+            employeeID: 0,
+            status: true,
+            specialQualifications: [],
+            postingStatus: PostingStatus.Servings,
+            createdBy: this.auditUser,
+            createdDate: now,
+            lastUpdatedBy: this.auditUser,
+            lastupdate: now,
+            statusDate: now,
+            isRFTSComplted: 1   // RftsStatus.Yes
+        });
+        this.applyDefaultGender();
+        this.imagePreview = null;
+        this.selectedFile = null;
+        this.profileUploadFile = null;
+        this.selectedFileName = '';
+        if (this.fileUpload) this.fileUpload.clear();
     }
 
     capitalizeWords(fieldName: string): void {
@@ -1517,6 +1674,18 @@ export class ServingMemberEntry implements OnInit {
             .toLowerCase()
             .replace(/\b\p{L}/gu, (ch) => ch.toUpperCase());
         if (formatted !== value) field!.setValue(formatted);
+    }
+
+    /**
+     * Strip everything but digits as the user types. The control stays a string so
+     * leading zeros are preserved (a numeric input/parse would drop them).
+     */
+    onDigitsOnlyInput(event: Event, fieldName: string): void {
+        const input = event.target as HTMLInputElement;
+        const digitsOnly = (input.value ?? '').replace(/\D/g, '');
+        if (digitsOnly === input.value) return;
+        input.value = digitsOnly;
+        this.postingForm.get(fieldName)?.setValue(digitsOnly);
     }
 
     isFieldInvalid(fieldName: string): boolean {

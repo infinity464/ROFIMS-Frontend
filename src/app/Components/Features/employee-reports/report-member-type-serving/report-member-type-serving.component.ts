@@ -1,4 +1,4 @@
-import { Component, HostListener, OnDestroy, OnInit } from '@angular/core';
+﻿import { Component, HostListener, OnDestroy, OnInit } from '@angular/core';
 import { Router } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -115,6 +115,15 @@ export class ReportMemberTypeServingComponent implements OnInit, OnDestroy {
     selectedTradeIds: number[] = [];
     /** Raw org-scoped MotherOrgRank rows, re-filtered client-side by Member Type. */
     private allRanksForOrg: CommonCodeModel[] = [];
+
+    /**
+     * RAB Rank filter — universal rank tiers (EquivalentName common codes),
+     * mapped to per-org Mother Org Ranks by basic-setup/rank-equivalent. Not
+     * org-scoped, so the list loads once on init and stays enabled regardless
+     * of the Mother Organization picked. Mutually exclusive with Rank.
+     */
+    rabRankOptions: { label: string; labelBn: string; value: number }[] = [];
+    selectedRabRankIds: number[] = [];
 
     /** Joining-in-RAB date range (maps to registry `joiningDate`). */
     joiningInRabFrom: Date | null = null;
@@ -274,7 +283,7 @@ export class ReportMemberTypeServingComponent implements OnInit, OnDestroy {
         if (key === 'serviceId') {
             const r = row as any;
             const prefix = this.codeValue(r.prefix, r.prefixBN);
-            const svc = r.serviceId != null && r.serviceId !== '' ? String(r.serviceId) : '';
+            const svc = r.serviceId != null && r.serviceId !== '' ? this.displayNum(r.serviceId) : '';
             const px = prefix && prefix !== '-' && prefix !== '—' ? prefix : '';
             return [px, svc].filter((s) => s).join(' ') || '—';
         }
@@ -283,7 +292,7 @@ export class ReportMemberTypeServingComponent implements OnInit, OnDestroy {
         const en = (row as any)[map.en] as string | null | undefined;
         const bn = map.bn ? (row as any)[map.bn] as string | null | undefined : undefined;
         if (ReportMemberTypeServingComponent.dateColumnKeys.has(key)) return this.formatDate(en);
-        const value = this.codeValue(en, bn);
+        const value = (key === 'nid' || key === 'mobileNo') ? this.displayNum(this.codeValue(en, bn)) : this.codeValue(en, bn);
         // RAB Unit hierarchy is a comma-joined chain (Battalion, Wing, Branch,
         // Sub-Branch, Section, Sub-Section). Show only the first two levels
         // (Unit, Wing) + the deepest level instead of the full chain.
@@ -457,6 +466,7 @@ export class ReportMemberTypeServingComponent implements OnInit, OnDestroy {
         }
         multi(this.selectedOrgIds, this.orgOptions, L['report.search.motherOrg']);
         multi(this.selectedRankIds, this.rankOptions, L['report.search.rank']);
+        multi(this.selectedRabRankIds, this.rabRankOptions, L['report.title.rabRank']);
         multi(this.selectedCorpsIds, this.corpsOptions, L['report.table.corps'] ?? 'Corps');
         multi(this.selectedTradeIds, this.tradeOptions, L['report.search.trade']);
         if (this.joiningInRabFrom != null) {
@@ -533,6 +543,7 @@ export class ReportMemberTypeServingComponent implements OnInit, OnDestroy {
         this.loadMemberTypes();
         this.loadOrgNodeLabels();
         this.loadOrgs();
+        this.loadRabRankOptions();
 
         this.idSearchSub = this.idSearchInput$
             .pipe(debounceTime(400))
@@ -675,6 +686,24 @@ export class ReportMemberTypeServingComponent implements OnInit, OnDestroy {
         });
     }
 
+    /** RAB Rank tiers — EquivalentName common codes (org-independent). */
+    loadRabRankOptions(): void {
+        this.commonCodeService.getAllActiveCommonCodesType('EquivalentName').subscribe({
+            next: (codes: CommonCodeModel[]) => (this.rabRankOptions = this.mapCodes(codes || [])),
+            error: () => (this.rabRankOptions = []),
+        });
+    }
+
+    /**
+     * Rank changed → drop any RAB Rank selection. The two are alternative ways
+     * of asking the same question (per-org Mother Org Rank vs. the universal
+     * tier it maps to), so only one may be active at a time — the template
+     * disables RAB Rank while a Rank is picked.
+     */
+    onRankChange(): void {
+        if (this.selectedRankIds.length) this.selectedRabRankIds = [];
+    }
+
     /** Member Type changed → re-filter the org-scoped ranks by parentCodeId. */
     onMemberTypeChange(): void {
         this.applyRankMemberTypeFilter();
@@ -727,6 +756,7 @@ export class ReportMemberTypeServingComponent implements OnInit, OnDestroy {
         if (this.selectedOrgNodeIds.length > 0) c++;
         if (this.selectedOrgIds.length > 0) c++;
         if (this.selectedRankIds.length > 0) c++;
+        if (this.selectedRabRankIds.length > 0) c++;
         if (this.selectedCorpsIds.length > 0) c++;
         if (this.selectedTradeIds.length > 0) c++;
         if (this.joiningInRabFrom != null) c++;
@@ -750,6 +780,7 @@ export class ReportMemberTypeServingComponent implements OnInit, OnDestroy {
         this.selectedOrgNodeIds = [];
         this.selectedOrgIds = [];
         this.selectedRankIds = [];
+        this.selectedRabRankIds = [];
         this.selectedCorpsIds = [];
         this.selectedTradeIds = [];
         this.rankOptions = [];
@@ -776,12 +807,16 @@ export class ReportMemberTypeServingComponent implements OnInit, OnDestroy {
 
     /** Keystroke in the toolbar search — debounced auto-search. */
     onIdSearchInput(): void {
-        this.idSearchInput$.next((this.idSearchText ?? '').trim());
+        // Bangla digits typed/pasted into the ID search are normalized to
+        // Western digits so they match the stored Service ID / RAB ID.
+        this.idSearchText = BanglaNumerals.toWestern(this.idSearchText ?? '');
+        this.idSearchInput$.next(this.idSearchText.trim());
     }
 
     /** Enter / search icon — search immediately, skipping the debounce. */
     onIdSearch(): void {
-        this.applyIdSearch((this.idSearchText ?? '').trim());
+        this.idSearchText = BanglaNumerals.toWestern(this.idSearchText ?? '');
+        this.applyIdSearch(this.idSearchText.trim());
     }
 
     clearIdSearch(): void {
@@ -869,6 +904,10 @@ export class ReportMemberTypeServingComponent implements OnInit, OnDestroy {
             criteria.push({ fieldKey: 'motherOrganization', idValues: this.selectedOrgIds });
         if (this.selectedRankIds.length > 0)
             criteria.push({ fieldKey: 'armyRank', idValues: this.selectedRankIds });
+        // RAB Rank tiers resolve to the matching Mother Org Ranks server-side
+        // via the RankEquivalent map.
+        if (this.selectedRabRankIds.length > 0)
+            criteria.push({ fieldKey: 'rabRankEquivalent', idValues: this.selectedRabRankIds });
         if (this.selectedCorpsIds.length > 0)
             criteria.push({ fieldKey: 'corps', idValues: this.selectedCorpsIds });
         if (this.selectedTradeIds.length > 0)
@@ -953,7 +992,7 @@ export class ReportMemberTypeServingComponent implements OnInit, OnDestroy {
 
     private async exportRabWord(): Promise<void> {
         const isBn = this.lang === 'bn';
-        const bnFont = { ascii: 'Times New Roman', hAnsi: 'Times New Roman', cs: 'Nirmala UI', hint: 'cs' as const };
+        const bnFont = { ascii: 'Times New Roman', hAnsi: 'Times New Roman', cs: 'SolaimanLipi', hint: 'cs' as const };
         const bnLang = { value: 'bn-BD', bidirectional: 'bn-BD' } as any;
         const sans = isBn ? (bnFont as any) : 'Calibri';
         const serif = isBn ? (bnFont as any) : 'Cambria';
@@ -1119,8 +1158,8 @@ export class ReportMemberTypeServingComponent implements OnInit, OnDestroy {
     private buildRabPrintHtml(): string {
         const esc = (s: unknown) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;');
         const isBn = this.lang === 'bn';
-        const serif = isBn ? "'Times New Roman', 'Nirmala UI', serif" : "'Times New Roman', serif";
-        const sans = isBn ? "'Times New Roman', 'Nirmala UI', sans-serif" : "'Times New Roman', sans-serif";
+        const serif = isBn ? "'Times New Roman', 'SolaimanLipi', serif" : "'Times New Roman', serif";
+        const sans = isBn ? "'Times New Roman', 'SolaimanLipi', sans-serif" : "'Times New Roman', sans-serif";
         const mono = "'JetBrains Mono', 'Consolas', 'Courier New', monospace";
 
         const visibleCols = this.visibleColumns;

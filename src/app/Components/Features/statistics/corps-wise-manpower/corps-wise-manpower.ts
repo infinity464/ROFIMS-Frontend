@@ -1,9 +1,9 @@
-import { Component, HostListener, OnInit, inject } from '@angular/core';
+import { Component, HostListener, OnDestroy, OnInit, QueryList, ViewChildren, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Router } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { MultiSelectModule } from 'primeng/multiselect';
+import { MultiSelect, MultiSelectModule } from 'primeng/multiselect';
 import { forkJoin, of, firstValueFrom } from 'rxjs';
 import { catchError } from 'rxjs/operators';
 import { Packer } from 'docx';
@@ -33,7 +33,7 @@ type CorpsOrgBlock = CorpsWiseManpowerResponse;
     templateUrl: './corps-wise-manpower.html',
     styleUrl: './corps-wise-manpower.scss'
 })
-export class CorpsWiseManpowerComponent implements OnInit {
+export class CorpsWiseManpowerComponent implements OnInit, OnDestroy {
     canInsert = true;
     canUpdate = true;
     canDelete = true;
@@ -159,6 +159,28 @@ export class CorpsWiseManpowerComponent implements OnInit {
     @HostListener('document:click')
     onDocumentClick(): void { this.exportDropdownOpen = false; }
 
+    /** Org / Corps / Rank multiselects — all three close on an outside click. */
+    @ViewChildren(MultiSelect) private multiSelects?: QueryList<MultiSelect>;
+
+    /**
+     * PrimeNG closes a multiselect panel from a bubble-phase listener on `document`, so any
+     * ancestor calling stopPropagation() (the org-tree filter does) leaves the panel stuck open.
+     * Listening in the capture phase closes it on a click anywhere on the page.
+     */
+    private readonly closeMultiSelectsOnOutsideClick = (event: Event): void => {
+        const target = event.target as Node | null;
+        if (!target) return;
+
+        this.multiSelects?.forEach(ms => {
+            if (!ms.overlayVisible) return;
+            if (ms.el.nativeElement.contains(target)) return;
+            // appendTo="body" moves the panel out of the host, so match the real overlay element.
+            const panel = ms.overlayViewChild?.overlayEl as HTMLElement | undefined;
+            if (panel?.contains(target)) return;
+            ms.hide();
+        });
+    };
+
     onOrgTreeFilter(e: { codeId: number | null; label: string | null }): void {
         this.filterRabCodeId = e.codeId;
         this.filterLabel = e.label;
@@ -186,7 +208,13 @@ export class CorpsWiseManpowerComponent implements OnInit {
         this.canUpdate = _perms.canUpdate;
         this.canDelete = _perms.canDelete;
 
+        document.addEventListener('click', this.closeMultiSelectsOnOutsideClick, true);
+
         this.loadOrgOptions();
+    }
+
+    ngOnDestroy(): void {
+        document.removeEventListener('click', this.closeMultiSelectsOnOutsideClick, true);
     }
 
     /** Loads the dropdown options only — data is fetched on-demand when the user selects orgs. */

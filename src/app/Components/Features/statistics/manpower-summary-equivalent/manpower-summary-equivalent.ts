@@ -1,4 +1,4 @@
-import { Component, HostListener, OnInit, inject } from '@angular/core';
+﻿import { Component, HostListener, OnInit, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Router } from '@angular/router';
 import { CommonModule } from '@angular/common';
@@ -286,10 +286,10 @@ export class ManpowerSummaryEquivalentComponent implements OnInit {
             (s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;');
         const isBn = this.lang === 'bn';
         const serif = isBn
-            ? "'Nirmala UI', 'Hind Siliguri', 'SolaimanLipi', serif"
+            ? "'SolaimanLipi', 'Hind Siliguri', 'SolaimanLipi', serif"
             : "'Playfair Display', Georgia, 'Times New Roman', serif";
         const sans = isBn
-            ? "'Nirmala UI', 'Hind Siliguri', 'SolaimanLipi', sans-serif"
+            ? "'SolaimanLipi', 'Hind Siliguri', 'SolaimanLipi', sans-serif"
             : "'DM Sans', 'Segoe UI', Arial, sans-serif";
         const mono = "'JetBrains Mono', 'Consolas', 'Courier New', monospace";
 

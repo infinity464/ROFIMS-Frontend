@@ -1,9 +1,9 @@
-import { Component, HostListener, OnInit, inject } from '@angular/core';
+import { Component, HostListener, OnDestroy, OnInit, ViewChild, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Router } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { MultiSelectModule } from 'primeng/multiselect';
+import { MultiSelect, MultiSelectModule } from 'primeng/multiselect';
 import { forkJoin, of, firstValueFrom } from 'rxjs';
 import { catchError } from 'rxjs/operators';
 import { Packer } from 'docx';
@@ -34,7 +34,7 @@ type MotherUnitOrgBlock = MotherUnitWiseManpowerResponse;
     templateUrl: './mother-unit-wise-manpower.html',
     styleUrl: './mother-unit-wise-manpower.scss'
 })
-export class MotherUnitWiseManpowerComponent implements OnInit {
+export class MotherUnitWiseManpowerComponent implements OnInit, OnDestroy {
     canInsert = true;
     canUpdate = true;
     canDelete = true;
@@ -49,6 +49,8 @@ export class MotherUnitWiseManpowerComponent implements OnInit {
     orgOptions: MotherUnitOrgOption[] = [];
     /** Multi-select binding: empty array = nothing loaded yet (shows empty state). */
     selectedOrgIds: number[] = [];
+
+    @ViewChild('orgSelect') private orgSelect?: MultiSelect;
 
     /** Currently displayed blocks — only orgs the user explicitly selected. */
     filteredOrgs: MotherUnitOrgBlock[] = [];
@@ -98,6 +100,25 @@ export class MotherUnitWiseManpowerComponent implements OnInit {
     @HostListener('document:click')
     onDocumentClick(): void { this.exportDropdownOpen = false; }
 
+    /**
+     * PrimeNG closes the multiselect panel from a bubble-phase listener on `document`, so any
+     * ancestor calling stopPropagation() (the org-tree filter does) leaves the panel stuck open.
+     * Listening in the capture phase closes it on a click anywhere on the page.
+     */
+    private readonly closeOrgSelectOnOutsideClick = (event: Event): void => {
+        const ms = this.orgSelect;
+        if (!ms?.overlayVisible) return;
+
+        const target = event.target as Node | null;
+        if (!target) return;
+        if (ms.el.nativeElement.contains(target)) return;
+        // This panel uses appendTo="body", so it lives outside the host element.
+        for (const panel of Array.from(document.querySelectorAll('.p-multiselect-overlay'))) {
+            if (panel.contains(target)) return;
+        }
+        ms.hide();
+    };
+
     onOrgTreeFilter(e: { codeId: number | null; label: string | null }): void {
         this.filterRabCodeId = e.codeId;
         this.filterLabel = e.label;
@@ -125,7 +146,13 @@ export class MotherUnitWiseManpowerComponent implements OnInit {
         this.canUpdate = _perms.canUpdate;
         this.canDelete = _perms.canDelete;
 
+        document.addEventListener('click', this.closeOrgSelectOnOutsideClick, true);
+
         this.loadOrgOptions();
+    }
+
+    ngOnDestroy(): void {
+        document.removeEventListener('click', this.closeOrgSelectOnOutsideClick, true);
     }
 
     /** Loads the dropdown options only — data is fetched on-demand when the user selects orgs. */

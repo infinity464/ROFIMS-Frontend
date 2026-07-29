@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, HostListener } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterModule, ActivatedRoute } from '@angular/router';
@@ -25,6 +25,8 @@ import { IsSendingNotesheetStatus } from '@/models/enums';
 import { FlexibleDateDirective } from '@/shared/directives/flexible-date.directive';
 import { DialogModule } from 'primeng/dialog';
 import { Article47TakeoverBulkComponent } from '@/Components/Features/article-47-takeover-bulk/article-47-takeover-bulk';
+import { SupernumeraryRollService, SupernumeraryRollDates } from '@/services/supernumerary-roll.service';
+import { firstValueFrom } from 'rxjs';
 
 /** Minimal employee shape handed to the Article 47 (Takeover) modal. */
 interface Article47TakeoverEmployee {
@@ -74,6 +76,7 @@ export class SupernumeraryList implements OnInit {
         private messageService: MessageService,
         private sharedService: SharedService,
         private memberTypeAccess: IdentityUserMemberTypeAccessService,
+        private supernumeraryRoll: SupernumeraryRollService,
         private _router: Router,
         private _route: ActivatedRoute,
         private _userMenuService: UserMenuService
@@ -469,6 +472,72 @@ export class SupernumeraryList implements OnInit {
         this.selectedIds.clear();
     }
 
+    // ── Export (Word / Excel / Print) ────────────────────────────
+    exportDropdownOpen = false;
+    exporting = false;
+
+    toggleExportDropdown(event: Event): void {
+        event.stopPropagation();
+        this.exportDropdownOpen = !this.exportDropdownOpen;
+    }
+
+    @HostListener('document:click')
+    closeExportDropdown(): void {
+        this.exportDropdownOpen = false;
+    }
+
+    /**
+     * All three formats render the Bangla "নতুন আগত সদস্যদের র‍্যাব আইডি
+     * বরাদ্দকরণ" roll, grouped by root mother organisation.
+     *
+     * The rows are fetched rather than built from `filteredList`: that list is
+     * English-only and carries no districts or previous workplace. The employee
+     * ids are posted so the roll matches exactly what is filtered on screen.
+     */
+    async exportAs(type: 'print' | 'word' | 'excel'): Promise<void> {
+        this.exportDropdownOpen = false;
+
+        const employeeIds = this.filteredList
+            .map((r) => r.employeeID)
+            .filter((id): id is number => id != null && id > 0);
+
+        if (employeeIds.length === 0) {
+            this.messageService.add({ severity: 'warn', summary: 'Nothing to export', detail: 'No members in the current list.' });
+            return;
+        }
+
+        // The তারিখঃ line mirrors the Data Entry Date filter; unset renders no date.
+        const dates: SupernumeraryRollDates = {
+            entryDateFrom: this.toDateString(this.createdDateFrom) ?? null,
+            entryDateTo: this.toDateString(this.createdDateTo) ?? null,
+        };
+
+        this.exporting = true;
+        try {
+            const roll = await firstValueFrom(this.employeeListService.getSupernumeraryNominalRoll(employeeIds));
+
+            if (type === 'print') {
+                if (!this.supernumeraryRoll.print(roll, dates)) {
+                    this.messageService.add({
+                        severity: 'warn',
+                        summary: 'Popup blocked',
+                        detail: 'Allow popups for this site to open the print view.',
+                    });
+                }
+            } else if (type === 'word') {
+                await this.supernumeraryRoll.exportWord(roll, dates);
+            } else {
+                this.supernumeraryRoll.exportExcel(roll, dates);
+            }
+        } catch (err) {
+            console.error(`${type} export failed`, err);
+            this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to build the export.' });
+        } finally {
+            this.exporting = false;
+        }
+    }
+
+
     /** Article 47 (Takeover) modal state. */
     showArticle47Modal = false;
     article47Employees: Article47TakeoverEmployee[] = [];
@@ -513,6 +582,20 @@ export class SupernumeraryList implements OnInit {
         this.showArticle47Modal = false;
         this.clearSelection();
         this.loadData();
+    }
+
+    /**
+     * Generation was rejected — most often no Movement number is configured for the
+     * members' RAB unit. Shown on this page's toast (the modal's own toast renders
+     * inside the dialog) and the dialog stays open so the selection isn't lost.
+     */
+    onArticle47Failed(detail: string): void {
+        this.messageService.add({
+            severity: 'error',
+            summary: 'Article 47 (Takeover) not generated',
+            detail: detail || 'Failed to generate Article 47 (Takeover).',
+            life: 10000
+        });
     }
 
     /** Bulk send: fire SetIsSendingNotesheetStatus=Draft for every selected ID in parallel. */

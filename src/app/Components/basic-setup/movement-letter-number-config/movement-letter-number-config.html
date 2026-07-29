@@ -4,6 +4,15 @@
 
         <form [formGroup]="configForm" (ngSubmit)="onSubmit()">
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
+                <!-- RAB Unit -->
+                <div class="field">
+                    <label for="rabUnitId" class="block mb-2"> RAB Unit <span class="text-red-500">*</span> </label>
+                    <p-select id="rabUnitId" formControlName="rabUnitId" [options]="rabUnitOptions" optionLabel="label" optionValue="value" [filter]="true" filterBy="label" placeholder="Select RAB Unit" class="w-full"> </p-select>
+                    @if (configForm.get('rabUnitId')?.invalid && configForm.get('rabUnitId')?.touched) {
+                    <small class="text-red-500 block mt-1"> RAB Unit is required </small>
+                    }
+                </div>
+
                 <!-- Move Order Type -->
                 <div class="field">
                     <label for="moveOrderType" class="block mb-2"> Move Order Type <span class="text-red-500">*</span> </label>
@@ -28,24 +37,55 @@
                 <!-- Start Number -->
                 <div class="field">
                     <label for="startNumber" class="block mb-2"> Start Number <span class="text-red-500">*</span> </label>
-                    <p-inputnumber id="startNumber" formControlName="startNumber" placeholder="e.g. 10001" [useGrouping]="false" class="w-full"> </p-inputnumber>
+                    <input pInputText id="startNumber" formControlName="startNumber" placeholder="e.g. 001 or 00001" inputmode="numeric" maxlength="12" class="w-full" />
                     @if (configForm.get('startNumber')?.invalid && configForm.get('startNumber')?.touched) {
-                    <small class="text-red-500 block mt-1"> Start Number is required and must be greater than 0 </small>
+                    <small class="text-red-500 block mt-1">
+                        @if (configForm.get('startNumber')?.hasError('pattern')) { Digits only — no spaces or symbols } @else { Start Number is required and must be greater than 0 }
+                    </small>
+                    } @else {
+                    <small class="text-muted-color block mt-1"> Leading zeros set the width — type 001 for 001, 002 … 010 </small>
                     }
                 </div>
 
-                <!-- Include Date in Number -->
-                <div class="field" style="display: flex; align-items: end; padding-bottom: 0.5rem">
-                    <p-checkbox formControlName="includeDateInNumber" [binary]="true" inputId="includeDateInNumber"></p-checkbox>
-                    <label for="includeDateInNumber" class="ml-2">Include Date (Year/Month)</label>
+                <!-- Telephone No -->
+                <div class="field">
+                    <label for="telephoneNo" class="block mb-2"> Telephone No </label>
+                    <input pInputText id="telephoneNo" formControlName="telephoneNo" placeholder="e.g. 02-9012345, Ext-201" maxlength="50" class="w-full" />
+                </div>
+
+                <!-- Include Year in Number -->
+                <!-- The empty label keeps the checkbox on the same baseline as the
+                     inputs beside it, since every other field carries a label row. -->
+                <div class="field">
+                    <label class="block mb-2" aria-hidden="true">&nbsp;</label>
+                    <div class="flex items-center" style="min-height: 2.75rem">
+                        <p-checkbox formControlName="includeDateInNumber" [binary]="true" inputId="includeDateInNumber"></p-checkbox>
+                        <label for="includeDateInNumber" class="ml-2 mb-0">Include Year</label>
+                    </div>
+                </div>
+
+                <!-- Is Default -->
+                <div class="field">
+                    <label class="block mb-2" aria-hidden="true">&nbsp;</label>
+                    <div class="flex items-center" style="min-height: 2.75rem">
+                        <p-checkbox formControlName="isDefault" [binary]="true" inputId="isDefault"></p-checkbox>
+                        <label for="isDefault" class="ml-2 mb-0">Is Default</label>
+                    </div>
+                    @if (configForm.get('isDefault')?.value && getExistingDefault(); as current) {
+                    <small class="text-red-500 block mt-1"> {{ getRabUnitLabel(current.rabUnitId) }} is already the default for this Move Order Type. </small>
+                    } @else {
+                    <small class="text-muted-color block mt-1"> Fallback when the issuing unit has none. One per Move Order Type. </small>
+                    }
                 </div>
             </div>
 
             <!-- Preview -->
-            @if (configForm.get('startNumber')?.value) {
+            @if (configForm.get('startNumber')?.valid) {
             <div class="mb-4 p-3 surface-100 border-round">
                 <span class="font-medium">Preview: </span>
                 <span class="text-primary font-bold">{{ getPreview() }}</span>
+                <span class="text-primary font-bold">, {{ getPreviewNext() }} …</span>
+                <small class="block mt-1 text-muted-color"> The sequence restarts at {{ configForm.get('startNumber')?.value }} on the first movement of each new year. </small>
             </div>
             }
 
@@ -73,12 +113,16 @@
         <ng-template pTemplate="header">
             <tr>
                 <th style="width: 5%">#</th>
+                <th>RAB Unit</th>
                 <th>Move Order Type</th>
                 <th>Prefix (EN)</th>
                 <th>Prefix (BN)</th>
                 <th>Start Number</th>
                 <th>Current Number</th>
-                <th>Include Date</th>
+                <th>Current Year</th>
+                <th>Include Year</th>
+                <th>Telephone No</th>
+                <th>Is Default</th>
                 <th>Status</th>
                 <th style="width: 10%">Actions</th>
             </tr>
@@ -87,12 +131,22 @@
         <ng-template pTemplate="body" let-row let-rowIndex="rowIndex">
             <tr>
                 <td>{{ first + rowIndex + 1 }}</td>
+                <td>{{ getRabUnitLabel(row.rabUnitId) }}</td>
                 <td>{{ getMoveOrderTypeLabel(row.moveOrderType) }}</td>
                 <td>{{ row.prefix }}</td>
                 <td>{{ row.prefixBN || '-' }}</td>
-                <td>{{ row.startNumber }}</td>
-                <td>{{ row.currentNumber }}</td>
+                <td>{{ padNumber(row.startNumber, row.numberPadding) }}</td>
+                <td>{{ padNumber(row.currentNumber, row.numberPadding) }}</td>
+                <td>{{ row.currentYear || '-' }}</td>
                 <td>{{ row.includeDateInNumber ? 'Yes' : 'No' }}</td>
+                <td>{{ row.telephoneNo || '-' }}</td>
+                <td>
+                    @if (row.isDefault) {
+                    <span class="text-green-500"><i class="pi pi-check-circle mr-1"></i>Yes</span>
+                    } @else {
+                    <span class="text-muted-color">No</span>
+                    }
+                </td>
                 <td>
                     <span [class]="row.status ? 'text-green-500' : 'text-red-500'"> {{ row.status ? 'Active' : 'Inactive' }} </span>
                 </td>
@@ -104,7 +158,7 @@
 
         <ng-template pTemplate="emptymessage">
             <tr>
-                <td colspan="9" class="text-center">No configurations found.</td>
+                <td colspan="13" class="text-center">No configurations found.</td>
             </tr>
         </ng-template>
     </p-table>

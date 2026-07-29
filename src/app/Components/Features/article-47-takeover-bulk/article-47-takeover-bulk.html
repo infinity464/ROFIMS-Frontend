@@ -227,6 +227,47 @@
     </section>
     }
 
+    <!-- ── Card 2b: Dates (modal only) ───────────────────────────────
+         Card 2 above is hidden in modal mode, so Generated date and
+         Takeover charge date live in their own card here. -->
+    @if (asModal) {
+    <section class="mv-card">
+        <header class="mv-card-header">
+            <i class="pi pi-calendar mv-card-icon"></i>
+            <span class="mv-card-title">Dates</span>
+        </header>
+        <div class="mv-subsection">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div class="mv-field">
+                    <label>Generated date</label>
+                    <!-- showOnFocus off: the dialog focuses its first field on open,
+                         which would otherwise pop this calendar straight away and leave
+                         two overlays stacked. Opens on the input icon instead. -->
+                    <p-datepicker
+                        formControlName="generatedDate"
+                        appendTo="body" dateFormat="dd/mm/yy"
+                        [showTime]="true" hourFormat="12"
+                        [showOnFocus]="false"
+                        [showIcon]="true" iconDisplay="input"
+                        placeholder="dd/mm/yyyy hh:mm" [inputStyle]="{ width: '100%' }"
+                        class="w-full"></p-datepicker>
+                    <small class="mv-hint">Defaults to the current date and time; saved as the record's Created date.</small>
+                </div>
+                <div class="mv-field">
+                    <label>Takeover charge date</label>
+                    <p-datepicker
+                        formControlName="takeoverDate"
+                        appendTo="body" dateFormat="dd/mm/yy"
+                        [showOnFocus]="false"
+                        [showIcon]="true" iconDisplay="input"
+                        placeholder="dd/mm/yyyy" [inputStyle]="{ width: '100%' }"
+                        class="w-full"></p-datepicker>
+                </div>
+            </div>
+        </div>
+    </section>
+    }
+
     <!-- ── Card 3: Details ───────────────────────────────────────────── -->
     <section class="mv-card">
         <header class="mv-card-header">

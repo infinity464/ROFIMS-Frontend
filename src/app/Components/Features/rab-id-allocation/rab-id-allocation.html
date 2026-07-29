@@ -2,15 +2,16 @@
 <p-confirmDialog></p-confirmDialog>
 
 <div class="employee-reports-page">
-    <!-- Card 1: Filters (same style as employee-reports report-type-card) -->
-    <div class="report-type-card">
-        <div class="report-page-header">
+    <!-- Filter card -->
+    <div class="report-filter-card">
+        <div class="report-filter-card-title">
             <h1 class="report-page-title">RAB ID Allocation</h1>
         </div>
-        <div class="report-type-row">
-            <div class="report-type-field">
-                <div class="rt-label">Organization(s)</div>
-                <div class="rt-select-wrap">
+
+        <div class="report-filter-body-inner">
+            <div class="report-fields-row">
+                <div class="report-filter-field">
+                    <label>Organization(s)</label>
                     <p-multiSelect
                         id="orgs"
                         [options]="orgOptions"
@@ -24,10 +25,8 @@
                         appendTo="body">
                     </p-multiSelect>
                 </div>
-            </div>
-            <div class="report-type-field">
-                <div class="rt-label">Member Type</div>
-                <div class="rt-select-wrap">
+                <div class="report-filter-field">
+                    <label>Member Type</label>
                     <p-select
                         id="memberType"
                         [options]="memberTypeOptions"
@@ -41,44 +40,31 @@
                     </p-select>
                 </div>
             </div>
-        </div>
-        <div class="report-filter-actions">
-            <button
-                type="button"
-                class="report-btn-search"
-                (click)="loadList()"
-                [disabled]="loading">
-                <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-                    <circle cx="6" cy="6" r="4.5" stroke="white" stroke-width="1.6"/>
-                    <path d="M10 10l2.5 2.5" stroke="white" stroke-width="1.6" stroke-linecap="round"/>
-                </svg>
-                Show List
-            </button>
+
+            <div class="report-filter-actions">
+                <button type="button" class="report-btn-primary" (click)="loadList()" [disabled]="loading">
+                    <i class="pi pi-search mr-1"></i>Show List
+                </button>
+            </div>
         </div>
     </div>
 
-    <!-- Card 2: Table (same style as employee-reports report-results-card) -->
-    <div class="report-results-card">
-        <div class="report-results-header">
-            <div class="report-results-title">
+    <!-- Results card -->
+    <div class="report-filter-card">
+        <div class="psm-results-header">
+            <h3 class="report-panel-title">
                 Results
                 <span class="report-results-count">{{ list?.length ?? 0 }} record(s)</span>
-            </div>
-            <div class="report-results-actions">
-                <button
-                    type="button"
-                    class="report-btn-export"
-                    (click)="generateId()"
-                    [disabled]="!selectedRows?.length || loading || generatingId"
-                    [class.perm-hidden]="!canUpdate">
-                    <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
-                        <rect x="1" y="2.5" width="11" height="8" rx="1.2" stroke="currentColor" stroke-width="1.4"/>
-                        <circle cx="4.2" cy="6.2" r="1.2" stroke="currentColor" stroke-width="1.2"/>
-                        <path d="M7 5h4M7 7h3M3 9h7" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/>
-                    </svg>
-                    {{ generatingId ? 'Generating…' : (selectedRows?.length ? 'Generate Id (' + selectedRows.length + ')' : 'Generate Id') }}
-                </button>
-            </div>
+            </h3>
+            <button
+                type="button"
+                class="report-btn-primary"
+                (click)="generateId()"
+                [disabled]="!selectedRows?.length || loading || generatingId"
+                [class.perm-hidden]="!canUpdate">
+                <i class="pi pi-id-card mr-1"></i>
+                {{ generatingId ? 'Generating…' : (selectedRows?.length ? 'Generate Id (' + selectedRows.length + ')' : 'Generate Id') }}
+            </button>
         </div>
 
         <div class="report-table-wrap">

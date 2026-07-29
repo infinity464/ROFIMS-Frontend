@@ -10,6 +10,7 @@ import { MultiSelectModule } from 'primeng/multiselect';
 import { Button, ButtonModule } from 'primeng/button';
 import { CommonCodeModel } from '@/models/common-code-model';
 import { EmpService } from '@/services/emp-service';
+import { buildProfileImageFile, buildUploadOwnerTag } from '@/shared/utils/upload-file-name.util';
 import { FamilyInfoService } from '@/services/family-info-service';
 import { MotherOrganizationModel } from '@/models/mother-org-model';
 import { CommonCodeService } from '@/services/common-code-service';
@@ -57,6 +58,17 @@ export class EmpBasicInfo implements OnInit {
     isViewMode: boolean = false;
     isEditMode: boolean = false;
     pageTitle: string = 'New Posting Entry Form';
+
+    /**
+     * RAB Orientation Training status + remark of the loaded employee. This form
+     * has no control for either (status is edited on /serving-member-entry, the
+     * remark is written when marking Not Applicable on /emp-rfts-course-ref), but
+     * the update endpoint replaces every column — so the loaded values have to be
+     * carried back out or an edit here silently resets them. Null on a new entry,
+     * which the API reads as "not set". See RftsStatus on the API side.
+     */
+    private loadedRftsStatus: number | null = null;
+    private loadedRftsRemark: string | null = null;
 
     /** When false, the entry form is hidden until search returns "employee not found". When true (or when opening with id in route), form is shown. */
     showEntryForm: boolean = false;
@@ -346,9 +358,9 @@ export class EmpBasicInfo implements OnInit {
             PostOfficeType: data.postOffice,
             HouseRoad: data.houseRoad || '',
             Active: true, // New addresses are active by default
-            CreatedBy: 'system',
+            CreatedBy: this.auditUser,
             CreatedDate: new Date().toISOString(),
-            LastUpdatedBy: 'system',
+            LastUpdatedBy: this.auditUser,
             Lastupdate: new Date().toISOString()
         };
 
@@ -400,9 +412,9 @@ export class EmpBasicInfo implements OnInit {
             PostOfficeType: data.postOffice,
             HouseRoad: data.houseRoad || '',
             Active: true, // New addresses are active by default
-            CreatedBy: 'system',
+            CreatedBy: this.auditUser,
             CreatedDate: new Date().toISOString(),
-            LastUpdatedBy: 'system',
+            LastUpdatedBy: this.auditUser,
             Lastupdate: new Date().toISOString()
         };
 
@@ -455,9 +467,9 @@ export class EmpBasicInfo implements OnInit {
             PostOfficeType: data.postOffice,
             HouseRoad: data.houseRoad || '',
             Active: true, // New addresses are active by default
-            CreatedBy: 'system',
+            CreatedBy: this.auditUser,
             CreatedDate: new Date().toISOString(),
-            LastUpdatedBy: 'system',
+            LastUpdatedBy: this.auditUser,
             Lastupdate: new Date().toISOString()
         };
 
@@ -510,9 +522,9 @@ export class EmpBasicInfo implements OnInit {
             PostOfficeType: data.postOffice,
             HouseRoad: data.houseRoad || '',
             Active: true, // New addresses are active by default
-            CreatedBy: 'system',
+            CreatedBy: this.auditUser,
             CreatedDate: new Date().toISOString(),
-            LastUpdatedBy: 'system',
+            LastUpdatedBy: this.auditUser,
             Lastupdate: new Date().toISOString()
         };
 
@@ -594,6 +606,11 @@ export class EmpBasicInfo implements OnInit {
 
     // Save All - Employee + All Addresses
     saveAll(): void {
+        // Guard against double submission while a save is already in flight.
+        if (this.isSaving) {
+            return;
+        }
+
         // Validate employee form first
         if (this.postingForm.invalid) {
             Object.keys(this.postingForm.controls).forEach((key) => {
@@ -653,13 +670,24 @@ export class EmpBasicInfo implements OnInit {
         const existingRefs = this.fileReferencesForm?.getExistingFileReferences() || [];
         const filesToUpload = this.fileReferencesForm?.getFilesToUpload() || [];
 
+        // From here on a request will be issued — lock the Save button until the flow settles.
+        this.isSaving = true;
+
         const doSave = (filesRefsJson: string | null, profileImgsJson: string | null) => {
             this.saveEmployeeWithFilesRefs(this.formattedDataForEmployee(), filesRefsJson, profileImgsJson, permanentData!, presentData!, spousePermanentData, spousePresentData);
         };
 
         if (filesToUpload.length > 0 || this.selectedFile) {
-            const fileRefUploads = filesToUpload.map((r: any) => this.empService.uploadEmployeeFile(r.file!, r.displayName?.trim() || r.file!.name));
-            const profileUpload$ = this.selectedFile ? this.empService.uploadEmployeeFile(this.selectedFile, this.selectedFileName || this.selectedFile.name) : null;
+            // Store the profile image as <RABID>_<timestamp>.<ext> instead of the user's original file name.
+            // Built once per picked image so a repeated Save re-uploads nothing (see EmpService.uploadEmployeeFile).
+            if (this.selectedFile) {
+                this.selectedFile = this.profileUploadFile ??= buildProfileImageFile(this.selectedFile, this.postingForm?.get('rabid')?.value, this.employeeId);
+                this.selectedFileName = this.selectedFile.name;
+            }
+
+            const owner = this.uploadOwnerTag();
+            const fileRefUploads = filesToUpload.map((r: any) => this.empService.uploadEmployeeFile(r.file!, r.displayName?.trim() || r.file!.name, owner));
+            const profileUpload$ = this.selectedFile ? this.empService.uploadEmployeeFile(this.selectedFile, this.selectedFile.name, owner) : null;
 
             const allUploads = profileUpload$ ? [...fileRefUploads, profileUpload$] : fileRefUploads;
 
@@ -678,6 +706,7 @@ export class EmpBasicInfo implements OnInit {
                     doSave(filesReferencesJson, profileImagesJson);
                 },
                 error: (err) => {
+                    this.isSaving = false;
                     console.error('Error uploading files', err);
                     this.messageService.add({
                         severity: 'error',
@@ -707,7 +736,10 @@ export class EmpBasicInfo implements OnInit {
             relieverId: this.isReliever && this.selectedRelieverEmployeeId ? this.selectedRelieverEmployeeId : null,
             maritalStatus: formValue.maritalStatus ?? null,
             batch: formValue.batch ?? null,
-            specialQualifications: specialQualsCsv
+            specialQualifications: specialQualsCsv,
+            // Not editable here — echo back what was loaded so the update doesn't blank them.
+            isRFTSComplted: this.loadedRftsStatus,
+            rftsRemark: this.loadedRftsRemark
         };
     }
 
@@ -836,6 +868,7 @@ export class EmpBasicInfo implements OnInit {
                         )
                     ).subscribe();
                 } else {
+                    this.isSaving = false;
                     this.messageService.add({
                         severity: 'error',
                         summary: 'Error',
@@ -844,11 +877,27 @@ export class EmpBasicInfo implements OnInit {
                 }
             },
             error: (err) => {
+                this.isSaving = false;
                 console.error('Error saving/updating employee', err);
+
+                // 409 = server-side duplicate guard (RAB ID / Mother Org + Prefix + Service ID).
+                // Another operator can claim the same ids between our on-type check and this save.
+                if (err?.status === 409) {
+                    this.checkDuplicateRabId();
+                    this.checkDuplicateCombo();
+                    this.messageService.add({
+                        severity: 'warn',
+                        summary: 'Duplicate Entry',
+                        detail: err?.error?.description || 'RAB ID or Service ID already exist',
+                        life: 10000
+                    });
+                    return;
+                }
+
                 this.messageService.add({
                     severity: 'error',
                     summary: 'Error',
-                    detail: this.isEditMode ? 'Failed to update employee' : 'Failed to save employee'
+                    detail: err?.error?.description || (this.isEditMode ? 'Failed to update employee' : 'Failed to save employee')
                 });
             }
         });
@@ -881,7 +930,7 @@ export class EmpBasicInfo implements OnInit {
             PassportNo: null,
             Email: null,
             CreatedDate: nowIso,
-            LastUpdatedBy: 'system',
+            LastUpdatedBy: this.auditUser,
             Lastupdate: nowIso,
             StatusDate: nowIso
         };
@@ -931,9 +980,9 @@ export class EmpBasicInfo implements OnInit {
                 PostOfficeType: data.postOffice,
                 HouseRoad: data.houseRoad || '',
                 Active: true, // New addresses are active by default
-                CreatedBy: 'system',
+                CreatedBy: this.auditUser,
                 CreatedDate: new Date().toISOString(),
-                LastUpdatedBy: 'system',
+                LastUpdatedBy: this.auditUser,
                 Lastupdate: new Date().toISOString()
             };
             console.log('Address payload:', payload);
@@ -964,6 +1013,7 @@ export class EmpBasicInfo implements OnInit {
 
         forkJoin(saveRequests).subscribe({
             next: (results: any) => {
+                this.isSaving = false;
                 this.permanentAddress = permanent;
                 this.presentAddress = present;
                 if (spousePermanent) this.spousePermanentAddress = spousePermanent;
@@ -995,6 +1045,7 @@ export class EmpBasicInfo implements OnInit {
                 }
             },
             error: (err: any) => {
+                this.isSaving = false;
                 console.error('Error saving/updating addresses', err);
                 this.messageService.add({
                     severity: 'error',
@@ -1008,6 +1059,8 @@ export class EmpBasicInfo implements OnInit {
     postingForm!: FormGroup;
     imagePreview: string | null = null;
     selectedFile: File | null = null;
+    /** The picked image renamed for upload. Kept so repeated Saves reuse one upload; cleared whenever the image changes. */
+    private profileUploadFile: File | null = null;
     /** Per-employee face-image cap (mirrors the Face Images screen + face API). */
     private readonly MAX_FACES_PER_EMPLOYEE = 10;
 
@@ -1022,7 +1075,7 @@ export class EmpBasicInfo implements OnInit {
     lastUnitOrganizations: MotherOrganizationModel[] = [];
     memberTypes: CommonCodeModel[] = [];
     batches: CommonCodeModel[] = [];
-    specialQualificationOptions: CommonCodeModel[] = [];
+    specialQualificationOptions: (CommonCodeModel & { displayLabel?: string })[] = [];
     officerTypes: CommonCodeModel[] = [];
     appointments: CommonCodeModel[] = [];
     ranks: CommonCodeModel[] = [];
@@ -1048,6 +1101,8 @@ export class EmpBasicInfo implements OnInit {
     newLastUnitNameEN: string = '';
     newLastUnitNameBN: string = '';
     isSavingLastUnit: boolean = false;
+    /** True while a Save/Update All request is in flight — disables the Save button to prevent double submits. */
+    isSaving: boolean = false;
 
     constructor(
         private fb: FormBuilder,
@@ -1063,6 +1118,11 @@ export class EmpBasicInfo implements OnInit {
         private memberTypeAccess: IdentityUserMemberTypeAccessService,
         private joineeDetailService: PermanentPostingJoineeDetailService
     ) {}
+
+    /** Logged-in user for CreatedBy / LastUpdatedBy. Falls back to 'system' only when nobody is signed in. */
+    private get auditUser(): string {
+        return this.sharedService.getCurrentUser() ?? 'system';
+    }
 
     /** CodeIds of Member Types the current user is allowed to use. `null` means "not yet loaded" (fail-open). */
     private allowedMemberTypeIds: number[] | null = null;
@@ -1199,9 +1259,18 @@ export class EmpBasicInfo implements OnInit {
                     officerType: employee.officerType,
                     orgId: employee.orgId,
                     lastMotherUnitDistrictId: employee.lastMotherUnitDistrictId ?? null,
-                    spouseName: employee.spouseName ?? employee.wifeName ?? ''
+                    spouseName: employee.spouseName ?? employee.wifeName ?? '',
+                    // Carry the real creation audit back into the form. Without this the
+                    // form keeps its `new Date()` default and the update payload claims the
+                    // row was created today. The API ignores these on update anyway
+                    // (see Entity.ProtectEmployeeCreatedAudit), but don't send a lie.
+                    createdBy: employee.createdBy ?? employee.CreatedBy ?? 'system',
+                    createdDate: employee.createdDate ?? employee.CreatedDate ?? new Date()
                 });
                 this.spouseFmid = null;
+                // Not form controls — stashed so formattedDataForEmployee can echo them back.
+                this.loadedRftsStatus = employee.isRFTSComplted ?? employee.IsRFTSComplted ?? null;
+                this.loadedRftsRemark = employee.rftsRemark ?? employee.RftsRemark ?? null;
 
                 // Load file references (display names from JSON; files are not re-fetched)
                 const refsJson = employee.filesReferences || employee.FilesReferences;
@@ -1414,11 +1483,10 @@ export class EmpBasicInfo implements OnInit {
     // Enable form for edit mode
     enableForm(): void {
         this.postingForm.enable();
-        // serviceId stays disabled in edit mode (relationship is readonly in UI when Married, not disabled).
-        // rabid is editable — see checkDuplicateRabId() for its uniqueness guard.
-        if (this.isEditMode) {
-            this.postingForm.get('serviceId')?.disable();
-        }
+        // serviceId is editable in edit mode too — uniqueness is guarded by
+        // checkDuplicateCombo() (Mother Org + Prefix + Service ID, excluding this
+        // record), which runs live on valueChanges and again in onSubmit().
+        // rabid is likewise editable — see checkDuplicateRabId().
     }
 
     // Go back to list
@@ -1466,9 +1534,9 @@ export class EmpBasicInfo implements OnInit {
             fullNameBN: ['', [Validators.required, Validators.minLength(2)]],
             postingStatus: [''],
             status: [true],
-            createdBy: ['system'],
+            createdBy: [this.auditUser],
             createdDate: [new Date()],
-            lastUpdatedBy: ['system'],
+            lastUpdatedBy: [this.auditUser],
             lastupdate: [new Date()],
             statusDate: [new Date()],
             lastMotherUnitLocation: [''],
@@ -1506,6 +1574,7 @@ export class EmpBasicInfo implements OnInit {
             }
 
             this.selectedFile = file;
+            this.profileUploadFile = null;
             this.selectedFileName = file.name;
             this.postingForm.patchValue({ picture: file });
 
@@ -1520,12 +1589,18 @@ export class EmpBasicInfo implements OnInit {
         }
     }
 
+    /** Owner tag for uploads from this form — the RAB ID on the form, falling back to the employee id. */
+    private uploadOwnerTag(): string {
+        return buildUploadOwnerTag(this.postingForm?.get('rabid')?.value, this.employeeId);
+    }
+
     /**
      * Remove selected image
      */
     removeImage(): void {
         this.imagePreview = null;
         this.selectedFile = null;
+        this.profileUploadFile = null;
         this.selectedFileName = '';
         this.profileImageRef = null;
         this.postingForm.patchValue({ picture: null });
@@ -1785,7 +1860,11 @@ export class EmpBasicInfo implements OnInit {
 
     loadSpecialQualifications(): void {
         this.commonCodeService.getAllActiveCommonCodesType('SpecialQualification').subscribe({
-            next: (res) => (this.specialQualificationOptions = res ?? []),
+            next: (res) =>
+                (this.specialQualificationOptions = (res ?? []).map((item: any) => ({
+                    ...item,
+                    displayLabel: item.codeValueBN ? `${item.codeValueEN} (${item.codeValueBN})` : item.codeValueEN
+                }))),
             error: (err) => console.log(err)
         });
     }
@@ -2069,14 +2148,15 @@ export class EmpBasicInfo implements OnInit {
             employeeID: 0,
             status: true,
             specialQualifications: [],
-            createdBy: 'system',
+            createdBy: this.auditUser,
             createdDate: now,
-            lastUpdatedBy: 'system',
+            lastUpdatedBy: this.auditUser,
             lastupdate: now,
             statusDate: now
         });
         this.imagePreview = null;
         this.selectedFile = null;
+        this.profileUploadFile = null;
         this.selectedFileName = '';
 
         if (this.fileUpload) {
@@ -2138,6 +2218,19 @@ export class EmpBasicInfo implements OnInit {
         if (formatted !== value) {
             field!.setValue(formatted);
         }
+    }
+
+    /**
+     * Strip everything but digits as the user types. The control stays a string so
+     * leading zeros are preserved (a numeric input/parse would drop them).
+     * Mirrors serving-member-entry, where Service ID / RAB ID are also user-entered.
+     */
+    onDigitsOnlyInput(event: Event, fieldName: string): void {
+        const input = event.target as HTMLInputElement;
+        const digitsOnly = (input.value ?? '').replace(/\D/g, '');
+        if (digitsOnly === input.value) return;
+        input.value = digitsOnly;
+        this.postingForm.get(fieldName)?.setValue(digitsOnly);
     }
 
     isFieldInvalid(fieldName: string): boolean {

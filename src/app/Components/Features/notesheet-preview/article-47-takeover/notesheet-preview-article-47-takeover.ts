@@ -1,4 +1,4 @@
-import { Component, OnInit, ViewChild, ElementRef, inject } from '@angular/core';
+﻿import { Component, OnInit, ViewChild, ElementRef, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
@@ -24,6 +24,7 @@ import { ServingMembersService } from '@/services/serving-members.service';
 import { EmployeeServiceOverview } from '@/models/employee-service-overview.model';
 import { MasterBasicSetupService } from '@/Components/basic-setup/shared/services/MasterBasicSetupService';
 import { BanglaNumerals } from '@/Core/i18n/bangla-numerals';
+import { MoveOrderType } from '@/models/enums';
 import { MovementReturnButtonComponent } from '../shared/movement-return-button';
 import { MovementFilesInfoComponent } from '../shared/movement-files-info';
 
@@ -77,6 +78,19 @@ export class NotesheetPreviewArticle47TakeoverComponent implements OnInit {
     battalionHqEn = '';
     battalionHqBn = '';
 
+    /** First Final Approver on the movement — rendered as the left signature block,
+     *  in the same shape as the member's block on the right. Same three sources the
+     *  member uses: search info, serving-members overview and personal overview. */
+    approver: EmployeeSearchInfoModel | null = null;
+    approverOverview: EmployeeServiceOverview | null = null;
+    approverPersonalOverview: any | null = null;
+    approverBattalionHqEn = '';
+    approverBattalionHqBn = '';
+    /** True once an approver has been resolved — the left block is hidden until then. */
+    get hasApprover(): boolean {
+        return this.approver != null;
+    }
+
     /** Final recipient list rendered in the letter: stored items 1–4, then the
      *  two dynamic entries (Adhinayak + FC Army Pay-1) at slots 5–6, then stored
      *  items Personal/Office Copy at slots 7–8. */
@@ -90,6 +104,7 @@ export class NotesheetPreviewArticle47TakeoverComponent implements OnInit {
     ngOnInit(): void {
         this.loadRankLabels();
         this.loadRabUnitLabels();
+        this.loadLetterConfigs();
         this.loadCorpsLabels();
         const idParam = this.route.snapshot.queryParamMap.get('id');
         const id = idParam ? Number(idParam) : NaN;
@@ -111,6 +126,7 @@ export class NotesheetPreviewArticle47TakeoverComponent implements OnInit {
                 this.buildRecipientList();
                 this.buildHeaderLines();
                 this.loadEmployee();
+                this.loadApprover();
                 this.loading = false;
             },
             error: (err) => {
@@ -149,6 +165,64 @@ export class NotesheetPreviewArticle47TakeoverComponent implements OnInit {
         });
     }
 
+    /** Same three lookups as loadEmployee(), for the first Final Approver. */
+    private loadApprover(): void {
+        const ids = this.parseIntArray(this.movement?.finalApproverIds);
+        const firstId = ids.length > 0 ? ids[0] : 0;
+        if (!firstId) return;
+
+        this.empService.getEmployeeSearchInfo(firstId).subscribe({
+            next: (info) => {
+                this.approver = info ?? null;
+                this.loadApproverOverview();
+            },
+            error: () => { this.approver = null; }
+        });
+
+        this.servingMembersService.getEmployeePersonalServiceOverview(firstId).subscribe({
+            next: (po: any) => { this.approverPersonalOverview = po ?? null; },
+            error: () => { this.approverPersonalOverview = null; }
+        });
+    }
+
+    private loadApproverOverview(): void {
+        const e: any = this.approver || {};
+        const rabId: string = e.rabID ?? e.RABID ?? '';
+        const serviceId: string = e.serviceId ?? e.ServiceId ?? '';
+        if (!rabId && !serviceId) return;
+
+        this.servingMembersService.getPresentlyServingMembersPaginatedFiltered({
+            pagination: { page_no: 1, row_per_page: 5 },
+            filter: rabId ? { rabId } : { serviceId }
+        }).subscribe({
+            next: (res: any) => {
+                const list: EmployeeServiceOverview[] =
+                    (res?.datalist ?? res?.data ?? res ?? []) as EmployeeServiceOverview[];
+                this.approverOverview = Array.isArray(list) && list.length ? list[0] : null;
+                this.loadApproverBattalionHq();
+            },
+            error: () => { this.approverOverview = null; }
+        });
+    }
+
+    private loadApproverBattalionHq(): void {
+        // Same HQ fallback as the member's lookup.
+        const rabUnitId = (this.approverOverview as any)?.rabUnitId ?? (this.approverOverview as any)?.RabUnitId ?? this.hqRabUnitId;
+        if (!rabUnitId) return;
+        // GetByRabUnit returns an ARRAY of AOR rows — take the first row that
+        // actually carries a value, same as loadBattalionHq() does for the member.
+        this.masterBasicSetup.getRABUnitAORByRabUnit(rabUnitId).subscribe({
+            next: (rows: any[]) => {
+                if (!Array.isArray(rows) || rows.length === 0) return;
+                const firstEn = rows.find((r) => !!(r?.locationOfBattalionHQ ?? r?.LocationOfBattalionHQ));
+                if (firstEn) this.approverBattalionHqEn = String(firstEn.locationOfBattalionHQ ?? firstEn.LocationOfBattalionHQ ?? '');
+                const firstBn = rows.find((r) => !!(r?.locationOfBattalionHQBangla ?? r?.LocationOfBattalionHQBangla));
+                if (firstBn) this.approverBattalionHqBn = String(firstBn.locationOfBattalionHQBangla ?? firstBn.LocationOfBattalionHQBangla ?? '');
+            },
+            error: () => { /* leave blank */ }
+        });
+    }
+
     /** Load EmployeeServiceOverview row (same source as /presently-serving-members)
      *  so we can pull the RAB unit display name. Filters by RAB ID or Service ID. */
     private loadOverview(): void {
@@ -174,7 +248,9 @@ export class NotesheetPreviewArticle47TakeoverComponent implements OnInit {
     /** Look up the Battalion HQ location for the employee's RAB unit — same source
      *  the leave card uses (RABUnitAOR.locationOfBattalionHQ[Bangla]). */
     private loadBattalionHq(): void {
-        const rabUnitId = (this.overview as any)?.rabUnitId ?? (this.overview as any)?.RabUnitId;
+        // No unit of their own — the signature line falls back to RAB HQ, so read that
+        // unit's AOR row rather than leaving the location blank.
+        const rabUnitId = (this.overview as any)?.rabUnitId ?? (this.overview as any)?.RabUnitId ?? this.hqRabUnitId;
         if (!rabUnitId) return;
         this.masterBasicSetup.getRABUnitAORByRabUnit(rabUnitId).subscribe({
             next: (rows: any[]) => {
@@ -209,6 +285,8 @@ export class NotesheetPreviewArticle47TakeoverComponent implements OnInit {
         this.masterBasicSetup.getAllByType('RabUnit').subscribe({
             next: (rows: any[]) => {
                 this.rabUnitLabels.clear();
+                let hqId: number | null = null;
+                let hqSort = Number.POSITIVE_INFINITY;
                 for (const r of rows || []) {
                     const id = r.codeId ?? r.CodeId;
                     if (id == null) continue;
@@ -216,7 +294,19 @@ export class NotesheetPreviewArticle47TakeoverComponent implements OnInit {
                         en: r.codeValueEN ?? r.CodeValueEN ?? '',
                         bn: r.codeValueBN ?? r.CodeValueBN ?? ''
                     });
+                    // Smallest SortOrder = RAB HQ.
+                    const sort = Number(r.sortOrder ?? r.SortOrder);
+                    if (Number.isFinite(sort) && sort < hqSort) {
+                        hqSort = sort;
+                        hqId = id;
+                    }
                 }
+                this.hqRabUnitId = hqId;
+
+                // Labels can land after an overview has already resolved, so retry the
+                // AOR lookups now that the HQ fallback target is known.
+                this.loadBattalionHq();
+                this.loadApproverBattalionHq();
             }
         });
     }
@@ -238,54 +328,78 @@ export class NotesheetPreviewArticle47TakeoverComponent implements OnInit {
         });
     }
 
-    /** Field accessors for the signature block. Fall back to placeholders when empty. */
-    get employeeIdLineBn(): string {
-        const e = this.employee as any;
-        const o = this.overview as any;
-        const po = this.personalOverview as any;
-        const id = e ? (e.rabID ?? e.RABID ?? e.serviceId ?? e.ServiceId ?? '') : '';
+    /* ── Signature-block fields ────────────────────────────────────────────
+       Built once against an (employee, overview, personalOverview) triple so the
+       member block on the right and the approver block on the left render
+       identically from their own sources. */
+
+    private idLineBn(emp: any, ovw: any, personal: any): string {
+        const id = emp ? (emp.rabID ?? emp.RABID ?? emp.serviceId ?? emp.ServiceId ?? '') : '';
 
         // Prefix is the CommonCode label behind EmployeeInfo.Prefix (an id), not a
         // fixed "বিডি". Resolve from the personal overview, then the serving-members
         // overview, falling back to '' when genuinely absent.
-        const prefix = (po?.prefixBN || po?.PrefixBN || po?.prefixEN || po?.PrefixEN || po?.prefix || po?.Prefix
-            || o?.prefixBN || o?.PrefixBN || o?.prefix || o?.Prefix || '') as string;
+        const prefix = (personal?.prefixBN || personal?.PrefixBN || personal?.prefixEN || personal?.PrefixEN
+            || personal?.prefix || personal?.Prefix
+            || ovw?.prefixBN || ovw?.PrefixBN || ovw?.prefix || ovw?.Prefix || '') as string;
 
         if (!id) return prefix ? `${prefix}/-----` : '-----';
         return prefix ? `${prefix}/${this.toBn(id)}` : this.toBn(id);
     }
-    get employeeRankBn(): string {
-        const e = this.employee as any;
-        const o = this.overview as any;
-        const rankId: number | undefined =
-            o?.armyRankId ?? o?.ArmyRankId ?? e?.rankId ?? e?.RankId;
+
+    private rankBn(emp: any, ovw: any): string {
+        const rankId: number | undefined = ovw?.armyRankId ?? ovw?.ArmyRankId ?? emp?.rankId ?? emp?.RankId;
         if (rankId != null) {
             const labels = this.rankLabels.get(rankId);
             if (labels?.bn) return labels.bn;
             if (labels?.en) return labels.en;
         }
-        return (e?.rank ?? e?.Rank ?? o?.armyRank ?? o?.ArmyRank ?? 'ক্ষোয়াড্রন লীডার') as string;
+        return (emp?.rank ?? emp?.Rank ?? ovw?.armyRank ?? ovw?.ArmyRank ?? 'ক্ষোয়াড্রন লীডার') as string;
     }
-    get employeeNameBn(): string {
-        const e = this.employee as any;
-        if (!e) return '-- -- --';
-        return (e.fullNameBN ?? e.FullNameBN ?? e.fullNameEN ?? e.FullNameEN ?? '-- -- --') as string;
+
+    private nameBn(emp: any): string {
+        if (!emp) return '-- -- --';
+        return (emp.fullNameBN ?? emp.FullNameBN ?? emp.fullNameEN ?? emp.FullNameEN ?? '-- -- --') as string;
     }
-    get employeeCorpsBn(): string {
-        const e = this.employee as any;
-        const o = this.overview as any;
-        const corpsId: number | undefined =
-            o?.corpsId ?? o?.CorpsId ?? e?.branchId ?? e?.BranchId;
+
+    private corpsBn(emp: any, ovw: any): string {
+        const corpsId: number | undefined = ovw?.corpsId ?? ovw?.CorpsId ?? emp?.branchId ?? emp?.BranchId;
         let value = '';
         if (corpsId != null) {
             const labels = this.corpsLabels.get(corpsId);
             value = labels?.bn || labels?.en || '';
         }
         if (!value) {
-            value = (e?.corps ?? e?.Corps ?? o?.corps ?? o?.Corps ?? '') as string;
+            value = (emp?.corps ?? emp?.Corps ?? ovw?.corps ?? ovw?.Corps ?? '') as string;
         }
         // Don't render a "not applicable" placeholder as a corps name.
         return this.isNotApplicable(value) ? '' : value;
+    }
+
+    /** Unit shown when the member/approver has no resolvable RAB unit. Its location
+     *  is NOT hardcoded — the AOR lookup falls back to the RAB HQ unit so the
+     *  value comes from /basic-setup/rab-unit-aor. */
+    private readonly HQ_UNIT_BN = 'র‍্যাব ফোর্সেস সদর দপ্তর';
+    /** CommonCode id of the RAB HQ RabUnit — the row with the smallest SortOrder,
+     *  the same convention vw_NewPostingOrderWithEmployees uses. The AOR lookup
+     *  targets this when a person has no RAB unit of their own. */
+    private hqRabUnitId: number | null = null;
+
+    private unitBn(ovw: any): string {
+        const rabUnitId: number | undefined = ovw?.rabUnitId ?? ovw?.RabUnitId;
+        if (rabUnitId != null) {
+            const labels = this.rabUnitLabels.get(rabUnitId);
+            if (labels?.bn) return labels.bn;
+            if (labels?.en) return labels.en;
+        }
+        const rabUnit = (ovw?.rabUnit ?? ovw?.RabUnit ?? '') as string;
+        return rabUnit || this.HQ_UNIT_BN;
+    }
+
+    private unitLocationBn(ovw: any, hqBn: string, hqEn: string): string {
+        if (hqBn) return hqBn;
+        if (hqEn) return hqEn;
+        return (ovw?.location ?? ovw?.Location ?? '') as string;
     }
 
     /** True when a label is an N/A placeholder (in either language) and shouldn't be shown. */
@@ -293,24 +407,26 @@ export class NotesheetPreviewArticle47TakeoverComponent implements OnInit {
         const v = (value ?? '').trim().toLowerCase();
         return v === '' || v === 'n/a' || v === 'na' || v === 'অপ্রযোজ্য';
     }
-    get employeeUnitBn(): string {
-        const o = this.overview as any;
-        const rabUnitId: number | undefined = o?.rabUnitId ?? o?.RabUnitId;
-        if (rabUnitId != null) {
-            const labels = this.rabUnitLabels.get(rabUnitId);
-            if (labels?.bn) return labels.bn;
-            if (labels?.en) return labels.en;
-        }
-        const rabUnit = (o?.rabUnit ?? o?.RabUnit ?? '') as string;
-        return rabUnit || 'র‍্যাব ফোর্সেস সদর দপ্তর';
-    }
 
+    // Member (right-hand block).
+    get employeeIdLineBn(): string { return this.idLineBn(this.employee, this.overview, this.personalOverview); }
+    get employeeRankBn(): string { return this.rankBn(this.employee, this.overview); }
+    get employeeNameBn(): string { return this.nameBn(this.employee); }
+    get employeeCorpsBn(): string { return this.corpsBn(this.employee, this.overview); }
+    get employeeUnitBn(): string { return this.unitBn(this.overview); }
     /** Second signature line under the RAB Unit — Battalion HQ location. */
     get employeeUnitLocationBn(): string {
-        if (this.battalionHqBn) return this.battalionHqBn;
-        if (this.battalionHqEn) return this.battalionHqEn;
-        const o = this.overview as any;
-        return (o?.location ?? o?.Location ?? '') as string;
+        return this.unitLocationBn(this.overview, this.battalionHqBn, this.battalionHqEn);
+    }
+
+    // Final Approver (left-hand block).
+    get approverIdLineBn(): string { return this.idLineBn(this.approver, this.approverOverview, this.approverPersonalOverview); }
+    get approverRankBn(): string { return this.rankBn(this.approver, this.approverOverview); }
+    get approverNameBn(): string { return this.nameBn(this.approver); }
+    get approverCorpsBn(): string { return this.corpsBn(this.approver, this.approverOverview); }
+    get approverUnitBn(): string { return this.unitBn(this.approverOverview); }
+    get approverUnitLocationBn(): string {
+        return this.unitLocationBn(this.approverOverview, this.approverBattalionHqBn, this.approverBattalionHqEn);
     }
 
     private parseIntArray(json: string | null | undefined): number[] {
@@ -329,9 +445,50 @@ export class NotesheetPreviewArticle47TakeoverComponent implements OnInit {
         this.recipientLines = this.parseStringArray(this.movement?.letterRecipients);
     }
 
+    /**
+     * Article47Takeover rows of MovementLetterNumberConfig, kept only to render the
+     * Bangla prefix on স্মারক নং. Each row pairs the prefix its letter numbers are
+     * minted with against that prefix's Bangla form.
+     */
+    private letterConfigs: { prefix: string; prefixBN: string }[] = [];
+
+    private loadLetterConfigs(): void {
+        this.masterBasicSetup.getAllMovementLetterNumberConfig().subscribe({
+            next: (rows: any[]) => {
+                this.letterConfigs = (rows || [])
+                    .filter((r) => r.moveOrderType === MoveOrderType.Article47Takeover)
+                    .map((r) => ({ prefix: (r.prefix || '').trim(), prefixBN: (r.prefixBN || '').trim() }))
+                    .filter((r) => r.prefix && r.prefixBN);
+                // Configs may land after the movement — rebuild so the Bangla prefix
+                // replaces the English one once it's known.
+                if (this.movement) this.buildHeaderLines();
+            },
+            // A lookup failure must not blank the header — the minted prefix stands.
+            error: () => { /* keep the minted prefix */ }
+        });
+    }
+
+    /**
+     * Letter numbers are minted with the config's English prefix. The Bangla letter
+     * prints Prefix (Bangla) instead, so swap the leading prefix for its prefixBN and
+     * Bangla-ise only the digits that follow (the Bangla prefix is already Bangla text
+     * and must not go through the numeral converter).
+     *
+     * The config is identified by the prefix the number actually starts with — longest
+     * match wins — rather than by re-resolving the issuing unit, so the swap stays
+     * correct for movements whose unit config has since changed.
+     */
+    private toBanglaLetterNo(letterNo: string): string {
+        const match = this.letterConfigs
+            .filter((c) => letterNo.startsWith(c.prefix))
+            .sort((a, b) => b.prefix.length - a.prefix.length)[0];
+        if (!match) return this.toBn(letterNo);
+        return `${match.prefixBN}${this.toBn(letterNo.slice(match.prefix.length))}`;
+    }
+
     private buildHeaderLines(): void {
         this.memoNoBn = this.movement?.letterNo
-            ? this.toBn(this.movement.letterNo)
+            ? this.toBanglaLetterNo(this.movement.letterNo)
             : '---';
 
         const d = this.movement?.letterDate ? new Date(this.movement.letterDate) : new Date();
@@ -519,7 +676,7 @@ html, body { margin: 0; padding: 0; background: transparent; }
     /** Build the Article 47 Takeover Word document (portrait). */
     private buildWordDocument(): Document {
         const m = this.movement!;
-        const font = { ascii: 'Times New Roman', hAnsi: 'Times New Roman', cs: 'Nirmala UI', hint: 'cs' as const };
+        const font = { ascii: 'Times New Roman', hAnsi: 'Times New Roman', cs: 'SolaimanLipi', hint: 'cs' as const };
         const bnLang = { value: 'bn-BD', bidirectional: 'bn-BD' } as any;
         const dims = this.getPageDimensions();
         const marginLeft = 1440;  // 1 inch
@@ -623,22 +780,35 @@ html, body { margin: 0; padding: 0; background: transparent; }
 
         // Signature block — right-side nested table so the content sits on the
         // right with its lines centered inside (mirrors the web layout).
-        const sigLeftW = Math.round(contentWidth * 0.6);
+        // Two equal columns: Final Approver on the left, member on the right.
+        const sigLeftW = Math.round(contentWidth / 2);
         const sigRightW = contentWidth - sigLeftW;
-        const sigInnerParas: Paragraph[] = [];
-        sigInnerParas.push(para('গ্রহণকারী কর্মকর্তা', { align: AlignmentType.CENTER, spacingBefore: 240 }));
-        sigInnerParas.push(para('________________________', { align: AlignmentType.CENTER, spacingBefore: 720 }));
-        sigInnerParas.push(para(`${this.employeeIdLineBn} ${this.employeeRankBn}`.trim(), { align: AlignmentType.CENTER }));
-        sigInnerParas.push(para(`${this.employeeNameBn}${this.employeeCorpsBn ? ', ' + this.employeeCorpsBn : ''}`, { align: AlignmentType.CENTER }));
-        sigInnerParas.push(para(this.employeeUnitBn, { align: AlignmentType.CENTER }));
-        if (this.employeeUnitLocationBn) sigInnerParas.push(para(this.employeeUnitLocationBn, { align: AlignmentType.CENTER }));
+
+        /** One signature stack. No caption and no rule above the name — the leading
+         *  empty paragraph keeps the signing space the underscores used to occupy. */
+        const sigStack = (idLine: string, rank: string, name: string, corps: string, unit: string, location: string): Paragraph[] => {
+            const out: Paragraph[] = [];
+            out.push(para('', { align: AlignmentType.CENTER, spacingBefore: 720 }));
+            out.push(para(`${idLine} ${rank}`.trim(), { align: AlignmentType.CENTER }));
+            out.push(para(`${name}${corps ? ', ' + corps : ''}`, { align: AlignmentType.CENTER }));
+            out.push(para(`${unit}${location ? ', ' + location : ''}`, { align: AlignmentType.CENTER }));
+            return out;
+        };
+
+        const approverParas: Paragraph[] = this.hasApprover
+            ? sigStack(this.approverIdLineBn, this.approverRankBn, this.approverNameBn,
+                       this.approverCorpsBn, this.approverUnitBn, this.approverUnitLocationBn)
+            : [para('')];
+        const sigInnerParas: Paragraph[] = sigStack(
+            this.employeeIdLineBn, this.employeeRankBn, this.employeeNameBn,
+            this.employeeCorpsBn, this.employeeUnitBn, this.employeeUnitLocationBn);
         const sigRow = new Table({
             width: { size: contentWidth, type: WidthType.DXA },
             columnWidths: [sigLeftW, sigRightW],
             layout: TableLayoutType.FIXED,
             borders: { ...noBorder, insideHorizontal: { style: BorderStyle.NONE, size: 0, color: 'FFFFFF' }, insideVertical: { style: BorderStyle.NONE, size: 0, color: 'FFFFFF' } },
             rows: [new TableRow({ children: [
-                new TableCell({ width: { size: sigLeftW, type: WidthType.DXA }, borders: noBorder, children: [para('')] }),
+                new TableCell({ width: { size: sigLeftW, type: WidthType.DXA }, borders: noBorder, children: approverParas }),
                 new TableCell({ width: { size: sigRightW, type: WidthType.DXA }, borders: noBorder, children: sigInnerParas })
             ] })]
         });

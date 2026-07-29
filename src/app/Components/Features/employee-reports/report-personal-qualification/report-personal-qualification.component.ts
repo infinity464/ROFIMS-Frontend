@@ -1,4 +1,4 @@
-import { Component, EventEmitter, HostListener, Input, OnChanges, OnDestroy, OnInit, Output, SimpleChanges } from '@angular/core';
+﻿import { Component, EventEmitter, HostListener, Input, OnChanges, OnDestroy, OnInit, Output, SimpleChanges } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { TableModule } from 'primeng/table';
@@ -226,7 +226,7 @@ export class ReportPersonalQualificationComponent implements OnInit, OnChanges, 
         if (key === 'serviceId') {
             const r = row as any;
             const prefix = this.codeValue(r.prefix, r.prefixBN);
-            const svc = r.serviceId != null && r.serviceId !== '' ? String(r.serviceId) : '';
+            const svc = r.serviceId != null && r.serviceId !== '' ? this.displayNum(r.serviceId) : '';
             const px = prefix && prefix !== '-' && prefix !== '—' ? prefix : '';
             return [px, svc].filter((s) => s).join(' ') || '—';
         }
@@ -234,7 +234,7 @@ export class ReportPersonalQualificationComponent implements OnInit, OnChanges, 
         if (!map) return '—';
         const en = (row as any)[map.en] as string | null | undefined;
         const bn = map.bn ? (row as any)[map.bn] as string | null | undefined : undefined;
-        const value = this.codeValue(en, bn);
+        const value = (key === 'nid' || key === 'mobileNo') ? this.displayNum(this.codeValue(en, bn)) : this.codeValue(en, bn);
         if (key === 'rabUnitHierarchy') return this.trimHierarchy(value);
         return value;
     }
@@ -509,7 +509,7 @@ export class ReportPersonalQualificationComponent implements OnInit, OnChanges, 
 
     private async exportRabWord(): Promise<void> {
         const isBn = this.lang === 'bn';
-        const bnFont = { ascii: 'Times New Roman', hAnsi: 'Times New Roman', cs: 'Nirmala UI', hint: 'cs' as const };
+        const bnFont = { ascii: 'Times New Roman', hAnsi: 'Times New Roman', cs: 'SolaimanLipi', hint: 'cs' as const };
         const bnLang = { value: 'bn-BD', bidirectional: 'bn-BD' } as any;
         const sans = isBn ? (bnFont as any) : 'Calibri';
         const serif = isBn ? (bnFont as any) : 'Cambria';
@@ -675,8 +675,8 @@ export class ReportPersonalQualificationComponent implements OnInit, OnChanges, 
     private buildRabPrintHtml(): string {
         const esc = (s: unknown) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;');
         const isBn = this.lang === 'bn';
-        const serif = isBn ? "'Times New Roman', 'Nirmala UI', serif" : "'Times New Roman', serif";
-        const sans = isBn ? "'Times New Roman', 'Nirmala UI', sans-serif" : "'Times New Roman', sans-serif";
+        const serif = isBn ? "'Times New Roman', 'SolaimanLipi', serif" : "'Times New Roman', serif";
+        const sans = isBn ? "'Times New Roman', 'SolaimanLipi', sans-serif" : "'Times New Roman', sans-serif";
         const mono = "'JetBrains Mono', 'Consolas', 'Courier New', monospace";
 
         const visibleCols = this.visibleColumns;
@@ -945,12 +945,16 @@ export class ReportPersonalQualificationComponent implements OnInit, OnChanges, 
 
     /** Keystroke in the toolbar search — debounced auto-search. */
     onIdSearchInput(): void {
-        this.idSearchInput$.next((this.idSearchText ?? '').trim());
+        // Bangla digits typed/pasted into the ID search are normalized to
+        // Western digits so they match the stored Service ID / RAB ID.
+        this.idSearchText = BanglaNumerals.toWestern(this.idSearchText ?? '');
+        this.idSearchInput$.next(this.idSearchText.trim());
     }
 
     /** Enter / search icon — search immediately, skipping the debounce. */
     onIdSearch(): void {
-        this.applyIdSearch((this.idSearchText ?? '').trim());
+        this.idSearchText = BanglaNumerals.toWestern(this.idSearchText ?? '');
+        this.applyIdSearch(this.idSearchText.trim());
     }
 
     clearIdSearch(): void {

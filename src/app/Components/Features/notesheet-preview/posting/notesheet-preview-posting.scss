@@ -1,4 +1,4 @@
-.ns-cell-ref {
+﻿.ns-cell-ref {
     padding: 5px 16px 0 20px;
 }
 .ns-para {
@@ -57,12 +57,13 @@
    cc / mo / article-47 previews are untouched. styleUrls load this file AFTER the
    shared sheet, so these rules win on equal specificity. */
 .ns-title-en,
-.ns-title-bn { font-size: 11pt; }          /* document title (HEADER) — kept */
+.ns-title-bn { font-size: 13pt; }          /* document title (HEADER) — +2pt */
 
 /* Body: everything except the document header + table column headers → 10pt. */
 .ns-sanglagni-col { font-size: 10pt; }     /* সংলগ্নী নং column */
 .ns-cell-ref { font-size: 10pt; }          /* সূত্র */
 .ns-para { font-size: 10pt; }              /* body paragraphs */
+.ns-para-no { font-weight: normal; }       /* serial numbers (১। ২। …) not bold */
 .ns-note { font-size: 10pt; }              /* note */
 .ns-initiator-area { font-size: 10pt; }    /* signature block */
 .ns-closing-text { font-size: 10pt; }      /* closing line */
@@ -71,7 +72,7 @@
     /* Table content 8pt; column headers (table information) keep their own size. */
     table { font-size: 8pt; }
     td { font-size: 8pt; }
-    th { font-size: 6.5pt; }
+    th { font-size: 6.5pt; font-weight: 700; }
     .ns-posting-note { font-size: 10pt; }
 
     /* No shading — plain white rows and header (no zebra, no grey header). */
@@ -79,24 +80,24 @@
     tr:nth-child(even) { background: transparent !important; }
     tr { background: transparent !important; }
 
-    /* Hairline cell borders (lighter grey reads even thinner in print/PDF). */
+    /* Hairline cell borders — deep black. */
     th,
-    td { border: 0.25px solid #888 !important; }
+    td { border: 0.25px solid #000 !important; }
 }
 
 /* New posting: table content + column headers 9pt (inter posting stays 8pt / 6.5pt).
-   Header is NOT bold — same weight/size as the content. */
+   Header is bold. */
 .ns-posting-table.ns-posting-new {
     table { font-size: 9pt; }
     td { font-size: 9pt; }
     th {
         font-size: 9pt;
-        font-weight: normal;
+        font-weight: 700;
     }
 }
 
 /* ── Document font ─────────────────────────────────────
-   SolaimanLipi (bundled, see styles.scss) replaces Nirmala UI as the Bangla
+   SolaimanLipi (bundled, see styles.scss) replaces SolaimanLipi as the Bangla
    face for this preview. Times New Roman stays first so Latin text and digits
    are unchanged — Bangla codepoints have no Times glyphs and fall through to
    SolaimanLipi.
@@ -110,7 +111,7 @@
     font-family: 'Times New Roman', 'SolaimanLipi', Times, serif;
 
     /* Beats the shared preview's !important rule that pins rich-text (Quill)
-       content to Nirmala UI. */
+       content to SolaimanLipi. */
     ::ng-deep .ns-para-text,
     ::ng-deep .ns-para-text *,
     ::ng-deep .ns-ref-content,

@@ -18,6 +18,7 @@ import { DatePickerModule } from 'primeng/datepicker';
 import { TextareaModule } from 'primeng/textarea';
 
 import { EmpService } from '@/services/emp-service';
+import { buildUploadOwnerTag } from '@/shared/utils/upload-file-name.util';
 import { MedicalInfoService, MedicalInfoModel } from '@/services/medical-info.service';
 import { MasterBasicSetupService } from '@/Components/basic-setup/shared/services/MasterBasicSetupService';
 import { CodeType } from '@/models/enums';
@@ -323,7 +324,7 @@ export class EmpMedicalCategory implements OnInit {
 
         if (filesToUpload.length > 0) {
             const uploads = filesToUpload.map((r: FileRowData) =>
-                this.empService.uploadEmployeeFile(r.file!, r.displayName?.trim() || r.file!.name)
+                this.empService.uploadEmployeeFile(r.file!, r.displayName?.trim() || r.file!.name, buildUploadOwnerTag(this.employeeBasicInfo?.rabid, this.selectedEmployeeId))
             );
             forkJoin(uploads).subscribe({
                 next: (results: unknown) => {

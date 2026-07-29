@@ -1,4 +1,4 @@
-:host {
+﻿:host {
     display: block;
 }
 .filter-field {
@@ -236,33 +236,47 @@
     }
 
     .rab-toolbar-search {
+        /* Border/glow follow the app's selected theme primary color
+           (PrimeNG --p-primary-color from the palette picker), gold fallback. */
+        --rab-search-accent: var(--p-primary-color, #b78b3b);
         display: flex;
         align-items: center;
         height: 28px;
-        border: 1px solid var(--rab-strip-border);
-        border-radius: 2px;
-        background: var(--rab-strip-bg);
-        transition: border-color 0.15s;
+        border: 1.5px solid var(--rab-search-accent);
+        border-radius: 4px;
+        background: #ffffff;
+        transition: border-color 0.2s ease, box-shadow 0.2s ease;
+        /* Idle: a gentle border shimmer that draws the eye to the search. */
+        animation: rab-search-border-pulse 2.6s ease-in-out infinite;
 
+        &:hover {
+            border-color: color-mix(in srgb, var(--rab-search-accent) 65%, #ffffff);
+        }
+
+        /* While typing, stop the idle pulse and hold a crisp focus ring. */
         &:focus-within {
-            border-color: var(--rab-accent);
+            border-color: var(--rab-search-accent);
+            box-shadow: 0 0 0 3px color-mix(in srgb, var(--rab-search-accent) 25%, transparent);
+            animation: none;
         }
 
         input {
-            width: 180px;
+            width: 198px;
             height: 100%;
             padding: 0 4px;
             border: none;
             outline: none;
             background: transparent;
-            color: var(--rab-text);
+            /* Fixed dark ink — the field is always white, so it must stay
+               readable even in dark theme (where --rab-text is light gold). */
+            color: #1a1a1a;
             font-family: var(--rab-mono);
             font-size: 0.7rem;
             letter-spacing: 0.04em;
 
             &::placeholder {
-                color: var(--rab-text);
-                opacity: 0.45;
+                color: #000000;
+                opacity: 1;
                 text-transform: uppercase;
                 letter-spacing: 0.1em;
             }
@@ -277,7 +291,7 @@
             padding: 0 8px;
             border: none;
             background: transparent;
-            color: var(--rab-text);
+            color: var(--rab-search-accent);
             cursor: pointer;
 
             .pi {
@@ -285,8 +299,20 @@
             }
 
             &:hover {
-                color: var(--rab-accent);
+                color: color-mix(in srgb, var(--rab-search-accent) 65%, #000000);
             }
+        }
+    }
+
+    @keyframes rab-search-border-pulse {
+        0%,
+        100% {
+            border-color: var(--rab-search-accent);
+            box-shadow: 0 0 0 0 color-mix(in srgb, var(--rab-search-accent) 0%, transparent);
+        }
+        50% {
+            border-color: color-mix(in srgb, var(--rab-search-accent) 60%, #ffffff);
+            box-shadow: 0 0 0 3px color-mix(in srgb, var(--rab-search-accent) 16%, transparent);
         }
     }
 
@@ -510,14 +536,14 @@
     .rab-personnel-name,
     .rab-personnel-meta {
         letter-spacing: 0;
-        font-family: 'Times New Roman', 'Nirmala UI', sans-serif;
+        font-family: 'Times New Roman', 'SolaimanLipi', sans-serif;
     }
 
     .rab-criteria-strip,
     .rab-criteria-cell-label,
     .rab-foot-row {
         letter-spacing: 0.04em;
-        font-family: 'Times New Roman', 'Nirmala UI', sans-serif;
+        font-family: 'Times New Roman', 'SolaimanLipi', sans-serif;
         text-transform: none;
     }
 
@@ -532,7 +558,7 @@
 
 :host ::ng-deep .rab-paper.rab-lang-bn .rab-data-table .p-datatable-thead > tr > th {
     letter-spacing: 0.04em;
-    font-family: 'Times New Roman', 'Nirmala UI', sans-serif;
+    font-family: 'Times New Roman', 'SolaimanLipi', sans-serif;
 }
 
 /* ----- Data table ----- */

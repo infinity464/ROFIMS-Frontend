@@ -1,4 +1,4 @@
-import { Component, HostListener, OnDestroy, OnInit } from '@angular/core';
+﻿import { Component, HostListener, OnDestroy, OnInit } from '@angular/core';
 import { Router } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -29,9 +29,17 @@ import * as XLSX from 'xlsx';
 type Lang = 'en' | 'bn';
 
 /**
- * RFTS Completion Report — list of members who have (Completed) or have not
- * (NotCompleted) completed RFTS. RAB-formal paper layout, dynamic column
- * picker, drag-to-reorder, self-contained Print/Word/Excel exports.
+ * The three buckets of EmployeeInfo.IsRFTSComplted. Mutually exclusive and
+ * between them they cover everyone — members who are exempt get their own list
+ * rather than padding the NotCompleted action list.
+ */
+type CompletionStatus = 'Completed' | 'NotCompleted' | 'NotApplicable';
+
+/**
+ * RFTS Completion Report — list of members who have (Completed), have not
+ * (NotCompleted), or are exempt from (NotApplicable) RFTS. RAB-formal paper
+ * layout, dynamic column picker, drag-to-reorder, self-contained
+ * Print/Word/Excel exports.
  */
 @Component({
     selector: 'app-report-rfts-completion',
@@ -57,12 +65,13 @@ export class ReportRftsCompletionComponent implements OnInit, OnDestroy {
     canUpdate = true;
     canDelete = true;
 
-    /** Primary filter — switches the report between the two lists. */
-    statusOptions: { label: string; labelBn: string; value: 'Completed' | 'NotCompleted' }[] = [
+    /** Primary filter — switches the report between the three lists. */
+    statusOptions: { label: string; labelBn: string; value: CompletionStatus }[] = [
         { label: 'Completed RFTS', labelBn: 'আরএফটিএস সম্পন্ন', value: 'Completed' },
         { label: 'Not Completed RFTS', labelBn: 'আরএফটিএস সম্পন্ন হয়নি', value: 'NotCompleted' },
+        { label: 'Not Applicable', labelBn: 'প্রযোজ্য নয়', value: 'NotApplicable' },
     ];
-    selectedCompletionStatus: 'Completed' | 'NotCompleted' = 'Completed';
+    selectedCompletionStatus: CompletionStatus = 'Completed';
 
     /** Org / role dropdowns — loaded from CommonCode + MotherOrg endpoints. All multi-select. */
     motherOrgOptions: { label: string; labelBn: string; value: number }[] = [];
@@ -73,6 +82,14 @@ export class ReportRftsCompletionComponent implements OnInit, OnDestroy {
     private allRanksForOrg: CommonCodeModel[] = [];
     rankOptions: { label: string; labelBn: string; value: number }[] = [];
     selectedRankIds: number[] = [];
+    /**
+     * RAB Rank filter — universal rank tiers (EquivalentName common codes),
+     * mapped to per-org Mother Org Ranks by basic-setup/rank-equivalent. Not
+     * org-scoped, so the list loads once on init and stays enabled regardless
+     * of the Mother Organization picked. Mutually exclusive with Rank.
+     */
+    rabRankOptions: { label: string; labelBn: string; value: number }[] = [];
+    selectedRabRankIds: number[] = [];
     corpsOptions: { label: string; labelBn: string; value: number }[] = [];
     selectedCorpsIds: number[] = [];
     tradeOptions: { label: string; labelBn: string; value: number }[] = [];
@@ -161,14 +178,14 @@ export class ReportRftsCompletionComponent implements OnInit, OnDestroy {
     selectedColumnKeys: string[] = this.defaultColumnsFor('Completed');
     draggingColumnKey: string | null = null;
 
-    /** Default visible columns for a view — drops course columns in NotCompleted. */
-    private defaultColumnsFor(status: 'Completed' | 'NotCompleted'): string[] {
+    /** Default visible columns for a view — only Completed has course data to show. */
+    private defaultColumnsFor(status: CompletionStatus): string[] {
         return this.columnCatalog
             .filter(c => c.defaultVisible && (status === 'Completed' || !c.courseOnly))
             .map(c => c.key);
     }
 
-    /** Picker options — hide course-only fields in the NotCompleted view. */
+    /** Picker options — only Completed has course data, so hide course-only fields elsewhere. */
     get columnPickerOptions(): { label: string; value: string }[] {
         return this.columnCatalog
             .filter(c => this.isCompletedView || !c.courseOnly)
@@ -288,6 +305,7 @@ export class ReportRftsCompletionComponent implements OnInit, OnDestroy {
 
         this.loadMotherOrgOptions();
         this.loadMemberTypeOptions();
+        this.loadRabRankOptions();
         this.loadOrgNodeLabels();
 
         this.idSearchSub = this.idSearchInput$
@@ -430,6 +448,24 @@ export class ReportRftsCompletionComponent implements OnInit, OnDestroy {
         });
     }
 
+    /** RAB Rank tiers — EquivalentName common codes (org-independent). */
+    loadRabRankOptions(): void {
+        this.commonCodeService.getAllActiveCommonCodesType('EquivalentName').subscribe({
+            next: (codes: CommonCodeModel[]) => (this.rabRankOptions = this.mapCodes(codes || [])),
+            error: () => (this.rabRankOptions = []),
+        });
+    }
+
+    /**
+     * Rank changed → drop any RAB Rank selection. The two are alternative ways
+     * of asking the same question (per-org Mother Org Rank vs. the universal
+     * tier it maps to), so only one may be active at a time — the template
+     * disables RAB Rank while a Rank is picked.
+     */
+    onRankChange(): void {
+        if (this.selectedRankIds.length) this.selectedRabRankIds = [];
+    }
+
     /** Member Type changed → re-filter the org-scoped ranks by parentCodeId. */
     onMemberTypeChange(): void {
         this.applyRankMemberTypeFilter();
@@ -486,6 +522,7 @@ export class ReportRftsCompletionComponent implements OnInit, OnDestroy {
         multi(this.selectedOrgIds, this.motherOrgOptions, 'Mother Org');
         multi(this.selectedMemberTypeIds, this.memberTypeOptions, 'Member Type');
         multi(this.selectedRankIds, this.rankOptions, 'Rank');
+        multi(this.selectedRabRankIds, this.rabRankOptions, 'RAB Rank');
         multi(this.selectedCorpsIds, this.corpsOptions, 'Corps');
         multi(this.selectedTradeIds, this.tradeOptions, 'Trade');
         if (this.selectedOrgNodeIds.length > 0) {
@@ -503,6 +540,7 @@ export class ReportRftsCompletionComponent implements OnInit, OnDestroy {
         if (this.selectedOrgIds.length > 0) c++;
         if (this.selectedMemberTypeIds.length > 0) c++;
         if (this.selectedRankIds.length > 0) c++;
+        if (this.selectedRabRankIds.length > 0) c++;
         if (this.selectedCorpsIds.length > 0) c++;
         if (this.selectedTradeIds.length > 0) c++;
         if (this.selectedOrgNodeIds.length > 0) c++;
@@ -511,8 +549,8 @@ export class ReportRftsCompletionComponent implements OnInit, OnDestroy {
 
     /**
      * Completion status is the report mode. Reset the visible columns to the
-     * view's defaults (course columns are dropped for NotCompleted, restored
-     * for Completed).
+     * view's defaults (course columns are dropped for NotCompleted and
+     * NotApplicable, restored for Completed).
      */
     onCompletionStatusChange(): void {
         this.selectedColumnKeys = this.defaultColumnsFor(this.selectedCompletionStatus);
@@ -533,6 +571,7 @@ export class ReportRftsCompletionComponent implements OnInit, OnDestroy {
         this.selectedOrgIds = [];
         this.selectedMemberTypeIds = [];
         this.selectedRankIds = [];
+        this.selectedRabRankIds = [];
         this.selectedCorpsIds = [];
         this.selectedTradeIds = [];
         this.selectedOrgNodeIds = [];
@@ -568,12 +607,16 @@ export class ReportRftsCompletionComponent implements OnInit, OnDestroy {
 
     /** Keystroke in the toolbar search — debounced auto-search. */
     onIdSearchInput(): void {
-        this.idSearchInput$.next((this.idSearchText ?? '').trim());
+        // Bangla digits typed/pasted into the ID search are normalized to
+        // Western digits so they match the stored Service ID / RAB ID.
+        this.idSearchText = BanglaNumerals.toWestern(this.idSearchText ?? '');
+        this.idSearchInput$.next(this.idSearchText.trim());
     }
 
     /** Enter / search icon — search immediately, skipping the debounce. */
     onIdSearch(): void {
-        this.applyIdSearch((this.idSearchText ?? '').trim());
+        this.idSearchText = BanglaNumerals.toWestern(this.idSearchText ?? '');
+        this.applyIdSearch(this.idSearchText.trim());
     }
 
     clearIdSearch(): void {
@@ -652,6 +695,10 @@ export class ReportRftsCompletionComponent implements OnInit, OnDestroy {
             criteria.push({ fieldKey: 'memberType', idValues: this.selectedMemberTypeIds });
         if (this.selectedRankIds.length)
             criteria.push({ fieldKey: 'armyRank', idValues: this.selectedRankIds });
+        // RAB Rank tiers resolve to the matching Mother Org Ranks server-side
+        // via the RankEquivalent map.
+        if (this.selectedRabRankIds.length)
+            criteria.push({ fieldKey: 'rabRankEquivalent', idValues: this.selectedRabRankIds });
         if (this.selectedCorpsIds.length)
             criteria.push({ fieldKey: 'corps', idValues: this.selectedCorpsIds });
         if (this.selectedTradeIds.length)
@@ -847,7 +894,7 @@ export class ReportRftsCompletionComponent implements OnInit, OnDestroy {
 
     private async exportRabWord(): Promise<void> {
         const isBn = this.lang === 'bn';
-        const bnFont = { ascii: 'Times New Roman', hAnsi: 'Times New Roman', cs: 'Nirmala UI', hint: 'cs' as const };
+        const bnFont = { ascii: 'Times New Roman', hAnsi: 'Times New Roman', cs: 'SolaimanLipi', hint: 'cs' as const };
         const bnLang = { value: 'bn-BD', bidirectional: 'bn-BD' } as any;
         const sans = isBn ? (bnFont as any) : 'Calibri';
         const serif = isBn ? (bnFont as any) : 'Cambria';
@@ -1152,8 +1199,8 @@ export class ReportRftsCompletionComponent implements OnInit, OnDestroy {
                 .replace(/"/g, '&quot;')
                 .replace(/'/g, '&#039;');
         const isBn = this.lang === 'bn';
-        const serif = isBn ? "'Times New Roman', 'Nirmala UI', serif" : "'Times New Roman', serif";
-        const sans = isBn ? "'Times New Roman', 'Nirmala UI', sans-serif" : "'Times New Roman', sans-serif";
+        const serif = isBn ? "'Times New Roman', 'SolaimanLipi', serif" : "'Times New Roman', serif";
+        const sans = isBn ? "'Times New Roman', 'SolaimanLipi', sans-serif" : "'Times New Roman', sans-serif";
         const mono = "'JetBrains Mono', 'Consolas', 'Courier New', monospace";
         const visibleCols = this.visibleColumns;
         const tableHeaderHtml = `<tr>${visibleCols.map((c) => `<th>${esc(this.lang === 'bn' ? c.labelBN : c.labelEN)}</th>`).join('')}</tr>`;

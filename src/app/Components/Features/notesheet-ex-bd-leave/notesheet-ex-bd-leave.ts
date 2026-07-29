@@ -1,4 +1,4 @@
-import { Component, OnInit, ViewChild , inject } from '@angular/core';
+﻿import { Component, OnInit, ViewChild , inject } from '@angular/core';
 import { UserMenuService } from '@/services/user-menu.service';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { MasterBasicSetupService } from '@/Components/basic-setup/shared/services/MasterBasicSetupService';
@@ -25,6 +25,7 @@ import { HttpClient } from '@angular/common/http';
 import { forkJoin, of } from 'rxjs';
 import { FileReferencesFormComponent, FileRowData } from '@/Components/Common/file-references-form/file-references-form';
 import { EmpService } from '@/services/emp-service';
+import { buildUploadOwnerTag } from '@/shared/utils/upload-file-name.util';
 import { CommonCodeService } from '@/services/common-code-service';
 import { FamilyInfoService, FamilyInfoModel } from '@/services/family-info-service';
 import { ActivatedRoute, Router } from '@angular/router';
@@ -1120,6 +1121,8 @@ export class NotesheetExBdLeaveComponent implements OnInit {
     }
 
     async submit(): Promise<void> {
+        // Guard against double submission while a save is already in flight.
+        if (this.isSubmitting) return;
         if (this.form.invalid) {
             this.form.markAllAsTouched();
             this.messageService.add({ severity: 'warn', summary: 'Validation', detail: 'Please fill required fields.' });
@@ -1136,7 +1139,7 @@ export class NotesheetExBdLeaveComponent implements OnInit {
             let filesReferencesJson: string | null = null;
             if (filesToUpload.length > 0) {
                 const uploads = filesToUpload.map((r: FileRowData) =>
-                    this.empService.uploadEmployeeFile(r.file!, r.displayName?.trim() || r.file!.name)
+                    this.empService.uploadEmployeeFile(r.file!, r.displayName?.trim() || r.file!.name, buildUploadOwnerTag(null, this.selectedEmployeeId))
                 );
                 const results = await forkJoin(uploads).toPromise();
                 const arr = Array.isArray(results) ? results : [];
@@ -1525,7 +1528,7 @@ export class NotesheetExBdLeaveComponent implements OnInit {
             const existingFiles = para.fileRows.filter(r => r.fileId != null).map(r => ({ FileId: r.fileId!, fileName: r.displayName ?? '' }));
             const newFiles = para.fileRows.filter(r => r.file != null);
             if (newFiles.length > 0) {
-                const uploads = newFiles.map(r => this.empService.uploadEmployeeFile(r.file!, r.displayName?.trim() || r.file!.name).toPromise());
+                const uploads = newFiles.map(r => this.empService.uploadEmployeeFile(r.file!, r.displayName?.trim() || r.file!.name, buildUploadOwnerTag(null, this.selectedEmployeeId)).toPromise());
                 const uploaded = await Promise.all(uploads);
                 const uploadedRefs = (uploaded as any[]).map(r => ({ FileId: r.fileId, fileName: r.fileName }));
                 result.push({ text: para.text, files: [...existingFiles, ...uploadedRefs] });
@@ -1538,6 +1541,8 @@ export class NotesheetExBdLeaveComponent implements OnInit {
 
     saveViewChanges(): void {
         if (!this.viewNoteSheet) return;
+        // Guard against double submission while a save is already in flight.
+        if (this.savingView) return;
         this.savingView = true;
         const resolvedSubject = this.getSubjectLabel(this.editExBdLeaveSubjectId) || this.editSubject;
         const payload = {
@@ -1734,7 +1739,7 @@ export class NotesheetExBdLeaveComponent implements OnInit {
         const ns = this.viewNoteSheet;
         if (!ns) return;
         const bn = !this.isViewEnglish();
-        const fontFamily = bn ? "'Times New Roman', 'Nirmala UI', sans-serif" : "'Times New Roman', serif";
+        const fontFamily = bn ? "'Times New Roman', 'SolaimanLipi', sans-serif" : "'Times New Roman', serif";
         const title = bn ? 'মন্তব্যপত্র' : 'NOTE SHEET';
 
         const metaParts: string[] = [];
@@ -1807,7 +1812,7 @@ export class NotesheetExBdLeaveComponent implements OnInit {
         const ns = this.viewNoteSheet;
         if (!ns) return;
         const bn = !this.isViewEnglish();
-        const fontFamily = bn ? "'Times New Roman', 'Nirmala UI', sans-serif" : "'Times New Roman', serif";
+        const fontFamily = bn ? "'Times New Roman', 'SolaimanLipi', sans-serif" : "'Times New Roman', serif";
         const title = bn ? 'মন্তব্যপত্র' : 'NOTE SHEET';
 
         const metaParts: string[] = [];

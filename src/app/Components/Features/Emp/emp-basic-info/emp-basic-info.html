@@ -243,10 +243,15 @@
                     </div>
 
                     <div class="form-field">
+                        <label class="form-label">Trade Remarks</label>
+                        <input pInputText class="w-full" placeholder="Enter remarks" formControlName="tradeMark" />
+                    </div>
+
+                    <div class="form-field">
                         <label class="form-label">Special Qualifications</label>
                         <p-multiSelect
                             [options]="specialQualificationOptions"
-                            optionLabel="codeValueEN"
+                            optionLabel="displayLabel"
                             optionValue="codeId"
                             placeholder="Select Special Qualifications"
                             styleClass="w-full"
@@ -256,11 +261,6 @@
                             display="chip"
                         >
                         </p-multiSelect>
-                    </div>
-
-                    <div class="form-field">
-                        <label class="form-label">Trade Remarks</label>
-                        <input pInputText class="w-full" placeholder="Enter remarks" formControlName="tradeMark" />
                     </div>
                 </div>
 
@@ -285,7 +285,7 @@
                     <div class="form-field">
                         <label class="form-label"> Service ID <span class="form-label-required">*</span> </label>
                         <div class="p-inputgroup">
-                            <input pInputText class="w-full" [class.surface-100]="isEditMode" placeholder="Only Number" formControlName="serviceId" [readonly]="isEditMode" />
+                            <input pInputText class="w-full" placeholder="Only Number" formControlName="serviceId" inputmode="numeric" (input)="onDigitsOnlyInput($event, 'serviceId')" />
                             @if (isCheckingCombo) {
                             <span class="p-inputgroup-addon">
                                 <i class="pi pi-spin pi-spinner"></i>
@@ -302,7 +302,7 @@
                     <div class="form-field">
                         <label class="form-label">RAB ID</label>
                         <div class="p-inputgroup">
-                            <input pInputText class="w-full" placeholder="Auto Generated if left blank" formControlName="rabid" />
+                            <input pInputText class="w-full" placeholder="Auto Generated if left blank" formControlName="rabid" inputmode="numeric" (input)="onDigitsOnlyInput($event, 'rabid')" />
                             @if (isCheckingRabId) {
                             <span class="p-inputgroup-addon">
                                 <i class="pi pi-spin pi-spinner"></i>
@@ -518,7 +518,7 @@
             @if (!isEditMode) {
             <p-button type="button" label="Reset" icon="pi pi-refresh" severity="secondary" [outlined]="true" styleClass="form-btn-secondary" (onClick)="onReset()"> </p-button>
             }
-            <p-button type="button" [label]="isEditMode ? 'Update All Information' : 'Save All Information'" icon="pi pi-check-circle" styleClass="form-btn-primary" [disabled]="isDuplicateCombo || isCheckingCombo || isDuplicateRabId || isCheckingRabId" (onClick)="saveAll()"> </p-button>
+            <p-button type="button" [label]="isEditMode ? 'Update All Information' : 'Save All Information'" icon="pi pi-check-circle" styleClass="form-btn-primary" [loading]="isSaving" [disabled]="isSaving || isDuplicateCombo || isCheckingCombo || isDuplicateRabId || isCheckingRabId" (onClick)="saveAll()"> </p-button>
         </div>
         }
     </div>

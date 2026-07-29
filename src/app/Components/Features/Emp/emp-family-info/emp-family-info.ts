@@ -1,5 +1,6 @@
 import { Component, EventEmitter, Input, OnInit, Output, ViewChild , inject } from '@angular/core';
 import { UserMenuService } from '@/services/user-menu.service';
+import { SharedService } from '@/shared/services/shared-service';
 import { CommonModule } from '@angular/common';
 import { FormsModule, ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
@@ -71,6 +72,13 @@ interface FamilyMember {
 export class EmpFamilyInfo implements OnInit {
     private _router = inject(Router);
     private _userMenuService = inject(UserMenuService);
+    private sharedService = inject(SharedService);
+
+    /** Logged-in user for CreatedBy / LastUpdatedBy. Falls back to 'system' only when nobody is signed in. */
+    private get auditUser(): string {
+        return this.sharedService.getCurrentUser() ?? 'system';
+    }
+
     canInsert = true;
     canUpdate = true;
     canDelete = true;
@@ -197,6 +205,24 @@ export class EmpFamilyInfo implements OnInit {
                 this.familyForm.patchValue({ occupationDetails: '', districtId: null });
             }
         });
+    }
+
+    /**
+     * Capitalize the first letter of each word in the given text field (fixes
+     * casing mistakes like "john doe" → "John Doe"). Runs on blur.
+     */
+    capitalizeWords(fieldName: string): void {
+        const field = this.familyForm.get(fieldName);
+        const value = field?.value;
+        if (typeof value !== 'string' || !value.trim()) return;
+        const formatted = value
+            .replace(/\s+/g, ' ')
+            .trim()
+            .toLowerCase()
+            .replace(/\b\p{L}/gu, (ch) => ch.toUpperCase());
+        if (formatted !== value) {
+            field!.setValue(formatted);
+        }
     }
 
     loadDropdowns(): void {
@@ -448,7 +474,7 @@ export class EmpFamilyInfo implements OnInit {
             MobileNo: formValue.mobileNo || null,
             PassportNo: formValue.passportNo || null,
             Email: formValue.email || null,
-            LastUpdatedBy: 'system',
+            LastUpdatedBy: this.auditUser,
             Lastupdate: new Date().toISOString(),
             StatusDate: new Date().toISOString()
         };
@@ -543,7 +569,9 @@ export class EmpFamilyInfo implements OnInit {
     formatDate(date: Date): string {
         if (!date) return '';
         const d = new Date(date);
-        return d.toISOString().split('T')[0];
+        if (isNaN(d.getTime())) return '';
+        // Local Y/M/D — toISOString() converts to UTC and shifts the date back a day in UTC+ zones.
+        return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
     }
 
     enableEditMode(): void {
@@ -738,9 +766,9 @@ export class EmpFamilyInfo implements OnInit {
             ThanaType: data.upazila,
             PostOfficeType: data.postOffice,
             Active: true,
-            CreatedBy: 'system',
+            CreatedBy: this.auditUser,
             CreatedDate: new Date().toISOString(),
-            LastUpdatedBy: 'system',
+            LastUpdatedBy: this.auditUser,
             Lastupdate: new Date().toISOString()
         };
 
@@ -804,7 +832,7 @@ export class EmpFamilyInfo implements OnInit {
             MobileNo: formValue.mobileNo || null,
             PassportNo: formValue.passportNo || null,
             Email: formValue.email || null,
-            LastUpdatedBy: 'system',
+            LastUpdatedBy: this.auditUser,
             Lastupdate: new Date().toISOString(),
             StatusDate: new Date().toISOString()
         };

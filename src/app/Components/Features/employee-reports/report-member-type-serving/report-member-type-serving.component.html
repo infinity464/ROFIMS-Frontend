@@ -68,13 +68,29 @@
                     <p-multiSelect
                         [options]="rankOptions"
                         [(ngModel)]="selectedRankIds"
-                        (ngModelChange)="onFilterChange()"
+                        (ngModelChange)="onRankChange()"
                         optionLabel="label"
                         optionValue="value"
                         display="chip"
                         placeholder="Select"
                         styleClass="w-full"
                         [disabled]="selectedOrgIds.length === 0"
+                        [filter]="true"
+                        appendTo="body">
+                    </p-multiSelect>
+                </div>
+                <div class="report-filter-field">
+                    <label>{{ L['en']['report.title.rabRank'] }}</label>
+                    <p-multiSelect
+                        [options]="rabRankOptions"
+                        [(ngModel)]="selectedRabRankIds"
+                        (ngModelChange)="onFilterChange()"
+                        optionLabel="label"
+                        optionValue="value"
+                        display="chip"
+                        placeholder="Select"
+                        styleClass="w-full"
+                        [disabled]="selectedRankIds.length > 0"
                         [filter]="true"
                         appendTo="body">
                     </p-multiSelect>

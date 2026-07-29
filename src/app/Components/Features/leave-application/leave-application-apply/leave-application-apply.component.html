@@ -348,7 +348,7 @@
         }
         <div class="submit-row">
           <span class="spacer"></span>
-          <p-button type="submit" label="Submit" icon="pi pi-send" severity="success" [loading]="isSaving" [class.perm-hidden]="editMode ? !canUpdate : !canInsert"></p-button>
+          <p-button type="submit" label="Submit" icon="pi pi-send" severity="success" [loading]="isSaving" [disabled]="isSaving" [class.perm-hidden]="editMode ? !canUpdate : !canInsert"></p-button>
         </div>
       </div>
 

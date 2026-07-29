@@ -45,7 +45,7 @@ interface FilterModel {
     imports: [CommonModule, FormsModule, RouterModule, TableModule, ButtonModule, InputTextModule, SelectModule, ToastModule],
     providers: [MessageService],
     templateUrl: './rab-organogram-members.html',
-    styleUrls: ['./rab-organogram-members.scss', '../../../employee-reports/report-theme.scss']
+    styleUrls: ['./rab-organogram-members.scss']
 })
 export class RabOrganogramMembersComponent implements OnInit {
     private _router = inject(Router);

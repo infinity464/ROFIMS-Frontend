@@ -1,4 +1,4 @@
-import { Component, HostListener, OnDestroy, OnInit } from '@angular/core';
+﻿import { Component, HostListener, OnDestroy, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { TableModule } from 'primeng/table';
@@ -115,6 +115,14 @@ export class ReportConfidentialRemarksComponent implements OnInit, OnDestroy {
      *  resolve each picked node to its full root→node ancestry path. */
     private orgNodeLabels = new Map<number, { en: string; bn: string; parentId: number | null }>();
     rankOptions: { label: string; labelBn: string; value: number }[] = [];
+    /**
+     * RAB Rank filter — universal rank tiers (EquivalentName common codes),
+     * mapped to per-org Mother Org Ranks by basic-setup/rank-equivalent. Not
+     * org-scoped, so the list loads once on init and stays enabled regardless
+     * of the Mother Organization picked.
+     */
+    rabRankOptions: { label: string; labelBn: string; value: number }[] = [];
+    selectedRabRankIds: number[] = [];
     corpsOptions: { label: string; labelBn: string; value: number }[] = [];
     tradeOptions: { label: string; labelBn: string; value: number }[] = [];
     selectedRankIds: number[] = [];
@@ -152,12 +160,16 @@ export class ReportConfidentialRemarksComponent implements OnInit, OnDestroy {
 
     /** Keystroke in the toolbar search — debounced auto-search. */
     onIdSearchInput(): void {
-        this.idSearchInput$.next((this.idSearchText ?? '').trim());
+        // Bangla digits typed/pasted into the ID search are normalized to
+        // Western digits so they match the stored Service ID / RAB ID.
+        this.idSearchText = BanglaNumerals.toWestern(this.idSearchText ?? '');
+        this.idSearchInput$.next(this.idSearchText.trim());
     }
 
     /** Enter / search icon — search immediately, skipping the debounce. */
     onIdSearch(): void {
-        this.applyIdSearch((this.idSearchText ?? '').trim());
+        this.idSearchText = BanglaNumerals.toWestern(this.idSearchText ?? '');
+        this.applyIdSearch(this.idSearchText.trim());
     }
 
     clearIdSearch(): void {
@@ -262,7 +274,7 @@ export class ReportConfidentialRemarksComponent implements OnInit, OnDestroy {
         if (key === 'serviceId') {
             const r = row as any;
             const prefix = this.codeValue(r.prefix, r.prefixBN);
-            const svc = r.serviceId != null && r.serviceId !== '' ? String(r.serviceId) : '';
+            const svc = r.serviceId != null && r.serviceId !== '' ? this.displayNum(r.serviceId) : '';
             const px = prefix && prefix !== '-' && prefix !== '—' ? prefix : '';
             return [px, svc].filter((s) => s).join(' ') || '—';
         }
@@ -270,7 +282,7 @@ export class ReportConfidentialRemarksComponent implements OnInit, OnDestroy {
         if (!map) return '—';
         const en = (row as any)[map.en] as string | null | undefined;
         const bn = map.bn ? (row as any)[map.bn] as string | null | undefined : undefined;
-        const value = this.codeValue(en, bn);
+        const value = (key === 'nid' || key === 'mobileNo') ? this.displayNum(this.codeValue(en, bn)) : this.codeValue(en, bn);
         // RAB Unit hierarchy is a comma-joined chain (Battalion, Wing, Branch,
         // Sub-Branch, Section, Sub-Section). Show only the first two levels
         // (Unit, Wing) + the deepest level instead of the full chain.
@@ -427,6 +439,7 @@ export class ReportConfidentialRemarksComponent implements OnInit, OnDestroy {
         multi(this.selectedOrgIds, this.orgOptions, L['report.search.motherOrg']);
         multi(this.selectedMemberTypeIds, this.memberTypeOptions, this.lang === 'bn' ? 'সদস্য ধরন' : 'Member Type');
         multi(this.selectedRankIds, this.rankOptions, L['report.search.rank']);
+        multi(this.selectedRabRankIds, this.rabRankOptions, L['report.title.rabRank']);
         multi(this.selectedCorpsIds, this.corpsOptions, L['report.table.corps'] ?? 'Corps');
         multi(this.selectedTradeIds, this.tradeOptions, L['report.search.trade']);
         if (this.selectedOrgNodeIds.length > 0) {
@@ -519,6 +532,7 @@ export class ReportConfidentialRemarksComponent implements OnInit, OnDestroy {
         multi(this.selectedOrgIds, this.orgOptions, L['report.search.motherOrg']);
         multi(this.selectedMemberTypeIds, this.memberTypeOptions, this.lang === 'bn' ? 'সদস্য ধরন' : 'Member Type');
         multi(this.selectedRankIds, this.rankOptions, L['report.search.rank']);
+        multi(this.selectedRabRankIds, this.rabRankOptions, L['report.title.rabRank']);
         multi(this.selectedCorpsIds, this.corpsOptions, L['report.table.corps'] ?? 'Corps');
         multi(this.selectedTradeIds, this.tradeOptions, L['report.search.trade']);
         if (this.selectedOrgNodeIds.length > 0) {
@@ -549,7 +563,7 @@ export class ReportConfidentialRemarksComponent implements OnInit, OnDestroy {
 
     private async exportRabWord(): Promise<void> {
         const isBn = this.lang === 'bn';
-        const bnFont = { ascii: 'Times New Roman', hAnsi: 'Times New Roman', cs: 'Nirmala UI', hint: 'cs' as const };
+        const bnFont = { ascii: 'Times New Roman', hAnsi: 'Times New Roman', cs: 'SolaimanLipi', hint: 'cs' as const };
         const bnLang = { value: 'bn-BD', bidirectional: 'bn-BD' } as any;
         const sans = isBn ? (bnFont as any) : 'Calibri';
         const serif = isBn ? (bnFont as any) : 'Cambria';
@@ -851,10 +865,10 @@ export class ReportConfidentialRemarksComponent implements OnInit, OnDestroy {
         const esc = (s: unknown) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;');
         const isBn = this.lang === 'bn';
         const serif = isBn
-            ? "'Times New Roman', 'Nirmala UI', serif"
+            ? "'Times New Roman', 'SolaimanLipi', serif"
             : "'Times New Roman', serif";
         const sans = isBn
-            ? "'Times New Roman', 'Nirmala UI', sans-serif"
+            ? "'Times New Roman', 'SolaimanLipi', sans-serif"
             : "'Times New Roman', sans-serif";
         const mono = "'JetBrains Mono', 'Consolas', 'Courier New', monospace";
 
@@ -1045,6 +1059,7 @@ export class ReportConfidentialRemarksComponent implements OnInit, OnDestroy {
 
         this.loadOrgOptions();
         this.loadMemberTypeOptions();
+        this.loadRabRankOptions();
         this.loadOrgNodeLabels();
 
         this.idSearchSub = this.idSearchInput$
@@ -1065,6 +1080,14 @@ export class ReportConfidentialRemarksComponent implements OnInit, OnDestroy {
                     value: c.codeId,
                 }))),
             error: () => (this.memberTypeOptions = []),
+        });
+    }
+
+    /** RAB Rank tiers — EquivalentName common codes (org-independent). */
+    loadRabRankOptions(): void {
+        this.commonCodeService.getAllActiveCommonCodesType('EquivalentName').subscribe({
+            next: (codes) => (this.rabRankOptions = this.mapCodes(codes || [])),
+            error: () => (this.rabRankOptions = []),
         });
     }
 
@@ -1143,6 +1166,7 @@ export class ReportConfidentialRemarksComponent implements OnInit, OnDestroy {
         if (this.selectedPostingStatus) c++;
         if (this.selectedOrgIds.length > 0) c++;
         if (this.selectedRankIds.length > 0) c++;
+        if (this.selectedRabRankIds.length > 0) c++;
         if (this.selectedCorpsIds.length > 0) c++;
         if (this.selectedTradeIds.length > 0) c++;
         if (this.selectedMemberTypeIds.length > 0) c++;
@@ -1168,6 +1192,7 @@ export class ReportConfidentialRemarksComponent implements OnInit, OnDestroy {
         this.selectedPostingStatus = 'Servings';
         this.selectedOrgIds = [];
         this.selectedRankIds = [];
+        this.selectedRabRankIds = [];
         this.selectedCorpsIds = [];
         this.selectedTradeIds = [];
         this.selectedMemberTypeIds = [];
@@ -1236,6 +1261,16 @@ export class ReportConfidentialRemarksComponent implements OnInit, OnDestroy {
             },
             error: () => (this.corpsOptions = []),
         });
+    }
+
+    /**
+     * Rank changed → drop any RAB Rank selection. The two are alternative ways
+     * of asking the same question (per-org Mother Org Rank vs. the universal
+     * tier it maps to), so only one may be active at a time — the template
+     * disables RAB Rank while a Rank is picked.
+     */
+    onRankChange(): void {
+        if (this.selectedRankIds.length) this.selectedRabRankIds = [];
     }
 
     /** Member Type changed → re-filter the org-scoped ranks by parentCodeId. */
@@ -1336,6 +1371,7 @@ export class ReportConfidentialRemarksComponent implements OnInit, OnDestroy {
             orgIds: this.selectedOrgIds.length ? this.selectedOrgIds : undefined,
             memberTypeIds: this.selectedMemberTypeIds.length ? this.selectedMemberTypeIds : undefined,
             rankIds: this.selectedRankIds.length ? this.selectedRankIds : undefined,
+            rabRankIds: this.selectedRabRankIds.length ? this.selectedRabRankIds : undefined,
             corpsIds: this.selectedCorpsIds.length ? this.selectedCorpsIds : undefined,
             tradeIds: this.selectedTradeIds.length ? this.selectedTradeIds : undefined,
             rabOrgNodeIds: this.selectedOrgNodeIds.length ? this.selectedOrgNodeIds : undefined,

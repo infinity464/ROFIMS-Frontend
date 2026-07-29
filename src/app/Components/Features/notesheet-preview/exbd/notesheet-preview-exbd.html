@@ -82,6 +82,8 @@
                          [style.height.px]="getPageCoverHeight(i)">
                     </div>
                 </div>
+                <!-- Page number under the border — only when the note-sheet spans multiple pages -->
+                <div class="ns-page-footer" *ngIf="pageOffsets.length > 1">{{ pageLabel(i, pageOffsets.length) }}</div>
             </div>
         </div>
     </ng-container>
@@ -241,7 +243,7 @@
 
                 <!-- ── Subject ── -->
                 <div *ngIf="getSubjectLabel(noteSheet.exBdLeaveSubjectId) || noteSheet.subject" style="padding:2px 2px 4px; font-size:10pt;">
-                    <strong><u>{{ getSubjectLabel(noteSheet.exBdLeaveSubjectId) || noteSheet.subject }}</u></strong>
+                    <strong><u style="text-underline-offset:2px; text-decoration-skip-ink:none;">{{ getSubjectLabel(noteSheet.exBdLeaveSubjectId) || noteSheet.subject }}</u></strong>
                 </div>
 
                 <!-- ── Reference ── -->

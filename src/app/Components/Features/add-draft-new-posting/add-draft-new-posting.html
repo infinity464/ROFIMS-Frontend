@@ -16,14 +16,11 @@
                     <p-datepicker [(ngModel)]="draftPostingDate" dateFormat="dd-mm-yy" placeholder="Select Date" appendTo="body" styleClass="w-full"></p-datepicker>
                 </div>
                 <div class="field flex-1 min-w-200px">
-                    <label class="font-semibold block mb-2 text-700">Draft Posting List No <span class="text-red-500">*</span></label>
-                    <input pInputText class="w-full" [(ngModel)]="draftPostingListNo" [readonly]="!isEditMode" placeholder="Auto Generated" />
-                </div>
-                <div class="field flex-1 min-w-200px">
                     <label class="font-semibold block mb-2 text-700">Member Type <span class="text-red-500">*</span></label>
                     <p-multiSelect
                         [options]="memberTypeOptions"
                         [(ngModel)]="selectedMemberTypeIds"
+                        (ngModelChange)="onMemberTypeChange()"
                         optionLabel="label"
                         optionValue="value"
                         placeholder="Select Member Type(s)"
@@ -32,6 +29,10 @@
                         appendTo="body"
                         styleClass="w-full">
                     </p-multiSelect>
+                </div>
+                <div class="field flex-1 min-w-200px">
+                    <label class="font-semibold block mb-2 text-700">Draft Posting List No <span class="text-red-500">*</span></label>
+                    <input pInputText class="w-full" [(ngModel)]="draftPostingListNo" [readonly]="!isEditMode" placeholder="Auto Generated" />
                 </div>
                 <div *ngIf="isEditMode" class="field min-w-150px">
                     <label class="font-semibold block mb-2 text-700">Status</label>
@@ -153,7 +154,6 @@
                     <th style="min-width: 120px">Status</th>
                     <th style="min-width: 160px">Member Type</th>
                     <th style="width: 80px">Employees</th>
-                    <th style="min-width: 100px">Created By</th>
                     <th style="min-width: 140px">Action</th>
                 </tr>
             </ng-template>
@@ -165,7 +165,6 @@
                     <td>{{ getDraftPostingStatusLabel(row.draftPostingStatus) }}</td>
                     <td>{{ row.employeeTypeNames || '-' }}</td>
                     <td>{{ row.detailCount }}</td>
-                    <td>{{ row.createdBy || '-' }}</td>
                     <td class="text-center">
                         <p-button *ngIf="canView" icon="pi pi-users" label="View Member" severity="primary" size="small"
                                   (onClick)="viewEmployees(row)"></p-button>
@@ -174,7 +173,7 @@
             </ng-template>
             <ng-template pTemplate="emptymessage">
                 <tr>
-                    <td colspan="8" class="text-center p-4 text-500">No Draft New Posting saved yet. Select employees above and click Save.</td>
+                    <td colspan="7" class="text-center p-4 text-500">No Draft New Posting saved yet. Select employees above and click Save.</td>
                 </tr>
             </ng-template>
         </p-table>

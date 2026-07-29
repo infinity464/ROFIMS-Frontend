@@ -1,4 +1,4 @@
-import { Component, OnInit, ViewChild, ElementRef, inject } from '@angular/core';
+﻿import { Component, OnInit, ViewChild, ElementRef, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
@@ -459,7 +459,7 @@ export class OfficeOrderPreviewComponent implements OnInit {
     private async buildWordDocument(): Promise<Document> {
         if (!this.order) throw new Error('No order loaded');
 
-        const font = this.isBangla ? { ascii: 'Times New Roman', hAnsi: 'Times New Roman', cs: 'Nirmala UI', hint: 'cs' as const } : 'Times New Roman';
+        const font = this.isBangla ? { ascii: 'Times New Roman', hAnsi: 'Times New Roman', cs: 'SolaimanLipi', hint: 'cs' as const } : 'Times New Roman';
         const titleSize = 22; // 11pt — document title (অফিস আদেশ)
         const headerSize = 18; // 9pt — government header lines
         const contentSize = 18; // 9pt — body / meta / reference / onulipi

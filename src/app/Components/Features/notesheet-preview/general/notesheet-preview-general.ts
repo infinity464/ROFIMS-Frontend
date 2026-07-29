@@ -357,7 +357,7 @@ export class NotesheetPreviewGeneralComponent extends NotesheetPreviewBase imple
     getRefSerialLabel(index: number): string {
         if (this.editTextType === 'bn') {
             const banglaLetters = ['ক', 'খ', 'গ', 'ঘ', 'ঙ', 'চ', 'ছ', 'জ', 'ঝ', 'ঞ', 'ট', 'ঠ', 'ড', 'ঢ', 'ণ', 'ত', 'থ', 'দ', 'ধ', 'ন'];
-            return (banglaLetters[index] ?? String(index + 1)) + '.';
+            return (banglaLetters[index] ?? String(index + 1)) + '।';
         }
         return String.fromCharCode(65 + index) + '.';
     }
@@ -1199,7 +1199,7 @@ export class NotesheetPreviewGeneralComponent extends NotesheetPreviewBase imple
     refSerialLabel(index: number): string {
         if (!this.isEnglish()) {
             const banglaLetters = ['ক', 'খ', 'গ', 'ঘ', 'ঙ', 'চ', 'ছ', 'জ', 'ঝ', 'ঞ', 'ট', 'ঠ', 'ড', 'ঢ', 'ণ', 'ত', 'থ', 'দ', 'ধ', 'ন'];
-            return (banglaLetters[index] ?? String(index + 1)) + '.';
+            return (banglaLetters[index] ?? String(index + 1)) + '।';
         }
         return String.fromCharCode(97 + index) + '.'; // a, b, c...
     }
@@ -1472,9 +1472,9 @@ export class NotesheetPreviewGeneralComponent extends NotesheetPreviewBase imple
         if (!this.noteSheet || !this.contentMeasure) return;
         this.printingPreview = true;
         try {
-            const { html, chrome } = await this.buildJsReportPdf();
+            const { html, chrome, templateExtras } = await this.buildJsReportPdf();
             await this.jsreportService.previewPdfInNewTab(
-                html, {}, `NoteSheet_${this.noteSheet.noteSheetNo ?? 'export'}`, chrome,
+                html, {}, `NoteSheet_${this.noteSheet.noteSheetNo ?? 'export'}`, chrome, templateExtras,
             );
         } catch (err: any) {
             this.messageService.add({
@@ -1491,9 +1491,9 @@ export class NotesheetPreviewGeneralComponent extends NotesheetPreviewBase imple
         if (!this.noteSheet || !this.contentMeasure) return;
         this.exportingPdf = true;
         try {
-            const { html, chrome } = await this.buildJsReportPdf();
+            const { html, chrome, templateExtras } = await this.buildJsReportPdf();
             await this.jsreportService.downloadPdf(
-                html, {}, `NoteSheet_${this.noteSheet.noteSheetNo ?? 'export'}.pdf`, chrome,
+                html, {}, `NoteSheet_${this.noteSheet.noteSheetNo ?? 'export'}.pdf`, chrome, templateExtras,
             );
         } catch (err: any) {
             this.messageService.add({
@@ -1512,7 +1512,7 @@ export class NotesheetPreviewGeneralComponent extends NotesheetPreviewBase imple
      * flow via @page rules; @page insets mirror .a4-paper's padding so the text
      * column matches the web view (Legal 215.9−2×10 = 195.9mm; A4 = 190mm).
      */
-    private async buildJsReportPdf(): Promise<{ html: string; chrome: Record<string, unknown> }> {
+    private async buildJsReportPdf(): Promise<{ html: string; chrome: Record<string, unknown>; templateExtras: Record<string, unknown> }> {
         const styles = this.collectDocumentStyles();
         const fontCss = await this.embedBanglaFontCss();
         const body = this.contentMeasure.nativeElement.innerHTML;
@@ -1593,13 +1593,25 @@ html, body { margin: 0; padding: 0; background: transparent; }
             width: pageWidth,
             height: pageHeight,
             landscape: false,
-            marginTop: '0', marginBottom: '0', marginLeft: '0', marginRight: '0',
+            // Same values as the @page rule above — Chromium sizes the footer band
+            // from these params, so a '0' bottom margin would clip the page number.
+            marginTop: `${padTop}mm`, marginBottom: `${padBottom}mm`,
+            marginLeft: `${padX}mm`, marginRight: `${padX}mm`,
             printBackground: true,
             displayHeaderFooter: false,
             headerTemplate: '', footerTemplate: ''
         };
 
-        return { html, chrome };
+        const templateExtras = {
+            pdfOperations: this.pdfPageNumberOperations({
+                multipage: this.pageOffsets.length > 1,
+                pageWidth, pageHeight,
+                bottomMarginMm: padBottom,
+                fontCss,
+            }),
+        };
+
+        return { html, chrome, templateExtras };
     }
 
     /** Concatenate every same-origin stylesheet loaded into the page. */
@@ -1903,7 +1915,7 @@ html, body { margin: 0; padding: 0; background: transparent; }
         const model = this.buildDocumentModel();
         const bn = model.isBangla;
         const font = bn
-            ? { ascii: 'Times New Roman', hAnsi: 'Times New Roman', cs: 'Nirmala UI', hint: 'cs' as const }
+            ? { ascii: 'Times New Roman', hAnsi: 'Times New Roman', cs: 'SolaimanLipi', hint: 'cs' as const }
             : 'Times New Roman';
         // Font sizes in half-points: title/org=9pt(18), body=8pt(16), table=7pt(14), sig=9pt(18)
         const titleSize = 18;   // 9pt — org header (HEADER — kept)
@@ -2224,7 +2236,7 @@ html, body { margin: 0; padding: 0; background: transparent; }
                 alignment: AlignmentType.CENTER, spacing: { before: 80, after: 40 }, keepNext: true
             }),
             new Paragraph({
-                children: [new TextRun({ text: 'মন্তব্য পত্র', underline: {}, size: titleHdrSize, font: { ascii: 'Times New Roman', hAnsi: 'Times New Roman', cs: 'Nirmala UI', hint: 'cs' as const } })],
+                children: [new TextRun({ text: 'মন্তব্য পত্র', underline: {}, size: titleHdrSize, font: { ascii: 'Times New Roman', hAnsi: 'Times New Roman', cs: 'SolaimanLipi', hint: 'cs' as const } })],
                 alignment: AlignmentType.CENTER, spacing: { after: 100 }, keepNext: true
             }),
         ];

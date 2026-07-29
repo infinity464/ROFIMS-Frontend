@@ -1,5 +1,6 @@
 import { Component, EventEmitter, Input, OnInit, Output, ViewChild , inject } from '@angular/core';
 import { UserMenuService } from '@/services/user-menu.service';
+import { SharedService } from '@/shared/services/shared-service';
 import { CommonModule } from '@angular/common';
 import { FormsModule, ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
@@ -16,6 +17,7 @@ import { DialogModule } from 'primeng/dialog';
 import { ConfirmDialogModule } from 'primeng/confirmdialog';
 
 import { EmpService } from '@/services/emp-service';
+import { buildUploadOwnerTag } from '@/shared/utils/upload-file-name.util';
 import { BankAccInfoService, BankAccInfoModel } from '@/services/bank-acc-info-service';
 import { MasterBasicSetupService } from '@/Components/basic-setup/shared/services/MasterBasicSetupService';
 import { BankModel } from '@/Components/basic-setup/shared/models/bank';
@@ -34,6 +36,13 @@ import { FileReferencesFormComponent, FileRowData } from '@components/Common/fil
 export class EmpBankAccount implements OnInit {
     private _router = inject(Router);
     private _userMenuService = inject(UserMenuService);
+    private sharedService = inject(SharedService);
+
+    /** Logged-in user for createdBy / lastUpdatedBy. Falls back to 'system' only when nobody is signed in. */
+    private get auditUser(): string {
+        return this.sharedService.getCurrentUser() ?? 'system';
+    }
+
     canInsert = true;
     canUpdate = true;
     canDelete = true;
@@ -308,8 +317,8 @@ export class EmpBankAccount implements OnInit {
                 swiftCode: formValue.swiftCode || null,
                 remarks: formValue.remarks || null,
                 filesReferences: filesReferencesJson ?? undefined,
-                createdBy: 'system',
-                lastUpdatedBy: 'system'
+                createdBy: this.auditUser,
+                lastUpdatedBy: this.auditUser
             };
 
             this.isSaving = true;
@@ -331,7 +340,7 @@ export class EmpBankAccount implements OnInit {
 
         if (filesToUpload.length > 0) {
             const uploads = filesToUpload.map((r: FileRowData) =>
-                this.empService.uploadEmployeeFile(r.file!, r.displayName?.trim() || r.file!.name)
+                this.empService.uploadEmployeeFile(r.file!, r.displayName?.trim() || r.file!.name, buildUploadOwnerTag(this.employeeBasicInfo?.rabid, this.selectedEmployeeId))
             );
             forkJoin(uploads).subscribe({
                 next: (results: unknown) => {
@@ -411,9 +420,9 @@ export class EmpBankAccount implements OnInit {
             bankNameBN: this.newBankNameBN?.trim() || '',
             branchName: '',
             swiftCode: this.newBankSwiftCode?.trim() || '',
-            createdBy: 'system',
+            createdBy: this.auditUser,
             createdDate: now,
-            lastUpdatedBy: 'system',
+            lastUpdatedBy: this.auditUser,
             lastUpdate: now
         };
         this.masterBasicSetupService.createBank(payload).subscribe({
@@ -466,9 +475,9 @@ export class EmpBankAccount implements OnInit {
             branchNameBN: this.newBranchNameBN?.trim() || '',
             routingNumber: this.newBranchRoutingNumber?.trim() || '',
             location: this.newBranchLocation?.trim() || '',
-            createdBy: 'system',
+            createdBy: this.auditUser,
             createdDate: now,
-            lastUpdatedBy: 'system',
+            lastUpdatedBy: this.auditUser,
             lastupdate: now
         };
         this.masterBasicSetupService.createBankBranch(payload).subscribe({

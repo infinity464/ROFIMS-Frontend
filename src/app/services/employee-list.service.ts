@@ -1,7 +1,9 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
+import { map } from 'rxjs/operators';
 import { environment } from '@/Core/Environments/environment';
+import { SupernumeraryRoll } from '@/models/supernumerary-roll.model';
 import { GetEmployeeListRequest, EmployeeList, AllocateRabIdRequest, AllocateRabIdResultItem, SupernumeraryEmpProfile } from '@/models/employee-list.model';
 import { PagedResponse } from '@/Core/Models/Pagination';
 
@@ -68,6 +70,42 @@ export class EmployeeListService {
     /** All filters optional. Returns full list for client-side pagination. */
     getSupernumeraryList(request: GetSupernumeraryListRequest): Observable<EmployeeList[]> {
         return this.http.post<EmployeeList[]>(`${this.apiUrl}/GetSupernumeraryList`, request);
+    }
+
+    /**
+     * Rows for the supernumerary RAB-ID allocation roll. Posts the ids already on
+     * screen rather than re-sending filters, so the printed roll matches the
+     * filtered list exactly.
+     */
+    getSupernumeraryNominalRoll(employeeIds: number[]): Observable<SupernumeraryRoll> {
+        return this.http
+            .post<any>(`${this.apiUrl}/GetSupernumeraryNominalRoll`, { employeeIds })
+            .pipe(
+                map((r) => ({
+                    rows: (r?.rows ?? r?.Rows ?? []).map((x: any) => ({
+                        employeeId: x.employeeId ?? x.EmployeeId ?? 0,
+                        groupNameEN: x.groupNameEN ?? x.GroupNameEN ?? null,
+                        groupNameBN: x.groupNameBN ?? x.GroupNameBN ?? null,
+                        groupSortOrder: x.groupSortOrder ?? x.GroupSortOrder ?? null,
+                        serviceId: x.serviceId ?? x.ServiceId ?? null,
+                        rankNameEN: x.rankNameEN ?? x.RankNameEN ?? null,
+                        rankNameBN: x.rankNameBN ?? x.RankNameBN ?? null,
+                        rankSortOrder: x.rankSortOrder ?? x.RankSortOrder ?? null,
+                        fullNameEN: x.fullNameEN ?? x.FullNameEN ?? null,
+                        fullNameBN: x.fullNameBN ?? x.FullNameBN ?? null,
+                        ownDistrictEN: x.ownDistrictEN ?? x.OwnDistrictEN ?? null,
+                        ownDistrictBN: x.ownDistrictBN ?? x.OwnDistrictBN ?? null,
+                        spouseDistrictEN: x.spouseDistrictEN ?? x.SpouseDistrictEN ?? null,
+                        spouseDistrictBN: x.spouseDistrictBN ?? x.SpouseDistrictBN ?? null,
+                        motherUnitNameEN: x.motherUnitNameEN ?? x.MotherUnitNameEN ?? null,
+                        motherUnitNameBN: x.motherUnitNameBN ?? x.MotherUnitNameBN ?? null,
+                        motherUnitDistrictEN: x.motherUnitDistrictEN ?? x.MotherUnitDistrictEN ?? null,
+                        motherUnitDistrictBN: x.motherUnitDistrictBN ?? x.MotherUnitDistrictBN ?? null,
+                        joiningDate: x.joiningDate ?? x.JoiningDate ?? null,
+                        rabId: x.rabId ?? x.RabId ?? null
+                    }))
+                }))
+            );
     }
 
     getEmployeesByPostingStatus(request: GetEmployeesByPostingStatusRequest): Observable<EmployeeList[]> {

@@ -1,4 +1,4 @@
-import { Component, HostListener, OnDestroy, OnInit } from '@angular/core';
+﻿import { Component, HostListener, OnDestroy, OnInit } from '@angular/core';
 import { Router } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -490,7 +490,7 @@ export class ReportAddressLocationComponent implements OnInit, OnDestroy {
         if (key === 'serviceId') {
             const r = row as any;
             const prefix = this.codeValue(r.prefix, r.prefixBN);
-            const svc = r.serviceId != null && r.serviceId !== '' ? String(r.serviceId) : '';
+            const svc = r.serviceId != null && r.serviceId !== '' ? this.displayNum(r.serviceId) : '';
             const px = prefix && prefix !== '-' && prefix !== '—' ? prefix : '';
             return [px, svc].filter((s) => s).join(' ') || '—';
         }
@@ -498,7 +498,7 @@ export class ReportAddressLocationComponent implements OnInit, OnDestroy {
         if (!map) return '—';
         const en = (row as any)[map.en] as string | null | undefined;
         const bn = map.bn ? (row as any)[map.bn] as string | null | undefined : undefined;
-        const value = this.codeValue(en, bn);
+        const value = (key === 'nid' || key === 'mobileNo') ? this.displayNum(this.codeValue(en, bn)) : this.codeValue(en, bn);
         // RAB Unit hierarchy is a comma-joined chain (Battalion, Wing, Branch, …).
         // Show only the first two levels + the deepest instead of the full chain.
         if (key === 'rabUnitHierarchy') return this.trimHierarchy(value);
@@ -1029,10 +1029,10 @@ export class ReportAddressLocationComponent implements OnInit, OnDestroy {
                 .replace(/'/g, '&#039;');
         const isBn = this.lang === 'bn';
         const serif = isBn
-            ? "'Times New Roman', 'Nirmala UI', serif"
+            ? "'Times New Roman', 'SolaimanLipi', serif"
             : "'Times New Roman', serif";
         const sans = isBn
-            ? "'Times New Roman', 'Nirmala UI', sans-serif"
+            ? "'Times New Roman', 'SolaimanLipi', sans-serif"
             : "'Times New Roman', sans-serif";
         const mono = "'JetBrains Mono', 'Consolas', 'Courier New', monospace";
 
@@ -1400,7 +1400,7 @@ export class ReportAddressLocationComponent implements OnInit, OnDestroy {
         differentiation so the docx reads identically on any printer. */
     private async exportRabWord(): Promise<void> {
         const isBn = this.lang === 'bn';
-        // Nirmala UI is the standard Bangla font on Windows 8+. The same
+        // SolaimanLipi is the standard Bangla font on Windows 8+. The same
         // font config we use here is what the notesheet-preview/article-47
         // exports use to render conjuncts like "র‍্যাব" correctly — the key
         // is that EVERY TextRun must also carry (a) language: bn-BD with
@@ -1412,7 +1412,7 @@ export class ReportAddressLocationComponent implements OnInit, OnDestroy {
         const bnFont = {
             ascii: 'Times New Roman',
             hAnsi: 'Times New Roman',
-            cs: 'Nirmala UI',
+            cs: 'SolaimanLipi',
             hint: 'cs' as const,
         };
         const bnLang = { value: 'bn-BD', bidirectional: 'bn-BD' } as any;
@@ -2402,12 +2402,16 @@ export class ReportAddressLocationComponent implements OnInit, OnDestroy {
 
     /** Keystroke in the toolbar search — debounced auto-search. */
     onIdSearchInput(): void {
-        this.idSearchInput$.next((this.idSearchText ?? '').trim());
+        // Bangla digits typed/pasted into the ID search are normalized to
+        // Western digits so they match the stored Service ID / RAB ID.
+        this.idSearchText = BanglaNumerals.toWestern(this.idSearchText ?? '');
+        this.idSearchInput$.next(this.idSearchText.trim());
     }
 
     /** Enter / search icon — search immediately, skipping the debounce. */
     onIdSearch(): void {
-        this.applyIdSearch((this.idSearchText ?? '').trim());
+        this.idSearchText = BanglaNumerals.toWestern(this.idSearchText ?? '');
+        this.applyIdSearch(this.idSearchText.trim());
     }
 
     clearIdSearch(): void {

@@ -1,4 +1,4 @@
-import { Component, EventEmitter, HostListener, Input, OnInit, Output, SimpleChanges, OnChanges } from '@angular/core';
+﻿import { Component, EventEmitter, HostListener, Input, OnInit, Output, SimpleChanges, OnChanges } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { TableModule } from 'primeng/table';
@@ -50,8 +50,8 @@ import * as XLSX from 'xlsx';
  */
 type MoServiceReportRow = {
     ser?: number;
-    organization: string | null;
-    location: string | null;
+    organization: string | null; organizationBN: string | null;
+    location: string | null; locationBN: string | null;
     appointment: string | null; appointmentBN: string | null;
     auth: string | null;
     remarks: string | null;
@@ -108,8 +108,8 @@ export class ReportMoServiceIndividualComponent implements OnInit, OnChanges {
 
     columnCatalog: { key: string; labelEN: string; labelBN: string; hint: string; defaultVisible: boolean }[] = [
         { key: 'ser',          labelEN: 'Ser',           labelBN: 'ক্রঃ',         hint: 'Serial',  defaultVisible: true  },
-        { key: 'organization', labelEN: 'Organization',  labelBN: 'সংস্থা/ইউনিট', hint: 'Plain',   defaultVisible: true  },
-        { key: 'location',     labelEN: 'Location',      labelBN: 'অবস্থান',      hint: 'Plain',   defaultVisible: true  },
+        { key: 'organization', labelEN: 'Organization Unit', labelBN: 'সংস্থা/ইউনিট', hint: 'Plain', defaultVisible: true },
+        { key: 'location',     labelEN: 'District',      labelBN: 'জেলা',        hint: 'Plain',   defaultVisible: true  },
         { key: 'appointment',  labelEN: 'Appointment',   labelBN: 'নিয়োগ',       hint: 'Plain',   defaultVisible: true  },
         { key: 'period',       labelEN: 'Service Period',labelBN: 'চাকরিকাল',    hint: 'Period',  defaultVisible: true  },
         // Opt-in extras
@@ -118,8 +118,8 @@ export class ReportMoServiceIndividualComponent implements OnInit, OnChanges {
     ];
 
     private static readonly plainColumnPropertyMap: Record<string, { en: string; bn?: string }> = {
-        organization: { en: 'organization' },
-        location:     { en: 'location' },
+        organization: { en: 'organization', bn: 'organizationBN' },
+        location:     { en: 'location', bn: 'locationBN' },
         appointment:  { en: 'appointment', bn: 'appointmentBN' },
         auth:         { en: 'auth' },
         remarks:      { en: 'remarks' },
@@ -356,8 +356,12 @@ export class ReportMoServiceIndividualComponent implements OnInit, OnChanges {
                         const fromP = (item.serviceFromPrecision ?? item.ServiceFromPrecision ?? null) as DatePrecision | null;
                         const toP = (item.serviceToPrecision ?? item.ServiceToPrecision ?? fromP) as DatePrecision | null;
                         return {
-                            organization: item.organizationName ?? item.OrganizationName ?? null,
+                            // Org unit is the meaningful value; legacy rows without a unit
+                            // fall back to the mother organization name.
+                            organization: item.orgUnitName ?? item.OrgUnitName ?? item.organizationName ?? item.OrganizationName ?? null,
+                            organizationBN: item.orgUnitNameBN ?? item.OrgUnitNameBN ?? item.organizationNameBN ?? item.OrganizationNameBN ?? null,
                             location: item.locationName ?? item.LocationName ?? null,
+                            locationBN: item.locationNameBN ?? item.LocationNameBN ?? null,
                             appointment: item.appointment ?? item.Appointment ?? null,
                             appointmentBN: item.appointmentBN ?? item.AppointmentBN ?? null,
                             auth: item.auth ?? item.Auth ?? null,
@@ -477,7 +481,7 @@ export class ReportMoServiceIndividualComponent implements OnInit, OnChanges {
     // ── Exporters ──────────────────────────────────────────────────────
     private async exportRabWord(): Promise<void> {
         const isBn = this.lang === 'bn';
-        const bnFont = { ascii: 'Times New Roman', hAnsi: 'Times New Roman', cs: 'Nirmala UI', hint: 'cs' as const };
+        const bnFont = { ascii: 'Times New Roman', hAnsi: 'Times New Roman', cs: 'SolaimanLipi', hint: 'cs' as const };
         const bnLang = { value: 'bn-BD', bidirectional: 'bn-BD' } as any;
         const sans = isBn ? (bnFont as any) : 'Calibri';
         const serif = isBn ? (bnFont as any) : 'Cambria';
@@ -608,8 +612,8 @@ export class ReportMoServiceIndividualComponent implements OnInit, OnChanges {
     private buildRabPrintHtml(): string {
         const esc = (s: unknown) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;');
         const isBn = this.lang === 'bn';
-        const serif = isBn ? "'Times New Roman', 'Nirmala UI', serif" : "'Times New Roman', serif";
-        const sans = isBn ? "'Times New Roman', 'Nirmala UI', sans-serif" : "'Times New Roman', sans-serif";
+        const serif = isBn ? "'Times New Roman', 'SolaimanLipi', serif" : "'Times New Roman', serif";
+        const sans = isBn ? "'Times New Roman', 'SolaimanLipi', sans-serif" : "'Times New Roman', sans-serif";
         const mono = "'JetBrains Mono', 'Consolas', 'Courier New', monospace";
 
         const visibleCols = this.visibleColumns;

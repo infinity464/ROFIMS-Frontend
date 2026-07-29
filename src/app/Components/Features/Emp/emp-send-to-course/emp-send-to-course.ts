@@ -215,7 +215,9 @@ export class EmpSendToCourseComponent implements OnInit {
             tradeId: isNaTrade ? null : this.selectedTradeId,
             tradeIds: isNaTrade ? this.naTradeIds : null,
             joiningDateFrom: this.toLocalDateStr(this.joiningDateFrom),
-            joiningDateTo: this.toLocalDateStr(this.joiningDateTo)
+            joiningDateTo: this.toLocalDateStr(this.joiningDateTo),
+            // Only members who came through /emp-rfts-course-ref are eligible here.
+            onlyCourseRefMembers: true
         };
         this.courseInfoService.getEmployeesPendingRfts(filter).subscribe({
             next: (data) => {
@@ -328,6 +330,8 @@ export class EmpSendToCourseComponent implements OnInit {
     }
 
     addToDraft(): void {
+        // Guard against double submission while a save is already in flight.
+        if (this.isAddingToDraft) return;
         if (!this.courseNo?.trim()) {
             this.messageService.add({ severity: 'warn', summary: 'Warning', detail: 'CourseNo is required.' });
             return;
@@ -358,6 +362,11 @@ export class EmpSendToCourseComponent implements OnInit {
                     this.courseNo = '';
                     this.draftDateFrom = null;
                     this.draftDateTo = null;
+                    // The saved members are now in a draft list, which the server
+                    // excludes from this list — refetch so they disappear now
+                    // rather than on the next page load.
+                    this.first = 0;
+                    this.loadData();
                 } else {
                     this.messageService.add({
                         severity: 'error',

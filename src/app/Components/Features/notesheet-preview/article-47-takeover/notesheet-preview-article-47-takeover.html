@@ -97,18 +97,25 @@
                 অগ্রগামী করা হইল।
             </div>
 
-            <!-- Signature block (right-aligned) on the next line — Takeover variant title.
-                 margin-top:30pt keeps a clear gap between the static line and the signature stack. -->
-            <div style="margin-top:30pt; font-size:9pt; text-align:right;">
-                <div style="display:inline-block; text-align:center;">
-                    <div>গ্রহণকারী কর্মকর্তা</div>
-                    <div style="margin-top:36pt; border-top:1px solid #000; min-width:220pt;"></div>
+            <!-- Two signature blocks on one row: the Final Approver on the left,
+                 the member on the right, both in the same shape. The left block is
+                 omitted entirely when the movement carries no approver. -->
+            <div style="margin-top:30pt; font-size:9pt; display:flex; justify-content:space-between; align-items:flex-start; gap:18pt;">
+                <div style="text-align:center;">
+                    @if (hasApprover) {
+                        <!-- No caption and no rule above the name — the spacer is kept
+                             (borderless) so the signing space remains. -->
+                        <div style="margin-top:36pt; min-width:220pt;"></div>
+                        <div style="margin-top:4pt;">{{ approverIdLineBn }} {{ approverRankBn }}</div>
+                        <div>{{ approverNameBn }}{{ approverCorpsBn ? ', ' + approverCorpsBn : '' }}</div>
+                        <div>{{ approverUnitBn }}{{ approverUnitLocationBn ? ', ' + approverUnitLocationBn : '' }}</div>
+                    }
+                </div>
+                <div style="text-align:center;">
+                    <div style="margin-top:36pt; min-width:220pt;"></div>
                     <div style="margin-top:4pt;">{{ employeeIdLineBn }} {{ employeeRankBn }}</div>
                     <div>{{ employeeNameBn }}{{ employeeCorpsBn ? ', ' + employeeCorpsBn : '' }}</div>
-                    <div>{{ employeeUnitBn }}</div>
-                    @if (employeeUnitLocationBn) {
-                        <div>{{ employeeUnitLocationBn }}</div>
-                    }
+                    <div>{{ employeeUnitBn }}{{ employeeUnitLocationBn ? ', ' + employeeUnitLocationBn : '' }}</div>
                 </div>
             </div>
 

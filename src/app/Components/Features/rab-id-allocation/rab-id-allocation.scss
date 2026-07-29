@@ -1,37 +1,338 @@
-/**
- * RAB ID Allocation – component-specific overrides.
- * Uses .employee-reports-page from report-theme-common.scss.
- */
-
-/* MultiSelect in report-type-card: align with p-select height and border */
-.employee-reports-page .report-type-card .rt-select-wrap .p-multiselect {
-    width: 100%;
+:host {
+    display: block;
 }
 
-.employee-reports-page .report-type-card .rt-select-wrap .p-multiselect .p-multiselect-label {
-    height: 42px;
-    border: 1.5px solid var(--border);
-    border-radius: 10px;
-    padding: 0 40px 0 14px;
-    font-size: 0.9rem;
-    font-weight: 500;
-    color: var(--text);
-    background: var(--white);
-    min-height: 42px;
-}
+/* ─────────────────────────────────────────────────────────────────────────
+ * Re-skinned to match presently-serving-members (leave-application look).
+ * Self-contained: does NOT depend on report-theme-common.scss.
+ * ───────────────────────────────────────────────────────────────────────── */
 
 .employee-reports-page {
-    border-radius: 5px;
+    background: transparent;
+    color: var(--text-color, inherit);
+    font-family: inherit;
+    margin: 0 auto;
+    padding: 0 0 1.5rem 0;
 }
 
-.employee-reports-page .report-type-card .rt-select-wrap .p-multiselect:focus-within .p-multiselect-label,
-.employee-reports-page .report-type-card .rt-select-wrap .p-multiselect.p-focus .p-multiselect-label {
-    border-color: var(--primary-color);
-    box-shadow: 0 0 0 3px var(--report-accent-bg);
+.report-filter-card {
+    background: var(--surface-card, rgba(255, 255, 255, 0.03));
+    border: 1px solid var(--surface-border, rgba(255, 255, 255, 0.08));
+    border-radius: 0.75rem;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+    padding: 1.5rem;
+    margin-bottom: 1.25rem;
+    overflow: visible;
 }
 
-:host-context(.app-dark) .employee-reports-page .report-type-card .rt-select-wrap .p-multiselect .p-multiselect-label {
-    background: var(--surface-card);
+.report-filter-card-title {
+    padding: 0;
+    margin: 0 0 1.25rem 0;
+    padding-bottom: 0.75rem;
+    border-bottom: 1px solid var(--surface-border, rgba(255, 255, 255, 0.08));
+}
+
+.report-page-title {
+    font-size: 1.75rem;
+    font-weight: 700;
+    color: var(--text-color, #fff);
+    margin: 0 0 0.25rem 0;
+    letter-spacing: 0;
+}
+
+:host-context(.app-dark) .report-page-title {
     color: var(--text-color);
-    border-color: var(--surface-border);
+}
+
+/* Fields row. */
+.report-filter-body-inner {
+    padding: 0;
+}
+
+.report-fields-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+    margin-bottom: 1rem;
+}
+
+.report-filter-field {
+    flex: 1 1 240px;
+    min-width: 0;
+
+    label {
+        display: block;
+        font-size: 0.85rem;
+        font-weight: 600;
+        color: var(--text-color, #fff);
+        margin-bottom: 0.4rem;
+        text-transform: none;
+        letter-spacing: 0;
+    }
+}
+
+/* Inputs in the filter card. */
+:host ::ng-deep .employee-reports-page .report-filter-body-inner {
+    --filter-input-h: 34px;
+    --filter-input-bg: var(--surface-card, rgba(255, 255, 255, 0.03));
+    --filter-input-border: var(--surface-border, rgba(255, 255, 255, 0.18));
+
+    p-select,
+    p-multiselect {
+        display: block;
+        width: 100%;
+    }
+
+    .p-select,
+    .p-multiselect {
+        width: 100%;
+        min-height: var(--filter-input-h);
+        box-sizing: border-box;
+        border: 1px solid var(--filter-input-border);
+        border-radius: 0.5rem;
+        background: var(--filter-input-bg);
+        display: inline-flex;
+        align-items: center;
+        overflow: hidden;
+    }
+
+    .p-select .p-select-label,
+    .p-multiselect .p-multiselect-label {
+        border: none;
+        background: transparent;
+        min-height: calc(var(--filter-input-h) - 2px);
+        line-height: calc(var(--filter-input-h) - 2px);
+        padding: 0 12px;
+        font-size: 0.9rem;
+        color: var(--text-color, #fff);
+        flex: 1 1 auto;
+        min-width: 0;
+    }
+
+    .p-select .p-select-dropdown,
+    .p-select .p-select-dropdown.p-button,
+    .p-multiselect .p-multiselect-dropdown {
+        &,
+        &:hover,
+        &:focus,
+        &:active,
+        &:enabled:hover {
+            border: none !important;
+            background: transparent !important;
+            box-shadow: none !important;
+            outline: none !important;
+        }
+
+        & {
+            color: var(--text-color-secondary, rgba(255, 255, 255, 0.55));
+            width: var(--filter-input-h);
+            height: var(--filter-input-h);
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+
+        .p-icon,
+        svg {
+            width: 14px;
+            height: 14px;
+        }
+    }
+
+    .p-select:focus-within,
+    .p-multiselect:focus-within,
+    .p-multiselect.p-focus {
+        border-color: var(--p-primary-color, #10b981);
+        box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.18);
+        outline: none;
+    }
+}
+
+:host-context(.app-dark) ::ng-deep .employee-reports-page .report-filter-body-inner {
+    --filter-input-bg: var(--surface-card);
+    --filter-input-border: var(--surface-border);
+}
+
+.report-filter-actions {
+    border-top: 1px solid var(--surface-border, rgba(255, 255, 255, 0.08));
+    padding-top: 1rem;
+    margin-top: 0.25rem;
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.5rem;
+}
+
+.report-btn-secondary {
+    height: 36px;
+    min-width: 36px;
+    padding: 0 12px;
+    border-radius: 0.5rem;
+    border: 1px solid var(--surface-border, rgba(255, 255, 255, 0.18));
+    background: var(--surface-card, rgba(255, 255, 255, 0.03));
+    color: var(--text-color-secondary, rgba(255, 255, 255, 0.7));
+    font-size: 0.85rem;
+    font-weight: 500;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    transition: border-color 0.15s, color 0.15s, background 0.15s;
+
+    &:hover {
+        border-color: var(--p-primary-color, #10b981);
+        color: var(--p-primary-color, #10b981);
+        background: rgba(16, 185, 129, 0.08);
+    }
+
+    &:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+    }
+}
+
+.report-btn-primary {
+    height: 36px;
+    padding: 0 22px;
+    border-radius: 0.5rem;
+    border: none;
+    background: var(--p-primary-color, #10b981);
+    color: var(--p-primary-contrast-color, #fff);
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    box-shadow: 0 1px 3px rgba(16, 185, 129, 0.3);
+    transition: transform 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
+
+    &:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 3px 10px rgba(16, 185, 129, 0.4);
+    }
+
+    &:active {
+        transform: none;
+    }
+
+    &:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+        transform: none;
+        box-shadow: none;
+    }
+}
+
+/* Results card panel title — green accent bar. */
+.report-panel-title {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: var(--text-color, #fff);
+    margin: 0 0 1rem 0;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+
+    &::before {
+        content: '';
+        display: inline-block;
+        width: 4px;
+        height: 1.1rem;
+        border-radius: 2px;
+        background: var(--p-primary-color, #10b981);
+    }
+}
+
+:host-context(.app-dark) .report-panel-title {
+    color: var(--text-color);
+}
+
+/* Muted record-count pill next to the results title. */
+.report-results-count {
+    font-size: 0.78rem;
+    font-weight: 500;
+    color: var(--text-color-secondary, rgba(255, 255, 255, 0.6));
+    background: var(--surface-ground, rgba(0, 0, 0, 0.15));
+    border: 1px solid var(--surface-border, rgba(255, 255, 255, 0.1));
+    padding: 2px 10px;
+    border-radius: 999px;
+}
+
+/* PrimeNG table. */
+:host ::ng-deep .p-datatable .p-datatable-thead > tr > th {
+    background: var(--surface-ground, rgba(0, 0, 0, 0.2));
+    color: var(--text-color-secondary, rgba(255, 255, 255, 0.6));
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    padding: 0.65rem 0.75rem;
+    border-bottom: 1px solid var(--surface-border, rgba(255, 255, 255, 0.1));
+}
+
+:host ::ng-deep .p-datatable .p-datatable-tbody > tr > td {
+    padding: 0.6rem 0.75rem;
+    font-size: 0.85rem;
+    color: var(--text-color, inherit);
+    border-bottom: 1px solid var(--surface-border, rgba(255, 255, 255, 0.06));
+}
+
+:host ::ng-deep .p-datatable .p-datatable-tbody > tr:hover {
+    background: rgba(16, 185, 129, 0.06);
+}
+
+:host ::ng-deep .p-paginator {
+    padding: 0.75rem 1rem;
+    background: transparent;
+    border-top: 1px solid var(--surface-border, rgba(255, 255, 255, 0.08));
+}
+
+:host ::ng-deep {
+    .p-select .p-select-label.p-placeholder,
+    .p-multiselect .p-multiselect-label.p-placeholder,
+    input::placeholder {
+        color: var(--text-color-secondary, rgba(255, 255, 255, 0.55)) !important;
+        opacity: 1;
+    }
+}
+
+/* Title + action button on the same row above the table. */
+.psm-results-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+    margin: 0 0 1rem 0;
+
+    .report-panel-title {
+        margin: 0;
+    }
+}
+
+/* Ser-num cell. */
+.report-ser-num {
+    font-variant-numeric: tabular-nums;
+    color: var(--text-color-secondary, rgba(255, 255, 255, 0.6));
+    font-size: 0.8rem;
+}
+
+/* Subtle badges for corps / unit. */
+.report-badge-corps,
+.report-badge-unit {
+    display: inline-block;
+    font-size: 0.72rem;
+    font-weight: 600;
+    padding: 0.18rem 0.55rem;
+    border-radius: 999px;
+    background: rgba(16, 185, 129, 0.12);
+    color: var(--p-primary-color, #10b981);
+    border: 1px solid rgba(16, 185, 129, 0.3);
+    white-space: nowrap;
+}
+
+.report-dash {
+    color: var(--text-color-secondary, rgba(255, 255, 255, 0.4));
 }

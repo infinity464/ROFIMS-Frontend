@@ -1,5 +1,5 @@
-/* ── Document font ─────────────────────────────────────
-   SolaimanLipi (bundled, see styles.scss) replaces Nirmala UI as the Bangla
+﻿/* ── Document font ─────────────────────────────────────
+   SolaimanLipi (bundled, see styles.scss) replaces SolaimanLipi as the Bangla
    face for this preview. Times New Roman stays first so Latin text and digits
    are unchanged — Bangla codepoints have no Times glyphs and fall through to
    SolaimanLipi.
@@ -15,7 +15,7 @@
     font-family: 'Times New Roman', 'SolaimanLipi', Times, serif;
 
     /* Beats the shared preview's !important rule that pins rich-text (Quill)
-       content to Nirmala UI. */
+       content to SolaimanLipi. */
     ::ng-deep .ns-para-text,
     ::ng-deep .ns-para-text *,
     ::ng-deep .ns-ref-content,
@@ -39,6 +39,21 @@
    keep their own spacing. Loaded after notesheet-preview.scss, so it wins. */
 .ns-para-no {
     margin-right: 0.8em;
+    font-weight: normal;   /* serial numbers (১। ২। …) not bold */
+}
+
+/* Reference serials (ক। খ। …) not bold either. */
+.ns-ref-serial {
+    font-weight: normal;
+}
+
+/* Signature block: one size larger (9pt → 10pt) and bold. */
+.ns-sig-name,
+.ns-sig-rank,
+.ns-sig-appoint,
+.ns-sig-date {
+    font-size: 10pt;
+    font-weight: 700;
 }
 
 /* Note has no serial — give it a left gap so it lines up with the members table. */

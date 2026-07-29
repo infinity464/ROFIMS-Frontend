@@ -1,5 +1,6 @@
 import { Component, EventEmitter, Input, OnInit, Output, ViewChild , inject } from '@angular/core';
 import { UserMenuService } from '@/services/user-menu.service';
+import { SharedService } from '@/shared/services/shared-service';
 import { CommonModule } from '@angular/common';
 import { FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
@@ -25,6 +26,13 @@ import { EmployeeSearchComponent, EmployeeBasicInfo } from '@/Components/Shared/
 export class EmpAddressInfo implements OnInit {
     private _router = inject(Router);
     private _userMenuService = inject(UserMenuService);
+    private sharedService = inject(SharedService);
+
+    /** Logged-in user for CreatedBy / LastUpdatedBy. Falls back to 'system' only when nobody is signed in. */
+    private get auditUser(): string {
+        return this.sharedService.getCurrentUser() ?? 'system';
+    }
+
     canInsert = true;
     canUpdate = true;
     canDelete = true;
@@ -459,9 +467,9 @@ export class EmpAddressInfo implements OnInit {
             PostOfficeType: data.postOffice,
             HouseRoad: data.houseRoad || '',
             Active: true,
-            CreatedBy: 'system',
+            CreatedBy: this.auditUser,
             CreatedDate: new Date().toISOString(),
-            LastUpdatedBy: 'system',
+            LastUpdatedBy: this.auditUser,
             Lastupdate: new Date().toISOString()
         };
 
@@ -512,7 +520,7 @@ export class EmpAddressInfo implements OnInit {
                             Active: false, // Deactivate
                             CreatedBy: existingAddress.createdBy || existingAddress.CreatedBy || 'system',
                             CreatedDate: existingAddress.createdDate || existingAddress.CreatedDate,
-                            LastUpdatedBy: 'system',
+                            LastUpdatedBy: this.auditUser,
                             Lastupdate: new Date().toISOString()
                         };
 

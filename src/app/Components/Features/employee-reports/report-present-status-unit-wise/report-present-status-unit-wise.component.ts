@@ -1,4 +1,4 @@
-import { Component, HostListener, OnInit } from '@angular/core';
+﻿import { Component, HostListener, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { SelectModule } from 'primeng/select';
@@ -325,7 +325,7 @@ export class ReportPresentStatusUnitWiseComponent implements OnInit {
 
     private async exportPdfDirect(): Promise<void> {
         const fontFamily = this.lang === 'bn'
-            ? "'Times New Roman', 'Nirmala UI', sans-serif"
+            ? "'Times New Roman', 'SolaimanLipi', sans-serif"
             : "'Times New Roman', serif";
         const dateStr = this.dateLine;
         const genStr = this.generateDateLabel;
@@ -384,7 +384,7 @@ export class ReportPresentStatusUnitWiseComponent implements OnInit {
 
     private exportPrintPopup(): void {
         const fontFamily = this.lang === 'bn'
-            ? "'Times New Roman', 'Nirmala UI', sans-serif"
+            ? "'Times New Roman', 'SolaimanLipi', sans-serif"
             : "'Times New Roman', serif";
         const dateStr = this.dateLine;
         const genStr = this.generateDateLabel;

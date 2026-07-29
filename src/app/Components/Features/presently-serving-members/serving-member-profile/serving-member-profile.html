@@ -343,7 +343,7 @@
                     <ng-template pTemplate="header">
                         <tr>
                             <th style="width: 4rem">{{ L['table.ser'] }}</th>
-                            <th>{{ L['table.organization'] }}</th>
+                            <th>{{ L['table.orgUnit'] }}</th>
                             <th>{{ L['table.location'] }}</th>
                             <th>{{ L['table.serviceFrom'] }}</th>
                             <th>{{ L['table.serviceTo'] }}</th>
@@ -355,7 +355,7 @@
                     <ng-template pTemplate="body" let-row let-rowIndex="rowIndex">
                         <tr>
                             <td>{{ rowNum(rowIndex) }}.</td>
-                            <td>{{ val(row.organizationName) }}</td>
+                            <td>{{ val(row.orgUnitName || row.organizationName) }}</td>
                             <td>{{ val(row.locationName) }}</td>
                             <td>{{ row.serviceFrom | partialDate: row.serviceFromPrecision }}</td>
                             <td>{{ row.serviceTo | partialDate: row.serviceToPrecision }}</td>
@@ -429,11 +429,11 @@
                     <ng-template pTemplate="header">
                         <tr>
                             <th style="width: 4rem">{{ L['table.ser'] }}</th>
-                            <th>{{ L['table.durationFrom'] }}</th>
-                            <th>{{ L['table.durationTo'] }}</th>
-                            <th>{{ L['table.schoolCollegeUniversity'] }}</th>
                             <th>{{ L['table.examDegree'] }}</th>
                             <th>{{ L['table.subjectDepartment'] }}</th>
+                            <th>{{ L['table.schoolCollegeUniversity'] }}</th>
+                            <th>{{ L['table.durationFrom'] }}</th>
+                            <th>{{ L['table.durationTo'] }}</th>
                             <th>{{ L['table.result'] }}</th>
                             <th>{{ L['table.gradePoint'] }}</th>
                             <th>{{ L['table.passingYear'] }}</th>
@@ -444,11 +444,11 @@
                     <ng-template pTemplate="body" let-row let-rowIndex="rowIndex">
                         <tr>
                             <td>{{ rowNum(rowIndex) }}.</td>
-                            <td>{{ formatDateOnly(row.durationFrom) }}</td>
-                            <td>{{ formatDateOnly(row.durationTo) }}</td>
-                            <td>{{ codeValue(row.schoolCollegeUniversity, row.schoolCollegeUniversityBN) }}</td>
                             <td>{{ codeValue(row.nameOfExamDegree, row.nameOfExamDegreeBN) }}</td>
                             <td>{{ codeValue(row.subjectsDepartments, row.subjectsDepartmentsBN) }}</td>
+                            <td>{{ codeValue(row.schoolCollegeUniversity, row.schoolCollegeUniversityBN) }}</td>
+                            <td>{{ formatDateOnly(row.durationFrom) }}</td>
+                            <td>{{ formatDateOnly(row.durationTo) }}</td>
                             <td>{{ codeValue(row.result, row.resultBN) }}</td>
                             <td>{{ valDisplay(row.gradePoint) }}</td>
                             <td>{{ valDisplay(row.passingYear) }}</td>

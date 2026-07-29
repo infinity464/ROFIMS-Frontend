@@ -54,9 +54,12 @@
     <div class="a4-paper-container">
         <div class="a4-paper" #paper [class.a4-paper--legal]="selectedPageSize === 'Legal'">
 
-            <!-- Top-right reference label (static) -->
-            <div style="text-align:right; font-size:10pt;">
-                বিএফটি-১৭৬২ এর পরিবর্তে
+            <!-- Top-right reference label (static, underlined).
+                 text-underline-offset drops the rule 2pt below its default position so
+                 it clears the Bangla descenders. Word has no equivalent setting — its
+                 underline sits wherever the font's metrics put it. -->
+            <div style="text-align:right; font-size:10pt; text-decoration:underline; text-underline-offset:2pt;">
+                বিএএফটি-১৭৬২ এর পরিবর্তে
             </div>
 
             <!-- Centered heading -->
@@ -67,9 +70,13 @@
             <!-- Numbered rows (১। … ১০।) — label : value.
                  table-layout:fixed + colgroup keeps the ঃ column at the same X across every row. -->
             <table style="width:100%; table-layout:fixed; border-collapse:collapse; font-size:10pt;">
+                <!-- Label column is sized just past the longest label
+                     ("রিপোর্ট করিবার ইউনিট/প্রতিষ্ঠান", ~115pt at 10pt) so the ঃ sits close to
+                     the text instead of after a wide gap. Keep in step with LABEL_W
+                     in the Word export (twips = pt × 20). -->
                 <colgroup>
                     <col style="width:30pt;">
-                    <col style="width:180pt;">
+                    <col style="width:135pt;">
                     <col style="width:14pt;">
                     <col>
                 </colgroup>
@@ -77,116 +84,158 @@
                     <tr>
                         <td style="vertical-align:top; padding:4pt 0; line-height:1.4; white-space:nowrap;">{{ serialBn(1) }}</td>
                         <td style="vertical-align:top; padding:4pt 0; line-height:1.4;">ব্যক্তিগত নং, পদবী এবং নাম</td>
-                        <td style="vertical-align:top; padding:4pt 0; line-height:1.4;">:</td>
+                        <td style="vertical-align:top; padding:4pt 0; line-height:1.4; font-size:9pt;">ঃ</td>
                         <td style="vertical-align:top; padding:4pt 0; line-height:1.4;">{{ employeeDisplayBn }}</td>
                     </tr>
                     <tr>
                         <td style="vertical-align:top; padding:4pt 0; line-height:1.4;">{{ serialBn(2) }}</td>
                         <td style="vertical-align:top; padding:4pt 0; line-height:1.4;">গন্তব্যস্থল</td>
-                        <td style="vertical-align:top; padding:4pt 0; line-height:1.4;">:</td>
+                        <td style="vertical-align:top; padding:4pt 0; line-height:1.4; font-size:9pt;">ঃ</td>
                         <td style="vertical-align:top; padding:4pt 0; line-height:1.4;">{{ destinationBn }}</td>
                     </tr>
                     <tr>
                         <td style="vertical-align:top; padding:4pt 0; line-height:1.4;">{{ serialBn(3) }}</td>
                         <td style="vertical-align:top; padding:4pt 0; line-height:1.4;">রিপোর্ট করিবার ইউনিট/প্রতিষ্ঠান</td>
-                        <td style="vertical-align:top; padding:4pt 0; line-height:1.4;">:</td>
+                        <td style="vertical-align:top; padding:4pt 0; line-height:1.4; font-size:9pt;">ঃ</td>
                         <td style="vertical-align:top; padding:4pt 0; line-height:1.4;">{{ reportingUnitBn }}</td>
                     </tr>
                     <tr>
                         <td style="vertical-align:top; padding:4pt 0; line-height:1.4;">{{ serialBn(4) }}</td>
                         <td style="vertical-align:top; padding:4pt 0; line-height:1.4;">গমনের তারিখ ও সময়</td>
-                        <td style="vertical-align:top; padding:4pt 0; line-height:1.4;">:</td>
+                        <td style="vertical-align:top; padding:4pt 0; line-height:1.4; font-size:9pt;">ঃ</td>
                         <td style="vertical-align:top; padding:4pt 0; line-height:1.4;">{{ departureDateBn }}</td>
                     </tr>
                     <tr>
                         <td style="vertical-align:top; padding:4pt 0; line-height:1.4;">{{ serialBn(5) }}</td>
                         <td style="vertical-align:top; padding:4pt 0; line-height:1.4;">গমনের প্রাধিকার</td>
-                        <td style="vertical-align:top; padding:4pt 0; line-height:1.4;">:</td>
+                        <td style="vertical-align:top; padding:4pt 0; line-height:1.4; font-size:9pt;">ঃ</td>
                         <td style="vertical-align:top; padding:4pt 0; line-height:1.4;">
-                            <div class="mv-rich" [innerHTML]="movement.auth || '---'"></div>
+                            <!-- Blank when no Auth was entered — no --- placeholder. -->
+                            <div class="mv-rich" [innerHTML]="movement.auth || ''"></div>
                         </td>
                     </tr>
                     <tr>
                         <td style="vertical-align:top; padding:4pt 0; line-height:1.4;">{{ serialBn(6) }}</td>
                         <td style="vertical-align:top; padding:4pt 0; line-height:1.4;">শেষ রসদ সনদপত্র</td>
-                        <td style="vertical-align:top; padding:4pt 0; line-height:1.4;">:</td>
+                        <td style="vertical-align:top; padding:4pt 0; line-height:1.4; font-size:9pt;">ঃ</td>
                         <td style="vertical-align:top; padding:4pt 0; line-height:1.4;">{{ movement.lastRationCertificate || '' }}</td>
                     </tr>
                     <tr>
                         <td style="vertical-align:top; padding:4pt 0; line-height:1.4;">{{ serialBn(7) }}</td>
                         <td style="vertical-align:top; padding:4pt 0; line-height:1.4;">বেতন ও ভাতা</td>
-                        <td style="vertical-align:top; padding:4pt 0; line-height:1.4;">:</td>
+                        <td style="vertical-align:top; padding:4pt 0; line-height:1.4; font-size:9pt;">ঃ</td>
                         <td style="vertical-align:top; padding:4pt 0; line-height:1.4;">{{ movement.payAndAllowance || '' }}</td>
                     </tr>
                     <tr>
                         <td style="vertical-align:top; padding:4pt 0; line-height:1.4;">{{ serialBn(8) }}</td>
                         <td style="vertical-align:top; padding:4pt 0; line-height:1.4;">রেলওয়ে আজ্ঞাপত্র</td>
-                        <td style="vertical-align:top; padding:4pt 0; line-height:1.4;">:</td>
+                        <td style="vertical-align:top; padding:4pt 0; line-height:1.4; font-size:9pt;">ঃ</td>
                         <td style="vertical-align:top; padding:4pt 0; line-height:1.4;">{{ movement.railwayWarrant || '' }}</td>
                     </tr>
                     <tr>
                         <td style="vertical-align:top; padding:4pt 0; line-height:1.4;">{{ serialBn(9) }}</td>
                         <td style="vertical-align:top; padding:4pt 0; line-height:1.4;">অভ্যর্থনা</td>
-                        <td style="vertical-align:top; padding:4pt 0; line-height:1.4;">:</td>
+                        <td style="vertical-align:top; padding:4pt 0; line-height:1.4; font-size:9pt;">ঃ</td>
                         <td style="vertical-align:top; padding:4pt 0; line-height:1.4;">{{ receptionUnitBn }}</td>
                     </tr>
                     <tr>
                         <td style="vertical-align:top; padding:4pt 0; line-height:1.4;">{{ serialBn(10) }}</td>
                         <td style="vertical-align:top; padding:4pt 0; line-height:1.4;">মন্তব্য</td>
-                        <td style="vertical-align:top; padding:4pt 0; line-height:1.4;">:</td>
-                        <td style="vertical-align:top; padding:4pt 0; line-height:1.4;">
+                        <td style="vertical-align:top; padding:4pt 0; line-height:1.4; font-size:9pt;">ঃ</td>
+                        <!-- মন্তব্য is the one free-prose row, so it is justified to a flush
+                             right edge. Keep in step with the JUSTIFIED alignment on
+                             remarksValue in the Word export. -->
+                        <td style="vertical-align:top; padding:4pt 0; line-height:1.4; text-align:justify; text-justify:inter-word;">
                             <div class="mv-rich" [innerHTML]="movement.remarks || '---'"></div>
                         </td>
                     </tr>
                 </tbody>
             </table>
 
-            <!-- Bottom metadata block (left) + signature stamp area (right) -->
+            <!-- Bottom metadata block (left) + signature stamp area (right).
+                 Rows are set tight: single (1.0) line spacing AND no vertical cell padding.
+                 The 4pt top/bottom padding used elsewhere dominated the row gap here,
+                 so line-height alone could not close it. Keep in step with META_LINE
+                 and metaCell margins in the Word export (twips = 240 × spacing). -->
             <div style="display:flex; gap:18pt; margin-top:18pt; font-size:10pt;">
                 <div style="flex:1;">
                     <table style="border-collapse:collapse;">
                         <tbody>
                             <tr>
-                                <td style="vertical-align:top; padding:4pt 0; line-height:1.4; width:80pt;">ইউনিট</td>
-                                <td style="vertical-align:top; padding:4pt 8pt;">:</td>
-                                <td style="vertical-align:top; padding:4pt 0; line-height:1.4;">{{ rabUnitBn }}</td>
+                                <!-- Label column sized just past the longest label
+                                     ("তারালাপনী", ~42pt at 10pt) so the ঃ follows closely.
+                                     Keep in step with metaLabelW in the Word export
+                                     (twips = pt × 20). -->
+                                <td style="vertical-align:top; padding:0; line-height:1; width:55pt;">ইউনিট</td>
+                                <td style="vertical-align:top; padding:0 8pt; font-size:9pt;">ঃ</td>
+                                <td style="vertical-align:top; padding:0; line-height:1;">{{ rabUnitBn }}</td>
                             </tr>
                             <tr>
-                                <td style="vertical-align:top; padding:4pt 0; line-height:1.4;">স্থান</td>
-                                <td style="vertical-align:top; padding:4pt 8pt;">:</td>
-                                <td style="vertical-align:top; padding:4pt 0; line-height:1.4;">{{ rabUnitLocationBn || '---' }}</td>
+                                <td style="vertical-align:top; padding:0; line-height:1;">স্থান</td>
+                                <td style="vertical-align:top; padding:0 8pt; font-size:9pt;">ঃ</td>
+                                <td style="vertical-align:top; padding:0; line-height:1;">{{ rabUnitLocationBn || '---' }}</td>
                             </tr>
                             <tr>
-                                <td style="vertical-align:top; padding:4pt 0; line-height:1.4;">তারালাপনী</td>
-                                <td style="vertical-align:top; padding:4pt 8pt;">:</td>
-                                <td style="vertical-align:top; padding:4pt 0; line-height:1.4;">৮৯৬৫৩১৫০ বর্ধিত ৩৫১১</td>
+                                <td style="vertical-align:top; padding:0; line-height:1;">তারালাপনী</td>
+                                <td style="vertical-align:top; padding:0 8pt; font-size:9pt;">ঃ</td>
+                                <td style="vertical-align:top; padding:0; line-height:1;">{{ telephoneBn }}</td>
                             </tr>
                             <tr>
-                                <td style="vertical-align:top; padding:4pt 0; line-height:1.4;">নথি নং</td>
-                                <td style="vertical-align:top; padding:4pt 8pt;">:</td>
-                                <td style="vertical-align:top; padding:4pt 0; line-height:1.4;">{{ topRightLabelBn }}</td>
+                                <td style="vertical-align:top; padding:0; line-height:1;">নথি নং</td>
+                                <td style="vertical-align:top; padding:0 8pt; font-size:9pt;">ঃ</td>
+                                <td style="vertical-align:top; padding:0; line-height:1;">{{ topRightLabelBn }}</td>
                             </tr>
                             <tr>
-                                <td style="vertical-align:top; padding:4pt 0; line-height:1.4;">তারিখ</td>
-                                <td style="vertical-align:top; padding:4pt 8pt;">:</td>
-                                <td style="vertical-align:top; padding:4pt 0; line-height:1.4;">{{ letterDateBn }}</td>
+                                <td style="vertical-align:top; padding:0; line-height:1;">তারিখ</td>
+                                <td style="vertical-align:top; padding:0 8pt; font-size:9pt;">ঃ</td>
+                                <td style="vertical-align:top; padding:0; line-height:1;">{{ letterDateBn }}</td>
                             </tr>
+                            <!-- One blank line between the তারিখ row and the বিতরণ list.
+                                 &nbsp; stops the cell collapsing, and the explicit 12pt
+                                 height pins the gap independently of inherited
+                                 line-height — 12pt = the 240 twips metaFullRow('') uses
+                                 for the same blank line in the Word export. -->
+                            <tr style="height:12pt;">
+                                <td colspan="3" style="padding:0; font-size:10pt; line-height:12pt; height:12pt;">&nbsp;</td>
+                            </tr>
+                            <!-- বিতরণ heads its own list: the label and colon sit alone,
+                                 and the distribution entries start on the line below,
+                                 flush with the label. Mirrored by metaFullRow in the
+                                 Word export. -->
                             <tr>
-                                <td style="vertical-align:top; padding:4pt 0; line-height:1.4;">বিতরণ</td>
-                                <td style="vertical-align:top; padding:4pt 8pt;">:</td>
-                                <td style="vertical-align:top; padding:4pt 0; line-height:1.4;">
-                                    <div class="mv-rich" [innerHTML]="movement.detailsInformation || ''"></div>
-                                </td>
+                                <td style="vertical-align:top; padding:0; line-height:1;">বিতরণ</td>
+                                <td style="vertical-align:top; padding:0 8pt; font-size:9pt;">ঃ</td>
+                                <td style="vertical-align:top; padding:0; line-height:1;"></td>
                             </tr>
+                            @if (movement.detailsInformation) {
+                                <tr>
+                                    <td colspan="3" style="vertical-align:top; padding:0; line-height:1;">
+                                        <div class="mv-rich" [innerHTML]="movement.detailsInformation"></div>
+                                    </td>
+                                </tr>
+                            }
                         </tbody>
                     </table>
                 </div>
 
+                <!-- Signature block — right-hand side of the same row as the metadata.
+                     Bottom-aligned would put its LAST line level with বিতরণ; the -28pt
+                     bottom margin drops it two of its own lines (2 × 1.4 × 10pt) so
+                     নির্বাহী কর্মকর্তা lands on the বিতরণ line instead. Mirrored by the
+                     leading blank paragraphs in the Word export's signature cell. -->
+                <div style="flex:0 0 auto; align-self:flex-end; margin-bottom:-28pt; text-align:center; line-height:1.4; padding-right:20pt;">
+                    <div>নির্বাহী কর্মকর্তা</div>
+                    <div>{{ rabUnitBn }}</div>
+                    @if (rabUnitLocationBn) {
+                        <div>{{ rabUnitLocationBn }}</div>
+                    }
+                </div>
             </div>
 
-            <!-- Recipient list at the bottom (flat, no serial numbers) -->
+            <!-- Recipient list — this IS the বিতরণ list, so it starts on the line
+                 directly below that label rather than as a detached block. -->
             @if (recipientLines.length > 0) {
-                <div style="margin-top:18pt; font-size:10pt;">
+                <div style="margin-top:0; font-size:10pt;">
                     @for (line of recipientLines; track $index) {
                         <div style="padding:3pt 0;">{{ line }}</div>
                     }

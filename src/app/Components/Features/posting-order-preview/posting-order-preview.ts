@@ -1,4 +1,4 @@
-import { Component, OnInit, ViewChild, ElementRef } from '@angular/core';
+﻿import { Component, OnInit, ViewChild, ElementRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
@@ -274,6 +274,11 @@ export class PostingOrderPreviewPageComponent implements OnInit {
         private sharedService: SharedService,
         private memberTypeAccess: IdentityUserMemberTypeAccessService
     ) {}
+
+    /** Logged-in user for createdBy / updatedBy. Falls back to 'system' only when nobody is signed in. */
+    private get auditUser(): string {
+        return this.sharedService.getCurrentUser() ?? 'system';
+    }
 
     /** Resolve the current user's accessible member type ids (cache first, then always refetch). */
     private loadCurrentUserMemberTypePermissions(): void {
@@ -801,7 +806,10 @@ export class PostingOrderPreviewPageComponent implements OnInit {
         const prefix = this.isBangla ? (emp.prefixNameBN || emp.prefixName) : emp.prefixName;
         let sid = emp.serviceId || '-';
         if (this.isBangla && sid !== '-') sid = this.toBanglaDigits(sid);
-        return prefix ? `${prefix}-${sid}` : sid;
+        if (!prefix) return sid;
+        const full = `${prefix}-${sid}`;
+        // Long IDs: put the prefix (with dash) on its own line, number on the next.
+        return full.length > 10 ? `${prefix}-\n${sid}` : full;
     }
 
     empRank(emp: PostingOrderEmployeeRow): string {
@@ -839,7 +847,11 @@ export class PostingOrderPreviewPageComponent implements OnInit {
 
     empPrevWorkplace(emp: PostingOrderEmployeeRow): string {
         const bn = this.isBangla;
-        const motherUnit = (bn ? (emp.motherUnitNameBN || emp.motherUnitName) : emp.motherUnitName) || '';
+        const unit = (bn ? (emp.motherUnitNameBN || emp.motherUnitName) : emp.motherUnitName) || '';
+        // Mother unit's district (EmployeeInfo.LastMotherUnitDistrictId) after a
+        // comma: "বানৌজা হাজী মহসীন, চট্টগ্রাম" — matches the posting notesheet.
+        const district = (bn ? (emp.motherUnitDistrictNameBN || emp.motherUnitDistrictName) : emp.motherUnitDistrictName) || '';
+        const motherUnit = unit && district ? unit + ', ' + district : (unit || district);
         if (!this.isInterPosting) return motherUnit;
         // Inter-posting: পূর্ববতী কর্মস্থল = mother unit + present RAB unit hierarchy (matches the notesheet).
         const parts = [
@@ -1415,7 +1427,7 @@ export class PostingOrderPreviewPageComponent implements OnInit {
             remarks: this.editRemarks || null,
             footerText: footerText,
             employeeIds: this.editEmployees.map(e => e.employeeId),
-            updatedBy: 'system',
+            updatedBy: this.auditUser,
             approvalEmployeeId: this.editApprovalEmployeeId ?? null
         };
     }
@@ -1640,7 +1652,7 @@ html, body { margin: 0; padding: 0; background: transparent; }
     private buildWordDocument(): Document {
         const bn = this.isBangla;
         const font = bn
-            ? { ascii: 'Times New Roman', hAnsi: 'Times New Roman', cs: 'Nirmala UI', hint: 'cs' as const }
+            ? { ascii: 'Times New Roman', hAnsi: 'Times New Roman', cs: 'SolaimanLipi', hint: 'cs' as const }
             : 'Times New Roman';
         const csSize = bn ? 20 : undefined;   // 10pt for order context (complex script)
         const hdrSize = 20;                     // 10pt for org header
@@ -1651,7 +1663,7 @@ html, body { margin: 0; padding: 0; background: transparent; }
         const tblHdrCsSize = bn ? 18 : undefined;
         const ctxSize = 20;                     // 10pt for order context
         const lang = bn ? { value: 'bn-BD', bidirectional: 'bn-BD' } : undefined;
-        const thinBorder = { style: BorderStyle.SINGLE, size: 1, color: '888888' };
+        const thinBorder = { style: BorderStyle.SINGLE, size: 1, color: '000000' };
         const cellBorders = { top: thinBorder, bottom: thinBorder, left: thinBorder, right: thinBorder };
 
         // ── Government Header (9pt, bold, centered) ──
@@ -1749,7 +1761,7 @@ html, body { margin: 0; padding: 0; background: transparent; }
         };
         const colW = buildColW();
 
-        const hdrPara = (text: string) => new Paragraph({ children: [new TextRun({ text, size: tblHdrSize, sizeComplexScript: tblHdrCsSize, font, language: lang })], alignment: AlignmentType.CENTER });
+        const hdrPara = (text: string) => new Paragraph({ children: [new TextRun({ text, bold: true, size: tblHdrSize, sizeComplexScript: tblHdrCsSize, font, language: lang })], alignment: AlignmentType.CENTER });
         const hdrCell = (text: string, ci: number, extra?: Partial<ConstructorParameters<typeof TableCell>[0]>) => new TableCell({
             children: [hdrPara(text)], borders: cellBorders, width: { size: colW[ci], type: WidthType.DXA }, ...extra
         });
@@ -1757,8 +1769,12 @@ html, body { margin: 0; padding: 0; background: transparent; }
         const headerRows = [new TableRow({ tableHeader: true, children: cols.map((col, ci) => hdrCell(col, ci)) })];
 
         const nameIdx = isInter ? 3 : (st ? 4 : 3);   // নাম column index (left-aligned)
+        // Left-aligned span (matches the preview): ব্যক্তিগত নং → বদলিকৃত কর্মস্থল.
+        // ক্রমিক / র‌্যাব আইডি / মন্তব্য stay centered.
+        const transferIdx = nameIdx + (sd ? 1 : 0) + (sp ? 1 : 0) + 1;
+        const isLeftCol = (ci: number) => ci >= 1 && ci <= transferIdx;
         const dataRows = this.filteredEmployees.map((emp, i) => {
-            const serial = bn ? this.toBanglaDigits(String(i + 1)) : String(i + 1);
+            const serial = bn ? this.toBanglaDigits(String(i + 1)) + '।' : String(i + 1);
             const vals = isInter
                 ? [
                     serial, this.empServiceId(emp), this.empRank(emp), this.empName(emp),
@@ -1780,7 +1796,7 @@ html, body { margin: 0; padding: 0; background: transparent; }
                     const lines = val.split('\n');
                     const cellParas = lines.map(line => new Paragraph({
                         children: [new TextRun({ text: line, size: tblSize, sizeComplexScript: tblCsSize, font, language: lang })],
-                        alignment: ci === nameIdx ? AlignmentType.LEFT : AlignmentType.CENTER,
+                        alignment: isLeftCol(ci) ? AlignmentType.LEFT : AlignmentType.CENTER,
                         spacing: { after: 20 }
                     }));
                     return new TableCell({

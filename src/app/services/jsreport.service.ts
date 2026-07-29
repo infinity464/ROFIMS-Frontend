@@ -61,6 +61,7 @@ export class JsReportService {
         data: unknown,
         title: string,
         chromeOverrides: Record<string, unknown> = {},
+        templateExtras: Record<string, unknown> = {},
     ): Promise<void> {
         const res = await (jsreport as any).render({
             template: {
@@ -68,6 +69,7 @@ export class JsReportService {
                 engine: 'handlebars',
                 recipe: 'chrome-pdf',
                 chrome: { ...DEFAULT_CHROME, ...chromeOverrides },
+                ...templateExtras,
             },
             data,
         });
@@ -84,6 +86,7 @@ export class JsReportService {
         data: unknown,
         filename: string,
         chromeOverrides: Record<string, unknown> = {},
+        templateExtras: Record<string, unknown> = {},
     ): Promise<void> {
         const res = await (jsreport as any).render({
             template: {
@@ -91,6 +94,7 @@ export class JsReportService {
                 engine: 'handlebars',
                 recipe: 'chrome-pdf',
                 chrome: { ...DEFAULT_CHROME, ...chromeOverrides },
+                ...templateExtras,
             },
             data,
         });

@@ -1,4 +1,4 @@
-import { Injectable } from '@angular/core';
+﻿import { Injectable } from '@angular/core';
 import {
     Document,
     Packer,
@@ -55,6 +55,17 @@ export interface ReportConfig {
     rabLetterhead?: boolean;
     /** Label/value pairs shown in the SELECTION CRITERIA grid (letterhead mode). */
     criteriaItems?: { label: string; value: string }[];
+    /**
+     * Complex-script font used for `lang: 'bn'` Word exports. Defaults to
+     * 'SolaimanLipi'.
+     *
+     * Word cannot fall back through a font stack: if the named font is not
+     * REGISTERED on the reader's machine (having the .ttf in C:\Windows\Fonts is
+     * not enough), it silently drops to the Latin font and every Bengali glyph
+     * renders as a tofu box. Pass 'Nirmala UI' — which ships with Windows and is
+     * always registered — when the document must render on any machine.
+     */
+    bnFont?: string;
 }
 
 /** One section in a sectioned report: org-style heading + its own table. */
@@ -148,8 +159,8 @@ export class ExportService {
         const dateText = dateStr;
         const columns = config.columns;
         const rows = config.rows;
-        // Same font as Word: Nirmala UI (Bangla) / Times New Roman (English)
-        const fontFamily = config.lang === 'bn' ? "'Times New Roman', 'Nirmala UI', serif" : "'Times New Roman', serif";
+        // Same font as Word: SolaimanLipi (Bangla) / Times New Roman (English)
+        const fontFamily = config.lang === 'bn' ? "'Times New Roman', 'SolaimanLipi', serif" : "'Times New Roman', serif";
         // Same sizes as Word: page header 14pt, table header 10pt, content 8pt (bn) / 11pt (en)
         const sizeContentPt = config.lang === 'bn' ? '8pt' : '11pt';
         const pageSize = config.landscape ? 'A4 landscape' : 'A4';
@@ -248,8 +259,8 @@ export class ExportService {
             month: 'long',
             day: 'numeric',
         });
-        // Use Nirmala UI for Bangla so Word renders Bengali Unicode without font embedding (ships with Windows 8+ / Office).
-        const font = config.lang === 'bn' ? { ascii: 'Times New Roman', hAnsi: 'Times New Roman', cs: 'Nirmala UI', hint: 'cs' as const } : 'Times New Roman';
+        // Use SolaimanLipi for Bangla so Word renders Bengali Unicode without font embedding (ships with Windows 8+ / Office).
+        const font = config.lang === 'bn' ? { ascii: 'Times New Roman', hAnsi: 'Times New Roman', cs: 'SolaimanLipi', hint: 'cs' as const } : 'Times New Roman';
         const title = config.title;
         const dateText = dateStr;
         const columns = config.columns;
@@ -481,7 +492,7 @@ export class ExportService {
         const dateStr = new Date().toLocaleDateString(config.lang === 'bn' ? 'bn-BD' : 'en-US', {
             year: 'numeric', month: 'long', day: 'numeric',
         });
-        const font = config.lang === 'bn' ? { ascii: 'Times New Roman', hAnsi: 'Times New Roman', cs: 'Nirmala UI', hint: 'cs' as const } : 'Times New Roman';
+        const font = config.lang === 'bn' ? { ascii: 'Times New Roman', hAnsi: 'Times New Roman', cs: 'SolaimanLipi', hint: 'cs' as const } : 'Times New Roman';
         // Sizes in half-points: 24 = 12pt, 16 = 8pt, 18 = 9pt, 12 = 6pt.
         const sizePageHeader = 24;
         const sizeTableHeader = 16;
@@ -760,7 +771,9 @@ export class ExportService {
         const dateStr = new Date().toLocaleDateString(config.lang === 'bn' ? 'bn-BD' : 'en-US', {
             year: 'numeric', month: 'long', day: 'numeric',
         });
-        const font = config.lang === 'bn' ? { ascii: 'Times New Roman', hAnsi: 'Times New Roman', cs: 'Nirmala UI', hint: 'cs' as const } : 'Times New Roman';
+        const font = config.lang === 'bn'
+            ? { ascii: 'Times New Roman', hAnsi: 'Times New Roman', cs: config.bnFont ?? 'SolaimanLipi', hint: 'cs' as const }
+            : 'Times New Roman';
         // A4 landscape ≈ 297mm, portrait ≈ 210mm. After ~1" margins the usable width in DXA
         // (1/20 pt; 1440 DXA = 1 inch) is ~13900 (landscape) / ~9000 (portrait).
         const totalDxa = config.landscape ? 13900 : 9000;
@@ -976,14 +989,22 @@ export class ExportService {
 
         // "Page X of Y" centred footer — only emitted when explicitly requested,
         // so callers that don't care (e.g. embedded snapshots) stay clean.
+        // Bangla documents get the "পাতা-X/Y" form instead. Word renders the field
+        // digits per its own locale, so these can still come out as 1/2 rather
+        // than ১/২ — only the print/PDF view guarantees Bangla numerals.
         const footers = config.showPageNumbers ? {
             default: new Footer({
                 children: [new Paragraph({
                     alignment: AlignmentType.CENTER,
-                    children: [
-                        new TextRun({ children: ['Page ', PageNumber.CURRENT], font, size: 16, color: '555555' }),
-                        new TextRun({ children: [' of ', PageNumber.TOTAL_PAGES], font, size: 16, color: '555555' }),
-                    ],
+                    children: config.lang === 'bn'
+                        ? [
+                            new TextRun({ children: ['পাতা-', PageNumber.CURRENT], font, size: 16, color: '555555' }),
+                            new TextRun({ children: ['/', PageNumber.TOTAL_PAGES], font, size: 16, color: '555555' }),
+                        ]
+                        : [
+                            new TextRun({ children: ['Page ', PageNumber.CURRENT], font, size: 16, color: '555555' }),
+                            new TextRun({ children: [' of ', PageNumber.TOTAL_PAGES], font, size: 16, color: '555555' }),
+                        ],
                 })],
             }),
         } : undefined;
@@ -1113,7 +1134,7 @@ export class ExportService {
     }
 
     exportProfilePDF(config: ProfileExportConfig): void {
-        const fontFamily = config.lang === 'bn' ? "'Times New Roman', 'Nirmala UI', serif" : "'Times New Roman', serif";
+        const fontFamily = config.lang === 'bn' ? "'Times New Roman', 'SolaimanLipi', serif" : "'Times New Roman', serif";
         const sizeContentPt = config.lang === 'bn' ? '8pt' : '11pt';
         const pageFooter = config.showPageNumbers
             ? `
@@ -1137,17 +1158,42 @@ export class ExportService {
                         const r = padRow(row, 2);
                         return { label: r[0], value: r[1] };
                     });
-                    const pairItems = pairs
-                        .map(
-                            (p) =>
-                                `<span style="font-size:${sizeContentPt};"><span style="font-weight:400">${escapeHtml(p.label.endsWith(':') ? p.label : p.label + ':')} </span><strong>${escapeHtml(p.value)}</strong></span>`
-                        )
-                        .join('');
+                    const pairSpan = (p: { label: string; value: string }) =>
+                        `<span style="font-size:${sizeContentPt};"><span style="font-weight:400">${escapeHtml(p.label.endsWith(':') ? p.label : p.label + ':')} </span><strong>${escapeHtml(p.value)}</strong></span>`;
+                    const pairGrid = (items: { label: string; value: string }[]) =>
+                        `<div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px 1.5em;">${items.map(pairSpan).join('')}</div>`;
+
+                    // Address sections carry several addresses in one list; each one starts with the
+                    // address-type row (e.g. "Address: Permanent Address"). Give every address its own
+                    // boxed block with the type as a heading, otherwise Permanent/Present run together.
+                    if (sec.addressSection && pairs.length > 0) {
+                        const typeLabel = pairs[0].label;
+                        const blocks: { head: { label: string; value: string }; items: { label: string; value: string }[] }[] = [];
+                        pairs.forEach((p) => {
+                            if (blocks.length === 0 || p.label === typeLabel) blocks.push({ head: p, items: [] });
+                            else blocks[blocks.length - 1].items.push(p);
+                        });
+                        const blockHtml = blocks
+                            .map(
+                                (b) => `
+                            <div style="border: 1px solid #d0d0d0; border-radius: 4px; padding: 10px 12px; margin-bottom: 8px; background: #fafafa; page-break-inside: avoid;">
+                                <div style="font-size:${sizeContentPt}; font-weight: bold; border-bottom: 1px solid #d0d0d0; padding-bottom: 4px; margin-bottom: 8px;">${escapeHtml(b.head.value || b.head.label)}</div>
+                                ${b.items.length ? pairGrid(b.items) : ''}
+                            </div>`
+                            )
+                            .join('');
+                        return `
+                    <div class="profile-section" style="margin-bottom: 1.5rem; page-break-inside: avoid;">
+                        <h2 style="font-family: ${fontFamily}; font-size: 12pt; font-weight: bold; margin-bottom: 0.5rem; border-bottom: 1px solid #ccc; page-break-after: avoid;">${escapeHtml(sec.title)}</h2>
+                        <div style="font-family: ${fontFamily};">${blockHtml}</div>
+                    </div>`;
+                    }
+
                     return `
                     <div class="profile-section" style="margin-bottom: 1.5rem; page-break-inside: avoid;">
                         <h2 style="font-family: ${fontFamily}; font-size: 12pt; font-weight: bold; margin-bottom: 0.5rem; border-bottom: 1px solid #ccc; page-break-after: avoid;">${escapeHtml(sec.title)}</h2>
                         <div style="font-family: ${fontFamily}; border: 1px solid #e0e0e0; border-radius: 4px; padding: 12px 14px; background: #fafafa;">
-                            <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px 1.5em;">${pairItems}</div>
+                            ${pairGrid(pairs)}
                         </div>
                     </div>`;
                 }
@@ -1195,7 +1241,7 @@ ${sectionBlocks}
     }
 
     async exportProfileWord(config: ProfileExportConfig): Promise<void> {
-        const font = config.lang === 'bn' ? { ascii: 'Times New Roman', hAnsi: 'Times New Roman', cs: 'Nirmala UI', hint: 'cs' as const } : 'Times New Roman';
+        const font = config.lang === 'bn' ? { ascii: 'Times New Roman', hAnsi: 'Times New Roman', cs: 'SolaimanLipi', hint: 'cs' as const } : 'Times New Roman';
         const sizePageHeader = 28;
         const sizeSectionHeader = 28; // 14pt for Basic Service, Own Address, etc.
         const sizeAddrSubheader = 24; // 12pt for Permanent/Present Address headings
@@ -1409,7 +1455,7 @@ ${sectionBlocks}
     /** Generate a real PDF (html2canvas + jsPDF) and open it in a new browser tab. */
     async generatePDF(config: ReportConfig): Promise<void> {
         const fontFamily = config.lang === 'bn'
-            ? "'Times New Roman', 'Nirmala UI', sans-serif"
+            ? "'Times New Roman', 'SolaimanLipi', sans-serif"
             : "'Times New Roman', serif";
         const sizeContentPt = config.lang === 'bn' ? '8pt' : '9pt';
         const orientation = config.landscape ? 'landscape' : 'portrait';

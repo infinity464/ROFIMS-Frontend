@@ -22,7 +22,7 @@
             </div>
             <div style="min-width: 180px">
                 <label class="font-semibold block mb-2 text-700">Service ID</label>
-                <p-inputNumber #serviceIdInput [(ngModel)]="serviceId" placeholder="Service ID" [useGrouping]="false" [autofocus]="true" styleClass="w-full" inputStyleClass="w-full" (keyup.enter)="search()"> </p-inputNumber>
+                <input #serviceIdInput pInputText [(ngModel)]="serviceId" placeholder="Service ID" inputmode="numeric" class="w-full" (input)="onServiceIdInput($event)" (keyup.enter)="search()" />
             </div>
             <div>
                 <label class="font-semibold block mb-2 text-700">&nbsp;</label>

@@ -84,7 +84,8 @@
             <div style="margin-top:36pt; font-size:10pt;">
                 <div style="display:flex; gap:0; align-items:flex-start;">
                     <div style="min-width:50pt;">সূত্র:</div>
-                    <div class="mv-rich" [innerHTML]="movement.auth || '---'"></div>
+                    <!-- Blank when no Auth was entered — no --- placeholder. -->
+                    <div class="mv-rich" [innerHTML]="movement.auth || ''"></div>
                 </div>
             </div>
 
@@ -97,17 +98,25 @@
                 অগ্রগামী করা হইল।
             </div>
 
-            <!-- Signature block (right-aligned) on the next line -->
-            <div style="margin-top:12pt; font-size:10pt; text-align:right;">
-                <div style="display:inline-block; text-align:center;">
-                    <div>অর্পণকারী কর্মকর্তা</div>
-                    <div style="margin-top:36pt; border-top:1px solid #000; min-width:220pt;"></div>
+            <!-- Two signature blocks on one row: the Final Approver on the left,
+                 the member on the right, both in the same shape. The left block is
+                 omitted entirely when the movement carries no approver. -->
+            <div style="margin-top:12pt; font-size:10pt; display:flex; justify-content:space-between; align-items:flex-start; gap:18pt;">
+                <div style="text-align:center;">
+                    @if (hasApprover) {
+                        <!-- No caption and no rule above the name — the spacer is kept
+                             (borderless) so the signing space remains. -->
+                        <div style="margin-top:36pt; min-width:220pt;"></div>
+                        <div style="margin-top:4pt;">{{ approverIdLineBn }} {{ approverRankBn }}</div>
+                        <div>{{ approverNameBn }}{{ approverCorpsBn ? ', ' + approverCorpsBn : '' }}</div>
+                        <div>{{ approverUnitBn }}{{ approverUnitLocationBn ? ', ' + approverUnitLocationBn : '' }}</div>
+                    }
+                </div>
+                <div style="text-align:center;">
+                    <div style="margin-top:36pt; min-width:220pt;"></div>
                     <div style="margin-top:4pt;">{{ employeeIdLineBn }} {{ employeeRankBn }}</div>
                     <div>{{ employeeNameBn }}{{ employeeCorpsBn ? ', ' + employeeCorpsBn : '' }}</div>
-                    <div>{{ employeeUnitBn }}</div>
-                    @if (employeeUnitLocationBn) {
-                        <div>{{ employeeUnitLocationBn }}</div>
-                    }
+                    <div>{{ employeeUnitBn }}{{ employeeUnitLocationBn ? ', ' + employeeUnitLocationBn : '' }}</div>
                 </div>
             </div>
 

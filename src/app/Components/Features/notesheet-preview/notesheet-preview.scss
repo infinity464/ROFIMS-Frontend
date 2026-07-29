@@ -190,6 +190,23 @@
     z-index: 1;
 }
 
+/* ── Page number under the border (e.g. ১/৬) ──────────
+   Absolutely positioned inside `.a4-paper`'s 20mm bottom padding so it sits
+   below the viewport border WITHOUT consuming flex height — the pagination
+   math in computePageContentHeightPx() assumes the viewport still gets the
+   full 297mm − 14mm − 20mm − 2×4mm, so this must stay out of the flow. */
+.ns-page-footer {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 8mm;
+    text-align: center;
+    font-size: 10pt;
+    font-weight: 700;
+    line-height: 1;
+    color: #000;
+}
+
 /* When the employee table continues onto the next page, close it with a bottom
    border on this page. The line sits at the top of the white cover (i.e. right
    under the last visible row) and is inset to match the table's column edges
@@ -203,9 +220,12 @@
     border-top: 1px solid #000;
 }
 
-/* Spacer row that only renders in the PDF/Print export (see buildJsReportPdf).
-   Hidden everywhere on screen and in Word so those surfaces are unchanged. */
-.ns-head-gap {
+/* Spacer rows that only render in the PDF/Print export (see buildJsReportPdf).
+   Hidden everywhere on screen and in Word so those surfaces are unchanged.
+   .ns-head-gap sits above the repeated column header, .ns-foot-gap below the
+   last row on each page so it clears the page frame's bottom border. */
+.ns-head-gap,
+.ns-foot-gap {
     display: none;
 }
 
@@ -345,7 +365,7 @@
     table-layout: fixed;
     th,
     td {
-        border: 0.25px solid #888;  // finer/thinner grid lines
+        border: 0.25px solid #888; // finer/thinner grid lines
         padding: 4px 6px;
         text-align: center;
         word-break: break-word;
@@ -353,7 +373,7 @@
     }
     th {
         font-weight: 600;
-        background: transparent;   // no shaded header — plain white like the paper
+        background: transparent; // no shaded header — plain white like the paper
         font-size: 7pt;
         text-transform: uppercase;
     }
@@ -477,9 +497,15 @@
     padding: 5px 2px 0 4px;
     font-size: 7pt;
 
-    .ns-ref-content { margin-left: 0; }
-    ::ng-deep .ns-ref-content p { margin: 0 0 0.2rem; }
-    ::ng-deep .ns-ref-content p:last-child { margin-bottom: 0; }
+    .ns-ref-content {
+        margin-left: 0;
+    }
+    ::ng-deep .ns-ref-content p {
+        margin: 0 0 0.2rem;
+    }
+    ::ng-deep .ns-ref-content p:last-child {
+        margin-bottom: 0;
+    }
     .ns-ref-content {
         flex: 1;
         min-width: 0;
@@ -513,7 +539,9 @@
     gap: 5px;
     max-width: 220px;
     white-space: nowrap;
-    transition: background .15s ease, color .15s ease;
+    transition:
+        background 0.15s ease,
+        color 0.15s ease;
     &:hover {
         background: #3b82f6;
         color: #fff;
@@ -648,6 +676,11 @@
     }
     /* নাম column: value left-aligned (header stays centered). */
     td.ns-name-cell {
+        text-align: left;
+    }
+    /* ব্যক্তিগত নম্বর / পদবি / ট্রেড columns: same treatment as নাম — value
+       left-aligned, header centered. */
+    td.ns-left-cell {
         text-align: left;
     }
     tr:nth-child(even) {
@@ -1013,6 +1046,12 @@
     /* Keep pagination exactly as screen — no unwinding */
     .page-viewport {
         overflow: hidden !important;
+    }
+
+    /* Page number must survive the print stylesheet */
+    .ns-page-footer {
+        display: block !important;
+        color: #000 !important;
     }
 
     .page-measure {

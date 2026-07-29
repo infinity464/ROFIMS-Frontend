@@ -1,4 +1,4 @@
-import { Component, EventEmitter, HostListener, Input, OnInit, Output, OnDestroy } from '@angular/core';
+﻿import { Component, EventEmitter, HostListener, Input, OnInit, Output, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { HttpClient } from '@angular/common/http';
 import { FormsModule } from '@angular/forms';
@@ -233,7 +233,7 @@ export class ReportBioDataFullIndividualComponent implements OnInit, OnDestroy {
         {
             id: 'moService', titleEN: 'Service History (Mother Org)', titleBN: 'মাতৃ সংস্থায় চাকরির ইতিহাস', type: 'table',
             columns: [
-                { key: 'organizationName', bnKey: 'organizationNameBN', labelEN: 'Organization', labelBN: 'সংস্থা/ইউনিট', kind: 'code', defaultVisible: true },
+                { key: 'orgUnitName', bnKey: 'orgUnitNameBN', labelEN: 'Organization Unit', labelBN: 'সংস্থা/ইউনিট', kind: 'code', defaultVisible: true },
                 { key: 'locationName', bnKey: 'locationNameBN', labelEN: 'District', labelBN: 'জেলা', kind: 'code', defaultVisible: true },
                 { key: 'serviceFrom', labelEN: 'From', labelBN: 'হইতে', kind: 'date', defaultVisible: true },
                 { key: 'serviceTo', labelEN: 'To', labelBN: 'পর্যন্ত', kind: 'date', defaultVisible: true },
@@ -810,7 +810,12 @@ export class ReportBioDataFullIndividualComponent implements OnInit, OnDestroy {
                     previousRab: prev,
                     permanentMovement: movements.filter(m => m.movementType === MovementType.Permanent).map(m => this.mapMovement(m)),
                     temporaryMovement: movements.filter(m => m.movementType === MovementType.Temporary).map(m => this.mapMovement(m)),
-                    moService: mine(list<any>(r.moService)),
+                    // Legacy rows have no OrgUnitId — fall back to the mother org name.
+                    moService: mine(list<any>(r.moService)).map((x: any) => ({
+                        ...x,
+                        orgUnitName: x.orgUnitName ?? x.organizationName ?? null,
+                        orgUnitNameBN: x.orgUnitNameBN ?? x.organizationNameBN ?? null,
+                    })),
                     promotion: proms,
                     education: list<any>(r.education),
                     course: list<any>(r.course),
@@ -1033,8 +1038,8 @@ export class ReportBioDataFullIndividualComponent implements OnInit, OnDestroy {
     private buildPrintHtml(): string {
         const esc = (s: unknown) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;');
         const isBn = this.isBn;
-        const grotesk = isBn ? "'Times New Roman', 'Nirmala UI', sans-serif" : "'Space Grotesk', 'Helvetica Neue', Helvetica, sans-serif";
-        const mono = isBn ? "'Times New Roman', 'Nirmala UI', monospace" : "'IBM Plex Mono', ui-monospace, 'SF Mono', Menlo, monospace";
+        const grotesk = isBn ? "'Times New Roman', 'SolaimanLipi', sans-serif" : "'Space Grotesk', 'Helvetica Neue', Helvetica, sans-serif";
+        const mono = isBn ? "'Times New Roman', 'SolaimanLipi', monospace" : "'IBM Plex Mono', ui-monospace, 'SF Mono', Menlo, monospace";
 
         const photo = this.profileImageUrl
             ? `<div class="photo"><img src="${this.profileImageUrl}" alt="Photo" /></div>`
@@ -1142,7 +1147,7 @@ export class ReportBioDataFullIndividualComponent implements OnInit, OnDestroy {
         this.exporting = true;
         try {
             const isBn = this.isBn;
-            const bnFont = { ascii: 'Times New Roman', hAnsi: 'Times New Roman', cs: 'Nirmala UI', eastAsia: 'Nirmala UI', hint: 'cs' as const };
+            const bnFont = { ascii: 'Times New Roman', hAnsi: 'Times New Roman', cs: 'SolaimanLipi', eastAsia: 'SolaimanLipi', hint: 'cs' as const };
             const bnLang = { value: 'bn-BD', bidirectional: 'bn-BD', eastAsia: 'bn-BD' } as any;
             const sans = isBn ? (bnFont as any) : 'Calibri';
             const serif = isBn ? (bnFont as any) : 'Cambria';

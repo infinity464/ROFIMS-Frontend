@@ -1,4 +1,4 @@
-import { Component, HostListener, OnInit, inject } from '@angular/core';
+﻿import { Component, HostListener, OnInit, inject } from '@angular/core';
 import { Router } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -327,7 +327,7 @@ export class PostedOutServedReportComponent implements OnInit {
 
     private async exportRabWord(): Promise<void> {
         const isBn = this.lang === 'bn';
-        const bnFont = { ascii: 'Times New Roman', hAnsi: 'Times New Roman', cs: 'Nirmala UI', hint: 'cs' as const };
+        const bnFont = { ascii: 'Times New Roman', hAnsi: 'Times New Roman', cs: 'SolaimanLipi', hint: 'cs' as const };
         const sans = isBn ? (bnFont as any) : 'Calibri';
         const serif = isBn ? (bnFont as any) : 'Cambria';
         const mono = isBn ? (bnFont as any) : 'Consolas';
@@ -427,8 +427,8 @@ export class PostedOutServedReportComponent implements OnInit {
     private buildRabPrintHtml(): string {
         const esc = (s: unknown) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;');
         const isBn = this.lang === 'bn';
-        const serif = isBn ? "'Times New Roman', 'Nirmala UI', serif" : "'Times New Roman', serif";
-        const sans = isBn ? "'Times New Roman', 'Nirmala UI', sans-serif" : "'Times New Roman', sans-serif";
+        const serif = isBn ? "'Times New Roman', 'SolaimanLipi', serif" : "'Times New Roman', serif";
+        const sans = isBn ? "'Times New Roman', 'SolaimanLipi', sans-serif" : "'Times New Roman', sans-serif";
         const mono = "'JetBrains Mono', 'Consolas', 'Courier New', monospace";
 
         const tableHeaderHtml = `<tr>${this.columns.map(c => `<th>${esc(this.colLabel(c))}</th>`).join('')}</tr>`;

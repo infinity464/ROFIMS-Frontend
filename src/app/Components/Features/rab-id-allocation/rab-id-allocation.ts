@@ -24,7 +24,7 @@ import { CommonCodeModel } from '@/models/common-code-model';
     imports: [CommonModule, FormsModule, TableModule, ButtonModule, MultiSelectModule, SelectModule, Toast, ConfirmDialog],
     providers: [ConfirmationService, MessageService],
     templateUrl: './rab-id-allocation.html',
-    styleUrls: ['./rab-id-allocation.scss', '../employee-reports/report-theme-common.scss'],
+    styleUrls: ['./rab-id-allocation.scss'],
 })
 export class RabIdAllocation implements OnInit {
     list: EmployeeList[] = [];

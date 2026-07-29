@@ -40,9 +40,15 @@
                 </div>
                 <div class="report-filter-field">
                     <label>{{ lang === 'en' ? 'Rank' : 'পদবী' }}</label>
-                    <p-multiSelect [options]="rankOptions" [(ngModel)]="selectedRankIds" (ngModelChange)="onFilterChange()"
+                    <p-multiSelect [options]="rankOptions" [(ngModel)]="selectedRankIds" (ngModelChange)="onRankChange()"
                         optionLabel="label" optionValue="value" display="chip" [filter]="true"
                         [disabled]="selectedOrgIds.length === 0" [placeholder]="lang === 'en' ? 'Select' : 'নির্বাচন করুন'" styleClass="w-full" appendTo="body"></p-multiSelect>
+                </div>
+                <div class="report-filter-field">
+                    <label>{{ lang === 'en' ? 'RAB Rank' : 'র‍্যাব পদবি' }}</label>
+                    <p-multiSelect [options]="rabRankOptions" [(ngModel)]="selectedRabRankIds" (ngModelChange)="onFilterChange()"
+                        optionLabel="label" optionValue="value" display="chip" [filter]="true"
+                        [disabled]="selectedRankIds.length > 0" [placeholder]="lang === 'en' ? 'Select' : 'নির্বাচন করুন'" styleClass="w-full" appendTo="body"></p-multiSelect>
                 </div>
                 <div class="report-filter-field">
                     <label>{{ lang === 'en' ? 'Corps' : 'কোর' }}</label>

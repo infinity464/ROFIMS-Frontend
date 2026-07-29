@@ -1,5 +1,6 @@
 import { Component, EventEmitter, Input, OnInit, Output, ViewChild , inject } from '@angular/core';
 import { UserMenuService } from '@/services/user-menu.service';
+import { SharedService } from '@/shared/services/shared-service';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { FormsModule } from '@angular/forms';
 import { CommonModule } from '@angular/common';
@@ -20,6 +21,7 @@ import { RadioButtonModule } from 'primeng/radiobutton';
 import { TooltipModule } from 'primeng/tooltip';
 
 import { EmpService } from '@/services/emp-service';
+import { buildUploadOwnerTag } from '@/shared/utils/upload-file-name.util';
 import { CommonCodeService } from '@/services/common-code-service';
 import { EmployeeSearchComponent, EmployeeBasicInfo } from '@/Components/Shared/employee-search/employee-search';
 import { FileReferencesFormComponent, FileRowData } from '@components/Common/file-references-form/file-references-form';
@@ -54,6 +56,13 @@ import { PresentStatusTypeOptions } from '@/models/enums';
 export class EmpPersonalInfo implements OnInit {
     private _router = inject(Router);
     private _userMenuService = inject(UserMenuService);
+    private sharedService = inject(SharedService);
+
+    /** Logged-in user for CreatedBy / LastUpdatedBy. Falls back to 'system' only when nobody is signed in. */
+    private get auditUser(): string {
+        return this.sharedService.getCurrentUser() ?? 'system';
+    }
+
     canInsert = true;
     canUpdate = true;
     canDelete = true;
@@ -573,7 +582,7 @@ export class EmpPersonalInfo implements OnInit {
         };
 
         if (filesToUpload.length > 0) {
-            const uploads = filesToUpload.map((r: FileRowData) => this.empService.uploadEmployeeFile(r.file!, r.displayName?.trim() || r.file!.name));
+            const uploads = filesToUpload.map((r: FileRowData) => this.empService.uploadEmployeeFile(r.file!, r.displayName?.trim() || r.file!.name, buildUploadOwnerTag(this.employeeBasicInfo?.rabid, this.selectedEmployeeId)));
             forkJoin(uploads).subscribe({
                 next: (results: unknown) => {
                     const resultsArray = Array.isArray(results) ? results : [];
@@ -598,6 +607,17 @@ export class EmpPersonalInfo implements OnInit {
         doSave(filesReferencesJson);
     }
 
+    /**
+     * Formats a picked date as YYYY-MM-DD using local Y/M/D.
+     * toISOString() would convert to UTC first and shift the date back a day in UTC+ zones.
+     */
+    private toLocalDateOnly(date: Date | string | null | undefined): string | null {
+        if (!date) return null;
+        const d = date instanceof Date ? date : new Date(date);
+        if (isNaN(d.getTime())) return null;
+        return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    }
+
     buildPersonalInfoPayload(filesReferencesJson?: string | null): any {
         const formValue = this.personalInfoForm.getRawValue();
 
@@ -617,14 +637,14 @@ export class EmpPersonalInfo implements OnInit {
             BloodGroup: formValue.bloodGroup, // varchar(5) - value from CommonCode (e.g., "A+", "B+")
             MobileNo: formValue.mobileNo,
             MobileNoOfficial: formValue.mobileNoOfficial,
-            DOB: formValue.dateOfBirth ? new Date(formValue.dateOfBirth).toISOString().split('T')[0] : null,
+            DOB: this.toLocalDateOnly(formValue.dateOfBirth),
             Religion: formValue.religion ? formValue.religion.toString() : null,
             PassportNo: formValue.passportNo,
             IdentificationMark: formValue.identificationMark,
             MaritalStatus: formValue.maritalStatus ? formValue.maritalStatus.toString() : null,
             EmergencyContact: formValue.emergencyContactNo,
-            JoiningDate: formValue.dateOfJoining ? new Date(formValue.dateOfJoining).toISOString().split('T')[0] : null,
-            CommissionDate: formValue.dateOfCommission ? new Date(formValue.dateOfCommission).toISOString().split('T')[0] : null,
+            JoiningDate: this.toLocalDateOnly(formValue.dateOfJoining),
+            CommissionDate: this.toLocalDateOnly(formValue.dateOfCommission),
             Batch: formValue.batch ? formValue.batch.toString() : null,
             HasInvestigationExp: formValue.investigationExperience,
             InvestigationExpDetails: formValue.investigationExperienceDetails,
@@ -643,9 +663,9 @@ export class EmpPersonalInfo implements OnInit {
             ServiceIdCardNo: formValue.serviceIdCardNo,
             PresentStatus: formValue.presentStatus || null,
             FilesReferences: filesReferencesJson ?? undefined,
-            CreatedBy: 'system',
+            CreatedBy: this.auditUser,
             CreatedDate: new Date().toISOString(),
-            LastUpdatedBy: 'system',
+            LastUpdatedBy: this.auditUser,
             Lastupdate: new Date().toISOString()
         };
     }

@@ -99,7 +99,7 @@
           @if (viewEditing) {
             <div class="ns-preview-edit-actions">
               <p-button label="Cancel" icon="pi pi-times" severity="secondary" [outlined]="true" (onClick)="cancelViewEdit()"></p-button>
-              <p-button label="Save" icon="pi pi-check" [loading]="savingView" (onClick)="saveViewChanges()"></p-button>
+              <p-button label="Save" icon="pi pi-check" [loading]="savingView" [disabled]="savingView" (onClick)="saveViewChanges()"></p-button>
             </div>
           } @else {
             <!-- Closing line -->
@@ -385,7 +385,7 @@
 
         <!-- Actions -->
         <div class="ns-gen-actions">
-          <p-button type="submit" label="Generate Note Sheet" icon="pi pi-check" [loading]="isSubmitting" [disabled]="form.invalid" />
+          <p-button type="submit" label="Generate Note Sheet" icon="pi pi-check" [loading]="isSubmitting" [disabled]="isSubmitting || form.invalid" />
         </div>
       </form>
       }

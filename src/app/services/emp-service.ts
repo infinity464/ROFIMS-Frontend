@@ -1,8 +1,8 @@
 import { Injectable } from '@angular/core';
 import { environment } from '@/Core/Environments/environment';
-import { Observable, forkJoin, of } from 'rxjs';
+import { Observable, forkJoin, of, throwError } from 'rxjs';
 import { HttpClient } from '@angular/common/http';
-import { switchMap, map, catchError, tap } from 'rxjs/operators';
+import { switchMap, map, catchError, tap, shareReplay } from 'rxjs/operators';
 import { from } from 'rxjs';
 import { concatMap, toArray } from 'rxjs/operators';
 import { AddressInfoModel, EmpModel, EmployeeSearchInfoModel } from '@/models/EmpModel';
@@ -351,12 +351,43 @@ export class EmpService {
         );
     }
 
-    /** Upload a file for employee references. File is stored on server (path from appsettings) and a FileInformation record is created. Returns { fileId, fileName } for FilesReferences JSON. */
-    uploadEmployeeFile(file: File, displayName?: string): Observable<{ fileId: number; fileName: string }> {
+    /**
+     * Uploads already issued, keyed by the File instance. A file picked once is written to disk once, however
+     * many times Save is pressed: a double-click shares the single in-flight request, and a later re-save reuses
+     * the FileId instead of writing another copy. Failed uploads drop out of the map so Save can retry them.
+     * Weakly keyed, so entries disappear with the File itself.
+     */
+    private readonly issuedUploads = new WeakMap<File, Observable<{ fileId: number; fileName: string }>>();
+
+    /**
+     * Upload a file for employee references. File is stored on server (path from appsettings) and a FileInformation record is created.
+     * Returns { fileId, fileName } for FilesReferences JSON.
+     *
+     * Uploading the same File instance again returns the first upload's result rather than issuing a second request.
+     *
+     * @param displayName Label kept in FileInformation.FileName — what file lists and downloads show. Defaults to the file's own name.
+     * @param owner Owner tag for the on-disk name (`<displayName>_<owner>_<guid>.<ext>`). Build it with buildUploadOwnerTag(); omitting it stores the file under NORABID.
+     */
+    uploadEmployeeFile(file: File, displayName?: string, owner?: string): Observable<{ fileId: number; fileName: string }> {
+        const alreadyIssued = this.issuedUploads.get(file);
+        if (alreadyIssued) return alreadyIssued;
+
         const form = new FormData();
         form.append('file', file);
         if (displayName != null && displayName.trim() !== '') form.append('fileName', displayName.trim());
-        return this.http.post<{ fileId: number; fileName: string }>(`${this.empApi}/FileInformation/Upload`, form);
+        if (owner != null && owner.trim() !== '') form.append('owner', owner.trim());
+
+        const upload$ = this.http.post<{ fileId: number; fileName: string }>(`${this.empApi}/FileInformation/Upload`, form).pipe(
+            catchError((err) => {
+                // Nothing was stored — let the next Save try again.
+                this.issuedUploads.delete(file);
+                return throwError(() => err);
+            }),
+            shareReplay({ bufferSize: 1, refCount: false })
+        );
+
+        this.issuedUploads.set(file, upload$);
+        return upload$;
     }
 
     /** Download a file by FileID. Returns blob. Use with triggerFileDownload(blob, fileName) to save. */

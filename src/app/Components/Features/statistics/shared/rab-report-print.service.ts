@@ -1,4 +1,4 @@
-import { Injectable } from '@angular/core';
+﻿import { Injectable } from '@angular/core';
 
 export type CellAlign = 'left' | 'center' | 'right';
 
@@ -79,10 +79,10 @@ export class RabReportPrintService {
         const esc = (s: string) => this.esc(s);
         const isBn = cfg.lang === 'bn';
         const serif = isBn
-            ? "'Times New Roman', 'Nirmala UI', serif"
+            ? "'Times New Roman', 'SolaimanLipi', serif"
             : "'Times New Roman', serif";
         const sans = isBn
-            ? "'Times New Roman', 'Nirmala UI', sans-serif"
+            ? "'Times New Roman', 'SolaimanLipi', sans-serif"
             : "'Times New Roman', sans-serif";
         const mono = "'JetBrains Mono', 'Consolas', 'Courier New', monospace";
 
@@ -102,7 +102,12 @@ export class RabReportPrintService {
 
         const colCount = cfg.columns.length;
         const alignCss = (a?: CellAlign) => `text-align:${a ?? 'left'};`;
-        const headerHtml = `<tr>${cfg.columns.map(c => `<th style="${alignCss(c.align ?? 'center')}">${esc(c.label)}</th>`).join('')}</tr>`;
+        // Transparent spacer row that lives INSIDE <thead>, so it repeats at the top of
+        // every printed page. This forces a top gap above the header on each continuation
+        // page independently of the browser's print-margin setting (Chrome ignores a large
+        // @page top margin when "Margins" is set to None/Minimum).
+        const topSpacerHtml = `<tr class="head-spacer" aria-hidden="true"><td colspan="${colCount}">&nbsp;</td></tr>`;
+        const headerHtml = `${topSpacerHtml}<tr>${cfg.columns.map(c => `<th style="${alignCss(c.align ?? 'center')}">${esc(c.label)}</th>`).join('')}</tr>`;
 
         const renderRow = (cells: string[], cls = ''): string =>
             `<tr class="${cls}">${cfg.columns.map((c, i) =>
@@ -164,7 +169,7 @@ export class RabReportPrintService {
             ? groupedHtml
             : isMatrix
                 ? `${matrixHtml}${matrixGrandHtml}`
-                : `<table><thead>${headerHtml}</thead><tbody>${sectionsHtml}</tbody>${grandTotalHtml}</table>`;
+                : `<table class="rpt-has-spacer"><thead>${headerHtml}</thead><tbody>${sectionsHtml}</tbody>${grandTotalHtml}</table>`;
 
         const criteriaGridHtml = `<div class="criteria-grid">${cfg.criteriaItems
             .map(it => `<div class="cell"><div class="cell-label">${esc(it.label)}</div><div class="cell-value">${esc(it.value)}</div></div>`)
@@ -218,6 +223,13 @@ export class RabReportPrintService {
     thead { display: table-header-group; }
     /* Keep the grand-total on the LAST page only — table-footer-group would repeat it on every page. */
     tfoot { display: table-row-group; }
+    /* Invisible spacer row inside thead — repeats on every page, forcing a ~0.5in
+       top gap above the header on each CONTINUATION page. It's transparent so it never
+       paints over content. On the FIRST page the negative margin below pulls the whole
+       table up by exactly the spacer height, cancelling the gap there (a negative top
+       margin only applies to the first fragment, not to continuation pages). */
+    thead tr.head-spacer td { height: 13mm; line-height: 13mm; padding: 0; border: 0 !important; background: transparent !important; font-size: 0; }
+    table.rpt-has-spacer { margin-top: -13mm; }
     thead th { background: #0b0b0b; color: #d9c79a; font-family: ${mono}; font-size: 7pt; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; padding: 2mm; vertical-align: middle; white-space: nowrap; border: 1px solid rgba(11,11,11,0.05); ${isBn ? 'letter-spacing:0.04em;font-family:' + sans + ';' : ''} }
     tbody td { padding: 2mm; font-size: 9pt; color: #0b0b0b; border: 1px solid rgba(11,11,11,0.06); vertical-align: middle; background: #fff; }
     tbody tr:nth-child(even) td { background: #fafaf6; }

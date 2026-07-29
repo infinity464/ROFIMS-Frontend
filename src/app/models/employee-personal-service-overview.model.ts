@@ -109,6 +109,10 @@ export interface EmployeePersonalServiceOverview {
     gallantryAwardsDecorationId: string | null; // CSV of CommonCode ids (multi-select)
     hasInvestigationExp: boolean | null;
     investigationExpDetails: string | null;
+    /** RAB Orientation Training status: 0 = No, 1 = Yes, 2 = Not Applicable, null = not set. */
+    isRFTSComplted?: number | null;
+    /** Why the member was marked Not Applicable; null for every other status. */
+    rftsRemark?: string | null;
     /** JSON array of profile image ref(s): e.g. [{"FileId":3,"fileName":"photo.png"}]. From EmployeeInfo.ProfileImages. */
     profileImages?: string | null;
 }

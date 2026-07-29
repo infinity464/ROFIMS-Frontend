@@ -17,6 +17,7 @@ import { ConfirmDialogModule } from 'primeng/confirmdialog';
 import { DatePickerModule } from 'primeng/datepicker';
 
 import { EmpService } from '@/services/emp-service';
+import { buildUploadOwnerTag } from '@/shared/utils/upload-file-name.util';
 import { EducationInfoService, EducationInfoModel } from '@/services/education-info-service';
 import { CommonCodeService } from '@/services/common-code-service';
 import { MasterBasicSetupService } from '@/Components/basic-setup/shared/services/MasterBasicSetupService';
@@ -137,6 +138,11 @@ export class EmpEducationInfoComponent implements OnInit {
         private fb: FormBuilder
     ) {
         this.initForm();
+    }
+
+    /** Logged-in user for createdBy / lastUpdatedBy. Falls back to 'system' only when nobody is signed in. */
+    private get auditUser(): string {
+        return this.sharedService.getCurrentUser() ?? 'system';
     }
 
     ngOnInit(): void {
@@ -453,8 +459,8 @@ export class EmpEducationInfoComponent implements OnInit {
                 gradePoint: formValue.gradePoint && String(formValue.gradePoint).trim() ? String(formValue.gradePoint).trim() : null,
                 remarks: formValue.remarks && String(formValue.remarks).trim() ? String(formValue.remarks).trim() : null,
                 filesReferences: filesReferencesJson ?? undefined,
-                createdBy: 'system',
-                lastUpdatedBy: 'system'
+                createdBy: this.auditUser,
+                lastUpdatedBy: this.auditUser
             };
 
             this.isSaving = true;
@@ -476,7 +482,7 @@ export class EmpEducationInfoComponent implements OnInit {
 
         if (filesToUpload.length > 0) {
             const uploads = filesToUpload.map((r: FileRowData) =>
-                this.empService.uploadEmployeeFile(r.file!, r.displayName?.trim() || r.file!.name)
+                this.empService.uploadEmployeeFile(r.file!, r.displayName?.trim() || r.file!.name, buildUploadOwnerTag(this.employeeBasicInfo?.rabid, this.selectedEmployeeId))
             );
             forkJoin(uploads).subscribe({
                 next: (results: unknown) => {

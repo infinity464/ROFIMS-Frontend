@@ -67,6 +67,12 @@ export class AddDraftNewPostingComponent implements OnInit {
     /** All active Member Types (CommonCode 'EmployeeType'); `memberTypeOptions` exposes the accessible subset. */
     allMemberTypeOptions: { label: string; value: number }[] = [];
     selectedMemberTypeIds: number[] = [];
+    /** Previous selection — lets onMemberTypeChange tell an add apart from a remove. */
+    private prevMemberTypeIds: number[] = [];
+    /** Member types that must be selected/cleared together (all-or-none), matched
+     *  by English label so it works regardless of DB code ids. Officer is NOT here,
+     *  so it stays independently selectable. */
+    private static readonly GROUPED_MEMBER_TYPE_LABELS = ['dad', 'ors', 'civil'];
     /** Member type ids the logged-in user may access (null = not yet resolved / unrestricted). */
     allowedMemberTypeIds: number[] | null = null;
 
@@ -157,6 +163,89 @@ export class AddDraftNewPostingComponent implements OnInit {
         });
     }
 
+    /** Officer's CommonCode id (matched by English label), if present. */
+    private getOfficerId(): number | undefined {
+        return this.allMemberTypeOptions
+            .find((o) => (o.label || '').trim().toLowerCase() === 'officer')?.value;
+    }
+
+    /** The DAD / ORs / Civil ids (matched by English label). */
+    private getGroupIds(): number[] {
+        return this.allMemberTypeOptions
+            .filter((o) => AddDraftNewPostingComponent.GROUPED_MEMBER_TYPE_LABELS
+                .includes((o.label || '').trim().toLowerCase()))
+            .map((o) => o.value);
+    }
+
+    /** Category of the current selection: 'officer', 'others', or null (nothing picked). */
+    private currentMemberCategory(): 'officer' | 'others' | null {
+        const officerId = this.getOfficerId();
+        const groupIds = this.getGroupIds();
+        const selected = new Set(this.selectedMemberTypeIds);
+        if (officerId != null && selected.has(officerId)) return 'officer';
+        if (groupIds.some((id) => selected.has(id))) return 'others';
+        return null;
+    }
+
+    /** Category an existing draft belongs to, from its stored employeeTypeIds. */
+    private masterCategory(m: DraftPostingMasterDto): 'officer' | 'others' | null {
+        const ids = (m.employeeTypeIds ?? '')
+            .split(',')
+            .map((s) => parseInt(s.trim(), 10))
+            .filter((n) => !isNaN(n));
+        const officerId = this.getOfficerId();
+        const groupIds = this.getGroupIds();
+        if (officerId != null && ids.includes(officerId)) return 'officer';
+        if (ids.some((id) => groupIds.includes(id))) return 'others';
+        return null;
+    }
+
+    /**
+     * Member-type selection rules:
+     *  - Officer and the DAD/ORs/Civil group are MUTUALLY EXCLUSIVE — a draft is
+     *    for one category or the other, never both.
+     *  - The group is all-or-none: checking any of DAD/ORs/Civil selects all three;
+     *    unchecking any one clears all three.
+     * After normalizing, the list number is regenerated for the chosen category
+     * (add mode), because Officer and Others have separate serials.
+     */
+    onMemberTypeChange(): void {
+        const officerId = this.getOfficerId();
+        const groupIds = this.getGroupIds();
+
+        const selected = new Set(this.selectedMemberTypeIds);
+        const prev = new Set(this.prevMemberTypeIds);
+        const added = [...selected].filter((id) => !prev.has(id));
+
+        const addedOfficer = officerId != null && added.includes(officerId);
+        const addedGroup = added.some((id) => groupIds.includes(id));
+
+        if (addedOfficer) {
+            // Officer chosen → Officer only (clear the group).
+            groupIds.forEach((id) => selected.delete(id));
+            selected.add(officerId!);
+        } else if (addedGroup) {
+            // A group member chosen → whole group, and clear Officer.
+            if (officerId != null) selected.delete(officerId);
+            groupIds.forEach((id) => selected.add(id));
+        } else {
+            // A removal happened → keep the group all-or-none.
+            const inGroup = groupIds.filter((id) => selected.has(id)).length;
+            if (inGroup > 0 && inGroup < groupIds.length) {
+                groupIds.forEach((id) => selected.delete(id));
+            }
+        }
+
+        // Re-materialize preserving catalog order.
+        this.selectedMemberTypeIds = this.allMemberTypeOptions
+            .map((o) => o.value)
+            .filter((v) => selected.has(v));
+        this.prevMemberTypeIds = [...this.selectedMemberTypeIds];
+
+        // The serial depends on the category, so refresh it (add mode only).
+        if (!this.isEditMode) this.generateDraftPostingListNo();
+    }
+
     /** Parse comma-separated "1,2,3" into a number[] for the multi-select. */
     private parseMemberTypeIds(ids: string | null | undefined): number[] {
         if (!ids) return [];
@@ -205,10 +294,15 @@ export class AddDraftNewPostingComponent implements OnInit {
             return;
         }
 
-        // Check duplicate posting list no (skip if editing the same record)
+        // Check duplicate posting list no WITHIN THE SAME CATEGORY (skip if
+        // editing the same record). Officer and the DAD/ORs/Civil group have
+        // independent serials, so an identical number across categories is fine.
         const trimmedNo = this.draftPostingListNo.trim();
+        const currentCat = this.currentMemberCategory();
         const duplicate = this.draftMastersList.find(
-            (m) => m.draftPostingNo?.toLowerCase() === trimmedNo.toLowerCase() && m.id !== this.editDraftId
+            (m) => m.draftPostingNo?.toLowerCase() === trimmedNo.toLowerCase()
+                && m.id !== this.editDraftId
+                && this.masterCategory(m) === currentCat
         );
         if (duplicate) {
             this.messageService.add({ severity: 'warn', summary: 'Duplicate', detail: `Draft Posting List No "${trimmedNo}" already exists.` });
@@ -264,6 +358,7 @@ export class AddDraftNewPostingComponent implements OnInit {
                     this.loadDraftMasters();
                     this.selectedRows = [];
                     this.selectedMemberTypeIds = [];
+                    this.prevMemberTypeIds = [];
                     this.draftPostingDate = new Date();
                 }
             },
@@ -288,25 +383,33 @@ export class AddDraftNewPostingComponent implements OnInit {
         });
     }
 
+    /**
+     * Build the next Draft Posting List No as "<seq>/<year>", e.g. 001/2026.
+     * The sequence is per-year AND per-category: Officer and the DAD/ORs/Civil
+     * group keep SEPARATE serials that each start at 001 (so both categories can
+     * legitimately show 001/2026 — they are told apart by member type, not by the
+     * number). Pads to at least 3 digits (001 ... 100 ... 1000) and restarts at
+     * 001 when the year rolls over. Empty until a member type is chosen.
+     */
     private generateDraftPostingListNo(): void {
-        const now = new Date();
-        const dd = String(now.getDate()).padStart(2, '0');
-        const mm = String(now.getMonth() + 1).padStart(2, '0');
-        const yyyy = now.getFullYear();
-        const datePrefix = `${dd}/${mm}/${yyyy}`;
+        const category = this.currentMemberCategory();
+        if (category == null) { this.draftPostingListNo = ''; return; }
+
+        const year = new Date().getFullYear();
 
         let maxSeq = 0;
         for (const m of this.draftMastersList) {
-            const no = m.draftPostingNo ?? '';
-            if (!no.startsWith(datePrefix + '//')) continue;
-            const parts = no.substring(datePrefix.length + 2).split('/');
-            const seq = parseInt(parts[0], 10);
+            const no = (m.draftPostingNo ?? '').trim();
+            // Only the "<seq>/<year>" format, THIS year, and the SAME category.
+            const match = /^(\d+)\/(\d{4})$/.exec(no);
+            if (!match || parseInt(match[2], 10) !== year) continue;
+            if (this.masterCategory(m) !== category) continue;
+            const seq = parseInt(match[1], 10);
             if (!isNaN(seq) && seq > maxSeq) maxSeq = seq;
         }
 
         const seq = String(maxSeq + 1).padStart(3, '0');
-        const rand = String(Math.floor(1000 + Math.random() * 9000));
-        this.draftPostingListNo = `${datePrefix}//${seq}/${rand}`;
+        this.draftPostingListNo = `${seq}/${year}`;
     }
 
     formatDateForApi(d: Date | null): string | null {
@@ -327,6 +430,50 @@ export class AddDraftNewPostingComponent implements OnInit {
             error: (err) => {
                 this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.message ?? 'Failed to load draft list' });
                 this.loading = false;
+            }
+        });
+    }
+
+    /** Employee id currently being removed from the draft list (per-row button loading state). */
+    removingDraftEmployeeId: number | null = null;
+
+    /** Confirm, then reverse an employee's draft status so they're removed from this list. */
+    removeFromDraft(row: EmployeeList): void {
+        if (!this.canDelete) {
+            this.messageService.add({ severity: 'warn', summary: 'Permission Denied', detail: 'You do not have permission to perform this action.' });
+            return;
+        }
+        const name = row.fullNameEN || row.serviceId || 'this member';
+        this.confirmationService.confirm({
+            header: 'Remove from Draft',
+            message: `Remove ${name} from the draft posting list? Their sending status will be reverted and they'll return to the Supernumerary List.`,
+            icon: 'pi pi-exclamation-triangle',
+            acceptButtonProps: { label: 'Remove', severity: 'danger' },
+            rejectButtonProps: { label: 'Cancel', severity: 'secondary', outlined: true },
+            accept: () => this.doRemoveFromDraft(row)
+        });
+    }
+
+    /** Clear IsSendingNotesheetStatus (empty = not sent), reversing the "Send to Posting" action. */
+    private doRemoveFromDraft(row: EmployeeList): void {
+        this.removingDraftEmployeeId = row.employeeID;
+        this.employeeListService.setIsSendingNotesheetStatus(row.employeeID, '').subscribe({
+            next: (res: { statusCode?: number; description?: string }) => {
+                this.removingDraftEmployeeId = null;
+                const ok = (res?.statusCode ?? 200) === 200;
+                this.messageService.add({
+                    severity: ok ? 'success' : 'warn',
+                    summary: 'Remove',
+                    detail: ok ? 'Member removed from draft.' : (res?.description ?? 'Remove failed.')
+                });
+                if (ok) {
+                    this.selectedRows = this.selectedRows.filter((r) => r.employeeID !== row.employeeID);
+                    this.loadData();
+                }
+            },
+            error: (err: { error?: { description?: string }; message?: string }) => {
+                this.removingDraftEmployeeId = null;
+                this.messageService.add({ severity: 'error', summary: 'Remove', detail: err?.error?.description ?? err?.message ?? 'Failed to remove.' });
             }
         });
     }
@@ -352,6 +499,7 @@ export class AddDraftNewPostingComponent implements OnInit {
                 this.draftPostingDate = data.draftPostingDate ? this.parseDateFromApi(data.draftPostingDate) : null;
                 this.editDraftStatus = data.draftPostingStatus ?? '';
                 this.selectedMemberTypeIds = this.parseMemberTypeIds(data.employeeTypeIds);
+                this.prevMemberTypeIds = [...this.selectedMemberTypeIds];
                 this.loading = false;
             },
             error: (err: { error?: { description?: string }; message?: string }) => {
@@ -373,6 +521,7 @@ export class AddDraftNewPostingComponent implements OnInit {
         this.draftPostingListNo = '';
         this.selectedRows = [];
         this.selectedMemberTypeIds = [];
+        this.prevMemberTypeIds = [];
         this.loadData();
     }
 

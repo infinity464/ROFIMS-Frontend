@@ -1,5 +1,6 @@
 import { Component, OnInit, OnDestroy, ViewChild , inject } from '@angular/core';
 import { UserMenuService } from '@/services/user-menu.service';
+import { SharedService } from '@/shared/services/shared-service';
 import { CommonModule } from '@angular/common';
 import { FormsModule, ReactiveFormsModule, FormBuilder, FormGroup } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
@@ -19,6 +20,7 @@ import { DatePickerModule } from 'primeng/datepicker';
 import { ToastModule } from 'primeng/toast';
 
 import { EmpService } from '@/services/emp-service';
+import { buildUploadOwnerTag } from '@/shared/utils/upload-file-name.util';
 import { PermPostingMotherOrgService, PermPostingMotherOrgModel } from '@/services/perm-posting-mother-org.service';
 import { EmployeeSearchComponent, EmployeeBasicInfo } from '@/Components/Shared/employee-search/employee-search';
 import { FileReferencesFormComponent, FileRowData } from '@components/Common/file-references-form/file-references-form';
@@ -56,6 +58,13 @@ interface DropdownOption {
 export class EmpPermPostingMotherOrg implements OnInit, OnDestroy {
     private _router = inject(Router);
     private _userMenuService = inject(UserMenuService);
+    private sharedService = inject(SharedService);
+
+    /** Logged-in user for createdBy / lastUpdatedBy. Falls back to 'system' only when nobody is signed in. */
+    private get auditUser(): string {
+        return this.sharedService.getCurrentUser() ?? 'system';
+    }
+
     canInsert = true;
     canUpdate = true;
     canDelete = true;
@@ -366,7 +375,7 @@ export class EmpPermPostingMotherOrg implements OnInit, OnDestroy {
         }
 
         const uploads = filesToUpload.map((r: FileRowData) =>
-            this.empService.uploadEmployeeFile(r.file!, r.displayName?.trim() || r.file!.name)
+            this.empService.uploadEmployeeFile(r.file!, r.displayName?.trim() || r.file!.name, buildUploadOwnerTag(this.employeeBasicInfo?.rabid, this.selectedEmployeeId))
         );
 
         return forkJoin(uploads).pipe(
@@ -409,7 +418,9 @@ export class EmpPermPostingMotherOrg implements OnInit, OnDestroy {
                 const toDateStr = (d: Date | null): string | null => {
                     if (!d) return null;
                     const x = new Date(d);
-                    return isNaN(x.getTime()) ? null : x.toISOString().split('T')[0];
+                    if (isNaN(x.getTime())) return null;
+                    // Local Y/M/D — toISOString() converts to UTC and shifts the date back a day in UTC+ zones.
+                    return `${x.getFullYear()}-${String(x.getMonth() + 1).padStart(2, '0')}-${String(x.getDate()).padStart(2, '0')}`;
                 };
 
                 const payload: Partial<PermPostingMotherOrgModel> = {
@@ -425,8 +436,8 @@ export class EmpPermPostingMotherOrg implements OnInit, OnDestroy {
                     postingOrderFilesReferences: fileResults.postingOrder,
                     noteSheetFilesReferences: fileResults.noteSheet,
                     clearanceLatterFilesReferences: fileResults.clearanceLatter,
-                    createdBy: 'system',
-                    lastUpdatedBy: 'system'
+                    createdBy: this.auditUser,
+                    lastUpdatedBy: this.auditUser
                 };
 
                 const req = this.isEditMode

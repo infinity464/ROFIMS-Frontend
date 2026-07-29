@@ -1,4 +1,4 @@
-import { Component, HostListener, OnDestroy, OnInit } from '@angular/core';
+﻿import { Component, HostListener, OnDestroy, OnInit } from '@angular/core';
 import { Router } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -80,6 +80,14 @@ export class ReportStayAfterRelieverJoinedComponent implements OnInit, OnDestroy
     tradeOptions: { label: string; labelBn: string; value: number }[] = [];
     selectedOrgIds: number[] = [];
     selectedRankId: number | null = null;
+    /**
+     * RAB Rank filter — universal rank tiers (EquivalentName common codes),
+     * mapped to per-org Mother Org Ranks by basic-setup/rank-equivalent. Not
+     * org-scoped, so the list loads once on init and stays enabled regardless
+     * of the Mother Organization picked. Mutually exclusive with Rank.
+     */
+    rabRankOptions: { label: string; labelBn: string; value: number }[] = [];
+    selectedRabRankId: number | null = null;
     selectedMemberTypeIds: number[] = [];
     selectedCorpsIds: number[] = [];
     selectedTradeIds: number[] = [];
@@ -419,6 +427,7 @@ export class ReportStayAfterRelieverJoinedComponent implements OnInit, OnDestroy
 
         this.loadMotherOrgs();
         this.loadMemberTypes();
+        this.loadRabRankOptions();
         this.loadOrgNodeLabels();
         // Do not auto-run; the list loads only after the user clicks Search.
 
@@ -555,6 +564,24 @@ export class ReportStayAfterRelieverJoinedComponent implements OnInit, OnDestroy
         });
     }
 
+    /** RAB Rank tiers — EquivalentName common codes (org-independent). */
+    loadRabRankOptions(): void {
+        this.commonCodeService.getAllActiveCommonCodesType('EquivalentName').subscribe({
+            next: (codes: CommonCodeModel[]) => (this.rabRankOptions = this.mapCodes(codes || [])),
+            error: () => (this.rabRankOptions = []),
+        });
+    }
+
+    /**
+     * Rank changed → drop any RAB Rank selection. The two are alternative ways
+     * of asking the same question (per-org Mother Org Rank vs. the universal
+     * tier it maps to), so only one may be active at a time — the template
+     * disables RAB Rank while a Rank is picked.
+     */
+    onRankChange(): void {
+        if (this.selectedRankId != null) this.selectedRabRankId = null;
+    }
+
     /** Member Type changed → re-filter the org-scoped ranks by parentCodeId. */
     onMemberTypeChange(): void {
         this.applyRankMemberTypeFilter();
@@ -615,6 +642,7 @@ export class ReportStayAfterRelieverJoinedComponent implements OnInit, OnDestroy
         if (this.relieverMode !== 'newPosting') {
             if (this.selectedOrgIds.length > 0) c++;
             if (this.selectedRankId != null) c++;
+            if (this.selectedRabRankId != null) c++;
             if (this.selectedMemberTypeIds.length > 0) c++;
             if (this.selectedCorpsIds.length > 0) c++;
             if (this.selectedTradeIds.length > 0) c++;
@@ -650,6 +678,11 @@ export class ReportStayAfterRelieverJoinedComponent implements OnInit, OnDestroy
                 const lbl = this.lang === 'en' ? 'Rank' : 'পদবী';
                 if (opt) items.push({ label: lbl, value: this.lang === 'bn' ? opt.labelBn : opt.label });
             }
+            if (this.selectedRabRankId != null) {
+                const opt = this.rabRankOptions.find((o) => o.value === this.selectedRabRankId);
+                const lbl = this.lang === 'en' ? 'RAB Rank' : 'র‍্যাব পদবি';
+                if (opt) items.push({ label: lbl, value: this.lang === 'bn' ? opt.labelBn : opt.label });
+            }
             multi(this.selectedCorpsIds, this.corpsOptions, 'Corps', 'কোর');
             multi(this.selectedTradeIds, this.tradeOptions, 'Trade', 'ট্রেড');
             if (this.selectedOrgNodeIds.length > 0) {
@@ -676,6 +709,7 @@ export class ReportStayAfterRelieverJoinedComponent implements OnInit, OnDestroy
         this.lastIdSearchApplied = '';
         this.selectedOrgIds = [];
         this.selectedRankId = null;
+        this.selectedRabRankId = null;
         this.rankOptions = [];
         this.allRanksForOrg = [];
         this.selectedMemberTypeIds = [];
@@ -697,12 +731,16 @@ export class ReportStayAfterRelieverJoinedComponent implements OnInit, OnDestroy
 
     /** Keystroke in the toolbar search — debounced auto-search. */
     onIdSearchInput(): void {
-        this.idSearchInput$.next((this.idSearchText ?? '').trim());
+        // Bangla digits typed/pasted into the ID search are normalized to
+        // Western digits so they match the stored Service ID / RAB ID.
+        this.idSearchText = BanglaNumerals.toWestern(this.idSearchText ?? '');
+        this.idSearchInput$.next(this.idSearchText.trim());
     }
 
     /** Enter / search icon — search immediately, skipping the debounce. */
     onIdSearch(): void {
-        this.applyIdSearch((this.idSearchText ?? '').trim());
+        this.idSearchText = BanglaNumerals.toWestern(this.idSearchText ?? '');
+        this.applyIdSearch(this.idSearchText.trim());
     }
 
     clearIdSearch(): void {
@@ -747,6 +785,9 @@ export class ReportStayAfterRelieverJoinedComponent implements OnInit, OnDestroy
         const criteria: DynamicReportCriterion[] = [];
         if (this.selectedOrgIds.length > 0) criteria.push({ fieldKey: 'motherOrganization', idValues: this.selectedOrgIds });
         if (this.selectedRankId != null && this.selectedRankId > 0) criteria.push({ fieldKey: 'armyRank', idValue: this.selectedRankId });
+        // RAB Rank tier resolves to the matching Mother Org Ranks server-side
+        // via the RankEquivalent map.
+        if (this.selectedRabRankId != null && this.selectedRabRankId > 0) criteria.push({ fieldKey: 'rabRankEquivalent', idValue: this.selectedRabRankId });
         if (this.selectedMemberTypeIds.length > 0) criteria.push({ fieldKey: 'memberType', idValues: this.selectedMemberTypeIds });
         if (this.selectedCorpsIds.length > 0) criteria.push({ fieldKey: 'corps', idValues: this.selectedCorpsIds });
         if (this.selectedTradeIds.length > 0) criteria.push({ fieldKey: 'trade', idValues: this.selectedTradeIds });
@@ -1033,7 +1074,7 @@ export class ReportStayAfterRelieverJoinedComponent implements OnInit, OnDestroy
 
     private async exportRabWord(): Promise<void> {
         const isBn = this.lang === 'bn';
-        const bnFont = { ascii: 'Times New Roman', hAnsi: 'Times New Roman', cs: 'Nirmala UI', hint: 'cs' as const };
+        const bnFont = { ascii: 'Times New Roman', hAnsi: 'Times New Roman', cs: 'SolaimanLipi', hint: 'cs' as const };
         const bnLang = { value: 'bn-BD', bidirectional: 'bn-BD' } as any;
         const sans = isBn ? (bnFont as any) : 'Calibri';
         const serif = isBn ? (bnFont as any) : 'Cambria';
@@ -1353,8 +1394,8 @@ export class ReportStayAfterRelieverJoinedComponent implements OnInit, OnDestroy
                 .replace(/"/g, '&quot;')
                 .replace(/'/g, '&#039;');
         const isBn = this.lang === 'bn';
-        const serif = isBn ? "'Times New Roman', 'Nirmala UI', serif" : "'Times New Roman', serif";
-        const sans = isBn ? "'Times New Roman', 'Nirmala UI', sans-serif" : "'Times New Roman', sans-serif";
+        const serif = isBn ? "'Times New Roman', 'SolaimanLipi', serif" : "'Times New Roman', serif";
+        const sans = isBn ? "'Times New Roman', 'SolaimanLipi', sans-serif" : "'Times New Roman', sans-serif";
         const mono = "'JetBrains Mono', 'Consolas', 'Courier New', monospace";
         const visibleCols = this.visibleColumns;
         const tableHeaderHtml = `<tr>${visibleCols.map((c) => `<th>${esc(this.lang === 'bn' ? c.labelBN : c.labelEN)}</th>`).join('')}</tr>`;

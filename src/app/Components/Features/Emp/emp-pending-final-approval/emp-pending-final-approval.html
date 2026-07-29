@@ -112,27 +112,47 @@
 
                         <!-- Row actions -->
                         <div class="flex gap-1 shrink-0">
-                            <p-button icon="pi pi-eye" [rounded]="true" [text]="true" severity="info" size="small"
-                                pTooltip="Show Members"
+                            <p-button [icon]="selectedDraft?.id === row.id ? 'pi pi-eye-slash' : 'pi pi-eye'"
+                                [rounded]="true" [text]="true" severity="info" size="small"
+                                [pTooltip]="selectedDraft?.id === row.id ? 'Hide Members' : 'Show Members'"
                                 (onClick)="toggleDraftMembers(row); $event.stopPropagation()"></p-button>
+                            <!-- Nominal roll export — Bangla, grouped by mother org. -->
+                            <p-button icon="pi pi-print" [rounded]="true" [text]="true" severity="secondary" size="small"
+                                [disabled]="exportingId != null" [loading]="exportingId === row.id"
+                                pTooltip="Print / PDF — নামীয় তালিকা" tooltipPosition="top"
+                                (onClick)="exportRoll(row, 'print', $event)"></p-button>
+                            <p-button icon="pi pi-file-word" [rounded]="true" [text]="true" severity="info" size="small"
+                                [disabled]="exportingId != null" pTooltip="Export Word" tooltipPosition="top"
+                                (onClick)="exportRoll(row, 'word', $event)"></p-button>
+                            <p-button icon="pi pi-file-excel" [rounded]="true" [text]="true" severity="success" size="small"
+                                [disabled]="exportingId != null" pTooltip="Export Excel" tooltipPosition="top"
+                                (onClick)="exportRoll(row, 'excel', $event)"></p-button>
                             <p-button icon="pi pi-trash" [class.perm-hidden]="!canDelete" [rounded]="true" [text]="true"
                                 severity="danger" size="small" pTooltip="Delete"
                                 (onClick)="deleteDraftRow(row); $event.stopPropagation()" [disabled]="isDeletingDraft"></p-button>
                         </div>
                     </div>
+
+                    <!-- Members for this list — renders directly under its own card. -->
+                    @if (selectedDraft?.id === row.id) {
+                        <ng-container [ngTemplateOutlet]="membersPanel"></ng-container>
+                    }
                 }
             </div>
         }
 
-        <!-- ============== Members panel ============== -->
-        @if (selectedDraft) {
+        <!-- ============== Members panel ==============
+             An ng-template so the accordion can render it inline beneath the
+             clicked card rather than once at the foot of the list. -->
+        <ng-template #membersPanel>
+        @if (selectedDraft; as sel) {
             <div class="rounded-lg border border-surface bg-surface-50 dark:bg-surface-800 p-4 mt-4">
                 <div class="flex items-center justify-between mb-3 flex-wrap gap-2">
                     <div class="flex items-center gap-2 flex-wrap">
                         <i class="pi pi-users text-color-secondary"></i>
                         <span class="font-semibold text-lg">Members in</span>
                         <span class="inline-block bg-primary-100 text-primary-700 dark:bg-primary-900 dark:text-primary-100 rounded-md px-2 py-1 font-semibold text-sm">
-                            {{ selectedDraft.listNo }}
+                            {{ sel.listNo }}
                         </span>
                     </div>
                     <p-button label="Final approve" icon="pi pi-check-circle" severity="success"
@@ -140,32 +160,29 @@
                 </div>
 
                 <p-table
-                    [value]="selectedDraft.members"
+                    [value]="sel.members"
                     styleClass="p-datatable-sm"
                     dataKey="employeeId"
-                    [paginator]="(selectedDraft?.members?.length ?? 0) > 10"
+                    [paginator]="(sel.members?.length ?? 0) > 10"
                     [rows]="10">
                     <ng-template pTemplate="header">
                         <tr>
-                            <th>Member</th>
-                            <th>RAB ID</th>
-                            <th>Service ID</th>
+                            <!-- Same column set as the printed নামীয় তালিকা, in English.
+                                 Remarks + remove stay: they are approval workflow, not
+                                 part of the printed form. -->
+                            <th style="width: 4rem">Ser</th>
+                            <th>Personal No</th>
                             <th>Rank</th>
-                            <th>Corps</th>
-                            <th>Trade</th>
+                            <th>Name</th>
+                            <th>Mother Org</th>
+                            <th>RAB ID</th>
                             <th>Remarks</th>
                             <th style="width: 60px"></th>
                         </tr>
                     </ng-template>
-                    <ng-template pTemplate="body" let-row>
+                    <ng-template pTemplate="body" let-row let-rowIndex="rowIndex">
                         <tr>
-                            <td>
-                                <div class="flex flex-col">
-                                    <span class="font-semibold">{{ row.fullNameEN || '—' }}</span>
-                                    <small class="text-color-secondary">{{ row.motherUnitName || '—' }}</small>
-                                </div>
-                            </td>
-                            <td>{{ row.rabId || 'N/A' }}</td>
+                            <td>{{ rowIndex + 1 }}</td>
                             <td>{{ row.serviceId || '—' }}</td>
                             <td>
                                 @if (row.rankName) {
@@ -174,8 +191,9 @@
                                     <span>N/A</span>
                                 }
                             </td>
-                            <td>{{ row.corpsName || 'N/A' }}</td>
-                            <td>{{ row.tradeName || '—' }}</td>
+                            <td class="font-semibold">{{ row.fullNameEN || '—' }}</td>
+                            <td>{{ row.motherUnitName || '—' }}</td>
+                            <td>{{ row.rabId || 'N/A' }}</td>
                             <td>
                                 <input pInputText
                                     [value]="getMemberRemark(row.employeeId)"
@@ -213,7 +231,7 @@
                 <div class="rounded-lg border border-dashed border-surface p-4 mt-3">
                     <div class="flex items-center gap-2 mb-3">
                         <i class="pi pi-user-plus text-color-secondary"></i>
-                        <span class="font-semibold">Add members to {{ selectedDraft?.listNo }}</span>
+                        <span class="font-semibold">Add members to {{ sel.listNo }}</span>
                     </div>
                     <p-iconfield iconPosition="left" class="w-full block mb-3">
                         <p-inputicon styleClass="pi pi-search"></p-inputicon>
@@ -271,5 +289,6 @@
                 </div>
             }
         }
+        </ng-template>
     </p-card>
 </p-fluid>

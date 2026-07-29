@@ -34,6 +34,7 @@ import { PendingPostingJoiningDto } from '@/models/posting.model';
 import { IdentityUserMappingService } from '@/services/identity-user-mapping.service';
 import { SharedService } from '@/shared/services/shared-service';
 import { UserMenuService } from '@/services/user-menu.service';
+import { PreviousRABServiceService } from '@/services/previous-rab-service.service';
 
 import { MovementInfoModel } from '@/models/movement-info.model';
 import { CommonCodeModel } from '@/models/common-code-model';
@@ -57,6 +58,12 @@ interface MovementEmployeeRow {
     motherOrganizationDisplay?: string;
     memberTypeDisplay?: string;
     unit?: number | null;
+    /** CommonCode 'AppointmentCategory' label, Bangla preferred. Often null —
+     *  EmployeeInfo.Appointment is optional. */
+    appointmentBn?: string | null;
+    /** Member's currently-active RAB unit (PreviousRABServiceInfo). Names the
+     *  handing-over unit in the Article 47 (Handover) declaration. */
+    rabUnitId?: number | null;
 }
 
 @Component({
@@ -100,6 +107,7 @@ export class MovementInfoComponent implements OnInit {
     private messageService = inject(MessageService);
     private confirmationService = inject(ConfirmationService);
     private userMenuService = inject(UserMenuService);
+    private previousRabService = inject(PreviousRABServiceService);
     private router = inject(Router);
     private route = inject(ActivatedRoute);
 
@@ -174,6 +182,15 @@ export class MovementInfoComponent implements OnInit {
     /** True when a searched member was found on a pending posting list: Movement
      *  type is locked to Permanent (Order type stays selectable). */
     lockMovementType = false;
+
+    /** Editing an existing movement. Movement type, Order type and Destination
+     *  identify the record — its letter number, preview layout and service-history
+     *  side effects all hang off them — so they are read-only on update. Bound as a
+     *  PrimeNG `disabled` input rather than disabling the control, so the values
+     *  still reach `form.value` when the payload is built. */
+    get lockOnEdit(): boolean {
+        return this.editingId != null;
+    }
 
     /** True when the destined unit is known from the redirect — the Destination
      *  section is hidden and each record's RAB unit comes from prefilledUnits. */
@@ -352,13 +369,14 @@ export class MovementInfoComponent implements OnInit {
             lastRationCertificate: row.lastRationCertificate ?? null,
             payAndAllowance:       row.payAndAllowance       ?? null,
             railwayWarrant:        row.railwayWarrant        ?? null,
-            releaseTime:           row.releaseTime           ?? null,
+            releaseTime:           this.toTimeInput(row.releaseTime),
             vehicle:               row.vehicle               ?? null,
             auth: row.auth ?? null,
             detailsInformation: row.detailsInformation ?? null,
             remarks: row.remarks ?? null,
             finalApproverIds: this.parseIntJsonArray(row.finalApproverIds),
             letterDate: this.toDate(row.letterDate) ?? new Date(),
+            generatedDate: this.toDate(row.createdDate) ?? new Date(),
             status: row.status ?? true
         });
 
@@ -410,10 +428,14 @@ export class MovementInfoComponent implements OnInit {
                         tradeDisplay: this.pick(info, 'trade'),
                         motherOrganizationDisplay: this.pick(info, 'motherOrganization'),
                         memberTypeDisplay: this.pick(info, 'memberType'),
-                        unit: this.pick(info, 'lastMotherUnitId') ?? null
+                        unit: this.pick(info, 'lastMotherUnitId') ?? null,
+                        appointmentBn: this.pick(info, 'appointmentBN') ?? this.pick(info, 'appointment') ?? null
                     }
                 ];
                 this.syncCurrentUnitFromEmployees();
+                // The Article 47 declaration names the appointment.
+                this.syncArticle47Remark();
+                this.hydrateRabUnit(empId);
             }
         });
     }
@@ -505,6 +527,29 @@ export class MovementInfoComponent implements OnInit {
         return isNaN(d.getTime()) ? null : d;
     }
 
+    /**
+     * Normalises a stored Release time to the "HH:mm" that `<input type="time">`
+     * requires — anything else and the field silently renders blank on edit.
+     * MovementInfo.ReleaseTime is free-text nvarchar, so values like "9:30",
+     * "09:30:00" or "08:01 PM" can legitimately be in there.
+     */
+    private toTimeInput(value: string | null | undefined): string | null {
+        const raw = (value ?? '').trim();
+        if (!raw) return null;
+
+        const m = raw.match(/^(\d{1,2}):(\d{2})(?::\d{2})?\s*([AaPp][Mm])?$/);
+        if (!m) return null;
+
+        let hour = Number(m[1]);
+        const minute = m[2];
+        const meridiem = m[3]?.toUpperCase();
+        if (meridiem === 'PM' && hour < 12) hour += 12;
+        if (meridiem === 'AM' && hour === 12) hour = 0;
+        if (hour < 0 || hour > 23) return null;
+
+        return `${String(hour).padStart(2, '0')}:${minute}`;
+    }
+
     private initForm() {
         this.form = this.fb.group({
             movementType: [null, Validators.required],
@@ -534,6 +579,9 @@ export class MovementInfoComponent implements OnInit {
             detailsInformation: [null],
             remarks: [null],
             finalApproverIds: [[] as number[]],
+            // Generated date = the record's Created date, carried on the existing
+            // MovementInfo.CreatedDate column (no new backend field). Date only.
+            generatedDate: [new Date()],
             // "Approval date" UI field — persisted to MovementInfo.letterDate. Defaults to today.
             letterDate: [new Date()],
             status: [true]
@@ -544,6 +592,157 @@ export class MovementInfoComponent implements OnInit {
         this.form.get('moveOrderType')!.valueChanges.subscribe(() => this.onMoveOrderTypeChange());
         this.form.get('isJoiningLeave')!.valueChanges.subscribe((v) => this.onIsJoiningLeaveChange(v));
         this.form.get('destinedUnitTarget')!.valueChanges.subscribe((v) => this.onDestinedUnitTargetChange(v));
+        // The Article 47 (Takeover) declaration is built from these two fields.
+        this.form.get('generatedDate')!.valueChanges.subscribe(() => this.syncArticle47Remark());
+        this.form.get('releaseTime')!.valueChanges.subscribe(() => this.syncArticle47Remark());
+        // Handover names the destination unit.
+        this.form.get('destinedRABUnitId')!.valueChanges.subscribe(() => this.syncArticle47Remark());
+        this.form.get('destinedMotherUnitId')!.valueChanges.subscribe(() => this.syncArticle47Remark());
+    }
+
+    /** Last declaration this component auto-filled, so it can be refreshed when the
+     *  Generated date / Release time change without ever clobbering a user edit. */
+    private lastAutoRemark: string | null = null;
+
+    /** RabUnit id → Bangla name, for the Bangla-only Article 47 declarations. */
+    private rabUnitLabelsBn = new Map<number, string>();
+    /** RabUnit id → Battalion HQ location (Bangla preferred), from RABUnitAOR. */
+    private battalionHqByUnit = new Map<number, string>();
+
+    /**
+     * Both Article 47 variants open with their standard Bengali declaration in
+     * Remarks. The date comes from Generated date and the time-of-day word from
+     * Release time, so the sentence tracks whatever the user sets. Left alone once
+     * the user types over it, and never applied to CC or MO.
+     */
+    private syncArticle47Remark(): void {
+        if (!this.isArticle47Variant) return;
+
+        const ctrl = this.form.get('remarks')!;
+        const current = this.plainText((ctrl.value ?? '').toString());
+        const previous = this.plainText(this.lastAutoRemark ?? '');
+        // Only (re)write while the field is empty or still holds our own text.
+        if (current && current !== previous) return;
+
+        const text = this.isArticle47Takeover
+            ? this.buildArticle47TakeoverRemark()
+            : this.buildArticle47HandoverRemark();
+        this.lastAutoRemark = text;
+        ctrl.setValue(text, { emitEvent: false });
+    }
+
+    /** Visible text of a rich-editor value, whitespace-normalised, for comparison. */
+    private plainText(html: string): string {
+        const div = document.createElement('div');
+        div.innerHTML = html ?? '';
+        return (div.textContent || '').replace(/\s+/g, ' ').trim();
+    }
+
+    private buildArticle47TakeoverRemark(): string {
+        const v = this.form.getRawValue();
+        const generated = v.generatedDate ? new Date(v.generatedDate) : new Date();
+        const dateBn = this.toBengaliDate(Number.isNaN(generated.getTime()) ? new Date() : generated);
+
+        // অপরাহ্ণে from 12 PM onwards, পূর্বাহ্নে before it. With no Release time
+        // set, default to অপরাহ্ণে rather than dropping the bracket from the sentence.
+        const hour = Number(((v.releaseTime ?? '') as string).split(':')[0]);
+        const timeOfDay = Number.isInteger(hour) && hour < 12 ? 'পূর্বাহ্নে' : 'অপরাহ্ণে';
+
+        // The appointment names the role being taken over. EmployeeInfo.Appointment
+        // is optional, so when it is absent the phrase is dropped entirely and the
+        // sentence still reads correctly.
+        const appointment = (this.selectedEmployees[0]?.appointmentBn ?? '').trim();
+        const role = appointment ? `${appointment} হিসেবে ` : '';
+
+        return `বেসামরিক হিসাব পদ্ধতির ৪৭ নং অনুচ্ছেদের বিধি অনুযায়ী আমি নিম্নস্বাক্ষরকারী এই মর্মে বিবরণ দিচ্ছি যে, অদ্য ${dateBn} তারিখ (${timeOfDay}) র‍্যাব ফোর্সেস সদর দপ্তর, কুর্মিটোলা, ঢাকায় ${role}কার্যভার গ্রহণ করিলাম।`;
+    }
+
+    /** Shared date + time-of-day for both Article 47 declarations. */
+    private article47DateParts(): { dateBn: string; timeOfDay: string } {
+        const v = this.form.getRawValue();
+        const generated = v.generatedDate ? new Date(v.generatedDate) : new Date();
+        const dateBn = this.toBengaliDate(Number.isNaN(generated.getTime()) ? new Date() : generated);
+        // অপরাহ্ণে from 12 PM onwards, পূর্বাহ্নে before it. With no Release time
+        // set, default to অপরাহ্ণে rather than dropping the bracket from the sentence.
+        const hour = Number(((v.releaseTime ?? '') as string).split(':')[0]);
+        const timeOfDay = Number.isInteger(hour) && hour < 12 ? 'পূর্বাহ্নে' : 'অপরাহ্ণে';
+        return { dateBn, timeOfDay };
+    }
+
+    /** Bangla name of the destination — the RAB unit the member is posted to. */
+    private destinationUnitBn(): string {
+        const v = this.form.getRawValue();
+        if (v.destinedRABUnitId != null) {
+            return this.rabUnitLabelsBn.get(v.destinedRABUnitId)
+                ?? this.rabUnitOptions.find((o) => o.value === v.destinedRABUnitId)?.label
+                ?? '';
+        }
+        if (v.destinedMotherUnitId != null) {
+            return this.motherUnitOptions.find((o) => o.value === v.destinedMotherUnitId)?.label ?? '';
+        }
+        return '';
+    }
+
+    /**
+     * Article 47 (Handover) declaration. Four dynamic parts:
+     *   destination unit — Destined unit on this form
+     *   current unit     — the member's active RAB unit (PreviousRABServiceInfo)
+     *   Battalion HQ     — that unit's row on /basic-setup/rab-unit-aor
+     *   appointment      — the member's Appointment (optional)
+     * Each part is dropped from the sentence when its source is empty, so a partly
+     * filled form still produces readable text.
+     */
+    private buildArticle47HandoverRemark(): string {
+        const { dateBn, timeOfDay } = this.article47DateParts();
+        const emp = this.selectedEmployees[0];
+
+        const destUnit = this.destinationUnitBn().trim();
+        const currentUnit = (emp?.rabUnitId != null ? this.rabUnitLabelsBn.get(emp.rabUnitId) ?? '' : '').trim();
+        const hq = (emp?.rabUnitId != null ? this.battalionHqByUnit.get(emp.rabUnitId) ?? '' : '').trim();
+        const appointment = (emp?.appointmentBn ?? '').trim();
+
+        const transfer = destUnit ? `উল্লিখিত স্মারক মূলে আমার ${destUnit} এ বদলি হওয়ায় ` : '';
+        const place = [currentUnit, hq].filter(Boolean).join(', ');
+        const at = place ? `${place} ` : '';
+        const role = appointment ? `${appointment} পদায়নের ` : '';
+
+        return `বেসামরিক হিসাব পদ্ধতির ৪৭ নং অনুচ্ছেদের বিধি অনুযায়ী আমি নিম্নস্বাক্ষরকারী এই মর্মে বিবরণ দিচ্ছি যে, ${transfer}আমি অদ্য ${dateBn} তারিখ (${timeOfDay}) ${at}${role}দায়িত্বভার অর্পণ করিলাম।`;
+    }
+
+    /** Member's active RAB unit + its Battalion HQ — named by the handover text. */
+    private hydrateRabUnit(empId: number): void {
+        this.previousRabService.getByEmployeeId(empId).subscribe({
+            next: (rows) => {
+                const active = (rows || []).find((r) => r.isCurrentlyActive && r.rabUnitCodeId != null);
+                const unitId = active?.rabUnitCodeId ?? null;
+                const row = this.selectedEmployees.find((e) => e.employeeID === empId);
+                if (row) row.rabUnitId = unitId;
+                if (unitId == null) { this.syncArticle47Remark(); return; }
+                if (this.battalionHqByUnit.has(unitId)) { this.syncArticle47Remark(); return; }
+
+                this.masterBasicSetup.getRABUnitAORByRabUnit(unitId).subscribe({
+                    next: (aorRows: any[]) => {
+                        const hit = (aorRows || []).find((r) =>
+                            !!(r?.locationOfBattalionHQBangla ?? r?.LocationOfBattalionHQBangla
+                               ?? r?.locationOfBattalionHQ ?? r?.LocationOfBattalionHQ));
+                        this.battalionHqByUnit.set(unitId, String(
+                            hit?.locationOfBattalionHQBangla ?? hit?.LocationOfBattalionHQBangla
+                            ?? hit?.locationOfBattalionHQ ?? hit?.LocationOfBattalionHQ ?? ''));
+                        this.syncArticle47Remark();
+                    },
+                    error: () => this.syncArticle47Remark()
+                });
+            },
+            error: () => { /* leave the unit unnamed */ }
+        });
+    }
+
+    /** "27 July 2026" as "২৭ জুলাই ২০২৬". */
+    private toBengaliDate(d: Date): string {
+        const months = ['জানুয়ারি', 'ফেব্রুয়ারি', 'মার্চ', 'এপ্রিল', 'মে', 'জুন', 'জুলাই', 'আগস্ট', 'সেপ্টেম্বর', 'অক্টোবর', 'নভেম্বর', 'ডিসেম্বর'];
+        const digits = '০১২৩৪৫৬৭৮৯';
+        const bn = (t: string) => t.replace(/[0-9]/g, (c) => digits[Number(c)]);
+        return `${bn(String(d.getDate()).padStart(2, '0'))} ${months[d.getMonth()]} ${bn(String(d.getFullYear()))}`;
     }
 
     private onDestinedUnitTargetChange(target: 'mother' | 'rab') {
@@ -587,24 +786,43 @@ export class MovementInfoComponent implements OnInit {
                     label: r.codeValueEN,
                     value: r.codeId
                 }));
+                // Bangla names for the Article 47 declarations, which are Bangla-only.
+                this.rabUnitLabelsBn.clear();
+                for (const r of rows || []) {
+                    if (r.codeId == null) continue;
+                    this.rabUnitLabelsBn.set(r.codeId, (r.codeValueBN || r.codeValueEN || '') as string);
+                }
+                this.syncArticle47Remark();
             }
         });
 
-        // Final Approver options = employees who have an Identity user account
-        // (mirrors the pattern in /leave-application/apply so the chosen approver
-        // can actually log in and act on the movement).
+        // Final Approver options = employees who have an Identity user account AND a
+        // usable appointment — the same rule and label format the Initiator / Final
+        // Approver pickers on /posting/notesheet-generate use (see
+        // Components/Common/notesheet-approver-select).
         this.identityMappingService.getMappings().subscribe({
             next: (list) => {
                 const arr = Array.isArray(list) ? list : [];
+                // Read each field across possible JSON casings — System.Text.Json turns
+                // "RABID" into "rABID", so a plain `.rabID` would miss it.
+                const pick = (o: any, ...keys: string[]): string => {
+                    for (const k of keys) {
+                        const v = o?.[k];
+                        if (v != null && String(v).trim() !== '') return String(v);
+                    }
+                    return '';
+                };
                 this.approverOptions = arr
                     .map((m: any) => {
                         const empId = m.employeeId ?? m.EmployeeId;
                         if (!empId || empId <= 0) return null;
-                        const name = m.employeeName ?? m.EmployeeName ?? '';
-                        const rabId = m.rabID ?? m.RABID ?? '';
-                        const serviceId = m.serviceId ?? m.ServiceId ?? '';
-                        const rank = m.rank ?? m.Rank ?? '';
-                        const appointment = m.appointment ?? m.Appointment ?? '';
+                        const name = pick(m, 'employeeName', 'EmployeeName');
+                        const rabId = pick(m, 'rabID', 'rABID', 'rabid', 'RABID', 'RabID');
+                        const serviceId = pick(m, 'serviceId', 'ServiceId');
+                        const rank = pick(m, 'rank', 'Rank');
+                        const appointment = pick(m, 'appointment', 'Appointment');
+                        // Only employees with a real appointment can be approvers.
+                        if (this.isMissingAppointment(appointment)) return null;
                         // Rank Name (Appointment) | SVC | RAB
                         let head = [rank, name].filter(Boolean).join(' ');
                         if (appointment) head = head ? `${head} (${appointment})` : `(${appointment})`;
@@ -618,6 +836,18 @@ export class MovementInfoComponent implements OnInit {
                     .sort((a, b) => a.label.localeCompare(b.label));
             }
         });
+    }
+
+    /**
+     * True when an employee's appointment is unusable for approver selection:
+     * null/empty, or a "not applicable" placeholder. The string is
+     * CommonCode.CodeValueEN (CodeType 'AppointmentCategory'), which is null when the
+     * employee's Appointment is unset and can also be a literal "N/A" row. Same rule
+     * as notesheet-approver-select, case-insensitively.
+     */
+    private isMissingAppointment(appointment: string | null): boolean {
+        const norm = (appointment ?? '').trim().toLowerCase();
+        return !norm || norm === 'n/a' || norm === 'na' || norm === 'not applicable';
     }
 
     // ── Employee selection ────────────────────────────────────────────────
@@ -711,7 +941,11 @@ export class MovementInfoComponent implements OnInit {
                 const row = this.selectedEmployees.find((e) => e.employeeID === emp.employeeID);
                 if (row) {
                     row.unit = motherUnitId;
+                    row.appointmentBn = this.pick(info, 'appointmentBN') ?? this.pick(info, 'appointment') ?? null;
                     this.syncCurrentUnitFromEmployees();
+                    // The Article 47 declaration names the appointment.
+                    this.syncArticle47Remark();
+                    this.hydrateRabUnit(emp.employeeID);
                 }
             }
         });
@@ -766,6 +1000,7 @@ export class MovementInfoComponent implements OnInit {
     removeEmployee(row: MovementEmployeeRow) {
         this.selectedEmployees = this.selectedEmployees.filter((e) => e.employeeID !== row.employeeID);
         this.syncCurrentUnitFromEmployees();
+        this.syncArticle47Remark();
 
         // Drop the removed member's pending handover; when the last pending-sourced
         // member is gone (search flow only — not the redirect), restore the normal
@@ -955,6 +1190,7 @@ export class MovementInfoComponent implements OnInit {
         }
     }
     private onMoveOrderTypeChange() {
+        this.syncArticle47Remark();
         if (!this.showHandover) {
             this.form.patchValue({ handoverDate: null });
         }
@@ -1016,6 +1252,10 @@ export class MovementInfoComponent implements OnInit {
 
     // ── Submit ────────────────────────────────────────────────────────────
     submit() {
+        // Guard against double submission while a save is already in flight.
+        if (this.saving) {
+            return;
+        }
         if (this.form.invalid) {
             this.form.markAllAsTouched();
             this.messageService.add({
@@ -1131,16 +1371,20 @@ export class MovementInfoComponent implements OnInit {
             lastRationCertificate: this.isMO ? (v.lastRationCertificate ?? null) : null,
             payAndAllowance:       this.isMO ? (v.payAndAllowance ?? null)       : null,
             railwayWarrant:        this.isMO ? (v.railwayWarrant ?? null)        : null,
-            // CC-only — persist only when moveOrderType is CC; otherwise null.
-            releaseTime:           this.isCC ? (v.releaseTime ?? null)           : null,
+            // Release time applies to CC, MO and both Article 47 variants; Vehicle stays CC-only.
+            releaseTime:           (this.isCC || this.isMO || this.isArticle47Variant) ? (v.releaseTime ?? null) : null,
             vehicle:               this.isCC ? (v.vehicle ?? null)                : null,
             auth: v.auth ?? null,
-            detailsInformation: v.detailsInformation ?? null,
+            // The MO and Article 47 letters have no Details information field — don't
+            // carry a stale value over from another order type.
+            detailsInformation: (this.isMO || this.isArticle47Variant) ? null : (v.detailsInformation ?? null),
             remarks: v.remarks ?? null,
             filesReferences: filesJson,
             status: v.status ?? true,
             createdBy: currentUser,
-            createdDate: now,
+            // Generated date drives CreatedDate — that is what "generated" means here.
+            // Falls back to now if the field was cleared.
+            createdDate: this.toIsoDate(v.generatedDate) ?? now,
             lastUpdatedBy: currentUser,
             lastupdate: now
             };
@@ -1196,10 +1440,14 @@ export class MovementInfoComponent implements OnInit {
                 },
                 error: (err) => {
                     console.error('Movement save failed', err);
+                    // Validation rejections (mixed RAB units on one CC, no number
+                    // configured for the unit) come back as a ResultViewModel — the
+                    // message lands in `description`.
                     this.messageService.add({
                         severity: 'error',
                         summary: 'Error',
-                        detail: err?.error?.message || 'Failed to save movement.'
+                        detail: err?.error?.description || err?.error?.message || 'Failed to save movement.',
+                        life: 8000
                     });
                     this.saving = false;
                 }
@@ -1312,6 +1560,7 @@ export class MovementInfoComponent implements OnInit {
             remarks: null,
             finalApproverIds: [],
             letterDate: new Date(),
+            generatedDate: new Date(),
             status: true
         });
     }

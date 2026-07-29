@@ -1,4 +1,4 @@
-import { inject, Injectable, OnInit } from '@angular/core';
+﻿import { inject, Injectable, OnInit } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { ActivatedRoute, Router } from '@angular/router';
 import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
@@ -450,6 +450,101 @@ export abstract class NotesheetPreviewBase implements OnInit {
         return String(n).replace(/\d/g, d => bn[+d]) + '।';
     }
 
+    /**
+     * Page footer label under the page border, e.g. "১/৬". `index` is zero-based;
+     * callers hide the footer when `total` is 1.
+     */
+    pageLabel(index: number, total: number): string {
+        return this.toBanglaDigits(`${index + 1}/${total}`);
+    }
+
+    /**
+     * pdf-utils `merge` operation that stamps "১/৬" into each page's bottom margin
+     * — i.e. BELOW the .pdf-page-frame border, which only covers the printable area.
+     *
+     * Chromium's own displayHeaderFooter/footerTemplate would be simpler, but it
+     * substitutes .pageNumber/.totalPages with Latin digits and gives no way to
+     * transform them. This renders a transparent overlay — one page per page of the
+     * main PDF, looping pdf-utils' `$pdf.pages` — so the label is ordinary HTML we
+     * can set in Bangla, bold, in the document's own font. Page counts still come
+     * from the finished PDF, not from the screen's pagination.
+     *
+     * renderForEveryPage is REQUIRED. Without it pdf-utils renders the template once
+     * and merges that single buffer onto every page — i.e. page 1's overlay lands on
+     * all of them, so every page reads "১/৩" (see pdfProcessing.js: `singleMergeBuffer
+     * || await runRender(...)`). With it, the template is rendered per page and gets
+     * $pdf.pageNumber. Costs one Chromium render per page, which is why the whole
+     * operation is skipped for single-page documents.
+     *
+     * Returns [] for single-page documents: a lone "১/১" is noise.
+     */
+    protected pdfPageNumberOperations(opts: {
+        multipage: boolean;
+        pageWidth: string;
+        pageHeight: string;
+        bottomMarginMm: number;
+        fontCss: string;
+    }): Record<string, unknown>[] {
+        if (!opts.multipage) return [];
+
+        // Runs inside jsreport's templating worker, not the browser — plain ES5.
+        const helpers = `
+function bnPageLabel(pageNumber, total) {
+    var bn = ['০','১','২','৩','৪','৫','৬','৭','৮','৯'];
+    return (pageNumber + '/' + total).replace(/[0-9]/g, function (d) { return bn[+d]; });
+}`;
+
+        const content = `<!DOCTYPE html>
+<html><head><meta charset="utf-8"><style>
+${opts.fontCss}
+@page { size: ${opts.pageWidth} ${opts.pageHeight}; margin: 0; }
+html, body { margin: 0; padding: 0; background: transparent; }
+/* Exactly one page-sized block — this template renders once per page. */
+.pg {
+    position: relative;
+    width: ${opts.pageWidth};
+    height: ${opts.pageHeight};
+    overflow: hidden;
+}
+/* Centred in the bottom margin band — the strip below the page frame's border. */
+.pg-label {
+    position: absolute;
+    left: 0; right: 0; bottom: 0;
+    height: ${opts.bottomMarginMm}mm;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Times New Roman', 'SolaimanLipi', Times, serif;
+    font-size: 10pt;
+    font-weight: 700;
+    color: #000;
+}
+</style></head><body>
+<div class="pg"><div class="pg-label">{{bnPageLabel $pdf.pageNumber $pdf.pages.length}}</div></div>
+</body></html>`;
+
+        return [{
+            type: 'merge',
+            mergeWholeDocument: false,
+            renderForEveryPage: true,
+            template: {
+                content,
+                helpers,
+                engine: 'handlebars',
+                recipe: 'chrome-pdf',
+                chrome: {
+                    format: null,
+                    width: opts.pageWidth,
+                    height: opts.pageHeight,
+                    landscape: false,
+                    marginTop: '0', marginBottom: '0', marginLeft: '0', marginRight: '0',
+                    printBackground: false,
+                    displayHeaderFooter: false,
+                },
+            },
+        }];
+    }
+
     /** Parse paragraphText JSON into string array. */
     get parsedParagraphs(): string[] {
         if (!this.noteSheet?.paragraphText) return [];
@@ -486,7 +581,10 @@ export abstract class NotesheetPreviewBase implements OnInit {
             const d = new Date(value);
             if (isNaN(d.getTime())) return String(value);
             const locale = this.isEnglish() ? 'en-GB' : 'bn-BD';
-            return d.toLocaleDateString(locale, { day: 'numeric', month: 'long', year: 'numeric' });
+            const day = d.toLocaleDateString(locale, { day: 'numeric' });
+            const month = d.toLocaleDateString(locale, { month: 'long' });
+            const year = d.toLocaleDateString(locale, { year: 'numeric' });
+            return `${day} ${month} ${year}`;   // no comma
         } catch { return String(value); }
     }
 
@@ -745,7 +843,7 @@ export abstract class NotesheetPreviewBase implements OnInit {
 
         // Shared run properties: font + language so Word uses correct word-breaking
         const runProps: IRunPropertiesOptions = {
-            font: { ascii: 'Times New Roman', hAnsi: 'Times New Roman', eastAsia: 'Times New Roman', cs: 'Nirmala UI' },
+            font: { ascii: 'Times New Roman', hAnsi: 'Times New Roman', eastAsia: 'Times New Roman', cs: 'SolaimanLipi' },
             language: { value: lang, eastAsia: lang, bidirectional: lang },
             size: 20,  // 10pt = 20 half-points
         };

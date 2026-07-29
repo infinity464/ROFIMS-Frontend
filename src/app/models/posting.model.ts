@@ -280,6 +280,10 @@ export interface DraftPostingEmployeeRow {
     spousePermanentDistrictNameBN: string | null;
     motherOrgLocationName: string | null;
     motherOrgLocationNameBN: string | null;
+    /** District of the mother unit (EmployeeInfo.LastMotherUnitDistrictId) — shown
+     *  after the mother-unit name in the পূর্ববতী কর্মস্থল column. */
+    motherUnitDistrictName?: string | null;
+    motherUnitDistrictNameBN?: string | null;
     /** Previous RAB service units (comma-separated). Inter-posting only. */
     previousRabUnits?: string | null;
     previousRabUnitsBN?: string | null;
@@ -534,6 +538,10 @@ export interface PostingOrderEmployeeRow {
     gallantryAwardsDecorationBN: string | null;
     motherUnitName: string | null;
     motherUnitNameBN: string | null;
+    /** District of the mother unit (EmployeeInfo.LastMotherUnitDistrictId) — shown
+     *  after the mother-unit name in the পূর্ববতী কর্মস্থল column. */
+    motherUnitDistrictName?: string | null;
+    motherUnitDistrictNameBN?: string | null;
     // Present RAB unit hierarchy (current serving posting) — used for interposting পূর্ববতী কর্মস্থল.
     presentRabUnitId?: number | null;
     presentRabUnitName?: string | null;

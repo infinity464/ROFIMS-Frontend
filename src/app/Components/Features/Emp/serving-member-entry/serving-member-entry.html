@@ -209,10 +209,15 @@
                     </div>
 
                     <div class="form-field">
+                        <label class="form-label">Trade Remarks</label>
+                        <input pInputText class="w-full" placeholder="Enter remarks" formControlName="tradeMark" />
+                    </div>
+
+                    <div class="form-field">
                         <label class="form-label">Special Qualifications</label>
                         <p-multiSelect
                             [options]="specialQualificationOptions"
-                            optionLabel="codeValueEN"
+                            optionLabel="displayLabel"
                             optionValue="codeId"
                             placeholder="Select Special Qualifications"
                             styleClass="w-full"
@@ -222,11 +227,6 @@
                             display="chip"
                         >
                         </p-multiSelect>
-                    </div>
-
-                    <div class="form-field">
-                        <label class="form-label">Trade Remarks</label>
-                        <input pInputText class="w-full" placeholder="Enter remarks" formControlName="tradeMark" />
                     </div>
                 </div>
 
@@ -251,7 +251,7 @@
                     <div class="form-field">
                         <label class="form-label">Service ID <span class="form-label-required">*</span></label>
                         <div class="p-inputgroup">
-                            <input pInputText class="w-full" placeholder="Only Number" formControlName="serviceId" />
+                            <input pInputText class="w-full" placeholder="Only Number" formControlName="serviceId" inputmode="numeric" (input)="onDigitsOnlyInput($event, 'serviceId')" />
                             @if (isCheckingCombo) {
                             <span class="p-inputgroup-addon"><i class="pi pi-spin pi-spinner"></i></span>
                             }
@@ -260,6 +260,8 @@
                         <small class="form-error">{{ getErrorMessage('serviceId') }}</small>
                         } @if (isDuplicateCombo) {
                         <small class="form-error">A member with the same Mother Organization + Prefix + Service ID already exists</small>
+                        } @else if (serverDuplicateComboError) {
+                        <small class="form-error">{{ serverDuplicateComboError }}</small>
                         }
                     </div>
 
@@ -267,7 +269,7 @@
                     <div class="form-field">
                         <label class="form-label">RAB ID <span class="form-label-required">*</span></label>
                         <div class="p-inputgroup">
-                            <input pInputText class="w-full" placeholder="Enter existing RAB ID" formControlName="rabid" />
+                            <input pInputText class="w-full" placeholder="Only Number" formControlName="rabid" inputmode="numeric" (input)="onDigitsOnlyInput($event, 'rabid')" />
                             @if (isCheckingRabId) {
                             <span class="p-inputgroup-addon"><i class="pi pi-spin pi-spinner"></i></span>
                             }
@@ -276,6 +278,8 @@
                         <small class="form-error">{{ getErrorMessage('rabid') }}</small>
                         } @if (isDuplicateRabId) {
                         <small class="form-error">This RAB ID already exists</small>
+                        } @else if (serverDuplicateRabIdError) {
+                        <small class="form-error">{{ serverDuplicateRabIdError }}</small>
                         }
                     </div>
                 </div>
@@ -315,8 +319,8 @@
                     </div>
 
                     <div class="form-field">
-                        <label class="form-label">Is RFTS Complete?</label>
-                        <p-select [options]="yesNoOptions" optionLabel="label" optionValue="value" placeholder="Select" styleClass="w-full" formControlName="isRFTSComplted" [showClear]="true"> </p-select>
+                        <label class="form-label">RAB Orientation Training</label>
+                        <p-select [options]="rftsStatusOptions" optionLabel="label" optionValue="value" placeholder="Select" styleClass="w-full" formControlName="isRFTSComplted" [showClear]="true"> </p-select>
                     </div>
                 </div>
 
@@ -698,7 +702,7 @@
         <!-- Actions -->
         <div class="form-actions">
             <p-button type="button" label="Reset" icon="pi pi-refresh" severity="secondary" [outlined]="true" styleClass="form-btn-secondary" (onClick)="onReset()"> </p-button>
-            <p-button type="button" label="Save Serving Member" icon="pi pi-check-circle" styleClass="form-btn-primary" [disabled]="isDuplicateCombo || isCheckingCombo || isDuplicateRabId || isCheckingRabId" (onClick)="saveAll()"> </p-button>
+            <p-button type="button" label="Save Serving Member" icon="pi pi-check-circle" styleClass="form-btn-primary" [loading]="isSaving" [disabled]="isSaving || isCheckingCombo || isCheckingRabId || hasDuplicateBlock" (onClick)="saveAll()"> </p-button>
         </div>
     </div>
 </p-fluid>

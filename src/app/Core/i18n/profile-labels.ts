@@ -102,6 +102,8 @@ export const PROFILE_LABELS = {
     'field.weight': 'Weight:',
     'field.identificationMark': 'Identification Mark:',
     'field.details': 'Details:',
+    'field.rftsStatus': 'Status:',
+    'value.notApplicable': 'Not Applicable',
 
     // Address field labels
     'address.houseArea': 'House/Area:',
@@ -132,6 +134,7 @@ export const PROFILE_LABELS = {
     'table.postingAuth': 'Posting Auth',
     'table.remarks': 'Remarks',
     'table.organization': 'Organization',
+    'table.orgUnit': 'Organization Unit',
     'table.location': 'District',
     'table.auth': 'Auth',
     'table.previousRank': 'Previous Rank',
@@ -378,6 +381,8 @@ export const PROFILE_LABELS = {
     'field.weight': 'ওজন:',
     'field.identificationMark': 'শনাক্তকরণ চিহ্ন:',
     'field.details': 'বিবরণ:',
+    'field.rftsStatus': 'অবস্থা:',
+    'value.notApplicable': 'প্রযোজ্য নয়',
 
     'address.houseArea': 'বাড়ি/এলাকা:',
     'address.village': 'গ্রাম:',
@@ -405,6 +410,7 @@ export const PROFILE_LABELS = {
     'table.postingAuth': 'প্রাধিকার',
     'table.remarks': 'মন্তব্য',
     'table.organization': 'বাহিনী/সংস্থা',
+    'table.orgUnit': 'ইউনিট',
     'table.location': 'জেলা',
     'table.auth': 'প্রাধিকার',
     'table.previousRank': 'পদবি',

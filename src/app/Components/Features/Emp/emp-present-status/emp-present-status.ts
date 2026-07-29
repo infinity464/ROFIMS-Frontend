@@ -20,7 +20,9 @@ import { ConfirmDialogModule } from 'primeng/confirmdialog';
 import { ToastModule } from 'primeng/toast';
 
 import { UserMenuService } from '@/services/user-menu.service';
+import { SharedService } from '@/shared/services/shared-service';
 import { EmpService } from '@/services/emp-service';
+import { buildUploadOwnerTag } from '@/shared/utils/upload-file-name.util';
 import { PresentStatusInfoService } from '@/services/present-status-info.service';
 import { CommonCodeService } from '@/services/common-code-service';
 import { OrganizationService } from '@/Components/basic-setup/organization-setup/services/organization-service';
@@ -114,8 +116,14 @@ export class EmpPresentStatus implements OnInit {
         private organizationService: OrganizationService,
         private userMenuService: UserMenuService,
         private messageService: MessageService,
-        private confirmationService: ConfirmationService
+        private confirmationService: ConfirmationService,
+        private sharedService: SharedService
     ) {}
+
+    /** Logged-in user for CreatedBy / LastUpdatedBy. Falls back to 'system' only when nobody is signed in. */
+    private get auditUser(): string {
+        return this.sharedService.getCurrentUser() ?? 'system';
+    }
 
     ngOnInit(): void {
         const perms = this.userMenuService.getPermissionsByRoute(this.router.url);
@@ -877,7 +885,7 @@ export class EmpPresentStatus implements OnInit {
 
     private auditFields(): any {
         const now = new Date().toISOString();
-        return { CreatedBy: 'system', CreatedDate: now, LastUpdatedBy: 'system', Lastupdate: now };
+        return { CreatedBy: this.auditUser, CreatedDate: now, LastUpdatedBy: this.auditUser, Lastupdate: now };
     }
 
     private parseFileRefs(refsJson: string | null | undefined): FileRowData[] {
@@ -898,7 +906,7 @@ export class EmpPresentStatus implements OnInit {
 
         if (filesToUpload.length > 0) {
             const uploads = filesToUpload.map((r: FileRowData) =>
-                this.empService.uploadEmployeeFile(r.file!, r.displayName?.trim() || r.file!.name)
+                this.empService.uploadEmployeeFile(r.file!, r.displayName?.trim() || r.file!.name, buildUploadOwnerTag(this.employeeBasicInfo?.rabid, this.selectedEmployeeId))
             );
             forkJoin(uploads).subscribe({
                 next: (results: unknown) => {

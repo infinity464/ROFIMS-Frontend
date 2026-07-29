@@ -157,9 +157,10 @@
 
 .po-doc-title {
     text-align: center;
-    font-size: 11pt;
+    font-size: 12pt;
     font-weight: 700;
     text-decoration: underline;
+    text-underline-offset: 2px;   /* ~1pt down */
     margin: 12px 0;
 }
 
@@ -197,7 +198,7 @@
 
     th,
     td {
-        border: 0.5px solid #888;   /* thin, finer border (reads lighter in PDF/print) */
+        border: 0.5px solid #000;   /* thin, deep-black border */
         padding: 3px 4px;
         text-align: center;
         vertical-align: middle;
@@ -212,8 +213,14 @@
         text-align: left;
     }
 
+    /* ব্যক্তিগত নম্বর / পদবি / ট্রেড / নিজ জেলা / পূর্ববতী কর্মস্থল / বদলিকৃত কর্মস্থল:
+       same treatment as নাম — value left-aligned, header stays centered. */
+    td.po-doc-left-cell {
+        text-align: left;
+    }
+
     th {
-        font-weight: normal;   /* header not bold */
+        font-weight: 700;      /* header bold */
         background: transparent;
         text-align: center;
         font-size: 9pt;        /* header — same 9pt as content */
@@ -253,6 +260,10 @@
         s { text-decoration: line-through; }
         blockquote { border-left: 4px solid #ccc; margin: 4px 0; padding-left: 16px; }
     }
+
+    /* Posting body text (red-marked line) one size larger than sub-text / remarks. */
+    .po-doc-posting-text,
+    .po-doc-posting-text * { font-size: 11pt; }
 
     /* ── Quill editor: force bullet only (no numbered lists) ── */
     p-editor .ql-editor {

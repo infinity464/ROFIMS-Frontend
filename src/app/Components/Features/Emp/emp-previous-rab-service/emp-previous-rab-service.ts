@@ -22,6 +22,7 @@ import { DatePickerModule } from 'primeng/datepicker';
 import { SelectButtonModule } from 'primeng/selectbutton';
 
 import { EmpService } from '@/services/emp-service';
+import { buildUploadOwnerTag } from '@/shared/utils/upload-file-name.util';
 import { PreviousRABServiceService } from '@/services/previous-rab-service.service';
 import { CommonCodeService } from '@/services/common-code-service';
 import { EmployeeSearchComponent, EmployeeBasicInfo } from '@/Components/Shared/employee-search/employee-search';
@@ -531,7 +532,7 @@ export class EmpPreviousRabService implements OnInit {
 
         if (filesToUpload.length > 0) {
             const uploads = filesToUpload.map((r: FileRowData) =>
-                this.empService.uploadEmployeeFile(r.file!, r.displayName?.trim() || r.file!.name)
+                this.empService.uploadEmployeeFile(r.file!, r.displayName?.trim() || r.file!.name, buildUploadOwnerTag(this.employeeBasicInfo?.rabid, this.selectedEmployeeId))
             );
             this.isSaving = true;
             forkJoin(uploads).subscribe({

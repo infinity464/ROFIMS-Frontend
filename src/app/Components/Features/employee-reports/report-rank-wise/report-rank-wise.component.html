@@ -44,9 +44,16 @@
                 </div>
                 <div class="report-filter-field">
                     <label>Rank</label>
-                    <p-multiSelect [options]="rankOptions" [(ngModel)]="selectedRankIds"
+                    <p-multiSelect [options]="rankOptions" [(ngModel)]="selectedRankIds" (ngModelChange)="onRankChange()"
                         optionLabel="label" optionValue="value" display="chip" [filter]="true"
                         [disabled]="selectedOrgIds.length === 0"
+                        placeholder="Select" styleClass="w-full" appendTo="body"></p-multiSelect>
+                </div>
+                <div class="report-filter-field">
+                    <label>RAB Rank</label>
+                    <p-multiSelect [options]="rabRankOptions" [(ngModel)]="selectedRabRankIds"
+                        optionLabel="label" optionValue="value" display="chip" [filter]="true"
+                        [disabled]="selectedRankIds.length > 0"
                         placeholder="Select" styleClass="w-full" appendTo="body"></p-multiSelect>
                 </div>
                 <div class="report-filter-field">

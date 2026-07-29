@@ -2,7 +2,8 @@
 /*
  * Add district (`d`) only to the 14 GeoJSON upazila name groups that appear more
  * than once in bd-upazilas.geo.json. Uses nearest district centroid among known
- * candidates for each group.
+ * candidates for each group. Then renames the few polygons the GeoJSON labels with
+ * a thana name that CommonCode records as the district Sadar.
  *
  * Usage: node tools/enrich-duplicate-upazila-districts.js
  */
@@ -14,12 +15,12 @@ const geoPath = path.resolve(__dirname, '..', 'public', 'assets', 'data', 'bd-up
 /** Normalized upazila name -> candidate district names (English, as in CommonCode). */
 const DUPLICATE_CANDIDATES = {
     companiganj: ['Noakhali', 'Sylhet'],
-    daulatpur: ['Kushtia', 'Manikganj', 'Netrokona'],
+    daulatpur: ['Kushtia', 'Manikganj', 'Netrokona', 'Khulna'],
     durgapur: ['Rajshahi', 'Netrokona'],
     kachua: ['Chandpur', 'Bagerhat', 'Chattogram'],
     kaliganj: ['Satkhira', 'Jhenaidah', 'Gazipur', 'Lalmonirhat'],
     kawkhali: ['Rangamati', 'Pirojpur'],
-    kotwali: ['Dhaka', 'Chattogram', 'Feni'],
+    kotwali: ['Dhaka', 'Chattogram', 'Feni', 'Jashore'],
     lohagara: ['Chattogram', 'Narail'],
     mirpur: ['Kushtia', 'Dhaka'],
     mohammadpur: ['Magura', 'Dhaka'],
@@ -29,11 +30,23 @@ const DUPLICATE_CANDIDATES = {
     sreepur: ['Magura', 'Gazipur']
 };
 
+/**
+ * Polygons the GeoJSON labels with a thana name that CommonCode records as the district Sadar —
+ * no spelling rule bridges "Kotwali" and "Jessore Sadar", so rename to the CommonCode spelling.
+ * Keyed `<GeoJSON name>|<district>`; applied after tagging, since the tag is what identifies which
+ * polygon of a duplicate group to rename.
+ */
+const SADAR_RENAMES = {
+    'Kotwali|Jashore': { n: 'Jessore Sadar', bn: 'যশোর সদর' }
+};
+
 /** Approximate [lng, lat] district centroids for disambiguation. */
 const DISTRICT_CENTROID = {
     Noakhali: [91.1, 22.8],
     Sylhet: [91.9, 24.9],
     Kushtia: [89.0, 23.9],
+    Khulna: [89.5, 22.8],
+    Jashore: [89.2, 23.2],
     Manikganj: [90.0, 23.8],
     Netrokona: [90.7, 24.9],
     Rajshahi: [88.6, 24.4],
@@ -126,9 +139,23 @@ function main() {
         log.push(`${name} → ${district} [${centroid[0].toFixed(2)}, ${centroid[1].toFixed(2)}]`);
     }
 
+    const renames = [];
+    for (const f of geo.features) {
+        const from = (f.properties?.n ?? '').trim();
+        const hit = SADAR_RENAMES[`${from}|${f.properties?.d ?? ''}`];
+        if (!hit) continue;
+        f.properties.n = hit.n;
+        f.properties.bn = hit.bn;
+        // The Sadar name is unique, so the disambiguating tag is no longer needed.
+        delete f.properties.d;
+        renames.push(`${from} → ${hit.n}`);
+    }
+
     fs.writeFileSync(geoPath, JSON.stringify(geo));
     console.log(`Tagged ${enriched} polygons across ${duplicateKeys.size} duplicate name groups:`);
     log.forEach((l) => console.log('  ' + l));
+    console.log(`Renamed ${renames.length} thana polygon(s) to their CommonCode Sadar name:`);
+    renames.forEach((l) => console.log('  ' + l));
 }
 
 main();

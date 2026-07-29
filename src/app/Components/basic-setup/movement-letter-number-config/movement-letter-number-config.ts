@@ -1,7 +1,7 @@
 import { Component, OnInit, inject } from '@angular/core';
 import { UserMenuService } from '@/services/user-menu.service';
 import { Router } from '@angular/router';
-import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
+import { AbstractControl, FormBuilder, FormGroup, ReactiveFormsModule, ValidationErrors, Validators } from '@angular/forms';
 import { Fluid } from 'primeng/fluid';
 import { ButtonModule } from 'primeng/button';
 import { MovementLetterNumberConfigModel } from '../shared/models/movement-letter-number-config';
@@ -9,7 +9,6 @@ import { MessageService } from 'primeng/api';
 import { SharedService } from '@/shared/services/shared-service';
 import { MasterBasicSetupService } from '../shared/services/MasterBasicSetupService';
 import { InputText } from 'primeng/inputtext';
-import { InputNumber } from 'primeng/inputnumber';
 import { IconField } from 'primeng/iconfield';
 import { InputIcon } from 'primeng/inputicon';
 import { TableModule } from 'primeng/table';
@@ -19,7 +18,7 @@ import { MoveOrderType, MoveOrderTypeOptions } from '@/models/enums';
 
 @Component({
     selector: 'app-movement-letter-number-config',
-    imports: [ReactiveFormsModule, TableModule, InputText, InputNumber, Fluid, ButtonModule, IconField, InputIcon, Select, Checkbox],
+    imports: [ReactiveFormsModule, TableModule, InputText, Fluid, ButtonModule, IconField, InputIcon, Select, Checkbox],
     templateUrl: './movement-letter-number-config.html',
     styleUrl: './movement-letter-number-config.scss'
 })
@@ -39,6 +38,7 @@ export class MovementLetterNumberConfigComponent implements OnInit {
     filteredConfigs: MovementLetterNumberConfigModel[] = [];
 
     moveOrderTypeOptions = MoveOrderTypeOptions;
+    rabUnitOptions: { label: string; value: number }[] = [];
 
     currentUser: string = '';
 
@@ -65,17 +65,59 @@ export class MovementLetterNumberConfigComponent implements OnInit {
 
         this.currentUser = this.sharedService.getCurrentUser();
         this.initForm();
+        this.loadRabUnits();
         this.getAll();
     }
 
     initForm() {
         this.configForm = this.fb.group({
             configId: [0],
+            rabUnitId: [null as number | null, Validators.required],
             moveOrderType: [null as MoveOrderType | null, Validators.required],
             prefix: [null],
             prefixBN: [null],
-            startNumber: [null, [Validators.required, Validators.min(1)]],
-            includeDateInNumber: [false]
+            // Text, not a number input — the leading zeros the user types are the
+            // padding width ("001" → 3 wide). Digits only, at least one non-zero.
+            startNumber: [null, [Validators.required, Validators.pattern(/^\d+$/), this.nonZeroValidator]],
+            includeDateInNumber: [false],
+            telephoneNo: [null],
+            isDefault: [false]
+        });
+    }
+
+    /** "000" / "0" is not a usable starting point — the sequence must begin at 1 or above. */
+    private nonZeroValidator(control: AbstractControl): ValidationErrors | null {
+        const raw = (control.value ?? '').toString().trim();
+        if (!raw) return null;
+        if (!/^\d+$/.test(raw)) return null;
+        return Number(raw) >= 1 ? null : { nonZero: true };
+    }
+
+    /** Width the user typed the Start Number at — that becomes the zero-pad width. */
+    private get startNumberRaw(): string {
+        return (this.configForm.get('startNumber')?.value ?? '').toString().trim();
+    }
+
+    /** Left-pads a sequence number to the configured width for display. */
+    padNumber(value: number | null | undefined, padding: number | null | undefined): string {
+        if (value == null) return '-';
+        const text = String(value);
+        return padding && padding > 0 ? text.padStart(padding, '0') : text;
+    }
+
+    /** RAB units come from the CommonCode master maintained on /basic-setup/rab-unit. */
+    private loadRabUnits() {
+        this.masterBasicSetupService.getAllByType('RabUnit').subscribe({
+            next: (units) => {
+                this.rabUnitOptions = (units ?? []).map((u) => ({ label: u.codeValueEN, value: u.codeId }));
+            },
+            error: (err: any) => {
+                this.messageService.add({
+                    severity: 'error',
+                    summary: 'Error',
+                    detail: err?.error?.message || 'Failed to load RAB Units'
+                });
+            }
         });
     }
 
@@ -100,27 +142,57 @@ export class MovementLetterNumberConfigComponent implements OnInit {
         return this.moveOrderTypeOptions.find((o) => o.value === value)?.label ?? '-';
     }
 
-    getPreview(): string {
-        const rawPrefix = (this.configForm.get('prefix')?.value ?? '').toString().trim();
-        const startNumber = this.configForm.get('startNumber')?.value || '10001';
-        const includeDate = this.configForm.get('includeDateInNumber')?.value;
-        const now = new Date();
-        const year = now.getFullYear();
-        const month = String(now.getMonth() + 1).padStart(2, '0');
+    /** Legacy rows saved before the per-unit split carry no unit — they act as the global fallback. */
+    getRabUnitLabel(value: number | null | undefined): string {
+        if (value == null) return 'All Units (Global)';
+        return this.rabUnitOptions.find((o) => o.value === value)?.label ?? `Unit ${value}`;
+    }
 
-        // No prefix → number leads. CC drops the month ("StartNo/Year");
-        // other types keep "StartNo/Year/Month". Without date, just "StartNo".
+    getPreview(): string {
+        return this.buildNumber(this.startNumberRaw || '00001');
+    }
+
+    /** Second sample, so the zero-padding is obvious: 001 → 002. */
+    getPreviewNext(): string {
+        const raw = this.startNumberRaw || '00001';
+        if (!/^\d+$/.test(raw)) return '';
+        return this.buildNumber(String(Number(raw) + 1).padStart(raw.length, '0'));
+    }
+
+    private buildNumber(sequence: string): string {
+        const rawPrefix = (this.configForm.get('prefix')?.value ?? '').toString().trim();
+        const includeYear = this.configForm.get('includeDateInNumber')?.value;
+        const year = new Date().getFullYear();
+
+        // No prefix → number leads: "StartNo/Year", or just "StartNo" when the year is off.
         if (!rawPrefix) {
-            if (!includeDate) return `${startNumber}`;
-            const isCC = this.configForm.get('moveOrderType')?.value === MoveOrderType.CC;
-            return isCC ? `${startNumber}/${year}` : `${startNumber}/${year}/${month}`;
+            return includeYear ? `${sequence}/${year}` : `${sequence}`;
         }
 
         const sep = rawPrefix.endsWith('/') || rawPrefix.endsWith('-') ? '' : '-';
-        if (includeDate) {
-            return `${rawPrefix}${sep}${year}/${month}/${startNumber}`;
+        if (includeYear) {
+            return `${rawPrefix}${sep}${year}/${sequence}`;
         }
-        return `${rawPrefix}${sep}${startNumber}`;
+        return `${rawPrefix}${sep}${sequence}`;
+    }
+
+    /**
+     * The config already flagged as default for the move-order type being edited,
+     * ignoring the row on screen. Only one config per move-order type may be the
+     * default — one CC default, one MO default, and so on.
+     */
+    getExistingDefault(): MovementLetterNumberConfigModel | undefined {
+        const val = this.configForm.getRawValue();
+        if (val.moveOrderType == null) return undefined;
+        return this.configs.find((c) => c.configId !== this.editingConfigId && c.moveOrderType === val.moveOrderType && c.isDefault);
+    }
+
+    /** A unit may hold only one config per move-order type — mirrors the DB unique key. */
+    private findDuplicate(): MovementLetterNumberConfigModel | undefined {
+        const val = this.configForm.getRawValue();
+        return this.configs.find(
+            (c) => c.configId !== this.editingConfigId && (c.rabUnitId ?? null) === (val.rabUnitId ?? null) && c.moveOrderType === val.moveOrderType
+        );
     }
 
     onSearch(event: Event) {
@@ -130,7 +202,13 @@ export class MovementLetterNumberConfigComponent implements OnInit {
         if (this.searchValue) {
             this.filteredConfigs = this.configs.filter((c) => {
                 const typeLabel = this.getMoveOrderTypeLabel(c.moveOrderType).toLowerCase();
-                return typeLabel.includes(this.searchValue) || (c.prefix || '').toLowerCase().includes(this.searchValue);
+                const unitLabel = this.getRabUnitLabel(c.rabUnitId).toLowerCase();
+                return (
+                    typeLabel.includes(this.searchValue) ||
+                    unitLabel.includes(this.searchValue) ||
+                    (c.prefix || '').toLowerCase().includes(this.searchValue) ||
+                    (c.telephoneNo || '').toLowerCase().includes(this.searchValue)
+                );
             });
         } else {
             this.filteredConfigs = [...this.configs];
@@ -148,6 +226,33 @@ export class MovementLetterNumberConfigComponent implements OnInit {
             return;
         }
 
+        const duplicate = this.findDuplicate();
+        if (duplicate) {
+            this.messageService.add({
+                severity: 'warn',
+                summary: 'Duplicate configuration',
+                detail: `${this.getRabUnitLabel(duplicate.rabUnitId)} already has a configuration for ${this.getMoveOrderTypeLabel(duplicate.moveOrderType)}. Edit that one instead.`,
+                life: 6000
+            });
+            return;
+        }
+
+        // Only one default per move-order type — mirrors the API check and the
+        // filtered unique index UQ_MovementLetterNumberConfig_Default.
+        if (this.configForm.getRawValue().isDefault) {
+            const currentDefault = this.getExistingDefault();
+            if (currentDefault) {
+                const typeLabel = this.getMoveOrderTypeLabel(currentDefault.moveOrderType);
+                this.messageService.add({
+                    severity: 'warn',
+                    summary: 'Default already set',
+                    detail: `${this.getRabUnitLabel(currentDefault.rabUnitId)} is already the default for ${typeLabel}. Only one ${typeLabel} configuration can be the default — clear that one first.`,
+                    life: 6000
+                });
+                return;
+            }
+        }
+
         if (this.isEditMode) {
             this.update();
         } else {
@@ -159,11 +264,18 @@ export class MovementLetterNumberConfigComponent implements OnInit {
         this.isSubmitting = true;
         const currentDateTime = this.sharedService.getCurrentDateTime();
 
+        // "001" is stored as StartNumber 1 with NumberPadding 3 — the typed width
+        // is what the generated letter numbers are padded to.
+        const raw = this.startNumberRaw;
+
         const payload: any = {
             ...this.configForm.value,
             configId: 0,
             prefix: this.configForm.value.prefix ?? '',
             prefixBN: this.configForm.value.prefixBN ?? '',
+            telephoneNo: this.configForm.value.telephoneNo ?? null,
+            startNumber: Number(raw),
+            numberPadding: raw.length,
             currentNumber: 0,
             currentYear: 0,
             currentMonth: 0,
@@ -172,7 +284,8 @@ export class MovementLetterNumberConfigComponent implements OnInit {
             createdDate: currentDateTime,
             lastUpdatedBy: this.currentUser,
             lastupdate: currentDateTime,
-            includeDateInNumber: this.configForm.value.includeDateInNumber ?? false
+            includeDateInNumber: this.configForm.value.includeDateInNumber ?? false,
+            isDefault: this.configForm.value.isDefault ?? false
         };
 
         this.masterBasicSetupService.createMovementLetterNumberConfig(payload).subscribe({
@@ -187,10 +300,12 @@ export class MovementLetterNumberConfigComponent implements OnInit {
                 this.isSubmitting = false;
             },
             error: (err: any) => {
+                // The API rejects a duplicate (RAB Unit, Move Order Type) with a
+                // ResultViewModel — its message lands in `description`.
                 this.messageService.add({
                     severity: 'error',
                     summary: 'Error',
-                    detail: err?.error?.message || 'Failed to create Movement Letter Number Config'
+                    detail: err?.error?.description || err?.error?.message || 'Failed to create Movement Letter Number Config'
                 });
                 this.isSubmitting = false;
             }
@@ -209,6 +324,8 @@ export class MovementLetterNumberConfigComponent implements OnInit {
             prefix: formVal.prefix ?? '',
             prefixBN: formVal.prefixBN ?? '',
             includeDateInNumber: formVal.includeDateInNumber ?? false,
+            telephoneNo: formVal.telephoneNo ?? null,
+            isDefault: formVal.isDefault ?? false,
             lastUpdatedBy: this.currentUser,
             lastupdate: currentDateTime
         };
@@ -228,7 +345,7 @@ export class MovementLetterNumberConfigComponent implements OnInit {
                 this.messageService.add({
                     severity: 'error',
                     summary: 'Error',
-                    detail: err?.error?.message || 'Failed to update Movement Letter Number Config'
+                    detail: err?.error?.description || err?.error?.message || 'Failed to update Movement Letter Number Config'
                 });
                 this.isSubmitting = false;
             }
@@ -240,13 +357,20 @@ export class MovementLetterNumberConfigComponent implements OnInit {
         this.editingConfigId = row.configId;
         this.configForm.patchValue({
             configId: row.configId,
+            rabUnitId: row.rabUnitId ?? null,
             moveOrderType: row.moveOrderType,
             prefix: row.prefix,
             prefixBN: row.prefixBN ?? '',
-            startNumber: row.startNumber,
-            includeDateInNumber: row.includeDateInNumber ?? false
+            // Re-render the padding the config was created with, so the field
+            // shows "001" rather than "1".
+            startNumber: this.padNumber(row.startNumber, row.numberPadding),
+            includeDateInNumber: row.includeDateInNumber ?? false,
+            telephoneNo: row.telephoneNo ?? null,
+            isDefault: row.isDefault ?? false
         });
-        // Type + start-number locked after creation (matches notesheet-number-config)
+        // Unit + type + start-number locked after creation — they identify the
+        // running sequence (matches notesheet-number-config).
+        this.configForm.get('rabUnitId')?.disable();
         this.configForm.get('moveOrderType')?.disable();
         this.configForm.get('startNumber')?.disable();
     }
@@ -254,12 +378,16 @@ export class MovementLetterNumberConfigComponent implements OnInit {
     onReset() {
         this.configForm.reset({
             configId: 0,
+            rabUnitId: null,
             moveOrderType: null,
             prefix: null,
             prefixBN: null,
             startNumber: null,
-            includeDateInNumber: false
+            includeDateInNumber: false,
+            telephoneNo: null,
+            isDefault: false
         });
+        this.configForm.get('rabUnitId')?.enable();
         this.configForm.get('moveOrderType')?.enable();
         this.configForm.get('startNumber')?.enable();
         this.isEditMode = false;

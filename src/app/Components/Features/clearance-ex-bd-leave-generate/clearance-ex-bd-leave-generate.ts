@@ -28,6 +28,7 @@ import { CodeType, PostingType } from '@/models/enums';
 import { FlexibleDateDirective } from '@/shared/directives/flexible-date.directive';
 import { FileReferencesFormComponent, FileRowData } from '@/Components/Common/file-references-form/file-references-form';
 import { EmpService } from '@/services/emp-service';
+import { buildUploadOwnerTag } from '@/shared/utils/upload-file-name.util';
 import { EmployeeSearchInfoModel } from '@/models/EmpModel';
 import { ExBdLeaveApplicationService, ExBdLeaveNoteSheetBodyData } from '@/services/ex-bd-leave-application.service';
 import { OnulipiItem } from '@/Components/basic-setup/shared/models/onulipi-config';
@@ -76,6 +77,12 @@ export class ClearanceExBdLeaveGenerateComponent implements OnInit {
     private _userMenuService = inject(UserMenuService);
     private sharedService = inject(SharedService);
     private memberTypeAccess = inject(IdentityUserMemberTypeAccessService);
+
+    /** Logged-in user for createdBy / updatedBy. Falls back to 'system' only when nobody is signed in. */
+    private get auditUser(): string {
+        return this.sharedService.getCurrentUser() ?? 'system';
+    }
+
     allowedMemberTypeIds: number[] | null = null;
     canInsert = true;
     canUpdate = true;
@@ -526,6 +533,8 @@ export class ClearanceExBdLeaveGenerateComponent implements OnInit {
     }
 
     onGenerate(): void {
+        // Guard against double submission while a save is already in flight.
+        if (this.saving) return;
         if (!this.selectedNoteSheetId) {
             this.messageService.add({ severity: 'warn', summary: 'Warning', detail: 'Please select a notesheet.' });
             return;
@@ -581,7 +590,7 @@ export class ClearanceExBdLeaveGenerateComponent implements OnInit {
                     textType: 'en',
                     filesReferences: filesReferencesJson,
                     remarks: this.remarks || null,
-                    updatedBy: 'system',
+                    updatedBy: this.auditUser,
                     approvalEmployeeId: this.selectedApprovalEmployeeId ?? null
                 })
                 : this.exBdLeaveClearanceService.createClearance({
@@ -596,7 +605,7 @@ export class ClearanceExBdLeaveGenerateComponent implements OnInit {
                     textType: 'en',
                     filesReferences: filesReferencesJson,
                     remarks: this.remarks || null,
-                    createdBy: 'system',
+                    createdBy: this.auditUser,
                     postingOrderNumberConfigId: this.postingOrderNumberConfigId ?? null,
                     approvalEmployeeId: this.selectedApprovalEmployeeId ?? null
                 });
@@ -620,7 +629,7 @@ export class ClearanceExBdLeaveGenerateComponent implements OnInit {
 
         if (filesToUpload.length > 0) {
             const uploads = filesToUpload.map((r: FileRowData) =>
-                this.empService.uploadEmployeeFile(r.file!, r.displayName?.trim() || r.file!.name)
+                this.empService.uploadEmployeeFile(r.file!, r.displayName?.trim() || r.file!.name, buildUploadOwnerTag(this.applicantInfo?.rabID ?? this.applicantInfo?.RABID, this.applicantInfo?.employeeID ?? this.applicantInfo?.EmployeeID))
             );
             forkJoin(uploads).subscribe({
                 next: (results: unknown) => {
