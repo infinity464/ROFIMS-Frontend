@@ -34,7 +34,8 @@ import { MovementFilesInfoComponent } from '../shared/movement-files-info';
     imports: [CommonModule, FormsModule, ButtonModule, SelectModule, Toast, MovementReturnButtonComponent, MovementFilesInfoComponent],
     providers: [MessageService],
     templateUrl: './notesheet-preview-article-47-handover.html',
-    styleUrls: ['../notesheet-preview.scss', '../notesheet-preview-toolbar-dark.scss']
+    // Own stylesheet LAST — it overrides the shared .a4-paper side padding.
+    styleUrls: ['../notesheet-preview.scss', '../notesheet-preview-toolbar-dark.scss', './notesheet-preview-article-47-handover.scss']
 })
 export class NotesheetPreviewArticle47HandoverComponent implements OnInit {
     private route = inject(ActivatedRoute);
@@ -581,8 +582,11 @@ export class NotesheetPreviewArticle47HandoverComponent implements OnInit {
         const sz = this.selectedPageSize;
         const pageWidth = sz === 'A4' ? '210mm' : '215.9mm';
         const pageHeight = sz === 'A4' ? '297mm' : sz === 'Letter' ? '279.4mm' : '355.6mm';
-        const colWidth = sz === 'A4' ? '190mm' : '195.9mm';
-        const padX = 10, padTop = 14, padBottom = 20; // mm — .a4-paper padding
+        // mm — mirrors .a4-paper's padding (see this component's .scss):
+        // left 1in, right 0.4in, top/bottom unchanged.
+        const padLeft = 25.4, padRight = 10.16, padTop = 14, padBottom = 20;
+        const paperWidth = sz === 'A4' ? 210 : 215.9;
+        const colWidth = `${(paperWidth - padLeft - padRight).toFixed(2)}mm`;
 
         const html = `<!DOCTYPE html>
 <html>
@@ -595,7 +599,7 @@ ${styles}
    relative /assets/fonts reference. See bangla-font.util.ts. */
 ${fontCss}
 
-@page { size: ${pageWidth} ${pageHeight}; margin: ${padTop}mm ${padX}mm ${padBottom}mm ${padX}mm; }
+@page { size: ${pageWidth} ${pageHeight}; margin: ${padTop}mm ${padRight}mm ${padBottom}mm ${padLeft}mm; }
 html, body { margin: 0; padding: 0; background: transparent; }
 
 .no-print, .preview-header, .preview-actions { display: none !important; }
@@ -646,7 +650,9 @@ html, body { margin: 0; padding: 0; background: transparent; }
         const font = { ascii: 'Times New Roman', hAnsi: 'Times New Roman', cs: 'SolaimanLipi', hint: 'cs' as const };
         const bnLang = { value: 'bn-BD', bidirectional: 'bn-BD' } as any;
         const dims = this.getPageDimensions();
-        const contentWidth = dims.width - 1440;
+        // Twips — same margins as the preview/PDF: left 1in (1440), right 0.4in (576).
+        const MARGIN_LEFT = 1440, MARGIN_RIGHT = 576, MARGIN_Y = 720;
+        const contentWidth = dims.width - MARGIN_LEFT - MARGIN_RIGHT;
 
         const SZ_BODY  = 20; // 10pt
         const SZ_ORG   = 18; //  9pt — form number header
@@ -870,7 +876,7 @@ html, body { margin: 0; padding: 0; background: transparent; }
                 properties: {
                     page: {
                         size: { width: dims.width, height: dims.height, orientation: PageOrientation.PORTRAIT },
-                        margin: { top: 720, bottom: 720, left: 720, right: 720 }
+                        margin: { top: MARGIN_Y, bottom: MARGIN_Y, left: MARGIN_LEFT, right: MARGIN_RIGHT }
                     }
                 },
                 children
