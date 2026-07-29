@@ -115,6 +115,14 @@ export class ReportConfidentialRemarksComponent implements OnInit, OnDestroy {
      *  resolve each picked node to its full root→node ancestry path. */
     private orgNodeLabels = new Map<number, { en: string; bn: string; parentId: number | null }>();
     rankOptions: { label: string; labelBn: string; value: number }[] = [];
+    /**
+     * RAB Rank filter — universal rank tiers (EquivalentName common codes),
+     * mapped to per-org Mother Org Ranks by basic-setup/rank-equivalent. Not
+     * org-scoped, so the list loads once on init and stays enabled regardless
+     * of the Mother Organization picked.
+     */
+    rabRankOptions: { label: string; labelBn: string; value: number }[] = [];
+    selectedRabRankIds: number[] = [];
     corpsOptions: { label: string; labelBn: string; value: number }[] = [];
     tradeOptions: { label: string; labelBn: string; value: number }[] = [];
     selectedRankIds: number[] = [];
@@ -431,6 +439,7 @@ export class ReportConfidentialRemarksComponent implements OnInit, OnDestroy {
         multi(this.selectedOrgIds, this.orgOptions, L['report.search.motherOrg']);
         multi(this.selectedMemberTypeIds, this.memberTypeOptions, this.lang === 'bn' ? 'সদস্য ধরন' : 'Member Type');
         multi(this.selectedRankIds, this.rankOptions, L['report.search.rank']);
+        multi(this.selectedRabRankIds, this.rabRankOptions, L['report.title.rabRank']);
         multi(this.selectedCorpsIds, this.corpsOptions, L['report.table.corps'] ?? 'Corps');
         multi(this.selectedTradeIds, this.tradeOptions, L['report.search.trade']);
         if (this.selectedOrgNodeIds.length > 0) {
@@ -523,6 +532,7 @@ export class ReportConfidentialRemarksComponent implements OnInit, OnDestroy {
         multi(this.selectedOrgIds, this.orgOptions, L['report.search.motherOrg']);
         multi(this.selectedMemberTypeIds, this.memberTypeOptions, this.lang === 'bn' ? 'সদস্য ধরন' : 'Member Type');
         multi(this.selectedRankIds, this.rankOptions, L['report.search.rank']);
+        multi(this.selectedRabRankIds, this.rabRankOptions, L['report.title.rabRank']);
         multi(this.selectedCorpsIds, this.corpsOptions, L['report.table.corps'] ?? 'Corps');
         multi(this.selectedTradeIds, this.tradeOptions, L['report.search.trade']);
         if (this.selectedOrgNodeIds.length > 0) {
@@ -1049,6 +1059,7 @@ export class ReportConfidentialRemarksComponent implements OnInit, OnDestroy {
 
         this.loadOrgOptions();
         this.loadMemberTypeOptions();
+        this.loadRabRankOptions();
         this.loadOrgNodeLabels();
 
         this.idSearchSub = this.idSearchInput$
@@ -1069,6 +1080,14 @@ export class ReportConfidentialRemarksComponent implements OnInit, OnDestroy {
                     value: c.codeId,
                 }))),
             error: () => (this.memberTypeOptions = []),
+        });
+    }
+
+    /** RAB Rank tiers — EquivalentName common codes (org-independent). */
+    loadRabRankOptions(): void {
+        this.commonCodeService.getAllActiveCommonCodesType('EquivalentName').subscribe({
+            next: (codes) => (this.rabRankOptions = this.mapCodes(codes || [])),
+            error: () => (this.rabRankOptions = []),
         });
     }
 
@@ -1147,6 +1166,7 @@ export class ReportConfidentialRemarksComponent implements OnInit, OnDestroy {
         if (this.selectedPostingStatus) c++;
         if (this.selectedOrgIds.length > 0) c++;
         if (this.selectedRankIds.length > 0) c++;
+        if (this.selectedRabRankIds.length > 0) c++;
         if (this.selectedCorpsIds.length > 0) c++;
         if (this.selectedTradeIds.length > 0) c++;
         if (this.selectedMemberTypeIds.length > 0) c++;
@@ -1172,6 +1192,7 @@ export class ReportConfidentialRemarksComponent implements OnInit, OnDestroy {
         this.selectedPostingStatus = 'Servings';
         this.selectedOrgIds = [];
         this.selectedRankIds = [];
+        this.selectedRabRankIds = [];
         this.selectedCorpsIds = [];
         this.selectedTradeIds = [];
         this.selectedMemberTypeIds = [];
@@ -1240,6 +1261,16 @@ export class ReportConfidentialRemarksComponent implements OnInit, OnDestroy {
             },
             error: () => (this.corpsOptions = []),
         });
+    }
+
+    /**
+     * Rank changed → drop any RAB Rank selection. The two are alternative ways
+     * of asking the same question (per-org Mother Org Rank vs. the universal
+     * tier it maps to), so only one may be active at a time — the template
+     * disables RAB Rank while a Rank is picked.
+     */
+    onRankChange(): void {
+        if (this.selectedRankIds.length) this.selectedRabRankIds = [];
     }
 
     /** Member Type changed → re-filter the org-scoped ranks by parentCodeId. */
@@ -1340,6 +1371,7 @@ export class ReportConfidentialRemarksComponent implements OnInit, OnDestroy {
             orgIds: this.selectedOrgIds.length ? this.selectedOrgIds : undefined,
             memberTypeIds: this.selectedMemberTypeIds.length ? this.selectedMemberTypeIds : undefined,
             rankIds: this.selectedRankIds.length ? this.selectedRankIds : undefined,
+            rabRankIds: this.selectedRabRankIds.length ? this.selectedRabRankIds : undefined,
             corpsIds: this.selectedCorpsIds.length ? this.selectedCorpsIds : undefined,
             tradeIds: this.selectedTradeIds.length ? this.selectedTradeIds : undefined,
             rabOrgNodeIds: this.selectedOrgNodeIds.length ? this.selectedOrgNodeIds : undefined,

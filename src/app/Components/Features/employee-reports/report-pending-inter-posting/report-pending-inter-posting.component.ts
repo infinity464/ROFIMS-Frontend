@@ -19,6 +19,8 @@ import type { PendingPostingJoiningDto } from '@/models/posting.model';
 import type { CommonCodeModel } from '@/models/common-code-model';
 import type { MotherOrganizationModel } from '@/models/mother-org-model';
 import type { ReportAccessibleScope } from '@/models/report.model';
+import { MasterBasicSetupService } from '@/Components/basic-setup/shared/services/MasterBasicSetupService';
+import type { EquivalentRankModel } from '@/Components/basic-setup/shared/models/equivalent-rank';
 import { unitScopeLine, memberTypeScopeLine } from '../report-scope.helper';
 import { personnelMeta as personnelMetaHelper } from '../formal-rab-render.helper';
 import {
@@ -113,6 +115,21 @@ export class ReportPendingInterPostingComponent implements OnInit, OnDestroy {
     /** Raw org-scoped MotherOrgRank rows, re-filtered client-side by Member Type. */
     private allRanksForOrg: CommonCodeModel[] = [];
 
+    /**
+     * RAB Rank filter — universal rank tiers (EquivalentName common codes),
+     * mapped to per-org Mother Org Ranks by basic-setup/rank-equivalent. Not
+     * org-scoped, so the list loads once on init and stays enabled regardless
+     * of the Mother Organization picked. Mutually exclusive with Rank.
+     */
+    rabRankOptions: { label: string; labelBn: string; value: number }[] = [];
+    selectedRabRankIds: number[] = [];
+    /**
+     * EquivalentName CodeId → the Mother Org Rank ids it maps to. This report
+     * filters in memory (rows carry `rankId`, not a RAB-rank id), so the
+     * RankEquivalent map is resolved client-side rather than server-side.
+     */
+    private rabRankToOrgRankIds = new Map<number, Set<number>>();
+
     first = 0;
     rows = 100;
     rowsPerPageOptions = [100, 500, 1000, 5000];
@@ -199,6 +216,7 @@ export class ReportPendingInterPostingComponent implements OnInit, OnDestroy {
         private _userMenuService: UserMenuService,
         private postingService: PostingService,
         private commonCodeService: CommonCodeService,
+        private masterBasicSetupService: MasterBasicSetupService,
         private reportService: ReportService,
         private messageService: MessageService,
     ) {}
@@ -273,6 +291,34 @@ export class ReportPendingInterPostingComponent implements OnInit, OnDestroy {
                 (this.memberTypeOptions = (codes || []).map((c) => ({ label: c.codeValueEN || String(c.codeId), value: c.codeId }))),
             error: () => (this.memberTypeOptions = []),
         });
+
+        // RAB Rank tiers + the RankEquivalent map that resolves each tier to
+        // the Mother Org Ranks the in-memory rows actually carry.
+        this.commonCodeService.getAllActiveCommonCodesType('EquivalentName').subscribe({
+            next: (codes: CommonCodeModel[]) => (this.rabRankOptions = this.mapCodes(codes || [])),
+            error: () => (this.rabRankOptions = []),
+        });
+        this.masterBasicSetupService.getAllRankEquivalents().subscribe({
+            next: (rows: EquivalentRankModel[]) => {
+                this.rabRankToOrgRankIds.clear();
+                for (const r of rows || []) {
+                    let set = this.rabRankToOrgRankIds.get(r.equivalentNameID);
+                    if (!set) this.rabRankToOrgRankIds.set(r.equivalentNameID, (set = new Set<number>()));
+                    set.add(r.motherOrgRankId);
+                }
+            },
+            error: () => this.rabRankToOrgRankIds.clear(),
+        });
+    }
+
+    /**
+     * Rank changed → drop any RAB Rank selection. The two are alternative ways
+     * of asking the same question (per-org Mother Org Rank vs. the universal
+     * tier it maps to), so only one may be active at a time — the template
+     * disables RAB Rank while a Rank is picked.
+     */
+    onRankChange(): void {
+        if (this.selectedRankIds.length) this.selectedRabRankIds = [];
     }
 
     /** Map common codes to id-valued bilingual options. */
@@ -352,6 +398,7 @@ export class ReportPendingInterPostingComponent implements OnInit, OnDestroy {
         if (this.selectedOrgIds.length) c++;
         if (this.selectedMemberTypeIds.length) c++;
         if (this.selectedRankIds.length) c++;
+        if (this.selectedRabRankIds.length) c++;
         if (this.selectedCorpsIds.length) c++;
         if (this.selectedTradeIds.length) c++;
         return c;
@@ -372,6 +419,7 @@ export class ReportPendingInterPostingComponent implements OnInit, OnDestroy {
         this.selectedOrgIds = [];
         this.selectedMemberTypeIds = [];
         this.selectedRankIds = [];
+        this.selectedRabRankIds = [];
         this.selectedCorpsIds = [];
         this.selectedTradeIds = [];
         this.allRanksForOrg = [];
@@ -457,6 +505,9 @@ export class ReportPendingInterPostingComponent implements OnInit, OnDestroy {
         if (this.selectedRankIds.length) {
             items.push({ label: L['report.search.rank'], value: this.bilingualLabelsForIds(this.selectedRankIds, this.rankOptions) });
         }
+        if (this.selectedRabRankIds.length) {
+            items.push({ label: L['report.title.rabRank'], value: this.bilingualLabelsForIds(this.selectedRabRankIds, this.rabRankOptions) });
+        }
         if (this.selectedCorpsIds.length) {
             items.push({ label: corpsLabel, value: this.bilingualLabelsForIds(this.selectedCorpsIds, this.corpsOptions) });
         }
@@ -472,7 +523,14 @@ export class ReportPendingInterPostingComponent implements OnInit, OnDestroy {
         this.appliedFilterLines = this.buildFilterLines();
         // Identifier fields use EXACT match — "1234" must not surface "12345".
         const idTerm = (this.idSearchText ?? '').trim().toLowerCase();
+        // Expand the picked RAB Rank tiers into the Mother Org Rank ids the
+        // rows carry. Empty set = no tier picked (filter not applied).
+        const rabRankOrgRankIds = new Set<number>();
+        for (const tierId of this.selectedRabRankIds) {
+            for (const rankId of this.rabRankToOrgRankIds.get(tierId) ?? []) rabRankOrgRankIds.add(rankId);
+        }
         this.list = this.allRows.filter((r) => {
+            if (this.selectedRabRankIds.length && !rabRankOrgRankIds.has(r.rankId as number)) return false;
             if (this.selectedFromUnitIds.length && !this.selectedFromUnitIds.includes(r.fromRabUnitId as number)) return false;
             if (this.selectedPostedUnitIds.length && !this.selectedPostedUnitIds.includes(r.transferRabUnitId as number)) return false;
             if (this.selectedOrgIds.length && !this.selectedOrgIds.includes(r.motherOrganizationId as number)) return false;

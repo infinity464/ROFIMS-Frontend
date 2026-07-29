@@ -2184,6 +2184,19 @@ export class EmpBasicInfo implements OnInit {
         }
     }
 
+    /**
+     * Strip everything but digits as the user types. The control stays a string so
+     * leading zeros are preserved (a numeric input/parse would drop them).
+     * Mirrors serving-member-entry, where Service ID / RAB ID are also user-entered.
+     */
+    onDigitsOnlyInput(event: Event, fieldName: string): void {
+        const input = event.target as HTMLInputElement;
+        const digitsOnly = (input.value ?? '').replace(/\D/g, '');
+        if (digitsOnly === input.value) return;
+        input.value = digitsOnly;
+        this.postingForm.get(fieldName)?.setValue(digitsOnly);
+    }
+
     isFieldInvalid(fieldName: string): boolean {
         const field = this.postingForm.get(fieldName);
         return !!(field && field.invalid && (field.dirty || field.touched));

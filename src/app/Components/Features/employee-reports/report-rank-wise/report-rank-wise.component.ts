@@ -67,6 +67,15 @@ export class ReportRankWiseComponent implements OnInit, OnDestroy {
     tradeOptions: { label: string; labelBn: string; value: number }[] = [];
     selectedOrgIds: number[] = [];
     selectedRankIds: number[] = [];
+    /**
+     * RAB Rank filter — universal rank tiers (EquivalentName common codes),
+     * mapped to per-org Mother Org Ranks by basic-setup/rank-equivalent. Not
+     * org-scoped, so the list loads once on init and stays enabled regardless
+     * of the Mother Organization picked. Mutually exclusive with Rank, and
+     * either one satisfies this report's "rank is required" rule.
+     */
+    rabRankOptions: { label: string; labelBn: string; value: number }[] = [];
+    selectedRabRankIds: number[] = [];
     selectedMemberTypeIds: number[] = [];
     selectedCorpsIds: number[] = [];
     selectedTradeIds: number[] = [];
@@ -303,6 +312,7 @@ export class ReportRankWiseComponent implements OnInit, OnDestroy {
 
         this.loadMotherOrgs();
         this.loadMemberTypes();
+        this.loadRabRankOptions();
         this.loadOrgNodeLabels();
         // Do not auto-run; the list loads only after the user clicks Search.
 
@@ -437,6 +447,24 @@ export class ReportRankWiseComponent implements OnInit, OnDestroy {
         });
     }
 
+    /** RAB Rank tiers — EquivalentName common codes (org-independent). */
+    loadRabRankOptions(): void {
+        this.commonCodeService.getAllActiveCommonCodesType('EquivalentName').subscribe({
+            next: (codes: CommonCodeModel[]) => (this.rabRankOptions = this.mapCodes(codes || [])),
+            error: () => (this.rabRankOptions = []),
+        });
+    }
+
+    /**
+     * Rank changed → drop any RAB Rank selection. The two are alternative ways
+     * of asking the same question (per-org Mother Org Rank vs. the universal
+     * tier it maps to), so only one may be active at a time — the template
+     * disables RAB Rank while a Rank is picked.
+     */
+    onRankChange(): void {
+        if (this.selectedRankIds.length) this.selectedRabRankIds = [];
+    }
+
     /** Member Type changed → re-filter the org-scoped ranks by parentCodeId. */
     onMemberTypeChange(): void {
         this.applyRankMemberTypeFilter();
@@ -473,6 +501,7 @@ export class ReportRankWiseComponent implements OnInit, OnDestroy {
         let c = 0;
         if (this.selectedOrgIds.length > 0) c++;
         if (this.selectedRankIds.length > 0) c++;
+        if (this.selectedRabRankIds.length > 0) c++;
         if (this.selectedMemberTypeIds.length > 0) c++;
         if (this.selectedCorpsIds.length > 0) c++;
         if (this.selectedTradeIds.length > 0) c++;
@@ -498,6 +527,7 @@ export class ReportRankWiseComponent implements OnInit, OnDestroy {
         multi(this.selectedOrgIds, this.orgOptions, 'Mother Org', 'মাতৃ সংস্থা');
         multi(this.selectedMemberTypeIds, this.memberTypeOptions, 'Member Type', 'সদস্য ধরন');
         multi(this.selectedRankIds, this.rankOptions, 'Rank', 'পদবী');
+        multi(this.selectedRabRankIds, this.rabRankOptions, 'RAB Rank', 'র‍্যাব পদবি');
         multi(this.selectedCorpsIds, this.corpsOptions, 'Corps', 'কোর');
         multi(this.selectedTradeIds, this.tradeOptions, 'Trade', 'ট্রেড');
         if (this.selectedOrgNodeIds.length > 0) {
@@ -515,6 +545,7 @@ export class ReportRankWiseComponent implements OnInit, OnDestroy {
         this.lastIdSearchApplied = '';
         this.selectedOrgIds = [];
         this.selectedRankIds = [];
+        this.selectedRabRankIds = [];
         this.rankOptions = [];
         this.allRanksForOrg = [];
         this.selectedMemberTypeIds = [];
@@ -557,8 +588,10 @@ export class ReportRankWiseComponent implements OnInit, OnDestroy {
     }
 
     search(): void {
-        if (!this.selectedOrgIds.length || !this.selectedRankIds.length) {
-            this.messageService.add({ severity: 'warn', summary: 'Required', detail: 'Please select at least one Mother Org and one Rank first.' });
+        // Rank is required — but RAB Rank is an equivalent way of naming it, so
+        // either one satisfies the rule (they are mutually exclusive in the UI).
+        if (!this.selectedOrgIds.length || (!this.selectedRankIds.length && !this.selectedRabRankIds.length)) {
+            this.messageService.add({ severity: 'warn', summary: 'Required', detail: 'Please select at least one Mother Org and one Rank (or RAB Rank) first.' });
             return;
         }
         this.first = 0;
@@ -630,6 +663,9 @@ export class ReportRankWiseComponent implements OnInit, OnDestroy {
         const criteria: DynamicReportCriterion[] = [];
         if (this.selectedOrgIds.length > 0) criteria.push({ fieldKey: 'motherOrganization', idValues: this.selectedOrgIds });
         if (this.selectedRankIds.length > 0) criteria.push({ fieldKey: 'armyRank', idValues: this.selectedRankIds });
+        // RAB Rank tiers resolve to the matching Mother Org Ranks server-side
+        // via the RankEquivalent map.
+        if (this.selectedRabRankIds.length > 0) criteria.push({ fieldKey: 'rabRankEquivalent', idValues: this.selectedRabRankIds });
         if (this.selectedMemberTypeIds.length > 0) criteria.push({ fieldKey: 'memberType', idValues: this.selectedMemberTypeIds });
         if (this.selectedCorpsIds.length > 0) criteria.push({ fieldKey: 'corps', idValues: this.selectedCorpsIds });
         if (this.selectedTradeIds.length > 0) criteria.push({ fieldKey: 'trade', idValues: this.selectedTradeIds });

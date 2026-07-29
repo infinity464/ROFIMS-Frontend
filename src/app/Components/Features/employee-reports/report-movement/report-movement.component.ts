@@ -70,6 +70,14 @@ export class ReportMovementComponent implements OnInit, OnDestroy {
     reasonOptions: { label: string; labelBn: string; value: number }[] = [];
     selectedOrgIds: number[] = [];
     selectedRankId: number | null = null;
+    /**
+     * RAB Rank filter — universal rank tiers (EquivalentName common codes),
+     * mapped to per-org Mother Org Ranks by basic-setup/rank-equivalent. Not
+     * org-scoped, so the list loads once on init and stays enabled regardless
+     * of the Mother Organization picked. Mutually exclusive with Rank.
+     */
+    rabRankOptions: { label: string; labelBn: string; value: number }[] = [];
+    selectedRabRankId: number | null = null;
     rabUnitOptions: { label: string; labelBn: string; value: number }[] = [];
     selectedMemberTypeIds: number[] = [];
     selectedCorpsIds: number[] = [];
@@ -334,6 +342,7 @@ export class ReportMovementComponent implements OnInit, OnDestroy {
 
         this.loadMotherOrgs();
         this.loadMemberTypes();
+        this.loadRabRankOptions();
         this.loadRabUnits();
         this.loadOrgNodeLabels();
         this.loadReasons();
@@ -482,6 +491,24 @@ export class ReportMovementComponent implements OnInit, OnDestroy {
         });
     }
 
+    /** RAB Rank tiers — EquivalentName common codes (org-independent). */
+    loadRabRankOptions(): void {
+        this.commonCodeService.getAllActiveCommonCodesType('EquivalentName').subscribe({
+            next: (codes: CommonCodeModel[]) => (this.rabRankOptions = this.mapCodes(codes || [])),
+            error: () => (this.rabRankOptions = []),
+        });
+    }
+
+    /**
+     * Rank changed → drop any RAB Rank selection. The two are alternative ways
+     * of asking the same question (per-org Mother Org Rank vs. the universal
+     * tier it maps to), so only one may be active at a time — the template
+     * disables RAB Rank while a Rank is picked.
+     */
+    onRankChange(): void {
+        if (this.selectedRankId != null) this.selectedRabRankId = null;
+    }
+
     /** Member Type changed → re-filter the org-scoped ranks by parentCodeId. */
     onMemberTypeChange(): void {
         this.applyRankMemberTypeFilter();
@@ -530,6 +557,7 @@ export class ReportMovementComponent implements OnInit, OnDestroy {
         let c = 0;
         if (this.selectedOrgIds.length > 0) c++;
         if (this.selectedRankId != null) c++;
+        if (this.selectedRabRankId != null) c++;
         if (this.selectedMemberTypeIds.length > 0) c++;
         if (this.selectedCorpsIds.length > 0) c++;
         if (this.selectedTradeIds.length > 0) c++;
@@ -570,6 +598,11 @@ export class ReportMovementComponent implements OnInit, OnDestroy {
             const lbl = this.lang === 'en' ? 'Rank' : 'পদবী';
             if (opt) items.push({ label: lbl, value: this.lang === 'bn' ? opt.labelBn : opt.label });
         }
+        if (this.selectedRabRankId != null) {
+            const opt = this.rabRankOptions.find((o) => o.value === this.selectedRabRankId);
+            const lbl = this.lang === 'en' ? 'RAB Rank' : 'র‍্যাব পদবি';
+            if (opt) items.push({ label: lbl, value: this.lang === 'bn' ? opt.labelBn : opt.label });
+        }
         multi(this.selectedCorpsIds, this.corpsOptions, 'Corps', 'কোর');
         multi(this.selectedTradeIds, this.tradeOptions, 'Trade', 'ট্রেড');
         if (this.selectedOrgNodeIds.length > 0) {
@@ -592,6 +625,7 @@ export class ReportMovementComponent implements OnInit, OnDestroy {
     clearFilters(): void {
         this.selectedOrgIds = [];
         this.selectedRankId = null;
+        this.selectedRabRankId = null;
         this.rankOptions = [];
         this.allRanksForOrg = [];
         this.selectedMemberTypeIds = [];
@@ -712,6 +746,9 @@ export class ReportMovementComponent implements OnInit, OnDestroy {
         const criteria: DynamicReportCriterion[] = [];
         if (this.selectedOrgIds.length > 0) criteria.push({ fieldKey: 'motherOrganization', idValues: this.selectedOrgIds });
         if (this.selectedRankId != null && this.selectedRankId > 0) criteria.push({ fieldKey: 'armyRank', idValue: this.selectedRankId });
+        // RAB Rank tier resolves to the matching Mother Org Ranks server-side
+        // via the RankEquivalent map.
+        if (this.selectedRabRankId != null && this.selectedRabRankId > 0) criteria.push({ fieldKey: 'rabRankEquivalent', idValue: this.selectedRabRankId });
         if (this.selectedMemberTypeIds.length > 0) criteria.push({ fieldKey: 'memberType', idValues: this.selectedMemberTypeIds });
         if (this.selectedCorpsIds.length > 0) criteria.push({ fieldKey: 'corps', idValues: this.selectedCorpsIds });
         if (this.selectedTradeIds.length > 0) criteria.push({ fieldKey: 'trade', idValues: this.selectedTradeIds });

@@ -73,6 +73,14 @@ export class ReportRftsCompletionComponent implements OnInit, OnDestroy {
     private allRanksForOrg: CommonCodeModel[] = [];
     rankOptions: { label: string; labelBn: string; value: number }[] = [];
     selectedRankIds: number[] = [];
+    /**
+     * RAB Rank filter — universal rank tiers (EquivalentName common codes),
+     * mapped to per-org Mother Org Ranks by basic-setup/rank-equivalent. Not
+     * org-scoped, so the list loads once on init and stays enabled regardless
+     * of the Mother Organization picked. Mutually exclusive with Rank.
+     */
+    rabRankOptions: { label: string; labelBn: string; value: number }[] = [];
+    selectedRabRankIds: number[] = [];
     corpsOptions: { label: string; labelBn: string; value: number }[] = [];
     selectedCorpsIds: number[] = [];
     tradeOptions: { label: string; labelBn: string; value: number }[] = [];
@@ -288,6 +296,7 @@ export class ReportRftsCompletionComponent implements OnInit, OnDestroy {
 
         this.loadMotherOrgOptions();
         this.loadMemberTypeOptions();
+        this.loadRabRankOptions();
         this.loadOrgNodeLabels();
 
         this.idSearchSub = this.idSearchInput$
@@ -430,6 +439,24 @@ export class ReportRftsCompletionComponent implements OnInit, OnDestroy {
         });
     }
 
+    /** RAB Rank tiers — EquivalentName common codes (org-independent). */
+    loadRabRankOptions(): void {
+        this.commonCodeService.getAllActiveCommonCodesType('EquivalentName').subscribe({
+            next: (codes: CommonCodeModel[]) => (this.rabRankOptions = this.mapCodes(codes || [])),
+            error: () => (this.rabRankOptions = []),
+        });
+    }
+
+    /**
+     * Rank changed → drop any RAB Rank selection. The two are alternative ways
+     * of asking the same question (per-org Mother Org Rank vs. the universal
+     * tier it maps to), so only one may be active at a time — the template
+     * disables RAB Rank while a Rank is picked.
+     */
+    onRankChange(): void {
+        if (this.selectedRankIds.length) this.selectedRabRankIds = [];
+    }
+
     /** Member Type changed → re-filter the org-scoped ranks by parentCodeId. */
     onMemberTypeChange(): void {
         this.applyRankMemberTypeFilter();
@@ -486,6 +513,7 @@ export class ReportRftsCompletionComponent implements OnInit, OnDestroy {
         multi(this.selectedOrgIds, this.motherOrgOptions, 'Mother Org');
         multi(this.selectedMemberTypeIds, this.memberTypeOptions, 'Member Type');
         multi(this.selectedRankIds, this.rankOptions, 'Rank');
+        multi(this.selectedRabRankIds, this.rabRankOptions, 'RAB Rank');
         multi(this.selectedCorpsIds, this.corpsOptions, 'Corps');
         multi(this.selectedTradeIds, this.tradeOptions, 'Trade');
         if (this.selectedOrgNodeIds.length > 0) {
@@ -503,6 +531,7 @@ export class ReportRftsCompletionComponent implements OnInit, OnDestroy {
         if (this.selectedOrgIds.length > 0) c++;
         if (this.selectedMemberTypeIds.length > 0) c++;
         if (this.selectedRankIds.length > 0) c++;
+        if (this.selectedRabRankIds.length > 0) c++;
         if (this.selectedCorpsIds.length > 0) c++;
         if (this.selectedTradeIds.length > 0) c++;
         if (this.selectedOrgNodeIds.length > 0) c++;
@@ -533,6 +562,7 @@ export class ReportRftsCompletionComponent implements OnInit, OnDestroy {
         this.selectedOrgIds = [];
         this.selectedMemberTypeIds = [];
         this.selectedRankIds = [];
+        this.selectedRabRankIds = [];
         this.selectedCorpsIds = [];
         this.selectedTradeIds = [];
         this.selectedOrgNodeIds = [];
@@ -656,6 +686,10 @@ export class ReportRftsCompletionComponent implements OnInit, OnDestroy {
             criteria.push({ fieldKey: 'memberType', idValues: this.selectedMemberTypeIds });
         if (this.selectedRankIds.length)
             criteria.push({ fieldKey: 'armyRank', idValues: this.selectedRankIds });
+        // RAB Rank tiers resolve to the matching Mother Org Ranks server-side
+        // via the RankEquivalent map.
+        if (this.selectedRabRankIds.length)
+            criteria.push({ fieldKey: 'rabRankEquivalent', idValues: this.selectedRabRankIds });
         if (this.selectedCorpsIds.length)
             criteria.push({ fieldKey: 'corps', idValues: this.selectedCorpsIds });
         if (this.selectedTradeIds.length)

@@ -56,9 +56,15 @@
                 </div>
                 <div class="report-filter-field">
                     <label>Rank</label>
-                    <p-select [options]="rankOptions" [(ngModel)]="selectedRankId" (ngModelChange)="onFilterChange()"
+                    <p-select [options]="rankOptions" [(ngModel)]="selectedRankId" (ngModelChange)="onRankChange()"
                         optionLabel="label" optionValue="value" placeholder="Select" styleClass="w-full"
                         [disabled]="selectedOrgIds.length === 0" [filter]="true" [showClear]="true" appendTo="body"></p-select>
+                </div>
+                <div class="report-filter-field">
+                    <label>RAB Rank</label>
+                    <p-select [options]="rabRankOptions" [(ngModel)]="selectedRabRankId" (ngModelChange)="onFilterChange()"
+                        optionLabel="label" optionValue="value" placeholder="Select" styleClass="w-full"
+                        [disabled]="selectedRankId != null" [filter]="true" [showClear]="true" appendTo="body"></p-select>
                 </div>
                 <div class="report-filter-field">
                     <label>Corps</label>
