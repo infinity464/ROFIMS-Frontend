@@ -152,6 +152,9 @@
                         <p-tableHeaderCheckbox></p-tableHeaderCheckbox>
                     </th>
                     <th style="width: 45px">Ser</th>
+                    <!-- Surfaces as a column what was previously only discoverable by
+                         hovering the row checkbox. -->
+                    <th style="width: 110px">Issue Movement Order</th>
                     <th style="min-width: 260px">Posting Order No</th>
                     <th style="min-width: 95px">Order Date</th>
                     <th style="min-width: 100px">Service ID</th>
@@ -173,10 +176,23 @@
                              is gated on movement-less rows. -->
                         <p-tableCheckbox
                             [value]="row"
-                            [pTooltip]="hasMovement(row) ? 'Movement order already generated — can still be received' : ''"
+                            [pTooltip]="hasMovement(row) ? 'Movement order already generated' : ''"
                         ></p-tableCheckbox>
                     </td>
                     <td>{{ rowIndex + 1 }}</td>
+                    <td>
+                        <span
+                            class="font-semibold"
+                            [class.text-green-600]="hasMovement(row)"
+                            [class.text-red-500]="!hasMovement(row)"
+                            [pTooltip]="hasMovement(row)
+                                ? 'Movement order already generated'
+                                : 'No movement order generated yet'"
+                            tooltipPosition="top"
+                        >
+                            {{ hasMovement(row) ? 'Yes' : 'No' }}
+                        </span>
+                    </td>
                     <td>
                         {{ row.postingOrderNo || '-' }}
                     </td>
@@ -228,7 +244,7 @@
             </ng-template>
             <ng-template pTemplate="emptymessage">
                 <tr>
-                    <td colspan="13" class="text-center p-4">
+                    <td colspan="14" class="text-center p-4">
                         <div class="flex flex-column align-items-center gap-3 py-5">
                             <i class="pi pi-check-circle text-5xl text-400"></i>
                             <span class="text-lg text-500">
