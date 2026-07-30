@@ -153,6 +153,7 @@
     gap: 0.4rem;
     margin-bottom: 0.65rem;
 
+    .report-criteria-toggle,
     .report-lang-toggle,
     .report-btn-export {
         height: 28px;
@@ -180,6 +181,26 @@
 
     .report-lang-toggle {
         letter-spacing: 0.04em;
+    }
+
+    /* Criteria visibility toggle — same chrome as the language/export buttons,
+       with the accent held while the criteria are on so the current state is
+       readable without re-reading the label. */
+    .report-criteria-toggle {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        letter-spacing: 0.04em;
+        cursor: pointer;
+
+        .pi {
+            font-size: 0.72rem;
+        }
+
+        &.is-on {
+            border-color: var(--rab-accent);
+            color: var(--rab-accent);
+        }
     }
 
     .rab-toolbar-search {
@@ -398,6 +419,12 @@
     text-transform: uppercase;
     color: var(--rab-muted-strong);
     font-weight: 600;
+}
+
+/* Heading toggled off — keep the total + date flush right instead of letting
+   space-between pull the lone remaining child to the left. */
+.rab-criteria-strip.no-title {
+    justify-content: flex-end;
 }
 
 .rab-criteria-strip-title {

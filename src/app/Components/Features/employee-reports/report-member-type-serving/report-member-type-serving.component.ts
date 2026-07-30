@@ -104,7 +104,16 @@ export class ReportMemberTypeServingComponent implements OnInit, OnDestroy {
      *  resolve each picked node to its full root→node ancestry path. */
     private orgNodeLabels = new Map<number, { en: string; bn: string; parentId: number | null }>();
 
-    /** Mother Org → Rank/Corps cascade. */
+    /**
+     * Mother Org, Rank, Corps and Trade. None of the three code filters is
+     * *gated* by another — every list loads in full on init and all four
+     * dropdowns are usable from first paint, so a Corps or Trade can be picked
+     * without first choosing a Mother Org. They still *narrow* each other once a
+     * pick is made: a Mother Org narrows Rank + Corps + Trade to that org's
+     * codes, and a Corps narrows Trade further. Narrowing is client-side over the
+     * cached lists (see refreshDependentOptions) — no extra round-trips, and
+     * clearing the parent restores the full list.
+     */
     orgOptions: { label: string; labelBn: string; value: number }[] = [];
     rankOptions: { label: string; labelBn: string; value: number }[] = [];
     corpsOptions: { label: string; labelBn: string; value: number }[] = [];
@@ -113,8 +122,20 @@ export class ReportMemberTypeServingComponent implements OnInit, OnDestroy {
     selectedRankIds: number[] = [];
     selectedCorpsIds: number[] = [];
     selectedTradeIds: number[] = [];
-    /** Raw org-scoped MotherOrgRank rows, re-filtered client-side by Member Type. */
-    private allRanksForOrg: CommonCodeModel[] = [];
+    /** Full active code lists (all orgs), narrowed client-side into the *Options above. */
+    private allRankCodes: CommonCodeModel[] = [];
+    private allCorpsCodes: CommonCodeModel[] = [];
+    private allTradeCodes: CommonCodeModel[] = [];
+    /** orgId → MotherOrg.SortOrder, so the code lists keep their org grouping order. */
+    private orgSortOrderById = new Map<number, number | null>();
+    /**
+     * Representative codeId → the code rows collapsed under it, for the options
+     * that merge several same-named rows into one entry (see mapMergedCodes).
+     * Only merged options appear here; a plain option needs no entry. Rebuilt on
+     * every refreshDependentOptions, and expanded back to the full id list when
+     * the criteria are sent (expandCodeIds).
+     */
+    private mergedCodeIds = new Map<number, number[]>();
 
     /**
      * RAB Rank filter — universal rank tiers (EquivalentName common codes),
@@ -478,6 +499,45 @@ export class ReportMemberTypeServingComponent implements OnInit, OnDestroy {
         return items;
     }
 
+    /**
+     * Whether the report prints its selection criteria — both the cells and the
+     * "SELECTION CRITERIA" strip heading. Off by default; the toolbar's "Show
+     * Search Criteria" button opts in. The strip itself survives either way,
+     * because it also carries the record total and generated date — those stamp
+     * the report rather than restating what was searched.
+     */
+    showCriteria = false;
+
+    toggleCriteria(): void {
+        this.showCriteria = !this.showCriteria;
+    }
+
+    /** English-only, like the rest of the toolbar chrome — the language toggle
+     *  switches the report, not the controls around it. */
+    get criteriaToggleLabel(): string {
+        return this.showCriteria ? 'Hide Search Criteria' : 'Show Search Criteria';
+    }
+
+    /**
+     * The criteria cells actually rendered — empty while the toggle is off. Both
+     * the on-screen paper and all three exports read this rather than
+     * `criteriaItems`, so Print / Word / Excel match what the screen shows; each
+     * already falls back to the strip alone when there are no cells.
+     */
+    get visibleCriteriaItems(): { label: string; value: string }[] {
+        return this.showCriteria ? this.criteriaItems : [];
+    }
+
+    /**
+     * The strip's heading — blank while the toggle is off, leaving the strip to
+     * carry just the record total and generated date. Same four render sites as
+     * visibleCriteriaItems; each drops the heading entirely when it is blank
+     * rather than laying out an empty label.
+     */
+    get criteriaStripTitle(): string {
+        return this.showCriteria ? this.rabCriteriaTitle : '';
+    }
+
     get rabOverlineText(): string {
         return this.lang === 'bn'
             ? 'গণপ্রজাতন্ত্রী বাংলাদেশ সরকার'
@@ -542,7 +602,7 @@ export class ReportMemberTypeServingComponent implements OnInit, OnDestroy {
 
         this.loadMemberTypes();
         this.loadOrgNodeLabels();
-        this.loadOrgs();
+        this.loadFilterOptions();
         this.loadRabRankOptions();
 
         this.idSearchSub = this.idSearchInput$
@@ -630,16 +690,133 @@ export class ReportMemberTypeServingComponent implements OnInit, OnDestroy {
     }
 
 
-    loadOrgs(): void {
-        this.commonCodeService.getAllActiveMotherOrgs().subscribe({
-            next: (orgs: MotherOrganizationModel[]) =>
-                (this.orgOptions = (orgs || []).map((o) => ({
-                    label: o.orgNameEN || String(o.orgId),
-                    labelBn: o.orgNameBN || o.orgNameEN || String(o.orgId),
-                    value: o.orgId,
-                }))),
-            error: () => (this.orgOptions = []),
+    /**
+     * Mother Org, Rank, Corps and Trade lists — loaded together, once, in full.
+     * Caching the complete lists is what lets the three code filters open
+     * un-gated *and* narrow to a picked Mother Org / Corps without re-fetching.
+     * The orgs come in the same round-trip because their sort order is what keeps
+     * the code lists in the setup-defined order.
+     */
+    loadFilterOptions(): void {
+        forkJoin({
+            orgs:   this.commonCodeService.getAllActiveMotherOrgs(),
+            ranks:  this.commonCodeService.getAllActiveCommonCodesType('MotherOrgRank'),
+            corps:  this.commonCodeService.getAllActiveCommonCodesType('Corps'),
+            trades: this.commonCodeService.getAllActiveCommonCodesType('Trade'),
+        }).subscribe({
+            next: ({ orgs, ranks, corps, trades }) => {
+                const orgRows: MotherOrganizationModel[] = orgs || [];
+                this.orgSortOrderById.clear();
+                for (const o of orgRows) this.orgSortOrderById.set(o.orgId, o.sortOrder ?? null);
+                this.orgOptions = [...orgRows]
+                    .sort((a, b) => this.cmpNum(a.sortOrder, b.sortOrder) || (a.orgNameEN ?? '').localeCompare(b.orgNameEN ?? ''))
+                    .map((o) => ({
+                        label: o.orgNameEN || String(o.orgId),
+                        labelBn: o.orgNameBN || o.orgNameEN || String(o.orgId),
+                        value: o.orgId,
+                    }));
+
+                this.allCorpsCodes = this.dedupeByCodeId(corps || []);
+                this.allRankCodes = this.dedupeByCodeId(ranks || []);
+                this.allTradeCodes = this.attachTradeOrgIds(this.dedupeByCodeId(trades || []), this.allCorpsCodes);
+                this.refreshDependentOptions();
+            },
+            error: () => {
+                this.orgSortOrderById.clear();
+                this.orgOptions = [];
+                this.allRankCodes = [];
+                this.allCorpsCodes = [];
+                this.allTradeCodes = [];
+                this.refreshDependentOptions();
+            },
         });
+    }
+
+    /**
+     * Recompute the Rank / Corps / Trade option lists from the cached full lists
+     * and the current picks, then drop any selection the narrowed list no longer
+     * offers. Cascade rules — each applies only when its parent has a pick, so an
+     * untouched parent leaves the child list complete:
+     *   Mother Org  → Rank, Corps, Trade  (codes belonging to the picked orgs)
+     *   Member Type → Rank                (rank tier the MotherOrgRank hangs off)
+     *   Corps       → Trade               (children of the picked Corps rows)
+     * Trade takes both of its narrowings — a Mother Org alone already narrows it,
+     * and a Corps narrows it further. Corps is narrowed before Trade so a Corps
+     * dropped by an org change cannot keep narrowing Trade to a corps that is no
+     * longer selectable.
+     */
+    private refreshDependentOptions(): void {
+        const orgIds = this.selectedOrgIds;
+        const inOrgs = (c: CommonCodeModel) => orgIds.length === 0 || orgIds.includes(c.orgId);
+        // Which rows merge depends on what each narrowed list contains, so the
+        // merge map is rebuilt from scratch by the mapMergedCodes calls below.
+        this.mergedCodeIds.clear();
+
+        let rankRows = this.allRankCodes.filter(inOrgs);
+        if (this.selectedMemberTypeIds.length) {
+            rankRows = rankRows.filter((r) => r.parentCodeId != null && this.selectedMemberTypeIds.includes(r.parentCodeId));
+        }
+        this.rankOptions = this.mapMergedCodes(rankRows);
+        this.selectedRankIds = this.retainSelectable(this.selectedRankIds, this.rankOptions);
+
+        this.corpsOptions = this.mapMergedCodes(this.allCorpsCodes.filter(inOrgs));
+        this.selectedCorpsIds = this.retainSelectable(this.selectedCorpsIds, this.corpsOptions);
+
+        // Expanded, because a picked Corps option may stand for several same-named
+        // Corps rows — the trades hanging off each of them all belong in the list.
+        const corpsIds = new Set(this.expandCodeIds(this.selectedCorpsIds));
+        let tradeRows = this.allTradeCodes.filter(inOrgs);
+        if (corpsIds.size) {
+            tradeRows = tradeRows.filter((t) => t.parentCodeId != null && corpsIds.has(t.parentCodeId));
+        }
+        this.tradeOptions = this.mapMergedCodes(tradeRows);
+        this.selectedTradeIds = this.retainSelectable(this.selectedTradeIds, this.tradeOptions);
+    }
+
+    /** Keep only the ids the narrowed option list still offers. */
+    private retainSelectable(selected: number[], options: { value: number }[]): number[] {
+        if (!selected.length) return selected;
+        const available = new Set(options.map((o) => o.value));
+        return selected.filter((id) => available.has(id));
+    }
+
+    /**
+     * Turn picked option values into the code ids the server must match. A merged
+     * option stands for several same-named code rows, so it expands to all of
+     * them; an unmerged one passes through as itself.
+     */
+    private expandCodeIds(ids: number[]): number[] {
+        const out: number[] = [];
+        const seen = new Set<number>();
+        for (const id of ids) {
+            for (const real of this.mergedCodeIds.get(id) ?? [id]) {
+                if (!seen.has(real)) { seen.add(real); out.push(real); }
+            }
+        }
+        return out;
+    }
+
+    /**
+     * Resolve each Trade's Mother Organization through its parent Corps
+     * (Trade.parentCodeId → Corps.orgId) and stamp it onto the row's orgId. That
+     * chain — not the Trade row's own orgId, which is not reliably populated — is
+     * what the Mother Org narrowing and the org grouping read. A trade whose
+     * parent Corps is missing (inactive, say) keeps whatever orgId it came with.
+     */
+    private attachTradeOrgIds(trades: CommonCodeModel[], corps: CommonCodeModel[]): CommonCodeModel[] {
+        const orgByCorpsId = new Map(corps.map((c) => [c.codeId, c.orgId]));
+        return trades.map((t) => {
+            const orgId = t.parentCodeId != null ? orgByCorpsId.get(t.parentCodeId) : undefined;
+            return orgId != null && orgId !== t.orgId ? { ...t, orgId } : t;
+        });
+    }
+
+    /** Nulls-last numeric compare — rows without an explicit sortOrder sink to
+     *  the bottom rather than colliding with sortOrder = 0. */
+    private cmpNum(a: number | null | undefined, b: number | null | undefined): number {
+        const ax = a == null ? Number.POSITIVE_INFINITY : a;
+        const bx = b == null ? Number.POSITIVE_INFINITY : b;
+        return ax - bx;
     }
 
     /** Map CommonCode rows to {label, labelBn, value} option shape. */
@@ -651,39 +828,55 @@ export class ReportMemberTypeServingComponent implements OnInit, OnDestroy {
         }));
     }
 
+    /**
+     * Same as mapCodes, but for the per-Mother-Org code lists (Rank, Corps,
+     * Trade) shown un-scoped, where one name maps to many code rows: a Trade row
+     * exists per Corps that employs it *and* per Mother Organization, so "Cook(M)"
+     * alone was a dozen identical-looking entries.
+     *
+     * Rows sharing a name collapse into one option regardless of Corps or Mother
+     * Org — the only thing that separates entries is the spelling. Picking one
+     * queries every code row behind it (see mergedCodeIds / expandCodeIds), so a
+     * single "Cook(M)" pick still matches Army, Navy and Air Force cooks.
+     *
+     * Rows are sorted by the org's sort order then the code's own before grouping,
+     * so each group's first row — the lowest sort order — is its representative,
+     * and the list keeps the setup-defined order (essential for Rank, which must
+     * read in seniority order rather than alphabetically).
+     */
+    private mapMergedCodes(codes: CommonCodeModel[]): { label: string; labelBn: string; value: number }[] {
+        const sorted = this.dedupeByCodeId(codes).sort((a, b) =>
+            this.cmpNum(this.orgSortOrderById.get(a.orgId), this.orgSortOrderById.get(b.orgId)) ||
+            this.cmpNum(a.sortOrder, b.sortOrder) ||
+            (a.codeValueEN ?? '').localeCompare(b.codeValueEN ?? ''));
+
+        const groups: { head: CommonCodeModel; ids: number[] }[] = [];
+        const byName = new Map<string, { head: CommonCodeModel; ids: number[] }>();
+        for (const c of sorted) {
+            const name = (c.codeValueEN || String(c.codeId)).trim().toLowerCase();
+            let g = byName.get(name);
+            if (!g) { g = { head: c, ids: [] }; byName.set(name, g); groups.push(g); }
+            g.ids.push(c.codeId);
+            // A blank BN name on the first row shouldn't cost the group its Bangla
+            // label when a later sibling carries one.
+            if (!g.head.codeValueBN && c.codeValueBN) g.head = { ...g.head, codeValueBN: c.codeValueBN };
+        }
+
+        return groups.map(({ head, ids }) => {
+            if (ids.length > 1) this.mergedCodeIds.set(head.codeId, ids);
+            return {
+                label:   head.codeValueEN || String(head.codeId),
+                labelBn: head.codeValueBN || head.codeValueEN || String(head.codeId),
+                value:   head.codeId,
+            };
+        });
+    }
+
     /** Dedupe CommonCode rows by codeId, preserving first-seen order. */
     private dedupeByCodeId(rows: CommonCodeModel[]): CommonCodeModel[] {
         const byId = new Map<number, CommonCodeModel>();
         for (const r of rows || []) if (!byId.has(r.codeId)) byId.set(r.codeId, r);
         return Array.from(byId.values());
-    }
-
-    /** Mother Org changed → reload org-scoped Ranks and Corps across all selected orgs; reset Trade. */
-    onOrgChange(): void {
-        this.rankOptions = [];
-        this.allRanksForOrg = [];
-        this.selectedRankIds = [];
-        this.corpsOptions = [];
-        this.selectedCorpsIds = [];
-        this.tradeOptions = [];
-        this.selectedTradeIds = [];
-        if (!this.selectedOrgIds.length) return;
-        forkJoin(this.selectedOrgIds.map((orgId) => this.commonCodeService.getAllActiveCommonCodesByOrgIdAndType(orgId, 'MotherOrgRank'))).subscribe({
-            next: (results: CommonCodeModel[][]) => {
-                this.allRanksForOrg = this.dedupeByCodeId(results.flat());
-                this.applyRankMemberTypeFilter();
-            },
-            error: () => {
-                this.allRanksForOrg = [];
-                this.rankOptions = [];
-            },
-        });
-        forkJoin(this.selectedOrgIds.map((orgId) => this.commonCodeService.getAllActiveCommonCodesByOrgIdAndType(orgId, 'Corps'))).subscribe({
-            next: (results: CommonCodeModel[][]) => {
-                this.corpsOptions = this.mapCodes(this.dedupeByCodeId(results.flat()));
-            },
-            error: () => (this.corpsOptions = []),
-        });
     }
 
     /** RAB Rank tiers — EquivalentName common codes (org-independent). */
@@ -704,30 +897,19 @@ export class ReportMemberTypeServingComponent implements OnInit, OnDestroy {
         if (this.selectedRankIds.length) this.selectedRabRankIds = [];
     }
 
-    /** Member Type changed → re-filter the org-scoped ranks by parentCodeId. */
+    /** Member Type changed → narrow Rank to that tier's ranks. */
     onMemberTypeChange(): void {
-        this.applyRankMemberTypeFilter();
+        this.refreshDependentOptions();
     }
 
-    /** Rank = org-scoped MotherOrgRank rows whose parentCodeId is a selected Member Type. */
-    private applyRankMemberTypeFilter(): void {
-        let rows = this.allRanksForOrg;
-        if (this.selectedMemberTypeIds.length) rows = rows.filter((r) => r.parentCodeId != null && this.selectedMemberTypeIds.includes(r.parentCodeId));
-        this.rankOptions = this.mapCodes(rows);
-        this.selectedRankIds = this.selectedRankIds.filter((id) => this.rankOptions.some((o) => o.value === id));
+    /** Mother Org changed → narrow Rank, Corps and Trade to the picked orgs. */
+    onOrgChange(): void {
+        this.refreshDependentOptions();
     }
 
-    /** Cascade: a new Corps reloads Trades (children of selected Corps rows). */
+    /** Corps changed → narrow Trade to the picked Corps rows' children. */
     onCorpsChange(): void {
-        this.tradeOptions = [];
-        this.selectedTradeIds = [];
-        if (!this.selectedCorpsIds.length) return;
-        forkJoin(this.selectedCorpsIds.map((corpsId) => this.commonCodeService.getAllActiveCommonCodesByParentId(corpsId))).subscribe({
-            next: (results: CommonCodeModel[][]) => {
-                this.tradeOptions = this.mapCodes(this.dedupeByCodeId(results.flat()));
-            },
-            error: () => (this.tradeOptions = []),
-        });
+        this.refreshDependentOptions();
     }
 
     onFilterChange(): void {}
@@ -783,10 +965,9 @@ export class ReportMemberTypeServingComponent implements OnInit, OnDestroy {
         this.selectedRabRankIds = [];
         this.selectedCorpsIds = [];
         this.selectedTradeIds = [];
-        this.rankOptions = [];
-        this.corpsOptions = [];
-        this.tradeOptions = [];
-        this.allRanksForOrg = [];
+        // The full lists stay cached — recompute so every dropdown widens back to
+        // its complete set rather than being emptied.
+        this.refreshDependentOptions();
         this.joiningInRabFrom = null;
         this.joiningInRabTo = null;
         this.selectedSeniority = 'OrganizationSeniority';
@@ -902,16 +1083,18 @@ export class ReportMemberTypeServingComponent implements OnInit, OnDestroy {
             criteria.push({ fieldKey: 'rabOrgNode', idValues: this.selectedOrgNodeIds });
         if (this.selectedOrgIds.length > 0)
             criteria.push({ fieldKey: 'motherOrganization', idValues: this.selectedOrgIds });
+        // Rank / Corps / Trade options can each stand for several same-named code
+        // rows, so they go out expanded to every id behind the pick.
         if (this.selectedRankIds.length > 0)
-            criteria.push({ fieldKey: 'armyRank', idValues: this.selectedRankIds });
+            criteria.push({ fieldKey: 'armyRank', idValues: this.expandCodeIds(this.selectedRankIds) });
         // RAB Rank tiers resolve to the matching Mother Org Ranks server-side
         // via the RankEquivalent map.
         if (this.selectedRabRankIds.length > 0)
             criteria.push({ fieldKey: 'rabRankEquivalent', idValues: this.selectedRabRankIds });
         if (this.selectedCorpsIds.length > 0)
-            criteria.push({ fieldKey: 'corps', idValues: this.selectedCorpsIds });
+            criteria.push({ fieldKey: 'corps', idValues: this.expandCodeIds(this.selectedCorpsIds) });
         if (this.selectedTradeIds.length > 0)
-            criteria.push({ fieldKey: 'trade', idValues: this.selectedTradeIds });
+            criteria.push({ fieldKey: 'trade', idValues: this.expandCodeIds(this.selectedTradeIds) });
         const jFrom = this.toDateStr(this.joiningInRabFrom);
         const jTo   = this.toDateStr(this.joiningInRabTo);
         if (jFrom || jTo) {
@@ -1015,11 +1198,14 @@ export class ReportMemberTypeServingComponent implements OnInit, OnDestroy {
         const critCellPct = 100 / colsPerCritRow;
         const stripCell = (runs: TextRun[], alignment: typeof AlignmentType.LEFT | typeof AlignmentType.RIGHT) =>
             new TableCell({ columnSpan: 2, borders: { top: { style: BorderStyle.SINGLE, size: 4, color: C.border }, bottom: { style: BorderStyle.SINGLE, size: 4, color: C.border }, left: { style: BorderStyle.SINGLE, size: 4, color: C.border }, right: { style: BorderStyle.SINGLE, size: 4, color: C.border } }, margins: { top: 80, bottom: 80, left: 140, right: 140 }, width: { size: 50, type: WidthType.PERCENTAGE }, children: [new Paragraph({ alignment, children: runs })] });
-        const stripRow = new TableRow({ cantSplit: true, children: [stripCell([new TextRun({ text: wsafe(this.rabCriteriaTitle), font: sans, size: S.stripLabel, ...bnRunExtras(S.stripLabel), bold: true, color: C.black, characterSpacing: isBn ? 0 : 40, allCaps: !isBn })], AlignmentType.LEFT), stripCell([
+        // Left half of the strip carries the "SELECTION CRITERIA" heading — blank
+        // (but still present, so the two-cell geometry holds) while the criteria
+        // toggle is off, leaving only the right half's total + generated date.
+        const stripRow = new TableRow({ cantSplit: true, children: [stripCell([new TextRun({ text: wsafe(this.criteriaStripTitle), font: sans, size: S.stripLabel, ...bnRunExtras(S.stripLabel), bold: true, color: C.black, characterSpacing: isBn ? 0 : 40, allCaps: !isBn })], AlignmentType.LEFT), stripCell([
             new TextRun({ text: wsafe(this.rabTotalText), font: sans, size: S.stripDate, ...bnRunExtras(S.stripDate), bold: true, color: C.black, characterSpacing: isBn ? 0 : 30, allCaps: !isBn }),
             new TextRun({ text: wsafe(`${this.rabGeneratedLabel} · ${this.rabFormattedDate}`), font: sans, size: S.stripDate, ...bnRunExtras(S.stripDate), bold: true, color: C.mutedText, characterSpacing: isBn ? 0 : 30, allCaps: !isBn, break: 1 })
         ], AlignmentType.RIGHT)] });
-        const items = this.criteriaItems;
+        const items = this.visibleCriteriaItems;
         const critRows: TableRow[] = [stripRow];
         for (let i = 0; i < items.length; i += colsPerCritRow) {
             const cells: TableCell[] = [];
@@ -1101,8 +1287,11 @@ export class ReportMemberTypeServingComponent implements OnInit, OnDestroy {
         aoa.push([wsafe(this.rabOrgSubtitle), ...pad(totalCols - 1)]);
         aoa.push([wsafe(this.rabSectionTitle), ...pad(totalCols - 1)]);
         aoa.push(pad(totalCols));
-        aoa.push([`${this.rabCriteriaTitle}  ·  ${this.rabTotalText}  ·  ${this.rabGeneratedLabel}: ${this.rabFormattedDate}`, ...pad(totalCols - 1)]);
-        for (const it of this.criteriaItems) aoa.push([`${it.label}: ${it.value.replace(/\n/g, '; ')}`, ...pad(totalCols - 1)]);
+        // Strip line — the "SELECTION CRITERIA" heading drops out with the toggle,
+        // leaving the total and generated date to stand alone.
+        const stripParts = [this.criteriaStripTitle, this.rabTotalText, `${this.rabGeneratedLabel}: ${this.rabFormattedDate}`].filter((s) => s);
+        aoa.push([stripParts.join('  ·  '), ...pad(totalCols - 1)]);
+        for (const it of this.visibleCriteriaItems) aoa.push([`${it.label}: ${it.value.replace(/\n/g, '; ')}`, ...pad(totalCols - 1)]);
         aoa.push(pad(totalCols));
         aoa.push(headers);
         for (let i = 0; i < this.list.length; i++) {
@@ -1188,7 +1377,10 @@ export class ReportMemberTypeServingComponent implements OnInit, OnDestroy {
         };
 
         const tableBodyHtml = this.list.map((row, i) => `<tr>${visibleCols.map(c => renderCell(row, c, i)).join('')}</tr>`).join('');
-        const items = this.criteriaItems;
+        const items = this.visibleCriteriaItems;
+        const criteriaStripTitleHtml = this.criteriaStripTitle
+            ? `<span class="criteria-strip-title"><span class="diamond-bullet">&#9670;</span> ${esc(this.criteriaStripTitle)}</span>`
+            : '';
         const criteriaGridHtml = items.length ? `<div class="criteria-grid">${items.map(item => `<div class="cell"><div class="cell-label">${esc(item.label)}</div><div class="cell-value">${esc(item.value).replace(/\n/g, '<br>')}</div></div>`).join('')}</div>` : '';
         const confidential = this.rabConfidentialLabel;
         const warning = this.rabWarningLabel;
@@ -1221,6 +1413,9 @@ export class ReportMemberTypeServingComponent implements OnInit, OnDestroy {
     .criteria { margin: 5mm 0 6mm; border: 1px solid #d8d6d0; border-radius: 1mm; overflow: hidden; }
     .criteria-strip { display: flex; justify-content: space-between; align-items: center; padding: 1.5mm 3mm; background: #f4f4f2; border-bottom: 1px solid #d8d6d0; font-size: 8pt; letter-spacing: 0.2em; text-transform: uppercase; color: #4a4a4a; font-weight: 600; ${isBn ? 'letter-spacing:0.04em;text-transform:none;' : ''} }
     .criteria-strip-title { display: inline-flex; gap: 1.5mm; align-items: center; color: #0b0b0b; }
+    /* Heading toggled off — keep the total + date flush right instead of letting
+       space-between pull the lone child to the left. */
+    .criteria-strip.no-title { justify-content: flex-end; }
     .diamond-bullet { color: #b78b3b; }
     .criteria-strip-date { opacity: 0.9; font-weight: 500; display: flex; flex-direction: column; align-items: flex-end; gap: 0.4mm; text-align: right; }
     .criteria-strip-total { color: #b78b3b; font-weight: 700; text-transform: none; letter-spacing: normal; }
@@ -1253,7 +1448,7 @@ export class ReportMemberTypeServingComponent implements OnInit, OnDestroy {
         <h2 class="paper-section">${esc(this.rabSectionTitle)}</h2>
     </header>
     <div class="criteria">
-        <div class="criteria-strip"><span class="criteria-strip-title"><span class="diamond-bullet">&#9670;</span> ${esc(this.rabCriteriaTitle)}</span><span class="criteria-strip-date"><span class="criteria-strip-total">${esc(this.rabTotalText)}</span><span class="criteria-strip-gen">${esc(this.rabGeneratedLabel)} &middot; ${esc(this.rabFormattedDate)}</span></span></div>
+        <div class="criteria-strip${criteriaStripTitleHtml ? '' : ' no-title'}">${criteriaStripTitleHtml}<span class="criteria-strip-date"><span class="criteria-strip-total">${esc(this.rabTotalText)}</span><span class="criteria-strip-gen">${esc(this.rabGeneratedLabel)} &middot; ${esc(this.rabFormattedDate)}</span></span></div>
         ${criteriaGridHtml}
     </div>
     <table><thead>${tableHeaderHtml}</thead><tbody>${tableBodyHtml}</tbody></table>

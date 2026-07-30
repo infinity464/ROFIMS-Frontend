@@ -74,8 +74,9 @@
                         display="chip"
                         placeholder="Select"
                         styleClass="w-full"
-                        [disabled]="selectedOrgIds.length === 0"
                         [filter]="true"
+                        [virtualScroll]="true"
+                        [virtualScrollItemSize]="38"
                         appendTo="body">
                     </p-multiSelect>
                 </div>
@@ -92,6 +93,8 @@
                         styleClass="w-full"
                         [disabled]="selectedRankIds.length > 0"
                         [filter]="true"
+                        [virtualScroll]="true"
+                        [virtualScrollItemSize]="38"
                         appendTo="body">
                     </p-multiSelect>
                 </div>
@@ -106,8 +109,9 @@
                         display="chip"
                         placeholder="Select"
                         styleClass="w-full"
-                        [disabled]="selectedOrgIds.length === 0"
                         [filter]="true"
+                        [virtualScroll]="true"
+                        [virtualScrollItemSize]="38"
                         appendTo="body">
                     </p-multiSelect>
                 </div>
@@ -122,8 +126,9 @@
                         display="chip"
                         placeholder="Select"
                         styleClass="w-full"
-                        [disabled]="selectedCorpsIds.length === 0"
                         [filter]="true"
+                        [virtualScroll]="true"
+                        [virtualScrollItemSize]="38"
                         appendTo="body">
                     </p-multiSelect>
                 </div>
@@ -274,6 +279,11 @@
                 </button>
             }
         </div>
+        <button type="button" class="report-criteria-toggle" [class.is-on]="showCriteria"
+                (click)="toggleCriteria()" [attr.aria-pressed]="showCriteria">
+            <i class="pi" [class.pi-eye]="!showCriteria" [class.pi-eye-slash]="showCriteria" aria-hidden="true"></i>
+            {{ criteriaToggleLabel }}
+        </button>
         <button type="button" class="report-lang-toggle" (click)="toggleLang()">
             {{ lang === 'en' ? 'বাংলা' : 'English' }}
         </button>
@@ -323,7 +333,7 @@
             }
         </header>
 
-        @if (criteriaItems.length > 0) {
+        @if (visibleCriteriaItems.length > 0) {
             <div class="rab-criteria">
                 <div class="rab-criteria-strip">
                     <span class="rab-criteria-strip-title"><span class="rab-diamond-bullet">&#9670;</span> {{ rabCriteriaTitle }}</span>
@@ -333,7 +343,7 @@
                     </span>
                 </div>
                 <div class="rab-criteria-grid">
-                    @for (item of criteriaItems; track item.label) {
+                    @for (item of visibleCriteriaItems; track item.label) {
                         <div class="rab-criteria-cell">
                             <div class="rab-criteria-cell-label">{{ item.label }}</div>
                             <div class="rab-criteria-cell-value">{{ item.value }}</div>
@@ -343,8 +353,10 @@
             </div>
         } @else {
             <div class="rab-criteria rab-criteria-stamp-only">
-                <div class="rab-criteria-strip">
-                    <span class="rab-criteria-strip-title"><span class="rab-diamond-bullet">&#9670;</span> {{ rabCriteriaTitle }}</span>
+                <div class="rab-criteria-strip" [class.no-title]="!criteriaStripTitle">
+                    @if (criteriaStripTitle) {
+                        <span class="rab-criteria-strip-title"><span class="rab-diamond-bullet">&#9670;</span> {{ criteriaStripTitle }}</span>
+                    }
                     <span class="rab-criteria-strip-date">
                         <span class="rab-criteria-strip-total">{{ rabTotalText }}</span>
                         <span class="rab-criteria-strip-gen">{{ rabGeneratedLabel }} &middot; {{ rabFormattedDate }}</span>
