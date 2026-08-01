@@ -203,7 +203,7 @@
 
                     <div class="ns-edit-field">
                         <label class="ns-edit-label">Paragraph</label>
-                        <app-rich-editor [(ngModel)]="editParagraphText"></app-rich-editor>
+                        <textarea pInputText [(ngModel)]="editParagraphText" rows="4" class="w-full"></textarea>
                     </div>
 
                     <!-- ── Approval Chain Edit ── -->
@@ -278,10 +278,10 @@
                     <div class="ns-para-text">{{ noteSheet.note }}</div>
                 </div>
 
-                <!-- ── Extra Paragraph (after Main Text) ── -->
+                <!-- ── Extra Paragraph (after Main Text) — plain text ── -->
                 <div class="ns-para" *ngIf="hasParagraphText">
                     <span class="ns-para-no">{{ serial(paragraphSerialNo) }}</span>
-                    <div class="ns-para-text" [innerHTML]="getParagraphTextSafeHtml()"></div>
+                    <div class="ns-para-text" style="white-space: pre-wrap">{{ getParagraphText() }}</div>
                 </div>
 
                 <!-- ── Initiator area ── -->

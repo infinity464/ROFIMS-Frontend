@@ -348,10 +348,10 @@
             <app-rich-editor formControlName="mainText" height="220px" placeholder="Write content here..."></app-rich-editor>
           </div>
 
-          <!-- Row 7b: Paragraph (full) — extra paragraph shown after Main Text in the document -->
+          <!-- Row 7b: Paragraph (full) — extra plain-text paragraph shown after Main Text in the document -->
           <div class="ns-gen-field ns-gen-full">
             <label class="ns-gen-label">Paragraph</label>
-            <app-rich-editor formControlName="paragraphText" height="150px" placeholder="Optional paragraph shown after Main Text..."></app-rich-editor>
+            <textarea pInputText formControlName="paragraphText" rows="4" class="w-full" placeholder="Optional paragraph shown after Main Text..."></textarea>
           </div>
 
           <!-- Prepared By / Initiator / Recommender / Final Approver -->

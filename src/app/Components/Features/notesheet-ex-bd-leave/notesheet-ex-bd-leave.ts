@@ -340,10 +340,10 @@ export class NotesheetExBdLeaveComponent implements OnInit {
         return isNaN(n) ? null : n;
     }
 
-    /** ParagraphText is stored as a JSON array of HTML blocks (general-notesheet format).
-     *  The Ex-BD form uses a single paragraph, so return the first block; fall back to the
-     *  raw string for legacy/plain values. */
-    private parseParagraphTextHtml(raw: unknown): string {
+    /** ParagraphText is stored as a JSON array (general-notesheet format). The Ex-BD form uses a
+     *  single plain-text paragraph, so return the first block; fall back to the raw string for
+     *  legacy/plain values. */
+    private parseParagraphTextValue(raw: unknown): string {
         const s = (raw == null ? '' : String(raw)).trim();
         if (!s) return '';
         if (s.startsWith('[')) {
@@ -461,7 +461,7 @@ export class NotesheetExBdLeaveComponent implements OnInit {
             totalDays,
             familyMemberIds: familyMemberIds,
             mainText: String(d.mainText ?? d.MainText ?? ''),
-            paragraphText: this.parseParagraphTextHtml(d.paragraphText ?? d.ParagraphText),
+            paragraphText: this.parseParagraphTextValue(d.paragraphText ?? d.ParagraphText),
             preparedBy: String(d.createdBy ?? d.CreatedBy ?? d.lastUpdatedBy ?? d.LastUpdatedBy ?? this.sharedService.getCurrentUser?.() ?? ''),
             preparedByEmployeeId: d.preparedByEmployeeId ?? d.PreparedByEmployeeId ?? null,
             initiatorId: initiatorIdVal,
@@ -1240,10 +1240,10 @@ export class NotesheetExBdLeaveComponent implements OnInit {
             ? (d.textType === 'bn' ? (subjOpt.labelBn || subjOpt.label) : subjOpt.label)
             : '';
 
-        // Extra paragraph after Main Text — stored in NoteSheetInfo.ParagraphText as a JSON
-        // array (same format as the general notesheet) so the preview's parsedParagraphs reads it.
-        const paraHtml = (d.paragraphText != null ? String(d.paragraphText) : '').trim();
-        const paragraphTextJson = this.stripHtml(paraHtml) ? JSON.stringify([paraHtml]) : null;
+        // Extra plain-text paragraph after Main Text — stored in NoteSheetInfo.ParagraphText as a
+        // JSON array (same format as the general notesheet) so the preview's parsedParagraphs reads it.
+        const paraText = (d.paragraphText != null ? String(d.paragraphText) : '').trim();
+        const paragraphTextJson = paraText ? JSON.stringify([paraText]) : null;
 
         const payload: Record<string, unknown> = {
             noteSheetId: 0,
@@ -1406,17 +1406,13 @@ export class NotesheetExBdLeaveComponent implements OnInit {
         return this.sanitizer.bypassSecurityTrustHtml(this.viewNoteSheet?.mainText ?? '');
     }
 
-    /** HTML of the extra paragraph (stored as a JSON array in ParagraphText). */
-    private getViewParagraphHtml(): string {
-        return this.parseParagraphTextHtml(this.viewNoteSheet?.paragraphText ?? this.viewNoteSheet?.ParagraphText);
+    /** Plain text of the extra paragraph (stored as a JSON array in ParagraphText). */
+    getViewParagraphText(): string {
+        return this.parseParagraphTextValue(this.viewNoteSheet?.paragraphText ?? this.viewNoteSheet?.ParagraphText);
     }
 
     hasViewParagraphText(): boolean {
-        return this.stripHtml(this.getViewParagraphHtml()).trim() !== '';
-    }
-
-    getViewParagraphTextSafe(): SafeHtml {
-        return this.sanitizer.bypassSecurityTrustHtml(this.getViewParagraphHtml());
+        return this.getViewParagraphText().trim() !== '';
     }
 
     getViewSupportingDocs(): { fileId: number; fileName: string }[] {
@@ -1457,7 +1453,7 @@ export class NotesheetExBdLeaveComponent implements OnInit {
         this.editSubject = ns?.subject ?? '';
         this.editExBdLeaveSubjectId = ns?.exBdLeaveSubjectId ?? null;
         this.editMainText = ns?.mainText ?? '';
-        this.editParagraphText = this.getViewParagraphHtml();
+        this.editParagraphText = this.getViewParagraphText();
         this.editReferenceNumber = ns?.referenceNumber ?? '';
         this.viewEditing = true;
     }
@@ -1584,8 +1580,8 @@ export class NotesheetExBdLeaveComponent implements OnInit {
         if (this.savingView) return;
         this.savingView = true;
         const resolvedSubject = this.getSubjectLabel(this.editExBdLeaveSubjectId) || this.editSubject;
-        const paraHtml = (this.editParagraphText ?? '').trim();
-        const paragraphTextJson = this.stripHtml(paraHtml).trim() ? JSON.stringify([paraHtml]) : null;
+        const paraText = (this.editParagraphText ?? '').trim();
+        const paragraphTextJson = paraText ? JSON.stringify([paraText]) : null;
         const payload = {
             ...this.viewNoteSheet,
             subject: resolvedSubject,
@@ -1727,7 +1723,7 @@ export class NotesheetExBdLeaveComponent implements OnInit {
             }));
         }
 
-        const paraPlain = this.stripHtml(this.getViewParagraphHtml()).trim();
+        const paraPlain = this.getViewParagraphText().trim();
         if (paraPlain) {
             children.push(new Paragraph({
                 children: [new TextRun({ text: paraPlain, size: 22, font })],
@@ -1814,7 +1810,7 @@ export class NotesheetExBdLeaveComponent implements OnInit {
                 <div style="font-size:10pt;margin-bottom:12px;display:flex;gap:24px;flex-wrap:wrap">${metaParts.join('')}</div>
                 ${subjectHtml}
                 <div style="margin-bottom:12px">${ns.mainText ?? ''}</div>
-                ${this.getViewParagraphHtml() ? `<div style="margin-bottom:12px">${this.getViewParagraphHtml()}</div>` : ''}
+                ${this.getViewParagraphText().trim() ? `<div style="margin-bottom:12px;white-space:pre-wrap">${this.escapeHtml(this.getViewParagraphText())}</div>` : ''}
                 <p style="font-style:italic;color:#64748b;margin-top:16px;padding-top:10px;border-top:1px dashed #ccc">${this.escapeHtml(closingText)}</p>
                 ${sigHtml}
             </div>`;
@@ -1891,7 +1887,7 @@ export class NotesheetExBdLeaveComponent implements OnInit {
     <div class="meta">${metaParts.map(p => `<span>${p}</span>`).join('')}</div>
     ${subjectHtml}
     <div class="content">${ns.mainText ?? ''}</div>
-    ${this.getViewParagraphHtml() ? `<div class="content">${this.getViewParagraphHtml()}</div>` : ''}
+    ${this.getViewParagraphText().trim() ? `<div class="content" style="white-space:pre-wrap">${this.escapeHtml(this.getViewParagraphText())}</div>` : ''}
     <p style="font-style:italic;color:#64748b;margin-top:16px;padding-top:10px;border-top:1px dashed #ccc">${this.escapeHtml(closingText)}</p>
     ${sigHtml}
 </body></html>`;

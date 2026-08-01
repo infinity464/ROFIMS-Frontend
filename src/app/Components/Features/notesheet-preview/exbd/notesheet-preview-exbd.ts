@@ -160,15 +160,10 @@ export class NotesheetPreviewExbdComponent extends NotesheetPreviewBase implemen
         return 2 + (this.noteSheet?.note ? 1 : 0) + (this.hasParagraphText ? 1 : 0);
     }
 
-    /** Safe HTML for the extra paragraph (rich-text) rendered after Main Text. */
-    getParagraphTextSafeHtml(): SafeHtml {
-        const html = this.parsedParagraphs.join('');
-        if (this._paraTextCache?.raw === html) return this._paraTextCache.safe;
-        const safe = this.sanitizer.bypassSecurityTrustHtml(html);
-        this._paraTextCache = { raw: html, safe };
-        return safe;
+    /** Plain text of the extra paragraph rendered after Main Text. */
+    getParagraphText(): string {
+        return this.parsedParagraphs.join('\n\n');
     }
-    private _paraTextCache: { raw: string; safe: SafeHtml } | null = null;
 
     downloadRefFile(file: { fileId: number; fileName: string }): void {
         this.empService.downloadFile(file.fileId).subscribe({
@@ -590,8 +585,8 @@ export class NotesheetPreviewExbdComponent extends NotesheetPreviewBase implemen
         const referenceNumberJson = await this.uploadReferenceParagraphFiles();
 
         const resolvedSubject = this.getSubjectLabel(this.editExBdLeaveSubjectId) || this.editSubject;
-        const paraHtml = (this.editParagraphText ?? '').trim();
-        const paragraphTextJson = this.stripHtml(paraHtml).trim() ? JSON.stringify([paraHtml]) : null;
+        const paraText = (this.editParagraphText ?? '').trim();
+        const paragraphTextJson = paraText ? JSON.stringify([paraText]) : null;
         const payload: Record<string, unknown> = {
             ...this.noteSheet,
             subject: resolvedSubject,
@@ -1437,7 +1432,7 @@ html, body { margin: 0; padding: 0; background: transparent; }
         }
 
         // Extra Paragraph (after Main Text) — same numbered-paragraph style as the Note
-        const paraPlain = this.stripHtml(this.parsedParagraphs.join(' ')).trim();
+        const paraPlain = this.parsedParagraphs.join(' ').trim();
         if (paraPlain) {
             mainChildren.push(new Paragraph({
                 children: [
