@@ -86,7 +86,7 @@
             </div>
           } @else if (hasViewParagraphText()) {
             <div class="ns-preview-body-section">
-              <div class="notesheet-preview-body" [innerHTML]="getViewParagraphTextSafe()"></div>
+              <div class="notesheet-preview-body" style="white-space: pre-wrap">{{ getViewParagraphText() }}</div>
             </div>
           }
 
