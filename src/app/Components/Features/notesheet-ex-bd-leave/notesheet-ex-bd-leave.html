@@ -78,6 +78,18 @@
             }
           </div>
 
+          <!-- Extra paragraph (after main text) -->
+          @if (viewEditing) {
+            <div class="ns-preview-body-section">
+              <div class="ns-preview-body-label">Paragraph</div>
+              <app-rich-editor [(ngModel)]="editParagraphText" height="150px" placeholder="Edit paragraph..."></app-rich-editor>
+            </div>
+          } @else if (hasViewParagraphText()) {
+            <div class="ns-preview-body-section">
+              <div class="notesheet-preview-body" [innerHTML]="getViewParagraphTextSafe()"></div>
+            </div>
+          }
+
           <!-- Supporting Documents -->
           @if (getViewSupportingDocs().length > 0) {
             <div class="ns-preview-docs">
@@ -334,6 +346,12 @@
           <div class="ns-gen-field ns-gen-full">
             <label class="ns-gen-label">Main Text</label>
             <app-rich-editor formControlName="mainText" height="220px" placeholder="Write content here..."></app-rich-editor>
+          </div>
+
+          <!-- Row 7b: Paragraph (full) — extra paragraph shown after Main Text in the document -->
+          <div class="ns-gen-field ns-gen-full">
+            <label class="ns-gen-label">Paragraph</label>
+            <app-rich-editor formControlName="paragraphText" height="150px" placeholder="Optional paragraph shown after Main Text..."></app-rich-editor>
           </div>
 
           <!-- Prepared By / Initiator / Recommender / Final Approver -->

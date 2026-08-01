@@ -36,6 +36,7 @@ import { IdentityUserMappingService } from '@/services/identity-user-mapping.ser
 import { PostingService } from '@/services/posting.service';
 import { ExBdLeaveApplicationService, ExBdLeaveApplicationListViewModel, ExBdLeaveNoteSheetBodyData } from '@/services/ex-bd-leave-application.service';
 import { NoteSheetType, NoteSheetCurrentStatus, ApprovalStatus, NoteSheetOperationType, NoteSheetOperationTypeOptions, CodeType } from '@/models/enums';
+import { encodeNoteSheetId } from '@/shared/utils/notesheet-id-codec';
 import { BanglaNumerals, toBanglaWords, toEnglishWords, formatDateBangla, formatDateEnglish } from '@/Core/i18n/bangla-numerals';
 import { NotesheetApproverSelectComponent } from '@/Components/Common/notesheet-approver-select/notesheet-approver-select';
 import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
@@ -145,6 +146,7 @@ export class NotesheetExBdLeaveComponent implements OnInit {
     editSubject = '';
     editExBdLeaveSubjectId: number | null = null;
     editMainText = '';
+    editParagraphText = '';
     editReferenceNumber = '';
 
     private generatedMainTextBN = '';
@@ -209,6 +211,7 @@ export class NotesheetExBdLeaveComponent implements OnInit {
             totalDays: [0],
             familyMemberIds: [[] as number[]], // selected FMIDs for family list
             mainText: [''],
+            paragraphText: [''], // extra paragraph after Main Text (stored in NoteSheetInfo.ParagraphText)
             preparedBy: [''],
             preparedByEmployeeId: [null as number | null],
             initiatorId: [null as number | null, Validators.required],
@@ -337,6 +340,21 @@ export class NotesheetExBdLeaveComponent implements OnInit {
         return isNaN(n) ? null : n;
     }
 
+    /** ParagraphText is stored as a JSON array of HTML blocks (general-notesheet format).
+     *  The Ex-BD form uses a single paragraph, so return the first block; fall back to the
+     *  raw string for legacy/plain values. */
+    private parseParagraphTextHtml(raw: unknown): string {
+        const s = (raw == null ? '' : String(raw)).trim();
+        if (!s) return '';
+        if (s.startsWith('[')) {
+            try {
+                const arr = JSON.parse(s);
+                if (Array.isArray(arr)) return arr.map((p: any) => String(p ?? '')).find((p) => p.trim() !== '') ?? '';
+            } catch { /* fall through to raw */ }
+        }
+        return s;
+    }
+
     private applyNoteSheetToForm(d: any): void {
         let recommenderIds: number[] = [];
         const rawJson = d.recommendersJson ?? d.RecommendersJson ?? d.recommenderIdsJson ?? d.RecommenderIdsJson;
@@ -443,6 +461,7 @@ export class NotesheetExBdLeaveComponent implements OnInit {
             totalDays,
             familyMemberIds: familyMemberIds,
             mainText: String(d.mainText ?? d.MainText ?? ''),
+            paragraphText: this.parseParagraphTextHtml(d.paragraphText ?? d.ParagraphText),
             preparedBy: String(d.createdBy ?? d.CreatedBy ?? d.lastUpdatedBy ?? d.LastUpdatedBy ?? this.sharedService.getCurrentUser?.() ?? ''),
             preparedByEmployeeId: d.preparedByEmployeeId ?? d.PreparedByEmployeeId ?? null,
             initiatorId: initiatorIdVal,
@@ -1172,7 +1191,7 @@ export class NotesheetExBdLeaveComponent implements OnInit {
                         : (resp?.data?.noteSheetId ?? resp?.data?.NoteSheetId ?? null);
                     // Save → jump straight to preview mode for the saved note-sheet.
                     if (savedId != null && savedId > 0) {
-                        this.router.navigate(['/notesheet-preview/exbd'], { queryParams: { id: savedId } });
+                        this.router.navigate(['/notesheet-preview/exbd'], { queryParams: { id: encodeNoteSheetId(savedId) } });
                     } else {
                         this.router.navigate(['/notesheet-list/draft-ex-bd-leave']);
                     }
@@ -1221,6 +1240,11 @@ export class NotesheetExBdLeaveComponent implements OnInit {
             ? (d.textType === 'bn' ? (subjOpt.labelBn || subjOpt.label) : subjOpt.label)
             : '';
 
+        // Extra paragraph after Main Text — stored in NoteSheetInfo.ParagraphText as a JSON
+        // array (same format as the general notesheet) so the preview's parsedParagraphs reads it.
+        const paraHtml = (d.paragraphText != null ? String(d.paragraphText) : '').trim();
+        const paragraphTextJson = this.stripHtml(paraHtml) ? JSON.stringify([paraHtml]) : null;
+
         const payload: Record<string, unknown> = {
             noteSheetId: 0,
             exBdLeaveApplicationId: d.exBdLeaveApplicationId ?? null,
@@ -1234,6 +1258,7 @@ export class NotesheetExBdLeaveComponent implements OnInit {
             subject: subjectLabel,
             exBdLeaveSubjectId: d.exBdLeaveSubjectId ?? null,
             mainText: d.mainText != null ? String(d.mainText) : '',
+            paragraphText: paragraphTextJson,
             note: null,
             textType: d.textType === 'bn' ? 1 : 0,
             isSecret: d.isSecret ?? false,
@@ -1381,6 +1406,19 @@ export class NotesheetExBdLeaveComponent implements OnInit {
         return this.sanitizer.bypassSecurityTrustHtml(this.viewNoteSheet?.mainText ?? '');
     }
 
+    /** HTML of the extra paragraph (stored as a JSON array in ParagraphText). */
+    private getViewParagraphHtml(): string {
+        return this.parseParagraphTextHtml(this.viewNoteSheet?.paragraphText ?? this.viewNoteSheet?.ParagraphText);
+    }
+
+    hasViewParagraphText(): boolean {
+        return this.stripHtml(this.getViewParagraphHtml()).trim() !== '';
+    }
+
+    getViewParagraphTextSafe(): SafeHtml {
+        return this.sanitizer.bypassSecurityTrustHtml(this.getViewParagraphHtml());
+    }
+
     getViewSupportingDocs(): { fileId: number; fileName: string }[] {
         const json = this.viewNoteSheet?.filesReferences;
         if (!json || typeof json !== 'string') return [];
@@ -1419,6 +1457,7 @@ export class NotesheetExBdLeaveComponent implements OnInit {
         this.editSubject = ns?.subject ?? '';
         this.editExBdLeaveSubjectId = ns?.exBdLeaveSubjectId ?? null;
         this.editMainText = ns?.mainText ?? '';
+        this.editParagraphText = this.getViewParagraphHtml();
         this.editReferenceNumber = ns?.referenceNumber ?? '';
         this.viewEditing = true;
     }
@@ -1545,11 +1584,14 @@ export class NotesheetExBdLeaveComponent implements OnInit {
         if (this.savingView) return;
         this.savingView = true;
         const resolvedSubject = this.getSubjectLabel(this.editExBdLeaveSubjectId) || this.editSubject;
+        const paraHtml = (this.editParagraphText ?? '').trim();
+        const paragraphTextJson = this.stripHtml(paraHtml).trim() ? JSON.stringify([paraHtml]) : null;
         const payload = {
             ...this.viewNoteSheet,
             subject: resolvedSubject,
             exBdLeaveSubjectId: this.editExBdLeaveSubjectId,
             mainText: this.editMainText,
+            paragraphText: paragraphTextJson,
             referenceNumber: this.editReferenceNumber
         };
         const api = `${environment.apis.core}/NoteSheetInfo`;
@@ -1560,6 +1602,7 @@ export class NotesheetExBdLeaveComponent implements OnInit {
                     this.viewNoteSheet.subject = resolvedSubject;
                     this.viewNoteSheet.exBdLeaveSubjectId = this.editExBdLeaveSubjectId;
                     this.viewNoteSheet.mainText = this.editMainText;
+                    this.viewNoteSheet.paragraphText = paragraphTextJson;
                     this.viewNoteSheet.referenceNumber = this.editReferenceNumber;
                     this.viewEditing = false;
                     this.messageService.add({ severity: 'success', summary: 'Success', detail: 'Note sheet updated.' });
@@ -1684,6 +1727,14 @@ export class NotesheetExBdLeaveComponent implements OnInit {
             }));
         }
 
+        const paraPlain = this.stripHtml(this.getViewParagraphHtml()).trim();
+        if (paraPlain) {
+            children.push(new Paragraph({
+                children: [new TextRun({ text: paraPlain, size: 22, font })],
+                spacing: { after: 200 }
+            }));
+        }
+
         children.push(new Paragraph({
             children: [new TextRun({ text: bn ? 'আপনার সদয় অনুমোদনের জন্য উপস্থাপন করা হলো।' : 'Presented for your kind approval.', italics: true, size: 20, font })],
             spacing: { before: 200, after: 300 }
@@ -1763,6 +1814,7 @@ export class NotesheetExBdLeaveComponent implements OnInit {
                 <div style="font-size:10pt;margin-bottom:12px;display:flex;gap:24px;flex-wrap:wrap">${metaParts.join('')}</div>
                 ${subjectHtml}
                 <div style="margin-bottom:12px">${ns.mainText ?? ''}</div>
+                ${this.getViewParagraphHtml() ? `<div style="margin-bottom:12px">${this.getViewParagraphHtml()}</div>` : ''}
                 <p style="font-style:italic;color:#64748b;margin-top:16px;padding-top:10px;border-top:1px dashed #ccc">${this.escapeHtml(closingText)}</p>
                 ${sigHtml}
             </div>`;
@@ -1839,6 +1891,7 @@ export class NotesheetExBdLeaveComponent implements OnInit {
     <div class="meta">${metaParts.map(p => `<span>${p}</span>`).join('')}</div>
     ${subjectHtml}
     <div class="content">${ns.mainText ?? ''}</div>
+    ${this.getViewParagraphHtml() ? `<div class="content">${this.getViewParagraphHtml()}</div>` : ''}
     <p style="font-style:italic;color:#64748b;margin-top:16px;padding-top:10px;border-top:1px dashed #ccc">${this.escapeHtml(closingText)}</p>
     ${sigHtml}
 </body></html>`;

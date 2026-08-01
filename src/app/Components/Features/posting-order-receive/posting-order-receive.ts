@@ -17,6 +17,7 @@ import { SharedService } from '@/shared/services/shared-service';
 import { FlexibleDateDirective } from '@/shared/directives/flexible-date.directive';
 import { UserMenuService } from '@/services/user-menu.service';
 import { PostingReceiveViewDto } from '@/models/posting.model';
+import { encodeNoteSheetId } from '@/shared/utils/notesheet-id-codec';
 
 interface PostingOrderGroup {
     postingOrderMasterId: number;
@@ -244,7 +245,7 @@ export class PostingOrderReceiveComponent implements OnInit {
 
     openNotesheet(order: PostingOrderGroup): void {
         if (order.noteSheetId) {
-            window.open(`/notesheet-preview/posting?id=${order.noteSheetId}`, '_blank');
+            window.open(`/notesheet-preview/posting?id=${encodeNoteSheetId(order.noteSheetId)}`, '_blank');
         }
     }
 

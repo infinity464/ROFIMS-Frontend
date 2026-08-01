@@ -31,6 +31,7 @@ import { DraftInterPostingDetailDto, DraftInterPostingMasterDto } from '@/models
 import { IdentityUserMappingService } from '@/services/identity-user-mapping.service';
 import { NoteSheetEditCacheService } from '@/services/note-sheet-edit-cache.service';
 import { NoteSheetType, NoteSheetOperationType, NoteSheetOperationTypeOptions, ApprovalStatus, CodeType } from '@/models/enums';
+import { encodeNoteSheetId } from '@/shared/utils/notesheet-id-codec';
 import { MasterBasicSetupService } from '@/Components/basic-setup/shared/services/MasterBasicSetupService';
 import { NoteSheetSubjectService, NoteSheetSubjectModel } from '@/Components/basic-setup/shared/services/NoteSheetSubjectService';
 import { NotesheetApproverSelectComponent } from '@/Components/Common/notesheet-approver-select/notesheet-approver-select';
@@ -545,7 +546,7 @@ export class InterPostingNotesheetGenerateComponent implements OnInit {
                             : (resp?.data?.noteSheetId ?? resp?.data?.NoteSheetId ?? null);
                         // Save → jump straight to preview mode for the saved note-sheet.
                         if (savedId != null && savedId > 0) {
-                            this.router.navigate(['/notesheet-preview/posting'], { queryParams: { id: savedId } });
+                            this.router.navigate(['/notesheet-preview/posting'], { queryParams: { id: encodeNoteSheetId(savedId) } });
                         } else if (this.editMode) {
                             this.router.navigate(['/notesheet-list/draft-inter-posting']);
                         } else {

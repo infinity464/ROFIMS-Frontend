@@ -20,6 +20,7 @@ import {
 } from 'docx';
 import { saveAs } from 'file-saver';
 import { normalizeRab } from '@/shared/utils/bangla-text.util';
+import { decodeNoteSheetId } from '@/shared/utils/notesheet-id-codec';
 
 export interface NoteSheetInfoFull {
     noteSheetId: number;
@@ -149,9 +150,10 @@ export abstract class NotesheetPreviewBase implements OnInit {
     ngOnInit(): void {
         this.loadLookups();
         this.route.queryParams.subscribe(params => {
-            const id = params['id'];
-            if (id) {
-                const newId = +id;
+            // The URL carries an obfuscated token (see notesheet-id-codec); decode to the
+            // real id. Plain numeric ids still resolve for backward-compat.
+            const newId = decodeNoteSheetId(params['id']);
+            if (newId && newId > 0) {
                 if (newId === this._lastLoadedId) return;
                 this._lastLoadedId = newId;
                 this.noteSheetId = newId;

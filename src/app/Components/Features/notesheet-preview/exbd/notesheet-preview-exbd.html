@@ -201,6 +201,11 @@
                         <app-rich-editor [(ngModel)]="editMainText"></app-rich-editor>
                     </div>
 
+                    <div class="ns-edit-field">
+                        <label class="ns-edit-label">Paragraph</label>
+                        <app-rich-editor [(ngModel)]="editParagraphText"></app-rich-editor>
+                    </div>
+
                     <!-- ── Approval Chain Edit ── -->
                     <div class="ns-approval-edit">
                         <h4 class="ns-approval-edit-title">Approval Chain</h4>
@@ -271,6 +276,12 @@
                 <div class="ns-para" *ngIf="noteSheet.note">
                     <span class="ns-para-no">{{ serial(2) }}</span>
                     <div class="ns-para-text">{{ noteSheet.note }}</div>
+                </div>
+
+                <!-- ── Extra Paragraph (after Main Text) ── -->
+                <div class="ns-para" *ngIf="hasParagraphText">
+                    <span class="ns-para-no">{{ serial(paragraphSerialNo) }}</span>
+                    <div class="ns-para-text" [innerHTML]="getParagraphTextSafeHtml()"></div>
                 </div>
 
                 <!-- ── Initiator area ── -->

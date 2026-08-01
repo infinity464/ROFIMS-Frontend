@@ -146,9 +146,29 @@ export class NotesheetPreviewExbdComponent extends NotesheetPreviewBase implemen
         return String.fromCharCode(97 + index) + '.';
     }
 
-    get approverStartSerial(): number {
-        return this.noteSheet?.note ? 3 : 2;
+    /** True when this note-sheet has an extra paragraph (after Main Text) to render. */
+    get hasParagraphText(): boolean {
+        return this.parsedParagraphs.length > 0;
     }
+
+    /** Serial number for the extra paragraph: right after Main Text (১।) and the optional Note. */
+    get paragraphSerialNo(): number {
+        return 2 + (this.noteSheet?.note ? 1 : 0);
+    }
+
+    get approverStartSerial(): number {
+        return 2 + (this.noteSheet?.note ? 1 : 0) + (this.hasParagraphText ? 1 : 0);
+    }
+
+    /** Safe HTML for the extra paragraph (rich-text) rendered after Main Text. */
+    getParagraphTextSafeHtml(): SafeHtml {
+        const html = this.parsedParagraphs.join('');
+        if (this._paraTextCache?.raw === html) return this._paraTextCache.safe;
+        const safe = this.sanitizer.bypassSecurityTrustHtml(html);
+        this._paraTextCache = { raw: html, safe };
+        return safe;
+    }
+    private _paraTextCache: { raw: string; safe: SafeHtml } | null = null;
 
     downloadRefFile(file: { fileId: number; fileName: string }): void {
         this.empService.downloadFile(file.fileId).subscribe({
@@ -201,6 +221,7 @@ export class NotesheetPreviewExbdComponent extends NotesheetPreviewBase implemen
     editExBdLeaveSubjectId: number | null = null;
     editReferenceParagraphs: { text: string; fileRows: FileRowData[] }[] = [{ text: '', fileRows: [] }];
     editMainText = '';
+    editParagraphText = '';
     editNote = '';
     editNoteSheetDate: Date | null = null;
     editInitiatorId: number | null = null;
@@ -467,6 +488,7 @@ export class NotesheetPreviewExbdComponent extends NotesheetPreviewBase implemen
         this.editExBdLeaveSubjectId = ns.exBdLeaveSubjectId ?? null;
         this.editReferenceParagraphs = this.parseReferenceParagraphs(ns.referenceNumber);
         this.editMainText = ns.mainText ?? '';
+        this.editParagraphText = this.parsedParagraphs[0] ?? '';
         this.editNote = ns.note ?? '';
         this.editNoteSheetDate = ns.noteSheetDate ? new Date(ns.noteSheetDate) : null;
         this.editTextType = (ns.textType ?? 0) === 1 ? 'bn' : 'en';
@@ -568,12 +590,15 @@ export class NotesheetPreviewExbdComponent extends NotesheetPreviewBase implemen
         const referenceNumberJson = await this.uploadReferenceParagraphFiles();
 
         const resolvedSubject = this.getSubjectLabel(this.editExBdLeaveSubjectId) || this.editSubject;
+        const paraHtml = (this.editParagraphText ?? '').trim();
+        const paragraphTextJson = this.stripHtml(paraHtml).trim() ? JSON.stringify([paraHtml]) : null;
         const payload: Record<string, unknown> = {
             ...this.noteSheet,
             subject: resolvedSubject,
             exBdLeaveSubjectId: this.editExBdLeaveSubjectId,
             referenceNumber: referenceNumberJson,
             mainText: this.editMainText,
+            paragraphText: paragraphTextJson,
             note: this.editNote || null,
             textType: this.editTextType === 'bn' ? 1 : 0,
             noteSheetOperationType: this.editOperationType,
@@ -1408,6 +1433,18 @@ html, body { margin: 0; padding: 0; background: transparent; }
                     new TextRun({ text: model.note, size: contentSize, sizeComplexScript: csContent, font, language: lang })
                 ],
                 spacing: { before: 80, after: 80 }
+            }));
+        }
+
+        // Extra Paragraph (after Main Text) — same numbered-paragraph style as the Note
+        const paraPlain = this.stripHtml(this.parsedParagraphs.join(' ')).trim();
+        if (paraPlain) {
+            mainChildren.push(new Paragraph({
+                children: [
+                    new TextRun({ text: `${this.serial(this.paragraphSerialNo)}  `, bold: true, size: contentSize, sizeComplexScript: csContent, font, language: lang }),
+                    new TextRun({ text: paraPlain, size: contentSize, sizeComplexScript: csContent, font, language: lang })
+                ],
+                spacing: { before: 80, after: 80 }, alignment: AlignmentType.JUSTIFIED
             }));
         }
 
