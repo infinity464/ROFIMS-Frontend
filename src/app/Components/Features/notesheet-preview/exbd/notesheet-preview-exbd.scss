@@ -36,7 +36,7 @@
    the text; `:host` scopes it to this screen only. The matching PDF/Print rule
    lives in buildJsReportPdf() (`.pdf-flow .ns-main-col`). */
 :host .ns-main-col {
-    padding-left: 5px;
+    padding-left: 10px;   /* small gap so text doesn't touch the left border line */
     padding-right: 5px;   /* small gap so justified text doesn't touch the right border */
 }
 
@@ -62,7 +62,7 @@
     .ns-sig-appoint,
     .ns-sig-date { font-size: 10pt; }
 
-    /* Tighter serial indents. */
-    .ns-para-no    { margin-right: 1em; }     /* was 2em — tighter ১। indent */
-    .ns-ref-serial { margin-right: 0.5em; }   /* was 1em — tighter ক. indent */
+    /* Tighter serial indents; serials (১। ২। and ক। খ।) are NOT bold. */
+    .ns-para-no    { margin-right: 1em; font-weight: normal; }     /* was 2em — tighter ১। indent */
+    .ns-ref-serial { margin-right: 0.5em; font-weight: normal; }   /* was 1em — tighter ক. indent */
 }

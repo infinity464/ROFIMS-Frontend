@@ -891,9 +891,19 @@ export class NotesheetExBdLeaveComponent implements OnInit {
             familySectionEN = ` self and family members (${bodyData.familyMembersDisplayEN})`;
         }
 
-        // Person identifier: Prefix → ServiceId → Name (empties skipped to avoid stray spaces)
-        const personBN = [prefixBN, BanglaNumerals.toBangla(serviceId), nameBN].filter(Boolean).join(' ');
-        const personEN = [prefixEN, serviceId, nameEN].filter(Boolean).join(' ');
+        // Title suffixes after the name (like the profile header): special qualifications
+        // (e.g. "psc") then corps (e.g. "Arty") → "মোঃ জয়নুল আবেদীন, psc, Arty".
+        const suffixBN = [bodyData.specialQualificationsBN, bodyData.corpsBN].filter(Boolean).join(', ');
+        const suffixEN = [bodyData.specialQualificationsEN, bodyData.corpsEN].filter(Boolean).join(', ');
+        const nameWithSuffixBN = suffixBN ? `${nameBN}, ${suffixBN}` : nameBN;
+        const nameWithSuffixEN = suffixEN ? `${nameEN}, ${suffixEN}` : nameEN;
+
+        // Person identifier: "Prefix-ServiceId Name, psc, Arty" — prefix & service id joined by a
+        // dash (e.g. বিএ-৭৪৪২ মোঃ কামরুল হাসান); empties skipped to avoid stray spaces/dashes.
+        const prefixSvcBN = [prefixBN, BanglaNumerals.toBangla(serviceId)].filter(Boolean).join('-');
+        const prefixSvcEN = [prefixEN, serviceId].filter(Boolean).join('-');
+        const personBN = [prefixSvcBN, nameWithSuffixBN].filter(Boolean).join(' ');
+        const personEN = [prefixSvcEN, nameWithSuffixEN].filter(Boolean).join(' ');
 
         const dynamicBN = `র‍্যাব প্রেষণে নিয়োজিত বর্তমানে ${rabUnitBN} এ কর্মরত ${personBN} এর ${purposeBN} জন্য${familySectionBN} আগামী ${formatDateBangla(fromDate)} হতে ${formatDateBangla(toDate)} তারিখ পর্যন্ত ${daysBN} (${daysWordsBN}) দিন অথবা উল্লিখিত সময়ের মধ্যে যাত্রার তারিখ হতে ${daysBN} (${daysWordsBN}) দিন ${countriesBN} গমনের জন্য অর্জিত `;
 

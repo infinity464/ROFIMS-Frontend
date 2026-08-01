@@ -18,6 +18,9 @@ import { DialogModule } from 'primeng/dialog';
 import { TagModule } from 'primeng/tag';
 import { CheckboxModule } from 'primeng/checkbox';
 import { PostingService } from '@/services/posting.service';
+import { IdentityService } from '@/services/identity.service';
+import { IdentityUserMappingService } from '@/services/identity-user-mapping.service';
+import { buildApprovalPersonOptions } from '@/shared/utils/approval-person-options.util';
 import { OrgService } from '@/Components/basic-setup/org-tree/org.service';
 import { ServingMembersService } from '@/services/serving-members.service';
 import { EmpService } from '@/services/emp-service';
@@ -272,7 +275,9 @@ export class PostingOrderPreviewPageComponent implements OnInit {
         private jsreportService: JsReportService,
         private masterBasicSetupService: MasterBasicSetupService,
         private sharedService: SharedService,
-        private memberTypeAccess: IdentityUserMemberTypeAccessService
+        private memberTypeAccess: IdentityUserMemberTypeAccessService,
+        private identityService: IdentityService,
+        private identityMappingService: IdentityUserMappingService
     ) {}
 
     /** Logged-in user for createdBy / updatedBy. Falls back to 'system' only when nobody is signed in. */
@@ -1099,9 +1104,17 @@ export class PostingOrderPreviewPageComponent implements OnInit {
     private loadApprovalEmployees(): void {
         if (this.approvalEmployees.length > 0) return;
         this.loadingApprovalEmployees = true;
-        this.postingService.getApprovalEmployees().subscribe({
-            next: (list) => {
-                this.approvalEmployees = list ?? [];
+        // Same source + filter as the generate screens (identity users + mappings →
+        // buildApprovalPersonOptions), so edit mode offers the exact same full dropdown.
+        forkJoin({
+            users: this.identityService.getAllUsers(),
+            mappings: this.identityMappingService.getMappings()
+        }).subscribe({
+            next: ({ users, mappings }) => {
+                this.approvalEmployees = buildApprovalPersonOptions(
+                    Array.isArray(users) ? users : [],
+                    Array.isArray(mappings) ? mappings : []
+                );
                 this.loadingApprovalEmployees = false;
             },
             error: () => { this.loadingApprovalEmployees = false; }
@@ -1268,6 +1281,20 @@ export class PostingOrderPreviewPageComponent implements OnInit {
 
     removeEditFooterParagraph(index: number): void {
         this.editFooterParagraphs.splice(index, 1);
+    }
+
+    /** Reorder অনুলিপি rows in edit mode. Order is the array order, which buildSavePayload
+     *  serializes into footerText, so the new order persists to the DB on save. */
+    moveEditFooterUp(index: number): void {
+        if (index <= 0) return;
+        [this.editFooterParagraphs[index - 1], this.editFooterParagraphs[index]] =
+            [this.editFooterParagraphs[index], this.editFooterParagraphs[index - 1]];
+    }
+
+    moveEditFooterDown(index: number): void {
+        if (index >= this.editFooterParagraphs.length - 1) return;
+        [this.editFooterParagraphs[index], this.editFooterParagraphs[index + 1]] =
+            [this.editFooterParagraphs[index + 1], this.editFooterParagraphs[index]];
     }
 
     onEditFooterUnitChange(index: number): void {

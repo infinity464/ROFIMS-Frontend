@@ -227,6 +227,10 @@ export interface ExBdLeaveNoteSheetBodyData {
     prefixBN: string | null;
     placementEN: string | null;
     placementBN: string | null;
+    corpsEN: string | null;
+    corpsBN: string | null;
+    specialQualificationsEN: string | null;
+    specialQualificationsBN: string | null;
     visitTypeNameEN: string | null;
     visitTypeNameBN: string | null;
     countriesDisplayEN: string | null;

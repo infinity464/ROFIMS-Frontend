@@ -392,6 +392,10 @@
                             [style]="{ 'min-width': '160px' }"
                             (onChange)="onEditFooterUnitChange(i)"
                         ></p-select>
+                        <div class="flex flex-column gap-1">
+                            <p-button icon="pi pi-arrow-up" [rounded]="true" [text]="true" size="small" [disabled]="i === 0" pTooltip="{{ isBangla ? 'উপরে' : 'Move up' }}" (onClick)="moveEditFooterUp(i)"></p-button>
+                            <p-button icon="pi pi-arrow-down" [rounded]="true" [text]="true" size="small" [disabled]="i === editFooterParagraphs.length - 1" pTooltip="{{ isBangla ? 'নিচে' : 'Move down' }}" (onClick)="moveEditFooterDown(i)"></p-button>
+                        </div>
                         <p-button
                             icon="pi pi-times"
                             severity="danger"
