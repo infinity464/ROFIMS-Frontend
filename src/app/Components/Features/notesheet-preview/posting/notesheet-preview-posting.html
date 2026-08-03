@@ -70,6 +70,9 @@
     >
         <span style="font-weight: 600; font-size: 0.85rem"><i class="pi pi-cog" style="margin-right: 0.3rem"></i>Export:</span>
         <p-select [options]="pageSizeOptions" [(ngModel)]="selectedPageSize" (onChange)="onPageSizeChange()" optionLabel="label" optionValue="value" [style]="{'width': '90px'}"></p-select>
+        <!-- Font size of the section after the table. Sizing it down usually pulls the
+             whole trailing block back onto the previous page and saves a sheet. -->
+        <p-select [options]="tailFontOptions" [(ngModel)]="tailFontClass" optionLabel="label" optionValue="value" [style]="{'width': '120px'}" pTooltip="শেষাংশের (নোট, অনুচ্ছেদ, স্বাক্ষর) ফন্ট সাইজ"></p-select>
         <ng-container *ngIf="isPostingType() && postingEmployees.length > 0">
             <span style="border-left: 1px solid var(--surface-border); height: 1.5rem"></span>
             <span style="display: inline-flex; align-items: center; gap: 0.3rem"><p-checkbox [(ngModel)]="showRankQualifications" [binary]="true" inputId="chkRankQ"></p-checkbox><label for="chkRankQ" style="cursor: pointer">পদবি বিবরণ</label></span>
@@ -524,7 +527,9 @@
     <!-- ══════════════════════════════════════════════════════════ -->
     <ng-template #viewContent>
         <ng-container *ngIf="noteSheet">
-            <div class="ns-doc-box">
+            <!-- tailFontClass scales the trailing section only; it rides on the doc box so
+                 the PDF snapshot (which clones this subtree) carries it too. -->
+            <div class="ns-doc-box" [ngClass]="tailFontClass">
                 <div class="ns-main-col">
                     <div class="ns-title-area">
                         <div class="ns-title-en">NOTE SHEET</div>
@@ -625,7 +630,7 @@
 
                     <!-- ── Paragraphs (after employee table) ── -->
                     <ng-container *ngIf="parsedParagraphs.length > 0">
-                        <div class="ns-para" *ngFor="let para of parsedParagraphs; let pi = index">
+                        <div class="ns-para ns-para--tail" *ngFor="let para of parsedParagraphs; let pi = index">
                             <span class="ns-para-no">{{ serial(pi + 2) }}</span>
                             <div class="ns-para-text">{{ para }}</div>
                         </div>
@@ -643,14 +648,16 @@
                     </div>
 
                     <!-- ── Approver Sections ── -->
-                    <div class="ns-approver-section" *ngFor="let approver of approversDetails; let i = index">
+                    <div class="ns-approver-section" *ngFor="let approver of approversDetails; let i = index" [class.ns-approver-section--empty]="!hasApproverSigArea(approver)">
                         <div class="ns-approver-role">{{ isEnglish() ? approver.appointment : (approver.appointmentBN || approver.appointment) }}</div>
-                        <div class="ns-approver-body" [class.ns-approver-body--left]="i >= approversDetails.length - 2">
+                        <div class="ns-approver-body" [class.ns-approver-body--left]="i >= approversDetails.length - 2" [class.ns-approver-body--empty]="!hasApproverSigArea(approver)">
                             <div class="ns-approver-left">
                                 <span class="ns-para-no">{{ serial(i + 2 + parsedParagraphs.length) }}</span>
                                 <span class="ns-approver-remark" *ngIf="getApproverRemark(approver.step)">{{ getApproverRemark(approver.step) }}</span>
                             </div>
-                            <div class="ns-approver-sig-area">
+                            <!-- Rendered only when there is a signature or a date — an approver who
+                                 has not acted yet leaves no empty box behind the serial number. -->
+                            <div class="ns-approver-sig-area" *ngIf="hasApproverSigArea(approver)">
                                 <img *ngIf="showSignatureImage && shouldShowSignature(approver.step) && approver.signatureDataUrl" [src]="approver.signatureDataUrl" class="ns-sig-img" alt="Signature" />
                                 <div class="ns-sig-date" *ngIf="getApproverDate(approver.step)">{{ getApproverDate(approver.step) }}</div>
                             </div>

@@ -15,7 +15,7 @@ import { SelectModule } from 'primeng/select';
 import { CheckboxModule } from 'primeng/checkbox';
 import { DatePickerModule } from 'primeng/datepicker';
 import { TreeSelectModule } from 'primeng/treeselect';
-import { NotesheetSignatoryComponent } from '@/Components/Common/notesheet-signatory/notesheet-signatory';
+import { NotesheetSignatoryComponent, SignatoryDetail } from '@/Components/Common/notesheet-signatory/notesheet-signatory';
 import { RichEditorComponent } from '@/Components/Common/rich-editor/rich-editor';
 import { FileReferencesFormComponent, FileRowData } from '@/Components/Common/file-references-form/file-references-form';
 import { NotesheetApproverSelectComponent } from '@/Components/Common/notesheet-approver-select/notesheet-approver-select';
@@ -158,6 +158,29 @@ export class NotesheetPreviewPostingComponent extends NotesheetPreviewBase imple
         { label: 'Legal', value: 'Legal' }
     ];
     selectedPageSize = 'Legal';
+
+    // ── Trailing-section font size ────────────────────────────
+    /** The section after the employee table — নোটঃ, the paragraphs, the initiator
+     *  signature and the approver blocks — is held together on one page, so when it
+     *  no longer fits it moves to a page of its own and leaves a gap behind. Sizing
+     *  it down a step or two is usually enough to pull it back onto the previous
+     *  page and drop the extra sheet entirely. The value is a class applied to the
+     *  document box; '' keeps the default 10pt/9pt. See the $tail-scales map in the
+     *  component SCSS — the body pt in each label is what the class produces. */
+    tailFontOptions = [
+        { label: 'শেষাংশ ১১', value: 'ns-tail-fs-110' },
+        { label: 'শেষাংশ ১০.৫', value: 'ns-tail-fs-105' },
+        { label: 'শেষাংশ ১০', value: 'ns-tail-fs-100' },
+        { label: 'শেষাংশ ৯.৭৫', value: 'ns-tail-fs-975' },
+        { label: 'শেষাংশ ৯.৫', value: 'ns-tail-fs-95' },
+        { label: 'শেষাংশ ৯.২৫', value: 'ns-tail-fs-925' },
+        { label: 'শেষাংশ ৯', value: 'ns-tail-fs-90' },
+        { label: 'শেষাংশ ৮.৫', value: 'ns-tail-fs-85' },
+        { label: 'শেষাংশ ৮', value: 'ns-tail-fs-80' }
+    ];
+    /** Default = the sheet's normal 10pt/9pt. A real class rather than '' so the
+     *  dropdown shows its label instead of falling back to the empty placeholder. */
+    tailFontClass = 'ns-tail-fs-100';
 
     // ── Export detail toggles ──────────────────────────────────
     showRankQualifications = true;
@@ -847,11 +870,21 @@ export class NotesheetPreviewPostingComponent extends NotesheetPreviewBase imple
         return index;
     }
 
+    /** True when an approver's signature area has something to render (signature
+     *  image or approval date). When false the area is dropped entirely so an
+     *  un-acted approver (e.g. the last one, still pending) leaves no blank box. */
+    hasApproverSigArea(approver: SignatoryDetail): boolean {
+        const hasImg = this.showSignatureImage && this.shouldShowSignature(approver.step) && !!approver.signatureDataUrl;
+        return hasImg || !!this.getApproverDate(approver.step);
+    }
+
     private computePageContentHeightPx(): number {
-        // Visible content height inside the page viewport, per page size:
-        //   Legal: 355.6mm paper − 14mm top − 20mm bottom padding − 2×4mm insets = 313.6mm
-        //   A4:    297mm   paper − 14mm top − 20mm bottom padding − 2×4mm insets = 255mm
-        const visibleH = this.selectedPageSize === 'Legal' ? '313.6mm' : '255mm';
+        // Visible content height inside the page viewport, per page size. The paper
+        // padding matches the PDF's @page margins (7mm top / 10mm bottom — see the
+        // page-margin block in the component SCSS and buildJsReportPdf):
+        //   Legal: 355.6mm paper − 7mm top − 10mm bottom padding − 2×4mm insets = 330.6mm
+        //   A4:    297mm   paper − 7mm top − 10mm bottom padding − 2×4mm insets = 272mm
+        const visibleH = this.selectedPageSize === 'Legal' ? '330.6mm' : '272mm';
         const testDiv = document.createElement('div');
         testDiv.style.cssText = `position:absolute;left:-9999px;width:1mm;height:${visibleH};visibility:hidden`;
         document.body.appendChild(testDiv);
@@ -868,8 +901,39 @@ export class NotesheetPreviewPostingComponent extends NotesheetPreviewBase imple
         return heightPx;
     }
 
+    /**
+     * Bottom-most pixel that renders something: a text line, a signature image or a
+     * table border. Everything below it in the measured flow is blank padding, so
+     * pagination can safely stop there. Returns 0 when nothing was found, letting the
+     * caller fall back to the raw scrollHeight.
+     */
+    private measureRenderedBottom(container: HTMLElement, containerTop: number): number {
+        let bottom = 0;
+
+        const walker = document.createTreeWalker(container, NodeFilter.SHOW_TEXT);
+        let textNode: Node | null;
+        while ((textNode = walker.nextNode())) {
+            if (!textNode.textContent?.trim()) continue;
+            const range = document.createRange();
+            range.selectNodeContents(textNode);
+            const rects = range.getClientRects();
+            for (let r = 0; r < rects.length; r++) {
+                if (rects[r].height > 0) bottom = Math.max(bottom, rects[r].bottom - containerTop);
+            }
+        }
+
+        // Images (signatures) carry no text, and the employee table's bottom border is
+        // drawn below its last line of text — both have to be inside the last page.
+        for (const el of Array.from(container.querySelectorAll('img, table')) as HTMLElement[]) {
+            const rect = el.getBoundingClientRect();
+            if (rect.height > 0) bottom = Math.max(bottom, rect.bottom - containerTop);
+        }
+
+        return bottom;
+    }
+
     /** Build page offsets — avoids splitting text lines and keep-together blocks */
-    private calculatePageOffsets(totalHeight: number): number[] {
+    private calculatePageOffsets(measuredHeight: number): number[] {
         const container = this.contentMeasure?.nativeElement;
         const pageH = this.pageContentHeightPx;
         if (!container || pageH <= 0) {
@@ -878,6 +942,15 @@ export class NotesheetPreviewPostingComponent extends NotesheetPreviewBase imple
         }
 
         const containerTop = container.getBoundingClientRect().top;
+
+        // Paginate against the bottom of the last thing actually drawn, not the raw
+        // scrollHeight. Trailing empty space — block padding, the approver section's
+        // reserved signature height — adds to scrollHeight while showing nothing, and
+        // a few such pixels spilling past the final break earn a whole extra sheet
+        // that renders blank. Chromium's own PDF pagination ignores them, which is why
+        // the Print Preview never grew that page.
+        const drawnBottom = this.measureRenderedBottom(container, containerTop);
+        const totalHeight = drawnBottom > 0 ? Math.min(measuredHeight, drawnBottom) : measuredHeight;
 
         // Measure title block height (title is rendered outside viewport on page 1)
         const titleEl = container.querySelector('.ns-title-block') as HTMLElement;
@@ -1664,10 +1737,10 @@ export class NotesheetPreviewPostingComponent extends NotesheetPreviewBase imple
             rowWrap.classList.add('ns-tail-row-table');
             rowWrap.appendChild(rowTable);
             tail.insertBefore(rowWrap, tail.firstChild);
-            // The PDF page holds more than the web page (5/7/10mm margins vs
-            // 10/14/20mm), so break-inside alone would often leave room for the
-            // one-row table on the page the main table ends — the two tables would
-            // then abut. Force the break the web view already decided on.
+            // The PDF page still holds a little more than the web page (the web
+            // viewport also spends 2×4mm on its inset bands), so break-inside alone
+            // can leave room for the one-row table on the page the main table ends —
+            // the two tables would then abut. Force the break the web view decided on.
             tail.className += ' ns-tail-keep--page';
         }
 
@@ -1688,9 +1761,9 @@ export class NotesheetPreviewPostingComponent extends NotesheetPreviewBase imple
         const fontCss = await this.embedBanglaFontCss();
         const body = this.buildPdfBodyHtml();
         const isLegal = this.selectedPageSize === 'Legal';
-        // Page margins are HALF the on-screen .a4-paper insets (5mm side / 7mm top /
-        // 10mm bottom instead of 10 / 14 / 20) so the printed sheet uses more of the
-        // page. The text column widens to match: Legal 215.9 - 2*5 = 205.9mm.
+        // Page margins — the on-screen .a4-paper carries the SAME insets (see the
+        // page-margin block in the component SCSS), so the preview and the print show
+        // the same white margin and the same text column: Legal 215.9 - 2*5 = 205.9mm.
         const pageWidth = isLegal ? '215.9mm' : '210mm';
         const pageHeight = isLegal ? '355.6mm' : '297mm';
         const padX = 5; // mm — horizontal page margin
@@ -1776,6 +1849,11 @@ html, body { margin: 0; padding: 0; background: transparent; }
 .pdf-flow .ns-sig-rank { font-size: 10pt !important; }
 
 .pdf-flow .ns-closing-text { font-size: 10pt !important; }
+
+/* Trailing-section font size picked in the export bar. The tier above pins the
+   whole block to 10pt !important, so the chosen scale has to be restated at the
+   same tier — the .ns-doc-box class itself rides along in the snapshot. */
+${this.buildTailFontCss()}
 
 .pdf-flow .ns-members-preview-table,
 .pdf-flow .ns-members-preview-table th,
@@ -1937,6 +2015,49 @@ html, body { margin: 0; padding: 0; background: transparent; }
      * those @font-face fonts must be system-installed where Chromium runs, or
      * bundled locally, to render identically.
      */
+    /** Scale behind each tailFontOptions value — must track the $tail-scales map in
+     *  the component SCSS, which drives the same classes on screen. */
+    private readonly tailFontScales: Record<string, number> = {
+        'ns-tail-fs-100': 1,
+        'ns-tail-fs-110': 1.1,
+        'ns-tail-fs-105': 1.05,
+        'ns-tail-fs-975': 0.975,
+        'ns-tail-fs-95': 0.95,
+        'ns-tail-fs-925': 0.925,
+        'ns-tail-fs-90': 0.9,
+        'ns-tail-fs-85': 0.85,
+        'ns-tail-fs-80': 0.8
+    };
+
+    /**
+     * PDF-side restatement of the selected trailing-section font size.
+     *
+     * On screen the block mixes 10pt body text with 9pt signature lines, but the
+     * PDF tier above flattens all of it to 10pt, so one size covers every selector
+     * here. Returns '' for the default, leaving the tier untouched.
+     */
+    private buildTailFontCss(): string {
+        const scale = this.tailFontScales[this.tailFontClass];
+        if (!scale) return '';
+        const size = +(10 * scale).toFixed(2);
+        const selectors = [
+            '.ns-note',
+            '.ns-para--tail',
+            '.ns-initiator-area',
+            '.ns-approver-left',
+            '.ns-approver-remark',
+            '.ns-approver-role',
+            '.ns-sig-name',
+            '.ns-sig-rank',
+            '.ns-sig-paren',
+            '.ns-sig-appoint',
+            '.ns-sig-date'
+        ]
+            .map(s => `.pdf-flow .${this.tailFontClass} ${s}`)
+            .join(',\n');
+        return `${selectors} { font-size: ${size}pt !important; }`;
+    }
+
     private collectDocumentStyles(): string {
         const out: string[] = [];
         for (const sheet of Array.from(document.styleSheets)) {

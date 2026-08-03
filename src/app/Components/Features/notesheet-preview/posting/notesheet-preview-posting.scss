@@ -1,17 +1,63 @@
-﻿.ns-cell-ref {
-    padding: 5px 16px 0 20px;
+﻿/* Vertical rhythm — the block gaps below the employee table (table → নোট →
+   অনুচ্ছেদ → স্বাক্ষর → অনুমোদনকারী) are half the shared preview's spacing so the
+   posting sheet packs more rows per page. Horizontal padding is unchanged. */
+.ns-cell-ref {
+    padding: 3px 16px 0 20px;
 }
 .ns-para {
-    padding: 10px 16px 10px 20px;
+    padding: 5px 16px 5px 20px;
 }
 .ns-note {
-    padding: 6px 16px 6px 20px;
+    padding: 3px 16px 3px 20px;
+}
+.ns-posting-table {
+    padding: 2px 16px 5px 20px;
 }
 .ns-initiator-area {
-    padding: 14px 16px 18px 20px;
+    padding: 7px 16px 9px 20px;
+    gap: 5px;                   /* shared sheet uses 10px between sig lines */
 }
 .ns-approver-section {
-    padding: 10px 16px 24px 20px;
+    padding: 5px 16px 12px 20px;
+    min-height: 45px;           /* shared sheet reserves 90px for the signature */
+}
+
+/* Approver who has not acted yet: no signature image, no date. The signature
+   area isn't rendered at all (see the template's *ngIf), so drop the space the
+   section and body reserve for it too — otherwise the serial number sits above
+   an empty box. Only the serial line's own height remains. */
+.ns-approver-section--empty {
+    min-height: 0;
+    padding-bottom: 4px;
+
+    .ns-approver-body {
+        min-height: 0;
+        gap: 0;
+    }
+}
+
+/* ── Page margins: identical to the PDF / Print Preview ──
+   buildJsReportPdf() prints with @page margins of 7mm top / 5mm side / 10mm
+   bottom, and the page frame is drawn on that margin box. The on-screen sheet
+   used to sit at 14 / 6 / 20, so the same document showed a much wider white
+   margin around the frame and a 2mm narrower text column than the print — which
+   also meant slightly different line wraps. These numbers are the print's, so the
+   two now agree; computePageContentHeightPx() derives the usable page height from
+   the same 7mm / 10mm. Scoped to the posting preview — the other note-sheet
+   previews keep the shared 14 / 6 / 20.
+
+   .page-measure is the hidden div the page-break math measures and the source
+   snapshot for the PDF, so its text column has to track the paper's. */
+.a4-paper {
+    padding: 7mm 5mm 10mm;
+}
+.page-measure {
+    padding: 0 5mm;
+}
+/* Page number lives in the bottom margin, under the frame — re-seated for the
+   10mm band (it cleared the frame comfortably in the old 20mm one). */
+.ns-page-footer {
+    bottom: 3mm;
 }
 
 /* ── Edit mode: full-width sheet ───────────────────────
@@ -67,6 +113,38 @@
 .ns-note { font-size: 10pt; }              /* note */
 .ns-initiator-area { font-size: 10pt; }    /* signature block */
 .ns-closing-text { font-size: 10pt; }      /* closing line */
+
+/* ── Trailing-section font size (user-selectable) ──────
+   The block after the employee table — নোটঃ, the paragraphs, the initiator
+   signature and the approver sections — is kept together on one page, so once it
+   outgrows the space left below the table it jumps to a page of its own and
+   leaves a hole behind. The export bar's second dropdown puts one of these
+   classes on .ns-doc-box; a step or two down is usually enough to pull the whole
+   block back up and save the extra sheet.
+
+   Both base sizes are scaled by the same factor so the block keeps its internal
+   proportions: 10pt body text (নোট / অনুচ্ছেদ) and 9pt signature lines. The
+   two-class selectors also beat the 1-class defaults above and in the shared
+   sheet. The employee table, the title and everything above the table are
+   deliberately untouched. */
+$tail-scales: ("110": 1.10, "105": 1.05, "100": 1, "975": 0.975, "95": 0.95, "925": 0.925, "90": 0.90, "85": 0.85, "80": 0.80);
+
+@each $key, $scale in $tail-scales {
+    .ns-tail-fs-#{$key} {
+        .ns-note,
+        .ns-para--tail,
+        .ns-initiator-area { font-size: 10pt * $scale; }
+
+        .ns-sig-name,
+        .ns-sig-rank,
+        .ns-sig-paren,
+        .ns-sig-appoint,
+        .ns-sig-date,
+        .ns-approver-role,
+        .ns-approver-left,
+        .ns-approver-remark { font-size: 9pt * $scale; }
+    }
+}
 
 .ns-posting-table {
     /* Table content 8pt; column headers (table information) keep their own size. */
