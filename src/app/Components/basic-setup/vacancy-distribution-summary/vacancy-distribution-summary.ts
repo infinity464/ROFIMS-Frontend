@@ -541,11 +541,20 @@ export class VacancyDistributionSummaryComponent implements OnInit {
                             this.buildDisplayRows(this.lastDistributionList);
                         }
                     },
-                    error: (err: any) => {}
+                    error: (err: any) => { console.error('Failed to build RAB tree — grid will render flat', err); }
                 });
             },
-            error: (err: any) => {}
+            error: (err: any) => { console.error('Failed to load RAB units', err); }
         });
+    }
+
+    /**
+     * forkJoin over an EMPTY array completes without ever emitting, which would kill the
+     * whole chain and leave orderedRabIds empty (grid falls back to a flat, tree-less list).
+     * Levels below the deepest configured one produce no requests, so guard every fan-out.
+     */
+    private forkJoinLevel(reqs: import('rxjs').Observable<CommonCode[]>[]): import('rxjs').Observable<CommonCode[][]> {
+        return reqs.length ? forkJoin(reqs) : of([] as CommonCode[][]);
     }
 
     private buildOrderedRabIds(units: CommonCode[]): import('rxjs').Observable<{ codeId: number; level: 0 | 1 | 2 | 3 | 4 | 5; unitCodeId: number }[]> {
@@ -574,13 +583,13 @@ export class VacancyDistributionSummaryComponent implements OnInit {
                                 const allSubBranches = subBranchesPerBranch.flat() as CommonCode[];
                                 allSubBranches.forEach((sb) => { this.rabNameById[sb.codeId] = sb.codeValueEN ?? ''; });
                                 const sectionReqs = allSubBranches.map((sb) => this.masterBasicSetup.getByParentId(sb.codeId));
-                                return forkJoin(sectionReqs).pipe(
+                                return this.forkJoinLevel(sectionReqs).pipe(
                                     switchMap((sectionsPerSubBranchRaw) => {
                                         const sectionsPerSubBranch = sectionsPerSubBranchRaw.map((s) => this.sortCodes(s as CommonCode[]));
                                         const allSections = sectionsPerSubBranch.flat() as CommonCode[];
                                         allSections.forEach((s) => { this.rabNameById[s.codeId] = s.codeValueEN ?? ''; });
                                         const subSectionReqs = allSections.map((s) => this.masterBasicSetup.getByParentId(s.codeId));
-                                        return forkJoin(subSectionReqs).pipe(
+                                        return this.forkJoinLevel(subSectionReqs).pipe(
                                             switchMap((subSectionsPerSectionRaw) => {
                                                 const subSectionsPerSection = subSectionsPerSectionRaw.map((ss) => this.sortCodes(ss as CommonCode[]));
                                                 const allSubSections = subSectionsPerSection.flat() as CommonCode[];
