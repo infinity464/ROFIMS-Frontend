@@ -93,6 +93,31 @@ export class UnitTradeWiseManpowerComponent implements OnInit {
         UnitTradeWiseManpowerComponent.DEFAULT_VISIBLE_TRADE_NAMES.map(n => n.trim().toLowerCase())
     );
 
+    /** Column-order overrides applied on top of the API's ordering (alphabetical by
+     *  trade name). Each entry pins a trade immediately after the named anchor —
+     *  GD Clk next to Clk, so the two clerk trades read together instead of being
+     *  split apart by the Cook/Dvr columns that fall between them alphabetically. */
+    private static readonly TRADE_COLUMN_PINS: { move: string; after: string }[] = [
+        { move: 'GD Clk', after: 'Clk' }
+    ];
+
+    /** Applies TRADE_COLUMN_PINS to the API-supplied trade order. A pin whose trade
+     *  or anchor is missing from the response is skipped, so an absent column
+     *  reorders nothing rather than shuffling the rest. */
+    private orderTradeColumns(trades: UnitTradeColumn[]): UnitTradeColumn[] {
+        const key = (t: UnitTradeColumn) => (t.tradeNameEN ?? '').trim().toLowerCase();
+        const ordered = [...trades];
+        for (const pin of UnitTradeWiseManpowerComponent.TRADE_COLUMN_PINS) {
+            const from = ordered.findIndex(t => key(t) === pin.move.trim().toLowerCase());
+            if (from < 0) continue;
+            const [col] = ordered.splice(from, 1);
+            const anchor = ordered.findIndex(t => key(t) === pin.after.trim().toLowerCase());
+            // Anchor absent → put the column back where it was rather than guess a slot.
+            ordered.splice(anchor < 0 ? from : anchor + 1, 0, col);
+        }
+        return ordered;
+    }
+
     private resetTradeVisibility(): void {
         this.selectedTradeColIds = this.trades
             .filter(t => UnitTradeWiseManpowerComponent.DEFAULT_VISIBLE_TRADE_KEYS.has(
@@ -171,7 +196,7 @@ export class UnitTradeWiseManpowerComponent implements OnInit {
         if (ids.length === 0) {
             this.statisticsService.getUnitTradeWiseManpower(null).subscribe({
                 next: (res: UnitTradeWiseManpowerResponse) => {
-                    this.trades = res.trades ?? [];
+                    this.trades = this.orderTradeColumns(res.trades ?? []);
                     this.sections = [{
                         titleEN: '',
                         titleBN: '',
@@ -214,7 +239,7 @@ export class UnitTradeWiseManpowerComponent implements OnInit {
                         grandTotal: res.grandTotal ?? 0
                     });
                 });
-                this.trades = firstTrades;
+                this.trades = this.orderTradeColumns(firstTrades);
                 this.sections = built;
                 this.accessibleRabUnitNames   = scopeEN;
                 this.accessibleRabUnitNamesBN = scopeBN;

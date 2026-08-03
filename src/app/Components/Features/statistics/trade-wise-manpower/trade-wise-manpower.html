@@ -64,6 +64,31 @@
                         [disabled]="filteredOrgs.length === 0">
                     </p-multiselect>
                 </div>
+
+                <!-- Merge: collapse every rank under the picked member types into one column
+                     each. Only meaningful once an organization is chosen, so it stays hidden
+                     until then rather than offering a control that would do nothing. -->
+                @if (selectedOrgIds.length > 0) {
+                    <div class="col-vis-field">
+                        <label class="col-vis-label">{{ lang === 'en' ? 'Merge' : 'একত্রীকরণ' }}</label>
+                        <p-multiselect
+                            [(ngModel)]="selectedMergeMemberTypeIds"
+                            [options]="memberTypeOptions"
+                            optionLabel="label"
+                            optionValue="value"
+                            [placeholder]="lang === 'en' ? 'Member types to merge' : 'একত্রিত করার সদস্য ধরন'"
+                            [showClear]="true"
+                            [filter]="true"
+                            filterBy="label"
+                            display="comma"
+                            appendTo="body"
+                            styleClass="col-vis-select"
+                            (onChange)="onMergeMemberTypesChange()"
+                            (onClear)="onMergeMemberTypesChange()"
+                            [disabled]="loading">
+                        </p-multiselect>
+                    </div>
+                }
             </div>
 
             <!-- Lang + Export -->

@@ -50,9 +50,9 @@
 }
 
 .org-filter-wrap {
-    min-width: 220px;
-    max-width: 340px;
-    flex: 1;
+    min-width: 200px;
+    max-width: 320px;
+    flex: 1 1 220px;
 }
 
 /* Show/Hide toggle field (label + checkbox multiselect) */
@@ -60,7 +60,10 @@
     display: flex;
     flex-direction: column;
     gap: 2px;
-    flex-shrink: 0;
+    /* Shrink rather than wrap: the org select, three filter fields and the action
+       buttons share one row, so a fixed-width field would push Merge onto its own line. */
+    flex: 0 1 165px;
+    min-width: 120px;
 }
 
 .col-vis-label {
@@ -72,11 +75,6 @@
     white-space: nowrap;
 }
 
-::ng-deep .col-vis-select {
-    width: 170px;
-    font-size: 0.82rem;
-}
-
 /* Corps filter dropdown */
 .corps-filter-wrap {
     min-width: 180px;
@@ -84,8 +82,16 @@
     flex: 0 1 auto;
 }
 
-::ng-deep .org-filter-select {
+/* PrimeNG sets its own min-width on .p-multiselect. A bare `.col-vis-select` rule has
+   the same specificity (0,1,0), so which one wins depends on stylesheet order — and
+   PrimeNG wins, inflating every field well past its flex basis and forcing Merge onto a
+   second row. Scoping through .report-toolbar-left makes this (0,2,0) so it always wins,
+   and matching .p-multiselect directly means it applies whether or not styleClass lands
+   on the component root. Widths are then decided by the flex bases above. */
+::ng-deep .report-toolbar-left .p-multiselect {
     width: 100%;
+    min-width: 0;
+    max-width: 100%;
     font-size: 0.82rem;
 }
 
@@ -94,6 +100,12 @@
     align-items: center;
     gap: 0.5rem;
     flex-shrink: 0;
+    /* The filter group can wrap to more than one line, and centring would float the
+       buttons against its full height. Pin them to the first line instead, pushed down by
+       the filter-label height (font-size x line-height + .col-vis-field's 2px gap) so they
+       sit level with the select boxes rather than riding up against the labels. */
+    align-self: flex-start;
+    margin-top: calc(0.7rem * 1.5 + 2px);
 }
 
 /* Lang toggle */

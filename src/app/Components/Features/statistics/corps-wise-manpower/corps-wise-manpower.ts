@@ -18,6 +18,8 @@ import {
     type CorpsRow,
     type CorpsWiseManpowerResponse
 } from '@/services/statistics.service';
+import { MasterBasicSetupService } from '@/Components/basic-setup/shared/services/MasterBasicSetupService';
+import { CommonCode } from '@/Components/basic-setup/shared/models/common-code';
 import { OrgTreeFilterComponent } from '../shared/org-tree-filter/org-tree-filter.component';
 import { RabReportPrintService } from '../shared/rab-report-print.service';
 
@@ -67,6 +69,13 @@ export class CorpsWiseManpowerComponent implements OnInit, OnDestroy {
         this.showMotherOrgRank = !this.showMotherOrgRank;
         this.onOrgFilterChange();
     }
+
+    /** Member-type CodeIds the user picked to MERGE. Every rank under a selected member
+     *  type collapses into one column named after it. Server-side — same facility as the
+     *  unit-rank-wise report's Merge dropdown. */
+    selectedMergeMemberTypeIds: number[] = [];
+    memberTypeOptions: { label: string; value: number }[] = [];
+    private memberTypes: CommonCode[] = [];
 
     /** Checked Regiment/Corps ids (rows shown). Rebuilt when org selection/data changes. */
     selectedCorpsIds: number[] = [];
@@ -153,6 +162,7 @@ export class CorpsWiseManpowerComponent implements OnInit, OnDestroy {
         private _userMenuService: UserMenuService,
         private statisticsService: StatisticsService,
         private exportService: ExportService,
+        private masterBasicSetup: MasterBasicSetupService,
         private rabPrint: RabReportPrintService
     ) {}
 
@@ -211,6 +221,57 @@ export class CorpsWiseManpowerComponent implements OnInit, OnDestroy {
         document.addEventListener('click', this.closeMultiSelectsOnOutsideClick, true);
 
         this.loadOrgOptions();
+        this.loadMemberTypeOptions();
+    }
+
+    /** Member types merged by default on load; the user may unselect or add others.
+     *  Matched against EmployeeType.codeValueEN, case- and whitespace-insensitive. */
+    private static readonly DEFAULT_MERGE_MEMBER_TYPE_NAMES = ['Officer'] as const;
+
+    private loadMemberTypeOptions(): void {
+        this.masterBasicSetup.getAllByType('EmployeeType').subscribe({
+            next: (res) => {
+                this.memberTypes = (Array.isArray(res) ? res : []).filter((m) => m.status !== false);
+                this.memberTypes.sort((a, b) => (a.sortOrder ?? Number.MAX_SAFE_INTEGER) - (b.sortOrder ?? Number.MAX_SAFE_INTEGER));
+                this.rebuildMemberTypeOptions();
+                this.applyDefaultMergeSelection();
+            },
+            error: () => {
+                this.memberTypes = [];
+                this.rebuildMemberTypeOptions();
+            }
+        });
+    }
+
+    /**
+     * Seeds the Merge dropdown with the default member types once the options are known.
+     * The ids only exist server-side, so this resolves them by name after the fetch.
+     * Skipped when the user has already picked something, and it refetches only if a
+     * report is already on screen — on a cold load nothing is displayed yet.
+     */
+    private applyDefaultMergeSelection(): void {
+        if (this.selectedMergeMemberTypeIds.length > 0) return;
+        const wanted = new Set(
+            CorpsWiseManpowerComponent.DEFAULT_MERGE_MEMBER_TYPE_NAMES.map((n) => n.trim().toLowerCase())
+        );
+        const ids = this.memberTypes
+            .filter((m) => wanted.has((m.codeValueEN ?? '').trim().toLowerCase()))
+            .map((m) => m.codeId);
+        if (ids.length === 0) return;
+        this.selectedMergeMemberTypeIds = ids;
+        if (this.filteredOrgs.length > 0) this.onOrgFilterChange();
+    }
+
+    private rebuildMemberTypeOptions(): void {
+        this.memberTypeOptions = this.memberTypes.map((m) => ({
+            label: this.lang === 'en' ? (m.codeValueEN ?? '') : m.codeValueBN || m.codeValueEN || '',
+            value: m.codeId
+        }));
+    }
+
+    /** Merge selection changed — the collapse happens server-side, so refetch. */
+    onMergeMemberTypesChange(): void {
+        this.onOrgFilterChange();
     }
 
     ngOnDestroy(): void {
@@ -249,8 +310,8 @@ export class CorpsWiseManpowerComponent implements OnInit, OnDestroy {
         this.loading = true;
         // Default = RAB Rank (Equivalent Name); toggled = Mother Org Rank.
         const fetchOrg = (id: number) => this.showMotherOrgRank
-            ? this.statisticsService.getCorpsWiseManpower(id, this.filterRabCodeId)
-            : this.statisticsService.getCorpsWiseManpowerByEquivalentName(id, this.filterRabCodeId);
+            ? this.statisticsService.getCorpsWiseManpower(id, this.filterRabCodeId, this.selectedMergeMemberTypeIds)
+            : this.statisticsService.getCorpsWiseManpowerByEquivalentName(id, this.filterRabCodeId, this.selectedMergeMemberTypeIds);
         forkJoin(
             ids.map(id =>
                 fetchOrg(id).pipe(
@@ -298,7 +359,10 @@ export class CorpsWiseManpowerComponent implements OnInit, OnDestroy {
         return parts.length === 0 ? null : parts.join('  |  ');
     }
 
-    toggleLang(): void { this.lang = this.lang === 'en' ? 'bn' : 'en'; }
+    toggleLang(): void {
+        this.lang = this.lang === 'en' ? 'bn' : 'en';
+        this.rebuildMemberTypeOptions();
+    }
 
     toggleExportDropdown(event: Event): void {
         event.stopPropagation();

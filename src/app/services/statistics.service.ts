@@ -374,18 +374,32 @@ export class StatisticsService {
         );
     }
 
-    getCorpsWiseManpower(orgId: number, rabCodeId?: number | null): Observable<CorpsWiseManpowerResponse> {
+    getCorpsWiseManpower(
+        orgId: number,
+        rabCodeId?: number | null,
+        mergeMemberTypeIds?: number[] | null
+    ): Observable<CorpsWiseManpowerResponse> {
         const params: any = { orgId };
         if (rabCodeId != null) params.rabCodeId = rabCodeId;
+        if (mergeMemberTypeIds && mergeMemberTypeIds.length > 0) {
+            params.mergeMemberTypeIds = mergeMemberTypeIds.join(',');
+        }
         return this.http.get<CorpsWiseManpowerResponse>(
             `${this.apiUrl}/GetCorpsWiseManpower`, { params }
         );
     }
 
     /** Same report, but columns are Equivalent Name (the equivalent-name man-power setup). */
-    getCorpsWiseManpowerByEquivalentName(orgId: number, rabCodeId?: number | null): Observable<CorpsWiseManpowerResponse> {
+    getCorpsWiseManpowerByEquivalentName(
+        orgId: number,
+        rabCodeId?: number | null,
+        mergeMemberTypeIds?: number[] | null
+    ): Observable<CorpsWiseManpowerResponse> {
         const params: any = { orgId };
         if (rabCodeId != null) params.rabCodeId = rabCodeId;
+        if (mergeMemberTypeIds && mergeMemberTypeIds.length > 0) {
+            params.mergeMemberTypeIds = mergeMemberTypeIds.join(',');
+        }
         return this.http.get<CorpsWiseManpowerResponse>(
             `${this.apiUrl}/GetCorpsWiseManpowerByEquivalentName`, { params }
         );
@@ -397,20 +411,36 @@ export class StatisticsService {
         );
     }
 
-    getTradeWiseManpower(orgId: number, corpsId?: number, rabCodeId?: number | null): Observable<TradeWiseManpowerResponse> {
+    getTradeWiseManpower(
+        orgId: number,
+        corpsId?: number,
+        rabCodeId?: number | null,
+        mergeMemberTypeIds?: number[] | null
+    ): Observable<TradeWiseManpowerResponse> {
         const params: any = { orgId };
         if (corpsId != null) params.corpsId = corpsId;
         if (rabCodeId != null) params.rabCodeId = rabCodeId;
+        if (mergeMemberTypeIds && mergeMemberTypeIds.length > 0) {
+            params.mergeMemberTypeIds = mergeMemberTypeIds.join(',');
+        }
         return this.http.get<TradeWiseManpowerResponse>(
             `${this.apiUrl}/GetTradeWiseManpower`, { params }
         );
     }
 
     /** Same report, but columns are Equivalent Name (the equivalent-name man-power setup). */
-    getTradeWiseManpowerByEquivalentName(orgId: number, corpsId?: number, rabCodeId?: number | null): Observable<TradeWiseManpowerResponse> {
+    getTradeWiseManpowerByEquivalentName(
+        orgId: number,
+        corpsId?: number,
+        rabCodeId?: number | null,
+        mergeMemberTypeIds?: number[] | null
+    ): Observable<TradeWiseManpowerResponse> {
         const params: any = { orgId };
         if (corpsId != null) params.corpsId = corpsId;
         if (rabCodeId != null) params.rabCodeId = rabCodeId;
+        if (mergeMemberTypeIds && mergeMemberTypeIds.length > 0) {
+            params.mergeMemberTypeIds = mergeMemberTypeIds.join(',');
+        }
         return this.http.get<TradeWiseManpowerResponse>(
             `${this.apiUrl}/GetTradeWiseManpowerByEquivalentName`, { params }
         );
