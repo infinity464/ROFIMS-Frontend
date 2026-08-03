@@ -146,8 +146,23 @@ export class NotesheetPreviewExbdComponent extends NotesheetPreviewBase implemen
         return String.fromCharCode(97 + index) + '.';
     }
 
+    /** True when this note-sheet has an extra paragraph (after Main Text) to render. */
+    get hasParagraphText(): boolean {
+        return this.parsedParagraphs.length > 0;
+    }
+
+    /** Serial number for the extra paragraph: right after Main Text (১।) and the optional Note. */
+    get paragraphSerialNo(): number {
+        return 2 + (this.noteSheet?.note ? 1 : 0);
+    }
+
     get approverStartSerial(): number {
-        return this.noteSheet?.note ? 3 : 2;
+        return 2 + (this.noteSheet?.note ? 1 : 0) + (this.hasParagraphText ? 1 : 0);
+    }
+
+    /** Plain text of the extra paragraph rendered after Main Text. */
+    getParagraphText(): string {
+        return this.parsedParagraphs.join('\n\n');
     }
 
     downloadRefFile(file: { fileId: number; fileName: string }): void {
@@ -201,6 +216,7 @@ export class NotesheetPreviewExbdComponent extends NotesheetPreviewBase implemen
     editExBdLeaveSubjectId: number | null = null;
     editReferenceParagraphs: { text: string; fileRows: FileRowData[] }[] = [{ text: '', fileRows: [] }];
     editMainText = '';
+    editParagraphText = '';
     editNote = '';
     editNoteSheetDate: Date | null = null;
     editInitiatorId: number | null = null;
@@ -457,6 +473,16 @@ export class NotesheetPreviewExbdComponent extends NotesheetPreviewBase implemen
         } catch { return '—'; }
     }
 
+    /** Notesheet date — full month name, no comma (e.g. "০২ আগস্ট ২০২৬" / "02 August 2026").
+     *  Overrides the base's short-month "০২ আগ, ২০২৬" format for the Ex-BD preview. */
+    override formatDate(value: string | null | undefined): string {
+        if (!value) return '—';
+        const d = new Date(value);
+        if (isNaN(d.getTime())) return String(value);
+        const locale = this.isEnglish() ? 'en-GB' : 'bn-BD';
+        return d.toLocaleDateString(locale, { day: '2-digit', month: 'long', year: 'numeric' }).replace(/,/g, '');
+    }
+
     // ── Toggle edit mode ──────────────────────────────────────
     toggleEdit(): void {
         if (!this.noteSheet) return;
@@ -467,6 +493,7 @@ export class NotesheetPreviewExbdComponent extends NotesheetPreviewBase implemen
         this.editExBdLeaveSubjectId = ns.exBdLeaveSubjectId ?? null;
         this.editReferenceParagraphs = this.parseReferenceParagraphs(ns.referenceNumber);
         this.editMainText = ns.mainText ?? '';
+        this.editParagraphText = this.parsedParagraphs[0] ?? '';
         this.editNote = ns.note ?? '';
         this.editNoteSheetDate = ns.noteSheetDate ? new Date(ns.noteSheetDate) : null;
         this.editTextType = (ns.textType ?? 0) === 1 ? 'bn' : 'en';
@@ -568,12 +595,15 @@ export class NotesheetPreviewExbdComponent extends NotesheetPreviewBase implemen
         const referenceNumberJson = await this.uploadReferenceParagraphFiles();
 
         const resolvedSubject = this.getSubjectLabel(this.editExBdLeaveSubjectId) || this.editSubject;
+        const paraText = (this.editParagraphText ?? '').trim();
+        const paragraphTextJson = paraText ? JSON.stringify([paraText]) : null;
         const payload: Record<string, unknown> = {
             ...this.noteSheet,
             subject: resolvedSubject,
             exBdLeaveSubjectId: this.editExBdLeaveSubjectId,
             referenceNumber: referenceNumberJson,
             mainText: this.editMainText,
+            paragraphText: paragraphTextJson,
             note: this.editNote || null,
             textType: this.editTextType === 'bn' ? 1 : 0,
             noteSheetOperationType: this.editOperationType,
@@ -1052,7 +1082,7 @@ html, body { margin: 0; padding: 0; background: transparent; }
 
 /* Match the on-screen gap between the left border and the text
    (see notesheet-preview-exbd.scss → :host .ns-main-col). */
-.pdf-flow .ns-main-col { padding-left: 5px; padding-right: 5px; }
+.pdf-flow .ns-main-col { padding-left: 10px; padding-right: 5px; }
 
 /* Uniform body size — everything except the NOTE SHEET title renders at 10pt,
    matching the on-screen preview. The collected page styles pin some blocks
@@ -1183,12 +1213,17 @@ html, body { margin: 0; padding: 0; background: transparent; }
             try {
                 const refArr = JSON.parse(rawRef);
                 if (Array.isArray(refArr) && refArr.length > 0) {
-                    for (let i = 0; i < refArr.length; i++) {
-                        const item = refArr[i];
-                        const text = (item.text ?? item.Text ?? '').trim();
-                        if (text) {
-                            const serial = this.refSerialLabel(i);
-                            refBlocks.push({ type: 'paragraph', text: `${serial}\t${text}`, runs: [{ text: `${serial}\t${text}` }], indent: 'normal', alignment: 'justify' });
+                    const refTexts = refArr
+                        .map((item: any) => (item.text ?? item.Text ?? '').trim())
+                        .filter((t: string) => !!t);
+                    if (refTexts.length === 1) {
+                        // Single reference — no serial; it renders inline with the সূত্রঃ label.
+                        const text = refTexts[0];
+                        refBlocks.push({ type: 'paragraph', text, runs: [{ text }], indent: 'normal', alignment: 'justify' });
+                    } else {
+                        for (let i = 0; i < refTexts.length; i++) {
+                            const text = `${this.refSerialLabel(i)}\t${refTexts[i]}`;
+                            refBlocks.push({ type: 'paragraph', text, runs: [{ text }], indent: 'normal', alignment: 'justify' });
                         }
                     }
                 }
@@ -1350,8 +1385,16 @@ html, body { margin: 0; padding: 0; background: transparent; }
             }));
         }
 
-        // Reference — label on its own line, ref items below
-        if (model.referenceBlocks.length > 0) {
+        // Reference — single ref inline with the label; multiple refs stack (label above, items below)
+        if (model.referenceBlocks.length === 1) {
+            mainChildren.push(new Paragraph({
+                children: [
+                    new TextRun({ text: `${model.referenceLabel.trim()}  `, bold: true, size: contentSize, sizeComplexScript: csContent, font, language: lang }),
+                    new TextRun({ text: model.referenceBlocks[0].text ?? '', size: contentSize, sizeComplexScript: csContent, font, language: lang })
+                ],
+                spacing: { after: 80 }, alignment: AlignmentType.JUSTIFIED
+            }));
+        } else if (model.referenceBlocks.length > 0) {
             mainChildren.push(new Paragraph({
                 children: [new TextRun({ text: model.referenceLabel.trim(), bold: true, size: contentSize, sizeComplexScript: csContent, font, language: lang })],
                 spacing: { after: 0 }
@@ -1372,7 +1415,7 @@ html, body { margin: 0; padding: 0; background: transparent; }
         // Merge serial (১।) with first text block so they appear inline
         if (model.mainBlocks.length > 0 && model.mainBlocks[0].type === 'paragraph' && model.mainBlocks[0].text) {
             const firstBlock = model.mainBlocks[0];
-            const serialRun = new TextRun({ text: `${model.mainSerialText}  `, bold: true, size: contentSize, sizeComplexScript: csContent, font, language: lang });
+            const serialRun = new TextRun({ text: `${model.mainSerialText}  `, bold: false, size: contentSize, sizeComplexScript: csContent, font, language: lang });
             const contentRuns = (firstBlock.runs && firstBlock.runs.length > 0)
                 ? firstBlock.runs.map(r => new TextRun({
                     text: r.text,
@@ -1394,7 +1437,7 @@ html, body { margin: 0; padding: 0; background: transparent; }
             }
         } else {
             mainChildren.push(new Paragraph({
-                children: [new TextRun({ text: model.mainSerialText, bold: true, size: contentSize, sizeComplexScript: csContent, font, language: lang })],
+                children: [new TextRun({ text: model.mainSerialText, bold: false, size: contentSize, sizeComplexScript: csContent, font, language: lang })],
                 spacing: { before: 160, after: 40 }
             }));
             mainChildren.push(...this.contentBlocksToDocx(model.mainBlocks, font, bn));
@@ -1404,10 +1447,22 @@ html, body { margin: 0; padding: 0; background: transparent; }
         if (model.note) {
             mainChildren.push(new Paragraph({
                 children: [
-                    new TextRun({ text: `${this.serial(2)}  `, bold: true, size: contentSize, sizeComplexScript: csContent, font, language: lang }),
+                    new TextRun({ text: `${this.serial(2)}  `, bold: false, size: contentSize, sizeComplexScript: csContent, font, language: lang }),
                     new TextRun({ text: model.note, size: contentSize, sizeComplexScript: csContent, font, language: lang })
                 ],
                 spacing: { before: 80, after: 80 }
+            }));
+        }
+
+        // Extra Paragraph (after Main Text) — same numbered-paragraph style as the Note
+        const paraPlain = this.parsedParagraphs.join(' ').trim();
+        if (paraPlain) {
+            mainChildren.push(new Paragraph({
+                children: [
+                    new TextRun({ text: `${this.serial(this.paragraphSerialNo)}  `, bold: false, size: contentSize, sizeComplexScript: csContent, font, language: lang }),
+                    new TextRun({ text: paraPlain, size: contentSize, sizeComplexScript: csContent, font, language: lang })
+                ],
+                spacing: { before: 80, after: 80 }, alignment: AlignmentType.JUSTIFIED
             }));
         }
 
@@ -1504,6 +1559,15 @@ html, body { margin: 0; padding: 0; background: transparent; }
             }),
             new Paragraph({
                 children: [new TextRun({ text: 'মন্তব্য পত্র', bold: true, underline: {}, size: titleHdrSize, font: { ascii: 'Times New Roman', hAnsi: 'Times New Roman', cs: 'SolaimanLipi', hint: 'cs' as const } })],
+                alignment: AlignmentType.CENTER, spacing: { after: 60 }, keepNext: true
+            }),
+            // Org header — both lines underlined
+            new Paragraph({
+                children: [new TextRun({ text: this.getOrgHeaderLine1(), bold: true, underline: {}, size: contentSize, sizeComplexScript: csContent, font, language: lang })],
+                alignment: AlignmentType.CENTER, spacing: { after: 20 }, keepNext: true
+            }),
+            new Paragraph({
+                children: [new TextRun({ text: this.getOrgHeaderLine2(), bold: true, underline: {}, size: contentSize, sizeComplexScript: csContent, font, language: lang })],
                 alignment: AlignmentType.CENTER, spacing: { after: 100 }, keepNext: true
             }),
         ];

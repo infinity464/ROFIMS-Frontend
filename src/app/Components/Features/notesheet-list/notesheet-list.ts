@@ -39,6 +39,7 @@ import { map, catchError } from 'rxjs/operators';
 import { Table } from 'primeng/table';
 import { PostingService } from '@/services/posting.service';
 import { DraftPostingEmployeeRow, PostingMemberRemovalHistoryDto } from '@/models/posting.model';
+import { encodeNoteSheetId } from '@/shared/utils/notesheet-id-codec';
 import { EmployeeList } from '@/models/employee-list.model';
 import { EmployeeListService } from '@/services/employee-list.service';
 import { IdentityUserMemberTypeAccessService } from '@/services/identity-user-member-type-access.service';
@@ -369,7 +370,7 @@ export class NotesheetListComponent implements OnInit {
     } else if (row.noteSheetType === NoteSheetType.NewPosting || row.noteSheetType === NoteSheetType.InterPosting) {
       route = '/notesheet-preview/posting';
     }
-    const queryParams: Record<string, string | number> = { id: row.noteSheetId };
+    const queryParams: Record<string, string | number> = { id: encodeNoteSheetId(row.noteSheetId) };
     // When previewing from the Pending or My-Approval section, pass a marker so preview can
     // show inline approval actions (Approve/Decline/Back/View Members/Log).
     if (this.section === NOTE_SHEET_SECTIONS.PENDING || this.section === NOTE_SHEET_SECTIONS.MY_PENDING) {

@@ -3,7 +3,7 @@ import { HttpClient } from '@angular/common/http';
 import { ActivatedRoute, Router } from '@angular/router';
 import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
 import { MessageService } from 'primeng/api';
-import { catchError, forkJoin, of } from 'rxjs';
+import { catchError, forkJoin, map, of } from 'rxjs';
 import { environment } from '@/Core/Environments/environment';
 import { EmpService } from '@/services/emp-service';
 import { UserMenuService } from '@/services/user-menu.service';
@@ -20,6 +20,7 @@ import {
 } from 'docx';
 import { saveAs } from 'file-saver';
 import { normalizeRab } from '@/shared/utils/bangla-text.util';
+import { decodeNoteSheetId } from '@/shared/utils/notesheet-id-codec';
 
 export interface NoteSheetInfoFull {
     noteSheetId: number;
@@ -54,6 +55,12 @@ export interface NoteSheetInfoFull {
     finalApprovalRemark?: string;
     finalApprovalCancelRemark?: string;
     finalApprovalApprovedDate?: string;
+    // ── Signatory snapshots (frozen name/rank/appointment, EN+BN, at sign time) ──
+    // JSON SignatorySnapshot per slot; recommender snapshots live inside
+    // recommendersJson (signatory_snapshot). Null → step not yet signed → live.
+    initiatorSignatorySnapshot?: string;
+    finalApprovalSignatorySnapshot?: string;
+    preparedBySignatorySnapshot?: string;
     // ── Workflow state ─────────────────────────────────────────────────
     currentStatus?: string;
     // ── Audit ──────────────────────────────────────────────────────────
@@ -75,6 +82,28 @@ export interface NoteSheetInfoFull {
     recommenderIdsJson?: string;
     remark?: string;
     paragraphText?: string;
+}
+
+/** Frozen signatory identity captured at sign time (mirrors backend SignatorySnapshot). */
+export interface SignatorySnapshotFE {
+    employeeId?: number;
+    rabId?: string;
+    prefixEN?: string;
+    prefixBN?: string;
+    nameEN?: string;
+    nameBN?: string;
+    rankEN?: string;
+    rankBN?: string;
+    appointmentEN?: string;
+    appointmentBN?: string;
+    snapshotAtUtc?: string;
+}
+
+/** One resolved node of the approval chain, with its frozen snapshot if signed. */
+interface SignatoryChainEntry {
+    empId: number;
+    step: string;
+    snapshot: SignatorySnapshotFE | null;
 }
 
 export interface BackHistoryRow {
@@ -149,9 +178,10 @@ export abstract class NotesheetPreviewBase implements OnInit {
     ngOnInit(): void {
         this.loadLookups();
         this.route.queryParams.subscribe(params => {
-            const id = params['id'];
-            if (id) {
-                const newId = +id;
+            // The URL carries an obfuscated token (see notesheet-id-codec); decode to the
+            // real id. Plain numeric ids still resolve for backward-compat.
+            const newId = decodeNoteSheetId(params['id']);
+            if (newId && newId > 0) {
                 if (newId === this._lastLoadedId) return;
                 this._lastLoadedId = newId;
                 this.noteSheetId = newId;
@@ -288,8 +318,10 @@ export abstract class NotesheetPreviewBase implements OnInit {
             ? this.noteSheet.preparedByEmployeeId : null;
         const initiatorId = this.noteSheet.initiatorId && this.noteSheet.initiatorId > 0
             ? this.noteSheet.initiatorId : null;
-        const approverIds: { empId: number; step: string }[] = [];
 
+        // Each recommender carries its frozen snapshot (name/rank/appointment captured
+        // at sign time) when signed; null while pending → resolve live.
+        const recommenderEntries: SignatoryChainEntry[] = [];
         try {
             // New format: recommendersJson (array of objects); legacy: recommenderIdsJson (array of IDs)
             const json = this.noteSheet.recommendersJson ?? this.noteSheet.recommenderIdsJson;
@@ -300,7 +332,10 @@ export abstract class NotesheetPreviewBase implements OnInit {
                         const id = typeof r === 'number'
                             ? r
                             : (r.recomender_id ?? r.recomenderId ?? r.EmployeeId ?? r.employeeId);
-                        if (id && id > 0) approverIds.push({ empId: id, step: `${ApprovalStep.Recommender} ${arr.length > 1 ? i + 1 : ''}`.trim() });
+                        if (id && id > 0) {
+                            const snapshot = typeof r === 'number' ? null : this.parseSnapshot(r.signatory_snapshot);
+                            recommenderEntries.push({ empId: id, step: `${ApprovalStep.Recommender} ${arr.length > 1 ? i + 1 : ''}`.trim(), snapshot });
+                        }
                     });
                 }
             }
@@ -309,55 +344,85 @@ export abstract class NotesheetPreviewBase implements OnInit {
         const finalApproverEmpId = (this.noteSheet.finalApprovalId && this.noteSheet.finalApprovalId > 0)
             ? this.noteSheet.finalApprovalId
             : (this.noteSheet.finalApproverId && this.noteSheet.finalApproverId > 0 ? this.noteSheet.finalApproverId : null);
-        if (finalApproverEmpId) approverIds.push({ empId: finalApproverEmpId, step: ApprovalStep.FinalApprover });
 
-        const allIds = [
-            ...(preparedByEmpId ? [{ empId: preparedByEmpId, step: ApprovalStep.PreparedBy }] : []),
-            ...(initiatorId     ? [{ empId: initiatorId,     step: ApprovalStep.Initiator    }] : []),
-            ...approverIds
+        const entries: SignatoryChainEntry[] = [
+            ...(preparedByEmpId ? [{ empId: preparedByEmpId, step: ApprovalStep.PreparedBy, snapshot: this.parseSnapshot(this.noteSheet.preparedBySignatorySnapshot) }] : []),
+            ...(initiatorId     ? [{ empId: initiatorId,     step: ApprovalStep.Initiator,   snapshot: this.parseSnapshot(this.noteSheet.initiatorSignatorySnapshot) }] : []),
+            ...recommenderEntries,
+            ...(finalApproverEmpId ? [{ empId: finalApproverEmpId, step: ApprovalStep.FinalApprover, snapshot: this.parseSnapshot(this.noteSheet.finalApprovalSignatorySnapshot) }] : []),
         ];
 
-        if (allIds.length === 0) return;
+        if (entries.length === 0) return;
 
         this.loadingApprovalChain = true;
 
+        // A signed step reads its FROZEN snapshot (no fetch) so promotion/reassignment
+        // never changes an approved document. A still-pending (or legacy) step resolves
+        // LIVE from GetEmployeeBriefProfile — intentionally NOT member-access scoped, so
+        // any viewer who can open the note-sheet sees who signed it. forkJoin preserves
+        // input order, keeping approversDetails in chain order.
         forkJoin(
-            allIds.map(({ empId }) =>
-                // Signatory display info is intentionally NOT member-access scoped:
-                // if a user can open this note-sheet, they may see who signed it.
-                // GetEmployeeBriefProfile is the non-scoped source (name / rank /
-                // appointment / RAB ID), so an office-access viewer sees officer
-                // signatories the same as anyone else — no per-viewer 404 blanking.
-                this.servingMembersService.getEmployeeBriefProfile(empId)
-                    .pipe(catchError(() => of(null)))
+            entries.map(e =>
+                e.snapshot
+                    ? of(this.detailFromSnapshot(e.step, e.snapshot))
+                    : this.servingMembersService.getEmployeeBriefProfile(e.empId).pipe(
+                        map(emp => this.detailFromProfile(e.step, e.empId, emp)),
+                        catchError(() => of(this.detailFromProfile(e.step, e.empId, null)))
+                    )
             )
         ).subscribe({
-            next: (results) => {
-                results.forEach((emp, idx) => {
-                    const { empId, step } = allIds[idx];
-                    const detail: SignatoryDetail = {
-                        step,
-                        name:          emp?.nameEN        ?? '-',
-                        nameBN:        emp?.nameBN        ?? '',
-                        rabId:         emp?.rabId         ?? '-',
-                        rank:          emp?.rankEN        ?? '-',
-                        rankBN:        emp?.rankBN        ?? '',
-                        serviceRank:   emp?.rankEN        ?? '-',
-                        appointment:   emp?.appointmentEN ?? '',
-                        appointmentBN: emp?.appointmentBN ?? '',
-                        employeeId: empId
-                    };
-
-                    if (step === ApprovalStep.PreparedBy) this.preparedByDetails = detail;
-                    else if (step === ApprovalStep.Initiator) this.initiatorDetails = detail;
+            next: (details) => {
+                details.forEach(detail => {
+                    if (detail.step === ApprovalStep.PreparedBy) this.preparedByDetails = detail;
+                    else if (detail.step === ApprovalStep.Initiator) this.initiatorDetails = detail;
                     else this.approversDetails.push(detail);
-
                     this.loadSignature(detail);
                 });
                 this.loadingApprovalChain = false;
             },
             error: () => { this.loadingApprovalChain = false; }
         });
+    }
+
+    /** Parse a stored snapshot (JSON string, already-parsed object, or null). */
+    private parseSnapshot(v: any): SignatorySnapshotFE | null {
+        if (!v) return null;
+        try {
+            const o = typeof v === 'string' ? JSON.parse(v) : v;
+            return o && typeof o === 'object' ? o as SignatorySnapshotFE : null;
+        } catch { return null; }
+    }
+
+    /** Build a signatory block from a frozen snapshot (signed step). */
+    private detailFromSnapshot(step: string, s: SignatorySnapshotFE): SignatoryDetail {
+        return {
+            step,
+            name:          s.nameEN        ?? '-',
+            nameBN:        s.nameBN        ?? '',
+            rabId:         s.rabId         ?? '-',
+            rank:          s.rankEN        ?? '-',
+            rankBN:        s.rankBN        ?? '',
+            serviceRank:   s.rankEN        ?? '-',
+            appointment:   s.appointmentEN ?? '',
+            appointmentBN: s.appointmentBN ?? '',
+            employeeId:    s.employeeId
+        };
+    }
+
+    /** Build a signatory block from the LIVE employee profile (pending/legacy step). */
+    private detailFromProfile(step: string, empId: number, emp: any): SignatoryDetail {
+        return {
+            step,
+            name:          emp?.nameEN        ?? '-',
+            nameBN:        emp?.nameBN        ?? '',
+            rabId:         emp?.rabId         ?? '-',
+            rank:          emp?.rankEN        ?? '-',
+            rankBN:        emp?.rankBN        ?? '',
+            serviceRank:   emp?.rankEN        ?? '-',
+            appointment:   emp?.appointmentEN ?? '',
+            appointmentBN: emp?.appointmentBN ?? '',
+            employeeId:    empId
+        };
     }
 
     private loadSignature(detail: SignatoryDetail): void {

@@ -3,6 +3,7 @@ import { HttpClient } from '@angular/common/http';
 import { ActivatedRoute, Router } from '@angular/router';
 import { environment } from '@/Core/Environments/environment';
 import { NoteSheetType } from '@/models/enums';
+import { encodeNoteSheetId, decodeNoteSheetId } from '@/shared/utils/notesheet-id-codec';
 
 // Re-export the interface so existing code that imports it here still works
 export type { NoteSheetInfoFull } from './notesheet-preview-base';
@@ -29,8 +30,10 @@ export class NotesheetPreviewComponent implements OnInit {
 
     ngOnInit(): void {
         this.route.queryParams.subscribe(params => {
-            const id = params['id'];
-            if (!id) { this.router.navigate(['/notesheet-list/draft']); return; }
+            // Incoming id may be an obfuscated token or a plain number; resolve to the real id.
+            const id = decodeNoteSheetId(params['id']);
+            if (!id || id <= 0) { this.router.navigate(['/notesheet-list/draft']); return; }
+            const token = encodeNoteSheetId(id);
 
             this.http.get<{ noteSheetType?: string }[]>(`${this.api}/GetFilteredByKeysAsyn/${id}`).subscribe({
                 next: (data) => {
@@ -38,9 +41,9 @@ export class NotesheetPreviewComponent implements OnInit {
                     let route = '/notesheet-preview/general';
                     if (type === NoteSheetType.ExBDLeave) route = '/notesheet-preview/exbd';
                     else if (type === NoteSheetType.NewPosting || type === NoteSheetType.InterPosting) route = '/notesheet-preview/posting';
-                    this.router.navigate([route], { queryParams: { id }, replaceUrl: true });
+                    this.router.navigate([route], { queryParams: { id: token }, replaceUrl: true });
                 },
-                error: () => this.router.navigate(['/notesheet-preview/general'], { queryParams: { id }, replaceUrl: true })
+                error: () => this.router.navigate(['/notesheet-preview/general'], { queryParams: { id: token }, replaceUrl: true })
             });
         });
     }
