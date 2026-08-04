@@ -70,9 +70,19 @@
     >
         <span style="font-weight: 600; font-size: 0.85rem"><i class="pi pi-cog" style="margin-right: 0.3rem"></i>Export:</span>
         <p-select [options]="pageSizeOptions" [(ngModel)]="selectedPageSize" (onChange)="onPageSizeChange()" optionLabel="label" optionValue="value" [style]="{'width': '90px'}"></p-select>
-        <!-- Font size of the section after the table. Sizing it down usually pulls the
-             whole trailing block back onto the previous page and saves a sheet. -->
-        <p-select [options]="tailFontOptions" [(ngModel)]="tailFontClass" optionLabel="label" optionValue="value" [style]="{'width': '120px'}" pTooltip="শেষাংশের (নোট, অনুচ্ছেদ, স্বাক্ষর) ফন্ট সাইজ"></p-select>
+        <!-- Font size of the WHOLE note sheet, as a point offset (-2 … +2, 0.25 steps):
+             the sheet's tiers differ in size, so they move together instead of being set
+             to one value. Sizing down usually pulls a trailing block back onto the
+             previous page and saves a sheet. -->
+        <p-select
+            [options]="fontDeltaOptions"
+            [(ngModel)]="fontDelta"
+            (onChange)="onFontDeltaChange()"
+            optionLabel="label"
+            optionValue="value"
+            [style]="{ width: '165px' }"
+            pTooltip="Font size of the whole note sheet (-2 pt to +2 pt)"
+        ></p-select>
         <ng-container *ngIf="isPostingType() && postingEmployees.length > 0">
             <span style="border-left: 1px solid var(--surface-border); height: 1.5rem"></span>
             <span style="display: inline-flex; align-items: center; gap: 0.3rem"><p-checkbox [(ngModel)]="showRankQualifications" [binary]="true" inputId="chkRankQ"></p-checkbox><label for="chkRankQ" style="cursor: pointer">পদবি বিবরণ</label></span>
@@ -527,9 +537,11 @@
     <!-- ══════════════════════════════════════════════════════════ -->
     <ng-template #viewContent>
         <ng-container *ngIf="noteSheet">
-            <!-- tailFontClass scales the trailing section only; it rides on the doc box so
-                 the PDF snapshot (which clones this subtree) carries it too. -->
-            <div class="ns-doc-box" [ngClass]="tailFontClass">
+            <!-- Font size is not set here: the export bar's offset lives in the
+                 --ns-fs-delta custom property on the component host, which every text
+                 size in the sheet is expressed against and which the PDF restates on
+                 .pdf-flow (the snapshot clones this subtree, not the host). -->
+            <div class="ns-doc-box">
                 <div class="ns-main-col">
                     <div class="ns-title-area">
                         <div class="ns-title-en">NOTE SHEET</div>
@@ -541,12 +553,14 @@
                         <div style="border-bottom: 1.5px solid #000; display: inline-block; padding-bottom: 2px">{{ getOrgHeaderLine2() }}</div>
                     </div>
 
-                    <div *ngIf="noteSheet.noteSheetNo" style="padding: 4px 16px 2px; font-size: 10pt; display: flex; justify-content: space-between; align-items: baseline">
+                    <!-- Sizes come from .ns-nsno-line / .ns-subject-line in the component
+                         SCSS (10pt + the export bar's offset), not from an inline style. -->
+                    <div class="ns-nsno-line" *ngIf="noteSheet.noteSheetNo" style="padding: 4px 16px 2px; display: flex; justify-content: space-between; align-items: baseline">
                         <span>{{ noteSheet.noteSheetNo }}</span>
                         <span *ngIf="noteSheet.noteSheetDate">{{ isEnglish() ? 'Date:' : 'তারিখঃ' }} {{ formatFullDate(noteSheet.noteSheetDate) }}</span>
                     </div>
 
-                    <div *ngIf="noteSheet.subject" style="padding: 2px 16px 4px; font-size: 10pt">
+                    <div class="ns-subject-line" *ngIf="noteSheet.subject" style="padding: 2px 16px 4px">
                         <strong><u style="text-underline-offset: 3px; text-decoration-skip-ink: none">{{ noteSheet.subject }}</u></strong>
                     </div>
 

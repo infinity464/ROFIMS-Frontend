@@ -203,6 +203,33 @@
         }
     }
 
+    /* Picture trim-size select — sits beside the Picture toggle and wears the
+       same flat toolbar chrome as the buttons around it. */
+    .report-photo-size ::ng-deep .p-select {
+        height: 28px;
+        min-width: 190px;
+        align-items: center;
+        border: 1px solid var(--rab-strip-border);
+        border-radius: 2px;
+        background: var(--rab-strip-bg);
+        box-shadow: none;
+
+        .p-select-label {
+            padding: 0 10px;
+            display: flex;
+            align-items: center;
+            font-family: var(--rab-mono);
+            font-size: 0.66rem;
+            font-weight: 600;
+            letter-spacing: 0.04em;
+            color: var(--rab-text);
+        }
+
+        &:not(.p-disabled):hover {
+            border-color: var(--rab-accent);
+        }
+    }
+
     .rab-toolbar-search {
         /* Border/glow follow the app's selected theme primary color
            (PrimeNG --p-primary-color from the palette picker), gold fallback. */
@@ -611,6 +638,10 @@
 /* Column-width hints */
 :host ::ng-deep .rab-data-table {
     .rab-th-ser, .rab-td-ser { width: 56px; text-align: left; }
+    /* Width comes from the selected trim size (bound inline on the cell) so the
+       column reserves its space before any thumbnail has loaded — otherwise the
+       table would reflow row by row as images arrive. */
+    .rab-th-photo, .rab-td-photo { text-align: left; }
     .rab-th-personnel, .rab-td-personnel { min-width: 220px; }
     .rab-th-joiningDate, .rab-td-date {
         width: 110px;
@@ -648,6 +679,52 @@
         font-size: 0.82rem;
         letter-spacing: 0.04em;
         white-space: nowrap;
+    }
+}
+
+/* Row thumbnail + its empty-state placeholder. Both are the same box — sized
+   inline from the selected trim size — so the row height stays put whether or
+   not the member has a photo, and matches what the export will print. */
+:host ::ng-deep .rab-data-table .p-datatable-tbody {
+    .rab-thumb {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        border: 1px solid var(--rab-strip-border);
+        border-radius: 2px;
+        background: var(--rab-strip-bg);
+        object-fit: cover;
+        overflow: hidden;
+    }
+
+    img.rab-thumb {
+        cursor: zoom-in;
+        transition: border-color 0.15s;
+
+        &:hover {
+            border-color: var(--rab-accent);
+        }
+    }
+
+    .rab-thumb--empty {
+        color: var(--rab-body-ink-muted);
+
+        .pi {
+            font-size: 0.85rem;
+        }
+    }
+}
+
+/* Full-size photo inside the enlarge dialog. */
+::ng-deep .rab-photo-dialog {
+    max-width: 92vw;
+
+    .rab-photo-full {
+        display: block;
+        max-width: min(420px, 84vw);
+        max-height: 70vh;
+        margin: 0 auto;
+        object-fit: contain;
     }
 }
 

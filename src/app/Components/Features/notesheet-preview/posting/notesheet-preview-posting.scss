@@ -98,60 +98,65 @@
     }
 }
 
+/* ── Whole-sheet font size (user-selectable) ───────────
+   The export bar's font dropdown sets --ns-fs-delta on the component host: a
+   point offset from -2 to +2 in 0.25 steps that EVERY text size of the sheet is
+   expressed against, through fs() below.
+
+   The sheet's tiers are deliberately unequal — 13pt title, 11pt org header, 10pt
+   body, 9pt signature lines, 8pt / 6.5pt table — so a single absolute size can
+   never drive the whole document; a shared offset moves them all by the same
+   amount and keeps those proportions intact. Stepping down is also what pulls a
+   trailing block back onto the previous page and saves a sheet.
+
+   The custom property inherits, so it reaches the visible pages, the hidden
+   .page-measure div the pagination math measures, and the repeated table headers
+   alike; the PDF sets the same property on .pdf-flow (see buildJsReportPdf).
+   With no offset set the 0 fallback leaves every size exactly as it was. */
+@function fs($pt) {
+    @return calc(#{$pt}pt + var(--ns-fs-delta, 0) * 1pt);
+}
+
 /* ── Match posting-order-preview document font sizes (posting notesheet ONLY) ──
    Scoped here instead of the shared ../notesheet-preview.scss so general / exbd /
    cc / mo / article-47 previews are untouched. styleUrls load this file AFTER the
    shared sheet, so these rules win on equal specificity. */
 .ns-title-en,
-.ns-title-bn { font-size: 13pt; }          /* document title (HEADER) — +2pt */
+.ns-title-bn { font-size: fs(13); }        /* document title (HEADER) — +2pt */
+
+/* Org header carries its size inline in the template; a stylesheet !important is
+   what beats a non-important inline style, and is needed for it to take the
+   offset. */
+.ns-org-header { font-size: fs(11) !important; }
 
 /* Body: everything except the document header + table column headers → 10pt. */
-.ns-sanglagni-col { font-size: 10pt; }     /* সংলগ্নী নং column */
-.ns-cell-ref { font-size: 10pt; }          /* সূত্র */
-.ns-para { font-size: 10pt; }              /* body paragraphs */
+.ns-nsno-line { font-size: fs(10); }       /* note-sheet no. + date line */
+.ns-subject-line { font-size: fs(10); }    /* subject line */
+.ns-sanglagni-col { font-size: fs(10); }   /* সংলগ্নী নং column */
+.ns-cell-ref { font-size: fs(10); }        /* সূত্র */
+.ns-para { font-size: fs(10); }            /* body paragraphs (incl. .ns-para--tail) */
 .ns-para-no { font-weight: normal; }       /* serial numbers (১। ২। …) not bold */
-.ns-note { font-size: 10pt; }              /* note */
-.ns-initiator-area { font-size: 10pt; }    /* signature block */
-.ns-closing-text { font-size: 10pt; }      /* closing line */
+.ns-note { font-size: fs(10); }            /* note */
+.ns-initiator-area { font-size: fs(10); }  /* signature block */
+.ns-closing-text { font-size: fs(10); }    /* closing line */
 
-/* ── Trailing-section font size (user-selectable) ──────
-   The block after the employee table — নোটঃ, the paragraphs, the initiator
-   signature and the approver sections — is kept together on one page, so once it
-   outgrows the space left below the table it jumps to a page of its own and
-   leaves a hole behind. The export bar's second dropdown puts one of these
-   classes on .ns-doc-box; a step or two down is usually enough to pull the whole
-   block back up and save the extra sheet.
-
-   Both base sizes are scaled by the same factor so the block keeps its internal
-   proportions: 10pt body text (নোট / অনুচ্ছেদ) and 9pt signature lines. The
-   two-class selectors also beat the 1-class defaults above and in the shared
-   sheet. The employee table, the title and everything above the table are
-   deliberately untouched. */
-$tail-scales: ("110": 1.10, "105": 1.05, "100": 1, "975": 0.975, "95": 0.95, "925": 0.925, "90": 0.90, "85": 0.85, "80": 0.80);
-
-@each $key, $scale in $tail-scales {
-    .ns-tail-fs-#{$key} {
-        .ns-note,
-        .ns-para--tail,
-        .ns-initiator-area { font-size: 10pt * $scale; }
-
-        .ns-sig-name,
-        .ns-sig-rank,
-        .ns-sig-paren,
-        .ns-sig-appoint,
-        .ns-sig-date,
-        .ns-approver-role,
-        .ns-approver-left,
-        .ns-approver-remark { font-size: 9pt * $scale; }
-    }
-}
+/* Signature / approver lines — 9pt in the shared sheet, restated here so the
+   offset reaches them too. */
+.ns-sig-name,
+.ns-sig-rank,
+.ns-sig-paren,
+.ns-sig-appoint,
+.ns-sig-date,
+.ns-approver-role,
+.ns-approver-left,
+.ns-approver-remark { font-size: fs(9); }
 
 .ns-posting-table {
     /* Table content 8pt; column headers (table information) keep their own size. */
-    table { font-size: 8pt; }
-    td { font-size: 8pt; }
-    th { font-size: 6.5pt; font-weight: 700; }
-    .ns-posting-note { font-size: 10pt; }
+    table { font-size: fs(8); }
+    td { font-size: fs(8); }
+    th { font-size: fs(6.5); font-weight: 700; }
+    .ns-posting-note { font-size: fs(10); }
 
     /* No shading — plain white rows and header (no zebra, no grey header). */
     th { background: transparent !important; }
@@ -166,10 +171,10 @@ $tail-scales: ("110": 1.10, "105": 1.05, "100": 1, "975": 0.975, "95": 0.95, "92
 /* New posting: table content + column headers 9pt (inter posting stays 8pt / 6.5pt).
    Header is bold. */
 .ns-posting-table.ns-posting-new {
-    table { font-size: 9pt; }
-    td { font-size: 9pt; }
+    table { font-size: fs(9); }
+    td { font-size: fs(9); }
     th {
-        font-size: 9pt;
+        font-size: fs(9);
         font-weight: 700;
     }
 }

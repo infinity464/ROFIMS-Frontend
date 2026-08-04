@@ -284,6 +284,23 @@
             <i class="pi" [class.pi-eye]="!showCriteria" [class.pi-eye-slash]="showCriteria" aria-hidden="true"></i>
             {{ criteriaToggleLabel }}
         </button>
+        <button type="button" class="report-criteria-toggle" [class.is-on]="showPhotos"
+                (click)="togglePhotos()" [attr.aria-pressed]="showPhotos"
+                title="Show a profile picture column after Ser">
+            <i class="pi pi-image" aria-hidden="true"></i>
+            {{ photoToggleLabel }}
+        </button>
+        @if (showPhotos) {
+            <p-select
+                class="report-photo-size"
+                [options]="photoSizeOptions"
+                [(ngModel)]="photoSize"
+                optionLabel="label"
+                optionValue="value"
+                appendTo="body"
+                title="Picture trim size — applies on screen and in Word / Print exports">
+            </p-select>
+        }
         <button type="button" class="report-lang-toggle" (click)="toggleLang()">
             {{ lang === 'en' ? 'বাংলা' : 'English' }}
         </button>
@@ -389,6 +406,24 @@
                                 @case ('Serial') {
                                     <td class="rab-td-ser"><span class="rab-ser">{{ paddedSer(row.ser ?? (i + 1)) }}</span></td>
                                 }
+                                @case ('Photo') {
+                                    <!-- The blob is only fetched once this cell is within a
+                                         screen of the viewport, so a 100-row page costs about
+                                         one screenful of downloads instead of a hundred. -->
+                                    <td class="rab-td-photo" (appLazyVisible)="onPhotoCellVisible(row)"
+                                        [style.width.mm]="photoBoxMm.w + 4">
+                                        @if (photoUrlFor(row); as photoUrl) {
+                                            <img [src]="photoUrl" alt="" class="rab-thumb"
+                                                 [style.width.mm]="photoBoxMm.w" [style.height.mm]="photoBoxMm.h"
+                                                 (click)="openPhotoDialog(row)" title="Click to enlarge" />
+                                        } @else {
+                                            <span class="rab-thumb rab-thumb--empty"
+                                                  [style.width.mm]="photoBoxMm.w" [style.height.mm]="photoBoxMm.h">
+                                                <i class="pi pi-user"></i>
+                                            </span>
+                                        }
+                                    </td>
+                                }
                                 @case ('RabPersonnelComposite') {
                                     <td class="rab-td-personnel">
                                         <div class="rab-personnel-name">{{ codeValue(row.name, row.nameBN) }}</div>
@@ -465,3 +500,17 @@
     }
 </div>
 }
+
+<!-- Full-size profile photo — opened by clicking a row thumbnail. -->
+<p-dialog
+    [(visible)]="showPhotoDialog"
+    [header]="photoDialogName || 'Picture'"
+    [modal]="true"
+    [dismissableMask]="true"
+    [draggable]="false"
+    [resizable]="false"
+    styleClass="rab-photo-dialog">
+    @if (photoDialogUrl) {
+        <img [src]="photoDialogUrl" alt="" class="rab-photo-full" />
+    }
+</p-dialog>

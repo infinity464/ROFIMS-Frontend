@@ -400,6 +400,17 @@ export class EmpService {
         return this.http.delete(`${this.empApi}/FileInformation/Delete/${fileId}`);
     }
 
+    /**
+     * Resolve profile-photo FileIDs for a batch of employees in one round trip.
+     * Employees without a profile image are simply absent from the response —
+     * callers should treat "missing" as "no photo", not "not loaded yet".
+     */
+    getProfilePhotoRefs(employeeIds: number[]): Observable<{ employeeId: number; fileId: number }[]> {
+        return this.http.post<{ employeeId: number; fileId: number }[]>(
+            `${this.empApi}/FileInformation/GetProfilePhotoRefs`, employeeIds
+        );
+    }
+
     /** Get all document references (file id and file name) for an employee from vw_EmployeeDocumentReferences. */
     getEmployeeDocumentReferences(employeeId: number): Observable<EmployeeDocumentReferenceItem[]> {
         return this.http.get<EmployeeDocumentReferenceItem[]>(`${this.empApi}/FileInformation/GetEmployeeDocumentReferences`, {

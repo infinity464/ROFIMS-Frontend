@@ -30,12 +30,16 @@ import {
     statusLocked,
 } from '../report-scope.helper';
 import { OrgTreeMultiSelectComponent } from '@/shared/components/org-tree-multi-select/org-tree-multi-select.component';
+import { LazyVisibleDirective } from '@/shared/directives/lazy-visible.directive';
+import { EmpService } from '@/services/emp-service';
 import { personnelMeta as personnelMetaHelper } from '../formal-rab-render.helper';
+import { DialogModule } from 'primeng/dialog';
 import {
     AlignmentType,
     BorderStyle,
     Document,
     Footer,
+    ImageRun,
     Packer,
     PageNumber,
     PageOrientation,
@@ -49,7 +53,10 @@ import {
 } from 'docx';
 import { saveAs } from 'file-saver';
 import * as XLSX from 'xlsx';
-import { debounceTime, forkJoin, Subject, Subscription } from 'rxjs';
+import { debounceTime, firstValueFrom, forkJoin, Subject, Subscription } from 'rxjs';
+
+/** ID-photo trim size the Picture column renders at, on screen and in exports. */
+export type PhotoSizeKey = 'stamp' | 'intermediate' | 'passport';
 
 /**
  * Member Type Report — standalone report (no parent dropdown).
@@ -70,7 +77,9 @@ import { debounceTime, forkJoin, Subject, Subscription } from 'rxjs';
         PaginatorModule,
         DatePickerModule,
         Toast,
+        DialogModule,
         OrgTreeMultiSelectComponent,
+        LazyVisibleDirective,
     ],
     providers: [MessageService],
     templateUrl: './report-member-type-serving.component.html',
@@ -358,13 +367,43 @@ export class ReportMemberTypeServingComponent implements OnInit, OnDestroy {
      */
     private static readonly NAME_EXTRAS_KEY = 'nameExtras';
 
+    /**
+     * Thumbnail column injected by the Picture toggle. It isn't in the catalog
+     * because the column picker shouldn't offer it — the toolbar button owns it.
+     */
+    private static readonly PHOTO_COLUMN = {
+        key: 'photo', labelEN: 'Picture', labelBN: 'ছবি', hint: 'Photo', defaultVisible: false,
+    };
+
     get visibleColumns(): typeof this.columnCatalog {
         const map = new Map(this.columnCatalog.map(c => [c.key, c]));
-        return this.selectedColumnKeys
+        const cols = this.selectedColumnKeys
             .filter((k) => k !== ReportMemberTypeServingComponent.NAME_EXTRAS_KEY)
             .map(k => map.get(k))
             .filter((c): c is typeof this.columnCatalog[number] => c != null)
             .map(c => this.decorateColumn(c));
+        if (!this.showPhotos) return cols;
+        // Sits directly after Ser; falls back to leading when Ser is unticked.
+        const serIdx = cols.findIndex((c) => c.hint === 'Serial');
+        const at = serIdx >= 0 ? serIdx + 1 : 0;
+        return [...cols.slice(0, at), ReportMemberTypeServingComponent.PHOTO_COLUMN, ...cols.slice(at)];
+    }
+
+    /**
+     * Columns for Word and Print — the same set as the screen, photo column
+     * included, so an export mirrors what the user is looking at.
+     */
+    private get exportColumns(): typeof this.columnCatalog {
+        return this.visibleColumns;
+    }
+
+    /**
+     * Columns for Excel. Same as the screen minus the photo column: the XLSX
+     * writer in use (SheetJS community build) has no image support, so the
+     * column could only ever be an empty one.
+     */
+    private get excelColumns(): typeof this.columnCatalog {
+        return this.visibleColumns.filter((c) => c.hint !== 'Photo');
     }
 
     /**
@@ -501,12 +540,12 @@ export class ReportMemberTypeServingComponent implements OnInit, OnDestroy {
 
     /**
      * Whether the report prints its selection criteria — both the cells and the
-     * "SELECTION CRITERIA" strip heading. Off by default; the toolbar's "Show
-     * Search Criteria" button opts in. The strip itself survives either way,
+     * "SELECTION CRITERIA" strip heading. On by default; the toolbar's "Hide
+     * Search Criteria" button opts out. The strip itself survives either way,
      * because it also carries the record total and generated date — those stamp
      * the report rather than restating what was searched.
      */
-    showCriteria = false;
+    showCriteria = true;
 
     toggleCriteria(): void {
         this.showCriteria = !this.showCriteria;
@@ -516,6 +555,267 @@ export class ReportMemberTypeServingComponent implements OnInit, OnDestroy {
      *  switches the report, not the controls around it. */
     get criteriaToggleLabel(): string {
         return this.showCriteria ? 'Hide Search Criteria' : 'Show Search Criteria';
+    }
+
+    // ── Row photos ────────────────────────────────────────────────────────
+    // Off by default so the report keeps its current load cost: with the
+    // toggle off nothing here runs at all. Turning it on inserts a thumbnail
+    // column after Ser and pays for the images in two lazy steps —
+    //   1. ONE batched call resolves employeeId → profile FileId for the page
+    //      (rows carry `employeeId` from the dynamic-report projector, but not
+    //      the ProfileImages JSON, so the ids have to be looked up).
+    //   2. Each thumbnail blob is fetched only once its cell scrolls within a
+    //      screen of the viewport (LazyVisibleDirective), capped at
+    //      PHOTO_FETCH_LIMIT concurrent downloads.
+    // With rows = 100 per page, eager loading would mean 100 full-size photo
+    // downloads on every toggle; this way a user who never scrolls pays for
+    // roughly one screenful.
+    //
+    // Both maps are keyed by employeeId and survive paging, so revisiting a
+    // page is instant. Object URLs are revoked on destroy.
+    private static readonly PHOTO_FETCH_LIMIT = 4;
+
+    /**
+     * ID-photo trim sizes, in millimetres. These are the standard print sizes,
+     * so the same numbers drive the on-screen box, the Word image and the print
+     * sheet — what the toolbar previews is what the export prints.
+     */
+    private static readonly PHOTO_SIZES = {
+        stamp:        { w: 25, h: 30 },
+        intermediate: { w: 30, h: 40 },
+        passport:     { w: 35, h: 45 },
+    } as const;
+
+    readonly photoSizeOptions: { label: string; value: PhotoSizeKey }[] = [
+        { label: 'Stamp — 25 × 30 mm',        value: 'stamp' },
+        { label: 'Intermediate — 30 × 40 mm', value: 'intermediate' },
+        { label: 'Passport — 35 × 45 mm',     value: 'passport' },
+    ];
+
+    showPhotos = false;
+    photoSize: PhotoSizeKey = 'stamp';
+
+    /** Selected trim size in mm — shared by the screen table and every export. */
+    get photoBoxMm(): { w: number; h: number } {
+        return ReportMemberTypeServingComponent.PHOTO_SIZES[this.photoSize];
+    }
+
+    /** employeeId → profile FileId. A null entry means "looked up, has none". */
+    private photoFileIds = new Map<number, number | null>();
+    /** employeeId → downloaded image, kept for the exporters to re-encode. */
+    private photoBlobs = new Map<number, Blob>();
+    /** employeeId → blob object URL for the on-screen thumbnail. */
+    private photoUrls = new Map<number, string>();
+    /** employeeId → base64 data URL, built lazily for the print window. */
+    private photoDataUrls = new Map<number, string>();
+    /** employeeIds whose blob download has been started (success or not). */
+    private photoRequested = new Set<number>();
+    /** employeeIds queued behind the concurrency cap. */
+    private photoQueue: number[] = [];
+    private photoInFlight = 0;
+    /** In-flight batched FileId lookup, shared by every caller that needs refs. */
+    private photoRefsPromise: Promise<void> | null = null;
+    private photoRefsSub: Subscription | null = null;
+
+    /** Photo modal state — clicking a thumbnail opens the full image. */
+    showPhotoDialog = false;
+    photoDialogUrl: string | null = null;
+    photoDialogName = '';
+
+    get photoToggleLabel(): string {
+        return this.showPhotos ? 'Hide Picture' : 'Picture';
+    }
+
+    togglePhotos(): void {
+        this.showPhotos = !this.showPhotos;
+        if (this.showPhotos) void this.resolvePhotoRefs();
+    }
+
+    /** employeeId for a row, or null when the projector didn't supply one. */
+    private rowEmployeeId(row: MemberAppointmentReportRow): number | null {
+        const id = (row as any)?.employeeId;
+        return typeof id === 'number' && id > 0 ? id : null;
+    }
+
+    /**
+     * One batched employeeId → FileId lookup for the rows on screen. Ids already
+     * resolved (from an earlier page visit) are skipped, so paging back and forth
+     * costs nothing. Concurrent callers (a toggle plus an export) share the same
+     * in-flight promise rather than firing the call twice.
+     */
+    private resolvePhotoRefs(): Promise<void> {
+        if (this.photoRefsPromise) return this.photoRefsPromise;
+        const pending = Array.from(
+            new Set(
+                this.list
+                    .map((r) => this.rowEmployeeId(r))
+                    .filter((id): id is number => id != null && !this.photoFileIds.has(id))
+            )
+        );
+        if (pending.length === 0) {
+            this.drainPhotoQueue();
+            return Promise.resolve();
+        }
+        this.photoRefsPromise = new Promise<void>((resolve) => {
+            this.photoRefsSub?.unsubscribe();
+            this.photoRefsSub = this.empService.getProfilePhotoRefs(pending).subscribe({
+                next: (refs) => {
+                    // Absent from the response = employee has no profile image;
+                    // record that as null so we never ask again.
+                    for (const id of pending) this.photoFileIds.set(id, null);
+                    for (const ref of refs ?? []) {
+                        if (ref?.employeeId != null && ref?.fileId > 0) this.photoFileIds.set(ref.employeeId, ref.fileId);
+                    }
+                    this.photoRefsPromise = null;
+                    this.drainPhotoQueue();
+                    resolve();
+                },
+                error: () => {
+                    // Leave the ids unresolved so a later toggle/export can retry.
+                    this.photoRefsPromise = null;
+                    this.photoQueue = [];
+                    resolve();
+                },
+            });
+        });
+        return this.photoRefsPromise;
+    }
+
+    /**
+     * Called by the template when a photo cell scrolls into view. Requests the
+     * thumbnail unless it's already cached, in flight, or known to not exist.
+     */
+    onPhotoCellVisible(row: MemberAppointmentReportRow): void {
+        if (!this.showPhotos) return;
+        const empId = this.rowEmployeeId(row);
+        if (empId == null || this.photoRequested.has(empId)) return;
+        if (this.photoQueue.includes(empId)) return;
+        this.photoQueue.push(empId);
+        this.drainPhotoQueue();
+    }
+
+    /** Start queued downloads up to the concurrency cap. */
+    private drainPhotoQueue(): void {
+        // FileIds aren't known yet — the batch call's completion re-drains.
+        if (this.photoRefsPromise) return;
+        while (this.photoInFlight < ReportMemberTypeServingComponent.PHOTO_FETCH_LIMIT && this.photoQueue.length > 0) {
+            const empId = this.photoQueue.shift()!;
+            if (this.photoRequested.has(empId)) continue;
+            const fileId = this.photoFileIds.get(empId);
+            // undefined = not resolved (row arrived after the batch call); null = no photo.
+            if (fileId == null) continue;
+            this.photoRequested.add(empId);
+            this.photoInFlight++;
+            this.empService.downloadFile(fileId).subscribe({
+                next: (blob) => {
+                    if (blob && blob.size > 0) {
+                        this.photoBlobs.set(empId, blob);
+                        this.photoUrls.set(empId, URL.createObjectURL(blob));
+                    }
+                    this.photoInFlight--;
+                    this.drainPhotoQueue();
+                },
+                error: () => {
+                    // Leave the placeholder — a broken file shouldn't retry on every scroll.
+                    this.photoInFlight--;
+                    this.drainPhotoQueue();
+                },
+            });
+        }
+    }
+
+    /**
+     * Downloads every remaining photo on the page and resolves once they've all
+     * settled. Exports need the whole page, not just what the user scrolled past,
+     * so this is the one place that gives up on lazy loading — and it only runs
+     * from an export the user explicitly asked for.
+     */
+    private async loadAllPhotosForExport(): Promise<void> {
+        await this.resolvePhotoRefs();
+        const wanted = Array.from(
+            new Set(
+                this.list
+                    .map((r) => this.rowEmployeeId(r))
+                    .filter((id): id is number => id != null && !!this.photoFileIds.get(id) && !this.photoBlobs.has(id))
+            )
+        );
+        if (wanted.length === 0) return;
+
+        const limit = ReportMemberTypeServingComponent.PHOTO_FETCH_LIMIT;
+        let cursor = 0;
+        const worker = async (): Promise<void> => {
+            while (cursor < wanted.length) {
+                const empId = wanted[cursor++];
+                const fileId = this.photoFileIds.get(empId);
+                if (!fileId) continue;
+                this.photoRequested.add(empId);
+                try {
+                    const blob = await firstValueFrom(this.empService.downloadFile(fileId));
+                    if (blob && blob.size > 0) {
+                        this.photoBlobs.set(empId, blob);
+                        if (!this.photoUrls.has(empId)) this.photoUrls.set(empId, URL.createObjectURL(blob));
+                    }
+                } catch {
+                    // A missing file just prints an empty photo cell.
+                }
+            }
+        };
+        await Promise.all(Array.from({ length: Math.min(limit, wanted.length) }, () => worker()));
+    }
+
+    /** Cached thumbnail URL for a row, or null while loading / when there is none. */
+    photoUrlFor(row: MemberAppointmentReportRow): string | null {
+        const empId = this.rowEmployeeId(row);
+        return empId != null ? (this.photoUrls.get(empId) ?? null) : null;
+    }
+
+    /** Base64 data URL for a row's photo — print runs in a separate window
+     *  where this document's blob: URLs would not resolve. */
+    private photoDataUrlFor(row: MemberAppointmentReportRow): string | null {
+        const empId = this.rowEmployeeId(row);
+        return empId != null ? (this.photoDataUrls.get(empId) ?? null) : null;
+    }
+
+    /** Encode every downloaded photo on the page as a data URL, once. */
+    private async buildPhotoDataUrls(): Promise<void> {
+        const pending = Array.from(this.photoBlobs.entries()).filter(([id]) => !this.photoDataUrls.has(id));
+        await Promise.all(pending.map(async ([id, blob]) => {
+            const dataUrl = await this.blobToDataUrl(blob);
+            if (dataUrl) this.photoDataUrls.set(id, dataUrl);
+        }));
+    }
+
+    private blobToDataUrl(blob: Blob): Promise<string | null> {
+        return new Promise((resolve) => {
+            const reader = new FileReader();
+            reader.onload = () => resolve(typeof reader.result === 'string' ? reader.result : null);
+            reader.onerror = () => resolve(null);
+            reader.readAsDataURL(blob);
+        });
+    }
+
+    openPhotoDialog(row: MemberAppointmentReportRow): void {
+        const url = this.photoUrlFor(row);
+        if (!url) return;
+        this.photoDialogUrl = url;
+        this.photoDialogName = this.nameColumnValue(row);
+        this.showPhotoDialog = true;
+    }
+
+    /** Drop every queued/in-flight download and revoke cached object URLs. */
+    private clearRowPhotos(): void {
+        this.photoRefsSub?.unsubscribe();
+        this.photoRefsSub = null;
+        this.photoRefsPromise = null;
+        this.photoQueue = [];
+        for (const url of this.photoUrls.values()) {
+            try { URL.revokeObjectURL(url); } catch { /* already revoked */ }
+        }
+        this.photoUrls.clear();
+        this.photoBlobs.clear();
+        this.photoDataUrls.clear();
+        this.photoRequested.clear();
+        this.photoFileIds.clear();
     }
 
     /**
@@ -574,6 +874,7 @@ export class ReportMemberTypeServingComponent implements OnInit, OnDestroy {
         private _userMenuService: UserMenuService,
         private reportService: ReportService,
         private commonCodeService: CommonCodeService,
+        private empService: EmpService,
         private messageService: MessageService
     ) {}
 
@@ -612,6 +913,7 @@ export class ReportMemberTypeServingComponent implements OnInit, OnDestroy {
 
     ngOnDestroy(): void {
         this.idSearchSub?.unsubscribe();
+        this.clearRowPhotos();
     }
 
     loadMemberTypes(): void {
@@ -1125,6 +1427,9 @@ export class ReportMemberTypeServingComponent implements OnInit, OnDestroy {
                 }
                 this.searched = true;
                 this.loading = false;
+                // Only when the user has opted into pictures — the default path
+                // stays exactly as costly as it was before.
+                if (this.showPhotos) void this.resolvePhotoRefs();
             },
             error: (err) => {
                 console.error(err);
@@ -1162,15 +1467,41 @@ export class ReportMemberTypeServingComponent implements OnInit, OnDestroy {
     async exportAs(type: 'print' | 'word' | 'excel'): Promise<void> {
         this.exportDropdownOpen = false;
         if (!this.list?.length) return;
-        if (type === 'print') {
-            this.openRabPrintWindow();
-            return;
+        this.exporting = true;
+        try {
+            // Word and Print embed the pictures, so they need every row's image —
+            // not just the rows the user happened to scroll past. Excel has no
+            // image support in the XLSX writer, so it skips the wait entirely.
+            if (this.showPhotos && type !== 'excel') {
+                await this.loadAllPhotosForExport();
+                if (type === 'print') await this.buildPhotoDataUrls();
+            }
+            if (type === 'print') {
+                this.openRabPrintWindow();
+            } else if (type === 'word') {
+                await this.exportRabWord();
+            } else {
+                this.exportRabExcel();
+            }
+        } finally {
+            this.exporting = false;
         }
-        if (type === 'word') {
-            await this.exportRabWord();
-        } else {
-            this.exportRabExcel();
-        }
+    }
+
+    /** Selected trim size converted to CSS pixels (96 dpi) — the unit docx's
+     *  image transformation expects, and what the print sheet lays out in. */
+    private get photoBoxPx(): { w: number; h: number } {
+        const mm = this.photoBoxMm;
+        return { w: Math.round((mm.w * 96) / 25.4), h: Math.round((mm.h * 96) / 25.4) };
+    }
+
+    /** docx image type for a blob, defaulting to jpg for unlabelled uploads. */
+    private docxImageType(blob: Blob): 'jpg' | 'png' | 'gif' | 'bmp' {
+        const mime = (blob.type || '').toLowerCase();
+        if (mime.includes('png')) return 'png';
+        if (mime.includes('gif')) return 'gif';
+        if (mime.includes('bmp')) return 'bmp';
+        return 'jpg';
     }
 
     private async exportRabWord(): Promise<void> {
@@ -1217,13 +1548,26 @@ export class ReportMemberTypeServingComponent implements OnInit, OnDestroy {
         }
         const criteriaTable = new Table({ width: { size: 100, type: WidthType.PERCENTAGE }, layout: TableLayoutType.AUTOFIT, rows: critRows });
 
-        const visibleCols = this.visibleColumns;
+        const visibleCols = this.exportColumns;
         const headerLabels = visibleCols.map(c => this.lang === 'bn' ? c.labelBN : c.labelEN);
         const dataColPct = visibleCols.length > 0 ? (100 / visibleCols.length) : 100;
         const headerCells: TableCell[] = headerLabels.map(label => new TableCell({ borders: headerCellBorder, margins: { top: 120, bottom: 120, left: 140, right: 140 }, width: { size: dataColPct, type: WidthType.PERCENTAGE }, children: [new Paragraph({ alignment: AlignmentType.LEFT, children: [new TextRun({ text: wsafe(label), font: sans, size: S.tableHeader, ...bnRunExtras(S.tableHeader), bold: true, color: C.black, characterSpacing: isBn ? 0 : 30, allCaps: !isBn })] })] }));
         const headerRow = new TableRow({ tableHeader: true, cantSplit: true, children: headerCells });
 
         const codeValue = (en?: string | null, bn?: string | null): string => (isBn && bn) ? bn.trim() : (en ?? bn ?? '—');
+
+        // docx needs the raw bytes up front — the cell builder below is sync.
+        const photoBox = this.photoBoxPx;
+        const photoBuffers = new Map<number, { data: ArrayBuffer; type: 'jpg' | 'png' | 'gif' | 'bmp' }>();
+        if (this.showPhotos) {
+            for (const [empId, blob] of this.photoBlobs) {
+                try {
+                    photoBuffers.set(empId, { data: await blob.arrayBuffer(), type: this.docxImageType(blob) });
+                } catch {
+                    // Unreadable blob — that row just gets an empty photo cell.
+                }
+            }
+        }
 
         const dataRows: TableRow[] = this.list.map((row, idx) => {
             const isEven = idx % 2 === 1;
@@ -1233,6 +1577,24 @@ export class ReportMemberTypeServingComponent implements OnInit, OnDestroy {
                 const run = (text: string, opts: { fontKey?: any; sz?: number; bold?: boolean; color?: string; chSp?: number } = {}) => new TextRun({ text: wsafe(text), font: opts.fontKey ?? sans, size: opts.sz ?? S.body, ...bnRunExtras(opts.sz ?? S.body), bold: opts.bold ?? false, color: opts.color ?? C.black, ...(opts.chSp != null ? { characterSpacing: opts.chSp } : {}) });
                 switch (col.hint) {
                     case 'Serial': return new TableCell({ ...cellOpts, children: [new Paragraph({ alignment: AlignmentType.LEFT, children: [run(this.paddedSer((row as any).ser ?? idx + 1), { fontKey: mono, sz: S.name, bold: true, color: C.gray, chSp: isBn ? 0 : 8 })] })] });
+                    case 'Photo': {
+                        const empId = this.rowEmployeeId(row);
+                        const img = empId != null ? photoBuffers.get(empId) : undefined;
+                        // No photo on file → an empty cell keeps the column aligned.
+                        if (!img) return new TableCell({ ...cellOpts, children: [new Paragraph({ children: [run('')] })] });
+                        return new TableCell({
+                            ...cellOpts,
+                            children: [new Paragraph({
+                                alignment: AlignmentType.LEFT,
+                                children: [new ImageRun({
+                                    type: img.type,
+                                    data: img.data,
+                                    transformation: { width: photoBox.w, height: photoBox.h },
+                                    altText: { name: 'photo', description: codeValue(row.name, row.nameBN), title: 'photo' },
+                                })],
+                            })],
+                        });
+                    }
                     case 'RabPersonnelComposite': {
                         const meta = this.personnelMeta(row);
                         const children: Paragraph[] = [new Paragraph({ spacing: { after: meta ? 40 : 0 }, children: [run(codeValue(row.name, row.nameBN), { sz: S.name, bold: true })] })];
@@ -1275,7 +1637,7 @@ export class ReportMemberTypeServingComponent implements OnInit, OnDestroy {
     private exportRabExcel(): void {
         const isBn = this.lang === 'bn';
         const wsafe = (s: string | null | undefined): string => s ?? '';
-        const visibleCols = this.visibleColumns;
+        const visibleCols = this.excelColumns;
         const headers: string[] = visibleCols.map(c => isBn ? c.labelBN : c.labelEN);
         const totalCols = headers.length || 1;
         const codeValue = (en?: string | null, bn?: string | null): string => (isBn && bn) ? bn.trim() : (en ?? bn ?? '—');
@@ -1351,13 +1713,20 @@ export class ReportMemberTypeServingComponent implements OnInit, OnDestroy {
         const sans = isBn ? "'Times New Roman', 'SolaimanLipi', sans-serif" : "'Times New Roman', sans-serif";
         const mono = "'JetBrains Mono', 'Consolas', 'Courier New', monospace";
 
-        const visibleCols = this.visibleColumns;
+        const visibleCols = this.exportColumns;
+        const photoMm = this.photoBoxMm;
         const tableHeaderHtml = `<tr>${visibleCols.map(c => `<th>${esc(this.lang === 'bn' ? c.labelBN : c.labelEN)}</th>`).join('')}</tr>`;
         const codeValue = (en?: string | null, bn?: string | null): string => (this.lang === 'bn' && bn) ? bn.trim() : (en ?? bn ?? '—');
 
         const renderCell = (row: MemberAppointmentReportRow, col: { key: string; hint: string }, idx: number): string => {
             switch (col.hint) {
                 case 'Serial': return `<td class="td-ser"><span class="ser">${esc(this.paddedSer((row as any).ser ?? idx + 1))}</span></td>`;
+                case 'Photo': {
+                    // Data URL, not the blob: URL — the print window is a separate
+                    // document and would not resolve this document's blob refs.
+                    const src = this.photoDataUrlFor(row);
+                    return `<td class="td-photo">${src ? `<img class="photo" src="${src}" alt="" />` : '<span class="photo photo-empty"></span>'}</td>`;
+                }
                 case 'RabPersonnelComposite': {
                     const meta = this.personnelMeta(row);
                     const metaHtml = meta ? `<div class="personnel-meta">${esc(meta)}</div>` : '';
@@ -1431,6 +1800,11 @@ export class ReportMemberTypeServingComponent implements OnInit, OnDestroy {
     tbody tr { page-break-inside: avoid; }
     .td-ser { white-space: nowrap; }
     .ser { font-family: ${mono}; font-size: 9pt; font-weight: 600; color: #6b6b6b; letter-spacing: 0.04em; white-space: nowrap; }
+    /* Photo cell is fixed at the selected ID-photo trim size, so every picture
+       on the sheet prints identically whether or not the source is that ratio. */
+    .td-photo { width: ${photoMm.w + 4}mm; }
+    .photo { display: block; width: ${photoMm.w}mm; height: ${photoMm.h}mm; object-fit: cover; border: 0.3mm solid #d8d5cc; }
+    .photo-empty { background: #f2f1ec; }
     .td-personnel { min-width: 56mm; }
     .personnel-name { font-family: ${sans}; font-weight: 600; font-size: 9.5pt; color: #0b0b0b; line-height: 1.2; }
     .personnel-meta { margin-top: 0.7mm; font-family: ${mono}; font-size: 7pt; letter-spacing: 0.08em; text-transform: uppercase; color: #6b6b6b; ${isBn ? 'letter-spacing:0;text-transform:none;font-family:' + sans + ';' : ''} }

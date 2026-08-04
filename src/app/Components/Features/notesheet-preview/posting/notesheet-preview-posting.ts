@@ -90,6 +90,8 @@ export class NotesheetPreviewPostingComponent extends NotesheetPreviewBase imple
     @ViewChild('pagesContainer') pagesContainer!: ElementRef<HTMLDivElement>;
 
     private cdr = inject(ChangeDetectorRef);
+    /** Host element — carries the --ns-fs-delta font-size offset for the whole preview. */
+    private hostEl = inject(ElementRef) as ElementRef<HTMLElement>;
     private confirmationService = inject(ConfirmationService);
     private sharedService = inject(SharedService);
     private jsreportService = inject(JsReportService);
@@ -159,28 +161,54 @@ export class NotesheetPreviewPostingComponent extends NotesheetPreviewBase imple
     ];
     selectedPageSize = 'Legal';
 
-    // ── Trailing-section font size ────────────────────────────
-    /** The section after the employee table — নোটঃ, the paragraphs, the initiator
-     *  signature and the approver blocks — is held together on one page, so when it
-     *  no longer fits it moves to a page of its own and leaves a gap behind. Sizing
-     *  it down a step or two is usually enough to pull it back onto the previous
-     *  page and drop the extra sheet entirely. The value is a class applied to the
-     *  document box; '' keeps the default 10pt/9pt. See the $tail-scales map in the
-     *  component SCSS — the body pt in each label is what the class produces. */
-    tailFontOptions = [
-        { label: 'শেষাংশ ১১', value: 'ns-tail-fs-110' },
-        { label: 'শেষাংশ ১০.৫', value: 'ns-tail-fs-105' },
-        { label: 'শেষাংশ ১০', value: 'ns-tail-fs-100' },
-        { label: 'শেষাংশ ৯.৭৫', value: 'ns-tail-fs-975' },
-        { label: 'শেষাংশ ৯.৫', value: 'ns-tail-fs-95' },
-        { label: 'শেষাংশ ৯.২৫', value: 'ns-tail-fs-925' },
-        { label: 'শেষাংশ ৯', value: 'ns-tail-fs-90' },
-        { label: 'শেষাংশ ৮.৫', value: 'ns-tail-fs-85' },
-        { label: 'শেষাংশ ৮', value: 'ns-tail-fs-80' }
-    ];
-    /** Default = the sheet's normal 10pt/9pt. A real class rather than '' so the
-     *  dropdown shows its label instead of falling back to the empty placeholder. */
-    tailFontClass = 'ns-tail-fs-100';
+    // ── Whole-sheet font size ─────────────────────────────────
+    /** Point offset applied to every text size of the note sheet — title, org
+     *  header, subject, body paragraphs, নোটঃ, the employee table and the
+     *  signature / approver blocks.
+     *
+     *  Those tiers are deliberately unequal (13 / 11 / 10 / 9 / 8 / 6.5pt), so no
+     *  single absolute size can drive the document; the dropdown offers a shared
+     *  offset instead, which moves them together and keeps the proportions. 0 is
+     *  the sheet's normal sizing. Sizing the sheet down also pulls a block that
+     *  spilled onto a page of its own back up and saves the extra sheet.
+     *
+     *  Applied as the --ns-fs-delta custom property on the component host — see
+     *  applyFontDelta(), the fs() function in the component SCSS, and the
+     *  .pdf-flow restatement in buildJsReportPdf(). */
+    fontDelta = 0;
+    /** +2.00 … 0 … -2.00 pt in 0.25 steps, largest first (like the page-size list). */
+    readonly fontDeltaOptions = Array.from({ length: 17 }, (_, i) => {
+        const value = +(2 - i * 0.25).toFixed(2);
+        return { label: this.fontDeltaLabel(value), value };
+    });
+
+    /** e.g. "Font: -0.25 pt" — the sign is the point of the label, so it is always
+     *  shown; the 0 step is named rather than numbered since it is the sheet's own
+     *  sizing. Kept in English (unlike the document itself) because the export bar
+     *  is app chrome, not printed. */
+    private fontDeltaLabel(value: number): string {
+        if (value === 0) return 'Default Font Size';
+        return `Font: ${value > 0 ? '+' : '-'}${Math.abs(value).toFixed(2)} pt`;
+    }
+
+    /**
+     * Font-size dropdown changed. The offset is written to the host element so it
+     * inherits into the visible pages, the hidden .page-measure div and the
+     * repeated table headers at once. Every tier resizes, so the content height
+     * changes: clearing lastMeasuredHeight makes the next ngAfterViewChecked
+     * re-measure and re-paginate against the new size.
+     */
+    onFontDeltaChange(): void {
+        this.applyFontDelta();
+        this.lastMeasuredHeight = 0;
+        this.cdr.detectChanges();
+    }
+
+    /** Unitless — the SCSS multiplies it by 1pt, which keeps a negative offset a
+     *  plain multiplication instead of a signed operand inside calc(). */
+    private applyFontDelta(): void {
+        this.hostEl.nativeElement.style.setProperty('--ns-fs-delta', `${this.fontDelta}`);
+    }
 
     // ── Export detail toggles ──────────────────────────────────
     showRankQualifications = true;
@@ -1817,7 +1845,12 @@ html, body { margin: 0; padding: 0; background: transparent; }
     box-sizing: border-box;
     width: ${contentWidth};
     font-family: 'Times New Roman', 'SolaimanLipi', Times, serif;
-    font-size: 10pt;
+    /* Font-size offset picked in the export bar. The web view carries it on the
+       component host, which is outside the cloned snapshot — restated here so the
+       tiers below and the scoped component rules resolve to the same sizes the
+       preview shows. */
+    --ns-fs-delta: ${this.fontDelta};
+    font-size: ${this.pdfFs(10)};
     line-height: 1.7;
     color: #000;
 }
@@ -1825,14 +1858,16 @@ html, body { margin: 0; padding: 0; background: transparent; }
 /* Per-element font-size tiers restated so they win over scoped component styles
    (1:1 with the web view). */
 .pdf-flow .ns-title-bn,
-.pdf-flow .ns-title-en { font-size: 11pt !important; }   /* title — match প্রজ্ঞাপন / Word */
+.pdf-flow .ns-title-en { font-size: ${this.pdfFs(11)} !important; }   /* title — match প্রজ্ঞাপন / Word */
 
 .pdf-flow .ns-cell-subject,
 .pdf-flow .ns-edit-field,
 .pdf-flow .ns-exbd-info,
 .pdf-flow .ns-file-attachments-label,
-.pdf-flow .ns-page-no { font-size: 10pt !important; }
+.pdf-flow .ns-page-no { font-size: ${this.pdfFs(10)} !important; }
 
+/* The trailing block mixes 10pt body text with 9pt signature lines on screen;
+   the PDF flattens all of it to 10pt (+ offset), as it always has. */
 .pdf-flow .ns-approver-left,
 .pdf-flow .ns-approver-remark,
 .pdf-flow .ns-approver-role,
@@ -1846,14 +1881,9 @@ html, body { margin: 0; padding: 0; background: transparent; }
 .pdf-flow .ns-sig-date,
 .pdf-flow .ns-sig-name,
 .pdf-flow .ns-sig-paren,
-.pdf-flow .ns-sig-rank { font-size: 10pt !important; }
+.pdf-flow .ns-sig-rank { font-size: ${this.pdfFs(10)} !important; }
 
-.pdf-flow .ns-closing-text { font-size: 10pt !important; }
-
-/* Trailing-section font size picked in the export bar. The tier above pins the
-   whole block to 10pt !important, so the chosen scale has to be restated at the
-   same tier — the .ns-doc-box class itself rides along in the snapshot. */
-${this.buildTailFontCss()}
+.pdf-flow .ns-closing-text { font-size: ${this.pdfFs(10)} !important; }
 
 .pdf-flow .ns-members-preview-table,
 .pdf-flow .ns-members-preview-table th,
@@ -1861,10 +1891,10 @@ ${this.buildTailFontCss()}
 .pdf-flow .ns-ref-file-btn,
 .pdf-flow .ns-ref-file-btn i { font-size: 7pt !important; }
 
-.pdf-flow .ns-posting-table td { font-size: 8pt !important; }    /* table content (inter) */
-.pdf-flow .ns-posting-table.ns-posting-new td { font-size: 9pt !important; }  /* new posting content */
-.pdf-flow .ns-posting-table th { font-size: 6.5pt !important; }  /* table header (inter) */
-.pdf-flow .ns-posting-table.ns-posting-new th { font-size: 9pt !important; font-weight: normal !important; }  /* new posting header (not bold) */
+.pdf-flow .ns-posting-table td { font-size: ${this.pdfFs(8)} !important; }    /* table content (inter) */
+.pdf-flow .ns-posting-table.ns-posting-new td { font-size: ${this.pdfFs(9)} !important; }  /* new posting content */
+.pdf-flow .ns-posting-table th { font-size: ${this.pdfFs(6.5)} !important; }  /* table header (inter) */
+.pdf-flow .ns-posting-table.ns-posting-new th { font-size: ${this.pdfFs(9)} !important; font-weight: normal !important; }  /* new posting header (not bold) */
 
 /* No shading — plain white rows and header (no zebra, no grey header). */
 .pdf-flow .ns-posting-table th,
@@ -2015,47 +2045,11 @@ ${this.buildTailFontCss()}
      * those @font-face fonts must be system-installed where Chromium runs, or
      * bundled locally, to render identically.
      */
-    /** Scale behind each tailFontOptions value — must track the $tail-scales map in
-     *  the component SCSS, which drives the same classes on screen. */
-    private readonly tailFontScales: Record<string, number> = {
-        'ns-tail-fs-100': 1,
-        'ns-tail-fs-110': 1.1,
-        'ns-tail-fs-105': 1.05,
-        'ns-tail-fs-975': 0.975,
-        'ns-tail-fs-95': 0.95,
-        'ns-tail-fs-925': 0.925,
-        'ns-tail-fs-90': 0.9,
-        'ns-tail-fs-85': 0.85,
-        'ns-tail-fs-80': 0.8
-    };
-
-    /**
-     * PDF-side restatement of the selected trailing-section font size.
-     *
-     * On screen the block mixes 10pt body text with 9pt signature lines, but the
-     * PDF tier above flattens all of it to 10pt, so one size covers every selector
-     * here. Returns '' for the default, leaving the tier untouched.
-     */
-    private buildTailFontCss(): string {
-        const scale = this.tailFontScales[this.tailFontClass];
-        if (!scale) return '';
-        const size = +(10 * scale).toFixed(2);
-        const selectors = [
-            '.ns-note',
-            '.ns-para--tail',
-            '.ns-initiator-area',
-            '.ns-approver-left',
-            '.ns-approver-remark',
-            '.ns-approver-role',
-            '.ns-sig-name',
-            '.ns-sig-rank',
-            '.ns-sig-paren',
-            '.ns-sig-appoint',
-            '.ns-sig-date'
-        ]
-            .map(s => `.pdf-flow .${this.tailFontClass} ${s}`)
-            .join(',\n');
-        return `${selectors} { font-size: ${size}pt !important; }`;
+    /** A PDF-tier font size, written against the same --ns-fs-delta offset the web
+     *  view uses (mirrors the fs() function in the component SCSS). .pdf-flow sets
+     *  the property, so the sizes below track the export bar's font dropdown. */
+    private pdfFs(pt: number): string {
+        return `calc(${pt}pt + var(--ns-fs-delta, 0) * 1pt)`;
     }
 
     private collectDocumentStyles(): string {
