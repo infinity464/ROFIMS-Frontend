@@ -8,6 +8,18 @@
             <ng-container *ngIf="!editing">
                 <ng-container *ngIf="employees.length > 0">
                     <p-select [options]="pageSizeOptions" [(ngModel)]="selectedPageSize" optionLabel="label" optionValue="value" [style]="{'width': '90px'}"></p-select>
+                    <!-- Font size of the WHOLE order, as a point offset (-2 … +2, 0.25 steps):
+                         the document's tiers differ in size, so they move together instead of
+                         being set to one value. -->
+                    <p-select
+                        [options]="fontDeltaOptions"
+                        [(ngModel)]="fontDelta"
+                        (onChange)="onFontDeltaChange()"
+                        optionLabel="label"
+                        optionValue="value"
+                        [style]="{ width: '165px' }"
+                        pTooltip="Font size of the whole posting order (-2 pt to +2 pt)"
+                    ></p-select>
                     <p-button icon="pi pi-file-word" label="Word" (onClick)="exportWord()" styleClass="p-button-outlined"></p-button>
                     <p-button icon="pi pi-file-pdf" label="PDF" (onClick)="exportPdf()" [loading]="exportingPdf" styleClass="p-button-outlined"></p-button>
                     <p-button icon="pi pi-print" label="Print Preview" (onClick)="printPreview()" [loading]="printingPreview" styleClass="p-button-outlined"></p-button>
@@ -461,7 +473,9 @@
     <div class="unit-filter-bar no-print" *ngIf="!editing && !loading && !error && employees.length > 0"
          style="flex-direction:column; align-items:flex-start;">
         <div style="display:flex; align-items:center; gap:0.8rem; font-size:0.82rem;">
-            <span *ngIf="!isInterPosting" style="display:inline-flex; align-items:center; gap:0.4rem;">
+            <!-- ট্রেড applies to both order types — the inter-posting table carries the
+                 column too, in the same place as the new-posting one. -->
+            <span style="display:inline-flex; align-items:center; gap:0.4rem;">
                 <p-checkbox [(ngModel)]="showTradeColumn" [binary]="true" inputId="chkTradeCol"></p-checkbox>
                 <label for="chkTradeCol" style="cursor:pointer;">{{ isBangla ? 'ট্রেড' : 'Trade' }}</label>
             </span>
@@ -546,12 +560,13 @@
             <!-- Employee Table -->
             <table class="po-doc-table">
                 <thead>
-                    <!-- Inter-posting: single-row header (no Trade, no RAB ID) -->
+                    <!-- Inter-posting: single-row header (no RAB ID) -->
                     <ng-container *ngIf="isInterPosting">
                         <tr>
                             <th style="width:6%">{{ isBangla ? 'ক্রমিক' : 'Ser' }}</th>
                             <th style="width:13%">{{ isBangla ? 'ব্যক্তিগত নং' : 'Service ID' }}</th>
                             <th style="width:10%">{{ isBangla ? 'পদবি' : 'Rank' }}</th>
+                            <th *ngIf="showTradeColumn" style="width:8%">{{ isBangla ? 'ট্রেড' : 'Trade' }}</th>
                             <th style="width:16%">{{ isBangla ? 'নাম' : 'Name' }}</th>
                             <th *ngIf="showOwnDistrict" style="width:8%">{{ isBangla ? 'নিজ জেলা' : 'Own District' }}</th>
                             <th *ngIf="showPrevWorkplaceUnit" style="width:12%">{{ isBangla ? 'পূর্ববতী কর্মস্থল' : 'Previous Workplace' }}</th>
@@ -595,6 +610,7 @@
                             <td class="text-center">{{ isBangla ? (toBanglaDigits('' + (i + 1)) + '।') : (i + 1) }}</td>
                             <td class="po-doc-left-cell" style="white-space: pre-line;">{{ empServiceId(emp) }}</td>
                             <td class="po-doc-left-cell">{{ empRank(emp) }}</td>
+                            <td class="po-doc-left-cell" *ngIf="showTradeColumn">{{ empTrade(emp) }}</td>
                             <td class="po-doc-name-cell">{{ empName(emp) }}{{ empNameQuals(emp) }}</td>
                             <td class="po-doc-left-cell" *ngIf="showOwnDistrict" style="white-space: pre-line;">{{ empDistrict(emp) }}</td>
                             <td class="po-doc-left-cell" *ngIf="showPrevWorkplaceUnit" style="white-space: pre-line;">{{ empPrevWorkplace(emp) }}</td>
@@ -625,50 +641,86 @@
             <!-- Sub Text (rich HTML from editor) -->
             <div class="po-doc-sub-text" *ngIf="subText" [innerHTML]="subText"></div>
 
-            <!-- Signature Block (top right, standalone). Date is omitted here; it is
-                 rendered separately on the অনুলিপি title line below. -->
-            <div class="po-doc-signature">
-                <div>স্বাক্ষরিত/-</div>
-                <div>{{ (isBangla ? approverNameBN : approverName) || approverName || '...................................' }}</div>
-                <div>{{ (isBangla ? approverRankBN : approverRank) || approverRank || '............................' }}</div>
-                <div>{{ (isBangla ? approverAppointmentBN : approverAppointment) || approverAppointment || '............................' }}</div>
-                <div>{{ isBangla ? 'টেলিঃ' : 'Tel:' }} {{ approverPhoneText }}</div>
-            </div>
+            <!-- Opening block — স্বাক্ষরিত/- signature, the অনুলিপি head and line ১, held
+                 together on one page: the signature must never print without at least
+                 the first অনুলিপি line under it. Lines ২ onward follow freely, on this
+                 page or the next. -->
+            <div class="po-doc-copy-open">
+                <!-- Signature Block (top right). Date is omitted here; it is rendered
+                     separately on the অনুলিপি title line below. -->
+                <div class="po-doc-signature">
+                    <div>স্বাক্ষরিত/-</div>
+                    <div>{{ (isBangla ? approverNameBN : approverName) || approverName || '...................................' }}</div>
+                    <div>{{ (isBangla ? approverRankBN : approverRank) || approverRank || '............................' }}</div>
+                    <div>{{ (isBangla ? approverAppointmentBN : approverAppointment) || approverAppointment || '............................' }}</div>
+                    <div>{{ isBangla ? 'টেলিঃ' : 'Tel:' }} {{ approverPhoneText }}</div>
+                </div>
 
-            <!-- Copy Distribution + Footer - mirrors Word two-column table exactly -->
-            <div class="po-doc-copy">
                 <!-- Head: prefix + অনুলিপি title (left); only the তারিখ line (right) sits
                      here, top-aligned so it is exactly level with the prefix line. -->
-                <div class="po-doc-copy-head">
-                    <div class="po-doc-copy-head-left">
-                        <div *ngIf="noteSheetPrefix" style="margin-bottom:0.3rem;">{{ noteSheetPrefix }}</div>
-                        <div class="po-doc-copy-title">{{ isBangla ? 'অনুলিপি (জ্যেষ্ঠতার ভিত্তিতে নহে)' : 'Copy (not in order of seniority):' }}</div>
+                <div class="po-doc-copy">
+                    <div class="po-doc-copy-head">
+                        <div class="po-doc-copy-head-left">
+                            <div *ngIf="noteSheetPrefix" style="margin-bottom:0.3rem;">{{ noteSheetPrefix }}</div>
+                            <div class="po-doc-copy-title">{{ isBangla ? 'অনুলিপি (জ্যেষ্ঠতার ভিত্তিতে নহে)' : 'Copy (not in order of seniority):' }}</div>
+                        </div>
+                        <div class="po-doc-signature-date">
+                            <div>{{ isBangla ? 'তারিখঃ' : 'Date:' }} {{ previewDate }}</div>
+                        </div>
                     </div>
-                    <div class="po-doc-signature-date">
-                        <div>{{ isBangla ? 'তারিখঃ' : 'Date:' }} {{ previewDate }}</div>
-                    </div>
+                    <table class="po-doc-copy-table" *ngIf="copyLineFirst">
+                        <tr>
+                            <td class="po-doc-copy-left">
+                                <div class="po-doc-copy-list">
+                                    <p><span class="po-copy-no">{{ copyLineFirst.no }}।</span>{{ copyLineFirst.text }}</p>
+                                </div>
+                            </td>
+                            <td class="po-doc-copy-right"></td>
+                        </tr>
+                    </table>
                 </div>
-                <table class="po-doc-copy-table">
-                    <tr>
-                        <td class="po-doc-copy-left">
-                            <div class="po-doc-copy-list">
-                                <ng-container *ngIf="showTransferUnitsCopy">
-                                    <p *ngFor="let line of autoCopyLines; let i = index"><span class="po-copy-no">{{ isBangla ? toBanglaDigits('' + (i + 1)) : (i + 1) }}।</span>{{ line }}</p>
-                                </ng-container>
-                                <p *ngFor="let para of exportFooterParagraphs; let i = index"><span class="po-copy-no">{{ isBangla ? toBanglaDigits('' + (i + 1 + autoCopyOffset)) : (i + 1 + autoCopyOffset) }}।</span>{{ para.text }}</p>
-                            </div>
-                        </td>
-                        <td class="po-doc-copy-right">
-                            <div class="po-doc-copy-sig" *ngIf="approvalEmployeeId">
-                                <img *ngIf="approvalPersonSignatureUrl && showUpperSignature && isApproved" [src]="approvalPersonSignatureUrl" class="approver-signature-img" alt="Signature" />
-                                <div class="sig-name">{{ (isBangla ? approvalPersonNameBN : approvalPersonName) || approvalPersonName || '...................................' }}</div>
-                                <div class="sig-rank">{{ (isBangla ? approvalPersonRankBN : approvalPersonRank) || approvalPersonRank || '............................' }}</div>
-                                <div class="sig-appointment">{{ (isBangla ? approvalPersonAppointmentBN : approvalPersonAppointment) || approvalPersonAppointment || '............................' }}</div>
-                            </div>
-                        </td>
-                    </tr>
-                </table>
             </div>
+
+            <!-- Middle lines — one row each, free to break across pages. -->
+            <table class="po-doc-copy-table" *ngIf="copyLinesMiddle.length > 0">
+                <tr *ngFor="let line of copyLinesMiddle">
+                    <td class="po-doc-copy-left">
+                        <div class="po-doc-copy-list">
+                            <p><span class="po-copy-no">{{ line.no }}।</span>{{ line.text }}</p>
+                        </div>
+                    </td>
+                    <td class="po-doc-copy-right"></td>
+                </tr>
+            </table>
+            <!-- Tail: the last few lines plus the approver signature, kept on one page.
+                 The signature is anchored to the bottom of the final line's row and
+                 drawn upward over these rows, so it ends level with that line — and
+                 because they print together it can never be split across pages. -->
+            <table class="po-doc-copy-table po-doc-copy-tail">
+                <tr *ngFor="let line of copyLinesTail">
+                    <td class="po-doc-copy-left">
+                        <div class="po-doc-copy-list">
+                            <p><span class="po-copy-no">{{ line.no }}।</span>{{ line.text }}</p>
+                        </div>
+                    </td>
+                    <td class="po-doc-copy-right"></td>
+                </tr>
+                <tr class="po-doc-copy-last-row">
+                    <td class="po-doc-copy-left">
+                        <div class="po-doc-copy-list">
+                            <p *ngIf="copyLineLast"><span class="po-copy-no">{{ copyLineLast.no }}।</span>{{ copyLineLast.text }}</p>
+                        </div>
+                    </td>
+                    <td class="po-doc-copy-right">
+                        <div class="po-doc-copy-sig" *ngIf="approvalEmployeeId">
+                            <img *ngIf="approvalPersonSignatureUrl && showUpperSignature && isApproved" [src]="approvalPersonSignatureUrl" class="approver-signature-img" alt="Signature" />
+                            <div class="sig-name">{{ (isBangla ? approvalPersonNameBN : approvalPersonName) || approvalPersonName || '...................................' }}</div>
+                            <div class="sig-rank">{{ (isBangla ? approvalPersonRankBN : approvalPersonRank) || approvalPersonRank || '............................' }}</div>
+                            <div class="sig-appointment">{{ (isBangla ? approvalPersonAppointmentBN : approvalPersonAppointment) || approvalPersonAppointment || '............................' }}</div>
+                        </div>
+                    </td>
+                </tr>
+            </table>
 
           </div><!-- /po-doc-box -->
         </div>

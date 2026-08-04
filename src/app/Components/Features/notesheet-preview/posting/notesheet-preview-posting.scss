@@ -158,6 +158,18 @@
     th { font-size: fs(6.5); font-weight: 700; }
     .ns-posting-note { font-size: fs(10); }
 
+    /* Top, not middle (the shared sheet's default): a row is as tall as its
+       longest cell — unit names and remarks wrap to several lines — and centering
+       the short cells against it leaves every value at a different height across
+       the row. Headers ride along so the whole table starts on one line. */
+    th,
+    td { vertical-align: top; }
+
+    /* Every value starts at the left edge. The .ns-name-cell / .ns-left-cell
+       classes used to opt individual columns into this; the rest (ক্রমিক, tenure,
+       র‌্যাব আইডি, মন্তব্য) were still centered. Headers stay centered. */
+    td { text-align: left; }
+
     /* No shading — plain white rows and header (no zebra, no grey header). */
     th { background: transparent !important; }
     tr:nth-child(even) { background: transparent !important; }

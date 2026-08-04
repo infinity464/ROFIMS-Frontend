@@ -844,22 +844,31 @@ export class NotesheetPreviewPostingComponent extends NotesheetPreviewBase imple
         return this.isEnglish() ? String(n) : this.toBnDigits(String(n));
     }
 
+    /**
+     * পূর্ববতী কর্মস্থল (inter posting): the mother unit, then only the DEEPEST node
+     * of the present RAB hierarchy — not every level of it. So a member under
+     * "র‌্যাব সদর দপ্তর / ইন্ট উইং" reads "৮ ফিল্ড রেজিঃ আর্টিঃ যশোর/ ইন্ট উইং", while one
+     * posted straight to a unit keeps "এসআইএন্ডটি, সিলেট/ র‌্যাব-৪".
+     *
+     * The mother unit carries its district after a comma ("বানৌজা হাজী মহসীন,
+     * চট্টগ্রাম"); either half is dropped when the other is missing.
+     */
     getInterPrevWorkplace(emp: DraftPostingEmployeeRow): string {
         const bn = !this.isEnglish();
-        // Mother unit carries its district after a comma: "বানৌজা হাজী মহসীন, চট্টগ্রাম",
-        // then the present RAB hierarchy follows separated by "/".
         const motherUnit = bn ? emp.motherUnitNameBN || emp.motherUnitName || '' : emp.motherUnitName || '';
         const district = bn ? emp.motherUnitDistrictNameBN || emp.motherUnitDistrictName || '' : emp.motherUnitDistrictName || '';
-        const parts = [
-            motherUnit && district ? motherUnit + ', ' + district : motherUnit || district,
+        // Outermost-first, so the last filled one is the deepest node the member sits at.
+        const rabLevels = [
             bn ? emp.presentRabUnitNameBN || emp.presentRabUnitName || '' : emp.presentRabUnitName || '',
             bn ? emp.presentRabWingNameBN || emp.presentRabWingName || '' : emp.presentRabWingName || '',
             bn ? emp.presentRabBranchNameBN || emp.presentRabBranchName || '' : emp.presentRabBranchName || '',
             bn ? emp.presentRabSubBranchNameBN || emp.presentRabSubBranchName || '' : emp.presentRabSubBranchName || '',
             bn ? emp.presentRabSectionNameBN || emp.presentRabSectionName || '' : emp.presentRabSectionName || '',
             bn ? emp.presentRabSubSectionNameBN || emp.presentRabSubSectionName || '' : emp.presentRabSubSectionName || ''
-        ];
-        return parts.filter((p) => p).join('/ ') || '';
+        ].filter((p) => p);
+
+        const parts = [motherUnit && district ? motherUnit + ', ' + district : motherUnit || district, rabLevels[rabLevels.length - 1] ?? ''];
+        return parts.filter((p) => p).join('/ ');
     }
 
     /**
@@ -1154,8 +1163,8 @@ export class NotesheetPreviewPostingComponent extends NotesheetPreviewBase imple
         if (this.isInterPosting()) {
             // Ser, Service ID, Rank, Name, Own/Spouse District, Previous Workplace,
             // Transfer Station (8) + Tenure group (Joining Date, Year, Month, Day = 4)
-            // + Remarks.
-            return (this.showTenure ? 12 : 8) + (this.showRemarks ? 1 : 0);
+            // + Trade + Remarks.
+            return (this.showTenure ? 12 : 8) + (this.showTradeColumn ? 1 : 0) + (this.showRemarks ? 1 : 0);
         }
         // Ser, Service ID, Rank, Name, Own/Spouse District, Previous Workplace,
         // Transfer Unit (+ Trade + Remarks).
@@ -2416,27 +2425,30 @@ html, body { margin: 0; padding: 0; background: transparent; }
             const cellSpacing = { before: 0, after: 0, line: 220 };
             const hdrParaFn = (text: string) =>
                 new Paragraph({ children: [new TextRun({ text, bold: true, size: TBL_HDR_SZ, sizeComplexScript: bn ? TBL_HDR_SZ : undefined, font, language: lang })], alignment: AlignmentType.CENTER, spacing: cellSpacing });
-            const dataCellFn = (v: string, w: number, align: (typeof AlignmentType)[keyof typeof AlignmentType] = AlignmentType.CENTER) => {
+            // Values are left-aligned in every column, as in the preview; only the
+            // header row is centered (hdrParaFn above).
+            const dataCellFn = (v: string, w: number) => {
                 const lines = v.split('\n');
-                const cellParas = lines.map((line) => new Paragraph({ children: [new TextRun({ text: line, size: TBL_SZ, sizeComplexScript: bn ? TBL_SZ : undefined, font, language: lang })], alignment: align, spacing: cellSpacing }));
+                const cellParas = lines.map((line) => new Paragraph({ children: [new TextRun({ text: line, size: TBL_SZ, sizeComplexScript: bn ? TBL_SZ : undefined, font, language: lang })], alignment: AlignmentType.LEFT, spacing: cellSpacing }));
                 return new TableCell({ children: cellParas, borders: cellBorders, width: { size: w, type: WidthType.DXA }, margins: cellMargins });
             };
 
             if (this.isInterPosting()) {
-                // ── Inter-posting: 13-column (no Trade), 3-row header ──
-                // Indices: 0=ser,1=svcId,2=rank,3=name,4=ownDist,5=spouseDist,
-                //          6=joinDate,7=yr,8=mo,9=day,10=prevWp,11=trUnit,12=remarks
-                //          ser svcId rank name own  spo  jdt  yr  mo  day prev unit rem
+                // ── Inter-posting: 14-column, 3-row header ──
+                // Indices: 0=ser,1=svcId,2=rank,3=trade,4=name,5=ownDist,6=spouseDist,
+                //          7=joinDate,8=yr,9=mo,10=day,11=prevWp,12=trUnit,13=remarks
+                //          ser svcId rank trade name own  spo  jdt  yr  mo  day prev unit rem
                 // When tenure is hidden, give the freed width to Name / Previous
-                // Workplace / Transfer Station (idx 3 / 10 / 11).
-                const iBase = this.showTenure ? [300, 1150, 850, 1000, 900, 900, 800, 400, 400, 400, 700, 900, 650] : [300, 1150, 850, 1600, 900, 900, 800, 400, 400, 400, 1300, 1400, 650];
-                const iBnHdr = ['ক্রমিক', 'ব্যক্তিগত নং', 'পদবি', 'নাম', 'নিজ জেলা (দায়িত্বপূর্ণ এলাকা)', 'স্বামী/স্ত্রীর জেলা (দায়িত্বপূর্ণ এলাকা)', '', '', '', '', 'পূর্ববতী কর্মস্থল', 'বদলিকৃত কর্মস্থল', 'মন্তব্য'];
-                const iEnHdr = ['Ser', 'Service ID', 'Rank', 'Name', 'Own District (Responsible Area)', "Husband/Wife's District (Responsible Area)", '', '', '', '', 'Previous Workplace', 'Transfer Station', 'Remarks'];
+                // Workplace / Transfer Station (idx 4 / 11 / 12).
+                const iBase = this.showTenure ? [300, 1150, 850, 700, 1000, 900, 900, 800, 400, 400, 400, 700, 900, 650] : [300, 1150, 850, 700, 1600, 900, 900, 800, 400, 400, 400, 1300, 1400, 650];
+                const iBnHdr = ['ক্রমিক', 'ব্যক্তিগত নং', 'পদবি', 'ট্রেড', 'নাম', 'নিজ জেলা (দায়িত্বপূর্ণ এলাকা)', 'স্বামী/স্ত্রীর জেলা (দায়িত্বপূর্ণ এলাকা)', '', '', '', '', 'পূর্ববতী কর্মস্থল', 'বদলিকৃত কর্মস্থল', 'মন্তব্য'];
+                const iEnHdr = ['Ser', 'Service ID', 'Rank', 'Trade', 'Name', 'Own District (Responsible Area)', "Husband/Wife's District (Responsible Area)", '', '', '', '', 'Previous Workplace', 'Transfer Station', 'Remarks'];
                 const iVisIdx = iBase
                     .map((_, i) => i)
                     .filter((i) => {
-                        if (i === 12) return this.showRemarks; // Remarks
-                        if (i >= 6 && i <= 9) return this.showTenure; // Tenure group (join date + Y/M/D)
+                        if (i === 13) return this.showRemarks; // Remarks
+                        if (i === 3) return this.showTradeColumn; // Trade
+                        if (i >= 7 && i <= 10) return this.showTenure; // Tenure group (join date + Y/M/D)
                         return true;
                     });
                 // Scale to the VISIBLE columns so the table fills the page width even
@@ -2459,9 +2471,9 @@ html, body { margin: 0; padding: 0; background: transparent; }
                     // Row 1: outer cols span 3 rows, tenure block colspan=4
                     const r1: TableCell[] = [];
                     for (const oi of iVisIdx) {
-                        if (oi >= 7 && oi <= 9) continue; // covered by colspan=4 from oi=6
-                        if (oi === 6) {
-                            r1.push(iMkHdrCell(bn ? 'র‌্যাবে অবস্থানকাল' : 'Tenure in RAB', iW[6] + iW[7] + iW[8] + iW[9], { columnSpan: 4 }));
+                        if (oi >= 8 && oi <= 10) continue; // covered by colspan=4 from oi=7
+                        if (oi === 7) {
+                            r1.push(iMkHdrCell(bn ? 'র‌্যাবে অবস্থানকাল' : 'Tenure in RAB', iW[7] + iW[8] + iW[9] + iW[10], { columnSpan: 4 }));
                         } else {
                             r1.push(iMkHdrCell(bn ? iBnHdr[oi] : iEnHdr[oi], iW[oi], { verticalMerge: VerticalMergeType.RESTART }));
                         }
@@ -2470,14 +2482,14 @@ html, body { margin: 0; padding: 0; background: transparent; }
                     // Row 2: joining date spans 2 rows, duration colspan=3
                     const r2: TableCell[] = [];
                     for (const oi of iVisIdx) {
-                        if (oi < 6 || oi >= 10) {
+                        if (oi < 7 || oi >= 11) {
                             r2.push(iContCell(iW[oi]));
-                        } else if (oi === 6) {
-                            r2.push(iMkHdrCell(bn ? 'যোগদানের তারিখ' : 'Joining Date', iW[6], { verticalMerge: VerticalMergeType.RESTART }));
                         } else if (oi === 7) {
-                            r2.push(iMkHdrCell(bn ? 'অবস্থানকাল' : 'Duration', iW[7] + iW[8] + iW[9], { columnSpan: 3 }));
+                            r2.push(iMkHdrCell(bn ? 'যোগদানের তারিখ' : 'Joining Date', iW[7], { verticalMerge: VerticalMergeType.RESTART }));
+                        } else if (oi === 8) {
+                            r2.push(iMkHdrCell(bn ? 'অবস্থানকাল' : 'Duration', iW[8] + iW[9] + iW[10], { columnSpan: 3 }));
                         }
-                        // oi 8,9: skipped (covered by colspan=3)
+                        // oi 9,10: skipped (covered by colspan=3)
                     }
 
                     // Row 3: joining date continues, বছর/মাস/দিন cells
@@ -2485,12 +2497,12 @@ html, body { margin: 0; padding: 0; background: transparent; }
                     const subBn = ['বছর', 'মাস', 'দিন'];
                     const subEn = ['Year', 'Month', 'Day'];
                     for (const oi of iVisIdx) {
-                        if (oi < 6 || oi >= 10) {
+                        if (oi < 7 || oi >= 11) {
                             r3.push(iContCell(iW[oi]));
-                        } else if (oi === 6) {
-                            r3.push(iContCell(iW[6]));
+                        } else if (oi === 7) {
+                            r3.push(iContCell(iW[7]));
                         } else {
-                            r3.push(iMkHdrCell(bn ? subBn[oi - 7] : subEn[oi - 7], iW[oi]));
+                            r3.push(iMkHdrCell(bn ? subBn[oi - 8] : subEn[oi - 8], iW[oi]));
                         }
                     }
 
@@ -2507,6 +2519,7 @@ html, body { margin: 0; padding: 0; background: transparent; }
                         bn ? this.serial(i + 1) : String(i + 1),
                         this.getServiceIdDisplay(emp),
                         (bn ? emp.rankNameBN || emp.rankName || '' : (emp.rankName ?? '')) + (this.showRankQualifications && this.getRankQualifications(emp) ? '\n(' + this.getRankQualifications(emp) + ')' : ''),
+                        (bn ? emp.tradeNameBN || emp.tradeName || '' : (emp.tradeName ?? '')) + (this.showTradeRemarks && emp.tradeRemarks ? '\n(' + emp.tradeRemarks + ')' : ''),
                         bn ? emp.fullNameBN || emp.fullNameEN || '' : (emp.fullNameEN ?? ''),
                         bn ? emp.permanentDistrictNameBN || emp.permanentDistrictName || '' : (emp.permanentDistrictName ?? ''),
                         bn ? emp.spousePermanentDistrictNameBN || emp.spousePermanentDistrictName || '' : (emp.spousePermanentDistrictName ?? ''),
@@ -2521,8 +2534,8 @@ html, body { margin: 0; padding: 0; background: transparent; }
                     // cantSplit: keep each employee row whole — Word must not break a
                     // multi-line row across pages (that leaves a stray fragment after
                     // the repeated header on the next page).
-                    // ব্যক্তিগত নং / পদবি / নাম (1–3) left-aligned, matching the preview.
-                    return new TableRow({ cantSplit: true, children: iVisIdx.map((oi) => dataCellFn(allV[oi], iW[oi], oi >= 1 && oi <= 3 ? AlignmentType.LEFT : AlignmentType.CENTER)) });
+                    // Every value left-aligned, matching the preview (headers stay centered).
+                    return new TableRow({ cantSplit: true, children: iVisIdx.map((oi) => dataCellFn(allV[oi], iW[oi])) });
                 });
 
                 const iTotalW = iVisIdx.reduce((a, oi) => a + iW[oi], 0);
@@ -2583,8 +2596,8 @@ html, body { margin: 0; padding: 0; background: transparent; }
                 const dataRows = this.postingEmployees.map((emp, i) => {
                     const allVals = buildAllCellValues(emp, i);
                     // cantSplit: keep each employee row whole across page breaks.
-                    // Every column except ক্রমিক (0) is left-aligned, matching the preview.
-                    return new TableRow({ cantSplit: true, children: visibleIndices.map((oi, vi) => dataCellFn(allVals[oi], colWidths[vi], oi >= 1 ? AlignmentType.LEFT : AlignmentType.CENTER)) });
+                    // Every value left-aligned, matching the preview (headers stay centered).
+                    return new TableRow({ cantSplit: true, children: visibleIndices.map((oi, vi) => dataCellFn(allVals[oi], colWidths[vi])) });
                 });
                 const tableRows = [...headerRows, ...dataRows];
                 mainChildren.push(new Paragraph({ spacing: { before: 200 }, children: [] }));

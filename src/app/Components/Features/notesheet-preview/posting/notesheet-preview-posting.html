@@ -86,12 +86,12 @@
         <ng-container *ngIf="isPostingType() && postingEmployees.length > 0">
             <span style="border-left: 1px solid var(--surface-border); height: 1.5rem"></span>
             <span style="display: inline-flex; align-items: center; gap: 0.3rem"><p-checkbox [(ngModel)]="showRankQualifications" [binary]="true" inputId="chkRankQ"></p-checkbox><label for="chkRankQ" style="cursor: pointer">পদবি বিবরণ</label></span>
-            <ng-container *ngIf="!isInterPosting()">
-                <span style="display: inline-flex; align-items: center; gap: 0.3rem"><p-checkbox [(ngModel)]="showTradeColumn" [binary]="true" inputId="chkTradeCol"></p-checkbox><label for="chkTradeCol" style="cursor: pointer">ট্রেড</label></span>
-                <span style="display: inline-flex; align-items: center; gap: 0.3rem"
-                    ><p-checkbox [(ngModel)]="showTradeRemarks" [binary]="true" inputId="chkTradeR" [disabled]="!showTradeColumn"></p-checkbox><label for="chkTradeR" style="cursor: pointer">ট্রেড বিবরণ</label></span
-                >
-            </ng-container>
+            <!-- ট্রেড applies to both posting types — the inter-posting table carries the
+                 column too, in the same place as the new-posting one. -->
+            <span style="display: inline-flex; align-items: center; gap: 0.3rem"><p-checkbox [(ngModel)]="showTradeColumn" [binary]="true" inputId="chkTradeCol"></p-checkbox><label for="chkTradeCol" style="cursor: pointer">ট্রেড</label></span>
+            <span style="display: inline-flex; align-items: center; gap: 0.3rem"
+                ><p-checkbox [(ngModel)]="showTradeRemarks" [binary]="true" inputId="chkTradeR" [disabled]="!showTradeColumn"></p-checkbox><label for="chkTradeR" style="cursor: pointer">ট্রেড বিবরণ</label></span
+            >
             <span *ngIf="isInterPosting()" style="display: inline-flex; align-items: center; gap: 0.3rem"
                 ><p-checkbox [(ngModel)]="showTenure" [binary]="true" inputId="chkTenure"></p-checkbox><label for="chkTenure" style="cursor: pointer">র‌্যাবে অবস্থানকাল</label></span
             >
@@ -240,6 +240,8 @@
                                 <col />
                                 <!-- পদবি -->
                                 <col />
+                                <!-- ট্রেড -->
+                                <col />
                                 <!-- নাম -->
                                 <col style="width: 50px" />
                                 <!-- নিজ জেলা -->
@@ -288,6 +290,7 @@
                                         <th rowspan="3" style="width: 28px">{{ isEnglish() ? 'Ser' : 'ক্রমিক' }}</th>
                                         <th rowspan="3">{{ isEnglish() ? 'Service ID' : 'ব্যক্তিগত নং' }}</th>
                                         <th rowspan="3">{{ isEnglish() ? 'Rank' : 'পদবি' }}</th>
+                                        <th rowspan="3">{{ isEnglish() ? 'Trade' : 'ট্রেড' }}</th>
                                         <th rowspan="3">{{ isEnglish() ? 'Name' : 'নাম' }}</th>
                                         <th rowspan="3" style="width: 45px; max-width: 45px; word-break: break-word">{{ isEnglish() ? 'Own District (Responsible Area)' : 'নিজ জেলা (দায়িত্বপূর্ণ এলাকা)' }}</th>
                                         <th rowspan="3">{{ isEnglish() ? "Husband/Wife's District (Responsible Area)" : 'স্বামী/স্ত্রীর জেলা (দায়িত্বপূর্ণ এলাকা)' }}</th>
@@ -328,6 +331,9 @@
                                         <td class="ns-left-cell" style="white-space: pre-line">{{ getServiceIdDisplay(emp) }}</td>
                                         <td class="ns-left-cell">
                                             {{ isEnglish() ? (emp.rankName || '-') : (emp.rankNameBN || emp.rankName || '-') }}<span *ngIf="showRankQualifications && getRankQualifications(emp)"><br />({{ getRankQualifications(emp) }})</span>
+                                        </td>
+                                        <td class="ns-left-cell">
+                                            {{ isEnglish() ? (emp.tradeName || '-') : (emp.tradeNameBN || emp.tradeName || '-') }}<span *ngIf="showTradeRemarks && emp.tradeRemarks"><br />({{ emp.tradeRemarks }})</span>
                                         </td>
                                         <td class="ns-name-cell">{{ isEnglish() ? (emp.fullNameEN || '-') : (emp.fullNameBN || emp.fullNameEN || '-') }}</td>
                                         <td style="white-space: pre-line">{{ getOwnDistrict(emp) || '-' }}</td>
@@ -440,6 +446,8 @@
             <!-- ব্যক্তিগত নং -->
             <col />
             <!-- পদবি (auto — absorbs balance so table stays 100%) -->
+            <col *ngIf="showTradeColumn" style="width: 56px" />
+            <!-- ট্রেড (same width as the new-posting table's) -->
             <col [style.width]="showTenure ? '82px' : '130px'" />
             <!-- নাম (tenure লুকালে চওড়া) -->
             <col style="width: 48px" />
@@ -497,6 +505,7 @@
                     <th [attr.rowspan]="showTenure ? 3 : 1" style="width: 28px">{{ isEnglish() ? 'Ser' : 'ক্রমিক' }}</th>
                     <th [attr.rowspan]="showTenure ? 3 : 1">{{ isEnglish() ? 'Service ID' : 'ব্যক্তিগত নং' }}</th>
                     <th [attr.rowspan]="showTenure ? 3 : 1">{{ isEnglish() ? 'Rank' : 'পদবি' }}</th>
+                    <th *ngIf="showTradeColumn" [attr.rowspan]="showTenure ? 3 : 1">{{ isEnglish() ? 'Trade' : 'ট্রেড' }}</th>
                     <th [attr.rowspan]="showTenure ? 3 : 1">{{ isEnglish() ? 'Name' : 'নাম' }}</th>
                     <th [attr.rowspan]="showTenure ? 3 : 1" style="width: 45px; max-width: 45px; word-break: break-word">{{ isEnglish() ? 'Own District (Responsible Area)' : 'নিজ জেলা (দায়িত্বপূর্ণ এলাকা)' }}</th>
                     <th [attr.rowspan]="showTenure ? 3 : 1">{{ isEnglish() ? "Husband/Wife's District (Responsible Area)" : 'স্বামী/স্ত্রীর জেলা (দায়িত্বপূর্ণ এলাকা)' }}</th>
@@ -587,6 +596,9 @@
                                         <td class="ns-left-cell" style="white-space: pre-line">{{ getServiceIdDisplay(emp) }}</td>
                                         <td class="ns-left-cell">
                                             {{ isEnglish() ? (emp.rankName || '') : (emp.rankNameBN || emp.rankName || '') }}<span *ngIf="showRankQualifications && getRankQualifications(emp)"><br />({{ getRankQualifications(emp) }})</span>
+                                        </td>
+                                        <td class="ns-left-cell" *ngIf="showTradeColumn">
+                                            {{ isEnglish() ? (emp.tradeName || '') : (emp.tradeNameBN || emp.tradeName || '') }}<span *ngIf="showTradeRemarks && emp.tradeRemarks"><br />({{ emp.tradeRemarks }})</span>
                                         </td>
                                         <td class="ns-name-cell">
                                             {{ isEnglish() ? (emp.fullNameEN || '') : (emp.fullNameBN || emp.fullNameEN || '') }}<span *ngIf="showGallantryAwards && getGallantryAwards(emp)">, {{ getGallantryAwards(emp) }}</span

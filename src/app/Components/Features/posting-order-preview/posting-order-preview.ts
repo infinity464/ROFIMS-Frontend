@@ -111,6 +111,43 @@ export class PostingOrderPreviewPageComponent implements OnInit {
     ];
     selectedPageSize: 'a4' | 'legal' = 'a4';
 
+    // ── Whole-order font size ─────────────────────────────────
+    /** Point offset applied to every text size of the order — header lines, title,
+     *  meta, reference, body, the employee table, the posting/sub texts, note,
+     *  footer paragraphs, signature, memo, initiator and অনুলিপি blocks.
+     *
+     *  Those tiers are deliberately unequal (12 / 10 / 9pt), so no single
+     *  absolute size can drive the document; the dropdown offers a shared offset
+     *  instead, which moves them together and keeps the proportions. 0 is the
+     *  order's normal sizing.
+     *
+     *  Applied as the --ns-fs-delta custom property on the component host — see
+     *  applyFontDelta(), the fs() function in the component SCSS, and the
+     *  .pdf-flow restatement in buildJsReportPdf(). */
+    fontDelta = 0;
+    /** +2.00 … 0 … -2.00 pt in 0.25 steps, largest first (like the page-size list). */
+    readonly fontDeltaOptions = Array.from({ length: 17 }, (_, i) => {
+        const value = +(2 - i * 0.25).toFixed(2);
+        return { label: this.fontDeltaLabel(value), value };
+    });
+
+    /** e.g. "Font: -0.25 pt" — the sign is the point of the label, so it is always
+     *  shown; the 0 step is named rather than numbered since it is the document's
+     *  own sizing. */
+    private fontDeltaLabel(value: number): string {
+        if (value === 0) return 'Default Font Size';
+        return `Font: ${value > 0 ? '+' : '-'}${Math.abs(value).toFixed(2)} pt`;
+    }
+
+    /** Font-size dropdown changed. The offset goes on the host element, which every
+     *  font size in the paper is expressed against; the PDF restates it on
+     *  .pdf-flow because the snapshot is the paper's innerHTML, not the host.
+     *  Unitless — the SCSS multiplies it by 1pt, which keeps a negative offset a
+     *  plain multiplication instead of a signed operand inside calc(). */
+    onFontDeltaChange(): void {
+        this.hostEl.nativeElement.style.setProperty('--ns-fs-delta', `${this.fontDelta}`);
+    }
+
     // ── অনুলিপি paragraph checkboxes ────────────────────────
     showOnulipiFilter = false;
     paragraphChecked: boolean[] = [];
@@ -262,6 +299,8 @@ export class PostingOrderPreviewPageComponent implements OnInit {
     @ViewChild('legalPaper') legalPaper!: ElementRef<HTMLDivElement>;
 
     constructor(
+        /** Host element — carries the --ns-fs-delta font-size offset for the paper. */
+        private hostEl: ElementRef<HTMLElement>,
         private route: ActivatedRoute,
         private router: Router,
         private postingService: PostingService,
@@ -858,17 +897,21 @@ export class PostingOrderPreviewPageComponent implements OnInit {
         const district = (bn ? (emp.motherUnitDistrictNameBN || emp.motherUnitDistrictName) : emp.motherUnitDistrictName) || '';
         const motherUnit = unit && district ? unit + ', ' + district : (unit || district);
         if (!this.isInterPosting) return motherUnit;
-        // Inter-posting: পূর্ববতী কর্মস্থল = mother unit + present RAB unit hierarchy (matches the notesheet).
-        const parts = [
-            motherUnit,
+        // Inter-posting: mother unit + only the DEEPEST node of the present RAB
+        // hierarchy, not every level of it (matches the notesheet's
+        // getInterPrevWorkplace) — "৮ ফিল্ড রেজিঃ আর্টিঃ যশোর/ ইন্ট উইং", not
+        // "…/ র‌্যাব সদর দপ্তর/ ইন্ট উইং". Outermost-first, so the last filled level is
+        // the one the member actually sits at.
+        const rabLevels = [
             bn ? (emp.presentRabUnitNameBN || emp.presentRabUnitName || '') : (emp.presentRabUnitName || ''),
             bn ? (emp.presentRabWingNameBN || emp.presentRabWingName || '') : (emp.presentRabWingName || ''),
             bn ? (emp.presentRabBranchNameBN || emp.presentRabBranchName || '') : (emp.presentRabBranchName || ''),
             bn ? (emp.presentRabSubBranchNameBN || emp.presentRabSubBranchName || '') : (emp.presentRabSubBranchName || ''),
             bn ? (emp.presentRabSectionNameBN || emp.presentRabSectionName || '') : (emp.presentRabSectionName || ''),
             bn ? (emp.presentRabSubSectionNameBN || emp.presentRabSubSectionName || '') : (emp.presentRabSubSectionName || ''),
-        ];
-        return parts.filter(p => p).join('/ ') || '';
+        ].filter(p => p);
+
+        return [motherUnit, rabLevels[rabLevels.length - 1] ?? ''].filter(p => p).join('/ ');
     }
 
     empTransferUnit(emp: PostingOrderEmployeeRow): string {
@@ -1019,6 +1062,65 @@ export class PostingOrderPreviewPageComponent implements OnInit {
     /** Number of auto copy-lines actually rendered (0 when hidden) — footer paragraphs continue after this. */
     get autoCopyOffset(): number {
         return this.showTransferUnitsCopy ? this.autoCopyLines.length : 0;
+    }
+
+    /**
+     * Every অনুলিপি line as one numbered list: the auto transfer-unit lines (when
+     * shown) followed by the footer paragraphs.
+     *
+     * The template renders one table row per line and pairs the LAST line with the
+     * approver signature (see copyLinesHead / copyLineLast). That is what lets the
+     * list break across pages — it starts right under the স্বাক্ষরিত/- block instead of
+     * being pushed to a page of its own — while the signature still ends level with
+     * the final line, wherever the list happens to end. The list is dynamic, so
+     * nothing here assumes a line count.
+     */
+    get copyLines(): { no: string; text: string }[] {
+        const lines = [...(this.showTransferUnitsCopy ? this.autoCopyLines : []), ...this.exportFooterParagraphs.map((p) => p.text)];
+        return lines.map((text, i) => ({ no: this.isBangla ? this.toBanglaDigits('' + (i + 1)) : String(i + 1), text }));
+    }
+
+    /**
+     * How many trailing copy lines are held on one page with the signature.
+     *
+     * The signature is anchored to the bottom of the last line's row and drawn
+     * UPWARD over the rows above it. Those rows must be on the same page, or the
+     * part that reaches past the page edge prints on the previous one — the
+     * signature splits in two. Six lines covers the tallest form of the block
+     * (signature image + name + rank + appointment); the cost is at most six lines
+     * of white space at the foot of the previous page.
+     */
+    private readonly copyTailLineCount = 6;
+
+    /** Line ১, which prints with the স্বাক্ষরিত/- block above it — that block must never
+     *  end up on a page with no অনুলিপি under it. null when the list is empty. */
+    get copyLineFirst(): { no: string; text: string } | null {
+        return this.copyLines[0] ?? null;
+    }
+
+    /** Everything after line ১ — line ১ is spoken for by the opening block, so the
+     *  splits below never reach back into it. */
+    private get copyRestLines(): { no: string; text: string }[] {
+        return this.copyLines.slice(1);
+    }
+
+    /** Copy lines between line ১ and the kept-together tail — free to break anywhere. */
+    get copyLinesMiddle(): { no: string; text: string }[] {
+        const rest = this.copyRestLines;
+        return rest.slice(0, Math.max(0, rest.length - this.copyTailLineCount));
+    }
+
+    /** The trailing lines that ride with the signature, EXCLUDING the last one. */
+    get copyLinesTail(): { no: string; text: string }[] {
+        const rest = this.copyRestLines;
+        return rest.slice(Math.max(0, rest.length - this.copyTailLineCount), Math.max(0, rest.length - 1));
+    }
+
+    /** The final copy line, which shares its row with the approver signature. null when
+     *  the list is empty or holds only line ১ — the signature row still renders. */
+    get copyLineLast(): { no: string; text: string } | null {
+        const rest = this.copyRestLines;
+        return rest.length ? rest[rest.length - 1] : null;
     }
 
     /** Recompute `filteredEmployees` and `filteredFooterParagraphs` from the current filter. */
@@ -1584,10 +1686,62 @@ html, body { margin: 0; padding: 0; background: transparent; }
     box-sizing: border-box;
     width: ${colWidth};
     font-family: 'Times New Roman', 'SolaimanLipi', Times, serif;
-    font-size: 9pt;
+    /* Font-size offset picked in the header bar. The web view carries it on the
+       component host, which is outside this snapshot (the body is the paper's
+       innerHTML), so it is restated here — the scoped .po-doc-* rules that ride
+       along in the clone are all written against it. */
+    --ns-fs-delta: ${this.fontDelta};
+    font-size: calc(9pt + var(--ns-fs-delta, 0) * 1pt);
     line-height: 1.7;
     color: #000;
 }
+
+/* The rich-text blocks get their size from a ":host ::ng-deep" rule, which Angular
+   compiles to "[_nghost-…] .po-doc-…" — the host element is not in this snapshot
+   (the body is the paper's innerHTML), so that rule cannot match here and the text
+   would fall back to .pdf-flow's 9pt. Restated so the print matches the screen. */
+.pdf-flow .po-doc-posting-text,
+.pdf-flow .po-doc-posting-text *,
+.pdf-flow .po-doc-sub-text,
+.pdf-flow .po-doc-sub-text *,
+.pdf-flow .po-doc-master-remarks,
+.pdf-flow .po-doc-master-remarks * {
+    font-size: calc(10pt + var(--ns-fs-delta, 0) * 1pt);
+    line-height: 1.8;
+}
+
+/* ── অনুলিপি block ──────────────────────────────────────────────────────────
+   The list is one table row per line so it can break across pages, in three parts:
+   the opening block (স্বাক্ষরিত/- signature + head + line ১) prints as a unit so the
+   signature always has a copy line under it; the middle rows break anywhere; the tail
+   (last lines + approver signature) prints as a unit. The approver signature shares
+   the LAST line's row and is anchored to that row's bottom edge (position:absolute —
+   see the component SCSS), so it ends level with the final line and grows upward
+   beside the rows above, which is why those rows have to share its page. */
+.pdf-flow .po-doc-copy-open,
+.pdf-flow .po-doc-copy-table tr,
+.pdf-flow .po-doc-copy-tail,
+.pdf-flow .po-doc-copy-sig { page-break-inside: avoid; break-inside: avoid; }
+.pdf-flow .po-doc-copy-last-row .po-doc-copy-right { position: relative; }
+.pdf-flow .po-doc-copy-last-row .po-doc-copy-sig { position: absolute; right: 0; bottom: 0; width: 100%; }
+
+/* ── Multi-page employee table (same treatment as the note-sheet PDF) ──
+   Chromium fragments the table across pages by itself, but without these rules
+   it breaks THROUGH a row: a cell whose text wraps leaves its first line(s) at
+   the bottom of one page and the rest under the repeated header on the next, so
+   the row reads as two half-empty ones. Holding each row together moves the
+   whole row to the next page instead, and the bordered cells then close the
+   columns at the page boundary.
+
+   .po-doc-box is a flex column with overflow:hidden on screen; both can stop a
+   table from fragmenting and suppress <thead> repetition in print, so they are
+   relaxed to normal block flow here. */
+.pdf-flow .po-doc-box { display: block !important; overflow: visible !important; }
+.pdf-flow .po-doc-table { overflow: visible !important; border-collapse: collapse; }
+.pdf-flow .po-doc-table thead { display: table-header-group !important; }
+.pdf-flow .po-doc-table tr,
+.pdf-flow .po-doc-table th,
+.pdf-flow .po-doc-table td { page-break-inside: avoid; break-inside: avoid; }
 </style>
 </head>
 <body>
@@ -1751,10 +1905,10 @@ html, body { margin: 0; padding: 0; background: transparent; }
         const sd = this.showOwnDistrict;
         const sp = this.showPrevWorkplaceUnit;
         const sr = this.showRemarks;
-        const st = this.showTradeColumn;   // Trade column (new-posting only)
+        const st = this.showTradeColumn;   // Trade column (both order types)
         const cols = isInter
-            ? (bn ? ['ক্রমিক', 'ব্যক্তিগত নং', 'পদবি', 'নাম', ...(sd ? ['নিজ জেলা'] : []), ...(sp ? ['পূর্ববতী কর্মস্থল'] : []), 'বদলিকৃত কর্মস্থল', ...(sr ? ['মন্তব্য'] : [])]
-                   : ['Ser', 'Service ID', 'Rank', 'Name', ...(sd ? ['Own District'] : []), ...(sp ? ['Previous Workplace'] : []), 'Transfer Station', ...(sr ? ['Remarks'] : [])])
+            ? (bn ? ['ক্রমিক', 'ব্যক্তিগত নং', 'পদবি', ...(st ? ['ট্রেড'] : []), 'নাম', ...(sd ? ['নিজ জেলা'] : []), ...(sp ? ['পূর্ববতী কর্মস্থল'] : []), 'বদলিকৃত কর্মস্থল', ...(sr ? ['মন্তব্য'] : [])]
+                   : ['Ser', 'Service ID', 'Rank', ...(st ? ['Trade'] : []), 'Name', ...(sd ? ['Own District'] : []), ...(sp ? ['Previous Workplace'] : []), 'Transfer Station', ...(sr ? ['Remarks'] : [])])
             : (bn ? ['ক্রমিক', 'ব্যক্তিগত নম্বর', 'পদবি', ...(st ? ['ট্রেড'] : []), 'নাম', ...(sd ? ['নিজ জেলা'] : []), ...(sp ? ['পূর্ববতী কর্মস্থল'] : []), 'বদলিকৃত কর্মস্থল', 'র‌্যাব আইডি', ...(sr ? ['মন্তব্য'] : [])]
                    : ['Ser', 'Service ID', 'Rank', ...(st ? ['Trade'] : []), 'Name', ...(sd ? ['Own District'] : []), ...(sp ? ['Previous Workplace'] : []), 'Transfer Unit', 'RAB ID', ...(sr ? ['Remarks'] : [])]);
         // Column widths in DXA – must sum to full content width.
@@ -1762,9 +1916,9 @@ html, body { margin: 0; padding: 0; background: transparent; }
         const tblContentWidth = this.selectedPageSize === 'legal' ? 11106 : 10772;
         const buildColW = (): number[] => {
             if (isInter) {
-                const base = [600, 1300, 1000];   // ক্রমিক / ব্যক্তিগত নং / পদবি — wider
-                const rem = tblContentWidth - 600 - 1300 - 1000;
-                const optCols = (sd ? 1 : 0) + (sp ? 1 : 0) + (sr ? 1 : 0);
+                const tradeW = st ? 924 : 0;      // ট্রেড — same width as the new-posting order's
+                const base = st ? [600, 1300, 1000, tradeW] : [600, 1300, 1000];   // ক্রমিক / ব্যক্তিগত নং / পদবি — wider
+                const rem = tblContentWidth - base.reduce((a, b) => a + b, 0);
                 const nameW = 2200;
                 const transferW = 1200;            // বদলিকৃত কর্মস্থল — smaller
                 const distW = sd ? 1000 : 0;       // নিজ জেলা — smaller
@@ -1795,16 +1949,11 @@ html, body { margin: 0; padding: 0; background: transparent; }
 
         const headerRows = [new TableRow({ tableHeader: true, children: cols.map((col, ci) => hdrCell(col, ci)) })];
 
-        const nameIdx = isInter ? 3 : (st ? 4 : 3);   // নাম column index (left-aligned)
-        // Left-aligned span (matches the preview): ব্যক্তিগত নং → বদলিকৃত কর্মস্থল.
-        // ক্রমিক / র‌্যাব আইডি / মন্তব্য stay centered.
-        const transferIdx = nameIdx + (sd ? 1 : 0) + (sp ? 1 : 0) + 1;
-        const isLeftCol = (ci: number) => ci >= 1 && ci <= transferIdx;
         const dataRows = this.filteredEmployees.map((emp, i) => {
             const serial = bn ? this.toBanglaDigits(String(i + 1)) + '।' : String(i + 1);
             const vals = isInter
                 ? [
-                    serial, this.empServiceId(emp), this.empRank(emp), this.empName(emp),
+                    serial, this.empServiceId(emp), this.empRank(emp), ...(st ? [this.empTrade(emp)] : []), this.empName(emp),
                     ...(sd ? [this.empDistrict(emp)] : []),
                     ...(sp ? [this.empPrevWorkplace(emp)] : []),
                     this.empTransferUnit(emp),
@@ -1823,7 +1972,9 @@ html, body { margin: 0; padding: 0; background: transparent; }
                     const lines = val.split('\n');
                     const cellParas = lines.map(line => new Paragraph({
                         children: [new TextRun({ text: line, size: tblSize, sizeComplexScript: tblCsSize, font, language: lang })],
-                        alignment: isLeftCol(ci) ? AlignmentType.LEFT : AlignmentType.CENTER,
+                        // Every value starts at the left edge, as in the preview;
+                        // only the column headers stay centered (see hdrPara).
+                        alignment: AlignmentType.LEFT,
                         spacing: { after: 20 }
                     }));
                     return new TableCell({

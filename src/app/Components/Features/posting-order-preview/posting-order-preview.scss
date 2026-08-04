@@ -92,6 +92,21 @@
     gap: 2rem;
 }
 
+/* ── Whole-order font size (user-selectable) ───────────
+   The header bar's font dropdown sets --ns-fs-delta on the component host: a
+   point offset from -2 to +2 in 0.25 steps that EVERY text size of the order is
+   expressed against, through fs() below.
+
+   The document's tiers are deliberately unequal — 12pt title, 10pt body, 9pt
+   table — so a single absolute size can never drive the whole
+   thing; a shared offset moves them together and keeps those proportions. The
+   custom property inherits, so it reaches every part of the paper, and the PDF
+   sets the same property on .pdf-flow (see buildJsReportPdf). With no offset set
+   the 0 fallback leaves every size exactly as it was. */
+@function fs($pt) {
+    @return calc(#{$pt}pt + var(--ns-fs-delta, 0) * 1pt);
+}
+
 .legal-paper {
     /* A4 portrait: 210mm x 297mm (default) */
     width: 210mm;
@@ -104,7 +119,7 @@
        stays first so Latin text and digits are unchanged — Bangla codepoints have
        no Times glyphs and fall through to SolaimanLipi. */
     font-family: 'Times New Roman', 'SolaimanLipi', Times, serif;
-    font-size: 10pt;
+    font-size: fs(10);
     color: #000;
     line-height: 1.7;
     position: relative;
@@ -144,36 +159,43 @@
 }
 
 /* ── Document Styles ──────────────────────────────── */
+/* One gap for every block break at the top of the order — header → প্রজ্ঞাপন,
+   ফোর্স অর্ডার নম্বর → সূত্র, and সূত্র → posting text. .po-doc-box is a flex
+   column, so adjacent margins do NOT collapse: each break sets the gap on ONE
+   side only (bottom of the block above, or top of the block below) and the other
+   side stays 0, otherwise the two would add up. */
+$doc-block-gap: 6px;
+
 .po-doc-header {
     text-align: center;
-    margin-bottom: 4px;
+    margin-bottom: 0;   /* gap owned by .po-doc-title's margin-top */
 }
 
 .po-doc-header-line {
     font-weight: 700;
-    font-size: 10pt;
+    font-size: fs(10);
     line-height: 1.5;
 }
 
 .po-doc-title {
     text-align: center;
-    font-size: 12pt;
+    font-size: fs(12);
     font-weight: 700;
     text-decoration: underline;
     text-underline-offset: 2px;   /* ~1pt down */
-    margin: 12px 0;
+    margin: $doc-block-gap 0 12px;
 }
 
 .po-doc-meta {
     display: flex;
     justify-content: space-between;
-    margin-bottom: 6px;
-    font-size: 10pt;
+    margin-bottom: $doc-block-gap;
+    font-size: fs(10);
 }
 
 .po-doc-reference {
-    margin-bottom: 10px;
-    font-size: 10pt;
+    margin-bottom: $doc-block-gap;
+    font-size: fs(10);
 
     .po-doc-reference-label {
         font-weight: 700;
@@ -185,7 +207,7 @@
     margin-bottom: 10px;
     line-height: 1.8;
     text-align: justify;
-    font-size: 10pt;
+    font-size: fs(10);
 }
 
 /* ── Employee Table ───────────────────────────────── */
@@ -194,28 +216,33 @@
     table-layout: fixed;
     border-collapse: collapse;
     margin-bottom: 8px;
-    font-size: 9pt;   /* table content — 9pt */
+    font-size: fs(9);   /* table content — 9pt */
+    /* Tighter than the document's 1.7 (inherited from .legal-paper): cells such as
+       পূর্ববতী কর্মস্থল and নাম wrap to 3-4 lines, and at 1.7 those rows read as loose
+       blocks. Set on the table so th/td inherit it — in the preview, the PDF and the
+       browser print alike. */
+    line-height: 1.25;
 
     th,
     td {
         border: 0.5px solid #000;   /* thin, deep-black border */
         padding: 3px 4px;
-        text-align: center;
-        vertical-align: middle;
+        /* Top, not middle: a row is as tall as its longest cell (unit names and
+           remarks wrap to 3-4 lines), and centering the short cells against it
+           left every value floating at a different height across the row. */
+        vertical-align: top;
         word-break: break-word;
         overflow-wrap: break-word;
         hyphens: auto;
         font-weight: normal;   /* no bold — content + header */
     }
 
-    /* নাম column: value left-aligned (header stays centered). */
-    td.po-doc-name-cell {
-        text-align: left;
-    }
-
-    /* ব্যক্তিগত নম্বর / পদবি / ট্রেড / নিজ জেলা / পূর্ববতী কর্মস্থল / বদলিকৃত কর্মস্থল:
-       same treatment as নাম — value left-aligned, header stays centered. */
-    td.po-doc-left-cell {
+    /* Every value starts at the left edge of its cell — a centered column of
+       unequal-length values (ranks, unit names, IDs) reads as ragged on both
+       sides. The .po-doc-name-cell / .po-doc-left-cell classes in the template
+       are what used to opt individual columns into this; they now need no rule
+       of their own. Headers stay centered (see below). */
+    td {
         text-align: left;
     }
 
@@ -223,7 +250,7 @@
         font-weight: 700;      /* header bold */
         background: transparent;
         text-align: center;
-        font-size: 9pt;        /* header — same 9pt as content */
+        font-size: fs(9);      /* header — same 9pt as content */
     }
 
     /* No shading — plain white rows and header (no zebra, no grey header). */
@@ -234,7 +261,9 @@
 }
 
 /* ── Rich HTML sections (innerHTML) — :host ::ng-deep to pierce encapsulation ── */
-.po-doc-posting-text { margin: 8px 0 6px; }
+/* Top margin 0: the সূত্র line above owns that break ($doc-block-gap), and the
+   first paragraph's own top margin is dropped below so the gap is exactly it. */
+.po-doc-posting-text { margin: 0 0 6px; }
 .po-doc-sub-text { margin: 6px 0; }
 .po-doc-master-remarks { margin: 6px 0 8px; }
 
@@ -243,7 +272,7 @@
     .po-doc-posting-text,
     .po-doc-sub-text,
     .po-doc-master-remarks {
-        font-size: 10pt;
+        font-size: fs(10);
         line-height: 1.8;
         width: 100%;
         max-width: 100%;
@@ -252,6 +281,10 @@
         overflow-wrap: break-word;
 
         p { margin: 4px 0; text-align: justify; }
+        /* Quill wraps the text in <p>, whose 4px would sit on top of the block gap
+           the section above already sets — a rich-text block must start flush. */
+        > p:first-child { margin-top: 0; }
+        > p:last-child { margin-bottom: 0; }
         ul, ol { padding-left: 24px !important; margin: 4px 0; list-style-type: disc !important; }
         li { display: list-item !important; list-style-type: disc !important; }
         strong { font-weight: 700; }
@@ -261,9 +294,10 @@
         blockquote { border-left: 4px solid #ccc; margin: 4px 0; padding-left: 16px; }
     }
 
-    /* Posting body text (red-marked line) one size larger than sub-text / remarks. */
+    /* Posting body text — same 10pt as the ফোর্স অর্ডার নম্বর / সূত্র lines above it.
+       The * is what normalises any inline size Quill left on a child span. */
     .po-doc-posting-text,
-    .po-doc-posting-text * { font-size: 11pt; }
+    .po-doc-posting-text * { font-size: fs(10); }
 
     /* ── Quill editor: force bullet only (no numbered lists) ── */
     p-editor .ql-editor {
@@ -278,13 +312,13 @@
     margin: 8px 0;
     font-style: italic;
     color: #555;
-    font-size: 10pt;
+    font-size: fs(10);
 }
 
 /* ── Footer Paragraphs ───────────────────────────── */
 .po-doc-footer-text {
     margin: 12px 0;
-    font-size: 10pt;
+    font-size: fs(10);
     line-height: 1.7;
     white-space: pre-wrap;
 
@@ -299,10 +333,10 @@
     width: 20%;
     text-align: left;
     line-height: 1.2;
-    font-size: 10pt;
+    font-size: fs(10);
     div {
         margin-bottom: 0px;
-        font-size: 10pt;
+        font-size: fs(10);
     }
 }
 
@@ -314,19 +348,19 @@
 }
 
 .po-doc-memo {
-    font-size: 10pt;
+    font-size: fs(10);
 }
 
 .po-doc-initiator {
     text-align: left;
     margin-top: 16px;
     line-height: 1.8;
-    font-size: 10pt;
+    font-size: fs(10);
 
     div {
         line-height: 1.3;
         margin-bottom: 1px;
-        font-size: 10pt;
+        font-size: fs(10);
     }
 }
 
@@ -355,7 +389,7 @@
     width: 20%;
     text-align: left;
     line-height: 1.2;
-    font-size: 10pt;
+    font-size: fs(10);
 }
 
 .po-doc-copy-table {
@@ -373,12 +407,12 @@
 .po-doc-copy-title {
     font-weight: 600;
     margin-bottom: 6px;
-    font-size: 10pt;
+    font-size: fs(10);
 }
 
 .po-doc-copy-list {
     line-height: 1.5;
-    font-size: 10pt;
+    font-size: fs(10);
 
     p {
         margin: 0;
@@ -400,10 +434,30 @@
     padding: 0;
 }
 
+/* The approver signature shares the LAST copy line's row and is anchored to that
+   row's bottom edge, so it ends level with the final line and grows UPWARD beside
+   the lines above (whose right-hand cells are empty). Taking it out of flow is what
+   keeps it from pushing the last line down — a normal bottom-aligned cell would
+   make the row as tall as the signature and leave the line stranded at the top.
+   The row itself is held together across page breaks (see the print block), so the
+   line and the signature can never land on different pages. */
+.po-doc-copy-last-row {
+    .po-doc-copy-right {
+        position: relative;
+    }
+
+    .po-doc-copy-sig {
+        position: absolute;
+        right: 0;
+        bottom: 0;
+        width: 100%;
+    }
+}
+
 .po-doc-copy-sig {
     text-align: left;
     line-height: 1.2;
-    font-size: 10pt;
+    font-size: fs(10);
     padding-top: 20px;
     overflow: hidden;
     .approver-signature-img {
@@ -417,17 +471,17 @@
     }
     div {
         margin-bottom: 0px;
-        font-size: 10pt;
+        font-size: fs(10);
         &:last-child {
             margin-bottom: 0;
         }
     }
     .sig-name {
         font-weight: 600;
-        font-size: 10pt;
+        font-size: fs(10);
     }
     .sig-rank, .sig-appointment {
-        font-size: 10pt;
+        font-size: fs(10);
     }
 }
 
@@ -473,6 +527,46 @@
 
     .po-doc-table th {
         background: transparent !important;
+    }
+
+    /* অনুলিপি page breaks, in three parts:
+       • .po-doc-copy-open — স্বাক্ষরিত/- block + অনুলিপি head + line ১ print together, so
+         the signature is never left on a page with no copy line under it.
+       • middle rows — free to break anywhere, one line at a time.
+       • .po-doc-copy-tail — last lines + approver signature as a unit, because that
+         signature is drawn upward from the final row and would otherwise be cut in
+         half at a page edge. */
+    .po-doc-copy-open,
+    .po-doc-copy-table tr,
+    .po-doc-copy-tail,
+    .po-doc-copy-sig {
+        page-break-inside: avoid;
+        break-inside: avoid;
+    }
+
+    /* Same page-break handling as the JsReport PDF (see buildJsReportPdf): keep
+       every row whole so a wrapped cell can't leave half its lines on the
+       previous page, and repeat the column header on each page the table spans.
+       The flex column + overflow:hidden that .po-doc-box uses on screen can stop
+       the table fragmenting at all, so relax them for print. */
+    .po-doc-box {
+        display: block !important;
+        overflow: visible !important;
+    }
+
+    .po-doc-table {
+        overflow: visible !important;
+
+        thead {
+            display: table-header-group !important;
+        }
+
+        tr,
+        th,
+        td {
+            page-break-inside: avoid;
+            break-inside: avoid;
+        }
     }
 }
 
