@@ -1,6 +1,6 @@
 import { Component, OnInit, ViewChild , inject } from '@angular/core';
 import { UserMenuService } from '@/services/user-menu.service';
-import { FormBuilder, FormGroup, Validators, FormsModule } from '@angular/forms';
+import { AbstractControl, FormBuilder, FormGroup, Validators, FormsModule } from '@angular/forms';
 import { MessageService } from 'primeng/api';
 import { SharedService } from '@/shared/services/shared-service';
 import { FlexibleDateDirective } from '@/shared/directives/flexible-date.directive';
@@ -134,7 +134,9 @@ export class InterPostingNotesheetGenerateComponent implements OnInit {
             noteSheetNo: [''],
             noteSheetNumberConfigId: [null as number | null, Validators.required],
             noteSheetNoStaticWord: [''],
-            subject: [''],
+            // Trim-aware: a subject of nothing but spaces is not a subject, and it is
+            // what the note sheet prints as its heading.
+            subject: ['', (c: AbstractControl) => (String(c.value ?? '').trim() ? null : { required: true })],
             mainText: [''],
             note: [''],
             preparedBy: [''],
@@ -518,7 +520,7 @@ export class InterPostingNotesheetGenerateComponent implements OnInit {
         if (this.isSubmitting) return;
         if (this.form.invalid) {
             this.form.markAllAsTouched();
-            this.messageService.add({ severity: 'warn', summary: 'Validation', detail: 'Please select Draft Inter Posting List and Date.' });
+            this.messageService.add({ severity: 'warn', summary: 'Validation', detail: 'Please fill in the required fields (Draft Inter Posting List, Date and Subject).' });
             return;
         }
         this.isSubmitting = true;

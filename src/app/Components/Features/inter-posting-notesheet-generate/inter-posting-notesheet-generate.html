@@ -107,12 +107,15 @@
         <!-- Row 3b: Subject, Operation Type, Is Secret -->
         <div class="form-row">
           <div class="form-field">
-            <label class="form-label">Subject</label>
+            <label class="form-label">Subject <span class="form-label-required">*</span></label>
             <div class="subject-input-row">
               <input pInputText formControlName="subject" placeholder="Enter subject or click search" class="w-full" />
               <button pButton type="button" icon="pi pi-search" class="p-button-outlined subject-search-btn"
                 title="Pick subject from list" (click)="openSubjectDialog()"></button>
             </div>
+            @if (form.get('subject')?.invalid && form.get('subject')?.touched) {
+              <small class="form-error">Subject is required</small>
+            }
           </div>
           <div class="form-field">
             <label class="form-label">Operation Type <span class="form-label-required">*</span></label>
