@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
 import { ActivatedRoute, Router } from '@angular/router';
+import { encodeOrderId, decodeOrderId } from '@/shared/utils/order-id-codec';
 import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
 import { ButtonModule } from 'primeng/button';
 import { TagModule } from 'primeng/tag';
@@ -92,6 +93,20 @@ export class OfficeOrderPreviewComponent implements OnInit {
         return this.onulipiEntries.filter((_, i) => this.onulipiChecked[i] !== false);
     }
 
+    /** View-only reorder of an অনুলিপি entry (for print/export). Swaps the entry with its
+     *  neighbour and carries its show/hide checkbox along; the paper, PDF and Word all
+     *  read exportOnulipiEntries, so they follow. Ephemeral — resets on reload. */
+    moveOnulipiUp(i: number): void { this.swapOnulipi(i, i - 1); }
+    moveOnulipiDown(i: number): void { this.swapOnulipi(i, i + 1); }
+    private swapOnulipi(from: number, to: number): void {
+        const a = this.onulipiEntries;
+        if (from < 0 || to < 0 || from >= a.length || to >= a.length) return;
+        [a[from], a[to]] = [a[to], a[from]];
+        const c = this.onulipiChecked;
+        const cf = c[from] ?? true, ct = c[to] ?? true;
+        c[from] = ct; c[to] = cf;
+    }
+
     // Page size for export
     selectedPageSize: 'a4' | 'legal' = 'a4';
 
@@ -161,7 +176,7 @@ export class OfficeOrderPreviewComponent implements OnInit {
     }
 
     ngOnInit(): void {
-        const id = Number(this.route.snapshot.queryParamMap.get('id'));
+        const id = decodeOrderId(this.route.snapshot.queryParamMap.get('id'));
         if (id) {
             this.viewMode = 'detail';
             this.loadOrder(id);
@@ -189,7 +204,7 @@ export class OfficeOrderPreviewComponent implements OnInit {
 
     viewOrder(row: GeneralNotesheetOfficeOrderDto): void {
         this.viewMode = 'detail';
-        this.router.navigate(['/office-order/preview'], { queryParams: { id: row.id } });
+        this.router.navigate(['/office-order/preview'], { queryParams: { id: encodeOrderId(row.id) } });
         this.loadOrder(row.id);
     }
 

@@ -1,6 +1,7 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
+import { encodeOrderId } from '@/shared/utils/order-id-codec';
 import { UserMenuService } from '@/services/user-menu.service';
 import { TableModule } from 'primeng/table';
 import { ButtonModule } from 'primeng/button';
@@ -71,7 +72,7 @@ export class PostingOrderListComponent implements OnInit {
     }
 
     viewPreview(order: PostingOrderMasterDto): void {
-        this.router.navigate(['/posting/posting-order-preview'], { queryParams: { id: order.id } });
+        this.router.navigate(['/posting/posting-order-preview'], { queryParams: { id: encodeOrderId(order.id) } });
     }
 
     getStatusSeverity(status: string): "success" | "info" | "warn" | "danger" | "secondary" | "contrast" {

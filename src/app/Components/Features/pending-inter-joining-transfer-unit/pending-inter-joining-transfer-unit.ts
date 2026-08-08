@@ -2,6 +2,7 @@ import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
+import { encodeOrderId } from '@/shared/utils/order-id-codec';
 import { Table, TableModule } from 'primeng/table';
 import { ButtonModule } from 'primeng/button';
 import { TooltipModule } from 'primeng/tooltip';
@@ -416,7 +417,7 @@ export class PendingInterJoiningTransferUnitComponent implements OnInit {
     openPostingOrder(row: PendingPostingJoiningDto): void {
         if (row.postingOrderMasterId) {
             this.router.navigate(['/posting/posting-order-preview'], {
-                queryParams: { id: row.postingOrderMasterId }
+                queryParams: { id: encodeOrderId(row.postingOrderMasterId) }
             });
         }
     }

@@ -86,6 +86,20 @@ export class ClearanceExBdLeavePreviewComponent implements OnInit {
         return this.onulipiEntries.filter((_, i) => this.onulipiChecked[i] !== false);
     }
 
+    /** View-only reorder of an অনুলিপি entry (for print/export). Swaps the entry with its
+     *  neighbour and carries its show/hide checkbox along; the paper, PDF and Word all
+     *  read exportOnulipiEntries, so they follow. Ephemeral — resets on reload. */
+    moveOnulipiUp(i: number): void { this.swapOnulipi(i, i - 1); }
+    moveOnulipiDown(i: number): void { this.swapOnulipi(i, i + 1); }
+    private swapOnulipi(from: number, to: number): void {
+        const a = this.onulipiEntries;
+        if (from < 0 || to < 0 || from >= a.length || to >= a.length) return;
+        [a[from], a[to]] = [a[to], a[from]];
+        const c = this.onulipiChecked;
+        const cf = c[from] ?? true, ct = c[to] ?? true;
+        c[from] = ct; c[to] = cf;
+    }
+
     selectedPageSize: 'a4' | 'legal' = 'a4';
 
     exportingPdf = false;

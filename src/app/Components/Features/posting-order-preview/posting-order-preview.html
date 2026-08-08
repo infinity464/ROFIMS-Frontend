@@ -448,17 +448,31 @@
     </div>
 
     <!-- অনুলিপি paragraph filter (collapsed by default) -->
-    <div class="unit-filter-bar no-print" *ngIf="!editing && !loading && !error && (autoCopyLines.length > 0 || filteredFooterParagraphs.length > 0)"
+    <div class="unit-filter-bar no-print" *ngIf="!editing && !loading && !error && (corpsOfficeCopyLines.length > 0 || autoCopyLines.length > 0 || motherOrgOfficeHeadCopyLines.length > 0 || filteredFooterParagraphs.length > 0)"
          style="flex-direction:column; align-items:flex-start;">
         <span style="font-weight:600; font-size:0.85rem; cursor:pointer;" (click)="showOnulipiFilter = !showOnulipiFilter">
             <i class="pi" [ngClass]="showOnulipiFilter ? 'pi-chevron-down' : 'pi-chevron-right'" style="margin-right:0.3rem;"></i>{{ isBangla ? 'অনুলিপি ফিল্টার' : 'Copy Filter' }}
         </span>
         <div *ngIf="showOnulipiFilter" style="display:flex; flex-direction:column; gap:0.3rem; margin-top:0.4rem; width:100%;">
+            <span *ngIf="corpsOfficeCopyLines.length > 0"
+                  style="display:inline-flex; align-items:flex-start; gap:0.4rem; font-size:0.82rem; line-height:1.4;">
+                <p-checkbox [(ngModel)]="showCorpsOfficeCopy" [binary]="true" inputId="chkCorpsOfficeCopy"></p-checkbox>
+                <label for="chkCorpsOfficeCopy" style="cursor:pointer;">
+                    <span *ngFor="let line of corpsOfficeCopyLines; let i = index" style="display:block;">{{ isBangla ? toBanglaDigits('' + (i + 1)) : (i + 1) }}। {{ line }}</span>
+                </label>
+            </span>
             <span *ngIf="autoCopyLines.length > 0"
                   style="display:inline-flex; align-items:flex-start; gap:0.4rem; font-size:0.82rem; line-height:1.4;">
                 <p-checkbox [(ngModel)]="showTransferUnitsCopy" [binary]="true" inputId="chkTransferUnitsCopy"></p-checkbox>
                 <label for="chkTransferUnitsCopy" style="cursor:pointer;">
-                    <span *ngFor="let line of autoCopyLines; let i = index" style="display:block;">{{ isBangla ? toBanglaDigits('' + (i + 1)) : (i + 1) }}। {{ line }}</span>
+                    <span *ngFor="let line of autoCopyLines; let i = index" style="display:block;">{{ isBangla ? toBanglaDigits('' + (i + 1 + corpsOfficeCopyCount)) : (i + 1 + corpsOfficeCopyCount) }}। {{ line }}</span>
+                </label>
+            </span>
+            <span *ngIf="motherOrgOfficeHeadCopyLines.length > 0"
+                  style="display:inline-flex; align-items:flex-start; gap:0.4rem; font-size:0.82rem; line-height:1.4;">
+                <p-checkbox [(ngModel)]="showMotherOrgOfficeHeadCopy" [binary]="true" inputId="chkMotherOrgOfficeHeadCopy"></p-checkbox>
+                <label for="chkMotherOrgOfficeHeadCopy" style="cursor:pointer;">
+                    <span *ngFor="let line of motherOrgOfficeHeadCopyLines; let i = index" style="display:block;">{{ isBangla ? toBanglaDigits('' + (i + 1 + motherOrgOfficeHeadCopyOffset)) : (i + 1 + motherOrgOfficeHeadCopyOffset) }}। {{ line }}</span>
                 </label>
             </span>
             <span *ngFor="let para of filteredFooterParagraphs; let pi = index"
@@ -466,6 +480,32 @@
                 <p-checkbox [(ngModel)]="paragraphChecked[pi]" [binary]="true" [inputId]="'chkPara' + pi"></p-checkbox>
                 <label [for]="'chkPara' + pi" style="cursor:pointer;">{{ isBangla ? toBanglaDigits('' + (pi + 1 + autoCopyOffset)) : (pi + 1 + autoCopyOffset) }}। {{ para.text }}</label>
             </span>
+
+            <!-- Reorder (view-only). Moves any অনুলিপি line up/down; the new order flows
+                 to the preview, PDF and Word. Ephemeral — resets on reload. This whole
+                 bar is .no-print, so the arrows never reach the exported document. -->
+            <div *ngIf="copyLinesCount > 1"
+                 style="margin-top:0.6rem; width:100%; border-top:1px solid var(--surface-border, #e5e7eb); padding-top:0.4rem;">
+                <div style="font-weight:600; font-size:0.8rem; margin-bottom:0.3rem;">
+                    {{ isBangla ? 'ক্রম সাজান (প্রিন্ট/এক্সপোর্টের জন্য)' : 'Reorder (for print / export)' }}
+                </div>
+                <div *ngFor="let line of copyLines"
+                     style="display:flex; align-items:flex-start; gap:0.3rem; font-size:0.82rem; line-height:1.4; margin-bottom:0.15rem;">
+                    <button type="button" (click)="moveCopyLineUp(line.idx)" [disabled]="line.idx === 0"
+                            title="Up"
+                            style="border:none; background:none; padding:0 0.15rem; cursor:pointer;"
+                            [style.opacity]="line.idx === 0 ? 0.3 : 1">
+                        <i class="pi pi-arrow-up" style="font-size:0.7rem;"></i>
+                    </button>
+                    <button type="button" (click)="moveCopyLineDown(line.idx)" [disabled]="line.idx === copyLinesCount - 1"
+                            title="Down"
+                            style="border:none; background:none; padding:0 0.15rem; cursor:pointer;"
+                            [style.opacity]="line.idx === copyLinesCount - 1 ? 0.3 : 1">
+                        <i class="pi pi-arrow-down" style="font-size:0.7rem;"></i>
+                    </button>
+                    <span>{{ line.no }}। {{ line.text }}</span>
+                </div>
+            </div>
         </div>
     </div>
 

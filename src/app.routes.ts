@@ -58,11 +58,13 @@ import { EducationResult } from '@/Components/basic-setup/education-result/educa
 import { PersonalInfo } from '@/Components/Features/PersonalInfo/personal-info/personal-info';
 import { Organization } from '@/Components/basic-setup/organization-setup/organization/organization';
 import { OrganizationUnit } from '@/Components/basic-setup/organization-setup/organization-unit/organization-unit';
+import { MotherOrgOfficeHeadComponent } from '@/Components/basic-setup/mother-org-office-head/mother-org-office-head';
 import { MotherOrgRank } from '@/Components/basic-setup/mother-org-rank/mother-org-rank';
 import { MotherOrgRankVacancyDistributionComponent } from '@/Components/basic-setup/mother-org-rank-vacancy-distribution/mother-org-rank-vacancy-distribution';
 import { VacancyDistributionSummaryComponent } from '@/Components/basic-setup/vacancy-distribution-summary/vacancy-distribution-summary';
 import { EquivalentNameVacancyComponent } from '@/Components/basic-setup/equivalent-name-vacancy/equivalent-name-vacancy';
 import { Corps } from '@/Components/basic-setup/corps/corps';
+import { CorpsOffice } from '@/Components/basic-setup/corps-office/corps-office';
 import { Batch } from '@/Components/basic-setup/batch/batch';
 import { Decoration } from '@/Components/basic-setup/decoration/decoration';
 import { ProfessionalQualification } from '@/Components/basic-setup/professional-qualification/professional-qualification';
@@ -301,11 +303,13 @@ export const appRoutes: Routes = [
             { path: 'basic-setup/rab-wing', component: RabWing },
             { path: 'basic-setup/mother-org', component: Organization },
             { path: 'basic-setup/organization-unit', component: OrganizationUnit },
+            { path: 'basic-setup/mother-org-office-head', component: MotherOrgOfficeHeadComponent },
             { path: 'basic-setup/mother-org-rank', component: MotherOrgRank },
             { path: 'basic-setup/mother-org-rank-vacancy-distribution', component: MotherOrgRankVacancyDistributionComponent },
             { path: 'basic-setup/vacancy-distribution-summary', component: VacancyDistributionSummaryComponent },
             { path: 'basic-setup/equivalent-name-vacancy', component: EquivalentNameVacancyComponent },
             { path: 'basic-setup/corps', component: Corps },
+            { path: 'basic-setup/corps-office', component: CorpsOffice },
             { path: 'basic-setup/prefix', component: Prefix },
             { path: 'basic-setup/gender', component: Gender },
             { path: 'basic-setup/batch', component: Batch },

@@ -132,6 +132,14 @@
         </span>
         <div class="oo-onulipi-filter-list" *ngIf="showOnulipiFilter">
             <div *ngFor="let entry of onulipiEntries; let i = index" class="oo-onulipi-filter-item">
+                <button type="button" (click)="moveOnulipiUp(i)" [disabled]="i === 0" title="Up"
+                        style="border:none;background:none;padding:0 0.15rem;cursor:pointer;" [style.opacity]="i === 0 ? 0.3 : 1">
+                    <i class="pi pi-arrow-up" style="font-size:0.7rem;"></i>
+                </button>
+                <button type="button" (click)="moveOnulipiDown(i)" [disabled]="i === onulipiEntries.length - 1" title="Down"
+                        style="border:none;background:none;padding:0 0.15rem;cursor:pointer;" [style.opacity]="i === onulipiEntries.length - 1 ? 0.3 : 1">
+                    <i class="pi pi-arrow-down" style="font-size:0.7rem;"></i>
+                </button>
                 <p-checkbox [(ngModel)]="onulipiChecked[i]" [binary]="true" [inputId]="'onulipiChk' + i"></p-checkbox>
                 <label [for]="'onulipiChk' + i">{{ i + 1 }}. {{ entry.text }}</label>
             </div>

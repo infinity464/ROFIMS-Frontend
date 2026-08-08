@@ -35,6 +35,10 @@ import { JsReportService } from '@/services/jsreport.service';
 import { environment } from '@/Core/Environments/environment';
 import { firstValueFrom, forkJoin } from 'rxjs';
 import { MasterBasicSetupService } from '@/Components/basic-setup/shared/services/MasterBasicSetupService';
+import { CorpsOfficeService } from '@/services/corps-office.service';
+import { MotherOrgOfficeHeadService } from '@/Components/basic-setup/mother-org-office-head/mother-org-office-head-service';
+import { OrganizationService } from '@/Components/basic-setup/organization-setup/services/organization-service';
+import { decodeOrderId } from '@/shared/utils/order-id-codec';
 import {
     Document, Packer, Paragraph, TextRun, Table, TableRow, TableCell, ImageRun,
     WidthType, BorderStyle, AlignmentType, PageOrientation, TabStopType, TabStopPosition, TableLayoutType, VerticalAlign
@@ -156,6 +160,10 @@ export class PostingOrderPreviewPageComponent implements OnInit {
     showPrevWorkplaceFilter = false;
     showPrevWorkplaceUnit = true;
     showTransferUnitsCopy = true;
+    // অনুলিপি line listing the distinct Corps Offices of the employees' corps.
+    showCorpsOfficeCopy = true;
+    // অনুলিপি lines from Mother Org Office Head setup, matched by the employees' units.
+    showMotherOrgOfficeHeadCopy = true;
 
     // ── Column visibility ───────────────────
     /** Show/hide the whole Trade column (new-posting only) across preview / Word / PDF / print. */
@@ -313,6 +321,9 @@ export class PostingOrderPreviewPageComponent implements OnInit {
         private confirmationService: ConfirmationService,
         private jsreportService: JsReportService,
         private masterBasicSetupService: MasterBasicSetupService,
+        private corpsOfficeService: CorpsOfficeService,
+        private motherOrgOfficeHeadService: MotherOrgOfficeHeadService,
+        private organizationService: OrganizationService,
         private sharedService: SharedService,
         private memberTypeAccess: IdentityUserMemberTypeAccessService,
         private identityService: IdentityService,
@@ -345,11 +356,15 @@ export class PostingOrderPreviewPageComponent implements OnInit {
     ngOnInit(): void {
         this.loadCurrentUserMemberTypePermissions();
         this.loadUnitSortOrders();
+        this.loadCorpsOfficeMap();
+        this.loadMotherOrgOfficeHeadMap();
         this.route.queryParams.subscribe(params => {
-            const id = params['id'];
+            // The URL carries an obfuscated token (see order-id-codec); decode to the
+            // real id. Plain numeric ids still resolve for backward-compat.
+            const id = decodeOrderId(params['id']);
             if (id) {
-                this.currentOrderId = +id;
-                this.loadOrder(+id);
+                this.currentOrderId = id;
+                this.loadOrder(id);
             } else {
                 this.error = true;
                 this.messageService.add({ severity: 'error', summary: 'Error', detail: 'No posting order ID provided.' });
@@ -416,6 +431,7 @@ export class PostingOrderPreviewPageComponent implements OnInit {
 
                     // Reset per-unit filter whenever a new order is loaded, then prime the memoized caches.
                     this.selectedFilterUnitId = null;
+                    this.copyOrder = null;   // ephemeral অনুলিপি reorder — starts fresh per order
                     this.availableTransferUnits = this.computeTransferUnits(this.employees);
                     this.applyFilter();
 
@@ -967,13 +983,16 @@ export class PostingOrderPreviewPageComponent implements OnInit {
     }
 
     /**
-     * Auto-generated অনুলিপি (copy-to) lines derived from the employees' transfer
-     * destination units. Hard-coded RAB rules:
+     * Auto-generated অনুলিপি (copy-to) lines derived from the employees' RAB units.
+     * For NEW posting this is the transfer destination only; for INTER posting the
+     * member's PRESENT (from) unit is included as well, so both the previous and the
+     * transferred unit land in the copy list. Hard-coded RAB rules:
      *   • র‍্যাব সদর দপ্তর (HQ) → show the WING name (segment under HQ), not "সদর দপ্তর",
      *     prefixed "পরিচালক, " — this line comes FIRST.
      *   • র‍্যাব-N battalions → prefixed "অধিনায়ক, ", units slash-joined — comes next.
      *   • Any other unit → shown plainly (top-level name), comma-joined.
-     * Each group is de-duplicated; empty groups are omitted.
+     * From- and to-units feed the SAME groups, so they are merged and de-duplicated;
+     * empty groups are omitted.
      */
     get autoCopyLines(): string[] {
         const bn = this.isBangla;
@@ -984,22 +1003,45 @@ export class PostingOrderPreviewPageComponent implements OnInit {
         const others: string[] = [];
         const otherSeen = new Set<string>();
 
-        for (const emp of this.filteredEmployees) {
-            const full = (bn ? (emp.transferRabUnitNameBN || emp.transferRabUnitName) : emp.transferRabUnitName) || '';
-            if (!full) continue;
-            const parts = full.split(',').map((s) => s.trim()).filter(Boolean);
-            if (!parts.length) continue;
+        // Sort one unit hierarchy (outermost-first parts) into the copy buckets:
+        // HQ → পরিচালক of the wing (segment under HQ); র‍্যাব-N battalion → অধিনায়ক of
+        // the unit; anything else → plain. Each bucket is de-duplicated, so the same
+        // unit reached from both the from- and to-side collapses to one entry.
+        const classify = (parts: string[], isHq: boolean): void => {
+            if (!parts.length) return;
             const top = parts[0];
-
-            // HQ comes straight from the view (TransferIsHq); name heuristic is only a
-            // fallback if the view hasn't been refreshed with the flag yet.
-            if (emp.transferIsHq ?? this.isRabHq(top)) {
+            if (isHq) {
                 const wing = parts[1] || top; // segment directly under HQ
                 if (!hqSeen.has(wing)) { hqSeen.add(wing); hqWings.push(wing); }
             } else if (this.isRabBattalion(top)) {
                 if (!rabSeen.has(top)) { rabSeen.add(top); rabUnits.push(top); }
             } else {
                 if (!otherSeen.has(top)) { otherSeen.add(top); others.push(top); }
+            }
+        };
+
+        for (const emp of this.filteredEmployees) {
+            // বদলিকৃত কর্মস্থল (transfer destination). HQ comes straight from the view
+            // (TransferIsHq); the name heuristic is only a fallback.
+            const transferFull = (bn ? (emp.transferRabUnitNameBN || emp.transferRabUnitName) : emp.transferRabUnitName) || '';
+            const transferParts = transferFull.split(',').map((s) => s.trim()).filter(Boolean);
+            classify(transferParts, emp.transferIsHq ?? this.isRabHq(transferParts[0] || ''));
+
+            // Inter posting: also address the member's PRESENT (from) unit, so the
+            // previous RAB unit shows in the অনুলিপি alongside the transfer one. The
+            // present hierarchy is already on the row (outermost-first: unit → … →
+            // sub-section); no HQ flag exists for it, so the name heuristic decides
+            // পরিচালক vs অধিনায়ক.
+            if (this.isInterPosting) {
+                const presentParts = [
+                    bn ? (emp.presentRabUnitNameBN || emp.presentRabUnitName) : emp.presentRabUnitName,
+                    bn ? (emp.presentRabWingNameBN || emp.presentRabWingName) : emp.presentRabWingName,
+                    bn ? (emp.presentRabBranchNameBN || emp.presentRabBranchName) : emp.presentRabBranchName,
+                    bn ? (emp.presentRabSubBranchNameBN || emp.presentRabSubBranchName) : emp.presentRabSubBranchName,
+                    bn ? (emp.presentRabSectionNameBN || emp.presentRabSectionName) : emp.presentRabSectionName,
+                    bn ? (emp.presentRabSubSectionNameBN || emp.presentRabSubSectionName) : emp.presentRabSubSectionName,
+                ].map((s) => (s || '').trim()).filter(Boolean);
+                classify(presentParts, this.isRabHq(presentParts[0] || ''));
             }
         }
 
@@ -1059,9 +1101,238 @@ export class PostingOrderPreviewPageComponent implements OnInit {
         });
     }
 
+    // ── Corps Office অনুলিপি (derived from the employees' corps) ─────────────
+    /** corps name (EN & BN, normalized) → CommonCode codeId(s). */
+    private corpsCodeByName = new Map<string, number[]>();
+    /** corps codeId → the Corps Office(s) it is assigned to (basic-setup/corps-office). */
+    private officesByCorpsCode = new Map<number, { en: string; bn: string }[]>();
+
+    private normalizeCorpsName(s: string): string {
+        return this.stripZeroWidth(s || '').toLowerCase();
+    }
+
+    /**
+     * Load corps codes + Corps Office assignments so the অনুলিপি can list the
+     * distinct Corps Offices of the employees' corps. Corps are matched by name
+     * (the employee row carries corpsName, not the code), so both EN and BN names
+     * are keyed to the CommonCode code, which is then mapped to its office(s).
+     */
+    private loadCorpsOfficeMap(): void {
+        forkJoin([
+            this.masterBasicSetupService.getAllByType('Corps'),
+            this.corpsOfficeService.getAll()
+        ]).subscribe({
+            next: ([corps, offices]) => {
+                this.corpsCodeByName.clear();
+                for (const c of corps ?? []) {
+                    for (const nm of [c.codeValueEN, c.codeValueBN]) {
+                        if (!nm) continue;
+                        const k = this.normalizeCorpsName(nm);
+                        const arr = this.corpsCodeByName.get(k) ?? [];
+                        if (!arr.includes(c.codeId)) arr.push(c.codeId);
+                        this.corpsCodeByName.set(k, arr);
+                    }
+                }
+                this.officesByCorpsCode.clear();
+                for (const o of offices ?? []) {
+                    for (const a of o.assignedCorps ?? []) {
+                        const arr = this.officesByCorpsCode.get(a.corpsCodeId) ?? [];
+                        arr.push({ en: o.officeNameEN, bn: o.officeNameBN });
+                        this.officesByCorpsCode.set(a.corpsCodeId, arr);
+                    }
+                }
+            },
+            error: () => { /* no corps-office copy line if the lookup fails */ }
+        });
+    }
+
+    /**
+     * অনুলিপি line: the distinct Corps Offices of every employee's corps in this
+     * order, comma-joined. Each employee's corps is matched by name to its
+     * CommonCode code, then to the Corps Office(s) it is assigned to
+     * (basic-setup/corps-office). Bilingual (office BN name in Bangla docs),
+     * de-duplicated. Empty until the map loads or when no corps maps to an office.
+     */
+    get corpsOfficeCopyLines(): string[] {
+        const bn = this.isBangla;
+        const seen = new Set<string>();
+        const names: string[] = [];
+        for (const emp of this.filteredEmployees) {
+            const codeIds = new Set<number>();
+            for (const nm of [emp.corpsName, emp.corpsNameBN]) {
+                if (!nm) continue;
+                for (const id of this.corpsCodeByName.get(this.normalizeCorpsName(nm)) ?? []) codeIds.add(id);
+            }
+            for (const id of codeIds) {
+                for (const off of this.officesByCorpsCode.get(id) ?? []) {
+                    const label = ((bn ? (off.bn || off.en) : off.en) || '').trim();
+                    if (!label) continue;
+                    const dk = label.toLowerCase();
+                    if (seen.has(dk)) continue;
+                    seen.add(dk);
+                    names.push(label);
+                }
+            }
+        }
+        return names;
+    }
+
+    /** The Corps-Office অনুলিপি lines actually rendered (empty when toggled off). */
+    get shownCorpsOfficeCopyLines(): string[] {
+        return this.showCorpsOfficeCopy ? this.corpsOfficeCopyLines : [];
+    }
+
+    /** How many Corps-Office lines are shown — offsets the transfer-unit numbering in the filter list. */
+    get corpsOfficeCopyCount(): number {
+        return this.shownCorpsOfficeCopyLines.length;
+    }
+
+    // ── Mother Org Office Head অনুলিপি (generated from THIS order's units) ────
+    // Onulipi is NOT taken from the setup; it is built here from the units actually
+    // in the order, grouped by the office head that presides over them, so an
+    // employee only ever contributes their OWN unit — not the head's full list.
+    /** normalized unit name (EN & BN) → the unit record (id + both names). */
+    private orgUnitByNameKey = new Map<string, { id: number; en: string; bn: string }>();
+    /** unit id → the office head presiding over it (name + police flag). */
+    private headByUnitId = new Map<number, { key: string; en: string; bn: string; police: boolean }>();
+
+    private normalizeUnitKey(s: string): string {
+        return this.stripZeroWidth(s || '').toLowerCase();
+    }
+
+    /**
+     * Load Mother Org Office Head setups + all org units (+ mother orgs, to flag
+     * Police). The employee row carries the unit NAME, so units are keyed by name
+     * to their record, and each head's unit-ids are mapped to the head. The actual
+     * onulipi text is built per order in motherOrgOfficeHeadCopyLines.
+     */
+    private loadMotherOrgOfficeHeadMap(): void {
+        forkJoin([
+            this.motherOrgOfficeHeadService.getAll(),
+            this.organizationService.GetAllOrgUnit(),
+            this.organizationService.getAllActiveMotherOrgs()
+        ]).subscribe({
+            next: ([heads, units, motherOrgs]) => {
+                this.orgUnitByNameKey.clear();
+                for (const u of units ?? []) {
+                    const rec = { id: u.orgId, en: u.orgNameEN ?? '', bn: u.orgNameBN ?? '' };
+                    if (u.orgNameEN) this.orgUnitByNameKey.set(this.normalizeUnitKey(u.orgNameEN), rec);
+                    if (u.orgNameBN) this.orgUnitByNameKey.set(this.normalizeUnitKey(u.orgNameBN), rec);
+                }
+                const policeOrgIds = new Set<number>();
+                for (const mo of motherOrgs ?? []) {
+                    if ((mo.orgNameEN ?? '').toLowerCase().includes('police') || (mo.orgNameBN ?? '').includes('পুলিশ'))
+                        policeOrgIds.add(mo.orgId);
+                }
+                this.headByUnitId.clear();
+                for (const h of heads ?? []) {
+                    if (h.status === false) continue;
+                    const head = {
+                        key: String(h.orgHeadId),
+                        en: (h.headNameEN ?? '').trim(),
+                        bn: (h.headNameBN ?? '').trim(),
+                        police: h.motherOrgId != null && policeOrgIds.has(h.motherOrgId)
+                    };
+                    for (const u of h.units ?? []) this.headByUnitId.set(u.unitOrgId, head);
+                }
+            },
+            error: () => { /* no office-head copy line if the lookup fails */ }
+        });
+    }
+
+    /**
+     * অনুলিপি line per office head: HeadName + ' ' + the head's units THAT ARE IN
+     * THIS order (grouped), so a member only brings their own unit — not the head's
+     * full assigned list. For Police the units are collapsed on their shared prefix
+     * ("জেলা পুলিশ রাজবাড়ী/শরিয়তপুর"); otherwise comma-joined. Bangla in Bangla docs.
+     */
+    get motherOrgOfficeHeadCopyLines(): string[] {
+        const bn = this.isBangla;
+        const order: string[] = [];
+        const groups = new Map<string, { head: { en: string; bn: string; police: boolean }; names: string[]; seen: Set<string> }>();
+        for (const emp of this.filteredEmployees) {
+            const empUnit = emp.motherUnitName ?? emp.motherUnitNameBN;
+            if (!empUnit) continue;
+            const unit = this.orgUnitByNameKey.get(this.normalizeUnitKey(empUnit));
+            if (!unit) continue;
+            const head = this.headByUnitId.get(unit.id);
+            if (!head) continue;
+            let g = groups.get(head.key);
+            if (!g) { g = { head, names: [], seen: new Set() }; groups.set(head.key, g); order.push(head.key); }
+            const unitName = (bn ? (unit.bn || unit.en) : (unit.en || unit.bn)) || '';
+            const nk = this.normalizeUnitKey(unitName);
+            if (unitName && !g.seen.has(nk)) { g.seen.add(nk); g.names.push(unitName); }
+        }
+        const lines: string[] = [];
+        for (const key of order) {
+            const g = groups.get(key)!;
+            const headName = (bn ? (g.head.bn || g.head.en) : (g.head.en || g.head.bn)) || '';
+            const unitsText = g.head.police ? this.collapseByPrefix(g.names) : g.names.join(', ');
+            const line = [headName, unitsText].filter(x => (x ?? '').trim()).join(' ').trim();
+            if (line) lines.push(line);
+        }
+        return lines;
+    }
+
+    /**
+     * Group names by their shared prefix and join the differing tails with "/".
+     * Split point: the first comma if present (Bangla "জেলা পুলিশ, রাজবাড়ী"), else the
+     * last space (English "District Police Rajbari"); single-token names stay whole.
+     * Groups keep first-appearance order and are joined by ", ".
+     */
+    private collapseByPrefix(names: string[]): string {
+        const groups: { prefix: string; suffixes: string[] }[] = [];
+        for (const raw of names) {
+            const name = (raw ?? '').trim();
+            if (!name) continue;
+            let prefix = name;
+            let suffix = '';
+            const comma = name.indexOf(',');
+            if (comma >= 0) {
+                prefix = name.slice(0, comma).trim();
+                suffix = name.slice(comma + 1).trim();
+            } else {
+                const space = name.lastIndexOf(' ');
+                if (space > 0) {
+                    prefix = name.slice(0, space).trim();
+                    suffix = name.slice(space + 1).trim();
+                }
+            }
+            const group = groups.find(g => g.prefix === prefix);
+            if (group) {
+                if (suffix) group.suffixes.push(suffix);
+            } else {
+                groups.push({ prefix, suffixes: suffix ? [suffix] : [] });
+            }
+        }
+        return groups
+            .map(g => g.suffixes.length ? `${g.prefix} ${g.suffixes.join('/')}` : g.prefix)
+            .join(', ');
+    }
+
+    /** The office-head অনুলিপি lines actually rendered (empty when toggled off). */
+    get shownMotherOrgOfficeHeadCopyLines(): string[] {
+        return this.showMotherOrgOfficeHeadCopy ? this.motherOrgOfficeHeadCopyLines : [];
+    }
+
+    /** Lines shown before the office-head group — offsets its numbering in the filter list. */
+    get motherOrgOfficeHeadCopyOffset(): number {
+        return this.corpsOfficeCopyCount + (this.showTransferUnitsCopy ? this.autoCopyLines.length : 0);
+    }
+
+    /**
+     * Auto অনুলিপি lines in document order: Corps-Office lines FIRST, then the
+     * transfer-unit lines, then the Mother Org Office Head lines (all when shown).
+     * Shared by the preview/PDF (copyLines) and the Word export so numbering stays in step.
+     */
+    private get autoCopyAllLines(): string[] {
+        const units = this.showTransferUnitsCopy ? this.autoCopyLines : [];
+        return [...this.shownCorpsOfficeCopyLines, ...units, ...this.shownMotherOrgOfficeHeadCopyLines];
+    }
+
     /** Number of auto copy-lines actually rendered (0 when hidden) — footer paragraphs continue after this. */
     get autoCopyOffset(): number {
-        return this.showTransferUnitsCopy ? this.autoCopyLines.length : 0;
+        return this.autoCopyAllLines.length;
     }
 
     /**
@@ -1075,9 +1346,49 @@ export class PostingOrderPreviewPageComponent implements OnInit {
      * the final line, wherever the list happens to end. The list is dynamic, so
      * nothing here assumes a line count.
      */
-    get copyLines(): { no: string; text: string }[] {
-        const lines = [...(this.showTransferUnitsCopy ? this.autoCopyLines : []), ...this.exportFooterParagraphs.map((p) => p.text)];
-        return lines.map((text, i) => ({ no: this.isBangla ? this.toBanglaDigits('' + (i + 1)) : String(i + 1), text }));
+    /** User-chosen অনুলিপি order (line texts) for THIS view only — ephemeral, reset on
+     *  every load (see loadOrder). null = the natural computed order. Set from the Copy
+     *  Filter panel's reorder controls; reconciled against the current computed lines so
+     *  show/hide toggles and the per-unit filter keep working. */
+    private copyOrder: string[] | null = null;
+
+    /** Apply the ephemeral `copyOrder` to freshly-computed line texts: kept lines follow
+     *  the user's order; any new line (a toggle re-enabled, a filter change) is appended
+     *  at the end. Pure — never mutates state. Matches each text once, so duplicate
+     *  lines are handled positionally. */
+    private orderCopyTexts(computed: string[]): string[] {
+        if (!this.copyOrder) return computed;
+        const remaining = [...computed];
+        const result: string[] = [];
+        for (const t of this.copyOrder) {
+            const at = remaining.indexOf(t);
+            if (at !== -1) { result.push(t); remaining.splice(at, 1); }
+        }
+        result.push(...remaining);   // lines not in the saved order (new / re-enabled)
+        return result;
+    }
+
+    get copyLines(): { no: string; text: string; idx: number }[] {
+        const raw = [...this.autoCopyAllLines, ...this.exportFooterParagraphs.map((p) => p.text)];
+        return this.orderCopyTexts(raw).map((text, i) => ({
+            no: this.isBangla ? this.toBanglaDigits('' + (i + 1)) : String(i + 1),
+            text,
+            idx: i
+        }));
+    }
+
+    /** Effective অনুলিপি line count — drives the "move down" disabled state. */
+    get copyLinesCount(): number { return this.copyLines.length; }
+
+    /** View-only reorder of an অনুলিপি line (for print/export). `idx` is the line's
+     *  position in copyLines; the new order flows to the preview, PDF and Word. */
+    moveCopyLineUp(idx: number): void { this.swapCopyLine(idx, idx - 1); }
+    moveCopyLineDown(idx: number): void { this.swapCopyLine(idx, idx + 1); }
+    private swapCopyLine(from: number, to: number): void {
+        const texts = this.copyLines.map((l) => l.text);
+        if (from < 0 || to < 0 || from >= texts.length || to >= texts.length) return;
+        [texts[from], texts[to]] = [texts[to], texts[from]];
+        this.copyOrder = texts;
     }
 
     /**
@@ -2157,19 +2468,11 @@ html, body { margin: 0; padding: 0; background: transparent; }
         // ── Copy list + approval-person signature (two-column borderless table) ──
         // Left cell: অনুলিপি list only (prefix + title moved to the head above).
         const leftCellChildren: Paragraph[] = [];
-        const autoLines = this.showTransferUnitsCopy ? this.autoCopyLines : [];
-        autoLines.forEach((line, i) => {
-            const serial = i + 1;
+        // One numbered list in the user-chosen অনুলিপি order (auto + footer merged) —
+        // the exact order the on-screen preview and PDF use, so all three stay in step.
+        this.copyLines.forEach((l) => {
             leftCellChildren.push(new Paragraph({
-                children: [new TextRun({ text: `${bn ? this.toBanglaDigits(String(serial)) : serial}।\t${line}`, size: ctxSize, sizeComplexScript: csSize, font, language: lang })],
-                spacing: { after: 40 },
-                tabStops: [{ type: TabStopType.LEFT, position: 400 }]
-            }));
-        });
-        this.exportFooterParagraphs.forEach((p, i) => {
-            const serial = i + 1 + autoLines.length;
-            leftCellChildren.push(new Paragraph({
-                children: [new TextRun({ text: `${bn ? this.toBanglaDigits(String(serial)) : serial}।\t${p.text}`, size: ctxSize, sizeComplexScript: csSize, font, language: lang })],
+                children: [new TextRun({ text: `${l.no}।\t${l.text}`, size: ctxSize, sizeComplexScript: csSize, font, language: lang })],
                 spacing: { after: 40 },
                 tabStops: [{ type: TabStopType.LEFT, position: 400 }]
             }));

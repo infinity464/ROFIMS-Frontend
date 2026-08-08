@@ -4,6 +4,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
 import { ActivatedRoute, Router } from '@angular/router';
+import { encodeOrderId } from '@/shared/utils/order-id-codec';
 import { forkJoin } from 'rxjs';
 import { TableModule } from 'primeng/table';
 import { ButtonModule } from 'primeng/button';
@@ -603,7 +604,7 @@ export class PostingOrderGenerateComponent implements OnInit {
                     // Navigate to the preview page for the newly created posting order
                     const newId = (res as any)?.data;
                     if (newId != null) {
-                        this.router.navigate(['/posting/posting-order-preview'], { queryParams: { id: newId } });
+                        this.router.navigate(['/posting/posting-order-preview'], { queryParams: { id: encodeOrderId(newId) } });
                     }
                 } else {
                     this.messageService.add({ severity: 'error', summary: this.isBangla ? 'ত্রুটি' : 'Error', detail: res.description ?? (this.isBangla ? 'পোস্টিং অর্ডার তৈরি ব্যর্থ হয়েছে।' : 'Failed to generate posting order.') });
@@ -662,7 +663,7 @@ export class PostingOrderGenerateComponent implements OnInit {
     }
 
     viewGeneratedOrder(order: PostingOrderMasterDto): void {
-        this.router.navigate(['/posting/posting-order-preview'], { queryParams: { id: order.id } });
+        this.router.navigate(['/posting/posting-order-preview'], { queryParams: { id: encodeOrderId(order.id) } });
     }
 
     postingTypeLabel(type: string): string {
