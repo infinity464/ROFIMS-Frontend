@@ -96,6 +96,32 @@
 
         <!-- Employee List Table -->
         <div *ngIf="selectedNoteSheetId">
+            <!-- সূত্র / Reference — first line auto from the note-sheet (no + approved
+                 date); add more text-only lines with "+". Saved as a JSON array.
+                 Placed right under the note-sheet, above Posting Text. -->
+            <div class="mb-4 p-4 surface-50 border-round">
+                <div class="flex align-items-center gap-3 mb-3">
+                    <span class="font-semibold text-700">{{ isBangla ? 'সূত্র' : 'Reference' }}</span>
+                    <p-button icon="pi pi-plus" [label]="isBangla ? 'যোগ করুন' : 'Add'" size="small"
+                        severity="secondary" type="button" (onClick)="addReference()"></p-button>
+                </div>
+                @for (ref of references; track trackByIndex($index); let i = $index) {
+                    <div class="flex align-items-center gap-2 mb-3">
+                        <span class="font-semibold text-600" style="width:1.6rem;">{{ isBangla ? toBanglaDigits('' + (i + 1)) : (i + 1) }}।</span>
+                        <!-- Line 1 is the note-sheet's own reference — locked (read-only, no remove). -->
+                        <input pInputText [(ngModel)]="references[i].referenceNo" [ngModelOptions]="{ standalone: true }"
+                            [readonly]="i === 0" [placeholder]="isBangla ? 'সূত্র লিখুন' : 'Enter reference'"
+                            class="flex-1" [style.background]="i === 0 ? 'var(--surface-100)' : null" />
+                        <span *ngIf="ref.date" class="text-600 white-space-nowrap">{{ isBangla ? 'তারিখঃ' : 'Date:' }} {{ formatDate(ref.date) }}</span>
+                        <p-button *ngIf="i !== 0" icon="pi pi-times" severity="danger" [rounded]="true" [text]="true" size="small"
+                            type="button" (onClick)="removeReference(i)"></p-button>
+                    </div>
+                }
+                @if (references.length === 0) {
+                    <div class="text-500 text-sm">{{ isBangla ? 'নোটশীট নির্বাচন করলে সূত্র স্বয়ংক্রিয়ভাবে আসবে।' : 'Select a note-sheet to auto-fill the reference.' }}</div>
+                }
+            </div>
+
             <!-- Posting Text (pre-filled from notesheet main text) -->
             <div class="posting-text-section mb-4 p-4 surface-50 border-round">
                 <div class="flex align-items-center gap-2 mb-2">

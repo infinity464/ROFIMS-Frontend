@@ -27,7 +27,7 @@ import { EmpService } from '@/services/emp-service';
 import { EmployeeListService } from '@/services/employee-list.service';
 import { SharedService } from '@/shared/services/shared-service';
 import { IdentityUserMemberTypeAccessService } from '@/services/identity-user-member-type-access.service';
-import { PostingOrderEmployeeRow, EmployeeRemovalInfo, CancelledInterPostingInfo } from '@/models/posting.model';
+import { PostingOrderEmployeeRow, EmployeeRemovalInfo, CancelledInterPostingInfo, ReferenceEntry } from '@/models/posting.model';
 import { EmployeeList } from '@/models/employee-list.model';
 import { NoteSheetType, IsSendingNotesheetStatus, ApprovalStatus } from '@/models/enums';
 import { HttpClient } from '@angular/common/http';
@@ -211,6 +211,7 @@ export class PostingOrderPreviewPageComponent implements OnInit {
     editPostingText = '';
     editSubText = '';
     editFooterParagraphs: FooterParagraph[] = [];
+    editReferences: ReferenceEntry[] = [];
     editEmployees: PostingOrderEmployeeRow[] = [];
 
     // ─── Add member (inline dropdown) ��────────────────
@@ -820,17 +821,63 @@ export class PostingOrderPreviewPageComponent implements OnInit {
         return lastSlash > 0 ? no.substring(0, lastSlash) : no;
     }
 
-    /** NoteSheet number + final approval date, shown after the bold "সূত্রঃ / Reference:" label. */
-    get referenceLine(): string {
+    /** Parsed সূত্র entries. New orders store a JSON array in referenceNumber; a legacy
+     *  order holds a plain string (→ one entry, no date), and an order with no reference
+     *  falls back to the linked note-sheet's no + approval date (pre-feature behaviour). */
+    get referenceEntries(): ReferenceEntry[] {
+        const raw = (this.referenceNumber ?? '').trim();
+        if (raw) {
+            try {
+                const parsed = JSON.parse(raw);
+                if (Array.isArray(parsed)) {
+                    const entries = parsed
+                        .map((e: any) => ({
+                            referenceNo: (typeof e === 'string' ? e : (e?.referenceNo ?? '')) as string,
+                            date: (typeof e === 'string' ? null : (e?.date ?? null)) as string | null
+                        }))
+                        .filter(e => (e.referenceNo ?? '').trim().length > 0);
+                    if (entries.length) return entries;
+                }
+            } catch { /* not JSON — treat as a legacy plain string below */ }
+            return [{ referenceNo: raw, date: null }];
+        }
         const no = (this.noteSheetNo ?? '').trim();
+        return no ? [{ referenceNo: no, date: this.noteSheetApprovalDate }] : [];
+    }
+
+    get hasMultipleReferences(): boolean { return this.referenceEntries.length > 1; }
+
+    /** One সূত্র line as "<no>, তারিখঃ <date>" (date omitted when absent). */
+    referenceEntryText(entry: ReferenceEntry): string {
+        const no = (entry.referenceNo ?? '').trim();
         if (!no) return '';
-        const dateStr = this.noteSheetApprovalDate
-            ? (this.isBangla ? this.formatDateBangla(this.noteSheetApprovalDate) : this.formatDate(this.noteSheetApprovalDate))
+        const dateStr = entry.date
+            ? (this.isBangla ? this.formatDateBangla(entry.date) : this.formatDate(entry.date))
             : '';
         if (!dateStr) return no;
         const dateLabel = this.isBangla ? 'তারিখঃ' : 'Date:';
         return `${no}, ${dateLabel} ${dateStr}`;
     }
+
+    /** The single-line সূত্র (first entry) — used for the one-reference layout and Word. */
+    get referenceLine(): string {
+        const first = this.referenceEntries[0];
+        return first ? this.referenceEntryText(first) : '';
+    }
+
+    /** Serialize an edit list of references to the JSON stored in ReferenceNumber
+     *  (blank lines dropped; null when empty). */
+    private serializeReferences(list: ReferenceEntry[]): string | null {
+        const refs = list
+            .map(r => ({ referenceNo: (r.referenceNo ?? '').trim(), date: r.date }))
+            .filter(r => r.referenceNo.length > 0);
+        return refs.length > 0 ? JSON.stringify(refs) : null;
+    }
+
+    /** Add a text-only সূত্র line in edit mode. */
+    addEditReference(): void { this.editReferences.push({ referenceNo: '', date: null }); }
+    /** Remove a সূত্র line in edit mode. */
+    removeEditReference(index: number): void { this.editReferences.splice(index, 1); }
 
     formatDate(value: string | null | undefined): string {
         if (value == null || value === '') return '-';
@@ -1507,6 +1554,10 @@ export class PostingOrderPreviewPageComponent implements OnInit {
         // Re-parse the raw footerText into full FooterParagraph objects (with unit linkage).
         this.editFooterParagraphs = this.parseFooterParagraphs(this.rawFooterText);
 
+        // References for edit — cloned from the parsed entries (includes the note-sheet
+        // fallback for pre-feature orders, so editing persists it as JSON).
+        this.editReferences = this.referenceEntries.map(e => ({ ...e }));
+
         this.editApprovalEmployeeId = this.approvalEmployeeId;
         this.loadApprovalEmployees();
         this.loadAddMemberList();
@@ -1541,6 +1592,7 @@ export class PostingOrderPreviewPageComponent implements OnInit {
         this.editPostingText = '';
         this.editSubText = '';
         this.editFooterParagraphs = [];
+        this.editReferences = [];
         this.editEmployees = [];
         this.selectedAddEmployee = null;
         this.selectedAddMemberTransferUnitId = null;
@@ -1858,7 +1910,7 @@ export class PostingOrderPreviewPageComponent implements OnInit {
             postingOrderNo: this.postingOrderNo,
             postingOrderDate: postingOrderDateStr,
             postingType: this.postingType,
-            referenceNumber: this.referenceNumber || null,
+            referenceNumber: this.serializeReferences(this.editReferences),
             subject: this.subject || null,
             mainText: mainText,
             subText: subText,
@@ -2188,14 +2240,26 @@ html, body { margin: 0; padding: 0; background: transparent; }
             spacing: { after: 80 }
         });
 
-        // ── Reference / সূত্র : linked Note-Sheet No + final approval date ──
-        const referenceParas: Paragraph[] = this.referenceLine ? [new Paragraph({
-            children: [
-                new TextRun({ text: bn ? 'সূত্রঃ ' : 'Reference: ', bold: true, size: ctxSize, sizeComplexScript: csSize, font, language: lang }),
-                new TextRun({ text: this.referenceLine, size: ctxSize, sizeComplexScript: csSize, font, language: lang })
-            ],
-            spacing: { after: 160 }
-        })] : [];
+        // ── Reference / সূত্র : one line, or a numbered list when multiple ──
+        const refEntries = this.referenceEntries;
+        const referenceParas: Paragraph[] = refEntries.length === 0 ? [] :
+            refEntries.length === 1 ? [new Paragraph({
+                children: [
+                    new TextRun({ text: bn ? 'সূত্রঃ ' : 'Reference: ', bold: true, size: ctxSize, sizeComplexScript: csSize, font, language: lang }),
+                    new TextRun({ text: this.referenceEntryText(refEntries[0]), size: ctxSize, sizeComplexScript: csSize, font, language: lang })
+                ],
+                spacing: { after: 160 }
+            })] : [
+                new Paragraph({
+                    children: [new TextRun({ text: bn ? 'সূত্রঃ' : 'Reference:', bold: true, size: ctxSize, sizeComplexScript: csSize, font, language: lang })],
+                    spacing: { after: 40 }
+                }),
+                ...refEntries.map((ref, i) => new Paragraph({
+                    children: [new TextRun({ text: `${bn ? this.toBanglaDigits(String(i + 1)) : (i + 1)}। ${this.referenceEntryText(ref)}`, size: ctxSize, sizeComplexScript: csSize, font, language: lang })],
+                    spacing: { after: i === refEntries.length - 1 ? 160 : 40 },
+                    tabStops: [{ type: TabStopType.LEFT, position: 400 }]
+                }))
+            ];
 
         // ── Body Text (10pt, justified) – split on blank lines into paragraphs ──
         const bodyParas = (this.bodyText || '')

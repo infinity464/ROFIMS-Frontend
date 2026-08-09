@@ -107,6 +107,30 @@
                 </div>
             </div>
 
+            <!-- সূত্র / Reference (edit) — text-only lines; first came from the note-sheet -->
+            <div class="mt-4 p-4 surface-50 border-round">
+                <div class="flex align-items-center gap-3 mb-3">
+                    <label class="font-semibold text-700">{{ isBangla ? 'সূত্র' : 'Reference' }}</label>
+                    <p-button icon="pi pi-plus" [label]="isBangla ? 'যোগ করুন' : 'Add'" size="small"
+                        severity="secondary" type="button" (onClick)="addEditReference()"></p-button>
+                </div>
+                @for (ref of editReferences; track trackByIndex($index); let i = $index) {
+                    <div class="flex align-items-center gap-2 mb-3">
+                        <span class="font-semibold text-600" style="width:1.6rem;">{{ isBangla ? toBanglaDigits('' + (i + 1)) : (i + 1) }}।</span>
+                        <!-- Line 1 is the note-sheet's own reference — locked (read-only, no remove). -->
+                        <input pInputText [(ngModel)]="editReferences[i].referenceNo" [ngModelOptions]="{ standalone: true }"
+                            [readonly]="i === 0" [placeholder]="isBangla ? 'সূত্র লিখুন' : 'Enter reference'"
+                            class="flex-1" [style.background]="i === 0 ? 'var(--surface-100)' : null" />
+                        <span *ngIf="ref.date" class="text-600 white-space-nowrap">{{ isBangla ? 'তারিখঃ' : 'Date:' }} {{ formatDate(ref.date) }}</span>
+                        <p-button *ngIf="i !== 0" icon="pi pi-times" severity="danger" [rounded]="true" [text]="true" size="small"
+                            type="button" (onClick)="removeEditReference(i)"></p-button>
+                    </div>
+                }
+                @if (editReferences.length === 0) {
+                    <div class="text-500 text-sm">{{ isBangla ? 'কোনো সূত্র নেই।' : 'No reference.' }}</div>
+                }
+            </div>
+
             <!-- Posting Text (rich editor) -->
             <div class="mt-4 p-4 surface-50 border-round">
                 <label class="font-semibold block mb-2 text-700">{{ isBangla ? 'পোস্টিং টেক্সট' : 'Posting Text' }}</label>
@@ -588,10 +612,13 @@
                 <span><strong>{{ isBangla ? 'তারিখ' : 'Date' }}:</strong> {{ previewDate }}</span>
             </div>
 
-            <!-- Reference / সূত্র : linked Note-Sheet No + final approval date -->
-            <div class="po-doc-reference" *ngIf="referenceLine">
+            <!-- Reference / সূত্র : one line, or a numbered list when multiple -->
+            <div class="po-doc-reference" *ngIf="referenceEntries.length > 0">
                 <span class="po-doc-reference-label">{{ isBangla ? 'সূত্র' : 'Reference' }}:</span>
-                <span class="po-doc-reference-value">{{ referenceLine }}</span>
+                <span class="po-doc-reference-value" *ngIf="!hasMultipleReferences">{{ referenceLine }}</span>
+                <div class="po-doc-reference-list" *ngIf="hasMultipleReferences">
+                    <div *ngFor="let ref of referenceEntries; let i = index">{{ isBangla ? toBanglaDigits('' + (i + 1)) : (i + 1) }}। {{ referenceEntryText(ref) }}</div>
+                </div>
             </div>
 
             <!-- Posting Text (rich HTML from editor) — shown after সূত্র -->

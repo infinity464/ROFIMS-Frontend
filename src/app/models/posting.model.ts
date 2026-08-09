@@ -409,6 +409,15 @@ export interface PendingPostingJoiningDto {
 
 // ── Posting Order DTOs ────────────────────────────────────────
 
+/** One সূত্র (reference) line stored in PostingOrderMaster.ReferenceNumber as a JSON
+ *  array. The first entry is auto-filled from the linked note-sheet (its number +
+ *  approval date); further entries are text-only (date null). A legacy plain-string
+ *  ReferenceNumber is read as a single entry with no date. */
+export interface ReferenceEntry {
+    referenceNo: string;
+    date: string | null;
+}
+
 /** Posting Order master row for list. */
 export interface PostingOrderMasterDto {
     id: number;
