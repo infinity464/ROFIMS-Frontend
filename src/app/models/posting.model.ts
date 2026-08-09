@@ -538,6 +538,10 @@ export interface PostingOrderEmployeeRow {
     rankNameBN: string | null;
     corpsName: string | null;
     corpsNameBN: string | null;
+    // Corps code (EmployeeInfo.Branch) + employee's top-level mother org — used to
+    // resolve the Corps Office scoped to the employee's own mother organization.
+    corpsId: number | null;
+    motherOrgId: number | null;
     tradeName: string | null;
     tradeNameBN: string | null;
     tradeRemarks: string | null;

@@ -1166,44 +1166,34 @@ export class PostingOrderPreviewPageComponent implements OnInit {
         });
     }
 
-    // ── Corps Office অনুলিপি (derived from the employees' corps) ─────────────
-    /** corps name (EN & BN, normalized) → CommonCode codeId(s). */
-    private corpsCodeByName = new Map<string, number[]>();
-    /** corps codeId → the Corps Office(s) it is assigned to (basic-setup/corps-office). */
+    // ── Corps Office অনুলিপি (scoped to each employee's mother organization) ──
+    /** corps codeId (EmployeeInfo.Branch) → the Corps Office(s) it is assigned to. */
     private officesByCorpsCode = new Map<number, { en: string; bn: string }[]>();
-
-    private normalizeCorpsName(s: string): string {
-        return this.stripZeroWidth(s || '').toLowerCase();
-    }
+    /** mother-org id → every Corps Office set up under it (N/A / unmatched fallback). */
+    private officesByOrg = new Map<number, { en: string; bn: string }[]>();
 
     /**
-     * Load corps codes + Corps Office assignments so the অনুলিপি can list the
-     * distinct Corps Offices of the employees' corps. Corps are matched by name
-     * (the employee row carries corpsName, not the code), so both EN and BN names
-     * are keyed to the CommonCode code, which is then mapped to its office(s).
+     * Load the Corps Office assignments (basic-setup/corps-office) into two lookups:
+     * by assigned corps CODE, and by mother organization. Matching on the corps code
+     * (not the name) keeps it scoped to that corps' own org, so a police member never
+     * pulls in another org's office that merely shares a corps name.
      */
     private loadCorpsOfficeMap(): void {
-        forkJoin([
-            this.masterBasicSetupService.getAllByType('Corps'),
-            this.corpsOfficeService.getAll()
-        ]).subscribe({
-            next: ([corps, offices]) => {
-                this.corpsCodeByName.clear();
-                for (const c of corps ?? []) {
-                    for (const nm of [c.codeValueEN, c.codeValueBN]) {
-                        if (!nm) continue;
-                        const k = this.normalizeCorpsName(nm);
-                        const arr = this.corpsCodeByName.get(k) ?? [];
-                        if (!arr.includes(c.codeId)) arr.push(c.codeId);
-                        this.corpsCodeByName.set(k, arr);
-                    }
-                }
+        this.corpsOfficeService.getAll().subscribe({
+            next: (offices) => {
                 this.officesByCorpsCode.clear();
+                this.officesByOrg.clear();
                 for (const o of offices ?? []) {
+                    const rec = { en: o.officeNameEN, bn: o.officeNameBN };
+                    if (o.orgId != null) {
+                        const byOrg = this.officesByOrg.get(o.orgId) ?? [];
+                        byOrg.push(rec);
+                        this.officesByOrg.set(o.orgId, byOrg);
+                    }
                     for (const a of o.assignedCorps ?? []) {
-                        const arr = this.officesByCorpsCode.get(a.corpsCodeId) ?? [];
-                        arr.push({ en: o.officeNameEN, bn: o.officeNameBN });
-                        this.officesByCorpsCode.set(a.corpsCodeId, arr);
+                        const byCorps = this.officesByCorpsCode.get(a.corpsCodeId) ?? [];
+                        byCorps.push(rec);
+                        this.officesByCorpsCode.set(a.corpsCodeId, byCorps);
                     }
                 }
             },
@@ -1212,31 +1202,29 @@ export class PostingOrderPreviewPageComponent implements OnInit {
     }
 
     /**
-     * অনুলিপি line: the distinct Corps Offices of every employee's corps in this
-     * order, comma-joined. Each employee's corps is matched by name to its
-     * CommonCode code, then to the Corps Office(s) it is assigned to
-     * (basic-setup/corps-office). Bilingual (office BN name in Bangla docs),
-     * de-duplicated. Empty until the map loads or when no corps maps to an office.
+     * অনুলিপি lines: the distinct Corps Offices for the employees in this order.
+     * For each employee the office is resolved from their EXACT corps code
+     * (EmployeeInfo.Branch) → the Corps Office(s) that corps is assigned to. When the
+     * corps maps to no office (e.g. corps/trade is অপ্রযোজ্য), it falls back to every
+     * Corps Office under the employee's OWN mother organization — so the list is
+     * always scoped to the members' org and never leaks another org's office.
+     * Bilingual (office BN name in Bangla docs); de-duplicated.
      */
     get corpsOfficeCopyLines(): string[] {
         const bn = this.isBangla;
         const seen = new Set<string>();
         const names: string[] = [];
         for (const emp of this.filteredEmployees) {
-            const codeIds = new Set<number>();
-            for (const nm of [emp.corpsName, emp.corpsNameBN]) {
-                if (!nm) continue;
-                for (const id of this.corpsCodeByName.get(this.normalizeCorpsName(nm)) ?? []) codeIds.add(id);
-            }
-            for (const id of codeIds) {
-                for (const off of this.officesByCorpsCode.get(id) ?? []) {
-                    const label = ((bn ? (off.bn || off.en) : off.en) || '').trim();
-                    if (!label) continue;
-                    const dk = label.toLowerCase();
-                    if (seen.has(dk)) continue;
-                    seen.add(dk);
-                    names.push(label);
-                }
+            let offices: { en: string; bn: string }[] = [];
+            if (emp.corpsId != null) offices = this.officesByCorpsCode.get(emp.corpsId) ?? [];
+            if (offices.length === 0 && emp.motherOrgId != null) offices = this.officesByOrg.get(emp.motherOrgId) ?? [];
+            for (const off of offices) {
+                const label = ((bn ? (off.bn || off.en) : off.en) || '').trim();
+                if (!label) continue;
+                const dk = label.toLowerCase();
+                if (seen.has(dk)) continue;
+                seen.add(dk);
+                names.push(label);
             }
         }
         return names;
