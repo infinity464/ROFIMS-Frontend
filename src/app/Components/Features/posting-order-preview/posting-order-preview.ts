@@ -1030,6 +1030,16 @@ export class PostingOrderPreviewPageComponent implements OnInit {
     }
 
     /**
+     * Hard-coded special case: RAB Forces Training School (র‍্যাব ফোর্সেস ট্রেনিং স্কুল).
+     * It must NOT sit under the পরিচালক wing group — it gets its own অনুলিপি line
+     * prefixed "কমান্ড্যান্ট, " (its head is a Commandant, not a Director).
+     */
+    private isRabTrainingSchool(name: string): boolean {
+        const n = this.stripZeroWidth(name);
+        return n.includes('ফোর্সেস ট্রেনিং স্কুল') || /forces\s+training\s+school/i.test(n);
+    }
+
+    /**
      * Auto-generated অনুলিপি (copy-to) lines derived from the employees' RAB units.
      * For NEW posting this is the transfer destination only; for INTER posting the
      * member's PRESENT (from) unit is included as well, so both the previous and the
@@ -1047,6 +1057,8 @@ export class PostingOrderPreviewPageComponent implements OnInit {
         const hqSeen = new Set<string>();
         const rabUnits: string[] = [];
         const rabSeen = new Set<string>();
+        const commandant: string[] = [];       // RAB Forces Training School — its own কমান্ড্যান্ট line
+        const commandantSeen = new Set<string>();
         const others: string[] = [];
         const otherSeen = new Set<string>();
 
@@ -1059,9 +1071,14 @@ export class PostingOrderPreviewPageComponent implements OnInit {
             const top = parts[0];
             if (isHq) {
                 const wing = parts[1] || top; // segment directly under HQ
-                if (!hqSeen.has(wing)) { hqSeen.add(wing); hqWings.push(wing); }
+                // Hard-coded: RAB Forces Training School is its own কমান্ড্যান্ট line, not a পরিচালক wing.
+                if (this.isRabTrainingSchool(wing)) {
+                    if (!commandantSeen.has(wing)) { commandantSeen.add(wing); commandant.push(wing); }
+                } else if (!hqSeen.has(wing)) { hqSeen.add(wing); hqWings.push(wing); }
             } else if (this.isRabBattalion(top)) {
                 if (!rabSeen.has(top)) { rabSeen.add(top); rabUnits.push(top); }
+            } else if (this.isRabTrainingSchool(top)) {
+                if (!commandantSeen.has(top)) { commandantSeen.add(top); commandant.push(top); }
             } else {
                 if (!otherSeen.has(top)) { otherSeen.add(top); others.push(top); }
             }
@@ -1094,6 +1111,7 @@ export class PostingOrderPreviewPageComponent implements OnInit {
 
         const lines: string[] = [];
         if (hqWings.length) lines.push(`${bn ? 'পরিচালক' : 'Director'}, ${this.sortUnitsNaturally(hqWings).join('/ ')}`);
+        if (commandant.length) lines.push(`${bn ? 'কমান্ড্যান্ট' : 'Commandant'}, ${this.sortUnitsNaturally(commandant).join('/ ')}`);
         if (rabUnits.length) lines.push(`${bn ? 'অধিনায়ক' : 'Commanding Officer'}, ${this.sortUnitsNaturally(rabUnits).join('/ ')}`);
         if (others.length) lines.push(this.sortUnitsNaturally(others).join(', '));
         return lines;
@@ -1367,19 +1385,62 @@ export class PostingOrderPreviewPageComponent implements OnInit {
         return this.corpsOfficeCopyCount + (this.showTransferUnitsCopy ? this.autoCopyLines.length : 0);
     }
 
+    // ── Per-line অনুলিপি checkboxes (every auto line is individually toggleable) ──
+    /** Auto lines the user has unchecked in the Copy Filter, tracked by their text. */
+    private hiddenAutoLines = new Set<string>();
+
     /**
-     * Auto অনুলিপি lines in document order: Corps-Office lines FIRST, then the
-     * transfer-unit lines, then the Mother Org Office Head lines (all when shown).
-     * Shared by the preview/PDF (copyLines) and the Word export so numbering stays in step.
+     * Every auto-generated অনুলিপি line in document order: Corps Office → transfer
+     * units (পরিচালক / কমান্ড্যান্ট / অধিনায়ক / others) → Mother Org Office Head.
      */
-    private get autoCopyAllLines(): string[] {
-        const units = this.showTransferUnitsCopy ? this.autoCopyLines : [];
-        return [...this.shownCorpsOfficeCopyLines, ...units, ...this.shownMotherOrgOfficeHeadCopyLines];
+    get allAutoLines(): string[] {
+        return [...this.corpsOfficeCopyLines, ...this.autoCopyLines, ...this.motherOrgOfficeHeadCopyLines];
     }
 
-    /** Number of auto copy-lines actually rendered (0 when hidden) — footer paragraphs continue after this. */
-    get autoCopyOffset(): number {
-        return this.autoCopyAllLines.length;
+    /**
+     * Auto অনুলিপি lines actually rendered: every auto line except the ones the user
+     * unchecked. Shared by preview/PDF (copyLines) and the Word export.
+     */
+    private get autoCopyAllLines(): string[] {
+        return this.allAutoLines.filter(l => !this.hiddenAutoLines.has(l));
+    }
+
+    /**
+     * One row per অনুলিপি line for the Copy Filter — EVERY line (auto + system/footer)
+     * has its own checkbox. `no` is the running document number of the checked lines
+     * (blank for unchecked, so it's clear they won't appear).
+     */
+    get onulipiFilterRows(): { text: string; checked: boolean; no: string; kind: 'auto' | 'para'; paraIndex: number }[] {
+        this.syncParagraphChecked();
+        const rows: { text: string; checked: boolean; no: string; kind: 'auto' | 'para'; paraIndex: number }[] = [];
+        let n = 0;
+        const fmt = (v: number) => (this.isBangla ? this.toBanglaDigits('' + v) : String(v));
+        for (const line of this.allAutoLines) {
+            const checked = !this.hiddenAutoLines.has(line);
+            if (checked) n++;
+            rows.push({ text: line, checked, no: checked ? fmt(n) : '', kind: 'auto', paraIndex: -1 });
+        }
+        this.filteredFooterParagraphs.forEach((para, pi) => {
+            const checked = this.paragraphChecked[pi] !== false;
+            if (checked) n++;
+            rows.push({ text: para.text, checked, no: checked ? fmt(n) : '', kind: 'para', paraIndex: pi });
+        });
+        return rows;
+    }
+
+    /** trackBy for the Copy Filter rows — positional identity keeps the p-checkboxes
+     *  from being destroyed/recreated every change-detection tick (the getter returns a
+     *  fresh array each time), which otherwise loops CD and hangs the browser. */
+    trackFilterRowByIndex = (index: number): number => index;
+
+    /** Toggle a single অনুলিপি line (auto or footer) from the Copy Filter. */
+    onFilterRowToggle(row: { kind: 'auto' | 'para'; text: string; paraIndex: number }, checked: boolean): void {
+        if (row.kind === 'auto') {
+            if (checked) this.hiddenAutoLines.delete(row.text);
+            else this.hiddenAutoLines.add(row.text);
+        } else {
+            this.paragraphChecked[row.paraIndex] = checked;
+        }
     }
 
     /**

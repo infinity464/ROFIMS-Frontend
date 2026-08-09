@@ -478,31 +478,13 @@
             <i class="pi" [ngClass]="showOnulipiFilter ? 'pi-chevron-down' : 'pi-chevron-right'" style="margin-right:0.3rem;"></i>{{ isBangla ? 'অনুলিপি ফিল্টার' : 'Copy Filter' }}
         </span>
         <div *ngIf="showOnulipiFilter" style="display:flex; flex-direction:column; gap:0.3rem; margin-top:0.4rem; width:100%;">
-            <span *ngIf="corpsOfficeCopyLines.length > 0"
+            <!-- Every অনুলিপি line — auto (Corps Office / RAB units / Office Head) and
+                 system/footer — gets its own checkbox. -->
+            <span *ngFor="let row of onulipiFilterRows; let ri = index; trackBy: trackFilterRowByIndex"
                   style="display:inline-flex; align-items:flex-start; gap:0.4rem; font-size:0.82rem; line-height:1.4;">
-                <p-checkbox [(ngModel)]="showCorpsOfficeCopy" [binary]="true" inputId="chkCorpsOfficeCopy"></p-checkbox>
-                <label for="chkCorpsOfficeCopy" style="cursor:pointer;">
-                    <span *ngFor="let line of corpsOfficeCopyLines; let i = index" style="display:block;">{{ isBangla ? toBanglaDigits('' + (i + 1)) : (i + 1) }}। {{ line }}</span>
-                </label>
-            </span>
-            <span *ngIf="autoCopyLines.length > 0"
-                  style="display:inline-flex; align-items:flex-start; gap:0.4rem; font-size:0.82rem; line-height:1.4;">
-                <p-checkbox [(ngModel)]="showTransferUnitsCopy" [binary]="true" inputId="chkTransferUnitsCopy"></p-checkbox>
-                <label for="chkTransferUnitsCopy" style="cursor:pointer;">
-                    <span *ngFor="let line of autoCopyLines; let i = index" style="display:block;">{{ isBangla ? toBanglaDigits('' + (i + 1 + corpsOfficeCopyCount)) : (i + 1 + corpsOfficeCopyCount) }}। {{ line }}</span>
-                </label>
-            </span>
-            <span *ngIf="motherOrgOfficeHeadCopyLines.length > 0"
-                  style="display:inline-flex; align-items:flex-start; gap:0.4rem; font-size:0.82rem; line-height:1.4;">
-                <p-checkbox [(ngModel)]="showMotherOrgOfficeHeadCopy" [binary]="true" inputId="chkMotherOrgOfficeHeadCopy"></p-checkbox>
-                <label for="chkMotherOrgOfficeHeadCopy" style="cursor:pointer;">
-                    <span *ngFor="let line of motherOrgOfficeHeadCopyLines; let i = index" style="display:block;">{{ isBangla ? toBanglaDigits('' + (i + 1 + motherOrgOfficeHeadCopyOffset)) : (i + 1 + motherOrgOfficeHeadCopyOffset) }}। {{ line }}</span>
-                </label>
-            </span>
-            <span *ngFor="let para of filteredFooterParagraphs; let pi = index"
-                  style="display:inline-flex; align-items:flex-start; gap:0.4rem; font-size:0.82rem; line-height:1.4;">
-                <p-checkbox [(ngModel)]="paragraphChecked[pi]" [binary]="true" [inputId]="'chkPara' + pi"></p-checkbox>
-                <label [for]="'chkPara' + pi" style="cursor:pointer;">{{ isBangla ? toBanglaDigits('' + (pi + 1 + autoCopyOffset)) : (pi + 1 + autoCopyOffset) }}। {{ para.text }}</label>
+                <p-checkbox [ngModel]="row.checked" [binary]="true" [inputId]="'chkOnulipi' + ri"
+                            (ngModelChange)="onFilterRowToggle(row, $event)"></p-checkbox>
+                <label [for]="'chkOnulipi' + ri" style="cursor:pointer;" [style.opacity]="row.checked ? 1 : 0.5">{{ row.no ? row.no + '।' : '' }} {{ row.text }}</label>
             </span>
 
             <!-- Reorder (view-only). Moves any অনুলিপি line up/down; the new order flows
