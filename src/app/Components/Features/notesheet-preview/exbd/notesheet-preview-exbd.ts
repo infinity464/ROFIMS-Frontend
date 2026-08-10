@@ -1015,7 +1015,9 @@ export class NotesheetPreviewExbdComponent extends NotesheetPreviewBase implemen
      * Print Preview, reproducing the on-screen `.a4-paper` exactly. Snapshots the
      * UNPAGINATED source (hidden .page-measure div) so Chromium paginates the full
      * flow via @page rules; @page insets mirror .a4-paper's padding so the text
-     * column matches the web view (Legal 215.9−2×10 = 195.9mm; A4 = 190mm).
+     * column matches the web view. The left inset is 1in (25.4mm) per the screen
+     * rule in notesheet-preview-exbd.scss, the right stays 10mm — so the column is
+     * A4 210−25.4−10 = 174.6mm; Legal 215.9−25.4−10 = 180.5mm.
      */
     private async buildJsReportPdf(): Promise<{ html: string; chrome: Record<string, unknown>; templateExtras: Record<string, unknown> }> {
         const styles = this.collectDocumentStyles();
@@ -1024,8 +1026,9 @@ export class NotesheetPreviewExbdComponent extends NotesheetPreviewBase implemen
         const isLegal = this.selectedPageSize === 'Legal';
         const pageWidth = isLegal ? '215.9mm' : '210mm';
         const pageHeight = isLegal ? '355.6mm' : '297mm';
-        const colWidth = isLegal ? '195.9mm' : '190mm';
-        const padX = 10, padTop = 14, padBottom = 20; // mm — .a4-paper padding
+        const colWidth = isLegal ? '180.5mm' : '174.6mm';
+        // mm — .a4-paper padding. padLeft is the 1in document margin.
+        const padLeft = 25.4, padRight = 10, padTop = 14, padBottom = 20;
 
         const html = `<!DOCTYPE html>
 <html>
@@ -1040,7 +1043,7 @@ ${styles}
    server — the embedded copy below is what Chromium actually loads. */
 ${fontCss}
 
-@page { size: ${pageWidth} ${pageHeight}; margin: ${padTop}mm ${padX}mm ${padBottom}mm ${padX}mm; }
+@page { size: ${pageWidth} ${pageHeight}; margin: ${padTop}mm ${padRight}mm ${padBottom}mm ${padLeft}mm; }
 html, body { margin: 0; padding: 0; background: transparent; }
 
 .no-print, .preview-header, .export-options-bar, .preview-actions, .preview-status-actions { display: none !important; }
@@ -1065,7 +1068,7 @@ html, body { margin: 0; padding: 0; background: transparent; }
     box-sizing: border-box;
     width: ${colWidth};
     font-family: 'Times New Roman', 'SolaimanLipi', Times, serif;
-    font-size: 10pt;
+    font-size: 12pt;
     line-height: 1.7;
     color: #000;
 }
@@ -1084,7 +1087,7 @@ html, body { margin: 0; padding: 0; background: transparent; }
    (see notesheet-preview-exbd.scss → :host .ns-main-col). */
 .pdf-flow .ns-main-col { padding-left: 10px; padding-right: 5px; }
 
-/* Uniform body size — everything except the NOTE SHEET title renders at 10pt,
+/* Uniform body size — everything except the NOTE SHEET title renders at 12pt,
    matching the on-screen preview. The collected page styles pin some blocks
    smaller (7-9pt); these higher-specificity rules restore uniformity. The title
    (.ns-title-*) keeps its own inline size, so it is unaffected. */
@@ -1092,7 +1095,12 @@ html, body { margin: 0; padding: 0; background: transparent; }
 .pdf-flow .ns-cell-ref, .pdf-flow .ns-note,
 .pdf-flow .ns-approver-role, .pdf-flow .ns-approver-left, .pdf-flow .ns-approver-remark,
 .pdf-flow .ns-sig-name, .pdf-flow .ns-sig-rank, .pdf-flow .ns-sig-paren,
-.pdf-flow .ns-sig-appoint, .pdf-flow .ns-sig-date { font-size: 10pt; }
+.pdf-flow .ns-sig-appoint, .pdf-flow .ns-sig-date { font-size: 12pt; }
+
+/* Rich-text main text carries the editor's own sizes (ql-size-*, h1/h2) through
+   the innerHTML snapshot — pin it to the body size, mirroring the screen rule in
+   notesheet-preview-exbd.scss. */
+.pdf-flow .ns-para-text, .pdf-flow .ns-para-text * { font-size: 12pt !important; }
 
 /* Serials (১। ২। and ক। খ।) are NOT bold, and use the tighter on-screen indents.
    The screen rules live under \`:host\` (notesheet-preview-exbd.scss), and the host
@@ -1121,7 +1129,7 @@ html, body { margin: 0; padding: 0; background: transparent; }
             // Same values as the @page rule above — Chromium sizes the footer band
             // from these params, so a '0' bottom margin would clip the page number.
             marginTop: `${padTop}mm`, marginBottom: `${padBottom}mm`,
-            marginLeft: `${padX}mm`, marginRight: `${padX}mm`,
+            marginLeft: `${padLeft}mm`, marginRight: `${padRight}mm`,
             printBackground: true,
             displayHeaderFooter: false,
             headerTemplate: '', footerTemplate: ''
@@ -1347,22 +1355,26 @@ html, body { margin: 0; padding: 0; background: transparent; }
         // Font sizes (half-points). Everything except the NOTE SHEET title is
         // uniform at the body size (10pt), matching the on-screen preview.
         const hdrSize = 20;                   // 10pt - org header
-        const contentSize = 20;               // 10pt - body content (uniform base)
+        const contentSize = 24;               // 12pt - body content (uniform base)
         const sigSize = contentSize;          // signature/approver = body size
         const noDateSize = contentSize;       // notesheet no + date = body size
         const titleHdrSize = hdrSize + 2;     // 11pt — NOTE SHEET / মন্তব্য পত্র (header)
         const csContent = bn ? contentSize : undefined;
         const csNoDate = bn ? noDateSize : undefined;
         const csSig = bn ? sigSize : undefined;
+        const csHdr = bn ? hdrSize : undefined;
         const lang = bn ? { value: 'bn-BD', bidirectional: 'bn-BD' } : undefined;
 
-        // Page size follows the selected option (A4 default / Legal). Margins are
-        // 400 twips each side, so the bordered cell width = pageWidth − 800
-        // (A4 = 11106, Legal = 11440 twips).
+        // Page size follows the selected option (A4 default / Legal). The left
+        // margin is 1in (1440 twips) to match the screen/PDF; the other three stay
+        // at 400 twips. The bordered cell fills what is left of the page width
+        // (A4 = 10066, Legal = 10400 twips).
+        const wordMarginLeft = 1440;   // 1 inch
+        const wordMarginOther = 400;
         const wordIsLegal = this.selectedPageSize === 'Legal';
         const wordPageWidth = wordIsLegal ? 12240 : 11906;
         const wordPageHeight = wordIsLegal ? 20160 : 16838;
-        const wordCellWidth = wordPageWidth - 800;
+        const wordCellWidth = wordPageWidth - wordMarginLeft - wordMarginOther;
 
         const mainChildren: (Paragraph | Table)[] = [];
 
@@ -1570,11 +1582,11 @@ html, body { margin: 0; padding: 0; background: transparent; }
             }),
             // Org header — both lines underlined
             new Paragraph({
-                children: [new TextRun({ text: this.getOrgHeaderLine1(), bold: true, underline: {}, size: contentSize, sizeComplexScript: csContent, font, language: lang })],
+                children: [new TextRun({ text: this.getOrgHeaderLine1(), bold: true, underline: {}, size: hdrSize, sizeComplexScript: csHdr, font, language: lang })],
                 alignment: AlignmentType.CENTER, spacing: { after: 20 }, keepNext: true
             }),
             new Paragraph({
-                children: [new TextRun({ text: this.getOrgHeaderLine2(), bold: true, underline: {}, size: contentSize, sizeComplexScript: csContent, font, language: lang })],
+                children: [new TextRun({ text: this.getOrgHeaderLine2(), bold: true, underline: {}, size: hdrSize, sizeComplexScript: csHdr, font, language: lang })],
                 alignment: AlignmentType.CENTER, spacing: { after: 100 }, keepNext: true
             }),
         ];
@@ -1611,7 +1623,7 @@ html, body { margin: 0; padding: 0; background: transparent; }
                 properties: {
                     page: {
                         size: { width: wordPageWidth, height: wordPageHeight, orientation: PageOrientation.PORTRAIT },
-                        margin: { top: 400, right: 400, bottom: 400, left: 400 }
+                        margin: { top: wordMarginOther, right: wordMarginOther, bottom: wordMarginOther, left: wordMarginLeft }
                     }
                 },
                 children: docChildren
@@ -1624,8 +1636,8 @@ html, body { margin: 0; padding: 0; background: transparent; }
         const thinBorder = { style: BorderStyle.SINGLE, size: 1, color: '000000' };
         const cellBorders = { top: thinBorder, bottom: thinBorder, left: thinBorder, right: thinBorder };
         const lang = bn ? { value: 'bn-BD', bidirectional: 'bn-BD' } : undefined;
-        const contentSize = 20; // 10pt — uniform body size
-        const csContent = bn ? 20 : undefined;
+        const contentSize = 24; // 12pt — uniform body size
+        const csContent = bn ? 24 : undefined;
 
         for (const b of blocks) {
             if (b.type === 'table' && b.rows?.length) {
