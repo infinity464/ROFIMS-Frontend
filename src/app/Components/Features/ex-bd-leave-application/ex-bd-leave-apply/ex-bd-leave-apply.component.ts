@@ -92,6 +92,22 @@ export class ExBdLeaveApplyComponent implements OnInit {
     isSavingVisitType = false;
     newVisitType: Partial<CommonCode> = { codeValueEN: '', codeValueBN: '' };
 
+    // Full selection text for tooltips — the dropdown labels are truncated with
+    // an ellipsis so long names cannot stretch their grid column.
+    get selectedFamilyMemberNames(): string {
+        return this.joinSelectedLabels('familyMemberIds', this.familyMemberOptions);
+    }
+
+    get selectedCountryNames(): string {
+        return this.joinSelectedLabels('destinationCountryIds', this.countryOptions);
+    }
+
+    private joinSelectedLabels(controlName: string, options: { label: string; value: number }[]): string {
+        const ids: number[] = this.form?.get(controlName)?.value ?? [];
+        if (!ids?.length) return '';
+        return options.filter(o => ids.includes(o.value)).map(o => o.label).join(', ');
+    }
+
     ngOnInit(): void {
         this.initForm();
         this.loadDropdowns();

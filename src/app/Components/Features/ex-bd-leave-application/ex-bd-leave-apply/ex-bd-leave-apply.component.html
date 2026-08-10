@@ -61,6 +61,8 @@
             filterBy="label"
             [showClear]="true"
             placeholder="Select Country (can add multiple)"
+            [pTooltip]="selectedCountryNames"
+            tooltipPosition="top"
             styleClass="w-full">
           </p-multiselect>
         </div>
@@ -100,6 +102,8 @@
             [showClear]="true"
             placeholder="Select Family Members"
             [disabled]="!form.get('applicantEmployeeId')?.value"
+            [pTooltip]="selectedFamilyMemberNames"
+            tooltipPosition="top"
             styleClass="w-full">
           </p-multiselect>
         </div>

@@ -1094,6 +1094,13 @@ html, body { margin: 0; padding: 0; background: transparent; }
 .pdf-flow .ns-sig-name, .pdf-flow .ns-sig-rank, .pdf-flow .ns-sig-paren,
 .pdf-flow .ns-sig-appoint, .pdf-flow .ns-sig-date { font-size: 10pt; }
 
+/* Serials (১। ২। and ক। খ।) are NOT bold, and use the tighter on-screen indents.
+   The screen rules live under \`:host\` (notesheet-preview-exbd.scss), and the host
+   element is not part of the snapshotted innerHTML — without this the shared
+   sheet's .ns-para-no{font-weight:700} / .ns-ref-serial{font-weight:600} win here. */
+.pdf-flow .ns-para-no    { font-weight: normal; margin-right: 1em; }
+.pdf-flow .ns-ref-serial { font-weight: normal; margin-right: 0.5em; }
+
 .ns-posting-table tr,
 .ns-approver-section,
 .ns-org-header,
