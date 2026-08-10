@@ -34,6 +34,21 @@
                 </p-multiSelect>
             </div>
 
+            <!-- Member Type (single-select) -->
+            <div class="col-span-12 md:col-span-6">
+                <label class="block mb-2">Member Type <span class="text-red-500">*</span></label>
+                <p-select
+                    formControlName="memberTypeId"
+                    [options]="memberTypeOptions"
+                    optionLabel="label"
+                    optionValue="value"
+                    placeholder="Select Member Type"
+                    [filter]="true"
+                    appendTo="body"
+                    styleClass="w-full">
+                </p-select>
+            </div>
+
             <!-- Authorization -->
             <div class="col-span-12 md:col-span-6">
                 <label class="block mb-2">Authorization <span class="text-red-500">*</span></label>

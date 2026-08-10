@@ -1166,36 +1166,21 @@ export class PostingOrderPreviewPageComponent implements OnInit {
         });
     }
 
-    // ── Corps Office অনুলিপি (scoped to each employee's mother organization) ──
-    /** corps codeId (EmployeeInfo.Branch) → the Corps Office(s) it is assigned to. */
-    private officesByCorpsCode = new Map<number, { en: string; bn: string }[]>();
-    /** mother-org id → every Corps Office set up under it (N/A / unmatched fallback). */
-    private officesByOrg = new Map<number, { en: string; bn: string }[]>();
+    // ── Corps Office অনুলিপি (Member Type first, then Corps, scoped to the org) ──
+    /** Every Corps Office with its member type, mother org and assigned corps codes. */
+    private offices: { orgId: number | null; memberTypeId: number | null; corpsCodeIds: number[]; en: string; bn: string }[] = [];
 
-    /**
-     * Load the Corps Office assignments (basic-setup/corps-office) into two lookups:
-     * by assigned corps CODE, and by mother organization. Matching on the corps code
-     * (not the name) keeps it scoped to that corps' own org, so a police member never
-     * pulls in another org's office that merely shares a corps name.
-     */
+    /** Load the Corps Office setup (basic-setup/corps-office) once for the অনুলিপি lookup. */
     private loadCorpsOfficeMap(): void {
         this.corpsOfficeService.getAll().subscribe({
             next: (offices) => {
-                this.officesByCorpsCode.clear();
-                this.officesByOrg.clear();
-                for (const o of offices ?? []) {
-                    const rec = { en: o.officeNameEN, bn: o.officeNameBN };
-                    if (o.orgId != null) {
-                        const byOrg = this.officesByOrg.get(o.orgId) ?? [];
-                        byOrg.push(rec);
-                        this.officesByOrg.set(o.orgId, byOrg);
-                    }
-                    for (const a of o.assignedCorps ?? []) {
-                        const byCorps = this.officesByCorpsCode.get(a.corpsCodeId) ?? [];
-                        byCorps.push(rec);
-                        this.officesByCorpsCode.set(a.corpsCodeId, byCorps);
-                    }
-                }
+                this.offices = (offices ?? []).map((o) => ({
+                    orgId: o.orgId,
+                    memberTypeId: o.memberTypeId,
+                    corpsCodeIds: (o.assignedCorps ?? []).map((a) => a.corpsCodeId),
+                    en: o.officeNameEN,
+                    bn: o.officeNameBN
+                }));
             },
             error: () => { /* no corps-office copy line if the lookup fails */ }
         });
@@ -1203,22 +1188,24 @@ export class PostingOrderPreviewPageComponent implements OnInit {
 
     /**
      * অনুলিপি lines: the distinct Corps Offices for the employees in this order.
-     * For each employee the office is resolved from their EXACT corps code
-     * (EmployeeInfo.Branch) → the Corps Office(s) that corps is assigned to. When the
-     * corps maps to no office (e.g. corps/trade is অপ্রযোজ্য), it falls back to every
-     * Corps Office under the employee's OWN mother organization — so the list is
-     * always scoped to the members' org and never leaks another org's office.
-     * Bilingual (office BN name in Bangla docs); de-duplicated.
+     * Gating order — MEMBER TYPE first, then CORPS:
+     *   1. keep only offices whose Member Type matches the employee's;
+     *   2. of those, the office(s) whose assigned corps includes the employee's EXACT
+     *      corps code (EmployeeInfo.Branch);
+     *   3. fallback — if no corps match (e.g. corps is অপ্রযোজ্য), every member-type
+     *      office under the employee's OWN mother organization.
+     * An employee with no member type produces no line. Bilingual; de-duplicated.
      */
     get corpsOfficeCopyLines(): string[] {
         const bn = this.isBangla;
         const seen = new Set<string>();
         const names: string[] = [];
         for (const emp of this.filteredEmployees) {
-            let offices: { en: string; bn: string }[] = [];
-            if (emp.corpsId != null) offices = this.officesByCorpsCode.get(emp.corpsId) ?? [];
-            if (offices.length === 0 && emp.motherOrgId != null) offices = this.officesByOrg.get(emp.motherOrgId) ?? [];
-            for (const off of offices) {
+            if (emp.memberTypeId == null) continue; // member type must match first
+            const mtOffices = this.offices.filter((o) => o.memberTypeId === emp.memberTypeId);
+            let chosen = emp.corpsId != null ? mtOffices.filter((o) => o.corpsCodeIds.includes(emp.corpsId!)) : [];
+            if (chosen.length === 0 && emp.motherOrgId != null) chosen = mtOffices.filter((o) => o.orgId === emp.motherOrgId);
+            for (const off of chosen) {
                 const label = ((bn ? (off.bn || off.en) : off.en) || '').trim();
                 if (!label) continue;
                 const dk = label.toLowerCase();
@@ -1903,25 +1890,11 @@ export class PostingOrderPreviewPageComponent implements OnInit {
     /** Combined remark — same content as the note-sheet preview / order generate. */
     empCombinedRemarks(emp: PostingOrderEmployeeRow): string {
         const base = this.isInterPosting ? emp.interPostingRemark : emp.sendingRemark;
-        // The "previous posting cancelled" note refers to an EARLIER order, so it must
-        // appear ONLY on orders created AFTER the cancelled one — i.e. the current
-        // order's primary key must be greater than the cancelled order's primary key.
-        // (This naturally excludes the cancelled order itself and any older order.)
-        // Fall back to a same-no check if the backend hasn't supplied the master id yet.
-        const cancelled = this.cancelledInterMap[emp.employeeId];
-        const cancelledMasterId = cancelled?.postingOrderMasterId ?? 0;
-        const isAfterCancelled = cancelledMasterId > 0
-            ? (this.currentOrderId ?? 0) > cancelledMasterId
-            : (!!cancelled?.postingOrderNo && cancelled.postingOrderNo !== this.postingOrderNo);
-        let cancelNote = '';
-        if (cancelled?.postingOrderNo && isAfterCancelled) {
-            const no = cancelled.postingOrderNo;
-            cancelNote = this.isBangla
-                ? `${no} এর মাধ্যমে জারিকৃত বদলি আদেশ বাতিল করা হলো।`
-                : `The transfer order issued vide ${no} has been cancelled.`;
-        }
-        return [base, emp.noteSheetRemarks, this.getRemovalRemark(emp), cancelNote]
-            .filter(s => s?.trim()).join(', ');
+        // TEMPORARILY HIDDEN (per request): the auto-generated notes — "removed from the
+        // previous note-sheet" (getRemovalRemark) and "previous transfer order cancelled"
+        // (cancelledInterMap) — are no longer appended; only the manual remarks show.
+        // To restore, add `this.getRemovalRemark(emp)` and the cancel note back to the list.
+        return [base, emp.noteSheetRemarks].filter(s => s?.trim()).join(', ');
     }
 
     trackByIndex(index: number): number {
