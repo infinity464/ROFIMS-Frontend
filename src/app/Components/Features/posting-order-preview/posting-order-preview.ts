@@ -27,7 +27,7 @@ import { EmpService } from '@/services/emp-service';
 import { EmployeeListService } from '@/services/employee-list.service';
 import { SharedService } from '@/shared/services/shared-service';
 import { IdentityUserMemberTypeAccessService } from '@/services/identity-user-member-type-access.service';
-import { PostingOrderEmployeeRow, EmployeeRemovalInfo, CancelledInterPostingInfo } from '@/models/posting.model';
+import { PostingOrderEmployeeRow, EmployeeRemovalInfo, CancelledInterPostingInfo, ReferenceEntry } from '@/models/posting.model';
 import { EmployeeList } from '@/models/employee-list.model';
 import { NoteSheetType, IsSendingNotesheetStatus, ApprovalStatus } from '@/models/enums';
 import { HttpClient } from '@angular/common/http';
@@ -211,6 +211,7 @@ export class PostingOrderPreviewPageComponent implements OnInit {
     editPostingText = '';
     editSubText = '';
     editFooterParagraphs: FooterParagraph[] = [];
+    editReferences: ReferenceEntry[] = [];
     editEmployees: PostingOrderEmployeeRow[] = [];
 
     // ─── Add member (inline dropdown) ��────────────────
@@ -820,17 +821,63 @@ export class PostingOrderPreviewPageComponent implements OnInit {
         return lastSlash > 0 ? no.substring(0, lastSlash) : no;
     }
 
-    /** NoteSheet number + final approval date, shown after the bold "সূত্রঃ / Reference:" label. */
-    get referenceLine(): string {
+    /** Parsed সূত্র entries. New orders store a JSON array in referenceNumber; a legacy
+     *  order holds a plain string (→ one entry, no date), and an order with no reference
+     *  falls back to the linked note-sheet's no + approval date (pre-feature behaviour). */
+    get referenceEntries(): ReferenceEntry[] {
+        const raw = (this.referenceNumber ?? '').trim();
+        if (raw) {
+            try {
+                const parsed = JSON.parse(raw);
+                if (Array.isArray(parsed)) {
+                    const entries = parsed
+                        .map((e: any) => ({
+                            referenceNo: (typeof e === 'string' ? e : (e?.referenceNo ?? '')) as string,
+                            date: (typeof e === 'string' ? null : (e?.date ?? null)) as string | null
+                        }))
+                        .filter(e => (e.referenceNo ?? '').trim().length > 0);
+                    if (entries.length) return entries;
+                }
+            } catch { /* not JSON — treat as a legacy plain string below */ }
+            return [{ referenceNo: raw, date: null }];
+        }
         const no = (this.noteSheetNo ?? '').trim();
+        return no ? [{ referenceNo: no, date: this.noteSheetApprovalDate }] : [];
+    }
+
+    get hasMultipleReferences(): boolean { return this.referenceEntries.length > 1; }
+
+    /** One সূত্র line as "<no>, তারিখঃ <date>" (date omitted when absent). */
+    referenceEntryText(entry: ReferenceEntry): string {
+        const no = (entry.referenceNo ?? '').trim();
         if (!no) return '';
-        const dateStr = this.noteSheetApprovalDate
-            ? (this.isBangla ? this.formatDateBangla(this.noteSheetApprovalDate) : this.formatDate(this.noteSheetApprovalDate))
+        const dateStr = entry.date
+            ? (this.isBangla ? this.formatDateBangla(entry.date) : this.formatDate(entry.date))
             : '';
         if (!dateStr) return no;
         const dateLabel = this.isBangla ? 'তারিখঃ' : 'Date:';
         return `${no}, ${dateLabel} ${dateStr}`;
     }
+
+    /** The single-line সূত্র (first entry) — used for the one-reference layout and Word. */
+    get referenceLine(): string {
+        const first = this.referenceEntries[0];
+        return first ? this.referenceEntryText(first) : '';
+    }
+
+    /** Serialize an edit list of references to the JSON stored in ReferenceNumber
+     *  (blank lines dropped; null when empty). */
+    private serializeReferences(list: ReferenceEntry[]): string | null {
+        const refs = list
+            .map(r => ({ referenceNo: (r.referenceNo ?? '').trim(), date: r.date }))
+            .filter(r => r.referenceNo.length > 0);
+        return refs.length > 0 ? JSON.stringify(refs) : null;
+    }
+
+    /** Add a text-only সূত্র line in edit mode. */
+    addEditReference(): void { this.editReferences.push({ referenceNo: '', date: null }); }
+    /** Remove a সূত্র line in edit mode. */
+    removeEditReference(index: number): void { this.editReferences.splice(index, 1); }
 
     formatDate(value: string | null | undefined): string {
         if (value == null || value === '') return '-';
@@ -983,6 +1030,16 @@ export class PostingOrderPreviewPageComponent implements OnInit {
     }
 
     /**
+     * Hard-coded special case: RAB Forces Training School (র‍্যাব ফোর্সেস ট্রেনিং স্কুল).
+     * It must NOT sit under the পরিচালক wing group — it gets its own অনুলিপি line
+     * prefixed "কমান্ড্যান্ট, " (its head is a Commandant, not a Director).
+     */
+    private isRabTrainingSchool(name: string): boolean {
+        const n = this.stripZeroWidth(name);
+        return n.includes('ফোর্সেস ট্রেনিং স্কুল') || /forces\s+training\s+school/i.test(n);
+    }
+
+    /**
      * Auto-generated অনুলিপি (copy-to) lines derived from the employees' RAB units.
      * For NEW posting this is the transfer destination only; for INTER posting the
      * member's PRESENT (from) unit is included as well, so both the previous and the
@@ -1000,6 +1057,8 @@ export class PostingOrderPreviewPageComponent implements OnInit {
         const hqSeen = new Set<string>();
         const rabUnits: string[] = [];
         const rabSeen = new Set<string>();
+        const commandant: string[] = [];       // RAB Forces Training School — its own কমান্ড্যান্ট line
+        const commandantSeen = new Set<string>();
         const others: string[] = [];
         const otherSeen = new Set<string>();
 
@@ -1012,9 +1071,14 @@ export class PostingOrderPreviewPageComponent implements OnInit {
             const top = parts[0];
             if (isHq) {
                 const wing = parts[1] || top; // segment directly under HQ
-                if (!hqSeen.has(wing)) { hqSeen.add(wing); hqWings.push(wing); }
+                // Hard-coded: RAB Forces Training School is its own কমান্ড্যান্ট line, not a পরিচালক wing.
+                if (this.isRabTrainingSchool(wing)) {
+                    if (!commandantSeen.has(wing)) { commandantSeen.add(wing); commandant.push(wing); }
+                } else if (!hqSeen.has(wing)) { hqSeen.add(wing); hqWings.push(wing); }
             } else if (this.isRabBattalion(top)) {
                 if (!rabSeen.has(top)) { rabSeen.add(top); rabUnits.push(top); }
+            } else if (this.isRabTrainingSchool(top)) {
+                if (!commandantSeen.has(top)) { commandantSeen.add(top); commandant.push(top); }
             } else {
                 if (!otherSeen.has(top)) { otherSeen.add(top); others.push(top); }
             }
@@ -1047,6 +1111,7 @@ export class PostingOrderPreviewPageComponent implements OnInit {
 
         const lines: string[] = [];
         if (hqWings.length) lines.push(`${bn ? 'পরিচালক' : 'Director'}, ${this.sortUnitsNaturally(hqWings).join('/ ')}`);
+        if (commandant.length) lines.push(`${bn ? 'কমান্ড্যান্ট' : 'Commandant'}, ${this.sortUnitsNaturally(commandant).join('/ ')}`);
         if (rabUnits.length) lines.push(`${bn ? 'অধিনায়ক' : 'Commanding Officer'}, ${this.sortUnitsNaturally(rabUnits).join('/ ')}`);
         if (others.length) lines.push(this.sortUnitsNaturally(others).join(', '));
         return lines;
@@ -1101,44 +1166,34 @@ export class PostingOrderPreviewPageComponent implements OnInit {
         });
     }
 
-    // ── Corps Office অনুলিপি (derived from the employees' corps) ─────────────
-    /** corps name (EN & BN, normalized) → CommonCode codeId(s). */
-    private corpsCodeByName = new Map<string, number[]>();
-    /** corps codeId → the Corps Office(s) it is assigned to (basic-setup/corps-office). */
+    // ── Corps Office অনুলিপি (scoped to each employee's mother organization) ──
+    /** corps codeId (EmployeeInfo.Branch) → the Corps Office(s) it is assigned to. */
     private officesByCorpsCode = new Map<number, { en: string; bn: string }[]>();
-
-    private normalizeCorpsName(s: string): string {
-        return this.stripZeroWidth(s || '').toLowerCase();
-    }
+    /** mother-org id → every Corps Office set up under it (N/A / unmatched fallback). */
+    private officesByOrg = new Map<number, { en: string; bn: string }[]>();
 
     /**
-     * Load corps codes + Corps Office assignments so the অনুলিপি can list the
-     * distinct Corps Offices of the employees' corps. Corps are matched by name
-     * (the employee row carries corpsName, not the code), so both EN and BN names
-     * are keyed to the CommonCode code, which is then mapped to its office(s).
+     * Load the Corps Office assignments (basic-setup/corps-office) into two lookups:
+     * by assigned corps CODE, and by mother organization. Matching on the corps code
+     * (not the name) keeps it scoped to that corps' own org, so a police member never
+     * pulls in another org's office that merely shares a corps name.
      */
     private loadCorpsOfficeMap(): void {
-        forkJoin([
-            this.masterBasicSetupService.getAllByType('Corps'),
-            this.corpsOfficeService.getAll()
-        ]).subscribe({
-            next: ([corps, offices]) => {
-                this.corpsCodeByName.clear();
-                for (const c of corps ?? []) {
-                    for (const nm of [c.codeValueEN, c.codeValueBN]) {
-                        if (!nm) continue;
-                        const k = this.normalizeCorpsName(nm);
-                        const arr = this.corpsCodeByName.get(k) ?? [];
-                        if (!arr.includes(c.codeId)) arr.push(c.codeId);
-                        this.corpsCodeByName.set(k, arr);
-                    }
-                }
+        this.corpsOfficeService.getAll().subscribe({
+            next: (offices) => {
                 this.officesByCorpsCode.clear();
+                this.officesByOrg.clear();
                 for (const o of offices ?? []) {
+                    const rec = { en: o.officeNameEN, bn: o.officeNameBN };
+                    if (o.orgId != null) {
+                        const byOrg = this.officesByOrg.get(o.orgId) ?? [];
+                        byOrg.push(rec);
+                        this.officesByOrg.set(o.orgId, byOrg);
+                    }
                     for (const a of o.assignedCorps ?? []) {
-                        const arr = this.officesByCorpsCode.get(a.corpsCodeId) ?? [];
-                        arr.push({ en: o.officeNameEN, bn: o.officeNameBN });
-                        this.officesByCorpsCode.set(a.corpsCodeId, arr);
+                        const byCorps = this.officesByCorpsCode.get(a.corpsCodeId) ?? [];
+                        byCorps.push(rec);
+                        this.officesByCorpsCode.set(a.corpsCodeId, byCorps);
                     }
                 }
             },
@@ -1147,31 +1202,29 @@ export class PostingOrderPreviewPageComponent implements OnInit {
     }
 
     /**
-     * অনুলিপি line: the distinct Corps Offices of every employee's corps in this
-     * order, comma-joined. Each employee's corps is matched by name to its
-     * CommonCode code, then to the Corps Office(s) it is assigned to
-     * (basic-setup/corps-office). Bilingual (office BN name in Bangla docs),
-     * de-duplicated. Empty until the map loads or when no corps maps to an office.
+     * অনুলিপি lines: the distinct Corps Offices for the employees in this order.
+     * For each employee the office is resolved from their EXACT corps code
+     * (EmployeeInfo.Branch) → the Corps Office(s) that corps is assigned to. When the
+     * corps maps to no office (e.g. corps/trade is অপ্রযোজ্য), it falls back to every
+     * Corps Office under the employee's OWN mother organization — so the list is
+     * always scoped to the members' org and never leaks another org's office.
+     * Bilingual (office BN name in Bangla docs); de-duplicated.
      */
     get corpsOfficeCopyLines(): string[] {
         const bn = this.isBangla;
         const seen = new Set<string>();
         const names: string[] = [];
         for (const emp of this.filteredEmployees) {
-            const codeIds = new Set<number>();
-            for (const nm of [emp.corpsName, emp.corpsNameBN]) {
-                if (!nm) continue;
-                for (const id of this.corpsCodeByName.get(this.normalizeCorpsName(nm)) ?? []) codeIds.add(id);
-            }
-            for (const id of codeIds) {
-                for (const off of this.officesByCorpsCode.get(id) ?? []) {
-                    const label = ((bn ? (off.bn || off.en) : off.en) || '').trim();
-                    if (!label) continue;
-                    const dk = label.toLowerCase();
-                    if (seen.has(dk)) continue;
-                    seen.add(dk);
-                    names.push(label);
-                }
+            let offices: { en: string; bn: string }[] = [];
+            if (emp.corpsId != null) offices = this.officesByCorpsCode.get(emp.corpsId) ?? [];
+            if (offices.length === 0 && emp.motherOrgId != null) offices = this.officesByOrg.get(emp.motherOrgId) ?? [];
+            for (const off of offices) {
+                const label = ((bn ? (off.bn || off.en) : off.en) || '').trim();
+                if (!label) continue;
+                const dk = label.toLowerCase();
+                if (seen.has(dk)) continue;
+                seen.add(dk);
+                names.push(label);
             }
         }
         return names;
@@ -1320,19 +1373,62 @@ export class PostingOrderPreviewPageComponent implements OnInit {
         return this.corpsOfficeCopyCount + (this.showTransferUnitsCopy ? this.autoCopyLines.length : 0);
     }
 
+    // ── Per-line অনুলিপি checkboxes (every auto line is individually toggleable) ──
+    /** Auto lines the user has unchecked in the Copy Filter, tracked by their text. */
+    private hiddenAutoLines = new Set<string>();
+
     /**
-     * Auto অনুলিপি lines in document order: Corps-Office lines FIRST, then the
-     * transfer-unit lines, then the Mother Org Office Head lines (all when shown).
-     * Shared by the preview/PDF (copyLines) and the Word export so numbering stays in step.
+     * Every auto-generated অনুলিপি line in document order: Corps Office → transfer
+     * units (পরিচালক / কমান্ড্যান্ট / অধিনায়ক / others) → Mother Org Office Head.
      */
-    private get autoCopyAllLines(): string[] {
-        const units = this.showTransferUnitsCopy ? this.autoCopyLines : [];
-        return [...this.shownCorpsOfficeCopyLines, ...units, ...this.shownMotherOrgOfficeHeadCopyLines];
+    get allAutoLines(): string[] {
+        return [...this.corpsOfficeCopyLines, ...this.autoCopyLines, ...this.motherOrgOfficeHeadCopyLines];
     }
 
-    /** Number of auto copy-lines actually rendered (0 when hidden) — footer paragraphs continue after this. */
-    get autoCopyOffset(): number {
-        return this.autoCopyAllLines.length;
+    /**
+     * Auto অনুলিপি lines actually rendered: every auto line except the ones the user
+     * unchecked. Shared by preview/PDF (copyLines) and the Word export.
+     */
+    private get autoCopyAllLines(): string[] {
+        return this.allAutoLines.filter(l => !this.hiddenAutoLines.has(l));
+    }
+
+    /**
+     * One row per অনুলিপি line for the Copy Filter — EVERY line (auto + system/footer)
+     * has its own checkbox. `no` is the running document number of the checked lines
+     * (blank for unchecked, so it's clear they won't appear).
+     */
+    get onulipiFilterRows(): { text: string; checked: boolean; no: string; kind: 'auto' | 'para'; paraIndex: number }[] {
+        this.syncParagraphChecked();
+        const rows: { text: string; checked: boolean; no: string; kind: 'auto' | 'para'; paraIndex: number }[] = [];
+        let n = 0;
+        const fmt = (v: number) => (this.isBangla ? this.toBanglaDigits('' + v) : String(v));
+        for (const line of this.allAutoLines) {
+            const checked = !this.hiddenAutoLines.has(line);
+            if (checked) n++;
+            rows.push({ text: line, checked, no: checked ? fmt(n) : '', kind: 'auto', paraIndex: -1 });
+        }
+        this.filteredFooterParagraphs.forEach((para, pi) => {
+            const checked = this.paragraphChecked[pi] !== false;
+            if (checked) n++;
+            rows.push({ text: para.text, checked, no: checked ? fmt(n) : '', kind: 'para', paraIndex: pi });
+        });
+        return rows;
+    }
+
+    /** trackBy for the Copy Filter rows — positional identity keeps the p-checkboxes
+     *  from being destroyed/recreated every change-detection tick (the getter returns a
+     *  fresh array each time), which otherwise loops CD and hangs the browser. */
+    trackFilterRowByIndex = (index: number): number => index;
+
+    /** Toggle a single অনুলিপি line (auto or footer) from the Copy Filter. */
+    onFilterRowToggle(row: { kind: 'auto' | 'para'; text: string; paraIndex: number }, checked: boolean): void {
+        if (row.kind === 'auto') {
+            if (checked) this.hiddenAutoLines.delete(row.text);
+            else this.hiddenAutoLines.add(row.text);
+        } else {
+            this.paragraphChecked[row.paraIndex] = checked;
+        }
     }
 
     /**
@@ -1507,6 +1603,10 @@ export class PostingOrderPreviewPageComponent implements OnInit {
         // Re-parse the raw footerText into full FooterParagraph objects (with unit linkage).
         this.editFooterParagraphs = this.parseFooterParagraphs(this.rawFooterText);
 
+        // References for edit — cloned from the parsed entries (includes the note-sheet
+        // fallback for pre-feature orders, so editing persists it as JSON).
+        this.editReferences = this.referenceEntries.map(e => ({ ...e }));
+
         this.editApprovalEmployeeId = this.approvalEmployeeId;
         this.loadApprovalEmployees();
         this.loadAddMemberList();
@@ -1541,6 +1641,7 @@ export class PostingOrderPreviewPageComponent implements OnInit {
         this.editPostingText = '';
         this.editSubText = '';
         this.editFooterParagraphs = [];
+        this.editReferences = [];
         this.editEmployees = [];
         this.selectedAddEmployee = null;
         this.selectedAddMemberTransferUnitId = null;
@@ -1858,7 +1959,7 @@ export class PostingOrderPreviewPageComponent implements OnInit {
             postingOrderNo: this.postingOrderNo,
             postingOrderDate: postingOrderDateStr,
             postingType: this.postingType,
-            referenceNumber: this.referenceNumber || null,
+            referenceNumber: this.serializeReferences(this.editReferences),
             subject: this.subject || null,
             mainText: mainText,
             subText: subText,
@@ -2188,14 +2289,26 @@ html, body { margin: 0; padding: 0; background: transparent; }
             spacing: { after: 80 }
         });
 
-        // ── Reference / সূত্র : linked Note-Sheet No + final approval date ──
-        const referenceParas: Paragraph[] = this.referenceLine ? [new Paragraph({
-            children: [
-                new TextRun({ text: bn ? 'সূত্রঃ ' : 'Reference: ', bold: true, size: ctxSize, sizeComplexScript: csSize, font, language: lang }),
-                new TextRun({ text: this.referenceLine, size: ctxSize, sizeComplexScript: csSize, font, language: lang })
-            ],
-            spacing: { after: 160 }
-        })] : [];
+        // ── Reference / সূত্র : one line, or a numbered list when multiple ──
+        const refEntries = this.referenceEntries;
+        const referenceParas: Paragraph[] = refEntries.length === 0 ? [] :
+            refEntries.length === 1 ? [new Paragraph({
+                children: [
+                    new TextRun({ text: bn ? 'সূত্রঃ ' : 'Reference: ', bold: true, size: ctxSize, sizeComplexScript: csSize, font, language: lang }),
+                    new TextRun({ text: this.referenceEntryText(refEntries[0]), size: ctxSize, sizeComplexScript: csSize, font, language: lang })
+                ],
+                spacing: { after: 160 }
+            })] : [
+                new Paragraph({
+                    children: [new TextRun({ text: bn ? 'সূত্রঃ' : 'Reference:', bold: true, size: ctxSize, sizeComplexScript: csSize, font, language: lang })],
+                    spacing: { after: 40 }
+                }),
+                ...refEntries.map((ref, i) => new Paragraph({
+                    children: [new TextRun({ text: `${bn ? this.toBanglaDigits(String(i + 1)) : (i + 1)}। ${this.referenceEntryText(ref)}`, size: ctxSize, sizeComplexScript: csSize, font, language: lang })],
+                    spacing: { after: i === refEntries.length - 1 ? 160 : 40 },
+                    tabStops: [{ type: TabStopType.LEFT, position: 400 }]
+                }))
+            ];
 
         // ── Body Text (10pt, justified) – split on blank lines into paragraphs ──
         const bodyParas = (this.bodyText || '')
