@@ -50,6 +50,11 @@ interface OnulipiParagraph {
     transferRabUnitName: string | null;
 }
 
+/** Attachment entry — plain text, rendered above the Onulipi. */
+interface AttachmentEntry {
+    text: string;
+}
+
 @Component({
     selector: 'app-clearance-ex-bd-leave-generate',
     standalone: true,
@@ -128,6 +133,7 @@ export class ClearanceExBdLeaveGenerateComponent implements OnInit {
     bodyText = '';
     fileRows: FileRowData[] = [];
     onulipiParagraphs: OnulipiParagraph[] = [];
+    attachmentEntries: AttachmentEntry[] = [];
     remarks = '';
     saving = false;
 
@@ -220,6 +226,12 @@ export class ClearanceExBdLeaveGenerateComponent implements OnInit {
 
                 // Onulipi
                 try { this.onulipiParagraphs = data.onulipi ? JSON.parse(data.onulipi) : []; } catch { this.onulipiParagraphs = []; }
+
+                // Attachments
+                try {
+                    const atts = data.attachments ? JSON.parse(data.attachments) : [];
+                    this.attachmentEntries = Array.isArray(atts) ? atts.map((a: any) => ({ text: a?.text ?? '' })) : [];
+                } catch { this.attachmentEntries = []; }
 
                 // File references
                 try {
@@ -344,6 +356,7 @@ export class ClearanceExBdLeaveGenerateComponent implements OnInit {
         this.selectedNoteSheetApprovedDate = null;
         this.subject = '';
         this.onulipiParagraphs = [];
+        this.attachmentEntries = [];  // Attachment has no default — user adds entries on demand
         this.applicantInfo = null;
         if (!this.selectedNoteSheetId) return;
 
@@ -489,6 +502,27 @@ export class ClearanceExBdLeaveGenerateComponent implements OnInit {
             [this.onulipiParagraphs[index + 1], this.onulipiParagraphs[index]];
     }
 
+    // --- Attachments ---------------------------------------------
+    addAttachmentEntry(): void {
+        this.attachmentEntries.push({ text: '' });
+    }
+
+    removeAttachmentEntry(index: number): void {
+        this.attachmentEntries.splice(index, 1);
+    }
+
+    moveAttachmentUp(index: number): void {
+        if (index <= 0) return;
+        [this.attachmentEntries[index - 1], this.attachmentEntries[index]] =
+            [this.attachmentEntries[index], this.attachmentEntries[index - 1]];
+    }
+
+    moveAttachmentDown(index: number): void {
+        if (index >= this.attachmentEntries.length - 1) return;
+        [this.attachmentEntries[index], this.attachmentEntries[index + 1]] =
+            [this.attachmentEntries[index + 1], this.attachmentEntries[index]];
+    }
+
     trackByIndex(index: number): number {
         return index;
     }
@@ -547,6 +581,9 @@ export class ClearanceExBdLeaveGenerateComponent implements OnInit {
                     transferRabUnitName: p.transferRabUnitName
                 })))
                 : null;
+            const attachmentsJson = this.attachmentEntries.filter(a => a.text.trim()).length > 0
+                ? JSON.stringify(this.attachmentEntries.filter(a => a.text.trim()).map(a => ({ text: a.text.trim() })))
+                : null;
 
             const saveObs = this.editMode && this.editId
                 ? this.exBdLeaveClearanceService.updateClearance({
@@ -558,6 +595,7 @@ export class ClearanceExBdLeaveGenerateComponent implements OnInit {
                     referenceNo: refJson,
                     body: this.bodyText?.trim() || null,
                     onulipi: onulipiJson,
+                    attachments: attachmentsJson,
                     textType: 'en',
                     filesReferences: filesReferencesJson,
                     remarks: this.remarks || null,
@@ -573,6 +611,7 @@ export class ClearanceExBdLeaveGenerateComponent implements OnInit {
                     referenceNo: refJson,
                     body: this.bodyText?.trim() || null,
                     onulipi: onulipiJson,
+                    attachments: attachmentsJson,
                     textType: 'en',
                     filesReferences: filesReferencesJson,
                     remarks: this.remarks || null,

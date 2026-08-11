@@ -98,8 +98,8 @@ export class NotesheetPreviewExbdComponent extends NotesheetPreviewBase implemen
     });
 
     private fontDeltaLabel(value: number): string {
-        if (value === 0) return 'Default Font Size';
-        return `Font: ${value > 0 ? '+' : '-'}${Math.abs(value).toFixed(2)} pt`;
+        if (value === 0) return 'Default Front Size';
+        return `Front: ${value > 0 ? '+' : '-'}${Math.abs(value).toFixed(2)} pt`;
     }
 
     /** Font dropdown changed — restate the offset on the host and re-paginate against
@@ -1152,6 +1152,10 @@ html, body { margin: 0; padding: 0; background: transparent; }
    collectDocumentStyles() pulls in, matching the on-screen 1.25 (see the
    \`.ns-para\` rule in notesheet-preview-exbd.scss). */
 .pdf-flow .ns-para { line-height: 1.25; }
+
+/* Push the approver-role underline below the Bangla descenders so it stays one
+   continuous line (mirrors the :host .ns-approver-role rule in the SCSS). */
+.pdf-flow .ns-approver-role { text-underline-offset: 4px; text-decoration-skip-ink: none; }
 
 .ns-posting-table tr,
 .ns-approver-section,

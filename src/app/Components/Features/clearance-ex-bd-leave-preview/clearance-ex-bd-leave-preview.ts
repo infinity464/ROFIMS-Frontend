@@ -19,7 +19,7 @@ import { MessageService } from 'primeng/api';
 import { environment } from '@/Core/Environments/environment';
 import { ExBdLeaveClearanceService, ExBdLeaveClearanceDto, ExBdLeaveClearanceWithDetailsDto } from '@/services/ex-bd-leave-clearance.service';
 import { EmpService } from '@/services/emp-service';
-import { ReferenceNoEntry, OnulipiEntry } from '@/models/office-order.model';
+import { ReferenceNoEntry, OnulipiEntry, AttachmentEntry } from '@/models/office-order.model';
 import { ApprovalStatus } from '@/models/enums';
 import { NotesheetMembersTableComponent } from '@/Components/Shared/notesheet-members-table/notesheet-members-table';
 import { Document, Packer, Paragraph, TextRun, AlignmentType, BorderStyle, Table, TableRow, TableCell, WidthType, VerticalAlign, TableLayoutType, TabStopType } from 'docx';
@@ -75,6 +75,7 @@ export class ClearanceExBdLeavePreviewComponent implements OnInit {
 
     referenceEntries: ReferenceNoEntry[] = [];
     onulipiEntries: OnulipiEntry[] = [];
+    attachmentEntries: AttachmentEntry[] = [];
 
     showOnulipiFilter = false;
     onulipiChecked: boolean[] = [];
@@ -212,6 +213,10 @@ export class ClearanceExBdLeavePreviewComponent implements OnInit {
         try { this.referenceEntries = this.order.referenceNo ? JSON.parse(this.order.referenceNo) : []; } catch { this.referenceEntries = []; }
         try { this.onulipiEntries = this.order.onulipi ? JSON.parse(this.order.onulipi) : []; } catch { this.onulipiEntries = []; }
         this.onulipiChecked = this.onulipiEntries.map(() => true);
+        try {
+            const atts = this.order.attachments ? JSON.parse(this.order.attachments) : [];
+            this.attachmentEntries = Array.isArray(atts) ? atts.map((a: any) => ({ text: a?.text ?? '' })) : [];
+        } catch { this.attachmentEntries = []; }
     }
 
     getBodySafe(): SafeHtml {
@@ -451,6 +456,23 @@ export class ClearanceExBdLeavePreviewComponent implements OnInit {
                     alignment: AlignmentType.JUSTIFIED, spacing: { after: 60 }
                 }));
             }
+        }
+
+        // Attachments — printed directly above the Information (Onulipi).
+        if (this.attachmentEntries.length > 0) {
+            children.push(new Paragraph({
+                children: [new TextRun({ text: 'Attachment:', font, size: contentSize, bold: true })],
+                spacing: { before: 300, after: 0 }
+            }));
+            this.attachmentEntries.forEach((att, idx) => {
+                const ser = String(idx + 1);
+                children.push(new Paragraph({
+                    children: [new TextRun({ text: `${ser}.\t${att.text}`, font, size: contentSize })],
+                    indent: { left: 432, hanging: 432 },
+                    tabStops: serialTab,
+                    spacing: { after: 20 }
+                }));
+            });
         }
 
         const exportOnulipi = this.exportOnulipiEntries;

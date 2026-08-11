@@ -120,3 +120,13 @@
 :host .ns-initiator-area {
     margin-top: 2.5em;
 }
+
+/* ── Approver-role underline (this screen only) ────
+   Bangla conjuncts and the parenthesis in "পরিচালক (প্রশাসন ও অর্থ)" hang below the
+   baseline, so the default underline (drawn at the baseline, with skip-ink) breaks
+   around them and looks chopped. Push the underline down clear of the descenders so
+   it renders as one continuous line. The PDF mirrors this in buildJsReportPdf(). */
+:host .ns-approver-role {
+    text-underline-offset: 4px;
+    text-decoration-skip-ink: none;
+}

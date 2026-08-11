@@ -20,7 +20,7 @@ import { MessageService } from 'primeng/api';
 import { environment } from '@/Core/Environments/environment';
 import { ExBdLeaveOfficeOrderService, ExBdLeaveOfficeOrderDto, ExBdLeaveOfficeOrderWithDetailsDto } from '@/services/ex-bd-leave-office-order.service';
 import { EmpService } from '@/services/emp-service';
-import { ReferenceNoEntry, OnulipiEntry } from '@/models/office-order.model';
+import { ReferenceNoEntry, OnulipiEntry, AttachmentEntry } from '@/models/office-order.model';
 import { ApprovalStatus } from '@/models/enums';
 import { NotesheetMembersTableComponent } from '@/Components/Shared/notesheet-members-table/notesheet-members-table';
 import { Document, Packer, Paragraph, TextRun, AlignmentType, BorderStyle, Table, TableRow, TableCell, WidthType, VerticalAlign, TableLayoutType, TabStopType, ImageRun } from 'docx';
@@ -87,6 +87,7 @@ export class OfficeOrderExBdLeavePreviewComponent implements OnInit {
     // Parsed JSON fields
     referenceEntries: ReferenceNoEntry[] = [];
     onulipiEntries: OnulipiEntry[] = [];
+    attachmentEntries: AttachmentEntry[] = [];
 
     // Onulipi show/hide filter
     showOnulipiFilter = false;
@@ -314,6 +315,10 @@ export class OfficeOrderExBdLeavePreviewComponent implements OnInit {
         try { this.referenceEntries = this.order.referenceNo ? JSON.parse(this.order.referenceNo) : []; } catch { this.referenceEntries = []; }
         try { this.onulipiEntries = this.order.onulipi ? JSON.parse(this.order.onulipi) : []; } catch { this.onulipiEntries = []; }
         this.onulipiChecked = this.onulipiEntries.map(() => true);
+        try {
+            const atts = this.order.attachments ? JSON.parse(this.order.attachments) : [];
+            this.attachmentEntries = Array.isArray(atts) ? atts.map((a: any) => ({ text: a?.text ?? '' })) : [];
+        } catch { this.attachmentEntries = []; }
     }
 
     private parseNoteSheetFields(): void {
@@ -713,6 +718,23 @@ export class OfficeOrderExBdLeavePreviewComponent implements OnInit {
             if (fRank) children.push(new Paragraph({ children: [new TextRun({ text: fRank, font, size: contentSize })], alignment: AlignmentType.LEFT, indent: { left: sigIndent } }));
             const fAppt = this.isBangla ? (this.finalApproverAppointmentBN || this.finalApproverAppointment) : this.finalApproverAppointment;
             if (fAppt) children.push(new Paragraph({ children: [new TextRun({ text: fAppt, font, size: contentSize })], alignment: AlignmentType.LEFT, indent: { left: sigIndent } }));
+        }
+
+        // Attachments (সংযুক্ত) — printed directly above the Onulipi.
+        if (this.attachmentEntries.length > 0) {
+            children.push(new Paragraph({
+                children: [new TextRun({ text: this.isBangla ? 'সংযুক্ত:' : 'Attachment:', font, size: contentSize, bold: true })],
+                spacing: { before: 300, after: 0 }
+            }));
+            this.attachmentEntries.forEach((att, idx) => {
+                const ser = this.isBangla ? this.toBanglaDigits(String(idx + 1)) : String(idx + 1);
+                children.push(new Paragraph({
+                    children: [new TextRun({ text: `${ser}।\t${att.text}`, font, size: contentSize })],
+                    indent: { left: 432, hanging: 432 },
+                    tabStops: [{ type: TabStopType.LEFT, position: 432 }],
+                    spacing: { after: 20 }
+                }));
+            });
         }
 
         const exportOnulipi = this.exportOnulipiEntries;

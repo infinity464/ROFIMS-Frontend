@@ -209,6 +209,16 @@
                     </div>
                 </div>
 
+                <!-- ═══ Attachment (সংযুক্ত) — rendered above Onulipi ═══ -->
+                <div class="oo-doc-section oo-doc-attachments" *ngIf="attachmentEntries.length > 0">
+                    <div class="oo-doc-section-label">{{ isBangla ? 'সংযুক্ত:' : 'Attachment:' }}</div>
+                    <div class="oo-doc-list">
+                        <p *ngFor="let att of attachmentEntries; let i = index" class="oo-onulipi-item">
+                            <span class="oo-onulipi-serial">{{ isBangla ? toBanglaDigits('' + (i + 1)) : (i + 1) }}।</span>{{ att.text }}
+                        </p>
+                    </div>
+                </div>
+
                 <!-- ═══ Onulipi (Copy Distribution) ═══ -->
                 <div class="oo-doc-section oo-doc-onulipi" *ngIf="exportOnulipiEntries.length > 0">
                     <div class="oo-doc-onulipi-header">

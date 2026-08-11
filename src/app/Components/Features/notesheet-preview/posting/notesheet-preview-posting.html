@@ -339,9 +339,9 @@
                                         <td style="white-space: pre-line">{{ getOwnDistrict(emp) || '-' }}</td>
                                         <td style="white-space: pre-line">{{ getSpouseDistrict(emp) || 'অপ্রযোজ্য' }}</td>
                                         <td>{{ isEnglish() ? formatJoiningDate(emp.joiningDateInRAB) : toBnDigits(formatJoiningDate(emp.joiningDateInRAB)) }}</td>
-                                        <td>{{ tenure(emp.joiningDateInRAB, 'y') }}</td>
-                                        <td>{{ tenure(emp.joiningDateInRAB, 'm') }}</td>
-                                        <td>{{ tenure(emp.joiningDateInRAB, 'd') }}</td>
+                                        <td class="ns-center-cell">{{ tenure(emp.joiningDateInRAB, 'y') }}</td>
+                                        <td class="ns-center-cell">{{ tenure(emp.joiningDateInRAB, 'm') }}</td>
+                                        <td class="ns-center-cell">{{ tenure(emp.joiningDateInRAB, 'd') }}</td>
                                         <td style="white-space: pre-line">{{ getInterPrevWorkplace(emp) || '-' }}</td>
                                         <td>
                                             <p-treeSelect
@@ -607,9 +607,9 @@
                                         <td style="white-space: pre-line">{{ getOwnDistrict(emp) }}</td>
                                         <td style="white-space: pre-line">{{ getSpouseDistrict(emp) || 'অপ্রযোজ্য' }}</td>
                                         <td *ngIf="showTenure">{{ isEnglish() ? formatJoiningDate(emp.joiningDateInRAB) : toBnDigits(formatJoiningDate(emp.joiningDateInRAB)) }}</td>
-                                        <td *ngIf="showTenure">{{ tenure(emp.joiningDateInRAB, 'y') }}</td>
-                                        <td *ngIf="showTenure">{{ tenure(emp.joiningDateInRAB, 'm') }}</td>
-                                        <td *ngIf="showTenure">{{ tenure(emp.joiningDateInRAB, 'd') }}</td>
+                                        <td class="ns-center-cell" *ngIf="showTenure">{{ tenure(emp.joiningDateInRAB, 'y') }}</td>
+                                        <td class="ns-center-cell" *ngIf="showTenure">{{ tenure(emp.joiningDateInRAB, 'm') }}</td>
+                                        <td class="ns-center-cell" *ngIf="showTenure">{{ tenure(emp.joiningDateInRAB, 'd') }}</td>
                                         <td style="white-space: pre-line">{{ getInterPrevWorkplace(emp) }}</td>
                                         <td>{{ getTransferUnitShort(emp) }}</td>
                                         <td *ngIf="showRemarks">{{ getCombinedRemarks(emp) }}</td>
