@@ -121,6 +121,12 @@
     margin-top: 2.5em;
 }
 
+/* Leave five blank body lines after each approver's signature block before the
+   next numbered approver section begins. */
+:host .ns-approver-section {
+    padding-bottom: calc(24px + 6.25em);
+}
+
 /* ── Approver-role underline (this screen only) ────
    Bangla conjuncts and the parenthesis in "পরিচালক (প্রশাসন ও অর্থ)" hang below the
    baseline, so the default underline (drawn at the baseline, with skip-ink) breaks

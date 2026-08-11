@@ -182,7 +182,11 @@ export class IdentityUserCreateComponent implements OnInit {
         this.memberTypeAccesses = Array.isArray(accesses) ? accesses : [];
         this.rabUnitAccesses = Array.isArray(rabAccesses) ? rabAccesses : [];
         const arr = Array.isArray(users) ? users : [];
-        this.users = arr.map((u) => this.buildUserRow(u));
+        // Keep active users at the top; the native sort is stable, so each
+        // group's existing API order is retained.
+        this.users = arr
+          .map((u) => this.buildUserRow(u))
+          .sort((a, b) => Number(b.isActive) - Number(a.isActive));
       },
       error: (err: any) => {
         this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.message || 'Failed to load users' });
