@@ -1,4 +1,14 @@
-﻿/* ── Document font ─────────────────────────────────────
+﻿/* ── Whole-sheet font size (user-selectable) ───────────
+   The export bar's font dropdown sets --ns-fs-delta on the component host: a point
+   offset (−2 … +2 in 0.25 steps) that every body size below is expressed against
+   through fs(). With no offset the 0 fallback leaves every size exactly as it was.
+   The PDF restates the same offset on .pdf-flow in buildJsReportPdf() (via a matching
+   inline calc), because the export snapshots the paper's innerHTML, not the host. */
+@function fs($pt) {
+    @return calc(#{$pt}pt + var(--ns-fs-delta, 0) * 1pt);
+}
+
+/* ── Document font ─────────────────────────────────────
    SolaimanLipi (bundled, see styles.scss) replaces SolaimanLipi as the Bangla
    face for this preview. Times New Roman stays first so Latin text and digits
    are unchanged — Bangla codepoints have no Times glyphs and fall through to
@@ -61,7 +71,8 @@
    (the hidden pagination source) so the page-break math matches what is shown. */
 :host .a4-paper,
 :host .page-measure {
-    font-size: 12pt;                          /* base — anything without its own size */
+    font-size: fs(12);                        /* base — anything without its own size */
+    line-height: 1.25;                        /* tighter body line gap (was 1.7 from the shared sheet) */
 
     /* Blocks the shared stylesheet pins smaller (7–9pt) — force them to body size. */
     .ns-para,
@@ -75,17 +86,37 @@
     .ns-sig-rank,
     .ns-sig-paren,
     .ns-sig-appoint,
-    .ns-sig-date { font-size: 12pt; }
+    .ns-sig-date { font-size: fs(12); }
+
+    /* The real body line gap. The shared sheet pins `.ns-para { line-height: 1.85 }`
+       (notesheet-preview.scss) — and because `.ns-para` is the block that lays out
+       the wrapped lines, its own line-height sets each line box's strut and overrides
+       whatever `.a4-paper` (or the inline `.ns-para-text`) inherits. So this rule,
+       not the `.a4-paper` line-height above, is what actually tightens the body.
+       Mirrored for the PDF in buildJsReportPdf() (`.pdf-flow .ns-para`). */
+    .ns-para { line-height: 1.25; }
 
     /* Rich-text (Quill) main text is injected raw via [innerHTML], so the editor's
        size picker (ql-size-small/large/huge) and headings (h1/h2) would otherwise
        carry their own em-relative sizes into the document. Pin them to the body
        size so paragraph ১। stays on the same grid as every other block.
+       line-height is forced here too: text pasted from Word/Quill carries its own
+       inline line-height on each <p>, which would otherwise beat the 1.25 inherited
+       from .a4-paper — an !important stylesheet rule overrides those inline styles.
        Mirrored for the PDF in buildJsReportPdf() (`.pdf-flow .ns-para-text`). */
     ::ng-deep .ns-para-text,
-    ::ng-deep .ns-para-text * { font-size: 12pt !important; }
+    ::ng-deep .ns-para-text * { font-size: fs(12) !important; line-height: 1.25 !important; }
 
     /* Tighter serial indents; serials (১। ২। and ক। খ।) are NOT bold. */
     .ns-para-no    { margin-right: 1em; font-weight: normal; }     /* was 2em — tighter ১। indent */
     .ns-ref-serial { margin-right: 0.5em; font-weight: normal; }   /* was 1em — tighter ক. indent */
+}
+
+/* ── Signature-zone breathing room (this screen only) ────
+   Two extra blank lines of vertical space between the last body paragraph and
+   the initiator/approver signature zone, so approvers have room to sign. `:host`
+   scopes it to the Ex-BD preview; the PDF/Print paths snapshot this same DOM, so
+   the gap carries through there too. 2.5em ≈ 2 lines at the 1.25 body line-height. */
+:host .ns-initiator-area {
+    margin-top: 2.5em;
 }

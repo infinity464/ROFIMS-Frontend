@@ -35,6 +35,9 @@ import { NoteSheetEditCacheService } from '@/services/note-sheet-edit-cache.serv
 import { IdentityUserMappingService } from '@/services/identity-user-mapping.service';
 import { PostingService } from '@/services/posting.service';
 import { ExBdLeaveApplicationService, ExBdLeaveApplicationListViewModel, ExBdLeaveNoteSheetBodyData } from '@/services/ex-bd-leave-application.service';
+import { ServingMembersService } from '@/services/serving-members.service';
+import { getFormattedMemberName } from '@/shared/utils/member-display-name.util';
+import { EmployeePersonalServiceOverview } from '@/models/employee-personal-service-overview.model';
 import { NoteSheetType, NoteSheetCurrentStatus, ApprovalStatus, NoteSheetOperationType, NoteSheetOperationTypeOptions, CodeType } from '@/models/enums';
 import { encodeNoteSheetId } from '@/shared/utils/notesheet-id-codec';
 import { BanglaNumerals, toBanglaWords, toEnglishWords, formatDateBangla, formatDateEnglish } from '@/Core/i18n/bangla-numerals';
@@ -126,6 +129,8 @@ export class NotesheetExBdLeaveComponent implements OnInit {
     newSubject: Partial<CommonCode> = { codeValueEN: '', codeValueBN: '' };
     isSavingSubject = false;
     referenceParagraphs: ReferenceParagraph[] = [{ text: '', fileRows: [] }];
+    /** Extra paragraphs shown after Main Text (stored in NoteSheetInfo.ParagraphText as a JSON array). */
+    paragraphs: string[] = [''];
     fileRows: FileRowData[] = [];
     /** Selected employee from RAB dropdown (auto-fill wing, branch, etc.) */
     selectedEmployee: any = null;
@@ -154,13 +159,13 @@ export class NotesheetExBdLeaveComponent implements OnInit {
 
     private readonly defaultMainTextBN =
         'ছুটি মঞ্জুরের নিমিত্তে সিনিয়র সচিব, জননিরাপত্তা বিভাগ, স্বরাষ্ট্র মন্ত্রণালয়, বাংলাদেশ সচিবালয়, ঢাকা বরাবর আবেদন করেছেন। তার স্বাক্ষ্যায়িত আবেদন সংশ্লিষ্ট নথিপত্র সূত্র স্মারক মোতাবেক অত্র কার্যালয়ে গৃহীত হয়েছে।' +
-        '<br><br>' +
+        ' ' +
         'এমতাবস্থায়, উল্লিখিত পুলিশ কর্মকর্তার স্বাক্ষ্যায়িত আবেদনপত্র এবং সংশ্লিষ্ট নথিপত্র পুলিশ হেডকোয়ার্টার্স, ঢাকা বরাবর প্রেরণ করা যেতে পারে।';
 
     private readonly defaultMainTextEN =
         'Has applied to the Senior Secretary, Public Security Division, Ministry of Home Affairs, Bangladesh Secretariat, Dhaka, for the grant of leave. ' +
         'His/Her attested application, along with the relevant documents, has been received in this office in accordance with the reference memo.' +
-        '<br><br>' +
+        ' ' +
         'In these circumstances, the attested application and relevant documents of the aforementioned police officer may be forwarded to the Police Headquarters, Dhaka.';
 
     private readonly stepTranslations: Record<string, string> = {
@@ -186,7 +191,8 @@ export class NotesheetExBdLeaveComponent implements OnInit {
         private identityMappingService: IdentityUserMappingService,
         private commonCodeService: CommonCodeService,
         private postingService: PostingService,
-        private exBdLeaveAppService: ExBdLeaveApplicationService
+        private exBdLeaveAppService: ExBdLeaveApplicationService,
+        private servingMembersService: ServingMembersService
     ) {
         this.form = this.fb.group({
             exBdLeaveApplicationId: [null as number | null, Validators.required],
@@ -343,6 +349,21 @@ export class NotesheetExBdLeaveComponent implements OnInit {
     /** ParagraphText is stored as a JSON array (general-notesheet format). The Ex-BD form uses a
      *  single plain-text paragraph, so return the first block; fall back to the raw string for
      *  legacy/plain values. */
+    /** ParagraphText is stored as a JSON array of paragraph strings. Parse it into the
+     *  editable `paragraphs` list; falls back to a single block for legacy/plain values,
+     *  and always returns at least one (empty) row so the UI has something to render. */
+    private parseParagraphTextArray(raw: unknown): string[] {
+        const s = (raw == null ? '' : String(raw)).trim();
+        if (!s) return [''];
+        if (s.startsWith('[')) {
+            try {
+                const arr = JSON.parse(s);
+                if (Array.isArray(arr) && arr.length > 0) return arr.map((p: any) => String(p ?? ''));
+            } catch { /* fall through to raw */ }
+        }
+        return [s];
+    }
+
     private parseParagraphTextValue(raw: unknown): string {
         const s = (raw == null ? '' : String(raw)).trim();
         if (!s) return '';
@@ -439,6 +460,7 @@ export class NotesheetExBdLeaveComponent implements OnInit {
                 this.referenceParagraphs = [{ text: String(refNum), fileRows: [] }];
             }
         }
+        this.paragraphs = this.parseParagraphTextArray(d.paragraphText ?? d.ParagraphText);
         const noteNo = d.noteSheetNo ?? d.NoteSheetNo;
         this.form.patchValue({
             exBdLeaveApplicationId: this.toNum(d.exBdLeaveApplicationId ?? d.ExBdLeaveApplicationId),
@@ -823,19 +845,26 @@ export class NotesheetExBdLeaveComponent implements OnInit {
             });
         }
 
-        // Fetch body data from backend API (has correct BN hierarchy from DB)
-        // and load family members in parallel
+        // Fetch body data from backend API (has correct BN hierarchy from DB),
+        // the applicant's profile overview (for the name suffix, so the body matches
+        // the profile header exactly), and family members — all in parallel.
         let bodyData: ExBdLeaveNoteSheetBodyData | null = null;
+        let overview: EmployeePersonalServiceOverview | null = null;
         let bodyDataReady = false;
+        let overviewReady = false;
         let familyReady = false;
         const tryGenerate = () => {
-            if (bodyDataReady && familyReady && bodyData) this.generateMainText(app, emp, bodyData);
+            if (bodyDataReady && overviewReady && familyReady && bodyData) this.generateMainText(app, emp, bodyData, overview);
         };
 
         this.exBdLeaveAppService.getNoteSheetBodyData(appId).subscribe({
             next: (data) => { bodyData = data; bodyDataReady = true; tryGenerate(); },
             error: () => { bodyDataReady = true; tryGenerate(); }
         });
+
+        this.servingMembersService.getEmployeePersonalServiceOverview(app.applicantEmployeeId)
+            .pipe(catchError(() => of(null)))
+            .subscribe((ov) => { overview = ov; overviewReady = true; tryGenerate(); });
 
         // Auto-fill family members, then signal ready
         const onFamilyLoaded = () => { familyReady = true; tryGenerate(); };
@@ -859,7 +888,7 @@ export class NotesheetExBdLeaveComponent implements OnInit {
     }
 
     /** Build the notesheet body text using backend-resolved bilingual data. */
-    private generateMainText(app: ExBdLeaveApplicationListViewModel, emp: any, bodyData: ExBdLeaveNoteSheetBodyData): void {
+    private generateMainText(app: ExBdLeaveApplicationListViewModel, emp: any, bodyData: ExBdLeaveNoteSheetBodyData, overview: EmployeePersonalServiceOverview | null): void {
         const textType = this.form.get('textType')?.value ?? 'bn';
         const fromDate = this.parseDate(app.fromDate);
         const toDate = this.parseDate(app.toDate);
@@ -891,12 +920,12 @@ export class NotesheetExBdLeaveComponent implements OnInit {
             familySectionEN = ` self and family members (${bodyData.familyMembersDisplayEN})`;
         }
 
-        // Title suffixes after the name (like the profile header): special qualifications
-        // (e.g. "psc") then corps (e.g. "Arty") → "মোঃ জয়নুল আবেদীন, psc, Arty".
-        const suffixBN = [bodyData.specialQualificationsBN, bodyData.corpsBN].filter(Boolean).join(', ');
-        const suffixEN = [bodyData.specialQualificationsEN, bodyData.corpsEN].filter(Boolean).join(', ');
-        const nameWithSuffixBN = suffixBN ? `${nameBN}, ${suffixBN}` : nameBN;
-        const nameWithSuffixEN = suffixEN ? `${nameEN}, ${suffixEN}` : nameEN;
+        // Name + title suffix — reuse the SAME util the profile header uses
+        // (getFormattedMemberName), so the body reads exactly like the profile:
+        // "Name, Decoration, Professional Qualification, Corps" (Navy variant handled
+        // inside the util). Falls back to the plain name if the overview didn't load.
+        const nameWithSuffixBN = overview ? getFormattedMemberName(overview, true) : nameBN;
+        const nameWithSuffixEN = overview ? getFormattedMemberName(overview, false) : nameEN;
 
         // Person identifier: "Prefix-ServiceId Name, psc, Arty" — prefix & service id joined by a
         // dash (e.g. বিএ-৭৪৪২ মোঃ কামরুল হাসান); empties skipped to avoid stray spaces/dashes.
@@ -1250,10 +1279,11 @@ export class NotesheetExBdLeaveComponent implements OnInit {
             ? (d.textType === 'bn' ? (subjOpt.labelBn || subjOpt.label) : subjOpt.label)
             : '';
 
-        // Extra plain-text paragraph after Main Text — stored in NoteSheetInfo.ParagraphText as a
-        // JSON array (same format as the general notesheet) so the preview's parsedParagraphs reads it.
-        const paraText = (d.paragraphText != null ? String(d.paragraphText) : '').trim();
-        const paragraphTextJson = paraText ? JSON.stringify([paraText]) : null;
+        // Extra paragraphs after Main Text — stored in NoteSheetInfo.ParagraphText as a JSON
+        // array (same format as the general notesheet) so the preview's parsedParagraphs reads
+        // each block. Empty rows are dropped; null when nothing was entered.
+        const paragraphBlocks = this.paragraphs.map(p => p.trim()).filter(p => p);
+        const paragraphTextJson = paragraphBlocks.length ? JSON.stringify(paragraphBlocks) : null;
 
         const payload: Record<string, unknown> = {
             noteSheetId: 0,
@@ -1537,6 +1567,17 @@ export class NotesheetExBdLeaveComponent implements OnInit {
     removeReferenceParagraph(index: number): void {
         if (this.referenceParagraphs.length > 1) {
             this.referenceParagraphs.splice(index, 1);
+        }
+    }
+
+    // ── Extra Paragraphs (after Main Text) ──────────────────────────────
+    addParagraph(): void {
+        this.paragraphs.push('');
+    }
+
+    removeParagraph(index: number): void {
+        if (this.paragraphs.length > 1) {
+            this.paragraphs.splice(index, 1);
         }
     }
 

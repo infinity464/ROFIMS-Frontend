@@ -10,6 +10,11 @@
             <p-button *ngIf="editing" icon="pi pi-check" label="Save" (onClick)="saveChanges()" [loading]="saving" styleClass="p-button-success"></p-button>
             <p-select *ngIf="!editing" [options]="pageSizeOptions" [(ngModel)]="selectedPageSize" (onChange)="onPageSizeChange()" optionLabel="label" optionValue="value"
                       [style]="{'width':'95px'}" pTooltip="Page size for PDF / Print Preview"></p-select>
+            <!-- Font size of the WHOLE note sheet, as a point offset (−2 … +2, 0.25 steps):
+                 the body sizes move together instead of being set to one value. Sizing
+                 down usually pulls a trailing block back onto the previous page. -->
+            <p-select *ngIf="!editing" [options]="fontDeltaOptions" [(ngModel)]="fontDelta" (onChange)="onFontDeltaChange()" optionLabel="label" optionValue="value"
+                      [style]="{'width':'165px'}" pTooltip="Font size of the note sheet (−2 pt to +2 pt)"></p-select>
             <p-button *ngIf="!editing" icon="pi pi-print" label="Print Preview" (onClick)="printPreview()" [loading]="printingPreview" styleClass="p-button-outlined p-button-info"></p-button>
             <p-button *ngIf="!editing" icon="pi pi-file-word" label="Word"  (onClick)="exportWord()" styleClass="p-button-outlined"></p-button>
             <p-button *ngIf="!editing" icon="pi pi-file-pdf"  label="PDF"   (onClick)="exportPdf()" [loading]="exportingPdf" styleClass="p-button-outlined"></p-button>
@@ -99,12 +104,12 @@
 
                     <!-- Title INSIDE the border -->
                     <div class="ns-title-area">
-                        <div class="ns-title-en" style="font-size:13pt; text-decoration:underline; font-weight:bold;">NOTE SHEET</div>
-                        <div class="ns-title-bn" style="font-size:13pt; text-decoration:underline; font-weight:bold;">মন্তব্য পত্র</div>
+                        <div class="ns-title-en" style="font-size:calc(13pt + var(--ns-fs-delta, 0) * 1pt); text-decoration:underline; font-weight:bold;">NOTE SHEET</div>
+                        <div class="ns-title-bn" style="font-size:calc(13pt + var(--ns-fs-delta, 0) * 1pt); text-decoration:underline; font-weight:bold;">মন্তব্য পত্র</div>
                     </div>
 
                     <!-- Org header — both lines underlined -->
-                    <div class="ns-org-header" style="text-align:center; padding:2px 16px 4px; font-weight:700; font-size:11pt; line-height:1.3;">
+                    <div class="ns-org-header" style="text-align:center; padding:2px 16px 4px; font-weight:700; font-size:calc(11pt + var(--ns-fs-delta, 0) * 1pt); line-height:1.3;">
                         <div><span style="display:inline-block; border-bottom:1.5px solid #000; padding-bottom:2px;">{{ getOrgHeaderLine1() }}</span></div>
                         <div><span style="display:inline-block; border-bottom:1.5px solid #000; padding-bottom:2px;">{{ getOrgHeaderLine2() }}</span></div>
                     </div>
@@ -241,25 +246,25 @@
 
                 <!-- Title INSIDE the border -->
                 <div class="ns-title-area">
-                    <div class="ns-title-en" style="font-size:13pt; text-decoration:underline; font-weight:bold;">NOTE SHEET</div>
-                    <div class="ns-title-bn" style="font-size:13pt; text-decoration:underline; font-weight:bold;">মন্তব্য পত্র</div>
+                    <div class="ns-title-en" style="font-size:calc(13pt + var(--ns-fs-delta, 0) * 1pt); text-decoration:underline; font-weight:bold;">NOTE SHEET</div>
+                    <div class="ns-title-bn" style="font-size:calc(13pt + var(--ns-fs-delta, 0) * 1pt); text-decoration:underline; font-weight:bold;">মন্তব্য পত্র</div>
                 </div>
 
                 <!-- Org header — both lines underlined -->
-                <div class="ns-org-header" style="text-align:center; padding:2px 16px 4px; font-weight:700; font-size:11pt; line-height:1.3;">
+                <div class="ns-org-header" style="text-align:center; padding:2px 16px 4px; font-weight:700; font-size:calc(11pt + var(--ns-fs-delta, 0) * 1pt); line-height:1.3;">
                     <div><span style="display:inline-block; border-bottom:1.5px solid #000; padding-bottom:2px;">{{ getOrgHeaderLine1() }}</span></div>
                     <div><span style="display:inline-block; border-bottom:1.5px solid #000; padding-bottom:2px;">{{ getOrgHeaderLine2() }}</span></div>
                 </div>
 
                 <!-- ── Notesheet No & Date ── -->
-                <div style="display:flex; justify-content:space-between; padding:4px 2px 2px; font-size:12pt;">
+                <div style="display:flex; justify-content:space-between; padding:4px 2px 2px; font-size:calc(12pt + var(--ns-fs-delta, 0) * 1pt);">
                     <span *ngIf="noteSheet.noteSheetNo">{{ noteSheet.noteSheetNo }}</span>
                     <span *ngIf="!noteSheet.noteSheetNo"></span>
                     <span *ngIf="noteSheet.noteSheetDate">{{ isEnglish() ? 'Date:' : 'তারিখ :' }} {{ formatDate(noteSheet.noteSheetDate) }}</span>
                 </div>
 
                 <!-- ── Subject ── -->
-                <div *ngIf="getSubjectLabel(noteSheet.exBdLeaveSubjectId) || noteSheet.subject" style="padding:2px 2px 4px; font-size:12pt;">
+                <div *ngIf="getSubjectLabel(noteSheet.exBdLeaveSubjectId) || noteSheet.subject" style="padding:2px 2px 4px; font-size:calc(12pt + var(--ns-fs-delta, 0) * 1pt);">
                     <strong><u style="text-underline-offset:2px; text-decoration-skip-ink:none;">{{ getSubjectLabel(noteSheet.exBdLeaveSubjectId) || noteSheet.subject }}</u></strong>
                 </div>
 
@@ -293,10 +298,10 @@
                     <div class="ns-para-text">{{ noteSheet.note }}</div>
                 </div>
 
-                <!-- ── Extra Paragraph (after Main Text) — plain text ── -->
-                <div class="ns-para" *ngIf="hasParagraphText">
-                    <span class="ns-para-no">{{ serial(paragraphSerialNo) }}</span>
-                    <div class="ns-para-text" style="white-space: pre-wrap">{{ getParagraphText() }}</div>
+                <!-- ── Extra Paragraphs (after Main Text) — plain text, each separately numbered ── -->
+                <div class="ns-para" *ngFor="let para of parsedParagraphs; let i = index">
+                    <span class="ns-para-no">{{ serial(paragraphSerialNo + i) }}</span>
+                    <div class="ns-para-text" style="white-space: pre-wrap">{{ para }}</div>
                 </div>
 
                 <!-- ── Initiator area ── -->
