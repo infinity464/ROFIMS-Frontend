@@ -31,6 +31,21 @@
     }
 }
 
+/* ── 1 inch left page margin (this screen only) ──────────
+   The shared sheet gives every preview a 6mm side inset (`.a4-paper`
+   padding: 14mm 6mm 20mm); this widens the LEFT inset to 25.4mm = 1in, leaving
+   the right/top/bottom insets alone. `:host` keeps it off the other note-sheet
+   types. .page-measure gets the identical inset because it is the hidden div the
+   page-break math measures — a wider text column there would compute breaks
+   against lines that wrap differently than what is shown and printed.
+   Both elements are box-sizing: border-box, so the text column narrows by the
+   same amount. The PDF/Print counterpart is `padLeft` in buildJsReportPdf(), and
+   the Word counterpart is the section's `margin.left` in buildWordDocument(). */
+:host .a4-paper,
+:host .page-measure {
+    padding-left: 25.4mm;
+}
+
 /* Push the document text 10px in from the left border. Padding on the content
    column (`.ns-main-col` has none by default) opens a gap between the border and
    the text; `:host` scopes it to this screen only. The matching PDF/Print rule
@@ -42,11 +57,11 @@
 
 /* ── Ex-BD Leave body tweaks (this screen only) ──────────
    Uniform body size: everything except the NOTE SHEET title/header renders at
-   10pt (the body size). Applied to BOTH .a4-paper (visible) and .page-measure
+   12pt (the body size). Applied to BOTH .a4-paper (visible) and .page-measure
    (the hidden pagination source) so the page-break math matches what is shown. */
 :host .a4-paper,
 :host .page-measure {
-    font-size: 10pt;                          /* base — anything without its own size */
+    font-size: 12pt;                          /* base — anything without its own size */
 
     /* Blocks the shared stylesheet pins smaller (7–9pt) — force them to body size. */
     .ns-para,
@@ -60,7 +75,15 @@
     .ns-sig-rank,
     .ns-sig-paren,
     .ns-sig-appoint,
-    .ns-sig-date { font-size: 10pt; }
+    .ns-sig-date { font-size: 12pt; }
+
+    /* Rich-text (Quill) main text is injected raw via [innerHTML], so the editor's
+       size picker (ql-size-small/large/huge) and headings (h1/h2) would otherwise
+       carry their own em-relative sizes into the document. Pin them to the body
+       size so paragraph ১। stays on the same grid as every other block.
+       Mirrored for the PDF in buildJsReportPdf() (`.pdf-flow .ns-para-text`). */
+    ::ng-deep .ns-para-text,
+    ::ng-deep .ns-para-text * { font-size: 12pt !important; }
 
     /* Tighter serial indents; serials (১। ২। and ক। খ।) are NOT bold. */
     .ns-para-no    { margin-right: 1em; font-weight: normal; }     /* was 2em — tighter ১। indent */

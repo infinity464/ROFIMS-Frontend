@@ -30,29 +30,75 @@ const PIE_PERCENTAGE_PLUGIN = {
             if (meta.hidden) return;
 
             const data: number[] = chart.data.datasets[di].data;
+            // Legend clicks hide individual slices — skip their labels. The total stays
+            // the full dataset, so the remaining percentages keep their original values.
+            const isVisible = (i: number): boolean =>
+                typeof chart.getDataVisibility === 'function'
+                    ? chart.getDataVisibility(i)
+                    : !meta.data[i]?.hidden;
+
             const total = data.reduce((s: number, v: number) => s + (v || 0), 0);
             if (total === 0) return;
 
             meta.data.forEach((arc: any, i: number) => {
+                if (!isVisible(i)) return;
+
                 const value = data[i] ?? 0;
-                const pct = (value / total) * 100;
-                if (pct < 3) return; // skip tiny slices — label won't fit
+                if (value <= 0) return;
+                const label = `${((value / total) * 100).toFixed(1)}%`;
 
                 const midAngle = (arc.startAngle + arc.endAngle) / 2;
-                // Place label at ~65 % of the outer radius from the centre
-                const r = arc.outerRadius * 0.65;
-                const x = arc.x + Math.cos(midAngle) * r;
-                const y = arc.y + Math.sin(midAngle) * r;
+                const sweep = Math.min(Math.abs(arc.endAngle - arc.startAngle), Math.PI);
 
                 ctx.save();
-                ctx.font = 'bold 11px Arial, sans-serif';
                 ctx.textAlign = 'center';
                 ctx.textBaseline = 'middle';
+
+                // Fit the label to the arc as *drawn*, not to its value — after a legend toggle a
+                // 2 % slice can span a wide angle. Roomy slices keep the default size at ~65 % of
+                // the radius; narrower ones step the font down and slide outward, where the arc is
+                // wider.
+                const halfChord = Math.sin(sweep / 2);
+                let r = 0;
+                let fitted = false;
+                for (const size of [11, 10, 9, 8]) {
+                    ctx.font = `bold ${size}px Arial, sans-serif`;
+                    const need = ctx.measureText(label).width + 2;
+                    for (const factor of [0.65, 0.75, 0.85]) {
+                        r = arc.outerRadius * factor;
+                        if (2 * r * halfChord >= need) { fitted = true; break; }
+                    }
+                    if (fitted) break;
+                }
+
                 // Subtle dark shadow so text is readable on any colour
                 ctx.shadowColor = 'rgba(0,0,0,0.55)';
                 ctx.shadowBlur = 3;
                 ctx.fillStyle = '#ffffff';
-                ctx.fillText(`${pct.toFixed(1)}%`, x, y);
+
+                if (fitted) {
+                    ctx.fillText(label, arc.x + Math.cos(midAngle) * r, arc.y + Math.sin(midAngle) * r);
+                    ctx.restore();
+                    return;
+                }
+
+                // Nothing fits *across* the wedge — turn the label to run *along* it instead. A thin
+                // wedge is narrow across but long from centre to rim, so the text fits sideways.
+                for (const size of [10, 9, 8]) {
+                    ctx.font = `bold ${size}px Arial, sans-serif`;
+                    const w = ctx.measureText(label).width;
+                    // The text's innermost point must sit where the wedge is at least as wide as
+                    // the glyph height, otherwise the label pokes out of its own slice.
+                    const inner = (size + 1) / (2 * halfChord);
+                    const mid = inner + w / 2 + 2;
+                    if (mid + w / 2 > arc.outerRadius - 3) continue; // would run past the rim
+
+                    ctx.translate(arc.x + Math.cos(midAngle) * mid, arc.y + Math.sin(midAngle) * mid);
+                    // Flip on the left half so the text never reads upside-down.
+                    ctx.rotate(Math.cos(midAngle) < 0 ? midAngle + Math.PI : midAngle);
+                    ctx.fillText(label, 0, 0);
+                    break;
+                }
                 ctx.restore();
             });
         });
