@@ -75,6 +75,8 @@ export class NotesheetPreviewExbdComponent extends NotesheetPreviewBase implemen
     private readonly exBdLeaveAppService = inject(ExBdLeaveApplicationService);
     private cdr = inject(ChangeDetectorRef);
     private jsreportService = inject(JsReportService);
+    /** Host element — carries the --ns-fs-delta font-size offset for the whole preview. */
+    private hostEl = inject(ElementRef) as ElementRef<HTMLElement>;
 
     // ── Page size for jsReport export (Legal default, A4 optional) ──
     selectedPageSize = 'A4';
@@ -82,6 +84,39 @@ export class NotesheetPreviewExbdComponent extends NotesheetPreviewBase implemen
         { label: 'Legal', value: 'Legal' },
         { label: 'A4', value: 'A4' }
     ];
+
+    // ── Whole-sheet font size, as a point offset (−2 … 0 … +2 in 0.25 steps) ──
+    // Applied as the --ns-fs-delta custom property on the host; every body size in
+    // notesheet-preview-exbd.scss is expressed against it via fs(), and the PDF
+    // restates it on .pdf-flow in buildJsReportPdf(). Sizing down usually pulls a
+    // trailing block back onto the previous page and saves a sheet.
+    fontDelta = 0;
+    /** +2.00 … 0 … −2.00 pt in 0.25 steps, largest first (like the page-size list). */
+    readonly fontDeltaOptions = Array.from({ length: 17 }, (_, i) => {
+        const value = +(2 - i * 0.25).toFixed(2);
+        return { label: this.fontDeltaLabel(value), value };
+    });
+
+    private fontDeltaLabel(value: number): string {
+        if (value === 0) return 'Default Front Size';
+        return `Front: ${value > 0 ? '+' : '-'}${Math.abs(value).toFixed(2)} pt`;
+    }
+
+    /** Font dropdown changed — restate the offset on the host and re-paginate against
+     *  the new size (same reset as onPageSizeChange). */
+    onFontDeltaChange(): void {
+        this.applyFontDelta();
+        this.pageContentHeightPx = 0;
+        this.lastMeasuredHeight = 0;
+        this.pageOffsets = [0];
+        this.cdr.detectChanges();
+    }
+
+    /** Unitless — the SCSS multiplies it by 1pt, so a negative offset stays a plain
+     *  multiplication rather than a signed operand inside calc(). */
+    private applyFontDelta(): void {
+        this.hostEl.nativeElement.style.setProperty('--ns-fs-delta', `${this.fontDelta}`);
+    }
 
     // ── Pagination ────────────────────────────────────────────
     pageOffsets: number[] = [0];
@@ -157,7 +192,7 @@ export class NotesheetPreviewExbdComponent extends NotesheetPreviewBase implemen
     }
 
     get approverStartSerial(): number {
-        return 2 + (this.noteSheet?.note ? 1 : 0) + (this.hasParagraphText ? 1 : 0);
+        return 2 + (this.noteSheet?.note ? 1 : 0) + this.parsedParagraphs.length;
     }
 
     /** Plain text of the extra paragraph rendered after Main Text. */
@@ -1068,8 +1103,12 @@ html, body { margin: 0; padding: 0; background: transparent; }
     box-sizing: border-box;
     width: ${colWidth};
     font-family: 'Times New Roman', 'SolaimanLipi', Times, serif;
-    font-size: 12pt;
-    line-height: 1.7;
+    /* Restate the export bar's font offset here: the snapshot is the paper's
+       innerHTML, not the host that carries --ns-fs-delta on screen. Every 12pt
+       below is written against it, mirroring fs() in notesheet-preview-exbd.scss. */
+    --ns-fs-delta: ${this.fontDelta};
+    font-size: calc(12pt + var(--ns-fs-delta, 0) * 1pt);
+    line-height: 1.25;
     color: #000;
 }
 
@@ -1095,12 +1134,12 @@ html, body { margin: 0; padding: 0; background: transparent; }
 .pdf-flow .ns-cell-ref, .pdf-flow .ns-note,
 .pdf-flow .ns-approver-role, .pdf-flow .ns-approver-left, .pdf-flow .ns-approver-remark,
 .pdf-flow .ns-sig-name, .pdf-flow .ns-sig-rank, .pdf-flow .ns-sig-paren,
-.pdf-flow .ns-sig-appoint, .pdf-flow .ns-sig-date { font-size: 12pt; }
+.pdf-flow .ns-sig-appoint, .pdf-flow .ns-sig-date { font-size: calc(12pt + var(--ns-fs-delta, 0) * 1pt); }
 
-/* Rich-text main text carries the editor's own sizes (ql-size-*, h1/h2) through
-   the innerHTML snapshot — pin it to the body size, mirroring the screen rule in
-   notesheet-preview-exbd.scss. */
-.pdf-flow .ns-para-text, .pdf-flow .ns-para-text * { font-size: 12pt !important; }
+/* Rich-text main text carries the editor's own sizes (ql-size-*, h1/h2) and its
+   own inline line-height through the innerHTML snapshot — pin both to the body
+   size / 1.25 line gap, mirroring the screen rule in notesheet-preview-exbd.scss. */
+.pdf-flow .ns-para-text, .pdf-flow .ns-para-text * { font-size: calc(12pt + var(--ns-fs-delta, 0) * 1pt) !important; line-height: 1.25 !important; }
 
 /* Serials (১। ২। and ক। খ।) are NOT bold, and use the tighter on-screen indents.
    The screen rules live under \`:host\` (notesheet-preview-exbd.scss), and the host
@@ -1108,6 +1147,15 @@ html, body { margin: 0; padding: 0; background: transparent; }
    sheet's .ns-para-no{font-weight:700} / .ns-ref-serial{font-weight:600} win here. */
 .pdf-flow .ns-para-no    { font-weight: normal; margin-right: 1em; }
 .pdf-flow .ns-ref-serial { font-weight: normal; margin-right: 0.5em; }
+
+/* Body line gap — override the shared \`.ns-para { line-height: 1.85 }\` that
+   collectDocumentStyles() pulls in, matching the on-screen 1.25 (see the
+   \`.ns-para\` rule in notesheet-preview-exbd.scss). */
+.pdf-flow .ns-para { line-height: 1.25; }
+
+/* Push the approver-role underline below the Bangla descenders so it stays one
+   continuous line (mirrors the :host .ns-approver-role rule in the SCSS). */
+.pdf-flow .ns-approver-role { text-underline-offset: 4px; text-decoration-skip-ink: none; }
 
 .ns-posting-table tr,
 .ns-approver-section,
@@ -1355,7 +1403,7 @@ html, body { margin: 0; padding: 0; background: transparent; }
         // Font sizes (half-points). Everything except the NOTE SHEET title is
         // uniform at the body size (10pt), matching the on-screen preview.
         const hdrSize = 20;                   // 10pt - org header
-        const contentSize = 24;               // 12pt - body content (uniform base)
+        const contentSize = Math.round((12 + this.fontDelta) * 2);  // 12pt ± font offset (docx half-points)
         const sigSize = contentSize;          // signature/approver = body size
         const noDateSize = contentSize;       // notesheet no + date = body size
         const titleHdrSize = hdrSize + 2;     // 11pt — NOTE SHEET / মন্তব্য পত্র (header)
@@ -1473,17 +1521,18 @@ html, body { margin: 0; padding: 0; background: transparent; }
             }));
         }
 
-        // Extra Paragraph (after Main Text) — same numbered-paragraph style as the Note
-        const paraPlain = this.parsedParagraphs.join(' ').trim();
-        if (paraPlain) {
+        // Extra Paragraphs (after Main Text) — each its own numbered paragraph, like the Note
+        this.parsedParagraphs.forEach((para, i) => {
+            const text = para.trim();
+            if (!text) return;
             mainChildren.push(new Paragraph({
                 children: [
-                    new TextRun({ text: `${this.serial(this.paragraphSerialNo)}  `, bold: false, size: contentSize, sizeComplexScript: csContent, font, language: lang }),
-                    new TextRun({ text: paraPlain, size: contentSize, sizeComplexScript: csContent, font, language: lang })
+                    new TextRun({ text: `${this.serial(this.paragraphSerialNo + i)}  `, bold: false, size: contentSize, sizeComplexScript: csContent, font, language: lang }),
+                    new TextRun({ text, size: contentSize, sizeComplexScript: csContent, font, language: lang })
                 ],
                 spacing: { before: 80, after: 80 }, alignment: AlignmentType.JUSTIFIED
             }));
-        }
+        });
 
         // Closing text
         if (model.closingText) {
@@ -1636,8 +1685,8 @@ html, body { margin: 0; padding: 0; background: transparent; }
         const thinBorder = { style: BorderStyle.SINGLE, size: 1, color: '000000' };
         const cellBorders = { top: thinBorder, bottom: thinBorder, left: thinBorder, right: thinBorder };
         const lang = bn ? { value: 'bn-BD', bidirectional: 'bn-BD' } : undefined;
-        const contentSize = 24; // 12pt — uniform body size
-        const csContent = bn ? 24 : undefined;
+        const contentSize = Math.round((12 + this.fontDelta) * 2); // 12pt ± font offset (docx half-points)
+        const csContent = bn ? contentSize : undefined;
 
         for (const b of blocks) {
             if (b.type === 'table' && b.rows?.length) {

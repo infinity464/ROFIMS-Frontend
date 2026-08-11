@@ -19,6 +19,7 @@ import { SharedService } from '@/shared/services/shared-service';
 import { UserMenuService } from '@/services/user-menu.service';
 import { CorpsOfficeService } from '@/services/corps-office.service';
 import { CorpsOfficeModel } from '@/models/corps-office.model';
+import { CodeType } from '@/models/enums';
 
 @Component({
     selector: 'app-corps-office',
@@ -51,8 +52,10 @@ export class CorpsOffice implements OnInit {
 
     // Dropdown sources
     private allCorps: CommonCode[] = [];
+    private allMemberTypes: CommonCode[] = [];
     orgOptions: { label: string; value: number }[] = [];
     corpsOptions: { label: string; value: number }[] = [];
+    memberTypeOptions: { label: string; value: number }[] = [];
     statusOptions = [
         { label: 'Active', value: true },
         { label: 'Inactive', value: false }
@@ -64,6 +67,7 @@ export class CorpsOffice implements OnInit {
             { field: 'officeNameEN', header: 'Office Name (EN)' },
             { field: 'officeNameBN', header: 'Office Name (BN)' },
             { field: 'corpsDisplay', header: 'Corps' },
+            { field: 'memberTypeDisplay', header: 'Member Type' },
             { field: 'authorization', header: 'Authorization' },
             { field: 'status', header: 'Status', type: 'boolean', trueLabel: 'Active', falseLabel: 'Inactive' },
             { field: 'corpsOfficeId', header: 'ID', hidden: true }
@@ -94,6 +98,7 @@ export class CorpsOffice implements OnInit {
             corpsOfficeId: [0],
             orgId: [null, Validators.required],
             corpsCodeIds: [[] as number[], Validators.required],
+            memberTypeId: [null, Validators.required],
             authorization: [null, [Validators.required, Validators.min(1)]],
             officeNameEN: ['', Validators.required],
             officeNameBN: ['', Validators.required],
@@ -131,6 +136,21 @@ export class CorpsOffice implements OnInit {
                 this.loading = false;
             }
         });
+
+        // Member Type = CommonCode CodeType 'EmployeeType' (single-select, all active).
+        this.masterBasicSetupService.getAllByType(CodeType.EmployeeType).subscribe({
+            next: (list) => {
+                this.allMemberTypes = (Array.isArray(list) ? list : []).filter((c) => c.status);
+                this.memberTypeOptions = this.allMemberTypes.map((c) => ({ label: c.codeValueEN, value: c.codeId }));
+                this.buildTableData();
+            },
+            error: () => this.toast('error', 'Error', 'Failed to load Member Types')
+        });
+    }
+
+    private memberTypeName(id: number | null | undefined): string {
+        if (id == null) return '-';
+        return this.allMemberTypes.find((c) => c.codeId === id)?.codeValueEN ?? String(id);
     }
 
     private refreshCorpsOptions(orgId: number | null) {
@@ -163,7 +183,8 @@ export class CorpsOffice implements OnInit {
         let list = this.allData.map((r) => ({
             ...r,
             orgNameDisplay: orgName(r.orgId as number),
-            corpsDisplay: (r.assignedCorps || []).map((a) => this.corpsNameById(a.corpsCodeId)).join(', ')
+            corpsDisplay: (r.assignedCorps || []).map((a) => this.corpsNameById(a.corpsCodeId)).join(', '),
+            memberTypeDisplay: this.memberTypeName(r.memberTypeId)
         }));
 
         const q = (this.searchValue ?? '').toLowerCase().trim();
@@ -187,6 +208,7 @@ export class CorpsOffice implements OnInit {
             const corpsIds: number[] = this.form.get('corpsCodeIds')?.value || [];
             if (!this.form.get('orgId')?.value) this.toast('warn', 'Validation', 'Please select Mother Organization');
             else if (!corpsIds.length) this.toast('warn', 'Validation', 'Please select at least one Corps');
+            else if (this.form.get('memberTypeId')?.value == null) this.toast('warn', 'Validation', 'Please select Member Type');
             else if (this.form.get('authorization')?.invalid) this.toast('warn', 'Validation', 'Please enter a valid Authorization number');
             else this.toast('warn', 'Validation', 'Please fill all required fields');
             return;
@@ -201,6 +223,7 @@ export class CorpsOffice implements OnInit {
             corpsOfficeId: this.editingId ?? 0,
             orgId: v.orgId,
             authorization: v.authorization,
+            memberTypeId: v.memberTypeId,
             officeNameEN: v.officeNameEN,
             officeNameBN: v.officeNameBN,
             status: v.status,
@@ -241,6 +264,7 @@ export class CorpsOffice implements OnInit {
                 corpsOfficeId: row.corpsOfficeId,
                 orgId: row.orgId,
                 corpsCodeIds: (row.assignedCorps || []).map((a) => a.corpsCodeId),
+                memberTypeId: row.memberTypeId,
                 authorization: row.authorization,
                 officeNameEN: row.officeNameEN,
                 officeNameBN: row.officeNameBN,
@@ -278,6 +302,7 @@ export class CorpsOffice implements OnInit {
             corpsOfficeId: 0,
             orgId: null,
             corpsCodeIds: [],
+            memberTypeId: null,
             authorization: null,
             officeNameEN: '',
             officeNameBN: '',

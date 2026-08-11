@@ -192,6 +192,16 @@
                     <span class="oo-body-serial">2.</span>{{ order.remarks }}
                 </div>
 
+                <!-- ═══ Attachment — rendered above Information ═══ -->
+                <div class="oo-doc-section oo-doc-attachments" *ngIf="attachmentEntries.length > 0">
+                    <div class="oo-doc-section-label">Attachment:</div>
+                    <div class="oo-doc-list">
+                        <p *ngFor="let att of attachmentEntries; let i = index">
+                            <span class="oo-ref-serial">{{ i + 1 }}.</span>{{ att.text }}
+                        </p>
+                    </div>
+                </div>
+
                 <!-- ═══ Information (Copy Distribution) ═══ -->
                 <div class="oo-doc-section oo-doc-onulipi" *ngIf="exportOnulipiEntries.length > 0">
                     <div class="oo-doc-onulipi-header">

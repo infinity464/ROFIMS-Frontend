@@ -49,6 +49,11 @@ interface OnulipiParagraph {
     transferRabUnitName: string | null;
 }
 
+/** Attachment (সংযুক্ত) entry — plain text, rendered above the Onulipi. */
+interface AttachmentEntry {
+    text: string;
+}
+
 @Component({
     selector: 'app-office-order-ex-bd-leave-generate',
     standalone: true,
@@ -127,6 +132,7 @@ export class OfficeOrderExBdLeaveGenerateComponent implements OnInit {
     bodyText = '';
     fileRows: FileRowData[] = [];
     onulipiParagraphs: OnulipiParagraph[] = [];
+    attachmentEntries: AttachmentEntry[] = [];
     remarks = '';
     saving = false;
 
@@ -229,6 +235,12 @@ export class OfficeOrderExBdLeaveGenerateComponent implements OnInit {
 
                 // Onulipi
                 try { this.onulipiParagraphs = data.onulipi ? JSON.parse(data.onulipi) : []; } catch { this.onulipiParagraphs = []; }
+
+                // Attachments (সংযুক্ত)
+                try {
+                    const atts = data.attachments ? JSON.parse(data.attachments) : [];
+                    this.attachmentEntries = Array.isArray(atts) ? atts.map((a: any) => ({ text: a?.text ?? '' })) : [];
+                } catch { this.attachmentEntries = []; }
 
                 // File references
                 try {
@@ -359,6 +371,7 @@ export class OfficeOrderExBdLeaveGenerateComponent implements OnInit {
         this.selectedNoteSheetApprovedDate = null;
         this.subject = '';
         this.onulipiParagraphs = [];
+        this.attachmentEntries = [];  // সংযুক্ত has no default — user adds entries on demand
         this.applicantInfo = null;
         if (!this.selectedNoteSheetId) return;
 
@@ -474,6 +487,27 @@ export class OfficeOrderExBdLeaveGenerateComponent implements OnInit {
             [this.onulipiParagraphs[index + 1], this.onulipiParagraphs[index]];
     }
 
+    // ─── Attachments (সংযুক্ত) ──────────────────────────
+    addAttachmentEntry(): void {
+        this.attachmentEntries.push({ text: '' });
+    }
+
+    removeAttachmentEntry(index: number): void {
+        this.attachmentEntries.splice(index, 1);
+    }
+
+    moveAttachmentUp(index: number): void {
+        if (index <= 0) return;
+        [this.attachmentEntries[index - 1], this.attachmentEntries[index]] =
+            [this.attachmentEntries[index], this.attachmentEntries[index - 1]];
+    }
+
+    moveAttachmentDown(index: number): void {
+        if (index >= this.attachmentEntries.length - 1) return;
+        [this.attachmentEntries[index], this.attachmentEntries[index + 1]] =
+            [this.attachmentEntries[index + 1], this.attachmentEntries[index]];
+    }
+
     trackByIndex(index: number): number {
         return index;
     }
@@ -532,6 +566,9 @@ export class OfficeOrderExBdLeaveGenerateComponent implements OnInit {
                     transferRabUnitName: p.transferRabUnitName
                 })))
                 : null;
+            const attachmentsJson = this.attachmentEntries.filter(a => a.text.trim()).length > 0
+                ? JSON.stringify(this.attachmentEntries.filter(a => a.text.trim()).map(a => ({ text: a.text.trim() })))
+                : null;
 
             const saveObs = this.editMode && this.editId
                 ? this.exBdLeaveOfficeOrderService.updateOfficeOrder({
@@ -543,6 +580,7 @@ export class OfficeOrderExBdLeaveGenerateComponent implements OnInit {
                     referenceNo: refJson,
                     body: this.bodyText?.trim() || null,
                     onulipi: onulipiJson,
+                    attachments: attachmentsJson,
                     textType: this.selectedTextType === 'bn' ? 'bn' : 'en',
                     filesReferences: filesReferencesJson,
                     remarks: this.remarks || null,
@@ -558,6 +596,7 @@ export class OfficeOrderExBdLeaveGenerateComponent implements OnInit {
                     referenceNo: refJson,
                     body: this.bodyText?.trim() || null,
                     onulipi: onulipiJson,
+                    attachments: attachmentsJson,
                     textType: this.selectedTextType === 'bn' ? 'bn' : 'en',
                     filesReferences: filesReferencesJson,
                     remarks: this.remarks || null,

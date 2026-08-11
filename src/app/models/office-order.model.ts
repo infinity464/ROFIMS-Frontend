@@ -73,3 +73,8 @@ export interface OnulipiEntry {
     transferRabUnitId: number | null;
     transferRabUnitName: string | null;
 }
+
+/** Attachment (সংযুক্ত) list entry — plain text, rendered above the Onulipi. */
+export interface AttachmentEntry {
+    text: string;
+}

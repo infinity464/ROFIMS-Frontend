@@ -42,6 +42,7 @@ export interface ExBdLeaveClearanceWithDetailsDto {
     referenceNo: string;
     body: string;
     onulipi: string;
+    attachments: string;
     textType: string;
     filesReferences: string;
     status: string;
@@ -84,6 +85,7 @@ export class ExBdLeaveClearanceService {
         referenceNo?: string | null;
         body?: string | null;
         onulipi?: string | null;
+        attachments?: string | null;
         textType?: string | null;
         filesReferences?: string | null;
         remarks?: string | null;
@@ -103,6 +105,7 @@ export class ExBdLeaveClearanceService {
         referenceNo?: string | null;
         body?: string | null;
         onulipi?: string | null;
+        attachments?: string | null;
         textType?: string | null;
         filesReferences?: string | null;
         status?: string | null;

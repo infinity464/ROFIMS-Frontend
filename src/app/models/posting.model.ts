@@ -542,6 +542,8 @@ export interface PostingOrderEmployeeRow {
     // resolve the Corps Office scoped to the employee's own mother organization.
     corpsId: number | null;
     motherOrgId: number | null;
+    // Employee's Member Type (EmployeeType CommonCode) — Corps Office অনুলিপি gates on this first.
+    memberTypeId: number | null;
     tradeName: string | null;
     tradeNameBN: string | null;
     tradeRemarks: string | null;

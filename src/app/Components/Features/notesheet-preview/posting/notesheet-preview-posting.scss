@@ -170,6 +170,12 @@
        র‌্যাব আইডি, মন্তব্য) were still centered. Headers stay centered. */
     td { text-align: left; }
 
+    /* Short numeric columns read better centered: ক্রমিক (always the first cell) and
+       the অবস্থানকাল বছর/মাস/দিন cells (tagged .ns-center-cell in the template). These
+       beat the blanket `td { text-align: left }` above on specificity. */
+    td:first-child,
+    .ns-center-cell { text-align: center; }
+
     /* No shading — plain white rows and header (no zebra, no grey header). */
     th { background: transparent !important; }
     tr:nth-child(even) { background: transparent !important; }

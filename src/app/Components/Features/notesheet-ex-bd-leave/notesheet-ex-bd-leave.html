@@ -348,10 +348,21 @@
             <app-rich-editor formControlName="mainText" height="220px" placeholder="Write content here..."></app-rich-editor>
           </div>
 
-          <!-- Row 7b: Paragraph (full) — extra plain-text paragraph shown after Main Text in the document -->
+          <!-- Row 7b: Paragraphs (full) — extra paragraphs shown after Main Text in the document -->
           <div class="ns-gen-field ns-gen-full">
-            <label class="ns-gen-label">Paragraph</label>
-            <textarea pInputText formControlName="paragraphText" rows="4" class="w-full" placeholder="Optional paragraph shown after Main Text..."></textarea>
+            <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem;">
+              <label class="ns-gen-label" style="margin-bottom: 0;">Paragraph</label>
+              <p-button icon="pi pi-plus" label="Add Paragraph" [rounded]="false" [text]="true" severity="success" size="small" (onClick)="addParagraph()" pTooltip="Add Paragraph"></p-button>
+            </div>
+            @for (p of paragraphs; track trackByIndex($index)) {
+              <div style="display: flex; align-items: start; gap: 0.5rem; margin-bottom: 0.5rem;">
+                <span style="min-width: 1.5rem; padding-top: 0.6rem; font-weight: 600;">{{ $index + 1 }}.</span>
+                <textarea pInputText class="w-full" rows="2" [value]="paragraphs[$index]" (input)="paragraphs[$index] = $any($event.target).value" [placeholder]="'Paragraph ' + ($index + 1)"></textarea>
+                @if (paragraphs.length > 1) {
+                  <p-button icon="pi pi-trash" [rounded]="true" [text]="true" severity="danger" (onClick)="removeParagraph($index)"></p-button>
+                }
+              </div>
+            }
           </div>
 
           <!-- Prepared By / Initiator / Recommender / Final Approver -->

@@ -1295,27 +1295,17 @@ export class NotesheetPreviewPostingComponent extends NotesheetPreviewBase imple
     }
 
     getCombinedRemarks(emp: DraftPostingEmployeeRow): string {
-        const history = this.removalHistoryMap[emp.employeeId];
-        const removalRemark = this.isEnglish() ? history?.removalRemark || '' : history?.removalRemarkBN || history?.removalRemark || '';
-        // After the main remarks, append the "previous posting cancelled" note when this
-        // member's last posting (of this type) was cancelled.
-        const cancelNote = this.getCancelledInterNote(emp);
+        // TEMPORARILY HIDDEN (per request): the auto-generated "removed from previous
+        // note-sheet" (removalHistoryMap) + "previous transfer order cancelled"
+        // (getCancelledInterNote) notes are no longer appended; only manual remarks show.
         if (this.isInterPosting()) {
-            return [emp.interPostingRemark, emp.remarks, removalRemark, cancelNote].filter((s) => s?.trim()).join(', ');
+            return [emp.interPostingRemark, emp.remarks].filter((s) => s?.trim()).join(', ');
         }
-        return [emp.sendingRemark, emp.remarks, removalRemark, cancelNote].filter((s) => s?.trim()).join(', ');
+        return [emp.sendingRemark, emp.remarks].filter((s) => s?.trim()).join(', ');
     }
 
-    /**
-     * Note when this member's last posting was cancelled (cancelledInterMap is the flag).
-     * Same text for both posting types: "<order no> এর মাধ্যমে জারিকৃত বদলি আদেশ বাতিল করা হলো।".
-     */
-    private getCancelledInterNote(emp: DraftPostingEmployeeRow): string {
-        const c = this.cancelledInterMap[emp.employeeId];
-        if (!c?.postingOrderNo) return '';
-        const no = c.postingOrderNo;
-        return this.isEnglish() ? `The transfer order issued vide ${no} has been cancelled.` : `${no} এর মাধ্যমে জারিকৃত বদলি আদেশ বাতিল করা হলো।`;
-    }
+    // NOTE: the auto "previous transfer order cancelled" note (getCancelledInterNote)
+    // was removed per request — it is no longer generated or shown anywhere.
 
     getPreviousWorkplace(emp: DraftPostingEmployeeRow): string {
         const bn = !this.isEnglish();

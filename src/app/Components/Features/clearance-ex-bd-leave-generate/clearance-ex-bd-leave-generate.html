@@ -178,6 +178,50 @@
                 ></textarea>
             </div>
 
+            <!-- Attachment (rendered above the Onulipi in the document) -->
+            <div class="field mb-4 p-4 surface-50 border-round">
+                <div class="flex align-items-center gap-2 mb-3">
+                    <span class="font-semibold text-700">Attachment</span>
+                    <p-button
+                        icon="pi pi-plus"
+                        [rounded]="true"
+                        [text]="true"
+                        size="small"
+                        pTooltip="Add attachment"
+                        (onClick)="addAttachmentEntry()"
+                    ></p-button>
+                </div>
+                @for (att of attachmentEntries; track trackByIndex($index); let i = $index) {
+                    <div class="flex gap-2 align-items-start mb-2">
+                        <span class="para-number font-semibold text-600 mt-2" style="min-width: 30px">{{ i + 1 }}.</span>
+                        <textarea
+                            pTextarea
+                            [(ngModel)]="attachmentEntries[i].text"
+                            rows="2"
+                            class="flex-1"
+                            placeholder="Enter attachment text..."
+                            [autoResize]="true"
+                        ></textarea>
+                        <div class="flex flex-column gap-1">
+                            <p-button icon="pi pi-arrow-up" [rounded]="true" [text]="true" size="small" pTooltip="Move up" [disabled]="i === 0" (onClick)="moveAttachmentUp(i)"></p-button>
+                            <p-button icon="pi pi-arrow-down" [rounded]="true" [text]="true" size="small" pTooltip="Move down" [disabled]="i === attachmentEntries.length - 1" (onClick)="moveAttachmentDown(i)"></p-button>
+                        </div>
+                        <p-button
+                            icon="pi pi-times"
+                            severity="danger"
+                            [rounded]="true"
+                            [text]="true"
+                            size="small"
+                            pTooltip="Remove"
+                            (onClick)="removeAttachmentEntry(i)"
+                        ></p-button>
+                    </div>
+                }
+                @if (attachmentEntries.length === 0) {
+                    <div class="text-500 text-sm py-2">No attachments. Click "+" to add one.</div>
+                }
+            </div>
+
             <!-- Onulipi -->
             <div class="field mb-4 p-4 surface-50 border-round">
                 <div class="flex align-items-center gap-2 mb-3">

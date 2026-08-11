@@ -211,19 +211,11 @@ export class PostingOrderGenerateComponent implements OnInit {
     /** Combined remark — same content as the note-sheet preview. */
     getEmployeeRemarks(emp: NoteSheetEmployee): string {
         const isInter = this.selectedPostingType === NoteSheetType.InterPosting;
-        const history = this.removalHistoryMap[emp.employeeId];
-        const removalRemark = this.isBangla
-            ? (history?.removalRemarkBN || history?.removalRemark || '')
-            : (history?.removalRemark || '');
         const base = isInter ? emp.interPostingRemark : emp.sendingRemark;
-        let cancelNote = '';
-        const cancelledNo = this.cancelledInterMap[emp.employeeId]?.postingOrderNo;
-        if (cancelledNo) {
-            cancelNote = this.isBangla
-                ? `${cancelledNo} এর মাধ্যমে জারিকৃত বদলি আদেশ বাতিল করা হলো।`
-                : `The transfer order issued vide ${cancelledNo} has been cancelled.`;
-        }
-        return [base, emp.remarks, removalRemark, cancelNote].filter(s => s?.trim()).join(', ');
+        // TEMPORARILY HIDDEN (per request): the auto-generated "removed from previous
+        // note-sheet" (removalHistoryMap) + "previous transfer order cancelled"
+        // (cancelledInterMap) notes are no longer appended; only the manual remarks show.
+        return [base, emp.remarks].filter(s => s?.trim()).join(', ');
     }
 
     /** RAB ID — Bangla digits when text type is Bangla, else as-is. */
