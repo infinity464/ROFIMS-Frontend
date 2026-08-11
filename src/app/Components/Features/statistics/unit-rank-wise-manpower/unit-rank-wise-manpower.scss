@@ -182,6 +182,39 @@
     width: 100%;
 }
 
+/* The equivalent-manpower report has many rank columns. Keep its Unit column
+   anchored at the left edge while the rest of the matrix is scrolled. */
+.report-table-wrap.sticky-unit-column {
+    .unit-col,
+    .unit-name,
+    .totals-label {
+        position: sticky;
+        left: 0;
+    }
+
+    .unit-col {
+        z-index: 5;
+    }
+
+    .unit-name {
+        z-index: 1;
+        background-color: var(--surface-card, #fff);
+    }
+
+    tbody tr:nth-child(even) .unit-name {
+        background-color: var(--surface-ground, #f8fafc);
+    }
+
+    tbody tr:hover .unit-name {
+        background-color: var(--surface-hover, #f1f5f9);
+    }
+
+    .totals-label {
+        z-index: 1;
+        background-color: var(--surface-section, #e8eaf0);
+    }
+}
+
 /* ── Matrix table (Unit × Rank with Auth/Held sub-columns) ───────────── */
 $header-teal:      #16766a;
 $header-teal-dark: #0e4f47;

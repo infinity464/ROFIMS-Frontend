@@ -113,7 +113,7 @@
         <div *ngFor="let section of sections" class="section-block">
             <div class="section-banner" *ngIf="section.titleEN">{{ sectionTitle(section) }}</div>
 
-            <div class="report-table-wrap">
+            <div class="report-table-wrap" [class.sticky-unit-column]="stickyUnitColumn">
                 <table class="report-table matrix-table">
                     <thead>
                         <tr>

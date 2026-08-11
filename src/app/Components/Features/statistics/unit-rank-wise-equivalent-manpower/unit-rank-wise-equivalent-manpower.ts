@@ -43,6 +43,8 @@ const EMPTY_CELL: UnitRankCell = { auth: 0, held: 0 };
     styleUrl: '../unit-rank-wise-manpower/unit-rank-wise-manpower.scss'
 })
 export class UnitRankWiseEquivalentManpowerComponent implements OnInit {
+    /** Keep the Unit column visible while horizontally scrolling this wide report. */
+    readonly stickyUnitColumn = true;
     canInsert = true;
     canUpdate = true;
     canDelete = true;
