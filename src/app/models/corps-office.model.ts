@@ -5,16 +5,23 @@ export interface CorpsOfficeAssignedCorpsModel {
     corpsCodeId: number;
 }
 
+export interface CorpsOfficeAssignedMemberTypeModel {
+    detailId?: number;
+    corpsOfficeId?: number;
+    // References CommonCode.codeId where codeType = 'EmployeeType'
+    memberTypeId: number;
+}
+
 export interface CorpsOfficeModel {
     corpsOfficeId: number;
     orgId: number | null;
     authorization: number | null;
-    // Member Type — CommonCode.codeId where codeType = 'EmployeeType' (single-select).
-    memberTypeId: number | null;
     officeNameEN: string;
     officeNameBN: string;
     status: boolean;
     assignedCorps: CorpsOfficeAssignedCorpsModel[];
+    // Member Types — CommonCode.codeId where codeType = 'EmployeeType' (multi-select).
+    assignedMemberTypes: CorpsOfficeAssignedMemberTypeModel[];
 
     createdBy?: string;
     createdDate?: string;

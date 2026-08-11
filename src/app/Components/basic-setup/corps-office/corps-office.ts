@@ -98,7 +98,7 @@ export class CorpsOffice implements OnInit {
             corpsOfficeId: [0],
             orgId: [null, Validators.required],
             corpsCodeIds: [[] as number[], Validators.required],
-            memberTypeId: [null, Validators.required],
+            memberTypeIds: [[] as number[], Validators.required],
             authorization: [null, [Validators.required, Validators.min(1)]],
             officeNameEN: ['', Validators.required],
             officeNameBN: ['', Validators.required],
@@ -137,7 +137,7 @@ export class CorpsOffice implements OnInit {
             }
         });
 
-        // Member Type = CommonCode CodeType 'EmployeeType' (single-select, all active).
+        // Member Type = CommonCode CodeType 'EmployeeType' (multi-select, all active).
         this.masterBasicSetupService.getAllByType(CodeType.EmployeeType).subscribe({
             next: (list) => {
                 this.allMemberTypes = (Array.isArray(list) ? list : []).filter((c) => c.status);
@@ -151,6 +151,11 @@ export class CorpsOffice implements OnInit {
     private memberTypeName(id: number | null | undefined): string {
         if (id == null) return '-';
         return this.allMemberTypes.find((c) => c.codeId === id)?.codeValueEN ?? String(id);
+    }
+
+    private memberTypesDisplay(ids: number[]): string {
+        if (!ids || !ids.length) return '-';
+        return ids.map((id) => this.memberTypeName(id)).join(', ');
     }
 
     private refreshCorpsOptions(orgId: number | null) {
@@ -184,7 +189,7 @@ export class CorpsOffice implements OnInit {
             ...r,
             orgNameDisplay: orgName(r.orgId as number),
             corpsDisplay: (r.assignedCorps || []).map((a) => this.corpsNameById(a.corpsCodeId)).join(', '),
-            memberTypeDisplay: this.memberTypeName(r.memberTypeId)
+            memberTypeDisplay: this.memberTypesDisplay((r.assignedMemberTypes || []).map((a) => a.memberTypeId))
         }));
 
         const q = (this.searchValue ?? '').toLowerCase().trim();
@@ -206,9 +211,10 @@ export class CorpsOffice implements OnInit {
         if (this.form.invalid) {
             this.form.markAllAsTouched();
             const corpsIds: number[] = this.form.get('corpsCodeIds')?.value || [];
+            const memberTypeIds: number[] = this.form.get('memberTypeIds')?.value || [];
             if (!this.form.get('orgId')?.value) this.toast('warn', 'Validation', 'Please select Mother Organization');
             else if (!corpsIds.length) this.toast('warn', 'Validation', 'Please select at least one Corps');
-            else if (this.form.get('memberTypeId')?.value == null) this.toast('warn', 'Validation', 'Please select Member Type');
+            else if (!memberTypeIds.length) this.toast('warn', 'Validation', 'Please select at least one Member Type');
             else if (this.form.get('authorization')?.invalid) this.toast('warn', 'Validation', 'Please enter a valid Authorization number');
             else this.toast('warn', 'Validation', 'Please fill all required fields');
             return;
@@ -218,16 +224,17 @@ export class CorpsOffice implements OnInit {
         const now = this.shareService.getCurrentDateTime();
         const v = this.form.value;
         const corpsIds: number[] = v.corpsCodeIds || [];
+        const memberTypeIds: number[] = v.memberTypeIds || [];
 
         const payload: CorpsOfficeModel = {
             corpsOfficeId: this.editingId ?? 0,
             orgId: v.orgId,
             authorization: v.authorization,
-            memberTypeId: v.memberTypeId,
             officeNameEN: v.officeNameEN,
             officeNameBN: v.officeNameBN,
             status: v.status,
             assignedCorps: corpsIds.map((id) => ({ corpsCodeId: id })),
+            assignedMemberTypes: memberTypeIds.map((id) => ({ memberTypeId: id })),
             createdBy: user,
             createdDate: now,
             lastUpdatedBy: user,
@@ -264,7 +271,7 @@ export class CorpsOffice implements OnInit {
                 corpsOfficeId: row.corpsOfficeId,
                 orgId: row.orgId,
                 corpsCodeIds: (row.assignedCorps || []).map((a) => a.corpsCodeId),
-                memberTypeId: row.memberTypeId,
+                memberTypeIds: (row.assignedMemberTypes || []).map((a) => a.memberTypeId),
                 authorization: row.authorization,
                 officeNameEN: row.officeNameEN,
                 officeNameBN: row.officeNameBN,
@@ -302,7 +309,7 @@ export class CorpsOffice implements OnInit {
             corpsOfficeId: 0,
             orgId: null,
             corpsCodeIds: [],
-            memberTypeId: null,
+            memberTypeIds: [],
             authorization: null,
             officeNameEN: '',
             officeNameBN: '',

@@ -1167,20 +1167,22 @@ export class PostingOrderPreviewPageComponent implements OnInit {
     }
 
     // ── Corps Office অনুলিপি (Member Type first, then Corps, scoped to the org) ──
-    /** Every Corps Office with its member type, mother org and assigned corps codes. */
-    private offices: { orgId: number | null; memberTypeId: number | null; corpsCodeIds: number[]; en: string; bn: string }[] = [];
+    /** Every Corps Office with its member types, mother org and assigned corps codes. */
+    private offices: { orgId: number | null; memberTypeIds: number[]; corpsCodeIds: number[]; en: string; bn: string }[] = [];
 
     /** Load the Corps Office setup (basic-setup/corps-office) once for the অনুলিপি lookup. */
     private loadCorpsOfficeMap(): void {
         this.corpsOfficeService.getAll().subscribe({
             next: (offices) => {
-                this.offices = (offices ?? []).map((o) => ({
-                    orgId: o.orgId,
-                    memberTypeId: o.memberTypeId,
-                    corpsCodeIds: (o.assignedCorps ?? []).map((a) => a.corpsCodeId),
-                    en: o.officeNameEN,
-                    bn: o.officeNameBN
-                }));
+                this.offices = (offices ?? [])
+                    .filter((o) => o.status) // only ACTIVE corps offices appear in the অনুলিপি
+                    .map((o) => ({
+                        orgId: o.orgId,
+                        memberTypeIds: (o.assignedMemberTypes ?? []).map((a) => a.memberTypeId),
+                        corpsCodeIds: (o.assignedCorps ?? []).map((a) => a.corpsCodeId),
+                        en: o.officeNameEN,
+                        bn: o.officeNameBN
+                    }));
             },
             error: () => { /* no corps-office copy line if the lookup fails */ }
         });
@@ -1188,8 +1190,10 @@ export class PostingOrderPreviewPageComponent implements OnInit {
 
     /**
      * অনুলিপি lines: the distinct Corps Offices for the employees in this order.
+     * Only ACTIVE offices are considered (filtered in loadCorpsOfficeMap).
      * Gating order — MEMBER TYPE first, then CORPS:
-     *   1. keep only offices whose Member Type matches the employee's;
+     *   1. keep only offices whose assigned Member Types INCLUDE the employee's
+     *      (an office is multi-select; it matches if ANY of its member types matches);
      *   2. of those, the office(s) whose assigned corps includes the employee's EXACT
      *      corps code (EmployeeInfo.Branch);
      *   3. fallback — if no corps match (e.g. corps is অপ্রযোজ্য), every member-type
@@ -1202,7 +1206,7 @@ export class PostingOrderPreviewPageComponent implements OnInit {
         const names: string[] = [];
         for (const emp of this.filteredEmployees) {
             if (emp.memberTypeId == null) continue; // member type must match first
-            const mtOffices = this.offices.filter((o) => o.memberTypeId === emp.memberTypeId);
+            const mtOffices = this.offices.filter((o) => o.memberTypeIds.includes(emp.memberTypeId!));
             let chosen = emp.corpsId != null ? mtOffices.filter((o) => o.corpsCodeIds.includes(emp.corpsId!)) : [];
             if (chosen.length === 0 && emp.motherOrgId != null) chosen = mtOffices.filter((o) => o.orgId === emp.motherOrgId);
             for (const off of chosen) {
