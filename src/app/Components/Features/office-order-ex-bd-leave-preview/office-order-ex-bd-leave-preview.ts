@@ -751,7 +751,7 @@ export class OfficeOrderExBdLeavePreviewComponent implements OnInit {
                     spacing: { before: 300 }
                 }));
             }
-            children.push(new Paragraph({ children: [new TextRun({ text: this.isBangla ? 'অনুলিপি (জ্যেষ্ঠতার ভিত্তিতে নহে):' : 'Copy (not in order of seniority):', font, size: contentSize, bold: true })], spacing: { before: this.order.noteSheetNo ? 80 : 300 } }));
+            children.push(new Paragraph({ children: [new TextRun({ text: this.isBangla ? 'অনুলিপি (আপনার সদয় অনুমোদনের জন্য উপস্থাপন করা হলো):' : 'Copy (not in order of seniority):', font, size: contentSize, bold: true })], spacing: { before: this.order.noteSheetNo ? 80 : 300 } }));
             exportOnulipi.forEach((entry, idx) => {
                 const ser = this.isBangla ? this.toBanglaDigits(String(idx + 1)) : String(idx + 1);
                 // Serials sit at the left margin (aligned with the অনুলিপি heading / notesheet no),
