@@ -129,7 +129,7 @@
 .legal-paper {
     width: 210mm;
     min-height: 297mm;
-    padding: 14mm 10mm 20mm;
+    padding: 14mm 0.4in 20mm 0.8in;   /* left 0.8in, right 0.4in page margins */
     background: #fff;
     box-shadow: 0 6px 24px rgba(0, 0, 0, 0.25);
     box-sizing: border-box;
@@ -164,7 +164,7 @@
     flex: 1;
     display: flex;
     flex-direction: column;
-    padding: 10px 16px 18px 20px;
+    padding: 10px 0 18px 0;   /* horizontal inset 0 — page margin comes from .legal-paper padding */
     max-width: 100%;
     overflow: hidden;
     word-break: normal;

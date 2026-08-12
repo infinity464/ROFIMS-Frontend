@@ -22,7 +22,7 @@ import { EmpService } from '@/services/emp-service';
 import { ReferenceNoEntry, OnulipiEntry, AttachmentEntry } from '@/models/office-order.model';
 import { ApprovalStatus } from '@/models/enums';
 import { NotesheetMembersTableComponent } from '@/Components/Shared/notesheet-members-table/notesheet-members-table';
-import { Document, Packer, Paragraph, TextRun, AlignmentType, BorderStyle, Table, TableRow, TableCell, WidthType, VerticalAlign, TableLayoutType, TabStopType } from 'docx';
+import { Document, Packer, Paragraph, TextRun, AlignmentType, BorderStyle, Table, TableRow, TableCell, WidthType, VerticalAlign, TableLayoutType, TabStopType, LineRuleType } from 'docx';
 import { JsReportService } from '@/services/jsreport.service';
 import { saveAs } from 'file-saver';
 import { firstValueFrom } from 'rxjs';
@@ -374,7 +374,7 @@ export class ClearanceExBdLeavePreviewComponent implements OnInit {
     private async buildWordDocument(): Promise<Document> {
         if (!this.order) throw new Error('No order loaded');
         const font = 'Times New Roman';
-        const titleSize = 24;    // 12pt — government header (larger than body)
+        const titleSize = 20;    // 10pt — government header (same size as body, bold)
         const contentSize = 20;  // 10pt — all body content (uniform)
         const children: (Paragraph | Table)[] = [];
         const pageSize = this.selectedPageSize === 'legal'
@@ -422,7 +422,17 @@ export class ClearanceExBdLeavePreviewComponent implements OnInit {
 
         // Compact serial→text tab (0.3") so the gap after A./1./2. is small, matching the preview.
         const serialTab = [{ type: TabStopType.LEFT, position: 432 }];
-        if (this.referenceEntries.length > 0) {
+        if (this.referenceEntries.length === 1) {
+            // Single reference: label + value on ONE line (mirrors the preview), no serial. Single tab gap.
+            children.push(new Paragraph({
+                children: [
+                    new TextRun({ text: 'References:\t', font, size: contentSize, bold: true }),
+                    new TextRun({ text: this.referenceEntries[0].text, font, size: contentSize })
+                ],
+                tabStops: serialTab,
+                spacing: { before: 80, after: 60 }
+            }));
+        } else if (this.referenceEntries.length > 1) {
             children.push(new Paragraph({ children: [new TextRun({ text: 'References:', font, size: contentSize, bold: true })], spacing: { before: 80, after: 0 } }));
             for (let i = 0; i < this.referenceEntries.length; i++) {
                 const ref = this.referenceEntries[i];
@@ -442,7 +452,7 @@ export class ClearanceExBdLeavePreviewComponent implements OnInit {
                         runs.push(new TextRun({ text: '1.\t', font, size: contentSize, bold: true }));
                     }
                     runs.push(new TextRun({ text: line.trim(), font, size: contentSize }));
-                    children.push(new Paragraph({ children: runs, tabStops: serialTab, alignment: AlignmentType.JUSTIFIED, spacing: { after: 60 } }));
+                    children.push(new Paragraph({ children: runs, tabStops: serialTab, alignment: AlignmentType.JUSTIFIED, spacing: { after: 60, line: 300, lineRule: LineRuleType.AUTO } }));
                 });
             }
             const remarksText = (this.order.remarks || '').trim();
@@ -453,7 +463,7 @@ export class ClearanceExBdLeavePreviewComponent implements OnInit {
                         new TextRun({ text: remarksText, font, size: contentSize })
                     ],
                     tabStops: serialTab,
-                    alignment: AlignmentType.JUSTIFIED, spacing: { after: 60 }
+                    alignment: AlignmentType.JUSTIFIED, spacing: { after: 60, line: 300, lineRule: LineRuleType.AUTO }
                 }));
             }
         }
@@ -477,7 +487,7 @@ export class ClearanceExBdLeavePreviewComponent implements OnInit {
 
         const exportOnulipi = this.exportOnulipiEntries;
         if (exportOnulipi.length > 0) {
-            children.push(new Paragraph({ children: [new TextRun({ text: 'Information:', font, size: contentSize, bold: true })], spacing: { before: 300 } }));
+            children.push(new Paragraph({ children: [new TextRun({ text: 'Information:', font, size: contentSize, bold: true })], spacing: { before: 120 } }));
             exportOnulipi.forEach((entry, idx) => {
                 const ser = String(idx + 1);
                 // Serial at the left margin, text hangs at 0.3", wrapped lines align under the text.
@@ -503,7 +513,7 @@ export class ClearanceExBdLeavePreviewComponent implements OnInit {
             children.push(new Paragraph({ children: [new TextRun({ text: 'For Director General', font, size: contentSize })], alignment: AlignmentType.LEFT, indent: { left: sigIndent } }));
         }
 
-        return new Document({ sections: [{ properties: { page: { size: pageSize, margin: { top: 720, bottom: 720, left: 720, right: 720 } } }, children }] });
+        return new Document({ sections: [{ properties: { page: { size: pageSize, margin: { top: 720, bottom: 720, left: 1152, right: 576 } } }, children }] });
     }
 
     async exportWord(): Promise<void> {
@@ -554,8 +564,8 @@ export class ClearanceExBdLeavePreviewComponent implements OnInit {
         const isLegal = this.selectedPageSize === 'legal';
         const pageWidth = isLegal ? '215.9mm' : '210mm';
         const pageHeight = isLegal ? '355.6mm' : '297mm';
-        const colWidth = isLegal ? '195.9mm' : '190mm';
-        const padX = 10, padTop = 14, padBottom = 20;
+        const colWidth = isLegal ? '185.42mm' : '179.52mm'; // pageWidth − 0.8in left − 0.4in right
+        const padLeft = 20.32, padRight = 10.16, padTop = 14, padBottom = 20; // mm — 0.8in left / 0.4in right page margins
 
         const html = `<!DOCTYPE html>
 <html>
@@ -564,7 +574,7 @@ export class ClearanceExBdLeavePreviewComponent implements OnInit {
 <style>
 ${styles}
 
-@page { size: ${pageWidth} ${pageHeight}; margin: ${padTop}mm ${padX}mm ${padBottom}mm ${padX}mm; }
+@page { size: ${pageWidth} ${pageHeight}; margin: ${padTop}mm ${padRight}mm ${padBottom}mm ${padLeft}mm; }
 html, body { margin: 0; padding: 0; background: transparent; }
 
 .no-print, .preview-header, .preview-actions, .approval-header-right, .oo-onulipi-filter, .oo-file-attachments { display: none !important; }

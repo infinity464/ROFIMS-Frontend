@@ -774,7 +774,7 @@ export class OfficeOrderExBdLeavePreviewComponent implements OnInit {
             addSignatureBlock(false);
         }
 
-        return new Document({ sections: [{ properties: { page: { size: pageSize, margin: { top: 720, bottom: 720, left: 720, right: 720 } } }, children }] });
+        return new Document({ sections: [{ properties: { page: { size: pageSize, margin: { top: 720, bottom: 720, left: 1152, right: 576 } } }, children }] });
     }
 
     async exportWord(): Promise<void> {
@@ -835,8 +835,8 @@ export class OfficeOrderExBdLeavePreviewComponent implements OnInit {
         // a4: 210×297mm (190mm column). legal: 215.9×355.6mm (195.9mm column).
         const pageWidth = isLegal ? '215.9mm' : '210mm';
         const pageHeight = isLegal ? '355.6mm' : '297mm';
-        const colWidth = isLegal ? '195.9mm' : '190mm';
-        const padX = 10, padTop = 14, padBottom = 20; // mm — .legal-paper padding
+        const colWidth = isLegal ? '185.42mm' : '179.52mm'; // pageWidth − 0.8in left − 0.4in right
+        const padLeft = 20.32, padRight = 10.16, padTop = 14, padBottom = 20; // mm — 0.8in left / 0.4in right page margins
 
         const html = `<!DOCTYPE html>
 <html>
@@ -851,7 +851,7 @@ ${styles}
    server — the embedded copy below is what Chromium actually loads. */
 ${fontCss}
 
-@page { size: ${pageWidth} ${pageHeight}; margin: ${padTop}mm ${padX}mm ${padBottom}mm ${padX}mm; }
+@page { size: ${pageWidth} ${pageHeight}; margin: ${padTop}mm ${padRight}mm ${padBottom}mm ${padLeft}mm; }
 html, body { margin: 0; padding: 0; background: transparent; }
 
 .no-print, .preview-header, .preview-actions, .approval-header-right, .oo-onulipi-filter, .oo-file-attachments { display: none !important; }

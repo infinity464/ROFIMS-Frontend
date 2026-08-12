@@ -178,10 +178,18 @@
 
                 <!-- Reference No -->
                 <div class="oo-doc-section" *ngIf="referenceEntries.length > 0">
-                    <div class="oo-doc-section-label">References:</div>
-                    <div class="oo-doc-list">
-                        <p *ngFor="let ref of referenceEntries; let i = index"><span class="oo-ref-serial">{{ referenceSerial(i) }}</span>{{ ref.text }}</p>
-                    </div>
+                    <!-- Single reference: label and value on the SAME line, no serial. -->
+                    <ng-container *ngIf="referenceEntries.length === 1; else refMulti">
+                        <span class="oo-doc-section-label">References:</span>
+                        <span class="oo-ref-inline">{{ referenceEntries[0].text }}</span>
+                    </ng-container>
+                    <!-- Two or more: label on its own line, serialed list below. -->
+                    <ng-template #refMulti>
+                        <div class="oo-doc-section-label">References:</div>
+                        <div class="oo-doc-list">
+                            <p *ngFor="let ref of referenceEntries; let i = index"><span class="oo-ref-serial">{{ referenceSerial(i) }}</span>{{ ref.text }}</p>
+                        </div>
+                    </ng-template>
                 </div>
 
                 <!-- ═══ Body (paragraph 1 stored, paragraph 2 = Remarks) ═══ -->
