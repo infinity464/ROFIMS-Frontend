@@ -287,6 +287,11 @@ export interface DraftPostingEmployeeRow {
     /** Previous RAB service units (comma-separated). Inter-posting only. */
     previousRabUnits?: string | null;
     previousRabUnitsBN?: string | null;
+    /** পূর্ববতী কর্মস্থল অংশ ২ (inter posting): '/'-joined chain of the member's full RAB
+     *  posting history (deepest node each), oldest→present, from PreviousRABServiceInfo.
+     *  Ordered by the SP: ServiceFrom ascending with the currently-active posting last. */
+    prevRabServiceChain?: string | null;
+    prevRabServiceChainBN?: string | null;
     /** Current RAB unit the employee is presently serving in. Inter-posting only. */
     presentRabUnitId?: number | null;
     presentRabUnitName?: string | null;
@@ -557,7 +562,13 @@ export interface PostingOrderEmployeeRow {
      *  after the mother-unit name in the পূর্ববতী কর্মস্থল column. */
     motherUnitDistrictName?: string | null;
     motherUnitDistrictNameBN?: string | null;
-    // Present RAB unit hierarchy (current serving posting) — used for interposting পূর্ববতী কর্মস্থল.
+    // পূর্ববতী কর্মস্থল অংশ ২ (inter posting office order): '/'-joined chain of the member's
+    // full RAB posting history (deepest node each), oldest→present, from PreviousRABServiceInfo.
+    // Ordered by the view: ServiceFrom ascending with the currently-active posting last.
+    prevRabServiceChain?: string | null;
+    prevRabServiceChainBN?: string | null;
+    // Present RAB unit hierarchy (current serving posting) — fallback for interposting
+    // পূর্ববতী কর্মস্থল অংশ ২ when no previous-RAB-service history exists.
     presentRabUnitId?: number | null;
     presentRabUnitName?: string | null;
     presentRabUnitNameBN?: string | null;

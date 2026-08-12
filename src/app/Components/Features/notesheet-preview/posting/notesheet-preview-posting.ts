@@ -845,30 +845,44 @@ export class NotesheetPreviewPostingComponent extends NotesheetPreviewBase imple
     }
 
     /**
-     * পূর্ববতী কর্মস্থল (inter posting): the mother unit, then only the DEEPEST node
-     * of the present RAB hierarchy — not every level of it. So a member under
-     * "র‌্যাব সদর দপ্তর / ইন্ট উইং" reads "৮ ফিল্ড রেজিঃ আর্টিঃ যশোর/ ইন্ট উইং", while one
-     * posted straight to a unit keeps "এসআইএন্ডটি, সিলেট/ র‌্যাব-৪".
+     * পূর্ববতী কর্মস্থল (inter posting), two parts joined by "/ ":
      *
-     * The mother unit carries its district after a comma ("বানৌজা হাজী মহসীন,
-     * চট্টগ্রাম"); either half is dropped when the other is missing.
+     *   অংশ ১ — the mother unit, with its district after a comma
+     *           ("বানৌজা হাজী মহসীন, চট্টগ্রাম"); either half is dropped when the
+     *           other is missing.
+     *   অংশ ২ — the member's FULL RAB posting history from the Previous RAB Service
+     *           page (PreviousRABServiceInfo): the deepest node of every posting,
+     *           oldest → present, itself "/ "-joined. The SP already orders it by
+     *           ServiceFrom ascending with the currently-active posting last, so this
+     *           reads e.g. "র‌্যাব-১১/ র‌্যাব-৪/ ইন্ট উইং".
+     *
+     * Fallback: a member with no history rows yet still shows the deepest node of the
+     * live serving posting (presentRab* from vw_ServingMemberFilter), so অংশ ২ is never
+     * blank mid-transfer.
      */
     getInterPrevWorkplace(emp: DraftPostingEmployeeRow): string {
         const bn = !this.isEnglish();
         const motherUnit = bn ? emp.motherUnitNameBN || emp.motherUnitName || '' : emp.motherUnitName || '';
         const district = bn ? emp.motherUnitDistrictNameBN || emp.motherUnitDistrictName || '' : emp.motherUnitDistrictName || '';
-        // Outermost-first, so the last filled one is the deepest node the member sits at.
-        const rabLevels = [
-            bn ? emp.presentRabUnitNameBN || emp.presentRabUnitName || '' : emp.presentRabUnitName || '',
-            bn ? emp.presentRabWingNameBN || emp.presentRabWingName || '' : emp.presentRabWingName || '',
-            bn ? emp.presentRabBranchNameBN || emp.presentRabBranchName || '' : emp.presentRabBranchName || '',
-            bn ? emp.presentRabSubBranchNameBN || emp.presentRabSubBranchName || '' : emp.presentRabSubBranchName || '',
-            bn ? emp.presentRabSectionNameBN || emp.presentRabSectionName || '' : emp.presentRabSectionName || '',
-            bn ? emp.presentRabSubSectionNameBN || emp.presentRabSubSectionName || '' : emp.presentRabSubSectionName || ''
-        ].filter((p) => p);
+        const motherPart = motherUnit && district ? motherUnit + ', ' + district : motherUnit || district;
 
-        const parts = [motherUnit && district ? motherUnit + ', ' + district : motherUnit || district, rabLevels[rabLevels.length - 1] ?? ''];
-        return parts.filter((p) => p).join('/ ');
+        // অংশ ২: pre-built "/ "-joined chain of the RAB posting history.
+        let chain = bn ? emp.prevRabServiceChainBN || emp.prevRabServiceChain || '' : emp.prevRabServiceChain || '';
+        if (!chain) {
+            // No history entered → fall back to the deepest node of the present posting.
+            // Outermost-first, so the last filled one is the deepest node the member sits at.
+            const rabLevels = [
+                bn ? emp.presentRabUnitNameBN || emp.presentRabUnitName || '' : emp.presentRabUnitName || '',
+                bn ? emp.presentRabWingNameBN || emp.presentRabWingName || '' : emp.presentRabWingName || '',
+                bn ? emp.presentRabBranchNameBN || emp.presentRabBranchName || '' : emp.presentRabBranchName || '',
+                bn ? emp.presentRabSubBranchNameBN || emp.presentRabSubBranchName || '' : emp.presentRabSubBranchName || '',
+                bn ? emp.presentRabSectionNameBN || emp.presentRabSectionName || '' : emp.presentRabSectionName || '',
+                bn ? emp.presentRabSubSectionNameBN || emp.presentRabSubSectionName || '' : emp.presentRabSubSectionName || ''
+            ].filter((p) => p);
+            chain = rabLevels[rabLevels.length - 1] ?? '';
+        }
+
+        return [motherPart, chain].filter((p) => p).join('/ ');
     }
 
     /**

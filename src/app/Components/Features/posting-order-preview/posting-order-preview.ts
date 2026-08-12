@@ -960,21 +960,27 @@ export class PostingOrderPreviewPageComponent implements OnInit {
         const district = (bn ? (emp.motherUnitDistrictNameBN || emp.motherUnitDistrictName) : emp.motherUnitDistrictName) || '';
         const motherUnit = unit && district ? unit + ', ' + district : (unit || district);
         if (!this.isInterPosting) return motherUnit;
-        // Inter-posting: mother unit + only the DEEPEST node of the present RAB
-        // hierarchy, not every level of it (matches the notesheet's
-        // getInterPrevWorkplace) — "৮ ফিল্ড রেজিঃ আর্টিঃ যশোর/ ইন্ট উইং", not
-        // "…/ র‌্যাব সদর দপ্তর/ ইন্ট উইং". Outermost-first, so the last filled level is
-        // the one the member actually sits at.
-        const rabLevels = [
-            bn ? (emp.presentRabUnitNameBN || emp.presentRabUnitName || '') : (emp.presentRabUnitName || ''),
-            bn ? (emp.presentRabWingNameBN || emp.presentRabWingName || '') : (emp.presentRabWingName || ''),
-            bn ? (emp.presentRabBranchNameBN || emp.presentRabBranchName || '') : (emp.presentRabBranchName || ''),
-            bn ? (emp.presentRabSubBranchNameBN || emp.presentRabSubBranchName || '') : (emp.presentRabSubBranchName || ''),
-            bn ? (emp.presentRabSectionNameBN || emp.presentRabSectionName || '') : (emp.presentRabSectionName || ''),
-            bn ? (emp.presentRabSubSectionNameBN || emp.presentRabSubSectionName || '') : (emp.presentRabSubSectionName || ''),
-        ].filter(p => p);
+        // Inter-posting অংশ ২ — the member's FULL RAB posting history from the Previous
+        // RAB Service page (PreviousRABServiceInfo): deepest node of every posting,
+        // oldest → present, "/ "-joined. The view already orders it (ServiceFrom
+        // ascending, currently-active posting last). Matches the notesheet's
+        // getInterPrevWorkplace — e.g. "৮ ফিল্ড রেজিঃ আর্টিঃ, যশোর/ র‌্যাব-১১/ র‌্যাব-৪/ ইন্ট উইং".
+        let chain = bn ? (emp.prevRabServiceChainBN || emp.prevRabServiceChain || '') : (emp.prevRabServiceChain || '');
+        if (!chain) {
+            // No history entered → fall back to the deepest node of the present posting.
+            // Outermost-first, so the last filled level is the one the member sits at.
+            const rabLevels = [
+                bn ? (emp.presentRabUnitNameBN || emp.presentRabUnitName || '') : (emp.presentRabUnitName || ''),
+                bn ? (emp.presentRabWingNameBN || emp.presentRabWingName || '') : (emp.presentRabWingName || ''),
+                bn ? (emp.presentRabBranchNameBN || emp.presentRabBranchName || '') : (emp.presentRabBranchName || ''),
+                bn ? (emp.presentRabSubBranchNameBN || emp.presentRabSubBranchName || '') : (emp.presentRabSubBranchName || ''),
+                bn ? (emp.presentRabSectionNameBN || emp.presentRabSectionName || '') : (emp.presentRabSectionName || ''),
+                bn ? (emp.presentRabSubSectionNameBN || emp.presentRabSubSectionName || '') : (emp.presentRabSubSectionName || ''),
+            ].filter(p => p);
+            chain = rabLevels[rabLevels.length - 1] ?? '';
+        }
 
-        return [motherUnit, rabLevels[rabLevels.length - 1] ?? ''].filter(p => p).join('/ ');
+        return [motherUnit, chain].filter(p => p).join('/ ');
     }
 
     empTransferUnit(emp: PostingOrderEmployeeRow): string {
