@@ -180,10 +180,19 @@
 
                 <!-- Reference No -->
                 <div class="oo-doc-section" *ngIf="referenceEntries.length > 0">
-                    <div class="oo-doc-section-label">{{ isBangla ? 'সূত্র:' : 'Reference:' }}</div>
-                    <div class="oo-doc-list">
-                        <p *ngFor="let ref of referenceEntries"><span class="oo-ref-serial">{{ ref.serial }}।</span>{{ ref.text }}</p>
-                    </div>
+                    <!-- Single reference: label and value on the SAME line (সূত্র: 1234567890),
+                         no ক। serial — a serial only makes sense with two or more entries. -->
+                    <ng-container *ngIf="referenceEntries.length === 1; else refMulti">
+                        <span class="oo-doc-section-label">{{ isBangla ? 'সূত্র:' : 'Reference:' }}</span>
+                        <span class="oo-ref-inline">{{ referenceEntries[0].text }}</span>
+                    </ng-container>
+                    <!-- Two or more: label on its own line, serialed (ক।/খ।/…) list below. -->
+                    <ng-template #refMulti>
+                        <div class="oo-doc-section-label">{{ isBangla ? 'সূত্র:' : 'Reference:' }}</div>
+                        <div class="oo-doc-list">
+                            <p *ngFor="let ref of referenceEntries"><span class="oo-ref-serial">{{ ref.serial }}।</span>{{ ref.text }}</p>
+                        </div>
+                    </ng-template>
                 </div>
 
                 <!-- ═══ Body (exactly what is stored in DB) ═══ -->
@@ -194,17 +203,21 @@
                     <span class="oo-body-serial">{{ serial(2) }}</span>{{ order.remarks }}
                 </div>
 
-                <!-- ═══ Final Approver Signature (from notesheet) ═══ -->
-                <div class="oo-doc-signature-area" *ngIf="finalApproverName">
+                <!-- ═══ Approver Signature (office-order approver — same person as the after-Onulipi block) ═══ -->
+                <div class="oo-doc-signature-area" *ngIf="order.approvalEmployeeName">
                     <div class="oo-doc-signature-block">
+                        <img *ngIf="approvalSignatureUrl && isApproved" [src]="approvalSignatureUrl" class="oo-doc-sig-img" alt="Signature" />
                         <div class="oo-doc-sig-name">
-                            {{ isBangla ? (finalApproverNameBN || finalApproverName) : finalApproverName }}
+                            {{ isBangla ? (order.approvalEmployeeNameBN || order.approvalEmployeeName) : order.approvalEmployeeName }}
                         </div>
-                        <div class="oo-doc-sig-rank" *ngIf="finalApproverRank">
-                            {{ isBangla ? (finalApproverRankBN || finalApproverRank) : finalApproverRank }}
+                        <div class="oo-doc-sig-rank" *ngIf="order.approvalEmployeeRank">
+                            {{ isBangla ? (order.approvalEmployeeRankBN || order.approvalEmployeeRank) : order.approvalEmployeeRank }}
                         </div>
-                        <div class="oo-doc-sig-appointment" *ngIf="finalApproverAppointment">
-                            {{ isBangla ? (finalApproverAppointmentBN || finalApproverAppointment) : finalApproverAppointment }}
+                        <div class="oo-doc-sig-appointment" *ngIf="order.approvalEmployeeAppointment">
+                            {{ isBangla ? (order.approvalEmployeeAppointmentBN || order.approvalEmployeeAppointment) : order.approvalEmployeeAppointment }}
+                        </div>
+                        <div class="oo-doc-sig-onbehalf">
+                            {{ isBangla ? 'মহাপরিচালকের পক্ষে' : 'On behalf of Director General' }}
                         </div>
                     </div>
                 </div>
@@ -250,7 +263,7 @@
                                 {{ isBangla ? (order.approvalEmployeeAppointmentBN || order.approvalEmployeeAppointment) : order.approvalEmployeeAppointment }}
                             </div>
                             <div class="oo-doc-sig-onbehalf">
-                                {{ isBangla ? 'পক্ষে মহাপরিচালক' : 'On behalf of Director General' }}
+                                {{ isBangla ? 'মহাপরিচালকের পক্ষে' : 'On behalf of Director General' }}
                             </div>
                         </div>
                     </div>

@@ -171,27 +171,32 @@
 }
 
 .oo-doc-header { text-align: center; margin-bottom: 4px; }
-.oo-doc-header-line { font-weight: 700; font-size: 12pt; line-height: 1.5; }  /* header — larger than body */
+.oo-doc-header-line { font-weight: 700; font-size: 10pt; line-height: 1.5; }  /* header — same size as body, bold */
 .oo-doc-header-web { font-size: 9pt; color: #1a56db; margin-top: 2px; font-style: italic; }
 
 .oo-doc-title { text-align: center; font-size: 14pt; font-weight: 700; text-decoration: underline; margin: 12px 0; }
 .oo-doc-title--red { color: #dc2626; }
 
-.oo-doc-meta { display: flex; justify-content: space-between; margin-bottom: 6px; font-size: 10pt; }
-.oo-doc-section { margin: 10px 0; font-size: 10pt; }
+/* line-height 1.25 on every top block (meta/section/subject) matches the body, so
+   that with the uniform 5px block margins the gap between sections is equal. Without
+   it these label rows inherit the paper's 1.7 leading and their gaps look larger. */
+.oo-doc-meta { display: flex; justify-content: space-between; margin-bottom: 5px; font-size: 10pt; line-height: 1.25; }
+.oo-doc-section { margin: 5px 0; font-size: 10pt; line-height: 1.25; }
 .oo-doc-section-label { font-weight: 700; margin-bottom: 4px; font-size: 10pt; }
 .oo-doc-list { padding-left: 0; line-height: 2; p { margin: 2px 0; } }
 .oo-ref-serial { display: inline-block; min-width: 2.5em; }
+/* Single-reference inline value: small gap after the সূত্র: label on the same line. */
+.oo-ref-inline { margin-left: 0.4em; }
 /* Onulipi list: serial at the left, a tab-like gap before the text, wrapped lines hang under the text. */
 .oo-onulipi-item { padding-left: 2.5em; text-indent: -2.5em; }
 .oo-onulipi-serial { display: inline-block; min-width: 2.5em; text-indent: 0; }
-.oo-doc-subject { margin: 10px 0; font-size: 10pt; }
+.oo-doc-subject { margin: 5px 0; font-size: 10pt; line-height: 1.25; }
 .oo-doc-subject-label { font-weight: 700; }
 .oo-doc-subject-text { font-weight: 700; }
 .oo-doc-para { display: flex; gap: 8px; margin: 10px 0; font-size: 10pt; line-height: 1.8; }
 .oo-doc-para-no { font-weight: 700; min-width: 28px; flex-shrink: 0; }
 .oo-doc-para-text { flex: 1; text-align: justify; }
-.oo-doc-body { margin: 12px 0; line-height: 1.8; text-align: justify; font-size: 10pt; }
+.oo-doc-body { margin: 5px 0; line-height: 1.25; text-align: justify; font-size: 10pt; }
 .oo-body-serial { font-weight: 700; margin-right: 1.5em; }
 
 /* ── Application Info Panel ──────────────────────── */
@@ -232,7 +237,13 @@
 .oo-app-info-full {
     grid-column: 1 / -1;
 }
-.oo-doc-signature-area { display: flex; justify-content: flex-end; margin: 40px 0 20px; }
+.oo-doc-signature-area { display: flex; justify-content: flex-end; margin: 20px 0 20px; }
+/* Bottom (after-অনুলিপি) signature: pull it up so its top lines up with the last
+   অনুলিপি entry (e.g. ৩। নথি) and sits to the right of the list instead of far below
+   it. The distance from the list's end up to its last row is fixed, so this stays
+   correct no matter how many অনুলিপি rows there are. Scoped to .oo-doc-onulipi so the
+   top (final-approver) signature that shares this class keeps its normal spacing. */
+.oo-doc-onulipi .oo-doc-signature-area { margin-top: -30px; }
 .oo-doc-signature-block { text-align: left; min-width: 200px; }
 .oo-doc-sig-img { display: block; max-height: 48px; max-width: 200px; object-fit: contain; margin-bottom: 2px; }
 .oo-doc-sig-name { font-weight: 400; font-size: 10pt; border-top: 1px solid transparent; padding-top: 4px; }
@@ -246,8 +257,8 @@
 
 /* ── Onulipi (Copy Distribution) ─────────────────── */
 .oo-doc-onulipi {
-    margin-top: 30px;
-    padding-top: 10px;
+    margin-top: 0.625em;  /* half a blank line above the copy block (was 30px + 10px padding) */
+    padding-top: 0;
 }
 
 .oo-doc-onulipi-header {
@@ -292,8 +303,27 @@
 /* ── Rich HTML sections (innerHTML) ── */
 :host ::ng-deep {
     .oo-doc-rich-content {
-        font-size: 10pt; line-height: 1.8; width: 100%; max-width: 100%; text-align: justify; word-break: normal; overflow-wrap: break-word;
-        p { margin: 4px 0; text-align: justify; }
+        font-size: 10pt; line-height: 1.25; width: 100%; max-width: 100%; text-align: justify; word-break: normal; overflow-wrap: break-word;
+        /* Uniform 5px gap between every rich-text line/paragraph (the address lines
+           and the two body paragraphs) so each matches the 5px block-margin gap
+           between .oo-doc-body blocks — the "green" reference gap. !important
+           overrides the inline margins the editor saved on each <p> (p-editor/Quill
+           or Word paste), which otherwise make these gaps uneven. Adjacent 5px
+           margins collapse to 5px, so the section boundaries stay 5px too. */
+        p { margin: 5px 0 !important; text-align: justify; }
+        /* Drop blank paragraphs (<p><br></p>) the editor inserts on double-Enter so a
+           stray empty line can't widen one gap past the rest. */
+        p:has(> br:only-child) { display: none !important; }
+        /* Force the line gap to 1.25 even when the editor stored inline line-height
+           on each <p>/<span> (p-editor/Quill or Word paste). Inline styles beat the
+           inherited value, so a plain class rule silently does nothing — same reason
+           the notesheet body pins .ns-para-text line-height with !important. */
+        &, & * { line-height: 1.25 !important; }
+        /* Address block (the non-inline rich content — the body uses --inline): single
+           line spacing per request. Higher specificity than the &,& * rule above, so it
+           wins for the address without touching the body's 1.25. */
+        &:not(.oo-doc-rich-content--inline),
+        &:not(.oo-doc-rich-content--inline) * { line-height: 1 !important; }
         ul, ol { padding-left: 24px !important; margin: 4px 0; list-style-type: disc !important; }
         li { display: list-item !important; list-style-type: disc !important; }
         strong { font-weight: 700; } em { font-style: italic; } u { text-decoration: underline; } s { text-decoration: line-through; }
@@ -301,6 +331,7 @@
     }
     .oo-doc-rich-content--inline {
         display: inline;
+        line-height: 1.25;   /* body line gap — matches .oo-doc-body (subsequent block <p> inherit this) */
         p:first-child { display: inline; }
     }
 }

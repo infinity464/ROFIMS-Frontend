@@ -1153,9 +1153,9 @@ html, body { margin: 0; padding: 0; background: transparent; }
    \`.ns-para\` rule in notesheet-preview-exbd.scss). */
 .pdf-flow .ns-para { line-height: 1.25; }
 
-/* Match the five blank body lines after each approver signature in the screen
+/* Match the six blank body lines after each approver signature in the screen
    preview before the following numbered approver section. */
-.pdf-flow .ns-approver-section { padding-bottom: calc(24px + 6.25em); }
+.pdf-flow .ns-approver-section { padding-bottom: calc(24px + 7.5em); }
 
 /* Push the approver-role underline below the Bangla descenders so it stays one
    continuous line (mirrors the :host .ns-approver-role rule in the SCSS). */
