@@ -45,6 +45,8 @@ const EMPTY_CELL: UnitRankCell = { auth: 0, held: 0 };
     styleUrl: './unit-rank-wise-manpower.scss'
 })
 export class UnitRankWiseManpowerComponent implements OnInit {
+    /** The equivalent-name variant enables the pinned Unit column. */
+    readonly stickyUnitColumn = false;
     canInsert = true;
     canUpdate = true;
     canDelete = true;

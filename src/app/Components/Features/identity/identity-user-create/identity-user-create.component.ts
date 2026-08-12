@@ -123,6 +123,8 @@ export class IdentityUserCreateComponent implements OnInit {
   private currentResetRoleIds: string[] = [];
   users: UserRow[] = [];
   employees: EmployeeDropdownDto[] = [];
+  /** Prevent a slower, earlier employee-search response from replacing newer results. */
+  private employeeSearchRequestId = 0;
   memberTypes: MemberTypeOption[] = [];
   private mappings: IdentityUserMappingDto[] = [];
   private memberTypeAccesses: UserMemberTypeAccessDto[] = [];
@@ -180,7 +182,11 @@ export class IdentityUserCreateComponent implements OnInit {
         this.memberTypeAccesses = Array.isArray(accesses) ? accesses : [];
         this.rabUnitAccesses = Array.isArray(rabAccesses) ? rabAccesses : [];
         const arr = Array.isArray(users) ? users : [];
-        this.users = arr.map((u) => this.buildUserRow(u));
+        // Keep active users at the top; the native sort is stable, so each
+        // group's existing API order is retained.
+        this.users = arr
+          .map((u) => this.buildUserRow(u))
+          .sort((a, b) => Number(b.isActive) - Number(a.isActive));
       },
       error: (err: any) => {
         this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.message || 'Failed to load users' });
@@ -301,9 +307,11 @@ export class IdentityUserCreateComponent implements OnInit {
     return parts.join(' | ');
   }
 
-  loadEmployees(): void {
-    this.mappingService.getEmployeesForDropdown().subscribe({
+  loadEmployees(search?: string): void {
+    const requestId = ++this.employeeSearchRequestId;
+    this.mappingService.getEmployeesForDropdown(search).subscribe({
       next: (list) => {
+        if (requestId !== this.employeeSearchRequestId) return;
         const arr = Array.isArray(list) ? list : [];
         this.employees = arr.map((x: any) => {
           const fullNameEN = x.fullNameEN ?? x.FullNameEN ?? '';
@@ -323,9 +331,18 @@ export class IdentityUserCreateComponent implements OnInit {
         });
       },
       error: (err: any) => {
+        if (requestId !== this.employeeSearchRequestId) return;
         this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.message || 'Failed to load employees' });
       }
     });
+  }
+
+  /**
+   * PrimeNG emits this whenever the dropdown filter changes. Search on the
+   * server so IDs beyond the initial 2,000-row list can still be selected.
+   */
+  onEmployeeFilter(event: { filter?: string }): void {
+    this.loadEmployees(event?.filter ?? '');
   }
 
   initForm(): void {

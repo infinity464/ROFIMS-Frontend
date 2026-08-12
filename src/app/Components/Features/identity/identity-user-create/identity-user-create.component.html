@@ -149,8 +149,11 @@
               optionLabel="displayLabel"
               optionValue="employeeID"
               [placeholder]="editingUser ? 'Mapping cannot be changed' : 'Select employee'"
-              [filter]="true"
-              [showClear]="!editingUser"
+               [filter]="true"
+               (onFilter)="onEmployeeFilter($event)"
+               [showClear]="!editingUser"
+              [virtualScroll]="true"
+              [virtualScrollItemSize]="38"
               appendTo="body"
               styleClass="w-full"
             />

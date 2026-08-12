@@ -79,7 +79,7 @@ export class NotesheetPreviewExbdComponent extends NotesheetPreviewBase implemen
     private hostEl = inject(ElementRef) as ElementRef<HTMLElement>;
 
     // ── Page size for jsReport export (Legal default, A4 optional) ──
-    selectedPageSize = 'A4';
+    selectedPageSize = 'Legal';
     pageSizeOptions = [
         { label: 'Legal', value: 'Legal' },
         { label: 'A4', value: 'A4' }
@@ -1152,6 +1152,10 @@ html, body { margin: 0; padding: 0; background: transparent; }
    collectDocumentStyles() pulls in, matching the on-screen 1.25 (see the
    \`.ns-para\` rule in notesheet-preview-exbd.scss). */
 .pdf-flow .ns-para { line-height: 1.25; }
+
+/* Match the five blank body lines after each approver signature in the screen
+   preview before the following numbered approver section. */
+.pdf-flow .ns-approver-section { padding-bottom: calc(24px + 6.25em); }
 
 /* Push the approver-role underline below the Bangla descenders so it stays one
    continuous line (mirrors the :host .ns-approver-role rule in the SCSS). */
