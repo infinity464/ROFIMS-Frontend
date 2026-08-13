@@ -1153,16 +1153,16 @@ html, body { margin: 0; padding: 0; background: transparent; }
    \`.ns-para\` rule in notesheet-preview-exbd.scss). */
 .pdf-flow .ns-para { line-height: 1.25; }
 
-/* Match the six blank body lines after each approver signature in the screen
-   preview before the following numbered approver section. */
-.pdf-flow .ns-approver-section { padding-bottom: calc(24px + 7.5em); }
+/* Match the five blank body lines between approver signatures in the screen
+   preview. The final approver keeps the normal bottom padding to avoid an empty
+   overflow page. */
+.pdf-flow .ns-approver-section:not(:last-child) { padding-bottom: calc(24px + 6.25em); }
 
 /* Push the approver-role underline below the Bangla descenders so it stays one
    continuous line (mirrors the :host .ns-approver-role rule in the SCSS). */
 .pdf-flow .ns-approver-role { text-underline-offset: 4px; text-decoration-skip-ink: none; }
 
 .ns-posting-table tr,
-.ns-approver-section,
 .ns-org-header,
 .ns-title-block { page-break-inside: avoid; }
 </style>
@@ -1819,7 +1819,7 @@ html, body { margin: 0; padding: 0; background: transparent; }
 
         const keepTogether = Array.from(
             container.querySelectorAll(
-                '.ns-title-block, .ns-title-area, .ns-org-header, .ns-note, .ns-initiator-area, .ns-approver-section'
+                '.ns-title-block, .ns-title-area, .ns-org-header, .ns-note, .ns-initiator-area'
             ) as NodeListOf<HTMLElement>
         ).map(el => {
             const rect = el.getBoundingClientRect();

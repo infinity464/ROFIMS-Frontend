@@ -215,7 +215,7 @@
 
                     <div class="ns-edit-field">
                         <label class="ns-edit-label">{{ isEnglish() ? 'Note' : 'নোট' }}</label>
-                        <textarea pInputTextarea [(ngModel)]="editNote" rows="3" class="w-full" placeholder="{{ isEnglish() ? 'Note' : 'নোট' }}"></textarea>
+                        <app-rich-editor [(ngModel)]="editNote" height="120px" placeholder="{{ isEnglish() ? 'Note' : 'নোট' }}"></app-rich-editor>
                     </div>
 
                     <!-- ── Paragraphs (editable) ── -->
@@ -652,7 +652,7 @@
                     </div>
 
                     <!-- ── Note (above paragraphs) ── -->
-                    <div class="ns-note" *ngIf="noteSheet.note" style="white-space: pre-line">{{ noteSheet.note }}</div>
+                    <div class="ns-note" *ngIf="noteSheet.note" [innerHTML]="getNoteSafe()"></div>
 
                     <!-- ── Paragraphs (after employee table) ── -->
                     <ng-container *ngIf="parsedParagraphs.length > 0">

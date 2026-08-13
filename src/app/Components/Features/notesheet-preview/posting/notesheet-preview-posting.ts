@@ -42,6 +42,7 @@ import { forkJoin, of } from 'rxjs';
 import { catchError, map } from 'rxjs/operators';
 import { Document, Packer, Paragraph, TextRun, Table, TableRow, TableCell, WidthType, BorderStyle, AlignmentType, PageOrientation, ImageRun, VerticalMergeType } from 'docx';
 import { saveAs } from 'file-saver';
+import { SafeHtml } from '@angular/platform-browser';
 
 import type { NotesheetDocumentModel, ContentBlock, InlineRun, TextAlignment } from '../notesheet-document-model';
 
@@ -1316,6 +1317,11 @@ export class NotesheetPreviewPostingComponent extends NotesheetPreviewBase imple
             return [emp.interPostingRemark, emp.remarks].filter((s) => s?.trim()).join(', ');
         }
         return [emp.sendingRemark, emp.remarks].filter((s) => s?.trim()).join(', ');
+    }
+
+    getNoteSafe(): SafeHtml {
+        const raw = this.noteSheet?.note ?? '';
+        return this.sanitizer.bypassSecurityTrustHtml(this.fixBanglaWordBreaks(raw));
     }
 
     // NOTE: the auto "previous transfer order cancelled" note (getCancelledInterNote)
