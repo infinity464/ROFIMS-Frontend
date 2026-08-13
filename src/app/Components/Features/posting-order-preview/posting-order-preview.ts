@@ -175,6 +175,8 @@ export class PostingOrderPreviewPageComponent implements OnInit {
     showGallantryAwards = true;
     showProfQualification = true;
     showCorps = true;
+    // পদবি বিবরণ — special qualifications shown under the rank (matches the notesheet পদবি column).
+    showRankQualifications = true;
 
     private syncParagraphChecked(): void {
         const paras = this.filteredFooterParagraphs;
@@ -921,6 +923,12 @@ export class PostingOrderPreviewPageComponent implements OnInit {
 
     empRank(emp: PostingOrderEmployeeRow): string {
         return (this.isBangla ? (emp.rankNameBN || emp.rankName) : emp.rankName) || '-';
+    }
+
+    /** পদবি বিবরণ — special qualifications (e.g. কম্পিউটার কোর্স) shown under the rank,
+     *  mirroring the notesheet's পদবি column. Empty string when none. */
+    empRankQuals(emp: PostingOrderEmployeeRow): string {
+        return (this.isBangla ? (emp.specialQualificationsBN || emp.specialQualifications) : emp.specialQualifications) || '';
     }
 
     empTrade(emp: PostingOrderEmployeeRow): string {
@@ -1999,9 +2007,9 @@ export class PostingOrderPreviewPageComponent implements OnInit {
         if (this.filteredEmployees.length === 0 || !this.legalPaper) return;
         this.exportingPdf = true;
         try {
-            const { html, chrome } = await this.buildJsReportPdf();
+            const { html, chrome, templateExtras } = await this.buildJsReportPdf();
             await this.jsreportService.downloadPdf(
-                html, {}, `PostingOrder_${this.postingOrderNo || 'export'}${this.exportFileSuffix}.pdf`, chrome,
+                html, {}, `PostingOrder_${this.postingOrderNo || 'export'}${this.exportFileSuffix}.pdf`, chrome, templateExtras,
             );
         } catch (err: any) {
             this.messageService.add({
@@ -2018,9 +2026,9 @@ export class PostingOrderPreviewPageComponent implements OnInit {
         if (this.filteredEmployees.length === 0 || !this.legalPaper) return;
         this.printingPreview = true;
         try {
-            const { html, chrome } = await this.buildJsReportPdf();
+            const { html, chrome, templateExtras } = await this.buildJsReportPdf();
             await this.jsreportService.previewPdfInNewTab(
-                html, {}, `PostingOrder_${this.postingOrderNo || 'export'}`, chrome,
+                html, {}, `PostingOrder_${this.postingOrderNo || 'export'}`, chrome, templateExtras,
             );
         } catch (err: any) {
             this.messageService.add({
@@ -2040,7 +2048,7 @@ export class PostingOrderPreviewPageComponent implements OnInit {
      * insets mirror `.legal-paper`'s padding so the text column matches the web
      * view (A4 210 − 2×10 = 190mm).
      */
-    private async buildJsReportPdf(): Promise<{ html: string; chrome: Record<string, unknown> }> {
+    private async buildJsReportPdf(): Promise<{ html: string; chrome: Record<string, unknown>; templateExtras: Record<string, unknown> }> {
         const styles = this.collectDocumentStyles();
         const fontCss = await this.embedBanglaFontCss();
         const body = this.legalPaper.nativeElement.innerHTML;
@@ -2155,7 +2163,97 @@ html, body { margin: 0; padding: 0; background: transparent; }
             headerTemplate: '', footerTemplate: ''
         };
 
-        return { html, chrome };
+        const templateExtras = {
+            // Bangla "page/total" stamp (১/২) in the bottom margin — but only when
+            // the order runs past one page. The office order has no client-side
+            // pagination (Chromium fragments the single .legal-paper flow), so the
+            // "multi-page only" gate lives inside the handlebars helper, which reads
+            // JsReport's true $pdf.pages.length. See pdfPageNumberOperations().
+            pdfOperations: this.pdfPageNumberOperations({
+                pageWidth,
+                pageHeight,
+                bottomMarginMm: padBottom,
+                fontCss,
+            }),
+        };
+
+        return { html, chrome, templateExtras };
+    }
+
+    /**
+     * JsReport pdf-utils merge operation that stamps a Bangla "page/total" number
+     * (e.g. ১/২) centred in the bottom margin of every page — mirrors the note-sheet
+     * PDF (see NoteSheetPreviewBase.pdfPageNumberOperations).
+     *
+     * Difference from the note-sheet: it paginates itself and passes a `multipage`
+     * flag, so it can skip the operation entirely for a single page. The office order
+     * has no client-side page count (Chromium fragments the flow), so this always
+     * attaches the overlay and lets `bnPageLabel` return an empty string when
+     * $pdf.pages.length is 1 — a one-page order therefore prints no number.
+     */
+    private pdfPageNumberOperations(opts: {
+        pageWidth: string;
+        pageHeight: string;
+        bottomMarginMm: number;
+        fontCss: string;
+    }): Record<string, unknown>[] {
+        // Runs inside jsreport's templating worker, not the browser — plain ES5.
+        const helpers = `
+function bnPageLabel(pageNumber, total) {
+    if (!total || total <= 1) return '';
+    var bn = ['০','১','২','৩','৪','৫','৬','৭','৮','৯'];
+    return (pageNumber + '/' + total).replace(/[0-9]/g, function (d) { return bn[+d]; });
+}`;
+
+        const content = `<!DOCTYPE html>
+<html><head><meta charset="utf-8"><style>
+${opts.fontCss}
+@page { size: ${opts.pageWidth} ${opts.pageHeight}; margin: 0; }
+html, body { margin: 0; padding: 0; background: transparent; }
+/* Exactly one page-sized block — this template renders once per page. */
+.pg {
+    position: relative;
+    width: ${opts.pageWidth};
+    height: ${opts.pageHeight};
+    overflow: hidden;
+}
+/* Centred in the bottom margin band, under the document's content. */
+.pg-label {
+    position: absolute;
+    left: 0; right: 0; bottom: 0;
+    height: ${opts.bottomMarginMm}mm;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Times New Roman', 'SolaimanLipi', Times, serif;
+    font-size: 10pt;
+    font-weight: 700;
+    color: #000;
+}
+</style></head><body>
+<div class="pg"><div class="pg-label">{{bnPageLabel $pdf.pageNumber $pdf.pages.length}}</div></div>
+</body></html>`;
+
+        return [{
+            type: 'merge',
+            mergeWholeDocument: false,
+            renderForEveryPage: true,
+            template: {
+                content,
+                helpers,
+                engine: 'handlebars',
+                recipe: 'chrome-pdf',
+                chrome: {
+                    format: null,
+                    width: opts.pageWidth,
+                    height: opts.pageHeight,
+                    landscape: false,
+                    marginTop: '0', marginBottom: '0', marginLeft: '0', marginRight: '0',
+                    printBackground: false,
+                    displayHeaderFooter: false,
+                },
+            },
+        }];
     }
 
     /** Concatenate every same-origin stylesheet loaded into the page (cross-origin
@@ -2360,14 +2458,14 @@ html, body { margin: 0; padding: 0; background: transparent; }
             const serial = bn ? this.toBanglaDigits(String(i + 1)) + '।' : String(i + 1);
             const vals = isInter
                 ? [
-                    serial, this.empServiceId(emp), this.empRank(emp), ...(st ? [this.empTrade(emp)] : []), this.empName(emp),
+                    serial, this.empServiceId(emp), this.empRank(emp) + (this.showRankQualifications && this.empRankQuals(emp) ? '\n(' + this.empRankQuals(emp) + ')' : ''), ...(st ? [this.empTrade(emp)] : []), this.empName(emp),
                     ...(sd ? [this.empDistrict(emp)] : []),
                     ...(sp ? [this.empPrevWorkplace(emp)] : []),
                     this.empTransferUnit(emp),
                     ...(sr ? [this.empCombinedRemarks(emp)] : [])
                 ]
                 : [
-                    serial, this.empServiceId(emp), this.empRank(emp), ...(st ? [this.empTrade(emp)] : []), this.empName(emp),
+                    serial, this.empServiceId(emp), this.empRank(emp) + (this.showRankQualifications && this.empRankQuals(emp) ? '\n(' + this.empRankQuals(emp) + ')' : ''), ...(st ? [this.empTrade(emp)] : []), this.empName(emp),
                     ...(sd ? [this.empDistrict(emp)] : []),
                     ...(sp ? [this.empPrevWorkplace(emp)] : []),
                     this.empTransferUnit(emp),

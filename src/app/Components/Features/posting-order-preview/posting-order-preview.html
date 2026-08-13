@@ -550,6 +550,10 @@
                 <label for="chkCorps" style="cursor:pointer;">{{ isBangla ? 'কোর' : 'Corps' }}</label>
             </span>
             <span style="display:inline-flex; align-items:center; gap:0.4rem;">
+                <p-checkbox [(ngModel)]="showRankQualifications" [binary]="true" inputId="chkRankQ"></p-checkbox>
+                <label for="chkRankQ" style="cursor:pointer;">{{ isBangla ? 'পদবি বিবরণ' : 'Rank Qual.' }}</label>
+            </span>
+            <span style="display:inline-flex; align-items:center; gap:0.4rem;">
                 <p-checkbox [(ngModel)]="showUpperSignature" [binary]="true" inputId="chkUpperSig"></p-checkbox>
                 <label for="chkUpperSig" style="cursor:pointer;">{{ isBangla ? 'স্বাক্ষর' : 'Signature' }}</label>
             </span>
@@ -658,7 +662,7 @@
                         <tr *ngFor="let emp of filteredEmployees; let i = index">
                             <td class="text-center">{{ isBangla ? (toBanglaDigits('' + (i + 1)) + '।') : (i + 1) }}</td>
                             <td class="po-doc-left-cell" style="white-space: pre-line;">{{ empServiceId(emp) }}</td>
-                            <td class="po-doc-left-cell">{{ empRank(emp) }}</td>
+                            <td class="po-doc-left-cell">{{ empRank(emp) }}<span *ngIf="showRankQualifications && empRankQuals(emp)"><br />({{ empRankQuals(emp) }})</span></td>
                             <td class="po-doc-left-cell" *ngIf="showTradeColumn">{{ empTrade(emp) }}</td>
                             <td class="po-doc-name-cell">{{ empName(emp) }}{{ empNameQuals(emp) }}</td>
                             <td class="po-doc-left-cell" *ngIf="showOwnDistrict" style="white-space: pre-line;">{{ empDistrict(emp) }}</td>
@@ -671,7 +675,7 @@
                         <tr *ngFor="let emp of filteredEmployees; let i = index">
                             <td class="text-center">{{ isBangla ? (toBanglaDigits('' + (i + 1)) + '।') : (i + 1) }}</td>
                             <td class="po-doc-left-cell" style="white-space: pre-line;">{{ empServiceId(emp) }}</td>
-                            <td class="po-doc-left-cell">{{ empRank(emp) }}</td>
+                            <td class="po-doc-left-cell">{{ empRank(emp) }}<span *ngIf="showRankQualifications && empRankQuals(emp)"><br />({{ empRankQuals(emp) }})</span></td>
                             <td class="po-doc-left-cell" *ngIf="showTradeColumn">{{ empTrade(emp) }}</td>
                             <td class="po-doc-name-cell">{{ empName(emp) }}{{ empNameQuals(emp) }}</td>
                             <td class="po-doc-left-cell" *ngIf="showOwnDistrict" style="white-space: pre-line;">{{ empDistrict(emp) }}</td>

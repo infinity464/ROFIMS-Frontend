@@ -474,8 +474,8 @@
             <!-- ক্রমিক (একটু বড়) -->
             <col style="width: 94px" />
             <!-- ব্যক্তিগত নম্বর (মূল ৮৬px থেকে +১%) -->
-            <col style="width: 80px" />
-            <!-- পদবি (fixed so it stays constant whether ট্রেড is shown or hidden) -->
+            <col style="width: 98px" />
+            <!-- পদবি (fixed so it stays constant whether ট্রেড is shown or hidden; +18px from the halved outer margin) -->
             <col *ngIf="showTradeColumn" style="width: 56px" />
             <!-- ট্রেড (ছোট করা) -->
             <col />
@@ -550,7 +550,7 @@
                  --ns-fs-delta custom property on the component host, which every text
                  size in the sheet is expressed against and which the PDF restates on
                  .pdf-flow (the snapshot clones this subtree, not the host). -->
-            <div class="ns-doc-box">
+            <div class="ns-doc-box" [class.ns-inter-posting]="isInterPosting()">
                 <div class="ns-main-col">
                     <div class="ns-title-area">
                         <div class="ns-title-en">NOTE SHEET</div>
@@ -564,12 +564,12 @@
 
                     <!-- Sizes come from .ns-nsno-line / .ns-subject-line in the component
                          SCSS (10pt + the export bar's offset), not from an inline style. -->
-                    <div class="ns-nsno-line" *ngIf="noteSheet.noteSheetNo" style="padding: 4px 16px 2px; display: flex; justify-content: space-between; align-items: baseline">
+                    <div class="ns-nsno-line" *ngIf="noteSheet.noteSheetNo" style="padding: 4px 8px 2px; display: flex; justify-content: space-between; align-items: baseline">
                         <span>{{ noteSheet.noteSheetNo }}</span>
                         <span *ngIf="noteSheet.noteSheetDate">{{ isEnglish() ? 'Date:' : 'তারিখঃ' }} {{ formatFullDate(noteSheet.noteSheetDate) }}</span>
                     </div>
 
-                    <div class="ns-subject-line" *ngIf="noteSheet.subject" style="padding: 2px 16px 4px">
+                    <div class="ns-subject-line" *ngIf="noteSheet.subject" style="padding: 2px 8px 4px">
                         <strong><u style="text-underline-offset: 3px; text-decoration-skip-ink: none">{{ noteSheet.subject }}</u></strong>
                     </div>
 

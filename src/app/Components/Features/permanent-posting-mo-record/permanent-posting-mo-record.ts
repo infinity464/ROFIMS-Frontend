@@ -840,12 +840,9 @@ export class PermanentPostingMORecordComponent implements OnInit {
             }
         }
 
-        // Posted Out validation: if posted-out employee is provided, require key fields
+        // Posted Out validation: if posted-out employee is provided, require key fields.
+        // Posting Unit is optional (the backend column is nullable), so it is not enforced here.
         if (hasPostedOut) {
-            if (!this.postingUnitId) {
-                this.messageService.add({ severity: 'warn', summary: 'Validation', detail: 'Please select Posting Unit.' });
-                return;
-            }
             if (this.isOfficer) {
                 if (this.noteSheetClearance == null) {
                     this.messageService.add({ severity: 'warn', summary: 'Validation', detail: 'Please select Note-Sheet Clearance.' });

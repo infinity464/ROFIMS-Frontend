@@ -2,24 +2,44 @@
    অনুচ্ছেদ → স্বাক্ষর → অনুমোদনকারী) are half the shared preview's spacing so the
    posting sheet packs more rows per page. Horizontal padding is unchanged. */
 .ns-cell-ref {
-    padding: 3px 16px 0 20px;
+    padding: 3px 8px 0 10px;
 }
 .ns-para {
-    padding: 5px 16px 5px 20px;
+    padding: 5px 8px 5px 10px;
 }
 .ns-note {
-    padding: 3px 16px 3px 20px;
+    padding: 3px 8px 3px 10px;
     text-align: justify;
 }
+
+/* Body paragraphs (main text ১। + tail paragraphs ২।, ৩।, …) and নোট: 1.25 line
+   gap — tighter than the shared sheet's 1.85 so the multi-line transfer text,
+   the tail paragraphs and the note all pack closer.
+
+   The main text and note are injected via [innerHTML] (Quill rich-text), so with
+   emulated encapsulation a bare rule on the wrapper doesn't reach the inner <p>
+   elements — and any inline / global line-height on them blocks inheritance.
+   ::ng-deep + !important pierces to the injected nodes, same as the font-family
+   rules below. */
+.ns-para,
+.ns-note {
+    line-height: 1.25 !important;
+
+    ::ng-deep * {
+        line-height: 1.25 !important;
+    }
+}
 .ns-posting-table {
-    padding: 2px 16px 5px 20px;
+    /* Outer margin halved (was 20px left / 16px right) so the table runs wider;
+       the freed 18px is handed to the পদবি column in the new-posting colgroup. */
+    padding: 2px 8px 5px 10px;
 }
 .ns-initiator-area {
-    padding: 7px 16px 9px 20px;
+    padding: 7px 8px 9px 10px;
     gap: 5px;                   /* shared sheet uses 10px between sig lines */
 }
 .ns-approver-section {
-    padding: 5px 16px 12px 20px;
+    padding: 5px 8px 12px 10px;
     min-height: 45px;           /* shared sheet reserves 90px for the signature */
 }
 
@@ -140,6 +160,25 @@
 .ns-note { font-size: fs(10); }            /* note */
 .ns-initiator-area { font-size: fs(10); }  /* signature block */
 .ns-closing-text { font-size: fs(10); }    /* closing line */
+
+/* ── Inter-posting: body one step smaller (9pt, not 10pt) ──
+   New-posting reads 9pt table → 10pt body (a 1pt step). Inter-posting's table is
+   8pt, so a 10pt body left a 2pt gap; drop the body to 9pt so the sheet reads
+   8pt table → 9pt body, matching that rhythm. Scoped by .ns-inter-posting on the
+   view's .ns-doc-box; signature lines are already 9pt and the 8pt table is left
+   untouched. */
+.ns-inter-posting {
+    .ns-nsno-line,
+    .ns-subject-line,
+    .ns-sanglagni-col,
+    .ns-cell-ref,
+    .ns-para,
+    .ns-note,
+    .ns-initiator-area,
+    .ns-closing-text {
+        font-size: fs(9);
+    }
+}
 
 /* Signature / approver lines — 9pt in the shared sheet, restated here so the
    offset reaches them too. */

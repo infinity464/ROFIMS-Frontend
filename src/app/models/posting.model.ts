@@ -556,6 +556,9 @@ export interface PostingOrderEmployeeRow {
     professionalQualificationBN: string | null;
     gallantryAwardsDecoration: string | null;
     gallantryAwardsDecorationBN: string | null;
+    // পদবি বিবরণ — special qualifications resolved to CommonCode names, shown under the rank.
+    specialQualifications: string | null;
+    specialQualificationsBN: string | null;
     motherUnitName: string | null;
     motherUnitNameBN: string | null;
     /** District of the mother unit (EmployeeInfo.LastMotherUnitDistrictId) — shown
