@@ -29,6 +29,16 @@
         line-height: 1.25 !important;
     }
 }
+
+/* Quill (both the note AND the main body text) wraps every Enter in its own <p>.
+   The shared sheet resets the main text's <p> to 0.4rem and leaves the note's at
+   the browser default 1em — both open too wide a gap on a line break. Pin both to
+   0.2em so an Enter adds only a slight gap, not a near-empty line. Mirrored for the
+   PDF in buildJsReportPdf() (.pdf-flow .ns-note p / .ns-para-text p). */
+.ns-note ::ng-deep p,
+.ns-para-text ::ng-deep p {
+    margin: 0 0 0.2em !important;
+}
 .ns-posting-table {
     /* Outer margin halved (was 20px left / 16px right) so the table runs wider;
        the freed 18px is handed to the পদবি column in the new-posting colgroup. */
@@ -43,17 +53,17 @@
     min-height: 45px;           /* shared sheet reserves 90px for the signature */
 }
 
-/* Approver who has not acted yet: no signature image, no date. The signature
-   area isn't rendered at all (see the template's *ngIf), so drop the space the
-   section and body reserve for it too — otherwise the serial number sits above
-   an empty box. Only the serial line's own height remains. */
+/* Approver who has not acted yet still RESERVES the same signature space as an
+   approved one: the section's base min-height (45px) and the body's shared
+   min-height (60px) — plus the base 12px bottom padding — are kept, so the block
+   height and the gap between approvers are identical before and after approval.
+   Approving then fills the reserved area with the signature instead of pushing
+   everything down. (Previously collapsed to 0; restored so before-gap = after-gap.) */
 .ns-approver-section--empty {
-    min-height: 0;
-    padding-bottom: 4px;
+    min-height: 45px;
 
     .ns-approver-body {
-        min-height: 0;
-        gap: 0;
+        min-height: 60px;
     }
 }
 

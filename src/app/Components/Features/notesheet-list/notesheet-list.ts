@@ -961,11 +961,11 @@ export class NotesheetListComponent implements OnInit {
         if (noteSheetType === NoteSheetType.ExBDLeave) route = '/notesheet-ex-bd-leave';
         else if (noteSheetType === NoteSheetType.NewPosting) route = '/posting/notesheet-generate';
         else if (noteSheetType === NoteSheetType.InterPosting) route = '/posting/inter-posting-notesheet-generate';
-        this.router.navigate([route], { queryParams: { id: row.noteSheetId } });
+        this.router.navigate([route], { queryParams: { id: encodeNoteSheetId(row.noteSheetId) } });
       },
       error: (err: any) => {
         this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Could not load note sheet for update.' });
-        this.router.navigate(['/notesheet-generate'], { queryParams: { id: row.noteSheetId } });
+        this.router.navigate(['/notesheet-generate'], { queryParams: { id: encodeNoteSheetId(row.noteSheetId) } });
       }
     });
   }

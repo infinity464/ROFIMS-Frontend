@@ -30,7 +30,7 @@ import { IdentityUserMappingService } from '@/services/identity-user-mapping.ser
 import { IdentityUserMemberTypeAccessService } from '@/services/identity-user-member-type-access.service';
 import { PostingService } from '@/services/posting.service';
 import { NoteSheetType, NoteSheetOperationType, NoteSheetOperationTypeOptions, ApprovalStatus, CodeType } from '@/models/enums';
-import { encodeNoteSheetId } from '@/shared/utils/notesheet-id-codec';
+import { encodeNoteSheetId, decodeNoteSheetId } from '@/shared/utils/notesheet-id-codec';
 import { NotesheetApproverSelectComponent } from '@/Components/Common/notesheet-approver-select/notesheet-approver-select';
 import { BanglaNumerals } from '@/Core/i18n/bangla-numerals';
 import { TooltipModule } from 'primeng/tooltip';
@@ -377,8 +377,8 @@ export class NotesheetGenerateComponent implements OnInit {
         this.route.queryParams.pipe(take(1)).subscribe((params) => {
             const id = params['id'];
             if (id != null && id !== '') {
-                const numId = Number(id);
-                if (!isNaN(numId) && numId > 0) {
+                const numId = decodeNoteSheetId(id);
+                if (numId != null && numId > 0) {
                     this.editId = numId;
                     this.editMode = true;
                     this.title = 'Update Draft Note-Sheet';

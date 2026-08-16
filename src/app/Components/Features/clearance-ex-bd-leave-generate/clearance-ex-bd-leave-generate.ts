@@ -35,7 +35,7 @@ import { ExBdLeaveApplicationService, ExBdLeaveNoteSheetBodyData } from '@/servi
 import { OnulipiItem } from '@/Components/basic-setup/shared/models/onulipi-config';
 import { CommonCodeService } from '@/services/common-code-service';
 import { CommonCodeModel } from '@/models/common-code-model';
-import { toEnglishWords, formatDateEnglish } from '@/Core/i18n/bangla-numerals';
+import { formatDateEnglishDMY } from '@/Core/i18n/bangla-numerals';
 
 /** Reference No paragraph entry. */
 interface ReferenceNoEntry {
@@ -402,20 +402,32 @@ export class ClearanceExBdLeaveGenerateComponent implements OnInit {
                         const prefix = bd.prefixEN || '';
                         const serviceId = emp?.ServiceId || emp?.serviceId || '';
                         const identity = [prefix, serviceId].filter(Boolean).join('-');
-                        const unit = bd.placementEN || '';
+                        const rank = emp?.rank || emp?.Rank || '';
+                        const corps = bd.corpsEN || '';
+                        const corpsClause = corps ? `, ${corps}` : '';
                         const purpose = bd.visitTypeNameEN || '';
                         const countries = bd.countriesDisplayEN || '';
                         const totalDays = bd.totalDays ?? 0;
-                        const daysWords = toEnglishWords(totalDays);
-                        const fromDate = formatDateEnglish(bd.fromDate ? new Date(bd.fromDate) : null);
-                        const toDate = formatDateEnglish(bd.toDate ? new Date(bd.toDate) : null);
+                        const fromDate = formatDateEnglishDMY(bd.fromDate ? new Date(bd.fromDate) : null);
+                        const toDate = formatDateEnglishDMY(bd.toDate ? new Date(bd.toDate) : null);
+                        // Backend returns family as "Relation-Name" entries joined by ", "
+                        // (e.g. "Spouse-Rudvi Furat Nikita"). Turn the FIRST "-" of each entry
+                        // into ": " so it reads "(Spouse: Rudvi Furat Nikita)".
                         let family = '';
-                        if (bd.familyMembersDisplayEN) family = ` self and family members (${bd.familyMembersDisplayEN})`;
+                        if (bd.familyMembersDisplayEN) {
+                            const members = bd.familyMembersDisplayEN
+                                .split(',')
+                                .map(s => s.trim().replace('-', ': '))
+                                .join(', ');
+                            family = ` including his/her family (${members})`;
+                        }
 
-                        const dynamic = `Pursuant to the letter at reference B Security Clearance of currently serving at ${unit} under RAB deputation, ${identity} ${name} has applied for ${purpose}${family}, for ${totalDays} (${daysWords}) days from ${fromDate} to ${toDate}, or ${totalDays} (${daysWords}) days from the date of journey within the aforementioned period, to ${countries} for earned leave. `;
-                        const suffix = 'Has applied to the Senior Secretary, Public Security Division, Ministry of Home Affairs, Bangladesh Secretariat, Dhaka, for the grant of leave. ' +
-                            'His/Her attested application, along with the relevant documents, has been received in this office in accordance with the reference memo.';
-                        this.bodyText = dynamic + suffix;
+                        // e.g. "Pursuant to the letter at reference B security clearance of BA-10015 Major
+                        // M. Sadman Sakib, Infantry including his/her family (Spouse: Rudvi Furat Nikita) has
+                        // been sanctioned with effect from 10 October 2026 to 24 October 2026 total 15 days
+                        // which is to be availed in Indonesia for recreation purpose."
+                        const identName = [identity, rank, name].filter(Boolean).join(' ');
+                        this.bodyText = `Pursuant to the letter at reference B security clearance of ${identName}${corpsClause}${family} has been sanctioned with effect from ${fromDate} to ${toDate} total ${totalDays} days which is to be availed in ${countries} for ${purpose} purpose.`;
                     }
                 });
             }

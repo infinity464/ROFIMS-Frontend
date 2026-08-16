@@ -39,7 +39,7 @@ import { ServingMembersService } from '@/services/serving-members.service';
 import { getFormattedMemberName } from '@/shared/utils/member-display-name.util';
 import { EmployeePersonalServiceOverview } from '@/models/employee-personal-service-overview.model';
 import { NoteSheetType, NoteSheetCurrentStatus, ApprovalStatus, NoteSheetOperationType, NoteSheetOperationTypeOptions, CodeType } from '@/models/enums';
-import { encodeNoteSheetId } from '@/shared/utils/notesheet-id-codec';
+import { encodeNoteSheetId, decodeNoteSheetId } from '@/shared/utils/notesheet-id-codec';
 import { BanglaNumerals, toBanglaWords, toEnglishWords, formatDateBangla, formatDateEnglish } from '@/Core/i18n/bangla-numerals';
 import { NotesheetApproverSelectComponent } from '@/Components/Common/notesheet-approver-select/notesheet-approver-select';
 import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
@@ -267,8 +267,8 @@ export class NotesheetExBdLeaveComponent implements OnInit {
             const mode = params['mode'];
             const id = params['id'];
             if (mode === 'view' && id != null && id !== '') {
-                const numId = Number(id);
-                if (!isNaN(numId) && numId > 0) {
+                const numId = decodeNoteSheetId(id);
+                if (numId != null && numId > 0) {
                     this.viewMode = true;
                     this.title = 'Ex-BD Leave Note Sheet – Preview';
                     this.loadPurposeOfLeave();
@@ -300,8 +300,8 @@ export class NotesheetExBdLeaveComponent implements OnInit {
                 this.onUnitChange();
             });
             if (id != null && id !== '') {
-                const numId = Number(id);
-                if (!isNaN(numId) && numId > 0) {
+                const numId = decodeNoteSheetId(id);
+                if (numId != null && numId > 0) {
                     this.editId = numId;
                     this.editMode = true;
                     this.title = 'Update Draft Note-Sheet (Ex-BD Leave)';

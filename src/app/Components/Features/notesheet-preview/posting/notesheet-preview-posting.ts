@@ -1933,6 +1933,14 @@ html, body { margin: 0; padding: 0; background: transparent; }
     color: #000 !important;
 }
 
+/* Note + main text paragraph gap — mirror the component SCSS (.ns-note /
+   .ns-para-text ::ng-deep p): each Quill Enter is a <p> whose margin opens too wide
+   a blank line. Pinned to 0.2em so the exported PDF matches the on-screen preview. */
+.pdf-flow .ns-note p,
+.pdf-flow .ns-para-text p {
+    margin: 0 0 0.2em !important;
+}
+
 /* .ns-doc-box draws its own border that the frame replaces. */
 .pdf-flow .ns-doc-box { border: none !important; }
 

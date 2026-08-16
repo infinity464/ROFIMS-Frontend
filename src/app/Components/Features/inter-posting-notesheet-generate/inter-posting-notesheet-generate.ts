@@ -31,7 +31,7 @@ import { DraftInterPostingDetailDto, DraftInterPostingMasterDto } from '@/models
 import { IdentityUserMappingService } from '@/services/identity-user-mapping.service';
 import { NoteSheetEditCacheService } from '@/services/note-sheet-edit-cache.service';
 import { NoteSheetType, NoteSheetOperationType, NoteSheetOperationTypeOptions, ApprovalStatus, CodeType } from '@/models/enums';
-import { encodeNoteSheetId } from '@/shared/utils/notesheet-id-codec';
+import { encodeNoteSheetId, decodeNoteSheetId } from '@/shared/utils/notesheet-id-codec';
 import { MasterBasicSetupService } from '@/Components/basic-setup/shared/services/MasterBasicSetupService';
 import { NoteSheetSubjectService, NoteSheetSubjectModel } from '@/Components/basic-setup/shared/services/NoteSheetSubjectService';
 import { NotesheetApproverSelectComponent } from '@/Components/Common/notesheet-approver-select/notesheet-approver-select';
@@ -164,7 +164,8 @@ export class InterPostingNotesheetGenerateComponent implements OnInit {
         this.loadSubjectPickList();
 
         this.form.get('textType')!.valueChanges.subscribe(() => {
-            this.form.get('noteSheetNumberConfigId')?.setValue(null);
+            // In edit mode the config that generated the note-sheet no is locked; don't clear it.
+            if (!this.editMode) this.form.get('noteSheetNumberConfigId')?.setValue(null);
             this.rebuildConfigOptions();
             this.buildSubjectOptions();
         });
@@ -177,8 +178,8 @@ export class InterPostingNotesheetGenerateComponent implements OnInit {
         this.route.queryParams.pipe(take(1)).subscribe((params) => {
             const id = params['id'];
             if (id != null && id !== '') {
-                const numId = Number(id);
-                if (!isNaN(numId) && numId > 0) {
+                const numId = decodeNoteSheetId(id);
+                if (numId != null && numId > 0) {
                     this.editId = numId;
                     this.editMode = true;
                     this.title = 'Update Inter Posting Note-Sheet';
@@ -421,6 +422,7 @@ export class InterPostingNotesheetGenerateComponent implements OnInit {
         this.form.patchValue({
             draftPostingMasterId: d.draftPostingMasterId ?? d.DraftPostingMasterId ?? null,
             textType: (d.textType ?? d.TextType) === 1 ? 'bn' : 'en',
+            noteSheetNumberConfigId: d.noteSheetNumberConfigId ?? d.NoteSheetNumberConfigId ?? null,
             noteSheetNo: String(d.noteSheetNo ?? d.NoteSheetNo ?? ''),
             noteSheetDate,
             referenceNumber: String(d.referenceNumber ?? d.ReferenceNumber ?? ''),
@@ -435,6 +437,10 @@ export class InterPostingNotesheetGenerateComponent implements OnInit {
             noteSheetOperationType: d.noteSheetOperationType ?? d.NoteSheetOperationType ?? null,
             isSecret: !!(d.isSecret ?? d.IsSecret ?? false)
         });
+
+        // The note-sheet number was already generated from this config; lock it as read-only in edit mode.
+        // (Disabled controls are still included via form.getRawValue() in buildPayload.)
+        if (this.editMode) this.form.get('noteSheetNumberConfigId')?.disable();
 
         const filesReferences = d.filesReferences ?? d.FilesReferences;
         if (filesReferences && typeof filesReferences === 'string') {
@@ -619,7 +625,10 @@ export class InterPostingNotesheetGenerateComponent implements OnInit {
         const preparedBy = (d.preparedBy && String(d.preparedBy).trim()) || 'system';
         const createdBy = this.editMode && this.originalCreatedBy ? this.originalCreatedBy : preparedBy;
         const subject = (d.subject && String(d.subject).trim()) || this.originalSubject || null;
-        const noteSheetNo = 'AUTO';
+        // Create: 'AUTO' tells the backend to generate the number from the config.
+        // Update: keep the number already generated at creation (never regenerate).
+        const existingNoteSheetNo = String(d.noteSheetNo ?? '').trim();
+        const noteSheetNo = this.editMode && existingNoteSheetNo ? existingNoteSheetNo : 'AUTO';
         const recommenderIds: number[] = Array.isArray(d.recommenderIds) ? d.recommenderIds : [];
         const recommendersJson = recommenderIds.length
             ? JSON.stringify(recommenderIds.map((id: number, idx: number) => ({

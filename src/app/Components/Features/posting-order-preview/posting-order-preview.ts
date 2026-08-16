@@ -2110,7 +2110,7 @@ html, body { margin: 0; padding: 0; background: transparent; }
 .pdf-flow .po-doc-master-remarks,
 .pdf-flow .po-doc-master-remarks * {
     font-size: calc(10pt + var(--ns-fs-delta, 0) * 1pt);
-    line-height: 1.8;
+    line-height: 1.25;
 }
 
 /* ── অনুলিপি block ──────────────────────────────────────────────────────────

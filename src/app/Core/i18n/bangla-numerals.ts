@@ -117,3 +117,9 @@ export function formatDateEnglish(date: Date | null | undefined): string {
   if (!date || isNaN(date.getTime())) return '';
   return `${ENGLISH_MONTHS[date.getMonth()]} ${date.getDate()}, ${date.getFullYear()}`;
 }
+
+/** "10 October 2026" — day, month name, year, no comma (day-month-year order). */
+export function formatDateEnglishDMY(date: Date | null | undefined): string {
+  if (!date || isNaN(date.getTime())) return '';
+  return `${date.getDate()} ${ENGLISH_MONTHS[date.getMonth()]} ${date.getFullYear()}`;
+}

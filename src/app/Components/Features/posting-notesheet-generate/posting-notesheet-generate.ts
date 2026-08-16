@@ -31,7 +31,7 @@ import { DraftPostingDetailDto, DraftPostingMasterDto } from '@/models/posting.m
 import { IdentityUserMappingService } from '@/services/identity-user-mapping.service';
 import { NoteSheetEditCacheService } from '@/services/note-sheet-edit-cache.service';
 import { NoteSheetType, NoteSheetOperationType, NoteSheetOperationTypeOptions, ApprovalStatus, CodeType } from '@/models/enums';
-import { encodeNoteSheetId } from '@/shared/utils/notesheet-id-codec';
+import { encodeNoteSheetId, decodeNoteSheetId } from '@/shared/utils/notesheet-id-codec';
 import { BanglaNumerals } from '@/Core/i18n/bangla-numerals';
 import { MasterBasicSetupService } from '@/Components/basic-setup/shared/services/MasterBasicSetupService';
 import { NoteSheetSubjectService, NoteSheetSubjectModel } from '@/Components/basic-setup/shared/services/NoteSheetSubjectService';
@@ -170,8 +170,8 @@ export class PostingNotesheetGenerateComponent implements OnInit {
         this.route.queryParams.pipe(take(1)).subscribe((params) => {
             const id = params['id'];
             if (id != null && id !== '') {
-                const numId = Number(id);
-                if (!isNaN(numId) && numId > 0) {
+                const numId = decodeNoteSheetId(id);
+                if (numId != null && numId > 0) {
                     this.editId = numId;
                     this.editMode = true;
                     this.title = 'Update New Posting Note-Sheet';
