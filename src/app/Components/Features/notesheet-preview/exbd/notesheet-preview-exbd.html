@@ -104,14 +104,14 @@
 
                     <!-- Title INSIDE the border -->
                     <div class="ns-title-area">
-                        <div class="ns-title-en" style="font-size:calc(13pt + var(--ns-fs-delta, 0) * 1pt); text-decoration:underline; font-weight:bold;">NOTE SHEET</div>
-                        <div class="ns-title-bn" style="font-size:calc(13pt + var(--ns-fs-delta, 0) * 1pt); text-decoration:underline; font-weight:bold;">মন্তব্য পত্র</div>
+                        <div class="ns-title-en" style="font-size:calc(13pt + var(--ns-fs-delta, 0) * 1pt); text-decoration:underline; text-underline-offset:2px; font-weight:bold;">NOTE SHEET</div>
+                        <div class="ns-title-bn" style="font-size:calc(13pt + var(--ns-fs-delta, 0) * 1pt); text-decoration:underline; text-underline-offset:2px; font-weight:bold;">মন্তব্য পত্র</div>
                     </div>
 
                     <!-- Org header — both lines underlined -->
-                    <div class="ns-org-header" style="text-align:center; padding:2px 16px 4px; font-weight:700; font-size:calc(11pt + var(--ns-fs-delta, 0) * 1pt); line-height:1.3;">
-                        <div><span style="display:inline-block; border-bottom:1.5px solid #000; padding-bottom:2px;">{{ getOrgHeaderLine1() }}</span></div>
-                        <div><span style="display:inline-block; border-bottom:1.5px solid #000; padding-bottom:2px;">{{ getOrgHeaderLine2() }}</span></div>
+                    <div class="ns-org-header" style="text-align:center; padding:8px 16px 4px; font-weight:700; font-size:calc(11pt + var(--ns-fs-delta, 0) * 1pt); line-height:1.5;">
+                        <div><span style="display:inline-block; text-decoration:underline; text-underline-offset:2px; text-decoration-skip-ink:none;">{{ getOrgHeaderLine1() }}</span></div>
+                        <div><span style="display:inline-block; text-decoration:underline; text-underline-offset:2px; text-decoration-skip-ink:none;">{{ getOrgHeaderLine2() }}</span></div>
                     </div>
 
                     <div class="ns-edit-field">
@@ -246,26 +246,26 @@
 
                 <!-- Title INSIDE the border -->
                 <div class="ns-title-area">
-                    <div class="ns-title-en" style="font-size:calc(13pt + var(--ns-fs-delta, 0) * 1pt); text-decoration:underline; font-weight:bold;">NOTE SHEET</div>
-                    <div class="ns-title-bn" style="font-size:calc(13pt + var(--ns-fs-delta, 0) * 1pt); text-decoration:underline; font-weight:bold;">মন্তব্য পত্র</div>
+                    <div class="ns-title-en" style="font-size:calc(13pt + var(--ns-fs-delta, 0) * 1pt); text-decoration:underline; text-underline-offset:2px; font-weight:bold;">NOTE SHEET</div>
+                    <div class="ns-title-bn" style="font-size:calc(13pt + var(--ns-fs-delta, 0) * 1pt); text-decoration:underline; text-underline-offset:2px; font-weight:bold;">মন্তব্য পত্র</div>
                 </div>
 
                 <!-- Org header — both lines underlined -->
-                <div class="ns-org-header" style="text-align:center; padding:2px 16px 4px; font-weight:700; font-size:calc(11pt + var(--ns-fs-delta, 0) * 1pt); line-height:1.3;">
-                    <div><span style="display:inline-block; border-bottom:1.5px solid #000; padding-bottom:2px;">{{ getOrgHeaderLine1() }}</span></div>
-                    <div><span style="display:inline-block; border-bottom:1.5px solid #000; padding-bottom:2px;">{{ getOrgHeaderLine2() }}</span></div>
+                <div class="ns-org-header" style="text-align:center; padding:8px 16px 4px; font-weight:700; font-size:calc(11pt + var(--ns-fs-delta, 0) * 1pt); line-height:1.5;">
+                    <div><span style="display:inline-block; text-decoration:underline; text-underline-offset:2px; text-decoration-skip-ink:none;">{{ getOrgHeaderLine1() }}</span></div>
+                    <div><span style="display:inline-block; text-decoration:underline; text-underline-offset:2px; text-decoration-skip-ink:none;">{{ getOrgHeaderLine2() }}</span></div>
                 </div>
 
                 <!-- ── Notesheet No & Date ── -->
-                <div style="display:flex; justify-content:space-between; padding:4px 2px 2px; font-size:calc(12pt + var(--ns-fs-delta, 0) * 1pt);">
+                <div style="display:flex; justify-content:space-between; align-items:baseline; padding:4px 8px 2px; font-size:calc(12pt + var(--ns-fs-delta, 0) * 1pt);">
                     <span *ngIf="noteSheet.noteSheetNo">{{ noteSheet.noteSheetNo }}</span>
                     <span *ngIf="!noteSheet.noteSheetNo"></span>
                     <span *ngIf="noteSheet.noteSheetDate">{{ isEnglish() ? 'Date:' : 'তারিখ :' }} {{ formatDate(noteSheet.noteSheetDate) }}</span>
                 </div>
 
                 <!-- ── Subject ── -->
-                <div *ngIf="getSubjectLabel(noteSheet.exBdLeaveSubjectId) || noteSheet.subject" style="padding:2px 2px 4px; font-size:calc(12pt + var(--ns-fs-delta, 0) * 1pt);">
-                    <strong><u style="text-underline-offset:2px; text-decoration-skip-ink:none;">{{ getSubjectLabel(noteSheet.exBdLeaveSubjectId) || noteSheet.subject }}</u></strong>
+                <div *ngIf="getSubjectLabel(noteSheet.exBdLeaveSubjectId) || noteSheet.subject" style="margin-top:5px; padding:2px 8px 4px; font-size:calc(12pt + var(--ns-fs-delta, 0) * 1pt);">
+                    <strong><u style="text-underline-offset:3px; text-decoration-skip-ink:none;">{{ getSubjectLabel(noteSheet.exBdLeaveSubjectId) || noteSheet.subject }}</u></strong>
                 </div>
 
                 <!-- ── Reference ── -->

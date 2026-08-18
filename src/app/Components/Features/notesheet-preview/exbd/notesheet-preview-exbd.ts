@@ -1132,9 +1132,10 @@ html, body { margin: 0; padding: 0; background: transparent; }
    (.ns-title-*) keeps its own inline size, so it is unaffected. */
 .pdf-flow .ns-para, .pdf-flow .ns-para-no,
 .pdf-flow .ns-cell-ref, .pdf-flow .ns-note,
-.pdf-flow .ns-approver-role, .pdf-flow .ns-approver-left, .pdf-flow .ns-approver-remark,
+.pdf-flow .ns-approver-role, .pdf-flow .ns-approver-left, .pdf-flow .ns-approver-remark { font-size: calc(12pt + var(--ns-fs-delta, 0) * 1pt); }
+/* Signature block sits one point above the 12pt body — mirrors the screen rule in notesheet-preview-exbd.scss. */
 .pdf-flow .ns-sig-name, .pdf-flow .ns-sig-rank, .pdf-flow .ns-sig-paren,
-.pdf-flow .ns-sig-appoint, .pdf-flow .ns-sig-date { font-size: calc(12pt + var(--ns-fs-delta, 0) * 1pt); }
+.pdf-flow .ns-sig-appoint, .pdf-flow .ns-sig-date { font-size: calc(13pt + var(--ns-fs-delta, 0) * 1pt); }
 
 /* Rich-text main text carries the editor's own sizes (ql-size-*, h1/h2) and its
    own inline line-height through the innerHTML snapshot — pin both to the body
@@ -1153,10 +1154,9 @@ html, body { margin: 0; padding: 0; background: transparent; }
    \`.ns-para\` rule in notesheet-preview-exbd.scss). */
 .pdf-flow .ns-para { line-height: 1.25; }
 
-/* Match the five blank body lines between approver signatures in the screen
-   preview. The final approver keeps the normal bottom padding to avoid an empty
-   overflow page. */
-.pdf-flow .ns-approver-section:not(:last-child) { padding-bottom: calc(24px + 6.25em); }
+/* Inter-approver spacing copied from the Posting notesheet preview — 5/8/12/10
+   padding, 45px reserve — mirrors the :host .ns-approver-section rule in the SCSS. */
+.pdf-flow .ns-approver-section { padding: 5px 8px 12px 10px; min-height: 45px; }
 
 /* Push the approver-role underline below the Bangla descenders so it stays one
    continuous line (mirrors the :host .ns-approver-role rule in the SCSS). */

@@ -872,6 +872,12 @@ html, body { margin: 0; padding: 0; background: transparent; }
 .oo-doc-rich-content p { margin: 4px 0; text-align: justify; }
 .oo-doc-rich-content--inline { display: inline; }
 .oo-doc-rich-content--inline p:first-child { display: inline; }
+/* Address To block (non-inline rich content): single (1) line spacing to match the
+   web preview. The :host-scoped SCSS rule can't reach this standalone PDF HTML, so the
+   address would otherwise inherit .pdf-flow's 1.7 — restate 1 here. The body is
+   --inline and is excluded, keeping its own spacing. */
+.oo-doc-rich-content:not(.oo-doc-rich-content--inline),
+.oo-doc-rich-content:not(.oo-doc-rich-content--inline) * { line-height: 1; }
 </style>
 </head>
 <body>

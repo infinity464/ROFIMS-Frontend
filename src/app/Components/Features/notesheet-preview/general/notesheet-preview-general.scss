@@ -47,18 +47,29 @@
     font-weight: normal;
 }
 
-/* Signature block: one size larger (9pt → 10pt) and bold. */
+/* Signature block: one size larger (9pt → 10pt), not bold. */
 .ns-sig-name,
 .ns-sig-rank,
 .ns-sig-appoint,
 .ns-sig-date {
     font-size: 10pt;
-    font-weight: 700;
+    font-weight: normal;
 }
 
-/* Note has no serial — give it a left gap so it lines up with the members table. */
+/* Reference label (সূত্রঃ / Reference:) not bold — overrides shared notesheet-preview.scss. */
+.ns-ref-key {
+    font-weight: normal;
+}
+
+/* Members table: align its left edge with the body paragraphs (১।/ক।) instead of
+   the shared 16px Word-style indent. Loaded after notesheet-preview.scss, so it wins. */
+.ns-members-preview-table {
+    margin-left: 1px;
+}
+
+/* Note has no serial — keep it on the same left edge as the members table/paragraphs. */
 .ns-note-para {
-    padding-left: 16px;
+    padding-left: 1px;
 }
 
 /* Small left/right gap so the content doesn't touch the page's inner border. */

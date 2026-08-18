@@ -246,6 +246,12 @@ $doc-block-gap: 6px;
         text-align: left;
     }
 
+    /* Serial (ক্রমিক) column stays centered — the left-align default above would
+       otherwise win over the template's .text-center utility on higher specificity. */
+    td.text-center {
+        text-align: center;
+    }
+
     th {
         font-weight: 700;      /* header bold */
         background: transparent;

@@ -625,7 +625,7 @@ html, body { margin: 0; padding: 0; background: transparent; }
             const d = new Date(value);
             if (isNaN(d.getTime())) return String(value);
             const locale = this.isEnglish() ? 'en-GB' : 'bn-BD';
-            return d.toLocaleDateString(locale, { day: '2-digit', month: 'short', year: 'numeric' });
+            return d.toLocaleDateString(locale, { day: '2-digit', month: 'long', year: 'numeric' });
         } catch { return String(value); }
     }
 

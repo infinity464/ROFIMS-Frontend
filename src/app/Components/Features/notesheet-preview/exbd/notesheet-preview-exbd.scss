@@ -81,12 +81,16 @@
     .ns-note,
     .ns-approver-role,
     .ns-approver-left,
-    .ns-approver-remark,
+    .ns-approver-remark { font-size: fs(12); }
+
+    /* Signature block (name / rank / appointment / date) sits one point above the
+       12pt body so the signatory line reads a touch larger than the note text.
+       The PDF mirrors this in buildJsReportPdf() (`.pdf-flow .ns-sig-*`). */
     .ns-sig-name,
     .ns-sig-rank,
     .ns-sig-paren,
     .ns-sig-appoint,
-    .ns-sig-date { font-size: fs(12); }
+    .ns-sig-date { font-size: fs(13); }
 
     /* The real body line gap. The shared sheet pins `.ns-para { line-height: 1.85 }`
        (notesheet-preview.scss) — and because `.ns-para` is the block that lays out
@@ -121,11 +125,16 @@
     margin-top: 2.5em;
 }
 
-/* Leave five blank body lines after each approver's signature block before the
-   next numbered approver section begins. Do not add the extra trailing gap after
-   the final approver, because that empty space can spill into a blank page. */
-:host .ns-approver-section:not(:last-child) {
-    padding-bottom: calc(24px + 6.25em);
+/* Inter-approver spacing copied from the Posting notesheet preview
+   (notesheet-preview-posting.scss): the same 5/8/12/10 padding and 45px reserve,
+   so the gap after each approver's signature block reads identical to the posting
+   sheet instead of the previous five-blank-line signing gap. The 12px bottom is
+   small enough that the final approver no longer needs the `:not(:last-child)`
+   exception to avoid a blank overflow page. Mirrored for the PDF in
+   buildJsReportPdf(). */
+:host .ns-approver-section {
+    padding: 5px 8px 12px 10px;
+    min-height: 45px;
 }
 
 /* ── Approver-role underline (this screen only) ────

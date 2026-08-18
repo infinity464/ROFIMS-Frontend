@@ -2113,6 +2113,19 @@ html, body { margin: 0; padding: 0; background: transparent; }
     line-height: 1.25;
 }
 
+/* The same ":host ::ng-deep" rule also justifies these blocks and their <p>. That
+   host selector can't match in this snapshot either (see above), so restate the
+   alignment — otherwise the note reads left-aligned/ragged in the PDF while the
+   screen shows it justified. */
+.pdf-flow .po-doc-posting-text,
+.pdf-flow .po-doc-sub-text,
+.pdf-flow .po-doc-master-remarks,
+.pdf-flow .po-doc-posting-text p,
+.pdf-flow .po-doc-sub-text p,
+.pdf-flow .po-doc-master-remarks p {
+    text-align: justify;
+}
+
 /* ── অনুলিপি block ──────────────────────────────────────────────────────────
    The list is one table row per line so it can break across pages, in three parts:
    the opening block (স্বাক্ষরিত/- signature + head + line ১) prints as a unit so the

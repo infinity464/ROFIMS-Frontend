@@ -1114,12 +1114,23 @@ export class NotesheetPreviewPostingComponent extends NotesheetPreviewBase imple
 
             let nextBreak = cursor + currentPageH;
 
-            // Step 1: Keep-together — push break before any block that straddles
+            // Step 1: Keep-together — push break before any block that straddles.
+            //
+            // STRADDLE_EPS guards a false cascade: the employee table is border-collapse,
+            // so consecutive rows share a border and row N's bottom equals row N+1's top —
+            // but sub-pixel rounding leaves it a fraction GREATER. Without the epsilon, once
+            // the tail block moves the break to the last row's top, `block.bottom > nextBreak`
+            // then reads the row just above as "straddling" (its bottom is that top + 0.x),
+            // pushes the break up to it, and repeats row by row up the table — stranding
+            // several rows on the next page with a large gap on this one (seen at some font
+            // deltas, e.g. -0.75). A block whose bottom sits within a pixel of the break ends
+            // AT the break — a clean boundary, not a straddle — so it must not push.
+            const STRADDLE_EPS = 1;
             let adjusted = true;
             while (adjusted) {
                 adjusted = false;
                 for (const block of keepTogether) {
-                    if (block.top > cursor && block.top < nextBreak && block.bottom > nextBreak) {
+                    if (block.top > cursor && block.top < nextBreak && block.bottom > nextBreak + STRADDLE_EPS) {
                         nextBreak = block.top;
                         adjusted = true;
                         break;
