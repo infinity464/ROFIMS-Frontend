@@ -1315,8 +1315,27 @@ export class NotesheetPreviewPostingComponent extends NotesheetPreviewBase imple
     getTransferUnitShort(emp: DraftPostingEmployeeRow): string {
         const full = this.isEnglish() ? emp.transferRabUnitName || '' : emp.transferRabUnitNameBN || emp.transferRabUnitName || '';
         if (!full) return '';
-        const parts = full.split(',');
-        return parts[parts.length - 1].trim();
+        const parts = full
+            .split(',')
+            .map((part) => part.trim())
+            .filter(Boolean);
+
+        // Headquarters destinations are more useful at wing/branch level than as
+        // only the deepest hierarchy node: "Admin Wing (General Branch)".  Keep
+        // the existing deepest-node display for every non-HQ unit.
+        if (this.isRabHeadquarters(parts[0] || '')) {
+            const wing = parts[1] || parts[0];
+            const branch = parts[2];
+            return branch ? `${wing} (${branch})` : wing;
+        }
+
+        return parts[parts.length - 1] || '';
+    }
+
+    /** Match both Bangla HQ names and common English forms such as RAB HQ. */
+    private isRabHeadquarters(name: string): boolean {
+        const normalized = (name || '').replace(/[\u200B-\u200D\uFEFF]/g, '').trim();
+        return normalized.includes('সদর দপ্তর') || /head\s*quarters?/i.test(normalized) || /\bHQ\b/i.test(normalized);
     }
 
     getCombinedRemarks(emp: DraftPostingEmployeeRow): string {

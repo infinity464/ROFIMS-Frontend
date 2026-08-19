@@ -445,11 +445,12 @@
             <col style="width: 80px" />
             <!-- ব্যক্তিগত নং -->
             <col />
-            <!-- পদবি (auto — absorbs balance so table stays 100%) -->
+            <!-- পদবি (auto — its balance stays unchanged when ট্রেড is hidden because
+                 the freed 56px is reassigned to নাম and বদলিকৃত কর্মস্থল below) -->
             <col *ngIf="showTradeColumn" style="width: 56px" />
             <!-- ট্রেড (same width as the new-posting table's) -->
-            <col [style.width]="showTenure ? '82px' : '130px'" />
-            <!-- নাম (tenure লুকালে চওড়া) -->
+            <col [style.width]="showTenure ? (showTradeColumn ? '82px' : '115.6px') : (showTradeColumn ? '130px' : '163.6px')" />
+            <!-- নাম (ট্রেড লুকালে তার 56px-এর 60% = 33.6px পায়) -->
             <col style="width: 48px" />
             <!-- নিজ জেলা -->
             <col style="width: 56px" />
@@ -464,8 +465,8 @@
             <!-- দিন -->
             <col [style.width]="showTenure ? '85px' : '125px'" />
             <!-- পূর্ববতী কর্মস্থল (tenure লুকালে চওড়া) -->
-            <col [style.width]="showTenure ? '48px' : '90px'" />
-            <!-- বদলিকৃত কর্মস্থল (tenure লুকালে চওড়া) -->
+            <col [style.width]="showTenure ? (showTradeColumn ? '48px' : '70.4px') : (showTradeColumn ? '90px' : '112.4px')" />
+            <!-- বদলিকৃত কর্মস্থল (ট্রেড লুকালে তার 56px-এর 40% = 22.4px পায়) -->
             <col *ngIf="showRemarks" style="width: 58px" />
             <!-- মন্তব্য (ছোট করা; পদবি auto বাকি জায়গা পায়) -->
         </colgroup>
@@ -798,7 +799,7 @@
                 <td>{{ emp.motherUnitName || '-' }}</td>
                 <td>{{ emp.permanentDistrictName || '-' }}</td>
                 <td>{{ emp.motherOrgLocationName || '-' }}</td>
-                <td>{{ isEnglish() ? (emp.transferRabUnitName || '-') : (emp.transferRabUnitNameBN || emp.transferRabUnitName || '-') }}</td>
+                <td>{{ getTransferUnitShort(emp) || '-' }}</td>
                 <td>{{ getCombinedRemarks(emp) || '-' }}</td>
             </tr>
         </ng-template>
