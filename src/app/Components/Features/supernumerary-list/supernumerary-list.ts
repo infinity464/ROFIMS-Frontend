@@ -6,6 +6,7 @@ import { UserMenuService } from '@/services/user-menu.service';
 import { TableModule } from 'primeng/table';
 import { ButtonModule } from 'primeng/button';
 import { SelectModule } from 'primeng/select';
+import { MultiSelectModule } from 'primeng/multiselect';
 import { InputTextModule } from 'primeng/inputtext';
 import { DatePickerModule } from 'primeng/datepicker';
 import { CheckboxModule } from 'primeng/checkbox';
@@ -43,7 +44,7 @@ interface Article47TakeoverEmployee {
 @Component({
     selector: 'app-supernumerary-list',
     standalone: true,
-    imports: [CommonModule, FormsModule, RouterModule, TableModule, ButtonModule, SelectModule, InputTextModule, DatePickerModule, CheckboxModule, Toast, TooltipModule, FlexibleDateDirective, DialogModule, Article47TakeoverBulkComponent],
+    imports: [CommonModule, FormsModule, RouterModule, TableModule, ButtonModule, SelectModule, MultiSelectModule, InputTextModule, DatePickerModule, CheckboxModule, Toast, TooltipModule, FlexibleDateDirective, DialogModule, Article47TakeoverBulkComponent],
     providers: [MessageService],
     templateUrl: './supernumerary-list.html',
     styleUrls: ['../employee-reports/report-theme-common.scss', './supernumerary-list.scss'],
@@ -62,7 +63,7 @@ export class SupernumeraryList implements OnInit {
     orgOptions: MotherOrganizationModel[] = [];
     selectedOrgId: number | null = null;
     memberTypeOptions: { label: string; value: number }[] = [];
-    selectedMemberTypeId: number | null = null;
+    selectedMemberTypeIds: number[] = [];
 
     /** CodeIds of Member Types the current user is allowed to use. `null` means "not yet loaded" (fail-open). */
     private allowedMemberTypeIds: number[] | null = null;
@@ -141,7 +142,7 @@ export class SupernumeraryList implements OnInit {
                     value: c.codeId
                 }));
                 if (memberTypeIdFromRoute > 0) {
-                    this.selectedMemberTypeId = memberTypeIdFromRoute;
+                    this.selectedMemberTypeIds = [memberTypeIdFromRoute];
                     this.rebuildRankOptions();
                     if (this.orgOptions.length > 0) {
                         this.loadData();
@@ -218,16 +219,18 @@ export class SupernumeraryList implements OnInit {
 
     /** Member Type change: validate access, refilter ranks, then reload list. */
     onMemberTypeChange(): void {
-        const codeId = this.selectedMemberTypeId;
-        if (codeId != null && this.allowedMemberTypeIds !== null && !this.allowedMemberTypeIds.includes(codeId)) {
-            const typeName = this.memberTypeOptions?.find((m) => m.value === codeId)?.label ?? 'this member type';
+        const unauthorizedId = this.allowedMemberTypeIds === null
+            ? null
+            : this.selectedMemberTypeIds.find((id) => !this.allowedMemberTypeIds!.includes(id));
+        if (unauthorizedId != null) {
+            const typeName = this.memberTypeOptions?.find((m) => m.value === unauthorizedId)?.label ?? 'this member type';
             this.messageService.add({
                 severity: 'warn',
                 summary: 'No Permission',
                 detail: `You do not have permission to use ${typeName}.`,
                 life: 6000
             });
-            this.selectedMemberTypeId = null;
+            this.selectedMemberTypeIds = this.selectedMemberTypeIds.filter((id) => id !== unauthorizedId);
             return;
         }
         // Re-narrow the rank dropdown by the new Member Type (uses the cached
@@ -243,10 +246,10 @@ export class SupernumeraryList implements OnInit {
      * currently-selected rank if it isn't in the new option set.
      */
     private rebuildRankOptions(): void {
-        const memberTypeId = this.selectedMemberTypeId;
-        const filtered = memberTypeId == null
+        const memberTypeIds = this.selectedMemberTypeIds;
+        const filtered = memberTypeIds.length === 0
             ? this.allOrgRanks
-            : this.allOrgRanks.filter((c) => c.parentCodeId === memberTypeId);
+            : this.allOrgRanks.filter((c) => c.parentCodeId != null && memberTypeIds.includes(c.parentCodeId));
 
         this.rankOptions = filtered.map((c) => ({
             label: c.codeValueEN || String(c.codeId),
@@ -328,7 +331,7 @@ export class SupernumeraryList implements OnInit {
     get activeFilterCount(): number {
         let n = 0;
         if (this.selectedOrgId != null) n++;
-        if (this.selectedMemberTypeId != null) n++;
+        if (this.selectedMemberTypeIds.length > 0) n++;
         if (this.selectedRankId != null) n++;
         if (this.selectedTradeId != null) n++;
         if (this.joiningDateFrom != null) n++;
@@ -343,7 +346,7 @@ export class SupernumeraryList implements OnInit {
 
     clearFilters(): void {
         this.selectedOrgId = null;
-        this.selectedMemberTypeId = null;
+        this.selectedMemberTypeIds = [];
         this.rankOptions = [];
         this.selectedRankId = null;
         this.tradeOptions = [];
@@ -363,7 +366,7 @@ export class SupernumeraryList implements OnInit {
         this.loading = true;
         const request: GetSupernumeraryListRequest = {
             orgIds: this.selectedOrgId != null ? [this.selectedOrgId] : undefined,
-            memberTypeId: this.selectedMemberTypeId ?? undefined,
+            memberTypeIds: this.selectedMemberTypeIds.length > 0 ? this.selectedMemberTypeIds : undefined,
             rankId: this.selectedRankId ?? undefined,
             tradeId: this.selectedTradeId ?? undefined,
             joiningDateFrom: this.toDateString(this.joiningDateFrom),

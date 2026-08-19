@@ -49,17 +49,19 @@
                     </div>
                     <div class="report-filter-field">
                         <label>Member Type</label>
-                        <p-select
+                        <p-multiSelect
                             id="memberType"
                             [options]="memberTypeOptions"
-                            [(ngModel)]="selectedMemberTypeId"
+                            [(ngModel)]="selectedMemberTypeIds"
                             (ngModelChange)="onMemberTypeChange()"
                             optionLabel="label"
                             optionValue="value"
+                            display="chip"
                             placeholder="Select"
                             styleClass="w-full"
+                            [filter]="true"
                             appendTo="body">
-                        </p-select>
+                        </p-multiSelect>
                     </div>
                     <div class="report-filter-field">
                         <label>Rank</label>

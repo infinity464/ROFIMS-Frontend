@@ -994,8 +994,13 @@ export class PostingOrderPreviewPageComponent implements OnInit {
     empTransferUnit(emp: PostingOrderEmployeeRow): string {
         const full = (this.isBangla ? (emp.transferRabUnitNameBN || emp.transferRabUnitName) : emp.transferRabUnitName) || '';
         if (!full) return '-';
-        const parts = full.split(',');
-        return parts[parts.length - 1].trim();
+        const parts = full.split(',').map((part) => part.trim()).filter(Boolean);
+        if (emp.transferIsHq === true || this.isRabHq(parts[0] || '')) {
+            const wing = parts[1] || parts[0];
+            const branch = parts[2];
+            return branch ? `${wing} (${branch})` : wing;
+        }
+        return parts[parts.length - 1] || '-';
     }
 
     empRabId(emp: PostingOrderEmployeeRow): string {

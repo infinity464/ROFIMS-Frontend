@@ -1320,13 +1320,10 @@ export class NotesheetPreviewPostingComponent extends NotesheetPreviewBase imple
             .map((part) => part.trim())
             .filter(Boolean);
 
-        // Headquarters destinations are more useful at wing/branch level than as
-        // only the deepest hierarchy node: "Admin Wing (General Branch)".  Keep
-        // the existing deepest-node display for every non-HQ unit.
+        // Headquarters destinations display only the wing name.
         if (this.isRabHeadquarters(parts[0] || '')) {
             const wing = parts[1] || parts[0];
-            const branch = parts[2];
-            return branch ? `${wing} (${branch})` : wing;
+            return wing;
         }
 
         return parts[parts.length - 1] || '';
