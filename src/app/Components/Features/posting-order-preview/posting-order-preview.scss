@@ -336,13 +336,21 @@ $doc-block-gap: 6px;
 /* ── Signature Block ──────────────────────────────── */
 .po-doc-signature {
     margin-left: auto;
-    width: 20%;
+    width: max-content;
+    min-width: 20%;
     text-align: left;
     line-height: 1.2;
     font-size: fs(10);
     div {
         margin-bottom: 0px;
         font-size: fs(10);
+    }
+
+    /* Keep long identity lines intact. Because this block is right-anchored by
+       margin-left: auto, any extra width is taken from its left side. */
+    div:nth-child(2),
+    div:nth-child(4) {
+        white-space: nowrap;
     }
 }
 
@@ -456,7 +464,8 @@ $doc-block-gap: 6px;
         position: absolute;
         right: 0;
         bottom: 0;
-        width: 100%;
+        width: max-content;
+        min-width: 100%;
     }
 }
 
@@ -485,9 +494,13 @@ $doc-block-gap: 6px;
     .sig-name {
         font-weight: 600;
         font-size: fs(10);
+        white-space: nowrap;
     }
     .sig-rank, .sig-appointment {
         font-size: fs(10);
+    }
+    .sig-appointment {
+        white-space: nowrap;
     }
 }
 

@@ -650,14 +650,14 @@ export class OfficeOrderExBdLeavePreviewComponent implements OnInit {
                 // The label→value gap keeps the same single tab (serialTab) used by the serialed list.
                 children.push(new Paragraph({
                     children: [
-                        new TextRun({ text: this.isBangla ? 'সূত্র:\t' : 'Reference:\t', font, size: contentSize, bold: true }),
+                        new TextRun({ text: this.isBangla ? 'সূত্র:\t' : 'Reference:\t', font, size: contentSize }),
                         new TextRun({ text: this.referenceEntries[0].text, font, size: contentSize })
                     ],
                     tabStops: serialTab,
                     spacing: { before: 80, after: 60 }
                 }));
             } else {
-                children.push(new Paragraph({ children: [new TextRun({ text: this.isBangla ? 'সূত্র:' : 'Reference:', font, size: contentSize, bold: true })], spacing: { before: 80, after: 0 } }));
+                children.push(new Paragraph({ children: [new TextRun({ text: this.isBangla ? 'সূত্র:' : 'Reference:', font, size: contentSize })], spacing: { before: 80, after: 0 } }));
                 for (const ref of this.referenceEntries) {
                     children.push(new Paragraph({ children: [new TextRun({ text: `${ref.serial}।\t${ref.text}`, font, size: contentSize })], tabStops: serialTab, spacing: { after: 20 } }));
                 }

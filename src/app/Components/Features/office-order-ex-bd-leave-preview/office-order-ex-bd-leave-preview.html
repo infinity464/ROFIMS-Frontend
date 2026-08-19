@@ -183,12 +183,12 @@
                     <!-- Single reference: label and value on the SAME line (সূত্র: 1234567890),
                          no ক। serial — a serial only makes sense with two or more entries. -->
                     <ng-container *ngIf="referenceEntries.length === 1; else refMulti">
-                        <span class="oo-doc-section-label">{{ isBangla ? 'সূত্র:' : 'Reference:' }}</span>
+                        <span class="oo-doc-section-label oo-doc-reference-label">{{ isBangla ? 'সূত্র:' : 'Reference:' }}</span>
                         <span class="oo-ref-inline">{{ referenceEntries[0].text }}</span>
                     </ng-container>
                     <!-- Two or more: label on its own line, serialed (ক।/খ।/…) list below. -->
                     <ng-template #refMulti>
-                        <div class="oo-doc-section-label">{{ isBangla ? 'সূত্র:' : 'Reference:' }}</div>
+                        <div class="oo-doc-section-label oo-doc-reference-label">{{ isBangla ? 'সূত্র:' : 'Reference:' }}</div>
                         <div class="oo-doc-list">
                             <p *ngFor="let ref of referenceEntries"><span class="oo-ref-serial">{{ ref.serial }}।</span>{{ ref.text }}</p>
                         </div>

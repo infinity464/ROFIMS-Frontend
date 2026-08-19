@@ -330,7 +330,7 @@ export class ClearanceExBdLeavePreviewComponent implements OnInit {
     }
 
     private buildMembersTable(columns: any[], rows: Record<string, string>[], font: string): Table {
-        const tableFontSize = 14;
+        const tableFontSize = 16;
         const borderStyle = { style: BorderStyle.SINGLE, size: 1, color: '000000' };
         const borders = { top: borderStyle, bottom: borderStyle, left: borderStyle, right: borderStyle, insideHorizontal: borderStyle, insideVertical: borderStyle };
         const colWidths = this.calcColumnWidthsDxa(columns, rows);
@@ -374,8 +374,9 @@ export class ClearanceExBdLeavePreviewComponent implements OnInit {
     private async buildWordDocument(): Promise<Document> {
         if (!this.order) throw new Error('No order loaded');
         const font = 'Times New Roman';
-        const titleSize = 20;    // 10pt — government header (same size as body, bold)
-        const contentSize = 20;  // 10pt — all body content (uniform)
+        const titleSize = 22;    // 11pt — government header (same size as body, bold)
+        const contentSize = 22;  // 11pt — all body content (uniform)
+        const signatureSize = 20; // 10pt — signature section only
         const children: (Paragraph | Table)[] = [];
         const pageSize = this.selectedPageSize === 'legal'
             ? { width: 12240, height: 20160 }
@@ -502,15 +503,15 @@ export class ClearanceExBdLeavePreviewComponent implements OnInit {
 
         if (this.order.approvalEmployeeName) {
             const sigIndent = 8500;
-            children.push(new Paragraph({ text: '', spacing: { before: 400 } }));
-            children.push(new Paragraph({ children: [new TextRun({ text: this.order.approvalEmployeeName, font, size: contentSize, bold: true })], alignment: AlignmentType.LEFT, indent: { left: sigIndent } }));
+            children.push(new Paragraph({ text: '', spacing: { before: 615 } }));
+            children.push(new Paragraph({ children: [new TextRun({ text: this.order.approvalEmployeeName, font, size: signatureSize, bold: true })], alignment: AlignmentType.LEFT, indent: { left: sigIndent } }));
             if (this.order.approvalEmployeeRank) {
-                children.push(new Paragraph({ children: [new TextRun({ text: this.order.approvalEmployeeRank, font, size: contentSize })], alignment: AlignmentType.LEFT, indent: { left: sigIndent } }));
+                children.push(new Paragraph({ children: [new TextRun({ text: this.order.approvalEmployeeRank, font, size: signatureSize })], alignment: AlignmentType.LEFT, indent: { left: sigIndent } }));
             }
             if (this.order.approvalEmployeeAppointment) {
-                children.push(new Paragraph({ children: [new TextRun({ text: this.order.approvalEmployeeAppointment, font, size: contentSize })], alignment: AlignmentType.LEFT, indent: { left: sigIndent } }));
+                children.push(new Paragraph({ children: [new TextRun({ text: this.order.approvalEmployeeAppointment, font, size: signatureSize })], alignment: AlignmentType.LEFT, indent: { left: sigIndent } }));
             }
-            children.push(new Paragraph({ children: [new TextRun({ text: 'For Director General', font, size: contentSize })], alignment: AlignmentType.LEFT, indent: { left: sigIndent } }));
+            children.push(new Paragraph({ children: [new TextRun({ text: 'For Director General', font, size: signatureSize })], alignment: AlignmentType.LEFT, indent: { left: sigIndent } }));
         }
 
         return new Document({ sections: [{ properties: { page: { size: pageSize, margin: { top: 720, bottom: 720, left: 1152, right: 576 } } }, children }] });
@@ -585,7 +586,7 @@ html, body { margin: 0; padding: 0; background: transparent; }
     box-sizing: border-box;
     width: ${colWidth};
     font-family: 'Times New Roman', 'SolaimanLipi', Times, serif;
-    font-size: 10pt;
+    font-size: 11pt;
     line-height: 1.7;
     color: #000;
 }
