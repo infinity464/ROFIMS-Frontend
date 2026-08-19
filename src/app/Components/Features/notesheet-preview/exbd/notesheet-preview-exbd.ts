@@ -1154,9 +1154,10 @@ html, body { margin: 0; padding: 0; background: transparent; }
    \`.ns-para\` rule in notesheet-preview-exbd.scss). */
 .pdf-flow .ns-para { line-height: 1.25; }
 
-/* Inter-approver spacing copied from the Posting notesheet preview — 5/8/12/10
-   padding, 45px reserve — mirrors the :host .ns-approver-section rule in the SCSS. */
-.pdf-flow .ns-approver-section { padding: 5px 8px 12px 10px; min-height: 45px; }
+/* Match the five blank body lines between approver signatures in the screen
+   preview. The final approver keeps the normal bottom padding to avoid an empty
+   overflow page. */
+.pdf-flow .ns-approver-section:not(:last-child) { padding-bottom: calc(24px + 6.25em); }
 
 /* Push the approver-role underline below the Bangla descenders so it stays one
    continuous line (mirrors the :host .ns-approver-role rule in the SCSS). */

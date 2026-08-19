@@ -125,16 +125,11 @@
     margin-top: 2.5em;
 }
 
-/* Inter-approver spacing copied from the Posting notesheet preview
-   (notesheet-preview-posting.scss): the same 5/8/12/10 padding and 45px reserve,
-   so the gap after each approver's signature block reads identical to the posting
-   sheet instead of the previous five-blank-line signing gap. The 12px bottom is
-   small enough that the final approver no longer needs the `:not(:last-child)`
-   exception to avoid a blank overflow page. Mirrored for the PDF in
-   buildJsReportPdf(). */
-:host .ns-approver-section {
-    padding: 5px 8px 12px 10px;
-    min-height: 45px;
+/* Leave five blank body lines after each approver's signature block before the
+   next numbered approver section begins. Do not add the extra trailing gap after
+   the final approver, because that empty space can spill into a blank page. */
+:host .ns-approver-section:not(:last-child) {
+    padding-bottom: calc(24px + 6.25em);
 }
 
 /* ── Approver-role underline (this screen only) ────

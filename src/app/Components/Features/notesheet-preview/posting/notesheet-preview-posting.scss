@@ -67,6 +67,13 @@
     }
 }
 
+/* Match the Ex-BD notesheet: leave five blank body lines after each approver's
+   signature block, but not after the final approver. This selector covers both
+   new-posting and inter-posting previews. */
+.ns-approver-section:not(:last-child) {
+    padding-bottom: calc(24px + 6.25em);
+}
+
 /* ── Page margins: identical to the PDF / Print Preview ──
    buildJsReportPdf() prints with @page margins of 7mm top / 5mm side / 10mm
    bottom, and the page frame is drawn on that margin box. The on-screen sheet

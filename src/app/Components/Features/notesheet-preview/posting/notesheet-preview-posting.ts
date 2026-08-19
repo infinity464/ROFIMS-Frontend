@@ -1952,6 +1952,12 @@ html, body { margin: 0; padding: 0; background: transparent; }
     margin: 0 0 0.2em !important;
 }
 
+/* Match the screen and Ex-BD preview: five blank body lines between approver
+   signature sections for both new posting and inter posting. */
+.pdf-flow .ns-approver-section:not(:last-child) {
+    padding-bottom: calc(24px + 6.25em);
+}
+
 /* .ns-doc-box draws its own border that the frame replaces. */
 .pdf-flow .ns-doc-box { border: none !important; }
 
