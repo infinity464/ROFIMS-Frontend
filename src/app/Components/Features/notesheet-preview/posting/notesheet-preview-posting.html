@@ -446,17 +446,19 @@
             <!-- ব্যক্তিগত নং -->
             <col />
             <!-- পদবি (auto — its balance stays unchanged when ট্রেড is hidden because
-                 the freed 56px is reassigned to নাম and বদলিকৃত কর্মস্থল below) -->
+                 the freed 56px is reassigned to নাম, যোগদানের তারিখ and
+                 বদলিকৃত কর্মস্থল below) -->
             <col *ngIf="showTradeColumn" style="width: 56px" />
             <!-- ট্রেড (same width as the new-posting table's) -->
-            <col [style.width]="showTenure ? (showTradeColumn ? '82px' : '115.6px') : (showTradeColumn ? '130px' : '163.6px')" />
-            <!-- নাম (ট্রেড লুকালে তার 56px-এর 60% = 33.6px পায়) -->
+            <col [style.width]="showTenure ? (showTradeColumn ? '82px' : '112.8px') : (showTradeColumn ? '130px' : '163.6px')" />
+            <!-- নাম (ট্রেড লুকালে তার 56px-এর 55% = 30.8px পায়;
+                 অবস্থানকালও লুকানো থাকলে যোগদানের তারিখের 5% এটিই পায়) -->
             <col style="width: 48px" />
             <!-- নিজ জেলা -->
             <col style="width: 56px" />
             <!-- স্বামী/স্ত্রীর জেলা -->
-            <col *ngIf="showTenure" style="width: 64px" />
-            <!-- যোগদানের তারিখ (ছোট করা) -->
+            <col *ngIf="showTenure" [style.width]="showTradeColumn ? '64px' : '66.8px'" />
+            <!-- যোগদানের তারিখ (ট্রেড লুকালে তার 56px-এর 5% = 2.8px পায়) -->
             <col *ngIf="showTenure" style="width: 32px" />
             <!-- বছর -->
             <col *ngIf="showTenure" style="width: 24px" />
