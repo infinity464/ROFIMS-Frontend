@@ -988,6 +988,7 @@ export class NotesheetPreviewPostingComponent extends NotesheetPreviewBase imple
     private calculatePageOffsets(measuredHeight: number): number[] {
         const container = this.contentMeasure?.nativeElement;
         const pageH = this.pageContentHeightPx;
+        this.tailStartsNewPage = false;
         if (!container || pageH <= 0) {
             this.pageNeedsTableHeader = [false];
             return [0];
@@ -1069,12 +1070,10 @@ export class NotesheetPreviewPostingComponent extends NotesheetPreviewBase imple
         }
         const startsInTableBody = (pos: number): boolean => pos > tableBodyTop && pos < tableBodyBottom;
 
-        // Tail unit: the table's LAST row plus everything that trails it — the নোটঃ block,
-        // the paragraphs after the table, the initiator signature and the approver
-        // sections — must stay on one page. Registering it as a single keep-together
-        // block means that when the tail no longer fits, the break is pushed above the
-        // last row, so the row travels to the next page with the whole trailing section
-        // instead of that section being split across two pages.
+        // When there is no note text, keep the table's LAST row plus everything that
+        // trails it on one page. Registering this unit pushes a break above the last
+        // row when the tail does not fit. A populated note disables this special rule
+        // and lets the table and following content paginate normally.
         //
         // The unit runs to the end of the note-sheet, and its registered height is CLAMPED
         // to one page. A tail taller than a page can never satisfy a literal keep-together,
@@ -1084,7 +1083,7 @@ export class NotesheetPreviewPostingComponent extends NotesheetPreviewBase imple
         // remainder flows on normally from there.
         const lastRowEl = tbodyEl?.querySelector('tr:last-child') as HTMLElement | null;
         let lastRowTop = -1;
-        if (lastRowEl) {
+        if (lastRowEl && !this.hasNoteText()) {
             const tailEls = container.querySelectorAll('.ns-approver-section, .ns-initiator-area, .ns-para, .ns-note') as NodeListOf<HTMLElement>;
             const top = lastRowEl.getBoundingClientRect().top - containerTop;
             lastRowTop = top;
@@ -1167,7 +1166,7 @@ export class NotesheetPreviewPostingComponent extends NotesheetPreviewBase imple
         // Did the tail rule above actually move a break onto the last row? The PDF
         // flow reads this to decide whether to reproduce that break; it must not
         // split the table when the web view didn't.
-        this.tailStartsNewPage = lastRowTop >= 0 && offsets.some(o => Math.abs(o - lastRowTop) < 1);
+        this.tailStartsNewPage = lastRowTop >= 0 && offsets.some((o) => Math.abs(o - lastRowTop) < 1);
         return offsets;
     }
 
@@ -1333,6 +1332,15 @@ export class NotesheetPreviewPostingComponent extends NotesheetPreviewBase imple
     getNoteSafe(): SafeHtml {
         const raw = this.noteSheet?.note ?? '';
         return this.sanitizer.bypassSecurityTrustHtml(this.fixBanglaWordBreaks(raw));
+    }
+
+    /** Whether the rich-text note contains visible text (not just empty HTML). */
+    private hasNoteText(): boolean {
+        return (
+            this.stripHtml(this.noteSheet?.note ?? '')
+                .replace(/[\u200B-\u200D\uFEFF]/g, '')
+                .trim().length > 0
+        );
     }
 
     // NOTE: the auto "previous transfer order cancelled" note (getCancelledInterNote)
@@ -1731,9 +1739,9 @@ export class NotesheetPreviewPostingComponent extends NotesheetPreviewBase imple
     }
 
     /**
-     * Snapshot of the unpaginated content for the PDF flow, with everything that
-     * trails the employee table — the নোটঃ block, the paragraphs after it, the
-     * initiator signature and the approver sections — moved into one wrapper div.
+     * Snapshot of the unpaginated content for the PDF flow. When the note has no
+     * visible text, everything trailing the employee table is moved into one wrapper
+     * div so the PDF mirrors the web view's special last-row keep-together rule.
      *
      * The PDF is paginated by Chromium from this flat flow, not by
      * calculatePageOffsets, so the web view's keep-together rules do not apply
@@ -1751,6 +1759,8 @@ export class NotesheetPreviewPostingComponent extends NotesheetPreviewBase imple
      */
     private buildPdfBodyHtml(): string {
         const clone = this.contentMeasure.nativeElement.cloneNode(true) as HTMLElement;
+        if (this.hasNoteText()) return clone.innerHTML;
+
         const tableWrap = clone.querySelector('.ns-posting-table');
         const col = tableWrap?.parentElement;
         if (!tableWrap || !col) return clone.innerHTML;
