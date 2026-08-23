@@ -8,7 +8,10 @@
         <div>
             <h3 class="form-card-title">
                 <i class="pi pi-arrow-right-arrow-left" style="font-size:1.1rem"></i>
-                {{ isEditing ? 'Edit' : 'New' }} — Posted Out / New Posting Person
+                {{ isViewMode ? 'View' : isEditing ? 'Edit' : 'New' }} — Posted Out / New Posting Person
+                @if (isViewMode) {
+                    <span class="readonly-badge"><i class="pi pi-lock"></i> Read-only</span>
+                }
             </h3>
             <div style="font-size:0.8rem; color:var(--text-color-secondary); margin-top:0.2rem; padding-left:0.1rem;">
                 Permanent Posting (MO Change)
@@ -36,6 +39,12 @@
                 <span>Posted Out</span>
                 <p-button label="Clear" icon="pi pi-eraser" size="small" severity="secondary" [text]="true"
                     [style]="{'margin-left':'auto'}" (onClick)="clearPostedOutSection()"></p-button>
+                @if (isViewMode) {
+                    <p-button label="Edit" icon="pi pi-pencil" size="small"
+                        [style]="{'margin-left':'auto'}" [disabled]="!canUpdate"
+                        pTooltip="Unlock this saved entry for editing" tooltipPosition="top"
+                        (onClick)="enableEdit()"></p-button>
+                }
             </div>
 
             <!-- Search Row -->
@@ -50,7 +59,7 @@
                     <div style="display:flex; gap:0.5rem;">
                         <input pInputText class="w-full" [(ngModel)]="poSearchServiceId" placeholder="Service ID"
                             (keyup.enter)="searchPostedOut()" />
-                        <p-button icon="pi pi-search" [loading]="poSearching" (onClick)="searchPostedOut()"
+                        <p-button icon="pi pi-search" [loading]="poSearching || checkingExistingEntry" (onClick)="searchPostedOut()"
                             size="small" pTooltip="Search" tooltipPosition="top"></p-button>
                         <p-button icon="pi pi-times" severity="secondary" [outlined]="true"
                             (onClick)="clearPostedOutSection()" size="small" pTooltip="Clear" tooltipPosition="top"></p-button>
@@ -99,44 +108,44 @@
                         placeholder="Select posting unit" [filter]="true" filterBy="label"
                         [showClear]="true" class="w-full" appendTo="body"
                         [virtualScroll]="true" [virtualScrollItemSize]="38"
-                        [disabled]="!postingUnitOptions.length"></p-select>
+                        [disabled]="isViewMode || !postingUnitOptions.length"></p-select>
                 </div>
                 <div class="form-field form-field-half">
                     <label class="form-label">Posting Order No</label>
                     <input pInputText class="w-full" [(ngModel)]="postingOrderNo"
-                        placeholder="Enter posting order number" />
+                        placeholder="Enter posting order number" [readonly]="isViewMode" />
                 </div>
                 <div class="form-field form-field-half">
                     <label class="form-label">Posting Order Date</label>
-                    <p-datepicker [(ngModel)]="postingOrderDate" dateFormat="dd-mm-yy"
+                    <p-datepicker [(ngModel)]="postingOrderDate" dateFormat="dd-mm-yy" [disabled]="isViewMode"
                         placeholder="dd-mm-yyyy" appendTo="body" class="w-full" [inputStyle]="{'width':'100%'}"></p-datepicker>
                 </div>
                 <div class="form-field form-field-half">
                     <label class="form-label">Possible Release Date</label>
-                    <p-datepicker [(ngModel)]="possibleReleaseDate" dateFormat="dd-mm-yy"
+                    <p-datepicker [(ngModel)]="possibleReleaseDate" dateFormat="dd-mm-yy" [disabled]="isViewMode"
                         placeholder="dd-mm-yyyy" appendTo="body" class="w-full" [inputStyle]="{'width':'100%'}"></p-datepicker>
                 </div>
                 @if (isOfficer) {
                     <div class="form-field form-field-half">
                         <label class="form-label">Note-Sheet Clearance <span class="form-label-required">*</span></label>
-                        <p-select [options]="yesNoOptions" [(ngModel)]="noteSheetClearance"
+                        <p-select [options]="yesNoOptions" [(ngModel)]="noteSheetClearance" [disabled]="isViewMode"
                             optionLabel="label" optionValue="value"
                             placeholder="Select" [showClear]="true" class="w-full" appendTo="body"></p-select>
                     </div>
                     <div class="form-field form-field-half">
                         <label class="form-label">NS Clearance Date</label>
-                        <p-datepicker [(ngModel)]="nsClearanceDate" dateFormat="dd-mm-yy"
+                        <p-datepicker [(ngModel)]="nsClearanceDate" dateFormat="dd-mm-yy" [disabled]="isViewMode"
                             placeholder="dd-mm-yyyy" appendTo="body" class="w-full" [inputStyle]="{'width':'100%'}"></p-datepicker>
                     </div>
                     <div class="form-field form-field-half">
                         <label class="form-label">Clearance Given <span class="form-label-required">*</span></label>
-                        <p-select [options]="yesNoOptions" [(ngModel)]="clearanceGiven"
+                        <p-select [options]="yesNoOptions" [(ngModel)]="clearanceGiven" [disabled]="isViewMode"
                             optionLabel="label" optionValue="value"
                             placeholder="Select" [showClear]="true" class="w-full" appendTo="body"></p-select>
                     </div>
                     <div class="form-field form-field-half">
                         <label class="form-label">Clearance Given Date</label>
-                        <p-datepicker [(ngModel)]="clearanceGivenDate" dateFormat="dd-mm-yy"
+                        <p-datepicker [(ngModel)]="clearanceGivenDate" dateFormat="dd-mm-yy" [disabled]="isViewMode"
                             placeholder="dd-mm-yyyy" appendTo="body" class="w-full" [inputStyle]="{'width':'100%'}"></p-datepicker>
                     </div>
                 }
@@ -144,7 +153,7 @@
                     <label class="form-label">
                         Is Reliever Assigned? <span class="form-label-required">*</span>
                     </label>
-                    <p-select [options]="yesNoOptions" [(ngModel)]="isReliever"
+                    <p-select [options]="yesNoOptions" [(ngModel)]="isReliever" [disabled]="isViewMode"
                         optionLabel="label" optionValue="value"
                         placeholder="Select Yes / No" [showClear]="true"
                         class="w-full" appendTo="body"
@@ -155,8 +164,9 @@
                         <label class="form-label">Service ID <small class="text-500 font-normal">(search to auto-fill)</small></label>
                         <div style="display:flex; gap:0.5rem;">
                             <input pInputText class="w-full" [(ngModel)]="joineeSearchServiceId" placeholder="Enter Service ID"
-                                (keyup.enter)="searchJoinee()" />
-                            <p-button icon="pi pi-search" [loading]="joineeSearching" (onClick)="searchJoinee()"
+                                [readonly]="isViewMode" (keyup.enter)="searchJoinee()" />
+                            <p-button icon="pi pi-search" [loading]="joineeSearching" [disabled]="isViewMode"
+                                (onClick)="searchJoinee()"
                                 size="small" pTooltip="Search" tooltipPosition="top"></p-button>
                         </div>
                     </div>
@@ -165,7 +175,7 @@
                     <div class="form-field form-field-half">
                         <label class="form-label">Reason (No Reliever)</label>
                         <input pInputText class="w-full" [(ngModel)]="relieverNotGivenReason"
-                            placeholder="Enter reason" />
+                            placeholder="Enter reason" [readonly]="isViewMode" />
                     </div>
                 }
             </div>
@@ -174,6 +184,7 @@
             <app-file-references-form
                 #poFileForm
                 [fileRows]="postingOrderFileRows"
+                [isViewMode]="isViewMode"
                 title="Posting Order Copy"
                 (fileRowsChange)="onPOFileRowsChange($event)"
                 (onDownloadFile)="onDownloadFile($event)">
@@ -194,14 +205,14 @@
                     <i class="pi pi-user-plus"></i>
                     <span>New Posting Person</span>
                     <p-button label="Clear" icon="pi pi-eraser" size="small" severity="secondary" [text]="true"
-                        [style]="{'margin-left':'auto'}" (onClick)="clearJoineeSection()"></p-button>
+                        [disabled]="isViewMode" [style]="{'margin-left':'auto'}" (onClick)="clearJoineeSection()"></p-button>
                     <p-button icon="pi pi-eye-slash" size="small" [rounded]="true"
                         pTooltip="Hide" tooltipPosition="top" (onClick)="joineeCollapsed = true"></p-button>
                 </div>
             <div class="form-row">
                 <div class="form-field">
                     <label class="form-label">Mother Org <span class="form-label-required">*</span></label>
-                    <p-select [options]="motherOrgOptions" [(ngModel)]="joineeMotherOrgId"
+                    <p-select [options]="motherOrgOptions" [(ngModel)]="joineeMotherOrgId" [disabled]="isViewMode"
                         optionLabel="label" optionValue="value"
                         placeholder="Select mother org" [filter]="true" filterBy="label"
                         [showClear]="true" class="w-full" appendTo="body"
@@ -213,14 +224,14 @@
                         optionLabel="label" optionValue="value"
                         placeholder="Select unit" [filter]="true" filterBy="label"
                         [showClear]="true" class="w-full" appendTo="body"
-                        [disabled]="!motherOrgUnitOptions.length"></p-select>
+                        [disabled]="isViewMode || !motherOrgUnitOptions.length"></p-select>
                 </div>
             </div>
 
             <div class="form-row">
                 <div class="form-field">
                     <label class="form-label">Member Type</label>
-                    <p-select [options]="memberTypeOptions" [(ngModel)]="joineeMemberType"
+                    <p-select [options]="memberTypeOptions" [(ngModel)]="joineeMemberType" [disabled]="isViewMode"
                         optionLabel="label" optionValue="value"
                         placeholder="Select member type"
                         [showClear]="true" class="w-full" appendTo="body"
@@ -232,7 +243,7 @@
                         optionLabel="label" optionValue="value"
                         placeholder="Select rank" [filter]="true" filterBy="label"
                         [showClear]="true" class="w-full" appendTo="body"
-                        [disabled]="!rankOptions.length"></p-select>
+                        [disabled]="isViewMode || !rankOptions.length"></p-select>
                 </div>
             </div>
 
@@ -243,7 +254,7 @@
                         optionLabel="label" optionValue="value"
                         placeholder="Select Corps"
                         [showClear]="true" class="w-full" appendTo="body"
-                        [disabled]="!corpsOptions.length"
+                        [disabled]="isViewMode || !corpsOptions.length"
                         (onChange)="onCorpsChange($event.value)"></p-select>
                 </div>
                 <div class="form-field">
@@ -252,7 +263,7 @@
                         optionLabel="label" optionValue="value"
                         placeholder="Select trade"
                         [showClear]="true" class="w-full" appendTo="body"
-                        [disabled]="!tradeOptions.length"></p-select>
+                        [disabled]="isViewMode || !tradeOptions.length"></p-select>
                 </div>
             </div>
 
@@ -263,12 +274,12 @@
                         optionLabel="label" optionValue="value"
                         placeholder="Select prefix"
                         [showClear]="true" class="w-full" appendTo="body"
-                        [disabled]="!prefixOptions.length"></p-select>
+                        [disabled]="isViewMode || !prefixOptions.length"></p-select>
                 </div>
                 <div class="form-field">
                     <label class="form-label">Service ID <span class="form-label-required">*</span></label>
                     <input pInputText class="w-full" [(ngModel)]="joineeServiceId"
-                        placeholder="Service ID" />
+                        placeholder="Service ID" [readonly]="isViewMode" />
                 </div>
             </div>
 
@@ -276,24 +287,24 @@
                 <div class="form-field">
                     <label class="form-label">Name (Bangla) <span class="form-label-required">*</span></label>
                     <input pInputText class="w-full" [(ngModel)]="joineeNameBangla"
-                        placeholder="নাম বাংলায়" />
+                        placeholder="নাম বাংলায়" [readonly]="isViewMode" />
                 </div>
                 <div class="form-field">
                     <label class="form-label">Joining Order No</label>
                     <input pInputText class="w-full" [(ngModel)]="joineeJoiningOrderNo"
-                        placeholder="Joining order number" />
+                        placeholder="Joining order number" [readonly]="isViewMode" />
                 </div>
             </div>
 
             <div class="form-row">
                 <div class="form-field">
                     <label class="form-label">Joining Order Date</label>
-                    <p-datepicker [(ngModel)]="joineeJoiningOrderDate" dateFormat="dd-mm-yy"
+                    <p-datepicker [(ngModel)]="joineeJoiningOrderDate" dateFormat="dd-mm-yy" [disabled]="isViewMode"
                         placeholder="dd-mm-yyyy" appendTo="body" class="w-full" [inputStyle]="{'width':'100%'}"></p-datepicker>
                 </div>
                 <div class="form-field">
                     <label class="form-label">Possible Joining Date</label>
-                    <p-datepicker [(ngModel)]="joineePossibleJoiningDate" dateFormat="dd-mm-yy"
+                    <p-datepicker [(ngModel)]="joineePossibleJoiningDate" dateFormat="dd-mm-yy" [disabled]="isViewMode"
                         placeholder="dd-mm-yyyy" appendTo="body" class="w-full" [inputStyle]="{'width':'100%'}"></p-datepicker>
                 </div>
             </div>
@@ -302,6 +313,7 @@
             <app-file-references-form
                 #joFileForm
                 [fileRows]="joineeFileRows"
+                [isViewMode]="isViewMode"
                 title="Joining Order Copy"
                 (fileRowsChange)="onJOFileRowsChange($event)"
                 (onDownloadFile)="onDownloadFile($event)">
@@ -321,8 +333,10 @@
             <p-button label="Cancel" icon="pi pi-times" severity="secondary"
                 [outlined]="true" styleClass="form-btn-secondary" (onClick)="onCancel()"></p-button>
         }
-        <p-button [label]="isEditing ? 'Update' : 'Save'" icon="pi pi-save"
-            [loading]="saving" styleClass="form-btn-primary" (onClick)="onSave()"></p-button>
+        @if (!isViewMode) {
+            <p-button [label]="isEditing ? 'Update' : 'Save'" icon="pi pi-save"
+                [loading]="saving" styleClass="form-btn-primary" (onClick)="onSave()"></p-button>
+        }
     </div>
 </div>
 

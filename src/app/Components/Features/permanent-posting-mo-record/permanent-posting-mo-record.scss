@@ -23,6 +23,25 @@
   }
 }
 
+// Marks the form as a saved record loaded read-only by a repeat member search.
+.readonly-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  margin-left: 0.6rem;
+  padding: 0.1rem 0.55rem;
+  border-radius: 999px;
+  background: var(--orange-100, #ffedd5);
+  color: var(--orange-700, #c2410c);
+  font-size: 0.7rem;
+  font-weight: 700;
+  vertical-align: middle;
+
+  i {
+    font-size: 0.7rem;
+  }
+}
+
 .col-panel {
   border: 1px solid var(--surface-border, #dee2e6);
   border-radius: 0.75rem;

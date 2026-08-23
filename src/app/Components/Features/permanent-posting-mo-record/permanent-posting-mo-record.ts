@@ -61,11 +61,19 @@ export class PermanentPostingMORecordComponent implements OnInit {
     editDetailId: number | null = null;
     saving = false;
 
+    /** Repeat entry: the searched member already had a saved record, so it was loaded
+     *  read-only. "Edit" unlocks the form; searching another member discards it. */
+    isViewMode = false;
+    loadedFromSearch = false;
+    checkingExistingEntry = false;
+
     // Posted Out employee
     postedOutEmployee: EmployeeBasicInfo | null = null;
     editPostedOutEmployeeId: number | null = null;
     isOfficer = false;
     postedOutRabUnitName = '';
+    /** Ex-members never auto-load their old record — they always start a fresh entry. */
+    postedOutIsExMember = false;
 
     // Posted Out inline search
     poSearchRabId = '';
@@ -325,6 +333,7 @@ export class PermanentPostingMORecordComponent implements OnInit {
         this.postedOutEmployee = null;
         this.isOfficer = false;
         this.postedOutRabUnitName = '';
+        this.postedOutIsExMember = false;
         this.postingUnitOptions = [];
         this.postingUnitId = null;
     }
@@ -426,6 +435,15 @@ export class PermanentPostingMORecordComponent implements OnInit {
             this.messageService.add({ severity: 'warn', summary: 'Warning', detail: 'Please enter RAB ID or Service ID' });
             return;
         }
+        // Searching a new member discards a record that a previous search auto-loaded,
+        // so the next save never overwrites someone else's row.
+        if (this.loadedFromSearch) {
+            const rabId = this.poSearchRabId, serviceId = this.poSearchServiceId;
+            this.resetForm();
+            this.poSearchRabId = rabId;
+            this.poSearchServiceId = serviceId;
+        }
+
         this.postedOutEmployee = null;
         this.showPoPickerDialog = false;
         this.poPickerRows = [];
@@ -471,6 +489,7 @@ export class PermanentPostingMORecordComponent implements OnInit {
         if (this.poSearchRabId && !this.poSearchServiceId) this.poSearchServiceId = info.serviceId || '';
         else if (this.poSearchServiceId && !this.poSearchRabId) this.poSearchRabId = info.rabid || '';
         this.postedOutEmployee = info;
+        this.postedOutIsExMember = (employee.PostingStatus ?? employee.postingStatus) === PostingStatus.ExMember;
         this.finalizePostedOut(employeeID);
     }
 
@@ -503,12 +522,51 @@ export class PermanentPostingMORecordComponent implements OnInit {
                 }
                 this.poSearching = false;
                 if (this.postedOutEmployee) this.onPostedOutFound(this.postedOutEmployee);
+                this.loadExistingEntryFor(employeeID);
             },
             error: () => {
                 this.poSearching = false;
                 if (this.postedOutEmployee) this.onPostedOutFound(this.postedOutEmployee);
+                this.loadExistingEntryFor(employeeID);
             }
         });
+    }
+
+    /**
+     * Second (and later) entry for the same member: pull the saved Posted Out record and
+     * show it read-only instead of starting a blank form. Skipped while an edit is already
+     * in progress (list / query-param edit, or a post-save reload) and for ex-members.
+     */
+    private loadExistingEntryFor(employeeId: number): void {
+        if (this.editId || this.editDetailId || this.isQueryParamEdit) return;
+        if (this.postedOutIsExMember) return;
+
+        this.checkingExistingEntry = true;
+        this.recordSvc.getEmployeeClearanceStatus(employeeId).pipe(
+            switchMap(st => (st?.hasPostedOut && st.postedOutId) ? this.recordSvc.getById(st.postedOutId) : of(null)),
+            catchError(() => of(null))
+        ).subscribe((record) => {
+            this.checkingExistingEntry = false;
+            // The user may have searched someone else while this was in flight.
+            if (!record || this.postedOutEmployee?.employeeID !== employeeId) return;
+            this.onEdit(record, true);
+            this.loadedFromSearch = true;
+            this.isViewMode = true;
+            this.messageService.add({
+                severity: 'info', summary: 'Existing Entry Loaded',
+                detail: 'This member already has a Posted Out entry. It is shown read-only — click Edit to change it.',
+                life: 6000
+            });
+        });
+    }
+
+    /** Unlock the read-only form loaded by a repeat search. */
+    enableEdit(): void {
+        if (!this.canUpdate) {
+            this.messageService.add({ severity: 'warn', summary: 'No Permission', detail: 'You do not have permission to update this record.' });
+            return;
+        }
+        this.isViewMode = false;
     }
 
     private buildPoPickerRows(employees: any[]): void {
@@ -600,6 +658,7 @@ export class PermanentPostingMORecordComponent implements OnInit {
                     };
                     this.poSearchRabId = this.postedOutEmployee.rabid || '';
                     this.poSearchServiceId = this.postedOutEmployee.serviceId || '';
+                    this.postedOutIsExMember = (employee.PostingStatus ?? employee.postingStatus) === PostingStatus.ExMember;
                     this.finalizePostedOut(employeeID);
                 } else {
                     this.poSearching = false;
@@ -795,6 +854,9 @@ export class PermanentPostingMORecordComponent implements OnInit {
     }
 
     clearPostedOutSection(): void {
+        // A record pulled in by a repeat search is discarded whole — clearing only the
+        // employee would leave the form bound to a row it no longer shows.
+        if (this.loadedFromSearch) { this.resetForm(); return; }
         this.poSearchRabId = '';
         this.poSearchServiceId = '';
         this.onPostedOutReset();
@@ -826,6 +888,8 @@ export class PermanentPostingMORecordComponent implements OnInit {
 
     // ── Save ────────────────────────────────────────────────────────
     onSave(): void {
+        if (this.isViewMode) return;
+
         // ── Validation ───────────────────────────────────────────
         const hasPostedOut = !!(this.postedOutEmployee || this.editId);
         const hasJoineeData = !!(this.joineeMotherOrgId || this.joineeServiceId?.trim() || this.joineeNameBangla?.trim());
@@ -964,14 +1028,21 @@ export class PermanentPostingMORecordComponent implements OnInit {
             const ok = res?.statusCode === 200;
             this.messageService.add({ severity: ok ? 'success' : 'warn', summary: 'Save', detail: ok ? 'Saved successfully.' : (res?.description ?? 'Save failed.') });
             if (ok) {
-                if (this.isQueryParamEdit) {
+                // Repeat-search entries fall back to read-only after saving, the same way
+                // query-param edits stay on the loaded record instead of clearing the form.
+                const backToView = this.loadedFromSearch;
+                if (this.isQueryParamEdit || backToView) {
                     // Stay in edit mode — reload the saved data
                     this.loadList();
                     this.loadJoineeList();
                     const recordId = res.data?.id ?? res.id ?? this.editId;
                     if (recordId) {
                         this.recordSvc.getById(recordId).subscribe({
-                            next: (record) => { if (record) this.onEdit(record); }
+                            next: (record) => {
+                                if (!record) return;
+                                this.onEdit(record, backToView);
+                                if (backToView) this.isViewMode = true;
+                            }
                         });
                     } else if (this.editDetailId) {
                         this.detailSvc.getAll().subscribe({
@@ -1031,7 +1102,8 @@ export class PermanentPostingMORecordComponent implements OnInit {
     }
 
     // ── Edit ────────────────────────────────────────────────────────
-    onEdit(row: PermanentPostingMORecordModel): void {
+    /** @param skipEmployeeLoad the posted-out employee is already loaded (repeat search / post-save reload). */
+    onEdit(row: PermanentPostingMORecordModel, skipEmployeeLoad = false): void {
         this.editId = row.id;
         this.editPostedOutEmployeeId = row.postedOutEmployeeId;
 
@@ -1039,7 +1111,7 @@ export class PermanentPostingMORecordComponent implements OnInit {
         const savedPostingUnitId = row.postingUnitId ?? null;
         this.postingUnitId = savedPostingUnitId;
 
-        if (row.postedOutEmployeeId) {
+        if (row.postedOutEmployeeId && !skipEmployeeLoad) {
             this.loadPostedOutEmployeeById(row.postedOutEmployeeId);
         }
 
@@ -1153,6 +1225,8 @@ export class PermanentPostingMORecordComponent implements OnInit {
 
     onEditJoinee(row: PermanentPostingJoineeDetailModel): void {
         this.joineeCollapsed = false;
+        this.isViewMode = false;
+        this.loadedFromSearch = false;
         this.editId = null;
         this.editDetailId = row.id;
         this.editPostedOutEmployeeId = null;
@@ -1257,8 +1331,9 @@ export class PermanentPostingMORecordComponent implements OnInit {
 
     resetForm(): void {
         this.editId = null; this.editDetailId = null;
+        this.isViewMode = false; this.loadedFromSearch = false; this.checkingExistingEntry = false;
         this.editPostedOutEmployeeId = null; this.editRelieverEmployeeId = null;
-        this.postedOutEmployee = null; this.isOfficer = false; this.postedOutRabUnitName = '';
+        this.postedOutEmployee = null; this.isOfficer = false; this.postedOutRabUnitName = ''; this.postedOutIsExMember = false;
         this.poSearchRabId = ''; this.poSearchServiceId = ''; this.poSearching = false;
         this.joineeSearchServiceId = ''; this.joineeSearching = false;
         this.postingUnitId = null; this.postingUnitOptions = [];
