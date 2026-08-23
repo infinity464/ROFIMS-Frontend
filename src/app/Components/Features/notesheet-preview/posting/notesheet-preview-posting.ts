@@ -1075,16 +1075,21 @@ export class NotesheetPreviewPostingComponent extends NotesheetPreviewBase imple
         // row when the tail does not fit. A populated note disables this special rule
         // and lets the table and following content paginate normally.
         //
-        // The unit runs to the end of the note-sheet, and its registered height is CLAMPED
-        // to one page. A tail taller than a page can never satisfy a literal keep-together,
-        // so an unclamped block would just be dropped and nothing would move; clamping keeps
-        // the rule active, because the goal is only to push the break above the last row so
-        // the tail restarts at the top of a fresh page with the most room available. Any
-        // remainder flows on normally from there.
+        // The unit ENDS at the initiator signature block: the approver sections below it
+        // are deliberately excluded, so their (tall, mostly blank) boxes cannot drag the
+        // break above the last row and cost a sheet. They paginate on their own, each held
+        // whole by its .ns-approver-section keep-together entry above — role title, serial,
+        // signature and date always land on one page.
+        //
+        // The unit's registered height is CLAMPED to one page. A tail taller than a page can
+        // never satisfy a literal keep-together, so an unclamped block would just be dropped
+        // and nothing would move; clamping keeps the rule active, because the goal is only to
+        // push the break above the last row so the tail restarts at the top of a fresh page
+        // with the most room available. Any remainder flows on normally from there.
         const lastRowEl = tbodyEl?.querySelector('tr:last-child') as HTMLElement | null;
         let lastRowTop = -1;
         if (lastRowEl && !this.hasNoteText()) {
-            const tailEls = container.querySelectorAll('.ns-approver-section, .ns-initiator-area, .ns-para, .ns-note') as NodeListOf<HTMLElement>;
+            const tailEls = container.querySelectorAll('.ns-initiator-area, .ns-para, .ns-note') as NodeListOf<HTMLElement>;
             const top = lastRowEl.getBoundingClientRect().top - containerTop;
             lastRowTop = top;
             let tailBottom = top;
@@ -1756,8 +1761,12 @@ export class NotesheetPreviewPostingComponent extends NotesheetPreviewBase imple
 
     /**
      * Snapshot of the unpaginated content for the PDF flow. When the note has no
-     * visible text, everything trailing the employee table is moved into one wrapper
-     * div so the PDF mirrors the web view's special last-row keep-together rule.
+     * visible text, the content trailing the employee table — up to and INCLUDING the
+     * initiator signature block — is moved into one wrapper div so the PDF mirrors the
+     * web view's special last-row keep-together rule. The approver sections stay behind
+     * as siblings of that wrapper: they are outside the rule (matching
+     * calculatePageOffsets) and each is already held whole by `break-inside: avoid` on
+     * .ns-approver-section, so a role title never parts from its signature and date.
      *
      * The PDF is paginated by Chromium from this flat flow, not by
      * calculatePageOffsets, so the web view's keep-together rules do not apply
@@ -1783,12 +1792,16 @@ export class NotesheetPreviewPostingComponent extends NotesheetPreviewBase imple
 
         const tail = document.createElement('div');
         tail.className = 'ns-tail-keep';
+        // Stop at the initiator signature block — the approver sections after it are not
+        // part of the keep-together unit. Missing (older markup): fall back to the whole tail.
+        const stopAfter = clone.querySelector('.ns-initiator-area');
         // appendChild moves the node, so cache the next sibling before each move.
         let node = tableWrap.nextSibling;
         while (node) {
             const next = node.nextSibling;
+            const isLast = node === stopAfter;
             tail.appendChild(node);
-            node = next;
+            node = isLast ? null : next;
         }
 
         const srcTable = tableWrap.querySelector('table');
@@ -1828,7 +1841,9 @@ export class NotesheetPreviewPostingComponent extends NotesheetPreviewBase imple
             tail.className += ' ns-tail-keep--page';
         }
 
-        if (tail.childNodes.length > 0) col.appendChild(tail);
+        // Back into the flow where the moved nodes were: directly after the table, ahead of
+        // the approver sections left behind (nextSibling is null when none remain → append).
+        if (tail.childNodes.length > 0) col.insertBefore(tail, tableWrap.nextSibling);
         return clone.innerHTML;
     }
 
@@ -1993,13 +2008,17 @@ html, body { margin: 0; padding: 0; background: transparent; }
 .ns-org-header,
 .ns-title-block { page-break-inside: avoid; break-inside: avoid; }
 
-/* The whole block after the employee table (নোটঃ, the paragraphs, the initiator
-   signature, the approver sections) — plus the table's last row, re-emitted by
+/* The block after the employee table up to the initiator signature (নোটঃ, the
+   paragraphs, the signature) — plus the table's last row, re-emitted by
    buildPdfBodyHtml() as a one-row .ns-tail-row-table — is wrapped in a single
    .ns-tail-keep box, so Chromium moves the lot to the next page intact instead of
    splitting it. That matches the web view, where calculatePageOffsets pushes the
    break above the last row. Chromium drops break-inside on a box taller than the
    printable area, so an over-long tail still fragments as it does today.
+
+   The approver sections BELOW the signature are deliberately left outside the box:
+   they are excluded from the rule (same as the web view), and each carries its own
+   break-inside: avoid so it stays whole on one page.
 
    The head/foot gap margin cancellations above compensate for the repeated
    thead/tfoot of a table Chromium fragments across pages. The one-row table is

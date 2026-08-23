@@ -1163,9 +1163,14 @@ html, body { margin: 0; padding: 0; background: transparent; }
    continuous line (mirrors the :host .ns-approver-role rule in the SCSS). */
 .pdf-flow .ns-approver-role { text-underline-offset: 4px; text-decoration-skip-ink: none; }
 
+/* Keep each block whole on one page — the approver sections included, so a role
+   title never parts from its signature and date (mirrors the keepTogether list in
+   calculatePageOffsets, which does the same for the on-screen preview). */
 .ns-posting-table tr,
+.ns-approver-section,
+.ns-initiator-area,
 .ns-org-header,
-.ns-title-block { page-break-inside: avoid; }
+.ns-title-block { page-break-inside: avoid; break-inside: avoid; }
 </style>
 </head>
 <body>
@@ -1818,9 +1823,12 @@ html, body { margin: 0; padding: 0; background: transparent; }
         const firstPageH = pageH - this.titleBlockHeightPx;
         if (totalHeight <= firstPageH + this.titleBlockHeightPx) return [this.titleBlockHeightPx];
 
+        // Blocks that must not be split across pages. Each .ns-approver-section is one
+        // unit — role title, serial, signature and date always land on the same page, and
+        // the section moves down whole rather than parting from its heading.
         const keepTogether = Array.from(
             container.querySelectorAll(
-                '.ns-title-block, .ns-title-area, .ns-org-header, .ns-note, .ns-initiator-area'
+                '.ns-title-block, .ns-title-area, .ns-org-header, .ns-note, .ns-initiator-area, .ns-approver-section'
             ) as NodeListOf<HTMLElement>
         ).map(el => {
             const rect = el.getBoundingClientRect();
