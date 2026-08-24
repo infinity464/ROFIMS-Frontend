@@ -549,6 +549,41 @@ export class ExMemberProfile implements OnInit, OnDestroy {
         return this.profileLang === 'bn';
     }
 
+    /**
+     * Clearance chip key. Once the clearance note-sheet exists the chip tracks that
+     * workflow, so it stays labelled "Clearance". At the posted-out step there is no
+     * note-sheet yet — the chip names that step instead, because its value then carries
+     * the posting unit rather than a status word.
+     */
+    get clearanceChipKey(): string {
+        return this.isPostedOutOnly ? this.L['clearance.postedOut'] : this.L['clearance.label'];
+    }
+
+    /**
+     * Clearance chip value: the workflow status, except at the posted-out step where it
+     * reads "<posted unit> (<possible release date>)" — both from the member's latest
+     * Permanent Posting (MO Change) record.
+     */
+    get clearanceChipValue(): string {
+        const c = this.clearanceStatus;
+        if (!c) return '';
+        if (c.clearanceCancelled) return this.L['clearance.cancelled'];
+        if (c.clearanceApproved) return this.L['clearance.generated'];
+        if (c.hasClearanceNoteSheet) return this.L['clearance.noteSheet'];
+
+        const unit = this.codeValue(c.postedUnit, c.postedUnitBN);
+        const date = c.possibleReleaseDate ? this.formatDateOnly(c.possibleReleaseDate) : '-';
+        // A posted-out record with neither unit nor date still needs to say something.
+        if (unit === '-') return date === '-' ? this.L['clearance.postedOut'] : `${this.L['clearance.postedOut']} (${date})`;
+        return date === '-' ? unit : `${unit} (${date})`;
+    }
+
+    /** True at the posted-out step — a posted-out record exists but no clearance note-sheet yet. */
+    private get isPostedOutOnly(): boolean {
+        const c = this.clearanceStatus;
+        return !!c && !c.hasClearanceNoteSheet && !c.clearanceApproved && !c.clearanceCancelled;
+    }
+
     get translatedPresentStatus(): string | null {
         if (!this.activePresentStatus) return null;
         const key = `presentStatus.${this.activePresentStatus}` as ProfileLabelKey;

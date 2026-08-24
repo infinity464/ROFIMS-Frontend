@@ -129,6 +129,13 @@ export interface EmployeeClearanceStatus {
     employeeId: number;
     hasPostedOut: boolean;
     postedOutId: number | null;
+    /** MotherOrg.OrgId the member was posted to. */
+    postingUnitId: number | null;
+    /** Unit the member was posted to, from the posted-out record. */
+    postedUnit: string | null;
+    postedUnitBN: string | null;
+    /** Expected release date from the posted-out record (yyyy-MM-dd). */
+    possibleReleaseDate: string | null;
     hasClearanceNoteSheet: boolean;
     clearanceNoteSheetId: number | null;
     clearanceNoteSheetNo: string | null;
