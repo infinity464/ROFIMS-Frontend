@@ -1,4 +1,4 @@
-import { Component, OnInit, ViewChild } from '@angular/core';
+import { Component, OnDestroy, OnInit, ViewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
@@ -18,6 +18,10 @@ import { EmployeeServiceOverview } from '@/models/employee-service-overview.mode
 import { IsSendingNotesheetStatus } from '@/models/enums';
 import { TagModule } from 'primeng/tag';
 import { FlexibleDateDirective } from '@/shared/directives/flexible-date.directive';
+import { Subject, Subscription } from 'rxjs';
+import { debounceTime, distinctUntilChanged } from 'rxjs/operators';
+import { IconField } from 'primeng/iconfield';
+import { InputIcon } from 'primeng/inputicon';
 
 export interface FilterModel {
     rabId: string;
@@ -49,12 +53,12 @@ interface CascadeOption {
 @Component({
     selector: 'app-presently-serving-members',
     standalone: true,
-    imports: [CommonModule, FormsModule, RouterModule, TableModule, ButtonModule, InputTextModule, SelectModule, DatePickerModule, FlexibleDateDirective, Toast, CheckboxModule, TagModule],
+    imports: [CommonModule, FormsModule, RouterModule, TableModule, ButtonModule, InputTextModule, SelectModule, DatePickerModule, FlexibleDateDirective, Toast, CheckboxModule, TagModule, IconField, InputIcon],
     providers: [MessageService],
     templateUrl: './presently-serving-members.html',
     styleUrls: ['../employee-reports/report-theme-common.scss', './presently-serving-members.scss'],
 })
-export class PresentlyServingMembers implements OnInit {
+export class PresentlyServingMembers implements OnInit, OnDestroy {
     @ViewChild('dt') table?: Table;
 
     list: EmployeeServiceOverview[] = [];
@@ -104,8 +108,17 @@ export class PresentlyServingMembers implements OnInit {
     /** Collapsible filter panel closed by default. */
     filterOpen = false;
 
-    /** Selected rows for inter posting */
-    selectedRows: EmployeeServiceOverview[] = [];
+    /**
+     * Selected rows for inter posting, keyed by employeeID.
+     *
+     * Selection is owned by this component rather than by p-table's [(selection)]:
+     * the table is lazy, so its built-in header checkbox reasons about only the rows
+     * it currently holds and cannot distinguish "this page" from "everything selected
+     * so far". Keeping a map here makes both rules explicit — the header checkbox
+     * touches only the current page, and picks made on other pages / other searches
+     * survive because they are keyed by id, not by row object identity.
+     */
+    private selectedMap = new Map<number, EmployeeServiceOverview>();
     savingInterPosting = false;
     canInsert = true;
     canUpdate = true;
@@ -116,6 +129,11 @@ export class PresentlyServingMembers implements OnInit {
 
     /** Per-row remarks entered by user before sending to inter posting. Keyed by employeeID. */
     interPostingRemarks: Record<number, string> = {};
+
+    /** Quick search box above the table: matches Service ID OR RAB ID, server-side. */
+    quickSearch = '';
+    private quickSearch$ = new Subject<string>();
+    private quickSearchSub?: Subscription;
 
     constructor(
         private servingMembersService: ServingMembersService,
@@ -142,9 +160,33 @@ export class PresentlyServingMembers implements OnInit {
             this.useFilter = true;
         }
 
+        this.quickSearchSub = this.quickSearch$
+            .pipe(debounceTime(400), distinctUntilChanged())
+            .subscribe(() => {
+                // Quick search always goes through the filtered (server-side) endpoint.
+                this.useFilter = true;
+                this.resetToFirstPage();
+                this.loadList(this.pageNumber, this.pageSize);
+            });
+
         this.loadMotherOrgs();
         this.loadFilterOptions();
         this.loadList(this.pageNumber, this.pageSize);
+    }
+
+    ngOnDestroy(): void {
+        this.quickSearchSub?.unsubscribe();
+    }
+
+    /** Debounced (400 ms) quick-search input handler. */
+    onQuickSearchChange(): void {
+        this.quickSearch$.next(this.quickSearch.trim());
+    }
+
+    clearQuickSearch(): void {
+        if (!this.quickSearch) return;
+        this.quickSearch = '';
+        this.onQuickSearchChange();
     }
 
     get pageTitle(): string {
@@ -339,7 +381,8 @@ export class PresentlyServingMembers implements OnInit {
             permanentDistrictType: this.filter.wonHomeDistrict ?? undefined,
             wifePermanentDistrictType: this.filter.spouseHomeDistrict ?? undefined,
             appointmentId: this.filter.appointment ?? undefined,
-            organogramNodeCodeId: this.organogramNodeCodeId ?? undefined
+            organogramNodeCodeId: this.organogramNodeCodeId ?? undefined,
+            quickSearch: this.quickSearch?.trim() || undefined
         };
     }
 
@@ -368,6 +411,7 @@ export class PresentlyServingMembers implements OnInit {
             appointment: null
         };
         this.applyMotherOrgCascade();
+        this.quickSearch = '';
         this.organogramNodeCodeId = null;
         this.organogramFilterName = null;
         this.useFilter = false;
@@ -428,9 +472,50 @@ export class PresentlyServingMembers implements OnInit {
         return row.isSendingNotesheetStatus === IsSendingNotesheetStatus.DraftInterPosting;
     }
 
-    /** Used by p-table [rowSelectable] to prevent header checkbox from selecting blocked rows. */
-    isRowSelectable(event: { data: EmployeeServiceOverview; index: number }): boolean {
-        return event.data.isSendingNotesheetStatus !== IsSendingNotesheetStatus.DraftInterPosting;
+    /** Total selected across every page and search performed so far. */
+    get selectedCount(): number {
+        return this.selectedMap.size;
+    }
+
+    isRowSelected(row: EmployeeServiceOverview): boolean {
+        return this.selectedMap.has(row.employeeID);
+    }
+
+    toggleRow(row: EmployeeServiceOverview, checked: boolean): void {
+        if (this.isInPostingProcess(row)) return;
+        if (checked) this.selectedMap.set(row.employeeID, row);
+        else this.selectedMap.delete(row.employeeID);
+    }
+
+    /** Rows of the current page that may still be selected (not already in an inter posting). */
+    get selectablePageRows(): EmployeeServiceOverview[] {
+        return this.list.filter((r) => !this.isInPostingProcess(r));
+    }
+
+    /** Header checkbox state: ticked only when every selectable row of THIS page is selected. */
+    get allPageSelected(): boolean {
+        const rows = this.selectablePageRows;
+        return rows.length > 0 && rows.every((r) => this.selectedMap.has(r.employeeID));
+    }
+
+    /** Header checkbox shows the dash when this page is only partly selected. */
+    get pagePartiallySelected(): boolean {
+        const rows = this.selectablePageRows;
+        const picked = rows.filter((r) => this.selectedMap.has(r.employeeID)).length;
+        return picked > 0 && picked < rows.length;
+    }
+
+    /** Select/clear only the rows of the current page; selections on other pages are untouched. */
+    toggleCurrentPage(checked: boolean): void {
+        for (const row of this.selectablePageRows) {
+            if (checked) this.selectedMap.set(row.employeeID, row);
+            else this.selectedMap.delete(row.employeeID);
+        }
+    }
+
+    /** Drop every selection, on this page and any other. */
+    clearSelection(): void {
+        this.selectedMap.clear();
     }
 
     /** Maps IsSendingNotesheetStatus to a display label. */
@@ -450,17 +535,23 @@ export class PresentlyServingMembers implements OnInit {
         }
     }
 
+    /** Send button label, carrying the selected-row count once more than one row is picked. */
+    get interPostingButtonLabel(): string {
+        const n = this.selectedCount;
+        return n > 1 ? `Send Inter Posting (${n})` : 'Send Inter Posting';
+    }
+
     sendInterPosting(): void {
         if (!this.canUpdate) {
             this.messageService.add({ severity: 'warn', summary: 'Permission Denied', detail: 'You do not have permission to perform this action.' });
             return;
         }
-        if (!this.selectedRows?.length) {
+        if (!this.selectedCount) {
             this.messageService.add({ severity: 'warn', summary: 'Selection Required', detail: 'Please select at least one member.' });
             return;
         }
         this.savingInterPosting = true;
-        const employees = this.selectedRows.map(r => ({
+        const employees = Array.from(this.selectedMap.values()).map(r => ({
             employeeId: r.employeeID,
             interPostingRemark: this.interPostingRemarks[r.employeeID] || null
         }));
@@ -469,7 +560,7 @@ export class PresentlyServingMembers implements OnInit {
                 this.savingInterPosting = false;
                 if (res.statusCode === 200) {
                     this.messageService.add({ severity: 'success', summary: 'Success', detail: res.description || 'Employees marked for inter posting.' });
-                    this.selectedRows = [];
+                    this.selectedMap.clear();
                     this.interPostingRemarks = {};
                     this.loadList(1, this.pageSize);
                 } else {

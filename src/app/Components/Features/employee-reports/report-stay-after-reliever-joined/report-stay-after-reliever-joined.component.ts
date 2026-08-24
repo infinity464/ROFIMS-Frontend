@@ -62,14 +62,15 @@ export class ReportStayAfterRelieverJoinedComponent implements OnInit, OnDestroy
     searched = false;
 
     /** Report mode — reliever joined (default) vs reliever not yet joined. */
-    relieverMode: 'joined' | 'notJoined' | 'standRelease' | 'newPosting' = 'joined';
+    relieverMode: 'joined' | 'notJoined' | 'standRelease' | 'allPostedOut' | 'newPosting' = 'joined';
     /** Mode of the CURRENTLY DISPLAYED results — updated only on Search, so the
         table/columns don't change when the dropdown changes before searching. */
-    appliedMode: 'joined' | 'notJoined' | 'standRelease' | 'newPosting' = 'joined';
-    relieverModeOptions: { label: string; value: 'joined' | 'notJoined' | 'standRelease' | 'newPosting' }[] = [
+    appliedMode: 'joined' | 'notJoined' | 'standRelease' | 'allPostedOut' | 'newPosting' = 'joined';
+    relieverModeOptions: { label: string; value: 'joined' | 'notJoined' | 'standRelease' | 'allPostedOut' | 'newPosting' }[] = [
         { label: 'Stay After Reliever Joined', value: 'joined' },
         { label: 'Member Stay Reliever Not Joined', value: 'notJoined' },
         { label: 'Stand Release', value: 'standRelease' },
+        { label: 'All Posted Out', value: 'allPostedOut' },
         { label: 'New Posting Person List', value: 'newPosting' }
     ];
 
@@ -613,11 +614,12 @@ export class ReportStayAfterRelieverJoinedComponent implements OnInit, OnDestroy
         (columns/data) only change on Search via appliedMode. */
     onModeChange(): void {}
 
-    /** Show the derived "Reliever (Yes/No)" column only when Stand Release is the
-        applied (searched) mode. Called from search() after appliedMode is set. */
+    /** Show the derived "Reliever (Yes/No)" column for the modes that mix members
+        with and without a reliever — Stand Release and All Posted Out. Called from
+        search() after appliedMode is set. */
     private syncStandReleaseColumn(): void {
         const key = 'relieverYesNo';
-        if (this.appliedMode === 'standRelease') {
+        if (this.appliedMode === 'standRelease' || this.appliedMode === 'allPostedOut') {
             if (!this.selectedColumnKeys.includes(key)) {
                 const arr = [...this.selectedColumnKeys];
                 const at = arr.indexOf('relieverJoiningDate');
@@ -813,6 +815,7 @@ export class ReportStayAfterRelieverJoinedComponent implements OnInit, OnDestroy
                 relieverJoinedOnly: this.appliedMode === 'joined',
                 relieverNotJoinedOnly: this.appliedMode === 'notJoined',
                 postedOutAllOnly: this.appliedMode === 'standRelease',
+                allPostedOutOnly: this.appliedMode === 'allPostedOut',
                 idSearchText: (this.idSearchText ?? '').trim() || undefined,
                 pagination: { page_no: pageNo, row_per_page: this.rows }
             })
@@ -913,6 +916,9 @@ export class ReportStayAfterRelieverJoinedComponent implements OnInit, OnDestroy
         }
         if (this.appliedMode === 'standRelease') {
             return this.lang === 'en' ? 'Nominal Roll of Stand Release' : 'স্ট্যান্ড রিলিজ এর নামীয় তালিকা';
+        }
+        if (this.appliedMode === 'allPostedOut') {
+            return this.lang === 'en' ? 'Nominal Roll of All Posted Out Members' : 'সকল বদলিকৃত সদস্যের নামীয় তালিকা';
         }
         if (this.appliedMode === 'notJoined') {
             return this.lang === 'en' ? 'Nominal Roll of Stay in RAB though Reliever Not Joined' : 'প্রতিস্থাপক যোগদান না করা সত্ত্বেও র‍্যাবে অবস্থানরত সদস্যের নামীয় তালিকা';

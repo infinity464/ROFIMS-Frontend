@@ -29,6 +29,7 @@ import { PermanentPostingMORecordService, PermanentPostingMORecordModel } from '
 import { PermanentPostingJoineeDetailService, PermanentPostingJoineeDetailModel } from '@/services/permanent-posting-joinee-detail.service';
 import { OrganizationService } from '@/Components/basic-setup/organization-setup/services/organization-service';
 import { CommonCodeService } from '@/services/common-code-service';
+import { CommonCodeModel } from '@/models/common-code-model';
 import { FlexibleDateDirective } from '@/shared/directives/flexible-date.directive';
 import { DialogModule } from 'primeng/dialog';
 import { IdentityUserMemberTypeAccessService } from '@/services/identity-user-member-type-access.service';
@@ -294,9 +295,19 @@ export class PermanentPostingMORecordComponent implements OnInit {
         this.tradeOptions = [];
         if (!ropId) return;
         this.commonCodeService.getAllActiveCommonCodesByParentId(ropId).subscribe({
-            next: (codes) => { this.tradeOptions = codes.map(c => ({ label: c.codeValueEN, value: c.codeId })); },
+            next: (codes) => { this.tradeOptions = codes.map(c => ({ label: this.tradeLabel(c), value: c.codeId })); },
             error: (err: any) => {}
         });
+    }
+
+    /**
+     * Trade label as "English (Bangla)". Several trades share an English short form
+     * (two distinct codes both read "Gnr"), so the Bangla name is what tells them apart.
+     * Falls back to English alone when a code has no Bangla value.
+     */
+    private tradeLabel(c: CommonCodeModel): string {
+        const bn = c.codeValueBN?.trim();
+        return bn ? `${c.codeValueEN} (${bn})` : c.codeValueEN;
     }
 
     onMemberTypeChange(memberTypeId: number | null): void {

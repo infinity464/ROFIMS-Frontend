@@ -217,16 +217,32 @@
     <div class="report-filter-card">
         <div class="psm-results-header">
             <h3 class="report-panel-title">Presently Serving Members ({{ totalRecords }})</h3>
-            @if (canUpdate) {
-            <p-button
-                label="Send Inter Posting"
-                icon="pi pi-send"
-                severity="warn"
-                [loading]="savingInterPosting"
-                [disabled]="!selectedRows?.length"
-                (onClick)="sendInterPosting()">
-            </p-button>
-            }
+            <div class="psm-results-actions">
+                <p-iconfield iconPosition="left" class="psm-quick-search">
+                    <p-inputicon styleClass="pi pi-search"></p-inputicon>
+                    <input
+                        pInputText
+                        type="text"
+                        [(ngModel)]="quickSearch"
+                        (ngModelChange)="onQuickSearchChange()"
+                        placeholder="Search Service ID or RAB ID"
+                        aria-label="Search by Service ID or RAB ID" />
+                    @if (quickSearch) {
+                    <i class="pi pi-times psm-quick-search-clear" role="button" tabindex="0" aria-label="Clear search"
+                        (click)="clearQuickSearch()" (keydown.enter)="clearQuickSearch()"></i>
+                    }
+                </p-iconfield>
+                @if (canUpdate) {
+                <p-button
+                    [label]="interPostingButtonLabel"
+                    icon="pi pi-send"
+                    severity="warn"
+                    [loading]="savingInterPosting"
+                    [disabled]="!selectedCount"
+                    (onClick)="sendInterPosting()">
+                </p-button>
+                }
+            </div>
         </div>
 
         @if (interPostingMode && canUpdate) {
@@ -248,8 +264,6 @@
                 [rowsPerPageOptions]="[10, 20, 50]"
                 (onLazyLoad)="onLazyLoad($event)"
                 dataKey="employeeID"
-                [(selection)]="selectedRows"
-                [rowSelectable]="isRowSelectable.bind(this)"
                 [tableStyle]="{ 'min-width': '60rem' }"
                 styleClass="p-datatable-sm"
                 paginatorDropdownAppendTo="body"
@@ -258,7 +272,16 @@
                 <ng-template pTemplate="header">
                     <tr>
                         @if (canUpdate) {
-                        <th style="width: 44px"><p-tableHeaderCheckbox></p-tableHeaderCheckbox></th>
+                        <th style="width: 44px">
+                            <p-checkbox
+                                [binary]="true"
+                                [ngModel]="allPageSelected"
+                                [indeterminate]="pagePartiallySelected"
+                                [disabled]="!selectablePageRows.length"
+                                (onChange)="toggleCurrentPage($event.checked)"
+                                ariaLabel="Select all rows on this page">
+                            </p-checkbox>
+                        </th>
                         }
                         <th style="width: 4rem;">Ser</th>
                         <th>Service ID</th>
@@ -282,11 +305,13 @@
                     <tr>
                         @if (canUpdate) {
                         <td>
-                            @if (isInPostingProcess(row)) {
-                                <p-tableCheckbox [value]="row" [disabled]="true"></p-tableCheckbox>
-                            } @else {
-                                <p-tableCheckbox [value]="row"></p-tableCheckbox>
-                            }
+                            <p-checkbox
+                                [binary]="true"
+                                [ngModel]="isRowSelected(row)"
+                                [disabled]="isInPostingProcess(row)"
+                                (onChange)="toggleRow(row, $event.checked)"
+                                ariaLabel="Select row">
+                            </p-checkbox>
                         </td>
                         }
                         <td><span class="report-ser-num">{{ serialNumber(rowIndex) }}</span></td>
