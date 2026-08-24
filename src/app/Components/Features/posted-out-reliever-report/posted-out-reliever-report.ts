@@ -15,6 +15,7 @@ import { InputTextModule } from 'primeng/inputtext';
 import { IconFieldModule } from 'primeng/iconfield';
 import { InputIconModule } from 'primeng/inputicon';
 import { PermanentPostingMORecordService, PermanentPostingCombinedReportModel } from '@/services/permanent-posting-mo-record.service';
+import { CommonCodeService } from '@/services/common-code-service';
 import { ExportService, ReportConfig } from '@/services/export.service';
 
 enum EntryStatusFilter { All = 'all', Completed = 'completed', Pending = 'pending' }
@@ -90,6 +91,9 @@ export class PostedOutRelieverReportComponent implements OnInit, OnDestroy {
     filterDateTo: Date | null = null;
 
     readonly EntryStatusFilter = EntryStatusFilter;
+    /** Present battalion of the posted-out member — filtered server-side. */
+    filterRabUnitId: number | null = null;
+    rabUnitOptions: { label: string; value: number }[] = [];
     entryStatusFilter = EntryStatusFilter.All;
     entryStatusOptions = [
         { label: 'All Records',       value: EntryStatusFilter.All },
@@ -108,12 +112,24 @@ export class PostedOutRelieverReportComponent implements OnInit, OnDestroy {
 
     constructor(
         private recordSvc: PermanentPostingMORecordService,
+        private commonCodeService: CommonCodeService,
         private exportService: ExportService,
         private messageService: MessageService
     ) {}
 
     ngOnInit(): void {
         this.searchSub = this.searchSubject.pipe(debounceTime(300)).subscribe(() => this.reload());
+
+        // Flat master list — the report is paginated server-side, so options cannot be
+        // derived from the visible page the way the posted-out list builds its filters.
+        this.commonCodeService.getAllActiveCommonCodesType('RabUnit').subscribe({
+            next: (codes) => {
+                this.rabUnitOptions = (codes ?? [])
+                    .map((c: any) => ({ label: c.codeValueEN, value: c.codeId }))
+                    .sort((a: any, b: any) => String(a.label).localeCompare(String(b.label)));
+            },
+            error: () => { this.rabUnitOptions = []; }
+        });
     }
 
     ngOnDestroy(): void {
@@ -152,7 +168,7 @@ export class PostedOutRelieverReportComponent implements OnInit, OnDestroy {
         const entryStatus = this.getEntryStatus();
 
         this.recordSvc.getCombinedReportPaginated(
-            this.pageNumber, this.pageSize, search, dateFrom, dateTo, entryStatus
+            this.pageNumber, this.pageSize, search, dateFrom, dateTo, entryStatus, this.filterRabUnitId
         ).subscribe({
             next: (res) => {
                 this.records = res.datalist ?? [];
@@ -188,6 +204,7 @@ export class PostedOutRelieverReportComponent implements OnInit, OnDestroy {
         this.filterDateFrom = null;
         this.filterDateTo = null;
         this.entryStatusFilter = EntryStatusFilter.All;
+        this.filterRabUnitId = null;
         this.reload();
     }
 

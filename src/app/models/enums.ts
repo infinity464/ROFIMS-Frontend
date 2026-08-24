@@ -77,6 +77,20 @@ export enum PostingStatus {
     ExMember = 'ExMember'
 }
 
+/**
+ * RelieverNotGivenReason – the standard reasons offered when a Permanent Posting
+ * (MO Change) record has "Is Reliever Assigned? = No". Selecting one writes its text
+ * into PermanentPostingMORecord.RelieverNotGivenReason and sets the matching flag
+ * column, so reports filter on the flag rather than string-matching the text.
+ */
+export enum RelieverNotGivenReason {
+    TransferWithoutReliever = 'বিমোচক ব্যতীত বদলি'
+}
+
+export const RelieverNotGivenReasonOptions = [
+    { label: RelieverNotGivenReason.TransferWithoutReliever, value: RelieverNotGivenReason.TransferWithoutReliever }
+];
+
 /** IsSendingNotesheetStatus – stored in EmployeeInfo and DraftPostingDetail. */
 export enum IsSendingNotesheetStatus {
     Draft = 'draft',

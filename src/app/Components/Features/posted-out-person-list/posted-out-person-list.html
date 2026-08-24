@@ -3,10 +3,18 @@
 
 <div class="form-card">
     <div class="form-card-header">
-        <h3 class="form-card-title">
-            <i class="pi pi-user-minus" style="font-size:1.1rem"></i>
-            Posted Out Person List
-        </h3>
+        <div>
+            <h3 class="form-card-title">
+                <i class="pi pi-user-minus" style="font-size:1.1rem"></i>
+                Posted Out Person List
+            </h3>
+            @if (hiddenNoPostingUnitCount > 0) {
+                <div style="font-size:0.78rem; color:var(--text-color-secondary); margin-top:0.2rem; padding-left:0.1rem;">
+                    <i class="pi pi-info-circle" style="font-size:0.7rem"></i>
+                    {{ hiddenNoPostingUnitCount }} record(s) hidden — no Posting Unit entered, so the member is not yet actually posted out.
+                </div>
+            }
+        </div>
         <div class="flex gap-2 align-items-center">
             <div class="report-export-wrap" (click)="$event.stopPropagation()">
                 <button type="button" class="report-btn-export" [disabled]="!allRecords.length || exporting" (click)="toggleExportDropdown($event)">
@@ -63,6 +71,12 @@
                     <p-select [options]="tradeOptions" [(ngModel)]="filterTrade" optionLabel="label" optionValue="value"
                         placeholder="All" [filter]="true" filterBy="label" [showClear]="true" appendTo="body"
                         styleClass="text-sm" [style]="{'min-width':'9rem'}"></p-select>
+                </div>
+                <div class="filter-group">
+                    <label>RAB Unit</label>
+                    <p-select [options]="rabUnitOptions" [(ngModel)]="filterRabUnitId" optionLabel="label" optionValue="value"
+                        placeholder="All" [filter]="true" filterBy="label" [showClear]="true" appendTo="body"
+                        styleClass="text-sm" [style]="{'min-width':'11rem'}"></p-select>
                 </div>
                 <div class="filter-group">
                     <label>Posted Unit</label>

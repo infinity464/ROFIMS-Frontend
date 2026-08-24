@@ -23,6 +23,20 @@
   }
 }
 
+// Standard "no reliever" reason checkbox, sitting above its free-text input.
+.reason-standard-option {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  margin-bottom: 0.4rem;
+
+  label {
+    font-size: 0.85rem;
+    color: var(--text-color);
+    cursor: pointer;
+  }
+}
+
 // Marks the form as a saved record loaded read-only by a repeat member search.
 .readonly-badge {
   display: inline-flex;

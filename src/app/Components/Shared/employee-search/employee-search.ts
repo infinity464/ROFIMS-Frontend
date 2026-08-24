@@ -32,6 +32,8 @@ export interface EmployeeBasicInfo {
     branch?: number;
     trade?: number;
     memberType?: number;
+    /** CommonCode id of the employee's Prefix (EmployeeInfo.Prefix). */
+    prefix?: number;
     /** Display names from vw_EmployeeSearchInfo (Rank, Corps, Trade, MotherOrganization, MemberType) */
     rankDisplay?: string;
     corpsDisplay?: string;

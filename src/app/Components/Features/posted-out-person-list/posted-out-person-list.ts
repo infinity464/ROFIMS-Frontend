@@ -33,6 +33,8 @@ export class PostedOutPersonListComponent implements OnInit {
 
     /** Full dataset loaded once; filtering + pagination happen client-side. */
     allRecords: PermanentPostingMORecordModel[] = [];
+    /** Records held back because they carry no Posting Unit — surfaced as a hint. */
+    hiddenNoPostingUnitCount = 0;
     loading = false;
     rows = 10;
 
@@ -42,6 +44,8 @@ export class PostedOutPersonListComponent implements OnInit {
     filterCorps: string | null = null;
     filterTrade: string | null = null;
     filterPostingUnitId: number | null = null;
+    /** Present battalion of the posted-out member. */
+    filterRabUnitId: number | null = null;
     filterIsReliever: boolean | null = null;
     releaseDateFrom: Date | null = null;
     releaseDateTo: Date | null = null;
@@ -52,6 +56,7 @@ export class PostedOutPersonListComponent implements OnInit {
     corpsOptions: { label: string; value: string }[] = [];
     tradeOptions: { label: string; value: string }[] = [];
     postingUnitOptions: { label: string; value: number }[] = [];
+    rabUnitOptions: { label: string; value: number }[] = [];
     relieverOptions = [
         { label: 'Yes', value: true },
         { label: 'No', value: false },
@@ -78,11 +83,17 @@ export class PostedOutPersonListComponent implements OnInit {
         this.loading = true;
         this.recordSvc.getAll().subscribe({
             next: (d) => {
-                this.allRecords = d ?? [];
+                // A record with no Posting Unit is a half-entered row — the member has
+                // not actually been posted out anywhere — so it is dropped here rather
+                // than in the shared GetAllWithEmployeeAsyn endpoint, which the entry
+                // form also uses for its duplicate-employee guard.
+                const all = d ?? [];
+                this.allRecords = all.filter(r => r.postingUnitId != null);
+                this.hiddenNoPostingUnitCount = all.length - this.allRecords.length;
                 this.buildFilterOptions();
                 this.loading = false;
             },
-            error: () => { this.allRecords = []; this.loading = false; }
+            error: () => { this.allRecords = []; this.hiddenNoPostingUnitCount = 0; this.loading = false; }
         });
     }
 
@@ -102,6 +113,13 @@ export class PostedOutPersonListComponent implements OnInit {
         }
         this.postingUnitOptions = Array.from(unitMap, ([value, label]) => ({ label, value }))
             .sort((a, b) => a.label.localeCompare(b.label));
+
+        const rabUnitMap = new Map<number, string>();
+        for (const r of this.allRecords) {
+            if (r.postedOutRabUnitId != null && r.postedOutRabUnit) rabUnitMap.set(r.postedOutRabUnitId, r.postedOutRabUnit);
+        }
+        this.rabUnitOptions = Array.from(rabUnitMap, ([value, label]) => ({ label, value }))
+            .sort((a, b) => a.label.localeCompare(b.label));
     }
 
     /** Records after all active filters are applied. */
@@ -115,6 +133,7 @@ export class PostedOutPersonListComponent implements OnInit {
             if (this.filterCorps && r.postedOutCorps !== this.filterCorps) return false;
             if (this.filterTrade && r.postedOutTrade !== this.filterTrade) return false;
             if (this.filterPostingUnitId != null && r.postingUnitId !== this.filterPostingUnitId) return false;
+            if (this.filterRabUnitId != null && r.postedOutRabUnitId !== this.filterRabUnitId) return false;
             if (this.filterIsReliever != null && r.isReliever !== this.filterIsReliever) return false;
 
             if (from || to) {
@@ -147,6 +166,7 @@ export class PostedOutPersonListComponent implements OnInit {
         this.filterCorps = null;
         this.filterTrade = null;
         this.filterPostingUnitId = null;
+        this.filterRabUnitId = null;
         this.filterIsReliever = null;
         this.releaseDateFrom = null;
         this.releaseDateTo = null;

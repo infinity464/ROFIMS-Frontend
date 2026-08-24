@@ -20,6 +20,8 @@ export interface PermanentPostingMORecordModel {
     possibleReleaseDate: string | null;
     isReliever: boolean | null;
     relieverNotGivenReason: string | null;
+    /** Standard reason flag — বিমোচক ব্যতীত বদলি (transfer without a reliever). */
+    isTransferWithoutReliever: boolean | null;
     relieverEmployeeId: number | null;
     noteSheetClearance: boolean | null;
     nsClearanceDate: string | null;
@@ -41,6 +43,10 @@ export interface PermanentPostingMORecordModel {
     postedOutCorps: string | null;
     postedOutTrade: string | null;
     postingUnitName: string | null;
+    /** Posted-out member's PRESENT battalion (current active RAB service row). */
+    postedOutRabUnitId: number | null;
+    postedOutRabUnit: string | null;
+    postedOutRabUnitBN: string | null;
     relieverServiceId: string | null;
     relieverPrefix: string | null;
     // Display fields (BN)
@@ -66,6 +72,9 @@ export interface PermanentPostingCombinedReportModel {
     // Posted Out (BN)
     postedOutNameBN: string | null;
     postedOutPrefixBN: string | null;
+    postedOutRabUnitId: number | null;
+    postedOutRabUnit: string | null;
+    postedOutRabUnitBN: string | null;
     // Joinee Detail
     joineeDetailId: number | null;
     isAddedInNewJoineeDataEntry: boolean | null;
@@ -185,6 +194,7 @@ export class PermanentPostingMORecordService {
             possibleReleaseDate: model.possibleReleaseDate ?? null,
             isReliever: model.isReliever ?? null,
             relieverNotGivenReason: model.relieverNotGivenReason ?? null,
+            isTransferWithoutReliever: model.isTransferWithoutReliever ?? null,
             relieverEmployeeId: model.relieverEmployeeId ?? null,
             noteSheetClearance: model.noteSheetClearance ?? null,
             nsClearanceDate: model.nsClearanceDate ?? null,
@@ -200,7 +210,8 @@ export class PermanentPostingMORecordService {
 
     getCombinedReportPaginated(
         pageNo: number, rowPerPage: number, search?: string,
-        dateFrom?: string, dateTo?: string, entryStatus?: boolean | null
+        dateFrom?: string, dateTo?: string, entryStatus?: boolean | null,
+        rabUnitId?: number | null
     ): Observable<PaginatedResult<PermanentPostingCombinedReportModel>> {
         let params = new HttpParams()
             .set('page_no', pageNo)
@@ -209,6 +220,7 @@ export class PermanentPostingMORecordService {
         if (dateFrom) params = params.set('dateFrom', dateFrom);
         if (dateTo) params = params.set('dateTo', dateTo);
         if (entryStatus !== undefined && entryStatus !== null) params = params.set('entryStatus', entryStatus);
+        if (rabUnitId != null) params = params.set('rabUnitId', rabUnitId);
         return this.http.get<PaginatedResult<PermanentPostingCombinedReportModel>>(
             `${this.baseUrl}/GetCombinedReportPaginated`, { params });
     }

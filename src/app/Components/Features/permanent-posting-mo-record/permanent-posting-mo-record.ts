@@ -34,12 +34,13 @@ import { DialogModule } from 'primeng/dialog';
 import { IdentityUserMemberTypeAccessService } from '@/services/identity-user-member-type-access.service';
 import { PreviousRABServiceService, VwPreviousRABServiceInfoModel } from '@/services/previous-rab-service.service';
 import { MotherOrganizationModel } from '@/models/mother-org-model';
-import { PostingStatus } from '@/models/enums';
+import { PostingStatus, RelieverNotGivenReason } from '@/models/enums';
+import { CheckboxModule } from 'primeng/checkbox';
 
 @Component({
     selector: 'app-permanent-posting-mo-record',
     standalone: true,
-    imports: [CommonModule, FormsModule, ButtonModule, InputTextModule, DatePickerModule, SelectModule, TableModule, DividerModule, TooltipModule, Toast, ConfirmDialog, FileReferencesFormComponent, FlexibleDateDirective, DialogModule],
+    imports: [CommonModule, FormsModule, ButtonModule, InputTextModule, DatePickerModule, SelectModule, TableModule, DividerModule, TooltipModule, Toast, ConfirmDialog, FileReferencesFormComponent, FlexibleDateDirective, DialogModule, CheckboxModule],
     providers: [MessageService, ConfirmationService],
     templateUrl: './permanent-posting-mo-record.html',
     styleUrl: './permanent-posting-mo-record.scss'
@@ -112,6 +113,13 @@ export class PermanentPostingMORecordComponent implements OnInit {
     possibleReleaseDate: Date | null = null;
     isReliever: boolean | null = null;
     relieverNotGivenReason = '';
+    /** Entry status of the loaded joinee record. Carried through a save so editing a
+     *  completed record never demotes it — the backend only ever promotes this. */
+    joineeEntryCompleted = false;
+
+    /** Checkbox for the standard reason — keeps the reason text locked while ticked. */
+    isTransferWithoutReliever = false;
+    readonly transferWithoutRelieverText = RelieverNotGivenReason.TransferWithoutReliever;
     joineeCollapsed = true;
 
     // Officer-only
@@ -302,6 +310,14 @@ export class PermanentPostingMORecordComponent implements OnInit {
             ? this.allRanksForOrg
             : this.allRanksForOrg.filter((r: any) => (r?.parentCodeId ?? r?.ParentCodeId ?? null) === mt);
         this.rankOptions = filtered.map((item: any) => ({ label: item.codeValueEN ?? item.CodeValueEN, value: item.codeId ?? item.CodeId }));
+    }
+
+    /** Coerce a raw API id to a number, keeping absent/blank as undefined —
+     *  a plain Number() would turn null into 0 and select the wrong option. */
+    private toId(value: any): number | undefined {
+        if (value == null || value === '') return undefined;
+        const n = Number(value);
+        return Number.isFinite(n) ? n : undefined;
     }
 
     // ── Employee search events ──────────────────────────────────────
@@ -674,16 +690,46 @@ export class PermanentPostingMORecordComponent implements OnInit {
             this.messageService.add({ severity: 'warn', summary: 'Warning', detail: 'Please enter Service ID' });
             return;
         }
+        this.runJoineeServiceIdSearch(this.joineeSearchServiceId, false);
+    }
+
+    /**
+     * New Posting Person → Service ID lookup. Same auto-fill as the reliever search
+     * above, with one difference: a miss is NOT an error here. An incoming joinee
+     * often has no EmployeeInfo row yet — that is precisely why this panel exists —
+     * so the typed id stays put and the rest of the panel is left for manual entry.
+     */
+    searchNewJoineeByServiceId(): void {
+        const serviceId = (this.joineeServiceId ?? '').trim();
+        if (!serviceId) {
+            this.messageService.add({ severity: 'warn', summary: 'Warning', detail: 'Please enter Service ID' });
+            return;
+        }
+        this.runJoineeServiceIdSearch(serviceId, true);
+    }
+
+    /**
+     * Shared lookup behind both Service ID boxes in the joinee section.
+     * @param fromNewJoineeField the search was started from the New Posting Person
+     *   Service ID box — keep that box filled on a miss and report it as information
+     *   rather than a warning.
+     */
+    private runJoineeServiceIdSearch(serviceId: string, fromNewJoineeField: boolean): void {
         this.onRelieverReset();
+        // onRelieverReset() blanks joineeServiceId, so put back what was typed —
+        // a miss must not wipe the box the user is standing in.
+        if (fromNewJoineeField) this.joineeServiceId = serviceId;
         this.showJoineePickerDialog = false;
         this.joineePickerRows = [];
         this.joineeSearching = true;
 
-        this.empService.searchListByRabIdOrServiceId(undefined, this.joineeSearchServiceId).subscribe({
+        this.empService.searchListByRabIdOrServiceId(undefined, serviceId).subscribe({
             next: (employees: any[]) => {
                 if (!employees || employees.length === 0) {
                     this.joineeSearching = false;
-                    this.messageService.add({ severity: 'warn', summary: 'Not Found', detail: 'No employee found with the given Service ID' });
+                    this.messageService.add(fromNewJoineeField
+                        ? { severity: 'info', summary: 'Not Found', detail: 'No existing member with this Service ID — please enter the details manually.', life: 6000 }
+                        : { severity: 'warn', summary: 'Not Found', detail: 'No employee found with the given Service ID' });
                     return;
                 }
                 if (employees.length === 1) {
@@ -713,6 +759,7 @@ export class PermanentPostingMORecordComponent implements OnInit {
             branch: employee.Branch ?? employee.branch,
             trade: employee.Trade ?? employee.trade,
             memberType: employee.MemberType ?? employee.memberType,
+            prefix: this.toId(employee.Prefix ?? employee.prefix),
             orgId: employee.orgId
         };
         this.joineeSearchServiceId = info.serviceId || '';
@@ -737,6 +784,7 @@ export class PermanentPostingMORecordComponent implements OnInit {
                         branch: employee.Branch ?? employee.branch,
                         trade: employee.Trade ?? employee.trade,
                         memberType: employee.MemberType ?? employee.memberType,
+                        prefix: this.toId(employee.Prefix ?? employee.prefix),
                         orgId: employee.OrgId ?? employee.orgId
                     };
                     this.joineeSearchServiceId = info.serviceId || '';
@@ -818,6 +866,7 @@ export class PermanentPostingMORecordComponent implements OnInit {
                     const si = searchInfo as any;
                     const unitId = si?.lastMotherUnitId ?? si?.LastMotherUnitId ?? employee.motherOrganization ?? null;
                     this.joineeMotherOrgUnitId = unitId;
+                    this.joineePrefixId = employee.prefix ?? null;
                     this.joineeRank  = employee.rank ?? null;
                     this.joineeCorps = employee.branch ?? null;
                     this.joineeTrade = employee.trade ?? null;
@@ -826,6 +875,7 @@ export class PermanentPostingMORecordComponent implements OnInit {
             });
         } else {
             this.joineeMotherOrgUnitId = null;
+            this.joineePrefixId = null;
             this.joineeRank  = null;
             this.joineeCorps = null;
             this.joineeTrade = null;
@@ -872,6 +922,30 @@ export class PermanentPostingMORecordComponent implements OnInit {
         this.joineeJoiningOrderDate = null;
         this.joineePossibleJoiningDate = null;
         this.joineeFileRows = [];
+        this.joineeEntryCompleted = false;
+    }
+
+    // ── Reason (No Reliever) ────────────────────────────────────────
+    /** Ticking the standard-reason box fills the text and locks it; unticking clears it. */
+    onTransferWithoutRelieverToggle(): void {
+        this.relieverNotGivenReason = this.isTransferWithoutReliever ? this.transferWithoutRelieverText : '';
+    }
+
+    /**
+     * Typing the standard reason by hand is the same statement as ticking the box, so
+     * the box ticks itself and the field locks — with a message, since the input going
+     * readonly under the cursor is otherwise unexplained.
+     */
+    onReasonTextChange(): void {
+        if (this.isTransferWithoutReliever) return;
+        if (this.relieverNotGivenReason.trim() !== this.transferWithoutRelieverText) return;
+        this.isTransferWithoutReliever = true;
+        this.relieverNotGivenReason = this.transferWithoutRelieverText;
+        this.messageService.add({
+            severity: 'info', summary: 'Standard Reason',
+            detail: `"${this.transferWithoutRelieverText}" is a standard reason — it has been ticked and locked. Untick it to type a different reason.`,
+            life: 6000
+        });
     }
 
     // ── File row change (two-way binding with file-references-form) ─
@@ -900,6 +974,30 @@ export class PermanentPostingMORecordComponent implements OnInit {
             const existing = this.records.find(r => r.postedOutEmployeeId === empId && r.id !== this.editId);
             if (existing) {
                 this.messageService.add({ severity: 'warn', summary: 'Duplicate', detail: 'This employee already has a Posted Out entry.' });
+                return;
+            }
+        }
+
+        // Duplicate check: the same member must not appear twice in the New Posting
+        // Person list. Both keys are tested because the Service ID may have been typed
+        // without pressing Search, leaving employeeId unresolved on one side or the
+        // other — matching on a single key would let such a pair through.
+        if (hasJoineeData || this.isReliever === true) {
+            const jEmpId = this.joineeEmployeeId;
+            const jServiceId = (this.joineeServiceId ?? '').trim();
+            const dup = this.joineeRecords.find(r => r.id !== this.editDetailId && (
+                (jEmpId != null && r.employeeId === jEmpId) ||
+                (!!jServiceId && r.serviceId === jServiceId
+                    && r.prefixId === this.joineePrefixId
+                    && r.motherOrgId === this.joineeMotherOrgId)
+            ));
+            if (dup) {
+                this.joineeCollapsed = false;
+                this.messageService.add({
+                    severity: 'warn', summary: 'Duplicate',
+                    detail: 'This member already has a New Posting Person record. A member cannot have two.',
+                    life: 6000
+                });
                 return;
             }
         }
@@ -1003,7 +1101,7 @@ export class PermanentPostingMORecordComponent implements OnInit {
         const buildDetail = (recordId: number | null): Partial<PermanentPostingJoineeDetailModel> => ({
             id: this.editDetailId ?? 0,
             permanentPostingMORecordId: recordId,
-            isAddedInNewJoineeDataEntry: false,
+            isAddedInNewJoineeDataEntry: this.joineeEntryCompleted,
             employeeId: this.joineeEmployeeId,
             prefixId: this.joineePrefixId,
             motherOrgId: this.joineeMotherOrgId,
@@ -1075,6 +1173,7 @@ export class PermanentPostingMORecordComponent implements OnInit {
             possibleReleaseDate: this.formatDate(this.possibleReleaseDate),
             isReliever: this.isReliever,
             relieverNotGivenReason: this.isReliever === false ? (this.relieverNotGivenReason || null) : null,
+            isTransferWithoutReliever: this.isReliever === false ? this.isTransferWithoutReliever : null,
             relieverEmployeeId: this.isReliever === true ? (this.relieverEmployee?.employeeID ?? null) : null,
             noteSheetClearance: this.noteSheetClearance,
             nsClearanceDate: this.formatDate(this.nsClearanceDate),
@@ -1094,7 +1193,14 @@ export class PermanentPostingMORecordComponent implements OnInit {
                 const recordId = res.data?.id ?? res.id ?? this.editId ?? null;
                 // Only save joinee detail if isReliever=Yes or there's actual joinee data
                 if (this.isReliever === true || hasJoineeData || this.editDetailId) {
-                    return this.detailSvc.saveUpdate(buildDetail(recordId)).pipe(switchMap(() => of({ mainRes: res })));
+                    // Report the DETAIL result when it fails. The backend rejects a
+                    // duplicate New Posting Person here, and reporting only the main
+                    // record's success would announce "Saved" for a save that was
+                    // half-refused.
+                    return this.detailSvc.saveUpdate(buildDetail(recordId)).pipe(
+                        switchMap((detailRes: any) =>
+                            of({ mainRes: detailRes?.statusCode != null && detailRes.statusCode !== 200 ? detailRes : res }))
+                    );
                 }
                 return of({ mainRes: res });
             })
@@ -1122,6 +1228,7 @@ export class PermanentPostingMORecordComponent implements OnInit {
         this.isReliever = row.isReliever;
         this.joineeCollapsed = row.isReliever !== true;
         this.relieverNotGivenReason = row.relieverNotGivenReason ?? '';
+        this.isTransferWithoutReliever = row.isTransferWithoutReliever === true;
         this.noteSheetClearance = row.noteSheetClearance ?? null;
         this.nsClearanceDate = row.nsClearanceDate ? new Date(row.nsClearanceDate) : null;
         this.clearanceGiven = row.clearanceGiven ?? null;
@@ -1141,6 +1248,7 @@ export class PermanentPostingMORecordComponent implements OnInit {
             next: (d) => {
                 if (!d) return;
                 this.editDetailId = d.id;
+                this.joineeEntryCompleted = d.isAddedInNewJoineeDataEntry === true;
                 this.joineeEmployeeId = d.employeeId ?? null;
                 this.joineeMotherOrgId = d.motherOrgId ?? null;
                 this.joineeMemberType = d.memberType ?? null;
@@ -1229,6 +1337,7 @@ export class PermanentPostingMORecordComponent implements OnInit {
         this.loadedFromSearch = false;
         this.editId = null;
         this.editDetailId = row.id;
+        this.joineeEntryCompleted = row.isAddedInNewJoineeDataEntry === true;
         this.editPostedOutEmployeeId = null;
         this.editRelieverEmployeeId = row.employeeId ?? null;
         this.joineeEmployeeId = row.employeeId ?? null;
@@ -1338,7 +1447,7 @@ export class PermanentPostingMORecordComponent implements OnInit {
         this.joineeSearchServiceId = ''; this.joineeSearching = false;
         this.postingUnitId = null; this.postingUnitOptions = [];
         this.postingOrderNo = ''; this.postingOrderDate = null; this.possibleReleaseDate = null;
-        this.isReliever = null; this.relieverNotGivenReason = '';
+        this.isReliever = null; this.relieverNotGivenReason = ''; this.isTransferWithoutReliever = false;
         this.noteSheetClearance = null; this.nsClearanceDate = null; this.clearanceGiven = null; this.clearanceGivenDate = null;
         this.postingOrderFileRows = [];
         this.relieverEmployee = null;
@@ -1347,7 +1456,7 @@ export class PermanentPostingMORecordComponent implements OnInit {
         this.joineeMemberType = null; this.joineeRank = null; this.joineeCorps = null; this.joineeTrade = null;
         this.joineeServiceId = ''; this.joineePreviousRabId = ''; this.joineeNameBangla = '';
         this.joineeJoiningOrderNo = ''; this.joineeJoiningOrderDate = null; this.joineePossibleJoiningDate = null;
-        this.joineeFileRows = [];
+        this.joineeFileRows = []; this.joineeEntryCompleted = false;
         this.motherOrgUnitOptions = []; this.allRanksForOrg = []; this.rankOptions = []; this.corpsOptions = []; this.tradeOptions = []; this.prefixOptions = [];
     }
 }

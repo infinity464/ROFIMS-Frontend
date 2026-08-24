@@ -174,8 +174,16 @@
                 @if (isReliever === false) {
                     <div class="form-field form-field-half">
                         <label class="form-label">Reason (No Reliever)</label>
+                        <div class="reason-standard-option">
+                            <p-checkbox [(ngModel)]="isTransferWithoutReliever" [binary]="true"
+                                inputId="transferWithoutReliever" [disabled]="isViewMode"
+                                (onChange)="onTransferWithoutRelieverToggle()"></p-checkbox>
+                            <label for="transferWithoutReliever">{{ transferWithoutRelieverText }}</label>
+                        </div>
                         <input pInputText class="w-full" [(ngModel)]="relieverNotGivenReason"
-                            placeholder="Enter reason" [readonly]="isViewMode" />
+                            (ngModelChange)="onReasonTextChange()"
+                            placeholder="Enter reason"
+                            [readonly]="isViewMode || isTransferWithoutReliever" />
                     </div>
                 }
             </div>
@@ -277,9 +285,16 @@
                         [disabled]="isViewMode || !prefixOptions.length"></p-select>
                 </div>
                 <div class="form-field">
-                    <label class="form-label">Service ID <span class="form-label-required">*</span></label>
-                    <input pInputText class="w-full" [(ngModel)]="joineeServiceId"
-                        placeholder="Service ID" [readonly]="isViewMode" />
+                    <label class="form-label">Service ID <span class="form-label-required">*</span>
+                        <small class="text-500 font-normal">(search to auto-fill)</small></label>
+                    <div style="display:flex; gap:0.5rem;">
+                        <input pInputText class="w-full" [(ngModel)]="joineeServiceId"
+                            placeholder="Service ID" [readonly]="isViewMode"
+                            (keyup.enter)="searchNewJoineeByServiceId()" />
+                        <p-button icon="pi pi-search" [loading]="joineeSearching" [disabled]="isViewMode"
+                            (onClick)="searchNewJoineeByServiceId()"
+                            size="small" pTooltip="Load details if this member already exists" tooltipPosition="top"></p-button>
+                    </div>
                 </div>
             </div>
 

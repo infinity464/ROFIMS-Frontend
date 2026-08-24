@@ -49,6 +49,14 @@
         <ng-template pTemplate="caption">
             <div class="filter-bar">
                 <div class="filter-group">
+                    <label>RAB Unit</label>
+                    <p-select [options]="rabUnitOptions" [(ngModel)]="filterRabUnitId"
+                        optionLabel="label" optionValue="value"
+                        placeholder="All" [filter]="true" filterBy="label" [showClear]="true" appendTo="body"
+                        styleClass="text-sm" [style]="{'min-width':'12rem'}"
+                        (onChange)="onFilterChange()"></p-select>
+                </div>
+                <div class="filter-group">
                     <label>Status</label>
                     <p-select [options]="entryStatusOptions" [(ngModel)]="entryStatusFilter"
                         optionLabel="label" optionValue="value"
