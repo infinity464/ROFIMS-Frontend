@@ -983,9 +983,29 @@
 
 .ref-paragraph-content {
     flex: 1;
+    /* Without min-width:0 this flex item is sized by its min-content width, and the
+       file-references table inside it is ~590px of min-widths — so the row grew wider
+       than the fieldset and pushed the delete button out past the right edge. Zero lets
+       the table use its own `overflow-x: auto` instead of stretching the row. */
+    min-width: 0;
     display: flex;
     flex-direction: column;
     gap: 0.5rem;
+}
+
+/* The delete button is anchored in a reserved gutter at the row's top-right instead
+   of riding at the end of the flex line. As a flex item it was the element that
+   absorbed any overflow — whatever the row could not shrink pushed it past the right
+   border and, on a narrow paper, off the page. Out of flow it cannot be pushed
+   anywhere; `.ref-paragraph-row`'s padding-right keeps the content clear of it. */
+.ref-paragraph-row {
+    position: relative;
+    padding-right: 3rem;
+}
+.ref-paragraph-row > p-button {
+    position: absolute;
+    top: 0.5rem;
+    right: 0.5rem;
 }
 
 /* ── Print ────────────────────────────────────────── */

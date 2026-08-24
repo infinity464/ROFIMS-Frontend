@@ -2743,7 +2743,7 @@ html, body { margin: 0; padding: 0; background: transparent; }
                             ],
                             alignment: AlignmentType.LEFT,
                             indent: initIndent,
-                            spacing: { before: 280, after: 80 },
+                            spacing: { before: 655, after: 80 },
                             keepNext: true,
                             keepLines: true
                         })
@@ -2752,7 +2752,7 @@ html, body { margin: 0; padding: 0; background: transparent; }
                     /* no sig */
                 }
             } else {
-                mainChildren.push(new Paragraph({ spacing: { before: 280, after: 80 }, keepNext: true }));
+                mainChildren.push(new Paragraph({ spacing: { before: 655, after: 80 }, keepNext: true }));
             }
 
             // Name
@@ -2796,7 +2796,7 @@ html, body { margin: 0; padding: 0; background: transparent; }
                         children: [new TextRun({ text: model.initiator.date, size: SIG_SZ, sizeComplexScript: bn ? SIG_SZ : undefined, font, language: lang })],
                         alignment: AlignmentType.LEFT,
                         indent: initIndent,
-                        spacing: { before: 400 }
+                        spacing: { before: 200 }
                     })
                 );
             }

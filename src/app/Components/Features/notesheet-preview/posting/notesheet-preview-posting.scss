@@ -47,6 +47,12 @@
 .ns-initiator-area {
     padding: 7px 8px 9px 10px;
     gap: 5px;                   /* shared sheet uses 10px between sig lines */
+    /* Drop the whole signature block 25px below the body so it does not crowd the
+       closing line. The .ns-inter-posting block further down restates the same 25px,
+       so both posting variants sit at one offset. The PDF picks this up through
+       collectDocumentStyles(); the Word counterpart is the initiator paragraph's
+       `spacing.before` in buildWordDocument(). */
+    margin-top: 25px;
 }
 .ns-approver-section {
     padding: 5px 8px 12px 10px;
@@ -197,7 +203,7 @@
     }
 
     .ns-initiator-area {
-        margin-top: 15px;
+        margin-top: 25px;
     }
 }
 
@@ -211,6 +217,14 @@
 .ns-approver-role,
 .ns-approver-left,
 .ns-approver-remark { font-size: fs(9); }
+
+/* Gap above the date line, halved from the shared sheet's 2em — the block already
+   carries the .ns-initiator-area gap, so 2em read as a near-empty line between the
+   appointment and the date. The PDF picks this up through collectDocumentStyles();
+   the Word counterpart is the date paragraph's `spacing.before` in buildWordDocument(). */
+.ns-sig-date {
+    margin-top: 1em;
+}
 
 .ns-posting-table {
     /* Table content 8pt; column headers (table information) keep their own size. */
