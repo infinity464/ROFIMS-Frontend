@@ -49,6 +49,8 @@ export interface EmployeeBasicInfo {
     appointmentId?: number;
     /** Display name of the appointment (e.g. "Director General"). */
     appointment?: string;
+    /** EmployeeInfo.PostingStatus (e.g. 'Servings', 'ExMember') so hosts can react to ex-members. */
+    postingStatus?: string;
 }
 
 @Component({
@@ -357,7 +359,8 @@ export class EmployeeSearchComponent implements OnChanges {
                         branch: employee.Branch ?? employee.branch,
                         trade: employee.Trade ?? employee.trade,
                         memberType: employee.MemberType ?? employee.memberType,
-                        orgId: employee.orgId
+                        orgId: employee.orgId,
+                        postingStatus: employee.PostingStatus ?? employee.postingStatus
                     };
                     this.searchRabId = this.employeeInfo.rabid || '';
                     this.searchServiceId = this.employeeInfo.serviceId || '';
@@ -529,7 +532,8 @@ export class EmployeeSearchComponent implements OnChanges {
                             rank: (emp as any).Rank ?? (emp as any).rank,
                             trade: (emp as any).Trade ?? (emp as any).trade,
                             branch: (emp as any).Branch ?? (emp as any).branch,
-                            memberType: (emp as any).MemberType ?? (emp as any).memberType
+                            memberType: (emp as any).MemberType ?? (emp as any).memberType,
+                            postingStatus: (emp as any).PostingStatus ?? (emp as any).postingStatus
                         };
                         this.onEmployeeFound.emit(info);
                         found++;
@@ -575,7 +579,8 @@ export class EmployeeSearchComponent implements OnChanges {
             branch: employee.Branch ?? employee.branch,
             trade: employee.Trade ?? employee.trade,
             memberType: employee.MemberType ?? employee.memberType,
-            orgId: employee.orgId
+            orgId: employee.orgId,
+            postingStatus: employee.PostingStatus ?? employee.postingStatus
         };
         if (this.searchRabId && !this.searchServiceId) {
             this.searchServiceId = this.employeeInfo.serviceId || '';

@@ -5,12 +5,14 @@ import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angula
 import { FormsModule } from '@angular/forms';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router } from '@angular/router';
-import { forkJoin } from 'rxjs';
+import { forkJoin, of } from 'rxjs';
+import { catchError } from 'rxjs/operators';
 
 import { InputTextModule } from 'primeng/inputtext';
 import { ButtonModule } from 'primeng/button';
 import { Fluid } from 'primeng/fluid';
 import { MessageService } from 'primeng/api';
+import { DialogModule } from 'primeng/dialog';
 import { SelectModule } from 'primeng/select';
 import { MultiSelectModule } from 'primeng/multiselect';
 import { DatePickerModule } from 'primeng/datepicker';
@@ -26,7 +28,10 @@ import { CommonCodeService } from '@/services/common-code-service';
 import { EmployeeSearchComponent, EmployeeBasicInfo } from '@/Components/Shared/employee-search/employee-search';
 import { FileReferencesFormComponent, FileRowData } from '@components/Common/file-references-form/file-references-form';
 import { FlexibleDateDirective } from '@/shared/directives/flexible-date.directive';
-import { PresentStatusTypeOptions } from '@/models/enums';
+import { PostingStatus, PresentStatusType, PresentStatusTypeOptions } from '@/models/enums';
+import { PresentStatusInfoService } from '@/services/present-status-info.service';
+import { PreviousRABServiceService, VwPreviousRABServiceInfoModel } from '@/services/previous-rab-service.service';
+import { OrganizationService } from '@/Components/basic-setup/organization-setup/services/organization-service';
 
 @Component({
     selector: 'app-emp-personal-info',
@@ -46,6 +51,7 @@ import { PresentStatusTypeOptions } from '@/models/enums';
         FileUploadModule,
         RadioButtonModule,
         TooltipModule,
+        DialogModule,
         EmployeeSearchComponent,
         FileReferencesFormComponent,
         FlexibleDateDirective
@@ -69,6 +75,8 @@ export class EmpPersonalInfo implements OnInit {
 
     @ViewChild('fileReferencesForm') fileReferencesForm!: any; // FileReferencesFormComponent
 
+    @ViewChild('employeeSearch') employeeSearch?: EmployeeSearchComponent;
+
     /** When true (e.g. inside tab view), the "Employee Personal Info" title and header actions are hidden. */
     @Input() hideTitle = false;
 
@@ -87,6 +95,12 @@ export class EmpPersonalInfo implements OnInit {
     // Employee lookup
     employeeFound: boolean = false;
     selectedEmployeeId: number | null = null;
+
+    // Ex-Member notice dialog
+    showExMemberNotice: boolean = false;
+    exMemberNoticeName: string = '';
+    exMemberNoticeRows: { label: string; value: string }[] = [];
+    private pendingExMember: EmployeeBasicInfo | null = null;
 
     // File references (FilesReferences JSON) – same approach as emp-basic-info
     fileRows: FileRowData[] = [];
@@ -144,6 +158,9 @@ export class EmpPersonalInfo implements OnInit {
         private empService: EmpService,
         private commonCodeService: CommonCodeService,
         private messageService: MessageService,
+        private presentStatusService: PresentStatusInfoService,
+        private previousRabService: PreviousRABServiceService,
+        private organizationService: OrganizationService,
         private route: ActivatedRoute,
         private router: Router
     ) {}
@@ -389,6 +406,16 @@ export class EmpPersonalInfo implements OnInit {
 
     // Handle employee search component events
     onEmployeeSearchFound(employee: EmployeeBasicInfo): void {
+        // An ex-member's record is closed history, so the user is warned — with the details of
+        // the status that moved them off RAB strength — before the form is opened.
+        if (this.isExMember(employee)) {
+            this.confirmExMemberThenLoad(employee);
+            return;
+        }
+        this.applyFoundEmployee(employee);
+    }
+
+    private applyFoundEmployee(employee: EmployeeBasicInfo): void {
         this.employeeFound = true;
         this.selectedEmployeeId = employee.employeeID;
         this._lastLoadedEmployeeId = employee.employeeID;
@@ -402,6 +429,130 @@ export class EmpPersonalInfo implements OnInit {
         if (orgId) {
             this.loadBatchesByMotherOrg(orgId);
         }
+    }
+
+    private isExMember(employee: EmployeeBasicInfo): boolean {
+        const status = (employee.postingStatus ?? '').trim().toLowerCase();
+        return status === PostingStatus.ExMember.toLowerCase() || status === 'ex-member';
+    }
+
+    /**
+     * Gathers the ex-member context (last RAB unit, the posting/RTU unit they were sent to and
+     * the date they came off RAB strength) and asks the user to confirm before loading the form.
+     */
+    private confirmExMemberThenLoad(employee: EmployeeBasicInfo): void {
+        const employeeId = employee.employeeID;
+
+        // Each lookup fails soft: a missing section only blanks its own line in the notice.
+        forkJoin({
+            previousRabService: this.previousRabService.getViewByEmployeeId(employeeId).pipe(catchError(() => of([] as VwPreviousRABServiceInfoModel[]))),
+            presentStatuses: this.presentStatusService.getAllByEmployeeId(employeeId).pipe(catchError(() => of([] as any[]))),
+            orgUnits: this.organizationService.getOrgUnitsByEmployeeId(employeeId).pipe(catchError(() => of([] as any[])))
+        }).subscribe(({ previousRabService, presentStatuses, orgUnits }) => {
+            this.pendingExMember = employee;
+            this.exMemberNoticeName = employee.fullNameEN || '';
+            this.exMemberNoticeRows = this.buildExMemberRows(previousRabService, presentStatuses, orgUnits);
+            this.showExMemberNotice = true;
+        });
+    }
+
+    /**
+     * Ex-Member notice rows. "Posted Unit" and "Reduce Date" come from the Present Status record
+     * that performed the profile shift when that was a Regular Posting Out / RTU; for any other
+     * shifting status (Deceased, Absent, Arrested) the status itself and its date are shown
+     * instead, because those carry no transferred unit.
+     */
+    private buildExMemberRows(
+        previousRabService: VwPreviousRABServiceInfoModel[],
+        presentStatuses: any[],
+        orgUnits: any[]
+    ): { label: string; value: string }[] {
+        const rows: { label: string; value: string }[] = [{ label: 'Last RAB Unit', value: this.lastRabUnitName(previousRabService) }];
+
+        const shift = this.profileShiftRecord(presentStatuses);
+        const statusType = shift?.presentStatusType ?? null;
+
+        if (statusType === PresentStatusType.RegularPostingOut || statusType === PresentStatusType.RTUOnDisciplineIssue) {
+            rows.push({ label: 'Posted Unit', value: this.orgUnitName(shift.motherOrgTransferredUnitID ?? shift.transferredUnitID, orgUnits) });
+            rows.push({ label: 'Reduce Date', value: this.shortDate(shift.reduceFromRABStrength ?? shift.dateOfRelease ?? shift.dated) });
+        } else if (statusType) {
+            rows.push({ label: 'Status', value: PresentStatusTypeOptions.find((o) => o.value === statusType)?.label ?? statusType });
+            rows.push({ label: 'Date', value: this.shortDate(shift.dated) });
+        }
+
+        return rows;
+    }
+
+    /** Continue into the personal-info form for the ex-member. */
+    acceptExMemberNotice(): void {
+        const employee = this.pendingExMember;
+        this.closeExMemberNotice();
+        if (employee) this.applyFoundEmployee(employee);
+    }
+
+    /**
+     * Dismissed via the header X (or Esc / mask) without choosing an action — clear the search so
+     * the ex-member is not left selected. Continue / View Profile already cleared the pending
+     * member before hiding, so this no-ops for them.
+     */
+    onExMemberNoticeHide(): void {
+        if (this.pendingExMember) this.cancelExMemberNotice();
+    }
+
+    private cancelExMemberNotice(): void {
+        this.closeExMemberNotice();
+        this.employeeSearch?.reset();
+        this.resetForm();
+    }
+
+    /** Open the member's full (ex-member) profile page instead of editing personal info. */
+    viewExMemberProfile(): void {
+        const employeeId = this.pendingExMember?.employeeID ?? null;
+        this.closeExMemberNotice();
+        if (employeeId != null) this.router.navigate(['/members/profile', employeeId]);
+    }
+
+    private closeExMemberNotice(): void {
+        this.showExMemberNotice = false;
+        this.pendingExMember = null;
+    }
+
+    /** The Present Status record that moved this employee to the Ex Member list. */
+    private profileShiftRecord(presentStatuses: any[]): any | null {
+        const shifted = (presentStatuses ?? [])
+            .map((d) => ({
+                presentStatusType: d.PresentStatusType ?? d.presentStatusType,
+                dated: d.Dated ?? d.dated,
+                profileShift: d.ProfileShift ?? d.profileShift ?? false,
+                transferredUnitID: d.TransferredUnitID ?? d.transferredUnitID,
+                motherOrgTransferredUnitID: d.MotherOrgTransferredUnitID ?? d.motherOrgTransferredUnitID,
+                dateOfRelease: d.DateOfRelease ?? d.dateOfRelease,
+                reduceFromRABStrength: d.ReduceFromRABStrength ?? d.reduceFromRABStrength
+            }))
+            .filter((r) => !!r.profileShift);
+        if (!shifted.length) return null;
+        // Newest first, so a re-entered member shows the shift that made them an ex-member now.
+        shifted.sort((a, b) => String(b.dated ?? '').localeCompare(String(a.dated ?? '')));
+        return shifted[0];
+    }
+
+    /** Most recent Previous RAB Service unit, matching the ex-member profile page. */
+    private lastRabUnitName(list: VwPreviousRABServiceInfoModel[]): string {
+        if (!list?.length) return 'N/A';
+        const sorted = [...list].sort((a, b) => (b.serviceFrom ?? '').localeCompare(a.serviceFrom ?? ''));
+        return sorted[0]?.rabUnitName || sorted[0]?.rabUnitNameBN || 'N/A';
+    }
+
+    private orgUnitName(orgId: number | null | undefined, orgUnits: any[]): string {
+        if (orgId == null) return 'N/A';
+        const match = (orgUnits ?? []).find((o) => (o.orgId ?? o.OrgId) === orgId);
+        return match?.orgNameEN ?? match?.OrgNameEN ?? String(orgId);
+    }
+
+    private shortDate(value: string | null | undefined): string {
+        if (!value) return 'N/A';
+        const d = new Date(value);
+        return isNaN(d.getTime()) ? String(value) : d.toLocaleDateString('en-GB');
     }
 
     onEmployeeSearchReset(): void {

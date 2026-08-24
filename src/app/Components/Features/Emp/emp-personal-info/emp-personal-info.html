@@ -10,6 +10,7 @@
         @if (!embedMode && !hideTitle) {
             <div class="form-section">
                 <app-employee-search
+                    #employeeSearch
                     (onEmployeeFound)="onEmployeeSearchFound($event)"
                     (onSearchReset)="onEmployeeSearchReset()">
                 </app-employee-search>
@@ -243,3 +244,47 @@
         }
     </div>
 </p-fluid>
+
+<!-- Ex-Member notice: shown before an ex-member's personal info is opened. -->
+<p-dialog
+    header="Ex-Member"
+    [(visible)]="showExMemberNotice"
+    [modal]="true"
+    [draggable]="false"
+    [resizable]="false"
+    [style]="{ width: '34rem' }"
+    (onHide)="onExMemberNoticeHide()">
+    <div class="flex gap-3">
+        <i class="pi pi-exclamation-triangle text-2xl" style="color: var(--p-orange-500, #f97316);"></i>
+        <div class="flex-1">
+            <p class="mt-0 mb-3">
+                @if (exMemberNoticeName) {
+                    <b>{{ exMemberNoticeName }}</b> is an <b>Ex-Member</b>.
+                } @else {
+                    This member is an <b>Ex-Member</b>.
+                }
+            </p>
+            @for (row of exMemberNoticeRows; track row.label) {
+                <div class="flex gap-2 mb-1">
+                    <span class="text-600" style="min-width: 8.5rem;">{{ row.label }}:</span>
+                    <span class="font-semibold">{{ row.value }}</span>
+                </div>
+            }
+        </div>
+    </div>
+    <ng-template #footer>
+        <p-button
+            type="button"
+            label="View Profile"
+            icon="pi pi-user"
+            severity="secondary"
+            (onClick)="viewExMemberProfile()">
+        </p-button>
+        <p-button
+            type="button"
+            label="Continue"
+            icon="pi pi-check"
+            (onClick)="acceptExMemberNotice()">
+        </p-button>
+    </ng-template>
+</p-dialog>
