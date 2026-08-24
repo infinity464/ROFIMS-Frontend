@@ -8,16 +8,18 @@ import { DialogModule } from 'primeng/dialog';
 import { TableModule } from 'primeng/table';
 import { MessageService } from 'primeng/api';
 import { forkJoin, of } from 'rxjs';
-import { map } from 'rxjs/operators';
+import { catchError, map } from 'rxjs/operators';
 
 import { EmpService } from '@/services/emp-service';
 import { CommonCodeService } from '@/services/common-code-service';
 import { IdentityUserMemberTypeAccessService } from '@/services/identity-user-member-type-access.service';
 import { ServingMembersService } from '@/services/serving-members.service';
 import { PreviousRABServiceService, VwPreviousRABServiceInfoModel } from '@/services/previous-rab-service.service';
+import { PresentStatusInfoService } from '@/services/present-status-info.service';
+import { OrganizationService } from '@/Components/basic-setup/organization-setup/services/organization-service';
 import { SharedService } from '@/shared/services/shared-service';
 import { MotherOrganizationModel } from '@/models/mother-org-model';
-import { PostingStatus } from '@/models/enums';
+import { PostingStatus, PresentStatusType, PresentStatusTypeOptions } from '@/models/enums';
 import { BanglaNumerals } from '@/Core/i18n/bangla-numerals';
 
 export interface EmployeeBasicInfo {
@@ -139,6 +141,39 @@ export interface EmployeeBasicInfo {
                 <p-button type="button" label="Cancel" severity="secondary" [outlined]="true" (onClick)="closePickerDialog()"></p-button>
             </ng-template>
         </p-dialog>
+
+        <!-- Ex-Member notice: hosts that set [exMemberNotice]="true" see this before the member is emitted. -->
+        <p-dialog
+            header="Ex-Member"
+            [(visible)]="showExMemberNotice"
+            [modal]="true"
+            [draggable]="false"
+            [resizable]="false"
+            [style]="{ width: '34rem' }"
+            (onHide)="onExMemberNoticeHide()">
+            <div class="flex gap-3">
+                <i class="pi pi-exclamation-triangle text-2xl" style="color: var(--p-orange-500, #f97316);"></i>
+                <div class="flex-1">
+                    <p class="mt-0 mb-3">
+                        @if (exMemberNoticeName) {
+                            <b>{{ exMemberNoticeName }}</b> is an <b>Ex-Member</b>.
+                        } @else {
+                            This member is an <b>Ex-Member</b>.
+                        }
+                    </p>
+                    @for (row of exMemberNoticeRows; track row.label) {
+                        <div class="flex gap-2 mb-1">
+                            <span class="text-600" style="min-width: 8.5rem;">{{ row.label }}:</span>
+                            <span class="font-semibold">{{ row.value }}</span>
+                        </div>
+                    }
+                </div>
+            </div>
+            <ng-template #footer>
+                <p-button type="button" label="View Profile" icon="pi pi-user" severity="secondary" (onClick)="viewExMemberProfileFromNotice()"></p-button>
+                <p-button type="button" label="Continue" icon="pi pi-check" (onClick)="acceptExMemberNotice()"></p-button>
+            </ng-template>
+        </p-dialog>
     `
 })
 export class EmployeeSearchComponent implements OnChanges {
@@ -154,6 +189,10 @@ export class EmployeeSearchComponent implements OnChanges {
     @Input() showMotherUnit = true;
     @Input() showRabUnit = true;
 
+    /** When true, an ex-member is announced in a dialog and only emitted once the user continues.
+     *  Off by default so bulk/list hosts that legitimately handle ex-members are unaffected. */
+    @Input() exMemberNotice = false;
+
     @Output() onEmployeeFound = new EventEmitter<EmployeeBasicInfo>();
     @Output() onSearchReset = new EventEmitter<void>();
 
@@ -162,6 +201,11 @@ export class EmployeeSearchComponent implements OnChanges {
     isSearching: boolean = false;
     employeeFound: boolean = false;
     employeeInfo: EmployeeBasicInfo | null = null;
+
+    showExMemberNotice: boolean = false;
+    exMemberNoticeName: string = '';
+    exMemberNoticeRows: { label: string; value: string }[] = [];
+    private pendingExMember: EmployeeBasicInfo | null = null;
 
     showPickerDialog: boolean = false;
     pickerRows: Array<{
@@ -190,7 +234,9 @@ export class EmployeeSearchComponent implements OnChanges {
         private memberTypeAccess: IdentityUserMemberTypeAccessService,
         private sharedService: SharedService,
         private servingMembersService: ServingMembersService,
-        private previousRabService: PreviousRABServiceService
+        private previousRabService: PreviousRABServiceService,
+        private presentStatusService: PresentStatusInfoService,
+        private organizationService: OrganizationService
     ) {
         this.commonCodeService.getAllActiveMotherOrgs().subscribe({
             next: (res) => (this.motherOrganizations = res ?? []),
@@ -322,9 +368,132 @@ export class EmployeeSearchComponent implements OnChanges {
     private markFoundAndEmit(): void {
         this.employeeFound = true;
         this.isSearching = false;
-        if (this.employeeInfo) {
-            this.onEmployeeFound.emit(this.employeeInfo);
+        if (!this.employeeInfo) return;
+        // Opted-in hosts announce an ex-member first — the member is emitted only on Continue.
+        if (this.exMemberNotice && this.isExMember(this.employeeInfo)) {
+            this.openExMemberNotice(this.employeeInfo);
+            return;
         }
+        this.onEmployeeFound.emit(this.employeeInfo);
+    }
+
+    // ===================== Ex-Member notice =====================
+
+    private isExMember(employee: EmployeeBasicInfo): boolean {
+        const status = (employee.postingStatus ?? '').trim().toLowerCase();
+        return status === PostingStatus.ExMember.toLowerCase() || status === 'ex-member';
+    }
+
+    /**
+     * Gathers the ex-member context — last RAB unit, the unit they were posted/returned to and the
+     * date they came off RAB strength — then shows the notice.
+     */
+    private openExMemberNotice(employee: EmployeeBasicInfo): void {
+        const employeeId = employee.employeeID;
+
+        // Each lookup fails soft: a missing section only blanks its own line in the notice.
+        forkJoin({
+            previousRabService: this.previousRabService.getViewByEmployeeId(employeeId).pipe(catchError(() => of([] as VwPreviousRABServiceInfoModel[]))),
+            presentStatuses: this.presentStatusService.getAllByEmployeeId(employeeId).pipe(catchError(() => of([] as any[]))),
+            orgUnits: this.organizationService.getOrgUnitsByEmployeeId(employeeId).pipe(catchError(() => of([] as any[])))
+        }).subscribe(({ previousRabService, presentStatuses, orgUnits }) => {
+            this.pendingExMember = employee;
+            this.exMemberNoticeName = employee.fullNameEN || '';
+            this.exMemberNoticeRows = this.buildExMemberRows(previousRabService, presentStatuses, orgUnits);
+            this.showExMemberNotice = true;
+        });
+    }
+
+    /**
+     * Ex-Member notice rows. "Posted Unit" and "Reduce Date" come from the Present Status record
+     * that performed the profile shift when that was a Regular Posting Out / RTU; for any other
+     * shifting status (Deceased, Absent, Arrested) the status itself and its date are shown
+     * instead, because those carry no transferred unit.
+     */
+    private buildExMemberRows(
+        previousRabService: VwPreviousRABServiceInfoModel[],
+        presentStatuses: any[],
+        orgUnits: any[]
+    ): { label: string; value: string }[] {
+        const rows: { label: string; value: string }[] = [{ label: 'Last RAB Unit', value: this.lastRabUnitName(previousRabService) }];
+
+        const shift = this.profileShiftRecord(presentStatuses);
+        const statusType = shift?.presentStatusType ?? null;
+
+        if (statusType === PresentStatusType.RegularPostingOut || statusType === PresentStatusType.RTUOnDisciplineIssue) {
+            rows.push({ label: 'Posted Unit', value: this.orgUnitName(shift.motherOrgTransferredUnitID ?? shift.transferredUnitID, orgUnits) });
+            rows.push({ label: 'Reduce Date', value: this.shortDate(shift.reduceFromRABStrength ?? shift.dateOfRelease ?? shift.dated) });
+        } else if (statusType) {
+            rows.push({ label: 'Status', value: PresentStatusTypeOptions.find((o) => o.value === statusType)?.label ?? statusType });
+            rows.push({ label: 'Date', value: this.shortDate(shift.dated) });
+        }
+
+        return rows;
+    }
+
+    /** The Present Status record that moved this employee to the Ex Member list. */
+    private profileShiftRecord(presentStatuses: any[]): any | null {
+        const shifted = (presentStatuses ?? [])
+            .map((d) => ({
+                presentStatusType: d.PresentStatusType ?? d.presentStatusType,
+                dated: d.Dated ?? d.dated,
+                profileShift: d.ProfileShift ?? d.profileShift ?? false,
+                transferredUnitID: d.TransferredUnitID ?? d.transferredUnitID,
+                motherOrgTransferredUnitID: d.MotherOrgTransferredUnitID ?? d.motherOrgTransferredUnitID,
+                dateOfRelease: d.DateOfRelease ?? d.dateOfRelease,
+                reduceFromRABStrength: d.ReduceFromRABStrength ?? d.reduceFromRABStrength
+            }))
+            .filter((r) => !!r.profileShift);
+        if (!shifted.length) return null;
+        // Newest first, so a re-entered member shows the shift that made them an ex-member now.
+        shifted.sort((a, b) => String(b.dated ?? '').localeCompare(String(a.dated ?? '')));
+        return shifted[0];
+    }
+
+    /** Most recent Previous RAB Service unit, matching the ex-member profile page. */
+    private lastRabUnitName(list: VwPreviousRABServiceInfoModel[]): string {
+        return this.latestRabUnitName(list) ?? 'N/A';
+    }
+
+    private orgUnitName(orgId: number | null | undefined, orgUnits: any[]): string {
+        if (orgId == null) return 'N/A';
+        const match = (orgUnits ?? []).find((o) => (o.orgId ?? o.OrgId) === orgId);
+        return match?.orgNameEN ?? match?.OrgNameEN ?? String(orgId);
+    }
+
+    private shortDate(value: string | null | undefined): string {
+        if (!value) return 'N/A';
+        const d = new Date(value);
+        return isNaN(d.getTime()) ? String(value) : d.toLocaleDateString('en-GB');
+    }
+
+    /** Continue — hand the ex-member to the host as a normal search result. */
+    acceptExMemberNotice(): void {
+        const employee = this.pendingExMember;
+        this.closeExMemberNotice();
+        if (employee) this.onEmployeeFound.emit(employee);
+    }
+
+    /** Open the member's full (ex-member) profile page instead. */
+    viewExMemberProfileFromNotice(): void {
+        this.closeExMemberNotice();
+        this.openEmployeeProfile();
+    }
+
+    /**
+     * Dismissed via the header X (or Esc / mask) without choosing an action — clear the search so
+     * the ex-member is not left selected. Continue / View Profile already cleared the pending
+     * member before hiding, so this no-ops for them.
+     */
+    onExMemberNoticeHide(): void {
+        if (!this.pendingExMember) return;
+        this.closeExMemberNotice();
+        this.reset();
+    }
+
+    private closeExMemberNotice(): void {
+        this.showExMemberNotice = false;
+        this.pendingExMember = null;
     }
 
     ngOnChanges(changes: SimpleChanges): void {

@@ -9,6 +9,7 @@
         </div>
 
         <app-employee-search
+            [exMemberNotice]="true"
             [initialEmployeeId]="selectedEmployeeId"
             (onEmployeeFound)="onEmployeeFound($event)"
             (onSearchReset)="onSearchReset()">
