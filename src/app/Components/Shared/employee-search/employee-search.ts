@@ -55,6 +55,13 @@ export interface EmployeeBasicInfo {
     postingStatus?: string;
 }
 
+/** One entry in the search result chip. `danger` renders the value in red (e.g. Ex-Member). */
+interface ChipField {
+    label: string;
+    value: string;
+    danger?: boolean;
+}
+
 @Component({
     selector: 'app-employee-search',
     standalone: true,
@@ -90,7 +97,11 @@ export interface EmployeeBasicInfo {
                                 class="flex align-items-center gap-2 px-3 py-2"
                                 [style.border-left]="$first ? 'none' : '1px solid var(--surface-border, rgba(0,0,0,0.08))'">
                                 <span class="text-sm" style="color: var(--text-color-secondary, #6b7280);">{{ f.label }}:</span>
-                                <span class="text-sm font-semibold text-900 white-space-nowrap">{{ f.value }}</span>
+                                <span
+                                    class="text-sm font-semibold white-space-nowrap"
+                                    [class.text-900]="!f.danger"
+                                    [style.color]="f.danger ? 'var(--p-red-500, #ef4444)' : null"
+                                    [style.font-weight]="f.danger ? '700' : null">{{ f.value }}</span>
                             </div>
                         }
                     </div>
@@ -205,6 +216,8 @@ export class EmployeeSearchComponent implements OnChanges {
     showExMemberNotice: boolean = false;
     exMemberNoticeName: string = '';
     exMemberNoticeRows: { label: string; value: string }[] = [];
+    /** Extra result-chip entries shown for an ex-member. Empty for everyone else. */
+    private exMemberChipFields: ChipField[] = [];
     private pendingExMember: EmployeeBasicInfo | null = null;
 
     showPickerDialog: boolean = false;
@@ -368,10 +381,10 @@ export class EmployeeSearchComponent implements OnChanges {
     private markFoundAndEmit(): void {
         this.employeeFound = true;
         this.isSearching = false;
+        this.exMemberChipFields = [];
         if (!this.employeeInfo) return;
-        // Opted-in hosts announce an ex-member first — the member is emitted only on Continue.
-        if (this.exMemberNotice && this.isExMember(this.employeeInfo)) {
-            this.openExMemberNotice(this.employeeInfo);
+        if (this.isExMember(this.employeeInfo)) {
+            this.loadExMemberContext(this.employeeInfo);
             return;
         }
         this.onEmployeeFound.emit(this.employeeInfo);
@@ -385,23 +398,56 @@ export class EmployeeSearchComponent implements OnChanges {
     }
 
     /**
-     * Gathers the ex-member context — last RAB unit, the unit they were posted/returned to and the
-     * date they came off RAB strength — then shows the notice.
+     * Loads the ex-member context — last RAB unit, the unit they were posted/returned to and the
+     * date they came off RAB strength. It always feeds the result chip; hosts that opted into the
+     * notice get the dialog too, and the member is emitted only once they continue.
      */
-    private openExMemberNotice(employee: EmployeeBasicInfo): void {
+    private loadExMemberContext(employee: EmployeeBasicInfo): void {
         const employeeId = employee.employeeID;
 
-        // Each lookup fails soft: a missing section only blanks its own line in the notice.
+        // Each lookup fails soft: a missing section only blanks its own line.
         forkJoin({
             previousRabService: this.previousRabService.getViewByEmployeeId(employeeId).pipe(catchError(() => of([] as VwPreviousRABServiceInfoModel[]))),
             presentStatuses: this.presentStatusService.getAllByEmployeeId(employeeId).pipe(catchError(() => of([] as any[]))),
             orgUnits: this.organizationService.getOrgUnitsByEmployeeId(employeeId).pipe(catchError(() => of([] as any[])))
         }).subscribe(({ previousRabService, presentStatuses, orgUnits }) => {
+            if (this.employeeInfo?.employeeID !== employeeId) return; // a newer search won the race
+            const shift = this.profileShiftRecord(presentStatuses);
+            this.exMemberChipFields = this.buildExMemberChipFields(shift, orgUnits);
+
+            if (!this.exMemberNotice) {
+                this.onEmployeeFound.emit(employee);
+                return;
+            }
             this.pendingExMember = employee;
             this.exMemberNoticeName = employee.fullNameEN || '';
-            this.exMemberNoticeRows = this.buildExMemberRows(previousRabService, presentStatuses, orgUnits);
+            this.exMemberNoticeRows = this.buildExMemberRows(previousRabService, shift, orgUnits);
             this.showExMemberNotice = true;
         });
+    }
+
+    /**
+     * Ex-Member result-chip entries: the Ex-Member marker plus where they went and when they came
+     * off RAB strength, e.g. "Posted Unit: RAB-2 (12/03/2025)".
+     */
+    private buildExMemberChipFields(shift: any | null, orgUnits: any[]): ChipField[] {
+        const fields: ChipField[] = [{ label: 'Status', value: 'Ex-Member', danger: true }];
+        const statusType = shift?.presentStatusType ?? null;
+        if (!statusType) return fields;
+
+        const withDate = (text: string, date: string | null | undefined) => {
+            const formatted = this.shortDate(date);
+            return formatted === 'N/A' ? text : `${text} (${formatted})`;
+        };
+
+        if (statusType === PresentStatusType.RegularPostingOut || statusType === PresentStatusType.RTUOnDisciplineIssue) {
+            const unit = this.orgUnitName(shift.motherOrgTransferredUnitID ?? shift.transferredUnitID, orgUnits);
+            fields.push({ label: 'Posted Unit', value: withDate(unit, shift.reduceFromRABStrength ?? shift.dateOfRelease ?? shift.dated) });
+        } else {
+            const label = PresentStatusTypeOptions.find((o) => o.value === statusType)?.label ?? statusType;
+            fields.push({ label: 'Reduced On', value: withDate(label, shift.dated) });
+        }
+        return fields;
     }
 
     /**
@@ -412,12 +458,10 @@ export class EmployeeSearchComponent implements OnChanges {
      */
     private buildExMemberRows(
         previousRabService: VwPreviousRABServiceInfoModel[],
-        presentStatuses: any[],
+        shift: any | null,
         orgUnits: any[]
     ): { label: string; value: string }[] {
         const rows: { label: string; value: string }[] = [{ label: 'Last RAB Unit', value: this.lastRabUnitName(previousRabService) }];
-
-        const shift = this.profileShiftRecord(presentStatuses);
         const statusType = shift?.presentStatusType ?? null;
 
         if (statusType === PresentStatusType.RegularPostingOut || statusType === PresentStatusType.RTUOnDisciplineIssue) {
@@ -875,11 +919,11 @@ export class EmployeeSearchComponent implements OnChanges {
      * Mother Unit / RAB Unit are included per the show* toggles so the same strip layout
      * works for every host without template duplication.
      */
-    get chipFields(): { label: string; value: string }[] {
+    get chipFields(): ChipField[] {
         const e = this.employeeInfo;
         if (!e) return [];
         const motherOrg = e.motherOrganizationDisplay ?? (e.motherOrganization != null ? String(e.motherOrganization) : null);
-        const fields: { label: string; value: string }[] = [
+        const fields: ChipField[] = [
             { label: 'Name', value: e.fullNameEN || 'N/A' },
             { label: 'Rank', value: e.rankDisplay || 'N/A' }
         ];
@@ -888,6 +932,7 @@ export class EmployeeSearchComponent implements OnChanges {
         fields.push({ label: 'Mother Org', value: motherOrg || 'N/A' });
         if (this.showMotherUnit) fields.push({ label: 'Mother Unit', value: e.motherUnitDisplay || 'N/A' });
         if (this.showRabUnit) fields.push({ label: 'RAB Unit', value: e.rabUnitDisplay || 'N/A' });
+        fields.push(...this.exMemberChipFields);
         return fields;
     }
 

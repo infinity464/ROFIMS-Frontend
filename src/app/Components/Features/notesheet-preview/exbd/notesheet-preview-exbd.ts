@@ -37,6 +37,12 @@ import {
     WidthType, BorderStyle, AlignmentType, ImageRun,
     VerticalAlign, TableLayoutType, HeightRule, PageOrientation, TabStopType, TabStopPosition
 } from 'docx';
+
+/* Serial gutter for the Word export, in twips (1pt = 20 twips): 2.4em at the 12pt
+   body size = 28.8pt = 576. Same column the screen/PDF reserve with
+   --ns-serial-col (notesheet-preview-exbd.scss), so ১।/২। and ক।/খ। text starts at
+   one x position and wrapped lines hang under it. */
+const NS_SERIAL_INDENT = 576;
 import { saveAs } from 'file-saver';
 import type { NotesheetDocumentModel, ContentBlock } from '../notesheet-document-model';
 
@@ -1149,6 +1155,19 @@ html, body { margin: 0; padding: 0; background: transparent; }
 .pdf-flow .ns-para-no    { font-weight: normal; margin-right: 1em; }
 .pdf-flow .ns-ref-serial { font-weight: normal; margin-right: 0.5em; }
 
+/* সূত্রঃ label is NOT bold (mirrors the :host .ns-ref-key rule in the SCSS) — the
+   shared sheet's .ns-ref-key{font-weight:700} would otherwise win in the snapshot. */
+.pdf-flow .ns-ref-key { font-weight: normal; }
+
+/* Serial gutter — ১।/২। and ক।/খ। share one text column: each serial is a
+   fixed-width inline-block, so the first line's text starts at the same x for both
+   serial kinds while wrapped lines return to the left margin (no hanging indent —
+   that is the intended note-sheet shape). Mirrors the --ns-serial-col block in
+   notesheet-preview-exbd.scss (2.4em there; written out here because the snapshot
+   is the paper's innerHTML, not the host that carries the custom property). */
+.pdf-flow .ns-cell-ref { padding-left: 1px; padding-top: 12px; }
+.pdf-flow .ns-para-no, .pdf-flow .ns-ref-serial { display: inline-block; width: 2.4em; margin-right: 0; }
+
 /* Body line gap — override the shared \`.ns-para { line-height: 1.85 }\` that
    collectDocumentStyles() pulls in, matching the on-screen 1.25 (see the
    \`.ns-para\` rule in notesheet-preview-exbd.scss). */
@@ -1458,7 +1477,7 @@ html, body { margin: 0; padding: 0; background: transparent; }
         if (model.subject) {
             mainChildren.push(new Paragraph({
                 children: [new TextRun({ text: model.subject, bold: true, underline: {}, size: contentSize, sizeComplexScript: csContent, font, language: lang })],
-                spacing: { before: 20, after: 60 }
+                spacing: { before: 180, after: 180 }
             }));
         }
 
@@ -1466,21 +1485,21 @@ html, body { margin: 0; padding: 0; background: transparent; }
         if (model.referenceBlocks.length === 1) {
             mainChildren.push(new Paragraph({
                 children: [
-                    new TextRun({ text: `${model.referenceLabel.trim()}  `, bold: true, size: contentSize, sizeComplexScript: csContent, font, language: lang }),
+                    new TextRun({ text: `${model.referenceLabel.trim()}  `, bold: false, size: contentSize, sizeComplexScript: csContent, font, language: lang }),
                     new TextRun({ text: model.referenceBlocks[0].text ?? '', size: contentSize, sizeComplexScript: csContent, font, language: lang })
                 ],
                 spacing: { after: 80 }, alignment: AlignmentType.JUSTIFIED
             }));
         } else if (model.referenceBlocks.length > 0) {
             mainChildren.push(new Paragraph({
-                children: [new TextRun({ text: model.referenceLabel.trim(), bold: true, size: contentSize, sizeComplexScript: csContent, font, language: lang })],
+                children: [new TextRun({ text: model.referenceLabel.trim(), bold: false, size: contentSize, sizeComplexScript: csContent, font, language: lang })],
                 spacing: { after: 0 }
             }));
             mainChildren.push(...this.contentBlocksToDocx(model.referenceBlocks, font, bn));
         } else if (this.noteSheet?.referenceNumber) {
             const plain = this.stripHtml(this.noteSheet.referenceNumber ?? '');
             mainChildren.push(new Paragraph({
-                children: [new TextRun({ text: model.referenceLabel.trim(), bold: true, size: contentSize, sizeComplexScript: csContent, font, language: lang })],
+                children: [new TextRun({ text: model.referenceLabel.trim(), bold: false, size: contentSize, sizeComplexScript: csContent, font, language: lang })],
                 spacing: { after: 0 }
             }));
             mainChildren.push(new Paragraph({
@@ -1492,7 +1511,7 @@ html, body { margin: 0; padding: 0; background: transparent; }
         // Merge serial (১।) with first text block so they appear inline
         if (model.mainBlocks.length > 0 && model.mainBlocks[0].type === 'paragraph' && model.mainBlocks[0].text) {
             const firstBlock = model.mainBlocks[0];
-            const serialRun = new TextRun({ text: `${model.mainSerialText}  `, bold: false, size: contentSize, sizeComplexScript: csContent, font, language: lang });
+            const serialRun = new TextRun({ text: `${model.mainSerialText}	`, bold: false, size: contentSize, sizeComplexScript: csContent, font, language: lang });
             const contentRuns = (firstBlock.runs && firstBlock.runs.length > 0)
                 ? firstBlock.runs.map(r => new TextRun({
                     text: r.text,
@@ -1507,7 +1526,8 @@ html, body { margin: 0; padding: 0; background: transparent; }
                 : [new TextRun({ text: firstBlock.text!, bold: firstBlock.bold, italics: firstBlock.italic, size: contentSize, sizeComplexScript: csContent, font, language: lang })];
             mainChildren.push(new Paragraph({
                 children: [serialRun, ...contentRuns],
-                spacing: { before: 160, after: 80 }, alignment: AlignmentType.JUSTIFIED
+                spacing: { before: 160, after: 80 }, alignment: AlignmentType.JUSTIFIED,
+                tabStops: [{ type: TabStopType.LEFT, position: NS_SERIAL_INDENT }]
             }));
             if (model.mainBlocks.length > 1) {
                 mainChildren.push(...this.contentBlocksToDocx(model.mainBlocks.slice(1), font, bn));
@@ -1537,10 +1557,11 @@ html, body { margin: 0; padding: 0; background: transparent; }
             if (!text) return;
             mainChildren.push(new Paragraph({
                 children: [
-                    new TextRun({ text: `${this.serial(this.paragraphSerialNo + i)}  `, bold: false, size: contentSize, sizeComplexScript: csContent, font, language: lang }),
+                    new TextRun({ text: `${this.serial(this.paragraphSerialNo + i)}	`, bold: false, size: contentSize, sizeComplexScript: csContent, font, language: lang }),
                     new TextRun({ text, size: contentSize, sizeComplexScript: csContent, font, language: lang })
                 ],
-                spacing: { before: 80, after: 80 }, alignment: AlignmentType.JUSTIFIED
+                spacing: { before: 80, after: 80 }, alignment: AlignmentType.JUSTIFIED,
+                tabStops: [{ type: TabStopType.LEFT, position: NS_SERIAL_INDENT }]
             }));
         });
 
@@ -1722,7 +1743,13 @@ html, body { margin: 0; padding: 0; background: transparent; }
                 else if (b.alignment === 'right') align = AlignmentType.RIGHT;
                 else if (b.alignment === 'justify') align = AlignmentType.JUSTIFIED;
                 else align = b.indent === 'list' ? AlignmentType.LEFT : AlignmentType.JUSTIFIED;
+                /* Blocks built as `serial	text` (the ক।/খ। reference items) tab to the same
+                   column as ১।/২। so every serial's text starts at one x. No hanging
+                   indent: wrapped lines return to the left margin, matching the screen
+                   (--ns-serial-col in notesheet-preview-exbd.scss). */
+                const hasSerialTab = (b.text ?? '').includes('	');
                 const indent = b.indent === 'list' ? { left: 240 } : undefined;
+                const tabStops = hasSerialTab ? [{ type: TabStopType.LEFT, position: NS_SERIAL_INDENT }] : undefined;
                 const children = (b.runs && b.runs.length > 0)
                     ? b.runs.map(r => new TextRun({
                         text: r.text,
@@ -1738,6 +1765,7 @@ html, body { margin: 0; padding: 0; background: transparent; }
                 result.push(new Paragraph({
                     children,
                     indent,
+                    tabStops,
                     spacing: { after: b.indent === 'list' ? 60 : 80 },
                     alignment: align
                 } as any));

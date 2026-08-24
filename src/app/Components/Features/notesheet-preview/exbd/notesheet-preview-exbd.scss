@@ -141,3 +141,49 @@
     text-underline-offset: 4px;
     text-decoration-skip-ink: none;
 }
+
+/* ── সূত্রঃ label weight (this screen only) ─────────────
+   The shared sheet bolds the reference key (`.ns-ref-key { font-weight: 700 }` in
+   notesheet-preview.scss). On the Ex-BD sheet the label reads as ordinary body
+   text, so pull it back to normal. `:host` keeps the other note-sheet types bold.
+   The PDF/Print counterpart is `.pdf-flow .ns-ref-key` in buildJsReportPdf(), and
+   the Word counterpart is `bold: false` on the referenceLabel runs in
+   buildWordDocument(). */
+:host .ns-ref-key {
+    font-weight: normal;
+}
+
+/* ── Serial gutter: one shared text column ──────────────
+   Both serial kinds (১। ২। for body paragraphs, ক। খ। for reference items) sat in
+   the normal text flow with their own trailing margin (1em vs 0.5em), so their
+   text started at two different x positions.
+
+   Each serial is now a fixed-width inline-block, so the first line's text always
+   begins at --ns-serial-col no matter which serial precedes it. Wrapped lines
+   deliberately return to the left margin (under the serial), which is how the
+   note sheet is written — do NOT convert this into a hanging indent.
+   The PDF/Print counterpart lives in buildJsReportPdf() (`.pdf-flow .ns-para-no`
+   / `.ns-ref-serial`), and Word gets the same column from the tab stop at
+   NS_SERIAL_INDENT in buildWordDocument(). */
+:host .a4-paper,
+:host .page-measure {
+    --ns-serial-col: 2.4em;
+
+    /* Reference block shares the body paragraph's left base (shared sheet gives it
+       4px vs the paragraph's 1px), so both serial columns start from the same edge.
+       padding-top opens the subject → সূত্রঃ gap to 12px — a touch wider than the 10px
+       block gap used lower down (`.ns-para { padding-top: 10px }`), because the
+       underlined subject line above needs the extra air. The no/date → subject gap
+       carries the same 12px inline (notesheet-preview-exbd.html). */
+    .ns-cell-ref {
+        padding-left: 1px;
+        padding-top: 12px;
+    }
+
+    .ns-para-no,
+    .ns-ref-serial {
+        display: inline-block;
+        width: var(--ns-serial-col);
+        margin-right: 0;
+    }
+}

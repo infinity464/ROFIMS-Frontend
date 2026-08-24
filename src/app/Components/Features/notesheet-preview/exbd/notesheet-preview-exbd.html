@@ -257,14 +257,14 @@
                 </div>
 
                 <!-- ── Notesheet No & Date ── -->
-                <div style="display:flex; justify-content:space-between; align-items:baseline; padding:4px 8px 2px; font-size:calc(12pt + var(--ns-fs-delta, 0) * 1pt);">
+                <div style="display:flex; justify-content:space-between; align-items:baseline; padding:4px 2px 0 1px; font-size:calc(12pt + var(--ns-fs-delta, 0) * 1pt);">
                     <span *ngIf="noteSheet.noteSheetNo">{{ noteSheet.noteSheetNo }}</span>
                     <span *ngIf="!noteSheet.noteSheetNo"></span>
                     <span *ngIf="noteSheet.noteSheetDate">{{ isEnglish() ? 'Date:' : 'তারিখ :' }} {{ formatDate(noteSheet.noteSheetDate) }}</span>
                 </div>
 
                 <!-- ── Subject ── -->
-                <div *ngIf="getSubjectLabel(noteSheet.exBdLeaveSubjectId) || noteSheet.subject" style="margin-top:5px; padding:2px 8px 4px; font-size:calc(12pt + var(--ns-fs-delta, 0) * 1pt);">
+                <div *ngIf="getSubjectLabel(noteSheet.exBdLeaveSubjectId) || noteSheet.subject" style="margin-top:12px; padding:0 2px 0 1px; font-size:calc(12pt + var(--ns-fs-delta, 0) * 1pt);">
                     <strong><u style="text-underline-offset:3px; text-decoration-skip-ink:none;">{{ getSubjectLabel(noteSheet.exBdLeaveSubjectId) || noteSheet.subject }}</u></strong>
                 </div>
 
