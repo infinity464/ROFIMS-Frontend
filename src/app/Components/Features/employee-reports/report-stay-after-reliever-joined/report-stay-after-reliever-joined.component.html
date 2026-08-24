@@ -38,45 +38,45 @@
                 </div>
             </div>
             <div class="report-fields-row">
+                <div class="report-filter-field">
+                    <label>{{ lang === 'en' ? 'Mother Org' : 'মাতৃ সংস্থা' }}</label>
+                    <p-multiSelect [options]="orgOptions" [(ngModel)]="selectedOrgIds" (ngModelChange)="onOrgChange()"
+                        optionLabel="label" optionValue="value" display="chip" [filter]="true"
+                        placeholder="Select" styleClass="w-full" appendTo="body"></p-multiSelect>
+                </div>
+                <div class="report-filter-field">
+                    <label>{{ lang === 'en' ? 'Member Type' : 'সদস্য ধরন' }}</label>
+                    <p-multiSelect [options]="memberTypeOptions" [(ngModel)]="selectedMemberTypeIds" (ngModelChange)="onMemberTypeChange()"
+                        optionLabel="label" optionValue="value" display="chip" [filter]="true"
+                        placeholder="Select" styleClass="w-full" appendTo="body"></p-multiSelect>
+                </div>
+                <div class="report-filter-field">
+                    <label>{{ lang === 'en' ? 'Rank' : 'পদবী' }}</label>
+                    <p-select [options]="rankOptions" [(ngModel)]="selectedRankId" (ngModelChange)="onRankChange()"
+                        optionLabel="label" optionValue="value" placeholder="Select" styleClass="w-full"
+                        [disabled]="selectedOrgIds.length === 0" [filter]="true" [showClear]="true" appendTo="body"></p-select>
+                </div>
+                <div class="report-filter-field">
+                    <label>{{ lang === 'en' ? 'RAB Rank' : 'র‍্যাব পদবি' }}</label>
+                    <p-select [options]="rabRankOptions" [(ngModel)]="selectedRabRankId" (ngModelChange)="onFilterChange()"
+                        optionLabel="label" optionValue="value" placeholder="Select" styleClass="w-full"
+                        [disabled]="selectedRankId != null" [filter]="true" [showClear]="true" appendTo="body"></p-select>
+                </div>
+                <div class="report-filter-field">
+                    <label>{{ lang === 'en' ? 'Corps' : 'কোর' }}</label>
+                    <p-multiSelect [options]="corpsOptions" [(ngModel)]="selectedCorpsIds" (ngModelChange)="onCorpsChange()"
+                        optionLabel="label" optionValue="value" display="chip" [filter]="true"
+                        [disabled]="selectedOrgIds.length === 0"
+                        placeholder="Select" styleClass="w-full" appendTo="body"></p-multiSelect>
+                </div>
+                <div class="report-filter-field">
+                    <label>{{ lang === 'en' ? 'Trade' : 'ট্রেড' }}</label>
+                    <p-multiSelect [options]="tradeOptions" [(ngModel)]="selectedTradeIds"
+                        optionLabel="label" optionValue="value" display="chip" [filter]="true"
+                        [disabled]="selectedCorpsIds.length === 0"
+                        placeholder="Select" styleClass="w-full" appendTo="body"></p-multiSelect>
+                </div>
                 @if (relieverMode !== 'newPosting') {
-                    <div class="report-filter-field">
-                        <label>{{ lang === 'en' ? 'Mother Org' : 'মাতৃ সংস্থা' }}</label>
-                        <p-multiSelect [options]="orgOptions" [(ngModel)]="selectedOrgIds" (ngModelChange)="onOrgChange()"
-                            optionLabel="label" optionValue="value" display="chip" [filter]="true"
-                            placeholder="Select" styleClass="w-full" appendTo="body"></p-multiSelect>
-                    </div>
-                    <div class="report-filter-field">
-                        <label>{{ lang === 'en' ? 'Member Type' : 'সদস্য ধরন' }}</label>
-                        <p-multiSelect [options]="memberTypeOptions" [(ngModel)]="selectedMemberTypeIds" (ngModelChange)="onMemberTypeChange()"
-                            optionLabel="label" optionValue="value" display="chip" [filter]="true"
-                            placeholder="Select" styleClass="w-full" appendTo="body"></p-multiSelect>
-                    </div>
-                    <div class="report-filter-field">
-                        <label>{{ lang === 'en' ? 'Rank' : 'পদবী' }}</label>
-                        <p-select [options]="rankOptions" [(ngModel)]="selectedRankId" (ngModelChange)="onRankChange()"
-                            optionLabel="label" optionValue="value" placeholder="Select" styleClass="w-full"
-                            [disabled]="selectedOrgIds.length === 0" [filter]="true" [showClear]="true" appendTo="body"></p-select>
-                    </div>
-                    <div class="report-filter-field">
-                        <label>{{ lang === 'en' ? 'RAB Rank' : 'র‍্যাব পদবি' }}</label>
-                        <p-select [options]="rabRankOptions" [(ngModel)]="selectedRabRankId" (ngModelChange)="onFilterChange()"
-                            optionLabel="label" optionValue="value" placeholder="Select" styleClass="w-full"
-                            [disabled]="selectedRankId != null" [filter]="true" [showClear]="true" appendTo="body"></p-select>
-                    </div>
-                    <div class="report-filter-field">
-                        <label>{{ lang === 'en' ? 'Corps' : 'কোর' }}</label>
-                        <p-multiSelect [options]="corpsOptions" [(ngModel)]="selectedCorpsIds" (ngModelChange)="onCorpsChange()"
-                            optionLabel="label" optionValue="value" display="chip" [filter]="true"
-                            [disabled]="selectedOrgIds.length === 0"
-                            placeholder="Select" styleClass="w-full" appendTo="body"></p-multiSelect>
-                    </div>
-                    <div class="report-filter-field">
-                        <label>{{ lang === 'en' ? 'Trade' : 'ট্রেড' }}</label>
-                        <p-multiSelect [options]="tradeOptions" [(ngModel)]="selectedTradeIds"
-                            optionLabel="label" optionValue="value" display="chip" [filter]="true"
-                            [disabled]="selectedCorpsIds.length === 0"
-                            placeholder="Select" styleClass="w-full" appendTo="body"></p-multiSelect>
-                    </div>
                     <div class="report-filter-field">
                         <label>RAB Unit</label>
                         <app-org-tree-multi-select [(ngModel)]="selectedOrgNodeIds" placeholder="Select units, wings, branches…"></app-org-tree-multi-select>

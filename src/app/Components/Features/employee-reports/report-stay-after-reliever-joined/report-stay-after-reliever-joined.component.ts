@@ -640,16 +640,15 @@ export class ReportStayAfterRelieverJoinedComponent implements OnInit, OnDestroy
 
     get activeFilterCount(): number {
         let c = 0;
-        // Member filters apply to every mode except New Posting (joinee list has none).
-        if (this.relieverMode !== 'newPosting') {
-            if (this.selectedOrgIds.length > 0) c++;
-            if (this.selectedRankId != null) c++;
-            if (this.selectedRabRankId != null) c++;
-            if (this.selectedMemberTypeIds.length > 0) c++;
-            if (this.selectedCorpsIds.length > 0) c++;
-            if (this.selectedTradeIds.length > 0) c++;
-            if (this.selectedOrgNodeIds.length > 0) c++;
-        }
+        // Member filters apply to every mode. RAB Unit is the exception — a New
+        // Posting joinee has no RAB unit yet, so that field is hidden there.
+        if (this.selectedOrgIds.length > 0) c++;
+        if (this.selectedRankId != null) c++;
+        if (this.selectedRabRankId != null) c++;
+        if (this.selectedMemberTypeIds.length > 0) c++;
+        if (this.selectedCorpsIds.length > 0) c++;
+        if (this.selectedTradeIds.length > 0) c++;
+        if (this.relieverMode !== 'newPosting' && this.selectedOrgNodeIds.length > 0) c++;
         if (this.relieverMode === 'standRelease' && this.releaseFrom) c++;
         if (this.relieverMode === 'standRelease' && this.releaseTo) c++;
         if (this.relieverMode === 'newPosting' && this.joiningFrom) c++;
@@ -672,25 +671,24 @@ export class ReportStayAfterRelieverJoinedComponent implements OnInit, OnDestroy
                 .map((o) => (this.lang === 'bn' ? o.labelBn : o.label));
             if (names.length) items.push({ label: this.lang === 'en' ? en : bn, value: names.join(', ') });
         };
-        if (this.appliedMode !== 'newPosting') {
-            multi(this.selectedOrgIds, this.orgOptions, 'Mother Org', 'মাতৃ সংস্থা');
-            multi(this.selectedMemberTypeIds, this.memberTypeOptions, 'Member Type', 'সদস্য ধরন');
-            if (this.selectedRankId != null) {
-                const opt = this.rankOptions.find((o) => o.value === this.selectedRankId);
-                const lbl = this.lang === 'en' ? 'Rank' : 'পদবী';
-                if (opt) items.push({ label: lbl, value: this.lang === 'bn' ? opt.labelBn : opt.label });
-            }
-            if (this.selectedRabRankId != null) {
-                const opt = this.rabRankOptions.find((o) => o.value === this.selectedRabRankId);
-                const lbl = this.lang === 'en' ? 'RAB Rank' : 'র‍্যাব পদবি';
-                if (opt) items.push({ label: lbl, value: this.lang === 'bn' ? opt.labelBn : opt.label });
-            }
-            multi(this.selectedCorpsIds, this.corpsOptions, 'Corps', 'কোর');
-            multi(this.selectedTradeIds, this.tradeOptions, 'Trade', 'ট্রেড');
-            if (this.selectedOrgNodeIds.length > 0) {
-                const names = this.orgNodesLabel(this.lang === 'bn');
-                if (names) items.push({ label: this.lang === 'bn' ? 'র‍্যাব ইউনিট' : 'RAB Unit', value: names });
-            }
+        multi(this.selectedOrgIds, this.orgOptions, 'Mother Org', 'মাতৃ সংস্থা');
+        multi(this.selectedMemberTypeIds, this.memberTypeOptions, 'Member Type', 'সদস্য ধরন');
+        if (this.selectedRankId != null) {
+            const opt = this.rankOptions.find((o) => o.value === this.selectedRankId);
+            const lbl = this.lang === 'en' ? 'Rank' : 'পদবী';
+            if (opt) items.push({ label: lbl, value: this.lang === 'bn' ? opt.labelBn : opt.label });
+        }
+        if (this.selectedRabRankId != null) {
+            const opt = this.rabRankOptions.find((o) => o.value === this.selectedRabRankId);
+            const lbl = this.lang === 'en' ? 'RAB Rank' : 'র‍্যাব পদবি';
+            if (opt) items.push({ label: lbl, value: this.lang === 'bn' ? opt.labelBn : opt.label });
+        }
+        multi(this.selectedCorpsIds, this.corpsOptions, 'Corps', 'কোর');
+        multi(this.selectedTradeIds, this.tradeOptions, 'Trade', 'ট্রেড');
+        // RAB Unit is not a New Posting filter — a joinee has no RAB unit yet.
+        if (this.appliedMode !== 'newPosting' && this.selectedOrgNodeIds.length > 0) {
+            const names = this.orgNodesLabel(this.lang === 'bn');
+            if (names) items.push({ label: this.lang === 'bn' ? 'র‍্যাব ইউনিট' : 'RAB Unit', value: names });
         }
         if (this.appliedMode === 'standRelease') {
             if (this.releaseFrom) items.push({ label: this.lang === 'en' ? 'Possible Release From' : 'সম্ভাব্য রিলিজ হইতে', value: this.formatDateLabel(this.fmtDate(this.releaseFrom)!) });
@@ -845,7 +843,15 @@ export class ReportStayAfterRelieverJoinedComponent implements OnInit, OnDestroy
                 filter: {
                     isAddedInNewJoineeDataEntry: false,
                     possibleJoiningDateFrom: this.fmtDate(this.joiningFrom),
-                    possibleJoiningDateTo: this.fmtDate(this.joiningTo)
+                    possibleJoiningDateTo: this.fmtDate(this.joiningTo),
+                    // Member attributes captured on the Permanent Posting MO Record.
+                    // RAB Unit is deliberately absent — a joinee has none yet.
+                    motherOrgIds: this.selectedOrgIds.length ? this.selectedOrgIds : null,
+                    memberTypeIds: this.selectedMemberTypeIds.length ? this.selectedMemberTypeIds : null,
+                    rankId: this.selectedRankId ?? null,
+                    rabRankEquivalentId: this.selectedRabRankId ?? null,
+                    corpsIds: this.selectedCorpsIds.length ? this.selectedCorpsIds : null,
+                    tradeIds: this.selectedTradeIds.length ? this.selectedTradeIds : null
                 }
             })
             .subscribe({
