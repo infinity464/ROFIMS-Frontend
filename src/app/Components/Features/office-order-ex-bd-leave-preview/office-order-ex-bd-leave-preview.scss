@@ -262,7 +262,10 @@
    top (final-approver) signature that shares this class keeps its normal spacing. */
 .oo-doc-onulipi .oo-doc-signature-area { margin-top: -30px; }
 .oo-doc-signature-block { text-align: left; min-width: 200px; line-height: 1.25; }
-.oo-doc-sig-img { display: block; max-height: 48px; max-width: 200px; object-fit: contain; margin-bottom: 2px; }
+/* Fixed box (object-fit keeps the aspect ratio) so the signature always occupies the
+   same 48px, and the pre-approval placeholder can reserve exactly that much. */
+.oo-doc-sig-img { display: block; height: 48px; width: 200px; object-fit: contain; object-position: left center; margin-bottom: 2px; }
+.oo-doc-sig-img-placeholder { height: 48px; margin-bottom: 2px; }
 .oo-doc-sig-name { font-weight: 400; font-size: 10pt; border-top: 1px solid transparent; padding-top: 4px; line-height: 1.25; }
 .oo-doc-sig-rank, .oo-doc-sig-appointment, .oo-doc-sig-unit { font-size: 10pt; line-height: 1.25; }
 .oo-doc-sig-date { font-size: 10pt; line-height: 1.25; margin-top: 4px; }

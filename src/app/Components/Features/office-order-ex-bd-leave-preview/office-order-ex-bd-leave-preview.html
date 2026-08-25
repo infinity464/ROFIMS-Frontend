@@ -206,7 +206,9 @@
                 <!-- ═══ Approver Signature (office-order approver — same person as the after-Onulipi block) ═══ -->
                 <div class="oo-doc-signature-area" *ngIf="order.approvalEmployeeName">
                     <div class="oo-doc-signature-block">
-                        <img *ngIf="approvalSignatureUrl && isApproved" [src]="approvalSignatureUrl" class="oo-doc-sig-img" alt="Signature" />
+                        <ng-container *ngIf="approvalSignatureUrl && isApproved; else sigSpacer">
+                            <img [src]="approvalSignatureUrl" class="oo-doc-sig-img" alt="Signature" />
+                        </ng-container>
                         <div class="oo-doc-sig-name">
                             {{ isBangla ? (order.approvalEmployeeNameBN || order.approvalEmployeeName) : order.approvalEmployeeName }}
                         </div>
@@ -254,7 +256,9 @@
                     <!-- ═══ Signature after Onulipi ═══ -->
                     <div class="oo-doc-signature-area" *ngIf="order.approvalEmployeeName">
                         <div class="oo-doc-signature-block">
-                            <img *ngIf="approvalSignatureUrl && isApproved" [src]="approvalSignatureUrl" class="oo-doc-sig-img" alt="Signature" />
+                            <ng-container *ngIf="approvalSignatureUrl && isApproved; else sigSpacer">
+                                <img [src]="approvalSignatureUrl" class="oo-doc-sig-img" alt="Signature" />
+                            </ng-container>
                             <div class="oo-doc-sig-name">
                                 {{ isBangla ? (order.approvalEmployeeNameBN || order.approvalEmployeeName) : order.approvalEmployeeName }}
                             </div>
@@ -267,6 +271,11 @@
                         </div>
                     </div>
                 </div>
+
+
+                <!-- Reserves the signature image's height before approval so the block
+                     sits at the same place once the signature appears. -->
+                <ng-template #sigSpacer><div class="oo-doc-sig-img-placeholder"></div></ng-template>
 
             </div><!-- /oo-doc-box -->
         </div>
