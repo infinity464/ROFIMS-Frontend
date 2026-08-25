@@ -261,13 +261,13 @@
    correct no matter how many অনুলিপি rows there are. Scoped to .oo-doc-onulipi so the
    top (final-approver) signature that shares this class keeps its normal spacing. */
 .oo-doc-onulipi .oo-doc-signature-area { margin-top: -30px; }
-.oo-doc-signature-block { text-align: left; min-width: 200px; }
+.oo-doc-signature-block { text-align: left; min-width: 200px; line-height: 1.25; }
 .oo-doc-sig-img { display: block; max-height: 48px; max-width: 200px; object-fit: contain; margin-bottom: 2px; }
-.oo-doc-sig-name { font-weight: 400; font-size: 10pt; border-top: 1px solid transparent; padding-top: 4px; }
-.oo-doc-sig-rank, .oo-doc-sig-appointment, .oo-doc-sig-unit { font-size: 10pt; line-height: 1.5; }
-.oo-doc-sig-date { font-size: 10pt; line-height: 1.5; margin-top: 4px; }
-.oo-doc-sig-onbehalf { font-size: 10pt; line-height: 1.5; }
-.oo-doc-sig-email { font-size: 10pt; line-height: 1.5; }
+.oo-doc-sig-name { font-weight: 400; font-size: 10pt; border-top: 1px solid transparent; padding-top: 4px; line-height: 1.25; }
+.oo-doc-sig-rank, .oo-doc-sig-appointment, .oo-doc-sig-unit { font-size: 10pt; line-height: 1.25; }
+.oo-doc-sig-date { font-size: 10pt; line-height: 1.25; margin-top: 4px; }
+.oo-doc-sig-onbehalf { font-size: 10pt; line-height: 1.25; }
+.oo-doc-sig-email { font-size: 10pt; line-height: 1.25; }
 
 /* ── Attachments inside document ─────────────────── */
 .oo-doc-attachments { margin-top: 20px; }
@@ -281,6 +281,8 @@
 .oo-doc-onulipi-header {
     margin-bottom: 6px;
 }
+/* The অনুলিপি heading reads as normal weight, unlike the other section labels. */
+.oo-doc-onulipi-label { font-weight: 400; }
 .oo-doc-onulipi-top {
     display: flex;
     justify-content: space-between;
@@ -290,6 +292,10 @@
 .oo-doc-onulipi-date {
     font-size: 10pt;
     margin-right: 0;
+    /* Left edge lines up with the signature block, which is right-anchored and
+       200px wide — same constant as .oo-doc-signature-block min-width. */
+    min-width: 200px;
+    text-align: left;
 }
 
 .oo-doc-onulipi-meta {

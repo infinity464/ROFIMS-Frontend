@@ -163,7 +163,7 @@
 
                 <!-- Letter No & Date -->
                 <div class="oo-doc-meta">
-                    <span><strong>{{ isBangla ? 'স্মারক নং' : 'Letter No' }}:</strong> {{ order.letterNo || '.............' }}</span>
+                    <span><strong>{{ isBangla ? 'স্মারক নংঃ' : 'Letter No:' }}</strong> {{ order.letterNo || '.............' }}</span>
                     <span>{{ isBangla ? 'তারিখঃ' : 'Date:' }} {{ formatDate(order.letterDate) }}</span>
                 </div>
 
@@ -174,7 +174,7 @@
 
                 <!-- Subject -->
                 <div class="oo-doc-subject" *ngIf="order.subject">
-                    <span class="oo-doc-subject-label">{{ isBangla ? 'বিষয়: ' : 'Subject: ' }}</span>
+                    <span class="oo-doc-subject-label">{{ isBangla ? 'বিষয়ঃ ' : 'Subject: ' }}</span>
                     <span class="oo-doc-subject-text">{{ order.subject }}</span>
                 </div>
 
@@ -183,12 +183,12 @@
                     <!-- Single reference: label and value on the SAME line (সূত্র: 1234567890),
                          no ক। serial — a serial only makes sense with two or more entries. -->
                     <ng-container *ngIf="referenceEntries.length === 1; else refMulti">
-                        <span class="oo-doc-section-label oo-doc-reference-label">{{ isBangla ? 'সূত্র:' : 'Reference:' }}</span>
+                        <span class="oo-doc-section-label oo-doc-reference-label">{{ isBangla ? 'সূত্রঃ' : 'Reference:' }}</span>
                         <span class="oo-ref-inline">{{ referenceEntries[0].text }}</span>
                     </ng-container>
                     <!-- Two or more: label on its own line, serialed (ক।/খ।/…) list below. -->
                     <ng-template #refMulti>
-                        <div class="oo-doc-section-label oo-doc-reference-label">{{ isBangla ? 'সূত্র:' : 'Reference:' }}</div>
+                        <div class="oo-doc-section-label oo-doc-reference-label">{{ isBangla ? 'সূত্রঃ' : 'Reference:' }}</div>
                         <div class="oo-doc-list">
                             <p *ngFor="let ref of referenceEntries"><span class="oo-ref-serial">{{ ref.serial }}।</span>{{ ref.text }}</p>
                         </div>
@@ -217,7 +217,7 @@
                             {{ isBangla ? (order.approvalEmployeeAppointmentBN || order.approvalEmployeeAppointment) : order.approvalEmployeeAppointment }}
                         </div>
                         <div class="oo-doc-sig-onbehalf">
-                            {{ isBangla ? 'মহাপরিচালকের পক্ষে' : 'On behalf of Director General' }}
+                            {{ isBangla ? 'পক্ষে মহাপরিচালক' : 'On behalf of Director General' }}
                         </div>
                     </div>
                 </div>
@@ -241,7 +241,7 @@
                                 {{ isBangla ? 'তারিখঃ ' : 'Date: ' }}{{ finalApproverDate }}
                             </div>
                         </div>
-                        <div class="oo-doc-section-label">{{ isBangla ? 'অনুলিপি (আপনার সদয় অনুমোদনের জন্য উপস্থাপন করা হলো):' : 'Copy (not in order of seniority):' }}</div>
+                        <div class="oo-doc-section-label oo-doc-onulipi-label">{{ isBangla ? 'অনুলিপি (জ্যেষ্ঠতার ভিত্তিতে নয়)ঃ' : 'Copy (not in order of seniority):' }}</div>
                     </div>
                     <div class="oo-doc-list">
                         <p *ngFor="let entry of exportOnulipiEntries; let i = index" class="oo-onulipi-item">
@@ -261,9 +261,6 @@
                             </div>
                             <div class="oo-doc-sig-appointment" *ngIf="order.approvalEmployeeAppointment">
                                 {{ isBangla ? (order.approvalEmployeeAppointmentBN || order.approvalEmployeeAppointment) : order.approvalEmployeeAppointment }}
-                            </div>
-                            <div class="oo-doc-sig-onbehalf">
-                                {{ isBangla ? 'মহাপরিচালকের পক্ষে' : 'On behalf of Director General' }}
                             </div>
                         </div>
                     </div>
@@ -304,7 +301,7 @@
 >
     <div class="mb-3" *ngIf="order">
         <div class="flex gap-3 mb-2">
-            <span class="text-600">{{ isBangla ? 'স্মারক নং:' : 'Letter No:' }}</span>
+            <span class="text-600">{{ isBangla ? 'স্মারক নংঃ' : 'Letter No:' }}</span>
             <strong>{{ order.letterNo }}</strong>
         </div>
         <div class="flex gap-3 mb-3">

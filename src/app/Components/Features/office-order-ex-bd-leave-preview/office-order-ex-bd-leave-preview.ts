@@ -617,7 +617,7 @@ export class OfficeOrderExBdLeavePreviewComponent implements OnInit {
         // Letter No (left) & Date (right) — same line
         children.push(new Paragraph({
             children: [
-                new TextRun({ text: `${this.isBangla ? 'স্মারক নং: ' : 'Letter No: '}`, font, size: contentSize, bold: true }),
+                new TextRun({ text: `${this.isBangla ? 'স্মারক নংঃ ' : 'Letter No: '}`, font, size: contentSize, bold: true }),
                 new TextRun({ text: this.order.letterNo || '.............', font, size: contentSize }),
                 new TextRun({ text: '\t', font, size: contentSize }),
                 new TextRun({ text: `${this.isBangla ? 'তারিখঃ ' : 'Date: '}`, font, size: contentSize }),
@@ -638,7 +638,7 @@ export class OfficeOrderExBdLeavePreviewComponent implements OnInit {
         }
 
         if (this.order.subject) {
-            children.push(new Paragraph({ children: [new TextRun({ text: `${this.isBangla ? 'বিষয়: ' : 'Subject: '}`, font, size: contentSize, bold: true }), new TextRun({ text: this.order.subject, font, size: contentSize, bold: true })], spacing: { after: 100 } }));
+            children.push(new Paragraph({ children: [new TextRun({ text: `${this.isBangla ? 'বিষয়ঃ ' : 'Subject: '}`, font, size: contentSize, bold: true }), new TextRun({ text: this.order.subject, font, size: contentSize, bold: true })], spacing: { after: 100 } }));
         }
 
         // Compact serial→text tab stop (0.3") so the gap after ক।/১।/২। is small and uniform,
@@ -650,14 +650,14 @@ export class OfficeOrderExBdLeavePreviewComponent implements OnInit {
                 // The label→value gap keeps the same single tab (serialTab) used by the serialed list.
                 children.push(new Paragraph({
                     children: [
-                        new TextRun({ text: this.isBangla ? 'সূত্র:\t' : 'Reference:\t', font, size: contentSize }),
+                        new TextRun({ text: this.isBangla ? 'সূত্রঃ\t' : 'Reference:\t', font, size: contentSize }),
                         new TextRun({ text: this.referenceEntries[0].text, font, size: contentSize })
                     ],
                     tabStops: serialTab,
                     spacing: { before: 80, after: 60 }
                 }));
             } else {
-                children.push(new Paragraph({ children: [new TextRun({ text: this.isBangla ? 'সূত্র:' : 'Reference:', font, size: contentSize })], spacing: { before: 80, after: 0 } }));
+                children.push(new Paragraph({ children: [new TextRun({ text: this.isBangla ? 'সূত্রঃ' : 'Reference:', font, size: contentSize })], spacing: { before: 80, after: 0 } }));
                 for (const ref of this.referenceEntries) {
                     children.push(new Paragraph({ children: [new TextRun({ text: `${ref.serial}।\t${ref.text}`, font, size: contentSize })], tabStops: serialTab, spacing: { after: 20 } }));
                 }
@@ -692,7 +692,7 @@ export class OfficeOrderExBdLeavePreviewComponent implements OnInit {
         }
 
         const sigIndent = 8500;
-        const addSignatureBlock = (includeEmail = true, beforeSpacing = 400) => {
+        const addSignatureBlock = (includeEmail = true, beforeSpacing = 400, includeOnBehalf = true) => {
             if (!this.order?.approvalEmployeeName) return;
             children.push(new Paragraph({ text: '', spacing: { before: beforeSpacing } }));
             // Embed the approval person's signature image, only once the order is approved.
@@ -715,8 +715,10 @@ export class OfficeOrderExBdLeavePreviewComponent implements OnInit {
                 const appt = this.isBangla ? (this.order.approvalEmployeeAppointmentBN || this.order.approvalEmployeeAppointment) : this.order.approvalEmployeeAppointment;
                 children.push(new Paragraph({ children: [new TextRun({ text: appt, font, size: contentSize })], alignment: AlignmentType.LEFT, indent: { left: sigIndent } }));
             }
-            const onBehalfText = this.isBangla ? 'মহাপরিচালকের পক্ষে' : 'On behalf of Director General';
-            children.push(new Paragraph({ children: [new TextRun({ text: onBehalfText, font, size: contentSize })], alignment: AlignmentType.LEFT, indent: { left: sigIndent } }));
+            if (includeOnBehalf) {
+                const onBehalfText = this.isBangla ? 'পক্ষে মহাপরিচালক' : 'On behalf of Director General';
+                children.push(new Paragraph({ children: [new TextRun({ text: onBehalfText, font, size: contentSize })], alignment: AlignmentType.LEFT, indent: { left: sigIndent } }));
+            }
             if (includeEmail && this.order.approvalEmployeeEmail) {
                 children.push(new Paragraph({ children: [new TextRun({ text: `E-mail: ${this.order.approvalEmployeeEmail}`, font, size: contentSize })], alignment: AlignmentType.LEFT, indent: { left: sigIndent } }));
             }
@@ -754,11 +756,12 @@ export class OfficeOrderExBdLeavePreviewComponent implements OnInit {
                 }
                 children.push(new Paragraph({
                     children: nsNoRuns,
-                    tabStops: [{ type: TabStopType.RIGHT, position: (pageSize.width - 720 - 720) }],
+                    // Left tab at sigIndent so the date starts on the same left edge as the signature block.
+                    tabStops: [{ type: TabStopType.LEFT, position: sigIndent }],
                     spacing: { before: 120 }   // half a line gap above the copy block
                 }));
             }
-            children.push(new Paragraph({ children: [new TextRun({ text: this.isBangla ? 'অনুলিপি (আপনার সদয় অনুমোদনের জন্য উপস্থাপন করা হলো):' : 'Copy (not in order of seniority):', font, size: contentSize, bold: true })], spacing: { before: this.order.noteSheetNo ? 80 : 120 } }));
+            children.push(new Paragraph({ children: [new TextRun({ text: this.isBangla ? 'অনুলিপি (জ্যেষ্ঠতার ভিত্তিতে নয়)ঃ' : 'Copy (not in order of seniority):', font, size: contentSize })], spacing: { before: this.order.noteSheetNo ? 80 : 120 } }));
             exportOnulipi.forEach((entry, idx) => {
                 const ser = this.isBangla ? this.toBanglaDigits(String(idx + 1)) : String(idx + 1);
                 // Serials sit at the left margin (aligned with the অনুলিপি heading / notesheet no),
@@ -771,7 +774,8 @@ export class OfficeOrderExBdLeavePreviewComponent implements OnInit {
                 }));
             });
 
-            addSignatureBlock(false);
+            // Last block (after Onulipi): no "On behalf of Director General" line — matches the preview.
+            addSignatureBlock(false, 400, false);
         }
 
         return new Document({ sections: [{ properties: { page: { size: pageSize, margin: { top: 720, bottom: 720, left: 1152, right: 576 } } }, children }] });
