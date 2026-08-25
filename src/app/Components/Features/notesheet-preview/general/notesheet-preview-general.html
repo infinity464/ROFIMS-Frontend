@@ -253,8 +253,8 @@
                                                                 (keydown.enter)="saveColLabel(col.key)"
                                                                 (keydown.escape)="editingColLabelKey = null" />
                                                         } @else {
-                                                            <span (dblclick)="startEditColLabel(col.key, col.label, $event)" title="Double-click to rename" style="font-size:7pt;">{{ col.label }}</span>
-                                                            <button type="button" style="border:none;background:none;cursor:pointer;color:#3b82f6;padding:0;font-size:9px;opacity:0.6;" (click)="startEditColLabel(col.key, col.label, $event)" title="Rename column">
+                                                            <span (dblclick)="startEditColLabel(col.key, getMemberColHeader(col), $event)" title="Double-click to rename" style="font-size:7pt;">{{ getMemberColHeader(col) }}</span>
+                                                            <button type="button" style="border:none;background:none;cursor:pointer;color:#3b82f6;padding:0;font-size:9px;opacity:0.6;" (click)="startEditColLabel(col.key, getMemberColHeader(col), $event)" title="Rename column">
                                                                 <i class="pi pi-pencil"></i>
                                                             </button>
                                                         }
@@ -399,13 +399,13 @@
 
                 <!-- Notesheet no (left) + date (right), same line -->
                 <div class="ns-notesheet-no" *ngIf="noteSheet.noteSheetNo || noteSheet.noteSheetDate"
-                     style="display:flex; justify-content:space-between; align-items:baseline; gap:1rem; padding:4px 2px 2px 4px; font-size:10pt;">
+                     style="display:flex; justify-content:space-between; align-items:baseline; gap:1rem; padding:4px 2px 2px 1px; font-size:10pt;">
                     <span>{{ noteSheet.noteSheetNo }}</span>
                     <span *ngIf="noteSheet.noteSheetDate" style="white-space:nowrap;">{{ isEnglish() ? 'Date: ' : 'তারিখঃ ' }}{{ formatDate(noteSheet.noteSheetDate) }}</span>
                 </div>
 
                 <!-- ── Subject ── -->
-                <div *ngIf="displaySubject" style="padding:2px 2px 4px 4px; font-size:10pt;">
+                <div *ngIf="displaySubject" style="padding:2px 2px 4px 1px; font-size:10pt;">
                     <strong><u>{{ displaySubject }}</u></strong>
                 </div>
 

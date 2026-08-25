@@ -214,7 +214,7 @@ export class NotesheetPreviewGeneralComponent extends NotesheetPreviewBase imple
     }
 
     // ── Members table data (loaded from NoteSheetReferenceEmployee) ──
-    previewMembersColumns: { key: string; label: string; mergedFrom?: string[]; width?: number }[] = [];
+    previewMembersColumns: { key: string; label: string; labelBN?: string; mergedFrom?: string[]; width?: number }[] = [];
     previewMembersRows: Record<string, string>[] = [];
     private loadedMemberEmployeeIds: number[] = [];
 
@@ -311,6 +311,7 @@ export class NotesheetPreviewGeneralComponent extends NotesheetPreviewBase imple
         const cols: MemberColumnDef[] = this.previewMembersColumns.map(c => ({
             key: c.key,
             label: c.label,
+            ...(c.labelBN ? { labelBN: c.labelBN } : {}),
             group: (c as any).group ?? 'basic',
             ...(c.mergedFrom ? { mergedFrom: (c as any).mergedFrom } : {}),
             ...(c.width != null ? { width: c.width } : {})
@@ -985,6 +986,8 @@ export class NotesheetPreviewGeneralComponent extends NotesheetPreviewBase imple
         this.editingMemberCellKey = null;
     }
 
+    /** `currentLabel` is the header as displayed (Bangla when the note-sheet is
+     *  Bangla), so the input opens on the text the user actually sees. */
     startEditColLabel(colKey: string, currentLabel: string, event: Event): void {
         event.stopPropagation();
         this.editingColLabelKey = colKey;
@@ -996,11 +999,17 @@ export class NotesheetPreviewGeneralComponent extends NotesheetPreviewBase imple
         });
     }
 
+    /** A Bangla note-sheet renders headers from `labelBN` / the built-in Bangla
+     *  map, so a rename made while editing in Bangla must land on `labelBN` —
+     *  writing `label` alone was silently overridden by the map. */
     saveColLabel(colKey: string): void {
         const trimmed = this.editingColLabelValue.trim();
         if (trimmed) {
             const col = this.editMembersData.columns.find(c => c.key === colKey);
-            if (col) col.label = trimmed;
+            if (col) {
+                if (this.editTextType === 'bn') col.labelBN = trimmed;
+                else col.label = trimmed;
+            }
         }
         this.editingColLabelKey = null;
     }
@@ -1136,12 +1145,13 @@ export class NotesheetPreviewGeneralComponent extends NotesheetPreviewBase imple
         prefix: 'উপসর্গ', prefixBN: 'উপসর্গ',
     };
 
-    /** Column header for the members table — Bangla when the note-sheet is
-     *  Bangla, the configured English label otherwise. Drives web + PDF + preview
-     *  (all render from this same template). */
-    getMemberColHeader(col: { key: string; label: string }): string {
+    /** Column header for the members table. English note-sheet → `label`.
+     *  Bangla note-sheet → the user's `labelBN` rename if there is one, else the
+     *  built-in Bangla label for the key, else `label`. Drives web + PDF + Word
+     *  (all render from this same helper). */
+    getMemberColHeader(col: { key: string; label: string; labelBN?: string }): string {
         if (this.isEnglish()) return col.label;
-        return this.memberColHeaderBN[col.key] ?? col.label;
+        return col.labelBN?.trim() || this.memberColHeaderBN[col.key] || col.label;
     }
 
     /** Column keys that hold a person's name — their cells are left-aligned. */
@@ -2052,7 +2062,7 @@ html, body { margin: 0; padding: 0; background: transparent; }
         const mModel = model as any;
         if (mModel.membersColumns?.length > 0 && mModel.membersRows?.length > 0) {
             const thinBorder = { style: BorderStyle.SINGLE, size: 2, color: '666666' } as const;
-            const cols = mModel.membersColumns as { key: string; label: string; mergedFrom?: string[] }[];
+            const cols = mModel.membersColumns as { key: string; label: string; labelBN?: string; mergedFrom?: string[] }[];
             const slLabel = bn ? 'ক্রমিক' : 'SL';
             const bnDigits = ['০','১','২','৩','৪','৫','৬','৭','৮','৯'];
             const convertDigits = (s: string) => bn && /\d/.test(s) ? s.replace(/\d/g, d => bnDigits[+d]) : s;

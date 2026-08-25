@@ -58,6 +58,10 @@ export interface ReferenceParagraph {
 export interface MemberColumnDef {
     key: string;
     label: string;
+    /** Bangla header override typed by the user (general note-sheet preview edit
+     *  mode). When absent the Bangla preview falls back to its built-in Bangla
+     *  label map, then to `label`. */
+    labelBN?: string;
     group: 'basic' | 'personal' | 'family' | 'custom' | 'merged';
     /** Only for merged columns — stores source keys + separator */
     mergedFrom?: { keys: string[]; separator: string };
@@ -1371,7 +1375,7 @@ export class NotesheetGenerateComponent implements OnInit {
         const bn = this.isBangla;
         const lbl = (en: string, bnLabel: string) => (bn ? bnLabel : en);
         const cols: MemberColumnDef[] = [
-            { key: bn ? 'prefixWithServiceIdBN' : 'prefixWithServiceId', label: lbl('Prefix & Service ID', 'সার্ভিস আইডি'), group: 'basic' },
+            { key: bn ? 'prefixWithServiceIdBN' : 'prefixWithServiceId', label: lbl('Prefix & Service ID', 'ব্যক্তিগত নম্বর'), group: 'basic' },
             { key: bn ? 'armyRankBN' : 'armyRank', label: lbl('Rank', 'পদবি'), group: 'basic' },
             { key: bn ? 'formattedNameBN' : 'formattedName', label: lbl('Name', 'নাম'), group: 'basic' },
             { key: bn ? 'presentRabUnitBN' : 'presentRabUnit', label: lbl('Present RAB Unit', 'বর্তমান র‍্যাব ইউনিট'), group: 'basic' }

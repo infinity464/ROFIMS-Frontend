@@ -191,3 +191,16 @@
     width: 100%;
     max-width: 100%;
 }
+
+/* Header block (notesheet no / date, subject, reference) shares the body's 1px
+   left edge. The shared style pads .ns-cell-ref 4px from the left, which left
+   the top block sitting right of the numbered paragraphs and members table. */
+.ns-cell-ref {
+    padding-left: 1px;
+}
+
+/* Signature block sits a little lower — 10px more breathing room above the
+   initiator signature than the shared 14px top padding gives. */
+.ns-initiator-area {
+    padding-top: 24px;
+}
