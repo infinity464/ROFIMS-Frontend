@@ -236,7 +236,9 @@
                 <div class="oo-doc-section oo-doc-onulipi" *ngIf="exportOnulipiEntries.length > 0">
                     <div class="oo-doc-onulipi-header">
                         <div class="oo-doc-onulipi-top">
-                            <div class="oo-doc-onulipi-ns-no" *ngIf="order.noteSheetNo">{{ order.noteSheetNo }}</div>
+                            <!-- Repeats the office order's own memo no (same value as the স্মারক নং in the header),
+                                 not the linked note-sheet no. -->
+                            <div class="oo-doc-onulipi-ns-no" *ngIf="order.letterNo">{{ order.letterNo }}</div>
                             <div class="oo-doc-onulipi-date" *ngIf="finalApproverDate">
                                 {{ isBangla ? 'তারিখঃ ' : 'Date: ' }}{{ finalApproverDate }}
                             </div>

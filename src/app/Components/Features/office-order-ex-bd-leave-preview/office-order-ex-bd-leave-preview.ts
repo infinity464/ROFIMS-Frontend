@@ -748,8 +748,9 @@ export class OfficeOrderExBdLeavePreviewComponent implements OnInit {
 
         const exportOnulipi = this.exportOnulipiEntries;
         if (exportOnulipi.length > 0) {
-            if (this.order.noteSheetNo) {
-                const nsNoRuns: TextRun[] = [new TextRun({ text: this.order.noteSheetNo, font, size: contentSize })];
+            // Repeats the office order's own memo no (same value as the স্মারক নং in the header).
+            if (this.order.letterNo) {
+                const nsNoRuns: TextRun[] = [new TextRun({ text: this.order.letterNo, font, size: contentSize })];
                 if (this.finalApproverDate) {
                     nsNoRuns.push(new TextRun({ text: '\t', font, size: contentSize }));
                     nsNoRuns.push(new TextRun({ text: `${this.isBangla ? 'তারিখঃ ' : 'Date: '}${this.finalApproverDate}`, font, size: contentSize }));
@@ -761,7 +762,7 @@ export class OfficeOrderExBdLeavePreviewComponent implements OnInit {
                     spacing: { before: 120 }   // half a line gap above the copy block
                 }));
             }
-            children.push(new Paragraph({ children: [new TextRun({ text: this.isBangla ? 'অনুলিপি (জ্যেষ্ঠতার ভিত্তিতে নয়)ঃ' : 'Copy (not in order of seniority):', font, size: contentSize })], spacing: { before: this.order.noteSheetNo ? 80 : 120 } }));
+            children.push(new Paragraph({ children: [new TextRun({ text: this.isBangla ? 'অনুলিপি (জ্যেষ্ঠতার ভিত্তিতে নয়)ঃ' : 'Copy (not in order of seniority):', font, size: contentSize })], spacing: { before: this.order.letterNo ? 80 : 120 } }));
             exportOnulipi.forEach((entry, idx) => {
                 const ser = this.isBangla ? this.toBanglaDigits(String(idx + 1)) : String(idx + 1);
                 // Serials sit at the left margin (aligned with the অনুলিপি heading / notesheet no),
