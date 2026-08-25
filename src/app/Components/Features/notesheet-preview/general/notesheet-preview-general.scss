@@ -1,4 +1,14 @@
-﻿/* ── Document font ─────────────────────────────────────
+﻿/* -- Whole-sheet font size (user-selectable) -----------
+   The export bar's font dropdown sets --ns-fs-delta on the component host: a point
+   offset (-2 ... +2 in 0.25 steps) that every body size below is expressed against
+   through fs(). With no offset the 0 fallback leaves every size exactly as it was.
+   The PDF restates the same offset on .pdf-flow in buildJsReportPdf() (via a matching
+   inline calc), because the export snapshots the paper's innerHTML, not the host. */
+@function fs($pt) {
+    @return calc(#{$pt}pt + var(--ns-fs-delta, 0) * 1pt);
+}
+
+/* ── Document font ─────────────────────────────────────
    SolaimanLipi (bundled, see styles.scss) replaces SolaimanLipi as the Bangla
    face for this preview. Times New Roman stays first so Latin text and digits
    are unchanged — Bangla codepoints have no Times glyphs and fall through to
@@ -52,7 +62,7 @@
 .ns-sig-rank,
 .ns-sig-appoint,
 .ns-sig-date {
-    font-size: 10pt;
+    font-size: fs(10);
     font-weight: normal;
 }
 
@@ -137,27 +147,27 @@
    Title (.ns-title-*) + org header have their own explicit sizes, so they are unaffected. */
 .a4-paper,
 .page-measure {
-    font-size: 10pt; /* base — anything without its own size */
+    font-size: fs(10); /* base — anything without its own size */
 }
 /* Numbered paragraphs + note + last-text: shared style pins these at 8pt, so an
    explicit override is required (the base bump alone does not reach them). */
 .ns-para,
 .ns-para-no {
-    font-size: 10pt;
+    font-size: fs(10);
 }
 .ns-cell-ref {
-    font-size: 10pt; /* সূত্রঃ / ক. / খ. — was 7pt */
+    font-size: fs(10); /* সূত্রঃ / ক. / খ. — was 7pt */
 }
 .ns-members-preview-table,
 .ns-members-preview-table th {
-    font-size: 9pt; /* members table — 1pt smaller than body so columns fit */
+    font-size: fs(9); /* members table — 1pt smaller than body so columns fit */
 }
 .ns-sig-name,
 .ns-sig-rank,
 .ns-sig-paren,
 .ns-sig-appoint,
 .ns-sig-date {
-    font-size: 10pt; /* signature block */
+    font-size: fs(10); /* signature block */
 }
 
 /* Edit-mode members table: mark every editable data cell (same affordance as the
@@ -203,4 +213,26 @@
    initiator signature than the shared 14px top padding gives. */
 .ns-initiator-area {
     padding-top: 24px;
+}
+
+/* Note-sheet no. / date line and the subject line carry their padding inline in
+   the template; their size lives here so the export bar's font offset reaches
+   them too (an inline font-size would win over fs()). */
+.ns-notesheet-no,
+.ns-subject-line {
+    font-size: fs(10);
+}
+
+/* Export-bar detail toggle (কোর in the Name column) — sits inline with the
+   page-size / font dropdowns and buttons. */
+.ns-detail-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+
+    label {
+        cursor: pointer;
+        font-size: 0.875rem;
+        user-select: none;
+    }
 }

@@ -10,6 +10,18 @@
             <p-button *ngIf="editing" icon="pi pi-check" label="Save" (onClick)="saveChanges()" [loading]="saving" styleClass="p-button-success"></p-button>
             <p-select *ngIf="!editing" [options]="pageSizeOptions" [(ngModel)]="selectedPageSize" (onChange)="onPageSizeChange()" optionLabel="label" optionValue="value"
                       [style]="{'width':'95px'}" pTooltip="Page size for PDF / Print Preview"></p-select>
+            <!-- Font size of the WHOLE note sheet, as a point offset (-2 ... +2, 0.25 steps):
+                 the body sizes move together instead of being set to one value. Sizing
+                 down usually pulls a trailing block back onto the previous page. -->
+            <p-select *ngIf="!editing" [options]="fontDeltaOptions" [(ngModel)]="fontDelta" (onChange)="onFontDeltaChange()" optionLabel="label" optionValue="value"
+                      [style]="{'width':'165px'}" pTooltip="Font size of the note sheet (-2 pt to +2 pt)"></p-select>
+            <!-- Members table: show/hide the corps part inside the Name column (the stored
+                 name is "name, decoration, professional qualification, corps"). -->
+            <span *ngIf="!editing && canToggleCorpsInName" class="ns-detail-toggle">
+                <p-checkbox [(ngModel)]="showCorpsInName" [binary]="true" inputId="chkCorpsInName"
+                            (onChange)="onShowCorpsInNameChange()"></p-checkbox>
+                <label for="chkCorpsInName" pTooltip="Show কোর in the Name column">কোর</label>
+            </span>
             <p-button *ngIf="showWord && !editing" icon="pi pi-file-word" label="Word"  (onClick)="exportWord()" styleClass="p-button-outlined"></p-button>
             <p-button *ngIf="showPdf && !editing" icon="pi pi-file-pdf"  label="PDF"   (onClick)="exportPdf()" [loading]="exportingPdf" styleClass="p-button-outlined"></p-button>
             <p-button *ngIf="!editing" icon="pi pi-print" label="Print Preview" (onClick)="printPreview()" [loading]="printingPreview" styleClass="p-button-outlined p-button-info"></p-button>
@@ -399,13 +411,13 @@
 
                 <!-- Notesheet no (left) + date (right), same line -->
                 <div class="ns-notesheet-no" *ngIf="noteSheet.noteSheetNo || noteSheet.noteSheetDate"
-                     style="display:flex; justify-content:space-between; align-items:baseline; gap:1rem; padding:4px 2px 2px 1px; font-size:10pt;">
+                     style="display:flex; justify-content:space-between; align-items:baseline; gap:1rem; padding:4px 2px 2px 1px;">
                     <span>{{ noteSheet.noteSheetNo }}</span>
                     <span *ngIf="noteSheet.noteSheetDate" style="white-space:nowrap;">{{ isEnglish() ? 'Date: ' : 'তারিখঃ ' }}{{ formatDate(noteSheet.noteSheetDate) }}</span>
                 </div>
 
                 <!-- ── Subject ── -->
-                <div *ngIf="displaySubject" style="padding:2px 2px 4px 1px; font-size:10pt;">
+                <div class="ns-subject-line" *ngIf="displaySubject" style="padding:2px 2px 4px 1px;">
                     <strong><u>{{ displaySubject }}</u></strong>
                 </div>
 

@@ -9,6 +9,7 @@ import { TooltipModule } from 'primeng/tooltip';
 import { InputTextModule } from 'primeng/inputtext';
 import { TextareaModule } from 'primeng/textarea';
 import { SelectModule } from 'primeng/select';
+import { CheckboxModule } from 'primeng/checkbox';
 import { FieldsetModule } from 'primeng/fieldset';
 
 import { DatePickerModule } from 'primeng/datepicker';
@@ -61,7 +62,7 @@ interface ApprovalLogEntry {
     standalone: true,
     imports: [
         CommonModule, FormsModule, ButtonModule, ToastModule, ConfirmDialogModule, DialogModule, TooltipModule,
-        InputTextModule, TextareaModule, SelectModule, DatePickerModule, FlexibleDateDirective, FieldsetModule,
+        InputTextModule, TextareaModule, SelectModule, CheckboxModule, DatePickerModule, FlexibleDateDirective, FieldsetModule,
         NotesheetSignatoryComponent, RichEditorComponent, FileReferencesFormComponent, NotesheetApproverSelectComponent,
         EmployeeSearchComponent
     ],
@@ -81,6 +82,8 @@ export class NotesheetPreviewGeneralComponent extends NotesheetPreviewBase imple
     private sharedService = inject(SharedService);
     private familyInfoService = inject(FamilyInfoService);
     private jsreportService = inject(JsReportService);
+    /** Host element — carries the --ns-fs-delta font-size offset for the whole preview. */
+    private hostEl = inject(ElementRef) as ElementRef<HTMLElement>;
 
     // ── Page size for jsReport export (Legal default, A4 optional) ──
     selectedPageSize = 'A4';
@@ -88,6 +91,62 @@ export class NotesheetPreviewGeneralComponent extends NotesheetPreviewBase imple
         { label: 'Legal', value: 'Legal' },
         { label: 'A4', value: 'A4' }
     ];
+
+    // ── Whole-sheet font size, as a point offset (−2 … 0 … +2 in 0.25 steps) ──
+    // Applied as the --ns-fs-delta custom property on the host; every body size in
+    // notesheet-preview-general.scss is expressed against it via fs(), the PDF restates
+    // it on .pdf-flow in buildJsReportPdf(), and buildWordDocument() adds the same offset
+    // to its half-point sizes. Sizing down usually pulls a trailing block back onto the
+    // previous page and saves a sheet.
+    fontDelta = 0;
+    /** +2.00 … 0 … −2.00 pt in 0.25 steps, largest first (like the page-size list). */
+    readonly fontDeltaOptions = Array.from({ length: 17 }, (_, i) => {
+        const value = +(2 - i * 0.25).toFixed(2);
+        return { label: this.fontDeltaLabel(value), value };
+    });
+
+    private fontDeltaLabel(value: number): string {
+        if (value === 0) return 'Default Font Size';
+        return `Font: ${value > 0 ? '+' : '-'}${Math.abs(value).toFixed(2)} pt`;
+    }
+
+    /** Font dropdown changed — restate the offset on the host and re-paginate against
+     *  the new size (same reset as onPageSizeChange). */
+    onFontDeltaChange(): void {
+        this.applyFontDelta();
+        this.pageContentHeightPx = 0;
+        this.lastMeasuredHeight = 0;
+        this.pageOffsets = [0];
+        this.cdr.detectChanges();
+    }
+
+    /** Unitless — the SCSS multiplies it by 1pt, so a negative offset stays a plain
+     *  multiplication rather than a signed operand inside calc(). */
+    private applyFontDelta(): void {
+        this.hostEl.nativeElement.style.setProperty('--ns-fs-delta', `${this.fontDelta}`);
+    }
+
+    // ── Members table detail toggle ───────────────────────
+    /** কোর (corps) inside the Name column. The stored name is the composite built by
+     *  getFormattedMemberName() — "name, decoration, professional qualification, corps"
+     *  (navy: "name, corps, …, বিএন") — so switching this off drops the corps part from
+     *  the cell instead of hiding a column. Preview, print, PDF and Word all read the
+     *  value through memberCellValue(). */
+    showCorpsInName = true;
+
+    /** The toggle only makes sense when the table actually shows a name column AND the
+     *  rows carry a corps value to strip (older saved rows may not). */
+    get canToggleCorpsInName(): boolean {
+        if (this.previewMembersRows.length === 0) return false;
+        if (!this.previewMembersColumns.some(c => this.isNameColumn(c))) return false;
+        return this.previewMembersRows.some(r => ((r['corpsBN'] || r['corps'] || '').trim().length > 0));
+    }
+
+    /** Dropping/restoring the corps part can reflow the table, so re-paginate. */
+    onShowCorpsInNameChange(): void {
+        this.lastMeasuredHeight = 0;
+        this.cdr.detectChanges();
+    }
 
     // ── Button visibility (configurable by parent) ───────────
     @Input() showEdit = true;
@@ -1172,14 +1231,31 @@ export class NotesheetPreviewGeneralComponent extends NotesheetPreviewBase imple
         return String(n).replace(/\d/g, d => bn[+d]) + '।';
     }
 
+    /** Raw cell text for a members-table column — merged columns joined, and the
+     *  কোর toggle applied to the name column. Shared by the preview / PDF (through
+     *  formatMemberCell) and the Word export, so all three read the same value. */
+    memberCellValue(row: Record<string, string>, col: { key: string; mergedFrom?: string[] }): string {
+        const val = col.mergedFrom?.length
+            ? col.mergedFrom.map(k => row[k] || '').filter(Boolean).join(' ')
+            : (row[col.key] || '');
+        return this.stripCorpsFromName(val, row, col);
+    }
+
+    /** Remove the corps part from a name cell when the কোর toggle is off. The composite
+     *  name is a comma-joined list of parts, so the corps value is dropped as a whole
+     *  part — a substring replace would also hit a corps that appears inside the name. */
+    private stripCorpsFromName(val: string, row: Record<string, string>, col: { key: string; mergedFrom?: string[] }): string {
+        if (this.showCorpsInName || !val || !this.isNameColumn(col)) return val;
+        const corps = [row['corpsBN'], row['corps']].map(v => (v ?? '').trim()).filter(Boolean);
+        if (corps.length === 0) return val;
+        const parts = val.split(',').map(p => p.trim()).filter(Boolean);
+        const kept = parts.filter(p => !corps.includes(p));
+        return kept.length ? kept.join(', ') : val;
+    }
+
     /** Get cell value for preview members table — handles merged columns + Bangla numeral conversion */
     formatMemberCell(row: Record<string, string>, col: { key: string; mergedFrom?: string[] }): string {
-        let val: string;
-        if (col.mergedFrom?.length) {
-            val = col.mergedFrom.map(k => row[k] || '').filter(Boolean).join(' ');
-        } else {
-            val = row[col.key] || '';
-        }
+        let val = this.memberCellValue(row, col);
         if (!val) return '';
         // Auto-convert digits to Bangla when notesheet language is Bangla
         if (!this.isEnglish() && /\d/.test(val)) {
@@ -1570,7 +1646,11 @@ html, body { margin: 0; padding: 0; background: transparent; }
     box-sizing: border-box;
     width: ${colWidth};
     font-family: 'Times New Roman', 'SolaimanLipi', Times, serif;
-    font-size: 10pt;
+    /* Restate the export bar's font offset here: the snapshot is the paper's
+       innerHTML, not the host that carries --ns-fs-delta on screen. The sizes in
+       the collected component styles are written against it through fs(). */
+    --ns-fs-delta: ${this.fontDelta};
+    font-size: calc(10pt + var(--ns-fs-delta, 0) * 1pt);
     line-height: 1.7;
     color: #000;
 }
@@ -1929,8 +2009,10 @@ html, body { margin: 0; padding: 0; background: transparent; }
             : 'Times New Roman';
         // Font sizes in half-points: title/org=9pt(18), body=8pt(16), table=7pt(14), sig=9pt(18)
         const titleSize = 18;   // 9pt — org header (HEADER — kept)
-        const bodySize = 20;    // 10pt — main text, reference, note, notesheet no, subject
-        const tblSize = 18;        // 9pt — members table (1pt smaller than body so columns fit)
+        // Body / table sizes follow the export bar's font offset (docx half-points),
+        // mirroring fs() on screen; the org header + NOTE SHEET title keep their size.
+        const bodySize = Math.round((10 + this.fontDelta) * 2);    // 10pt ± offset — main text, reference, note, notesheet no, subject
+        const tblSize = Math.round((9 + this.fontDelta) * 2);      // 9pt ± offset — members table (1pt smaller than body so columns fit)
         const sigSize = bodySize;  // signature sections — uniform with body (10pt)
         const csTitle = bn ? titleSize : undefined;
         const csBody = bn ? bodySize : undefined;
@@ -2085,7 +2167,7 @@ html, body { margin: 0; padding: 0; background: transparent; }
                 const slCell = new TableCell({ width: mkWidth(slPct), children: [new Paragraph({ children: [new TextRun({ text: slVal, size: tblSize, sizeComplexScript: csTbl, font, language: lang })], alignment: AlignmentType.CENTER })], borders: { top: thinBorder, bottom: thinBorder, left: thinBorder, right: thinBorder } });
                 return new TableRow({
                     children: [slCell, ...cols.map((c, ci) => {
-                        let val = c.mergedFrom ? c.mergedFrom.map((k: string) => row[k] || '').filter(Boolean).join(' ') : (row[c.key] || '');
+                        let val = this.memberCellValue(row, c as any);
                         val = convertDigits(val);
                         const cellAlign = this.isNameColumn(c) ? AlignmentType.LEFT : AlignmentType.CENTER;
                         return new TableCell({ width: mkWidth(colPcts[ci]), children: [new Paragraph({ children: [new TextRun({ text: val, size: tblSize, sizeComplexScript: csTbl, font, language: lang })], alignment: cellAlign })], borders: { top: thinBorder, bottom: thinBorder, left: thinBorder, right: thinBorder } });
