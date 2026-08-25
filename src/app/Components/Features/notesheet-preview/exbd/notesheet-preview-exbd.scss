@@ -171,13 +171,15 @@
 
     /* Reference block shares the body paragraph's left base (shared sheet gives it
        4px vs the paragraph's 1px), so both serial columns start from the same edge.
-       padding-top opens the subject → সূত্রঃ gap to 12px — a touch wider than the 10px
-       block gap used lower down (`.ns-para { padding-top: 10px }`), because the
-       underlined subject line above needs the extra air. The no/date → subject gap
-       carries the same 12px inline (notesheet-preview-exbd.html). */
+       padding-top is 14px, not the 10px block gap used lower down
+       (`.ns-para { padding-top: 10px }`), because the subject line above is underlined:
+       the rule is drawn ~4px below the text (offset 3px + its own thickness) and reads
+       as ink inside the gap, so 14 − 4 leaves the same 10px of empty space and the
+       subject → সূত্রঃ and সূত্রঃ → ১। gaps read alike. The no/date → subject gap
+       is set inline in notesheet-preview-exbd.html. */
     .ns-cell-ref {
         padding-left: 1px;
-        padding-top: 12px;
+        padding-top: 14px;
     }
 
     .ns-para-no,

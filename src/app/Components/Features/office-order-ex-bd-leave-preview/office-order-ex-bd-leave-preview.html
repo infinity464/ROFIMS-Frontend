@@ -164,7 +164,7 @@
                 <!-- Letter No & Date -->
                 <div class="oo-doc-meta">
                     <span><strong>{{ isBangla ? 'স্মারক নং' : 'Letter No' }}:</strong> {{ order.letterNo || '.............' }}</span>
-                    <span><strong>{{ isBangla ? 'তারিখ' : 'Date' }}:</strong> {{ formatDate(order.letterDate) }}</span>
+                    <span>{{ isBangla ? 'তারিখঃ' : 'Date:' }} {{ formatDate(order.letterDate) }}</span>
                 </div>
 
                 <!-- Address To -->
@@ -179,7 +179,7 @@
                 </div>
 
                 <!-- Reference No -->
-                <div class="oo-doc-section" *ngIf="referenceEntries.length > 0">
+                <div class="oo-doc-section oo-doc-reference" *ngIf="referenceEntries.length > 0">
                     <!-- Single reference: label and value on the SAME line (সূত্র: 1234567890),
                          no ক। serial — a serial only makes sense with two or more entries. -->
                     <ng-container *ngIf="referenceEntries.length === 1; else refMulti">
@@ -238,7 +238,7 @@
                         <div class="oo-doc-onulipi-top">
                             <div class="oo-doc-onulipi-ns-no" *ngIf="order.noteSheetNo">{{ order.noteSheetNo }}</div>
                             <div class="oo-doc-onulipi-date" *ngIf="finalApproverDate">
-                                {{ isBangla ? 'তারিখ: ' : 'Date: ' }}{{ finalApproverDate }}
+                                {{ isBangla ? 'তারিখঃ ' : 'Date: ' }}{{ finalApproverDate }}
                             </div>
                         </div>
                         <div class="oo-doc-section-label">{{ isBangla ? 'অনুলিপি (আপনার সদয় অনুমোদনের জন্য উপস্থাপন করা হলো):' : 'Copy (not in order of seniority):' }}</div>

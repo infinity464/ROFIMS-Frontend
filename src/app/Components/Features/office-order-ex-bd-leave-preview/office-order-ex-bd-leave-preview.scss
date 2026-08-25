@@ -183,16 +183,25 @@
 .oo-doc-meta { display: flex; justify-content: space-between; margin-bottom: 5px; font-size: 10pt; line-height: 1.25; }
 .oo-doc-section { margin: 5px 0; font-size: 10pt; line-height: 1.25; }
 .oo-doc-section-label { font-weight: 700; margin-bottom: 4px; font-size: 10pt; }
+/* Block gaps: address → বিষয়: is the base 5px (both blocks carry margin: 5px 0 and
+   adjoining margins collapse to the larger of the two). The next two boundaries,
+   বিষয়: → সূত্র: and সূত্র: → body, are tuned separately as the bottom margin of
+   the block above, so the collapse resolves there without touching the address gap or
+   the ১।/২। body-to-body gaps. Both currently sit at 5px of empty space. */
+.oo-doc-reference { margin-bottom: 5px; }
 .oo-doc-reference-label { font-weight: 400; }
 .oo-doc-list { padding-left: 0; line-height: 2; p { margin: 2px 0; } }
 .oo-ref-serial { display: inline-block; min-width: 2.5em; }
-/* Single-reference inline value: small gap after the সূত্র: label on the same line. */
-.oo-ref-inline { margin-left: 0.4em; }
+/* Single-reference inline value: one plain space after the সূত্র: label, same as the বিষয়: line. */
+.oo-ref-inline { margin-left: 0; }
 /* Onulipi list: serial at the left, a tab-like gap before the text, wrapped lines hang under the text. */
 .oo-onulipi-item { padding-left: 2.5em; text-indent: -2.5em; }
 .oo-onulipi-serial { display: inline-block; min-width: 2.5em; text-indent: 0; }
 .oo-doc-subject {
-    margin: 5px 0; font-size: 10pt; line-height: 1.25;
+    /* 9px, not the 5px the সূত্র: block below uses, because the underline is drawn
+       ~4px under the text (offset 3px + its own thickness) and reads as ink inside the
+       gap. 9 − 4 leaves the same 5px of empty space, so the two boundaries match. */
+    margin: 5px 0 9px 0; font-size: 10pt; line-height: 1.25;
     /* Underline the whole subject line (label + text). skip-ink off + a small offset
        keep it one continuous line clear of the Bangla descenders/conjuncts. */
     text-decoration: underline;
@@ -205,7 +214,7 @@
 .oo-doc-para-no { font-weight: 700; min-width: 28px; flex-shrink: 0; }
 .oo-doc-para-text { flex: 1; text-align: justify; }
 .oo-doc-body { margin: 5px 0; line-height: 1.25; text-align: justify; font-size: 10pt; }
-.oo-body-serial { font-weight: 400; margin-right: 1.5em; }  /* serials (১। ২।) not bold, per request */
+.oo-body-serial { font-weight: 400; margin-right: 0.3em; }  /* serials (১। ২।) not bold, one-space gap like the বিষয়: line */
 
 /* ── Application Info Panel ──────────────────────── */
 .oo-app-info-panel {

@@ -620,7 +620,7 @@ export class OfficeOrderExBdLeavePreviewComponent implements OnInit {
                 new TextRun({ text: `${this.isBangla ? 'স্মারক নং: ' : 'Letter No: '}`, font, size: contentSize, bold: true }),
                 new TextRun({ text: this.order.letterNo || '.............', font, size: contentSize }),
                 new TextRun({ text: '\t', font, size: contentSize }),
-                new TextRun({ text: `${this.isBangla ? 'তারিখ: ' : 'Date: '}`, font, size: contentSize, bold: true }),
+                new TextRun({ text: `${this.isBangla ? 'তারিখঃ ' : 'Date: '}`, font, size: contentSize }),
                 new TextRun({ text: this.formatDate(this.order.letterDate), font, size: contentSize })
             ],
             tabStops: [{ type: TabStopType.RIGHT, position: (pageSize.width - 720 - 720) }],
@@ -750,7 +750,7 @@ export class OfficeOrderExBdLeavePreviewComponent implements OnInit {
                 const nsNoRuns: TextRun[] = [new TextRun({ text: this.order.noteSheetNo, font, size: contentSize })];
                 if (this.finalApproverDate) {
                     nsNoRuns.push(new TextRun({ text: '\t', font, size: contentSize }));
-                    nsNoRuns.push(new TextRun({ text: `${this.isBangla ? 'তারিখ: ' : 'Date: '}${this.finalApproverDate}`, font, size: contentSize }));
+                    nsNoRuns.push(new TextRun({ text: `${this.isBangla ? 'তারিখঃ ' : 'Date: '}${this.finalApproverDate}`, font, size: contentSize }));
                 }
                 children.push(new Paragraph({
                     children: nsNoRuns,
