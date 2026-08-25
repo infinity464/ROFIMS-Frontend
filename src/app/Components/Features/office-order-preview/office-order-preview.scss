@@ -188,17 +188,12 @@
     line-height: 1.5;
 }
 
-.oo-doc-title {
-    text-align: center;
-    font-size: 11pt;
-    font-weight: 700;
-    text-decoration: underline;
-    margin: 12px 0;
-}
-
 .oo-doc-meta {
     display: flex;
     justify-content: space-between;
+    /* Top gap kept from when the অফিস আদেশ title sat between this line and the
+       government header. */
+    margin-top: 12px;
     margin-bottom: 6px;
     font-size: 9pt;
 }
@@ -227,6 +222,11 @@
     font-size: 9pt;
 }
 
+/* সূত্র reads as plain text; অনুলিপি keeps the bold label. */
+.oo-doc-section-label--plain {
+    font-weight: 400;
+}
+
 .oo-doc-list {
     padding-left: 16px;
     line-height: 2;
@@ -252,23 +252,64 @@
 }
 
 /* ── Numbered Paragraphs (from notesheet) ─────────── */
+/* The serial sits INLINE with the first line rather than in its own flex column, so a
+   paragraph that wraps runs back to the page's left edge — the continuation lines start
+   under the number, not under the text. Same arrangement as the note sheet's .ns-para. */
 .oo-doc-para {
-    display: flex;
-    gap: 8px;
     margin: 10px 0;
     font-size: 9pt;
-    line-height: 1.8;
+    /* Tight 1.25 leading. The text is injected with [innerHTML], so the rich-content
+       rule further down (and any line-height Quill wrote inline) would otherwise win
+       over plain inheritance — hence !important on the descendants, the same way the
+       posting note sheet pins its paragraphs. */
+    line-height: 1.25 !important;
+    text-align: justify;
+
+    ::ng-deep * {
+        line-height: 1.25 !important;
+    }
 }
 
 .oo-doc-para-no {
-    font-weight: 700;
-    min-width: 28px;
-    flex-shrink: 0;
+    margin-right: 2em;   /* reads as the tab between the number and the text */
 }
 
 .oo-doc-para-text {
-    flex: 1;
+    display: inline;
     text-align: justify;
+
+    /* The rich-text wrapper and Quill's first <p> have to go inline too, or the text
+       would drop to its own line below the serial. Any later <p> stays a block and
+       therefore starts at the paragraph's left edge, which is what we want. */
+    ::ng-deep .oo-doc-rich-content {
+        display: inline;
+    }
+
+    ::ng-deep .oo-doc-rich-content > p:first-child {
+        display: inline;
+    }
+}
+
+/* ── Members table: full document width ──────────
+   The table renders inside paragraph ১।, which spans the page, so it only needs the
+   child component's own 8px inset dropped to reach both edges. ::ng-deep is what reaches
+   into app-notesheet-members-table's encapsulated styles; the PDF picks this up through
+   collectDocumentStyles(). */
+/* The paragraph text is an inline box now, so the table's own host has to be a block
+   for its 100% width to resolve against the paragraph rather than the inline run. */
+.oo-doc-para-text ::ng-deep app-notesheet-members-table {
+    display: block;
+}
+
+.oo-doc-para-text ::ng-deep .members-table-wrap {
+    width: 100%;
+    margin-left: 0;
+}
+
+.oo-doc-para-text ::ng-deep .members-table {
+    width: 100%;
+    margin-left: 0;
+    margin-right: 0;
 }
 
 /* ── Body ─────────────────────────────────────────── */

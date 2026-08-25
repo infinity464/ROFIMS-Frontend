@@ -172,13 +172,10 @@
                     </ng-container>
                 </div>
 
-                <!-- Title -->
-                <div class="oo-doc-title">{{ isBangla ? 'অফিস আদেশ' : 'OFFICE ORDER' }}</div>
-
                 <!-- Letter No & Date -->
                 <div class="oo-doc-meta">
-                    <span><strong>{{ isBangla ? 'স্মারক নং' : 'Letter No' }}:</strong> {{ order.letterNo || '.............' }}</span>
-                    <span><strong>{{ isBangla ? 'তারিখ' : 'Date' }}:</strong> {{ formatDate(order.letterDate) }}</span>
+                    <span>{{ isBangla ? 'স্মারক নং' : 'Letter No' }}: {{ order.letterNo || '.............' }}</span>
+                    <span>{{ isBangla ? 'তারিখ' : 'Date' }}: {{ formatDate(order.letterDate) }}</span>
                 </div>
 
                 <!-- Address To -->
@@ -194,7 +191,7 @@
 
                 <!-- Reference No -->
                 <div class="oo-doc-section" *ngIf="referenceEntries.length > 0">
-                    <div class="oo-doc-section-label">{{ isBangla ? 'সূত্র:' : 'Reference:' }}</div>
+                    <div class="oo-doc-section-label oo-doc-section-label--plain">{{ isBangla ? 'সূত্র:' : 'Reference:' }}</div>
                     <div class="oo-doc-list">
                         <p *ngFor="let ref of referenceEntries">{{ ref.serial }}। {{ ref.text }}</p>
                     </div>

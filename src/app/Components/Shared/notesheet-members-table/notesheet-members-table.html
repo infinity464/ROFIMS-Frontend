@@ -2,7 +2,7 @@
     <table class="members-table">
         <thead>
             <tr>
-                <th style="text-align:center;width:30px;">{{ isBangla ? 'ক্রমিক' : 'SL' }}</th>
+                <th style="text-align:center;width:35px;">{{ isBangla ? 'ক্রমিক' : 'SL' }}</th>
                 <th *ngFor="let col of columns" [style.width.%]="getColWidth(col)">{{ getColHeader(col) }}</th>
             </tr>
         </thead>

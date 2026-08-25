@@ -146,6 +146,62 @@
                 <input pInputText [(ngModel)]="subject" class="w-full" placeholder="Enter subject..." />
             </div>
 
+            <!-- Paragraphs (+) — seeded from the selected note sheet, then editable -->
+            <div class="field mb-4 p-4 surface-50 border-round">
+                <div class="flex align-items-center gap-2 mb-3">
+                    <span class="font-semibold text-700">Paragraphs</span>
+                    <p-button
+                        icon="pi pi-plus"
+                        [rounded]="true"
+                        [text]="true"
+                        size="small"
+                        pTooltip="Add paragraph"
+                        (onClick)="addBodyParagraph()"
+                    ></p-button>
+                    <small class="text-500">Loaded from the note sheet — edit or remove as needed.</small>
+                </div>
+                @for (para of bodyParagraphs; track trackByIndex($index); let i = $index) {
+                    <div class="flex gap-2 align-items-start mb-3">
+                        <span class="para-number font-semibold text-600 mt-2" style="min-width: 30px">{{ getParagraphSerial(i) }}</span>
+                        <div class="flex-1">
+                            <p-editor [(ngModel)]="bodyParagraphs[i].text" [style]="{ height: '140px' }"></p-editor>
+                        </div>
+                        <div class="flex flex-column gap-1">
+                            <p-button
+                                icon="pi pi-arrow-up"
+                                [rounded]="true"
+                                [text]="true"
+                                size="small"
+                                pTooltip="Move up"
+                                [disabled]="i === 0"
+                                (onClick)="moveBodyParagraphUp(i)"
+                            ></p-button>
+                            <p-button
+                                icon="pi pi-arrow-down"
+                                [rounded]="true"
+                                [text]="true"
+                                size="small"
+                                pTooltip="Move down"
+                                [disabled]="i === bodyParagraphs.length - 1"
+                                (onClick)="moveBodyParagraphDown(i)"
+                            ></p-button>
+                            <p-button
+                                icon="pi pi-times"
+                                severity="danger"
+                                [rounded]="true"
+                                [text]="true"
+                                size="small"
+                                pTooltip="Remove"
+                                (onClick)="removeBodyParagraph(i)"
+                            ></p-button>
+                        </div>
+                    </div>
+                }
+                @if (bodyParagraphs.length === 0) {
+                    <div class="text-500 text-sm py-2">No paragraphs. Click "+" to add one.</div>
+                }
+            </div>
+
             <!-- Onulipi / অনুলিপি -->
             <div class="field mb-4 p-4 surface-50 border-round">
                 <div class="flex align-items-center gap-2 mb-3">
