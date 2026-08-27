@@ -45,6 +45,13 @@ interface BodyParagraph {
     text: string;
 }
 
+/** Attachment (সংযুক্ত) entry — plain text, rendered above the Onulipi, same as the
+ *  ex-BD leave office order. Stored in GeneralNotesheetOfficeOrder.Attachments as a
+ *  JSON array of { text }. */
+interface AttachmentEntry {
+    text: string;
+}
+
 /** Onulipi paragraph entry (same as PostingOrder footer paragraph). */
 interface OnulipiParagraph {
     text: string;
@@ -126,6 +133,7 @@ export class OfficeOrderGenerateComponent implements OnInit {
     bodyParagraphs: BodyParagraph[] = [];
     fileRows: FileRowData[] = [];
     onulipiParagraphs: OnulipiParagraph[] = [];
+    attachmentEntries: AttachmentEntry[] = [];
     remarks = '';
     saving = false;
 
@@ -216,6 +224,12 @@ export class OfficeOrderGenerateComponent implements OnInit {
 
                 // Onulipi
                 try { this.onulipiParagraphs = data.onulipi ? JSON.parse(data.onulipi) : []; } catch { this.onulipiParagraphs = []; }
+
+                // Attachments (সংযুক্ত)
+                try {
+                    const atts = data.attachments ? JSON.parse(data.attachments) : [];
+                    this.attachmentEntries = Array.isArray(atts) ? atts.map((a: any) => ({ text: a?.text ?? '' })) : [];
+                } catch { this.attachmentEntries = []; }
 
                 // File references
                 try {
@@ -349,6 +363,7 @@ export class OfficeOrderGenerateComponent implements OnInit {
         this.subject = '';
         this.referenceEntries = [];
         this.bodyParagraphs = [];
+        this.attachmentEntries = [];  // সংযুক্ত has no default — the user adds entries on demand
         if (!this.selectedNoteSheetId) return;
 
         this.http.get<any>(`${this.noteSheetApi}/GetFilteredByKeysAsyn/${this.selectedNoteSheetId}`).subscribe({
@@ -485,6 +500,27 @@ export class OfficeOrderGenerateComponent implements OnInit {
         return cleaned.length > 0 ? JSON.stringify(cleaned) : null;
     }
 
+    // ─── Attachments (সংযুক্ত) ──────────────
+    addAttachmentEntry(): void {
+        this.attachmentEntries.push({ text: '' });
+    }
+
+    removeAttachmentEntry(index: number): void {
+        this.attachmentEntries.splice(index, 1);
+    }
+
+    moveAttachmentUp(index: number): void {
+        if (index <= 0) return;
+        [this.attachmentEntries[index - 1], this.attachmentEntries[index]] =
+            [this.attachmentEntries[index], this.attachmentEntries[index - 1]];
+    }
+
+    moveAttachmentDown(index: number): void {
+        if (index >= this.attachmentEntries.length - 1) return;
+        [this.attachmentEntries[index], this.attachmentEntries[index + 1]] =
+            [this.attachmentEntries[index + 1], this.attachmentEntries[index]];
+    }
+
     // ─── File References ─────────────────────────────────
     onFileRowsChange(event: FileRowData[]): void {
         if (event && Array.isArray(event)) {
@@ -583,6 +619,9 @@ export class OfficeOrderGenerateComponent implements OnInit {
                     transferRabUnitName: p.transferRabUnitName
                 })))
                 : null;
+            const attachmentsJson = this.attachmentEntries.filter(a => a.text.trim()).length > 0
+                ? JSON.stringify(this.attachmentEntries.filter(a => a.text.trim()).map(a => ({ text: a.text.trim() })))
+                : null;
 
             const saveObs = this.editMode && this.editId
                 ? this.officeOrderService.updateOfficeOrder({
@@ -594,6 +633,7 @@ export class OfficeOrderGenerateComponent implements OnInit {
                     referenceNo: refJson,
                     body: this.bodyJson,
                     onulipi: onulipiJson,
+                    attachments: attachmentsJson,
                     textType: this.selectedTextType === 'bn' ? 'bn' : 'en',
                     filesReferences: filesReferencesJson,
                     remarks: this.remarks || null,
@@ -609,6 +649,7 @@ export class OfficeOrderGenerateComponent implements OnInit {
                     referenceNo: refJson,
                     body: this.bodyJson,
                     onulipi: onulipiJson,
+                    attachments: attachmentsJson,
                     textType: this.selectedTextType === 'bn' ? 'bn' : 'en',
                     filesReferences: filesReferencesJson,
                     remarks: this.remarks || null,
