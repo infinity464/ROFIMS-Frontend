@@ -1,0 +1,118 @@
+export interface EmployeeBriefProfile {
+    employeeID: number;
+    rabId: string | null;
+    nameEN: string | null;
+    nameBN: string | null;
+    prefixEN: string | null;
+    prefixBN: string | null;
+    rankEN: string | null;
+    rankBN: string | null;
+    appointmentEN: string | null;
+    appointmentBN: string | null;
+    mobileNo: string | null;
+    mobileNoOfficial: string | null;
+}
+
+/**
+ * Single row from vw_EmployeePersonalServiceOverview (Basic Service + Other Personal Information).
+ * API: GET EmployeeInfo/GetEmployeePersonalServiceOverview/{employeeID}
+ */
+export interface EmployeePersonalServiceOverview {
+    employeeID: number;
+    serviceId: string | null;
+    rabId: string | null;
+    prefixId: number | null;
+    prefix: string | null;
+    prefixBN?: string | null;
+    nameEnglish: string | null;
+    nameBN?: string | null;
+    appointmentId: number | null;
+    appointment: string | null;
+    appointmentBN?: string | null;
+    memberTypeId: number | null;
+    memberType: string | null;
+    memberTypeBN?: string | null;
+    motherOrganizationId: number | null;
+    motherOrganization: string | null;
+    motherOrganizationBN?: string | null;
+    armyRankId: number | null;
+    armyRank: string | null;
+    armyRankBN?: string | null;
+    corpsId: number | null;
+    corps: string | null;
+    corpsBN?: string | null;
+    tradeId: number | null;
+    trade: string | null;
+    tradeBN?: string | null;
+    tradeRemarks: string | null;
+    genderId: number | null;
+    gender: string | null;
+    genderBN?: string | null;
+    dateOfCommission: string | null;
+    dateOfJoiningInServiceTraining: string | null;
+    motherUnitId: number | null;
+    motherUnit: string | null;
+    motherUnitBN?: string | null;
+    location: string | null;
+    locationBN?: string | null;
+    rabUnitId: number | null;
+    rabUnit: string | null;
+    rabUnitBN?: string | null;
+    status: boolean | null;
+    postingStatus: string | null;
+    joiningDate: string | null;
+    permanentDistrictType: number | null;
+    permanentDistrictTypeName: string | null;
+    permanentDistrictTypeNameBN?: string | null;
+    // Other Personal Information
+    nid: string | null;
+    nidOld: string | null;
+    courseBatch: string | null;
+    dateOfBirth: string | null;
+    bloodGroup: string | null;
+    mobileNo: string | null;
+    mobileNoOfficial: string | null;
+    emailAddress: string | null;
+    emergencyContactNo: string | null;
+    passportNo: string | null;
+    identificationMark: string | null;
+    height: number | null;
+    weight: number | null;
+    gallantryAwardsDecoration: string | null;
+    gallantryAwardsDecorationBN?: string | null;
+    religionId: number | null;
+    religion: string | null;
+    religionBN?: string | null;
+    maritalStatusId: number | null;
+    maritalStatus: string | null;
+    maritalStatusBN?: string | null;
+    educationQualificationId: number | null;
+    educationQualification: string | null;
+    educationQualificationBN?: string | null;
+    professionalQualificationId: string | null; // CSV of CommonCode ids (multi-select)
+    professionalQualification: string | null; // comma-joined labels
+    professionalQualificationBN?: string | null;
+    personalQualificationId: string | null; // CSV of CommonCode ids (multi-select)
+    personalQualification: string | null; // comma-joined labels
+    personalQualificationBN?: string | null;
+    medicalCategoryId: number | null;
+    medicalCategory: string | null;
+    medicalCategoryBN?: string | null;
+    batch: string | null;
+    batchBN?: string | null;
+    /** Comma-separated CommonCode ids from EmployeeInfo.SpecialQualifications. */
+    specialQualificationIds: string | null;
+    /** Comma-separated English labels for the ids. */
+    specialQualifications: string | null;
+    /** Comma-separated Bangla labels for the ids. */
+    specialQualificationsBN?: string | null;
+    gallantryAwardsDecorationId: string | null; // CSV of CommonCode ids (multi-select)
+    hasInvestigationExp: boolean | null;
+    investigationExpDetails: string | null;
+    /** RAB Orientation Training status: 0 = No, 1 = Yes, 2 = Not Applicable, null = not set. */
+    isRFTSComplted?: number | null;
+    /** Why the member was marked Not Applicable; null for every other status. */
+    rftsRemark?: string | null;
+    /** JSON array of profile image ref(s): e.g. [{"FileId":3,"fileName":"photo.png"}]. From EmployeeInfo.ProfileImages. */
+    profileImages?: string | null;
+}

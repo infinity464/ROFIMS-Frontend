@@ -1,0 +1,88 @@
+<div [class.card]="!bare">
+    @if (!hideTitle) {
+        <div class="font-semibold text-xl mb-4">{{ title }}</div>
+    }
+
+    @if (loading) {
+        <div class="flex items-center gap-3 py-6">
+            <p-progressSpinner styleClass="w-8 h-8"></p-progressSpinner>
+            <span>Loading upazila atlas and AOR data…</span>
+        </div>
+    } @else if (errorMessage) {
+        <p-message severity="error" [text]="errorMessage"></p-message>
+    } @else {
+        <div class="aor-map-grid" [class.no-legend]="hideLegend">
+            <div class="aor-map-host" #mapHost (mouseleave)="onHostLeave()"
+                [class.panning]="isPanning"
+                [class.zoomed]="zoom > 1"
+                [style.aspect-ratio]="heightPx ? 'auto' : null"
+                [style.height.px]="heightPx || null"
+                (mousedown)="onPanStart($event)"
+                (mousemove)="onPanMove($event)"
+                (mouseup)="onPanEnd()"
+                (wheel)="onWheel($event)">
+                <svg [attr.viewBox]="viewBox" preserveAspectRatio="xMidYMid meet">
+                    <g [attr.transform]="'translate(' + panX + ',' + panY + ') scale(' + zoom + ')'">
+                        @for (f of rendered; track $index) {
+                            <path
+                                class="upazila"
+                                [attr.d]="f.pathD"
+                                [attr.fill]="f.color"
+                                (mousemove)="onFeatureMove($event, f)">
+                            </path>
+                        }
+                    </g>
+                </svg>
+
+                <div class="aor-map-controls">
+                    <button type="button" (click)="zoomIn()" title="Zoom in" aria-label="Zoom in">
+                        <i class="pi pi-plus"></i>
+                    </button>
+                    <button type="button" (click)="zoomOut()" title="Zoom out" aria-label="Zoom out">
+                        <i class="pi pi-minus"></i>
+                    </button>
+                    <button type="button" (click)="resetView()" title="Reset / fit"
+                        aria-label="Reset view" [class.active]="zoom === 1 && panX === 0 && panY === 0">
+                        <i class="pi pi-arrows-alt"></i>
+                    </button>
+                </div>
+
+                @if (tooltip.visible) {
+                    <div class="aor-map-tip" [style.left.px]="tooltip.x" [style.top.px]="tooltip.y"
+                        [style.transform]="tooltip.transform">
+                        <div class="font-semibold">{{ tooltip.name }}</div>
+                        @if (tooltip.nameBn) { <div class="bn">{{ tooltip.nameBn }}</div> }
+                        <div class="mt-1 text-sm">
+                            <span class="text-color-secondary">Unit:</span> {{ tooltip.unitName }}
+                        </div>
+                        @if (tooltip.battalionHQ) {
+                            <div class="text-sm">
+                                <span class="text-color-secondary">HQ:</span> {{ tooltip.battalionHQ }}
+                            </div>
+                        }
+                    </div>
+                }
+            </div>
+
+            @if (!hideLegend) {
+            <aside class="aor-map-legend">
+                <div class="font-semibold mb-2">RAB Units</div>
+                @if (legend.length === 0) {
+                    <div class="text-color-secondary text-sm">No AORs configured yet.</div>
+                } @else {
+                    <ul class="legend-list">
+                        @for (l of legend; track l.unitId) {
+                            <li>
+                                <span class="swatch" [style.background]="l.color"></span>
+                                <span class="name">{{ l.name }}</span>
+                                <span class="count">{{ l.upazilaCount }}</span>
+                            </li>
+                        }
+                    </ul>
+                }
+
+            </aside>
+            }
+        </div>
+    }
+</div>

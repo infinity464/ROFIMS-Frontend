@@ -3,6 +3,22 @@ import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { environment } from '@/Core/Environments/environment';
 
+/** Single row from vw_FamilyInfoByEmployee. API: GET FamilyInfo/GetFamilyInfoByEmployeeView/{employeeId} */
+export interface FamilyInfoByEmployeeView {
+    employeeID: number;
+    ser: number;
+    name: string | null;
+    nameBN?: string | null;
+    relationId: number | null;
+    relation: string | null;
+    relationBN?: string | null;
+    dateOfBirth: string | null;
+    occupationId: number | null;
+    occupation: string | null;
+    occupationBN?: string | null;
+    mobileNo: string | null;
+}
+
 export interface FamilyInfoModel {
     EmployeeId: number | null;
     FMID: number | null;
@@ -12,6 +28,8 @@ export interface FamilyInfoModel {
     DOB: string | null;
     MaritalStatus: number | null;
     Occupation: number | null;
+    OccupationDetails: string | null;
+    DistrictId: number | null;
     NID: string | null;
     MobileNo: string | null;
     PassportNo: string | null;
@@ -32,6 +50,11 @@ export class FamilyInfoService {
 
     getByEmployeeId(employeeId: number): Observable<FamilyInfoModel[]> {
         return this.http.get<FamilyInfoModel[]>(`${this.apiUrl}/GetByEmployeeId/${employeeId}`);
+    }
+
+    /** Gets family list from vw_FamilyInfoByEmployee (Ser, Name, Relation, DateOfBirth, Occupation, MobileNo). */
+    getFamilyInfoByEmployeeView(employeeId: number): Observable<FamilyInfoByEmployeeView[]> {
+        return this.http.get<FamilyInfoByEmployeeView[]>(`${this.apiUrl}/GetFamilyInfoByEmployeeView/${employeeId}`);
     }
 
     getAll(): Observable<FamilyInfoModel[]> {

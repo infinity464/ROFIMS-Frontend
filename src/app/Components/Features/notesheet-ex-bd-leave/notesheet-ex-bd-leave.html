@@ -1,0 +1,442 @@
+<p-fluid>
+  <div class="card">
+    <!-- ═══ VIEW MODE ═══ -->
+    @if (viewMode) {
+      @if (viewLoading) {
+        <div class="flex align-items-center justify-content-center p-4"><i class="pi pi-spin pi-spinner" style="font-size: 2rem"></i><span class="ml-2">Loading note sheet...</span></div>
+      } @else if (viewNoteSheet) {
+        <!-- Header with title + action buttons -->
+        <div class="ns-view-header">
+          <div class="ns-gen-title">Note-Sheet for Ex-BD Leave – Preview</div>
+          @if (!viewEditing) {
+            <div class="flex align-items-center gap-1">
+              <p-button type="button" icon="pi pi-file-word" [rounded]="true" [text]="true" size="small" pTooltip="Export Word" (onClick)="exportWord()"></p-button>
+              <p-button type="button" icon="pi pi-file-pdf" [rounded]="true" [text]="true" size="small" pTooltip="Export PDF" (onClick)="exportPdf()"></p-button>
+              <p-button type="button" icon="pi pi-print" [rounded]="true" [text]="true" size="small" pTooltip="Print" (onClick)="printView()"></p-button>
+              @if (isViewDraft()) {
+                <p-button type="button" icon="pi pi-pencil" [class.perm-hidden]="!canUpdate" [rounded]="true" [text]="true" size="small" pTooltip="Edit Inline" (onClick)="toggleViewEdit()"></p-button>
+                <p-button type="button" icon="pi pi-file-edit" [rounded]="true" [text]="true" size="small" pTooltip="Edit Full Form" (onClick)="goToEditForm()"></p-button>
+              }
+            </div>
+          }
+        </div>
+
+        <!-- Formal document preview -->
+        <div class="notesheet-preview-doc">
+          <div class="ns-preview-header">
+            <div class="ns-preview-title">NOTE SHEET</div>
+          </div>
+
+          <!-- Meta info -->
+          <div class="ns-preview-meta">
+            <div class="ns-preview-meta-item">
+              <span class="ns-preview-meta-label">Note-Sheet No:</span>
+              <span>{{ viewNoteSheet.noteSheetNo || '—' }}</span>
+            </div>
+            <div class="ns-preview-meta-item">
+              <span class="ns-preview-meta-label">Date:</span>
+              <span>{{ formatDateView(viewNoteSheet.noteSheetDate) }}</span>
+            </div>
+            <div class="ns-preview-meta-item">
+              <span class="ns-preview-meta-label">Reference:</span>
+              @if (viewEditing) {
+                <input pInputText type="text" [(ngModel)]="editReferenceNumber" class="ns-inline-input" placeholder="Reference number" />
+              } @else {
+                <span>{{ viewNoteSheet.referenceNumber || '—' }}</span>
+              }
+            </div>
+          </div>
+
+          <!-- Subject -->
+          @if (viewEditing) {
+            <div class="ns-preview-subject-edit">
+              <label class="ns-preview-body-label">Subject</label>
+              <p-select
+                [(ngModel)]="editExBdLeaveSubjectId"
+                [options]="subjectTypeOptionsDisplay"
+                optionLabel="label"
+                optionValue="value"
+                [filter]="true"
+                filterBy="label"
+                [showClear]="true"
+                placeholder="Select Subject"
+                styleClass="w-full">
+              </p-select>
+            </div>
+          } @else if (viewNoteSheet.subject || viewNoteSheet.exBdLeaveSubjectId) {
+            <div class="ns-preview-subject">{{ getSubjectLabel(viewNoteSheet.exBdLeaveSubjectId) || viewNoteSheet.subject }}</div>
+          }
+
+
+          <!-- Main text body -->
+          <div class="ns-preview-body-section">
+            <div class="ns-preview-body-label">Content</div>
+            @if (viewEditing) {
+              <app-rich-editor [(ngModel)]="editMainText" height="220px" placeholder="Edit content..."></app-rich-editor>
+            } @else {
+              <div class="notesheet-preview-body" [innerHTML]="getViewMainTextSafe()"></div>
+            }
+          </div>
+
+          <!-- Extra paragraph (after main text) -->
+          @if (viewEditing) {
+            <div class="ns-preview-body-section">
+              <div class="ns-preview-body-label">Paragraph</div>
+              <app-rich-editor [(ngModel)]="editParagraphText" height="150px" placeholder="Edit paragraph..."></app-rich-editor>
+            </div>
+          } @else if (hasViewParagraphText()) {
+            <div class="ns-preview-body-section">
+              <div class="notesheet-preview-body" style="white-space: pre-wrap">{{ getViewParagraphText() }}</div>
+            </div>
+          }
+
+          <!-- Supporting Documents -->
+          @if (getViewSupportingDocs().length > 0) {
+            <div class="ns-preview-docs">
+              <div class="ns-preview-docs-label">Supporting Documents</div>
+              <div class="flex flex-column gap-1 mt-2">
+                @for (doc of getViewSupportingDocs(); track doc.fileId) {
+                  <div class="flex align-items-center gap-2">
+                    <i class="pi pi-file text-500"></i>
+                    <span class="text-sm flex-1" style="min-width: 0; overflow: hidden; text-overflow: ellipsis;">{{ doc.fileName }}</span>
+                    <p-button type="button" icon="pi pi-eye" [rounded]="true" [text]="true" size="small" pTooltip="Preview" (onClick)="onViewPreviewDoc(doc.fileId, doc.fileName)"></p-button>
+                    <p-button type="button" icon="pi pi-download" [rounded]="true" [text]="true" size="small" pTooltip="Download" (onClick)="onViewDownloadDoc(doc.fileId, doc.fileName)"></p-button>
+                  </div>
+                }
+              </div>
+            </div>
+          }
+
+          <!-- Edit mode: Save / Cancel -->
+          @if (viewEditing) {
+            <div class="ns-preview-edit-actions">
+              <p-button label="Cancel" icon="pi pi-times" severity="secondary" [outlined]="true" (onClick)="cancelViewEdit()"></p-button>
+              <p-button label="Save" icon="pi pi-check" [loading]="savingView" [disabled]="savingView" (onClick)="saveViewChanges()"></p-button>
+            </div>
+          } @else {
+            <!-- Closing line -->
+            <div class="ns-preview-closing">Presented for your kind approval.</div>
+
+            <!-- Approval chain: Initiator (right) -->
+            @if (initiatorDetails) {
+              <div class="ns-preview-initiator-block">
+                <app-notesheet-signatory
+                  [detail]="initiatorDetails"
+                  [showSignature]="shouldShowSignature(initiatorDetails.step)"
+                  [isEnglish]="true"
+                  align="right">
+                </app-notesheet-signatory>
+              </div>
+            }
+            <!-- Recommender(s) + Final Approver (left) -->
+            @if (approversDetails.length > 0) {
+              <div class="ns-preview-approvers-block">
+                @for (item of approversDetails; track item.step + item.rabId) {
+                  <app-notesheet-signatory
+                    [detail]="item"
+                    [showSignature]="shouldShowSignature(item.step)"
+                    [isEnglish]="true"
+                    align="left">
+                  </app-notesheet-signatory>
+                }
+              </div>
+            }
+          }
+        </div>
+      }
+
+    <!-- ═══ FORM MODE (Create / Edit) ═══ -->
+    } @else {
+      @if (editMode && editLoadFailed) {
+        <div class="p-4 surface-100 border-round mb-4">
+          <p class="font-semibold text-900 m-0 mb-2">Could not load note sheet for update</p>
+          <p class="text-600 m-0 mb-3">If you see "Content unavailable" or empty fields, open this page from the Draft list so data loads correctly.</p>
+          <a [routerLink]="['/notesheet-list/draft-ex-bd-leave']" class="p-button p-button-outlined">Go to Draft Note-Sheet List</a>
+          <span class="ml-2 text-sm text-500">Then click <strong>Update</strong> on the draft you want to edit.</span>
+        </div>
+      }
+      @if (editLoading) {
+        <div class="flex align-items-center justify-content-center p-4"><i class="pi pi-spin pi-spinner" style="font-size: 2rem"></i><span class="ml-2">Loading note sheet...</span></div>
+      } @else {
+      <div class="ns-gen-header">
+        <div class="ns-gen-title">{{ title }}</div>
+      </div>
+
+      <form [formGroup]="form" (ngSubmit)="submit()">
+        <div class="ns-gen-grid">
+          <!-- Row 0: Select Ex-BD Leave Application (full width) -->
+          <div class="ns-gen-field ns-gen-full">
+            <label class="ns-gen-label">Select Ex-BD Leave Application <span class="ns-gen-req">*</span></label>
+            @if (editMode) {
+              <input pInputText [value]="getEditApplicationLabel()" class="w-full" [readonly]="true" />
+            } @else {
+              <p-select
+                formControlName="exBdLeaveApplicationId"
+                [options]="exBdLeaveAppOptions"
+                optionLabel="label"
+                optionValue="value"
+                [filter]="true"
+                filterBy="label"
+                [showClear]="true"
+                placeholder="Search & Select Application"
+                styleClass="w-full"
+                (onChange)="onExBdLeaveAppChange($event.value)">
+              </p-select>
+              @if (form.get('exBdLeaveApplicationId')?.invalid && form.get('exBdLeaveApplicationId')?.touched) {
+                <small class="ns-gen-error">Ex-BD Leave Application is required</small>
+              }
+            }
+          </div>
+
+          <!-- Row 1: Text Type | Date | Note Sheet No -->
+          <div class="ns-gen-field">
+            <label class="ns-gen-label">Text Type</label>
+            <p-select
+              formControlName="textType"
+              [options]="textTypeOptions"
+              optionLabel="label"
+              optionValue="value"
+              placeholder="Select Language"
+              styleClass="w-full">
+            </p-select>
+          </div>
+
+          <div class="ns-gen-field">
+            <label class="ns-gen-label">Date <span class="ns-gen-req">*</span></label>
+            <p-datepicker formControlName="noteSheetDate" dateFormat="dd-mm-yy" styleClass="w-full" placeholder="Select date"></p-datepicker>
+          </div>
+
+          <div class="ns-gen-field">
+            <label class="ns-gen-label">Note Sheet No <span class="ns-gen-req">*</span></label>
+            @if (editMode) {
+              <input pInputText formControlName="noteSheetNo" class="w-full" [readonly]="true" />
+            } @else {
+              <p-select
+                formControlName="noteSheetNumberConfigId"
+                [options]="noteSheetConfigOptions"
+                optionLabel="label"
+                optionValue="value"
+                placeholder="Select NoteSheet Number"
+                styleClass="w-full">
+              </p-select>
+              @if (form.get('noteSheetNumberConfigId')?.invalid && form.get('noteSheetNumberConfigId')?.touched) {
+                <small class="ns-gen-error">Note Sheet No is required</small>
+              }
+            }
+          </div>
+
+          @if (!editMode) {
+          <div class="ns-gen-field">
+            <label class="ns-gen-label">Static Word</label>
+            <input pInputText formControlName="noteSheetNoStaticWord" placeholder="Optional word" class="w-full" maxlength="50" />
+            <small class="text-500">Added before the serial (prefix/word/serial)</small>
+          </div>
+          }
+
+          <!-- Application Info Panel (flat text, shown when app selected) -->
+          @if (selectedExBdLeaveAppId) {
+            <div class="ns-gen-full ns-app-info-panel">
+              <div class="ns-app-info-grid">
+                <div class="ns-app-info-item">
+                  <span class="ns-app-info-label">RAB Employee</span>
+                  <span class="ns-app-info-value">{{ getEmployeeDisplayName() }}</span>
+                </div>
+                <div class="ns-app-info-item">
+                  <span class="ns-app-info-label">Purpose of Ex-BD Leave</span>
+                  <span class="ns-app-info-value">{{ getPurposeLabel(form.get('purposeOfExBdLeaveId')?.value) }}</span>
+                </div>
+                <div class="ns-app-info-item">
+                  <span class="ns-app-info-label">Destination Country</span>
+                  <span class="ns-app-info-value">{{ getCountryLabels() }}</span>
+                </div>
+                <div class="ns-app-info-item">
+                  <span class="ns-app-info-label">Total Days</span>
+                  <span class="ns-app-info-value">{{ form.get('totalDays')?.value || '—' }}</span>
+                </div>
+                <div class="ns-app-info-item">
+                  <span class="ns-app-info-label">Date of Visit (From)</span>
+                  <span class="ns-app-info-value">{{ formatDateView(form.get('dateOfVisitFrom')?.value) }}</span>
+                </div>
+                <div class="ns-app-info-item">
+                  <span class="ns-app-info-label">Date of Visit (To)</span>
+                  <span class="ns-app-info-value">{{ formatDateView(form.get('dateOfVisitTo')?.value) }}</span>
+                </div>
+                <div class="ns-app-info-item ns-app-info-full">
+                  <span class="ns-app-info-label">Family Members</span>
+                  <span class="ns-app-info-value">{{ getFamilyMemberDisplayNames() || '—' }}</span>
+                </div>
+              </div>
+            </div>
+          }
+
+          <!-- Subject -->
+          <div class="ns-gen-field ns-gen-span-2">
+            <label class="ns-gen-label">Subject <span class="ns-gen-req">*</span></label>
+            <div class="flex align-items-center gap-1">
+              <p-select
+                formControlName="exBdLeaveSubjectId"
+                [options]="subjectTypeOptionsDisplay"
+                optionLabel="label"
+                optionValue="value"
+                [filter]="true"
+                filterBy="label"
+                [showClear]="true"
+                placeholder="Select Subject"
+                styleClass="w-full">
+              </p-select>
+              <p-button icon="pi pi-plus" [rounded]="true" [text]="true" severity="success" (onClick)="showAddSubjectDialog()" pTooltip="Add new Subject" />
+            </div>
+            @if (form.get('exBdLeaveSubjectId')?.invalid && form.get('exBdLeaveSubjectId')?.touched) {
+              <small class="ns-gen-error">Subject is required</small>
+            }
+          </div>
+
+          <!-- Reference Number Paragraphs -->
+          <div class="ns-gen-full">
+            <p-fieldset legend="Reference Number" [toggleable]="true" [collapsed]="false">
+              <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem;">
+                <p-button icon="pi pi-plus" label="Add Reference" [rounded]="false" [text]="true" severity="success" size="small" (onClick)="addReferenceParagraph()" pTooltip="Add Reference"></p-button>
+              </div>
+              @for (para of referenceParagraphs; track trackByIndex($index)) {
+                <div class="ref-paragraph-row">
+                  <span class="ref-serial">{{ getSerialLabel($index) }}</span>
+                  <div class="ref-paragraph-content">
+                    <textarea pInputText class="w-full" rows="2" [value]="referenceParagraphs[$index].text" (input)="referenceParagraphs[$index].text = $any($event.target).value" [placeholder]="'Reference ' + getSerialLabel($index)"></textarea>
+                    <app-file-references-form
+                      [fileRows]="referenceParagraphs[$index].fileRows"
+                      [isViewMode]="false"
+                      title=""
+                      (fileRowsChange)="onRefFileRowsChange($event, $index)"
+                      (onDownloadFile)="onRefDownloadFile($event)">
+                    </app-file-references-form>
+                  </div>
+                  @if (referenceParagraphs.length > 1) {
+                    <p-button icon="pi pi-trash" [rounded]="true" [text]="true" severity="danger" (onClick)="removeReferenceParagraph($index)"></p-button>
+                  }
+                </div>
+              }
+            </p-fieldset>
+          </div>
+
+          <div class="ns-gen-field">
+            <label class="ns-gen-label">Operation Type <span class="ns-gen-req">*</span></label>
+            <p-select
+              formControlName="noteSheetOperationType"
+              [options]="noteSheetOperationTypeOptions"
+              optionLabel="label"
+              optionValue="value"
+              [showClear]="true"
+              placeholder="Select type"
+              styleClass="w-full">
+            </p-select>
+            @if (form.get('noteSheetOperationType')?.invalid && form.get('noteSheetOperationType')?.touched) {
+              <small class="ns-gen-error">Operation Type is required</small>
+            }
+          </div>
+
+          <div class="ns-gen-field ns-gen-field--checkbox">
+            <label class="ns-gen-label">Secret</label>
+            <div class="ns-gen-checkbox-row">
+              <p-checkbox formControlName="isSecret" [binary]="true" inputId="isSecret"></p-checkbox>
+              <label for="isSecret" class="ns-gen-checkbox-label">Mark as Secret</label>
+            </div>
+          </div>
+
+          <!-- Row 7: Main Text (full) -->
+          <div class="ns-gen-field ns-gen-full">
+            <label class="ns-gen-label">Main Text</label>
+            <app-rich-editor formControlName="mainText" height="220px" placeholder="Write content here..."></app-rich-editor>
+          </div>
+
+          <!-- Row 7b: Paragraphs (full) — extra paragraphs shown after Main Text in the document -->
+          <div class="ns-gen-field ns-gen-full">
+            <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem;">
+              <label class="ns-gen-label" style="margin-bottom: 0;">Paragraph</label>
+              <p-button icon="pi pi-plus" label="Add Paragraph" [rounded]="false" [text]="true" severity="success" size="small" (onClick)="addParagraph()" pTooltip="Add Paragraph"></p-button>
+            </div>
+            @for (p of paragraphs; track trackByIndex($index)) {
+              <div style="display: flex; align-items: start; gap: 0.5rem; margin-bottom: 0.5rem;">
+                <span style="min-width: 1.5rem; padding-top: 0.6rem; font-weight: 600;">{{ $index + 1 }}.</span>
+                <textarea pInputText class="w-full" rows="2" [value]="paragraphs[$index]" (input)="paragraphs[$index] = $any($event.target).value" [placeholder]="'Paragraph ' + ($index + 1)"></textarea>
+                @if (paragraphs.length > 1) {
+                  <p-button icon="pi pi-trash" [rounded]="true" [text]="true" severity="danger" (onClick)="removeParagraph($index)"></p-button>
+                }
+              </div>
+            }
+          </div>
+
+          <!-- Prepared By / Initiator / Recommender / Final Approver -->
+          <div class="ns-gen-field ns-gen-full">
+            <app-notesheet-approver-select
+              [noteSheetType]="'ExBDLeave'"
+              [useUserList]="true"
+              [(initiatorId)]="form.controls['initiatorId'].value"
+              (initiatorIdChange)="form.controls['initiatorId'].setValue($event); form.controls['initiatorId'].markAsTouched()"
+              [(recommenderIds)]="form.controls['recommenderIds'].value"
+              (recommenderIdsChange)="form.controls['recommenderIds'].setValue($event)"
+              [(finalApproverId)]="form.controls['finalApproverId'].value"
+              (finalApproverIdChange)="form.controls['finalApproverId'].setValue($event); form.controls['finalApproverId'].markAsTouched()"
+              [showErrors]="!!(form.get('initiatorId')?.touched || form.get('finalApproverId')?.touched)">
+              <div class="form-field">
+                <label class="form-label">Prepared By</label>
+                @if (isPreparedByMapped) {
+                  <input pInputText formControlName="preparedBy" readonly class="w-full" />
+                } @else {
+                  <p-select
+                    formControlName="preparedByEmployeeId"
+                    [options]="preparedByOptions"
+                    optionLabel="label"
+                    optionValue="value"
+                    [filter]="true"
+                    filterBy="label"
+                    [showClear]="true"
+                    placeholder="Select Prepared By"
+                    styleClass="w-full">
+                  </p-select>
+                }
+              </div>
+            </app-notesheet-approver-select>
+          </div>
+
+          <!-- Row 10: Supporting Documents (full) -->
+          <div class="ns-gen-field ns-gen-full">
+            <label class="ns-gen-label">Supporting Documents</label>
+            <app-file-references-form
+              #fileReferencesForm
+              [fileRows]="fileRows"
+              [isViewMode]="false"
+              title="Supporting Documents"
+              (fileRowsChange)="onFileRowsChange($event)"
+              (onDownloadFile)="onDownloadFile($event)">
+            </app-file-references-form>
+          </div>
+        </div>
+
+        <!-- Actions -->
+        <div class="ns-gen-actions">
+          <p-button type="submit" label="Generate Note Sheet" icon="pi pi-check" [loading]="isSubmitting" [disabled]="isSubmitting || form.invalid" />
+        </div>
+      </form>
+      }
+    }
+  </div>
+
+  <p-toast position="top-center"></p-toast>
+
+  <!-- Add Subject Dialog -->
+  <p-dialog header="Add New Subject" [(visible)]="showSubjectDialog" [modal]="true" [style]="{ width: '450px' }" [closable]="true">
+    <div style="padding: 1rem 0; display: flex; flex-direction: column; gap: 1rem;">
+      <div>
+        <label class="ns-gen-label">Subject (English) <span class="ns-gen-req">*</span></label>
+        <input pInputText [(ngModel)]="newSubject.codeValueEN" [ngModelOptions]="{ standalone: true }" placeholder="Enter subject name" class="w-full" />
+      </div>
+      <div>
+        <label class="ns-gen-label">Subject (Bangla)</label>
+        <input pInputText [(ngModel)]="newSubject.codeValueBN" [ngModelOptions]="{ standalone: true }" placeholder="Enter subject name in Bangla" class="w-full" />
+      </div>
+    </div>
+    <ng-template pTemplate="footer">
+      <p-button label="Save" icon="pi pi-check" (onClick)="saveNewSubject()" [loading]="isSavingSubject" [disabled]="!newSubject.codeValueEN?.trim()" />
+    </ng-template>
+  </p-dialog>
+</p-fluid>

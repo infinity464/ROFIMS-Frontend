@@ -1,4 +1,6 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, inject } from '@angular/core';
+import { UserMenuService } from '@/services/user-menu.service';
+import { Router } from '@angular/router';
 import { FormBuilder, FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Fluid } from "primeng/fluid";
 import { ButtonModule } from "primeng/button";
@@ -18,6 +20,12 @@ import { TableModule } from "primeng/table";
     styleUrl: './bank.scss'
 })
 export class Bank implements OnInit {
+    private _router = inject(Router);
+    private _userMenuService = inject(UserMenuService);
+    canInsert = true;
+    canUpdate = true;
+    canDelete = true;
+
      isSubmitting = false;
      bankForm! : FormGroup
 
@@ -44,6 +52,11 @@ export class Bank implements OnInit {
     ) {}
 
     ngOnInit(): void {
+        const _perms = this._userMenuService.getPermissionsByRoute(this._router.url);
+        this.canInsert = _perms.canInsert;
+        this.canUpdate = _perms.canUpdate;
+        this.canDelete = _perms.canDelete;
+
         this.getAll();
         this.currentUser = this.sharedService.getCurrentUser();
         this.initForm();
@@ -56,8 +69,6 @@ export class Bank implements OnInit {
             bankNameEN: ['', Validators.required],
             bankNameBN: ['', Validators.required],
 
-            branchName: [''],
-            routingNumber: [''],
             swiftCode: [''],
 
             createdBy: [this.currentUser],
@@ -74,11 +85,11 @@ export class Bank implements OnInit {
                 this.filteredBanks = [...res];
                 this.totalRecords = res.length;
             },
-            error: () => {
+            error: (err: any) => {
                 this.messageService.add({
                     severity: 'error',
                     summary: 'Error',
-                    detail: 'Failed to fetch banks'
+                    detail: err?.error?.message || 'Failed to fetch banks'
                 });
             }
         });
@@ -91,8 +102,7 @@ export class Bank implements OnInit {
         if (this.searchValue) {
             this.filteredBanks = this.banks.filter(b =>
                 b.bankNameEN.toLowerCase().includes(this.searchValue) ||
-                b.bankNameBN.toLowerCase().includes(this.searchValue) ||
-                b.branchName.toLowerCase().includes(this.searchValue)
+                b.bankNameBN.toLowerCase().includes(this.searchValue)
             );
         } else {
             this.filteredBanks = [...this.banks];
@@ -131,11 +141,11 @@ export class Bank implements OnInit {
                 this.getAll();
                 this.isSubmitting = false;
             },
-            error: () => {
+            error: (err: any) => {
                 this.messageService.add({
                     severity: 'error',
                     summary: 'Error',
-                    detail: 'Failed to create bank'
+                    detail: err?.error?.message || 'Failed to create bank'
                 });
                 this.isSubmitting = false;
             }
@@ -161,11 +171,11 @@ export class Bank implements OnInit {
                 this.getAll();
                 this.isSubmitting = false;
             },
-            error: () => {
+            error: (err: any) => {
                 this.messageService.add({
                     severity: 'error',
                     summary: 'Error',
-                    detail: 'Failed to update bank'
+                    detail: err?.error?.message || 'Failed to update bank'
                 });
                 this.isSubmitting = false;
             }
@@ -207,11 +217,11 @@ export class Bank implements OnInit {
                         });
                         this.getAll();
                     },
-                    error: () => {
+                    error: (err: any) => {
                         this.messageService.add({
                             severity: 'error',
                             summary: 'Error',
-                            detail: 'Failed to delete bank'
+                            detail: err?.error?.message || 'Failed to delete bank'
                         });
                     }
                 });

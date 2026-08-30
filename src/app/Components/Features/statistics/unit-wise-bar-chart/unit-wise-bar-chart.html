@@ -1,0 +1,136 @@
+<!-- ── Unit Wise Serving Manpower Bar Chart ────────────────────────────── -->
+<div class="chart-results-card">
+
+    <!-- Header -->
+    <div class="chart-results-header">
+
+        <!-- Row 1: filter left | buttons right -->
+        <div class="chart-toolbar-row">
+
+            <!-- Organization filter -->
+            <div class="filter-wrap">
+                <p-select
+                    [(ngModel)]="selectedOrgId"
+                    [options]="orgOptions"
+                    optionLabel="orgName"
+                    optionValue="orgId"
+                    [placeholder]="lang === 'en' ? 'All Organizations' : 'সকল বাহিনী'"
+                    [showClear]="true"
+                    [filter]="true"
+                    filterBy="orgName"
+                    (onChange)="onOrgChange()"
+                    styleClass="filter-select"
+                    [disabled]="loading">
+                </p-select>
+            </div>
+
+            <!-- Member Type filter -->
+            <div class="filter-wrap">
+                <p-select
+                    [(ngModel)]="selectedMemberTypeId"
+                    [options]="memberTypeOptions"
+                    optionLabel="memberTypeName"
+                    optionValue="memberTypeId"
+                    placeholder="All Member Types"
+                    [showClear]="true"
+                    [filter]="true"
+                    filterBy="memberTypeName"
+                    (onChange)="onMemberTypeChange()"
+                    styleClass="filter-select"
+                    [disabled]="loading">
+                </p-select>
+            </div>
+
+            <!-- Rank filter (cascades from Member Type if one is selected) -->
+            <div class="filter-wrap">
+                <p-select
+                    [(ngModel)]="selectedRankId"
+                    [options]="rankOptions"
+                    optionLabel="label"
+                    optionValue="value"
+                    [placeholder]="lang === 'en' ? 'All Ranks' : 'সকল পদবী'"
+                    [showClear]="true"
+                    [filter]="true"
+                    filterBy="label"
+                    (onChange)="onRankChange()"
+                    styleClass="filter-select"
+                    [disabled]="loading">
+                </p-select>
+            </div>
+
+            <!-- Trade filter -->
+            <div class="filter-wrap">
+                <p-select
+                    [(ngModel)]="selectedTradeId"
+                    [options]="tradeOptions"
+                    optionLabel="tradeName"
+                    optionValue="tradeId"
+                    [placeholder]="lang === 'en' ? 'All Trades' : 'সকল ট্রেড'"
+                    [showClear]="true"
+                    [filter]="true"
+                    filterBy="tradeName"
+                    (onChange)="onTradeChange()"
+                    styleClass="filter-select"
+                    [disabled]="loading">
+                </p-select>
+            </div>
+
+            <!-- Lang + Print -->
+            <div class="chart-actions">
+                <button type="button" class="chart-lang-toggle" (click)="toggleLang()">
+                    {{ lang === 'en' ? 'বাংলা' : 'English' }}
+                </button>
+
+                <button type="button" class="chart-btn-print"
+                        (click)="printChart()"
+                        [disabled]="loading || units.length === 0">
+                    <i class="pi pi-print" style="font-size:13px"></i>
+                    Print
+                </button>
+            </div>
+        </div>
+
+        <!-- Row 2: centered title -->
+        <div class="chart-header-title-block">
+            <div class="chart-main-title">{{ titleLabel }}</div>
+            @if (scopeLine) {
+                <div class="chart-scope-line">{{ scopeLine }}</div>
+            }
+            <div class="chart-date-line">{{ dateLine }}</div>
+            @if (filterChips.length > 0) {
+                <div class="chart-filter-chips">
+                    <span *ngFor="let c of filterChips" class="chart-filter-chip">
+                        {{ c.label }}: {{ c.value }}
+                    </span>
+                </div>
+            }
+        </div>
+
+    </div>
+
+    <!-- Loading skeleton -->
+    <div *ngIf="loading" class="skeleton-wrapper">
+        <div class="skeleton-bar"></div>
+    </div>
+
+    <!-- Chart body -->
+    <div class="chart-body" *ngIf="!loading">
+
+        <!-- Empty state -->
+        <div *ngIf="units.length === 0" class="empty-state">
+            <i class="pi pi-chart-bar"></i>
+            <p>{{ lang === 'en' ? 'No serving manpower data found.' : 'কোনো কর্মরত জনবল পাওয়া যায়নি।' }}</p>
+        </div>
+
+        <!-- Bar chart -->
+        <div *ngIf="units.length > 0" class="chart-container">
+            <div class="chart-total">{{ totalLabel }}</div>
+            <div class="chart-canvas-wrap">
+                <p-chart type="bar" [data]="chartData" [options]="chartOptions"
+                         [style]="{ width: '100%', height: '100%' }"></p-chart>
+            </div>
+        </div>
+
+    </div>
+
+</div>

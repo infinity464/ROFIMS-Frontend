@@ -1,4 +1,6 @@
-import { Component } from '@angular/core';
+import { Component, inject } from '@angular/core';
+import { UserMenuService } from '@/services/user-menu.service';
+import { Router } from '@angular/router';
 import { FormConfig } from '../shared/models/formConfig';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { MasterBasicSetupService } from '../shared/services/MasterBasicSetupService';
@@ -18,10 +20,17 @@ import { SharedService } from '@/shared/services/shared-service';
   styleUrl: './corps.scss',
 })
 export class Corps {
+    private _router = inject(Router);
+    private _userMenuService = inject(UserMenuService);
+    canInsert = true;
+    canUpdate = true;
+    canDelete = true;
+
 
     codeType = "Corps";
     title = "Corps";
 
+    allData: any[] = [];
     commonData: any[] = [];
     editingId: number | null = null;
     commonForm!: FormGroup;
@@ -40,8 +49,8 @@ export class Corps {
                 name: 'orgId',
                 label: 'Mother Organization',
                 type: 'select',
-                required: true,
-                options: [] // Will be populated in ngOnInit
+                required: false,
+                options: [] as { label: string; value: any }[]
             },
             {
                 name: 'codeValueEN',
@@ -65,8 +74,8 @@ export class Corps {
                 name: 'status',
                 label: 'Status',
                 type: 'select',
-                required: true,
-                default: true,
+                required: false,
+                default: null,
                 options: [
                     { label: 'Active', value: true },
                     { label: 'Inactive', value: false }
@@ -77,7 +86,7 @@ export class Corps {
 
         tableConfig: TableConfig = {
         tableColumns: [
-
+            { field: 'orgNameDisplay', header: 'Mother Organization' },
             { field: 'codeValueEN', header: 'Corps Name (EN)' },
             { field: 'codeValueBN', header: 'Corps Name (BN)' },
             { field: 'sortOrder', header: 'Seniority' },
@@ -101,20 +110,27 @@ export class Corps {
     ) { }
 
     ngOnInit(): void {
+        const _perms = this._userMenuService.getPermissionsByRoute(this._router.url);
+        this.canInsert = _perms.canInsert;
+        this.canUpdate = _perms.canUpdate;
+        this.canDelete = _perms.canDelete;
+
         this.initForm();
-        this.loadActiveMotherOrgs(); // Load motherOrgRanks for dropdown
-        this.getCommonCodeWithPaging({
-            first: this.first,
-            rows: this.rows
-        });
+        this.setupFormFilterListeners();
+        this.loadActiveMotherOrgs();
+    }
+
+    private setupFormFilterListeners() {
+        this.commonForm.get('orgId')?.valueChanges.subscribe(() => { this.first = 0; this.buildTableData(); });
+        this.commonForm.get('status')?.valueChanges.subscribe(() => { this.first = 0; this.buildTableData(); });
     }
 
       initForm() {
         this.commonForm = this.fb.group({
             codeValueEN: ['', Validators.required],
             codeValueBN: ['', Validators.required],
-            status: [true, Validators.required],
-            orgId: ['', Validators.required],
+            status: [null],
+            orgId: [null],
             codeId: [0],
             codeType: ['Corps'],
             parentCodeId: [null], // Will store motherOrgId
@@ -136,7 +152,8 @@ export class Corps {
             next: (motherOrgRanks) => {
                 const motherOrgOptions = motherOrgRanks.map(d => ({
                     label: d.orgNameEN,
-                    value: d.orgId
+                    value: d.orgId,
+                    sortOrder: d.sortOrder
                 }));
 
                 // Update form config with motherOrg options
@@ -144,47 +161,69 @@ export class Corps {
                 if (motherOrgField) {
                     motherOrgField.options = motherOrgOptions;
                 }
+                this.getAllData();
             },
             error: (err) => {
                 console.error('Error loading corps:', err);
                 this.messageService.add({
                     severity: 'error',
                     summary: 'Error',
-                    detail: 'Failed to load corps'
+                    detail: err?.error?.message || 'Failed to load corps'
                 });
             }
         });
     }
 
-    getCommonCodeWithPaging(event?: any) {
+    getAllData() {
         this.loading = true;
-        const pageNo = event ? event.first / event.rows + 1 : 1;
-        const pageSize = event?.rows ?? this.rows;
-
-        const apiCall = this.searchValue
-            ? this.masterBasicSetupService.getByKeyordWithPaging('Corps', this.searchValue, pageNo, pageSize)
-            : this.masterBasicSetupService.getAllWithPaging('Corps', pageNo, pageSize);
-
-        apiCall.subscribe({
+        this.masterBasicSetupService.getAllByType('Corps').subscribe({
             next: (res) => {
-                this.commonData = res.datalist;
-                this.totalRecords = res.pages.rows;
-                this.rows = pageSize;
+                this.allData = Array.isArray(res) ? res : [];
+                this.buildTableData();
                 this.loading = false;
             },
             error: (err) => {
                 console.error('Error fetching data:', err);
-                this.messageService.add({
-                    severity: 'error',
-                    summary: 'Error',
-                    detail: 'Failed to load data'
-                });
+                this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.message || 'Failed to load data' });
                 this.loading = false;
             }
         });
     }
 
+    private buildTableData() {
+        const orgOpts = (this.formConfig.formFields.find(f => f.name === 'orgId')?.options as { label: string; value: any }[]) || [];
+        const getOrgName = (id: number) => orgOpts.find((o: any) => o.value === id)?.label ?? '-';
+        let list = this.allData.map((r: any) => ({ ...r, orgNameDisplay: getOrgName(r.orgId) }));
+        const orgId = this.commonForm?.get('orgId')?.value;
+        const status = this.commonForm?.get('status')?.value;
+        if (orgId != null && orgId !== '') list = list.filter((r: any) => r.orgId === orgId);
+        if (status != null) list = list.filter((r: any) => r.status === status);
+        const q = (this.searchValue ?? '').toLowerCase().trim();
+        if (q) list = list.filter((r: any) => r.codeValueEN?.toLowerCase().includes(q) || r.codeValueBN?.toLowerCase().includes(q));
+        // Order by Mother Organization's sort order first, then by the corps' own sort order.
+        const getOrgSortOrder = (id: number) =>
+            (orgOpts.find((o: any) => o.value === id) as any)?.sortOrder ?? Number.MAX_SAFE_INTEGER;
+        list.sort((a: any, b: any) => {
+            const parentDiff = getOrgSortOrder(a.orgId) - getOrgSortOrder(b.orgId);
+            if (parentDiff !== 0) return parentDiff;
+            return (a.sortOrder ?? 0) - (b.sortOrder ?? 0);
+        });
+        this.commonData = list;
+        this.totalRecords = list.length;
+        this.first = 0;
+    }
+
     submit(data: any) {
+        const orgId = this.commonForm.get('orgId')?.value;
+        const status = this.commonForm.get('status')?.value;
+        if (orgId == null || orgId === '') {
+            this.messageService.add({ severity: 'warn', summary: 'Validation', detail: 'Please select Mother Organization' });
+            return;
+        }
+        if (status == null) {
+            this.messageService.add({ severity: 'warn', summary: 'Validation', detail: 'Please select Status (Active or Inactive)' });
+            return;
+        }
         if (this.commonForm.invalid) {
             this.commonForm.markAllAsTouched();
             return;
@@ -219,10 +258,7 @@ export class Corps {
             next: (res) => {
                 console.log('Created:', res);
                 this.resetForm();
-                this.getCommonCodeWithPaging({
-                    first: this.first,
-                    rows: this.rows
-                });
+                this.getAllData();
                 this.messageService.add({
                     severity: 'success',
                     summary: 'Success',
@@ -235,7 +271,7 @@ export class Corps {
                 this.messageService.add({
                     severity: 'error',
                     summary: 'Error',
-                    detail: 'Failed to create corps'
+                    detail: err?.error?.message || 'Failed to create corps'
                 });
 
                 this.isSubmitting = false;
@@ -258,10 +294,7 @@ export class Corps {
             next: (res) => {
                 console.log('Updated:', res);
                 this.resetForm();
-                this.getCommonCodeWithPaging({
-                    first: this.first,
-                    rows: this.rows
-                });
+                this.getAllData();
                 this.messageService.add({
                     severity: 'success',
                     summary: 'Success',
@@ -274,7 +307,7 @@ export class Corps {
                 this.messageService.add({
                     severity: 'error',
                     summary: 'Error',
-                    detail: 'Failed to update corps'
+                    detail: err?.error?.message || 'Failed to update corps'
                 });
                 this.isSubmitting = false;
             }
@@ -312,10 +345,7 @@ export class Corps {
             accept: () => {
                 this.masterBasicSetupService.delete(row.codeId).subscribe({
                     next: () => {
-                        this.getCommonCodeWithPaging({
-                            first: this.first,
-                            rows: this.rows
-                        });
+                        this.getAllData();
                         this.messageService.add({
                             severity: 'success',
                             summary: 'Success',
@@ -327,7 +357,7 @@ export class Corps {
                         this.messageService.add({
                             severity: 'error',
                             summary: 'Error',
-                            detail: 'Failed to delete corps'
+                            detail: err?.error?.message || 'Failed to delete corps'
                         });
                     }
                 });
@@ -337,12 +367,13 @@ export class Corps {
 
     resetForm() {
         this.editingId = null;
+        this.searchValue = '';
         this.isSubmitting = false;
         this.commonForm.reset({
-            orgId: '',
+            orgId: null,
             codeId: 0,
             codeType: 'Corps',
-            status: true,
+            status: null,
             parentCodeId: null,
             commCode: null,
             displayCodeValueEN: null,
@@ -354,12 +385,13 @@ export class Corps {
             lastUpdatedBy: '',
             lastupdate: ''
         });
+        this.buildTableData();
     }
 
     onSearch(keyword: string) {
-        this.searchValue = keyword;
+        this.searchValue = keyword ?? '';
         this.first = 0;
-        this.getCommonCodeWithPaging({ first: 0, rows: this.rows });
+        this.buildTableData();
     }
 
     private getCurrentUser(): string {

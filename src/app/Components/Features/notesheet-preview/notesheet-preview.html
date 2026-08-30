@@ -1,0 +1,177 @@
+<p-toast position="top-center"></p-toast>
+
+<div class="preview-page">
+
+    <!-- Toolbar -->
+    <div class="preview-header no-print">
+        <p-button icon="pi pi-arrow-left" label="Back" (onClick)="goBack()" styleClass="p-button-text"></p-button>
+        <div class="preview-actions" *ngIf="noteSheet && !loading && !error">
+            <p-button icon="pi pi-print" label="Print" (onClick)="printPage()" styleClass="p-button-outlined"></p-button>
+            <p-button icon="pi pi-file-word" label="Word" (onClick)="exportWord()" styleClass="p-button-outlined"></p-button>
+            <p-button icon="pi pi-file-pdf" label="PDF" (onClick)="exportPdf()" styleClass="p-button-outlined"></p-button>
+        </div>
+    </div>
+
+    <!-- Loading -->
+    <div class="preview-loading" *ngIf="loading">
+        <i class="pi pi-spin pi-spinner" style="font-size:2rem"></i>
+        <p>Loading...</p>
+    </div>
+
+    <!-- Error -->
+    <div class="preview-error" *ngIf="error && !loading">
+        <i class="pi pi-exclamation-circle" style="font-size:3rem; color:var(--red-500)"></i>
+        <p>Failed to load note-sheet.</p>
+        <p-button label="Go Back" icon="pi pi-arrow-left" (onClick)="goBack()"></p-button>
+    </div>
+
+    <!-- A4 Paper -->
+    <div class="a4-paper-container" *ngIf="noteSheet && !loading && !error">
+        <div class="a4-paper">
+
+            <!-- Page / Document number – top right -->
+            <div class="ns-page-no" *ngIf="noteSheet.noteSheetNo">{{ noteSheet.noteSheetNo }}</div>
+
+            <!-- Title above the box -->
+            <div class="ns-title-block">
+                <div class="ns-title-en">NOTE SHEET</div>
+                <div class="ns-title-bn">মন্তব্য পত্র</div>
+            </div>
+
+            <!-- ════════════ Main document box ════════════ -->
+            <div class="ns-doc-box">
+
+                <!-- Header row: subject | সংলগ্নী নং -->
+                <div class="ns-box-header">
+                    <div class="ns-box-subject">{{ noteSheet.subject }}</div>
+                    <div class="ns-box-sanglagni">
+                        <span>সংলগ্নী</span>
+                        <span>নং</span>
+                    </div>
+                </div>
+
+                <!-- Reference / Date line -->
+                <div class="ns-ref-line">
+                    <ng-container *ngIf="noteSheet.referenceNumber">
+                        <span class="ns-ref-key">{{ isEnglish() ? 'Reference:' : 'সূত্রঃ' }}</span>
+                        {{ noteSheet.referenceNumber }}
+                    </ng-container>
+                    <ng-container *ngIf="!noteSheet.referenceNumber && noteSheet.noteSheetDate">
+                        <span class="ns-ref-key">{{ isEnglish() ? 'Date:' : 'তারিখঃ' }}</span>
+                        {{ formatDate(noteSheet.noteSheetDate) }}
+                    </ng-container>
+                </div>
+
+                <!-- ── General / default body ───────────────────── -->
+                <ng-container *ngIf="!isExBdLeave() && !isNewPosting()">
+                    <div class="ns-para">
+                        <span class="ns-para-no">১।</span>
+                        <div class="ns-para-text" [innerHTML]="getMainTextSafe()"></div>
+                    </div>
+                </ng-container>
+
+                <!-- ── Ex-BD Leave body ─────────────────────────── -->
+                <ng-container *ngIf="isExBdLeave()">
+                    <div class="ns-para">
+                        <span class="ns-para-no">১।</span>
+                        <div class="ns-para-text" [innerHTML]="getMainTextSafe()"></div>
+                    </div>
+                </ng-container>
+
+                <!-- ── New Posting body ─────────────────────────── -->
+                <ng-container *ngIf="isNewPosting()">
+                    <div class="ns-para">
+                        <span class="ns-para-no">১।</span>
+                        <div class="ns-para-text" [innerHTML]="getMainTextSafe()"></div>
+                    </div>
+                    <div class="ns-posting-table" *ngIf="postingEmployees.length > 0">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Ser</th>
+                                    <th>Service ID</th>
+                                    <th>{{ isEnglish() ? 'Rank' : 'পদবি' }}</th>
+                                    <th>{{ isEnglish() ? 'Trade' : 'ট্রেড' }}</th>
+                                    <th>{{ isEnglish() ? 'Name' : 'নাম' }}</th>
+                                    <th>{{ isEnglish() ? 'Mother Unit' : 'মাতৃ ইউনিট' }}</th>
+                                    <th>{{ isEnglish() ? 'Own District' : 'নিজ জেলা' }}</th>
+                                    <th>{{ isEnglish() ? 'Mother Unit Location' : 'মাতৃ ইউনিটের অবস্থান' }}</th>
+                                    <th>{{ isEnglish() ? 'Transfer Unit' : 'বদলি ইউনিট' }}</th>
+                                    <th>{{ isEnglish() ? 'Remarks' : 'মন্তব্য' }}</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr *ngFor="let emp of postingEmployees; let i = index">
+                                    <td>{{ i + 1 }}</td>
+                                    <td>{{ emp.serviceId || '-' }}</td>
+                                    <td>{{ isEnglish() ? (emp.rankName || '-') : (emp.rankNameBN || emp.rankName || '-') }}</td>
+                                    <td>{{ isEnglish() ? (emp.tradeName || '-') : (emp.tradeNameBN || emp.tradeName || '-') }}</td>
+                                    <td>{{ isEnglish() ? (emp.fullNameEN || '-') : (emp.fullNameBN || emp.fullNameEN || '-') }}</td>
+                                    <td>{{ isEnglish() ? (emp.motherUnitName || '-') : (emp.motherUnitNameBN || emp.motherUnitName || '-') }}</td>
+                                    <td>{{ isEnglish() ? (emp.permanentDistrictName || '-') : (emp.permanentDistrictNameBN || emp.permanentDistrictName || '-') }}</td>
+                                    <td>{{ isEnglish() ? (emp.motherOrgLocationName || '-') : (emp.motherOrgLocationNameBN || emp.motherOrgLocationName || '-') }}</td>
+                                    <td>{{ emp.transferRabUnitName || '-' }}</td>
+                                    <td>{{ emp.remarks || '-' }}</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </ng-container>
+
+                <!-- Note (all types) -->
+                <div class="ns-note" *ngIf="noteSheet.note">
+                    <strong>{{ isEnglish() ? 'Note:' : 'নোটঃ' }}</strong> {{ noteSheet.note }}
+                </div>
+
+                <!-- Closing sentence + Initiator signature -->
+                <div class="ns-initiator-area">
+                    <div class="ns-closing-text">
+                        {{ isEnglish() ? 'Presented for your kind approval.' : 'আপনার সদয় অনুমোদনের জন্য উপস্থাপন করা হলো।' }}
+                    </div>
+                    <div class="ns-initiator-sig" *ngIf="initiatorDetails">
+                        <img *ngIf="shouldShowSignature(initiatorDetails.step) && initiatorDetails.signatureDataUrl"
+                             [src]="initiatorDetails.signatureDataUrl" class="ns-sig-img" alt="Signature" />
+                        <div class="ns-sig-paren">
+                            ({{ initiatorDetails.name }}{{ initiatorDetails.rank && initiatorDetails.rank !== '-' ? ', ' + initiatorDetails.rank : '' }})
+                        </div>
+                        <div class="ns-sig-appoint" *ngIf="initiatorDetails.appointment">{{ initiatorDetails.appointment }}</div>
+                        <div class="ns-sig-date" *ngIf="noteSheet.noteSheetDate">{{ formatDate(noteSheet.noteSheetDate) }}</div>
+                    </div>
+                </div>
+
+                <!-- Approver sections -->
+                <div class="ns-approver-section" *ngFor="let approver of approversDetails; let i = index">
+                    <div class="ns-approver-role">{{ translateStep(approver.step) }}</div>
+                    <div class="ns-approver-body">
+                        <div class="ns-approver-left">
+                            <span class="ns-para-no">{{ i + 2 }}।</span>
+                        </div>
+                        <div class="ns-approver-sig-area">
+                            <img *ngIf="shouldShowSignature(approver.step) && approver.signatureDataUrl"
+                                 [src]="approver.signatureDataUrl" class="ns-sig-img" alt="Signature" />
+                        </div>
+                    </div>
+                </div>
+
+            </div><!-- /ns-doc-box -->
+        </div><!-- /a4-paper -->
+    </div><!-- /a4-paper-container -->
+
+    <!-- ── Back History Timeline (not printed) ── -->
+    <div class="ns-back-history no-print" *ngIf="backHistory.length > 0">
+        <h3><i class="pi pi-history"></i> Back History</h3>
+        <div class="ns-back-timeline">
+            <div class="ns-back-entry" *ngFor="let entry of backHistory">
+                <div class="ns-back-entry-header">
+                    <span class="ns-back-from">{{ getStatusLabel(entry.backedFromStatus) }}</span>
+                    <i class="pi pi-arrow-right"></i>
+                    <span class="ns-back-to">{{ getStatusLabel(entry.backedToStatus) }}</span>
+                    <span class="ns-back-date">{{ formatDate(entry.backedDate) }}</span>
+                </div>
+                <div class="ns-back-entry-by" *ngIf="entry.backedByName">Backed by: {{ entry.backedByName }}</div>
+                <div class="ns-back-entry-reason" *ngIf="entry.backReason">Reason: {{ entry.backReason }}</div>
+            </div>
+        </div>
+    </div>
+
+</div><!-- /preview-page -->

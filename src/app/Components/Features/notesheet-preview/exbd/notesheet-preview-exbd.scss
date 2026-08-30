@@ -1,0 +1,191 @@
+﻿/* ── Whole-sheet font size (user-selectable) ───────────
+   The export bar's font dropdown sets --ns-fs-delta on the component host: a point
+   offset (−2 … +2 in 0.25 steps) that every body size below is expressed against
+   through fs(). With no offset the 0 fallback leaves every size exactly as it was.
+   The PDF restates the same offset on .pdf-flow in buildJsReportPdf() (via a matching
+   inline calc), because the export snapshots the paper's innerHTML, not the host. */
+@function fs($pt) {
+    @return calc(#{$pt}pt + var(--ns-fs-delta, 0) * 1pt);
+}
+
+/* ── Document font ─────────────────────────────────────
+   SolaimanLipi (bundled, see styles.scss) replaces SolaimanLipi as the Bangla
+   face for this preview. Times New Roman stays first so Latin text and digits
+   are unchanged — Bangla codepoints have no Times glyphs and fall through to
+   SolaimanLipi.
+
+   The `:host` prefix raises specificity above the shared notesheet-preview.scss
+   rule (`.a4-paper` alone), so this override wins no matter the stylesheet
+   order. .page-measure carries the SAME stack as the visible .a4-paper on
+   purpose: it is the hidden div the page-break math measures and the source
+   snapshot for the JsReport PDF — a different Bangla face there would compute
+   breaks against text of a different height than what is shown and printed. */
+:host .a4-paper,
+:host .page-measure {
+    font-family: 'Times New Roman', 'SolaimanLipi', Times, serif;
+
+    /* Beats the shared preview's !important rule that pins rich-text (Quill)
+       content to SolaimanLipi. */
+    ::ng-deep .ns-para-text,
+    ::ng-deep .ns-para-text *,
+    ::ng-deep .ns-ref-content,
+    ::ng-deep .ns-ref-content *,
+    ::ng-deep .ns-note,
+    ::ng-deep .ns-note * {
+        font-family: 'Times New Roman', 'SolaimanLipi', Times, serif !important;
+    }
+
+    /* Restore the icon font the blanket rule above would otherwise clobber. */
+    ::ng-deep .ns-ref-file-btn .pi {
+        font-family: 'primeicons' !important;
+    }
+}
+
+/* ── 1 inch left page margin (this screen only) ──────────
+   The shared sheet gives every preview a 6mm side inset (`.a4-paper`
+   padding: 14mm 6mm 20mm); this widens the LEFT inset to 25.4mm = 1in, leaving
+   the right/top/bottom insets alone. `:host` keeps it off the other note-sheet
+   types. .page-measure gets the identical inset because it is the hidden div the
+   page-break math measures — a wider text column there would compute breaks
+   against lines that wrap differently than what is shown and printed.
+   Both elements are box-sizing: border-box, so the text column narrows by the
+   same amount. The PDF/Print counterpart is `padLeft` in buildJsReportPdf(), and
+   the Word counterpart is the section's `margin.left` in buildWordDocument(). */
+:host .a4-paper,
+:host .page-measure {
+    padding-left: 25.4mm;
+}
+
+/* Push the document text 10px in from the left border. Padding on the content
+   column (`.ns-main-col` has none by default) opens a gap between the border and
+   the text; `:host` scopes it to this screen only. The matching PDF/Print rule
+   lives in buildJsReportPdf() (`.pdf-flow .ns-main-col`). */
+:host .ns-main-col {
+    padding-left: 10px;   /* small gap so text doesn't touch the left border line */
+    padding-right: 5px;   /* small gap so justified text doesn't touch the right border */
+}
+
+/* ── Ex-BD Leave body tweaks (this screen only) ──────────
+   Uniform body size: everything except the NOTE SHEET title/header renders at
+   12pt (the body size). Applied to BOTH .a4-paper (visible) and .page-measure
+   (the hidden pagination source) so the page-break math matches what is shown. */
+:host .a4-paper,
+:host .page-measure {
+    font-size: fs(12);                        /* base — anything without its own size */
+    line-height: 1.25;                        /* tighter body line gap (was 1.7 from the shared sheet) */
+
+    /* Blocks the shared stylesheet pins smaller (7–9pt) — force them to body size. */
+    .ns-para,
+    .ns-para-no,
+    .ns-cell-ref,
+    .ns-note,
+    .ns-approver-role,
+    .ns-approver-left,
+    .ns-approver-remark { font-size: fs(12); }
+
+    /* Signature block (name / rank / appointment / date) sits one point above the
+       12pt body so the signatory line reads a touch larger than the note text.
+       The PDF mirrors this in buildJsReportPdf() (`.pdf-flow .ns-sig-*`). */
+    .ns-sig-name,
+    .ns-sig-rank,
+    .ns-sig-paren,
+    .ns-sig-appoint,
+    .ns-sig-date { font-size: fs(13); }
+
+    /* The real body line gap. The shared sheet pins `.ns-para { line-height: 1.85 }`
+       (notesheet-preview.scss) — and because `.ns-para` is the block that lays out
+       the wrapped lines, its own line-height sets each line box's strut and overrides
+       whatever `.a4-paper` (or the inline `.ns-para-text`) inherits. So this rule,
+       not the `.a4-paper` line-height above, is what actually tightens the body.
+       Mirrored for the PDF in buildJsReportPdf() (`.pdf-flow .ns-para`). */
+    .ns-para { line-height: 1.25; }
+
+    /* Rich-text (Quill) main text is injected raw via [innerHTML], so the editor's
+       size picker (ql-size-small/large/huge) and headings (h1/h2) would otherwise
+       carry their own em-relative sizes into the document. Pin them to the body
+       size so paragraph ১। stays on the same grid as every other block.
+       line-height is forced here too: text pasted from Word/Quill carries its own
+       inline line-height on each <p>, which would otherwise beat the 1.25 inherited
+       from .a4-paper — an !important stylesheet rule overrides those inline styles.
+       Mirrored for the PDF in buildJsReportPdf() (`.pdf-flow .ns-para-text`). */
+    ::ng-deep .ns-para-text,
+    ::ng-deep .ns-para-text * { font-size: fs(12) !important; line-height: 1.25 !important; }
+
+    /* Tighter serial indents; serials (১। ২। and ক। খ।) are NOT bold. */
+    .ns-para-no    { margin-right: 1em; font-weight: normal; }     /* was 2em — tighter ১। indent */
+    .ns-ref-serial { margin-right: 0.5em; font-weight: normal; }   /* was 1em — tighter ক. indent */
+}
+
+/* ── Signature-zone breathing room (this screen only) ────
+   Two extra blank lines of vertical space between the last body paragraph and
+   the initiator/approver signature zone, so approvers have room to sign. `:host`
+   scopes it to the Ex-BD preview; the PDF/Print paths snapshot this same DOM, so
+   the gap carries through there too. 2.5em ≈ 2 lines at the 1.25 body line-height. */
+:host .ns-initiator-area {
+    margin-top: 2.5em;
+}
+
+/* Leave five blank body lines after each approver's signature block before the
+   next numbered approver section begins. Do not add the extra trailing gap after
+   the final approver, because that empty space can spill into a blank page. */
+:host .ns-approver-section:not(:last-child) {
+    padding-bottom: calc(24px + 6.25em);
+}
+
+/* ── Approver-role underline (this screen only) ────
+   Bangla conjuncts and the parenthesis in "পরিচালক (প্রশাসন ও অর্থ)" hang below the
+   baseline, so the default underline (drawn at the baseline, with skip-ink) breaks
+   around them and looks chopped. Push the underline down clear of the descenders so
+   it renders as one continuous line. The PDF mirrors this in buildJsReportPdf(). */
+:host .ns-approver-role {
+    text-underline-offset: 4px;
+    text-decoration-skip-ink: none;
+}
+
+/* ── সূত্রঃ label weight (this screen only) ─────────────
+   The shared sheet bolds the reference key (`.ns-ref-key { font-weight: 700 }` in
+   notesheet-preview.scss). On the Ex-BD sheet the label reads as ordinary body
+   text, so pull it back to normal. `:host` keeps the other note-sheet types bold.
+   The PDF/Print counterpart is `.pdf-flow .ns-ref-key` in buildJsReportPdf(), and
+   the Word counterpart is `bold: false` on the referenceLabel runs in
+   buildWordDocument(). */
+:host .ns-ref-key {
+    font-weight: normal;
+}
+
+/* ── Serial gutter: one shared text column ──────────────
+   Both serial kinds (১। ২। for body paragraphs, ক। খ। for reference items) sat in
+   the normal text flow with their own trailing margin (1em vs 0.5em), so their
+   text started at two different x positions.
+
+   Each serial is now a fixed-width inline-block, so the first line's text always
+   begins at --ns-serial-col no matter which serial precedes it. Wrapped lines
+   deliberately return to the left margin (under the serial), which is how the
+   note sheet is written — do NOT convert this into a hanging indent.
+   The PDF/Print counterpart lives in buildJsReportPdf() (`.pdf-flow .ns-para-no`
+   / `.ns-ref-serial`), and Word gets the same column from the tab stop at
+   NS_SERIAL_INDENT in buildWordDocument(). */
+:host .a4-paper,
+:host .page-measure {
+    --ns-serial-col: 2.4em;
+
+    /* Reference block shares the body paragraph's left base (shared sheet gives it
+       4px vs the paragraph's 1px), so both serial columns start from the same edge.
+       padding-top is 14px, not the 10px block gap used lower down
+       (`.ns-para { padding-top: 10px }`), because the subject line above is underlined:
+       the rule is drawn ~4px below the text (offset 3px + its own thickness) and reads
+       as ink inside the gap, so 14 − 4 leaves the same 10px of empty space and the
+       subject → সূত্রঃ and সূত্রঃ → ১। gaps read alike. The no/date → subject gap
+       is set inline in notesheet-preview-exbd.html. */
+    .ns-cell-ref {
+        padding-left: 1px;
+        padding-top: 14px;
+    }
+
+    .ns-para-no,
+    .ns-ref-serial {
+        display: inline-block;
+        width: var(--ns-serial-col);
+        margin-right: 0;
+    }
+}

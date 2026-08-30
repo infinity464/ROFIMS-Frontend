@@ -1,6 +1,7 @@
 import { Component, OnInit } from '@angular/core';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { FormsModule } from '@angular/forms';
+import { Router } from '@angular/router';
 
 import { Card } from 'primeng/card';
 import { Tabs, TabList, Tab, TabPanels, TabPanel } from 'primeng/tabs';
@@ -13,6 +14,7 @@ import { CheckboxModule } from 'primeng/checkbox';
 import { TextareaModule } from 'primeng/textarea';
 import { FileUploadModule } from 'primeng/fileupload';
 
+import { UserMenuService } from '@/services/user-menu.service';
 import { AddressSectionComponent } from '../../Shared/address-section/address-section';
 import { DynamicFieldComponent } from "../../Shared/shared/components/dynamic-field/dynamic-field";
 import { FamilyInfo } from "../family-info/family-info";
@@ -52,6 +54,10 @@ import { EducationalInformation } from "../education-information/education-infor
   styleUrl: './personal-info.scss'
 })
 export class PersonalInfo implements OnInit {
+  canInsert = true;
+  canUpdate = true;
+  canDelete = true;
+
   form!: FormGroup;
 
   // Dropdown Data
@@ -144,9 +150,14 @@ export class PersonalInfo implements OnInit {
     { label: 'Uttara', value: 2 }
   ];
 
-  constructor(private fb: FormBuilder) {}
+  constructor(private fb: FormBuilder, private _router: Router, private _userMenuService: UserMenuService) {}
 
   ngOnInit(): void {
+    const _perms = this._userMenuService.getPermissionsByRoute(this._router.url);
+    this.canInsert = _perms.canInsert;
+    this.canUpdate = _perms.canUpdate;
+    this.canDelete = _perms.canDelete;
+
     this.form = this.fb.group({
       // ---------------- Personal Form ----------------
       bloodGroup: [null, Validators.required],

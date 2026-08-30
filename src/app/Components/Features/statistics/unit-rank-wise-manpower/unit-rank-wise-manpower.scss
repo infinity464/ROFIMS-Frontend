@@ -1,0 +1,383 @@
+:host {
+    display: block;
+    padding: 1.5rem;
+}
+
+/* ── Results card ────────────────────────────────────────────────────── */
+.report-results-card {
+    background: var(--surface-card, #fff);
+    border: 1px solid var(--surface-border, #e2e8f0);
+    border-radius: 10px;
+    overflow: hidden;
+}
+
+/* ── Results header ──────────────────────────────────────────────────── */
+.report-results-header {
+    display: flex;
+    flex-direction: column;
+    padding: 0.75rem 1.25rem 1rem;
+    border-bottom: 1px solid var(--surface-border, #e2e8f0);
+    background: var(--surface-section, #f8fafc);
+    gap: 0.5rem;
+}
+
+.report-toolbar-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+}
+
+.report-filter-block {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.filter-label {
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: var(--text-color, #1e293b);
+}
+
+::ng-deep .rab-unit-select {
+    min-width: 200px;
+    .p-select { height: 32px; border-radius: 7px; }
+    .p-select-label { padding: 4px 10px; font-size: 0.82rem; }
+}
+
+::ng-deep .merge-multiselect {
+    min-width: 220px;
+    .p-multiselect { height: 32px; border-radius: 7px; }
+    .p-multiselect-label { padding: 4px 10px; font-size: 0.82rem; }
+}
+.report-header-title-block { width: 100%; text-align: center; }
+
+.report-main-title {
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: var(--text-color, #1e293b);
+    letter-spacing: 0.03em;
+    line-height: 1.4;
+}
+
+.report-date-line {
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: var(--text-color-secondary, #475569);
+    margin-top: 0.15rem;
+    line-height: 1.4;
+}
+
+.report-scope-line {
+    font-size: 0.85rem;
+    font-weight: 500;
+    color: var(--primary-color, #4f46e5);
+    margin-top: 0.2rem;
+    line-height: 1.35;
+    padding: 0.15rem 0.5rem;
+    display: inline-block;
+    background: rgba(79, 70, 229, 0.08);
+    border-radius: 6px;
+}
+
+.report-results-actions { display: flex; align-items: center; gap: 0.5rem; }
+
+/* ── Language toggle ─────────────────────────────────────────────────── */
+.report-lang-toggle {
+    height: 32px;
+    padding: 0 12px;
+    border-radius: 7px;
+    border: 0.5px solid var(--surface-border, #e2e8f0);
+    background: var(--surface-card, #fff);
+    color: var(--text-color, #1e293b);
+    font-size: 0.8rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: border-color 0.15s, background 0.15s;
+
+    &:hover {
+        border-color: var(--primary-color, #4f46e5);
+        background: var(--surface-hover, #f1f5f9);
+    }
+}
+
+/* ── Export button ───────────────────────────────────────────────────── */
+.report-btn-export {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    height: 32px;
+    padding: 0 14px;
+    border-radius: 7px;
+    border: 0.5px solid var(--surface-border, #e2e8f0);
+    background: var(--surface-card, #fff);
+    color: var(--text-color, #1e293b);
+    font-size: 0.8rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: border-color 0.15s, background 0.15s;
+
+    &:hover {
+        border-color: var(--primary-color, #4f46e5);
+        background: var(--surface-hover, #f1f5f9);
+    }
+}
+
+.report-export-wrap { position: relative; }
+
+.report-export-dropdown {
+    position: absolute;
+    top: 100%;
+    right: 0;
+    margin-top: 6px;
+    min-width: 140px;
+    background: var(--surface-card, #fff);
+    border: 1px solid var(--surface-border, #e2e8f0);
+    border-radius: 8px;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.10);
+    z-index: 100;
+    overflow: hidden;
+}
+
+.report-export-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+    padding: 8px 14px;
+    background: none;
+    border: none;
+    font-size: 0.85rem;
+    cursor: pointer;
+    text-align: left;
+    transition: background 0.12s;
+
+    &:hover { background: var(--surface-hover, #f7fafc); }
+}
+
+.report-export-icon  { font-size: 0.75rem; }
+.report-export-pdf   { color: #e74c3c; }
+.report-export-word  { color: #2980b9; }
+.report-export-excel { color: #27ae60; }
+
+/* ── Skeleton ────────────────────────────────────────────────────────── */
+.skeleton-wrapper { padding: 1.25rem; }
+.skeleton-row {
+    height: 2.5rem;
+    background: var(--surface-border, #e2e8f0);
+    border-radius: 4px;
+    margin-bottom: 0.5rem;
+    animation: skeleton-pulse 1.4s ease-in-out infinite;
+}
+@keyframes skeleton-pulse {
+    0%, 100% { opacity: 1; }
+    50%      { opacity: 0.4; }
+}
+
+/* ── Table wrapper ───────────────────────────────────────────────────── */
+.report-table-wrap {
+    overflow-x: auto;
+    width: 100%;
+}
+
+/* The equivalent-manpower report has many rank columns. Keep its Unit column
+   anchored at the left edge while the rest of the matrix is scrolled. */
+.report-table-wrap.sticky-unit-column {
+    .unit-col,
+    .unit-name,
+    .totals-label {
+        position: sticky;
+        left: 0;
+    }
+
+    .unit-col {
+        z-index: 5;
+    }
+
+    .unit-name {
+        z-index: 1;
+        background-color: var(--surface-card, #fff);
+    }
+
+    tbody tr:nth-child(even) .unit-name {
+        background-color: var(--surface-ground, #f8fafc);
+    }
+
+    tbody tr:hover .unit-name {
+        background-color: var(--surface-hover, #f1f5f9);
+    }
+
+    .totals-label {
+        z-index: 1;
+        background-color: var(--surface-section, #e8eaf0);
+    }
+}
+
+/* ── Matrix table (Unit × Rank with Auth/Held sub-columns) ───────────── */
+$header-teal:      #16766a;
+$header-teal-dark: #0e4f47;
+$unit-col-dark:    #11363f;
+$auth-held-bg:     #0e4f47;
+$pill-bg:          #d4dee0;
+$pill-text:        #1e293b;
+
+.report-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.82rem;
+    color: var(--text-color, #1e293b);
+
+    thead tr {
+        background-color: $header-teal;
+        color: #fff;
+    }
+    /* Lock the first header row to a fixed height so the second row's sticky offset
+       matches even when none of the rank columns carry an abbreviation pill (i.e.
+       all-merged member-type columns). */
+    thead tr:first-child  { position: sticky; top: 0;       z-index: 3; height: 3.2rem; }
+    thead tr:nth-child(2) { position: sticky; top: 3.2rem;  z-index: 2; }
+
+    th {
+        padding: 0.5rem 0.6rem;
+        text-align: center;
+        font-weight: 700;
+        white-space: nowrap;
+        border: 1px solid rgba(255, 255, 255, 0.18);
+        vertical-align: middle;
+    }
+
+    td {
+        padding: 0.4rem 0.55rem;
+        border: 1px solid var(--surface-border, #e2e8f0);
+        vertical-align: middle;
+    }
+
+    tbody tr:nth-child(even) { background-color: var(--surface-ground, #f8fafc); }
+    tbody tr:hover           { background-color: var(--surface-hover, #f1f5f9); }
+
+    .unit-col {
+        min-width: 110px;
+        text-align: left;
+        background-color: $unit-col-dark;
+        color: #fff;
+        padding-left: 1rem;
+    }
+
+    /* Auth / Held row */
+    .sub-col {
+        font-weight: 700;
+        font-size: 0.72rem;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        background-color: $auth-held-bg;
+    }
+
+    thead .total-col { background-color: $header-teal-dark; }
+    tbody td.total-col,
+    tfoot td.total-col {
+        background-color: rgba(22, 118, 106, 0.08);
+        color: var(--text-color, #1e293b);
+        font-weight: 700;
+    }
+}
+
+/* Rank name + abbreviation pill */
+.rank-head {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    line-height: 1.2;
+}
+.rank-name {
+    font-weight: 700;
+    white-space: normal;
+    max-width: 7.5em;
+    text-align: center;
+}
+.rank-abbr {
+    display: inline-block;
+    padding: 1px 8px;
+    background: $pill-bg;
+    color: $pill-text;
+    border-radius: 9999px;
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    line-height: 1.4;
+}
+
+/* ── Cell types ──────────────────────────────────────────────────────── */
+.num-cell  { text-align: center; font-variant-numeric: tabular-nums; }
+.unit-name { text-align: left; font-weight: 600; min-width: 110px; }
+
+/* ── Totals row ──────────────────────────────────────────────────────── */
+.totals-row {
+    background-color: var(--surface-section, #e8eaf0) !important;
+    font-weight: 700;
+    td { border-top: 2px solid var(--surface-border, #cbd5e1); }
+}
+.totals-label { text-align: right; font-weight: 700; }
+
+/* ── Dark mode overrides ─────────────────────────────────────────────── */
+:host-context(.app-dark) {
+    .report-results-card {
+        background: var(--surface-card) !important;
+        border-color: var(--surface-border);
+    }
+    .report-results-header {
+        background: var(--surface-card) !important;
+        border-bottom-color: var(--surface-border);
+    }
+    .report-main-title  { color: var(--text-color) !important; }
+    .report-date-line   { color: var(--text-color-secondary) !important; }
+    .report-lang-toggle,
+    .report-btn-export {
+        background: var(--surface-ground) !important;
+        border-color: var(--surface-border);
+        color: var(--text-color);
+    }
+    .report-export-dropdown {
+        background: var(--surface-card);
+        border-color: var(--surface-border);
+    }
+    .report-export-item:hover { background: var(--surface-hover); }
+    .totals-row {
+        background-color: var(--surface-ground) !important;
+        td { border-top-color: var(--surface-border); }
+    }
+    tbody td.total-col,
+    tfoot td.total-col {
+        background-color: rgba(22, 118, 106, 0.18);
+        color: var(--text-color);
+    }
+}
+
+/* ── Empty state ─────────────────────────────────────────────────────── */
+.empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 3rem 1rem;
+    color: var(--text-color-secondary, #64748b);
+
+    i { font-size: 3rem; margin-bottom: 0.75rem; }
+    p { margin: 0; font-size: 0.9rem; }
+}
+
+/* ── Drill-down section: one block per selected RAB Unit ───────────────── */
+.section-block { margin-bottom: 0; }
+
+.section-banner {
+    padding: 0.55rem 1rem;
+    font-size: 0.9rem;
+    font-weight: 700;
+    color: #fff;
+    background: var(--primary-color, #4f46e5);
+    letter-spacing: 0.02em;
+    border-top: 1px solid var(--surface-border, #e2e8f0);
+}

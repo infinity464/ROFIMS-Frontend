@@ -1,0 +1,427 @@
+<p-toast></p-toast>
+
+@if (employees.length === 0) {
+    <section class="mv-card">
+        <div class="text-center p-4">
+            <p>No employees selected. Please go back to the Supernumerary List and select members.</p>
+            <button type="button" pButton label="Back to Supernumerary List"
+                    icon="pi pi-arrow-left" (click)="cancel()"></button>
+        </div>
+    </section>
+} @else {
+<form [formGroup]="form" (ngSubmit)="submit()" class="movement-form flex flex-col gap-4">
+
+    <!-- ── Card 1: Selected personnel (hidden when shown as a modal) ──── -->
+    @if (!asModal) {
+    <section class="mv-card">
+        <header class="mv-card-header">
+            <i class="pi pi-users mv-card-icon"></i>
+            <span class="mv-card-title">Article 47 (Takeover) — Selected Personnel</span>
+            <span class="mv-chip">{{ employees.length }} selected</span>
+        </header>
+
+        <p class="mv-hint">
+            One Article 47 (Takeover) record will be created for each member below using the same details entered.
+        </p>
+
+        <p-table [value]="employees" styleClass="p-datatable-sm mv-emp-table">
+            <ng-template pTemplate="header">
+                <tr>
+                    <th style="width: 48px">#</th>
+                    <th>RAB ID</th>
+                    <th>SVC ID</th>
+                    <th>Name</th>
+                    <th>Rank</th>
+                    <th>Corps</th>
+                    <th>Trade</th>
+                    <th>Mother Unit</th>
+                    <th style="width: 60px"></th>
+                </tr>
+            </ng-template>
+            <ng-template pTemplate="body" let-row let-i="rowIndex">
+                <tr>
+                    <td>{{ i + 1 }}</td>
+                    <td>{{ row.rabid || '—' }}</td>
+                    <td>{{ row.serviceId || '—' }}</td>
+                    <td class="font-semibold">{{ row.fullNameEN }}</td>
+                    <td>{{ row.rankDisplay || 'N/A' }}</td>
+                    <td>{{ row.corpsDisplay || 'N/A' }}</td>
+                    <td>{{ row.tradeDisplay || 'N/A' }}</td>
+                    <td>{{ row.motherUnitDisplay || '—' }}</td>
+                    <td>
+                        <button type="button" pButton
+                                icon="pi pi-trash" severity="danger"
+                                [text]="true" [rounded]="true" size="small"
+                                pTooltip="Remove"
+                                (click)="removeEmployee(row)"></button>
+                    </td>
+                </tr>
+            </ng-template>
+        </p-table>
+    </section>
+    }
+
+    <!-- ── Card 2: Movement details (entirely hidden in modal) ───────── -->
+    @if (!asModal) {
+    <section class="mv-card">
+        <header class="mv-card-header">
+            <i class="pi pi-arrow-right-arrow-left mv-card-icon"></i>
+            <span class="mv-card-title">Movement details</span>
+        </header>
+
+        <!-- Order information (hidden in modal; type=Permanent, reason=null) -->
+        @if (!asModal) {
+        <div class="mv-subsection">
+            <h3 class="mv-subsection-title">Order information</h3>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div class="mv-field">
+                    <label>Movement type <span class="p-error">*</span></label>
+                    <p-select
+                        formControlName="movementType"
+                        [options]="movementTypeOptions"
+                        optionLabel="label" optionValue="value"
+                        placeholder="Select"
+                        appendTo="body"
+                        styleClass="w-full"></p-select>
+                </div>
+                <div class="mv-field">
+                    <label>Order type</label>
+                    <input pInputText class="w-full" value="Article 47 (Takeover)" [disabled]="true" />
+                </div>
+            </div>
+            <div class="mv-field mt-3">
+                <label>Reason</label>
+                <div class="flex gap-2">
+                    <div class="flex-1">
+                        <p-select
+                            formControlName="movementReasonId"
+                            [options]="movementReasonOptions"
+                            optionLabel="label" optionValue="value"
+                            placeholder="Select a reason"
+                            [showClear]="true" [filter]="true" appendTo="body"
+                            styleClass="w-full"></p-select>
+                    </div>
+                    <p-button type="button"
+                              icon="pi pi-plus"
+                              pTooltip="Add new reason"
+                              tooltipPosition="top"
+                              severity="secondary"
+                              [outlined]="true"
+                              (onClick)="openAddReasonDialog()"></p-button>
+                </div>
+                <small class="mv-hint">Add a custom reason if none of the listed options apply.</small>
+            </div>
+        </div>
+        }
+
+        <!-- Destination (hidden in modal; RAB Unit, first option) -->
+        @if (!asModal) {
+        <div class="mv-subsection">
+            <h3 class="mv-subsection-title">Destination</h3>
+            <div class="mv-field">
+                <label>Destined unit <span class="p-error">*</span></label>
+                <div class="flex flex-col gap-2">
+                    <p-selectbutton
+                        formControlName="destinedUnitTarget"
+                        [options]="destinedUnitOptions"
+                        optionLabel="label" optionValue="value"
+                        [allowEmpty]="false"
+                        styleClass="mv-toggle"></p-selectbutton>
+
+                    @if (form.get('destinedUnitTarget')?.value === 'mother') {
+                        <p-select
+                            formControlName="destinedMotherUnitId"
+                            [options]="motherUnitOptions"
+                            optionLabel="label" optionValue="value"
+                            placeholder="Select mother unit..."
+                            [filter]="true" [showClear]="true" appendTo="body"
+                            styleClass="w-full"></p-select>
+                    } @else {
+                        <p-select
+                            formControlName="destinedRABUnitId"
+                            [options]="rabUnitOptions"
+                            optionLabel="label" optionValue="value"
+                            placeholder="Select RAB unit..."
+                            [filter]="true" [showClear]="true" appendTo="body"
+                            styleClass="w-full"></p-select>
+                    }
+                </div>
+            </div>
+        </div>
+        }
+
+        <!-- Effective dates (hidden in modal; takeover=today, others null) -->
+        @if (!asModal) {
+        <div class="mv-subsection">
+            <h3 class="mv-subsection-title">Effective dates</h3>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div class="mv-field">
+                    <label>Date of release</label>
+                    <p-datepicker
+                        formControlName="dateOfRelease"
+                        appendTo="body" dateFormat="dd/mm/yy"
+                        [showIcon]="true" iconDisplay="input"
+                        placeholder="dd/mm/yyyy" [inputStyle]="{ width: '100%' }"
+                        class="w-full"></p-datepicker>
+                </div>
+                <div class="mv-field">
+                    <label>Date of reduce</label>
+                    <p-datepicker
+                        formControlName="dateOfReduce"
+                        appendTo="body" dateFormat="dd/mm/yy"
+                        [showIcon]="true" iconDisplay="input"
+                        placeholder="dd/mm/yyyy" [inputStyle]="{ width: '100%' }"
+                        class="w-full"></p-datepicker>
+                </div>
+                <div class="mv-field">
+                    <label>Takeover date</label>
+                    <p-datepicker
+                        formControlName="takeoverDate"
+                        appendTo="body" dateFormat="dd/mm/yy"
+                        [showIcon]="true" iconDisplay="input"
+                        placeholder="dd/mm/yyyy" [inputStyle]="{ width: '100%' }"
+                        class="w-full"></p-datepicker>
+                </div>
+            </div>
+        </div>
+        }
+
+        <!-- Joining leave (hidden in modal; defaults to No) -->
+        @if (!asModal) {
+        <div class="mv-subsection">
+            <h3 class="mv-subsection-title">Joining leave</h3>
+            <div class="mv-field">
+                <span class="mv-question">Will the person take joining leave?</span>
+                <p-selectbutton
+                    formControlName="isJoiningLeave"
+                    [options]="joiningLeaveOptions"
+                    optionLabel="label" optionValue="value"
+                    [allowEmpty]="false"
+                    styleClass="mv-yesno"></p-selectbutton>
+            </div>
+
+            @if (showJoiningLeaveDates) {
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-3">
+                    <div class="mv-field">
+                        <label>Joining leave from</label>
+                        <p-datepicker
+                            formControlName="joiningLeaveFrom"
+                            appendTo="body" dateFormat="dd/mm/yy"
+                            [showIcon]="true" iconDisplay="input"
+                            placeholder="dd/mm/yyyy" [inputStyle]="{ width: '100%' }"
+                            class="w-full"></p-datepicker>
+                    </div>
+                    <div class="mv-field">
+                        <label>Joining leave to</label>
+                        <p-datepicker
+                            formControlName="joiningLeaveTo"
+                            appendTo="body" dateFormat="dd/mm/yy"
+                            [showIcon]="true" iconDisplay="input"
+                            placeholder="dd/mm/yyyy" [inputStyle]="{ width: '100%' }"
+                            class="w-full"></p-datepicker>
+                    </div>
+                </div>
+            }
+        </div>
+        }
+    </section>
+    }
+
+    <!-- ── Card 2b: Dates (modal only) ───────────────────────────────
+         Card 2 above is hidden in modal mode, so Generated date and
+         Takeover charge date live in their own card here. -->
+    @if (asModal) {
+    <section class="mv-card">
+        <header class="mv-card-header">
+            <i class="pi pi-calendar mv-card-icon"></i>
+            <span class="mv-card-title">Dates</span>
+        </header>
+        <div class="mv-subsection">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div class="mv-field">
+                    <label>Generated date</label>
+                    <!-- showOnFocus off: the dialog focuses its first field on open,
+                         which would otherwise pop this calendar straight away and leave
+                         two overlays stacked. Opens on the input icon instead. -->
+                    <p-datepicker
+                        formControlName="generatedDate"
+                        appendTo="body" dateFormat="dd/mm/yy"
+                        [showTime]="true" hourFormat="12"
+                        [showOnFocus]="false"
+                        [showIcon]="true" iconDisplay="input"
+                        placeholder="dd/mm/yyyy hh:mm" [inputStyle]="{ width: '100%' }"
+                        class="w-full"></p-datepicker>
+                    <small class="mv-hint">Defaults to the current date and time; saved as the record's Created date.</small>
+                </div>
+                <div class="mv-field">
+                    <label>Takeover charge date</label>
+                    <p-datepicker
+                        formControlName="takeoverDate"
+                        appendTo="body" dateFormat="dd/mm/yy"
+                        [showOnFocus]="false"
+                        [showIcon]="true" iconDisplay="input"
+                        placeholder="dd/mm/yyyy" [inputStyle]="{ width: '100%' }"
+                        class="w-full"></p-datepicker>
+                </div>
+            </div>
+        </div>
+    </section>
+    }
+
+    <!-- ── Card 3: Details ───────────────────────────────────────────── -->
+    <section class="mv-card">
+        <header class="mv-card-header">
+            <i class="pi pi-file-edit mv-card-icon"></i>
+            <span class="mv-card-title">Details</span>
+        </header>
+
+        <div class="mv-field">
+            <label>Auth</label>
+            <app-rich-editor formControlName="auth" height="140px"
+                             placeholder="Enter authorization..."></app-rich-editor>
+        </div>
+        @if (!asModal) {
+        <div class="mv-field mt-3">
+            <label>Details information</label>
+            <app-rich-editor formControlName="detailsInformation" height="180px"
+                             placeholder="Enter movement notes, special instructions, or context..."></app-rich-editor>
+        </div>
+        }
+        @if (!asModal) {
+        <div class="mv-field mt-3">
+            <label>Remarks</label>
+            <app-rich-editor formControlName="remarks" height="140px"
+                             placeholder="Enter remarks..."></app-rich-editor>
+        </div>
+        }
+    </section>
+
+    <!-- ── Card 4: Letter Recipients (hidden in modal; still saved with defaults) ── -->
+    @if (!asModal) {
+    <section class="mv-card">
+        <header class="mv-card-header">
+            <i class="pi pi-list mv-card-icon"></i>
+            <span class="mv-card-title">Letter Recipients</span>
+            <button type="button" pButton
+                    icon="pi pi-plus"
+                    [rounded]="true" [text]="true"
+                    severity="success"
+                    size="small"
+                    pTooltip="Add recipient"
+                    (click)="addLetterRecipient()"
+                    style="margin-left:0.5rem;"></button>
+        </header>
+
+        @for (recipient of letterRecipientsList; track trackByIndex($index); let i = $index) {
+            <div style="display:flex; align-items:start; gap:0.25rem; margin-bottom:0.5rem;">
+                <span style="min-width:1.75rem; padding-top:0.55rem; font-weight:600;">{{ i + 1 }}.</span>
+                <input pInputText
+                       class="w-full"
+                       [(ngModel)]="letterRecipientsList[i]"
+                       [ngModelOptions]="{ standalone: true }"
+                       [placeholder]="'Recipient ' + (i + 1)" />
+                <button type="button" pButton
+                        icon="pi pi-arrow-up"
+                        severity="secondary"
+                        [text]="true" [rounded]="true" size="small"
+                        pTooltip="Move up"
+                        [disabled]="i === 0"
+                        (click)="moveLetterRecipient(i, -1)"></button>
+                <button type="button" pButton
+                        icon="pi pi-arrow-down"
+                        severity="secondary"
+                        [text]="true" [rounded]="true" size="small"
+                        pTooltip="Move down"
+                        [disabled]="i === letterRecipientsList.length - 1"
+                        (click)="moveLetterRecipient(i, 1)"></button>
+                <button type="button" pButton
+                        icon="pi pi-trash"
+                        severity="danger"
+                        [text]="true" [rounded]="true" size="small"
+                        pTooltip="Remove"
+                        (click)="removeLetterRecipient(i)"></button>
+            </div>
+        }
+
+        @if (letterRecipientsList.length === 0) {
+            <small class="mv-hint">No recipients yet. Click + to add one.</small>
+        }
+    </section>
+    }
+
+    <!-- ── Card 5: Final Approvers ───────────────────────────────────── -->
+    <section class="mv-card">
+        <header class="mv-card-header">
+            <i class="pi pi-check-square mv-card-icon"></i>
+            <span class="mv-card-title">Final Approvers</span>
+        </header>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div class="mv-field md:col-span-2">
+                <label>Approvers</label>
+                <p-multiselect
+                    formControlName="finalApproverIds"
+                    [options]="approverOptions"
+                    optionLabel="label"
+                    optionValue="value"
+                    placeholder="Select one or more final approvers (optional)"
+                    styleClass="w-full"
+                    [filter]="true"
+                    display="chip"
+                    appendTo="body"></p-multiselect>
+                <small class="mv-hint">Optional. Only employees with an Identity user account are shown.</small>
+            </div>
+
+            <div class="mv-field">
+                <label>Approval date</label>
+                <p-datepicker
+                    formControlName="letterDate"
+                    appendTo="body" dateFormat="dd/mm/yy"
+                    [showIcon]="true" iconDisplay="input"
+                    placeholder="dd/mm/yyyy" [inputStyle]="{ width: '100%' }"
+                    class="w-full"></p-datepicker>
+                <small class="mv-hint">Defaults to today; printed as the Letter Date.</small>
+            </div>
+        </div>
+    </section>
+
+    <!-- ── Footer actions ────────────────────────────────────────────── -->
+    <div class="flex justify-end gap-2 mt-3">
+        <button type="button" pButton label="Cancel" severity="secondary" [outlined]="true"
+                (click)="cancel()"></button>
+        <button type="submit" pButton
+                [label]="saving ? 'Saving...' : 'Create ' + employees.length + ' Record(s)'"
+                icon="pi pi-check"
+                [disabled]="saving"></button>
+    </div>
+</form>
+
+<!-- ── Add Movement Reason Dialog ───────────────────────────── -->
+<p-dialog [(visible)]="showAddReasonDialog"
+          header="Add Movement Reason"
+          [modal]="true"
+          [closable]="true"
+          [style]="{ width: '520px' }"
+          appendTo="body">
+    <div class="mt-2">
+        <div class="mv-field">
+            <label>Reason <span class="p-error">*</span></label>
+            <input pInputText class="w-full"
+                   [(ngModel)]="newReasonNameBN"
+                   placeholder="Enter reason" />
+        </div>
+    </div>
+    <ng-template pTemplate="footer">
+        <p-button label="Cancel"
+                  icon="pi pi-times"
+                  severity="secondary"
+                  [outlined]="true"
+                  (onClick)="showAddReasonDialog = false"></p-button>
+        <p-button label="Save"
+                  icon="pi pi-check"
+                  [loading]="isSavingReason"
+                  [disabled]="!newReasonNameBN?.trim()"
+                  (onClick)="saveNewReason()"></p-button>
+    </ng-template>
+</p-dialog>
+}

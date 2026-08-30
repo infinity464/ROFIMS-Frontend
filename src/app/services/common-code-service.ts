@@ -26,6 +26,11 @@ export class CommonCodeService {
     getAllActiveCommonCodesType(codeType: string): Observable<CommonCodeModel[]> {
         return this.http.get<CommonCodeModel[]>(`${this.apiUrl}/GetActiveCommonCodeByTypeName/${codeType}`);
     }
+
+    /** Returns active EmployeeType rows filtered to the current user's allowed member types (server-side). */
+    getAccessibleMemberTypes(): Observable<CommonCodeModel[]> {
+        return this.http.get<CommonCodeModel[]>(`${this.apiUrl}/GetAccessibleMemberTypes`);
+    }
     getAllActiveCommonCodesByParentId(parentId: number): Observable<CommonCodeModel[]> {
         return this.http.get<CommonCodeModel[]>(`${this.apiUrl}/GetActiveCommonCodeByParentIdAsyn/${parentId}`);
     }

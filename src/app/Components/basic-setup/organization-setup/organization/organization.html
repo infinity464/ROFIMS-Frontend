@@ -33,36 +33,32 @@
                     </small>
                     }
                 </div>
-                <!-- Sort Order -->
+                <!-- Seniority (Sort Order) -->
                 <div class="field">
-                    <label for="sortOrder" class="block mb-2">
-                        Seniority <span class="text-red-500">*</span>
-                    </label>
+                    <label for="sortOrder" class="block mb-2">Seniority</label>
                     <input type="number" pInputText id="sortOrder" formControlName="sortOrder"
-                        placeholder="Enter sort order" class="w-full" />
-                    @if (organizationForm.get('sortOrder')?.invalid && organizationForm.get('sortOrder')?.touched) {
-                    <small class="text-red-500 block mt-1">
-                        Seniority is required
-                    </small>
-                    }
+                        placeholder="Enter seniority (sort order)" class="w-full" />
                 </div>
 
                 <!-- Status -->
-                <div class="field">
-                    <label for="status" class="block mb-2">
-                        Status
-                        <span class="text-red-500">*</span>
-                    </label>
-                    <p-select id="status" formControlName="status" [options]="statusOptions" optionLabel="label"
-                        optionValue="value" placeholder="Select status" styleClass="w-full"></p-select>
-                </div>
+                @if (editingId) {
+                    <div class="field">
+                        <label for="status" class="block mb-2">
+                            Status
+                            <span class="text-red-500">*</span>
+                        </label>
+                        <p-select id="status" formControlName="status" [options]="statusOptions" optionLabel="label"
+                            optionValue="value" placeholder="Select status" styleClass="w-full"></p-select>
+                    </div>
+                }
             </div>
 
             <!-- Buttons -->
             <div class="flex justify-end gap-2">
 
                 <p-button [label]="editingId ? 'Update' : 'Save'" type="submit"
-                    [disabled]="organizationForm.invalid || isSubmitting"></p-button>
+                    [disabled]="organizationForm.invalid || isSubmitting"
+                    [class.perm-hidden]="editingId ? !canUpdate : !canInsert"></p-button>
                 <p-button label="Reset" icon="pi pi-refresh" severity="secondary" (onClick)="onReset()" type="button"
                     [disabled]="isSubmitting"></p-button>
 
@@ -81,13 +77,14 @@
         </p-iconfield>
     </div>
 
-    <p-table [value]="filteredOrganizations" [paginator]="true" [first]="first" [rows]="rows"
+    <p-table [value]="filteredOrganizations" [paginator]="true" [(first)]="first" [rows]="rows"
         [totalRecords]="totalRecords" [rowsPerPageOptions]="[10, 25, 50]">
         <ng-template pTemplate="header">
             <tr>
                 <th style="width: 5%">#</th>
                 <th>Organization Name (English)</th>
                 <th>Organization Name (Bangla)</th>
+                <th>Seniority</th>
                 <th>Status</th>
                 <th style="width: 15%">Action</th>
             </tr>
@@ -98,6 +95,7 @@
                 <td>{{ first + rowIndex + 1 }}</td>
                 <td>{{ row.orgNameEN }}</td>
                 <td>{{ row.orgNameBN }}</td>
+                <td>{{ row.sortOrder ?? '—' }}</td>
                 <td>
                     <span [ngClass]="{
                                     'text-green-600 font-semibold': row.status,
@@ -109,8 +107,8 @@
 
                 <td>
                     <div class="flex gap-2">
-                        <button class="mx-2" pButton icon="pi pi-pencil" (click)="onEdit(row)"></button>
-                        <button pButton icon="pi pi-trash" (click)="onDelete(row, $event)"
+                        <button class="mx-2" pButton icon="pi pi-pencil" [class.perm-hidden]="!canUpdate" (click)="onEdit(row)"></button>
+                        <button pButton icon="pi pi-trash" [class.perm-hidden]="!canDelete" (click)="onDelete(row, $event)"
                             class="p-button-danger"></button>
                     </div>
                 </td>

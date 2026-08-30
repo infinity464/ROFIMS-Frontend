@@ -1,0 +1,541 @@
+<p-toast position="top-center" />
+<p-fluid>
+  <div class="card">
+    <div class="font-semibold text-xl mb-4">{{ editingUser ? 'Edit User' : 'Create Identity User' }}</div>
+
+    <form [formGroup]="form" (ngSubmit)="onSubmit()">
+
+      <!-- Section: Account -->
+      <div class="mb-6">
+        <div class="flex items-center gap-2 mb-3 pb-2 border-b border-surface">
+          <i class="pi pi-id-card text-primary"></i>
+          <h3 class="font-semibold text-base m-0">Account</h3>
+        </div>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div class="field">
+            <label for="email" class="block mb-2 font-medium">Email <span class="text-red-500">*</span></label>
+            <input
+              pInputText
+              id="email"
+              type="email"
+              formControlName="email"
+              placeholder="user@example.com"
+              autocomplete="email"
+              class="w-full"
+            />
+            @if (form.get('email')?.invalid && form.get('email')?.touched) {
+              <small class="text-red-500 block mt-1">
+                @if (form.get('email')?.errors?.['required']) { Email is required }
+                @if (form.get('email')?.errors?.['email']) { Enter a valid email }
+              </small>
+            }
+          </div>
+          <div class="field">
+            <label for="userName" class="block mb-2 font-medium">Username / Login ID <span class="text-red-500">*</span></label>
+            <input
+              pInputText
+              id="userName"
+              formControlName="userName"
+              placeholder="e.g. user123"
+              autocomplete="username"
+              class="w-full"
+            />
+            @if (!(form.get('userName')?.invalid && form.get('userName')?.touched)) {
+              <small class="text-color-secondary block mt-1">Letters, numbers, dots and underscores. No spaces or other symbols.</small>
+            }
+            @if (form.get('userName')?.invalid && form.get('userName')?.touched) {
+              <small class="text-red-500 block mt-1">
+                @if (form.get('userName')?.errors?.['required']) { Username is required }
+                @else if (form.get('userName')?.errors?.['minlength']) { At least 3 characters }
+                @else if (form.get('userName')?.errors?.['pattern']) { Only letters, numbers, dots and underscores — no spaces or other symbols }
+              </small>
+            }
+          </div>
+          <div class="field" [class.md:col-span-2]="editingUser">
+            <label for="phoneNumber" class="block mb-2 font-medium">Phone Number <span class="text-red-500">*</span></label>
+            <input
+              pInputText
+              id="phoneNumber"
+              type="tel"
+              formControlName="phoneNumber"
+              placeholder="e.g. +8801234567890"
+              autocomplete="tel"
+              class="w-full"
+            />
+            @if (!(form.get('phoneNumber')?.invalid && form.get('phoneNumber')?.touched)) {
+              <small class="text-color-secondary block mt-1">Include country code with a leading +.</small>
+            }
+            @if (form.get('phoneNumber')?.invalid && form.get('phoneNumber')?.touched) {
+              <small class="text-red-500 block mt-1">Phone number is required</small>
+            }
+          </div>
+          @if (!editingUser) {
+            <div class="field">
+              <label for="password" class="block mb-2 font-medium">Password <span class="text-red-500">*</span></label>
+              <p-password
+                inputId="password"
+                formControlName="password"
+                placeholder="Password"
+                [toggleMask]="true"
+                [feedback]="false"
+                styleClass="w-full"
+                [inputStyleClass]="'w-full'"
+              />
+              <!-- Live requirement checklist -->
+              <div class="grid grid-cols-2 gap-x-4 gap-y-1 mt-2 text-sm">
+                <div class="flex items-center gap-1.5" [class.text-green-500]="pwHasMinLength" [class.text-color-secondary]="!pwHasMinLength">
+                  <i [class]="pwHasMinLength ? 'pi pi-check' : 'pi pi-circle'" class="text-xs"></i>
+                  <span>6–20 characters</span>
+                </div>
+                <div class="flex items-center gap-1.5" [class.text-green-500]="pwHasUpper" [class.text-color-secondary]="!pwHasUpper">
+                  <i [class]="pwHasUpper ? 'pi pi-check' : 'pi pi-circle'" class="text-xs"></i>
+                  <span>Uppercase</span>
+                </div>
+                <div class="flex items-center gap-1.5" [class.text-green-500]="pwHasLower" [class.text-color-secondary]="!pwHasLower">
+                  <i [class]="pwHasLower ? 'pi pi-check' : 'pi pi-circle'" class="text-xs"></i>
+                  <span>Lowercase</span>
+                </div>
+                <div class="flex items-center gap-1.5" [class.text-green-500]="pwHasNumber" [class.text-color-secondary]="!pwHasNumber">
+                  <i [class]="pwHasNumber ? 'pi pi-check' : 'pi pi-circle'" class="text-xs"></i>
+                  <span>Number</span>
+                </div>
+                <div class="flex items-center gap-1.5" [class.text-green-500]="pwHasSymbol" [class.text-color-secondary]="!pwHasSymbol">
+                  <i [class]="pwHasSymbol ? 'pi pi-check' : 'pi pi-circle'" class="text-xs"></i>
+                  <span>Symbol</span>
+                </div>
+              </div>
+            </div>
+          }
+        </div>
+      </div>
+
+      <!-- Section: Access & Assignment -->
+      <div class="mb-6">
+        <div class="flex items-center gap-2 mb-3 pb-2 border-b border-surface">
+          <i class="pi pi-shield text-primary"></i>
+          <h3 class="font-semibold text-base m-0">Access &amp; Assignment</h3>
+        </div>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div class="field">
+            <label for="roleName" class="block mb-2 font-medium">Role <span class="text-red-500">*</span></label>
+            <p-select
+              id="roleName"
+              formControlName="roleName"
+              [options]="manageableRoles"
+              optionLabel="name"
+              optionValue="name"
+              placeholder="Select role"
+              appendTo="body"
+              styleClass="w-full"
+            />
+            @if (manageableRoles.length === 0) {
+              <small class="text-color-secondary block mt-1">
+                You don't have permission to assign any role. Ask your administrator to grant your role
+                "Reset Password Permission" for the roles you should be able to manage.
+              </small>
+            }
+            @if (form.get('roleName')?.invalid && form.get('roleName')?.touched) {
+              <small class="text-red-500 block mt-1">Role is required</small>
+            }
+          </div>
+          <div class="field">
+            <label for="employeeId" class="block mb-2 font-medium">
+              Employee @if (!editingUser) { <span class="text-red-500">*</span> }
+            </label>
+            <p-select
+              id="employeeId"
+              formControlName="employeeId"
+              [options]="employees"
+              optionLabel="displayLabel"
+              optionValue="employeeID"
+              [placeholder]="editingUser ? 'Mapping cannot be changed' : 'Select employee'"
+               [filter]="true"
+               (onFilter)="onEmployeeFilter($event)"
+               [showClear]="!editingUser"
+              [virtualScroll]="true"
+              [virtualScrollItemSize]="38"
+              appendTo="body"
+              styleClass="w-full"
+            />
+            @if (editingUser) {
+              <small class="text-color-secondary block mt-1">Employee mapping cannot be changed after create.</small>
+            }
+            @if (form.get('employeeId')?.invalid && form.get('employeeId')?.touched) {
+              <small class="text-red-500 block mt-1">Employee is required</small>
+            }
+          </div>
+          <div class="field md:col-span-2">
+            <div class="font-medium mb-1">Accessible organization scope</div>
+            <p class="text-sm text-color-secondary mb-3">
+              Which org-tree nodes' data should this user see? Pick at any level —
+              Unit, Wing, Branch, Sub-Branch, Section or Sub-Section.
+              Selecting a node grants access to it and everything beneath it.
+            </p>
+            <div class="flex flex-col gap-2">
+              <!-- All units -->
+              <label
+                for="rabModeAll"
+                class="flex items-start gap-3 p-3 rounded-lg border cursor-pointer transition-colors"
+                [class.border-primary]="form.get('rabUnitMode')?.value === 'all'"
+                [class.ring-1]="form.get('rabUnitMode')?.value === 'all'"
+                [class.ring-primary]="form.get('rabUnitMode')?.value === 'all'"
+                [class.border-surface]="form.get('rabUnitMode')?.value !== 'all'"
+              >
+                <p-radioButton inputId="rabModeAll" name="rabUnitMode" value="all" formControlName="rabUnitMode" />
+                <div class="leading-tight">
+                  <div class="font-medium">All units</div>
+                  <div class="text-sm text-color-secondary">No restriction. User sees data from every unit, including ones added later.</div>
+                </div>
+              </label>
+
+              <!-- Specific only -->
+              <label
+                for="rabModeSpecific"
+                class="flex items-start gap-3 p-3 rounded-lg border cursor-pointer transition-colors"
+                [class.border-primary]="form.get('rabUnitMode')?.value === 'specific'"
+                [class.ring-1]="form.get('rabUnitMode')?.value === 'specific'"
+                [class.ring-primary]="form.get('rabUnitMode')?.value === 'specific'"
+                [class.border-surface]="form.get('rabUnitMode')?.value !== 'specific'"
+              >
+                <p-radioButton inputId="rabModeSpecific" name="rabUnitMode" value="specific" formControlName="rabUnitMode" />
+                <div class="leading-tight">
+                  <div class="font-medium">Specific scope only</div>
+                  <div class="text-sm text-color-secondary">Limit access to a hand-picked set of nodes at any tree level.</div>
+                </div>
+              </label>
+
+              @if (form.get('rabUnitMode')?.value === 'specific') {
+                <div class="mt-1 p-3 rounded-lg border border-surface bg-surface-50 dark:bg-surface-800">
+                  <div class="text-sm text-color-secondary mb-2">
+                    Selected: {{ (form.get('rabUnitIds')?.value?.length ?? 0) }} node(s)
+                  </div>
+                  <app-org-tree-multi-select
+                    formControlName="rabUnitIds"
+                    placeholder="Pick units, wings, branches…">
+                  </app-org-tree-multi-select>
+                </div>
+              }
+            </div>
+          </div>
+
+          <div class="field md:col-span-2">
+            <div class="flex items-baseline justify-between gap-4 mb-1">
+              <div class="font-medium">Accessible member types</div>
+              <div class="flex items-center gap-3 text-sm">
+                <span class="text-color-secondary">{{ (form.get('memberTypeIds')?.value?.length ?? 0) }} of {{ memberTypes.length }}</span>
+                <button type="button" class="text-primary hover:underline" (click)="toggleAllMemberTypes(true)">Select all</button>
+                <button type="button" class="text-primary hover:underline" (click)="clearMemberTypes()">Clear</button>
+              </div>
+            </div>
+            <p class="text-sm text-color-secondary mb-3">
+              Categories whose data this user can see.
+              <span class="text-amber-600 dark:text-amber-400 font-medium">Empty selection means no access</span>
+              — picking nothing here is not the same as picking everything.
+            </p>
+            @if (memberTypes.length === 0) {
+              <div class="p-3 border border-surface rounded text-sm text-color-secondary">
+                No member types available yet. Add them from
+                <span class="font-medium">Basic Setup &rarr; Employee Type</span>, then come back here.
+              </div>
+            } @else {
+              <div class="flex flex-wrap gap-2">
+                @for (mt of memberTypes; track mt.value) {
+                  <button
+                    type="button"
+                    (click)="toggleMemberType(mt.value)"
+                    class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-sm transition-colors"
+                    [class.bg-surface-0]="isMemberTypeSelected(mt.value)"
+                    [class.dark:bg-surface-100]="isMemberTypeSelected(mt.value)"
+                    [class.text-surface-900]="isMemberTypeSelected(mt.value)"
+                    [class.border-surface-200]="isMemberTypeSelected(mt.value)"
+                    [class.bg-transparent]="!isMemberTypeSelected(mt.value)"
+                    [class.border-surface]="!isMemberTypeSelected(mt.value)"
+                    [class.text-color-secondary]="!isMemberTypeSelected(mt.value)"
+                  >
+                    <i [class]="isMemberTypeSelected(mt.value) ? 'pi pi-check text-green-600' : 'pi pi-plus'" class="text-xs"></i>
+                    {{ mt.label }}
+                  </button>
+                }
+              </div>
+            }
+          </div>
+        </div>
+      </div>
+
+      <div class="flex justify-end items-center gap-2 pt-2 border-t border-surface">
+        <p-button
+          [label]="editingUser ? 'Cancel' : 'Reset form'"
+          icon="pi pi-refresh"
+          severity="secondary"
+          [outlined]="true"
+          type="button"
+          (onClick)="onReset()"
+          [disabled]="isSubmitting"
+        />
+        <p-button
+          [label]="editingUser ? 'Update User' : 'Create User'"
+          type="submit"
+          [loading]="isSubmitting"
+          [disabled]="form.invalid || isSubmitting"
+        />
+      </div>
+    </form>
+  </div>
+
+  <div class="card mt-4">
+    <div class="font-semibold text-lg mb-4">User List</div>
+    <p-table
+      #dt
+      [value]="users"
+      [paginator]="true"
+      [rows]="10"
+      [rowsPerPageOptions]="[10, 25, 50]"
+      size="small"
+      styleClass="user-list-table"
+      [globalFilterFields]="['email','userName','phoneNumber','roleName','employeeName','employeeMeta','memberTypeNamesJoined','rabUnitNamesJoined']"
+    >
+      <ng-template pTemplate="caption">
+        <div class="flex flex-wrap items-center justify-between gap-2">
+          <p-iconField iconPosition="left">
+            <p-inputIcon styleClass="pi pi-search" />
+            <input
+              pInputText
+              type="text"
+              placeholder="Search users…"
+              (input)="dt.filterGlobal($any($event.target).value, 'contains')"
+            />
+          </p-iconField>
+        </div>
+      </ng-template>
+
+      <ng-template pTemplate="header">
+        <tr>
+          <th class="uppercase text-xs tracking-wide">User</th>
+          <th class="uppercase text-xs tracking-wide" style="width: 7rem">Role</th>
+          <th class="uppercase text-xs tracking-wide">Mapped Employee</th>
+          <th class="uppercase text-xs tracking-wide" style="width: 8rem">Type Access</th>
+          <th class="uppercase text-xs tracking-wide" style="width: 8rem">Access Label</th>
+          <th class="uppercase text-xs tracking-wide" style="width: 7rem">Status</th>
+          <th class="uppercase text-xs tracking-wide" style="width: 9rem">Actions</th>
+        </tr>
+      </ng-template>
+      <ng-template pTemplate="body" let-user>
+        <tr>
+          <!-- USER -->
+          <td>
+            <div class="leading-tight min-w-0">
+              <div class="font-semibold truncate">{{ user.userName || user.email }}</div>
+              @if (user.userName && user.email && user.userName !== user.email) {
+                <div class="text-xs text-color-secondary truncate">{{ user.email }}</div>
+              }
+              <div class="text-xs text-color-secondary flex items-center gap-1 mt-0.5">
+                <i class="pi pi-phone text-[10px]"></i>
+                <span>{{ user.phoneNumber || 'No phone' }}</span>
+              </div>
+            </div>
+          </td>
+
+          <!-- ROLE -->
+          <td>
+            @if (user.roleName) {
+              <span
+                class="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold"
+                [class]="getRolePillClass(user.roleName)"
+              >
+                {{ user.roleName }}
+              </span>
+            } @else {
+              <span class="text-color-secondary">—</span>
+            }
+          </td>
+
+          <!-- MAPPED EMPLOYEE -->
+          <td>
+            @if (user.employeeName) {
+              <div class="font-semibold leading-tight">{{ user.employeeName }}</div>
+              @if (user.serviceId) {
+                <div class="text-xs text-color-secondary leading-tight">Service {{ user.serviceId }}</div>
+              }
+            } @else {
+              <span class="text-color-secondary">—</span>
+            }
+          </td>
+
+          <!-- TYPE ACCESS -->
+          <td>
+            @if (!user.memberTypeNames?.length) {
+              <span class="text-color-secondary">—</span>
+            } @else if (memberTypes.length > 0 && user.memberTypeNames.length === memberTypes.length) {
+              <p-tag
+                severity="success"
+                value="All"
+                [pTooltip]="user.memberTypeNames.join(', ')"
+                tooltipPosition="top"
+              />
+            } @else {
+              <div class="flex flex-wrap gap-1">
+                @for (name of user.memberTypeNames; track name) {
+                  <p-tag [value]="name" severity="info" />
+                }
+              </div>
+            }
+          </td>
+
+          <!-- UNIT ACCESS -->
+          <td>
+            @if (!user.rabUnitNames?.length) {
+              <p-tag severity="success" value="All units" pTooltip="No restriction — full org-tree access" tooltipPosition="top" />
+            } @else {
+              <div class="flex flex-wrap items-center gap-1">
+                <!-- Each chip shows the leaf name; hover renders the full
+                     breadcrumb as a coloured chain (one colour per org level,
+                     separated by → arrows) via pre-rendered HTML in
+                     rabUnitPathHtml + [escape]=false on the tooltip. -->
+                @for (name of user.rabUnitNames.slice(0, 3); track $index; let i = $index) {
+                  <p-tag
+                    [value]="name"
+                    severity="info"
+                    [pTooltip]="user.rabUnitPathHtml?.[i] || (user.rabUnitPaths?.[i] ?? name)"
+                    [escape]="false"
+                    tooltipPosition="top"
+                    tooltipStyleClass="org-paths-tooltip"
+                  />
+                }
+                @if (user.rabUnitNames.length > 3) {
+                  <p-tag
+                    [value]="'+' + (user.rabUnitNames.length - 3) + ' more'"
+                    severity="warn"
+                    [pTooltip]="user.rabUnitPathHtmlAll || ((user.rabUnitPaths?.length ? user.rabUnitPaths : user.rabUnitNames)!.join('\n'))"
+                    [escape]="false"
+                    tooltipPosition="top"
+                    tooltipStyleClass="org-paths-tooltip"
+                  />
+                }
+              </div>
+            }
+          </td>
+
+          <!-- STATUS -->
+          <td>
+            <span
+              class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium"
+              [class]="user.isActive ? 'bg-green-500/10 text-green-700 dark:text-green-400' : 'bg-red-500/10 text-red-700 dark:text-red-400'"
+            >
+              <span
+                class="w-1.5 h-1.5 rounded-full"
+                [class]="user.isActive ? 'bg-green-500' : 'bg-red-500'"
+              ></span>
+              {{ user.isActive ? 'Active' : 'Disabled' }}
+            </span>
+          </td>
+
+          <!-- ACTIONS -->
+          <td>
+            <div class="flex gap-1">
+              <p-button
+                icon="pi pi-pencil"
+                [class.perm-hidden]="!canUpdate || !canManageRole(user.roleName)"
+                [text]="true"
+                [rounded]="true"
+                size="small"
+                severity="secondary"
+                (onClick)="onEdit(user)"
+                pTooltip="Edit"
+                tooltipPosition="top"
+              />
+              <p-button
+                icon="pi pi-key"
+                [class.perm-hidden]="!canManageRole(user.roleName)"
+                [text]="true"
+                [rounded]="true"
+                size="small"
+                severity="warn"
+                (onClick)="openResetPassword(user)"
+                pTooltip="Reset Password"
+                tooltipPosition="top"
+              />
+              <p-button
+                icon="pi pi-sign-out"
+                [class.perm-hidden]="!canManageRole(user.roleName)"
+                [text]="true"
+                [rounded]="true"
+                size="small"
+                severity="contrast"
+                (onClick)="forceLogoutUser(user)"
+                [loading]="forceLogoutUserId === user.id"
+                [disabled]="forceLogoutUserId !== null && forceLogoutUserId !== user.id"
+                pTooltip="Force Logout (sign out from all devices)"
+                tooltipPosition="top"
+              />
+              <p-button
+                [icon]="user.isActive ? 'pi pi-ban' : 'pi pi-check-circle'"
+                [class.perm-hidden]="!canManageRole(user.roleName)"
+                [text]="true"
+                [rounded]="true"
+                size="small"
+                [severity]="user.isActive ? 'danger' : 'success'"
+                (onClick)="toggleUserActive(user)"
+                [loading]="togglingUserId === user.id"
+                [disabled]="togglingUserId !== null && togglingUserId !== user.id"
+                [pTooltip]="user.isActive ? 'Disable User' : 'Enable User'"
+                tooltipPosition="top"
+              />
+            </div>
+          </td>
+        </tr>
+      </ng-template>
+      <ng-template pTemplate="emptymessage">
+        <tr>
+          <td colspan="7" class="text-center text-color-secondary">No users found.</td>
+        </tr>
+      </ng-template>
+    </p-table>
+  </div>
+
+  <p-dialog
+    header="Reset Password"
+    [(visible)]="resetDialogVisible"
+    [modal]="true"
+    [closable]="!resetSubmitting"
+    [style]="{ width: '28rem' }"
+    (onHide)="closeResetPassword()"
+  >
+    <div class="flex flex-col gap-3">
+      <div>
+        <label class="block mb-1 text-sm">User</label>
+        <div class="font-medium">{{ resetTargetUser?.email }}</div>
+      </div>
+      <div>
+        <label for="resetNewPassword" class="block mb-1 text-sm">New Password <span class="text-red-500">*</span></label>
+        <input
+          pInputText
+          id="resetNewPassword"
+          type="password"
+          [(ngModel)]="resetNewPassword"
+          placeholder="New password"
+          class="w-full"
+          autocomplete="new-password"
+        />
+        <small class="text-color-secondary block mt-1">
+          At least 6 characters, 1 upper, 1 lower, 1 number and 1 symbol.
+        </small>
+      </div>
+      <div>
+        <label for="resetConfirmPassword" class="block mb-1 text-sm">Confirm Password <span class="text-red-500">*</span></label>
+        <input
+          pInputText
+          id="resetConfirmPassword"
+          type="password"
+          [(ngModel)]="resetConfirmPassword"
+          placeholder="Confirm password"
+          class="w-full"
+          autocomplete="new-password"
+        />
+      </div>
+    </div>
+    <ng-template pTemplate="footer">
+      <p-button label="Cancel" severity="secondary" (onClick)="closeResetPassword()" [disabled]="resetSubmitting" />
+      <p-button label="Reset" icon="pi pi-key" (onClick)="submitResetPassword()" [loading]="resetSubmitting" />
+    </ng-template>
+  </p-dialog>
+</p-fluid>

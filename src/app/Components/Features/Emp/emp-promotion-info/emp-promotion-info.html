@@ -1,55 +1,166 @@
 <p-fluid>
-    <div class="mb-5 card">
-        <div class="flex align-items-center gap-3 mb-4">
-            @if (mode !== 'search') {
-                <p-button icon="pi pi-arrow-left" [rounded]="true" [text]="true" severity="secondary" pTooltip="Back to List" (onClick)="goBack()"></p-button>
-            }
-            <h3 class="m-0 text-xl font-bold text-900" style="display: inline-flex; align-items: center; gap: 0.5rem;">
-                Promotion Information Entry
+    <div class="form-card">
+        @if (!hideTitle) {
+            <div class="form-card-header">
+                <h3 class="form-card-title">
+                    Promotion Information Entry
+                    @if (mode === 'view') {
+                        <span class="text-500 text-base font-normal">(View Mode)</span>
+                    }
+                    @if (mode === 'edit') {
+                        <span class="text-primary text-base font-normal">(Edit Mode)</span>
+                    }
+                </h3>
                 @if (mode === 'view') {
-                    <span class="text-500 text-base font-normal">(View Mode)</span>
-                    <p-button label="Edit" icon="pi pi-pencil" size="small" (onClick)="enableEditMode()"></p-button>
+                    <div class="form-card-actions">
+                        <p-button label="Edit" icon="pi pi-pencil" [class.perm-hidden]="!canUpdate" (onClick)="enableEditMode()"></p-button>
+                    </div>
                 }
-                @if (mode === 'edit') {
-                    <span class="text-primary text-base font-normal">(Edit Mode)</span>
-                }
-            </h3>
-        </div>
-
-        @if (mode === 'search') {
-            <app-employee-search
-                (onEmployeeFound)="onEmployeeSearchFound($event)"
-                (onSearchReset)="onEmployeeSearchReset()">
-            </app-employee-search>
+            </div>
         }
 
-        @if (mode !== 'search' && employeeBasicInfo) {
-            <div class="surface-50 border-round-2xl p-4 mb-4">
-                <div class="flex flex-wrap gap-4">
-                    <div><span class="text-500 text-sm">Name:</span><span class="ml-2 font-semibold">{{ employeeBasicInfo.fullNameEN || employeeBasicInfo.FullNameEN || 'N/A' }}</span></div>
-                    <div><span class="text-500 text-sm">RAB ID:</span><span class="ml-2 font-semibold">{{ employeeBasicInfo.rabid || employeeBasicInfo.Rabid || 'N/A' }}</span></div>
-                    <div><span class="text-500 text-sm">Service ID:</span><span class="ml-2 font-semibold">{{ employeeBasicInfo.serviceId || employeeBasicInfo.ServiceId || 'N/A' }}</span></div>
-                </div>
+        @if (mode === 'search') {
+            <div class="form-section">
+                <app-employee-search
+                    [exMemberNotice]="true"
+                    (onEmployeeFound)="onEmployeeSearchFound($event)"
+                    (onSearchReset)="onEmployeeSearchReset()">
+                </app-employee-search>
             </div>
         }
 
         @if (employeeFound) {
-            <div class="surface-50 border-round-2xl p-4 mb-4">
-                <p class="text-600">Promotion information form will be displayed here...</p>
+            <div class="form-section">
+                <div class="flex align-items-center gap-3 mb-3 flex-wrap">
+                    <h3 class="form-subtitle m-0">Promotion List</h3>
+                    @if (!isReadonly && !showInlineForm) {
+                        <div class="ml-auto">
+                            <p-button label="Add row" icon="pi pi-plus" (onClick)="openAddDialog()"></p-button>
+                        </div>
+                    }
+                </div>
+
+                @if (showInlineForm) {
+                    <div class="surface-50 border-round-xl p-4 mb-4" style="border: 1px solid var(--surface-300);">
+                        <h4 class="m-0 text-700">{{ isEditMode ? 'Edit Promotion' : 'Add Promotion' }}</h4>
+                        <form [formGroup]="promotionForm" class="promotion-form mt-3">
+                            <div class="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label class="font-semibold block mb-2 text-700">Previous Rank <span class="text-red-500">*</span></label>
+                                    <p-select formControlName="previousRank" [options]="rankOptions" optionLabel="label" optionValue="value" placeholder="Select previous rank" styleClass="w-full" [filter]="true" appendTo="body"></p-select>
+                                    @if (promotionForm.get('previousRank')?.invalid && promotionForm.get('previousRank')?.touched) {
+                                        <small class="text-red-500">Previous Rank is required</small>
+                                    }
+                                </div>
+                                <div>
+                                    <label class="font-semibold block mb-2 text-700">Promoted Rank <span class="text-red-500">*</span></label>
+                                    <p-select formControlName="promotedRank" [options]="rankOptions" optionLabel="label" optionValue="value" placeholder="Select promoted rank" styleClass="w-full" [filter]="true" appendTo="body"></p-select>
+                                    @if (promotionForm.get('promotedRank')?.invalid && promotionForm.get('promotedRank')?.touched) {
+                                        <small class="text-red-500">Promoted Rank is required</small>
+                                    }
+                                </div>
+                                <div>
+                                    <label class="font-semibold block mb-2 text-700">Date of Promotion <span class="text-red-500">*</span></label>
+                                    <p-datepicker formControlName="promotedDate" dateFormat="dd-mm-yy" placeholder="Select date" appendTo="body" styleClass="w-full"></p-datepicker>
+                                    @if (promotionForm.get('promotedDate')?.invalid && promotionForm.get('promotedDate')?.touched) {
+                                        <small class="text-red-500">Date of Promotion is required</small>
+                                    }
+                                </div>
+                                <div>
+                                    <label class="font-semibold block mb-2 text-700">Prob. From</label>
+                                    <p-datepicker formControlName="fromDate" dateFormat="dd-mm-yy" placeholder="From" appendTo="body" styleClass="w-full"></p-datepicker>
+                                </div>
+                                <div>
+                                    <label class="font-semibold block mb-2 text-700">Prob. To</label>
+                                    <p-datepicker formControlName="toDate" dateFormat="dd-mm-yy" placeholder="To" appendTo="body" styleClass="w-full"></p-datepicker>
+                                    @if (promotionForm.hasError('fromAfterTo')) {
+                                        <small class="text-red-500">From date must be less than To date</small>
+                                    }
+                                </div>
+                                <div>
+                                    <label class="font-semibold block mb-2 text-700">Auth</label>
+                                    <input pInputText formControlName="auth" class="w-full" placeholder="Auth" />
+                                </div>
+                                <div class="col-span-2">
+                                    <label class="font-semibold block mb-2 text-700">Remarks</label>
+                                    <input pInputText formControlName="remarks" class="w-full" placeholder="Remarks" />
+                                </div>
+                                <div class="col-span-2 file-section-compact">
+                                    <app-file-references-form
+                                        #fileReferencesForm
+                                        [fileRows]="fileRows"
+                                        [isViewMode]="isReadonly"
+                                        title="Supporting Documents"
+                                        (fileRowsChange)="onFileRowsChange($event)"
+                                        (onDownloadFile)="onDownloadFile($event)">
+                                    </app-file-references-form>
+                                </div>
+                            </div>
+                        </form>
+                        <div class="flex justify-content-end gap-2 mt-3">
+                            <p-button label="Cancel" icon="pi pi-times" severity="secondary" [outlined]="true" (onClick)="showInlineForm = false" [disabled]="isSaving"></p-button>
+                            <p-button [label]="isEditMode ? 'Update' : 'Save'" icon="pi pi-check" [loading]="isSaving" [disabled]="isSaving" (onClick)="savePromotion()"></p-button>
+                        </div>
+                    </div>
+                }
+
+                <div class="surface-card border-round-lg overflow-hidden mb-4">
+                    <p-table [value]="promotionList" [loading]="isLoading" styleClass="p-datatable-sm" responsiveLayout="scroll" [tableStyle]="{'min-width': '72rem'}">
+                        <ng-template pTemplate="header">
+                            <tr>
+                                <th style="width: 60px; background: var(--surface-100)">Ser</th>
+                                <th style="min-width: 140px; background: var(--surface-100)">Previous Rank</th>
+                                <th style="min-width: 140px; background: var(--surface-100)">Promoted Rank</th>
+                                <th style="min-width: 135px; background: var(--surface-100)">Date of Promotion</th>
+                                <th style="min-width: 135px; background: var(--surface-100)">Prob. From</th>
+                                <th style="min-width: 135px; background: var(--surface-100)">Prob. To</th>
+                                <th style="min-width: 140px; background: var(--surface-100)">Auth</th>
+                                <th style="min-width: 160px; background: var(--surface-100)">Remarks</th>
+                                <th style="width: 120px; background: var(--surface-100)">Actions</th>
+                            </tr>
+                        </ng-template>
+                        <ng-template pTemplate="body" let-row let-i="rowIndex">
+                            <tr>
+                                <td class="text-center font-semibold">{{ i + 1 }}</td>
+                                <td>{{ getOptionLabel(rankOptions, row.previousRank) }}</td>
+                                <td>{{ getOptionLabel(rankOptions, row.promotedRank) }}</td>
+                                <td>{{ formatDate(row.promotedDate) }}</td>
+                                <td>{{ formatDate(row.fromDate) }}</td>
+                                <td>{{ formatDate(row.toDate) }}</td>
+                                <td>{{ row.auth || '—' }}</td>
+                                <td>{{ row.remarks || '—' }}</td>
+                                <td>
+                                    <div class="flex gap-1">
+                                        <p-button icon="pi pi-pencil" [class.perm-hidden]="!canUpdate" [rounded]="true" [text]="true" severity="info" pTooltip="Edit" (onClick)="openEditDialog(row)"></p-button>
+                                        @if (!isReadonly) {
+                                            <p-button icon="pi pi-trash" [class.perm-hidden]="!canDelete" [rounded]="true" [text]="true" severity="danger" pTooltip="Delete" (onClick)="confirmDelete(row)"></p-button>
+                                        }
+                                    </div>
+                                </td>
+                            </tr>
+                        </ng-template>
+                        <ng-template pTemplate="emptymessage">
+                            <tr>
+                                <td [attr.colspan]="9" class="text-center py-4 text-500">No promotion entries. Click "Add row" to add.</td>
+                            </tr>
+                        </ng-template>
+                    </p-table>
+                </div>
             </div>
 
-            <div class="flex justify-end mt-4 gap-2">
-                @if (mode === 'view') {
-                    <p-button label="Back to List" icon="pi pi-arrow-left" severity="secondary" [outlined]="true" (onClick)="goBack()"></p-button>
-                    <p-button label="Edit" icon="pi pi-pencil" (onClick)="enableEditMode()"></p-button>
-                } @else if (mode === 'search' && isReadonly) {
-                    <p-button label="Reset" icon="pi pi-refresh" severity="secondary" [outlined]="true" (onClick)="resetForm()"></p-button>
-                    <p-button label="Edit" icon="pi pi-pencil" (onClick)="enableSearchEditMode()"></p-button>
-                } @else {
-                    <p-button label="Reset" icon="pi pi-refresh" severity="secondary" [outlined]="true" (onClick)="resetForm()"></p-button>
-                    <p-button label="Save" icon="pi pi-check" (onClick)="saveData()"></p-button>
-                }
-            </div>
+            @if (mode === 'view') {
+                <div class="form-actions">
+                    <p-button type="button" label="Back to List" icon="pi pi-arrow-left" severity="secondary" [outlined]="true" styleClass="form-btn-secondary" (onClick)="goBack()"></p-button>
+                    <p-button type="button" label="Edit" icon="pi pi-pencil" [class.perm-hidden]="!canUpdate" styleClass="form-btn-primary" (onClick)="enableEditMode()"></p-button>
+                </div>
+            }
+            @else {
+                <div class="form-actions">
+                    <!-- <p-button type="button" label="Reset" icon="pi pi-refresh" severity="secondary" [outlined]="true" styleClass="form-btn-secondary" (onClick)="resetForm()" [disabled]="isSaving"></p-button> -->
+                </div>
+            }
         }
     </div>
 </p-fluid>
+
+<p-confirmDialog></p-confirmDialog>

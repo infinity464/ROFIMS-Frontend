@@ -1,0 +1,172 @@
+<p-toast position="top-center" />
+<p-fluid>
+    <div class="form-card">
+        <div class="form-card-header">
+            <h3 class="form-card-title">
+                <i class="pi pi-sync text-primary" style="margin-right: 0.5rem;"></i>{{ pageTitle }}
+            </h3>
+        </div>
+
+        <!-- Search Serving / Supernumerary member -->
+        <div class="form-section">
+            <app-employee-search
+                [exMemberNotice]="true"
+                [initialEmployeeId]="selectedEmployeeId"
+                (onEmployeeFound)="onEmployeeFound($event)"
+                (onSearchReset)="onSearchReset()">
+            </app-employee-search>
+        </div>
+
+        @if (employeeFound && !isActionable) {
+            <div class="flex items-start gap-3 p-3 mt-2 rounded border border-yellow-300 bg-yellow-50 text-yellow-800">
+                <i class="pi pi-exclamation-triangle mt-1"></i>
+                <div>
+                    @if ((isSupernumerary || isServing) && !hasRabId) {
+                        <div class="font-semibold">RAB ID Not Generated</div>
+                        <div class="text-sm">
+                            This member does not have a RAB ID yet. A RAB ID must be generated before a direct
+                            join or transfer can be saved.
+                        </div>
+                    } @else if (hasPendingNotesheet) {
+                        <div class="font-semibold">Note-Sheet In Process</div>
+                        <div class="text-sm">
+                            A note-sheet / posting is already in process for this member. Direct join or transfer
+                            is not allowed until the current note-sheet is completed.
+                        </div>
+                    } @else {
+                        <div class="font-semibold">Not Allowed</div>
+                        <div class="text-sm">
+                            This member's status is "{{ memberStatus || 'Unknown' }}". Only <b>Serving</b> (transfer)
+                            or <b>Supernumerary</b> (direct join) members can be processed on this screen.
+                        </div>
+                    }
+                </div>
+            </div>
+        }
+
+        @if (employeeFound && isActionable) {
+            <!-- Action banner -->
+            <div class="action-banner mt-3">
+                <i class="pi" [class.pi-sign-in]="isSupernumerary" [class.pi-arrow-right-arrow-left]="isServing"></i>
+                <span class="action-banner-title">{{ actionLabel }}</span>
+                <span class="action-banner-sub">
+                    @if (isSupernumerary) {
+                        Member will be moved from <b>Supernumerary</b> to <b>Serving</b>, marked <b>On Duty</b>,
+                        and the new posting below will be added as the active service record.
+                    } @else {
+                        The member's current active posting will be closed (To date = new From date) and the
+                        new posting below will be added as the active service record.
+                    }
+                </span>
+            </div>
+
+            <!-- Service Information (the new posting) -->
+            <div class="form-section form-section-spacer-first">
+                <h3 class="form-subtitle">Service Information (New Posting)</h3>
+                <form [formGroup]="serviceForm">
+                    <div class="form-row">
+                        <div class="form-field">
+                            <label class="form-label">Battalion Name <span class="form-label-required">*</span></label>
+                            <p-select formControlName="rabUnitCodeId" [options]="rabUnitOptions"
+                                optionLabel="label" optionValue="value" placeholder="Select" styleClass="w-full"
+                                [filter]="true" filterPlaceholder="Search"
+                                [class.p-invalid]="isFieldInvalid('rabUnitCodeId')">
+                            </p-select>
+                            @if (isFieldInvalid('rabUnitCodeId')) {
+                                <small class="form-error">This field is required</small>
+                            }
+                        </div>
+
+                        @if (serviceForm.get('rabUnitCodeId')?.value) {
+                        <div class="form-field">
+                            <label class="form-label">RAB Wing</label>
+                            <p-select formControlName="rabWingCodeId" [options]="rabWingOptions"
+                                optionLabel="label" optionValue="value" placeholder="Select" styleClass="w-full"
+                                [filter]="true" filterPlaceholder="Search">
+                            </p-select>
+                        </div>
+                        }
+
+                        @if (serviceForm.get('rabWingCodeId')?.value) {
+                        <div class="form-field">
+                            <label class="form-label">Branch</label>
+                            <p-select formControlName="rabBranchCodeId" [options]="rabBranchOptions"
+                                optionLabel="label" optionValue="value" placeholder="Select" styleClass="w-full"
+                                [filter]="true" filterPlaceholder="Search">
+                            </p-select>
+                        </div>
+                        }
+
+                        @if (serviceForm.get('rabBranchCodeId')?.value) {
+                        <div class="form-field">
+                            <label class="form-label">Sub-Branch</label>
+                            <p-select formControlName="rabSubBranchCodeId" [options]="rabSubBranchOptions"
+                                optionLabel="label" optionValue="value" placeholder="Select" styleClass="w-full"
+                                [filter]="true" filterPlaceholder="Search">
+                            </p-select>
+                        </div>
+                        }
+
+                        @if (serviceForm.get('rabSubBranchCodeId')?.value) {
+                        <div class="form-field">
+                            <label class="form-label">Section</label>
+                            <p-select formControlName="rabSectionCodeId" [options]="rabSectionOptions"
+                                optionLabel="label" optionValue="value" placeholder="Select" styleClass="w-full"
+                                [filter]="true" filterPlaceholder="Search">
+                            </p-select>
+                        </div>
+                        }
+
+                        @if (serviceForm.get('rabSectionCodeId')?.value) {
+                        <div class="form-field">
+                            <label class="form-label">Sub-Section</label>
+                            <p-select formControlName="rabSubSectionCodeId" [options]="rabSubSectionOptions"
+                                optionLabel="label" optionValue="value" placeholder="Select" styleClass="w-full"
+                                [filter]="true" filterPlaceholder="Search">
+                            </p-select>
+                        </div>
+                        }
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-field">
+                            <label class="form-label">Appointment</label>
+                            <p-select formControlName="appointment" [options]="appointmentOptions"
+                                optionLabel="label" optionValue="value" placeholder="Select" styleClass="w-full"
+                                [filter]="true" filterPlaceholder="Search" [showClear]="true">
+                            </p-select>
+                        </div>
+
+                        <div class="form-field">
+                            <label class="form-label">From <span class="form-label-required">*</span></label>
+                            <p-datepicker formControlName="serviceFrom" dateFormat="dd-mm-yy" [showIcon]="true" placeholder="DD-MM-YYYY" styleClass="w-full"></p-datepicker>
+                            @if (isFieldInvalid('serviceFrom')) {
+                                <small class="form-error">This field is required</small>
+                            }
+                        </div>
+
+                        <div class="form-field">
+                            <label class="form-label">Posting Authority</label>
+                            <input pInputText class="w-full" placeholder="Posting Authority" formControlName="postingAuth" />
+                        </div>
+
+                        <div class="form-field">
+                            <label class="form-label">Remarks</label>
+                            <input pInputText class="w-full" placeholder="Remarks" formControlName="remarks" />
+                        </div>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Actions -->
+            <div class="form-actions">
+                <p-button type="button" label="Cancel" icon="pi pi-times" severity="secondary" [outlined]="true"
+                    (onClick)="onSearchReset()">
+                </p-button>
+                <p-button type="button" [label]="actionLabel" icon="pi pi-check-circle"
+                    [loading]="isSaving" [disabled]="isLoadingMember || isSaving" (onClick)="save()">
+                </p-button>
+            </div>
+        }
+    </div>
+</p-fluid>

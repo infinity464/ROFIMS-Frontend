@@ -1,0 +1,426 @@
+<p-toast position="top-center"></p-toast>
+
+<div class="pending-posting-joining">
+    <!-- Direction toggle: Posting Out (members leaving — the HQ Source-scoped page,
+         embedded as-is) / Posting In (members coming in — this component's list). -->
+    <div class="mode-toggle-bar mb-3">
+        <p-selectButton
+            [options]="modeOptions"
+            [(ngModel)]="mode"
+            optionLabel="label"
+            optionValue="value"
+            [allowEmpty]="false"
+            (onChange)="onModeChange()"
+        ></p-selectButton>
+    </div>
+
+    <!-- Posting Out: full HQ (Source-scoped) page reused with all its actions. -->
+    <app-pending-inter-posting-joining *ngIf="mode === 'out'"></app-pending-inter-posting-joining>
+
+    <!-- Posting In: this unit's existing Destination-scoped pending list. -->
+    <ng-container *ngIf="mode === 'in'">
+    <div class="form-card">
+        <div class="form-card-header flex justify-between items-center">
+            <div>
+                <h3 class="form-card-title">Pending List for Joining — Transfer Unit (Inter Posting)</h3>
+            </div>
+            <div class="flex gap-2">
+                <!-- Appears once rows are selected; works exactly like the
+                     Receive Posting Order button on the HQ pending page. -->
+                <p-button
+                    *ngIf="selectedRows.length"
+                    icon="pi pi-check-square"
+                    label="Join Member ({{ selectedRows.length }})"
+                    severity="success"
+                    [class.perm-hidden]="!canUpdate"
+                    (onClick)="openReceiveDialog()"
+                ></p-button>
+            </div>
+        </div>
+
+        <!-- Filters -->
+        <div class="filter-bar">
+            <div class="filter-row">
+                <div class="filter-item">
+                    <label class="filter-label">NoteSheet</label>
+                    <p-select
+                        [options]="noteSheetOptions"
+                        [(ngModel)]="noteSheetFilter"
+                        optionLabel="label"
+                        optionValue="value"
+                        placeholder="All NoteSheets"
+                        [showClear]="true"
+                        [filter]="true"
+                        filterPlaceholder="Search..."
+                        (onChange)="applyFilters()"
+                        styleClass="w-full"
+                    ></p-select>
+                </div>
+                <div class="filter-item">
+                    <label class="filter-label">Posting Order No</label>
+                    <p-select
+                        [options]="postingOrderOptions"
+                        [(ngModel)]="postingOrderFilter"
+                        optionLabel="label"
+                        optionValue="value"
+                        placeholder="All Posting Orders"
+                        [showClear]="true"
+                        [filter]="true"
+                        filterPlaceholder="Search..."
+                        (onChange)="applyFilters()"
+                        styleClass="w-full"
+                    ></p-select>
+                </div>
+                <div class="filter-item">
+                    <label class="filter-label">Mother Organization</label>
+                    <p-select
+                        [options]="motherOrgOptions"
+                        [(ngModel)]="motherOrgFilter"
+                        optionLabel="label"
+                        optionValue="value"
+                        placeholder="All Mother Organizations"
+                        [showClear]="true"
+                        [filter]="true"
+                        filterPlaceholder="Search..."
+                        (onChange)="applyFilters()"
+                        styleClass="w-full"
+                    ></p-select>
+                </div>
+                <div class="filter-item">
+                    <label class="filter-label">Transfer Unit</label>
+                    <p-select
+                        [options]="transferUnitOptions"
+                        [(ngModel)]="transferUnitFilter"
+                        optionLabel="label"
+                        optionValue="value"
+                        placeholder="All Transfer Units"
+                        [showClear]="true"
+                        [filter]="true"
+                        filterPlaceholder="Search..."
+                        (onChange)="applyFilters()"
+                        styleClass="w-full"
+                    ></p-select>
+                </div>
+                <div class="filter-item filter-action">
+                    <p-button
+                        icon="pi pi-filter-slash"
+                        label="Clear"
+                        severity="secondary"
+                        [text]="true"
+                        size="small"
+                        (onClick)="clearFilters()"
+                    ></p-button>
+                </div>
+            </div>
+        </div>
+
+        <p-table
+            #dt
+            [value]="rows"
+            [loading]="loading"
+            dataKey="postingReceiveId"
+            [tableStyle]="{ 'min-width': '95rem' }"
+            styleClass="p-datatable-striped p-datatable-gridlines"
+            [paginator]="true"
+            [rows]="15"
+            [rowsPerPageOptions]="[15, 25, 50, 100]"
+            [selection]="selectedRows"
+            (selectionChange)="onSelectionChange($event)"
+            [globalFilterFields]="[
+                'postingOrderNo',
+                'noteSheetNo',
+                'serviceId',
+                'fullNameEN',
+                'rankName',
+                'motherOrganization',
+                'motherUnitName',
+                'transferRabUnitName'
+            ]"
+        >
+            <ng-template pTemplate="caption">
+                <div class="flex justify-content-between align-items-center flex-wrap gap-3">
+                    <span class="text-600 white-space-nowrap">
+                        Total pending: <b>{{ rows.length }}</b>
+                        <span *ngIf="rows.length !== allRows.length">
+                            (filtered from {{ allRows.length }})
+                        </span>
+                    </span>
+                    <p-iconfield>
+                        <p-inputicon styleClass="pi pi-search"></p-inputicon>
+                        <input
+                            pInputText
+                            type="text"
+                            placeholder="Search..."
+                            (input)="onGlobalFilter(dt, $event)"
+                        />
+                    </p-iconfield>
+                </div>
+            </ng-template>
+            <ng-template pTemplate="header">
+                <tr>
+                    <th style="width: 3rem">
+                        <p-tableHeaderCheckbox></p-tableHeaderCheckbox>
+                    </th>
+                    <th style="width: 50px">Ser</th>
+                    <th style="min-width: 300px">Posting Order No</th>
+                    <th style="min-width: 110px; white-space: nowrap">Order Date</th>
+                    <th style="min-width: 90px">Service ID</th>
+                    <th style="min-width: 80px">RAB ID</th>
+                    <th style="min-width: 80px">Rank</th>
+                    <th style="min-width: 140px">Full Name</th>
+                    <th style="min-width: 120px">Mother Organization</th>
+                    <th style="min-width: 120px">From Unit</th>
+                    <th style="min-width: 120px">Transfer To</th>
+                    <th style="min-width: 220px">Action</th>
+                </tr>
+            </ng-template>
+            <ng-template pTemplate="body" let-row let-rowIndex="rowIndex">
+                <tr>
+                    <td>
+                        <!-- Selectable only once the movement order exists -->
+                        <p-tableCheckbox [value]="row" [disabled]="!hasMovement(row)"></p-tableCheckbox>
+                    </td>
+                    <td>{{ rowIndex + 1 }}</td>
+                    <td>
+                        {{ row.postingOrderNo || '-' }}
+                    </td>
+                    <td>{{ formatDate(row.postingOrderDate) }}</td>
+                    <td>{{ row.serviceId || '-' }}</td>
+                    <td>{{ row.rabID || '-' }}</td>
+                    <td>{{ row.rankName || '-' }}</td>
+                    <td>{{ row.fullNameEN || '-' }}</td>
+                    <td>{{ row.motherOrganization || '-' }}</td>
+                    <td>{{ row.fromRabUnitName || '-' }}</td>
+                    <td>{{ row.transferRabUnitName || '-' }}</td>
+                    <td>
+                        <span *ngIf="!hasMovement(row)" class="text-500 font-italic white-space-nowrap">
+                            Movement Order is not generated yet
+                        </span>
+                        <div *ngIf="hasMovement(row)" class="flex gap-1">
+                            <p-button
+                                icon="pi pi-user"
+                                [rounded]="true"
+                                [text]="true"
+                                size="small"
+                                pTooltip="View Profile"
+                                (onClick)="openProfile(row)"
+                            ></p-button>
+                            <p-button
+                                icon="pi pi-eye"
+                                [rounded]="true"
+                                [text]="true"
+                                size="small"
+                                pTooltip="View Posting Order"
+                                (onClick)="openPostingOrder(row)"
+                            ></p-button>
+                            <p-button
+                                icon="pi pi-file-export"
+                                severity="info"
+                                [rounded]="true"
+                                [text]="true"
+                                size="small"
+                                pTooltip="View Movement Order"
+                                (onClick)="openMovement(row)"
+                            ></p-button>
+                            <p-button
+                                icon="pi pi-check-square"
+                                severity="success"
+                                [rounded]="true"
+                                [text]="true"
+                                size="small"
+                                pTooltip="Join Member"
+                                [disabled]="!canUpdate"
+                                (onClick)="openReceiveDialogFor(row)"
+                            ></p-button>
+                            <!-- Absent action disappears once an absent entry exists;
+                                 only the tag remains until the member is received. -->
+                            <p-button
+                                *ngIf="!row.hasActiveAbsent"
+                                icon="pi pi-user-minus"
+                                severity="warn"
+                                [rounded]="true"
+                                [text]="true"
+                                size="small"
+                                pTooltip="Mark Absent"
+                                [disabled]="!canUpdate"
+                                (onClick)="openAbsentDialog(row)"
+                            ></p-button>
+                            <span *ngIf="row.hasActiveAbsent" class="text-orange-500 text-sm font-italic white-space-nowrap align-self-center">
+                                Absent
+                            </span>
+                        </div>
+                    </td>
+                </tr>
+            </ng-template>
+            <ng-template pTemplate="emptymessage">
+                <tr>
+                    <td colspan="12" class="text-center p-4">
+                        <div class="flex flex-column align-items-center gap-3 py-5">
+                            <i class="pi pi-check-circle text-5xl text-400"></i>
+                            <span class="text-lg text-500">
+                                No pending joinings. All employees have been received.
+                            </span>
+                        </div>
+                    </td>
+                </tr>
+            </ng-template>
+        </p-table>
+    </div>
+    </ng-container>
+</div>
+
+<!-- Absent Dialog (like emp-present-status's Absent option; no Profile Shift) -->
+<p-dialog
+    header="Mark Absent"
+    styleClass="receive-dialog"
+    [(visible)]="showAbsentDialog"
+    [modal]="true"
+    [style]="{ width: '34rem' }"
+    [breakpoints]="{ '960px': '90vw', '640px': '95vw' }"
+    [draggable]="false"
+    [resizable]="false"
+    [closable]="!absentSaving"
+    [dismissableMask]="!absentSaving"
+>
+    <div class="receive-form" *ngIf="absentTarget">
+        <p class="receive-info">
+            Marking
+            <b>{{ absentTarget.rankName ? absentTarget.rankName + ' ' : '' }}{{ absentTarget.fullNameEN || '-' }}</b>
+            ({{ absentTarget.serviceId || '-' }}) as <b>Absent</b>.
+            The member stays on this pending list; receiving them later reactivates duty.
+        </p>
+
+        <div class="receive-field">
+            <label for="absentDate">Absent Date <span class="required">*</span></label>
+            <p-datepicker
+                inputId="absentDate"
+                [(ngModel)]="absentDate"
+                dateFormat="dd M yy"
+                [showIcon]="true"
+                iconDisplay="input"
+                [showOnFocus]="false"
+                appendTo="body"
+                placeholder="Select absent date"
+                styleClass="w-full"
+            ></p-datepicker>
+        </div>
+
+        <div class="receive-field">
+            <label for="absentType">Absent Type <span class="required">*</span></label>
+            <p-select
+                inputId="absentType"
+                [options]="absentTypeOptions"
+                [(ngModel)]="absentTypeId"
+                optionLabel="label"
+                optionValue="value"
+                placeholder="Select absent type"
+                [filter]="true"
+                appendTo="body"
+                styleClass="w-full"
+            ></p-select>
+        </div>
+
+        <div class="receive-field">
+            <label for="absentReport">Incident / Absent Report</label>
+            <textarea
+                id="absentReport"
+                pTextarea
+                [(ngModel)]="absentReport"
+                rows="3"
+                placeholder="Optional report details"
+            ></textarea>
+        </div>
+
+        <div class="receive-field">
+            <label for="absentInquiryReport">Court of Inquiry Report</label>
+            <textarea
+                id="absentInquiryReport"
+                pTextarea
+                [(ngModel)]="absentInquiryReport"
+                rows="3"
+                placeholder="Optional inquiry report"
+            ></textarea>
+        </div>
+    </div>
+    <ng-template pTemplate="footer">
+        <p-button
+            label="Cancel"
+            icon="pi pi-times"
+            severity="secondary"
+            [outlined]="true"
+            [disabled]="absentSaving"
+            (onClick)="closeAbsentDialog()"
+        ></p-button>
+        <p-button
+            label="Mark Absent"
+            icon="pi pi-user-minus"
+            severity="warn"
+            [loading]="absentSaving"
+            [disabled]="!absentDate || !absentTypeId"
+            (onClick)="confirmAbsent()"
+        ></p-button>
+    </ng-template>
+</p-dialog>
+
+<!-- Receive Posting Order Dialog -->
+<p-dialog
+    header="Receive Posting Order"
+    styleClass="receive-dialog"
+    [(visible)]="showReceiveDialog"
+    [modal]="true"
+    [style]="{ width: '32rem' }"
+    [breakpoints]="{ '960px': '90vw', '640px': '95vw' }"
+    [draggable]="false"
+    [resizable]="false"
+    [closable]="!saving"
+    [dismissableMask]="!saving"
+>
+    <div class="receive-form">
+        <p class="receive-info">
+            You are about to receive <b>{{ selectedRows.length }}</b> employee(s) as joined.
+        </p>
+
+        <div class="receive-field">
+            <label for="joiningDate">Joining Date <span class="required">*</span></label>
+            <p-datepicker
+                inputId="joiningDate"
+                [(ngModel)]="joiningDate"
+                dateFormat="dd M yy"
+                [showIcon]="true"
+                iconDisplay="input"
+                [showOnFocus]="false"
+                appendTo="body"
+                placeholder="Select joining date"
+                styleClass="w-full"
+            ></p-datepicker>
+        </div>
+
+        <div class="receive-field">
+            <label for="remarks">Remarks</label>
+            <textarea
+                id="remarks"
+                pTextarea
+                [(ngModel)]="remarks"
+                rows="4"
+                placeholder="Optional remarks"
+            ></textarea>
+        </div>
+    </div>
+    <ng-template pTemplate="footer">
+        <p-button
+            label="Cancel"
+            icon="pi pi-times"
+            severity="secondary"
+            [outlined]="true"
+            [disabled]="saving"
+            (onClick)="closeReceiveDialog()"
+        ></p-button>
+        <p-button
+            label="Join Member"
+            icon="pi pi-check"
+            severity="success"
+            [loading]="saving"
+            (onClick)="confirmReceive()"
+        ></p-button>
+    </ng-template>
+</p-dialog>

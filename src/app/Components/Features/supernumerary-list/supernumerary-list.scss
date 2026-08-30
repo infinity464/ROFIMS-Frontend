@@ -1,0 +1,692 @@
+:host {
+    display: block;
+}
+
+/* ─────────────────────────────────────────────────────────────────────────
+ * Re-skin to match leave-application/my-applications. Color tokens, font
+ * sizes, spacing, and border-radii are aligned with that page.
+ * ───────────────────────────────────────────────────────────────────────── */
+
+.employee-reports-page {
+    background: transparent;
+    color: var(--text-color, inherit);
+    font-family: inherit;
+    margin: 0 auto;
+    padding: 0 0 1.5rem 0;
+}
+
+.report-filter-card {
+    background: var(--surface-card, rgba(255, 255, 255, 0.03));
+    border: 1px solid var(--surface-border, rgba(255, 255, 255, 0.08));
+    border-radius: 0.75rem;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+    padding: 1.5rem;
+    margin-bottom: 1.25rem;
+    overflow: visible;
+}
+
+.report-filter-card-title {
+    padding: 0;
+    margin: 0 0 1.25rem 0;
+    padding-bottom: 0.75rem;
+    border-bottom: 1px solid var(--surface-border, rgba(255, 255, 255, 0.08));
+}
+
+.report-page-title {
+    font-size: 1.75rem;
+    font-weight: 700;
+    color: var(--text-color, #fff);
+    margin: 0 0 0.25rem 0;
+    letter-spacing: 0;
+}
+
+:host-context(.app-dark) .report-page-title {
+    color: var(--text-color);
+}
+
+.sup-header-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 1rem;
+    flex-wrap: wrap;
+}
+
+/* Collapsible filter header. */
+.report-filter-header {
+    border: 1px solid var(--surface-border, rgba(255, 255, 255, 0.08));
+    border-radius: 0.5rem;
+    background: var(--surface-ground, rgba(0, 0, 0, 0.15));
+    padding: 0.75rem 1rem;
+    margin-top: 0.25rem;
+    transition: border-color 0.18s, background 0.18s;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    cursor: pointer;
+
+    &:hover {
+        background: var(--surface-hover, rgba(255, 255, 255, 0.05));
+    }
+
+    &.open {
+        border-color: var(--p-primary-color, #10b981);
+        border-bottom-color: transparent;
+        border-bottom-left-radius: 0;
+        border-bottom-right-radius: 0;
+    }
+}
+
+.report-filter-header-left {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.report-filter-header-right {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.report-filter-icon {
+    width: 32px;
+    height: 32px;
+    border-radius: 0.5rem;
+    background: rgba(16, 185, 129, 0.15);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+
+    svg path {
+        stroke: var(--p-primary-color, #10b981);
+    }
+}
+
+.report-filter-title {
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: var(--text-color, #fff);
+}
+
+:host-context(.app-dark) .report-filter-title {
+    color: var(--text-color);
+}
+
+.report-filter-subtitle {
+    font-size: 0.78rem;
+    color: var(--text-color-secondary, rgba(255, 255, 255, 0.6));
+    margin-top: 1px;
+}
+
+.report-filters-badge {
+    background: var(--p-primary-color, #10b981);
+    color: var(--p-primary-contrast-color, #fff);
+    font-size: 0.7rem;
+    font-weight: 600;
+    padding: 2px 9px;
+    border-radius: 999px;
+    opacity: 0;
+    transition: opacity 0.15s;
+
+    &.show {
+        opacity: 1;
+    }
+}
+
+.report-chevron {
+    width: 28px;
+    height: 28px;
+    border-radius: 0.5rem;
+    border: 1px solid var(--surface-border, rgba(255, 255, 255, 0.1));
+    background: var(--surface-card, rgba(255, 255, 255, 0.03));
+    color: var(--text-color-secondary, rgba(255, 255, 255, 0.6));
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: transform 0.18s;
+}
+
+.report-filter-header.open .report-chevron {
+    border-color: var(--p-primary-color, #10b981);
+    background: rgba(16, 185, 129, 0.15);
+    color: var(--p-primary-color, #10b981);
+    transform: rotate(180deg);
+}
+
+.report-filter-body {
+    background: var(--surface-ground, rgba(0, 0, 0, 0.1));
+    border: 1px solid var(--p-primary-color, #10b981);
+    border-top: none;
+    border-bottom-left-radius: 0.5rem;
+    border-bottom-right-radius: 0.5rem;
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.25s ease;
+
+    &.open {
+        max-height: 1200px;
+    }
+
+    &:not(.open) {
+        border-color: transparent;
+    }
+}
+
+.report-filter-body-inner {
+    padding: 1.25rem;
+}
+
+.report-fields-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+    margin-bottom: 1rem;
+}
+
+.report-filter-field {
+    flex: 1 1 200px;
+    min-width: 0;
+
+    label {
+        display: block;
+        font-size: 0.85rem;
+        font-weight: 600;
+        color: var(--text-color, #fff);
+        margin-bottom: 0.4rem;
+        text-transform: none;
+        letter-spacing: 0;
+    }
+}
+
+.report-filter-field-date {
+    display: flex;
+    flex-direction: column;
+}
+
+/* Inputs in the filter body. */
+:host ::ng-deep .employee-reports-page .report-filter-body-inner {
+    --filter-input-h: 34px;
+    --filter-input-bg: var(--surface-card, rgba(255, 255, 255, 0.03));
+    --filter-input-border: var(--surface-border, rgba(255, 255, 255, 0.18));
+
+    p-select,
+    p-datepicker,
+    p-multiselect {
+        display: block;
+        width: 100%;
+    }
+
+    .p-select,
+    .p-datepicker,
+    .p-multiselect {
+        width: 100%;
+        height: var(--filter-input-h);
+        box-sizing: border-box;
+        border: 1px solid var(--filter-input-border);
+        border-radius: 0.5rem;
+        background: var(--filter-input-bg);
+        display: inline-flex;
+        align-items: center;
+        overflow: hidden;
+    }
+
+    input.p-inputtext {
+        height: var(--filter-input-h);
+        line-height: calc(var(--filter-input-h) - 2px);
+        box-sizing: border-box;
+        border: 1px solid var(--filter-input-border);
+        border-radius: 0.5rem;
+        padding: 0 12px;
+        font-size: 0.9rem;
+        color: var(--text-color, #fff);
+        background: var(--filter-input-bg);
+        width: 100%;
+    }
+
+    .p-select .p-select-label,
+    .p-multiselect .p-multiselect-label {
+        border: none;
+        background: transparent;
+        height: 100%;
+        line-height: calc(var(--filter-input-h) - 2px);
+        padding: 0 12px;
+        font-size: 0.9rem;
+        color: var(--text-color, #fff);
+        flex: 1 1 auto;
+        min-width: 0;
+    }
+
+    .p-datepicker input.p-inputtext {
+        flex: 1 1 auto;
+        min-width: 0;
+        height: 100%;
+        border: none;
+        background: transparent;
+        border-radius: 0;
+        padding: 0 12px;
+        box-shadow: none;
+    }
+
+    .p-datepicker .p-datepicker-dropdown,
+    .p-datepicker .p-datepicker-dropdown.p-button,
+    .p-select .p-select-dropdown,
+    .p-select .p-select-dropdown.p-button {
+        &,
+        &:hover,
+        &:focus,
+        &:active,
+        &:focus-visible,
+        &:enabled:hover,
+        &:enabled:focus,
+        &:enabled:active {
+            border: none !important;
+            background: transparent !important;
+            background-color: transparent !important;
+            background-image: none !important;
+            box-shadow: none !important;
+            outline: none !important;
+        }
+
+        & {
+            color: var(--text-color-secondary, rgba(255, 255, 255, 0.55));
+            width: var(--filter-input-h);
+            height: var(--filter-input-h);
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            padding: 0;
+            margin: 0;
+            cursor: pointer;
+            transition: color 0.15s ease;
+        }
+
+        &:hover {
+            color: var(--text-color, #111);
+        }
+
+        .p-button-label {
+            display: none;
+        }
+    }
+
+    .p-datepicker .p-datepicker-dropdown,
+    .p-select .p-select-dropdown {
+        .p-icon,
+        svg {
+            width: 14px;
+            height: 14px;
+            color: inherit;
+            fill: currentColor;
+            stroke: currentColor;
+        }
+
+        i,
+        i.pi {
+            font-size: 14px;
+            line-height: 1;
+            color: inherit;
+        }
+    }
+
+    .p-select:focus-within,
+    .p-multiselect:focus-within,
+    .p-datepicker:focus-within,
+    input.p-inputtext:focus {
+        border-color: var(--p-primary-color, #10b981);
+        box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.18);
+        outline: none;
+    }
+}
+
+:host-context(.app-dark) ::ng-deep .employee-reports-page .report-filter-body-inner {
+    --filter-input-bg: var(--surface-card);
+    --filter-input-border: var(--surface-border);
+}
+
+.report-filter-actions {
+    border-top: 1px solid var(--surface-border, rgba(255, 255, 255, 0.08));
+    padding-top: 1rem;
+    margin-top: 0.25rem;
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.5rem;
+}
+
+.report-btn-secondary {
+    height: 36px;
+    min-width: 36px;
+    padding: 0 12px;
+    border-radius: 0.5rem;
+    border: 1px solid var(--surface-border, rgba(255, 255, 255, 0.18));
+    background: var(--surface-card, rgba(255, 255, 255, 0.03));
+    color: var(--text-color-secondary, rgba(255, 255, 255, 0.7));
+    font-size: 0.85rem;
+    font-weight: 500;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    transition: border-color 0.15s, color 0.15s, background 0.15s;
+
+    &:hover {
+        border-color: var(--p-primary-color, #10b981);
+        color: var(--p-primary-color, #10b981);
+        background: rgba(16, 185, 129, 0.08);
+    }
+
+    &:disabled {
+        opacity: 0.55;
+        cursor: not-allowed;
+    }
+
+    &.danger {
+        color: rgba(239, 68, 68, 0.9);
+
+        &:hover {
+            border-color: rgba(239, 68, 68, 0.9);
+            color: #fff;
+            background: rgba(239, 68, 68, 0.85);
+        }
+    }
+}
+
+.report-btn-primary {
+    height: 36px;
+    padding: 0 22px;
+    border-radius: 0.5rem;
+    border: none;
+    background: var(--p-primary-color, #10b981);
+    color: var(--p-primary-contrast-color, #fff);
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    box-shadow: 0 1px 3px rgba(16, 185, 129, 0.3);
+    transition: transform 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
+
+    &:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 3px 10px rgba(16, 185, 129, 0.4);
+    }
+
+    &:active {
+        transform: none;
+    }
+
+    &:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+        transform: none;
+        box-shadow: none;
+    }
+}
+
+/* Results card panel title — green accent bar. */
+.report-panel-title {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: var(--text-color, #fff);
+    margin: 0 0 1rem 0;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+
+    &::before {
+        content: '';
+        display: inline-block;
+        width: 4px;
+        height: 1.1rem;
+        border-radius: 2px;
+        background: var(--p-primary-color, #10b981);
+    }
+}
+
+:host-context(.app-dark) .report-panel-title {
+    color: var(--text-color);
+}
+
+/* PrimeNG table. */
+:host ::ng-deep .p-datatable .p-datatable-thead > tr > th {
+    background: var(--surface-ground, rgba(0, 0, 0, 0.2));
+    color: var(--text-color-secondary, rgba(255, 255, 255, 0.6));
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    padding: 0.65rem 0.75rem;
+    border-bottom: 1px solid var(--surface-border, rgba(255, 255, 255, 0.1));
+}
+
+:host ::ng-deep .p-datatable .p-datatable-tbody > tr > td {
+    padding: 0.6rem 0.75rem;
+    font-size: 0.85rem;
+    color: var(--text-color, inherit);
+    border-bottom: 1px solid var(--surface-border, rgba(255, 255, 255, 0.06));
+}
+
+:host ::ng-deep .p-datatable .p-datatable-tbody > tr:hover {
+    background: rgba(16, 185, 129, 0.06);
+}
+
+:host ::ng-deep .p-paginator {
+    padding: 0.75rem 1rem;
+    background: transparent;
+    border-top: 1px solid var(--surface-border, rgba(255, 255, 255, 0.08));
+}
+
+:host ::ng-deep {
+    .p-select .p-select-label.p-placeholder,
+    .p-multiselect .p-multiselect-label.p-placeholder,
+    .p-datepicker-input::placeholder,
+    input::placeholder {
+        color: var(--text-color-secondary, rgba(255, 255, 255, 0.55)) !important;
+        opacity: 1;
+    }
+}
+
+/* ─────────── Supernumerary-specific bits ─────────── */
+
+/* Title + bulk-action buttons on the same row above the table. */
+.sup-results-header {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+    margin: 0 0 1rem 0;
+
+    .report-panel-title {
+        margin: 0;
+    }
+
+    /* Push the search box (and the Export button that follows it) to the right,
+       so search sits directly to the left of Export instead of being spread apart. */
+    .report-search-wrap {
+        margin-left: auto;
+    }
+}
+
+.sup-header-actions {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}
+
+/* Ser-num cell. */
+.report-ser-num {
+    font-variant-numeric: tabular-nums;
+    color: var(--text-color-secondary, rgba(255, 255, 255, 0.6));
+    font-size: 0.8rem;
+}
+
+/* Subtle badges for corps / unit. */
+.report-badge-corps,
+.report-badge-unit {
+    display: inline-block;
+    font-size: 0.72rem;
+    font-weight: 600;
+    padding: 0.18rem 0.55rem;
+    border-radius: 999px;
+    background: rgba(16, 185, 129, 0.12);
+    color: var(--p-primary-color, #10b981);
+    border: 1px solid rgba(16, 185, 129, 0.3);
+    white-space: nowrap;
+}
+
+.report-dash {
+    color: var(--text-color-secondary, rgba(255, 255, 255, 0.4));
+}
+
+/* Profile link in table. */
+.report-link-profile {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 0.8rem;
+    font-weight: 500;
+    color: var(--p-primary-color, #10b981);
+    text-decoration: none;
+    padding: 4px 10px;
+    border-radius: 0.4rem;
+    border: 1px solid transparent;
+    transition: background 0.15s, color 0.15s, border-color 0.15s;
+
+    &:hover {
+        background: rgba(16, 185, 129, 0.1);
+        border-color: rgba(16, 185, 129, 0.35);
+    }
+}
+
+/* Action cell — small spacing between the buttons. */
+.report-action-buttons {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    flex-wrap: wrap;
+}
+
+/* Action-button color variants — picked by isSendingNotesheetStatus, not by text.
+ *   Ash  = DraftPosting (note-sheet processing)
+ *   Blue = anything else  (button reads "Send New Posting list" or "Posting in Process")
+ * Static colors, identical in light/dark mode.
+ */
+.employee-reports-page .report-btn-secondary.report-btn-ash,
+.employee-reports-page .report-btn-secondary.report-btn-ash:hover,
+.employee-reports-page .report-btn-secondary.report-btn-ash:disabled {
+    background: #6b7280;
+    border-color: #4b5563;
+    color: #ffffff;
+}
+
+.employee-reports-page .report-btn-secondary.report-btn-blue,
+.employee-reports-page .report-btn-secondary.report-btn-blue:hover {
+    background: #2563eb;
+    border-color: #1e40af;
+    color: #ffffff;
+}
+.employee-reports-page .report-btn-secondary.report-btn-blue:hover:not(:disabled) {
+    background: #1d4ed8;
+    border-color: #1e3a8a;
+    color: #ffffff;
+}
+
+/* Bulk-send button in the results header. */
+.employee-reports-page .report-btn-secondary.report-btn-send-selected {
+    height: 36px;
+    padding: 0 16px;
+    font-size: 0.85rem;
+    font-weight: 600;
+}
+
+/* ── Column width tuning ──────────────────────────────────────────────────
+ * Compact padding + nowrap on most columns; allow Name to wrap.
+ * Action column is widened so the profile icon + button stay on one line.
+ */
+:host ::ng-deep .report-table-wrap .p-datatable table {
+  font-size: 0.79rem;
+}
+
+:host ::ng-deep .report-table-wrap .p-datatable th,
+:host ::ng-deep .report-table-wrap .p-datatable td {
+  padding: 5px 7px !important;
+  white-space: nowrap;
+}
+
+/* Ser */
+:host ::ng-deep .report-table-wrap .p-datatable th:nth-child(2),
+:host ::ng-deep .report-table-wrap .p-datatable td:nth-child(2) { width: 40px; }
+
+/* Service ID */
+:host ::ng-deep .report-table-wrap .p-datatable th:nth-child(3),
+:host ::ng-deep .report-table-wrap .p-datatable td:nth-child(3) { width: 110px; }
+
+/* Rank */
+:host ::ng-deep .report-table-wrap .p-datatable th:nth-child(4),
+:host ::ng-deep .report-table-wrap .p-datatable td:nth-child(4) { width: 110px; white-space: normal; }
+
+/* Corps */
+:host ::ng-deep .report-table-wrap .p-datatable th:nth-child(5),
+:host ::ng-deep .report-table-wrap .p-datatable td:nth-child(5) { width: 60px; }
+
+/* Trade */
+:host ::ng-deep .report-table-wrap .p-datatable th:nth-child(6),
+:host ::ng-deep .report-table-wrap .p-datatable td:nth-child(6) { width: 60px; }
+
+/* Name – allow wrap to save horizontal space */
+:host ::ng-deep .report-table-wrap .p-datatable th:nth-child(7),
+:host ::ng-deep .report-table-wrap .p-datatable td:nth-child(7) {
+  white-space: normal;
+  min-width: 140px;
+  max-width: 200px;
+}
+
+/* Mother Unit */
+:host ::ng-deep .report-table-wrap .p-datatable th:nth-child(8),
+:host ::ng-deep .report-table-wrap .p-datatable td:nth-child(8) { width: 90px; }
+
+/* Date of Join in RAB */
+:host ::ng-deep .report-table-wrap .p-datatable th:nth-child(9),
+:host ::ng-deep .report-table-wrap .p-datatable td:nth-child(9) { width: 100px; }
+
+/* RAB ID */
+:host ::ng-deep .report-table-wrap .p-datatable th:nth-child(10),
+:host ::ng-deep .report-table-wrap .p-datatable td:nth-child(10) { width: 70px; }
+
+/* Action – wide enough for icon + button on one line */
+:host ::ng-deep .report-table-wrap .p-datatable th:nth-child(11),
+:host ::ng-deep .report-table-wrap .p-datatable td:nth-child(11) { width: 210px; min-width: 210px; }
+
+/* Native checkbox in the select column – sized to match the PrimeNG look. */
+.employee-reports-page .report-row-checkbox {
+    width: 18px;
+    height: 18px;
+    cursor: pointer;
+    accent-color: var(--p-primary-color, #10b981);
+}
+.employee-reports-page .report-row-checkbox:disabled {
+    cursor: not-allowed;
+    opacity: 0.5;
+}
+
+/* In-row remark input — small, fits the table. */
+:host ::ng-deep .employee-reports-page .p-datatable td input.p-inputtext {
+    height: 32px;
+    padding: 0 10px;
+    font-size: 0.85rem;
+    border: 1px solid var(--surface-border, rgba(255, 255, 255, 0.18));
+    border-radius: 0.4rem;
+    background: var(--surface-card, rgba(255, 255, 255, 0.03));
+    color: var(--text-color, inherit);
+
+    &:focus {
+        outline: none;
+        border-color: var(--p-primary-color, #10b981);
+        box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.18);
+    }
+}

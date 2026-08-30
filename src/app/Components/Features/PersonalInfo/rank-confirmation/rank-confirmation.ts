@@ -10,6 +10,7 @@ import { SelectModule } from 'primeng/select';
 import { DatePickerModule } from 'primeng/datepicker';
 import { TableModule } from 'primeng/table';
 import { FileUploadModule } from 'primeng/fileupload';
+import { FlexibleDateDirective } from '@/shared/directives/flexible-date.directive';
 
 @Component({
   selector: 'app-rank-confirmation',
@@ -23,7 +24,7 @@ import { FileUploadModule } from 'primeng/fileupload';
     InputTextModule,
     ButtonModule,
     SelectModule,
-    DatePickerModule,
+    DatePickerModule, FlexibleDateDirective,
     TableModule,
     FileUploadModule
   ],

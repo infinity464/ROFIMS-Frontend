@@ -1,0 +1,222 @@
+:host {
+    display: block;
+}
+
+.audit-page {
+    padding: 1.25rem;
+}
+
+.audit-header {
+    margin-bottom: 1rem;
+
+    h2 {
+        margin: 0;
+        font-size: 1.5rem;
+        font-weight: 600;
+    }
+
+    .subtitle {
+        margin: 0.25rem 0 0;
+        color: var(--text-color-secondary);
+        font-size: 0.875rem;
+    }
+}
+
+/* ── Filter bar ─────────────────────────────────────────────────── */
+.filter-bar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    align-items: center;
+    margin-bottom: 1.5rem;
+
+    .filter-control {
+        min-width: 12rem;
+    }
+}
+
+/* ── State boxes ────────────────────────────────────────────────── */
+.state-box {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.75rem;
+    padding: 3rem 1rem;
+    color: var(--text-color-secondary);
+    text-align: center;
+
+    &.state-error {
+        color: var(--red-500, #ef4444);
+    }
+}
+
+/* ── Badges ─────────────────────────────────────────────────────── */
+/* Unique class name + explicit sizing so no global `.badge` rule (which forces a
+   fixed-size circle) can apply. The pill sizes to its text and never clips. */
+.audit-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: auto;
+    height: auto;
+    min-width: 0;
+    aspect-ratio: auto;
+    padding: 0.2rem 0.6rem;
+    border-radius: 999px;
+    font-size: 0.72rem;
+    line-height: 1.2;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    color: #fff;
+    white-space: nowrap;
+    box-sizing: border-box;
+}
+
+.audit-badge--created { background: #10b981; } /* green */
+.audit-badge--updated { background: #f59e0b; } /* amber */
+.audit-badge--deleted { background: #ef4444; } /* red   */
+
+/* ── Timeline ───────────────────────────────────────────────────── */
+.timeline {
+    position: relative;
+    margin-left: 0.5rem;
+}
+
+.timeline-item {
+    position: relative;
+    display: flex;
+    gap: 1rem;
+    padding-bottom: 1.25rem;
+
+    /* vertical connector line */
+    &::before {
+        content: '';
+        position: absolute;
+        left: 2.55rem;
+        top: 1.6rem;
+        bottom: 0;
+        width: 2px;
+        background: var(--surface-border, #e5e7eb);
+    }
+
+    &:last-child::before {
+        display: none;
+    }
+}
+
+.timeline-marker {
+    flex: 0 0 auto;
+    width: 5.5rem;
+    display: flex;
+    justify-content: center;
+    padding-top: 0.35rem;
+    z-index: 1;
+}
+
+.timeline-content {
+    flex: 1 1 auto;
+    border: 1px solid var(--surface-border, #e5e7eb);
+    border-radius: 0.5rem;
+    background: var(--surface-card, #fff);
+    overflow: hidden;
+}
+
+.row-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    gap: 1rem;
+    padding: 0.75rem 1rem;
+    background: none;
+    border: 0;
+    cursor: pointer;
+    text-align: left;
+    color: inherit;
+    font: inherit;
+
+    &:hover {
+        background: var(--surface-hover, #f9fafb);
+    }
+
+    .pi {
+        color: var(--text-color-secondary);
+        font-size: 0.8rem;
+    }
+}
+
+.row-main {
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+    min-width: 0;
+}
+
+.summary {
+    font-weight: 600;
+}
+
+.meta {
+    font-size: 0.8rem;
+    color: var(--text-color-secondary);
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.35rem;
+    align-items: center;
+
+    .dot { opacity: 0.5; }
+    .table-name { font-weight: 500; }
+    .time { cursor: help; }
+}
+
+/* ── Diff table ─────────────────────────────────────────────────── */
+.row-detail {
+    border-top: 1px solid var(--surface-border, #e5e7eb);
+    padding: 0.75rem 1rem;
+    background: var(--surface-ground, #f8fafc);
+}
+
+.diff-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.85rem;
+
+    th, td {
+        padding: 0.4rem 0.6rem;
+        text-align: left;
+        vertical-align: top;
+    }
+
+    thead th {
+        font-size: 0.72rem;
+        text-transform: uppercase;
+        letter-spacing: 0.03em;
+        color: var(--text-color-secondary);
+        border-bottom: 1px solid var(--surface-border, #e5e7eb);
+    }
+
+    tbody tr + tr td {
+        border-top: 1px dashed var(--surface-border, #eef0f3);
+    }
+
+    .col-field { width: 30%; font-weight: 500; }
+    .col-arrow { width: 1.5rem; color: var(--text-color-secondary); text-align: center; }
+
+    .val {
+        display: inline-block;
+        padding: 0.1rem 0.4rem;
+        border-radius: 0.25rem;
+        word-break: break-word;
+    }
+
+    .val-old { background: rgba(239, 68, 68, 0.12); }
+    .val-new { background: rgba(16, 185, 129, 0.14); }
+}
+
+.no-diff {
+    margin: 0;
+    color: var(--text-color-secondary);
+    font-size: 0.85rem;
+    font-style: italic;
+}

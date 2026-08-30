@@ -1,4 +1,6 @@
-import { Component } from '@angular/core';
+import { Component, inject } from '@angular/core';
+import { UserMenuService } from '@/services/user-menu.service';
+import { Router } from '@angular/router';
 import { CommonCode } from '../shared/models/common-code';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { MasterBasicSetupService } from '../shared/services/MasterBasicSetupService';
@@ -19,6 +21,12 @@ import { SharedService } from '@/shared/services/shared-service';
     styleUrl: './appointment-category.scss'
 })
 export class AppointmentCategory {
+    private _router = inject(Router);
+    private _userMenuService = inject(UserMenuService);
+    canInsert = true;
+    canUpdate = true;
+    canDelete = true;
+
     isSubmitting = false;
     codeType: string = 'AppointmentCategory';
     title: string = 'Appointment Category';
@@ -93,6 +101,11 @@ export class AppointmentCategory {
     ) {}
 
     ngOnInit(): void {
+        const _perms = this._userMenuService.getPermissionsByRoute(this._router.url);
+        this.canInsert = _perms.canInsert;
+        this.canUpdate = _perms.canUpdate;
+        this.canDelete = _perms.canDelete;
+
         this.initForm();
         this.getCommonCodeWithPaging({
             first: this.first,
@@ -130,7 +143,9 @@ export class AppointmentCategory {
 
         apiCall.subscribe({
             next: (res) => {
-                this.commonCodeData = res.datalist;
+                this.commonCodeData = (res.datalist ?? []).sort(
+                    (a: any, b: any) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0)
+                );
                 this.totalRecords = res.pages.rows;
                 this.rows = pageSize;
                 this.loading = false;
@@ -140,7 +155,7 @@ export class AppointmentCategory {
                 this.messageService.add({
                     severity: 'error',
                     summary: 'Error',
-                    detail: 'Failed to load data'
+                    detail: err?.error?.message || 'Failed to load data'
                 });
                 this.loading = false;
             }
@@ -194,7 +209,7 @@ export class AppointmentCategory {
                 this.messageService.add({
                     severity: 'error',
                     summary: 'Error',
-                    detail: 'Failed to create appointment-category'
+                    detail: err?.error?.message || 'Failed to create appointment-category'
                 });
             }
         });
@@ -230,7 +245,7 @@ export class AppointmentCategory {
                 this.messageService.add({
                     severity: 'error',
                     summary: 'Error',
-                    detail: 'Failed to update appointment-category'
+                    detail: err?.error?.message || 'Failed to update appointment-category'
                 });
                 this.isSubmitting = false;
             }
@@ -277,7 +292,7 @@ export class AppointmentCategory {
                         this.messageService.add({
                             severity: 'error',
                             summary: 'Error',
-                            detail: 'Failed to delete appointment-category'
+                            detail: err?.error?.message || 'Failed to delete appointment-category'
                         });
                     }
                 });

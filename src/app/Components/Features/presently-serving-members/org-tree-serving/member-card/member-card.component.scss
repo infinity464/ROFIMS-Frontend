@@ -1,0 +1,41 @@
+.member-card {
+    padding: 0.75rem 0;
+    border-bottom: 0.5px solid var(--p-surface-border);
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+
+    &:last-child {
+        border-bottom: none;
+    }
+
+    &:hover {
+        background-color: var(--p-surface-hover);
+    }
+}
+
+.rank-label {
+    font-size: 1.2rem;
+    font-weight: 500;
+    color: var(--p-yellow-600);
+}
+
+.name-row {
+    display: flex;
+    align-items: center;
+    padding-left: 0.75rem;
+    border-left: 2px solid var(--p-yellow-600);
+    margin: 0.25rem 0;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+
+    .name {
+        font-size: 1rem;
+        font-weight: 500;
+        color: var(--p-primary-color);
+    }
+
+    .ids {
+        font-size: 0.75rem;
+        color: var(--p-text-muted-color);
+    }
+}

@@ -1,0 +1,250 @@
+/* CC-specific overrides — landscape paper + bordered grid. */
+
+/* Host scrolls vertically; the paper is fluid on screen so it always fits
+   the viewport (no horizontal overflow at 100% zoom). True landscape size is
+   restored under @media print further down. */
+:host {
+    overflow-y: auto;
+
+    .a4-paper-container {
+        width: 100%;
+        align-items: center;
+    }
+
+    /* Landscape paper — full legal-landscape width on screen.
+       `display: block` overrides the shared flex-column layout so the
+       table and footnote stack via normal block flow. */
+    .a4-paper {
+        display: block;
+        width: 100%;
+        max-width: 355.6mm;
+        min-height: 0;
+        height: auto;
+        margin: 0 auto;
+        overflow: hidden;
+    }
+}
+
+/* Shrink only the inner content (header + table + footnote) by 30% on screen.
+   The paper stays at its full landscape size, while everything inside renders
+   visually smaller. zoom is fine here because it's applied to a plain wrapper
+   div, not to the .a4-paper-container (which previously caused fractional-pixel
+   issues during table cell layout). */
+.cc-content-scale {
+    zoom: 0.7;
+
+    /* Force normal weight everywhere — no bold letters in this preview. */
+    &,
+    *,
+    ::ng-deep * {
+        font-weight: normal !important;
+    }
+}
+
+/* Responsive: progressively zoom out on smaller viewports so the
+   legal-landscape content doesn't overflow horizontally. Large devices
+   keep the original 0.7 (design is perfect there). */
+@media (max-width: 1400px) { .cc-content-scale { zoom: 0.60; } }
+@media (max-width: 1200px) { .cc-content-scale { zoom: 0.50; } }
+@media (max-width:  992px) { .cc-content-scale { zoom: 0.42; } }
+@media (max-width:  768px) { .cc-content-scale { zoom: 0.34; } }
+@media (max-width:  576px) { .cc-content-scale { zoom: 0.28; } }
+@media (max-width:  420px) { .cc-content-scale { zoom: 0.22; } }
+
+.cc-grid {
+    border-collapse: collapse;
+    table-layout: fixed;
+    width: 100%;
+
+    .cc-cell {
+        border: 0.75pt solid #000;
+        padding: 4pt 6pt;
+        box-sizing: border-box;
+        /* table-layout is fixed, so text that can't fit would otherwise spill past
+           the border. Wrap at word boundaries and only split a word when it alone
+           is wider than the column. */
+        overflow-wrap: break-word;
+        word-break: normal;
+    }
+    .cc-th {
+        background: transparent;
+        font-weight: normal;
+        text-align: center;
+        vertical-align: middle;
+    }
+    /* Grow the body row ~50% taller (cumulative: 10% + 20% + 20%) by adding
+       bottom padding to body cells (overrides the inline `padding:6pt`). */
+    tbody .cc-cell {
+        padding-bottom: 150pt !important;
+    }
+    /* মন্তব্য — the form fixes this column at 4%, narrower than most single words.
+       Break mid-word rather than let Remarks overflow the cell border. Scoped to
+       this column only, so Bangla text in the wider columns still wraps normally. */
+    tbody .cc-cell:last-child {
+        word-break: break-all;
+        overflow-wrap: anywhere;
+        hyphens: none;
+    }
+}
+
+/* Quill wraps every typed line in its own <p>, which carries the browser's
+   default 1em top/bottom margin. At the grid's 12pt that spreads a short list
+   ("Note: / a. … / b. …") far wider than it looks in the editor, so collapse the
+   margins and tighten the leading — the preview should match what was typed.
+   ::ng-deep is required: [innerHTML] content is not touched by view encapsulation. */
+.cc-cell {
+    ::ng-deep .mv-rich {
+        line-height: 1.35;
+
+        p, div, ul, ol, h1, h2, h3, h4, h5, h6 {
+            margin: 0;
+        }
+        ul, ol {
+            padding-left: 18pt;
+        }
+    }
+}
+
+/* Footnote — inside the paper, directly below the table, like the reference. */
+.cc-footnote {
+    margin-top: 6pt;
+    font-size: 12pt;
+    line-height: 1.5;
+}
+
+/* QR-scan / mobile-portrait view — rotate the landscape paper 90° so its
+   long axis runs down the phone's long axis. At the desktop's progressive
+   zoom values (0.28 at <576px) the table breaks; rotating gives the wide
+   design enough room and the user can tilt their phone to landscape for
+   a natural reading orientation. The editor toolbar is hidden — it's not
+   useful on a public QR-scan view, and the browser still offers Print/Save
+   via its own menu. `dvh`/`dvw` use the *visible* viewport on mobile so
+   the paper doesn't get clipped by the browser's url-bar chrome.
+   Trigger is `orientation: portrait` so landscape on the same phone falls
+   back to the regular scaled view above. */
+@media (max-width: 900px) and (orientation: portrait) {
+    /* Full-screen rotated overlay for mobile QR-scan view. The paper
+       container is `position: fixed` so it fully covers the app's
+       content area; `z-index: 1` keeps it below any chat/support widget
+       (those typically use z-index 999+), so the widget stays tappable.
+       The editor toolbar is hidden and replaced by a floating PDF FAB
+       (see `.mobile-download-fab` rule below). */
+    :host {
+        overflow: hidden !important;
+        display: block;
+        background: #fff;
+        min-height: auto !important;
+
+        .preview-header,
+        .export-options-bar {
+            display: none !important;
+        }
+
+        /* Inset on all sides so the paper sits between the app header
+           (top ~56px) and the chat-widget / FAB row (bottom ~80px),
+           with a small horizontal margin to visually narrow the card. */
+        .a4-paper-container {
+            position: fixed !important;
+            top: 56px;
+            left: 8px;
+            right: 8px;
+            bottom: 80px;
+            width: auto !important;
+            height: auto !important;
+            min-height: 0 !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            gap: 0 !important;
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1;
+            background: #fff;
+        }
+
+        /* Pre-rotation dimensions match container's *visual* axes after
+           the 90° rotate: width = container visual height, height =
+           container visual width. So `width = 100dvh - top - bottom`,
+           `height = 100vw - left - right`. `flex: none` stops flex from
+           clamping the width back to the main-axis size. */
+        .a4-paper {
+            width: calc(100dvh - 136px) !important;
+            height: calc(100vw - 16px) !important;
+            max-width: none !important;
+            min-height: 0 !important;
+            margin: 0 !important;
+            padding: 4mm !important;
+            box-sizing: border-box;
+            transform: rotate(90deg);
+            transform-origin: center;
+            overflow: hidden;
+            display: block;
+            flex: none;
+        }
+
+        .cc-content-scale {
+            zoom: 0.34 !important;
+        }
+    }
+}
+
+/* Floating PDF download button — bottom-LEFT to avoid the chat widget
+   commonly placed at bottom-right. Visible only on small screens where
+   the toolbar is hidden. */
+.mobile-download-fab {
+    display: none;
+}
+@media (max-width: 900px) {
+    .mobile-download-fab {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        position: fixed;
+        bottom: 16px;
+        left: 16px;
+        z-index: 1000;
+        background: var(--primary-color, #10b981);
+        color: #fff;
+        border: none;
+        border-radius: 24px;
+        padding: 10px 18px;
+        font-size: 14px;
+        font-weight: 500;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+        cursor: pointer;
+
+        &:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        i {
+            font-size: 14px;
+        }
+    }
+}
+
+/* Print in landscape orientation. */
+@media print {
+    @page {
+        size: 355.6mm 215.9mm;
+        margin: 0;
+    }
+
+    :host {
+        overflow: visible !important;
+    }
+
+    .cc-content-scale {
+        zoom: 1 !important;
+    }
+
+    :host .a4-paper {
+        width: 355.6mm !important;
+        max-width: none !important;
+        min-height: 215.9mm !important;
+        height: auto !important;
+        aspect-ratio: auto !important;
+    }
+}

@@ -8,9 +8,13 @@ import { SelectModule } from 'primeng/select';
 import { Toast } from 'primeng/toast';
 import { ConfirmDialog } from 'primeng/confirmdialog';
 import { ConfirmationService, MessageService } from 'primeng/api';
-import { SupernumeraryListService } from '@/services/supernumerary-list.service';
+import { Router } from '@angular/router';
+import { UserMenuService } from '@/services/user-menu.service';
+import { EmployeeListService } from '@/services/employee-list.service';
 import { CommonCodeService } from '@/services/common-code-service';
-import { SupernumeraryList, GetSupernumeraryListRequest } from '@/models/supernumerary-list.model';
+import { IdentityUserMemberTypeAccessService } from '@/services/identity-user-member-type-access.service';
+import { SharedService } from '@/shared/services/shared-service';
+import { EmployeeList, GetEmployeeListRequest } from '@/models/employee-list.model';
 import { MotherOrganizationModel } from '@/models/mother-org-model';
 import { CommonCodeModel } from '@/models/common-code-model';
 
@@ -20,10 +24,11 @@ import { CommonCodeModel } from '@/models/common-code-model';
     imports: [CommonModule, FormsModule, TableModule, ButtonModule, MultiSelectModule, SelectModule, Toast, ConfirmDialog],
     providers: [ConfirmationService, MessageService],
     templateUrl: './rab-id-allocation.html',
-    styleUrl: './rab-id-allocation.scss'
+    styleUrls: ['./rab-id-allocation.scss'],
 })
 export class RabIdAllocation implements OnInit {
-    list: SupernumeraryList[] = [];
+    list: EmployeeList[] = [];
+    selectedRows: EmployeeList[] = [];
     loading = false;
     generatingId = false;
 
@@ -32,16 +37,66 @@ export class RabIdAllocation implements OnInit {
     memberTypeOptions: { label: string; value: number }[] = [];
     selectedMemberTypeId: number | null = null;
 
+    /** CodeIds of Member Types the current user is allowed to use. `null` means "not yet loaded" (fail-open). */
+    private allowedMemberTypeIds: number[] | null = null;
+    canInsert = true;
+    canUpdate = true;
+    canDelete = true;
+
     constructor(
-        private supernumeraryListService: SupernumeraryListService,
+        private employeeListService: EmployeeListService,
         private commonCodeService: CommonCodeService,
         private messageService: MessageService,
-        private confirmationService: ConfirmationService
+        private confirmationService: ConfirmationService,
+        private sharedService: SharedService,
+        private memberTypeAccess: IdentityUserMemberTypeAccessService,
+        private _router: Router,
+        private _userMenuService: UserMenuService
     ) {}
 
     ngOnInit(): void {
+        const _perms = this._userMenuService.getPermissionsByRoute(this._router.url);
+        this.canInsert = _perms.canInsert;
+        this.canUpdate = _perms.canUpdate;
+        this.canDelete = _perms.canDelete;
+        this.loadCurrentUserMemberTypePermissions();
         this.loadOrgOptions();
         this.loadMemberTypeOptions();
+    }
+
+    onMemberTypeChange(codeId: number | null): void {
+        if (codeId != null && this.allowedMemberTypeIds !== null && !this.allowedMemberTypeIds.includes(codeId)) {
+            const typeName =
+                this.memberTypeOptions?.find((m) => m.value === codeId)?.label ?? 'this member type';
+            this.messageService.add({
+                severity: 'warn',
+                summary: 'No Permission',
+                detail: `You do not have permission to use ${typeName}.`,
+                life: 6000
+            });
+            this.selectedMemberTypeId = null;
+        }
+    }
+
+    private loadCurrentUserMemberTypePermissions(): void {
+        const userId = this.sharedService.getCurrentUserId?.() ?? null;
+        if (!userId) {
+            this.allowedMemberTypeIds = null;
+            return;
+        }
+        const cached = this.memberTypeAccess.getCachedMemberTypeIds(userId);
+        if (cached !== null) {
+            this.allowedMemberTypeIds = cached;
+            return;
+        }
+        this.memberTypeAccess.cacheForUser(userId).subscribe({
+            next: (ids) => {
+                this.allowedMemberTypeIds = Array.isArray(ids) ? ids : [];
+            },
+            error: () => {
+                this.allowedMemberTypeIds = null;
+            }
+        });
     }
 
     loadOrgOptions(): void {
@@ -54,14 +109,15 @@ export class RabIdAllocation implements OnInit {
                 this.messageService.add({
                     severity: 'error',
                     summary: 'Error',
-                    detail: 'Failed to load organizations'
+                    detail: err?.error?.message || 'Failed to load organizations'
                 });
             }
         });
     }
 
+    /** Member Type from Employee Type Setup (same as Supernumerary List). */
     loadMemberTypeOptions(): void {
-        this.commonCodeService.getAllActiveCommonCodesType('OfficerType').subscribe({
+        this.commonCodeService.getAllActiveCommonCodesType('EmployeeType').subscribe({
             next: (codes: CommonCodeModel[]) => {
                 this.memberTypeOptions = codes.map((c) => ({
                     label: c.codeValueEN || String(c.codeId),
@@ -73,7 +129,7 @@ export class RabIdAllocation implements OnInit {
                 this.messageService.add({
                     severity: 'error',
                     summary: 'Error',
-                    detail: 'Failed to load member types'
+                    detail: err?.error?.message || 'Failed to load member types'
                 });
             }
         });
@@ -97,15 +153,16 @@ export class RabIdAllocation implements OnInit {
             return;
         }
 
-        const request: GetSupernumeraryListRequest = {
+        const request: GetEmployeeListRequest = {
             orgIds: this.selectedOrgIds,
             memberTypeId: this.selectedMemberTypeId
         };
 
         this.loading = true;
-        this.supernumeraryListService.getSupernumeraryList(request).subscribe({
+        this.employeeListService.getEmployeeList(request).subscribe({
             next: (data) => {
                 this.list = data ?? [];
+                this.selectedRows = [];
                 this.loading = false;
                 if (!skipLoadMessage) {
                     this.messageService.add({
@@ -116,11 +173,11 @@ export class RabIdAllocation implements OnInit {
                 }
             },
             error: (err) => {
-                console.error('Failed to load supernumerary list', err);
+                console.error('Failed to load employee list', err);
                 this.messageService.add({
                     severity: 'error',
                     summary: 'Error',
-                    detail: err?.error?.message || 'Failed to load supernumerary list'
+                    detail: err?.error?.message || 'Failed to load employee list'
                 });
                 this.loading = false;
             }
@@ -128,6 +185,10 @@ export class RabIdAllocation implements OnInit {
     }
 
     generateId(): void {
+        if (!this.canUpdate) {
+            this.messageService.add({ severity: 'warn', summary: 'Permission Denied', detail: 'You do not have permission to generate RAB IDs.' });
+            return;
+        }
         if (!this.list?.length) {
             this.messageService.add({
                 severity: 'warn',
@@ -136,8 +197,20 @@ export class RabIdAllocation implements OnInit {
             });
             return;
         }
-        // List is already ordered by JoiningDate then SortOrder (from API); preserve order for allocation priority.
-        const employeeIds = this.list.map((row) => row.employeeID).filter((id) => id != null);
+        if (!this.selectedRows?.length) {
+            this.messageService.add({
+                severity: 'warn',
+                summary: 'Validation',
+                detail: 'Select at least one employee to generate RAB ID.'
+            });
+            return;
+        }
+        // Walk the original list (already sorted by JoiningDate, RankSortOrder) and keep only selected ids,
+        // so allocation priority is preserved even if the user checked rows out of order.
+        const selectedIds = new Set(this.selectedRows.map((r) => r.employeeID));
+        const employeeIds = this.list
+            .map((row) => row.employeeID)
+            .filter((id) => id != null && selectedIds.has(id));
         if (employeeIds.length === 0) {
             this.messageService.add({
                 severity: 'warn',
@@ -148,7 +221,7 @@ export class RabIdAllocation implements OnInit {
         }
         const count = employeeIds.length;
         this.confirmationService.confirm({
-            message: `Generate RAB ID for all ${count} employee(s) in the list?`,
+            message: `Generate RAB ID for ${count} selected employee(s)?`,
             header: 'Confirm Generate RAB ID',
             icon: 'pi pi-id-card',
             accept: () => this.doGenerateId(employeeIds)
@@ -177,9 +250,10 @@ export class RabIdAllocation implements OnInit {
 
     private doGenerateId(employeeIds: number[]): void {
         this.generatingId = true;
-        this.supernumeraryListService.allocateRabId({ employeeIds }).subscribe({
+        this.employeeListService.allocateRabId({ employeeIds }).subscribe({
             next: (results) => {
                 this.generatingId = false;
+                this.selectedRows = [];
                 this.loadList(true);
                 if (!results || !Array.isArray(results)) {
                     this.showGenerationCompleteMessage(0);

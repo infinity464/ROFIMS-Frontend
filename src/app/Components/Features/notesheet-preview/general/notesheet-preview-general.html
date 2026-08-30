@@ -1,0 +1,695 @@
+<p-toast position="top-center"></p-toast>
+<p-confirmDialog></p-confirmDialog>
+
+<div class="preview-page">
+
+    <div class="preview-header no-print">
+        <div class="preview-actions" *ngIf="noteSheet && !loading && !error">
+            <p-button *ngIf="showEdit && canEdit && !editing" icon="pi pi-pencil" label="Edit" (onClick)="toggleEdit()" styleClass="p-button-outlined p-button-warning"></p-button>
+            <p-button *ngIf="editing" icon="pi pi-times" label="Cancel" (onClick)="cancelEdit()" styleClass="p-button-outlined p-button-secondary"></p-button>
+            <p-button *ngIf="editing" icon="pi pi-check" label="Save" (onClick)="saveChanges()" [loading]="saving" styleClass="p-button-success"></p-button>
+            <p-select *ngIf="!editing" [options]="pageSizeOptions" [(ngModel)]="selectedPageSize" (onChange)="onPageSizeChange()" optionLabel="label" optionValue="value"
+                      [style]="{'width':'95px'}" pTooltip="Page size for PDF / Print Preview"></p-select>
+            <!-- Font size of the WHOLE note sheet, as a point offset (-2 ... +2, 0.25 steps):
+                 the body sizes move together instead of being set to one value. Sizing
+                 down usually pulls a trailing block back onto the previous page. -->
+            <p-select *ngIf="!editing" [options]="fontDeltaOptions" [(ngModel)]="fontDelta" (onChange)="onFontDeltaChange()" optionLabel="label" optionValue="value"
+                      [style]="{'width':'165px'}" pTooltip="Font size of the note sheet (-2 pt to +2 pt)"></p-select>
+            <!-- Members table: show/hide the corps part inside the Name column (the stored
+                 name is "name, decoration, professional qualification, corps"). -->
+            <span *ngIf="!editing && canToggleCorpsInName" class="ns-detail-toggle">
+                <p-checkbox [(ngModel)]="showCorpsInName" [binary]="true" inputId="chkCorpsInName"
+                            (onChange)="onShowCorpsInNameChange()"></p-checkbox>
+                <label for="chkCorpsInName" pTooltip="Show কোর in the Name column">কোর</label>
+            </span>
+            <p-button *ngIf="showWord && !editing" icon="pi pi-file-word" label="Word"  (onClick)="exportWord()" styleClass="p-button-outlined"></p-button>
+            <p-button *ngIf="showPdf && !editing" icon="pi pi-file-pdf"  label="PDF"   (onClick)="exportPdf()" [loading]="exportingPdf" styleClass="p-button-outlined"></p-button>
+            <p-button *ngIf="!editing" icon="pi pi-print" label="Print Preview" (onClick)="printPreview()" [loading]="printingPreview" styleClass="p-button-outlined p-button-info"></p-button>
+        </div>
+        <div class="preview-status-actions" *ngIf="noteSheet && !loading && !error && !editing">
+            @if (isDraftStatus) {
+                <p-button icon="pi pi-send" label="Submit" severity="success" [outlined]="true" [loading]="submitting"
+                          pTooltip="Submit for approval" (onClick)="submitForApproval()"></p-button>
+            } @else if (fromPending) {
+                @if (currentApproverLabel) {
+                    <span class="ns-status-badge ns-status-badge--step">
+                        <i class="pi pi-user-edit"></i> Acting as: {{ currentApproverLabel }}
+                    </span>
+                }
+                <p-button type="button" icon="pi pi-list" [rounded]="true" [text]="true" size="small" severity="info"
+                          pTooltip="Approval Log" (onClick)="openApprovalLog()"></p-button>
+                <p-button type="button" icon="pi pi-check"
+                          [label]="currentApproverLabel ? ('Approve as ' + currentApproverLabel) : 'Approve'"
+                          severity="success" [outlined]="true"
+                          [pTooltip]="currentApproverLabel ? ('Approve as ' + currentApproverLabel) : 'Approve'"
+                          (onClick)="openRemarkDialog(NoteSheetRemarkAction.Approve)"></p-button>
+                <p-button type="button" icon="pi pi-times"
+                          [label]="currentApproverLabel ? ('Decline as ' + currentApproverLabel) : 'Decline'"
+                          severity="danger" [outlined]="true"
+                          [pTooltip]="currentApproverLabel ? ('Decline as ' + currentApproverLabel) : 'Decline'"
+                          (onClick)="openRemarkDialog(NoteSheetRemarkAction.Decline)"></p-button>
+                <p-button type="button" icon="pi pi-replay"
+                          [label]="currentApproverLabel ? ('Back as ' + currentApproverLabel) : 'Back'"
+                          severity="secondary" [outlined]="true"
+                          [pTooltip]="currentApproverLabel ? ('Back as ' + currentApproverLabel) : 'Back'"
+                          (onClick)="openRemarkDialog(NoteSheetRemarkAction.Back)"></p-button>
+            } @else {
+                <span class="ns-status-badge ns-status-badge--pending">
+                    <i class="pi pi-clock"></i> {{ currentStatusLabel }}
+                </span>
+            }
+        </div>
+    </div>
+
+    <div class="preview-loading" *ngIf="loading">
+        <i class="pi pi-spin pi-spinner" style="font-size:2rem"></i>
+        <p>Loading...</p>
+    </div>
+
+    <div class="preview-error" *ngIf="error && !loading">
+        <i class="pi pi-exclamation-circle" style="font-size:3rem; color:var(--red-500)"></i>
+        <p>Failed to load note-sheet.</p>
+        <p-button label="Go Back" icon="pi pi-arrow-left" (onClick)="goBack()"></p-button>
+    </div>
+
+    <!-- ══════════════════════════════════════════════════════════ -->
+    <!-- VIEW MODE: paginated legal pages                          -->
+    <!-- ══════════════════════════════════════════════════════════ -->
+    <ng-container *ngIf="noteSheet && !loading && !error && !editing">
+
+        <!-- Hidden: measure full content height -->
+        <div class="page-measure" #contentMeasure [class.page-measure--legal]="selectedPageSize === 'Legal'">
+            <ng-container *ngTemplateOutlet="viewContent"></ng-container>
+        </div>
+
+        <!-- Visible: paginated pages -->
+        <div class="a4-paper-container" #pagesContainer>
+            <div *ngFor="let offset of pageOffsets; let i = index; trackBy: trackByIndex" class="a4-paper paginated" [class.a4-paper--legal]="selectedPageSize === 'Legal'">
+                <div class="page-viewport ns-general-page">
+                    <div class="page-inner" [style.transform]="'translateY(-' + offset + 'px)'">
+                        <ng-container *ngTemplateOutlet="viewContent"></ng-container>
+                    </div>
+                    <div class="page-bottom-cover"
+                         *ngIf="getPageCoverHeight(i) > 0"
+                         [style.height.px]="getPageCoverHeight(i)">
+                    </div>
+                </div>
+                <!-- Page number under the border — only when the note-sheet spans multiple pages -->
+                <div class="ns-page-footer" *ngIf="pageOffsets.length > 1">{{ pageLabel(i, pageOffsets.length) }}</div>
+            </div>
+        </div>
+
+        <!-- ── File Attachments (outside page border) ── -->
+        <div class="ns-file-attachments" *ngIf="viewFileAttachments.length > 0">
+            <div class="ns-file-attachments-label">
+                <i class="pi pi-paperclip"></i>
+                {{ isEnglish() ? 'Attachments' : 'সংযুক্তি' }} ({{ viewFileAttachments.length }})
+            </div>
+            <div class="ns-file-list">
+                <div class="ns-file-item" *ngFor="let file of viewFileAttachments; let fi = index">
+                    <i class="pi pi-file"></i>
+                    <span class="ns-file-name">{{ fi + 1 }}. {{ file.fileName }}</span>
+                    <button class="ns-file-download-btn" (click)="onDownloadFile(file)" pTooltip="Download">
+                        <i class="pi pi-download"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- ── Reference Attachments (files attached to the Reference paragraphs) ── -->
+        <div class="ns-file-attachments" *ngIf="viewReferenceAttachments.length > 0">
+            <div class="ns-file-attachments-label">
+                <i class="pi pi-paperclip"></i>
+                {{ isEnglish() ? 'Reference Attachments' : 'সূত্র সংযুক্তি' }} ({{ viewReferenceAttachments.length }})
+            </div>
+            <div class="ns-file-list">
+                <div class="ns-file-item" *ngFor="let file of viewReferenceAttachments; let fi = index">
+                    <i class="pi pi-file"></i>
+                    <span class="ns-file-name">{{ file.serial ? file.serial + ' ' : (fi + 1) + '. ' }}{{ file.fileName }}</span>
+                    <button class="ns-file-download-btn" (click)="onDownloadFile(file)" pTooltip="Download">
+                        <i class="pi pi-download"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </ng-container>
+
+    <!-- ══════════════════════════════════════════════════════════ -->
+    <!-- EDIT MODE: single page, no pagination                     -->
+    <!-- ══════════════════════════════════════════════════════════ -->
+    <div class="a4-paper-container" *ngIf="noteSheet && !loading && !error && editing">
+        <div class="a4-paper">
+
+            <div class="ns-doc-box">
+                <div class="ns-main-col">
+
+                    <!-- Title INSIDE the border -->
+                    <div class="ns-title-area">
+                        <div class="ns-title-en">NOTE SHEET</div>
+                        <div class="ns-title-bn">মন্তব্য পত্র</div>
+                    </div>
+
+                    <div class="ns-org-header" style="text-align:center; padding:8px 16px 4px; font-weight:700; font-size:9pt; line-height:1.5;">
+                        <div>{{ getOrgHeaderLine1() }}</div>
+                        <div style="border-bottom:1.5px solid #000; display:inline-block; padding-bottom:2px;">{{ getOrgHeaderLine2() }}</div>
+                    </div>
+
+                    <div class="ns-edit-field">
+                        <label class="ns-edit-label">Subject</label>
+                        <input pInputText [(ngModel)]="editSubject" placeholder="Subject" class="w-full" />
+                    </div>
+
+                    <!-- ── Reference Number Paragraphs ── -->
+                    <p-fieldset legend="Reference Number" [toggleable]="true" [collapsed]="true">
+                        <div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.5rem;">
+                            <p-button icon="pi pi-plus" label="Add Reference" [rounded]="false" [text]="true" severity="success" size="small" (onClick)="addReferenceParagraph()" pTooltip="Add Reference"></p-button>
+                        </div>
+                        @for (para of editReferenceParagraphs; track $index) {
+                            <div style="display:flex;gap:0.5rem;margin-bottom:0.75rem;align-items:flex-start;">
+                                <span style="font-weight:600;min-width:24px;padding-top:6px;">{{ getRefSerialLabel($index) }}</span>
+                                <div style="flex:1;">
+                                    <app-rich-editor [(ngModel)]="editReferenceParagraphs[$index].text" [hideTable]="true" height="80px"></app-rich-editor>
+                                    <app-file-references-form
+                                        [fileRows]="editReferenceParagraphs[$index].fileRows"
+                                        [isViewMode]="false"
+                                        title=""
+                                        (fileRowsChange)="onRefFileRowsChange($event, $index)"
+                                        (onDownloadFile)="onRefDownloadFile($event)">
+                                    </app-file-references-form>
+                                </div>
+                                @if (editReferenceParagraphs.length > 1) {
+                                    <p-button icon="pi pi-trash" [rounded]="true" [text]="true" severity="danger" (onClick)="removeReferenceParagraph($index)"></p-button>
+                                }
+                            </div>
+                        }
+                    </p-fieldset>
+                    <div class="ns-edit-field ns-edit-row">
+                        <div class="ns-edit-col">
+                            <label class="ns-edit-label">Date</label>
+                            <p-datepicker [(ngModel)]="editNoteSheetDate" dateFormat="dd-mm-yy" [showIcon]="true" styleClass="w-full" appendTo="body"></p-datepicker>
+                        </div>
+                        <div class="ns-edit-col">
+                            <label class="ns-edit-label">Text Type</label>
+                            <p-select [(ngModel)]="editTextType" [options]="textTypeOptions" optionLabel="label" optionValue="value"
+                                      styleClass="w-full" appendTo="body"></p-select>
+                        </div>
+                        <div class="ns-edit-col">
+                            <label class="ns-edit-label">Operation Type</label>
+                            <p-select [(ngModel)]="editOperationType" [options]="operationTypeOptions" optionLabel="label" optionValue="value"
+                                      placeholder="Select Operation Type" [showClear]="true" styleClass="w-full" appendTo="body"
+                                      [disabled]="isInitiatorStatus"></p-select>
+                        </div>
+                    </div>
+
+                    <div class="ns-edit-field">
+                        <div style="display:flex;align-items:center;justify-content:space-between;gap:0.5rem;margin-bottom:0.35rem;">
+                            <label class="ns-edit-label" style="margin:0;">Main Text</label>
+                            <p-button icon="pi pi-plus" label="Add Block" [rounded]="false" [text]="true" severity="success" size="small" (onClick)="addEditMainTextParagraph()"></p-button>
+                        </div>
+                        @for (block of editMainTextParagraphs; track $index) {
+                            <div style="display:flex;align-items:flex-start;gap:0.5rem;margin-bottom:0.6rem;">
+                                <span style="min-width:1.5rem;padding-top:0.5rem;font-weight:700;">{{ getEditMainTextSerial($index) }}</span>
+                                <div style="flex:1;">
+                                    <app-rich-editor
+                                        [ngModel]="editMainTextParagraphs[$index].text"
+                                        [ngModelOptions]="{ standalone: true }"
+                                        (ngModelChange)="editMainTextParagraphs[$index].text = $event">
+                                    </app-rich-editor>
+                                </div>
+                                @if (editMainTextParagraphs.length > 1) {
+                                    <p-button icon="pi pi-trash" [rounded]="true" [text]="true" severity="danger" (onClick)="removeEditMainTextParagraph($index)"></p-button>
+                                }
+                            </div>
+                        }
+                    </div>
+
+                    <!-- ── Members Table (Edit) ── -->
+                    <p-fieldset legend="Members" [toggleable]="true" [collapsed]="editMembersData.members.length === 0">
+                        <div class="members-search-row" style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.5rem;">
+                            <app-employee-search
+                                (onEmployeeFound)="onMemberFound($event)">
+                            </app-employee-search>
+                            @if (memberAddLoading) {
+                                <span class="text-500 text-xs"><i class="pi pi-spin pi-spinner mr-1"></i>Loading profile...</span>
+                            }
+                        </div>
+
+                        <div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.5rem;flex-wrap:wrap;">
+                            <p-button label="Add Column" icon="pi pi-plus" size="small" severity="info" [outlined]="true" (onClick)="openAddColumnDialog()"></p-button>
+                        </div>
+
+                        @if (editMembersData.members.length > 0 && editMembersData.columns.length > 0) {
+                            <div style="overflow-x:auto;max-width:100%;">
+                                <table class="ns-members-preview-table" style="font-size:8pt;text-align:left;table-layout:fixed;width:100%;">
+                                    <thead>
+                                        <tr>
+                                            <th style="width:40px;text-align:center;padding:4px 6px;background:#f8f9fa;border:1px solid #dee2e6;font-size:7pt;">{{ editTextType === 'bn' ? 'ক্রমিক' : 'SL' }}</th>
+                                            @for (col of editMembersData.columns; track col.key; let ci = $index) {
+                                                <th draggable="true"
+                                                    [style.width.%]="getEditColWidth(col)"
+                                                    [class.members-table__th-dragging]="dragColIndex === ci"
+                                                    [class.members-table__th-dragover]="dragOverColIndex === ci"
+                                                    (dragstart)="onColDragStart(ci, $event)"
+                                                    (dragover)="onColDragOver(ci, $event)"
+                                                    (dragenter)="onColDragEnter(ci, $event)"
+                                                    (dragleave)="onColDragLeave($event)"
+                                                    (drop)="onColDrop(ci, $event)"
+                                                    (dragend)="onColDragEnd()"
+                                                    style="cursor:grab;padding:4px 6px;background:#f8f9fa;border:1px solid #dee2e6;position:relative;">
+                                                    <div style="display:flex;align-items:center;gap:4px;">
+                                                        @if (editingColLabelKey === col.key) {
+                                                            <input type="text" style="width:80px;font-size:7pt;padding:1px 3px;"
+                                                                [(ngModel)]="editingColLabelValue"
+                                                                [ngModelOptions]="{standalone:true}"
+                                                                (blur)="saveColLabel(col.key)"
+                                                                (keydown.enter)="saveColLabel(col.key)"
+                                                                (keydown.escape)="editingColLabelKey = null" />
+                                                        } @else {
+                                                            <span (dblclick)="startEditColLabel(col.key, getMemberColHeader(col), $event)" title="Double-click to rename" style="font-size:7pt;">{{ getMemberColHeader(col) }}</span>
+                                                            <button type="button" style="border:none;background:none;cursor:pointer;color:#3b82f6;padding:0;font-size:9px;opacity:0.6;" (click)="startEditColLabel(col.key, getMemberColHeader(col), $event)" title="Rename column">
+                                                                <i class="pi pi-pencil"></i>
+                                                            </button>
+                                                        }
+                                                        <button type="button" style="border:none;background:none;cursor:pointer;color:#e74c3c;padding:0;font-size:10px;" (click)="removeColumn(col.key)" title="Remove column">
+                                                            <i class="pi pi-times"></i>
+                                                        </button>
+                                                    </div>
+                                                    <div class="ns-edit-col-width" title="Column width (%)"
+                                                         (click)="$event.stopPropagation()" (mousedown)="$event.stopPropagation()">
+                                                        <button type="button" class="ns-edit-col-width-btn" (click)="setColWidth(col, getEditColWidth(col) - 1)" title="Narrower">−</button>
+                                                        <input type="number" min="3" max="80" step="0.5"
+                                                            [ngModel]="getEditColWidth(col)" (ngModelChange)="setColWidth(col, $event)" [ngModelOptions]="{standalone:true}" />
+                                                        <span class="ns-edit-col-width-pct">%</span>
+                                                        <button type="button" class="ns-edit-col-width-btn" (click)="setColWidth(col, getEditColWidth(col) + 1)" title="Wider">+</button>
+                                                    </div>
+                                                    <span style="position:absolute;top:0;right:-2px;bottom:0;width:5px;cursor:col-resize;z-index:1;" (mousedown)="onResizeStart(ci, $event)"></span>
+                                                </th>
+                                            }
+                                            <th style="padding:4px 6px;background:#f8f9fa;border:1px solid #dee2e6;font-size:7pt;">{{ editTextType === 'bn' ? 'অ্যাকশন' : 'Action' }}</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @for (member of editMembersData.members; track member.employeeId; let i = $index) {
+                                            <tr>
+                                                <td style="padding:3px 5px;border:1px solid #dee2e6;font-size:7pt;text-align:center;">{{ memberSerial(i) }}</td>
+                                                @for (col of editMembersData.columns; track col.key) {
+                                                    <td class="ns-edit-member-cell"
+                                                        [class.ns-edit-member-cell--editable]="isEditableCell(col)"
+                                                        style="padding:3px 5px;border:1px solid #dee2e6;font-size:7pt;word-break:break-word;"
+                                                        (click)="isEditableCell(col) ? startEditMemberCell(i, col.key, $event) : null">
+                                                        @if (col.mergedFrom) {
+                                                            {{ formatMemberCellDisplay(getMergedCellValue(member, col)) }}
+                                                        } @else if (editingMemberCellKey === memberCellKey(i, col.key)) {
+                                                            <input type="text" style="width:80px;font-size:7pt;padding:1px 3px;"
+                                                                [(ngModel)]="editingMemberCellValue"
+                                                                [ngModelOptions]="{standalone:true}"
+                                                                (blur)="onMemberCellBlur(i, col.key)"
+                                                                (keydown)="onMemberCellKeydown($event, i, col.key)" />
+                                                        } @else if (member.values[col.key]) {
+                                                            {{ formatMemberCellDisplay(member.values[col.key]) }}
+                                                        } @else {
+                                                            <span style="color:#94a3b8;font-style:italic;">{{ editTextType === 'bn' ? '✎ লিখুন' : '✎ Click to edit' }}</span>
+                                                        }
+                                                    </td>
+                                                }
+                                                <td style="padding:3px 5px;border:1px solid #dee2e6;text-align:center;">
+                                                    <p-button icon="pi pi-trash" [rounded]="true" [text]="true" severity="danger" size="small" (onClick)="removeMember(i)"></p-button>
+                                                </td>
+                                            </tr>
+                                        }
+                                    </tbody>
+                                </table>
+                            </div>
+                        } @else if (editMembersData.members.length > 0 && editMembersData.columns.length === 0) {
+                            <div style="color:#6c757d;font-size:8pt;padding:0.5rem 0;">
+                                {{ editMembersData.members.length }} member(s) added. Click "Add Column" to configure which fields to display.
+                            </div>
+                        } @else {
+                            <div style="color:#6c757d;font-size:8pt;padding:0.5rem 0;">
+                                No members added yet. Use the search above to find and add members.
+                            </div>
+                        }
+                    </p-fieldset>
+
+                    <div class="ns-edit-field">
+                        <label class="ns-edit-label">{{ isEnglish() ? 'Note' : 'নোট' }}</label>
+                        <app-rich-editor [(ngModel)]="editNote" height="120px"></app-rich-editor>
+                    </div>
+
+                    <div class="ns-edit-field">
+                        <div style="display:flex;align-items:center;justify-content:space-between;gap:0.5rem;margin-bottom:0.35rem;">
+                            <label class="ns-edit-label" style="margin:0;">{{ isEnglish() ? 'Last Text' : 'শেষ লেখা' }}</label>
+                            <p-button icon="pi pi-plus" label="Add Block" [rounded]="false" [text]="true" severity="success" size="small" (onClick)="addEditLastTextParagraph()"></p-button>
+                        </div>
+                        @for (block of editLastTextParagraphs; track $index) {
+                            <div style="display:flex;align-items:flex-start;gap:0.5rem;margin-bottom:0.6rem;">
+                                <span style="min-width:1.5rem;padding-top:0.5rem;font-weight:700;">{{ getEditLastTextSerial($index) }}</span>
+                                <div style="flex:1;">
+                                    <app-rich-editor
+                                        [ngModel]="editLastTextParagraphs[$index]"
+                                        [ngModelOptions]="{ standalone: true }"
+                                        (ngModelChange)="editLastTextParagraphs[$index] = $event"
+                                        height="120px">
+                                    </app-rich-editor>
+                                </div>
+                                @if (editLastTextParagraphs.length > 1) {
+                                    <p-button icon="pi pi-trash" [rounded]="true" [text]="true" severity="danger" (onClick)="removeEditLastTextParagraph($index)"></p-button>
+                                }
+                            </div>
+                        }
+                    </div>
+
+                    <!-- ── Supporting Documents ── -->
+                    <div class="ns-edit-field">
+                        <app-file-references-form
+                            #fileReferencesForm
+                            [fileRows]="fileRows"
+                            [isViewMode]="false"
+                            title="Supporting Documents"
+                            (fileRowsChange)="onFileRowsChange($event)"
+                            (onDownloadFile)="onDownloadFile($event)">
+                        </app-file-references-form>
+                    </div>
+
+                    <!-- ── Approval Chain Edit ── -->
+                    <div class="ns-approval-edit">
+                        <h4 class="ns-approval-edit-title">Approval Chain</h4>
+                        <app-notesheet-approver-select
+                            [noteSheetType]="'General'"
+                            [useUserList]="true"
+                            [(initiatorId)]="editInitiatorId"
+                            [(recommenderIds)]="editRecommenderIds"
+                            [(finalApproverId)]="editFinalApproverId"
+                            [disableInitiator]="isInitiatorStatus"
+                            [showErrors]="false">
+                        </app-notesheet-approver-select>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ══════════════════════════════════════════════════════════ -->
+    <!-- Shared view-mode content template (used by pagination)    -->
+    <!-- ══════════════════════════════════════════════════════════ -->
+    <ng-template #viewContent>
+      <ng-container *ngIf="noteSheet">
+        <div class="ns-doc-box">
+            <div class="ns-main-col">
+
+                <!-- Title INSIDE the border -->
+                <div class="ns-title-area">
+                    <div class="ns-title-en">NOTE SHEET</div>
+                    <div class="ns-title-bn">মন্তব্য পত্র</div>
+                </div>
+
+                <div class="ns-org-header" style="text-align:center; padding:8px 16px 4px; font-weight:700; font-size:9pt; line-height:1.5;">
+                    <div>{{ getOrgHeaderLine1() }}</div>
+                    <div style="border-bottom:1.5px solid #000; display:inline-block; padding-bottom:2px;">{{ getOrgHeaderLine2() }}</div>
+                </div>
+
+                <!-- Notesheet no (left) + date (right), same line -->
+                <div class="ns-notesheet-no" *ngIf="noteSheet.noteSheetNo || noteSheet.noteSheetDate"
+                     style="display:flex; justify-content:space-between; align-items:baseline; gap:1rem; padding:4px 2px 2px 1px;">
+                    <span>{{ noteSheet.noteSheetNo }}</span>
+                    <span *ngIf="noteSheet.noteSheetDate" style="white-space:nowrap;">{{ isEnglish() ? 'Date: ' : 'তারিখঃ ' }}{{ formatDate(noteSheet.noteSheetDate) }}</span>
+                </div>
+
+                <!-- ── Subject ── -->
+                <div class="ns-subject-line" *ngIf="displaySubject" style="padding:2px 2px 4px 1px;">
+                    <strong><u>{{ displaySubject }}</u></strong>
+                </div>
+
+                <!-- ── Reference (date now sits with the notesheet no above) ── -->
+                <div class="ns-cell-ref" *ngIf="parsedReferences.length > 0">
+                    <span class="ns-ref-key">{{ isEnglish() ? 'Reference:' : 'সূত্রঃ' }}</span>
+                    <div class="ns-ref-content">
+                        <ng-container *ngIf="parsedReferences.length === 1">
+                            {{ parsedReferences[0] }}
+                        </ng-container>
+                        <ng-container *ngIf="parsedReferences.length > 1">
+                            <div *ngFor="let ref of parsedReferences; let ri = index" class="ns-ref-item">
+                                <span class="ns-ref-serial">{{ refSerialLabel(ri) }}</span> {{ ref }}
+                            </div>
+                        </ng-container>
+                    </div>
+                </div>
+
+                <!-- ── ১।..N। Main Text blocks ── -->
+                <!-- innerHTML sits directly on .ns-para-text so its first <p> renders inline
+                     next to the serial (like the note/last-text), with the 2em gap as the tab. -->
+                <div class="ns-para" *ngFor="let block of mainDisplayBlocks; let bi = index">
+                    <span class="ns-para-no">{{ serial(bi + 1) }}</span>
+                    <div class="ns-para-text" [innerHTML]="getMainBlockSafe(bi)"></div>
+                </div>
+
+                <!-- ── Members table — renders after ALL main body blocks ── -->
+                <div *ngIf="previewMembersRows.length > 0 && previewMembersColumns.length > 0" class="ns-members-preview-table-wrap">
+                    <table class="ns-members-preview-table">
+                        <thead>
+                            <tr>
+                                <th style="text-align:center;width:36px;">{{ isEnglish() ? 'SL' : 'ক্রমিক' }}</th>
+                                <th *ngFor="let col of previewMembersColumns" [style.width.%]="getPreviewColWidth(col)">{{ getMemberColHeader(col) }}</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr *ngFor="let row of previewMembersRows; let ri = index">
+                                <td style="text-align:center;">{{ memberSerial(ri) }}</td>
+                                <td *ngFor="let col of previewMembersColumns" [style.text-align]="isNameColumn(col) ? 'left' : null">
+                                    {{ formatMemberCell(row, col) }}
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- ── Note (no serial — renders as a plain paragraph, aligned with the table) ── -->
+                <div class="ns-para ns-note-para" *ngIf="noteSheet.note">
+                    <div class="ns-para-text" [innerHTML]="getNoteSafe()"></div>
+                </div>
+
+                <!-- ── Last Text blocks (each with its own serial) ── -->
+                <div class="ns-para" *ngFor="let block of lastTextBlocks; let li = index">
+                    <span class="ns-para-no">{{ serial(lastTextStartSerial + li) }}</span>
+                    <div class="ns-para-text" [innerHTML]="getLastBlockSafe(li)"></div>
+                </div>
+
+                <!-- ── Initiator area ── -->
+                <div class="ns-initiator-area">
+                    <div class="ns-initiator-sig" *ngIf="initiatorDetails">
+                        <img *ngIf="isInitiatorApproved() && shouldShowSignature(initiatorDetails.step) && initiatorDetails.signatureDataUrl"
+                             [src]="initiatorDetails.signatureDataUrl" class="ns-sig-img" alt="Signature" />
+                        <div class="ns-sig-name">
+                            {{ isEnglish() ? initiatorDetails.name : (initiatorDetails.nameBN || initiatorDetails.name) }}
+                        </div>
+                        <div class="ns-sig-rank" *ngIf="initiatorDetails.rank && initiatorDetails.rank !== '-'">
+                            {{ isEnglish() ? initiatorDetails.rank : (initiatorDetails.rankBN || initiatorDetails.rank) }}
+                        </div>
+                        <div class="ns-sig-appoint" *ngIf="initiatorDetails.appointment || initiatorDetails.appointmentBN">
+                            {{ isEnglish() ? initiatorDetails.appointment : (initiatorDetails.appointmentBN || initiatorDetails.appointment) }}
+                        </div>
+                        <div class="ns-sig-date" *ngIf="isInitiatorApproved() && noteSheet.noteSheetDate">{{ formatMonthYear(noteSheet.noteSheetDate) }}</div>
+                    </div>
+                </div>
+
+                <!-- ── Approver Sections ── -->
+                <div class="ns-approver-section" *ngFor="let approver of approversDetails; let i = index">
+                    <div class="ns-approver-role">
+                        {{ isEnglish() ? approver.appointment : (approver.appointmentBN || approver.appointment) }}
+                    </div>
+                    <div class="ns-approver-body" [class.ns-approver-body--left]="i >= approversDetails.length - 2">
+                        <div class="ns-approver-left">
+                            <span class="ns-para-no">{{ serial(approverStartSerial + i) }}</span>
+                            <span class="ns-approver-remark" *ngIf="getApproverRemark(approver.step)">{{ getApproverRemark(approver.step) }}</span>
+                        </div>
+                        <div class="ns-approver-sig-area">
+                            <img *ngIf="shouldShowSignature(approver.step) && approver.signatureDataUrl"
+                                 [src]="approver.signatureDataUrl" class="ns-sig-img" alt="Signature" />
+                            <div class="ns-sig-date" *ngIf="getApproverDate(approver.step)">{{ getApproverDate(approver.step) }}</div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+      </ng-container>
+    </ng-template>
+
+    <!-- ── Back History Timeline (not printed) ── -->
+    <div class="ns-back-history no-print" *ngIf="backHistory.length > 0">
+        <h3><i class="pi pi-history"></i> Back History</h3>
+        <div class="ns-back-timeline">
+            <div class="ns-back-entry" *ngFor="let entry of backHistory">
+                <div class="ns-back-entry-header">
+                    <span class="ns-back-from">{{ getStatusLabel(entry.backedFromStatus) }}</span>
+                    <i class="pi pi-arrow-right"></i>
+                    <span class="ns-back-to">{{ getStatusLabel(entry.backedToStatus) }}</span>
+                    <span class="ns-back-date">{{ formatDate(entry.backedDate) }}</span>
+                </div>
+                <div class="ns-back-entry-by" *ngIf="entry.backedByName">Backed by: {{ entry.backedByName }}</div>
+                <div class="ns-back-entry-reason" *ngIf="entry.backReason">Reason: {{ entry.backReason }}</div>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<!-- ══════════════════════════════════════════════════════════ -->
+<!-- Remark dialog for Approve / Decline / Back                -->
+<!-- ══════════════════════════════════════════════════════════ -->
+<p-dialog header="{{ remarkAction === NoteSheetRemarkAction.Approve ? 'Approve' : remarkAction === NoteSheetRemarkAction.Decline ? 'Decline' : 'Back' }} with Remark"
+          [(visible)]="showRemarkDialog" [modal]="true" [style]="{ width: '28rem' }"
+          [contentStyle]="{ 'border-top': '2px solid var(--primary-color)' }"
+          (onHide)="remarkAction = null; remarkText = ''"
+          [draggable]="false" [resizable]="false">
+    <div class="flex flex-col gap-2">
+        <label class="font-medium">
+            Remark
+            @if (remarkAction === NoteSheetRemarkAction.Decline) {
+                <span class="text-red-500"> * required</span>
+            } @else {
+                <span class="text-500"> (optional)</span>
+            }
+        </label>
+        <textarea pTextarea [(ngModel)]="remarkText" rows="3" class="w-full"></textarea>
+    </div>
+    <ng-template pTemplate="footer">
+        <p-button type="button" label="Cancel" [text]="true" (onClick)="showRemarkDialog = false"></p-button>
+        <p-button type="button" label="Submit" icon="pi pi-check"
+                  [loading]="actionSubmitting"
+                  [disabled]="remarkAction === NoteSheetRemarkAction.Decline && !remarkText?.trim()"
+                  (onClick)="submitRemark()"></p-button>
+    </ng-template>
+</p-dialog>
+
+<!-- ══════════════════════════════════════════════════════════ -->
+<!-- Approval Log dialog                                        -->
+<!-- ══════════════════════════════════════════════════════════ -->
+<p-dialog header="Approval Log — {{ approvalLogNoteSheetNo }}"
+          [(visible)]="showApprovalLogDialog" [modal]="true"
+          [style]="{ width: '680px', maxHeight: '85vh' }"
+          [draggable]="false" [resizable]="false" [closable]="true"
+          styleClass="ns-approval-log-dialog">
+    @if (approvalLogLoading) {
+        <div class="flex justify-content-center align-items-center py-5">
+            <i class="pi pi-spin pi-spinner" style="font-size:1.5rem"></i>
+            <span class="ml-2">Loading approval log...</span>
+        </div>
+    }
+    @if (!approvalLogLoading && approvalLogEntries.length === 0) {
+        <div class="text-center text-500 py-4">No approval log entries found.</div>
+    }
+    @if (!approvalLogLoading && approvalLogEntries.length > 0) {
+        <div class="ns-approval-log">
+            @for (entry of approvalLogEntries; track entry; let i = $index) {
+                <div class="ns-log-entry" [class.ns-log-entry--back]="entry.action === ApprovalLogAction.Back">
+                    <div class="ns-log-marker">
+                        <i [class]="getActionIcon(entry.action)" [ngClass]="{
+                            'text-green-500': entry.action === ApprovalLogAction.Approve,
+                            'text-red-500': entry.action === ApprovalLogAction.Cancel,
+                            'text-orange-500': entry.action === ApprovalLogAction.Back,
+                            'text-blue-400': entry.action === ApprovalLogAction.Pending
+                        }"></i>
+                        @if (i < approvalLogEntries.length - 1) {
+                            <div class="ns-log-line"></div>
+                        }
+                    </div>
+                    <div class="ns-log-content">
+                        <div class="ns-log-header">
+                            <span class="ns-log-step">{{ entry.step }}</span>
+                            <span class="ns-log-action" [ngClass]="{
+                                'ns-log-action--approve': entry.action === ApprovalLogAction.Approve,
+                                'ns-log-action--cancel': entry.action === ApprovalLogAction.Cancel,
+                                'ns-log-action--back': entry.action === ApprovalLogAction.Back,
+                                'ns-log-action--pending': entry.action === ApprovalLogAction.Pending
+                            }">{{ getActionLabel(entry.action) }}</span>
+                        </div>
+                        @if (entry.serviceId || entry.name) {
+                            <div class="ns-log-user">
+                                @if (entry.serviceId) {
+                                    <span class="ns-log-sid">{{ entry.serviceId }}</span>
+                                }
+                                @if (entry.name) {
+                                    <span>{{ entry.name }}</span>
+                                }
+                                @if (entry.rank && entry.rank !== '-') {
+                                    <span class="text-500">({{ entry.rank }})</span>
+                                }
+                            </div>
+                        }
+                        @if (entry.date) {
+                            <div class="ns-log-date"><i class="pi pi-calendar"></i> {{ formatDateShort(entry.date) }}</div>
+                        }
+                        @if (entry.remark) {
+                            <div class="ns-log-remark">{{ entry.remark }}</div>
+                        }
+                    </div>
+                </div>
+            }
+        </div>
+    }
+</p-dialog>
+
+<!-- ══════════════════════════════════════════════════════════ -->
+<!-- Add Column Dialog                                          -->
+<!-- ══════════════════════════════════════════════════════════ -->
+<p-dialog
+    header="Add Table Column"
+    [(visible)]="showAddColumnDialog"
+    [modal]="true"
+    [style]="{ width: '500px' }"
+    [closable]="true"
+    [draggable]="false"
+    [resizable]="false"
+    (onHide)="closeAddColumnDialog()">
+    <div style="padding:1rem 0;display:flex;flex-direction:column;gap:1rem;">
+        <div style="display:flex;gap:1rem;">
+            <label style="display:flex;align-items:center;gap:0.375rem;cursor:pointer;">
+                <input type="radio" name="addColModePreview" value="field" [(ngModel)]="addColumnMode" [ngModelOptions]="{standalone:true}" />
+                From Employee Fields
+            </label>
+            <label style="display:flex;align-items:center;gap:0.375rem;cursor:pointer;">
+                <input type="radio" name="addColModePreview" value="custom" [(ngModel)]="addColumnMode" [ngModelOptions]="{standalone:true}" />
+                Custom Blank Column
+            </label>
+        </div>
+        @if (addColumnMode === 'field') {
+            <div>
+                <label style="font-weight:600;font-size:0.875rem;">Select Field</label>
+                <p-select
+                    [(ngModel)]="selectedColumnKey"
+                    [ngModelOptions]="{standalone:true}"
+                    [options]="groupedUnusedColumns"
+                    optionLabel="label"
+                    optionValue="value"
+                    optionGroupLabel="label"
+                    optionGroupChildren="items"
+                    [group]="true"
+                    [filter]="true"
+                    filterBy="label"
+                    placeholder="Select a field..."
+                    styleClass="w-full"
+                    appendTo="body">
+                </p-select>
+            </div>
+        } @else {
+            <div>
+                <label style="font-weight:600;font-size:0.875rem;">Column Name <span style="color:red;">*</span></label>
+                <input pInputText
+                    [(ngModel)]="newCustomColumnName"
+                    [ngModelOptions]="{standalone:true}"
+                    placeholder="e.g. Remarks, Note, Custom Field"
+                    class="w-full"
+                    style="margin-top:0.5rem;"
+                    (keydown.enter)="confirmAddColumn()" />
+            </div>
+        }
+    </div>
+    <ng-template pTemplate="footer">
+        <p-button label="Cancel" icon="pi pi-times" severity="secondary" [outlined]="true" (onClick)="closeAddColumnDialog()"></p-button>
+        <p-button label="Add Column" icon="pi pi-plus"
+            [disabled]="addColumnMode === 'field' ? !selectedColumnKey : !newCustomColumnName.trim()"
+            (onClick)="confirmAddColumn()"></p-button>
+    </ng-template>
+</p-dialog>

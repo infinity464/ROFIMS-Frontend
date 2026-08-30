@@ -1,0 +1,173 @@
+/* ── Card ── */
+.form-card {
+    background: var(--surface-card);
+    border-radius: 12px;
+    padding: 1.5rem;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.form-card-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 1rem;
+    gap: 1rem;
+}
+
+.form-card-title {
+    margin: 0;
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: var(--text-color);
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+/* ── Export button (matches report-present-status-by-mother-org) ── */
+.report-btn-export {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    height: 32px;
+    padding: 0 14px;
+    border-radius: 7px;
+    border: 0.5px solid var(--surface-border, #e2e8f0);
+    background: var(--surface-card, #fff);
+    color: var(--text-color, #1e293b);
+    font-size: 0.8rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: border-color 0.15s, background 0.15s;
+
+    &:hover:not(:disabled) {
+        border-color: var(--primary-color, #4f46e5);
+        background: var(--surface-hover, #f1f5f9);
+    }
+
+    &:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+    }
+}
+
+/* ── Export dropdown ── */
+.report-export-wrap {
+    position: relative;
+}
+
+.report-export-dropdown {
+    position: absolute;
+    top: 100%;
+    right: 0;
+    margin-top: 6px;
+    min-width: 140px;
+    background: var(--surface-card, #fff);
+    border: 1px solid var(--surface-border, #e2e8f0);
+    border-radius: 8px;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.10);
+    z-index: 100;
+    overflow: hidden;
+}
+
+.report-export-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+    padding: 8px 14px;
+    background: none;
+    border: none;
+    font-size: 0.85rem;
+    cursor: pointer;
+    text-align: left;
+    transition: background 0.12s;
+
+    &:hover {
+        background: var(--surface-hover, #f7fafc);
+    }
+}
+
+.report-export-icon  { font-size: 0.75rem; }
+.report-export-print { color: #555; }
+.report-export-pdf   { color: #e74c3c; }
+.report-export-word  { color: #2980b9; }
+.report-export-excel { color: #27ae60; }
+
+/* ── Filter bar ── */
+.filter-bar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    gap: 1rem 1.25rem;
+    padding: 0.875rem 1rem;
+    border-radius: 0.75rem;
+    margin-bottom: 0.25rem;
+}
+
+.filter-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+    width: 190px;
+    flex: 0 0 auto;
+
+    label {
+        font-weight: 600;
+        font-size: 0.8125rem;
+        color: var(--text-color-secondary, #64748b);
+    }
+}
+
+.filter-search {
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+    margin-left: auto;
+    width: 240px;
+    flex: 0 0 auto;
+
+    label {
+        font-weight: 600;
+        font-size: 0.8125rem;
+        color: var(--text-color-secondary, #64748b);
+    }
+}
+
+.filter-btn {
+    flex: 0 0 auto;
+    align-self: flex-end;
+    padding-bottom: 1px;
+}
+
+/* ── Themed table header (light tint of theme color) ── */
+:host ::ng-deep .themed-table {
+    .p-datatable-thead > tr > th {
+        background: color-mix(in srgb, var(--primary-color) 10%, var(--surface-card)) !important;
+        color: var(--text-color) !important;
+        font-size: 0.75rem;
+        font-weight: 700;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+        padding: 10px 12px;
+        border-bottom: 2px solid color-mix(in srgb, var(--primary-color) 30%, transparent) !important;
+        white-space: nowrap;
+    }
+
+    .p-datatable-tbody > tr > td {
+        padding: 9px 12px;
+        font-size: 0.84rem;
+        color: var(--text-color);
+        border-bottom: 1px solid var(--surface-border, #eee);
+        vertical-align: top;
+    }
+
+    .p-datatable-tbody > tr:hover > td {
+        background: color-mix(in srgb, var(--primary-color) 6%, transparent);
+    }
+}
+
+/* ── Permission-based hiding ── */
+.perm-hidden {
+    display: none !important;
+}

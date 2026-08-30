@@ -27,10 +27,10 @@ interface MenuChangeEvent {
 })
 export class LayoutService {
     _config: layoutConfig = {
-        preset: 'Aura',
-        primary: 'emerald',
-        surface: null,
-        darkTheme: false,
+        preset: localStorage.getItem('presetTheme') || 'Aura',
+        primary: localStorage.getItem('primaryColor') || 'emerald',
+        surface: localStorage.getItem('surfaceColor') || null,
+        darkTheme: localStorage.getItem('darkMode') ? JSON.parse(localStorage.getItem('darkMode')!) : false,
         menuMode: 'static'
     };
 

@@ -1,1 +1,39 @@
-// component styles
+// emp-foreign-visit – aligned with form-theme
+
+:host {
+    display: block;
+}
+
+:host ::ng-deep {
+  p-datepicker {
+    .p-datepicker-trigger {
+      width: 100%;
+    }
+
+    .p-inputtext {
+      width: 100%;
+    }
+  }
+
+  p-select,
+  p-datepicker,
+  p-inputtext {
+    width: 100%;
+
+    .p-component {
+      width: 100%;
+    }
+  }
+
+  // Match file-references title to other form labels
+  .file-section-compact {
+    app-file-references-form {
+      h3 {
+        font-size: 1rem !important;
+        font-weight: 600 !important;
+        color: var(--text-color-secondary) !important;
+        margin-bottom: 0.5rem !important;
+      }
+    }
+  }
+}

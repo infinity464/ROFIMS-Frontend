@@ -1,0 +1,221 @@
+<p-toast></p-toast>
+
+<div class="preview-header">
+    <div class="preview-actions">
+        <button type="button" pButton label="Back" icon="pi pi-arrow-left"
+                severity="secondary" [outlined]="true" (click)="onBack()"></button>
+    </div>
+    <div class="preview-status-actions">
+        <app-movement-return-button [movement]="movement"></app-movement-return-button>
+        <button type="button" pButton label="Edit" icon="pi pi-pencil"
+                [outlined]="true"
+                (click)="onEdit()" [disabled]="loading || !!error || !movement"></button>
+        <button type="button" pButton label="Word" icon="pi pi-file-word"
+                [outlined]="true" (click)="exportWord()"
+                [disabled]="loading || !!error || !movement"></button>
+        <button type="button" pButton label="PDF" icon="pi pi-file-pdf"
+                [outlined]="true" (click)="exportPdf()"
+                [disabled]="loading || !!error || !movement || exportingPdf"
+                [loading]="exportingPdf"></button>
+        <button type="button" pButton label="Print Preview" icon="pi pi-print"
+                [outlined]="true" (click)="printPreview()"
+                [disabled]="loading || !!error || !movement || printingPreview"
+                [loading]="printingPreview"></button>
+    </div>
+</div>
+
+@if (!loading && !error && movement) {
+    <!-- Export options bar -->
+    <div class="export-options-bar no-print"
+         style="display:flex; gap:0.75rem; align-items:center; padding:0.5rem 1rem; background:var(--surface-ground); border-radius:6px; margin:0.5rem 1rem;">
+        <span style="font-weight:600; font-size:0.85rem;">
+            <i class="pi pi-cog" style="margin-right:0.3rem;"></i>Export:
+        </span>
+        <p-select [options]="pageSizeOptions" [(ngModel)]="selectedPageSize"
+                  optionLabel="label" optionValue="value"
+                  [style]="{ width: '110px' }"></p-select>
+    </div>
+}
+
+@if (loading) {
+    <div class="preview-loading">
+        <i class="pi pi-spin pi-spinner" style="font-size:2rem"></i>
+        <div>Loading…</div>
+    </div>
+}
+
+@if (error) {
+    <div class="preview-error">
+        <i class="pi pi-exclamation-triangle" style="font-size:2rem"></i>
+        <div>{{ error }}</div>
+    </div>
+}
+
+@if (!loading && !error && movement) {
+    <div class="a4-paper-container">
+        <div class="a4-paper" #paper [class.a4-paper--legal]="selectedPageSize === 'Legal'" style="padding:10mm 8mm;">
+          <div class="cc-content-scale">
+
+            <!-- ── Header strip (above the bordered table) ──────────────── -->
+            <div style="display:flex; align-items:flex-start; gap:10pt; font-size:12pt;">
+                <!-- Left: form numbers (pushed down ~1 title line) -->
+                <div style="flex:0 0 22%; line-height:1.5; margin-top:24pt;">
+                    <div>বি পি ফরম নং ১০</div>
+                    <div>বাংলাদেশ ফরম নং ৫৩৩৬</div>
+                </div>
+                <!-- Center: title -->
+                <div style="flex:1; text-align:center;">
+                    <div style="font-size:19pt;">কর্তব্যে প্রেরিত পুলিশ অফিসার কর্তৃক বহনীয় হুকুমনামা</div>
+                    <div style="font-size:12pt; margin-top:3pt;">(নিয়ন্ত্রণ নং ১৬৩ এবং ৯০৯)</div>
+                </div>
+                <!-- Right: QR code (encodes the URL to this preview) -->
+                <div style="flex:0 0 22%; text-align:right;">
+                    @if (qrDataUrl) {
+                        <img [src]="qrDataUrl" alt="QR"
+                             style="width:80pt; height:80pt; display:inline-block;" />
+                    }
+                </div>
+            </div>
+
+            <!-- Second header row: M CC No (left)  +  Govt vehicle / date (right) -->
+            <div style="display:flex; align-items:flex-start; margin-top:8pt; font-size:12pt;">
+                <div style="flex:1;">{{ ccNumberLineBn }}</div>
+                <div style="flex:0 0 auto; text-align:right; line-height:1.6;">
+                    @if (vehicleLabelBn) {
+                        <div>{{ vehicleLabelBn }}</div>
+                    }
+                    <div>তারিখঃ {{ letterDateBn }}</div>
+                </div>
+            </div>
+
+            <!-- ── Main bordered grid ───────────────────────────────────── -->
+            <table class="cc-grid" style="width:100%; border-collapse:collapse; margin-top:6pt; font-size:12pt; table-layout:fixed;">
+                <colgroup>
+                    <col style="width:5%;">   <!-- জেলা / স্টেশন (cumulative -40% from original 9%) -->
+                    <col style="width:24%;">  <!-- বাহিনীর পূর্ণ বিবরণ ও নাম -->
+                    <col style="width:6%;">   <!-- গন্তব্যস্থল -->
+                    <col style="width:27%;">  <!-- কাজের বিবরণ -->
+                    <col style="width:10%;">  <!-- প্রস্থান -->
+                    <col style="width:10%;">  <!-- পৌঁছানোর -->
+                    <col style="width:14%;">  <!-- ফেরত আসার অনুমতি -->
+                    <col style="width:4%;">   <!-- মন্তব্য (cumulative ~33% narrower than original 6%) -->
+                </colgroup>
+
+                <thead>
+                    <!-- Row 1: top headers (col 5/6/7 span the time/date line) -->
+                    <tr>
+                        <th rowspan="3" class="cc-cell cc-th">জেলা <br/>এবং <br/>স্টেশন</th>
+                        <th rowspan="3" class="cc-cell cc-th">বাহিনীর পূর্ণ বিবরণ ও নাম</th>
+                        <th rowspan="3" class="cc-cell cc-th">গন্তব্যস্থল</th>
+                        <th rowspan="3" class="cc-cell cc-th">কাজের বিবরণ এবং যতজন চাওয়া হয়েছে</th>
+                        <th colspan="3" class="cc-cell cc-th" style="font-weight:normal;">{{ departureTimeAndDateBn }}</th>
+                        <th rowspan="3" class="cc-cell cc-th">মন্তব্য (ফেরার সময়, তারিখ ইত্যাদি লিখিতে হইবে)</th>
+                    </tr>
+                    <!-- Row 2: sub-headers under the time row -->
+                    <tr>
+                        <th class="cc-cell cc-th">প্রস্থান</th>
+                        <th class="cc-cell cc-th">পৌঁছানোর</th>
+                        <th class="cc-cell cc-th">ফেরত আসার অনুমতি<br/><span style="font-weight:normal; font-size:11pt;">(প্রদানকারী অফিসারের স্বাক্ষরসহ)</span></th>
+                    </tr>
+                    <tr><!-- spacer row so the rowspan=3 top headers sit cleanly --></tr>
+                </thead>
+
+                <tbody>
+                    <tr>
+                        <!-- Col 1: জেলা / স্টেশন (centered) -->
+                        <td class="cc-cell" style="vertical-align:middle; text-align:center; padding:6pt;">
+                            {{ districtAndStationBn || '---' }}
+                        </td>
+
+                        <!-- Col 2: numbered employee list -->
+                        <td class="cc-cell" style="vertical-align:top; padding:6pt;">
+                            @for (line of employeeLines; track $index) {
+                                <div style="padding:1pt 0;">{{ line.serial }} {{ line.text }}</div>
+                            }
+                            @if (employeeLines.length === 0) { <div>---</div> }
+                        </td>
+
+                        <!-- Col 3: গন্তব্যস্থল (centered) -->
+                        <td class="cc-cell" style="vertical-align:middle; text-align:center; padding:6pt;">
+                            {{ destinationBn || '---' }}
+                        </td>
+
+                        <!-- Col 4: কাজের বিবরণ (work description)
+                             Line 1: সূত্রঃ {auth}
+                             Line 2: the Details captured on the movement form. Remarks
+                             belong in the মন্তব্য column, not here. -->
+                        <td colspan="4" class="cc-cell" style="vertical-align:top; padding:6pt;">
+                            <div style="display:flex; gap:4pt; align-items:flex-start;">
+                                <span>সূত্রঃ</span>
+                                @if (movement.auth) {
+                                    <div class="mv-rich" style="flex:1;" [innerHTML]="movement.auth"></div>
+                                }
+                            </div>
+                            @if (movement.detailsInformation) {
+                                <div class="mv-rich" style="margin-top:2pt;" [innerHTML]="movement.detailsInformation"></div>
+                            }
+
+                            <!-- Signature block — one full block per approver (with their own unit/HQ).
+                                 Falls back to a single default block when no approver is set. -->
+                            <div style="margin-top:60pt; text-align:right; padding-right:20px;">
+                                @if (approverBlocks.length > 0) {
+                                    @for (block of approverBlocks; track $index) {
+                                        <div style="display:inline-block; text-align:center; line-height:1.5; margin-left:18pt; vertical-align:top;">
+                                            <div style="height:36pt;"></div>
+                                            <!-- Name is deliberately omitted — the block carries
+                                                 the appointment and unit only. -->
+                                            <div>নির্বাহী কর্মকর্তা</div>
+                                            @for (line of districtAndStationLines; track $index) {
+                                                <div>{{ line }}</div>
+                                            }
+                                        </div>
+                                    }
+                                } @else {
+                                    <div style="display:inline-block; text-align:center; line-height:1.5;">
+                                        <div style="height:36pt;"></div>
+                                        <div>নির্বাহী কর্মকর্তা</div>
+                                        @for (line of districtAndStationLines; track $index) {
+                                            <div>{{ line }}</div>
+                                        }
+                                    </div>
+                                }
+                            </div>
+                        </td>
+
+                        <!-- Col 8: মন্তব্য — Remarks captured on the movement form.
+                             Stays empty (for hand-written notes) when none were entered. -->
+                        <td class="cc-cell" style="vertical-align:top; padding:6pt;">
+                            @if (movement.remarks) {
+                                <div class="mv-rich" [innerHTML]="movement.remarks"></div>
+                            }
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <!-- ── Footnote (inside the paper, directly below the table) ── -->
+            <div class="cc-footnote">
+                দ্রষ্টব্য - কোন বিলম্ব হইলে সঙ্গে সঙ্গে শেষ চার কলামের লিখিত বিবরণ খুঁজিয়া বাহির করিতে হইবে। বিলম্বকারীকে অভিযুক্ত করিতে হইবে। তদন্তকারী অফিসার তাহার কৈফিয়ত হুকুমনামার পর পৃষ্ঠায় লিখিবেন এবং সুপারের কাছে আদেশের জন্য পাঠাইবেন।
+            </div>
+          </div>
+        </div>
+    </div>
+
+    <!-- Floating PDF button for mobile QR-scan view — visible only on
+         small screens where the top toolbar is hidden. -->
+    <button type="button" class="mobile-download-fab no-print"
+            (click)="exportPdf()"
+            [disabled]="exportingPdf"
+            aria-label="Download PDF">
+        @if (exportingPdf) {
+            <i class="pi pi-spin pi-spinner"></i>
+        } @else {
+            <i class="pi pi-download"></i>
+        }
+        <span>PDF</span>
+    </button>
+}
+
+@if (!loading && !error && movement) {
+    <app-movement-files-info [movement]="movement"></app-movement-files-info>
+}

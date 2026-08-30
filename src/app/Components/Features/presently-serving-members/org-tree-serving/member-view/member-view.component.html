@@ -1,0 +1,30 @@
+<div class="member-view">
+    @if (!isEmpty) {
+        <div class="view-header">
+            <span class="view-title">Members in {{ _title() }}</span>
+            <button class="clear-btn" (click)="onClear()">Clear</button>
+        </div>
+
+        <div class="members-list">
+            @if (_loading()) {
+                <div class="loading-state">
+                    <i class="pi pi-spin pi-spinner"></i>
+                </div>
+            } @else if (showEmptyState) {
+                <div class="empty-state">
+                    <i class="pi pi-inbox empty-icon"></i>
+                    <span>Select a node from the org tree to view members</span>
+                </div>
+            } @else {
+                @for (member of _members(); track member.serviceId) {
+                    <app-member-card [member]="member" />
+                }
+            }
+        </div>
+    } @else {
+        <div class="empty-state">
+            <i class="pi pi-inbox empty-icon"></i>
+            <span>Select a node from the org tree to view members</span>
+        </div>
+    }
+</div>

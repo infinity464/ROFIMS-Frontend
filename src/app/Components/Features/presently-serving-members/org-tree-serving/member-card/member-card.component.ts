@@ -1,0 +1,16 @@
+import { Component, Input, ChangeDetectionStrategy } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { RouterModule } from '@angular/router';
+import { EmployeeServiceOverview } from '@/models/employee-service-overview.model';
+
+@Component({
+    selector: 'app-member-card',
+    standalone: true,
+    changeDetection: ChangeDetectionStrategy.OnPush,
+    imports: [CommonModule, RouterModule],
+    templateUrl: './member-card.component.html',
+    styleUrl: './member-card.component.scss'
+})
+export class MemberCardComponent {
+    @Input() member!: EmployeeServiceOverview;
+}

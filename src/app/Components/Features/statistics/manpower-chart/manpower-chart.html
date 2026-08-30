@@ -1,0 +1,98 @@
+<!-- ── Manpower Pie Chart Report ──────────────────────────────────────── -->
+<div class="chart-results-card">
+
+    <!-- Header -->
+    <div class="chart-results-header">
+        <!-- Row 1: toolbar right-aligned -->
+        <div class="chart-toolbar-row">
+            <!-- Toggle checkboxes -->
+            <div class="chart-toggles">
+                <label class="toggle-label">
+                    <input type="checkbox" [checked]="showAuth" (change)="toggleAuth()" />
+                    <span class="toggle-dot auth-dot"></span>
+                    Auth Chart
+                </label>
+                <label class="toggle-label">
+                    <input type="checkbox" [checked]="showHeld" (change)="toggleHeld()" />
+                    <span class="toggle-dot held-dot"></span>
+                    Held Chart
+                </label>
+            </div>
+
+            <!-- Print button -->
+            <button type="button" class="chart-btn-print" (click)="printCharts()"
+                    [disabled]="!showAuth && !showHeld">
+                <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
+                    <path d="M3 5V1h7v4M2 9h9M3 9v3h7V9"
+                          stroke="currentColor" stroke-width="1.5"
+                          stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+                Print
+            </button>
+        </div>
+
+        <!-- RAB org-tree cascade filter (collapsible) -->
+        <app-org-tree-filter (filterChange)="onOrgTreeFilter($event)"></app-org-tree-filter>
+
+        <!-- Row 2: centered title -->
+        <div class="chart-header-title-block">
+            <div class="chart-main-title">MANPOWER DISTRIBUTION CHARTS</div>
+            @if (scopeLine) {
+                <div class="chart-scope-line">{{ scopeLine }}</div>
+            }
+            <div class="chart-date-line">OVERALL MANPOWER SUMMARY</div>
+        </div>
+    </div>
+
+    <!-- Loading skeleton -->
+    <div *ngIf="loading" class="skeleton-wrapper">
+        <div class="skeleton-charts-row">
+            <div class="skeleton-chart"></div>
+            <div class="skeleton-chart"></div>
+        </div>
+    </div>
+
+    <!-- Charts area -->
+    <div class="chart-body" *ngIf="!loading">
+
+        <!-- Empty state -->
+        <div *ngIf="rows.length === 0" class="empty-state">
+            <i class="pi pi-chart-pie"></i>
+            <p>No data found.</p>
+        </div>
+
+        <!-- No chart visible -->
+        <div *ngIf="rows.length > 0 && !showAuth && !showHeld" class="empty-state">
+            <i class="pi pi-eye-slash"></i>
+            <p>Both charts are hidden. Use the toggles above to show them.</p>
+        </div>
+
+        <!-- Charts row -->
+        <div class="charts-row" *ngIf="rows.length > 0 && (showAuth || showHeld)">
+
+            <!-- Auth pie chart -->
+            <div class="chart-panel" *ngIf="showAuth">
+                <div class="chart-panel-title">
+                    <span class="panel-dot auth-dot"></span>
+                    Authorized Strength
+                </div>
+                <div class="chart-canvas-wrap">
+                    <p-chart type="pie" [data]="authData" [options]="chartOptions" [plugins]="chartPlugins"></p-chart>
+                </div>
+            </div>
+
+            <!-- Held pie chart -->
+            <div class="chart-panel" *ngIf="showHeld">
+                <div class="chart-panel-title">
+                    <span class="panel-dot held-dot"></span>
+                    Held Strength
+                </div>
+                <div class="chart-canvas-wrap">
+                    <p-chart type="pie" [data]="heldData" [options]="chartOptions" [plugins]="chartPlugins"></p-chart>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+</div>

@@ -1,0 +1,17 @@
+/* MO-specific page margins.
+   The shared .a4-paper uses a symmetric 6mm horizontal padding; the MO letter is
+   printed with a wide left binding margin and a narrow right one instead:
+
+       left  = 1 inch  = 25.4mm
+       right = 0.4 inch = 10.16mm
+
+   Vertical padding is left to the shared rule. Keep these in step with `padLeft`
+   / `padRight` in buildJsReportPdf() and the Word section margins in
+   notesheet-preview-mo.ts — all three outputs must frame the text identically.
+
+   The container selector lifts specificity above the shared .a4-paper rule, so
+   the override holds regardless of styleUrls ordering. */
+.a4-paper-container .a4-paper {
+    padding-left: 25.4mm;
+    padding-right: 10.16mm;
+}

@@ -1,45 +1,47 @@
 <p-fluid>
-    <div class="mb-5 card">
-        <div class="flex align-items-center gap-3 mb-4">
-            @if (mode !== 'search') {
-                <p-button icon="pi pi-arrow-left" [rounded]="true" [text]="true" severity="secondary" pTooltip="Back to List" (onClick)="goBack()"></p-button>
-            }
-            <h3 class="m-0 text-xl font-bold text-900" style="display: inline-flex; align-items: center; gap: 0.5rem;">
-                Employee Nominee Information
+    <div class="form-card">
+        @if (!hideTitle) {
+            <div class="form-card-header">
+                <h3 class="form-card-title">
+                    Employee Nominee Information
+                    @if (mode === 'view') {
+                        <span class="text-500 text-base font-normal">(View Mode)</span>
+                    }
+                    @if (mode === 'edit') {
+                        <span class="text-primary text-base font-normal">(Edit Mode)</span>
+                    }
+                </h3>
                 @if (mode === 'view') {
-                    <span class="text-500 text-base font-normal">(View Mode)</span>
-                    <p-button label="Edit" icon="pi pi-pencil" size="small" (onClick)="enableEditMode()"></p-button>
+                    <div class="form-card-actions">
+                        <p-button
+                            label="Edit"
+                            icon="pi pi-pencil" [class.perm-hidden]="!canUpdate"
+                            (onClick)="enableEditMode()">
+                        </p-button>
+                    </div>
                 }
-                @if (mode === 'edit') {
-                    <span class="text-primary text-base font-normal">(Edit Mode)</span>
-                }
-            </h3>
-        </div>
-
-        @if (mode === 'search') {
-            <app-employee-search
-                (onEmployeeFound)="onEmployeeSearchFound($event)"
-                (onSearchReset)="onEmployeeSearchReset()">
-            </app-employee-search>
+            </div>
         }
 
-        @if (mode !== 'search' && employeeBasicInfo) {
-            <div class="surface-50 border-round-2xl p-4 mb-4">
-                <div class="flex flex-wrap gap-4">
-                    <div><span class="text-500 text-sm">Name:</span><span class="ml-2 font-semibold">{{ employeeBasicInfo.fullNameEN || employeeBasicInfo.FullNameEN || 'N/A' }}</span></div>
-                    <div><span class="text-500 text-sm">RAB ID:</span><span class="ml-2 font-semibold">{{ employeeBasicInfo.rabid || employeeBasicInfo.Rabid || 'N/A' }}</span></div>
-                    <div><span class="text-500 text-sm">Service ID:</span><span class="ml-2 font-semibold">{{ employeeBasicInfo.serviceId || employeeBasicInfo.ServiceId || 'N/A' }}</span></div>
-                </div>
+        @if (mode === 'search') {
+            <div class="form-section">
+                <app-employee-search
+                    [exMemberNotice]="true"
+                    (onEmployeeFound)="onEmployeeSearchFound($event)"
+                    (onSearchReset)="onEmployeeSearchReset()">
+                </app-employee-search>
             </div>
         }
 
         @if (employeeFound) {
             <form [formGroup]="nomineeForm" class="nominee-section">
-                <div class="surface-50 border-round-2xl p-4 mb-4">
-                    <div class="flex justify-content-between align-items-center gap-3 mb-3 flex-wrap">
-                        <h4 class="m-0 text-lg font-semibold text-900">Nominee Information</h4>
+                <div class="form-section">
+                    <div class="flex align-items-center gap-3 mb-3 flex-wrap">
+                        <h3 class="form-subtitle m-0">Nominee Information</h3>
                         @if (!isReadonly) {
-                            <p-button label="+ Add member" icon="pi pi-user-plus" (onClick)="openAddMemberModal()"></p-button>
+                            <div class="ml-auto">
+                                <p-button label="Add member" icon="pi pi-user" (onClick)="openAddMemberModal()"></p-button>
+                            </div>
                         }
                     </div>
 
@@ -82,7 +84,7 @@
                                     </td>
                                     @if (!isReadonly) {
                                         <td>
-                                            <p-button icon="pi pi-trash" [rounded]="true" [text]="true" severity="danger" pTooltip="Remove" (onClick)="removeNominee(i)"></p-button>
+                                            <p-button icon="pi pi-trash" [class.perm-hidden]="!canDelete" [rounded]="true" [text]="true" severity="danger" pTooltip="Remove" (onClick)="removeNominee(i)"></p-button>
                                         </td>
                                     }
                                 </tr>
@@ -90,7 +92,7 @@
                             <ng-template pTemplate="emptymessage">
                                 <tr>
                                     <td [attr.colspan]="isReadonly ? 4 : 5" class="text-center py-4 text-500">
-                                        No nominees added. Click "+ Add member" to select from family members.
+                                        No nominees added. Click "Add member" to select from family members.
                                     </td>
                                 </tr>
                             </ng-template>
@@ -107,24 +109,55 @@
                             <input pInputText class="w-full" formControlName="remarks" placeholder="Enter remarks" [readonly]="isReadonly" />
                         </div>
                     </div>
-                    @if (!isReadonly) {
-                        <div class="mb-4">
-                            <label class="font-semibold block mb-2 text-700">Document Upload</label>
-                            <p-fileUpload mode="basic" chooseLabel="Choose File" [auto]="false" [customUpload]="true" (onSelect)="nomineeForm.patchValue({ document: $event.files?.[0] })"></p-fileUpload>
-                        </div>
-                    }
+
+                    <!-- File References (Supporting Documents – for first nominee in list) -->
+                    <div class="file-section-compact">
+                        <app-file-references-form
+                            #fileReferencesForm
+                            [fileRows]="fileRows"
+                            [isViewMode]="isReadonly"
+                            title="Supporting Documents"
+                            (fileRowsChange)="onFileRowsChange($event)"
+                            (onDownloadFile)="onDownloadFile($event)">
+                        </app-file-references-form>
+                    </div>
                 </div>
             </form>
 
-            <div class="flex justify-end mt-4 gap-2">
-                @if (mode === 'view') {
-                    <p-button label="Back to List" icon="pi pi-arrow-left" severity="secondary" [outlined]="true" (onClick)="goBack()"></p-button>
-                    <p-button label="Edit" icon="pi pi-pencil" (onClick)="enableEditMode()"></p-button>
-                } @else {
-                    <p-button label="Reset" icon="pi pi-refresh" severity="secondary" [outlined]="true" (onClick)="resetForm()" [disabled]="isSaving"></p-button>
-                    <p-button label="Save" icon="pi pi-check" (onClick)="saveData()" [loading]="isSaving" [disabled]="isSaving"></p-button>
-                }
-            </div>
+            @if (mode === 'view') {
+                <div class="form-actions">
+                    <p-button
+                        type="button"
+                        label="Edit"
+                        icon="pi pi-pencil" [class.perm-hidden]="!canUpdate"
+                        styleClass="form-btn-primary"
+                        (onClick)="enableEditMode()">
+                    </p-button>
+                </div>
+            }
+            @else {
+                <div class="form-actions">
+                    <p-button
+                        type="button"
+                        label="Reset"
+                        icon="pi pi-refresh"
+                        severity="secondary"
+                        [outlined]="true"
+                        styleClass="form-btn-secondary"
+                        (onClick)="resetForm()"
+                        [disabled]="isSaving">
+                    </p-button>
+                    <p-button
+                        type="button"
+                        label="Save"
+                        icon="pi pi-check"
+                        styleClass="form-btn-primary"
+                        (onClick)="saveData()"
+                        [loading]="isSaving"
+                        [disabled]="isSaving">
+                    </p-button>
+                </div>
+            }
         }
     </div>
 
@@ -135,6 +168,7 @@
         [modal]="true"
         [style]="{ width: '600px' }"
         [closable]="true"
+        [contentStyle]="{'border-top': '2px solid var(--primary-color)'}"
         (onHide)="closeAddMemberModal()"
     >
         <p class="text-600 mb-3">Family members for this employee. Select one or more, then click "Add Selected".</p>
@@ -171,9 +205,10 @@
                 </tr>
             </ng-template>
         </p-table>
-        <ng-template pTemplate="footer">
+        <div class="flex justify-end gap-2 mt-4 pt-3 border-top-1 surface-border">
             <p-button label="Cancel" severity="secondary" [text]="true" (onClick)="closeAddMemberModal()"></p-button>
             <p-button label="Add Selected" icon="pi pi-plus" (onClick)="onAddSelectedMembers()"></p-button>
-        </ng-template>
+        </div>
     </p-dialog>
+    <p-confirmDialog />
 </p-fluid>

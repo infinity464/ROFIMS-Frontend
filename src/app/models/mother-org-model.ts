@@ -11,6 +11,8 @@ export interface MotherOrganizationModel {
   locationEN?: string;
   locationBN?: string;
 
+  districtId?: number | null;
+
   email?: string;
 
   status?: boolean;
@@ -18,6 +20,9 @@ export interface MotherOrganizationModel {
   remarks?: string;
 
   parentOrg?: number;
+
+  /** Backend MotherOrg.SortOrder — drives org-level ordering in reports. */
+  sortOrder?: number | null;
 
   createdBy?: string;
   createdDate?: string;

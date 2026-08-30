@@ -1,0 +1,38 @@
+.ns-signatory {
+    display: flex;
+    flex-direction: column;
+    gap: 0.125rem;
+    align-items: flex-start;
+
+    &.align-right {
+        align-items: flex-end;
+        text-align: right;
+    }
+}
+
+.ns-signatory-line {
+    width: 160px;
+    border-bottom: 1px solid #000;
+    margin-bottom: 0.25rem;
+}
+
+.ns-signatory.align-right .ns-signatory-line {
+    margin-left: auto;
+}
+
+.ns-signatory-role {
+    font-weight: 600;
+    font-size: 0.8125rem;
+    color: var(--primary-color);
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    margin-bottom: 0.125rem;
+}
+
+.ns-signatory-signature {
+    width: 150px;
+    height: 50px;
+    object-fit: contain;
+    margin-bottom: 0.25rem;
+    display: block;
+}

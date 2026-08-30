@@ -7,8 +7,12 @@ import { Checkbox } from 'primeng/checkbox';
 import { Select } from 'primeng/select';
 import { ButtonModule } from 'primeng/button';
 import { InputTextModule } from 'primeng/inputtext';
+import { DialogModule } from 'primeng/dialog';
+import { TooltipModule } from 'primeng/tooltip';
 import { MessageService } from 'primeng/api';
 import { forkJoin } from 'rxjs';
+import { MasterBasicSetupService } from '@/Components/basic-setup/shared/services/MasterBasicSetupService';
+import { SharedService } from '@/shared/services/shared-service';
 
 export interface AddressData {
     employeeId?: number;
@@ -24,9 +28,11 @@ export interface AddressData {
 
 export interface AddressFormConfig {
     title: string;
-    addressType: 'permanent' | 'present' | 'wife' | 'father' | 'mother' | 'emergency' | 'wifePresent';
+    addressType: 'permanent' | 'present' | 'spouse' | 'father' | 'mother' | 'emergency' | 'spousePresent';
     showSameAsPresent?: boolean;
     sameAsLabel?: string; // Custom label for "Same as" checkbox
+    showSameAsSecondary?: boolean; // Show an additional "Same as" checkbox (rendered before the primary one)
+    sameAsSecondaryLabel?: string; // Custom label for the secondary "Same as" checkbox
     employeeId?: number;
     initialData?: Partial<AddressData>;
 }
@@ -36,20 +42,24 @@ export interface AddressFormConfig {
     standalone: true,
     templateUrl: './address-form.html',
     styleUrls: ['./address-form.scss'],
-    imports: [Fluid, InputTextModule, Checkbox, Select, ButtonModule, CommonModule, FormsModule, ReactiveFormsModule]
+    imports: [Fluid, InputTextModule, Checkbox, Select, ButtonModule, CommonModule, FormsModule, ReactiveFormsModule, DialogModule, TooltipModule]
 })
 export class AddressFormComponent implements OnInit, OnChanges {
     @Input() config!: AddressFormConfig;
     @Input() savedAddressId?: number; // Generated AddressId after save
     @Input() showButtons: boolean = true; // Control visibility of save/cancel buttons
     @Input() showCard: boolean = true; // Control visibility of card wrapper
+    /** When false, the inner surface-50 wrapper is omitted so content aligns with parent (e.g. RAB ID section). */
+    @Input() showInnerWrapper: boolean = true;
     @Input() isReadonly: boolean = false; // Control readonly mode
     @Input() initialAddressData?: AddressData; // Initial data for view/edit mode
     @Input() isOptional: boolean = false; // When true, fields are not required
+    @Input() sameAsInline: boolean = false; // When true, render the "Same as" checkbox on the title line
 
     @Output() onSave = new EventEmitter<AddressData>();
     @Output() onCancel = new EventEmitter<void>();
     @Output() onSameAsPresentRequest = new EventEmitter<void>(); // Request parent for source address data
+    @Output() onSameAsSecondaryRequest = new EventEmitter<void>(); // Request parent for secondary source address data
 
     addressForm!: FormGroup;
 
@@ -59,10 +69,19 @@ export class AddressFormComponent implements OnInit, OnChanges {
     upazilas: any[] = [];
     postOffices: any[] = [];
 
+    // Add Post Office dialog
+    showPostOfficeDialog: boolean = false;
+    newPostOfficeNameEN: string = '';
+    newPostOfficeNameBN: string = '';
+    newPostOfficePostCode: string = '';
+    isSavingPostOffice: boolean = false;
+
     constructor(
         private fb: FormBuilder,
         private commonCodeService: CommonCodeService,
-        private messageService: MessageService
+        private messageService: MessageService,
+        private masterBasicSetupService: MasterBasicSetupService,
+        private sharedService: SharedService
     ) {}
 
     ngOnInit(): void {
@@ -75,6 +94,7 @@ export class AddressFormComponent implements OnInit, OnChanges {
 
         this.loadDivisions();
         this.addressForm.get('sameAsPresent')!.valueChanges.subscribe((checked) => this.onSameAsPresentChange(checked));
+        this.addressForm.get('sameAsSecondary')!.valueChanges.subscribe((checked) => this.onSameAsSecondaryChange(checked));
 
         // If initial data is provided, load it (for view/edit mode)
         if (this.initialAddressData) {
@@ -110,10 +130,11 @@ export class AddressFormComponent implements OnInit, OnChanges {
         const requiredValidator = this.isOptional ? [] : [Validators.required];
         this.addressForm = this.fb.group({
             sameAsPresent: [false],
+            sameAsSecondary: [false],
             division: [null, requiredValidator],
             district: [null, requiredValidator],
-            upazila: [null, requiredValidator],
-            postOffice: [null, requiredValidator],
+            upazila: [null],
+            postOffice: [null],
             postCode: ['', [Validators.maxLength(10)]],
             villageEnglish: [''],
             villageBangla: [''],
@@ -249,10 +270,51 @@ export class AddressFormComponent implements OnInit, OnChanges {
         this.loadPO(upazilaId)
     }
 
+    onPostOfficeChange(postOfficeId: number): void {
+        // Auto-fill Post Code from the selected post office's commCode (postal code).
+        // The field stays editable — the user can override the prefilled value.
+        const selected = this.postOffices.find((p: any) => (p.codeId ?? p.CodeId) === postOfficeId);
+        const postalCode = selected?.commCode ?? selected?.CommCode ?? null;
+        if (postalCode != null && postalCode !== '') {
+            this.addressForm.patchValue({ postCode: String(postalCode) });
+        }
+    }
+
     onSameAsPresentChange(checked: boolean): void {
         if (checked) {
+            // Uncheck the secondary checkbox to avoid conflicting sources
+            if (this.addressForm.get('sameAsSecondary')?.value) {
+                this.addressForm.get('sameAsSecondary')!.setValue(false, { emitEvent: false });
+            }
             // Emit event to request source address data from parent
             this.onSameAsPresentRequest.emit();
+        } else {
+            this.enableAddressFields();
+            // Reset form when unchecked
+            this.addressForm.patchValue({
+                division: null,
+                district: null,
+                upazila: null,
+                postOffice: null,
+                postCode: '',
+                villageEnglish: '',
+                villageBangla: '',
+                houseRoad: ''
+            });
+            this.districts = [];
+            this.upazilas = [];
+            this.postOffices = [];
+        }
+    }
+
+    onSameAsSecondaryChange(checked: boolean): void {
+        if (checked) {
+            // Uncheck the primary checkbox to avoid conflicting sources
+            if (this.addressForm.get('sameAsPresent')?.value) {
+                this.addressForm.get('sameAsPresent')!.setValue(false, { emitEvent: false });
+            }
+            // Emit event to request secondary source address data from parent
+            this.onSameAsSecondaryRequest.emit();
         } else {
             this.enableAddressFields();
             // Reset form when unchecked
@@ -280,7 +342,7 @@ export class AddressFormComponent implements OnInit, OnChanges {
                 summary: 'Warning',
                 detail: 'Please fill Permanent Address first'
             });
-            this.addressForm.patchValue({ sameAsPresent: false });
+            this.addressForm.patchValue({ sameAsPresent: false, sameAsSecondary: false });
             return;
         }
 
@@ -325,9 +387,9 @@ export class AddressFormComponent implements OnInit, OnChanges {
                     this.messageService.add({
                         severity: 'error',
                         summary: 'Error',
-                        detail: 'Failed to load address data'
+                        detail: err?.error?.message || 'Failed to load address data'
                     });
-                    this.addressForm.patchValue({ sameAsPresent: false });
+                    this.addressForm.patchValue({ sameAsPresent: false, sameAsSecondary: false });
                 }
             });
         } else {
@@ -412,9 +474,123 @@ export class AddressFormComponent implements OnInit, OnChanges {
         return this.config.sameAsLabel || 'Same as Permanent Address';
     }
 
+    get showSameAsSecondaryCheckbox(): boolean {
+        return this.config.showSameAsSecondary === true;
+    }
+
+    get sameAsSecondaryCheckboxLabel(): string {
+        return this.config.sameAsSecondaryLabel || 'Same As Permanent';
+    }
+
     // Check if form has meaningful data (division is selected)
     hasData(): boolean {
         const division = this.addressForm.get('division')?.value;
         return division !== null && division !== undefined;
+    }
+
+    /** Clear all fields and cascading dropdown options. Re-enables fields in case they were disabled by "same as" mode. */
+    reset(): void {
+        this.enableAddressFields();
+        this.addressForm.reset({
+            sameAsPresent: false,
+            sameAsSecondary: false,
+            division: null,
+            district: null,
+            upazila: null,
+            postOffice: null,
+            postCode: '',
+            villageEnglish: '',
+            villageBangla: '',
+            houseRoad: ''
+        });
+        this.districts = [];
+        this.upazilas = [];
+        this.postOffices = [];
+    }
+
+    // --- Add Post Office dialog ---
+
+    openAddPostOfficeDialog(): void {
+        this.newPostOfficeNameEN = '';
+        this.newPostOfficeNameBN = '';
+        this.newPostOfficePostCode = '';
+        this.showPostOfficeDialog = true;
+    }
+
+    getSelectedDivisionName(): string {
+        const id = this.addressForm.get('division')?.value;
+        return this.divisions.find(d => d.codeId === id)?.codeValueEN || '';
+    }
+
+    getSelectedDistrictName(): string {
+        const id = this.addressForm.get('district')?.value;
+        return this.districts.find(d => d.codeId === id)?.codeValueEN || '';
+    }
+
+    getSelectedUpazilaName(): string {
+        const id = this.addressForm.get('upazila')?.value;
+        return this.upazilas.find(d => d.codeId === id)?.codeValueEN || '';
+    }
+
+    saveNewPostOffice(): void {
+        if (!this.newPostOfficeNameEN?.trim()) return;
+
+        const upazilaId = this.addressForm.get('upazila')?.value;
+        if (!upazilaId) return;
+
+        this.isSavingPostOffice = true;
+        const currentUser = this.sharedService.getCurrentUser();
+        const currentDateTime = this.sharedService.getCurrentDateTime();
+
+        const payload = {
+            orgId: 0,
+            codeId: 0,
+            codeType: 'PostOffice',
+            codeValueEN: this.newPostOfficeNameEN.trim(),
+            codeValueBN: this.newPostOfficeNameBN?.trim() || null,
+            commCode: this.newPostOfficePostCode?.trim() || null,
+            displayCodeValueEN: null,
+            displayCodeValueBN: null,
+            status: true,
+            parentCodeId: upazilaId,
+            sortOrder: null,
+            level: null,
+            createdBy: currentUser,
+            createdDate: currentDateTime,
+            lastUpdatedBy: currentUser,
+            lastupdate: currentDateTime
+        };
+
+        this.masterBasicSetupService.create(payload as any).subscribe({
+            next: (res) => {
+                this.messageService.add({
+                    severity: 'success',
+                    summary: 'Success',
+                    detail: 'Post Office created successfully'
+                });
+                this.showPostOfficeDialog = false;
+                this.isSavingPostOffice = false;
+
+                // Reload post offices and auto-select the new one
+                this.commonCodeService.getAllActiveCommonCodesByParentId(upazilaId).subscribe({
+                    next: (postOffices) => {
+                        this.postOffices = postOffices;
+                        if (res?.codeId) {
+                            this.addressForm.patchValue({ postOffice: res.codeId });
+                            this.onPostOfficeChange(res.codeId);
+                        }
+                    }
+                });
+            },
+            error: (err) => {
+                console.error('Error creating post office:', err);
+                this.messageService.add({
+                    severity: 'error',
+                    summary: 'Error',
+                    detail: err?.error?.message || 'Failed to create post office'
+                });
+                this.isSavingPostOffice = false;
+            }
+        });
     }
 }

@@ -1,0 +1,71 @@
+<div class="employee-reports-page">
+    <div class="report-type-card">
+        <div class="report-page-header">
+            <h1 class="report-page-title">Individual Personnel Report</h1>
+        </div>
+        <div class="report-type-row">
+            <div class="report-type-field">
+                <div class="rt-label">Report Type</div>
+                <div class="rt-select-wrap">
+                    <p-select
+                        [options]="reportTypes"
+                        [(ngModel)]="reportType"
+                        optionLabel="label"
+                        optionValue="value"
+                        [filter]="true"
+                        filterBy="label"
+                        [inputId]="'individual-report-select'"
+                        placeholder="Select Report"
+                        appendTo="body" />
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div>
+        @switch (reportType) {
+            @case ('course') {
+                <app-report-course [lang]="reportLang" (langToggle)="toggleReportLang()" />
+            }
+            @case ('education') {
+                <app-report-education-individual [lang]="reportLang" (langToggle)="toggleReportLang()" />
+            }
+            @case ('address') {
+                <app-report-address-individual [lang]="reportLang" (langToggle)="toggleReportLang()" />
+            }
+            @case ('nominee') {
+                <app-report-nominee-individual [lang]="reportLang" (langToggle)="toggleReportLang()" />
+            }
+            @case ('rab-service') {
+                <app-report-rab-service-individual [lang]="reportLang" (langToggle)="toggleReportLang()" />
+            }
+            @case ('mo-service') {
+                <app-report-mo-service-individual [lang]="reportLang" (langToggle)="toggleReportLang()" />
+            }
+            @case ('promotion') {
+                <app-report-promotion-individual [lang]="reportLang" (langToggle)="toggleReportLang()" />
+            }
+            @case ('rank-confirmation') {
+                <app-report-rank-confirmation-individual [lang]="reportLang" (langToggle)="toggleReportLang()" />
+            }
+            @case ('discipline') {
+                <app-report-discipline-individual [lang]="reportLang" (langToggle)="toggleReportLang()" />
+            }
+            @case ('bank') {
+                <app-report-bank-individual [lang]="reportLang" (langToggle)="toggleReportLang()" />
+            }
+            @case ('foreign-visit') {
+                <app-report-foreign-visit-individual [lang]="reportLang" (langToggle)="toggleReportLang()" />
+            }
+            @case ('leave') {
+                <app-report-leave-individual [lang]="reportLang" (langToggle)="toggleReportLang()" />
+            }
+            @case ('bio-data') {
+                <app-report-bio-data-individual [lang]="reportLang" (langToggle)="toggleReportLang()" />
+            }
+            @case ('bio-data-full') {
+                <app-report-bio-data-full-individual [lang]="reportLang" (langToggle)="toggleReportLang()" />
+            }
+        }
+    </div>
+</div>

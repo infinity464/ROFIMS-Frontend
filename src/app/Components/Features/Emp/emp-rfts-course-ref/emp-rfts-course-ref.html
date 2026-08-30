@@ -1,0 +1,323 @@
+<p-toast position="top-center"></p-toast>
+
+<p-fluid>
+    <p-card>
+        <ng-template pTemplate="header">
+            <div class="flex items-center justify-between gap-2 p-3 flex-wrap">
+                <span class="text-xl font-semibold">
+                    {{ editingId ? 'Edit Selection Member for RFTS' : 'Selection Member for RFTS' }}
+                </span>
+                <p-button label="Selection List" icon="pi pi-list" severity="secondary" [outlined]="true"
+                    size="small" [fluid]="false" routerLink="/emp-rfts-course-list"></p-button>
+            </div>
+        </ng-template>
+
+        <!-- ============== Course details form ==============
+             Course No / Reference No + a single Date. Doubles as the edit form:
+             picking a row from the list below loads it here with its members. -->
+        <div class="rounded-xl border border-surface bg-surface-50 dark:bg-surface-800 p-4 mb-4">
+            <div class="flex items-center gap-2 mb-3">
+                <i class="pi pi-book text-color-secondary"></i>
+                <span class="font-semibold text-lg">Course details</span>
+                @if (editingId) {
+                    <span class="inline-flex items-center bg-primary-100 text-primary-700 dark:bg-primary-900 dark:text-primary-100 rounded-full px-2 text-sm font-semibold">
+                        Editing #{{ editingId }}
+                    </span>
+                }
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+                <div>
+                    <label class="font-semibold block mb-2 text-700">Course No / Reference No <span class="text-red-500">*</span></label>
+                    <input pInputText [(ngModel)]="courseRefNo" class="w-full" maxlength="100"
+                        placeholder="e.g. RFTS-2026-001" />
+                </div>
+                <div>
+                    <label class="font-semibold block mb-2 text-700">Date <span class="text-red-500">*</span></label>
+                    <p-datepicker [(ngModel)]="courseDate" dateFormat="dd-mm-yy" [showIcon]="true"
+                        placeholder="dd-mm-yyyy" appendTo="body" styleClass="w-full" [style]="{ width: '100%' }"></p-datepicker>
+                </div>
+                @if (editingId) {
+                    <div>
+                        <label class="font-semibold block mb-2 text-700">Status</label>
+                        <p-select [options]="statusOptions" [(ngModel)]="status" optionLabel="label" optionValue="value"
+                            styleClass="w-full" appendTo="body"></p-select>
+                    </div>
+                }
+                <div class="md:col-span-3">
+                    <label class="font-semibold block mb-2 text-700">Remarks</label>
+                    <textarea pTextarea [(ngModel)]="remarks" rows="2" class="w-full" maxlength="500"
+                        placeholder="Optional"></textarea>
+                </div>
+            </div>
+        </div>
+
+        <!-- ============== Filter panel ==============
+             Members pending RFTS (IsRFTSComplted null or false). Loads the full
+             pending list on init; filters narrow it server-side, the search box
+             narrows the loaded list client-side. -->
+        <div class="rounded-xl border border-surface bg-surface-50 dark:bg-surface-800 p-4 mb-4">
+            <div class="flex items-center justify-between mb-3 cursor-pointer" (click)="toggleFilter()">
+                <div class="flex items-center gap-2">
+                    <i class="pi pi-filter text-color-secondary"></i>
+                    <span class="font-semibold text-lg">Search &amp; filter</span>
+                    @if (activeFilterCount > 0) {
+                        <span class="inline-flex items-center justify-center bg-primary-100 text-primary-700 dark:bg-primary-900 dark:text-primary-100 rounded-full px-2 text-sm font-semibold">{{ activeFilterCount }} active</span>
+                    }
+                </div>
+                <i class="pi" [ngClass]="filterOpen ? 'pi-chevron-up' : 'pi-chevron-down'"></i>
+            </div>
+
+            @if (filterOpen) {
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-3 mb-3">
+                    <div>
+                        <label class="font-semibold block mb-2 text-700">Mother Organization</label>
+                        <p-select [options]="orgOptions" [(ngModel)]="selectedOrgId" (ngModelChange)="onOrgChange()"
+                            optionLabel="orgNameEN" optionValue="orgId" placeholder="Select" styleClass="w-full"
+                            [filter]="true" [showClear]="true" appendTo="body"></p-select>
+                    </div>
+                    <div>
+                        <label class="font-semibold block mb-2 text-700">Member Type</label>
+                        <p-select [options]="memberTypeOptions" [(ngModel)]="selectedMemberTypeId" (ngModelChange)="onFilterChange()"
+                            optionLabel="label" optionValue="value" placeholder="Select" styleClass="w-full"
+                            [showClear]="true" appendTo="body"></p-select>
+                    </div>
+                    <div>
+                        <label class="font-semibold block mb-2 text-700">Rank</label>
+                        <p-select [options]="rankOptions" [(ngModel)]="selectedRankId" (ngModelChange)="onFilterChange()"
+                            optionLabel="label" optionValue="value" placeholder="Select" styleClass="w-full"
+                            [disabled]="selectedOrgId == null" [showClear]="true" appendTo="body"></p-select>
+                    </div>
+                    <div>
+                        <label class="font-semibold block mb-2 text-700">Trade</label>
+                        <p-select [options]="tradeOptions" [(ngModel)]="selectedTradeId" (ngModelChange)="onFilterChange()"
+                            optionLabel="label" optionValue="value" placeholder="Select" styleClass="w-full"
+                            [disabled]="selectedOrgId == null" [showClear]="true" appendTo="body"></p-select>
+                    </div>
+                    <div>
+                        <label class="font-semibold block mb-2 text-700">Date of joining from</label>
+                        <p-datepicker [(ngModel)]="joiningDateFrom" (ngModelChange)="onFilterChange()" dateFormat="dd-mm-yy"
+                            [showIcon]="true" placeholder="dd-mm-yyyy" appendTo="body" styleClass="w-full"></p-datepicker>
+                    </div>
+                    <div>
+                        <label class="font-semibold block mb-2 text-700">Date of joining to</label>
+                        <p-datepicker [(ngModel)]="joiningDateTo" (ngModelChange)="onFilterChange()" dateFormat="dd-mm-yy"
+                            [showIcon]="true" placeholder="dd-mm-yyyy" appendTo="body" styleClass="w-full"></p-datepicker>
+                    </div>
+                </div>
+                <div class="flex justify-end gap-2">
+                    <p-button label="Clear" icon="pi pi-times" severity="secondary" [outlined]="true" size="small" [fluid]="false" (onClick)="clearFilters()"></p-button>
+                    <p-button label="Search" icon="pi pi-search" size="small" [fluid]="false" (onClick)="onFilterChange()" [loading]="membersLoading"></p-button>
+                </div>
+            }
+        </div>
+
+        <!-- ============== Members Eligible for RFTS ============== -->
+        <div class="rounded-xl border border-surface bg-surface-50 dark:bg-surface-800 p-4 mb-4">
+            <div class="flex items-center justify-between mb-3 flex-wrap gap-2">
+                <div class="flex items-center gap-2">
+                    <i class="pi pi-users text-color-secondary"></i>
+                    <span class="font-semibold text-lg">Members Eligible for RFTS</span>
+                    <span class="inline-flex items-center justify-center bg-primary-100 text-primary-700 dark:bg-primary-900 dark:text-primary-100 rounded-full px-2 text-sm font-semibold" style="min-width: 1.5rem; height: 1.5rem;">
+                        {{ filteredList.length }}
+                    </span>
+                    @if (selectedCount > 0) {
+                        <span class="text-sm text-color-secondary">· {{ selectedCount }} selected</span>
+                        <p-button label="Clear selection" severity="secondary" [outlined]="true" size="small" [fluid]="false" (onClick)="clearSelection()"></p-button>
+                    }
+                </div>
+                <p-iconfield iconPosition="left">
+                    <p-inputicon styleClass="pi pi-search"></p-inputicon>
+                    <input pInputText type="text" placeholder="Search by Name / Service ID / RAB ID"
+                        [(ngModel)]="memberSearchText" (ngModelChange)="onMemberSearchChange()" [style]="{ paddingLeft: '2.5rem' }" />
+                </p-iconfield>
+            </div>
+
+            <p-table
+                [value]="filteredList"
+                [loading]="membersLoading"
+                dataKey="employeeID"
+                [first]="memberFirst"
+                [rows]="memberRows"
+                [paginator]="true"
+                (onPage)="onMemberPage($event)"
+                [rowsPerPageOptions]="[10, 20, 50, 100, 500]"
+                [tableStyle]="{ 'min-width': '60rem' }"
+                styleClass="p-datatable-sm"
+                paginatorDropdownAppendTo="body"
+                currentPageReportTemplate="Showing {first} – {last} of {totalRecords}"
+                [showCurrentPageReport]="true">
+                <ng-template pTemplate="header">
+                    <tr>
+                        <th style="width: 2.5rem">
+                            <!-- Left enabled when the page has rows but none are
+                                 selectable, so the click can explain why. -->
+                            <input #selectAllCb type="checkbox"
+                                [checked]="isAllVisibleSelected"
+                                [indeterminate]="isVisibleIndeterminate"
+                                [disabled]="(filteredList?.length ?? 0) === 0"
+                                [class.opacity-40]="hasNoSelectableRows"
+                                [style.cursor]="hasNoSelectableRows ? 'not-allowed' : 'pointer'"
+                                (change)="toggleSelectAllVisible(selectAllCb.checked, selectAllCb)"
+                                [pTooltip]="hasNoSelectableRows ? 'RAB ID not generated yet for any member on this page' : 'Select all on this page'"
+                                tooltipPosition="top" />
+                        </th>
+                        <th style="width: 4rem">Ser</th>
+                        <th>Service ID</th>
+                        <th>Rank</th>
+                        <th>Corps</th>
+                        <th>Trade</th>
+                        <th>Name</th>
+                        <th>Mother Unit</th>
+                        <th>Date of Joining</th>
+                        <th>RAB ID</th>
+                        @if (canUpdate) {
+                            <th style="width: 12rem">Action</th>
+                        }
+                    </tr>
+                </ng-template>
+                <ng-template pTemplate="body" let-row let-rowIndex="rowIndex">
+                    <tr>
+                        <td>
+                            <!-- Not [disabled]: a disabled input fires no events, so a
+                                 click could not explain why the row is unavailable.
+                                 The component refuses the selection instead. -->
+                            <input #cb type="checkbox"
+                                [checked]="isRowSelected(row)"
+                                [class.opacity-40]="!isSelectable(row)"
+                                [style.cursor]="isSelectable(row) ? 'pointer' : 'not-allowed'"
+                                [pTooltip]="selectTooltip(row)" tooltipPosition="top"
+                                (change)="onRowSelectionChange(row, cb.checked, cb)" />
+                        </td>
+                        <td>{{ rowIndex + 1 }}</td>
+                        <td style="white-space: nowrap"><span class="font-semibold">{{ getVal(row, 'serviceId', 'ServiceId') || '—' }}</span></td>
+                        <td>{{ getVal(row, 'rank', 'Rank') || '—' }}</td>
+                        <td>{{ getVal(row, 'corps', 'Corps') || '—' }}</td>
+                        <td>{{ getVal(row, 'trade', 'Trade') || '—' }}</td>
+                        <td>{{ getVal(row, 'fullNameEN', 'FullNameEN') || '—' }}{{ getVal(row, 'fullNameBN', 'FullNameBN') ? ' (' + getVal(row, 'fullNameBN', 'FullNameBN') + ')' : '' }}</td>
+                        <td>{{ getVal(row, 'motherOrganization', 'MotherOrganization') || '—' }}</td>
+                        <td style="white-space: nowrap">{{ formatDate(getVal(row, 'joiningDate', 'JoiningDate')) }}</td>
+                        <td style="white-space: nowrap">{{ getVal(row, 'rabid', 'rabId', 'rabID', 'RABID') || '—' }}</td>
+                        @if (canUpdate) {
+                            <td style="white-space: nowrap">
+                                <p-button label="Not Applicable" icon="pi pi-ban" severity="warn" [outlined]="true"
+                                    size="small" [fluid]="false" (onClick)="openMarkNotApplicable(row)"
+                                    pTooltip="Exempt this member from RAB Orientation Training"
+                                    tooltipPosition="top"></p-button>
+                            </td>
+                        }
+                    </tr>
+                </ng-template>
+                <ng-template pTemplate="emptymessage">
+                    <tr>
+                        <td [attr.colspan]="canUpdate ? 11 : 10" class="text-center p-4">No members eligible for RFTS found.</td>
+                    </tr>
+                </ng-template>
+            </p-table>
+        </div>
+
+        <!-- ============== Selected members ==============
+             Its own table so members carried over from a saved course stay
+             visible even when the filters above exclude them. -->
+        @if (selectedCount > 0) {
+            <div class="rounded-xl border border-surface bg-surface-50 dark:bg-surface-800 p-4 mb-4">
+                <div class="flex items-center gap-2 mb-3">
+                    <i class="pi pi-check-square text-color-secondary"></i>
+                    <span class="font-semibold text-lg">Selected members</span>
+                    <span class="inline-flex items-center justify-center bg-primary-100 text-primary-700 dark:bg-primary-900 dark:text-primary-100 rounded-full px-2 text-sm font-semibold" style="min-width: 1.5rem; height: 1.5rem;">
+                        {{ selectedCount }}
+                    </span>
+                </div>
+
+                <p-table
+                    [value]="selectedMembers"
+                    dataKey="employeeId"
+                    [rows]="10"
+                    [paginator]="selectedCount > 10"
+                    [rowsPerPageOptions]="[10, 20, 50]"
+                    [tableStyle]="{ 'min-width': '48rem' }"
+                    styleClass="p-datatable-sm"
+                    paginatorDropdownAppendTo="body">
+                    <ng-template pTemplate="header">
+                        <tr>
+                            <th style="width: 4rem">Ser</th>
+                            <th>Service ID</th>
+                            <th>Rank</th>
+                            <th>Corps</th>
+                            <th>Trade</th>
+                            <th>Name</th>
+                            <th>Mother Unit</th>
+                            <th>RAB ID</th>
+                            <th style="width: 5rem">Remove</th>
+                        </tr>
+                    </ng-template>
+                    <ng-template pTemplate="body" let-m let-rowIndex="rowIndex">
+                        <tr>
+                            <td>{{ rowIndex + 1 }}</td>
+                            <td style="white-space: nowrap"><span class="font-semibold">{{ m.serviceId || '—' }}</span></td>
+                            <td>{{ m.rankName || '—' }}</td>
+                            <td>{{ m.corpsName || '—' }}</td>
+                            <td>{{ m.tradeName || '—' }}</td>
+                            <td>{{ m.fullNameEN || '—' }}</td>
+                            <td>{{ m.motherUnitName || '—' }}</td>
+                            <td style="white-space: nowrap">{{ m.rabId || '—' }}</td>
+                            <td>
+                                <p-button icon="pi pi-times" severity="danger" [rounded]="true" [text]="true"
+                                    [fluid]="false" (onClick)="removeSelectedMember(m.employeeId)"
+                                    pTooltip="Remove from course" tooltipPosition="top"></p-button>
+                            </td>
+                        </tr>
+                    </ng-template>
+                </p-table>
+            </div>
+        }
+
+        <div class="flex justify-end gap-2">
+            @if (editingId) {
+                <p-button label="Cancel" icon="pi pi-times" severity="secondary" [outlined]="true"
+                    [fluid]="false" (onClick)="cancelEdit()"></p-button>
+            } @else {
+                <p-button label="Reset" icon="pi pi-times" severity="secondary" [outlined]="true"
+                    [fluid]="false" (onClick)="resetForm()"></p-button>
+            }
+            @if (editingId ? canUpdate : canInsert) {
+                <p-button
+                    [label]="editingId ? 'Update Course' : 'Save Course'"
+                    icon="pi pi-check"
+                    severity="success"
+                    [fluid]="false"
+                    (onClick)="save()"
+                    [loading]="isSubmitting"
+                    [disabled]="!isFormValid || isSubmitting">
+                </p-button>
+            }
+        </div>
+
+    </p-card>
+</p-fluid>
+
+<!-- ============== Mark as Not Applicable ==============
+     The remark is the only record of why a member was exempted, and the member
+     leaves the pending list for good once saved — so it is required, and the
+     dialog says as much before the user commits. -->
+<p-dialog header="Mark as Not Applicable" [(visible)]="naDialogVisible" [modal]="true" [draggable]="false"
+    [style]="{ width: '32rem' }" [breakpoints]="{ '640px': '92vw' }" (onHide)="closeMarkNotApplicable()">
+    <div class="flex flex-col gap-3">
+        <p class="m-0">
+            <span class="font-semibold">{{ naTargetName }}</span> will be exempted from RAB Orientation Training
+            and will no longer appear in this list.
+        </p>
+        <div>
+            <label class="font-semibold block mb-2 text-700">Remark <span class="text-red-500">*</span></label>
+            <textarea pTextarea [(ngModel)]="naRemark" rows="3" class="w-full" maxlength="500"
+                placeholder="Why is this member exempt?"></textarea>
+        </div>
+    </div>
+    <ng-template pTemplate="footer">
+        <p-button label="Cancel" icon="pi pi-times" severity="secondary" [outlined]="true" [fluid]="false"
+            (onClick)="closeMarkNotApplicable()"></p-button>
+        <p-button label="Mark as Not Applicable" icon="pi pi-check" severity="warn" [fluid]="false"
+            (onClick)="confirmMarkNotApplicable()" [loading]="naSubmitting"
+            [disabled]="!canConfirmNotApplicable"></p-button>
+    </ng-template>
+</p-dialog>

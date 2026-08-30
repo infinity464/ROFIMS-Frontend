@@ -1,0 +1,202 @@
+<p-toast position="top-center"></p-toast>
+
+<p-fluid>
+    <div class="rab-organogram-shell" [class.dark-mode]="isDarkMode()">
+
+        <!-- ═══ HEADER CARD ═══ -->
+        <div class="header-card">
+            <div class="header-top-row">
+                <button class="refresh-action" [disabled]="loading()" (click)="loadTreeAndCounts()">
+                    <i class="pi pi-refresh" [class.pi-spin]="loading()"></i>
+                </button>
+            </div>
+            <div class="header-center">
+                <span class="header-title">RAB</span>
+                <div class="count-chip">
+                    <span>A: {{ totalAuthorized() | number }}</span>
+                    <span class="chip-divider"></span>
+                    <span>H: {{ totalHeld() | number }}</span>
+                </div>
+            </div>
+            <div class="header-toggles">
+                <button class="toggle-chip" [class.active]="showHQ()" (click)="showHQ.set(!showHQ())">
+                    <i class="pi" [class.pi-eye]="showHQ()" [class.pi-eye-slash]="!showHQ()"></i>
+                    HQ
+                </button>
+                <button class="toggle-chip" [class.active]="showBattalions()" (click)="showBattalions.set(!showBattalions())">
+                    <i class="pi" [class.pi-eye]="showBattalions()" [class.pi-eye-slash]="!showBattalions()"></i>
+                    Battalions
+                </button>
+                <button class="toggle-chip" [class.active]="showSupernumerary()" (click)="showSupernumerary.set(!showSupernumerary())">
+                    <i class="pi" [class.pi-eye]="showSupernumerary()" [class.pi-eye-slash]="!showSupernumerary()"></i>
+                    Supernumerary
+                </button>
+                <button class="toggle-chip" [class.active]="showPending()" (click)="showPending.set(!showPending())">
+                    <i class="pi" [class.pi-eye]="showPending()" [class.pi-eye-slash]="!showPending()"></i>
+                    Pending
+                </button>
+            </div>
+        </div>
+
+        <!-- ═══ CARDS GRID ═══ -->
+        @if (loading()) {
+        <div class="grid-loading">
+            <i class="pi pi-spin pi-spinner"></i> Loading organogram...
+        </div>
+        } @else {
+        <div class="cards-grid">
+
+            <!-- ── Card 1: RAB HQ ── -->
+            @if (showHQ()) {
+            <div class="org-card">
+                <div class="card-header">
+                    <span class="card-badge" style="background:#1a6fbf">HQ</span>
+                    <div class="card-header-text">
+                        <span class="card-title">RAB HQ</span>
+                        <span class="card-subtitle">
+                            @if (hqNode(); as hq) {
+                                A: {{ hq.authorizedCount ?? 0 }} &middot; H: {{ hq.servingCount ?? 0 }}
+                            }
+                        </span>
+                    </div>
+                </div>
+                <div class="card-body">
+                    @if (hqLoading()) {
+                    <div class="card-loading"><i class="pi pi-spin pi-spinner"></i> Loading...</div>
+                    } @else if (hqNode(); as hq) {
+                        @if (hq.children?.length) {
+                        <div class="tree-wrap">
+                            @for (child of hq.children; track child.id) {
+                            <app-tree-node
+                                [node]="child"
+                                [depth]="0"
+                                [readOnly]="true"
+                                [selectedNodeId]="null"
+                                [loadingParentId]="loadingParentId()"
+                                (expandRequest)="onExpandRequest($event)"
+                                (expandToggled)="onExpandToggled($event)"
+                                (nodeSelect)="onNodeSelect($event)"
+                            />
+                            }
+                        </div>
+                        } @else {
+                        <div class="card-empty">No wings found</div>
+                        }
+                    } @else {
+                    <div class="card-empty">No HQ data</div>
+                    }
+                </div>
+            </div>
+            }
+
+            <!-- ── Card 2: Battalions ── -->
+            @if (showBattalions()) {
+            <div class="org-card">
+                <div class="card-header">
+                    <span class="card-badge" style="background:#1d9e75">BN</span>
+                    <div class="card-header-text">
+                        <span class="card-title">Battalions</span>
+                        <span class="card-subtitle">A: {{ battalionTotalAuth() }} &middot; H: {{ battalionTotalHeld() }}</span>
+                    </div>
+                </div>
+                <div class="card-body">
+                    @if (battalionNodes().length === 0) {
+                    <div class="card-empty">No battalions found</div>
+                    } @else {
+                    <div class="tree-wrap">
+                        @for (bn of battalionNodes(); track bn.id) {
+                        <app-tree-node
+                            [node]="bn"
+                            [depth]="0"
+                            [readOnly]="true"
+                            [selectedNodeId]="null"
+                            [loadingParentId]="loadingParentId()"
+                            (expandRequest)="onExpandRequest($event)"
+                            (expandToggled)="onExpandToggled($event)"
+                            (nodeSelect)="onNodeSelect($event)"
+                        />
+                        }
+                    </div>
+                    }
+                </div>
+            </div>
+            }
+
+            <!-- ── Card 3: Supernumerary Post ── -->
+            @if (showSupernumerary()) {
+            <div class="org-card">
+                <div class="card-header">
+                    <span class="card-badge" style="background:#e67e22">S</span>
+                    <div class="card-header-text">
+                        <span class="card-title">Supernumerary Post</span>
+                        <span class="card-subtitle">
+                            Total: {{ supernumeraryNode()?.servingCount ?? 0 }}
+                        </span>
+                    </div>
+                </div>
+                <div class="card-body">
+                    @if (supernumeraryNode(); as sn) {
+                        @if (sn.children?.length) {
+                        <div class="tree-wrap">
+                            @for (child of sn.children; track child.id) {
+                            <app-tree-node
+                                [node]="child"
+                                [depth]="0"
+                                [readOnly]="true"
+                                [selectedNodeId]="null"
+                                [loadingParentId]="null"
+                                (nodeSelect)="onNodeSelect($event)"
+                            />
+                            }
+                        </div>
+                        } @else {
+                        <div class="card-empty">No data</div>
+                        }
+                    } @else {
+                    <div class="card-empty">Loading...</div>
+                    }
+                </div>
+            </div>
+            }
+
+            <!-- ── Card 4: Pending List for Joining ── -->
+            @if (showPending()) {
+            <div class="org-card">
+                <div class="card-header">
+                    <span class="card-badge" style="background:#993556">P</span>
+                    <div class="card-header-text">
+                        <span class="card-title">Pending List for Joining</span>
+                        <span class="card-subtitle">
+                            Total: {{ pendingNode()?.servingCount ?? 0 }}
+                        </span>
+                    </div>
+                </div>
+                <div class="card-body">
+                    @if (pendingNode(); as pn) {
+                        @if (pn.children?.length) {
+                        <div class="tree-wrap">
+                            @for (child of pn.children; track child.id) {
+                            <app-tree-node
+                                [node]="child"
+                                [depth]="0"
+                                [readOnly]="true"
+                                [selectedNodeId]="null"
+                                [loadingParentId]="null"
+                                (nodeSelect)="onNodeSelect($event)"
+                            />
+                            }
+                        </div>
+                        } @else {
+                        <div class="card-empty">No data</div>
+                        }
+                    } @else {
+                    <div class="card-empty">Loading...</div>
+                    }
+                </div>
+            </div>
+            }
+
+        </div>
+        }
+    </div>
+</p-fluid>

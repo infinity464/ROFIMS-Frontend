@@ -1,0 +1,324 @@
+<p-toast position="top-center"></p-toast>
+<p-confirmDialog></p-confirmDialog>
+
+<div class="office-order-generate">
+    <div class="form-card">
+        <div class="form-card-header">
+            <h3 class="form-card-title">{{ editMode ? 'Edit Office Order' : 'Generate Office Order' }}</h3>
+        </div>
+
+        <!-- Row 1: NoteSheet + Date + Config + Approval -->
+        <div class="draft-master-section mb-4 p-4 surface-50 border-round">
+            <div class="flex flex-wrap gap-4 align-items-end">
+                <!-- NoteSheet Dropdown -->
+                <div class="field flex-1 min-w-300px" *ngIf="!editMode">
+                    <label class="font-semibold block mb-2 text-700">Select Note Sheet <span class="text-red-500">*</span></label>
+                    <p-select
+                        [options]="noteSheetDropdownOptions"
+                        [(ngModel)]="selectedNoteSheetId"
+                        optionLabel="label"
+                        optionValue="value"
+                        placeholder="{{ loadingNoteSheets ? 'Loading...' : 'Select NoteSheet' }}"
+                        [disabled]="loadingNoteSheets"
+                        [showClear]="true"
+                        [filter]="true"
+                        filterPlaceholder="Search notesheet..."
+                        styleClass="w-full"
+                        (onChange)="onNoteSheetChange()"
+                    ></p-select>
+                </div>
+                <!-- NoteSheet (read-only in edit mode) -->
+                <div class="field flex-1 min-w-300px" *ngIf="editMode">
+                    <label class="font-semibold block mb-2 text-700">Note Sheet</label>
+                    <input pInputText [value]="selectedNoteSheetNo || ''" class="w-full" [readonly]="true" />
+                </div>
+
+                <!-- Letter Date -->
+                <div class="field min-w-200px">
+                    <label class="font-semibold block mb-2 text-700">Date <span class="text-red-500">*</span></label>
+                    <p-datepicker
+                        [(ngModel)]="letterDate"
+                        dateFormat="dd-mm-yy"
+                        styleClass="w-full"
+                        placeholder="Select date"
+                    ></p-datepicker>
+                </div>
+
+                <!-- Letter No (auto-generated from config) -->
+                <div class="field min-w-250px" *ngIf="!editMode">
+                    <label class="font-semibold block mb-2 text-700">Letter No <span class="text-red-500">*</span></label>
+                    <p-select
+                        [options]="configOptions"
+                        [(ngModel)]="postingOrderNumberConfigId"
+                        optionLabel="label"
+                        optionValue="value"
+                        placeholder="Select Pattern"
+                        [showClear]="true"
+                        [filter]="true"
+                        filterBy="label"
+                        styleClass="w-full"
+                    ></p-select>
+                </div>
+                <!-- Letter No (read-only in edit mode) -->
+                <div class="field min-w-250px" *ngIf="editMode">
+                    <label class="font-semibold block mb-2 text-700">Letter No</label>
+                    <input pInputText [(ngModel)]="manualLetterNo" class="w-full" [readonly]="true" />
+                </div>
+
+                <!-- Approval Person -->
+                <div class="field min-w-300px">
+                    <label class="font-semibold block mb-2 text-700">Approval Person <span class="text-red-500">*</span></label>
+                    <p-select
+                        [options]="approvalEmployees"
+                        [(ngModel)]="selectedApprovalEmployeeId"
+                        optionLabel="label"
+                        optionValue="value"
+                        placeholder="{{ loadingApprovalEmployees ? 'Loading...' : 'Select Approval Person' }}"
+                        [disabled]="loadingApprovalEmployees"
+                        [showClear]="true"
+                        [filter]="true"
+                        filterBy="label"
+                        styleClass="w-full"
+                        appendTo="body"
+                    ></p-select>
+                </div>
+
+            </div>
+        </div>
+
+        <!-- Form content (shown when notesheet is selected) -->
+        <div *ngIf="selectedNoteSheetId">
+            <!-- NoteSheet Info Bar -->
+            <div class="flex flex-wrap gap-4 align-items-center mb-3">
+                <span *ngIf="selectedNoteSheetNo" class="text-600">NoteSheet No: <strong>{{ selectedNoteSheetNo }}</strong></span>
+                <span *ngIf="selectedNoteSheetApprovedDate" class="text-600">| Approved: <strong>{{ formatDate(selectedNoteSheetApprovedDate) }}</strong></span>
+            </div>
+
+            <!-- Reference No (+) -->
+            <div class="field mb-4 p-4 surface-50 border-round">
+                <div class="flex align-items-center gap-2 mb-3">
+                    <span class="font-semibold text-700">Reference No</span>
+                    <p-button
+                        icon="pi pi-plus"
+                        [rounded]="true"
+                        [text]="true"
+                        size="small"
+                        pTooltip="Add reference"
+                        (onClick)="addReferenceEntry()"
+                    ></p-button>
+                </div>
+                @for (entry of referenceEntries; track trackByIndex($index); let i = $index) {
+                    <div class="flex gap-2 align-items-start mb-2">
+                        <span class="para-number font-semibold text-600 mt-2" style="min-width: 30px">{{ entry.serial }}.</span>
+                        <textarea
+                            pTextarea
+                            [(ngModel)]="referenceEntries[i].text"
+                            rows="2"
+                            class="flex-1"
+                            placeholder="Enter reference..."
+                            [autoResize]="true"
+                        ></textarea>
+                        <p-button
+                            icon="pi pi-times"
+                            severity="danger"
+                            [rounded]="true"
+                            [text]="true"
+                            size="small"
+                            pTooltip="Remove"
+                            (onClick)="removeReferenceEntry(i)"
+                        ></p-button>
+                    </div>
+                }
+                @if (referenceEntries.length === 0) {
+                    <div class="text-500 text-sm py-2">No references. Click "+" to add one.</div>
+                }
+            </div>
+
+            <!-- Address To (Rich Text) -->
+            <div class="field mb-4">
+                <label class="font-semibold block mb-2 text-700">Address To</label>
+                <p-editor [(ngModel)]="addressTo" [style]="{ height: '120px' }"></p-editor>
+            </div>
+
+            <!-- Subject -->
+            <div class="field mb-4">
+                <label class="font-semibold block mb-2 text-700">Subject</label>
+                <input pInputText [(ngModel)]="subject" class="w-full" placeholder="Enter subject..." />
+            </div>
+
+            <!-- Paragraphs (+) — seeded from the selected note sheet, then editable -->
+            <div class="field mb-4 p-4 surface-50 border-round">
+                <div class="flex align-items-center gap-2 mb-3">
+                    <span class="font-semibold text-700">Paragraphs</span>
+                    <p-button
+                        icon="pi pi-plus"
+                        [rounded]="true"
+                        [text]="true"
+                        size="small"
+                        pTooltip="Add paragraph"
+                        (onClick)="addBodyParagraph()"
+                    ></p-button>
+                    <small class="text-500">Loaded from the note sheet — edit or remove as needed.</small>
+                </div>
+                @for (para of bodyParagraphs; track trackByIndex($index); let i = $index) {
+                    <div class="flex gap-2 align-items-start mb-3">
+                        <span class="para-number font-semibold text-600 mt-2" style="min-width: 30px">{{ getParagraphSerial(i) }}</span>
+                        <div class="flex-1">
+                            <p-editor [(ngModel)]="bodyParagraphs[i].text" [style]="{ height: '140px' }"></p-editor>
+                        </div>
+                        <div class="flex flex-column gap-1">
+                            <p-button
+                                icon="pi pi-arrow-up"
+                                [rounded]="true"
+                                [text]="true"
+                                size="small"
+                                pTooltip="Move up"
+                                [disabled]="i === 0"
+                                (onClick)="moveBodyParagraphUp(i)"
+                            ></p-button>
+                            <p-button
+                                icon="pi pi-arrow-down"
+                                [rounded]="true"
+                                [text]="true"
+                                size="small"
+                                pTooltip="Move down"
+                                [disabled]="i === bodyParagraphs.length - 1"
+                                (onClick)="moveBodyParagraphDown(i)"
+                            ></p-button>
+                            <p-button
+                                icon="pi pi-times"
+                                severity="danger"
+                                [rounded]="true"
+                                [text]="true"
+                                size="small"
+                                pTooltip="Remove"
+                                (onClick)="removeBodyParagraph(i)"
+                            ></p-button>
+                        </div>
+                    </div>
+                }
+                @if (bodyParagraphs.length === 0) {
+                    <div class="text-500 text-sm py-2">No paragraphs. Click "+" to add one.</div>
+                }
+            </div>
+
+            <!-- Attachment / সংযুক্ত (rendered above the Onulipi in the document) -->
+            <div class="field mb-4 p-4 surface-50 border-round">
+                <div class="flex align-items-center gap-2 mb-3">
+                    <span class="font-semibold text-700">Attachment ({{ isBangla ? 'সংযুক্ত' : 'Attachment' }})</span>
+                    <p-button
+                        icon="pi pi-plus"
+                        [rounded]="true"
+                        [text]="true"
+                        size="small"
+                        pTooltip="Add attachment"
+                        (onClick)="addAttachmentEntry()"
+                    ></p-button>
+                </div>
+                @for (att of attachmentEntries; track trackByIndex($index); let i = $index) {
+                    <div class="flex gap-2 align-items-start mb-2">
+                        <span class="para-number font-semibold text-600 mt-2" style="min-width: 30px">{{ isBangla ? toBanglaDigits('' + (i + 1)) : (i + 1) }}.</span>
+                        <textarea
+                            pTextarea
+                            [(ngModel)]="attachmentEntries[i].text"
+                            rows="2"
+                            class="flex-1"
+                            placeholder="Enter attachment text..."
+                            [autoResize]="true"
+                        ></textarea>
+                        <div class="flex flex-column gap-1">
+                            <p-button icon="pi pi-arrow-up" [rounded]="true" [text]="true" size="small" pTooltip="Move up" [disabled]="i === 0" (onClick)="moveAttachmentUp(i)"></p-button>
+                            <p-button icon="pi pi-arrow-down" [rounded]="true" [text]="true" size="small" pTooltip="Move down" [disabled]="i === attachmentEntries.length - 1" (onClick)="moveAttachmentDown(i)"></p-button>
+                        </div>
+                        <p-button
+                            icon="pi pi-times"
+                            severity="danger"
+                            [rounded]="true"
+                            [text]="true"
+                            size="small"
+                            pTooltip="Remove"
+                            (onClick)="removeAttachmentEntry(i)"
+                        ></p-button>
+                    </div>
+                }
+                @if (attachmentEntries.length === 0) {
+                    <div class="text-500 text-sm py-2">No attachments. Click "+" to add one.</div>
+                }
+            </div>
+
+            <!-- Onulipi / অনুলিপি -->
+            <div class="field mb-4 p-4 surface-50 border-round">
+                <div class="flex align-items-center gap-2 mb-3">
+                    <span class="font-semibold text-700">Onulipi</span>
+                    <p-button
+                        icon="pi pi-plus"
+                        [rounded]="true"
+                        [text]="true"
+                        size="small"
+                        pTooltip="Add paragraph"
+                        (onClick)="addOnulipiParagraph()"
+                    ></p-button>
+                </div>
+                @for (para of onulipiParagraphs; track trackByIndex($index); let i = $index) {
+                    <div class="flex gap-2 align-items-start mb-2">
+                        <span class="para-number font-semibold text-600 mt-2" style="min-width: 30px">{{ isBangla ? toBanglaDigits('' + (i + 1)) : (i + 1) }}.</span>
+                        <textarea
+                            pTextarea
+                            [(ngModel)]="onulipiParagraphs[i].text"
+                            rows="3"
+                            class="flex-1"
+                            placeholder="Enter paragraph text..."
+                            [autoResize]="true"
+                        ></textarea>
+                        <div class="flex flex-column gap-1">
+                            <p-button icon="pi pi-arrow-up" [rounded]="true" [text]="true" size="small" [disabled]="i === 0" pTooltip="Move up" (onClick)="moveOnulipiUp(i)"></p-button>
+                            <p-button icon="pi pi-arrow-down" [rounded]="true" [text]="true" size="small" [disabled]="i === onulipiParagraphs.length - 1" pTooltip="Move down" (onClick)="moveOnulipiDown(i)"></p-button>
+                        </div>
+                        <p-button
+                            icon="pi pi-times"
+                            severity="danger"
+                            [rounded]="true"
+                            [text]="true"
+                            size="small"
+                            pTooltip="Remove"
+                            (onClick)="removeOnulipiParagraph(i)"
+                        ></p-button>
+                    </div>
+                }
+                @if (onulipiParagraphs.length === 0) {
+                    <div class="text-500 text-sm py-2">No onulipi paragraphs. Click "+" to add one.</div>
+                }
+            </div>
+
+            <!-- Remarks (hidden for now) -->
+            <!-- <div class="field mb-4">
+                <label class="font-semibold block mb-2 text-700">Remarks</label>
+                <p-editor [(ngModel)]="remarks" [style]="{ height: '100px' }"></p-editor>
+            </div> -->
+
+            <!-- File References (Upload) -->
+            <app-file-references-form
+                #fileReferencesForm
+                [fileRows]="fileRows"
+                [isViewMode]="false"
+                title="Supporting Documents"
+                (fileRowsChange)="onFileRowsChange($event)"
+                (onDownloadFile)="onDownloadFile($event)"
+            ></app-file-references-form>
+
+        </div>
+
+        <!-- Generate Button (bottom right) -->
+        <div style="display: flex; justify-content: flex-end; margin-top: 1rem;">
+            <p-button
+                [label]="editMode ? 'Update Office Order' : 'Generate Office Order'"
+                [icon]="editMode ? 'pi pi-save' : 'pi pi-file-export'"
+                [loading]="saving"
+                [disabled]="saving"
+                (onClick)="onGenerate()"
+            ></p-button>
+        </div>
+
+    </div>
+</div>
+

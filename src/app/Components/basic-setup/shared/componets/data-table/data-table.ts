@@ -1,4 +1,4 @@
-import { Component, EventEmitter, Input, OnInit, Output } from '@angular/core';
+import { Component, EventEmitter, Input, OnInit, Output, ViewChild } from '@angular/core';
 import { FluidModule } from 'primeng/fluid';
 import { InputTextModule } from 'primeng/inputtext';
 import { ButtonModule } from 'primeng/button';
@@ -61,15 +61,30 @@ export class DataTable implements OnInit {
     @Input() totalRecords = 0;
     @Input() rows = 10;
     @Input() loading = false;
+    /** When false, table displays data without lazy loading (client-side paging) */
+    @Input() lazy = true;
+    /** Permission flags – hide edit/delete buttons when false */
+    @Input() canUpdate = true;
+    @Input() canDelete = true;
     @Output() edit = new EventEmitter<any>();
     @Output() delete = new EventEmitter<{ row: any; event: Event }>();
     @Output() lazyLoad = new EventEmitter<any>();
     @Output() search = new EventEmitter<string>();
 
+    @ViewChild(Table) table?: Table;
+
     searchSubject = new Subject<string>();
 
     ngOnInit() {
         this.searchSubject.pipe(debounceTime(500), distinctUntilChanged()).subscribe((keyword) => {
+            // Reset the paginator back to the first page whenever the search keyword
+            // changes. The parent's `first` input stays at 0 (paginator page changes
+            // are not tracked back to it), so the one-way `[first]` binding cannot
+            // reset the table on its own – reset the table's internal page directly.
+            if (this.table) {
+                this.table.first = 0;
+            }
+            this.first = 0;
             this.search.emit(keyword);
         });
     }

@@ -1,0 +1,304 @@
+﻿/* Vertical rhythm — the block gaps below the employee table (table → নোট →
+   অনুচ্ছেদ → স্বাক্ষর → অনুমোদনকারী) are half the shared preview's spacing so the
+   posting sheet packs more rows per page. Horizontal padding is unchanged. */
+.ns-cell-ref {
+    padding: 3px 8px 0 10px;
+}
+.ns-para {
+    padding: 5px 8px 5px 10px;
+}
+.ns-note {
+    padding: 3px 8px 3px 10px;
+    text-align: justify;
+}
+
+/* Body paragraphs (main text ১। + tail paragraphs ২।, ৩।, …) and নোট: 1.25 line
+   gap — tighter than the shared sheet's 1.85 so the multi-line transfer text,
+   the tail paragraphs and the note all pack closer.
+
+   The main text and note are injected via [innerHTML] (Quill rich-text), so with
+   emulated encapsulation a bare rule on the wrapper doesn't reach the inner <p>
+   elements — and any inline / global line-height on them blocks inheritance.
+   ::ng-deep + !important pierces to the injected nodes, same as the font-family
+   rules below. */
+.ns-para,
+.ns-note {
+    line-height: 1.25 !important;
+
+    ::ng-deep * {
+        line-height: 1.25 !important;
+    }
+}
+
+/* Quill (both the note AND the main body text) wraps every Enter in its own <p>.
+   The shared sheet resets the main text's <p> to 0.4rem and leaves the note's at
+   the browser default 1em — both open too wide a gap on a line break. Pin both to
+   0.2em so an Enter adds only a slight gap, not a near-empty line. Mirrored for the
+   PDF in buildJsReportPdf() (.pdf-flow .ns-note p / .ns-para-text p). */
+.ns-note ::ng-deep p,
+.ns-para-text ::ng-deep p {
+    margin: 0 0 0.2em !important;
+}
+.ns-posting-table {
+    /* Outer margin halved (was 20px left / 16px right) so the table runs wider;
+       the freed 18px is handed to the পদবি column in the new-posting colgroup. */
+    padding: 2px 8px 5px 10px;
+}
+.ns-initiator-area {
+    padding: 7px 8px 9px 10px;
+    gap: 5px;                   /* shared sheet uses 10px between sig lines */
+    /* Drop the whole signature block 25px below the body so it does not crowd the
+       closing line. The .ns-inter-posting block further down restates the same 25px,
+       so both posting variants sit at one offset. The PDF picks this up through
+       collectDocumentStyles(); the Word counterpart is the initiator paragraph's
+       `spacing.before` in buildWordDocument(). */
+    margin-top: 25px;
+}
+.ns-approver-section {
+    padding: 5px 8px 12px 10px;
+    min-height: 45px;           /* shared sheet reserves 90px for the signature */
+}
+
+/* Approver who has not acted yet still RESERVES the same signature space as an
+   approved one: the section's base min-height (45px) and the body's shared
+   min-height (60px) — plus the base 12px bottom padding — are kept, so the block
+   height and the gap between approvers are identical before and after approval.
+   Approving then fills the reserved area with the signature instead of pushing
+   everything down. (Previously collapsed to 0; restored so before-gap = after-gap.) */
+.ns-approver-section--empty {
+    min-height: 45px;
+
+    .ns-approver-body {
+        min-height: 60px;
+    }
+}
+
+/* Match the Ex-BD notesheet: leave five blank body lines after each approver's
+   signature block, but not after the final approver. This selector covers both
+   new-posting and inter-posting previews. */
+.ns-approver-section:not(:last-child) {
+    padding-bottom: calc(24px + 6.25em);
+}
+
+/* ── Page margins: identical to the PDF / Print Preview ──
+   buildJsReportPdf() prints with @page margins of 7mm top / 5mm side / 10mm
+   bottom, and the page frame is drawn on that margin box. The on-screen sheet
+   used to sit at 14 / 6 / 20, so the same document showed a much wider white
+   margin around the frame and a 2mm narrower text column than the print — which
+   also meant slightly different line wraps. These numbers are the print's, so the
+   two now agree; computePageContentHeightPx() derives the usable page height from
+   the same 7mm / 10mm. Scoped to the posting preview — the other note-sheet
+   previews keep the shared 14 / 6 / 20.
+
+   .page-measure is the hidden div the page-break math measures and the source
+   snapshot for the PDF, so its text column has to track the paper's. */
+.a4-paper {
+    padding: 7mm 5mm 10mm;
+}
+.page-measure {
+    padding: 0 5mm;
+}
+/* Page number lives in the bottom margin, under the frame — re-seated for the
+   10mm band (it cleared the frame comfortably in the old 20mm one). */
+.ns-page-footer {
+    bottom: 3mm;
+}
+
+/* ── Edit mode: full-width sheet ───────────────────────
+   In edit mode the posting table has many columns plus a "Transfer Unit"
+   dropdown and a remarks input per row. Locking it to A4 width (215.9mm)
+   cramps everything, so let the edit sheet span the full page width. */
+.ns-edit-container {
+    padding: 1rem;
+    align-items: stretch;   /* sheet fills the row instead of centering at A4 width */
+    min-height: auto;
+}
+
+.a4-paper.ns-edit-paper {
+    width: 100%;
+    max-width: 100%;
+    min-height: auto;       /* drop the fixed A4 page height — no empty trailing page */
+}
+
+/* Edit mode is interactive (not printed), so make it fully responsive:
+   the wide posting table scrolls horizontally on small screens instead of
+   crushing columns / overflowing the sheet. */
+.ns-edit-paper .ns-posting-table {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+
+    table {
+        min-width: 760px;   /* keep columns legible; wrapper scrolls below this */
+    }
+}
+
+/* Phones / small tablets: tighten the sheet so it uses the available width. */
+@media screen and (max-width: 768px) {
+    .ns-edit-container {
+        padding: 0.5rem;
+    }
+    .a4-paper.ns-edit-paper {
+        padding: 8mm 4mm 12mm;
+    }
+}
+
+/* ── Whole-sheet font size (user-selectable) ───────────
+   The export bar's font dropdown sets --ns-fs-delta on the component host: a
+   point offset from -2 to +2 in 0.25 steps that EVERY text size of the sheet is
+   expressed against, through fs() below.
+
+   The sheet's tiers are deliberately unequal — 13pt title, 11pt org header, 10pt
+   body, 9pt signature lines, 8pt / 6.5pt table — so a single absolute size can
+   never drive the whole document; a shared offset moves them all by the same
+   amount and keeps those proportions intact. Stepping down is also what pulls a
+   trailing block back onto the previous page and saves a sheet.
+
+   The custom property inherits, so it reaches the visible pages, the hidden
+   .page-measure div the pagination math measures, and the repeated table headers
+   alike; the PDF sets the same property on .pdf-flow (see buildJsReportPdf).
+   With no offset set the 0 fallback leaves every size exactly as it was. */
+@function fs($pt) {
+    @return calc(#{$pt}pt + var(--ns-fs-delta, 0) * 1pt);
+}
+
+/* ── Match posting-order-preview document font sizes (posting notesheet ONLY) ──
+   Scoped here instead of the shared ../notesheet-preview.scss so general / exbd /
+   cc / mo / article-47 previews are untouched. styleUrls load this file AFTER the
+   shared sheet, so these rules win on equal specificity. */
+.ns-title-en,
+.ns-title-bn { font-size: fs(13); }        /* document title (HEADER) — +2pt */
+
+/* Org header carries its size inline in the template; a stylesheet !important is
+   what beats a non-important inline style, and is needed for it to take the
+   offset. */
+.ns-org-header { font-size: fs(11) !important; }
+
+/* Body: everything except the document header + table column headers → 10pt. */
+.ns-nsno-line { font-size: fs(10); }       /* note-sheet no. + date line */
+.ns-subject-line { font-size: fs(10); }    /* subject line */
+.ns-sanglagni-col { font-size: fs(10); }   /* সংলগ্নী নং column */
+.ns-cell-ref { font-size: fs(10); }        /* সূত্র */
+.ns-para { font-size: fs(10); }            /* body paragraphs (incl. .ns-para--tail) */
+.ns-para-no { font-weight: normal; }       /* serial numbers (১। ২। …) not bold */
+.ns-note { font-size: fs(10); }            /* note */
+.ns-initiator-area { font-size: fs(10); }  /* signature block */
+.ns-closing-text { font-size: fs(10); }    /* closing line */
+
+/* ── Inter-posting: body one step smaller (9pt, not 10pt) ──
+   New-posting reads 9pt table → 10pt body (a 1pt step). Inter-posting's table is
+   8pt, so a 10pt body left a 2pt gap; drop the body to 9pt so the sheet reads
+   8pt table → 9pt body, matching that rhythm. Scoped by .ns-inter-posting on the
+   view's .ns-doc-box; signature lines are already 9pt and the 8pt table is left
+   untouched. */
+.ns-inter-posting {
+    .ns-nsno-line,
+    .ns-subject-line,
+    .ns-sanglagni-col,
+    .ns-cell-ref,
+    .ns-para,
+    .ns-note,
+    .ns-initiator-area,
+    .ns-closing-text {
+        font-size: fs(9);
+    }
+
+    .ns-initiator-area {
+        margin-top: 25px;
+    }
+}
+
+/* Signature / approver lines — 9pt in the shared sheet, restated here so the
+   offset reaches them too. */
+.ns-sig-name,
+.ns-sig-rank,
+.ns-sig-paren,
+.ns-sig-appoint,
+.ns-sig-date,
+.ns-approver-role,
+.ns-approver-left,
+.ns-approver-remark { font-size: fs(9); }
+
+/* Gap above the date line, halved from the shared sheet's 2em — the block already
+   carries the .ns-initiator-area gap, so 2em read as a near-empty line between the
+   appointment and the date. The PDF picks this up through collectDocumentStyles();
+   the Word counterpart is the date paragraph's `spacing.before` in buildWordDocument(). */
+.ns-sig-date {
+    margin-top: 1em;
+}
+
+.ns-posting-table {
+    /* Table content 8pt; column headers (table information) keep their own size. */
+    table { font-size: fs(8); }
+    td { font-size: fs(8); }
+    th { font-size: fs(6.5); font-weight: 700; }
+    .ns-posting-note { font-size: fs(10); }
+
+    /* Top, not middle (the shared sheet's default): a row is as tall as its
+       longest cell — unit names and remarks wrap to several lines — and centering
+       the short cells against it leaves every value at a different height across
+       the row. Headers ride along so the whole table starts on one line. */
+    th,
+    td { vertical-align: top; }
+
+    /* Every value starts at the left edge. The .ns-name-cell / .ns-left-cell
+       classes used to opt individual columns into this; the rest (ক্রমিক, tenure,
+       র‌্যাব আইডি, মন্তব্য) were still centered. Headers stay centered. */
+    td { text-align: left; }
+
+    /* Short numeric columns read better centered: ক্রমিক (always the first cell) and
+       the অবস্থানকাল বছর/মাস/দিন cells (tagged .ns-center-cell in the template). These
+       beat the blanket `td { text-align: left }` above on specificity. */
+    td:first-child,
+    .ns-center-cell { text-align: center; }
+
+    /* No shading — plain white rows and header (no zebra, no grey header). */
+    th { background: transparent !important; }
+    tr:nth-child(even) { background: transparent !important; }
+    tr { background: transparent !important; }
+
+    /* Hairline cell borders — deep black. */
+    th,
+    td { border: 0.25px solid #000 !important; }
+}
+
+/* New posting: table content + column headers 9pt (inter posting stays 8pt / 6.5pt).
+   Header is bold. */
+.ns-posting-table.ns-posting-new {
+    table { font-size: fs(9); }
+    td { font-size: fs(9); }
+    th {
+        font-size: fs(9);
+        font-weight: 700;
+    }
+}
+
+/* ── Document font ─────────────────────────────────────
+   SolaimanLipi (bundled, see styles.scss) replaces SolaimanLipi as the Bangla
+   face for this preview. Times New Roman stays first so Latin text and digits
+   are unchanged — Bangla codepoints have no Times glyphs and fall through to
+   SolaimanLipi.
+
+   .page-measure carries the SAME stack as the visible .a4-paper on purpose: it
+   is the hidden div the page-break math measures, and it is also the source
+   snapshot for the JsReport PDF. A different Bangla face there would compute
+   breaks against text of a different height than what is shown and printed. */
+.a4-paper,
+.page-measure {
+    font-family: 'Times New Roman', 'SolaimanLipi', Times, serif;
+
+    /* Beats the shared preview's !important rule that pins rich-text (Quill)
+       content to SolaimanLipi. */
+    ::ng-deep .ns-para-text,
+    ::ng-deep .ns-para-text *,
+    ::ng-deep .ns-ref-content,
+    ::ng-deep .ns-ref-content *,
+    ::ng-deep .ns-note,
+    ::ng-deep .ns-note * {
+        font-family: 'Times New Roman', 'SolaimanLipi', Times, serif !important;
+    }
+
+    /* Restore the icon font the blanket rule above would otherwise clobber. */
+    ::ng-deep .ns-ref-file-btn .pi {
+        font-family: 'primeicons' !important;
+    }
+}

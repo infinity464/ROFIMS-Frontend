@@ -1,0 +1,450 @@
+<p-toast position="top-center"></p-toast>
+<p-confirmdialog></p-confirmdialog>
+
+<div class="form-card">
+
+    <!-- ── Header ──────────────────────────────────────────────────── -->
+    <div class="form-card-header">
+        <div>
+            <h3 class="form-card-title">
+                <i class="pi pi-arrow-right-arrow-left" style="font-size:1.1rem"></i>
+                {{ isViewMode ? 'View' : isEditing ? 'Edit' : 'New' }} — Posted Out / New Posting Person
+                @if (isViewMode) {
+                    <span class="readonly-badge"><i class="pi pi-lock"></i> Read-only</span>
+                }
+            </h3>
+            <div style="font-size:0.8rem; color:var(--text-color-secondary); margin-top:0.2rem; padding-left:0.1rem;">
+                Permanent Posting (MO Change)
+            </div>
+        </div>
+        <div class="form-card-actions">
+            @if (isQueryParamEdit) {
+                <p-button label="Back" icon="pi pi-arrow-left" severity="secondary" [outlined]="true"
+                    styleClass="form-btn-secondary" (onClick)="goBack()"></p-button>
+            }
+            @if (isEditing && !isQueryParamEdit) {
+                <p-button label="Cancel" icon="pi pi-times" severity="secondary" [outlined]="true"
+                    styleClass="form-btn-secondary" (onClick)="onCancel()"></p-button>
+            }
+        </div>
+    </div>
+
+    <!-- ══ Two-column layout ════════════════════════════════════ -->
+    <div class="two-col-layout">
+
+        <!-- ── LEFT: Posted Out Details ─────────────────────────── -->
+        <div class="col-panel">
+            <div class="col-panel-header">
+                <i class="pi pi-file-edit"></i>
+                <span>Posted Out</span>
+                <p-button label="Clear" icon="pi pi-eraser" size="small" severity="secondary" [text]="true"
+                    [style]="{'margin-left':'auto'}" (onClick)="clearPostedOutSection()"></p-button>
+                @if (isViewMode) {
+                    <p-button label="Edit" icon="pi pi-pencil" size="small"
+                        [style]="{'margin-left':'auto'}" [disabled]="!canUpdate"
+                        pTooltip="Unlock this saved entry for editing" tooltipPosition="top"
+                        (onClick)="enableEdit()"></p-button>
+                }
+            </div>
+
+            <!-- Search Row -->
+            <div class="form-row" style="align-items:flex-end;">
+                <div class="form-field">
+                    <label class="form-label">RAB ID</label>
+                    <input pInputText class="w-full" [(ngModel)]="poSearchRabId" placeholder="RAB ID"
+                        (keyup.enter)="searchPostedOut()" />
+                </div>
+                <div class="form-field">
+                    <label class="form-label">Service ID</label>
+                    <div style="display:flex; gap:0.5rem;">
+                        <input pInputText class="w-full" [(ngModel)]="poSearchServiceId" placeholder="Service ID"
+                            (keyup.enter)="searchPostedOut()" />
+                        <p-button icon="pi pi-search" [loading]="poSearching || checkingExistingEntry" (onClick)="searchPostedOut()"
+                            size="small" pTooltip="Search" tooltipPosition="top"></p-button>
+                        <p-button icon="pi pi-times" severity="secondary" [outlined]="true"
+                            (onClick)="clearPostedOutSection()" size="small" pTooltip="Clear" tooltipPosition="top"></p-button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Readonly Employee Info -->
+            @if (postedOutEmployee) {
+                <div class="form-row">
+                    <div class="form-field">
+                        <label class="form-label text-500">Name</label>
+                        <input pInputText class="w-full" [value]="postedOutEmployee.fullNameEN || '-'" readonly />
+                    </div>
+                    <div class="form-field">
+                        <label class="form-label text-500">Rank</label>
+                        <input pInputText class="w-full" [value]="postedOutEmployee.rankDisplay || '-'" readonly />
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-field">
+                        <label class="form-label text-500">Corps</label>
+                        <input pInputText class="w-full" [value]="postedOutEmployee.corpsDisplay || '-'" readonly />
+                    </div>
+                    <div class="form-field">
+                        <label class="form-label text-500">Trade</label>
+                        <input pInputText class="w-full" [value]="postedOutEmployee.tradeDisplay || '-'" readonly />
+                    </div>
+                </div>
+            }
+
+            <!-- Half-width fields wrap two per row; RAB Unit joining the flow pushes the rest up -->
+            <div class="form-row">
+                @if (postedOutEmployee) {
+                    <div class="form-field form-field-half">
+                        <label class="form-label text-500">RAB Unit</label>
+                        <input pInputText class="w-full" [value]="postedOutRabUnitName || '-'" readonly />
+                    </div>
+                }
+                <div class="form-field form-field-half">
+                    <label class="form-label">
+                        Posting Unit
+                    </label>
+                    <p-select [options]="postingUnitOptions" [(ngModel)]="postingUnitId"
+                        optionLabel="label" optionValue="value"
+                        placeholder="Select posting unit" [filter]="true" filterBy="label"
+                        [showClear]="true" class="w-full" appendTo="body"
+                        [virtualScroll]="true" [virtualScrollItemSize]="38"
+                        [disabled]="isViewMode || !postingUnitOptions.length"></p-select>
+                </div>
+                <div class="form-field form-field-half">
+                    <label class="form-label">Posting Order No</label>
+                    <input pInputText class="w-full" [(ngModel)]="postingOrderNo"
+                        placeholder="Enter posting order number" [readonly]="isViewMode" />
+                </div>
+                <div class="form-field form-field-half">
+                    <label class="form-label">Posting Order Date</label>
+                    <p-datepicker [(ngModel)]="postingOrderDate" dateFormat="dd-mm-yy" [disabled]="isViewMode"
+                        placeholder="dd-mm-yyyy" appendTo="body" class="w-full" [inputStyle]="{'width':'100%'}"></p-datepicker>
+                </div>
+                <div class="form-field form-field-half">
+                    <label class="form-label">Possible Release Date</label>
+                    <p-datepicker [(ngModel)]="possibleReleaseDate" dateFormat="dd-mm-yy" [disabled]="isViewMode"
+                        placeholder="dd-mm-yyyy" appendTo="body" class="w-full" [inputStyle]="{'width':'100%'}"></p-datepicker>
+                </div>
+                @if (isOfficer) {
+                    <div class="form-field form-field-half">
+                        <label class="form-label">Note-Sheet Clearance <span class="form-label-required">*</span></label>
+                        <p-select [options]="yesNoOptions" [(ngModel)]="noteSheetClearance" [disabled]="isViewMode"
+                            optionLabel="label" optionValue="value"
+                            placeholder="Select" [showClear]="true" class="w-full" appendTo="body"></p-select>
+                    </div>
+                    <div class="form-field form-field-half">
+                        <label class="form-label">NS Clearance Date</label>
+                        <p-datepicker [(ngModel)]="nsClearanceDate" dateFormat="dd-mm-yy" [disabled]="isViewMode"
+                            placeholder="dd-mm-yyyy" appendTo="body" class="w-full" [inputStyle]="{'width':'100%'}"></p-datepicker>
+                    </div>
+                    <div class="form-field form-field-half">
+                        <label class="form-label">Clearance Given <span class="form-label-required">*</span></label>
+                        <p-select [options]="yesNoOptions" [(ngModel)]="clearanceGiven" [disabled]="isViewMode"
+                            optionLabel="label" optionValue="value"
+                            placeholder="Select" [showClear]="true" class="w-full" appendTo="body"></p-select>
+                    </div>
+                    <div class="form-field form-field-half">
+                        <label class="form-label">Clearance Given Date</label>
+                        <p-datepicker [(ngModel)]="clearanceGivenDate" dateFormat="dd-mm-yy" [disabled]="isViewMode"
+                            placeholder="dd-mm-yyyy" appendTo="body" class="w-full" [inputStyle]="{'width':'100%'}"></p-datepicker>
+                    </div>
+                }
+                <div class="form-field form-field-half">
+                    <label class="form-label">
+                        Is Reliever Assigned? <span class="form-label-required">*</span>
+                    </label>
+                    <p-select [options]="yesNoOptions" [(ngModel)]="isReliever" [disabled]="isViewMode"
+                        optionLabel="label" optionValue="value"
+                        placeholder="Select Yes / No" [showClear]="true"
+                        class="w-full" appendTo="body"
+                        (onChange)="isReliever === true ? joineeCollapsed = false : null"></p-select>
+                </div>
+                @if (isReliever === true) {
+                    <div class="form-field form-field-half">
+                        <label class="form-label">Service ID <small class="text-500 font-normal">(search to auto-fill)</small></label>
+                        <div style="display:flex; gap:0.5rem;">
+                            <input pInputText class="w-full" [(ngModel)]="joineeSearchServiceId" placeholder="Enter Service ID"
+                                [readonly]="isViewMode" (keyup.enter)="searchJoinee()" />
+                            <p-button icon="pi pi-search" [loading]="joineeSearching" [disabled]="isViewMode"
+                                (onClick)="searchJoinee()"
+                                size="small" pTooltip="Search" tooltipPosition="top"></p-button>
+                        </div>
+                    </div>
+                }
+                @if (isReliever === false) {
+                    <div class="form-field form-field-half">
+                        <label class="form-label">Reason (No Reliever)</label>
+                        <div class="reason-standard-option">
+                            <p-checkbox [(ngModel)]="isTransferWithoutReliever" [binary]="true"
+                                inputId="transferWithoutReliever" [disabled]="isViewMode"
+                                (onChange)="onTransferWithoutRelieverToggle()"></p-checkbox>
+                            <label for="transferWithoutReliever">{{ transferWithoutRelieverText }}</label>
+                        </div>
+                        <input pInputText class="w-full" [(ngModel)]="relieverNotGivenReason"
+                            (ngModelChange)="onReasonTextChange()"
+                            placeholder="Enter reason"
+                            [readonly]="isViewMode || isTransferWithoutReliever" />
+                    </div>
+                }
+            </div>
+
+            <!-- Posting Order Files -->
+            <app-file-references-form
+                #poFileForm
+                [fileRows]="postingOrderFileRows"
+                [isViewMode]="isViewMode"
+                title="Posting Order Copy"
+                (fileRowsChange)="onPOFileRowsChange($event)"
+                (onDownloadFile)="onDownloadFile($event)">
+            </app-file-references-form>
+        </div>
+
+        <!-- ── RIGHT: New Posting Person (collapsible) ──────────── -->
+        <div>
+            @if (joineeCollapsed) {
+                <div class="joinee-ribbon" (click)="joineeCollapsed = false">
+                    <i class="pi pi-chevron-left" style="font-size:0.8rem;"></i>
+                    <i class="pi pi-user-plus"></i>
+                    <span>New Posting Person</span>
+                </div>
+            } @else {
+            <div class="col-panel">
+                <div class="col-panel-header">
+                    <i class="pi pi-user-plus"></i>
+                    <span>New Posting Person</span>
+                    <p-button label="Clear" icon="pi pi-eraser" size="small" severity="secondary" [text]="true"
+                        [disabled]="isViewMode" [style]="{'margin-left':'auto'}" (onClick)="clearJoineeSection()"></p-button>
+                    <p-button icon="pi pi-eye-slash" size="small" [rounded]="true"
+                        pTooltip="Hide" tooltipPosition="top" (onClick)="joineeCollapsed = true"></p-button>
+                </div>
+            <div class="form-row">
+                <div class="form-field">
+                    <label class="form-label">Mother Org <span class="form-label-required">*</span></label>
+                    <p-select [options]="motherOrgOptions" [(ngModel)]="joineeMotherOrgId" [disabled]="isViewMode"
+                        optionLabel="label" optionValue="value"
+                        placeholder="Select mother org" [filter]="true" filterBy="label"
+                        [showClear]="true" class="w-full" appendTo="body"
+                        (onChange)="onMotherOrgChange($event.value)"></p-select>
+                </div>
+                <div class="form-field">
+                    <label class="form-label">Mother Org Unit <span class="form-label-required">*</span></label>
+                    <p-select [options]="motherOrgUnitOptions" [(ngModel)]="joineeMotherOrgUnitId"
+                        optionLabel="label" optionValue="value"
+                        placeholder="Select unit" [filter]="true" filterBy="label"
+                        [showClear]="true" class="w-full" appendTo="body"
+                        [disabled]="isViewMode || !motherOrgUnitOptions.length"></p-select>
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div class="form-field">
+                    <label class="form-label">Member Type</label>
+                    <p-select [options]="memberTypeOptions" [(ngModel)]="joineeMemberType" [disabled]="isViewMode"
+                        optionLabel="label" optionValue="value"
+                        placeholder="Select member type"
+                        [showClear]="true" class="w-full" appendTo="body"
+                        (onChange)="onMemberTypeChange($event.value)"></p-select>
+                </div>
+                <div class="form-field">
+                    <label class="form-label">Rank</label>
+                    <p-select [options]="rankOptions" [(ngModel)]="joineeRank"
+                        optionLabel="label" optionValue="value"
+                        placeholder="Select rank" [filter]="true" filterBy="label"
+                        [showClear]="true" class="w-full" appendTo="body"
+                        [disabled]="isViewMode || !rankOptions.length"></p-select>
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div class="form-field">
+                    <label class="form-label">Corps</label>
+                    <p-select [options]="corpsOptions" [(ngModel)]="joineeCorps"
+                        optionLabel="label" optionValue="value"
+                        placeholder="Select Corps"
+                        [showClear]="true" class="w-full" appendTo="body"
+                        [disabled]="isViewMode || !corpsOptions.length"
+                        (onChange)="onCorpsChange($event.value)"></p-select>
+                </div>
+                <div class="form-field">
+                    <label class="form-label">Trade</label>
+                    <p-select [options]="tradeOptions" [(ngModel)]="joineeTrade"
+                        optionLabel="label" optionValue="value"
+                        placeholder="Select trade"
+                        [showClear]="true" class="w-full" appendTo="body"
+                        [disabled]="isViewMode || !tradeOptions.length"></p-select>
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div class="form-field">
+                    <label class="form-label">Prefix <span class="form-label-required">*</span></label>
+                    <p-select [options]="prefixOptions" [(ngModel)]="joineePrefixId"
+                        optionLabel="label" optionValue="value"
+                        placeholder="Select prefix"
+                        [showClear]="true" class="w-full" appendTo="body"
+                        [disabled]="isViewMode || !prefixOptions.length"></p-select>
+                </div>
+                <div class="form-field">
+                    <label class="form-label">Service ID <span class="form-label-required">*</span>
+                        <small class="text-500 font-normal">(search to auto-fill)</small></label>
+                    <div style="display:flex; gap:0.5rem;">
+                        <input pInputText class="w-full" [(ngModel)]="joineeServiceId"
+                            placeholder="Service ID" [readonly]="isViewMode"
+                            (keyup.enter)="searchNewJoineeByServiceId()" />
+                        <p-button icon="pi pi-search" [loading]="joineeSearching" [disabled]="isViewMode"
+                            (onClick)="searchNewJoineeByServiceId()"
+                            size="small" pTooltip="Load details if this member already exists" tooltipPosition="top"></p-button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div class="form-field">
+                    <label class="form-label">Name (Bangla) <span class="form-label-required">*</span></label>
+                    <input pInputText class="w-full" [(ngModel)]="joineeNameBangla"
+                        placeholder="নাম বাংলায়" [readonly]="isViewMode" />
+                </div>
+                <div class="form-field">
+                    <label class="form-label">Joining Order No</label>
+                    <input pInputText class="w-full" [(ngModel)]="joineeJoiningOrderNo"
+                        placeholder="Joining order number" [readonly]="isViewMode" />
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div class="form-field">
+                    <label class="form-label">Joining Order Date</label>
+                    <p-datepicker [(ngModel)]="joineeJoiningOrderDate" dateFormat="dd-mm-yy" [disabled]="isViewMode"
+                        placeholder="dd-mm-yyyy" appendTo="body" class="w-full" [inputStyle]="{'width':'100%'}"></p-datepicker>
+                </div>
+                <div class="form-field">
+                    <label class="form-label">Possible Joining Date</label>
+                    <p-datepicker [(ngModel)]="joineePossibleJoiningDate" dateFormat="dd-mm-yy" [disabled]="isViewMode"
+                        placeholder="dd-mm-yyyy" appendTo="body" class="w-full" [inputStyle]="{'width':'100%'}"></p-datepicker>
+                </div>
+            </div>
+
+            <!-- Joining Order Files -->
+            <app-file-references-form
+                #joFileForm
+                [fileRows]="joineeFileRows"
+                [isViewMode]="isViewMode"
+                title="Joining Order Copy"
+                (fileRowsChange)="onJOFileRowsChange($event)"
+                (onDownloadFile)="onDownloadFile($event)">
+            </app-file-references-form>
+            </div>
+            }
+        </div>
+
+    </div>
+
+    <!-- ── Action Buttons ──────────────────────────────────────────── -->
+    <div class="form-actions">
+        @if (isQueryParamEdit) {
+            <p-button label="Back" icon="pi pi-arrow-left" severity="secondary"
+                [outlined]="true" styleClass="form-btn-secondary" (onClick)="goBack()"></p-button>
+        } @else if (isEditing) {
+            <p-button label="Cancel" icon="pi pi-times" severity="secondary"
+                [outlined]="true" styleClass="form-btn-secondary" (onClick)="onCancel()"></p-button>
+        }
+        @if (!isViewMode) {
+            <p-button [label]="isEditing ? 'Update' : 'Save'" icon="pi pi-save"
+                [loading]="saving" styleClass="form-btn-primary" (onClick)="onSave()"></p-button>
+        }
+    </div>
+</div>
+
+<!-- ── Multiple Employee Picker Dialog ────────────────────────── -->
+<p-dialog [(visible)]="showPoPickerDialog"
+    header="Multiple Members Found — Please Select"
+    [modal]="true" [closable]="false"
+    [style]="{ width: '820px' }" [draggable]="false" [resizable]="false"
+    [contentStyle]="{ 'border-top': '2px solid var(--primary-color)' }">
+    <p class="m-0 mt-3 mb-3 text-600">The search matched more than one member. Pick the correct one to continue.</p>
+    <p-table [value]="poPickerRows" styleClass="p-datatable-sm">
+        <ng-template pTemplate="header">
+            <tr>
+                <th style="width:5%">#</th>
+                <th>Name</th>
+                <th>Mother Organization</th>
+                <th>Status</th>
+                <th style="width:110px">Action</th>
+            </tr>
+        </ng-template>
+        <ng-template pTemplate="body" let-row let-i="rowIndex">
+            <tr>
+                <td>{{ i + 1 }}</td>
+                <td class="font-semibold">{{ row.displayName || '-' }}</td>
+                <td>{{ row.orgName || '-' }}</td>
+                <td>{{ row.postingStatus || '-' }}</td>
+                <td>
+                    <p-button label="Select" size="small" (onClick)="selectPoPickerRow(row)"></p-button>
+                </td>
+            </tr>
+        </ng-template>
+    </p-table>
+    <ng-template pTemplate="footer">
+        <p-button label="Cancel" severity="secondary" [outlined]="true" (onClick)="closePoPickerDialog()"></p-button>
+    </ng-template>
+</p-dialog>
+
+<!-- ── Joinee Multiple Employee Picker Dialog ─────────────────── -->
+<p-dialog [(visible)]="showJoineePickerDialog"
+    header="Multiple Members Found — Please Select"
+    [modal]="true" [closable]="false"
+    [style]="{ width: '820px' }" [draggable]="false" [resizable]="false"
+    [contentStyle]="{ 'border-top': '2px solid var(--green-600, #16a34a)' }">
+    <p class="m-0 mt-3 mb-3 text-600">The search matched more than one member. Pick the correct one to continue.</p>
+    <p-table [value]="joineePickerRows" styleClass="p-datatable-sm">
+        <ng-template pTemplate="header">
+            <tr>
+                <th style="width:5%">#</th>
+                <th>Name</th>
+                <th>Mother Organization</th>
+                <th>Status</th>
+                <th style="width:110px">Action</th>
+            </tr>
+        </ng-template>
+        <ng-template pTemplate="body" let-row let-i="rowIndex">
+            <tr>
+                <td>{{ i + 1 }}</td>
+                <td class="font-semibold">{{ row.displayName || '-' }}</td>
+                <td>{{ row.orgName || '-' }}</td>
+                <td>{{ row.postingStatus || '-' }}</td>
+                <td>
+                    <p-button label="Select" size="small" (onClick)="selectJoineePickerRow(row)"></p-button>
+                </td>
+            </tr>
+        </ng-template>
+    </p-table>
+    <ng-template pTemplate="footer">
+        <p-button label="Cancel" severity="secondary" [outlined]="true" (onClick)="closeJoineePickerDialog()"></p-button>
+    </ng-template>
+</p-dialog>
+
+<!-- ── Add Posting Unit Dialog ───────────────────────────── -->
+<p-dialog [(visible)]="showAddUnitDialog"
+    header="Add Posting Unit" [modal]="true" [closable]="true"
+    [style]="{ width: '672px' }"
+    [contentStyle]="{'border-top': '2px solid var(--primary-color)'}"
+    appendTo="body">
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
+        <div>
+            <label class="font-semibold block mb-2 text-700">Mother Organization</label>
+            <input pInputText class="w-full" [value]="getPostedOutMotherOrgName()" [disabled]="true" />
+        </div>
+        <div>
+            <label class="font-semibold block mb-2 text-700">Unit Name (English) <span class="text-red-500">*</span></label>
+            <input pInputText class="w-full" [(ngModel)]="newUnitNameEN" placeholder="Enter unit name in English" />
+        </div>
+        <div>
+            <label class="font-semibold block mb-2 text-700">Unit Name (Bangla)</label>
+            <input pInputText class="w-full" [(ngModel)]="newUnitNameBN" placeholder="Enter unit name in Bangla" />
+        </div>
+    </div>
+    <ng-template pTemplate="footer">
+        <p-button label="Cancel" icon="pi pi-times" severity="secondary" [outlined]="true" (onClick)="showAddUnitDialog = false"></p-button>
+        <p-button label="Save" icon="pi pi-check" [loading]="isSavingUnit" [disabled]="!newUnitNameEN?.trim()" (onClick)="saveNewPostingUnit()"></p-button>
+    </ng-template>
+</p-dialog>

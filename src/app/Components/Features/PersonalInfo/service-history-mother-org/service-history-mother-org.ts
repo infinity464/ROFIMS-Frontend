@@ -9,6 +9,7 @@ import { ButtonModule } from 'primeng/button';
 import { SelectModule } from 'primeng/select';
 import { DatePickerModule } from 'primeng/datepicker';
 import { TableModule } from 'primeng/table';
+import { FlexibleDateDirective } from '@/shared/directives/flexible-date.directive';
 @Component({
   selector: 'app-service-history-mother-org',
    imports: [
@@ -20,7 +21,7 @@ import { TableModule } from 'primeng/table';
     InputTextModule,
     ButtonModule,
     SelectModule,
-    DatePickerModule,
+    DatePickerModule, FlexibleDateDirective,
     TableModule
   ],
   templateUrl: './service-history-mother-org.html',
