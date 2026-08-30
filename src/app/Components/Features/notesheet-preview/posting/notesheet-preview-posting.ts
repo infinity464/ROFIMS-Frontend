@@ -1,4 +1,4 @@
-﻿import { AfterViewChecked, ChangeDetectorRef, Component, ElementRef, Input, ViewChild, inject } from '@angular/core';
+import { AfterViewChecked, ChangeDetectorRef, Component, ElementRef, Input, ViewChild, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ConfirmationService, MessageService, TreeNode } from 'primeng/api';
@@ -1325,19 +1325,9 @@ export class NotesheetPreviewPostingComponent extends NotesheetPreviewBase imple
             .map((part) => part.trim())
             .filter(Boolean);
 
-        // Headquarters destinations display only the wing name.
-        if (this.isRabHeadquarters(parts[0] || '')) {
-            const wing = parts[1] || parts[0];
-            return wing;
-        }
-
+        // Show the deepest selected level (wing/branch/sub-branch) — the last
+        // segment of the full path, for HQ and non-HQ destinations alike.
         return parts[parts.length - 1] || '';
-    }
-
-    /** Match both Bangla HQ names and common English forms such as RAB HQ. */
-    private isRabHeadquarters(name: string): boolean {
-        const normalized = (name || '').replace(/[\u200B-\u200D\uFEFF]/g, '').trim();
-        return normalized.includes('সদর দপ্তর') || /head\s*quarters?/i.test(normalized) || /\bHQ\b/i.test(normalized);
     }
 
     getCombinedRemarks(emp: DraftPostingEmployeeRow): string {
