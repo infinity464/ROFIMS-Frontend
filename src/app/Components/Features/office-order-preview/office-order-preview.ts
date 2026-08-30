@@ -20,7 +20,7 @@ import { MessageService } from 'primeng/api';
 import { environment } from '@/Core/Environments/environment';
 import { OfficeOrderService } from '@/services/office-order.service';
 import { EmpService } from '@/services/emp-service';
-import { GeneralNotesheetOfficeOrderDto, GeneralNotesheetOfficeOrderWithDetailsDto, ReferenceNoEntry, OnulipiEntry } from '@/models/office-order.model';
+import { GeneralNotesheetOfficeOrderDto, GeneralNotesheetOfficeOrderWithDetailsDto, ReferenceNoEntry, OnulipiEntry, AttachmentEntry } from '@/models/office-order.model';
 import { mainTextBlocksToHtml } from '@/shared/utils/notesheet-main-text';
 import { ApprovalStatus } from '@/models/enums';
 import { NotesheetMembersTableComponent } from '@/Components/Shared/notesheet-members-table/notesheet-members-table';
@@ -81,6 +81,8 @@ export class OfficeOrderPreviewComponent implements OnInit {
     // Parsed JSON fields
     referenceEntries: ReferenceNoEntry[] = [];
     onulipiEntries: OnulipiEntry[] = [];
+    /** সংযুক্ত list — rendered directly above the Onulipi, same as the ex-BD leave order. */
+    attachmentEntries: AttachmentEntry[] = [];
 
     // Onulipi show/hide filter
     showOnulipiFilter = false;
@@ -233,6 +235,10 @@ export class OfficeOrderPreviewComponent implements OnInit {
         try { this.referenceEntries = this.order.referenceNo ? JSON.parse(this.order.referenceNo) : []; } catch { this.referenceEntries = []; }
         try { this.onulipiEntries = this.order.onulipi ? JSON.parse(this.order.onulipi) : []; } catch { this.onulipiEntries = []; }
         this.onulipiChecked = this.onulipiEntries.map(() => true);
+        try {
+            const atts = this.order.attachments ? JSON.parse(this.order.attachments) : [];
+            this.attachmentEntries = Array.isArray(atts) ? atts.map((a: any) => ({ text: a?.text ?? '' })) : [];
+        } catch { this.attachmentEntries = []; }
     }
 
     private parseNoteSheetFields(): void {
@@ -690,6 +696,23 @@ export class OfficeOrderPreviewComponent implements OnInit {
                     indent: { left: sigIndent }
                 }));
             }
+        }
+
+        // ── Attachments (সংযুক্ত, 8pt) — printed directly above the Onulipi ──
+        if (this.attachmentEntries.length > 0) {
+            children.push(new Paragraph({
+                children: [new TextRun({ text: this.isBangla ? 'সংযুক্ত:' : 'Attachment:', font, size: contentSize, bold: true })],
+                spacing: { before: 300, after: 0 }
+            }));
+            this.attachmentEntries.forEach((att, idx) => {
+                const ser = this.isBangla ? this.toBanglaDigits(String(idx + 1)) : String(idx + 1);
+                children.push(new Paragraph({
+                    children: [new TextRun({ text: `${ser}।\t${att.text}`, font, size: contentSize })],
+                    indent: { left: 432, hanging: 432 },
+                    tabStops: [{ type: TabStopType.LEFT, position: 432 }],
+                    spacing: { after: 20 }
+                }));
+            });
         }
 
         // ── Onulipi (8pt) — only checked entries ──

@@ -346,6 +346,18 @@
     line-height: 1.5;
 }
 
+/* ── Attachment (সংযুক্ত) ──────────────────
+   Sits directly above the Onulipi and numbers its lines the same way, so it repeats
+   .oo-copy-no's fixed tab stop rather than inheriting the Onulipi's. */
+.oo-doc-attachments {
+    margin-top: 20px;
+
+    .oo-copy-no {
+        display: inline-block;
+        min-width: 2.2em;
+    }
+}
+
 /* ── Onulipi spacing ─────────────────────────────── */
 .oo-doc-onulipi {
     margin-top: 30px;
