@@ -19,6 +19,7 @@ import { MessageService } from 'primeng/api';
 import { environment } from '@/Core/Environments/environment';
 import { ExBdLeaveClearanceService, ExBdLeaveClearanceDto, ExBdLeaveClearanceWithDetailsDto } from '@/services/ex-bd-leave-clearance.service';
 import { EmpService } from '@/services/emp-service';
+import { ServingMembersService } from '@/services/serving-members.service';
 import { ReferenceNoEntry, OnulipiEntry, AttachmentEntry } from '@/models/office-order.model';
 import { ApprovalStatus } from '@/models/enums';
 import { NotesheetMembersTableComponent } from '@/Components/Shared/notesheet-members-table/notesheet-members-table';
@@ -56,6 +57,7 @@ export class ClearanceExBdLeavePreviewComponent implements OnInit {
     private http = inject(HttpClient);
     private clearanceService = inject(ExBdLeaveClearanceService);
     private empService = inject(EmpService);
+    private servingMembersService = inject(ServingMembersService);
     private messageService = inject(MessageService);
     private sanitizer = inject(DomSanitizer);
     private jsreportService = inject(JsReportService);
@@ -199,12 +201,32 @@ export class ClearanceExBdLeavePreviewComponent implements OnInit {
             next: (data) => {
                 this.order = data;
                 this.parseJsonFields();
+                this.applyApprovalNavySuffix(data?.approvalEmployeeId);
                 this.loading = false;
             },
             error: () => {
                 this.error = true;
                 this.loading = false;
             }
+        });
+    }
+
+    /**
+     * Navy members carry "BN" after the rank in the signature block, e.g.
+     * "Commander, BN". The clearance rank comes from the view/snapshot, which has
+     * no mother-org info — fetch the brief profile and append when Navy.
+     */
+    private applyApprovalNavySuffix(employeeId: number | null | undefined): void {
+        if (!employeeId || !this.order?.approvalEmployeeRank) return;
+        this.servingMembersService.getEmployeeBriefProfile(employeeId).subscribe({
+            next: (emp) => {
+                const isNavy = /navy/i.test(emp?.motherOrgEN || '') || (emp?.motherOrgBN || '').includes('নৌ');
+                if (!isNavy || !this.order?.approvalEmployeeRank) return;
+                if (!this.order.approvalEmployeeRank.endsWith(', BN')) {
+                    this.order.approvalEmployeeRank += ', BN';
+                }
+            },
+            error: () => { /* no profile — leave rank as-is */ }
         });
     }
 

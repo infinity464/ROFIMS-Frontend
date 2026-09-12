@@ -1325,9 +1325,20 @@ export class NotesheetPreviewPostingComponent extends NotesheetPreviewBase imple
             .map((part) => part.trim())
             .filter(Boolean);
 
-        // Show the deepest selected level (wing/branch/sub-branch) — the last
-        // segment of the full path, for HQ and non-HQ destinations alike.
-        return parts[parts.length - 1] || '';
+        // RAB HQ destinations show only the deepest selected level
+        // (wing/branch/sub-branch); every other destination shows the FULL
+        // comma-separated path.
+        if (this.isRabHeadquarters(parts[0] || '')) {
+            return parts[parts.length - 1] || '';
+        }
+
+        return parts.join(', ');
+    }
+
+    /** Match both Bangla HQ names and common English forms such as RAB HQ. */
+    private isRabHeadquarters(name: string): boolean {
+        const normalized = (name || '').replace(/[\u200B-\u200D\uFEFF]/g, '').trim();
+        return normalized.includes('সদর দপ্তর') || /head\s*quarters?/i.test(normalized) || /\bHQ\b/i.test(normalized);
     }
 
     getCombinedRemarks(emp: DraftPostingEmployeeRow): string {
@@ -2676,15 +2687,30 @@ html, body { margin: 0; padding: 0; background: transparent; }
             }
         }
 
-        // Note (between employee table and paragraphs, matching view order)
+        // Note (between employee table and paragraphs, matching view order).
+        // The note is rich HTML from the editor — parse it into content blocks so
+        // the formatting survives instead of the raw tags landing in the document.
         if (model.note) {
-            const noteLines = model.note.split('\n').filter((l: string) => l.trim());
-            for (const line of noteLines) {
+            const noteBlocks = this.parseHtmlToContentBlocks(this.fixBanglaWordBreaks(model.note));
+            for (const b of noteBlocks) {
+                if (b.type === 'table' && b.rows?.length) {
+                    mainChildren.push(...this.contentBlocksToDocx([b], font, bn));
+                    continue;
+                }
+                if (!b.text) continue;
+                let align: (typeof AlignmentType)[keyof typeof AlignmentType] | undefined;
+                if (b.alignment === 'center') align = AlignmentType.CENTER;
+                else if (b.alignment === 'right') align = AlignmentType.RIGHT;
+                else if (b.alignment === 'justify') align = AlignmentType.JUSTIFIED;
+                const children = b.runs?.length
+                    ? b.runs.map((r) => new TextRun({ text: r.text, bold: r.bold, italics: r.italic, underline: r.underline ? {} : undefined, size: BODY_SZ, sizeComplexScript: csSize, font, language: lang }))
+                    : [new TextRun({ text: b.text, bold: b.bold, italics: b.italic, size: BODY_SZ, sizeComplexScript: csSize, font, language: lang })];
                 mainChildren.push(
                     new Paragraph({
-                        children: [new TextRun({ text: line, size: BODY_SZ, sizeComplexScript: csSize, font, language: lang })],
-                        indent: { left: 100 },
-                        spacing: { before: 40, after: 40 }
+                        children,
+                        indent: { left: b.indent === 'list' ? 400 : 100 },
+                        spacing: { before: 40, after: 40 },
+                        alignment: align
                     })
                 );
             }

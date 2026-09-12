@@ -575,6 +575,17 @@ export class PostingOrderPreviewPageComponent implements OnInit {
         });
     }
 
+    /**
+     * Navy members carry "বিএন" (EN: "BN") after the rank in signature blocks,
+     * e.g. "কমান্ডার, বিএন". Detected from the brief profile's root mother org.
+     */
+    private navyRank(emp: any, bn: boolean): string {
+        const rank = (bn ? emp?.rankBN : emp?.rankEN) ?? '';
+        if (!rank) return '';
+        const isNavy = /navy/i.test(emp?.motherOrgEN || '') || (emp?.motherOrgBN || '').includes('নৌ');
+        return isNavy ? `${rank}, ${bn ? 'বিএন' : 'BN'}` : rank;
+    }
+
     private loadApprovalPerson(employeeId: number | null): void {
         if (!employeeId) return;
         this.servingMembersService.getEmployeeBriefProfile(employeeId).subscribe({
@@ -582,8 +593,8 @@ export class PostingOrderPreviewPageComponent implements OnInit {
                 if (emp) {
                     this.approvalPersonName = emp.nameEN ?? '';
                     this.approvalPersonNameBN = emp.nameBN ?? '';
-                    this.approvalPersonRank = emp.rankEN ?? '';
-                    this.approvalPersonRankBN = emp.rankBN ?? '';
+                    this.approvalPersonRank = this.navyRank(emp, false);
+                    this.approvalPersonRankBN = this.navyRank(emp, true);
                     this.approvalPersonAppointment = emp.appointmentEN ?? '';
                     this.approvalPersonAppointmentBN = emp.appointmentBN ?? '';
                 }
@@ -715,8 +726,8 @@ export class PostingOrderPreviewPageComponent implements OnInit {
                             if (emp) {
                                 this.initiatorName = emp.nameEN ?? '';
                                 this.initiatorNameBN = emp.nameBN ?? '';
-                                this.initiatorRank = emp.rankEN ?? '';
-                                this.initiatorRankBN = emp.rankBN ?? '';
+                                this.initiatorRank = this.navyRank(emp, false);
+                                this.initiatorRankBN = this.navyRank(emp, true);
                                 this.initiatorAppointment = emp.appointmentEN ?? '';
                                 this.initiatorAppointmentBN = emp.appointmentBN ?? '';
                                 this.initiatorPhone = emp.mobileNo ?? '';
@@ -741,8 +752,8 @@ export class PostingOrderPreviewPageComponent implements OnInit {
                             if (emp) {
                                 this.approverName = emp.nameEN ?? '';
                                 this.approverNameBN = emp.nameBN ?? '';
-                                this.approverRank = emp.rankEN ?? '';
-                                this.approverRankBN = emp.rankBN ?? '';
+                                this.approverRank = this.navyRank(emp, false);
+                                this.approverRankBN = this.navyRank(emp, true);
                                 this.approverAppointment = emp.appointmentEN ?? '';
                                 this.approverAppointmentBN = emp.appointmentBN ?? '';
                                 this.approverPhone = emp.mobileNoOfficial ?? '';
@@ -1000,7 +1011,9 @@ export class PostingOrderPreviewPageComponent implements OnInit {
             const branch = parts[2];
             return branch ? `${wing} (${branch})` : wing;
         }
-        return parts[parts.length - 1] || '-';
+        // Non-HQ destinations show the FULL comma-separated path (matches the
+        // notesheet preview's বদলি ইউনিট rule).
+        return parts.join(', ') || '-';
     }
 
     empRabId(emp: PostingOrderEmployeeRow): string {

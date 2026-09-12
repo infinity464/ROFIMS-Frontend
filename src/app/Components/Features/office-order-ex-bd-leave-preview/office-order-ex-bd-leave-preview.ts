@@ -253,6 +253,7 @@ export class OfficeOrderExBdLeavePreviewComponent implements OnInit {
                 this.parseNoteSheetFields();
                 this.loadFinalApprover(data?.noteSheetId);
                 this.loadApprovalSignature(data?.approvalEmployeeId);
+                this.applyApprovalNavySuffix(data?.approvalEmployeeId);
                 this.loading = false;
             },
             error: () => {
@@ -260,6 +261,38 @@ export class OfficeOrderExBdLeavePreviewComponent implements OnInit {
                 this.loading = false;
             }
         });
+    }
+
+    /**
+     * The order's approval-person rank comes from the view/snapshot, which has no
+     * mother-org info — fetch the brief profile and append "বিএন"/"BN" when Navy.
+     */
+    private applyApprovalNavySuffix(employeeId: number | null | undefined): void {
+        if (!employeeId || !this.order?.approvalEmployeeRank) return;
+        this.servingMembersService.getEmployeeBriefProfile(employeeId).subscribe({
+            next: (emp) => {
+                const isNavy = /navy/i.test(emp?.motherOrgEN || '') || (emp?.motherOrgBN || '').includes('নৌ');
+                if (!isNavy || !this.order) return;
+                if (this.order.approvalEmployeeRank && !this.order.approvalEmployeeRank.endsWith(', BN')) {
+                    this.order.approvalEmployeeRank += ', BN';
+                }
+                if (this.order.approvalEmployeeRankBN && !this.order.approvalEmployeeRankBN.endsWith(', বিএন')) {
+                    this.order.approvalEmployeeRankBN += ', বিএন';
+                }
+            },
+            error: () => { /* no profile — leave rank as-is */ }
+        });
+    }
+
+    /**
+     * Navy members carry "বিএন" (EN: "BN") after the rank in signature blocks,
+     * e.g. "কমান্ডার, বিএন". Detected from the brief profile's root mother org.
+     */
+    private navyRank(emp: any, bn: boolean): string {
+        const rank = (bn ? emp?.rankBN : emp?.rankEN) ?? '';
+        if (!rank) return '';
+        const isNavy = /navy/i.test(emp?.motherOrgEN || '') || (emp?.motherOrgBN || '').includes('নৌ');
+        return isNavy ? `${rank}, ${bn ? 'বিএন' : 'BN'}` : rank;
     }
 
     /** Load the linked notesheet's final-approval user — shown as the signature above Onulipi. */
@@ -282,8 +315,8 @@ export class OfficeOrderExBdLeavePreviewComponent implements OnInit {
                         if (!emp) return;
                         this.finalApproverName = emp.nameEN ?? '';
                         this.finalApproverNameBN = emp.nameBN ?? '';
-                        this.finalApproverRank = emp.rankEN ?? '';
-                        this.finalApproverRankBN = emp.rankBN ?? '';
+                        this.finalApproverRank = this.navyRank(emp, false);
+                        this.finalApproverRankBN = this.navyRank(emp, true);
                         this.finalApproverAppointment = emp.appointmentEN ?? '';
                         this.finalApproverAppointmentBN = emp.appointmentBN ?? '';
                     },
