@@ -430,7 +430,7 @@ export class ReportBioDataIndividualComponent implements OnInit, OnDestroy {
             case 'identificationMark': return this.val(p.identificationMark);
             case 'ownDistrict':        return this.codeValue(p.permanentDistrictTypeName, p.permanentDistrictTypeNameBN);
             case 'wifeDistrict':       return this.codeValue(this.spouseDistrict, this.spouseDistrictBN);
-            case 'noOfChildren':       return this.childrenCount == null ? '-' : this.displayNum(this.childrenCount);
+            case 'noOfChildren':       return !this.childrenCount ? '-' : this.displayNum(this.childrenCount);
             case 'prevService':        return this.previousServiceInRab;
             default:                   return '-';
         }

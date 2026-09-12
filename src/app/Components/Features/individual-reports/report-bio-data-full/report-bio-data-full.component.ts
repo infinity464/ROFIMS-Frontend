@@ -1085,7 +1085,10 @@ export class ReportBioDataFullIndividualComponent implements OnInit, OnDestroy {
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=Hind+Siliguri:wght@400;500;600;700&display=swap" rel="stylesheet" />
 <style>
   :root { --paper:#fbfbf9; --sheet:#fff; --ink:#141413; --ink-soft:#3c3c39; --muted:#8d8d88; --faint:#bcbcb6; --line:#e8e7e3; --line-strong:#d3d2cc; }
-  * { box-sizing:border-box; margin:0; padding:0; }
+  /* print-color-adjust: browsers skip background colors when printing ("background
+     graphics" off by default), which erased the ink-filled marks — the section-head
+     square (.sec-head::before), the black address badges and the header dots. */
+  * { box-sizing:border-box; margin:0; padding:0; -webkit-print-color-adjust:exact; print-color-adjust:exact; }
   body { font-family:${grotesk}; background:var(--paper); color:var(--ink); -webkit-font-smoothing:antialiased; display:flex; justify-content:center; padding:36px 18px 64px; }
   .sheet { background:var(--sheet); width:100%; max-width:920px; border:1px solid var(--line); box-shadow:0 36px 70px -48px rgba(0,0,0,0.3); padding:40px 44px 36px; }
   .meta-bar { display:flex; justify-content:space-between; align-items:baseline; gap:16px; font-family:${mono}; font-size:10px; letter-spacing:0.2em; text-transform:uppercase; color:var(--muted); padding-bottom:16px; border-bottom:1.5px solid var(--ink); flex-wrap:wrap; }
