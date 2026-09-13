@@ -2395,7 +2395,7 @@ html, body { margin: 0; padding: 0; background: transparent; }
             children: [
                 new TextRun({ text: this.postingOrderNo, size: ctxSize, sizeComplexScript: csSize, font, language: lang }),
                 new TextRun({ text: '\t', font }),
-                new TextRun({ text: bn ? 'তারিখ: ' : 'Date: ', bold: true, size: ctxSize, sizeComplexScript: csSize, font, language: lang }),
+                new TextRun({ text: bn ? 'তারিখঃ ' : 'Date: ', size: ctxSize, sizeComplexScript: csSize, font, language: lang }),
                 new TextRun({ text: this.previewDate, size: ctxSize, sizeComplexScript: csSize, font, language: lang })
             ],
             spacing: { after: 80 }
@@ -2406,13 +2406,13 @@ html, body { margin: 0; padding: 0; background: transparent; }
         const referenceParas: Paragraph[] = refEntries.length === 0 ? [] :
             refEntries.length === 1 ? [new Paragraph({
                 children: [
-                    new TextRun({ text: bn ? 'সূত্রঃ ' : 'Reference: ', bold: true, size: ctxSize, sizeComplexScript: csSize, font, language: lang }),
+                    new TextRun({ text: bn ? 'সূত্রঃ ' : 'Reference: ', size: ctxSize, sizeComplexScript: csSize, font, language: lang }),
                     new TextRun({ text: this.referenceEntryText(refEntries[0]), size: ctxSize, sizeComplexScript: csSize, font, language: lang })
                 ],
                 spacing: { after: 160 }
             })] : [
                 new Paragraph({
-                    children: [new TextRun({ text: bn ? 'সূত্রঃ' : 'Reference:', bold: true, size: ctxSize, sizeComplexScript: csSize, font, language: lang })],
+                    children: [new TextRun({ text: bn ? 'সূত্রঃ' : 'Reference:', size: ctxSize, sizeComplexScript: csSize, font, language: lang })],
                     spacing: { after: 40 }
                 }),
                 ...refEntries.map((ref, i) => new Paragraph({

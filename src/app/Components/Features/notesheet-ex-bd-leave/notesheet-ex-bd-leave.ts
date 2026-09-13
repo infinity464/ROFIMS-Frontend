@@ -927,12 +927,14 @@ export class NotesheetExBdLeaveComponent implements OnInit {
         const nameWithSuffixBN = overview ? getFormattedMemberName(overview, true) : nameBN;
         const nameWithSuffixEN = overview ? getFormattedMemberName(overview, false) : nameEN;
 
-        // Person identifier: "Prefix-ServiceId Name, psc, Arty" — prefix & service id joined by a
-        // dash (e.g. বিএ-৭৪৪২ মোঃ কামরুল হাসান); empties skipped to avoid stray spaces/dashes.
+        // Person identifier: "Prefix-ServiceId Rank Name, psc, Arty" — prefix & service id joined by
+        // a dash (e.g. বিএ-৭৪৪২ মেজর মোঃ কামরুল হাসান); empties skipped to avoid stray spaces/dashes.
         const prefixSvcBN = [prefixBN, BanglaNumerals.toBangla(serviceId)].filter(Boolean).join('-');
         const prefixSvcEN = [prefixEN, serviceId].filter(Boolean).join('-');
-        const personBN = [prefixSvcBN, nameWithSuffixBN].filter(Boolean).join(' ');
-        const personEN = [prefixSvcEN, nameWithSuffixEN].filter(Boolean).join(' ');
+        const rankBN = overview?.armyRankBN || overview?.armyRank || app.applicantRank || '';
+        const rankEN = overview?.armyRank || app.applicantRank || '';
+        const personBN = [prefixSvcBN, rankBN, nameWithSuffixBN].filter(Boolean).join(' ');
+        const personEN = [prefixSvcEN, rankEN, nameWithSuffixEN].filter(Boolean).join(' ');
 
         const dynamicBN = `র‍্যাব প্রেষণে নিয়োজিত বর্তমানে ${rabUnitBN} এ কর্মরত ${personBN} এর ${purposeBN} জন্য${familySectionBN} আগামী ${formatDateBangla(fromDate)} হতে ${formatDateBangla(toDate)} তারিখ পর্যন্ত ${daysBN} (${daysWordsBN}) দিন অথবা উল্লিখিত সময়ের মধ্যে যাত্রার তারিখ হতে ${daysBN} (${daysWordsBN}) দিন ${countriesBN} গমনের জন্য অর্জিত `;
 

@@ -595,12 +595,12 @@
             <!-- Order No & Date -->
             <div class="po-doc-meta">
                 <span>{{ postingOrderNo || '.............' }}</span>
-                <span><strong>{{ isBangla ? 'তারিখ' : 'Date' }}:</strong> {{ previewDate }}</span>
+                <span>{{ isBangla ? 'তারিখঃ' : 'Date:' }} {{ previewDate }}</span>
             </div>
 
             <!-- Reference / সূত্র : one line, or a numbered list when multiple -->
             <div class="po-doc-reference" *ngIf="referenceEntries.length > 0">
-                <span class="po-doc-reference-label">{{ isBangla ? 'সূত্র' : 'Reference' }}:</span>
+                <span class="po-doc-reference-label">{{ isBangla ? 'সূত্রঃ' : 'Reference:' }}</span>
                 <span class="po-doc-reference-value" *ngIf="!hasMultipleReferences">{{ referenceLine }}</span>
                 <div class="po-doc-reference-list" *ngIf="hasMultipleReferences">
                     <div *ngFor="let ref of referenceEntries; let i = index">{{ isBangla ? toBanglaDigits('' + (i + 1)) : (i + 1) }}। {{ referenceEntryText(ref) }}</div>
