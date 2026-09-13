@@ -11,6 +11,9 @@ import { TooltipModule } from 'primeng/tooltip';
 import { InputTextModule } from 'primeng/inputtext';
 import { TextareaModule } from 'primeng/textarea';
 import { SelectModule } from 'primeng/select';
+import { InputNumberModule } from 'primeng/inputnumber';
+import { NotesheetStyleConfigService } from '@/services/notesheet-style-config.service';
+import { NotesheetStyleConfig, defaultNotesheetStyle } from '@/models/notesheet-style-config.model';
 
 import { CheckboxModule } from 'primeng/checkbox';
 import { DatePickerModule } from 'primeng/datepicker';
@@ -72,6 +75,7 @@ interface ApprovalLogEntry {
         InputTextModule,
         TextareaModule,
         SelectModule,
+        InputNumberModule,
         CheckboxModule,
         DatePickerModule,
         TreeSelectModule,
@@ -91,7 +95,7 @@ export class NotesheetPreviewPostingComponent extends NotesheetPreviewBase imple
     @ViewChild('pagesContainer') pagesContainer!: ElementRef<HTMLDivElement>;
 
     private cdr = inject(ChangeDetectorRef);
-    /** Host element — carries the --ns-fs-delta font-size offset for the whole preview. */
+    /** Host element — carries the --ns-* document style variables (font offset, gaps) for the whole preview. */
     private hostEl = inject(ElementRef) as ElementRef<HTMLElement>;
     private confirmationService = inject(ConfirmationService);
     private sharedService = inject(SharedService);
@@ -174,8 +178,9 @@ export class NotesheetPreviewPostingComponent extends NotesheetPreviewBase imple
      *  spilled onto a page of its own back up and saves the extra sheet.
      *
      *  Applied as the --ns-fs-delta custom property on the component host — see
-     *  applyFontDelta(), the fs() function in the component SCSS, and the
-     *  .pdf-flow restatement in buildJsReportPdf(). */
+     *  applyStyleVars(), the fs() function in the component SCSS, and the
+     *  .pdf-flow restatement in buildJsReportPdf(). Saved with the rest of the
+     *  document style (saveStyleAsDefault). */
     fontDelta = 0;
     /** +2.00 … 0 … -2.00 pt in 0.25 steps, largest first (like the page-size list). */
     readonly fontDeltaOptions = Array.from({ length: 17 }, (_, i) => {
@@ -192,23 +197,124 @@ export class NotesheetPreviewPostingComponent extends NotesheetPreviewBase imple
         return `Font: ${value > 0 ? '+' : '-'}${Math.abs(value).toFixed(2)} pt`;
     }
 
-    /**
-     * Font-size dropdown changed. The offset is written to the host element so it
-     * inherits into the visible pages, the hidden .page-measure div and the
-     * repeated table headers at once. Every tier resizes, so the content height
-     * changes: clearing lastMeasuredHeight makes the next ngAfterViewChecked
-     * re-measure and re-paginate against the new size.
-     */
     onFontDeltaChange(): void {
-        this.applyFontDelta();
+        this.onStyleChange();
+    }
+
+    // ── Saved document style ─────────────────────────────────
+    private styleConfigService = inject(NotesheetStyleConfigService);
+    /** Signature-block spacing, saved per note-sheet type. fontDelta and selectedPageSize
+     *  stay separate fields (the export bar binds them) and are folded in on save. */
+    styleConfig: NotesheetStyleConfig = defaultNotesheetStyle(NoteSheetType.NewPosting);
+    showStyleDialog = false;
+    savingStyle = false;
+
+    /** Cached style first so the sheet paginates in the saved style straight away,
+     *  then the server's copy. */
+    protected override onNoteSheetLoaded(): void {
+        const type = this.noteSheet?.noteSheetType;
+        if (!type) return;
+        this.applyStyleConfig(this.styleConfigService.cached(type));
+        this.styleConfigService.load(type).subscribe((cfg) => this.applyStyleConfig(cfg));
+    }
+
+    private applyStyleConfig(cfg: NotesheetStyleConfig): void {
+        this.styleConfig = { ...cfg };
+        this.fontDelta = cfg.fontDelta;
+        if (this.selectedPageSize !== cfg.defaultPageSize) {
+            this.selectedPageSize = cfg.defaultPageSize;
+            this.applyStyleVars();
+            this.onPageSizeChange();
+        } else {
+            this.onStyleChange();
+        }
+    }
+
+    /**
+     * Font size or a gap changed. The values are written to the host element so they
+     * inherit into the visible pages, the hidden .page-measure div and the repeated
+     * table headers at once. The content height changes with them: clearing
+     * lastMeasuredHeight makes the next ngAfterViewChecked re-measure and re-paginate.
+     */
+    onStyleChange(): void {
+        this.applyStyleVars();
         this.lastMeasuredHeight = 0;
         this.cdr.detectChanges();
     }
 
-    /** Unitless — the SCSS multiplies it by 1pt, which keeps a negative offset a
-     *  plain multiplication instead of a signed operand inside calc(). */
-    private applyFontDelta(): void {
-        this.hostEl.nativeElement.style.setProperty('--ns-fs-delta', `${this.fontDelta}`);
+    /** Current style with cleared inputs (p-inputNumber emits null) put back to defaults. */
+    private currentStyle(): NotesheetStyleConfig {
+        const d = defaultNotesheetStyle(this.noteSheet?.noteSheetType ?? this.styleConfig.noteSheetType);
+        const s = this.styleConfig;
+        return {
+            ...d,
+            configId: s.configId,
+            fontDelta: this.fontDelta ?? d.fontDelta,
+            defaultPageSize: this.selectedPageSize === 'A4' ? 'A4' : 'Legal',
+            approverGapPx: s.approverGapPx ?? d.approverGapPx,
+            approverGapEm: s.approverGapEm ?? d.approverGapEm,
+            sigDateGapEm: s.sigDateGapEm ?? d.sigDateGapEm,
+            initiatorTopMarginPx: s.initiatorTopMarginPx ?? d.initiatorTopMarginPx,
+            approverMinHeightPx: s.approverMinHeightPx ?? d.approverMinHeightPx
+        };
+    }
+
+    /** The custom properties the component SCSS reads. Unitless values (font delta, em
+     *  counts) are multiplied by 1pt / 1em there, which keeps a negative offset a plain
+     *  multiplication instead of a signed operand inside calc(). */
+    private styleVars(): [string, string][] {
+        const s = this.currentStyle();
+        return [
+            ['--ns-fs-delta', `${s.fontDelta}`],
+            ['--ns-approver-gap-px', `${s.approverGapPx}px`],
+            ['--ns-approver-gap-em', `${s.approverGapEm}`],
+            ['--ns-sig-date-gap-em', `${s.sigDateGapEm}`],
+            ['--ns-initiator-top', `${s.initiatorTopMarginPx}px`],
+            ['--ns-approver-min-h', `${s.approverMinHeightPx}px`]
+        ];
+    }
+
+    private applyStyleVars(): void {
+        const el = this.hostEl.nativeElement;
+        for (const [name, value] of this.styleVars()) el.style.setProperty(name, value);
+    }
+
+    saveStyleAsDefault(): void {
+        const type = this.noteSheet?.noteSheetType;
+        if (!type || this.savingStyle) return;
+        this.savingStyle = true;
+        const user = this.sharedService.getCurrentUser() || 'system';
+        const now = new Date().toISOString();
+        this.styleConfigService.save({ ...this.currentStyle(), noteSheetType: type, createdBy: user, createdDate: now, lastUpdatedBy: user, lastupdate: now }).subscribe({
+            next: (saved) => {
+                this.savingStyle = false;
+                this.styleConfig = { ...saved };
+                this.showStyleDialog = false;
+                this.messageService.add({ severity: 'success', summary: 'Saved', detail: 'Style saved as the default for this note-sheet type.' });
+            },
+            error: (err) => {
+                this.savingStyle = false;
+                this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.description || 'Failed to save style.' });
+            }
+        });
+    }
+
+    resetStyleToDefault(): void {
+        const type = this.noteSheet?.noteSheetType;
+        if (!type) return;
+        this.confirmationService.confirm({
+            header: 'Reset Style',
+            message: 'Remove the saved style for this note-sheet type and go back to the built-in defaults?',
+            icon: 'pi pi-exclamation-triangle',
+            accept: () =>
+                this.styleConfigService.reset(type).subscribe({
+                    next: (cfg) => {
+                        this.applyStyleConfig(cfg);
+                        this.messageService.add({ severity: 'success', summary: 'Reset', detail: 'Style reset to defaults.' });
+                    },
+                    error: () => this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to reset style.' })
+                })
+        });
     }
 
     // ── Export detail toggles ──────────────────────────────────
@@ -1917,45 +2023,28 @@ html, body { margin: 0; padding: 0; background: transparent; }
     box-sizing: border-box;
     width: ${contentWidth};
     font-family: 'Times New Roman', 'SolaimanLipi', Times, serif;
-    /* Font-size offset picked in the export bar. The web view carries it on the
-       component host, which is outside the cloned snapshot — restated here so the
-       tiers below and the scoped component rules resolve to the same sizes the
-       preview shows. */
-    --ns-fs-delta: ${this.fontDelta};
+    /* Font-size offset and signature gaps (the saved document style). The web view
+       carries them on the component host, which is outside the cloned snapshot —
+       restated here so the tiers below and the scoped component rules resolve to the
+       same sizes and gaps the preview shows. */
+    ${this.styleVars().map(([name, value]) => `${name}: ${value};`).join(' ')}
     font-size: ${this.pdfFs(10)};
     line-height: 1.7;
     color: #000;
 }
 
-/* Per-element font-size tiers restated so they win over scoped component styles
-   (1:1 with the web view). */
-.pdf-flow .ns-title-bn,
-.pdf-flow .ns-title-en { font-size: ${this.pdfFs(11)} !important; }   /* title — match প্রজ্ঞাপন / Word */
-
+/* Font sizes: the clone keeps its _ngcontent attributes, so the component SCSS tiers
+   (fs(), incl. the 9pt inter-posting body and 9pt signature lines) apply here
+   exactly as on screen. Restating the title, body, signature or table sizes would make
+   the PDF taller or shorter than the web view and break its page count — only elements
+   the component SCSS does not size are set below. */
 .pdf-flow .ns-cell-subject,
 .pdf-flow .ns-edit-field,
 .pdf-flow .ns-exbd-info,
 .pdf-flow .ns-file-attachments-label,
 .pdf-flow .ns-page-no { font-size: ${this.pdfFs(10)} !important; }
 
-/* The trailing block mixes 10pt body text with 9pt signature lines on screen;
-   the PDF flattens all of it to 10pt (+ offset), as it always has. */
-.pdf-flow .ns-approver-left,
-.pdf-flow .ns-approver-remark,
-.pdf-flow .ns-approver-role,
-.pdf-flow .ns-cell-ref,
-.pdf-flow .ns-file-item,
-.pdf-flow .ns-note,
-.pdf-flow .ns-para,
-.pdf-flow .ns-posting-note,
-.pdf-flow .ns-sanglagni-col,
-.pdf-flow .ns-sig-appoint,
-.pdf-flow .ns-sig-date,
-.pdf-flow .ns-sig-name,
-.pdf-flow .ns-sig-paren,
-.pdf-flow .ns-sig-rank { font-size: ${this.pdfFs(10)} !important; }
-
-.pdf-flow .ns-closing-text { font-size: ${this.pdfFs(10)} !important; }
+.pdf-flow .ns-file-item { font-size: ${this.pdfFs(10)} !important; }
 
 .pdf-flow .ns-members-preview-table,
 .pdf-flow .ns-members-preview-table th,
@@ -1963,10 +2052,6 @@ html, body { margin: 0; padding: 0; background: transparent; }
 .pdf-flow .ns-ref-file-btn,
 .pdf-flow .ns-ref-file-btn i { font-size: 7pt !important; }
 
-.pdf-flow .ns-posting-table td { font-size: ${this.pdfFs(8)} !important; }    /* table content (inter) */
-.pdf-flow .ns-posting-table.ns-posting-new td { font-size: ${this.pdfFs(9)} !important; }  /* new posting content */
-.pdf-flow .ns-posting-table th { font-size: ${this.pdfFs(6.5)} !important; }  /* table header (inter) */
-.pdf-flow .ns-posting-table.ns-posting-new th { font-size: ${this.pdfFs(9)} !important; font-weight: normal !important; }  /* new posting header (not bold) */
 
 /* No shading — plain white rows and header (no zebra, no grey header). */
 .pdf-flow .ns-posting-table th,
@@ -1997,7 +2082,17 @@ html, body { margin: 0; padding: 0; background: transparent; }
 /* Match the screen and Ex-BD preview: five blank body lines between approver
    signature sections for both new posting and inter posting. */
 .pdf-flow .ns-approver-section:not(:last-child) {
-    padding-bottom: calc(24px + 6.25em);
+    padding-bottom: calc(var(--ns-approver-gap-px, 24px) + var(--ns-approver-gap-em, 6.25) * 1em);
+}
+
+/* The web view paginates by the last drawn pixel (measureRenderedBottom), so the final
+   approver's reserved-but-blank signature space never costs a page there. Here that
+   block carries break-inside: avoid, so the same blank space would push it onto a new
+   page. It is the end of the document — nothing below it shows — so drop it. */
+.pdf-flow .ns-approver-section:last-child,
+.pdf-flow .ns-approver-section:last-child .ns-approver-body {
+    min-height: 0 !important;
+    padding-bottom: 0 !important;
 }
 
 /* .ns-doc-box draws its own border that the frame replaces. */
@@ -2378,12 +2473,25 @@ html, body { margin: 0; padding: 0; background: transparent; }
         const model = this.buildDocumentModel();
         const bn = model.isBangla;
         const font = bn ? { ascii: 'Times New Roman', hAnsi: 'Times New Roman', cs: 'SolaimanLipi', hint: 'cs' as const } : 'Times New Roman';
-        // Font sizes in half-points (1pt = 2 half-pts) — matched to posting-order-preview
-        const ORG_SZ = 18; // 9pt — org header (HEADER — kept)
-        const BODY_SZ = 20; // 10pt — body text, paragraphs, note, reference
-        const TBL_SZ = this.isInterPosting() ? 16 : 18; // 8pt inter / 9pt new posting — table content
-        const TBL_HDR_SZ = this.isInterPosting() ? 13 : 18; // 6.5pt inter / 9pt new posting — table header
-        const SIG_SZ = 20; // 10pt — signature & approver
+        // Font sizes in half-points (1pt = 2 half-pts) — matched to posting-order-preview,
+        // each shifted by the saved font offset. Word only has half-point steps, so a
+        // ±0.25pt offset rounds to the nearest one.
+        const hp = (pt: number) => this.wordHalfPoints(pt);
+        const ORG_SZ = hp(9); // org header (HEADER — kept)
+        const BODY_SZ = hp(10); // body text, paragraphs, note, reference
+        const TBL_SZ = hp(this.isInterPosting() ? 8 : 9); // table content — inter / new posting
+        const TBL_HDR_SZ = hp(this.isInterPosting() ? 6.5 : 9); // table header — inter / new posting
+        const SIG_SZ = hp(10); // signature & approver
+        const TITLE_SZ = hp(12);
+        // Signature-block spacing in twips (1pt = 20, 1px = 15) from the saved style. The
+        // em gaps are taken against the 10pt (+offset) signature text, as the PDF renders
+        // it; the fixed parts keep the values Word used before styles were configurable.
+        const style = this.currentStyle();
+        const emTwips = (em: number) => Math.round(em * (10 + style.fontDelta) * 20);
+        const INITIATOR_BEFORE = Math.max(0, 655 + (style.initiatorTopMarginPx - 25) * 15);
+        const SIG_DATE_BEFORE = emTwips(style.sigDateGapEm);
+        const APPROVER_GAP = style.approverGapPx * 15 + emTwips(style.approverGapEm);
+        const APPROVER_SIG_BEFORE = Math.max(0, 100 + (style.approverMinHeightPx - 45) * 15);
         const NODATE_SZ = BODY_SZ; // 10pt — notesheet no + date (matches body)
         const csSize = bn ? BODY_SZ : undefined;
         const csNoDate = bn ? NODATE_SZ : undefined;
@@ -2759,7 +2867,7 @@ html, body { margin: 0; padding: 0; background: transparent; }
                             ],
                             alignment: AlignmentType.LEFT,
                             indent: initIndent,
-                            spacing: { before: 655, after: 80 },
+                            spacing: { before: INITIATOR_BEFORE, after: 80 },
                             keepNext: true,
                             keepLines: true
                         })
@@ -2768,7 +2876,7 @@ html, body { margin: 0; padding: 0; background: transparent; }
                     /* no sig */
                 }
             } else {
-                mainChildren.push(new Paragraph({ spacing: { before: 655, after: 80 }, keepNext: true }));
+                mainChildren.push(new Paragraph({ spacing: { before: INITIATOR_BEFORE, after: 80 }, keepNext: true }));
             }
 
             // Name
@@ -2812,19 +2920,21 @@ html, body { margin: 0; padding: 0; background: transparent; }
                         children: [new TextRun({ text: model.initiator.date, size: SIG_SZ, sizeComplexScript: bn ? SIG_SZ : undefined, font, language: lang })],
                         alignment: AlignmentType.LEFT,
                         indent: initIndent,
-                        spacing: { before: 200 }
+                        spacing: { before: SIG_DATE_BEFORE }
                     })
                 );
             }
         }
 
         // Approvers — keep each approver block together
-        for (const ap of model.approvers) {
+        // The gap between approver blocks sits below every block but the last (the SCSS
+        // :not(:last-child) padding) — in Word, above every block but the first.
+        for (const [apIndex, ap] of model.approvers.entries()) {
             mainChildren.push(
                 new Paragraph({
                     children: [new TextRun({ text: ap.role, underline: {}, size: SIG_SZ, sizeComplexScript: bn ? SIG_SZ : undefined, font, language: lang })],
                     indent: { left: 100 },
-                    spacing: { before: 280 },
+                    spacing: { before: 280 + (apIndex > 0 ? APPROVER_GAP : 0) },
                     keepNext: true,
                     keepLines: true
                 })
@@ -2844,7 +2954,7 @@ html, body { margin: 0; padding: 0; background: transparent; }
                                 })
                             ],
                             alignment: AlignmentType.CENTER,
-                            spacing: { before: 100, after: 40 },
+                            spacing: { before: APPROVER_SIG_BEFORE, after: 40 },
                             keepNext: true
                         })
                     );
@@ -2852,7 +2962,7 @@ html, body { margin: 0; padding: 0; background: transparent; }
                     /* no sig */
                 }
             } else {
-                mainChildren.push(new Paragraph({ alignment: AlignmentType.CENTER, spacing: { before: 100, after: 40 }, keepNext: true }));
+                mainChildren.push(new Paragraph({ alignment: AlignmentType.CENTER, spacing: { before: APPROVER_SIG_BEFORE, after: 40 }, keepNext: true }));
             }
             if (ap.date) {
                 mainChildren.push(
@@ -2867,12 +2977,12 @@ html, body { margin: 0; padding: 0; background: transparent; }
         // Title paragraphs — inside the page border at the top
         const titleChildren: (Paragraph | Table)[] = [
             new Paragraph({
-                children: [new TextRun({ text: 'NOTE SHEET', bold: true, size: 24, font: 'Times New Roman' })],
+                children: [new TextRun({ text: 'NOTE SHEET', bold: true, size: TITLE_SZ, font: 'Times New Roman' })],
                 alignment: AlignmentType.CENTER,
                 spacing: { before: 80, after: 40 }
             }),
             new Paragraph({
-                children: [new TextRun({ text: 'মন্তব্য পত্র', size: 24, font: { ascii: 'Times New Roman', hAnsi: 'Times New Roman', cs: 'SolaimanLipi', hint: 'cs' as const } })],
+                children: [new TextRun({ text: 'মন্তব্য পত্র', size: TITLE_SZ, font: { ascii: 'Times New Roman', hAnsi: 'Times New Roman', cs: 'SolaimanLipi', hint: 'cs' as const } })],
                 alignment: AlignmentType.CENTER,
                 spacing: { after: 100 }
             })
@@ -2913,13 +3023,18 @@ html, body { margin: 0; padding: 0; background: transparent; }
         return s.replace(/\u00A0/g, ' ').replace(/\u200B/g, '');
     }
 
+    /** A base point size plus the saved font offset, as docx half-points. */
+    private wordHalfPoints(pt: number): number {
+        return Math.max(2, Math.round((pt + this.currentStyle().fontDelta) * 2));
+    }
+
     /** Convert shared content blocks to docx Paragraph/Table elements. */
     private contentBlocksToDocx(blocks: ContentBlock[], font: any, bn: boolean): (Paragraph | Table)[] {
         const result: (Paragraph | Table)[] = [];
         const thinBorder = { style: BorderStyle.SINGLE, size: 1, color: '000000' };
         const cellBorders = { top: thinBorder, bottom: thinBorder, left: thinBorder, right: thinBorder };
         const lang = bn ? { value: 'bn-BD', bidirectional: 'bn-BD' } : undefined;
-        const bodySize = 16; // 8pt
+        const bodySize = this.wordHalfPoints(8);
         const csSize = bn ? bodySize : undefined;
 
         for (const b of blocks) {

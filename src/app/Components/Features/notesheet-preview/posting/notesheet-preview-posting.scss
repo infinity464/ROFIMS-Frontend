@@ -51,12 +51,16 @@
        closing line. The .ns-inter-posting block further down restates the same 25px,
        so both posting variants sit at one offset. The PDF picks this up through
        collectDocumentStyles(); the Word counterpart is the initiator paragraph's
-       `spacing.before` in buildWordDocument(). */
-    margin-top: 25px;
+       `spacing.before` in buildWordDocument().
+
+       The --ns-* variables used from here down come from the saved per-type style
+       (NotesheetStyleConfig, set in applyStyleVars()); each fallback is the built-in
+       default, so an unsaved type renders unchanged. */
+    margin-top: var(--ns-initiator-top, 25px);
 }
 .ns-approver-section {
     padding: 5px 8px 12px 10px;
-    min-height: 45px;           /* shared sheet reserves 90px for the signature */
+    min-height: var(--ns-approver-min-h, 45px);   /* shared sheet reserves 90px for the signature */
 }
 
 /* Approver who has not acted yet still RESERVES the same signature space as an
@@ -66,7 +70,7 @@
    Approving then fills the reserved area with the signature instead of pushing
    everything down. (Previously collapsed to 0; restored so before-gap = after-gap.) */
 .ns-approver-section--empty {
-    min-height: 45px;
+    min-height: var(--ns-approver-min-h, 45px);
 
     .ns-approver-body {
         min-height: 60px;
@@ -75,9 +79,33 @@
 
 /* Match the Ex-BD notesheet: leave five blank body lines after each approver's
    signature block, but not after the final approver. This selector covers both
-   new-posting and inter-posting previews. */
+   new-posting and inter-posting previews. The gap is a fixed px part plus a
+   font-relative em part, both from the saved style. */
 .ns-approver-section:not(:last-child) {
-    padding-bottom: calc(24px + 6.25em);
+    padding-bottom: calc(var(--ns-approver-gap-px, 24px) + var(--ns-approver-gap-em, 6.25) * 1em);
+}
+
+/* Style dialog (app chrome, not printed). */
+.ns-style-form {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+
+    label {
+        font-size: 0.85rem;
+        font-weight: 600;
+        margin-top: 0.5rem;
+    }
+
+    ::ng-deep .p-inputnumber,
+    ::ng-deep .p-inputnumber input {
+        width: 100%;
+    }
+}
+.ns-style-hint {
+    margin: 0;
+    font-size: 0.8rem;
+    color: var(--p-text-muted-color, #6b7280);
 }
 
 /* ── Page margins: identical to the PDF / Print Preview ──
@@ -203,7 +231,7 @@
     }
 
     .ns-initiator-area {
-        margin-top: 25px;
+        margin-top: var(--ns-initiator-top, 25px);
     }
 }
 
@@ -223,7 +251,7 @@
    appointment and the date. The PDF picks this up through collectDocumentStyles();
    the Word counterpart is the date paragraph's `spacing.before` in buildWordDocument(). */
 .ns-sig-date {
-    margin-top: 1em;
+    margin-top: calc(var(--ns-sig-date-gap-em, 1) * 1em);
 }
 
 .ns-posting-table {

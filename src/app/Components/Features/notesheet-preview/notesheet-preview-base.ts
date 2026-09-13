@@ -259,6 +259,7 @@ export abstract class NotesheetPreviewBase implements OnInit {
                     this.noteSheet.note = normalizeRab(this.noteSheet.note);
                     this.noteSheet.paragraphText = normalizeRab(this.noteSheet.paragraphText);
                     this.resolvePermissions();
+                    this.onNoteSheetLoaded();
                     this.loadApprovalChain();
                     this.loadBackHistory();
                     if (this.isNewPosting() && this.noteSheet.draftPostingMasterId) {
@@ -310,6 +311,9 @@ export abstract class NotesheetPreviewBase implements OnInit {
     }
 
     protected onPostingEmployeesLoaded(_employees: DraftPostingEmployeeRow[]): void { }
+
+    /** Called once the note sheet (and so its type) is known. */
+    protected onNoteSheetLoaded(): void { }
 
     protected loadApprovalChain(): void {
         if (!this.noteSheet) return;

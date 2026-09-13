@@ -70,19 +70,7 @@
     >
         <span style="font-weight: 600; font-size: 0.85rem"><i class="pi pi-cog" style="margin-right: 0.3rem"></i>Export:</span>
         <p-select [options]="pageSizeOptions" [(ngModel)]="selectedPageSize" (onChange)="onPageSizeChange()" optionLabel="label" optionValue="value" [style]="{'width': '90px'}"></p-select>
-        <!-- Font size of the WHOLE note sheet, as a point offset (-2 … +2, 0.25 steps):
-             the sheet's tiers differ in size, so they move together instead of being set
-             to one value. Sizing down usually pulls a trailing block back onto the
-             previous page and saves a sheet. -->
-        <p-select
-            [options]="fontDeltaOptions"
-            [(ngModel)]="fontDelta"
-            (onChange)="onFontDeltaChange()"
-            optionLabel="label"
-            optionValue="value"
-            [style]="{ width: '165px' }"
-            pTooltip="Font size of the whole note sheet (-2 pt to +2 pt)"
-        ></p-select>
+        <p-button icon="pi pi-sliders-h" label="Style" (onClick)="showStyleDialog = true" styleClass="p-button-outlined p-button-sm" pTooltip="Signature gaps and the saved default style"></p-button>
         <ng-container *ngIf="isPostingType() && postingEmployees.length > 0">
             <span style="border-left: 1px solid var(--surface-border); height: 1.5rem"></span>
             <span style="display: inline-flex; align-items: center; gap: 0.3rem"><p-checkbox [(ngModel)]="showRankQualifications" [binary]="true" inputId="chkRankQ"></p-checkbox><label for="chkRankQ" style="cursor: pointer">পদবি বিবরণ</label></span>
@@ -117,6 +105,46 @@
             <span style="display: inline-flex; align-items: center; gap: 0.3rem"><p-checkbox [(ngModel)]="showSignatureImage" [binary]="true" inputId="chkSigImg"></p-checkbox><label for="chkSigImg" style="cursor: pointer">স্বাক্ষর ছবি</label></span>
         </ng-container>
     </div>
+
+    <!-- Document style: edits apply live; "Save as default" stores them per note-sheet type
+         for everyone (screen, Print Preview, PDF and Word). -->
+    <!-- Non-modal and docked right so the page keeps scrolling behind it and every change
+         can be judged on the sheet itself; drag the header to move it off the text. -->
+    <p-dialog
+        header="Document Style"
+        [(visible)]="showStyleDialog"
+        [modal]="false"
+        [blockScroll]="false"
+        [draggable]="true"
+        [resizable]="false"
+        [keepInViewport]="true"
+        position="right"
+        [style]="{ width: '320px', maxHeight: '90vh' }"
+        [contentStyle]="{ overflowY: 'auto' }"
+        [breakpoints]="{ '575px': '92vw' }"
+    >
+        <div class="ns-style-form">
+            <p class="ns-style-hint">Changes show on the sheet immediately — scroll the page to check them. Save to make them the default for every note sheet of this type.</p>
+
+            <label for="stFontDelta">Font size</label>
+            <p-select inputId="stFontDelta" [options]="fontDeltaOptions" [(ngModel)]="fontDelta" (onChange)="onFontDeltaChange()" optionLabel="label" optionValue="value" appendTo="body" [style]="{ width: '100%' }"></p-select>
+
+
+            <label for="stApproverGapEm">Gap between approver blocks (lines)</label>
+            <p-inputNumber inputId="stApproverGapEm" [(ngModel)]="styleConfig.approverGapEm" (ngModelChange)="onStyleChange()" mode="decimal" [minFractionDigits]="0" [maxFractionDigits]="2" [step]="0.25" [min]="0" [max]="30" [showButtons]="true"></p-inputNumber>
+
+            <label for="stInitiatorTop">Space above initiator signature (px)</label>
+            <p-inputNumber inputId="stInitiatorTop" [(ngModel)]="styleConfig.initiatorTopMarginPx" (ngModelChange)="onStyleChange()" [step]="5" [min]="0" [max]="200" [showButtons]="true"></p-inputNumber>
+
+            <label for="stSigDateGap">Space above signature date (lines)</label>
+            <p-inputNumber inputId="stSigDateGap" [(ngModel)]="styleConfig.sigDateGapEm" (ngModelChange)="onStyleChange()" mode="decimal" [minFractionDigits]="0" [maxFractionDigits]="2" [step]="0.25" [min]="0" [max]="10" [showButtons]="true"></p-inputNumber>
+        </div>
+        <ng-template pTemplate="footer">
+            <p-button *ngIf="canUpdate" label="Reset" icon="pi pi-refresh" severity="secondary" [text]="true" (onClick)="resetStyleToDefault()"></p-button>
+            <p-button label="Close" severity="secondary" [outlined]="true" (onClick)="showStyleDialog = false"></p-button>
+            <p-button *ngIf="canUpdate" label="Save" icon="pi pi-save" [loading]="savingStyle" (onClick)="saveStyleAsDefault()"></p-button>
+        </ng-template>
+    </p-dialog>
 
     <!-- ══════════════════════════════════════════════════════════ -->
     <!-- VIEW MODE: paginated legal pages                          -->
