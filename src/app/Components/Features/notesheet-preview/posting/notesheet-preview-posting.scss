@@ -107,6 +107,58 @@
     font-size: 0.8rem;
     color: var(--p-text-muted-color, #6b7280);
 }
+.ns-style-section {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-top: 0.75rem;
+    padding-top: 0.5rem;
+    border-top: 1px solid var(--p-content-border-color, #e5e7eb);
+    font-weight: 600;
+    font-size: 0.9rem;
+}
+.ns-style-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.25rem 0;
+    border: 0;
+    background: none;
+    color: inherit;
+    font: inherit;
+    cursor: pointer;
+
+    .pi {
+        font-size: 0.8rem;
+    }
+}
+.ns-style-form .ns-col-row {
+    display: grid;
+    grid-template-columns: auto 1fr 5.5rem 3.2rem;
+    align-items: center;
+    gap: 0.4rem;
+
+    label {
+        margin-top: 0;
+        font-weight: 400;
+        font-size: 0.8rem;
+    }
+
+    ::ng-deep .p-inputnumber {
+        width: 5.5rem;
+    }
+
+    ::ng-deep .p-inputnumber input {
+        width: 100%;
+        padding: 0.25rem 0.4rem;
+        font-size: 0.8rem;
+    }
+}
+.ns-col-pct {
+    font-size: 0.75rem;
+    text-align: right;
+    color: var(--p-text-muted-color, #6b7280);
+}
 
 /* ── Page margins: identical to the PDF / Print Preview ──
    buildJsReportPdf() prints with @page margins of 7mm top / 5mm side / 10mm

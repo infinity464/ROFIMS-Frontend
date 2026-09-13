@@ -119,7 +119,7 @@
         [resizable]="false"
         [keepInViewport]="true"
         position="right"
-        [style]="{ width: '320px', maxHeight: '90vh' }"
+        [style]="{ width: '380px', maxHeight: '90vh' }"
         [contentStyle]="{ overflowY: 'auto' }"
         [breakpoints]="{ '575px': '92vw' }"
     >
@@ -138,11 +138,30 @@
 
             <label for="stSigDateGap">Space above signature date (lines)</label>
             <p-inputNumber inputId="stSigDateGap" [(ngModel)]="styleConfig.sigDateGapEm" (ngModelChange)="onStyleChange()" mode="decimal" [minFractionDigits]="0" [maxFractionDigits]="2" [step]="0.25" [min]="0" [max]="10" [showButtons]="true"></p-inputNumber>
+
+            <ng-container *ngIf="isPostingType() && postingEmployees.length > 0">
+                <div class="ns-style-section">
+                    <button type="button" class="ns-style-toggle" (click)="showColumnSettings = !showColumnSettings" [attr.aria-expanded]="showColumnSettings">
+                        <i class="pi" [class.pi-chevron-right]="!showColumnSettings" [class.pi-chevron-down]="showColumnSettings"></i>
+                        Table columns
+                    </button>
+                    <p-button *ngIf="showColumnSettings" label="Reset columns" icon="pi pi-refresh" [text]="true" size="small" (onClick)="resetColumns()"></p-button>
+                </div>
+                <ng-container *ngIf="showColumnSettings">
+                    <p class="ns-style-hint">Temporary — resets on reload. Width is relative; the % is the column's share of the table.</p>
+                    <div class="ns-col-row" *ngFor="let c of postingColumns; trackBy: trackByColumnKey">
+                        <p-checkbox [binary]="true" [ngModel]="c.visible" (ngModelChange)="setColVisible(c.key, $event)" [disabled]="!!c.lockVisible" [inputId]="'stCol_' + c.key"></p-checkbox>
+                        <label [attr.for]="'stCol_' + c.key">{{ c.label }}</label>
+                        <p-inputNumber [(ngModel)]="c.weight" (ngModelChange)="onColumnsChange()" [disabled]="!c.visible" [min]="5" [max]="400" [step]="4" [showButtons]="true"></p-inputNumber>
+                        <span class="ns-col-pct">{{ c.visible ? (columnPercent(c.key) | number: '1.0-1') + '%' : '—' }}</span>
+                    </div>
+                </ng-container>
+            </ng-container>
         </div>
         <ng-template pTemplate="footer">
-            <p-button *ngIf="canUpdate" label="Reset" icon="pi pi-refresh" severity="secondary" [text]="true" (onClick)="resetStyleToDefault()"></p-button>
+            <p-button label="Reset" icon="pi pi-refresh" severity="secondary" [text]="true" (onClick)="resetStyleToDefault()"></p-button>
             <p-button label="Close" severity="secondary" [outlined]="true" (onClick)="showStyleDialog = false"></p-button>
-            <p-button *ngIf="canUpdate" label="Save" icon="pi pi-save" [loading]="savingStyle" (onClick)="saveStyleAsDefault()"></p-button>
+            <p-button label="Save" icon="pi pi-save" [loading]="savingStyle" (onClick)="saveStyleAsDefault()"></p-button>
         </ng-template>
     </p-dialog>
 
@@ -467,60 +486,9 @@
     <!-- used by the main table AND repeated on continuation pages.  -->
     <!-- ══════════════════════════════════════════════════════════ -->
     <ng-template #postingTableHead>
-        <colgroup *ngIf="isInterPosting()">
-            <col style="width: 30px" />
-            <!-- ক্রমিক -->
-            <col style="width: 80px" />
-            <!-- ব্যক্তিগত নং -->
-            <col />
-            <!-- পদবি (auto — its balance stays unchanged when ট্রেড is hidden because
-                 the freed 56px is reassigned to নাম, যোগদানের তারিখ and
-                 বদলিকৃত কর্মস্থল below) -->
-            <col *ngIf="showTradeColumn" style="width: 56px" />
-            <!-- ট্রেড (same width as the new-posting table's) -->
-            <col [style.width]="showTenure ? (showTradeColumn ? '82px' : '112.8px') : (showTradeColumn ? '130px' : '163.6px')" />
-            <!-- নাম (ট্রেড লুকালে তার 56px-এর 55% = 30.8px পায়;
-                 অবস্থানকালও লুকানো থাকলে যোগদানের তারিখের 5% এটিই পায়) -->
-            <col style="width: 48px" />
-            <!-- নিজ জেলা -->
-            <col style="width: 56px" />
-            <!-- স্বামী/স্ত্রীর জেলা -->
-            <col *ngIf="showTenure" [style.width]="showTradeColumn ? '64px' : '66.8px'" />
-            <!-- যোগদানের তারিখ (ট্রেড লুকালে তার 56px-এর 5% = 2.8px পায়) -->
-            <col *ngIf="showTenure" style="width: 32px" />
-            <!-- বছর -->
-            <col *ngIf="showTenure" style="width: 24px" />
-            <!-- মাস -->
-            <col *ngIf="showTenure" style="width: 24px" />
-            <!-- দিন -->
-            <col [style.width]="showTenure ? '85px' : '125px'" />
-            <!-- পূর্ববতী কর্মস্থল (tenure লুকালে চওড়া) -->
-            <col [style.width]="showTenure ? (showTradeColumn ? '48px' : '70.4px') : (showTradeColumn ? '90px' : '112.4px')" />
-            <!-- বদলিকৃত কর্মস্থল (ট্রেড লুকালে তার 56px-এর 40% = 22.4px পায়) -->
-            <col *ngIf="showRemarks" style="width: 58px" />
-            <!-- মন্তব্য (ছোট করা; পদবি auto বাকি জায়গা পায়) -->
-        </colgroup>
-        <colgroup *ngIf="!isInterPosting()">
-            <col style="width: 38px" />
-            <!-- ক্রমিক (একটু বড়) -->
-            <col style="width: 94px" />
-            <!-- ব্যক্তিগত নম্বর (মূল ৮৬px থেকে +১%) -->
-            <col style="width: 98px" />
-            <!-- পদবি (fixed so it stays constant whether ট্রেড is shown or hidden; +18px from the halved outer margin) -->
-            <col *ngIf="showTradeColumn" style="width: 56px" />
-            <!-- ট্রেড (ছোট করা) -->
-            <col />
-            <!-- নাম (auto — sole absorber; ব্যক্তিগত নম্বরের বাড়তি অংশ এখান থেকেই যায়) -->
-            <col style="width: 64px" />
-            <!-- নিজ জেলা (পদবি থেকে অর্ধেক পেয়েছে) -->
-            <col style="width: 64px" />
-            <!-- স্পাউস জেলা (পূর্ববতী কর্মস্থল থেকে ২px পেয়েছে) -->
-            <col style="width: 83px" />
-            <!-- পূর্ববতী কর্মস্থল (ছোট করা) -->
-            <col style="width: 88px" />
-            <!-- বদলি ইউনিট (একটু ছোট) -->
-            <col *ngIf="showRemarks" style="width: 66px" />
-            <!-- মন্তব্য (একটু ছোট) -->
+        <!-- Percentages from columnLayout() — the Word export uses the same numbers. -->
+        <colgroup>
+            <col *ngFor="let c of columnLayout(); trackBy: trackByColumnKey" [style.width.%]="c.pct" />
         </colgroup>
         <thead>
             <!-- PDF/Print only: borderless white gap row above the repeated header
@@ -534,15 +502,15 @@
             <ng-container *ngIf="isInterPosting()">
                 <tr>
                     <th [attr.rowspan]="showTenure ? 3 : 1" style="width: 28px">{{ isEnglish() ? 'Ser' : 'ক্রমিক' }}</th>
-                    <th [attr.rowspan]="showTenure ? 3 : 1">{{ isEnglish() ? 'Service ID' : 'ব্যক্তিগত নং' }}</th>
-                    <th [attr.rowspan]="showTenure ? 3 : 1">{{ isEnglish() ? 'Rank' : 'পদবি' }}</th>
+                    <th *ngIf="isColVisible('serviceId')" [attr.rowspan]="showTenure ? 3 : 1">{{ isEnglish() ? 'Service ID' : 'ব্যক্তিগত নং' }}</th>
+                    <th *ngIf="isColVisible('rank')" [attr.rowspan]="showTenure ? 3 : 1">{{ isEnglish() ? 'Rank' : 'পদবি' }}</th>
                     <th *ngIf="showTradeColumn" [attr.rowspan]="showTenure ? 3 : 1">{{ isEnglish() ? 'Trade' : 'ট্রেড' }}</th>
-                    <th [attr.rowspan]="showTenure ? 3 : 1">{{ isEnglish() ? 'Name' : 'নাম' }}</th>
-                    <th [attr.rowspan]="showTenure ? 3 : 1" style="width: 45px; max-width: 45px; word-break: break-word">{{ isEnglish() ? 'Own District (Responsible Area)' : 'নিজ জেলা (দায়িত্বপূর্ণ এলাকা)' }}</th>
-                    <th [attr.rowspan]="showTenure ? 3 : 1">{{ isEnglish() ? "Husband/Wife's District (Responsible Area)" : 'স্বামী/স্ত্রীর জেলা (দায়িত্বপূর্ণ এলাকা)' }}</th>
+                    <th *ngIf="isColVisible('name')" [attr.rowspan]="showTenure ? 3 : 1">{{ isEnglish() ? 'Name' : 'নাম' }}</th>
+                    <th *ngIf="isColVisible('ownDistrict')" [attr.rowspan]="showTenure ? 3 : 1" style="width: 45px; max-width: 45px; word-break: break-word">{{ isEnglish() ? 'Own District (Responsible Area)' : 'নিজ জেলা (দায়িত্বপূর্ণ এলাকা)' }}</th>
+                    <th *ngIf="isColVisible('spouseDistrict')" [attr.rowspan]="showTenure ? 3 : 1">{{ isEnglish() ? "Husband/Wife's District (Responsible Area)" : 'স্বামী/স্ত্রীর জেলা (দায়িত্বপূর্ণ এলাকা)' }}</th>
                     <th *ngIf="showTenure" colspan="4">{{ isEnglish() ? 'Tenure in RAB' : 'র‌্যাবে অবস্থানকাল' }}</th>
-                    <th [attr.rowspan]="showTenure ? 3 : 1" style="width: 100px">{{ isEnglish() ? 'Previous Workplace' : 'পূর্ববতী কর্মস্থল' }}</th>
-                    <th [attr.rowspan]="showTenure ? 3 : 1">{{ isEnglish() ? 'Transfer Station' : 'বদলিকৃত কর্মস্থল' }}</th>
+                    <th *ngIf="isColVisible('prevWorkplace')" [attr.rowspan]="showTenure ? 3 : 1" style="width: 100px">{{ isEnglish() ? 'Previous Workplace' : 'পূর্ববতী কর্মস্থল' }}</th>
+                    <th *ngIf="isColVisible('transferUnit')" [attr.rowspan]="showTenure ? 3 : 1">{{ isEnglish() ? 'Transfer Station' : 'বদলিকৃত কর্মস্থল' }}</th>
                     <th *ngIf="showRemarks" [attr.rowspan]="showTenure ? 3 : 1" style="min-width: 90px">{{ isEnglish() ? 'Remarks' : 'মন্তব্য' }}</th>
                 </tr>
                 <tr *ngIf="showTenure">
@@ -558,14 +526,14 @@
             <ng-container *ngIf="!isInterPosting()">
                 <tr>
                     <th style="width: 28px">{{ isEnglish() ? 'Ser' : 'ক্রমিক' }}</th>
-                    <th>{{ isEnglish() ? 'Service ID' : 'ব্যক্তিগত নম্বর' }}</th>
-                    <th>{{ isEnglish() ? 'Rank' : 'পদবি' }}</th>
+                    <th *ngIf="isColVisible('serviceId')">{{ isEnglish() ? 'Service ID' : 'ব্যক্তিগত নম্বর' }}</th>
+                    <th *ngIf="isColVisible('rank')">{{ isEnglish() ? 'Rank' : 'পদবি' }}</th>
                     <th *ngIf="showTradeColumn">{{ isEnglish() ? 'Trade' : 'ট্রেড' }}</th>
-                    <th>{{ isEnglish() ? 'Name' : 'নাম' }}</th>
-                    <th style="width: 45px; max-width: 45px; word-break: break-word">{{ isEnglish() ? 'Own District (Responsible Area)' : 'নিজ জেলা (দায়িত্বপূর্ণ এলাকা)' }}</th>
-                    <th>{{ isEnglish() ? 'Spouse District (Responsible Area)' : 'স্পাউস জেলা (দায়িত্বপূর্ণ এলাকা)' }}</th>
-                    <th style="width: 100px">{{ isEnglish() ? 'Previous Workplace' : 'পূর্ববতী কর্মস্থল' }}</th>
-                    <th>{{ isEnglish() ? 'Transfer Unit' : 'বদলি ইউনিট' }}</th>
+                    <th *ngIf="isColVisible('name')">{{ isEnglish() ? 'Name' : 'নাম' }}</th>
+                    <th *ngIf="isColVisible('ownDistrict')" style="width: 45px; max-width: 45px; word-break: break-word">{{ isEnglish() ? 'Own District (Responsible Area)' : 'নিজ জেলা (দায়িত্বপূর্ণ এলাকা)' }}</th>
+                    <th *ngIf="isColVisible('spouseDistrict')">{{ isEnglish() ? 'Spouse District (Responsible Area)' : 'স্পাউস জেলা (দায়িত্বপূর্ণ এলাকা)' }}</th>
+                    <th *ngIf="isColVisible('prevWorkplace')" style="width: 100px">{{ isEnglish() ? 'Previous Workplace' : 'পূর্ববতী কর্মস্থল' }}</th>
+                    <th *ngIf="isColVisible('transferUnit')">{{ isEnglish() ? 'Transfer Unit' : 'বদলি ইউনিট' }}</th>
                     <th *ngIf="showRemarks" style="min-width: 90px">{{ isEnglish() ? 'Remarks' : 'মন্তব্য' }}</th>
                 </tr>
             </ng-container>
@@ -624,46 +592,46 @@
                                 <ng-container *ngIf="isInterPosting()">
                                     <tr *ngFor="let emp of postingEmployees; let i = index">
                                         <td>{{ isEnglish() ? (i + 1) : serial(i + 1) }}</td>
-                                        <td class="ns-left-cell" style="white-space: pre-line">{{ getServiceIdDisplay(emp) }}</td>
-                                        <td class="ns-left-cell">
+                                        <td *ngIf="isColVisible('serviceId')" class="ns-left-cell" style="white-space: pre-line">{{ getServiceIdDisplay(emp) }}</td>
+                                        <td *ngIf="isColVisible('rank')" class="ns-left-cell">
                                             {{ isEnglish() ? (emp.rankName || '') : (emp.rankNameBN || emp.rankName || '') }}<span *ngIf="showRankQualifications && getRankQualifications(emp)"><br />({{ getRankQualifications(emp) }})</span>
                                         </td>
                                         <td class="ns-left-cell" *ngIf="showTradeColumn">
                                             {{ isEnglish() ? (emp.tradeName || '') : (emp.tradeNameBN || emp.tradeName || '') }}<span *ngIf="showTradeRemarks && emp.tradeRemarks"><br />({{ emp.tradeRemarks }})</span>
                                         </td>
-                                        <td class="ns-name-cell">
+                                        <td *ngIf="isColVisible('name')" class="ns-name-cell">
                                             {{ isEnglish() ? (emp.fullNameEN || '') : (emp.fullNameBN || emp.fullNameEN || '') }}<span *ngIf="showGallantryAwards && getGallantryAwards(emp)">, {{ getGallantryAwards(emp) }}</span
                                             ><span *ngIf="showProfQualification && getProfQualification(emp)">, {{ getProfQualification(emp) }}</span><span *ngIf="showCorps && getCorps(emp)">, {{ getCorps(emp) }}</span>
                                         </td>
-                                        <td style="white-space: pre-line">{{ getOwnDistrict(emp) }}</td>
-                                        <td style="white-space: pre-line">{{ getSpouseDistrict(emp) || 'অপ্রযোজ্য' }}</td>
+                                        <td *ngIf="isColVisible('ownDistrict')" style="white-space: pre-line">{{ getOwnDistrict(emp) }}</td>
+                                        <td *ngIf="isColVisible('spouseDistrict')" style="white-space: pre-line">{{ getSpouseDistrict(emp) || 'অপ্রযোজ্য' }}</td>
                                         <td *ngIf="showTenure">{{ isEnglish() ? formatJoiningDate(emp.joiningDateInRAB) : toBnDigits(formatJoiningDate(emp.joiningDateInRAB)) }}</td>
                                         <td class="ns-center-cell" *ngIf="showTenure">{{ tenure(emp.joiningDateInRAB, 'y') }}</td>
                                         <td class="ns-center-cell" *ngIf="showTenure">{{ tenure(emp.joiningDateInRAB, 'm') }}</td>
                                         <td class="ns-center-cell" *ngIf="showTenure">{{ tenure(emp.joiningDateInRAB, 'd') }}</td>
-                                        <td style="white-space: pre-line">{{ getInterPrevWorkplace(emp) }}</td>
-                                        <td>{{ getTransferUnitShort(emp) }}</td>
+                                        <td *ngIf="isColVisible('prevWorkplace')" style="white-space: pre-line">{{ getInterPrevWorkplace(emp) }}</td>
+                                        <td *ngIf="isColVisible('transferUnit')">{{ getTransferUnitShort(emp) }}</td>
                                         <td *ngIf="showRemarks">{{ getCombinedRemarks(emp) }}</td>
                                     </tr>
                                 </ng-container>
                                 <ng-container *ngIf="!isInterPosting()">
                                     <tr *ngFor="let emp of postingEmployees; let i = index">
                                         <td>{{ isEnglish() ? (i + 1) : serial(i + 1) }}</td>
-                                        <td class="ns-left-cell" style="white-space: pre-line">{{ getServiceIdDisplay(emp) }}</td>
-                                        <td class="ns-left-cell">
+                                        <td *ngIf="isColVisible('serviceId')" class="ns-left-cell" style="white-space: pre-line">{{ getServiceIdDisplay(emp) }}</td>
+                                        <td *ngIf="isColVisible('rank')" class="ns-left-cell">
                                             {{ isEnglish() ? (emp.rankName || '') : (emp.rankNameBN || emp.rankName || '') }}<span *ngIf="showRankQualifications && getRankQualifications(emp)"><br />({{ getRankQualifications(emp) }})</span>
                                         </td>
                                         <td class="ns-left-cell" *ngIf="showTradeColumn">
                                             {{ isEnglish() ? (emp.tradeName || '') : (emp.tradeNameBN || emp.tradeName || '') }}<span *ngIf="showTradeRemarks && emp.tradeRemarks"><br />({{ emp.tradeRemarks }})</span>
                                         </td>
-                                        <td class="ns-name-cell">
+                                        <td *ngIf="isColVisible('name')" class="ns-name-cell">
                                             {{ isEnglish() ? (emp.fullNameEN || '') : (emp.fullNameBN || emp.fullNameEN || '') }}<span *ngIf="showGallantryAwards && getGallantryAwards(emp)">, {{ getGallantryAwards(emp) }}</span
                                             ><span *ngIf="showProfQualification && getProfQualification(emp)">, {{ getProfQualification(emp) }}</span><span *ngIf="showCorps && getCorps(emp)">, {{ getCorps(emp) }}</span>
                                         </td>
-                                        <td class="ns-left-cell" style="white-space: pre-line">{{ getOwnDistrict(emp) }}</td>
-                                        <td class="ns-left-cell" style="white-space: pre-line">{{ getSpouseDistrict(emp) || 'অপ্রযোজ্য' }}</td>
-                                        <td class="ns-left-cell" style="white-space: pre-line">{{ getPreviousWorkplace(emp) }}</td>
-                                        <td class="ns-left-cell">{{ getTransferUnitShort(emp) }}</td>
+                                        <td *ngIf="isColVisible('ownDistrict')" class="ns-left-cell" style="white-space: pre-line">{{ getOwnDistrict(emp) }}</td>
+                                        <td *ngIf="isColVisible('spouseDistrict')" class="ns-left-cell" style="white-space: pre-line">{{ getSpouseDistrict(emp) || 'অপ্রযোজ্য' }}</td>
+                                        <td *ngIf="isColVisible('prevWorkplace')" class="ns-left-cell" style="white-space: pre-line">{{ getPreviousWorkplace(emp) }}</td>
+                                        <td *ngIf="isColVisible('transferUnit')" class="ns-left-cell">{{ getTransferUnitShort(emp) }}</td>
                                         <td class="ns-left-cell" *ngIf="showRemarks">{{ getCombinedRemarks(emp) }}</td>
                                     </tr>
                                 </ng-container>

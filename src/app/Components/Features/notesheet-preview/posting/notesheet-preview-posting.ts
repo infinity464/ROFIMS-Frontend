@@ -60,6 +60,22 @@ interface ApprovalLogEntry {
     rank?: string;
 }
 
+/** One employee-table column of the posting preview — see columnLayout(). */
+interface PostingColumn {
+    key: string;
+    label: string;
+    /** Relative width; only the ratio between columns matters. */
+    weight: number;
+    defaultWeight: number;
+    visible: boolean;
+    /** Keeps its share of the table when other columns are hidden. */
+    fixed?: boolean;
+    /** Columns sharing a group show and hide together. */
+    group?: string;
+    /** Always shown. */
+    lockVisible?: boolean;
+}
+
 @Component({
     selector: 'app-notesheet-preview-posting',
     standalone: true,
@@ -319,20 +335,134 @@ export class NotesheetPreviewPostingComponent extends NotesheetPreviewBase imple
 
     // ── Export detail toggles ──────────────────────────────────
     showRankQualifications = true;
-    /** Show/hide the whole Trade column (header + cells) across preview / print / PDF / Word. */
-    showTradeColumn = true;
     showTradeRemarks = true;
     showOwnDistrictDetail = true;
     showSpouseDistrictDetail = true;
     showPrevWorkplaceDetail = true;
-    showRemarks = true;
-    /** Inter-posting only: show/hide the "র‌্যাবে অবস্থানকাল" (Tenure in RAB) column
-     *  group — Joining Date + Duration (Year/Month/Day). Header collapses to one row when off. */
-    showTenure = true;
     showSignatureImage = true;
     showCorps = true;
     showProfQualification = true;
     showGallantryAwards = true;
+
+    // ── Employee table columns (temporary — reset on reload) ──
+    /** Visibility and relative width per table column. columnLayout() turns the widths
+     *  into percentages of the visible columns; the preview <colgroup> (and so the PDF)
+     *  and the Word table both use it. `fixed` columns keep their share when others are
+     *  hidden, the rest share the freed space. Defaults are the previous pixel widths on
+     *  a Legal sheet, so an untouched table looks as before. */
+    interColumns: PostingColumn[] = NotesheetPreviewPostingComponent.defaultColumns(true);
+    newColumns: PostingColumn[] = NotesheetPreviewPostingComponent.defaultColumns(false);
+    showColumnSettings = false;
+
+    private static defaultColumns(inter: boolean): PostingColumn[] {
+        const cols: Omit<PostingColumn, 'defaultWeight' | 'visible'>[] = inter
+            ? [
+                  { key: 'ser', label: 'ক্রমিক', weight: 30, fixed: true, lockVisible: true },
+                  { key: 'serviceId', label: 'ব্যক্তিগত নং', weight: 80 },
+                  { key: 'rank', label: 'পদবি', weight: 70 },
+                  { key: 'trade', label: 'ট্রেড', weight: 56 },
+                  { key: 'name', label: 'নাম', weight: 82 },
+                  { key: 'ownDistrict', label: 'নিজ জেলা', weight: 48 },
+                  { key: 'spouseDistrict', label: 'স্বামী/স্ত্রীর জেলা', weight: 56 },
+                  { key: 'joinDate', label: 'যোগদানের তারিখ', weight: 64, group: 'tenure' },
+                  { key: 'yr', label: 'বছর', weight: 32, fixed: true, group: 'tenure' },
+                  { key: 'mo', label: 'মাস', weight: 24, fixed: true, group: 'tenure' },
+                  { key: 'day', label: 'দিন', weight: 24, fixed: true, group: 'tenure' },
+                  { key: 'prevWorkplace', label: 'পূর্ববতী কর্মস্থল', weight: 85 },
+                  { key: 'transferUnit', label: 'বদলিকৃত কর্মস্থল', weight: 48 },
+                  { key: 'remarks', label: 'মন্তব্য', weight: 58 }
+              ]
+            : [
+                  { key: 'ser', label: 'ক্রমিক', weight: 38, fixed: true, lockVisible: true },
+                  { key: 'serviceId', label: 'ব্যক্তিগত নম্বর', weight: 94 },
+                  { key: 'rank', label: 'পদবি', weight: 98 },
+                  { key: 'trade', label: 'ট্রেড', weight: 56 },
+                  { key: 'name', label: 'নাম', weight: 106 },
+                  { key: 'ownDistrict', label: 'নিজ জেলা', weight: 64 },
+                  { key: 'spouseDistrict', label: 'স্পাউস জেলা', weight: 64 },
+                  { key: 'prevWorkplace', label: 'পূর্ববতী কর্মস্থল', weight: 83 },
+                  { key: 'transferUnit', label: 'বদলি ইউনিট', weight: 88 },
+                  { key: 'remarks', label: 'মন্তব্য', weight: 66 }
+              ];
+        return cols.map((c) => ({ ...c, defaultWeight: c.weight, visible: true }));
+    }
+
+    get postingColumns(): PostingColumn[] {
+        return this.isInterPosting() ? this.interColumns : this.newColumns;
+    }
+
+    isColVisible(key: string): boolean {
+        return this.postingColumns.some((c) => c.key === key && c.visible);
+    }
+
+    setColVisible(key: string, visible: boolean): void {
+        const target = this.postingColumns.find((c) => c.key === key);
+        if (!target || target.lockVisible) return;
+        for (const c of this.postingColumns) {
+            if (c === target || (target.group && c.group === target.group)) c.visible = visible;
+        }
+        this.onColumnsChange();
+    }
+
+    /** Show/hide the whole Trade column (header + cells) across preview / print / PDF / Word. */
+    get showTradeColumn(): boolean {
+        return this.isColVisible('trade');
+    }
+    set showTradeColumn(visible: boolean) {
+        this.setColVisible('trade', visible);
+    }
+
+    get showRemarks(): boolean {
+        return this.isColVisible('remarks');
+    }
+    set showRemarks(visible: boolean) {
+        this.setColVisible('remarks', visible);
+    }
+
+    /** Inter-posting only: the "র‌্যাবে অবস্থানকাল" (Tenure in RAB) column group — Joining
+     *  Date + Duration (Year/Month/Day). Header collapses to one row when off. */
+    get showTenure(): boolean {
+        return this.isInterPosting() && this.isColVisible('joinDate');
+    }
+    set showTenure(visible: boolean) {
+        this.setColVisible('joinDate', visible);
+    }
+
+    /** Visible columns with their width as a percentage of the table. */
+    columnLayout(): { key: string; pct: number }[] {
+        const cols = this.postingColumns;
+        const w = (c: PostingColumn) => (c.weight > 0 ? c.weight : c.defaultWeight);
+        const visible = cols.filter((c) => c.visible);
+        const flex = visible.filter((c) => !c.fixed);
+        if (flex.length === 0) {
+            const total = visible.reduce((a, c) => a + w(c), 0) || 1;
+            return visible.map((c) => ({ key: c.key, pct: (w(c) / total) * 100 }));
+        }
+        const totalAll = cols.reduce((a, c) => a + w(c), 0);
+        const fixedPct = visible.filter((c) => c.fixed).reduce((a, c) => a + (w(c) / totalAll) * 100, 0);
+        const flexPct = Math.max(0, 100 - fixedPct);
+        const flexTotal = flex.reduce((a, c) => a + w(c), 0);
+        return visible.map((c) => ({ key: c.key, pct: c.fixed ? (w(c) / totalAll) * 100 : (w(c) / flexTotal) * flexPct }));
+    }
+
+    columnPercent(key: string): number {
+        return this.columnLayout().find((c) => c.key === key)?.pct ?? 0;
+    }
+
+    trackByColumnKey(_index: number, column: { key: string }): string {
+        return column.key;
+    }
+
+    /** Column widths change row heights, so the pages must be re-measured. */
+    onColumnsChange(): void {
+        this.lastMeasuredHeight = 0;
+    }
+
+    resetColumns(): void {
+        this.interColumns = NotesheetPreviewPostingComponent.defaultColumns(true);
+        this.newColumns = NotesheetPreviewPostingComponent.defaultColumns(false);
+        this.onColumnsChange();
+    }
 
     // ── Edit state ───────────────────────────────────────────
     editing = false;
@@ -1296,15 +1426,7 @@ export class NotesheetPreviewPostingComponent extends NotesheetPreviewBase imple
      *  Used for the PDF header-gap spacer row's colspan (a wrong value squishes the
      *  table because table-layout:fixed would add phantom columns). */
     get postingColumnCount(): number {
-        if (this.isInterPosting()) {
-            // Ser, Service ID, Rank, Name, Own/Spouse District, Previous Workplace,
-            // Transfer Station (8) + Tenure group (Joining Date, Year, Month, Day = 4)
-            // + Trade + Remarks.
-            return (this.showTenure ? 12 : 8) + (this.showTradeColumn ? 1 : 0) + (this.showRemarks ? 1 : 0);
-        }
-        // Ser, Service ID, Rank, Name, Own/Spouse District, Previous Workplace,
-        // Transfer Unit (+ Trade + Remarks).
-        return 8 + (this.showTradeColumn ? 1 : 0) + (this.showRemarks ? 1 : 0);
+        return this.columnLayout().length;
     }
 
     // ── Toggle edit mode ─────────────────────────────────────
@@ -2622,176 +2744,117 @@ html, body { margin: 0; padding: 0; background: transparent; }
                 return new TableCell({ children: cellParas, borders: cellBorders, width: { size: w, type: WidthType.DXA }, margins: cellMargins });
             };
 
-            if (this.isInterPosting()) {
-                // ── Inter-posting: 14-column, 3-row header ──
-                // Indices: 0=ser,1=svcId,2=rank,3=trade,4=name,5=ownDist,6=spouseDist,
-                //          7=joinDate,8=yr,9=mo,10=day,11=prevWp,12=trUnit,13=remarks
-                //          ser svcId rank trade name own  spo  jdt  yr  mo  day prev unit rem
-                // When tenure is hidden, give the freed width to Name / Previous
-                // Workplace / Transfer Station (idx 4 / 11 / 12).
-                const iBase = this.showTenure ? [300, 1150, 850, 700, 1000, 900, 900, 800, 400, 400, 400, 700, 900, 650] : [300, 1150, 850, 700, 1600, 900, 900, 800, 400, 400, 400, 1300, 1400, 650];
-                const iBnHdr = ['ক্রমিক', 'ব্যক্তিগত নং', 'পদবি', 'ট্রেড', 'নাম', 'নিজ জেলা (দায়িত্বপূর্ণ এলাকা)', 'স্বামী/স্ত্রীর জেলা (দায়িত্বপূর্ণ এলাকা)', '', '', '', '', 'পূর্ববতী কর্মস্থল', 'বদলিকৃত কর্মস্থল', 'মন্তব্য'];
-                const iEnHdr = ['Ser', 'Service ID', 'Rank', 'Trade', 'Name', 'Own District (Responsible Area)', "Husband/Wife's District (Responsible Area)", '', '', '', '', 'Previous Workplace', 'Transfer Station', 'Remarks'];
-                const iVisIdx = iBase
-                    .map((_, i) => i)
-                    .filter((i) => {
-                        if (i === 13) return this.showRemarks; // Remarks
-                        if (i === 3) return this.showTradeColumn; // Trade
-                        if (i >= 7 && i <= 10) return this.showTenure; // Tenure group (join date + Y/M/D)
-                        return true;
-                    });
-                // Scale to the VISIBLE columns so the table fills the page width even
-                // when the tenure (or remarks) columns are hidden.
-                const iBaseTotal = iVisIdx.reduce((a, oi) => a + iBase[oi], 0);
-                const iW = iBase.map((w) => Math.round((w * pageUsable) / iBaseTotal));
+            // Column widths come from the same layout as the preview's <colgroup>
+            // (columnLayout()), so the Word table matches the screen and the PDF.
+            const layout = this.columnLayout();
+            const visKeys = layout.map((c) => c.key);
+            const wOf: Record<string, number> = {};
+            for (const c of layout) wOf[c.key] = Math.round((c.pct * pageUsable) / 100);
+            const columnWidths = visKeys.map((k) => wOf[k]);
+            const tableWidth = columnWidths.reduce((a, b) => a + b, 0);
+            const plainHdrCell = (text: string, w: number, extra?: any) =>
+                new TableCell({
+                    children: [hdrParaFn(text)],
+                    borders: cellBorders,
+                    width: { size: w, type: WidthType.DXA },
+                    margins: cellMargins,
+                    ...extra
+                });
+            const contCell = (w: number) => new TableCell({ children: [new Paragraph({})], verticalMerge: VerticalMergeType.CONTINUE, borders: cellBorders, width: { size: w, type: WidthType.DXA }, margins: cellMargins });
+            const rankValue = (emp: DraftPostingEmployeeRow) =>
+                (bn ? emp.rankNameBN || emp.rankName || '' : (emp.rankName ?? '')) + (this.showRankQualifications && this.getRankQualifications(emp) ? '\n(' + this.getRankQualifications(emp) + ')' : '');
+            const tradeValue = (emp: DraftPostingEmployeeRow) => (bn ? emp.tradeNameBN || emp.tradeName || '' : (emp.tradeName ?? '')) + (this.showTradeRemarks && emp.tradeRemarks ? '\n(' + emp.tradeRemarks + ')' : '');
 
-                const iMkHdrCell = (text: string, w: number, extra?: any) =>
-                    new TableCell({
-                        children: [hdrParaFn(text)],
-                        borders: cellBorders,
-                        width: { size: w, type: WidthType.DXA },
-                        margins: cellMargins,
-                        ...extra
-                    });
-                const iContCell = (w: number) => new TableCell({ children: [new Paragraph({})], verticalMerge: VerticalMergeType.CONTINUE, borders: cellBorders, width: { size: w, type: WidthType.DXA }, margins: cellMargins });
+            if (this.isInterPosting()) {
+                // ── Inter-posting: 3-row header when the tenure group is shown ──
+                const iHdr: Record<string, string> = bn
+                    ? { ser: 'ক্রমিক', serviceId: 'ব্যক্তিগত নং', rank: 'পদবি', trade: 'ট্রেড', name: 'নাম', ownDistrict: 'নিজ জেলা (দায়িত্বপূর্ণ এলাকা)', spouseDistrict: 'স্বামী/স্ত্রীর জেলা (দায়িত্বপূর্ণ এলাকা)', prevWorkplace: 'পূর্ববতী কর্মস্থল', transferUnit: 'বদলিকৃত কর্মস্থল', remarks: 'মন্তব্য' }
+                    : { ser: 'Ser', serviceId: 'Service ID', rank: 'Rank', trade: 'Trade', name: 'Name', ownDistrict: 'Own District (Responsible Area)', spouseDistrict: "Husband/Wife's District (Responsible Area)", prevWorkplace: 'Previous Workplace', transferUnit: 'Transfer Station', remarks: 'Remarks' };
+                const durationKeys = ['yr', 'mo', 'day'];
+                const isTenureKey = (k: string) => k === 'joinDate' || durationKeys.includes(k);
 
                 let iHdrRows: TableRow[];
                 if (this.showTenure) {
-                    // Row 1: outer cols span 3 rows, tenure block colspan=4
+                    const durationW = wOf['yr'] + wOf['mo'] + wOf['day'];
+                    // Row 1: outer columns span 3 rows; the tenure block spans its 4 columns
                     const r1: TableCell[] = [];
-                    for (const oi of iVisIdx) {
-                        if (oi >= 8 && oi <= 10) continue; // covered by colspan=4 from oi=7
-                        if (oi === 7) {
-                            r1.push(iMkHdrCell(bn ? 'র‌্যাবে অবস্থানকাল' : 'Tenure in RAB', iW[7] + iW[8] + iW[9] + iW[10], { columnSpan: 4 }));
-                        } else {
-                            r1.push(iMkHdrCell(bn ? iBnHdr[oi] : iEnHdr[oi], iW[oi], { verticalMerge: VerticalMergeType.RESTART }));
-                        }
+                    for (const k of visKeys) {
+                        if (durationKeys.includes(k)) continue;
+                        if (k === 'joinDate') r1.push(plainHdrCell(bn ? 'র‌্যাবে অবস্থানকাল' : 'Tenure in RAB', wOf[k] + durationW, { columnSpan: 4 }));
+                        else r1.push(plainHdrCell(iHdr[k], wOf[k], { verticalMerge: VerticalMergeType.RESTART }));
                     }
 
-                    // Row 2: joining date spans 2 rows, duration colspan=3
+                    // Row 2: joining date spans 2 rows, duration spans 3 columns
                     const r2: TableCell[] = [];
-                    for (const oi of iVisIdx) {
-                        if (oi < 7 || oi >= 11) {
-                            r2.push(iContCell(iW[oi]));
-                        } else if (oi === 7) {
-                            r2.push(iMkHdrCell(bn ? 'যোগদানের তারিখ' : 'Joining Date', iW[7], { verticalMerge: VerticalMergeType.RESTART }));
-                        } else if (oi === 8) {
-                            r2.push(iMkHdrCell(bn ? 'অবস্থানকাল' : 'Duration', iW[8] + iW[9] + iW[10], { columnSpan: 3 }));
-                        }
-                        // oi 9,10: skipped (covered by colspan=3)
+                    for (const k of visKeys) {
+                        if (!isTenureKey(k)) r2.push(contCell(wOf[k]));
+                        else if (k === 'joinDate') r2.push(plainHdrCell(bn ? 'যোগদানের তারিখ' : 'Joining Date', wOf[k], { verticalMerge: VerticalMergeType.RESTART }));
+                        else if (k === 'yr') r2.push(plainHdrCell(bn ? 'অবস্থানকাল' : 'Duration', durationW, { columnSpan: 3 }));
                     }
 
-                    // Row 3: joining date continues, বছর/মাস/দিন cells
-                    const r3: TableCell[] = [];
-                    const subBn = ['বছর', 'মাস', 'দিন'];
-                    const subEn = ['Year', 'Month', 'Day'];
-                    for (const oi of iVisIdx) {
-                        if (oi < 7 || oi >= 11) {
-                            r3.push(iContCell(iW[oi]));
-                        } else if (oi === 7) {
-                            r3.push(iContCell(iW[7]));
-                        } else {
-                            r3.push(iMkHdrCell(bn ? subBn[oi - 8] : subEn[oi - 8], iW[oi]));
-                        }
-                    }
+                    // Row 3: বছর / মাস / দিন
+                    const subLabel: Record<string, string> = bn ? { yr: 'বছর', mo: 'মাস', day: 'দিন' } : { yr: 'Year', mo: 'Month', day: 'Day' };
+                    const r3 = visKeys.map((k) => (durationKeys.includes(k) ? plainHdrCell(subLabel[k], wOf[k]) : contCell(wOf[k])));
 
                     iHdrRows = [new TableRow({ tableHeader: true, children: r1 }), new TableRow({ tableHeader: true, children: r2 }), new TableRow({ tableHeader: true, children: r3 })];
                 } else {
-                    // Tenure hidden → single-row header (indices 6-9 already dropped from iVisIdx)
-                    const r1 = iVisIdx.map((oi) => iMkHdrCell(bn ? iBnHdr[oi] : iEnHdr[oi], iW[oi]));
-                    iHdrRows = [new TableRow({ tableHeader: true, children: r1 })];
+                    iHdrRows = [new TableRow({ tableHeader: true, children: visKeys.map((k) => plainHdrCell(iHdr[k], wOf[k])) })];
                 }
 
                 const iDataRows = this.postingEmployees.map((emp, i) => {
                     const t = this.calcTenure(emp.joiningDateInRAB);
-                    const allV: string[] = [
-                        bn ? this.serial(i + 1) : String(i + 1),
-                        this.getServiceIdDisplay(emp),
-                        (bn ? emp.rankNameBN || emp.rankName || '' : (emp.rankName ?? '')) + (this.showRankQualifications && this.getRankQualifications(emp) ? '\n(' + this.getRankQualifications(emp) + ')' : ''),
-                        (bn ? emp.tradeNameBN || emp.tradeName || '' : (emp.tradeName ?? '')) + (this.showTradeRemarks && emp.tradeRemarks ? '\n(' + emp.tradeRemarks + ')' : ''),
-                        bn ? emp.fullNameBN || emp.fullNameEN || '' : (emp.fullNameEN ?? ''),
-                        bn ? emp.permanentDistrictNameBN || emp.permanentDistrictName || '' : (emp.permanentDistrictName ?? ''),
-                        bn ? emp.spousePermanentDistrictNameBN || emp.spousePermanentDistrictName || '' : (emp.spousePermanentDistrictName ?? ''),
-                        bn ? this.toBnDigits(this.formatJoiningDate(emp.joiningDateInRAB)) : this.formatJoiningDate(emp.joiningDateInRAB),
-                        bn ? this.toBnDigits(String(t.y)) : String(t.y),
-                        bn ? this.toBnDigits(String(t.m)) : String(t.m),
-                        bn ? this.toBnDigits(String(t.d)) : String(t.d),
-                        this.getInterPrevWorkplace(emp),
-                        this.getTransferUnitShort(emp),
-                        this.getCombinedRemarks(emp)
-                    ];
+                    const v: Record<string, string> = {
+                        ser: bn ? this.serial(i + 1) : String(i + 1),
+                        serviceId: this.getServiceIdDisplay(emp),
+                        rank: rankValue(emp),
+                        trade: tradeValue(emp),
+                        name: bn ? emp.fullNameBN || emp.fullNameEN || '' : (emp.fullNameEN ?? ''),
+                        ownDistrict: bn ? emp.permanentDistrictNameBN || emp.permanentDistrictName || '' : (emp.permanentDistrictName ?? ''),
+                        spouseDistrict: bn ? emp.spousePermanentDistrictNameBN || emp.spousePermanentDistrictName || '' : (emp.spousePermanentDistrictName ?? ''),
+                        joinDate: bn ? this.toBnDigits(this.formatJoiningDate(emp.joiningDateInRAB)) : this.formatJoiningDate(emp.joiningDateInRAB),
+                        yr: bn ? this.toBnDigits(String(t.y)) : String(t.y),
+                        mo: bn ? this.toBnDigits(String(t.m)) : String(t.m),
+                        day: bn ? this.toBnDigits(String(t.d)) : String(t.d),
+                        prevWorkplace: this.getInterPrevWorkplace(emp),
+                        transferUnit: this.getTransferUnitShort(emp),
+                        remarks: this.getCombinedRemarks(emp)
+                    };
                     // cantSplit: keep each employee row whole — Word must not break a
                     // multi-line row across pages (that leaves a stray fragment after
                     // the repeated header on the next page).
                     // Every value left-aligned, matching the preview (headers stay centered).
-                    return new TableRow({ cantSplit: true, children: iVisIdx.map((oi) => dataCellFn(allV[oi], iW[oi])) });
+                    return new TableRow({ cantSplit: true, children: visKeys.map((k) => dataCellFn(v[k], wOf[k])) });
                 });
 
-                const iTotalW = iVisIdx.reduce((a, oi) => a + iW[oi], 0);
                 mainChildren.push(new Paragraph({ spacing: { before: 200 }, children: [] }));
-                mainChildren.push(new Table({ width: { size: iTotalW, type: WidthType.DXA }, rows: [...iHdrRows, ...iDataRows], columnWidths: iVisIdx.map((oi) => iW[oi]), alignment: AlignmentType.LEFT, indent: { size: 100, type: WidthType.DXA } }));
+                mainChildren.push(new Table({ width: { size: tableWidth, type: WidthType.DXA }, rows: [...iHdrRows, ...iDataRows], columnWidths, alignment: AlignmentType.LEFT, indent: { size: 100, type: WidthType.DXA } }));
             } else {
-                // ── New posting: 10-column, single-row header ──
-                const allColKeys = ['ser', 'serviceId', 'rank', 'trade', 'name', 'ownDistrict', 'spouseDistrict', 'prevWorkplace', 'transferUnit', 'remarks'];
-                const allColHeaders = bn
-                    ? ['ক্রমিক', 'ব্যক্তিগত নম্বর', 'পদবি', 'ট্রেড', 'নাম', 'নিজ জেলা (দায়িত্বপূর্ণ এলাকা)', 'স্পাউস জেলা (দায়িত্বপূর্ণ এলাকা)', 'পূর্ববতী কর্মস্থল', 'বদলি ইউনিট', 'মন্তব্য']
-                    : ['Ser', 'Service ID', 'Rank', 'Trade', 'Name', 'Own District (Responsible Area)', 'Spouse District (Responsible Area)', 'Previous Workplace', 'Transfer Unit', 'Remarks'];
-                //                    ser  svcId rank trade name  own   spouse prev  unit  rem
-                const allBaseWidths = [620, 1480, 850, 820, 1380, 1400, 1220, 1040, 780, 800];
+                // ── New posting: single-row header ──
+                const hdr: Record<string, string> = bn
+                    ? { ser: 'ক্রমিক', serviceId: 'ব্যক্তিগত নম্বর', rank: 'পদবি', trade: 'ট্রেড', name: 'নাম', ownDistrict: 'নিজ জেলা (দায়িত্বপূর্ণ এলাকা)', spouseDistrict: 'স্পাউস জেলা (দায়িত্বপূর্ণ এলাকা)', prevWorkplace: 'পূর্ববতী কর্মস্থল', transferUnit: 'বদলি ইউনিট', remarks: 'মন্তব্য' }
+                    : { ser: 'Ser', serviceId: 'Service ID', rank: 'Rank', trade: 'Trade', name: 'Name', ownDistrict: 'Own District (Responsible Area)', spouseDistrict: 'Spouse District (Responsible Area)', prevWorkplace: 'Previous Workplace', transferUnit: 'Transfer Unit', remarks: 'Remarks' };
+                const district = (full: string, detail: boolean) => (detail ? full : full.split('\n')[0].replace(/\s*\(.*$/, ''));
 
-                const visibleIndices = allColKeys
-                    .map((k, i) => {
-                        if (k === 'remarks' && !this.showRemarks) return -1;
-                        if (k === 'trade' && !this.showTradeColumn) return -1;
-                        return i;
-                    })
-                    .filter((i) => i >= 0);
-                const cols = visibleIndices.map((i) => allColHeaders[i]);
-                const baseWidths = visibleIndices.map((i) => allBaseWidths[i]);
-                const baseTotal = baseWidths.reduce((a, b) => a + b, 0);
-                const colWidths = baseWidths.map((w) => Math.round((w * pageUsable) / baseTotal));
-
-                const hdrCell = (text: string, wi: number, extra?: any) =>
-                    new TableCell({
-                        children: [hdrParaFn(text)],
-                        borders: cellBorders,
-                        width: { size: colWidths[wi], type: WidthType.DXA },
-                        margins: cellMargins,
-                        ...extra
-                    });
-
-                const buildAllCellValues = (emp: any, i: number): string[] => [
-                    bn ? this.serial(i + 1) : String(i + 1),
-                    this.getServiceIdDisplay(emp),
-                    (bn ? emp.rankNameBN || emp.rankName || '' : (emp.rankName ?? '')) + (this.showRankQualifications && this.getRankQualifications(emp) ? '\n(' + this.getRankQualifications(emp) + ')' : ''),
-                    (bn ? emp.tradeNameBN || emp.tradeName || '' : (emp.tradeName ?? '')) + (this.showTradeRemarks && emp.tradeRemarks ? '\n(' + emp.tradeRemarks + ')' : ''),
-                    bn ? emp.fullNameBN || emp.fullNameEN || '' : (emp.fullNameEN ?? ''),
-                    this.showOwnDistrictDetail
-                        ? bn
-                            ? emp.permanentDistrictNameBN || emp.permanentDistrictName || ''
-                            : (emp.permanentDistrictName ?? '')
-                        : (bn ? emp.permanentDistrictNameBN || emp.permanentDistrictName || '' : (emp.permanentDistrictName ?? '')).split('\n')[0].replace(/\s*\(.*$/, ''),
-                    this.showSpouseDistrictDetail
-                        ? bn
-                            ? emp.spousePermanentDistrictNameBN || emp.spousePermanentDistrictName || ''
-                            : (emp.spousePermanentDistrictName ?? '')
-                        : (bn ? emp.spousePermanentDistrictNameBN || emp.spousePermanentDistrictName || '' : (emp.spousePermanentDistrictName ?? '')).split('\n')[0].replace(/\s*\(.*$/, ''),
-                    this.getPreviousWorkplace(emp),
-                    this.getTransferUnitShort(emp),
-                    this.getCombinedRemarks(emp)
-                ];
-
-                const headerRows = [new TableRow({ tableHeader: true, children: cols.map((c, vi) => hdrCell(c, vi)) })];
+                const headerRows = [new TableRow({ tableHeader: true, children: visKeys.map((k) => plainHdrCell(hdr[k], wOf[k])) })];
                 const dataRows = this.postingEmployees.map((emp, i) => {
-                    const allVals = buildAllCellValues(emp, i);
+                    const v: Record<string, string> = {
+                        ser: bn ? this.serial(i + 1) : String(i + 1),
+                        serviceId: this.getServiceIdDisplay(emp),
+                        rank: rankValue(emp),
+                        trade: tradeValue(emp),
+                        name: bn ? emp.fullNameBN || emp.fullNameEN || '' : (emp.fullNameEN ?? ''),
+                        ownDistrict: district(bn ? emp.permanentDistrictNameBN || emp.permanentDistrictName || '' : (emp.permanentDistrictName ?? ''), this.showOwnDistrictDetail),
+                        spouseDistrict: district(bn ? emp.spousePermanentDistrictNameBN || emp.spousePermanentDistrictName || '' : (emp.spousePermanentDistrictName ?? ''), this.showSpouseDistrictDetail),
+                        prevWorkplace: this.getPreviousWorkplace(emp),
+                        transferUnit: this.getTransferUnitShort(emp),
+                        remarks: this.getCombinedRemarks(emp)
+                    };
                     // cantSplit: keep each employee row whole across page breaks.
                     // Every value left-aligned, matching the preview (headers stay centered).
-                    return new TableRow({ cantSplit: true, children: visibleIndices.map((oi, vi) => dataCellFn(allVals[oi], colWidths[vi])) });
+                    return new TableRow({ cantSplit: true, children: visKeys.map((k) => dataCellFn(v[k], wOf[k])) });
                 });
-                const tableRows = [...headerRows, ...dataRows];
                 mainChildren.push(new Paragraph({ spacing: { before: 200 }, children: [] }));
-                const totalColW = colWidths.reduce((a, b) => a + b, 0);
-                mainChildren.push(new Table({ width: { size: totalColW, type: WidthType.DXA }, rows: tableRows, columnWidths: colWidths, alignment: AlignmentType.LEFT, indent: { size: 100, type: WidthType.DXA } }));
+                mainChildren.push(new Table({ width: { size: tableWidth, type: WidthType.DXA }, rows: [...headerRows, ...dataRows], columnWidths, alignment: AlignmentType.LEFT, indent: { size: 100, type: WidthType.DXA } }));
             }
         }
 
