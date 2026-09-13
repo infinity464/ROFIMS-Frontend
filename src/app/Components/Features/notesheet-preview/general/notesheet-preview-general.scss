@@ -202,6 +202,38 @@
     max-width: 100%;
 }
 
+/* The shared ≤1200px responsive rules un-slice the paginated pages (static .page-inner,
+   auto height): every page then shows the full content and the bottom cover lands over
+   the signature block — and the browser zoom decides whether that kicks in. Keep the
+   real page geometry at every width here; a narrow window scrolls sideways instead.
+   The offset comes from --ns-page-offset because the shared rule's
+   `transform: none !important` also cancels the inline translate. */
+@media screen and (max-width: 1200px) {
+    :host .a4-paper-container {
+        align-items: flex-start;
+        overflow-x: auto;
+    }
+    :host .a4-paper.paginated {
+        width: 210mm;
+        height: 297mm !important;
+        min-height: 297mm;
+        padding: 14mm 6mm 20mm;
+        overflow: hidden !important;
+    }
+    :host .a4-paper.paginated.a4-paper--legal {
+        width: 215.9mm;
+        height: 355.6mm !important;
+        min-height: 355.6mm;
+    }
+    :host .page-viewport {
+        overflow: hidden !important;
+    }
+    :host .page-inner {
+        position: absolute !important;
+        transform: translateY(calc(-1 * var(--ns-page-offset, 0px))) !important;
+    }
+}
+
 /* Header block (notesheet no / date, subject, reference) shares the body's 1px
    left edge. The shared style pads .ns-cell-ref 4px from the left, which left
    the top block sitting right of the numbered paragraphs and members table. */

@@ -82,7 +82,7 @@
         <div class="a4-paper-container" #pagesContainer>
             <div *ngFor="let offset of pageOffsets; let i = index; trackBy: trackByIndex" class="a4-paper paginated" [class.a4-paper--legal]="selectedPageSize === 'Legal'">
                 <div class="page-viewport ns-general-page">
-                    <div class="page-inner" [style.transform]="'translateY(-' + offset + 'px)'">
+                    <div class="page-inner" [style.transform]="'translateY(-' + offset + 'px)'" [style.--ns-page-offset]="offset + 'px'">
                         <ng-container *ngTemplateOutlet="viewContent"></ng-container>
                     </div>
                     <div class="page-bottom-cover"

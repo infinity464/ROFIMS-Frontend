@@ -1770,6 +1770,16 @@ html, body { margin: 0; padding: 0; background: transparent; }
 .ns-approver-section,
 .ns-org-header,
 .ns-title-block { page-break-inside: avoid; }
+
+/* The web view paginates by the last drawn pixel, so the final approver's reserved-but-
+   blank signature space never costs a page there. Here the section carries a keep-
+   together rule, so that blank space would push it onto a new page. It is the end of
+   the document — nothing below it shows — so drop it. */
+.pdf-flow .ns-approver-section:last-child,
+.pdf-flow .ns-approver-section:last-child .ns-approver-body {
+    min-height: 0 !important;
+    padding-bottom: 0 !important;
+}
 </style>
 </head>
 <body>
@@ -2642,12 +2652,47 @@ html, body { margin: 0; padding: 0; background: transparent; }
         return heightPx;
     }
 
+    /**
+     * Bottom-most pixel that renders something inside `container`: a text line, a
+     * signature image or a table border. Anything below it is blank padding or reserved
+     * height, which may fall past a page break without hiding anything. Returns 0 when
+     * nothing was found, letting the caller fall back to the box height.
+     */
+    private measureRenderedBottom(container: HTMLElement, containerTop: number): number {
+        let bottom = 0;
+
+        const walker = document.createTreeWalker(container, NodeFilter.SHOW_TEXT);
+        let textNode: Node | null;
+        while ((textNode = walker.nextNode())) {
+            if (!textNode.textContent?.trim()) continue;
+            const range = document.createRange();
+            range.selectNodeContents(textNode);
+            const rects = range.getClientRects();
+            for (let r = 0; r < rects.length; r++) {
+                if (rects[r].height > 0) bottom = Math.max(bottom, rects[r].bottom - containerTop);
+            }
+        }
+
+        for (const el of Array.from(container.querySelectorAll('img, table')) as HTMLElement[]) {
+            const rect = el.getBoundingClientRect();
+            if (rect.height > 0) bottom = Math.max(bottom, rect.bottom - containerTop);
+        }
+
+        return bottom;
+    }
+
     private calculatePageOffsets(totalHeight: number): number[] {
         const container = this.contentMeasure?.nativeElement;
         const pageH = this.pageContentHeightPx;
         if (!container || pageH <= 0) return [0];
 
         const containerTop = container.getBoundingClientRect().top;
+
+        // Paginate against the bottom of the last thing actually drawn, not scrollHeight:
+        // trailing blank space (the last approver's reserved signature height, padding)
+        // would otherwise earn an extra page whenever the sheet is a few pixels over.
+        const drawnBottom = this.measureRenderedBottom(container, containerTop);
+        if (drawnBottom > 0) totalHeight = Math.min(totalHeight, drawnBottom);
 
         const titleEl = container.querySelector('.ns-title-block') as HTMLElement;
         const docBox = container.querySelector('.ns-doc-box') as HTMLElement;
@@ -2664,7 +2709,12 @@ html, body { margin: 0; padding: 0; background: transparent; }
             ) as NodeListOf<HTMLElement>
         ).map(el => {
             const rect = el.getBoundingClientRect();
-            return { top: rect.top - containerTop, bottom: rect.top - containerTop + rect.height, height: rect.height };
+            const top = rect.top - containerTop;
+            // Only what is drawn has to stay on the page; blank space at the bottom of the
+            // block may fall past the break (the page's bottom cover hides it).
+            const drawn = this.measureRenderedBottom(el, containerTop);
+            const bottom = drawn > top ? drawn : top + rect.height;
+            return { top, bottom, height: rect.height };
         }).filter(b => b.height > 0 && b.height < pageH)
           .sort((a, b) => a.top - b.top);
 
@@ -2710,7 +2760,7 @@ html, body { margin: 0; padding: 0; background: transparent; }
             while (adjusted) {
                 adjusted = false;
                 for (const block of keepTogether) {
-                    if (block.top > cursor && block.top < nextBreak && block.bottom > nextBreak) {
+                    if (block.top > cursor && block.top < nextBreak && block.bottom > nextBreak + 1) {
                         nextBreak = block.top;
                         adjusted = true;
                         break;
