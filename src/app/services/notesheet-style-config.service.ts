@@ -36,7 +36,8 @@ export class NotesheetStyleConfigService {
     /** Fetches the saved style (or server defaults). Falls back to the cache on error — never errors. */
     load(noteSheetType: string): Observable<NotesheetStyleConfig> {
         return this.http.get<NotesheetStyleConfig>(`${this.api}/GetByType/${encodeURIComponent(noteSheetType)}`).pipe(
-            map((cfg) => ({ ...defaultNotesheetStyle(noteSheetType), ...(cfg ?? {}), noteSheetType })),
+            // Nothing saved (configId 0): use the client defaults, which differ per type.
+            map((cfg) => (cfg?.configId ? { ...defaultNotesheetStyle(noteSheetType), ...cfg, noteSheetType } : defaultNotesheetStyle(noteSheetType))),
             tap((cfg) => this.writeCache(cfg)),
             catchError(() => of(this.cached(noteSheetType)))
         );

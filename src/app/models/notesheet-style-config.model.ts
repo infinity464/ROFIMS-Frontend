@@ -35,6 +35,12 @@ export const DEFAULT_NOTESHEET_STYLE: Omit<NotesheetStyleConfig, 'noteSheetType'
     approverMinHeightPx: 45
 };
 
+/** Types whose preview spaces its signature blocks differently from the posting sheet. */
+const TYPE_DEFAULTS: Record<string, Partial<NotesheetStyleConfig>> = {
+    General: { defaultPageSize: 'A4', approverGapPx: 24, approverGapEm: 0, sigDateGapEm: 2, initiatorTopMarginPx: 24, approverMinHeightPx: 90 },
+    ExBDLeave: { approverGapPx: 24, approverGapEm: 6.25, sigDateGapEm: 2, initiatorTopMarginPx: 40, approverMinHeightPx: 90 }
+};
+
 export function defaultNotesheetStyle(noteSheetType: string): NotesheetStyleConfig {
-    return { ...DEFAULT_NOTESHEET_STYLE, noteSheetType };
+    return { ...DEFAULT_NOTESHEET_STYLE, ...(TYPE_DEFAULTS[noteSheetType] ?? {}), noteSheetType };
 }

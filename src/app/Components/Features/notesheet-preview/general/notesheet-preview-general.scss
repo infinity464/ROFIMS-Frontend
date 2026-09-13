@@ -210,9 +210,43 @@
 }
 
 /* Signature block sits a little lower — 10px more breathing room above the
-   initiator signature than the shared 14px top padding gives. */
+   initiator signature than the shared 14px top padding gives. The --ns-* variables
+   below come from the saved document style (applyStyleVars()); each fallback is the
+   built-in default, so an unsaved sheet renders unchanged. */
 .ns-initiator-area {
-    padding-top: 24px;
+    padding-top: var(--ns-initiator-top, 24px);
+}
+.ns-approver-section {
+    min-height: var(--ns-approver-min-h, 90px);
+}
+.ns-approver-section:not(:last-child) {
+    padding-bottom: calc(var(--ns-approver-gap-px, 24px) + var(--ns-approver-gap-em, 0) * 1em);
+}
+.ns-sig-date {
+    margin-top: calc(var(--ns-sig-date-gap-em, 2) * 1em);
+}
+
+/* Style dialog (app chrome, not printed). */
+.ns-style-form {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+
+    label {
+        font-size: 0.85rem;
+        font-weight: 600;
+        margin-top: 0.5rem;
+    }
+
+    ::ng-deep .p-inputnumber,
+    ::ng-deep .p-inputnumber input {
+        width: 100%;
+    }
+}
+.ns-style-hint {
+    margin: 0;
+    font-size: 0.8rem;
+    color: var(--p-text-muted-color, #6b7280);
 }
 
 /* Note-sheet no. / date line and the subject line carry their padding inline in
