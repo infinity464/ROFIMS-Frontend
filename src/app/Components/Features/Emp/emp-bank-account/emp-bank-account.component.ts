@@ -262,13 +262,20 @@ export class EmpBankAccount implements OnInit {
             bankId: null,
             branchId: null,
             accountNumber: '',
-            accountNameEN: '',
+            accountNameEN: this.memberNameEN(),
             routingNumber: '',
             swiftCode: '',
             remarks: ''
         });
         this.updateBranchOptions();
         this.showInlineForm = true;
+    }
+
+    /** Member's English name for the new account's default name. employeeBasicInfo comes from the
+     *  employee search (fullNameEN) or, when opened with ?id=, from the raw employee record. */
+    private memberNameEN(): string {
+        const info = this.employeeBasicInfo as any;
+        return (info?.fullNameEN ?? info?.FullNameEN ?? info?.nameEnglish ?? info?.nameEN ?? '').trim();
     }
 
     openEditDialog(row: BankAccInfoModel): void {

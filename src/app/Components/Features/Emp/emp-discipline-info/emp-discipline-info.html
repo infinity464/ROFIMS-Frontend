@@ -49,11 +49,8 @@
                                     }
                                 </div>
                                 <div>
-                                    <label class="font-semibold block mb-2 text-700">Offence Date <span class="text-red-500">*</span></label>
+                                    <label class="font-semibold block mb-2 text-700">Offence Date</label>
                                     <p-datepicker formControlName="offenseDate" dateFormat="dd-mm-yy" [showIcon]="true" styleClass="w-full" placeholder="Select date" appendTo="body"></p-datepicker>
-                                    @if (disciplineForm.get('offenseDate')?.invalid && disciplineForm.get('offenseDate')?.touched) {
-                                        <small class="text-red-500">Offence Date is required</small>
-                                    }
                                 </div>
                                 <div class="col-span-2">
                                     <label class="font-semibold block mb-2 text-700">Brief Statement of Offence <span class="text-red-500">*</span></label>
