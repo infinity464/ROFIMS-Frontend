@@ -489,7 +489,8 @@
     [breakpoints]="{ '575px': '92vw' }"
 >
     <div class="ns-style-form">
-        <p class="ns-style-hint">Changes show on the sheet immediately — scroll the page to check them. Save to make them the default for every note sheet of this type.</p>
+        <p class="ns-style-hint">Changes show on the sheet immediately — scroll the page to check them. <b>Save</b> keeps them for this note sheet only; <b>Reset</b> removes this note sheet's saved style. Other note sheets are not affected.</p>
+        <p class="ns-style-hint">Now using: {{ styleConfig.noteSheetId ? "this note sheet's own style" : (styleConfig.configId ? 'the default style of this type' : 'the built-in defaults') }}.</p>
 
         <label for="stFontDelta">Font size</label>
         <p-select inputId="stFontDelta" [options]="fontDeltaOptions" [(ngModel)]="fontDelta" (onChange)="onFontDeltaChange()" optionLabel="label" optionValue="value" appendTo="body" [style]="{ width: '100%' }"></p-select>
@@ -504,8 +505,8 @@
         <p-inputNumber inputId="stSigDateGap" [(ngModel)]="styleConfig.sigDateGapEm" (ngModelChange)="onStyleChange()" mode="decimal" [minFractionDigits]="0" [maxFractionDigits]="2" [step]="0.25" [min]="0" [max]="10" [showButtons]="true"></p-inputNumber>
     </div>
     <ng-template pTemplate="footer">
-        <p-button label="Reset" icon="pi pi-refresh" severity="secondary" [text]="true" (onClick)="resetStyleToDefault()"></p-button>
+        <p-button label="Reset" icon="pi pi-refresh" severity="secondary" [text]="true" [disabled]="!styleConfig.noteSheetId" (onClick)="resetStyleToDefault()"></p-button>
         <p-button label="Close" severity="secondary" [outlined]="true" (onClick)="showStyleDialog = false"></p-button>
-        <p-button label="Save" icon="pi pi-save" [loading]="savingStyle" (onClick)="saveStyleAsDefault()"></p-button>
+        <p-button label="Save" icon="pi pi-save" [loading]="savingStyle" (onClick)="saveStyle()"></p-button>
     </ng-template>
 </p-dialog>

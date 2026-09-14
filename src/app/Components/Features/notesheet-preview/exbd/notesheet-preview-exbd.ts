@@ -117,19 +117,20 @@ export class NotesheetPreviewExbdComponent extends NotesheetPreviewBase implemen
 
     // ── Saved document style ─────────────────────────────────
     private styleConfigService = inject(NotesheetStyleConfigService);
-    /** Style key for this preview layout — every note sheet this preview renders shares it. */
+    /** Style type for this preview layout: keys the type default and the built-in defaults.
+     *  A note sheet's own saved style (styleConfig.noteSheetId set) overrides both. */
     private readonly styleType = 'ExBDLeave';
-    /** Signature-block spacing, saved per preview type. fontDelta and selectedPageSize stay
-     *  separate fields (the page-size select binds one) and are folded in on save. */
+    /** Signature-block spacing, saved per note sheet. fontDelta and
+     *  selectedPageSize stay separate fields (the page-size select binds one) and are folded in on save. */
     styleConfig: NotesheetStyleConfig = defaultNotesheetStyle('ExBDLeave');
     showStyleDialog = false;
     savingStyle = false;
 
     /** Cached style first so the sheet paginates in the saved style straight away,
-     *  then the server's copy. */
+     *  then the server's copy — this note sheet's own style, else its type default. */
     protected override onNoteSheetLoaded(): void {
-        this.applyStyleConfig(this.styleConfigService.cached(this.styleType));
-        this.styleConfigService.load(this.styleType).subscribe((cfg) => this.applyStyleConfig(cfg));
+        this.applyStyleConfig(this.styleConfigService.cached(this.styleType, this.noteSheetId));
+        this.styleConfigService.load(this.styleType, this.noteSheetId).subscribe((cfg) => this.applyStyleConfig(cfg));
     }
 
     private applyStyleConfig(cfg: NotesheetStyleConfig): void {
@@ -189,17 +190,19 @@ export class NotesheetPreviewExbdComponent extends NotesheetPreviewBase implemen
         for (const [name, value] of this.styleVars()) el.style.setProperty(name, value);
     }
 
-    saveStyleAsDefault(): void {
-        if (this.savingStyle) return;
+    /** Saves the dialog's style for this note sheet only. */
+    saveStyle(): void {
+        const noteSheetId = this.noteSheetId;
+        if (this.savingStyle || !noteSheetId) return;
         this.savingStyle = true;
         const user = this.sharedService.getCurrentUser() || 'system';
         const now = new Date().toISOString();
-        this.styleConfigService.save({ ...this.currentStyle(), noteSheetType: this.styleType, createdBy: user, createdDate: now, lastUpdatedBy: user, lastupdate: now }).subscribe({
+        this.styleConfigService.save({ ...this.currentStyle(), noteSheetType: this.styleType, noteSheetId, createdBy: user, createdDate: now, lastUpdatedBy: user, lastupdate: now }).subscribe({
             next: (saved) => {
                 this.savingStyle = false;
                 this.styleConfig = { ...saved };
                 this.showStyleDialog = false;
-                this.messageService.add({ severity: 'success', summary: 'Saved', detail: 'Style saved as the default for this note-sheet type.' });
+                this.messageService.add({ severity: 'success', summary: 'Saved', detail: 'Style saved for this note sheet.' });
             },
             error: (err) => {
                 this.savingStyle = false;
@@ -208,16 +211,19 @@ export class NotesheetPreviewExbdComponent extends NotesheetPreviewBase implemen
         });
     }
 
+    /** Removes the style saved for this note sheet only — other note sheets keep theirs. */
     resetStyleToDefault(): void {
+        const noteSheetId = this.noteSheetId;
+        if (!noteSheetId || !this.styleConfig.noteSheetId) return;
         this.confirmationService.confirm({
             header: 'Reset Style',
-            message: 'Remove the saved style for this note-sheet type and go back to the built-in defaults?',
+            message: 'Remove the style saved for this note sheet? Other note sheets are not affected.',
             icon: 'pi pi-exclamation-triangle',
             accept: () =>
-                this.styleConfigService.reset(this.styleType).subscribe({
+                this.styleConfigService.reset(this.styleType, noteSheetId).subscribe({
                     next: (cfg) => {
                         this.applyStyleConfig(cfg);
-                        this.messageService.add({ severity: 'success', summary: 'Reset', detail: 'Style reset to defaults.' });
+                        this.messageService.add({ severity: 'success', summary: 'Reset', detail: 'Style reset for this note sheet.' });
                     },
                     error: () => this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to reset style.' })
                 })

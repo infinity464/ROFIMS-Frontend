@@ -1,10 +1,12 @@
 /**
- * Saved print / Word style for one note-sheet type — mirrors the C# entity
- * rab.Models.NoteSheetStyleConfig (one row per NoteSheetType).
+ * Saved print / Word style — mirrors the C# entity rab.Models.NoteSheetStyleConfig: the
+ * default for a note-sheet type (noteSheetId empty) or the style of one note sheet.
  */
 export interface NotesheetStyleConfig {
     configId: number;
     noteSheetType: string;
+    /** Set when this is a note sheet's own style; empty for the type default / built-in defaults. */
+    noteSheetId?: number | null;
     /** Points added to every base font size (-2 … +2). */
     fontDelta: number;
     defaultPageSize: 'A4' | 'Legal';
