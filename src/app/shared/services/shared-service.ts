@@ -1,5 +1,6 @@
 import { Injectable } from '@angular/core';
-import { getAuthItem } from './auth-storage';
+import { getAuthItem, setAuthItem } from './auth-storage';
+import type { MyUserAccessRules } from '@/models/identity.model';
 
 @Injectable({
     providedIn: 'root'
@@ -25,29 +26,41 @@ export class SharedService {
     }
 
     /**
-     * Role IDs the current user is allowed to reset passwords for.
-     * `["*"]` = any role; `[]` = none.
-     * Defensive: the backend wire shape is an array, but tolerate a JSON-string payload
-     * in case a stale cached token from an older deploy is still in localStorage.
+     * The current user's user-management rules (which roles' users they may see / manage), as stored
+     * from the login response. Pages that depend on them re-read `IdentityService.getMyUserAccessRules()`
+     * and save the fresh copy with {@link setUserAccessRules}, so rule changes apply without a new login.
+     * The API enforces the same rules — this copy only decides what the UI shows.
      */
-    getCurrentResetRoleIds(): string[] {
+    getUserAccessRules(): MyUserAccessRules {
+        const info = this.readAuth();
+        return {
+            hasFullUserAccess: info?.hasFullUserAccess === true,
+            rules: Array.isArray(info?.userAccessRules) ? info.userAccessRules : []
+        };
+    }
+
+    /** All six actions on all roles — may edit role permissions and the session policy. */
+    hasFullUserAccess(): boolean {
+        return this.getUserAccessRules().hasFullUserAccess;
+    }
+
+    /** Stores a fresh copy of the current user's rules into the cached auth object. */
+    setUserAccessRules(value: MyUserAccessRules): void {
+        const info = this.readAuth();
+        if (!info) return;
+        info.userAccessRules = Array.isArray(value?.rules) ? value.rules : [];
+        info.hasFullUserAccess = value?.hasFullUserAccess === true;
+        delete info.canResetRoleIds; // legacy field from before RoleUserAccessRules
+        setAuthItem('auth', JSON.stringify(info));
+    }
+
+    private readAuth(): any | null {
         const auth = getAuthItem('auth');
-        if (!auth) return [];
+        if (!auth) return null;
         try {
-            const info = JSON.parse(auth);
-            const raw = info?.canResetRoleIds;
-            if (Array.isArray(raw)) return raw;
-            if (typeof raw === 'string' && raw.trim()) {
-                try {
-                    const parsed = JSON.parse(raw);
-                    return Array.isArray(parsed) ? parsed : [];
-                } catch {
-                    return [];
-                }
-            }
-            return [];
+            return JSON.parse(auth);
         } catch {
-            return [];
+            return null;
         }
     }
 

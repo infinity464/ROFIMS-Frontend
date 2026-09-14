@@ -21,105 +21,117 @@
         }
       </div>
 
-      <!-- Password reset permission — only users with full ["*"] access may edit this. -->
-      @if (currentUserHasFullAccess) {
-        <div class="field">
-          <div class="font-semibold mb-1">Password reset permission</div>
-          <p class="text-sm text-color-secondary mb-3">
-            Which other roles' users can members of this role reset passwords for?
-          </p>
-
-          <div class="flex flex-col gap-2">
-            <!-- Deny all -->
-            <label
-              for="permModeDeny"
-              class="flex items-start gap-3 p-3 rounded-lg border cursor-pointer transition-colors"
-              [class.border-primary]="form.get('permissionMode')?.value === 'deny'"
-              [class.ring-1]="form.get('permissionMode')?.value === 'deny'"
-              [class.ring-primary]="form.get('permissionMode')?.value === 'deny'"
-              [class.border-surface]="form.get('permissionMode')?.value !== 'deny'"
-            >
-              <p-radioButton inputId="permModeDeny" name="permissionMode" value="deny" formControlName="permissionMode" />
-              <div class="leading-tight">
-                <div class="font-medium">Deny all resets</div>
-                <div class="text-sm text-color-secondary">Members cannot reset passwords for anyone.</div>
-              </div>
-            </label>
-
-            <!-- Specific roles -->
-            <label
-              for="permModeSpecific"
-              class="flex items-start gap-3 p-3 rounded-lg border cursor-pointer transition-colors"
-              [class.border-primary]="form.get('permissionMode')?.value === 'specific'"
-              [class.ring-1]="form.get('permissionMode')?.value === 'specific'"
-              [class.ring-primary]="form.get('permissionMode')?.value === 'specific'"
-              [class.border-surface]="form.get('permissionMode')?.value !== 'specific'"
-            >
-              <p-radioButton inputId="permModeSpecific" name="permissionMode" value="specific" formControlName="permissionMode" />
-              <div class="leading-tight">
-                <div class="font-medium">Specific roles only</div>
-                <div class="text-sm text-color-secondary">Pick which roles' users they can reset.</div>
-              </div>
-            </label>
-
-            <!-- Full access -->
-            <label
-              for="permModeFull"
-              class="flex items-start gap-3 p-3 rounded-lg border cursor-pointer transition-colors"
-              [class.border-primary]="form.get('permissionMode')?.value === 'full'"
-              [class.ring-1]="form.get('permissionMode')?.value === 'full'"
-              [class.ring-primary]="form.get('permissionMode')?.value === 'full'"
-              [class.border-surface]="form.get('permissionMode')?.value !== 'full'"
-            >
-              <p-radioButton inputId="permModeFull" name="permissionMode" value="full" formControlName="permissionMode" />
-              <div class="leading-tight">
-                <div class="font-medium">Full access</div>
-                <div class="text-sm text-color-secondary">May reset passwords for any role's users.</div>
-              </div>
-            </label>
-          </div>
-
-          <!-- Allowed-roles picker, shown only for "Specific roles only" -->
-          @if (form.get('permissionMode')?.value === 'specific') {
-            <div class="mt-3 p-3 rounded-lg border border-surface bg-surface-50 dark:bg-surface-800">
-              <div class="text-sm text-color-secondary mb-2">
-                Allowed roles · {{ (form.get('canResetRoleIds')?.value?.length ?? 0) }} of {{ roleOptions.length }} selected
-              </div>
-              @if (roleOptions.length === 0) {
-                <div class="text-sm text-color-secondary">
-                  No other roles available yet. Create more roles first, then come back here to grant per-role permission.
-                </div>
-              } @else {
-                <p-multiSelect
-                  inputId="canResetRoleIds"
-                  formControlName="canResetRoleIds"
-                  [options]="roleOptions"
-                  optionLabel="label"
-                  optionValue="value"
-                  [filter]="true"
-                  [showToggleAll]="true"
-                  display="chip"
-                  placeholder="Add a role…"
-                  appendTo="body"
-                  styleClass="w-full"
-                />
-              }
-            </div>
-          }
-        </div>
-
-        <!-- Self-service password reset toggle row -->
-        <div class="flex items-start justify-between gap-4 pt-4 border-t border-surface">
+      <!-- User management access — editable by anyone with access to this page. -->
+      <div class="field">
+        <div class="flex flex-wrap items-start justify-between gap-3 mb-3">
           <div class="leading-tight">
-            <div class="font-semibold">Self-service password reset</div>
-            <div class="text-sm text-color-secondary">
-              Members can use the "Forgot password" link on the login screen.
-              When off, an administrator must reset their password.
-            </div>
+            <div class="font-semibold mb-1">User management access</div>
+            <p class="text-sm text-color-secondary m-0">Which users can members of this role see and manage?</p>
           </div>
-          <p-toggleswitch formControlName="canSelfResetPassword" />
+          <div class="flex gap-2">
+            <p-button
+              label="No access"
+              size="small"
+              severity="secondary"
+              [outlined]="true"
+              [fluid]="false"
+              type="button"
+              [disabled]="!canSave"
+              (onClick)="setNoAccess()"
+            />
+            <p-button
+              label="Full access"
+              icon="pi pi-star"
+              size="small"
+              [outlined]="!gridIsFullAccess"
+              [fluid]="false"
+              type="button"
+              [disabled]="!canSave"
+              (onClick)="setFullAccess()"
+            />
+          </div>
         </div>
-      }
+
+        <div class="access-grid-wrap">
+          <table class="access-grid">
+            <thead>
+              <tr>
+                <th class="target-col">
+                  <div class="flex items-center gap-3">
+                    <span class="w-5 shrink-0"></span>
+                    <span>Target role</span>
+                  </div>
+                </th>
+                @for (a of actions; track a.field) {
+                  <th>{{ a.shortLabel }}</th>
+                }
+              </tr>
+            </thead>
+            <tbody>
+              @for (row of gridRows; track row.targetRoleId) {
+                <tr [class.all-roles-row]="row.isAllRoles">
+                  <td class="target-col">
+                    <div class="flex items-center gap-3">
+                      <!-- Row select-all: ticks every action for this target role -->
+                      <p-checkbox
+                        [binary]="true"
+                        [ngModel]="isRowChecked(row.targetRoleId)"
+                        [ngModelOptions]="{ standalone: true }"
+                        [disabled]="!canSave || isRowFullyInherited(row.targetRoleId)"
+                        [ariaLabel]="'Every action — ' + (row.isAllRoles ? 'All roles' : row.label)"
+                        (onChange)="onRowToggle(row.targetRoleId, $event.checked)"
+                      />
+                      <span>
+                        @if (row.isAllRoles) {
+                          <i class="pi pi-star-fill text-primary text-xs mr-1"></i>
+                          <span class="font-semibold">All roles</span>
+                          <span class="text-color-secondary text-xs ml-1">(incl. future)</span>
+                        } @else {
+                          <span>{{ row.label }}</span>
+                          @if (row.isSelf) {
+                            <span class="text-color-secondary text-xs ml-1">(this role)</span>
+                          }
+                        }
+                      </span>
+                    </div>
+                  </td>
+                  @for (a of actions; track a.field) {
+                    <td [pTooltip]="isInherited(row.targetRoleId, a.field) ? 'Granted by All roles' : ''" tooltipPosition="top">
+                      <p-checkbox
+                        [binary]="true"
+                        [ngModel]="isChecked(row.targetRoleId, a.field)"
+                        [ngModelOptions]="{ standalone: true }"
+                        [disabled]="!canSave || isInherited(row.targetRoleId, a.field)"
+                        [ariaLabel]="a.label + ' — ' + (row.isAllRoles ? 'All roles' : row.label)"
+                        (onChange)="onCellChange(row.targetRoleId, a.field, $event.checked)"
+                      />
+                    </td>
+                  }
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+        <small class="text-color-secondary block mt-2">
+          The box next to a role ticks every action for it. Any action also gives View.
+          Ticks on <b>All roles</b> apply to every role, including roles added later.
+          @if (!editingRoleId) {
+            To let this role manage its own members, edit it after saving.
+          }
+        </small>
+      </div>
+
+      <!-- Self-service password reset toggle row -->
+      <div class="flex items-start justify-between gap-4 pt-4 border-t border-surface">
+        <div class="leading-tight">
+          <div class="font-semibold">Self-service password reset</div>
+          <div class="text-sm text-color-secondary">
+            Members can use the "Forgot password" link on the login screen.
+            When off, an administrator must reset their password.
+          </div>
+        </div>
+        <p-toggleswitch formControlName="canSelfResetPassword" />
+      </div>
 
       <!-- Footer buttons -->
       <div class="flex justify-end items-center gap-2 pt-4 border-t border-surface">
@@ -132,7 +144,7 @@
           [label]="editingRoleId ? 'Update role' : 'Add role'"
           type="submit"
           [loading]="isSubmitting"
-          [disabled]="form.invalid || isSubmitting"
+          [disabled]="form.invalid || isSubmitting || !canSave"
         />
       </div>
     </form>
@@ -145,7 +157,7 @@
         <tr>
           <th style="width: 5%">#</th>
           <th>Role Name</th>
-          <th style="width: 18%">Reset Password Permission</th>
+          <th style="width: 18%">User Access</th>
           <th style="width: 12%">Self Reset</th>
           <th style="width: 12%">Action</th>
         </tr>
@@ -156,9 +168,10 @@
           <td>{{ role.name }}</td>
           <td>
             <p-tag
-              [severity]="getResetSummary(role).severity"
-              [value]="getResetSummary(role).text"
-              [pTooltip]="getResetTooltip(role)"
+              [severity]="getAccessSummary(role).severity"
+              [value]="getAccessSummary(role).text"
+              [pTooltip]="getAccessTooltip(role)"
+              [escape]="false"
               tooltipPosition="top"
             />
           </td>

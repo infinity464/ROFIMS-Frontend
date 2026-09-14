@@ -23,6 +23,7 @@ import { TableModule } from 'primeng/table';
 import { TooltipModule } from 'primeng/tooltip';
 import { DialogModule } from 'primeng/dialog';
 import { TagModule } from 'primeng/tag';
+import { CheckboxModule } from 'primeng/checkbox';
 import { forkJoin } from 'rxjs';
 import { CodeType } from '@/models/enums';
 import { IdentityService } from '@/services/identity.service';
@@ -44,9 +45,15 @@ import { LEVEL_COLORS } from '@/Components/basic-setup/org-tree/models/org-node.
 import { MasterBasicSetupService } from '@/Components/basic-setup/shared/services/MasterBasicSetupService';
 import { SharedService } from '@/shared/services/shared-service';
 import { OrgTreeMultiSelectComponent } from '@/shared/components/org-tree-multi-select/org-tree-multi-select.component';
-import type { ApplicationRole, ApplicationUser } from '@/models/identity.model';
+import {
+  rulesAllow,
+  type ApplicationRole,
+  type MyUserAccessRules,
+  type UserAccessAction,
+  type UserListItem
+} from '@/models/identity.model';
 
-interface UserRow extends ApplicationUser {
+interface UserRow extends UserListItem {
   employeeId?: number | null;
   employeeDisplay?: string;
   employeeName?: string | null;
@@ -75,6 +82,18 @@ interface MemberTypeOption {
 
 const USERNAME_PATTERN = /^[A-Za-z0-9._@-]+$/;
 
+type UserActionKind = 'disable' | 'enable' | 'hide' | 'forceLogout';
+
+interface UserActionConfig {
+  title: string;
+  message: string;
+  icon: string;
+  /** Classes for the round icon badge. */
+  iconClass: string;
+  severity: 'danger' | 'success' | 'warn' | 'contrast';
+  confirmLabel: string;
+}
+
 @Component({
   selector: 'app-identity-user-create',
   standalone: true,
@@ -93,6 +112,7 @@ const USERNAME_PATTERN = /^[A-Za-z0-9._@-]+$/;
     TooltipModule,
     DialogModule,
     TagModule,
+    CheckboxModule,
     Fluid,
     Toast,
     OrgTreeMultiSelectComponent
@@ -119,9 +139,15 @@ export class IdentityUserCreateComponent implements OnInit {
 
   form!: FormGroup;
   roles: ApplicationRole[] = [];
-  /** Role IDs whose users the current caller may reset passwords for. `['*']` = any. */
-  private currentResetRoleIds: string[] = [];
+  /** The caller's user-management rules (login copy, refreshed from the server on open). */
+  private accessRules: MyUserAccessRules = { hasFullUserAccess: false, rules: [] };
+  private currentUserId: string | null = null;
+  /** Every user the caller may see (View rule), split into the two list views below. */
   users: UserRow[] = [];
+  visibleUsers: UserRow[] = [];
+  hiddenUsers: UserRow[] = [];
+  /** When true the table shows only hidden (disabled + hidden) users. */
+  showHidden = false;
   employees: EmployeeDropdownDto[] = [];
   /** Prevent a slower, earlier employee-search response from replacing newer results. */
   private employeeSearchRequestId = 0;
@@ -140,6 +166,13 @@ export class IdentityUserCreateComponent implements OnInit {
 
   togglingUserId: string | null = null;
   forceLogoutUserId: string | null = null;
+  hidingUserId: string | null = null;
+
+  /** Styled confirm dialog shared by disable / enable / hide / force logout. */
+  actionDialogVisible = false;
+  actionKind: UserActionKind | null = null;
+  actionTarget: UserRow | null = null;
+  actionAlsoHide = false;
 
   ngOnInit(): void {
         const _perms = this._userMenuService.getPermissionsByRoute(this._router.url);
@@ -147,7 +180,9 @@ export class IdentityUserCreateComponent implements OnInit {
         this.canUpdate = _perms.canUpdate;
         this.canDelete = _perms.canDelete;
 
-    this.currentResetRoleIds = this.sharedService.getCurrentResetRoleIds();
+    this.accessRules = this.sharedService.getUserAccessRules();
+    this.currentUserId = this.sharedService.getCurrentUserId();
+    this.refreshAccessRules();
 
     this.initForm();
     this.loadRoles();
@@ -170,9 +205,30 @@ export class IdentityUserCreateComponent implements OnInit {
     });
   }
 
+  /** Re-reads the caller's rules so changes made on the Roles page apply without a new login. */
+  private refreshAccessRules(): void {
+    this.identityService.getMyUserAccessRules().subscribe({
+      next: (mine) => {
+        this.accessRules = {
+          hasFullUserAccess: mine?.hasFullUserAccess === true,
+          rules: Array.isArray(mine?.rules) ? mine.rules : []
+        };
+        this.sharedService.setUserAccessRules(this.accessRules);
+      },
+      error: () => { /* keep the login-time copy */ }
+    });
+  }
+
+  /** Arrays (not getters) so p-table gets a stable [value] reference between change-detection runs. */
+  private setUsers(rows: UserRow[]): void {
+    this.users = rows;
+    this.visibleUsers = rows.filter((u) => !u.isHidden);
+    this.hiddenUsers = rows.filter((u) => u.isHidden);
+  }
+
   loadUsersAndMappings(): void {
     forkJoin({
-      users: this.identityService.getAllUsers(),
+      users: this.identityService.getManageableUsers(),
       mappings: this.mappingService.getMappings(),
       accesses: this.accessService.getAllByUser(),
       rabAccesses: this.rabUnitAccessService.getAllByUser()
@@ -184,9 +240,11 @@ export class IdentityUserCreateComponent implements OnInit {
         const arr = Array.isArray(users) ? users : [];
         // Keep active users at the top; the native sort is stable, so each
         // group's existing API order is retained.
-        this.users = arr
-          .map((u) => this.buildUserRow(u))
-          .sort((a, b) => Number(b.isActive) - Number(a.isActive));
+        this.setUsers(
+          arr
+            .map((u) => this.buildUserRow(u))
+            .sort((a, b) => Number(b.isActive) - Number(a.isActive))
+        );
       },
       error: (err: any) => {
         this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.message || 'Failed to load users' });
@@ -209,13 +267,16 @@ export class IdentityUserCreateComponent implements OnInit {
   private buildUserRow(u: unknown): UserRow {
     const o = u as Record<string, unknown>;
     const lockoutEnd = (o['lockoutEnd'] ?? o['LockoutEnd']) as string | null | undefined;
-    const base: ApplicationUser = {
+    const base: UserListItem = {
       id: (o['id'] ?? o['Id']) as string,
       userName: (o['userName'] ?? o['UserName']) as string,
       email: (o['email'] ?? o['Email']) as string,
       phoneNumber: (o['phoneNumber'] ?? o['PhoneNumber']) as string | null,
       roleName: (o['roleName'] ?? o['RoleName']) as string,
-      lockoutEnd: lockoutEnd ?? null
+      lockoutEnd: lockoutEnd ?? null,
+      isHidden: (o['isHidden'] ?? o['IsHidden']) === true,
+      hiddenAt: (o['hiddenAt'] ?? o['HiddenAt'] ?? null) as string | null,
+      hiddenBy: (o['hiddenBy'] ?? o['HiddenBy'] ?? null) as string | null
     };
     const isActive = !(lockoutEnd && new Date(lockoutEnd).getTime() > Date.now());
     const mapping = this.mappings.find((m) => m.userId === base.id);
@@ -567,13 +628,13 @@ export class IdentityUserCreateComponent implements OnInit {
     confirmUrl: string
   ): void {
     forkJoin({
-      users: this.identityService.getAllUsers(),
+      users: this.identityService.getManageableUsers(),
       mappings: this.mappingService.getMappings()
     }).subscribe({
       next: ({ users, mappings }) => {
         this.mappings = Array.isArray(mappings) ? this.normMappings(mappings) : [];
         const arr = Array.isArray(users) ? users : [];
-        this.users = arr.map((u) => this.buildUserRow(u));
+        this.setUsers(arr.map((u) => this.buildUserRow(u)));
         const created = this.users.find((u) => (u.email ?? '').toLowerCase() === email.toLowerCase());
         if (!created?.id) {
           this.isSubmitting = false;
@@ -745,33 +806,41 @@ export class IdentityUserCreateComponent implements OnInit {
   }
 
   /**
-   * Whether the current caller may manage users of `roleName` — gates create, update,
-   * disable, and password reset. Backed by the same `canResetRoleIds` allowlist.
-   * Resolves role ID from the loaded `roles` list so target's role ID isn't needed in the user payload.
-   * Match is case-insensitive + trimmed to defend against legacy data.
+   * Whether the caller's rules allow `action` on users of `roleName` (the API enforces the same rules).
+   * Resolves the role ID from the loaded `roles` list; match is case-insensitive + trimmed for legacy data.
+   * An "All roles" rule applies even before the roles list has loaded.
    */
-  canManageRole(roleName: string | null | undefined): boolean {
-    const allow = this.currentResetRoleIds;
-    if (!allow?.length) return false;
-    if (allow.includes('*')) return true;
+  can(action: UserAccessAction, roleName: string | null | undefined): boolean {
     const needle = (roleName ?? '').trim().toLowerCase();
-    if (!needle) return false;
-    const targetRoleId = this.roles.find((r) => (r.name ?? '').trim().toLowerCase() === needle)?.id;
-    return !!targetRoleId && allow.includes(targetRoleId);
+    const roleId = needle ? this.roles.find((r) => (r.name ?? '').trim().toLowerCase() === needle)?.id : undefined;
+    return rulesAllow(this.accessRules.rules, action, roleId);
   }
 
-  /** Roles the caller is allowed to assign — used to filter the role dropdown. */
-  get manageableRoles(): ApplicationRole[] {
-    return this.roles.filter((r) => this.canManageRole(r.name));
+  /** True when the row is the caller's own account (disable / reset / force logout / hide are blocked). */
+  isSelf(user: UserRow): boolean {
+    return !!this.currentUserId && user.id === this.currentUserId;
   }
 
-  /** True when the caller can manage at least one role (i.e. the create/edit form is usable). */
-  get hasAnyManagePermission(): boolean {
-    return this.currentResetRoleIds.length > 0;
+  /** `can()` plus the no-self-action rule. */
+  canActOn(action: UserAccessAction, user: UserRow): boolean {
+    return !this.isSelf(user) && this.can(action, user.roleName);
+  }
+
+  /** Role dropdown: roles the caller can create users in; when editing, the user's current role stays selectable. */
+  get roleOptions(): ApplicationRole[] {
+    const current = (this.editingUser?.roleName ?? '').trim().toLowerCase();
+    return this.roles.filter(
+      (r) => this.can('create', r.name) || (!!current && (r.name ?? '').trim().toLowerCase() === current)
+    );
+  }
+
+  /** True when the caller can create users in at least one role (otherwise the create form is replaced by a note). */
+  get canCreateAny(): boolean {
+    return this.accessRules.rules.some((r) => r.canCreate);
   }
 
   openResetPassword(user: UserRow): void {
-    if (!this.canManageRole(user.roleName)) return;
+    if (!this.canActOn('resetPassword', user)) return;
     this.resetTargetUser = user;
     this.resetNewPassword = '';
     this.resetConfirmPassword = '';
@@ -792,15 +861,16 @@ export class IdentityUserCreateComponent implements OnInit {
    */
   forceLogoutUser(user: UserRow): void {
     if (!user?.id || !user.email || this.forceLogoutUserId) return;
-    if (!this.canManageRole(user.roleName)) return;
-    if (typeof window !== 'undefined' &&
-        !window.confirm(`Force-logout ${user.email}? They'll be signed out from every device immediately.`)) {
-      return;
-    }
+    if (!this.canActOn('forceLogout', user)) return;
+    this.openUserAction('forceLogout', user);
+  }
+
+  private runForceLogout(user: UserRow): void {
     this.forceLogoutUserId = user.id;
     this.identityService.forceLogoutUser({ email: user.email }).subscribe({
       next: (res) => {
         this.forceLogoutUserId = null;
+        if (res.isSuccess) this.closeUserAction();
         this.messageService.add({
           severity: res.isSuccess ? 'success' : 'error',
           summary: res.isSuccess ? 'Logged out' : 'Force logout failed',
@@ -815,23 +885,109 @@ export class IdentityUserCreateComponent implements OnInit {
     });
   }
 
+  /** Opens the confirm dialog: disable (with the "also hide" option) or enable. */
   toggleUserActive(user: UserRow): void {
-    if (!user?.id || this.togglingUserId) return;
-    const nextActive = !user.isActive;
-    const action = nextActive ? 'enable' : 'disable';
-    if (typeof window !== 'undefined' && !window.confirm(`Are you sure you want to ${action} ${user.email}?`)) {
-      return;
+    if (!user?.id || this.togglingUserId || !this.canActOn('disable', user)) return;
+    this.openUserAction(user.isActive ? 'disable' : 'enable', user);
+  }
+
+  private openUserAction(kind: UserActionKind, user: UserRow): void {
+    this.actionKind = kind;
+    this.actionTarget = user;
+    this.actionAlsoHide = false;
+    this.actionDialogVisible = true;
+  }
+
+  closeUserAction(): void {
+    if (this.actionBusy) return;
+    this.actionDialogVisible = false;
+    this.actionKind = null;
+    this.actionTarget = null;
+    this.actionAlsoHide = false;
+  }
+
+  get actionBusy(): boolean {
+    return this.togglingUserId !== null || this.hidingUserId !== null || this.forceLogoutUserId !== null;
+  }
+
+  /** Title, message, icon and colour for the open confirm dialog. */
+  get actionConfig(): UserActionConfig | null {
+    switch (this.actionKind) {
+      case 'disable':
+        return {
+          title: 'Disable user',
+          message: "They will be signed out and won't be able to log in until the account is enabled again.",
+          icon: 'pi pi-ban',
+          iconClass: 'bg-red-500/10 text-red-600 dark:text-red-400',
+          severity: 'danger',
+          confirmLabel: 'Disable user'
+        };
+      case 'enable':
+        return {
+          title: 'Enable user',
+          message: this.actionTarget?.isHidden
+            ? 'They will be able to log in again and will move back to the user list.'
+            : 'They will be able to log in again.',
+          icon: 'pi pi-check-circle',
+          iconClass: 'bg-green-500/10 text-green-600 dark:text-green-400',
+          severity: 'success',
+          confirmLabel: 'Enable user'
+        };
+      case 'hide':
+        return {
+          title: 'Hide user',
+          message: 'This disabled account will move out of the user list. Find it under "Hidden users" and unhide it any time.',
+          icon: 'pi pi-eye-slash',
+          iconClass: 'bg-surface-500/10 text-color-secondary',
+          severity: 'contrast',
+          confirmLabel: 'Hide user'
+        };
+      case 'forceLogout':
+        return {
+          title: 'Force logout',
+          message: 'They will be signed out from every device right away. They can log in again afterwards.',
+          icon: 'pi pi-sign-out',
+          iconClass: 'bg-amber-500/10 text-amber-600 dark:text-amber-400',
+          severity: 'warn',
+          confirmLabel: 'Force logout'
+        };
+      default:
+        return null;
     }
+  }
+
+  confirmUserAction(): void {
+    const user = this.actionTarget;
+    if (!user || this.actionBusy) return;
+    switch (this.actionKind) {
+      case 'disable':
+        this.setActive(user, false, this.actionAlsoHide);
+        break;
+      case 'enable':
+        this.setActive(user, true, false);
+        break;
+      case 'hide':
+        this.runSetHidden(user, true);
+        break;
+      case 'forceLogout':
+        this.runForceLogout(user);
+        break;
+    }
+  }
+
+  private setActive(user: UserRow, isActive: boolean, hide: boolean): void {
+    const action = isActive ? 'enable' : 'disable';
     this.togglingUserId = user.id;
-    this.identityService.setUserActive({ email: user.email, isActive: nextActive }).subscribe({
+    this.identityService.setUserActive({ email: user.email, isActive, hide }).subscribe({
       next: (res) => {
         this.togglingUserId = null;
         if (res.isSuccess) {
           this.messageService.add({
             severity: 'success',
             summary: 'Success',
-            detail: res.message ?? (nextActive ? 'User enabled.' : 'User disabled.')
+            detail: res.message ?? (isActive ? 'User enabled.' : 'User disabled.')
           });
+          this.closeUserAction();
           this.loadUsersAndMappings();
         } else {
           this.messageService.add({
@@ -847,6 +1003,58 @@ export class IdentityUserCreateComponent implements OnInit {
         this.messageService.add({ severity: 'error', summary: 'Error', detail: msg });
       }
     });
+  }
+
+  /**
+   * Hide keeps a disabled user out of the normal list (asks first); unhide returns them to it,
+   * still disabled, straight away.
+   */
+  setUserHidden(user: UserRow, isHidden: boolean): void {
+    if (!user?.id || !user.email || this.hidingUserId || !this.canActOn('disable', user)) return;
+    if (isHidden) {
+      this.openUserAction('hide', user);
+      return;
+    }
+    this.runSetHidden(user, false);
+  }
+
+  private runSetHidden(user: UserRow, isHidden: boolean): void {
+    this.hidingUserId = user.id;
+    this.identityService.setUserHidden({ email: user.email, isHidden }).subscribe({
+      next: (res) => {
+        this.hidingUserId = null;
+        if (res.isSuccess) this.closeUserAction();
+        this.messageService.add({
+          severity: res.isSuccess ? 'success' : 'error',
+          summary: res.isSuccess ? 'Success' : 'Error',
+          detail: res.message ?? (res.isSuccess ? (isHidden ? 'User hidden.' : 'User unhidden.') : 'Could not update user.')
+        });
+        if (res.isSuccess) this.loadUsersAndMappings();
+      },
+      error: (err) => {
+        this.hidingUserId = null;
+        const msg = err?.error?.message ?? (typeof err?.message === 'string' ? err.message : 'Could not update user.');
+        this.messageService.add({ severity: 'error', summary: 'Error', detail: msg });
+      }
+    });
+  }
+
+  toggleHiddenView(): void {
+    this.showHidden = !this.showHidden;
+  }
+
+  /** "Hidden on 14 Sep 2026, 10:32 by admin@x" — API sends UTC without an offset, so treat bare values as UTC. */
+  hiddenTooltip(user: UserRow): string {
+    const parts: string[] = [];
+    if (user.hiddenAt) {
+      const raw = user.hiddenAt;
+      const date = new Date(/[zZ]|[+-]\d\d:?\d\d$/.test(raw) ? raw : `${raw}Z`);
+      if (!isNaN(date.getTime())) {
+        parts.push(`on ${date.toLocaleString('en-GB', { dateStyle: 'medium', timeStyle: 'short' })}`);
+      }
+    }
+    if (user.hiddenBy) parts.push(`by ${user.hiddenBy}`);
+    return parts.length ? `Hidden ${parts.join(' ')}` : 'Hidden';
   }
 
   submitResetPassword(): void {

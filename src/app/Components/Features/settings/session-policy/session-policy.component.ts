@@ -159,7 +159,7 @@ export class SessionPolicyComponent implements OnInit {
   ];
 
   ngOnInit(): void {
-    this.hasFullAccess = this.sharedService.getCurrentResetRoleIds().includes('*');
+    this.hasFullAccess = this.sharedService.hasFullUserAccess();
     this.form = this.fb.group({
       idleTimeoutMinutes: [10, [Validators.required, Validators.min(1), Validators.max(1440)]],
       logoutOnBrowserClose: [false]

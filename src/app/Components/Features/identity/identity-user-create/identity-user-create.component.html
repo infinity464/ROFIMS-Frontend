@@ -3,6 +3,7 @@
   <div class="card">
     <div class="font-semibold text-xl mb-4">{{ editingUser ? 'Edit User' : 'Create Identity User' }}</div>
 
+    @if (editingUser || canCreateAny) {
     <form [formGroup]="form" (ngSubmit)="onSubmit()">
 
       <!-- Section: Account -->
@@ -121,17 +122,17 @@
             <p-select
               id="roleName"
               formControlName="roleName"
-              [options]="manageableRoles"
+              [options]="roleOptions"
               optionLabel="name"
               optionValue="name"
               placeholder="Select role"
               appendTo="body"
               styleClass="w-full"
             />
-            @if (manageableRoles.length === 0) {
+            @if (roleOptions.length === 0) {
               <small class="text-color-secondary block mt-1">
-                You don't have permission to assign any role. Ask your administrator to grant your role
-                "Reset Password Permission" for the roles you should be able to manage.
+                You don't have permission to assign any role. Ask your administrator to give your role
+                Create access for the roles you should be able to manage (Roles page → User management access).
               </small>
             }
             @if (form.get('roleName')?.invalid && form.get('roleName')?.touched) {
@@ -280,13 +281,24 @@
         />
       </div>
     </form>
+    } @else {
+      <div class="flex items-start gap-3 p-4 rounded-lg border border-surface text-sm">
+        <i class="pi pi-lock text-color-secondary mt-0.5"></i>
+        <div>
+          <div class="font-medium mb-1">You can't create users</div>
+          <div class="text-color-secondary">
+            Your role has no Create access for any role. Ask an administrator to grant it on the Roles page.
+          </div>
+        </div>
+      </div>
+    }
   </div>
 
   <div class="card mt-4">
     <div class="font-semibold text-lg mb-4">User List</div>
     <p-table
       #dt
-      [value]="users"
+      [value]="showHidden ? hiddenUsers : visibleUsers"
       [paginator]="true"
       [rows]="10"
       [rowsPerPageOptions]="[10, 25, 50]"
@@ -305,7 +317,22 @@
               (input)="dt.filterGlobal($any($event.target).value, 'contains')"
             />
           </p-iconField>
+          <p-button
+            [label]="showHidden ? 'Back to user list' : 'Hidden users (' + hiddenUsers.length + ')'"
+            [icon]="showHidden ? 'pi pi-arrow-left' : 'pi pi-eye-slash'"
+            severity="secondary"
+            [outlined]="!showHidden"
+            [fluid]="false"
+            size="small"
+            (onClick)="toggleHiddenView()"
+          />
         </div>
+        @if (showHidden) {
+          <div class="mt-3 flex items-start gap-2 p-3 rounded-lg text-sm bg-amber-500/10 text-amber-800 dark:text-amber-300">
+            <i class="pi pi-info-circle mt-0.5"></i>
+            <span>Showing hidden users — these accounts are disabled and hidden from the normal list.</span>
+          </div>
+        }
       </ng-template>
 
       <ng-template pTemplate="header">
@@ -315,8 +342,8 @@
           <th class="uppercase text-xs tracking-wide">Mapped Employee</th>
           <th class="uppercase text-xs tracking-wide" style="width: 8rem">Type Access</th>
           <th class="uppercase text-xs tracking-wide" style="width: 8rem">Access Label</th>
-          <th class="uppercase text-xs tracking-wide" style="width: 7rem">Status</th>
-          <th class="uppercase text-xs tracking-wide" style="width: 9rem">Actions</th>
+          <th class="uppercase text-xs tracking-wide" style="width: 9rem">Status</th>
+          <th class="uppercase text-xs tracking-wide" style="width: 11rem">Actions</th>
         </tr>
       </ng-template>
       <ng-template pTemplate="body" let-user>
@@ -417,24 +444,63 @@
 
           <!-- STATUS -->
           <td>
-            <span
-              class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium"
-              [class]="user.isActive ? 'bg-green-500/10 text-green-700 dark:text-green-400' : 'bg-red-500/10 text-red-700 dark:text-red-400'"
-            >
+            @if (user.isHidden) {
               <span
-                class="w-1.5 h-1.5 rounded-full"
-                [class]="user.isActive ? 'bg-green-500' : 'bg-red-500'"
-              ></span>
-              {{ user.isActive ? 'Active' : 'Disabled' }}
-            </span>
+                class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium whitespace-nowrap bg-surface-500/10 text-color-secondary"
+                [pTooltip]="hiddenTooltip(user)"
+                tooltipPosition="top"
+              >
+                <i class="pi pi-eye-slash text-[10px]"></i>
+                Disabled · Hidden
+              </span>
+            } @else {
+              <span
+                class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium"
+                [class]="user.isActive ? 'bg-green-500/10 text-green-700 dark:text-green-400' : 'bg-red-500/10 text-red-700 dark:text-red-400'"
+              >
+                <span
+                  class="w-1.5 h-1.5 rounded-full"
+                  [class]="user.isActive ? 'bg-green-500' : 'bg-red-500'"
+                ></span>
+                {{ user.isActive ? 'Active' : 'Disabled' }}
+              </span>
+            }
           </td>
 
           <!-- ACTIONS -->
           <td>
             <div class="flex gap-1">
+              @if (user.isHidden) {
+              <p-button
+                icon="pi pi-eye"
+                [class.perm-hidden]="!canActOn('disable', user)"
+                [text]="true"
+                [rounded]="true"
+                size="small"
+                severity="secondary"
+                (onClick)="setUserHidden(user, false)"
+                [loading]="hidingUserId === user.id"
+                [disabled]="hidingUserId !== null && hidingUserId !== user.id"
+                pTooltip="Unhide (stays disabled)"
+                tooltipPosition="top"
+              />
+              <p-button
+                icon="pi pi-check-circle"
+                [class.perm-hidden]="!canActOn('disable', user)"
+                [text]="true"
+                [rounded]="true"
+                size="small"
+                severity="success"
+                (onClick)="toggleUserActive(user)"
+                [loading]="togglingUserId === user.id"
+                [disabled]="togglingUserId !== null && togglingUserId !== user.id"
+                pTooltip="Enable User (also unhides)"
+                tooltipPosition="top"
+              />
+              } @else {
               <p-button
                 icon="pi pi-pencil"
-                [class.perm-hidden]="!canUpdate || !canManageRole(user.roleName)"
+                [class.perm-hidden]="!canUpdate || !can('edit', user.roleName)"
                 [text]="true"
                 [rounded]="true"
                 size="small"
@@ -445,7 +511,7 @@
               />
               <p-button
                 icon="pi pi-key"
-                [class.perm-hidden]="!canManageRole(user.roleName)"
+                [class.perm-hidden]="!canActOn('resetPassword', user)"
                 [text]="true"
                 [rounded]="true"
                 size="small"
@@ -456,7 +522,7 @@
               />
               <p-button
                 icon="pi pi-sign-out"
-                [class.perm-hidden]="!canManageRole(user.roleName)"
+                [class.perm-hidden]="!canActOn('forceLogout', user)"
                 [text]="true"
                 [rounded]="true"
                 size="small"
@@ -469,7 +535,7 @@
               />
               <p-button
                 [icon]="user.isActive ? 'pi pi-ban' : 'pi pi-check-circle'"
-                [class.perm-hidden]="!canManageRole(user.roleName)"
+                [class.perm-hidden]="!canActOn('disable', user)"
                 [text]="true"
                 [rounded]="true"
                 size="small"
@@ -480,13 +546,29 @@
                 [pTooltip]="user.isActive ? 'Disable User' : 'Enable User'"
                 tooltipPosition="top"
               />
+              @if (!user.isActive) {
+                <p-button
+                  icon="pi pi-eye-slash"
+                  [class.perm-hidden]="!canActOn('disable', user)"
+                  [text]="true"
+                  [rounded]="true"
+                  size="small"
+                  severity="secondary"
+                  (onClick)="setUserHidden(user, true)"
+                  [loading]="hidingUserId === user.id"
+                  [disabled]="hidingUserId !== null && hidingUserId !== user.id"
+                  pTooltip="Hide from list"
+                  tooltipPosition="top"
+                />
+              }
+              }
             </div>
           </td>
         </tr>
       </ng-template>
       <ng-template pTemplate="emptymessage">
         <tr>
-          <td colspan="7" class="text-center text-color-secondary">No users found.</td>
+          <td colspan="7" class="text-center text-color-secondary">{{ showHidden ? 'No hidden users.' : 'No users found.' }}</td>
         </tr>
       </ng-template>
     </p-table>
@@ -537,5 +619,100 @@
       <p-button label="Cancel" severity="secondary" (onClick)="closeResetPassword()" [disabled]="resetSubmitting" />
       <p-button label="Reset" icon="pi pi-key" (onClick)="submitResetPassword()" [loading]="resetSubmitting" />
     </ng-template>
+  </p-dialog>
+
+  <!-- Confirm dialog for disable / enable / hide / force logout (replaces browser confirm popups) -->
+  <p-dialog
+    [(visible)]="actionDialogVisible"
+    [modal]="true"
+    [showHeader]="false"
+    [draggable]="false"
+    [dismissableMask]="!actionBusy"
+    [closeOnEscape]="!actionBusy"
+    [style]="{ width: '27rem' }"
+    [breakpoints]="{ '640px': '92vw' }"
+    (onHide)="closeUserAction()"
+  >
+    @if (actionConfig; as cfg) {
+      @if (actionTarget; as u) {
+        <div class="flex flex-col gap-5 pt-5">
+          <!-- Icon + title + close -->
+          <div class="flex items-start gap-4">
+            <div class="shrink-0 w-11 h-11 rounded-full flex items-center justify-center" [class]="cfg.iconClass">
+              <i class="text-xl" [class]="cfg.icon"></i>
+            </div>
+            <div class="min-w-0 flex-1">
+              <div class="text-lg font-semibold leading-tight">{{ cfg.title }}</div>
+              <div class="text-sm text-color-secondary mt-1 leading-snug">{{ cfg.message }}</div>
+            </div>
+            <p-button
+              icon="pi pi-times"
+              [text]="true"
+              [rounded]="true"
+              [fluid]="false"
+              severity="secondary"
+              size="small"
+              ariaLabel="Close"
+              [disabled]="actionBusy"
+              (onClick)="closeUserAction()"
+            />
+          </div>
+
+          <!-- Target user -->
+          <div class="flex items-center gap-3 p-3 rounded-lg border border-surface bg-surface-50 dark:bg-surface-800">
+            <div class="shrink-0 w-10 h-10 rounded-full flex items-center justify-center text-sm font-semibold" [class]="getAvatarClass(u)">
+              {{ getInitials(u) }}
+            </div>
+            <div class="min-w-0 flex-1 leading-tight">
+              <div class="font-medium truncate">{{ u.employeeName || u.userName || u.email }}</div>
+              <div class="text-xs text-color-secondary truncate mt-0.5">{{ u.email }}</div>
+            </div>
+            @if (u.roleName) {
+              <span class="shrink-0 px-2.5 py-0.5 rounded-full text-xs font-semibold" [class]="getRolePillClass(u.roleName)">
+                {{ u.roleName }}
+              </span>
+            }
+          </div>
+
+          <!-- Disable only: also hide -->
+          @if (actionKind === 'disable') {
+            <label
+              for="actionAlsoHide"
+              class="flex items-start gap-3 p-3 rounded-lg border cursor-pointer transition-colors"
+              [class.border-primary]="actionAlsoHide"
+              [class.ring-1]="actionAlsoHide"
+              [class.ring-primary]="actionAlsoHide"
+              [class.border-surface]="!actionAlsoHide"
+            >
+              <p-checkbox inputId="actionAlsoHide" [binary]="true" [(ngModel)]="actionAlsoHide" />
+              <div class="leading-tight">
+                <div class="font-medium">Also hide from the user list</div>
+                <div class="text-sm text-color-secondary mt-0.5">Moves them to "Hidden users". You can unhide any time.</div>
+              </div>
+            </label>
+          }
+
+          <!-- Actions -->
+          <div class="flex justify-end gap-2">
+            <p-button
+              label="Cancel"
+              severity="secondary"
+              [text]="true"
+              [fluid]="false"
+              [disabled]="actionBusy"
+              (onClick)="closeUserAction()"
+            />
+            <p-button
+              [label]="cfg.confirmLabel"
+              [icon]="cfg.icon"
+              [severity]="cfg.severity"
+              [fluid]="false"
+              [loading]="actionBusy"
+              (onClick)="confirmUserAction()"
+            />
+          </div>
+        </div>
+      }
+    }
   </p-dialog>
 </p-fluid>
