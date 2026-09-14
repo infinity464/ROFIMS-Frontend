@@ -752,3 +752,36 @@ $doc-block-gap: 6px;
         box-shadow: 0 10px 40px rgba(0, 0, 0, 0.6);
     }
 }
+
+/* ── Table Columns dialog (same layout as the note-sheet Style dialog's column rows) ── */
+.po-style-form {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+}
+.po-style-hint {
+    margin: 0 0 0.5rem;
+    font-size: 0.8rem;
+    color: var(--p-text-muted-color, #6b7280);
+}
+.po-col-row {
+    display: grid;
+    grid-template-columns: auto 1fr 5.5rem 3.2rem;
+    align-items: center;
+    gap: 0.4rem;
+
+    label {
+        font-size: 0.8rem;
+        cursor: pointer;
+    }
+
+    ::ng-deep .p-inputnumber,
+    ::ng-deep .p-inputnumber input {
+        width: 5.5rem;
+    }
+}
+.po-col-pct {
+    font-size: 0.75rem;
+    text-align: right;
+    color: var(--p-text-muted-color, #6b7280);
+}

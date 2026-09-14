@@ -20,6 +20,7 @@
                         [style]="{ width: '165px' }"
                         pTooltip="Font size of the whole posting order (-2 pt to +2 pt)"
                     ></p-select>
+                    <p-button icon="pi pi-sliders-h" label="Columns" (onClick)="showColumnDialog = true" styleClass="p-button-outlined" pTooltip="Column widths of the member table (temporary — resets on reload)"></p-button>
                     <p-button icon="pi pi-file-word" label="Word" (onClick)="exportWord()" styleClass="p-button-outlined"></p-button>
                     <p-button icon="pi pi-file-pdf" label="PDF" (onClick)="exportPdf()" [loading]="exportingPdf" styleClass="p-button-outlined"></p-button>
                     <p-button icon="pi pi-print" label="Print Preview" (onClick)="printPreview()" [loading]="printingPreview" styleClass="p-button-outlined"></p-button>
@@ -612,47 +613,52 @@
 
             <!-- Employee Table -->
             <table class="po-doc-table">
+                <!-- Column widths come from columnLayout() (Columns dialog); header cells carry none.
+                     The <col> set matches the visible cells, so the PDF snapshot keeps the widths. -->
+                <colgroup>
+                    <col *ngFor="let c of columnLayout(); trackBy: trackByColumnKey" [style.width.%]="c.pct" />
+                </colgroup>
                 <thead>
                     <!-- Inter-posting: single-row header (no RAB ID) -->
                     <ng-container *ngIf="isInterPosting">
                         <tr>
-                            <th style="width:6%">{{ isBangla ? 'ক্রমিক' : 'Ser' }}</th>
-                            <th style="width:13%">{{ isBangla ? 'ব্যক্তিগত নং' : 'Service ID' }}</th>
-                            <th style="width:10%">{{ isBangla ? 'পদবি' : 'Rank' }}</th>
-                            <th *ngIf="showTradeColumn" style="width:8%">{{ isBangla ? 'ট্রেড' : 'Trade' }}</th>
-                            <th style="width:16%">{{ isBangla ? 'নাম' : 'Name' }}</th>
-                            <th *ngIf="showOwnDistrict" style="width:8%">{{ isBangla ? 'নিজ জেলা' : 'Own District' }}</th>
-                            <th *ngIf="showPrevWorkplaceUnit" style="width:12%">{{ isBangla ? 'পূর্ববতী কর্মস্থল' : 'Previous Workplace' }}</th>
-                            <th style="width:12%">{{ isBangla ? 'বদলিকৃত কর্মস্থল' : 'Transfer Station' }}</th>
-                            <th *ngIf="showRemarks" style="width:8%">{{ isBangla ? 'মন্তব্য' : 'Remarks' }}</th>
+                            <th>{{ isBangla ? 'ক্রমিক' : 'Ser' }}</th>
+                            <th>{{ isBangla ? 'ব্যক্তিগত নং' : 'Service ID' }}</th>
+                            <th>{{ isBangla ? 'পদবি' : 'Rank' }}</th>
+                            <th *ngIf="showTradeColumn">{{ isBangla ? 'ট্রেড' : 'Trade' }}</th>
+                            <th>{{ isBangla ? 'নাম' : 'Name' }}</th>
+                            <th *ngIf="showOwnDistrict">{{ isBangla ? 'নিজ জেলা' : 'Own District' }}</th>
+                            <th *ngIf="showPrevWorkplaceUnit">{{ isBangla ? 'পূর্ববতী কর্মস্থল' : 'Previous Workplace' }}</th>
+                            <th>{{ isBangla ? 'বদলিকৃত কর্মস্থল' : 'Transfer Station' }}</th>
+                            <th *ngIf="showRemarks">{{ isBangla ? 'মন্তব্য' : 'Remarks' }}</th>
                         </tr>
                     </ng-container>
                     <!-- Non-inter-posting: single header row -->
                     <ng-container *ngIf="!isInterPosting">
                         <tr>
                             <ng-container *ngIf="isBangla">
-                                <th style="width:6%">ক্রমিক</th>
-                                <th style="width:9%">ব্যক্তিগত নম্বর</th>
-                                <th style="width:9%">পদবি</th>
-                                <th *ngIf="showTradeColumn" style="width:8%">ট্রেড</th>
-                                <th style="width:12%">নাম</th>
-                                <th *ngIf="showOwnDistrict" style="width:8%">নিজ জেলা</th>
-                                <th *ngIf="showPrevWorkplaceUnit" style="width:11%">পূর্ববতী কর্মস্থল</th>
-                                <th style="width:11%">বদলিকৃত কর্মস্থল</th>
-                                <th style="width:9%">র‌্যাব আইডি</th>
-                                <th *ngIf="showRemarks" style="width:8%">মন্তব্য</th>
+                                <th>ক্রমিক</th>
+                                <th>ব্যক্তিগত নম্বর</th>
+                                <th>পদবি</th>
+                                <th *ngIf="showTradeColumn">ট্রেড</th>
+                                <th>নাম</th>
+                                <th *ngIf="showOwnDistrict">নিজ জেলা</th>
+                                <th *ngIf="showPrevWorkplaceUnit">পূর্ববতী কর্মস্থল</th>
+                                <th>বদলিকৃত কর্মস্থল</th>
+                                <th>র‌্যাব আইডি</th>
+                                <th *ngIf="showRemarks">মন্তব্য</th>
                             </ng-container>
                             <ng-container *ngIf="!isBangla">
-                                <th style="width:6%">Ser</th>
-                                <th style="width:9%">Service ID</th>
-                                <th style="width:9%">Rank</th>
-                                <th *ngIf="showTradeColumn" style="width:8%">Trade</th>
-                                <th style="width:12%">Name</th>
-                                <th *ngIf="showOwnDistrict" style="width:8%">Own District</th>
-                                <th *ngIf="showPrevWorkplaceUnit" style="width:11%">Previous Workplace</th>
-                                <th style="width:11%">Transfer Unit</th>
-                                <th style="width:9%">RAB ID</th>
-                                <th *ngIf="showRemarks" style="width:10%">Remarks</th>
+                                <th>Ser</th>
+                                <th>Service ID</th>
+                                <th>Rank</th>
+                                <th *ngIf="showTradeColumn">Trade</th>
+                                <th>Name</th>
+                                <th *ngIf="showOwnDistrict">Own District</th>
+                                <th *ngIf="showPrevWorkplaceUnit">Previous Workplace</th>
+                                <th>Transfer Unit</th>
+                                <th>RAB ID</th>
+                                <th *ngIf="showRemarks">Remarks</th>
                             </ng-container>
                         </tr>
                     </ng-container>
@@ -827,4 +833,35 @@
             </div>
         }
     </div>
+</p-dialog>
+
+<!-- ─── Table column widths ─── -->
+<!-- Non-modal and docked right (like the note-sheet Style dialog) so the sheet stays
+     visible while widths change. Temporary — nothing is saved. -->
+<p-dialog
+    header="Table Columns"
+    [(visible)]="showColumnDialog"
+    [modal]="false"
+    [blockScroll]="false"
+    [draggable]="true"
+    [resizable]="false"
+    [keepInViewport]="true"
+    position="right"
+    [style]="{ width: '380px', maxHeight: '90vh' }"
+    [contentStyle]="{ overflowY: 'auto' }"
+    [breakpoints]="{ '575px': '92vw' }"
+>
+    <div class="po-style-form">
+        <p class="po-style-hint">Temporary — resets on reload. Width is relative; the % is the column's share of the table. Applies to the preview, Print Preview, PDF and Word.</p>
+        <div class="po-col-row" *ngFor="let c of postingColumns; trackBy: trackByColumnKey">
+            <p-checkbox [binary]="true" [ngModel]="isColShown(c.key)" (ngModelChange)="setColShown(c.key, $event)" [disabled]="!isColToggleable(c.key)" [inputId]="'poCol_' + c.key"></p-checkbox>
+            <label [attr.for]="'poCol_' + c.key">{{ isBangla ? c.labelBN : c.labelEN }}</label>
+            <p-inputNumber [(ngModel)]="c.weight" [disabled]="!isColShown(c.key)" [min]="1" [max]="100" [step]="1" [showButtons]="true"></p-inputNumber>
+            <span class="po-col-pct">{{ isColShown(c.key) ? (columnPercent(c.key) | number: '1.0-1') + '%' : '—' }}</span>
+        </div>
+    </div>
+    <ng-template pTemplate="footer">
+        <p-button label="Reset columns" icon="pi pi-refresh" severity="secondary" [text]="true" (onClick)="resetColumns()"></p-button>
+        <p-button label="Close" severity="secondary" [outlined]="true" (onClick)="showColumnDialog = false"></p-button>
+    </ng-template>
 </p-dialog>
