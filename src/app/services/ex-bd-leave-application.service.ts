@@ -144,10 +144,12 @@ export class ExBdLeaveApplicationService {
         return this.http.delete(`${this.baseUrl}/DeleteAsyn/${id}`);
     }
 
-    checkEligibility(employeeId: number, fromDate?: string, toDate?: string): Observable<any> {
+    /** excludeId: the application being edited — left out of the overlap check. */
+    checkEligibility(employeeId: number, fromDate?: string, toDate?: string, excludeId?: number): Observable<any> {
         const params: any = {};
         if (fromDate) params.fromDate = fromDate;
         if (toDate) params.toDate = toDate;
+        if (excludeId) params.excludeId = excludeId;
         return this.http.get<any>(`${this.baseUrl}/CheckEligibility/${employeeId}`, { params });
     }
 

@@ -238,7 +238,8 @@ export class ExBdLeaveApplyComponent implements OnInit {
             return;
         }
 
-        // Check eligibility (rules 1 & 2) immediately after employee search
+        // Check eligibility (rule 1 — presently serving) immediately after employee search.
+        // Another pending application doesn't block; date overlap is checked on submit.
         this.exBdLeaveService.checkEligibility(info.employeeID).subscribe({
             next: (res: any) => {
                 // Eligible — proceed with selection
@@ -364,17 +365,13 @@ export class ExBdLeaveApplyComponent implements OnInit {
         this.isSubmitting = true;
         const v = this.form.getRawValue();
 
-        // In edit mode, skip eligibility check — the application already exists
-        if (this.editMode) {
-            this.performSave(v);
-            return;
-        }
-
-        // Step 1: Check eligibility (with dates for rule 3) before saving
+        // Step 1: Check eligibility (with dates for the overlap rule) before saving. In edit
+        // mode the application being edited is excluded, so it never clashes with itself.
         this.exBdLeaveService.checkEligibility(
             v.applicantEmployeeId,
             this.formatDate(v.fromDate),
-            this.formatDate(v.toDate)
+            this.formatDate(v.toDate),
+            this.editMode ? this.editId : undefined
         ).subscribe({
             next: () => {
                 // All checks passed — proceed with save
@@ -470,9 +467,10 @@ export class ExBdLeaveApplyComponent implements OnInit {
                     this.messageService.add({ severity: 'error', summary: 'Error', detail: res.description || 'Failed to save.' });
                 }
             },
-            error: () => {
+            error: (err: any) => {
                 this.isSubmitting = false;
-                this.messageService.add({ severity: 'error', summary: 'Error', detail: 'An error occurred while saving.' });
+                // The update endpoint answers 400 with a description (e.g. a date overlap).
+                this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.description || 'An error occurred while saving.' });
             }
         });
     }
