@@ -221,6 +221,21 @@
 
                     <!-- ── Members Table (Edit) ── -->
                     <p-fieldset legend="Members" [toggleable]="true" [collapsed]="editMembersData.members.length === 0">
+                        <!-- Show / hide the members table in the note sheet. Members stay linked either way. -->
+                        <div style="display:flex;align-items:flex-start;gap:0.5rem;margin-bottom:0.75rem;">
+                            <p-checkbox [(ngModel)]="editShowMembersTable" [binary]="true" inputId="chkEditShowMembersTable"></p-checkbox>
+                            <div style="line-height:1.3;">
+                                <label for="chkEditShowMembersTable" style="cursor:pointer;font-weight:600;">Show members table in the note sheet</label>
+                                <div style="color:#6c757d;font-size:8pt;margin-top:0.15rem;">
+                                    @if (editShowMembersTable) {
+                                        Untick to hide the table. Members stay linked to this note sheet.
+                                    } @else {
+                                        Table hidden in the note sheet, PDF and Word. The linked members are listed below.
+                                    }
+                                </div>
+                            </div>
+                        </div>
+
                         <div class="members-search-row" style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.5rem;">
                             <app-employee-search
                                 (onEmployeeFound)="onMemberFound($event)">
@@ -230,11 +245,26 @@
                             }
                         </div>
 
-                        <div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.5rem;flex-wrap:wrap;">
-                            <p-button label="Add Column" icon="pi pi-plus" size="small" severity="info" [outlined]="true" (onClick)="openAddColumnDialog()"></p-button>
-                        </div>
+                        @if (editShowMembersTable) {
+                            <div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.5rem;flex-wrap:wrap;">
+                                <p-button label="Add Column" icon="pi pi-plus" size="small" severity="info" [outlined]="true" (onClick)="openAddColumnDialog()"></p-button>
+                            </div>
+                        }
 
-                        @if (editMembersData.members.length > 0 && editMembersData.columns.length > 0) {
+                        @if (!editShowMembersTable) {
+                            <!-- Table hidden → compact member strips, so it stays clear who is linked -->
+                            @if (editMembersData.members.length > 0) {
+                                <app-notesheet-member-strips
+                                    [members]="editMembersData.members"
+                                    [bangla]="editTextType === 'bn'"
+                                    (removeMember)="removeMember($event)">
+                                </app-notesheet-member-strips>
+                            } @else {
+                                <div style="color:#6c757d;font-size:8pt;padding:0.5rem 0;">
+                                    No members linked yet. Use the search above to add members.
+                                </div>
+                            }
+                        } @else if (editMembersData.members.length > 0 && editMembersData.columns.length > 0) {
                             <div style="overflow-x:auto;max-width:100%;">
                                 <table class="ns-members-preview-table" style="font-size:8pt;text-align:left;table-layout:fixed;width:100%;">
                                     <thead>
@@ -441,7 +471,7 @@
                 </div>
 
                 <!-- ── Members table — renders after ALL main body blocks ── -->
-                <div *ngIf="previewMembersRows.length > 0 && previewMembersColumns.length > 0" class="ns-members-preview-table-wrap">
+                <div *ngIf="noteSheet?.showMembersTable !== false && previewMembersRows.length > 0 && previewMembersColumns.length > 0" class="ns-members-preview-table-wrap">
                     <table class="ns-members-preview-table">
                         <thead>
                             <tr>

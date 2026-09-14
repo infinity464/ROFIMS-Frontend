@@ -43,6 +43,7 @@ import { OrgService } from '@/Components/basic-setup/org-tree/org.service';
 import { DialogModule } from 'primeng/dialog';
 import { ServingMembersService } from '@/services/serving-members.service';
 import { EmployeeSearchComponent, EmployeeBasicInfo } from '@/Components/Shared/employee-search/employee-search';
+import { NotesheetMemberStripsComponent } from '@/Components/Shared/notesheet-member-strips/notesheet-member-strips';
 import { FamilyInfoService, FamilyInfoByEmployeeView } from '@/services/family-info-service';
 import { MainTextBlock, parseMainTextBlocks, serializeMainTextBlocks } from '@/shared/utils/notesheet-main-text';
 import { getFormattedMemberName } from '@/shared/utils/member-display-name.util';
@@ -205,6 +206,7 @@ export const AVAILABLE_MEMBER_COLUMNS: MemberColumnDef[] = [
         TreeSelectModule,
         DialogModule,
         EmployeeSearchComponent,
+        NotesheetMemberStripsComponent,
         NotesheetApproverSelectComponent
     ],
     templateUrl: './notesheet-generate.html',
@@ -356,6 +358,8 @@ export class NotesheetGenerateComponent implements OnInit {
             recommenderIds: [[] as number[]],
             finalApproverId: [null as number | null, Validators.required],
             isSecret: [false],
+            /** Print the members table in the note sheet. Members are linked either way. */
+            showMembersTable: [true],
             noteSheetOperationType: [NoteSheetOperationType.Manual as string, Validators.required],
             referenceEmployeeIds: [[] as number[]],
             memberTypeIds: [[] as number[]]
@@ -447,7 +451,6 @@ export class NotesheetGenerateComponent implements OnInit {
         if (id == null) return false;
         return !!this.subjectPickList.find((s) => s.id === id)?.isClearanceSubject;
     }
-
     /** Selected subject's display label (language-aware) — used for the read-only field in edit mode. */
     get selectedSubjectLabel(): string {
         const id = this.form.get('noteSheetSubjectId')?.value;
@@ -987,6 +990,7 @@ export class NotesheetGenerateComponent implements OnInit {
             recommenderIds,
             finalApproverId: d.finalApprovalId ?? d.FinalApprovalId ?? null,
             isSecret: !!(d.isSecret ?? d.IsSecret ?? false),
+            showMembersTable: (d.showMembersTable ?? d.ShowMembersTable) !== false,
             noteSheetOperationType: d.noteSheetOperationType ?? d.NoteSheetOperationType ?? null,
             memberTypeIds: this.parseMemberTypeIds(d.employeeTypeIds ?? d.EmployeeTypeIds)
         });
@@ -1738,6 +1742,7 @@ export class NotesheetGenerateComponent implements OnInit {
             recommenderIds: [],
             finalApproverId: null,
             isSecret: false,
+            showMembersTable: true,
             noteSheetOperationType: 'manual',
             referenceEmployeeIds: [],
             memberTypeIds: []
@@ -1810,7 +1815,8 @@ export class NotesheetGenerateComponent implements OnInit {
                             };
 
                             // Sync members to NoteSheetReferenceEmployee, then open the preview so it
-                            // reflects the freshly-synced members.
+                            // reflects the freshly-synced members. Always synced — even when the table is
+                            // hidden (showMembersTable) the note sheet stays linked to each member.
                             if (noteSheetId) {
                                 const refApi = `${environment.apis.core}/NoteSheetReferenceEmployee`;
                                 const employees = this.membersData.members.map(m => ({
@@ -1969,6 +1975,7 @@ export class NotesheetGenerateComponent implements OnInit {
                 : null,
             textType: d.textType === 'bn' ? 1 : 0,
             isSecret: d.isSecret ?? false,
+            showMembersTable: d.showMembersTable !== false,
             noteSheetOperationType: d.noteSheetOperationType ?? null,
             // Member types selected for this General note-sheet (comma-separated CommonCode ids).
             employeeTypeIds: (Array.isArray(d.memberTypeIds) ? d.memberTypeIds : []).join(',') || null,

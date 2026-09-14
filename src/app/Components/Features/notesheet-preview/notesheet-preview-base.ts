@@ -40,6 +40,8 @@ export interface NoteSheetInfoFull {
     unitId?: number;
     employeeId?: number;
     isSecret?: boolean;
+    /** False hides the members table (members stay linked). Missing/true = show. */
+    showMembersTable?: boolean;
     noteSheetOperationType?: string;
     // ── Initiator ──────────────────────────────────────────────────────
     initiatorId?: number;

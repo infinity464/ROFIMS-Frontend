@@ -23,9 +23,10 @@ import { RichEditorComponent } from '@/Components/Common/rich-editor/rich-editor
 import { FileReferencesFormComponent, FileRowData } from '@/Components/Common/file-references-form/file-references-form';
 import { NotesheetApproverSelectComponent } from '@/Components/Common/notesheet-approver-select/notesheet-approver-select';
 import { EmployeeSearchComponent, EmployeeBasicInfo } from '@/Components/Shared/employee-search/employee-search';
+import { NotesheetMemberStripsComponent } from '@/Components/Shared/notesheet-member-strips/notesheet-member-strips';
 import { NotesheetPreviewBase } from '../notesheet-preview-base';
 import { NoteSheetSubjectService, NoteSheetSubjectModel } from '@/Components/basic-setup/shared/services/NoteSheetSubjectService';
-import { MemberColumnDef, MemberRow, MembersJsonData, AVAILABLE_MEMBER_COLUMNS, ReferenceParagraph } from '../../notesheet-generate/notesheet-generate';
+import { MemberColumnDef, MemberRow, MembersJsonData, AVAILABLE_MEMBER_COLUMNS, ReferenceParagraph, PostedOutClearanceInfo } from '../../notesheet-generate/notesheet-generate';
 import { MainTextBlock, parseMainTextBlocks, serializeMainTextBlocks } from '@/shared/utils/notesheet-main-text';
 import { NoteSheetCurrentStatus, NoteSheetCurrentStatusOptions, NoteSheetOperationTypeOptions, ApprovalStatus, NoteSheetRemarkAction, NoteSheetPreviewFrom, ApprovalLogAction, ApprovalLogActionOptions } from '@/models/enums';
 import { SharedService } from '@/shared/services/shared-service';
@@ -67,7 +68,7 @@ interface ApprovalLogEntry {
         CommonModule, FormsModule, ButtonModule, ToastModule, ConfirmDialogModule, DialogModule, TooltipModule,
         InputTextModule, TextareaModule, SelectModule, InputNumberModule, CheckboxModule, DatePickerModule, FlexibleDateDirective, FieldsetModule,
         NotesheetSignatoryComponent, RichEditorComponent, FileReferencesFormComponent, NotesheetApproverSelectComponent,
-        EmployeeSearchComponent
+        EmployeeSearchComponent, NotesheetMemberStripsComponent
     ],
     providers: [MessageService, ConfirmationService],
     templateUrl: './notesheet-preview-general.html',
@@ -243,6 +244,7 @@ export class NotesheetPreviewGeneralComponent extends NotesheetPreviewBase imple
     /** The toggle only makes sense when the table actually shows a name column AND the
      *  rows carry a corps value to strip (older saved rows may not). */
     get canToggleCorpsInName(): boolean {
+        if (this.noteSheet?.showMembersTable === false) return false;
         if (this.previewMembersRows.length === 0) return false;
         if (!this.previewMembersColumns.some(c => this.isNameColumn(c))) return false;
         return this.previewMembersRows.some(r => ((r['corpsBN'] || r['corps'] || '').trim().length > 0));
@@ -261,6 +263,8 @@ export class NotesheetPreviewGeneralComponent extends NotesheetPreviewBase imple
 
     // ── Edit state ───────────────────────────────────────────
     editing = false;
+    /** Edit-mode copy of NoteSheetInfo.ShowMembersTable. False hides the table; members stay linked. */
+    editShowMembersTable = true;
     saving = false;
 
     // ── Submit for approval state ─────────────────────────────
@@ -297,6 +301,14 @@ export class NotesheetPreviewGeneralComponent extends NotesheetPreviewBase imple
     // ── General subject master (resolve NoteSheetSubjectId → BN/EN for display) ──
     private noteSheetSubjectService = inject(NoteSheetSubjectService);
     private noteSheetSubjects: NoteSheetSubjectModel[] = [];
+
+    /** True when this note sheet's subject is a clearance subject: members must be verified posted-out
+     *  members (same rule as /notesheet-generate). */
+    get isClearanceSubject(): boolean {
+        const id = this.noteSheet?.noteSheetSubjectId;
+        if (id == null) return false;
+        return !!this.noteSheetSubjects.find((s) => s.id === id)?.isClearanceSubject;
+    }
 
     // ── Edit model fields ────────────────────────────────────
     editSubject = '';
@@ -382,6 +394,9 @@ export class NotesheetPreviewGeneralComponent extends NotesheetPreviewBase imple
     previewMembersColumns: { key: string; label: string; labelBN?: string; mergedFrom?: string[]; width?: number }[] = [];
     previewMembersRows: Record<string, string>[] = [];
     private loadedMemberEmployeeIds: number[] = [];
+    /** Posted-out (clearance) link per loaded member, index-aligned with loadedMemberEmployeeIds.
+     *  Carried through edit + Sync so saving from the preview never drops it. */
+    private loadedMemberPostedOutIds: (number | null)[] = [];
 
     // ── Computed ─────────────────────────────────────────────
     get canEdit(): boolean {
@@ -483,9 +498,11 @@ export class NotesheetPreviewGeneralComponent extends NotesheetPreviewBase imple
         }));
         const members: MemberRow[] = this.previewMembersRows.map((row, i) => ({
             employeeId: this.loadedMemberEmployeeIds[i] ?? 0,
-            values: { ...row }
+            values: { ...row },
+            postedOutId: this.loadedMemberPostedOutIds[i] ?? null
         }));
         this.editMembersData = { columns: cols, members };
+        this.editShowMembersTable = this.noteSheet.showMembersTable !== false;
     }
 
     cancelEdit(): void {
@@ -653,6 +670,11 @@ export class NotesheetPreviewGeneralComponent extends NotesheetPreviewBase imple
     // ── Save changes ─────────────────────────────────────────
     saveChanges(): void {
         if (!this.noteSheet || this.saving) return;
+        // Clearance subject → at least one (posted-out) member is required (same rule as /notesheet-generate).
+        if (this.isClearanceSubject && this.editMembersData.members.length === 0) {
+            this.messageService.add({ severity: 'warn', summary: 'Members required', detail: 'This is a clearance subject — add at least one posted-out member.' });
+            return;
+        }
         this.saving = true;
 
         const existingRefs = this.fileReferencesForm?.getExistingFileReferences() || [];
@@ -673,6 +695,7 @@ export class NotesheetPreviewGeneralComponent extends NotesheetPreviewBase imple
                     : null,
                 textType: this.editTextType === 'bn' ? 1 : 0,
                 noteSheetOperationType: this.editOperationType,
+                showMembersTable: this.editShowMembersTable,
                 noteSheetDate: this.editNoteSheetDate ? this.formatDateOnly(this.editNoteSheetDate) : this.noteSheet!.noteSheetDate,
                 initiatorId: this.editInitiatorId ?? 0,
                 recommendersJson,
@@ -693,6 +716,8 @@ export class NotesheetPreviewGeneralComponent extends NotesheetPreviewBase imple
                         const refApi = `${environment.apis.core}/NoteSheetReferenceEmployee`;
                         const employees = this.editMembersData.members.map(m => ({
                             employeeId: m.employeeId,
+                            // Keep the clearance link — omitting it used to wipe PostedOutId on save.
+                            postedOutId: m.postedOutId ?? null,
                             informationJson: JSON.stringify({
                                 columns: this.editMembersData.columns,
                                 values: m.values
@@ -785,6 +810,7 @@ export class NotesheetPreviewGeneralComponent extends NotesheetPreviewBase imple
             ns.textType = payload['textType'] as number;
             ns.noteSheetDate = payload['noteSheetDate'];
             ns.noteSheetOperationType = this.editOperationType ?? null;
+            ns.showMembersTable = this.editShowMembersTable;
             if (payload['filesReferences'] !== undefined) ns.filesReferences = payload['filesReferences'] ?? null;
         }
         // View mode reads the members from previewMembers* — mirror the edited set.
@@ -792,6 +818,7 @@ export class NotesheetPreviewGeneralComponent extends NotesheetPreviewBase imple
         this.previewMembersColumns = this.editMembersData.columns.map((c) => ({ ...c })) as any;
         this.previewMembersRows = this.editMembersData.members.map((m) => ({ ...m.values }));
         this.loadedMemberEmployeeIds = this.editMembersData.members.map((m) => m.employeeId);
+        this.loadedMemberPostedOutIds = this.editMembersData.members.map((m) => m.postedOutId ?? null);
     }
 
     // ── Parse file references from noteSheet ─────────────────
@@ -906,15 +933,18 @@ export class NotesheetPreviewGeneralComponent extends NotesheetPreviewBase imple
                                 return parsed.values ?? {};
                             });
                             this.loadedMemberEmployeeIds = rows.map(r => r.employeeId ?? r.EmployeeId ?? 0);
+                            this.loadedMemberPostedOutIds = rows.map(r => r.postedOutId ?? r.PostedOutId ?? null);
                         } catch {
                             this.previewMembersColumns = [];
                             this.previewMembersRows = [];
                             this.loadedMemberEmployeeIds = [];
+                            this.loadedMemberPostedOutIds = [];
                         }
                     } else {
                         this.previewMembersColumns = [];
                         this.previewMembersRows = [];
                         this.loadedMemberEmployeeIds = [];
+                        this.loadedMemberPostedOutIds = [];
                     }
                 }
             });
@@ -943,7 +973,86 @@ export class NotesheetPreviewGeneralComponent extends NotesheetPreviewBase imple
 
     // ── Members edit methods ────────────────────────────────────
 
+    /**
+     * Same gates as /notesheet-generate: the logged-in user's access scope first (resilient on a network
+     * error), then — for clearance subjects — the posted-out lookup and one-active-note-sheet check.
+     */
     onMemberFound(emp: EmployeeBasicInfo): void {
+        this.servingMembersService.checkMemberAccess(emp.employeeID).subscribe({
+            next: (res) => {
+                if (res && res.accessible === false) {
+                    this.messageService.add({
+                        severity: 'error',
+                        summary: 'Access denied',
+                        detail: res.reason || "You don't have permission to view this employee (outside your assigned units / member types)."
+                    });
+                    return;
+                }
+                this.proceedAddMember(emp);
+            },
+            error: () => this.proceedAddMember(emp)
+        });
+    }
+
+    /** Clearance subject → verify the posted-out record + cross-note-sheet duplicate first; otherwise add normally. */
+    private proceedAddMember(emp: EmployeeBasicInfo): void {
+        if (this.editMembersData.members.some(m => m.employeeId === emp.employeeID)) {
+            this.messageService.add({ severity: 'warn', summary: 'Duplicate', detail: 'This member is already added.' });
+            return;
+        }
+        if (!this.isClearanceSubject) {
+            this.addFoundMember(emp, null);
+            return;
+        }
+
+        this.memberAddLoading = true;
+        const api = `${environment.apis.core}/NoteSheetReferenceEmployee`;
+        const params: Record<string, string> = { employeeId: String(emp.employeeID) };
+        // This note sheet's own rows must not count as "already in another note-sheet".
+        if (this.noteSheetId) params['excludeNoteSheetId'] = String(this.noteSheetId);
+        this.http.get<PostedOutClearanceInfo>(`${api}/GetPostedOutClearanceInfo`, { params }).subscribe({
+            next: (info) => {
+                this.memberAddLoading = false;
+                if (!info?.hasPostedOut) {
+                    this.messageService.add({
+                        severity: 'error',
+                        summary: 'No Posted Out record',
+                        detail: `${emp.fullNameEN || 'This member'} has no Posted Out entry. Please generate the Posted Out (Permanent Posting MO Change) record first.`,
+                        life: 7000
+                    });
+                    return;
+                }
+                if (info.usedInNoteSheetId != null) {
+                    const nsRef = info.usedInNoteSheetNo || ('#' + info.usedInNoteSheetId);
+                    this.messageService.add({
+                        severity: 'error',
+                        summary: info.usedInNoteSheetApproved ? 'Clearance already approved' : 'Already in a note-sheet',
+                        detail: info.usedInNoteSheetApproved
+                            ? `This posted-out member's clearance is already approved in note-sheet ${nsRef} and cannot be added again.`
+                            : `This posted-out member is already in note-sheet ${nsRef}. A posted-out member can be in only one active note-sheet. (If that note-sheet is cancelled, the member becomes available again.)`,
+                        life: 8000
+                    });
+                    return;
+                }
+                if (info.hasCancelledNoteSheet) {
+                    const cancelledRef = info.cancelledNoteSheetNo ? ` (${info.cancelledNoteSheetNo})` : '';
+                    this.messageService.add({
+                        severity: 'warn',
+                        summary: 'Previously cancelled',
+                        detail: `This member's earlier clearance note-sheet${cancelledRef} was cancelled. Adding to this note-sheet.`,
+                        life: 7000
+                    });
+                }
+                this.addFoundMember(emp, info.postedOutId, info.postingUnitName ?? '', info.postingUnitNameBN ?? '');
+            },
+            error: () => {
+                this.memberAddLoading = false;
+                this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to verify the posted-out record. Please try again.' });
+            }
+        });
+    }
+
+    private addFoundMember(emp: EmployeeBasicInfo, postedOutId: number | null, postingUnitEN: string = '', postingUnitBN: string = ''): void {
         if (this.editMembersData.members.some(m => m.employeeId === emp.employeeID)) {
             this.messageService.add({ severity: 'warn', summary: 'Duplicate', detail: 'This member is already added.' });
             return;
@@ -1023,7 +1132,14 @@ export class NotesheetPreviewGeneralComponent extends NotesheetPreviewBase imple
                 values['family_father'] = father?.name ?? '';
                 values['family_mother'] = mother?.name ?? '';
                 values['family_members'] = family.map((f: any) => `${f.relation ?? ''}: ${f.name ?? ''}`).join('; ');
-                this.editMembersData.members.push({ employeeId: emp.employeeID, values });
+                // Posted-out Posting Unit (mother-org transfer destination) — populated for clearance subjects.
+                values['postingUnit'] = postingUnitEN;
+                values['postingUnitBN'] = postingUnitBN;
+                // Keep any already-present custom columns (e.g. Remarks) in sync for the new row.
+                for (const col of this.editMembersData.columns) {
+                    if (col.group === 'custom' && values[col.key] === undefined) values[col.key] = '';
+                }
+                this.editMembersData.members.push({ employeeId: emp.employeeID, values, postedOutId });
                 this.memberAddLoading = false;
                 this.messageService.add({ severity: 'success', summary: 'Member Added', detail: `${profile.nameEnglish || emp.fullNameEN} added.` });
             },
@@ -1937,8 +2053,8 @@ html, body { margin: 0; padding: 0; background: transparent; }
         };
         if (this.noteSheet.note) model.note = this.noteSheet.note;
 
-        // Add members table info to model
-        if (this.previewMembersRows.length > 0 && this.previewMembersColumns.length > 0) {
+        // Add members table info to model (skipped when the note sheet hides its table)
+        if (this.noteSheet?.showMembersTable !== false && this.previewMembersRows.length > 0 && this.previewMembersColumns.length > 0) {
             (model as any).membersColumns = this.previewMembersColumns;
             (model as any).membersRows = this.previewMembersRows;
         }
