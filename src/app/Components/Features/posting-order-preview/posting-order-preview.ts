@@ -1166,10 +1166,10 @@ export class PostingOrderPreviewPageComponent implements OnInit {
         return n.includes('সদর দপ্তর') || /head\s*quarter/i.test(n) || /\bHQ\b/i.test(n);
     }
 
-    /** True if the top-level unit segment is a RAB battalion (র‍্যাব-১ … / RAB-1 …). */
+    /** True if the top-level unit segment is a battalion (এসআরবি-১ … / SRB-1 …). */
     private isRabBattalion(name: string): boolean {
         const n = this.stripZeroWidth(name);
-        return /যাব\s*[-–—]\s*[০-৯0-9]/.test(n) || /^RAB\s*[-–—]\s*\d+/i.test(n);
+        return /এসআরবি\s*[-–—]\s*[০-৯0-9]/.test(n) || /^SRB\s*[-–—]\s*\d+/i.test(n);
     }
 
     /**
