@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, HostListener, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterModule } from '@angular/router';
 
@@ -74,6 +74,27 @@ export class Login implements OnInit {
       this.email = remembered;
       this.checked = true;
     }
+  }
+
+  /**
+   * Enter submits from anywhere on the page, not just while a field has focus —
+   * browser-autofilled credentials leave nothing focused, so a field-level
+   * (keyup.enter) binding never fires in that (common) case.
+   * Buttons/links are skipped so their own Enter-activation isn't doubled up.
+   */
+  @HostListener('document:keydown.enter', ['$event'])
+  onEnterKey(event: KeyboardEvent): void {
+    if (event.isComposing) return;
+    if ((event.target as HTMLElement | null)?.closest('button, a, [role="button"]')) return;
+
+    if (this.forgotPasswordVisible) {
+      if (this.forgotLoading) return;
+      if (this.forgotStep === 'request') this.onForgotRequestSubmit();
+      else this.onForgotResetSubmit();
+      return;
+    }
+
+    this.onLogin();
   }
 
   onLogin(): void {
