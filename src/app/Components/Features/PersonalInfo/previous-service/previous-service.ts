@@ -36,9 +36,9 @@ export class PreviousServiceRab implements OnInit {
 
   // dropdown demo data
   wingBattalionList = [
-    { label: 'RAB-1', value: 1 },
-    { label: 'RAB-2', value: 2 },
-    { label: 'RAB-3', value: 3 }
+    { label: 'SRB-1', value: 1 },
+    { label: 'SRB-2', value: 2 },
+    { label: 'SRB-3', value: 3 }
   ];
 
   appointmentList = [
@@ -96,7 +96,7 @@ export class PreviousServiceRab implements OnInit {
           ser: 1,
           from: '2022-01-01',
           to: '2023-01-01',
-          wingBattalion: 'RAB-1',
+          wingBattalion: 'SRB-1',
           appointment: 'Officer'
         }
       ];

@@ -1263,7 +1263,7 @@ export class ExMemberProfile implements OnInit, OnDestroy {
         switch (row.presentStatusType) {
             case 'RegularPostingOut':
                 add('Date of Release', this.formatDateOnly(row.dateOfRelease));
-                add('Reduce from RAB Strength', this.formatDateOnly(row.reduceFromRABStrength));
+                add('Reduce from SRB Strength', this.formatDateOnly(row.reduceFromRABStrength));
                 break;
             case 'RTUOnDisciplineIssue':
                 add('RTU Cause', row.rtuCause);
@@ -1308,7 +1308,7 @@ export class ExMemberProfile implements OnInit, OnDestroy {
         const labels: Record<string, string> = {
             PersonalInfo: 'Personal Info',
             EmployeeInfo: 'Employee Info',
-            PreviousRABServiceInfo: 'Previous RAB Service',
+            PreviousRABServiceInfo: 'Previous SRB Service',
             PromotionInfo: 'Promotion',
             RankConfirmationInfo: 'Rank Confirmation',
             BankAccInfo: 'Bank Account',

@@ -133,12 +133,12 @@ export class ReportSupernumeraryComponent implements OnInit, OnDestroy {
         { key: 'nameExtras', labelEN: 'Award + Professional Qualification', labelBN: 'পদক + পেশাগত যোগ্যতা', hint: 'NameSuffix', defaultVisible: false },
         { key: 'callNoRankName', labelEN: 'No Rank Name', labelBN: 'নং র‍্যাঙ্ক নাম', hint: 'CallNoRankName', defaultVisible: false },
         { key: 'nameEnglish',  labelEN: 'Name (EN)',     labelBN: 'নাম (ইংরেজি)',   hint: 'Plain',                 defaultVisible: false  },
-        { key: 'personnel',    labelEN: 'RAB Personnel', labelBN: 'র‍্যাব সদস্য',   hint: 'RabPersonnelComposite', defaultVisible: false },
-        { key: 'rabId',        labelEN: 'RAB ID',        labelBN: 'র‍্যাব আইডি',    hint: 'RabId',                 defaultVisible: false },
+        { key: 'personnel',    labelEN: 'SRB Personnel', labelBN: 'এসআরবি সদস্য',   hint: 'RabPersonnelComposite', defaultVisible: false },
+        { key: 'rabId',        labelEN: 'SRB ID',        labelBN: 'এসআরবি আইডি',    hint: 'RabId',                 defaultVisible: false },
         { key: 'motherOrganization',labelEN: 'Mother Org', labelBN: 'মাতৃ সংস্থা',  hint: 'Plain',                 defaultVisible: false },
         { key: 'memberType',   labelEN: 'Member Type',   labelBN: 'সদস্য ধরন',      hint: 'Plain',                 defaultVisible: false },
-        { key: 'rabRank',      labelEN: 'RAB Rank',      labelBN: 'র‍্যাব র‍্যাঙ্ক', hint: 'Plain',                 defaultVisible: false },
-        { key: 'joiningDate',  labelEN: 'RAB Joining Date', labelBN: 'র‍্যাবে যোগদান তারিখ', hint: 'Plain',     defaultVisible: true  },
+        { key: 'rabRank',      labelEN: 'SRB Rank',      labelBN: 'এসআরবি র‍্যাঙ্ক', hint: 'Plain',                 defaultVisible: false },
+        { key: 'joiningDate',  labelEN: 'SRB Joining Date', labelBN: 'এসআরবিে যোগদান তারিখ', hint: 'Plain',     defaultVisible: true  },
         { key: 'postingStatus',  labelEN: 'Status',      labelBN: 'অবস্থা',         hint: 'Plain',                 defaultVisible: false },
         { key: 'rmks',         labelEN: 'Remark',       labelBN: 'মন্তব্য',       hint: 'Remarks',               defaultVisible: true  },
         { key: 'nameBangla',        labelEN: 'Name (BN)',        labelBN: 'নাম (বাংলা)',        hint: 'Plain', defaultVisible: false },
@@ -148,11 +148,11 @@ export class ReportSupernumeraryComponent implements OnInit, OnDestroy {
         { key: 'tradeRemarks',      labelEN: 'Trade Remarks',    labelBN: 'ট্রেড মন্তব্য',       hint: 'Plain', defaultVisible: false },
         { key: 'gender',            labelEN: 'Gender',           labelBN: 'লিঙ্গ',              hint: 'Plain', defaultVisible: false },
         { key: 'motherUnit',        labelEN: 'Last Unit',        labelBN: 'শেষ ইউনিট',          hint: 'Plain', defaultVisible: false },
-        { key: 'rabUnitHierarchy', labelEN: 'RAB Unit', labelBN: 'র‍্যাব ইউনিট (পূর্ণ)', hint: 'Plain', defaultVisible: false },
-        { key: 'rabWing',           labelEN: 'RAB Wing',         labelBN: 'র‍্যাব উইং',         hint: 'Plain', defaultVisible: false },
+        { key: 'rabUnitHierarchy', labelEN: 'SRB Unit', labelBN: 'এসআরবি ইউনিট (পূর্ণ)', hint: 'Plain', defaultVisible: false },
+        { key: 'rabWing',           labelEN: 'SRB Wing',         labelBN: 'এসআরবি উইং',         hint: 'Plain', defaultVisible: false },
         { key: 'dateOfCommission',  labelEN: 'Commission Date',  labelBN: 'কমিশন তারিখ',         hint: 'Plain', defaultVisible: false },
-        { key: 'rabServiceFrom',    labelEN: 'RAB Service From',  labelBN: 'র‍্যাব স্থিতিকাল হইতে', hint: 'Plain', defaultVisible: false },
-        { key: 'rabServiceTo',      labelEN: 'RAB End Date',     labelBN: 'র‍্যাব শেষ তারিখ',   hint: 'Plain', defaultVisible: false },
+        { key: 'rabServiceFrom',    labelEN: 'SRB Service From',  labelBN: 'এসআরবি স্থিতিকাল হইতে', hint: 'Plain', defaultVisible: false },
+        { key: 'rabServiceTo',      labelEN: 'SRB End Date',     labelBN: 'এসআরবি শেষ তারিখ',   hint: 'Plain', defaultVisible: false },
         { key: 'officerType',       labelEN: 'Officer Type',     labelBN: 'অফিসার ধরণ',        hint: 'Plain', defaultVisible: false },
         { key: 'division',          labelEN: 'Division',         labelBN: 'বিভাগ',              hint: 'Plain', defaultVisible: false },
         { key: 'district',          labelEN: 'District',         labelBN: 'জেলা',               hint: 'Plain', defaultVisible: false },
@@ -373,7 +373,7 @@ export class ReportSupernumeraryComponent implements OnInit, OnDestroy {
             ? 'গণপ্রজাতন্ত্রী বাংলাদেশ সরকার'
             : "GOVERNMENT OF THE PEOPLE'S REPUBLIC OF BANGLADESH";
     }
-    get rabOrgTitle(): string { return this.lang === 'bn' ? 'র‍্যাপিড অ্যাকশন ব্যাটালিয়ন' : 'RAPID ACTION BATTALION'; }
+    get rabOrgTitle(): string { return this.lang === 'bn' ? 'স্পেশাল রেসপন্স ব্যাটালিয়ন' : 'SPECIAL RESPONSE BATTALION'; }
     get rabOrgSubtitle(): string {
         return this.lang === 'bn'
             ? 'বাংলাদেশ পুলিশ · সদর দপ্তর, কুর্মিটোলা, ঢাকা'

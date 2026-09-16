@@ -63,7 +63,7 @@
                     <span class="profile-id-value">{{ profile.serviceId || '-' }}</span>
                 </div>
                 <div class="profile-id-block">
-                    <span class="profile-id-label">RAB ID</span>
+                    <span class="profile-id-label">SRB ID</span>
                     <span class="profile-id-value">{{ profile.rabId || '-' }}</span>
                 </div>
                 @if (postingProcessingStatus?.newPostingStep && !postingProcessingStatus!.newPostingOrderReceived) {
@@ -151,7 +151,7 @@
                         <span class="profile-field-value">{{ profile.location || '-' }}</span>
                     </div>
                     <div class="profile-field-row">
-                        <span class="profile-field-label">Date of joining RAB</span>
+                        <span class="profile-field-label">Date of joining SRB</span>
                         <span class="profile-field-value">{{ formatDateOfJoining(serviceOverview?.joiningDate ?? getDateOfJoiningInRAB(profile)) }}</span>
                     </div>
                     <div class="profile-field-row">
@@ -381,7 +381,7 @@
                 <div class="profile-two-col">
                     <div class="profile-field-list">
                         <div class="profile-field-row"><span class="profile-field-label">Service ID</span> <span class="profile-field-value">{{ relieverProfile.serviceId || '-' }}</span></div>
-                        <div class="profile-field-row"><span class="profile-field-label">RAB ID</span> <span class="profile-field-value">{{ relieverProfile.rabId || '-' }}</span></div>
+                        <div class="profile-field-row"><span class="profile-field-label">SRB ID</span> <span class="profile-field-value">{{ relieverProfile.rabId || '-' }}</span></div>
                         <div class="profile-field-row"><span class="profile-field-label">Name</span> <span class="profile-field-value">{{ relieverProfile.name || '-' }}{{ relieverProfile.corpsName && relieverProfile.corpsName !== 'N/A' ? ', + ' + relieverProfile.corpsName : '' }}</span></div>
                         <div class="profile-field-row"><span class="profile-field-label">Type of Member</span> <span class="profile-field-value">{{ relieverProfile.typeOfMember || '-' }}</span></div>
                         <div class="profile-field-row"><span class="profile-field-label">Rank</span> <span class="profile-field-value">{{ relieverProfile.rank || '-' }}</span></div>
@@ -393,7 +393,7 @@
                         <div class="profile-field-row"><span class="profile-field-label">Last Unit</span> <span class="profile-field-value">{{ relieverProfile.lastUnit || '-' }}</span></div>
                         <div class="profile-field-row"><span class="profile-field-label">Last Unit District</span> <span class="profile-field-value">{{ relieverProfile.location || '-' }}</span></div>
                         <div class="profile-field-row"><span class="profile-field-label">Appointment</span> <span class="profile-field-value">{{ relieverProfile.appointment || '-' }}</span></div>
-                        <div class="profile-field-row"><span class="profile-field-label">Date of Joining in RAB</span> <span class="profile-field-value">{{ formatDateOfJoining(getDateOfJoiningInRAB(relieverProfile)) }}</span></div>
+                        <div class="profile-field-row"><span class="profile-field-label">Date of Joining in SRB</span> <span class="profile-field-value">{{ formatDateOfJoining(getDateOfJoiningInRAB(relieverProfile)) }}</span></div>
                     </div>
                 </div>
             </div>

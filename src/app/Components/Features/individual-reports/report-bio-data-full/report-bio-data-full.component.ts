@@ -113,7 +113,7 @@ export class ReportBioDataFullIndividualComponent implements OnInit, OnDestroy {
     showAccessDeniedDialog = false;
     accessDeniedMessage = 'You do not have permission to view this employee. Either they are outside your accessible scope or no longer presently serving.';
     showNotFoundDialog = false;
-    notFoundMessage = 'No member found with the given RAB ID / Service ID / NID.';
+    notFoundMessage = 'No member found with the given SRB ID / Service ID / NID.';
 
     showPickerDialog = false;
     pickerRows: Array<{ employeeId: number; displayName: string; orgName: string; status: string; }> = [];
@@ -134,8 +134,8 @@ export class ReportBioDataFullIndividualComponent implements OnInit, OnDestroy {
                 { key: 'dateOfCommission', labelEN: 'Date of Commission', labelBN: 'কমিশনের তারিখ', defaultVisible: true },
                 { key: 'enrolment', labelEN: 'Enrolment in Service', labelBN: 'চাকরিতে যোগদান', defaultVisible: true },
                 { key: 'promotionPresent', labelEN: 'Promotion in Present Rank', labelBN: 'বর্তমান পদবিতে পদোন্নতি', defaultVisible: true },
-                { key: 'joiningRab', labelEN: 'Joining in RAB', labelBN: 'র‌্যাবে যোগদান', defaultVisible: true },
-                { key: 'rabUnit', labelEN: 'RAB Present Unit', labelBN: 'র‌্যাব বর্তমান ইউনিট', defaultVisible: true },
+                { key: 'joiningRab', labelEN: 'Joining in SRB', labelBN: 'এসআরবিে যোগদান', defaultVisible: true },
+                { key: 'rabUnit', labelEN: 'SRB Present Unit', labelBN: 'এসআরবি বর্তমান ইউনিট', defaultVisible: true },
                 { key: 'motherUnit', labelEN: 'Mother Unit', labelBN: 'মাতৃ ইউনিট', defaultVisible: false },
                 { key: 'location', labelEN: 'Location', labelBN: 'অবস্থান', defaultVisible: false },
             ],
@@ -200,9 +200,9 @@ export class ReportBioDataFullIndividualComponent implements OnInit, OnDestroy {
             ],
         },
         {
-            id: 'previousRab', titleEN: 'Service in RAB', titleBN: 'র‌্যাবে চাকরি', type: 'table',
+            id: 'previousRab', titleEN: 'Service in SRB', titleBN: 'এসআরবিে চাকরি', type: 'table',
             columns: [
-                { key: 'rabUnitName', bnKey: 'rabUnitNameBN', labelEN: 'RAB Unit', labelBN: 'র‌্যাব ইউনিট', kind: 'code', defaultVisible: true },
+                { key: 'rabUnitName', bnKey: 'rabUnitNameBN', labelEN: 'SRB Unit', labelBN: 'এসআরবি ইউনিট', kind: 'code', defaultVisible: true },
                 { key: 'serviceFrom', labelEN: 'From', labelBN: 'হইতে', kind: 'date', defaultVisible: true },
                 { key: 'serviceTo', labelEN: 'To', labelBN: 'পর্যন্ত', kind: 'date', defaultVisible: true },
                 { key: 'appointmentName', bnKey: 'appointmentNameBN', labelEN: 'Appointment', labelBN: 'নিয়োগ', kind: 'code', defaultVisible: true },
@@ -217,7 +217,7 @@ export class ReportBioDataFullIndividualComponent implements OnInit, OnDestroy {
                 { key: 'destinedUnit', bnKey: 'destinedUnitBN', labelEN: 'Destined Unit', labelBN: 'গন্তব্য ইউনিট', kind: 'code', defaultVisible: true },
                 { key: 'reason', bnKey: 'reasonBN', labelEN: 'Reason', labelBN: 'কারণ', kind: 'code', defaultVisible: true },
                 { key: 'dateOfRelease', labelEN: 'Date of Release', labelBN: 'অবমুক্তির তারিখ', kind: 'date', defaultVisible: true },
-                { key: 'dateOfReduce', labelEN: 'Date of Reduce from RAB', labelBN: 'র‌্যাব শক্তি হ্রাসের তারিখ', kind: 'date', defaultVisible: true },
+                { key: 'dateOfReduce', labelEN: 'Date of Reduce from SRB', labelBN: 'এসআরবি শক্তি হ্রাসের তারিখ', kind: 'date', defaultVisible: true },
             ],
         },
         {
@@ -227,7 +227,7 @@ export class ReportBioDataFullIndividualComponent implements OnInit, OnDestroy {
                 { key: 'destinedUnit', bnKey: 'destinedUnitBN', labelEN: 'Destined Unit', labelBN: 'গন্তব্য ইউনিট', kind: 'code', defaultVisible: true },
                 { key: 'reason', bnKey: 'reasonBN', labelEN: 'Reason', labelBN: 'কারণ', kind: 'code', defaultVisible: true },
                 { key: 'dateOfRelease', labelEN: 'Date of Release', labelBN: 'অবমুক্তির তারিখ', kind: 'date', defaultVisible: true },
-                { key: 'dateOfReduce', labelEN: 'Date of Reduce from RAB', labelBN: 'র‌্যাব শক্তি হ্রাসের তারিখ', kind: 'date', defaultVisible: true },
+                { key: 'dateOfReduce', labelEN: 'Date of Reduce from SRB', labelBN: 'এসআরবি শক্তি হ্রাসের তারিখ', kind: 'date', defaultVisible: true },
             ],
         },
         {
@@ -319,7 +319,7 @@ export class ReportBioDataFullIndividualComponent implements OnInit, OnDestroy {
                 { key: 'offenseDate', labelEN: 'Offence Date', labelBN: 'অপরাধের তারিখ', kind: 'date', defaultVisible: true },
                 { key: 'offenseType', bnKey: 'offenseTypeBN', labelEN: 'Offence Type', labelBN: 'অপরাধের ধরণ', kind: 'code', defaultVisible: true },
                 { key: 'briefStatementOfOffence', bnKey: 'briefStatementOfOffenceBN', labelEN: 'Brief Statement', labelBN: 'সংক্ষিপ্ত বিবরণ', kind: 'code', defaultVisible: true },
-                { key: 'punishmentTypeRAB', bnKey: 'punishmentTypeRABBN', labelEN: 'Punishment (RAB)', labelBN: 'শাস্তি (র‌্যাব)', kind: 'code', defaultVisible: true },
+                { key: 'punishmentTypeRAB', bnKey: 'punishmentTypeRABBN', labelEN: 'Punishment (SRB)', labelBN: 'শাস্তি (এসআরবি)', kind: 'code', defaultVisible: true },
                 { key: 'punishmentDate', labelEN: 'Punishment Date', labelBN: 'শাস্তির তারিখ', kind: 'date', defaultVisible: false },
                 { key: 'punishmentTypeMotherOrg', bnKey: 'punishmentTypeMotherOrgBN', labelEN: 'Punishment (Org)', labelBN: 'শাস্তি (সংস্থা)', kind: 'code', defaultVisible: false },
                 { key: 'offenseDetails', labelEN: 'Details', labelBN: 'বিবরণ', kind: 'text', defaultVisible: false },
@@ -517,7 +517,7 @@ export class ReportBioDataFullIndividualComponent implements OnInit, OnDestroy {
         if (!p) return [];
         return [
             { k: this.lx('Personal No', 'ব্যক্তিগত নম্বর'), v: this.personalNoDisplay },
-            { k: this.lx('RAB ID', 'র‌্যাব আইডি'), v: this.displayNum(p.rabId) },
+            { k: this.lx('SRB ID', 'এসআরবি আইডি'), v: this.displayNum(p.rabId) },
         ];
     }
 
@@ -694,7 +694,7 @@ export class ReportBioDataFullIndividualComponent implements OnInit, OnDestroy {
     }
     toggleFilter(): void { this.filterOpen = !this.filterOpen; }
     filterSubtitle(): string {
-        if (this.activeFilterCount === 0) return 'Enter RAB ID, Service ID or NID to begin';
+        if (this.activeFilterCount === 0) return 'Enter SRB ID, Service ID or NID to begin';
         const n = this.isBn ? BanglaNumerals.toBangla(String(this.activeFilterCount)) : String(this.activeFilterCount);
         return n + ' active filter(s)';
     }
@@ -711,7 +711,7 @@ export class ReportBioDataFullIndividualComponent implements OnInit, OnDestroy {
 
     load(): void {
         if (!this.searchRabId.trim() && !this.searchServiceId.trim() && !this.searchNid.trim()) {
-            this.messageService.add({ severity: 'warn', summary: 'Search', detail: 'Enter RAB ID, Service ID or NID.' });
+            this.messageService.add({ severity: 'warn', summary: 'Search', detail: 'Enter SRB ID, Service ID or NID.' });
             return;
         }
         this.loading = true;
@@ -935,7 +935,7 @@ export class ReportBioDataFullIndividualComponent implements OnInit, OnDestroy {
     private documentSourceLabel(row: any): string {
         const src = row?.sourceTable ?? row?.SourceTable ?? '';
         const labels: Record<string, string> = {
-            PersonalInfo: 'Personal Info', EmployeeInfo: 'Employee Info', PreviousRABServiceInfo: 'Previous RAB Service',
+            PersonalInfo: 'Personal Info', EmployeeInfo: 'Employee Info', PreviousRABServiceInfo: 'Previous SRB Service',
             PromotionInfo: 'Promotion', RankConfirmationInfo: 'Rank Confirmation', BankAccInfo: 'Bank Account',
             CourseInfo: 'Course', DisciplineInfo: 'Discipline', EducationInfo: 'Education', ForeignVisitInfo: 'Foreign Visit',
             MedicalInfo: 'Medical', MOServHistory: 'MO Service History', NomineeInfo: 'Nominee',

@@ -160,7 +160,7 @@ export class ReportFamilyOccupationComponent implements OnInit, OnDestroy {
         // plainColumnPropertyMap + adaptDynamicRow legacy renames.
         { key: 'serviceId',          labelEN: 'Service ID',           labelBN: 'সার্ভিস আইডি',       hint: 'Plain',                 defaultVisible: true  },
         { key: 'armyRank',           labelEN: 'Rank',                 labelBN: 'র‍্যাঙ্ক',           hint: 'Plain',                 defaultVisible: true  },
-        { key: 'rabRank',            labelEN: 'RAB Rank',             labelBN: 'র‍্যাব র‍্যাঙ্ক',     hint: 'Plain',                 defaultVisible: false },
+        { key: 'rabRank',            labelEN: 'SRB Rank',             labelBN: 'এসআরবি র‍্যাঙ্ক',     hint: 'Plain',                 defaultVisible: false },
         { key: 'corps',              labelEN: 'Corps',                labelBN: 'কোর',               hint: 'Plain',                 defaultVisible: true  },
         { key: 'trade',              labelEN: 'Trade',                labelBN: 'ট্রেড',             hint: 'Plain',                 defaultVisible: true  },
         // Plain employee name (just the name — no SVC·Rank·Org meta line).
@@ -174,8 +174,8 @@ export class ReportFamilyOccupationComponent implements OnInit, OnDestroy {
         // Name with awards, professional qualification and corps. Opt-in.
         { key: 'callNoRankName',     labelEN: 'No Rank Name',         labelBN: 'নং র‍্যাঙ্ক নাম',    hint: 'CallNoRankName',        defaultVisible: false },
         // Composite: Name + (SVC · Rank · Mother Org) on a secondary line. Opt-in.
-        { key: 'rabPersonnel',       labelEN: 'RAB Personnel',        labelBN: 'র‍্যাব সদস্য',        hint: 'RabPersonnelComposite', defaultVisible: false },
-        { key: 'rabId',              labelEN: 'RAB ID',               labelBN: 'র‍্যাব আইডি',         hint: 'RabId',                 defaultVisible: false },
+        { key: 'rabPersonnel',       labelEN: 'SRB Personnel',        labelBN: 'এসআরবি সদস্য',        hint: 'RabPersonnelComposite', defaultVisible: false },
+        { key: 'rabId',              labelEN: 'SRB ID',               labelBN: 'এসআরবি আইডি',         hint: 'RabId',                 defaultVisible: false },
         { key: 'familyMemberName',   labelEN: 'Family Member Name',   labelBN: 'পরিবারের সদস্যের নাম', hint: 'FamilyName',            defaultVisible: true  },
         { key: 'relation',           labelEN: 'Relation',             labelBN: 'সম্পর্ক',             hint: 'Relation',              defaultVisible: true  },
         { key: 'occupation',         labelEN: 'Occupation',           labelBN: 'পেশা',               hint: 'Occupation',            defaultVisible: true  },
@@ -198,11 +198,11 @@ export class ReportFamilyOccupationComponent implements OnInit, OnDestroy {
         { key: 'gender',             labelEN: 'Gender',               labelBN: 'লিঙ্গ',             hint: 'Plain',                 defaultVisible: false },
         { key: 'motherUnit',         labelEN: 'Last Unit',            labelBN: 'শেষ ইউনিট',         hint: 'Plain',                 defaultVisible: false },
         // Full job hierarchy (Battalion › Wing › Branch › … ). Opt-in; trimmed.
-        { key: 'rabUnitHierarchy',   labelEN: 'RAB Unit',             labelBN: 'র‍্যাব ইউনিট',      hint: 'Plain',                 defaultVisible: false },
+        { key: 'rabUnitHierarchy',   labelEN: 'SRB Unit',             labelBN: 'এসআরবি ইউনিট',      hint: 'Plain',                 defaultVisible: false },
         { key: 'dateOfCommission',   labelEN: 'Commission Date',      labelBN: 'কমিশন তারিখ',        hint: 'Plain',                 defaultVisible: false },
         { key: 'joiningDate',        labelEN: 'Joining Date',         labelBN: 'যোগদান তারিখ',       hint: 'Plain',                 defaultVisible: false },
-        { key: 'rabServiceFrom',     labelEN: 'RAB Joining Date',     labelBN: 'র‍্যাবে যোগদান তারিখ', hint: 'Plain',                defaultVisible: false },
-        { key: 'rabServiceTo',       labelEN: 'RAB End Date',         labelBN: 'র‍্যাব শেষ তারিখ',   hint: 'Plain',                 defaultVisible: false },
+        { key: 'rabServiceFrom',     labelEN: 'SRB Joining Date',     labelBN: 'এসআরবিে যোগদান তারিখ', hint: 'Plain',                defaultVisible: false },
+        { key: 'rabServiceTo',       labelEN: 'SRB End Date',         labelBN: 'এসআরবি শেষ তারিখ',   hint: 'Plain',                 defaultVisible: false },
         // ── Personal extras ──────────────────────────────────────────
         { key: 'dob',                labelEN: 'Date of Birth',        labelBN: 'জন্ম তারিখ',         hint: 'Plain',                 defaultVisible: false },
         { key: 'religion',           labelEN: 'Religion',             labelBN: 'ধর্ম',              hint: 'Plain',                 defaultVisible: false },
@@ -459,7 +459,7 @@ export class ReportFamilyOccupationComponent implements OnInit, OnDestroy {
         multi(this.selectedTradeIds, this.tradeOptions, L['report.search.trade']);
         if (this.selectedOrgNodeIds.length > 0) {
             const names = this.orgNodesLabel(this.lang === 'bn');
-            if (names) items.push({ label: this.lang === 'bn' ? 'র‍্যাব ইউনিট' : 'RAB Unit', value: names });
+            if (names) items.push({ label: this.lang === 'bn' ? 'এসআরবি ইউনিট' : 'SRB Unit', value: names });
         }
         if (this.selectedRelationId != null && this.selectedRelationId > 0) {
             const rel = this.relationOptions.find(o => o.value === this.selectedRelationId);
@@ -486,7 +486,7 @@ export class ReportFamilyOccupationComponent implements OnInit, OnDestroy {
             : "GOVERNMENT OF THE PEOPLE'S REPUBLIC OF BANGLADESH";
     }
     get rabOrgTitle(): string {
-        return this.lang === 'bn' ? 'র‍্যাপিড অ্যাকশন ব্যাটালিয়ন' : 'RAPID ACTION BATTALION';
+        return this.lang === 'bn' ? 'স্পেশাল রেসপন্স ব্যাটালিয়ন' : 'SPECIAL RESPONSE BATTALION';
     }
     get rabOrgSubtitle(): string {
         return this.lang === 'bn'
@@ -566,7 +566,7 @@ export class ReportFamilyOccupationComponent implements OnInit, OnDestroy {
         multi(this.selectedTradeIds, this.tradeOptions, L['report.search.trade']);
         if (this.selectedOrgNodeIds.length > 0) {
             const names = this.orgNodesLabel(this.lang === 'bn');
-            if (names) lines.push(`${this.lang === 'bn' ? 'র‍্যাব ইউনিট' : 'RAB Unit'}: ${names}`);
+            if (names) lines.push(`${this.lang === 'bn' ? 'এসআরবি ইউনিট' : 'SRB Unit'}: ${names}`);
         }
         if (this.selectedRelationId != null) {
             const rel = this.relationOptions.find((o) => o.value === this.selectedRelationId);

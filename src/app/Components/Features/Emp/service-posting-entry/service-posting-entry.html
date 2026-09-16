@@ -22,9 +22,9 @@
                 <i class="pi pi-exclamation-triangle mt-1"></i>
                 <div>
                     @if ((isSupernumerary || isServing) && !hasRabId) {
-                        <div class="font-semibold">RAB ID Not Generated</div>
+                        <div class="font-semibold">SRB ID Not Generated</div>
                         <div class="text-sm">
-                            This member does not have a RAB ID yet. A RAB ID must be generated before a direct
+                            This member does not have a SRB ID yet. A SRB ID must be generated before a direct
                             join or transfer can be saved.
                         </div>
                     } @else if (hasPendingNotesheet) {
@@ -79,7 +79,7 @@
 
                         @if (serviceForm.get('rabUnitCodeId')?.value) {
                         <div class="form-field">
-                            <label class="form-label">RAB Wing</label>
+                            <label class="form-label">SRB Wing</label>
                             <p-select formControlName="rabWingCodeId" [options]="rabWingOptions"
                                 optionLabel="label" optionValue="value" placeholder="Select" styleClass="w-full"
                                 [filter]="true" filterPlaceholder="Search">

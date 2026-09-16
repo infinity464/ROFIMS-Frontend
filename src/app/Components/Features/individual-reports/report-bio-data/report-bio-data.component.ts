@@ -98,7 +98,7 @@ export class ReportBioDataIndividualComponent implements OnInit, OnDestroy {
     showAccessDeniedDialog = false;
     accessDeniedMessage = 'You do not have permission to view this employee. Either they are outside your accessible scope or no longer presently serving.';
     showNotFoundDialog = false;
-    notFoundMessage = 'No member found with the given RAB ID / Service ID / NID.';
+    notFoundMessage = 'No member found with the given SRB ID / Service ID / NID.';
 
     showPickerDialog = false;
     pickerRows: Array<{ employeeId: number; displayName: string; orgName: string; status: string; }> = [];
@@ -242,7 +242,7 @@ export class ReportBioDataIndividualComponent implements OnInit, OnDestroy {
         if (!p) return [];
         return [
             { k: this.lx('Personal No', 'ব্যক্তিগত নম্বর'), v: this.personalNoDisplay },
-            { k: this.lx('RAB ID', 'র‍্যাব আইডি'),          v: this.displayNum(p.rabId) },
+            { k: this.lx('SRB ID', 'এসআরবি আইডি'),          v: this.displayNum(p.rabId) },
         ];
     }
 
@@ -294,8 +294,8 @@ export class ReportBioDataIndividualComponent implements OnInit, OnDestroy {
         { key: 'dateOfCommission',    labelEN: 'Date of Commission',    labelBN: 'কমিশনের তারিখ',          section: 1, kind: 'text', defaultVisible: true },
         { key: 'enrolment',           labelEN: 'Enrolment in Service',  labelBN: 'চাকরিতে যোগদান',         section: 1, kind: 'text', defaultVisible: true },
         { key: 'promotionPresent',    labelEN: 'Promotion in Present Rank', labelBN: 'বর্তমান পদবিতে পদোন্নতি', section: 1, kind: 'text', defaultVisible: true },
-        { key: 'joiningRab',          labelEN: 'Joining in RAB',        labelBN: 'র‍্যাবে যোগদান',         section: 1, kind: 'text', defaultVisible: true },
-        { key: 'rabUnit',             labelEN: 'RAB Present Unit',      labelBN: 'র‍্যাব বর্তমান ইউনিট',   section: 1, kind: 'text', defaultVisible: true },
+        { key: 'joiningRab',          labelEN: 'Joining in SRB',        labelBN: 'এসআরবিে যোগদান',         section: 1, kind: 'text', defaultVisible: true },
+        { key: 'rabUnit',             labelEN: 'SRB Present Unit',      labelBN: 'এসআরবি বর্তমান ইউনিট',   section: 1, kind: 'text', defaultVisible: true },
         { key: 'joiningPresentUnit',  labelEN: 'Joining in Present Unit', labelBN: 'বর্তমান ইউনিটে যোগদান', section: 1, kind: 'text', defaultVisible: true },
         { key: 'appointment',         labelEN: 'Appointment',           labelBN: 'নিয়োগ',                 section: 1, kind: 'text', defaultVisible: false },
         { key: 'memberType',          labelEN: 'Member Type',           labelBN: 'সদস্যের ধরন',            section: 1, kind: 'text', defaultVisible: false },
@@ -330,7 +330,7 @@ export class ReportBioDataIndividualComponent implements OnInit, OnDestroy {
         // 04 — RAB Experience & Training
         { key: 'orientation',         labelEN: 'Orientation Training',  labelBN: 'ওরিয়েন্টেশন প্রশিক্ষণ', section: 4, kind: 'orientation', defaultVisible: true },
         { key: 'punishment',          labelEN: 'Punishment Details',    labelBN: 'শাস্তির বিবরণ',          section: 4, kind: 'punishment', defaultVisible: true },
-        { key: 'prevService',         labelEN: 'Service in RAB',        labelBN: 'র‍্যাবে চাকরি',          section: 4, span: 2, kind: 'text', defaultVisible: true },
+        { key: 'prevService',         labelEN: 'Service in SRB',        labelBN: 'এসআরবিে চাকরি',          section: 4, span: 2, kind: 'text', defaultVisible: true },
         { key: 'specialTraining',     labelEN: 'Special Training',      labelBN: 'বিশেষ প্রশিক্ষণ',        section: 4, span: 2, kind: 'chips', defaultVisible: true },
     ];
 
@@ -480,10 +480,10 @@ export class ReportBioDataIndividualComponent implements OnInit, OnDestroy {
     get secService(): string { return this.lx('Service & Posting', 'চাকরি ও পদায়ন'); }
     get secPersonal(): string { return this.lx('Personal Information', 'ব্যক্তিগত তথ্য'); }
     get secDistrict(): string { return this.lx('District & Family', 'জেলা ও পরিবার'); }
-    get secRabExp(): string { return this.lx('RAB Experience & Training', 'র‍্যাব অভিজ্ঞতা ও প্রশিক্ষণ'); }
+    get secRabExp(): string { return this.lx('SRB Experience & Training', 'এসআরবি অভিজ্ঞতা ও প্রশিক্ষণ'); }
     get lblOrientation(): string { return this.lx('Orientation Training', 'ওরিয়েন্টেশন প্রশিক্ষণ'); }
     get lblPunishment(): string { return this.lx('Punishment Details', 'শাস্তির বিবরণ'); }
-    get lblPrevService(): string { return this.lx('Service in RAB', 'র‍্যাবে চাকরি'); }
+    get lblPrevService(): string { return this.lx('Service in SRB', 'এসআরবিে চাকরি'); }
     get lblSpecialTraining(): string { return this.lx('Special Training', 'বিশেষ প্রশিক্ষণ'); }
 
     // ── Search / lookup ────────────────────────────────────────────────
@@ -496,7 +496,7 @@ export class ReportBioDataIndividualComponent implements OnInit, OnDestroy {
     }
     toggleFilter(): void { this.filterOpen = !this.filterOpen; }
     filterSubtitle(): string {
-        if (this.activeFilterCount === 0) return 'Enter RAB ID, Service ID or NID to begin';
+        if (this.activeFilterCount === 0) return 'Enter SRB ID, Service ID or NID to begin';
         const n = this.isBn ? BanglaNumerals.toBangla(String(this.activeFilterCount)) : String(this.activeFilterCount);
         return n + ' active filter(s)';
     }
@@ -513,7 +513,7 @@ export class ReportBioDataIndividualComponent implements OnInit, OnDestroy {
 
     load(): void {
         if (!this.searchRabId.trim() && !this.searchServiceId.trim() && !this.searchNid.trim()) {
-            this.messageService.add({ severity: 'warn', summary: 'Search', detail: 'Enter RAB ID, Service ID or NID.' });
+            this.messageService.add({ severity: 'warn', summary: 'Search', detail: 'Enter SRB ID, Service ID or NID.' });
             return;
         }
         this.loading = true;

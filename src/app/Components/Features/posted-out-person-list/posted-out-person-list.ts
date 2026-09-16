@@ -222,7 +222,7 @@ export class PostedOutPersonListComponent implements OnInit {
     private buildExportData(records: PermanentPostingMORecordModel[]): { columns: string[]; rows: string[][] } {
         const columns = [
             '#', 'Service ID', 'Rank', 'Corps', 'Trade', 'Name',
-            'RAB ID', 'Posting Unit', 'Is Reliever Assigned?',
+            'SRB ID', 'Posting Unit', 'Is Reliever Assigned?',
         ];
         const rows = records.map((r, i) => [
             String(i + 1),

@@ -169,7 +169,7 @@ export class MovementInfoComponent implements OnInit {
     ];
     destinedUnitOptions = [
         { label: 'Mother Unit', value: 'mother' },
-        { label: 'RAB Unit', value: 'rab' }
+        { label: 'SRB Unit', value: 'rab' }
     ];
 
     readonly MovementType = MovementType;
@@ -654,7 +654,7 @@ export class MovementInfoComponent implements OnInit {
         const appointment = (this.selectedEmployees[0]?.appointmentBn ?? '').trim();
         const role = appointment ? `${appointment} হিসেবে ` : '';
 
-        return `বেসামরিক হিসাব পদ্ধতির ৪৭ নং অনুচ্ছেদের বিধি অনুযায়ী আমি নিম্নস্বাক্ষরকারী এই মর্মে বিবরণ দিচ্ছি যে, অদ্য ${dateBn} তারিখ (${timeOfDay}) র‍্যাব ফোর্সেস সদর দপ্তর, কুর্মিটোলা, ঢাকায় ${role}কার্যভার গ্রহণ করিলাম।`;
+        return `বেসামরিক হিসাব পদ্ধতির ৪৭ নং অনুচ্ছেদের বিধি অনুযায়ী আমি নিম্নস্বাক্ষরকারী এই মর্মে বিবরণ দিচ্ছি যে, অদ্য ${dateBn} তারিখ (${timeOfDay}) এসআরবি ফোর্সেস সদর দপ্তর, কুর্মিটোলা, ঢাকায় ${role}কার্যভার গ্রহণ করিলাম।`;
     }
 
     /** Shared date + time-of-day for both Article 47 declarations. */
@@ -826,7 +826,7 @@ export class MovementInfoComponent implements OnInit {
                         // Rank Name (Appointment) | SVC | RAB
                         let head = [rank, name].filter(Boolean).join(' ');
                         if (appointment) head = head ? `${head} (${appointment})` : `(${appointment})`;
-                        const parts = [head, serviceId ? `SVC: ${serviceId}` : '', rabId ? `RAB: ${rabId}` : ''].filter(Boolean);
+                        const parts = [head, serviceId ? `SVC: ${serviceId}` : '', rabId ? `SRB: ${rabId}` : ''].filter(Boolean);
                         return {
                             label: parts.join(' | ') || `Employee #${empId}`,
                             value: empId as number
@@ -1486,7 +1486,7 @@ export class MovementInfoComponent implements OnInit {
         if (isDirectPermanentRabMove) {
             this.confirmationService.confirm({
                 header: 'Service History Will Be Updated',
-                message: 'Saving this Permanent movement will immediately update the RAB Service History.',
+                message: 'Saving this Permanent movement will immediately update the SRB Service History.',
                 icon: 'pi pi-exclamation-triangle',
                 acceptButtonProps: { label: 'Yes, Save', severity: 'success' },
                 rejectButtonProps: { label: 'Cancel', severity: 'secondary', outlined: true },

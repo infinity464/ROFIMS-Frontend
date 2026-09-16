@@ -52,7 +52,7 @@
                     </p-multiSelect>
                 </div>
                 <div class="report-filter-field">
-                    <label>RAB Unit</label>
+                    <label>SRB Unit</label>
                     <app-org-tree-multi-select [(ngModel)]="selectedOrgNodeIds" placeholder="Select units, wings, branches…"></app-org-tree-multi-select>
                 </div>
             </div>
@@ -140,7 +140,7 @@
                 [(ngModel)]="idSearchText"
                 (ngModelChange)="onIdSearchInput()"
                 (keydown.enter)="onIdSearch()"
-                [placeholder]="lang === 'bn' ? 'সার্ভিস আইডি / র‍্যাব আইডি' : 'Service ID / RAB ID'" />
+                [placeholder]="lang === 'bn' ? 'সার্ভিস আইডি / এসআরবি আইডি' : 'Service ID / SRB ID'" />
             @if (idSearchText) {
                 <button type="button" class="rab-search-clear" (click)="clearIdSearch()" title="Clear search">
                     <i class="pi pi-times"></i>

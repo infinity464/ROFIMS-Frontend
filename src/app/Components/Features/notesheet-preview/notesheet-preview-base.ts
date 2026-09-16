@@ -509,7 +509,7 @@ export abstract class NotesheetPreviewBase implements OnInit {
 
     /** Returns the organizational header lines for the notesheet (inside the bordered box, centered). */
     getOrgHeaderLine1(): string {
-        return this.isEnglish() ? 'RAB Forces Headquarters' : 'র‍্যাব ফোর্সেস সদর দপ্তর';
+        return this.isEnglish() ? 'SRB Forces Headquarters' : 'এসআরবি ফোর্সেস সদর দপ্তর';
     }
     getOrgHeaderLine2(): string {
         return this.isEnglish() ? 'Administration & Finance Wing (Personnel Branch)' : 'প্রশাসন ও অর্থ উইং (পার্সোনেল শাখা)';

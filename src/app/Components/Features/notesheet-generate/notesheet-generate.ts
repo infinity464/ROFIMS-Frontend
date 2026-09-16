@@ -106,7 +106,7 @@ export interface MembersJsonData {
 export const AVAILABLE_MEMBER_COLUMNS: MemberColumnDef[] = [
     // Basic Info
     { key: 'serviceId', label: 'Service ID', group: 'basic' },
-    { key: 'rabId', label: 'RAB ID', group: 'basic' },
+    { key: 'rabId', label: 'SRB ID', group: 'basic' },
     { key: 'nameEnglish', label: 'Name (EN)', group: 'basic' },
     { key: 'nameBN', label: 'Name (BN)', group: 'basic' },
     // Composite name as shown at the top of the member profile: Name, Award, Qualification, Corps.
@@ -126,17 +126,17 @@ export const AVAILABLE_MEMBER_COLUMNS: MemberColumnDef[] = [
     { key: 'memberTypeBN', label: 'Member Type (BN)', group: 'basic' },
     { key: 'appointment', label: 'Appointment (EN)', group: 'basic' },
     { key: 'appointmentBN', label: 'Appointment (BN)', group: 'basic' },
-    { key: 'joiningDate', label: 'Joining Date in RAB', group: 'basic' },
+    { key: 'joiningDate', label: 'Joining Date in SRB', group: 'basic' },
     { key: 'gender', label: 'Gender (EN)', group: 'basic' },
     { key: 'genderBN', label: 'Gender (BN)', group: 'basic' },
     { key: 'batch', label: 'Batch (EN)', group: 'basic' },
     { key: 'batchBN', label: 'Batch (BN)', group: 'basic' },
-    { key: 'rabUnit', label: 'RAB Unit (EN)', group: 'basic' },
-    { key: 'rabUnitBN', label: 'RAB Unit (BN)', group: 'basic' },
+    { key: 'rabUnit', label: 'SRB Unit (EN)', group: 'basic' },
+    { key: 'rabUnitBN', label: 'SRB Unit (BN)', group: 'basic' },
     // Full present-posting hierarchy path (Unit > Wing > Branch > Sub-branch > Section > Sub-section)
     // from the currently-active Previous RAB Service row.
-    { key: 'presentRabUnit', label: 'Present RAB Unit — Full (EN)', group: 'basic' },
-    { key: 'presentRabUnitBN', label: 'Present RAB Unit — Full (BN)', group: 'basic' },
+    { key: 'presentRabUnit', label: 'Present SRB Unit — Full (EN)', group: 'basic' },
+    { key: 'presentRabUnitBN', label: 'Present SRB Unit — Full (BN)', group: 'basic' },
     // Posted-out Posting Unit (mother-org transfer destination) — populated for clearance-subject members.
     { key: 'postingUnit', label: 'Posting Unit (EN)', group: 'basic' },
     { key: 'postingUnitBN', label: 'Posting Unit (BN)', group: 'basic' },
@@ -877,7 +877,7 @@ export class NotesheetGenerateComponent implements OnInit {
                     const name = e.nameEnglish || e.NameEnglish || '';
                     const rabId = e.rabId || e.RabId || '';
                     const serviceId = e.serviceId || e.ServiceId || '';
-                    const parts = [name, rabId ? `RAB: ${rabId}` : '', serviceId ? `SVC: ${serviceId}` : ''].filter(Boolean);
+                    const parts = [name, rabId ? `SRB: ${rabId}` : '', serviceId ? `SVC: ${serviceId}` : ''].filter(Boolean);
                     return {
                         label: parts.join(' | ') || `ID ${e.employeeID ?? e.EmployeeID}`,
                         labelBn: e.nameBN || e.NameBN || null,
@@ -904,7 +904,7 @@ export class NotesheetGenerateComponent implements OnInit {
                             const name = emp?.FullNameEN || emp?.fullNameEN || '';
                             const rabId = emp?.RABID || emp?.rabid || emp?.Rabid || '';
                             const serviceId = emp?.ServiceId || emp?.serviceId || '';
-                            const parts = [name, rabId ? `RAB: ${rabId}` : '', serviceId ? `SVC: ${serviceId}` : ''].filter(Boolean);
+                            const parts = [name, rabId ? `SRB: ${rabId}` : '', serviceId ? `SVC: ${serviceId}` : ''].filter(Boolean);
                             this.form.get('preparedBy')?.setValue(parts.join(' | ') || `Employee #${empId}`);
                         }
                     });
@@ -1382,7 +1382,7 @@ export class NotesheetGenerateComponent implements OnInit {
             { key: bn ? 'prefixWithServiceIdBN' : 'prefixWithServiceId', label: lbl('Prefix & Service ID', 'ব্যক্তিগত নম্বর'), group: 'basic' },
             { key: bn ? 'armyRankBN' : 'armyRank', label: lbl('Rank', 'পদবি'), group: 'basic' },
             { key: bn ? 'formattedNameBN' : 'formattedName', label: lbl('Name', 'নাম'), group: 'basic' },
-            { key: bn ? 'presentRabUnitBN' : 'presentRabUnit', label: lbl('Present RAB Unit', 'বর্তমান র‍্যাব ইউনিট'), group: 'basic' }
+            { key: bn ? 'presentRabUnitBN' : 'presentRabUnit', label: lbl('Present SRB Unit', 'বর্তমান এসআরবি ইউনিট'), group: 'basic' }
         ];
         // Clearance subjects: show the posted-out destination (mother-org transfer / Posting Unit).
         if (this.isClearanceSubjectSelected) {

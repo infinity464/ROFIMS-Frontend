@@ -368,7 +368,7 @@ export class NotesheetPreviewArticle47HandoverComponent implements OnInit {
             if (labels?.en) return labels.en;
         }
         const rabUnit = (ovw?.rabUnit ?? ovw?.RabUnit ?? '') as string;
-        return rabUnit || 'র‍্যাব ফোর্সেস সদর দপ্তর';
+        return rabUnit || 'এসআরবি ফোর্সেস সদর দপ্তর';
     }
 
     private unitLocationBn(ovw: any, hqBn: string, hqEn: string): string {

@@ -850,7 +850,7 @@ export class ExportService {
         if (config.rabLetterhead) {
             const isBn = config.lang === 'bn';
             const overline = isBn ? 'গণপ্রজাতন্ত্রী বাংলাদেশ সরকার' : "GOVERNMENT OF THE PEOPLE'S REPUBLIC OF BANGLADESH";
-            const orgTitle = isBn ? 'র‍্যাপিড অ্যাকশন ব্যাটালিয়ন' : 'RAPID ACTION BATTALION';
+            const orgTitle = isBn ? 'স্পেশাল রেসপন্স ব্যাটালিয়ন' : 'SPECIAL RESPONSE BATTALION';
             const orgSubtitle = isBn ? 'বাংলাদেশ পুলিশ · সদর দপ্তর, কুর্মিটোলা, ঢাকা' : 'Bangladesh Police · Headquarters, Kurmitola, Dhaka';
             const criteriaTitle = isBn ? 'নির্বাচন মানদণ্ড' : 'SELECTION CRITERIA';
             const generatedLabel = isBn ? 'তারিখ' : 'GENERATED';

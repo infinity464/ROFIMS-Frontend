@@ -47,7 +47,7 @@ export class IndividualReportsComponent implements OnInit {
         { label: 'Education Report',                         value: 'education' },
         { label: 'Address Info Report',                      value: 'address' },
         { label: 'Nominee Information Report',               value: 'nominee' },
-        { label: 'Service History in RAB',                   value: 'rab-service' },
+        { label: 'Service History in SRB',                   value: 'rab-service' },
         { label: 'Service History in Mother Organization',   value: 'mo-service' },
         { label: 'Promotion History',                        value: 'promotion' },
         { label: 'Rank Confirmation Report',                 value: 'rank-confirmation' },

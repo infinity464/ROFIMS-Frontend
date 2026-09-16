@@ -480,7 +480,7 @@ export class NotesheetPreviewMOComponent implements OnInit {
             if (labels?.bn) return labels.bn;
             if (labels?.en) return labels.en;
         }
-        return (o?.rabUnit ?? o?.RabUnit ?? 'র‍্যাব ফোর্সেস সদর দপ্তর') as string;
+        return (o?.rabUnit ?? o?.RabUnit ?? 'এসআরবি ফোর্সেস সদর দপ্তর') as string;
     }
 
     /** Bottom block — Battalion HQ location. */

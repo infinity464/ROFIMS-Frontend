@@ -183,7 +183,7 @@
                             <th>Rank</th>
                             <th>Name</th>
                             <th>Mother Org</th>
-                            <th>RAB ID</th>
+                            <th>SRB ID</th>
                             <th>Remarks</th>
                             <th style="width: 60px"></th>
                         </tr>
@@ -254,7 +254,7 @@
                             [dropdown]="false"
                             [forceSelection]="true"
                             dataKey="employeeID"
-                            placeholder="Search by name, Service ID, or RAB ID…"
+                            placeholder="Search by name, Service ID, or SRB ID…"
                             styleClass="w-full"
                             [inputStyle]="{ width: '100%', paddingLeft: '2.5rem' }"
                             [showEmptyMessage]="true"
@@ -264,7 +264,7 @@
                                     {{ getVal(row, 'rank', 'Rank') }} {{ getVal(row, 'fullNameEN', 'FullNameEN') }}
                                     | Svc : {{ getVal(row, 'serviceId', 'ServiceId') }}
                                     @if (getVal(row, 'rabid', 'rabId', 'rabID', 'RABID')) {
-                                        | RAB ID : {{ getVal(row, 'rabid', 'rabId', 'rabID', 'RABID') }}
+                                        | SRB ID : {{ getVal(row, 'rabid', 'rabId', 'rabID', 'RABID') }}
                                     }
                                 </span>
                             </ng-template>
@@ -280,7 +280,7 @@
                                 <div class="rounded-md border border-surface p-2 flex items-center gap-3 bg-surface-0 dark:bg-surface-900">
                                     <div class="flex-1 min-w-0">
                                         <div class="font-medium">{{ getVal(r, 'rank', 'Rank') }} {{ getVal(r, 'fullNameEN', 'FullNameEN') }}</div>
-                                        <div class="text-color-secondary text-sm">Svc {{ getVal(r, 'serviceId', 'ServiceId') }} · RAB {{ getVal(r, 'rabid', 'rabId', 'rabID', 'RABID') }}</div>
+                                        <div class="text-color-secondary text-sm">Svc {{ getVal(r, 'serviceId', 'ServiceId') }} · SRB {{ getVal(r, 'rabid', 'rabId', 'rabID', 'RABID') }}</div>
                                     </div>
                                     <p-button icon="pi pi-times" [rounded]="true" [text]="true" severity="danger" size="small"
                                         pTooltip="Remove" (onClick)="removeAddToDraftEmployee(r)"></p-button>

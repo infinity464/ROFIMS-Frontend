@@ -130,7 +130,7 @@ export class Article47TakeoverBulkComponent implements OnInit {
     ];
     destinedUnitOptions = [
         { label: 'Mother Unit', value: 'mother' },
-        { label: 'RAB Unit', value: 'rab' }
+        { label: 'SRB Unit', value: 'rab' }
     ];
 
     // Add Reason dialog state
@@ -276,7 +276,7 @@ export class Article47TakeoverBulkComponent implements OnInit {
                         const name = m.employeeName ?? m.EmployeeName ?? '';
                         const rabId = m.rabID ?? m.RABID ?? '';
                         const serviceId = m.serviceId ?? m.ServiceId ?? '';
-                        const parts = [name, rabId ? `RAB: ${rabId}` : '', serviceId ? `SVC: ${serviceId}` : ''].filter(Boolean);
+                        const parts = [name, rabId ? `SRB: ${rabId}` : '', serviceId ? `SVC: ${serviceId}` : ''].filter(Boolean);
                         return {
                             label: parts.join(' | ') || `Employee #${empId}`,
                             value: empId as number
@@ -582,7 +582,7 @@ export class Article47TakeoverBulkComponent implements OnInit {
         const timeOfDay = now.getHours() < 12 ? 'পূর্বাহ্নে' : 'অপরাহ্ণে';
         const appt = (appointment ?? '').trim();
         const role = appt ? `${appt} হিসেবে ` : '';
-        return `বেসামরিক হিসাব পদ্ধতির ৪৭ নং অনুচ্ছেদের বিধি অনুযায়ী আমি নিম্নস্বাক্ষরকারী এই মর্মে বিবরণ দিচ্ছি যে, অদ্য ${dateBn} তারিখ (${timeOfDay}) র‍্যাব ফোর্সেস সদর দপ্তর, কুর্মিটোলা, ঢাকায় ${role}কার্যভার গ্রহণ করিলাম।`;
+        return `বেসামরিক হিসাব পদ্ধতির ৪৭ নং অনুচ্ছেদের বিধি অনুযায়ী আমি নিম্নস্বাক্ষরকারী এই মর্মে বিবরণ দিচ্ছি যে, অদ্য ${dateBn} তারিখ (${timeOfDay}) এসআরবি ফোর্সেস সদর দপ্তর, কুর্মিটোলা, ঢাকায় ${role}কার্যভার গ্রহণ করিলাম।`;
     }
 
     /** Formats a date as Bengali "dd MonthName yyyy" with Bengali digits. */

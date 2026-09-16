@@ -78,7 +78,7 @@ export class ReportLongStayNominalRollComponent implements OnInit, OnDestroy {
      */
     seniorityOptions: { label: string; value: NominalRollSeniority }[] = [
         { label: 'Organization Seniority', value: 'OrganizationSeniority' },
-        { label: 'RAB Rank Seniority',     value: 'RankSeniority' },
+        { label: 'SRB Rank Seniority',     value: 'RankSeniority' },
     ];
     selectedSeniority: NominalRollSeniority = 'OrganizationSeniority';
     unitOptions: { label: string; value: 'Years' | 'Months' }[] = [
@@ -147,7 +147,7 @@ export class ReportLongStayNominalRollComponent implements OnInit, OnDestroy {
         // Name with awards, professional qualification and corps. Opt-in.
         { key: 'callNoRankName',     labelEN: 'No Rank Name',       labelBN: 'নং র‍্যাঙ্ক নাম',         hint: 'CallNoRankName', defaultVisible: false },
         { key: 'motherUnit',         labelEN: 'Mother Unit',        labelBN: 'মাতৃ ইউনিট',             hint: 'Plain',     defaultVisible: false },
-        { key: 'joiningInRab',       labelEN: 'RAB Joining Date',   labelBN: 'র‍্যাবে যোগদানের তারিখ',  hint: 'Date',      defaultVisible: true  },
+        { key: 'joiningInRab',       labelEN: 'SRB Joining Date',   labelBN: 'এসআরবিে যোগদানের তারিখ',  hint: 'Date',      defaultVisible: true  },
         { key: 'durationOfStay',     labelEN: 'Duration of Stay',   labelBN: 'অবস্থানের মেয়াদকাল',     hint: 'Duration',  defaultVisible: true  },
         { key: 'presentUnit',        labelEN: 'Battalion',          labelBN: 'ব্যাটালিয়ন',             hint: 'Plain',     defaultVisible: true  },
         { key: 'postedOutUnit',      labelEN: 'Posted-out Unit',    labelBN: 'বদলিকৃত ইউনিট',          hint: 'Plain',     defaultVisible: true  },
@@ -162,9 +162,9 @@ export class ReportLongStayNominalRollComponent implements OnInit, OnDestroy {
         { key: 'relieverTrade',      labelEN: 'Reliever Trade',     labelBN: 'প্রতিস্থাপক ট্রেড',       hint: 'Plain',     defaultVisible: false },
         { key: 'possibleJoiningDate',labelEN: 'Possible Joining Date',labelBN: 'সম্ভাব্য যোগদানের তারিখ', hint: 'Date',    defaultVisible: false },
         { key: 'corps',              labelEN: 'Corps',              labelBN: 'কোর',                    hint: 'Plain',     defaultVisible: true  },
-        { key: 'rabRank',            labelEN: 'RAB Rank',           labelBN: 'র‍্যাব র‍্যাঙ্ক',         hint: 'Plain',     defaultVisible: false },
+        { key: 'rabRank',            labelEN: 'SRB Rank',           labelBN: 'এসআরবি র‍্যাঙ্ক',         hint: 'Plain',     defaultVisible: false },
         { key: 'trade',              labelEN: 'Trade',              labelBN: 'ট্রেড',                  hint: 'Plain',     defaultVisible: true  },
-        { key: 'rabId',              labelEN: 'RAB ID',             labelBN: 'র‍্যাব আইডি',            hint: 'Plain',     defaultVisible: false },
+        { key: 'rabId',              labelEN: 'SRB ID',             labelBN: 'এসআরবি আইডি',            hint: 'Plain',     defaultVisible: false },
         { key: 'nameBangla',         labelEN: 'Name (Bangla)',      labelBN: 'নাম (বাংলা)',            hint: 'Plain',     defaultVisible: false },
         { key: 'nid',                labelEN: 'NID',                labelBN: 'এনআইডি',                hint: 'Plain',     defaultVisible: false },
         { key: 'prefix',             labelEN: 'Prefix',             labelBN: 'প্রিফিক্স',              hint: 'Plain',     defaultVisible: false },
@@ -173,10 +173,10 @@ export class ReportLongStayNominalRollComponent implements OnInit, OnDestroy {
         { key: 'motherOrganization', labelEN: 'Mother Org',         labelBN: 'মাতৃ সংস্থা',            hint: 'Plain',     defaultVisible: false },
         { key: 'gender',             labelEN: 'Gender',             labelBN: 'লিঙ্গ',                  hint: 'Plain',     defaultVisible: false },
         // Trimmed job hierarchy (first two levels + deepest). Opt-in.
-        { key: 'rabUnitHierarchy',   labelEN: 'RAB Unit',           labelBN: 'র‍্যাব ইউনিট',           hint: 'Plain',     defaultVisible: false },
+        { key: 'rabUnitHierarchy',   labelEN: 'SRB Unit',           labelBN: 'এসআরবি ইউনিট',           hint: 'Plain',     defaultVisible: false },
         { key: 'dateOfCommission',   labelEN: 'Commission Date',    labelBN: 'কমিশন তারিখ',            hint: 'Date',      defaultVisible: false },
-        { key: 'rabServiceFrom',     labelEN: 'RAB Service From',   labelBN: 'র‍্যাব স্থিতিকাল হইতে',   hint: 'Date',      defaultVisible: false },
-        { key: 'rabServiceTo',       labelEN: 'RAB Service To',     labelBN: 'র‍্যাব স্থিতিকাল পর্যন্ত', hint: 'Date',     defaultVisible: false },
+        { key: 'rabServiceFrom',     labelEN: 'SRB Service From',   labelBN: 'এসআরবি স্থিতিকাল হইতে',   hint: 'Date',      defaultVisible: false },
+        { key: 'rabServiceTo',       labelEN: 'SRB Service To',     labelBN: 'এসআরবি স্থিতিকাল পর্যন্ত', hint: 'Date',     defaultVisible: false },
         { key: 'postingStatus',      labelEN: 'Posting Status',     labelBN: 'নিয়োগ অবস্থা',          hint: 'Plain',     defaultVisible: false },
         { key: 'officerType',        labelEN: 'Officer Type',       labelBN: 'অফিসার ধরণ',             hint: 'Plain',     defaultVisible: false },
         { key: 'dob',                labelEN: 'Date of Birth',      labelBN: 'জন্ম তারিখ',             hint: 'Date',      defaultVisible: false },
@@ -578,14 +578,14 @@ export class ReportLongStayNominalRollComponent implements OnInit, OnDestroy {
         }
         if (this.selectedRabRankId != null) {
             const opt = this.rabRankOptions.find(o => o.value === this.selectedRabRankId);
-            const rrLbl = this.lang === 'en' ? 'RAB Rank' : 'র‍্যাব পদবি';
+            const rrLbl = this.lang === 'en' ? 'SRB Rank' : 'এসআরবি পদবি';
             if (opt) items.push({ label: rrLbl, value: this.lang === 'bn' ? opt.labelBn : opt.label });
         }
         multi(this.selectedCorpsIds, this.corpsOptions, 'Corps', 'কোর');
         multi(this.selectedTradeIds, this.tradeOptions, 'Trade', 'ট্রেড');
         if (this.selectedOrgNodeIds.length > 0) {
             const names = this.orgNodesLabel(this.lang === 'bn');
-            if (names) items.push({ label: this.lang === 'bn' ? 'র‍্যাব ইউনিট' : 'RAB Unit', value: names });
+            if (names) items.push({ label: this.lang === 'bn' ? 'এসআরবি ইউনিট' : 'SRB Unit', value: names });
         }
         return items;
     }
@@ -766,14 +766,14 @@ export class ReportLongStayNominalRollComponent implements OnInit, OnDestroy {
         const n = this.minDuration;
         if (this.lang === 'en') {
             const noun = this.unit === 'Years' ? (n === 1 ? 'Year' : 'Years') : (n === 1 ? 'Month' : 'Months');
-            return `Nominal Roll of Stay in RAB Above ${n} ${noun}`;
+            return `Nominal Roll of Stay in SRB Above ${n} ${noun}`;
         }
         const bnNoun = this.unit === 'Years' ? 'বছর' : 'মাস';
-        return `র‍্যাবে ${BanglaNumerals.toBangla(String(n))} ${bnNoun}ের অধিক অবস্থানরত সদস্যের নামীয় তালিকা`;
+        return `এসআরবিে ${BanglaNumerals.toBangla(String(n))} ${bnNoun}ের অধিক অবস্থানরত সদস্যের নামীয় তালিকা`;
     }
 
     get rabOverlineText(): string { return this.lang === 'bn' ? 'গণপ্রজাতন্ত্রী বাংলাদেশ সরকার' : "GOVERNMENT OF THE PEOPLE'S REPUBLIC OF BANGLADESH"; }
-    get rabOrgTitle(): string { return this.lang === 'bn' ? 'র‍্যাপিড অ্যাকশন ব্যাটালিয়ন' : 'RAPID ACTION BATTALION'; }
+    get rabOrgTitle(): string { return this.lang === 'bn' ? 'স্পেশাল রেসপন্স ব্যাটালিয়ন' : 'SPECIAL RESPONSE BATTALION'; }
     get rabOrgSubtitle(): string { return this.lang === 'bn' ? 'বাংলাদেশ পুলিশ · সদর দপ্তর, কুর্মিটোলা, ঢাকা' : 'Bangladesh Police · Headquarters, Kurmitola, Dhaka'; }
     get rabSectionTitle(): string { return this.reportTitle; }
     get rabCriteriaTitle(): string { return this.lang === 'bn' ? 'নির্বাচন মানদণ্ড' : 'SELECTION CRITERIA'; }

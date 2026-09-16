@@ -409,7 +409,7 @@ export class ClearanceExBdLeavePreviewComponent implements OnInit {
         const headerLines = [
             "Government of the People's Republic of Bangladesh",
             'Bangladesh Police',
-            'Rapid Action Battalion Forces Headquarters',
+            'Special Response Battalion Forces Headquarters',
             'Kurmitola, Dhaka.'
         ];
         for (const line of headerLines) {

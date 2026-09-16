@@ -109,7 +109,7 @@ export class ReportJoiningLeaveComponent implements OnInit, OnDestroy {
         { key: 'ser', labelEN: 'Ser', labelBN: 'ক্রমিক', hint: 'Serial', defaultVisible: true },
         { key: 'serviceId', labelEN: 'Service ID', labelBN: 'ব্যক্তিগত নম্বর', hint: 'Plain', defaultVisible: true },
         { key: 'rank', labelEN: 'Rank', labelBN: 'পদবি', hint: 'Plain', defaultVisible: true },
-        { key: 'rabRank', labelEN: 'RAB Rank', labelBN: 'র‍্যাব র‍্যাঙ্ক', hint: 'Plain', defaultVisible: false },
+        { key: 'rabRank', labelEN: 'SRB Rank', labelBN: 'এসআরবি র‍্যাঙ্ক', hint: 'Plain', defaultVisible: false },
         { key: 'corps', labelEN: 'Corps', labelBN: 'কোর', hint: 'Plain', defaultVisible: true },
         { key: 'trade', labelEN: 'Trade', labelBN: 'ট্রেড', hint: 'Plain', defaultVisible: true },
         { key: 'name', labelEN: 'Name', labelBN: 'নাম', hint: 'Plain', defaultVisible: true },
@@ -128,7 +128,7 @@ export class ReportJoiningLeaveComponent implements OnInit, OnDestroy {
         { key: 'leaveDuration', labelEN: 'Leave Duration', labelBN: 'ছুটির মেয়াদকাল', hint: 'Plain', defaultVisible: true },
         { key: 'rmks', labelEN: 'Remark', labelBN: 'মন্তব্য', hint: 'Remarks', defaultVisible: true },
         // ── Opt-in extras (registry FieldKeys) — hidden by default ────────
-        { key: 'rabId', labelEN: 'RAB ID', labelBN: 'র‍্যাব আইডি', hint: 'Plain', defaultVisible: false },
+        { key: 'rabId', labelEN: 'SRB ID', labelBN: 'এসআরবি আইডি', hint: 'Plain', defaultVisible: false },
         { key: 'nameBangla', labelEN: 'Name (Bangla)', labelBN: 'নাম (বাংলা)', hint: 'Plain', defaultVisible: false },
         { key: 'nid', labelEN: 'NID', labelBN: 'এনআইডি', hint: 'Plain', defaultVisible: false },
         { key: 'prefix', labelEN: 'Prefix', labelBN: 'প্রিফিক্স', hint: 'Plain', defaultVisible: false },
@@ -138,9 +138,9 @@ export class ReportJoiningLeaveComponent implements OnInit, OnDestroy {
         { key: 'motherUnit', labelEN: 'Mother Unit', labelBN: 'মাতৃ ইউনিট', hint: 'Plain', defaultVisible: false },
         { key: 'gender', labelEN: 'Gender', labelBN: 'লিঙ্গ', hint: 'Plain', defaultVisible: false },
         // Trimmed job hierarchy (Battalion, Wing … deepest level — first two + last). Opt-in.
-        { key: 'rabUnitHierarchy', labelEN: 'RAB Unit', labelBN: 'র‍্যাব ইউনিট', hint: 'Plain', defaultVisible: false },
+        { key: 'rabUnitHierarchy', labelEN: 'SRB Unit', labelBN: 'এসআরবি ইউনিট', hint: 'Plain', defaultVisible: false },
         { key: 'officerType', labelEN: 'Officer Type', labelBN: 'অফিসার ধরণ', hint: 'Plain', defaultVisible: false },
-        { key: 'joiningInRab', labelEN: 'RAB Joining Date', labelBN: 'র‍্যাবে যোগদানের তারিখ', hint: 'Date', defaultVisible: false },
+        { key: 'joiningInRab', labelEN: 'SRB Joining Date', labelBN: 'এসআরবিে যোগদানের তারিখ', hint: 'Date', defaultVisible: false },
         { key: 'dateOfCommission', labelEN: 'Commission Date', labelBN: 'কমিশন তারিখ', hint: 'Date', defaultVisible: false },
         { key: 'postingStatus', labelEN: 'Posting Status', labelBN: 'নিয়োগ অবস্থা', hint: 'Plain', defaultVisible: false },
         { key: 'dob', labelEN: 'Date of Birth', labelBN: 'জন্ম তারিখ', hint: 'Date', defaultVisible: false },
@@ -518,7 +518,7 @@ export class ReportJoiningLeaveComponent implements OnInit, OnDestroy {
         multi(this.selectedTradeIds, this.tradeOptions, 'Trade', 'ট্রেড');
         if (this.selectedOrgNodeIds.length > 0) {
             const names = this.orgNodesLabel(this.lang === 'bn');
-            if (names) items.push({ label: this.lang === 'bn' ? 'র‍্যাব ইউনিট' : 'RAB Unit', value: names });
+            if (names) items.push({ label: this.lang === 'bn' ? 'এসআরবি ইউনিট' : 'SRB Unit', value: names });
         }
         if (this.joiningLeaveFrom != null) items.push({ label: 'Joining Leave From', value: this.formatDateLabel(this.fmtDate(this.joiningLeaveFrom)) });
         if (this.joiningLeaveTo != null) items.push({ label: 'Joining Leave To', value: this.formatDateLabel(this.fmtDate(this.joiningLeaveTo)) });
@@ -684,7 +684,7 @@ export class ReportJoiningLeaveComponent implements OnInit, OnDestroy {
         return this.lang === 'bn' ? 'গণপ্রজাতন্ত্রী বাংলাদেশ সরকার' : "GOVERNMENT OF THE PEOPLE'S REPUBLIC OF BANGLADESH";
     }
     get rabOrgTitle(): string {
-        return this.lang === 'bn' ? 'র‍্যাপিড অ্যাকশন ব্যাটালিয়ন' : 'RAPID ACTION BATTALION';
+        return this.lang === 'bn' ? 'স্পেশাল রেসপন্স ব্যাটালিয়ন' : 'SPECIAL RESPONSE BATTALION';
     }
     get rabOrgSubtitle(): string {
         return this.lang === 'bn' ? 'বাংলাদেশ পুলিশ · সদর দপ্তর, কুর্মিটোলা, ঢাকা' : 'Bangladesh Police · Headquarters, Kurmitola, Dhaka';

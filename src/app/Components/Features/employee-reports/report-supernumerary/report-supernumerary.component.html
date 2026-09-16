@@ -191,7 +191,7 @@
                 [(ngModel)]="idSearchText"
                 (ngModelChange)="onIdSearchInput()"
                 (keydown.enter)="onIdSearch()"
-                [placeholder]="lang === 'bn' ? 'সার্ভিস আইডি / র‍্যাব আইডি' : 'Service ID / RAB ID'" />
+                [placeholder]="lang === 'bn' ? 'সার্ভিস আইডি / এসআরবি আইডি' : 'Service ID / SRB ID'" />
             @if (idSearchText) {
                 <button type="button" class="rab-search-clear" (click)="clearIdSearch()" title="Clear search">
                     <i class="pi pi-times"></i>

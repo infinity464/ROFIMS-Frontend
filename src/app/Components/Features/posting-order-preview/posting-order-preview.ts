@@ -225,7 +225,7 @@ export class PostingOrderPreviewPageComponent implements OnInit {
                   { key: 'ownDistrict', labelBN: 'নিজ জেলা', labelEN: 'Own District', weight: 8 },
                   { key: 'prevWorkplace', labelBN: 'পূর্ববতী কর্মস্থল', labelEN: 'Previous Workplace', weight: 11 },
                   { key: 'transferUnit', labelBN: 'বদলিকৃত কর্মস্থল', labelEN: 'Transfer Unit', weight: 11 },
-                  { key: 'rabId', labelBN: 'র‌্যাব আইডি', labelEN: 'RAB ID', weight: 9 },
+                  { key: 'rabId', labelBN: 'এসআরবি আইডি', labelEN: 'SRB ID', weight: 9 },
                   { key: 'remarks', labelBN: 'মন্তব্য', labelEN: 'Remarks', weight: 8 }
               ];
         return cols.map((c) => ({ ...c, defaultWeight: c.weight }));
@@ -2484,8 +2484,8 @@ html, body { margin: 0; padding: 0; background: transparent; }
 
         // ── Government Header (9pt, bold, centered) ──
         const headerLines = bn
-            ? ['গণপ্রজাতন্ত্রী বাংলাদেশ সরকার', 'বাংলাদেশ পুলিশ', 'র‌্যাব ফোর্সেস সদর দপ্তর', 'কুর্মিটোলা, ঢাকা']
-            : ['Government of the Peoples Republic of Bangladesh', 'Bangladesh Police', 'RAB Forces Headquarters', 'Kurmitola, Dhaka'];
+            ? ['গণপ্রজাতন্ত্রী বাংলাদেশ সরকার', 'বাংলাদেশ পুলিশ', 'এসআরবি ফোর্সেস সদর দপ্তর', 'কুর্মিটোলা, ঢাকা']
+            : ['Government of the Peoples Republic of Bangladesh', 'Bangladesh Police', 'SRB Forces Headquarters', 'Kurmitola, Dhaka'];
 
         const headerParas = headerLines.map(line => new Paragraph({
             children: [new TextRun({ text: line, bold: true, size: hdrSize, sizeComplexScript: hdrCsSize, font, language: lang })],
@@ -2556,8 +2556,8 @@ html, body { margin: 0; padding: 0; background: transparent; }
         const cols = isInter
             ? (bn ? ['ক্রমিক', 'ব্যক্তিগত নং', 'পদবি', ...(st ? ['ট্রেড'] : []), 'নাম', ...(sd ? ['নিজ জেলা'] : []), ...(sp ? ['পূর্ববতী কর্মস্থল'] : []), 'বদলিকৃত কর্মস্থল', ...(sr ? ['মন্তব্য'] : [])]
                    : ['Ser', 'Service ID', 'Rank', ...(st ? ['Trade'] : []), 'Name', ...(sd ? ['Own District'] : []), ...(sp ? ['Previous Workplace'] : []), 'Transfer Station', ...(sr ? ['Remarks'] : [])])
-            : (bn ? ['ক্রমিক', 'ব্যক্তিগত নম্বর', 'পদবি', ...(st ? ['ট্রেড'] : []), 'নাম', ...(sd ? ['নিজ জেলা'] : []), ...(sp ? ['পূর্ববতী কর্মস্থল'] : []), 'বদলিকৃত কর্মস্থল', 'র‌্যাব আইডি', ...(sr ? ['মন্তব্য'] : [])]
-                   : ['Ser', 'Service ID', 'Rank', ...(st ? ['Trade'] : []), 'Name', ...(sd ? ['Own District'] : []), ...(sp ? ['Previous Workplace'] : []), 'Transfer Unit', 'RAB ID', ...(sr ? ['Remarks'] : [])]);
+            : (bn ? ['ক্রমিক', 'ব্যক্তিগত নম্বর', 'পদবি', ...(st ? ['ট্রেড'] : []), 'নাম', ...(sd ? ['নিজ জেলা'] : []), ...(sp ? ['পূর্ববতী কর্মস্থল'] : []), 'বদলিকৃত কর্মস্থল', 'এসআরবি আইডি', ...(sr ? ['মন্তব্য'] : [])]
+                   : ['Ser', 'Service ID', 'Rank', ...(st ? ['Trade'] : []), 'Name', ...(sd ? ['Own District'] : []), ...(sp ? ['Previous Workplace'] : []), 'Transfer Unit', 'SRB ID', ...(sr ? ['Remarks'] : [])]);
         // Column widths in DXA – must sum to full content width.
         // Legal: page 12240 − margins 567*2 = 11106. A4: page 11906 − margins 567*2 = 10772.
         // Shares come from columnLayout() (the Columns dialog), in the same order as `cols`,

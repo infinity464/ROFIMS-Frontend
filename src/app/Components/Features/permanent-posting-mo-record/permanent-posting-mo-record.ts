@@ -459,7 +459,7 @@ export class PermanentPostingMORecordComponent implements OnInit {
 
     searchPostedOut(): void {
         if (!this.poSearchRabId && !this.poSearchServiceId) {
-            this.messageService.add({ severity: 'warn', summary: 'Warning', detail: 'Please enter RAB ID or Service ID' });
+            this.messageService.add({ severity: 'warn', summary: 'Warning', detail: 'Please enter SRB ID or Service ID' });
             return;
         }
         // Searching a new member discards a record that a previous search auto-loaded,

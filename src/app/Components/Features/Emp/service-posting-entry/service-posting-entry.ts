@@ -176,7 +176,7 @@ export class ServicePostingEntry implements OnInit {
     private loadDropdowns(): void {
         this.commonCodeService.getAllActiveCommonCodesType('RabUnit').subscribe({
             next: (res: any[]) => (this.rabUnitOptions = (Array.isArray(res) ? res : []).map((i) => this.mapOption(i))),
-            error: (err) => console.error('Failed to load RAB units', err)
+            error: (err) => console.error('Failed to load SRB units', err)
         });
         this.commonCodeService.getAllActiveCommonCodesType('AppointmentCategory').subscribe({
             next: (res: any[]) => (this.appointmentOptions = (Array.isArray(res) ? res : []).map((i) => this.mapOption(i))),
@@ -244,8 +244,8 @@ export class ServicePostingEntry implements OnInit {
                 if (!this.hasRabId && (this.isSupernumerary || this.isServing)) {
                     this.messageService.add({
                         severity: 'warn',
-                        summary: 'RAB ID Not Generated',
-                        detail: 'This member does not have a RAB ID yet. A RAB ID must be generated before a direct join or transfer can be saved.',
+                        summary: 'SRB ID Not Generated',
+                        detail: 'This member does not have a SRB ID yet. A SRB ID must be generated before a direct join or transfer can be saved.',
                         life: 7000
                     });
                 } else if (this.hasPendingNotesheet) {
@@ -296,7 +296,7 @@ export class ServicePostingEntry implements OnInit {
             return;
         }
         if (!this.hasRabId) {
-            this.messageService.add({ severity: 'warn', summary: 'RAB ID Not Generated', detail: 'This member does not have a RAB ID. Please generate the RAB ID before saving a direct join or transfer.' });
+            this.messageService.add({ severity: 'warn', summary: 'SRB ID Not Generated', detail: 'This member does not have a SRB ID. Please generate the SRB ID before saving a direct join or transfer.' });
             return;
         }
         if (this.hasPendingNotesheet) {

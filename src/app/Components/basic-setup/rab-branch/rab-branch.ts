@@ -94,8 +94,8 @@ export class RabBranch {
 
     tableConfig: TableConfig = {
         tableColumns: [
-            { field: 'rabUnitNameDisplay', header: 'RAB Unit' },
-            { field: 'rabWingNameDisplay', header: 'RAB Wing' },
+            { field: 'rabUnitNameDisplay', header: 'SRB Unit' },
+            { field: 'rabWingNameDisplay', header: 'SRB Wing' },
             { field: 'codeValueEN', header: 'Rab Branch (EN)' },
             { field: 'codeValueBN', header: 'Rab Branch (BN)' },
             {
@@ -258,11 +258,11 @@ export class RabBranch {
         const rabWingId = this.upazilaForm.get('rabWingId')?.value;
         const status = this.upazilaForm.get('status')?.value;
         if (rabUnitId == null || rabUnitId === '') {
-            this.messageService.add({ severity: 'warn', summary: 'Validation', detail: 'Please select RAB Unit' });
+            this.messageService.add({ severity: 'warn', summary: 'Validation', detail: 'Please select SRB Unit' });
             return;
         }
         if (rabWingId == null || rabWingId === '') {
-            this.messageService.add({ severity: 'warn', summary: 'Validation', detail: 'Please select RAB Wing' });
+            this.messageService.add({ severity: 'warn', summary: 'Validation', detail: 'Please select SRB Wing' });
             return;
         }
         if (status == null) {

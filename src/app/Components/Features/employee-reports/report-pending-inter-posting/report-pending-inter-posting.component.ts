@@ -149,7 +149,7 @@ export class ReportPendingInterPostingComponent implements OnInit, OnDestroy {
         { key: 'ser',                labelEN: 'Ser',            labelBN: 'ক্রঃ',           hint: 'Serial',     defaultVisible: true  },
         { key: 'serviceId',          labelEN: 'Service ID',     labelBN: 'সার্ভিস আইডি',    hint: 'Plain',      defaultVisible: true  },
         { key: 'rank',               labelEN: 'Rank',           labelBN: 'র‍্যাঙ্ক',        hint: 'Plain',      defaultVisible: true  },
-        { key: 'rabRank',            labelEN: 'RAB Rank',       labelBN: 'র‍্যাব র‍্যাঙ্ক',  hint: 'Plain',      defaultVisible: false },
+        { key: 'rabRank',            labelEN: 'SRB Rank',       labelBN: 'এসআরবি র‍্যাঙ্ক',  hint: 'Plain',      defaultVisible: false },
         { key: 'corps',              labelEN: 'Corps',          labelBN: 'কোর',            hint: 'Plain',      defaultVisible: true  },
         { key: 'trade',              labelEN: 'Trade',          labelBN: 'ট্রেড',          hint: 'Plain',      defaultVisible: true  },
         { key: 'name',               labelEN: 'Name',           labelBN: 'নাম',            hint: 'Personnel',  defaultVisible: true  },
@@ -159,11 +159,11 @@ export class ReportPendingInterPostingComponent implements OnInit, OnDestroy {
         { key: 'postingOrderDate',   labelEN: 'Posting Order Date', labelBN: 'পোস্টিং অর্ডার তারিখ', hint: 'Date', defaultVisible: true  },
         { key: 'rmks',               labelEN: 'Remark',        labelBN: 'মন্তব্য',        hint: 'Remarks',    defaultVisible: true  },
         // Opt-in extras
-        { key: 'rabID',              labelEN: 'RAB ID',         labelBN: 'র‍্যাব আইডি',    hint: 'Plain',      defaultVisible: false },
+        { key: 'rabID',              labelEN: 'SRB ID',         labelBN: 'এসআরবি আইডি',    hint: 'Plain',      defaultVisible: false },
         { key: 'postingOrderNo',     labelEN: 'Order No',       labelBN: 'অর্ডার নম্বর',    hint: 'Plain',      defaultVisible: false },
         { key: 'noteSheetNo',        labelEN: 'NoteSheet No',   labelBN: 'নোটশীট নম্বর',    hint: 'Plain',      defaultVisible: false },
         { key: 'transferToHierarchy',labelEN: 'Posted (Full Path)', labelBN: 'পোস্টেড (পূর্ণ পথ)', hint: 'Plain', defaultVisible: false },
-        { key: 'fromHierarchy',      labelEN: 'RAB Unit (Full)', labelBN: 'র‍্যাব ইউনিট (পূর্ণ)', hint: 'Plain', defaultVisible: true  },
+        { key: 'fromHierarchy',      labelEN: 'SRB Unit (Full)', labelBN: 'এসআরবি ইউনিট (পূর্ণ)', hint: 'Plain', defaultVisible: true  },
         { key: 'noRankName',         labelEN: 'No Rank Name',   labelBN: 'নং র‍্যাঙ্ক নাম',   hint: 'NoRankName', defaultVisible: false },
         { key: 'motherUnitName',     labelEN: 'Mother Unit',    labelBN: 'মাতৃ ইউনিট',      hint: 'Plain',      defaultVisible: false },
         { key: 'memberType',         labelEN: 'Member Type',    labelBN: 'সদস্য ধরন',       hint: 'Plain',      defaultVisible: false },
@@ -621,7 +621,7 @@ export class ReportPendingInterPostingComponent implements OnInit, OnDestroy {
             ? 'গণপ্রজাতন্ত্রী বাংলাদেশ সরকার'
             : "GOVERNMENT OF THE PEOPLE'S REPUBLIC OF BANGLADESH";
     }
-    get rabOrgTitle(): string { return this.lang === 'bn' ? 'র‍্যাপিড অ্যাকশন ব্যাটালিয়ন' : 'RAPID ACTION BATTALION'; }
+    get rabOrgTitle(): string { return this.lang === 'bn' ? 'স্পেশাল রেসপন্স ব্যাটালিয়ন' : 'SPECIAL RESPONSE BATTALION'; }
     get rabOrgSubtitle(): string {
         return this.lang === 'bn'
             ? 'বাংলাদেশ পুলিশ · সদর দপ্তর, কুর্মিটোলা, ঢাকা'

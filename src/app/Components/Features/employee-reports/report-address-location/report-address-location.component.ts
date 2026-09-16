@@ -201,7 +201,7 @@ export class ReportAddressLocationComponent implements OnInit, OnDestroy {
         // the identity renders as separate plain columns (serviceId/rank/corps/
         // trade/name) by default instead.
         { key: 'personnel',    labelEN: 'Personnel',     labelBN: 'সদস্য',          hint: 'PersonnelComposite', defaultVisible: false },
-        { key: 'rabId',        labelEN: 'RAB ID',        labelBN: 'র‍্যাব আইডি',     hint: 'RabId',              defaultVisible: false },
+        { key: 'rabId',        labelEN: 'SRB ID',        labelBN: 'এসআরবি আইডি',     hint: 'RabId',              defaultVisible: false },
         { key: 'addressOwner', labelEN: 'Address Owner', labelBN: 'ঠিকানার মালিক',   hint: 'AddressOwner',       defaultVisible: false },
         { key: 'locationType', labelEN: 'Address Type',  labelBN: 'ঠিকানার ধরন',     hint: 'LocationType',       defaultVisible: false },
         { key: 'address',      labelEN: 'Address',       labelBN: 'ঠিকানা',         hint: 'AddressComposite',   defaultVisible: true },
@@ -219,16 +219,16 @@ export class ReportAddressLocationComponent implements OnInit, OnDestroy {
         { key: 'appointment',       labelEN: 'Appointment',      labelBN: 'নিয়োগ',            hint: 'Plain', defaultVisible: false },
         { key: 'memberType',        labelEN: 'Member Type',      labelBN: 'সদস্য ধরন',         hint: 'Plain', defaultVisible: false },
         { key: 'motherOrganization',labelEN: 'Mother Org',       labelBN: 'মাতৃ সংস্থা',       hint: 'Plain', defaultVisible: false },
-        { key: 'rabRank',           labelEN: 'RAB Rank',         labelBN: 'র‍্যাব র‍্যাঙ্ক',    hint: 'Plain', defaultVisible: false },
+        { key: 'rabRank',           labelEN: 'SRB Rank',         labelBN: 'এসআরবি র‍্যাঙ্ক',    hint: 'Plain', defaultVisible: false },
         { key: 'tradeRemarks',      labelEN: 'Trade Remarks',    labelBN: 'ট্রেড মন্তব্য',      hint: 'Plain', defaultVisible: false },
         { key: 'gender',            labelEN: 'Gender',           labelBN: 'লিঙ্গ',             hint: 'Plain', defaultVisible: false },
         { key: 'motherUnit',        labelEN: 'Last Unit',        labelBN: 'শেষ ইউনিট',         hint: 'Plain', defaultVisible: false },
         // Trimmed job hierarchy (Battalion, Wing … deepest level — first two + last). Opt-in.
-        { key: 'rabUnitHierarchy',  labelEN: 'RAB Unit',         labelBN: 'র‍্যাব ইউনিট',     hint: 'Plain', defaultVisible: false },
+        { key: 'rabUnitHierarchy',  labelEN: 'SRB Unit',         labelBN: 'এসআরবি ইউনিট',     hint: 'Plain', defaultVisible: false },
         { key: 'dateOfCommission',  labelEN: 'Commission Date',  labelBN: 'কমিশন তারিখ',       hint: 'Plain', defaultVisible: false },
         { key: 'joiningDate',       labelEN: 'Joining Date',     labelBN: 'যোগদান তারিখ',      hint: 'Plain', defaultVisible: false },
-        { key: 'rabServiceFrom',    labelEN: 'RAB Joining Date', labelBN: 'র‍্যাবে যোগদান তারিখ', hint: 'Plain', defaultVisible: false },
-        { key: 'rabServiceTo',      labelEN: 'RAB End Date',     labelBN: 'র‍্যাব শেষ তারিখ',  hint: 'Plain', defaultVisible: false },
+        { key: 'rabServiceFrom',    labelEN: 'SRB Joining Date', labelBN: 'এসআরবিে যোগদান তারিখ', hint: 'Plain', defaultVisible: false },
+        { key: 'rabServiceTo',      labelEN: 'SRB End Date',     labelBN: 'এসআরবি শেষ তারিখ',  hint: 'Plain', defaultVisible: false },
         { key: 'division',          labelEN: 'Division',         labelBN: 'বিভাগ',             hint: 'Plain', defaultVisible: false },
         { key: 'district',          labelEN: 'District',         labelBN: 'জেলা',              hint: 'Plain', defaultVisible: false },
         { key: 'upazila',           labelEN: 'Upazila',          labelBN: 'উপজেলা',            hint: 'Plain', defaultVisible: false },
@@ -680,7 +680,7 @@ export class ReportAddressLocationComponent implements OnInit, OnDestroy {
             : "GOVERNMENT OF THE PEOPLE'S REPUBLIC OF BANGLADESH";
     }
     get rabOrgTitle(): string {
-        return this.lang === 'bn' ? 'র‍্যাপিড অ্যাকশন ব্যাটালিয়ন' : 'RAPID ACTION BATTALION';
+        return this.lang === 'bn' ? 'স্পেশাল রেসপন্স ব্যাটালিয়ন' : 'SPECIAL RESPONSE BATTALION';
     }
     get rabOrgSubtitle(): string {
         return this.lang === 'bn'
@@ -769,7 +769,7 @@ export class ReportAddressLocationComponent implements OnInit, OnDestroy {
         return {
             ser: bn ? 'ক্রঃ' : 'SER',
             personnel: bn ? 'সদস্য' : 'PERSONNEL',
-            rabId: bn ? 'র‍্যাব আইডি' : 'RAB ID',
+            rabId: bn ? 'এসআরবি আইডি' : 'SRB ID',
             locationType: bn ? 'অবস্থানের ধরন' : 'LOCATION TYPE',
             addressOwner: bn ? 'ঠিকানার মালিক' : 'ADDRESS OWNER',
             address: bn ? 'ঠিকানা' : 'ADDRESS',
@@ -813,7 +813,7 @@ export class ReportAddressLocationComponent implements OnInit, OnDestroy {
         multi(this.selectedTradeIds, this.tradeOptions, lbl('TRADE', 'ট্রেড'));
         if (this.selectedOrgNodeIds.length > 0) {
             const names = this.orgNodesLabel(bn);
-            if (names) items.push({ label: lbl('RAB UNIT', 'র‍্যাব ইউনিট'), value: names });
+            if (names) items.push({ label: lbl('SRB UNIT', 'এসআরবি ইউনিট'), value: names });
         }
 
         // Address Owner always renders — when "All" is picked it reads as the
@@ -849,7 +849,7 @@ export class ReportAddressLocationComponent implements OnInit, OnDestroy {
 
         // RAB UNIT — only shown when access-scope actually restricts to specific units.
         if (this.unitScopeLine) {
-            items.push({ label: lbl('RAB UNIT', 'র‍্যাব ইউনিট'), value: this.unitScopeLine });
+            items.push({ label: lbl('SRB UNIT', 'এসআরবি ইউনিট'), value: this.unitScopeLine });
         }
 
         if (this.selectedLocationType) {
@@ -858,7 +858,7 @@ export class ReportAddressLocationComponent implements OnInit, OnDestroy {
         }
 
         if (this.searchRabId.trim()) {
-            items.push({ label: lbl('RAB ID', 'র‍্যাব আইডি'), value: this.searchRabId.trim() });
+            items.push({ label: lbl('SRB ID', 'এসআরবি আইডি'), value: this.searchRabId.trim() });
         }
         if (this.searchServiceId.trim()) {
             items.push({ label: lbl('SERVICE ID', 'সার্ভিস আইডি'), value: this.searchServiceId.trim() });
@@ -888,9 +888,9 @@ export class ReportAddressLocationComponent implements OnInit, OnDestroy {
         multi(this.selectedTradeIds, this.tradeOptions, this.lang === 'bn' ? 'ট্রেড' : 'Trade');
         if (this.selectedOrgNodeIds.length > 0) {
             const names = this.orgNodesLabel(this.lang === 'bn');
-            if (names) lines.push(`${this.lang === 'bn' ? 'র‍্যাব ইউনিট' : 'RAB Unit'}: ${names}`);
+            if (names) lines.push(`${this.lang === 'bn' ? 'এসআরবি ইউনিট' : 'SRB Unit'}: ${names}`);
         }
-        if (this.searchRabId.trim()) lines.push(`RAB ID: ${this.searchRabId.trim()}`);
+        if (this.searchRabId.trim()) lines.push(`SRB ID: ${this.searchRabId.trim()}`);
         if (this.searchServiceId.trim()) lines.push(`Service ID: ${this.searchServiceId.trim()}`);
         if (this.searchNid.trim()) lines.push(`NID: ${this.searchNid.trim()}`);
         if (this.selectedLocationType) {

@@ -125,7 +125,7 @@ export class ReportEducationComponent implements OnInit, OnChanges, OnDestroy {
         { key: 'ser', labelEN: 'Ser', labelBN: 'ক্রঃ', hint: 'Serial', defaultVisible: true },
         { key: 'serviceId', labelEN: 'Service ID', labelBN: 'সার্ভিস আইডি', hint: 'Plain', defaultVisible: true },
         { key: 'armyRank', labelEN: 'Rank', labelBN: 'র‍্যাঙ্ক', hint: 'Plain', defaultVisible: true },
-        { key: 'rabRank', labelEN: 'RAB Rank', labelBN: 'র‍্যাব র‍্যাঙ্ক', hint: 'Plain', defaultVisible: false },
+        { key: 'rabRank', labelEN: 'SRB Rank', labelBN: 'এসআরবি র‍্যাঙ্ক', hint: 'Plain', defaultVisible: false },
         { key: 'corps', labelEN: 'Corps', labelBN: 'কোর', hint: 'Plain', defaultVisible: true },
         { key: 'trade', labelEN: 'Trade', labelBN: 'ট্রেড', hint: 'Plain', defaultVisible: true },
         { key: 'name', labelEN: 'Name', labelBN: 'নাম', hint: 'Name', defaultVisible: true },
@@ -139,7 +139,7 @@ export class ReportEducationComponent implements OnInit, OnChanges, OnDestroy {
         // Name with awards, professional qualification and corps. Opt-in.
         { key: 'callNoRankName', labelEN: 'No Rank Name', labelBN: 'নং র‍্যাঙ্ক নাম', hint: 'CallNoRankName', defaultVisible: false },
         // Full job hierarchy (Battalion › Wing › Branch › Sub-Branch › Section › Sub-Section). Opt-in.
-        { key: 'rabUnitHierarchy', labelEN: 'RAB Unit', labelBN: 'র‍্যাব ইউনিট (পূর্ণ)', hint: 'Plain', defaultVisible: false },
+        { key: 'rabUnitHierarchy', labelEN: 'SRB Unit', labelBN: 'এসআরবি ইউনিট (পূর্ণ)', hint: 'Plain', defaultVisible: false },
         // Selected-value column: header mirrors the chosen report type
         // (e.g. "Education") and every cell shows the picked CommonCode
         // value (e.g. "SSC") — the filter context surfaced per row.
@@ -159,8 +159,8 @@ export class ReportEducationComponent implements OnInit, OnChanges, OnDestroy {
         // Default-visible; users can hide via the column picker.
         { key: 'rmks', labelEN: 'Remark', labelBN: 'মন্তব্য', hint: 'Remarks', defaultVisible: true },
         // Opt-in extras (same as member-appointment / batch-course catalog).
-        { key: 'personnel', labelEN: 'RAB Personnel', labelBN: 'র‍্যাব সদস্য', hint: 'RabPersonnelComposite', defaultVisible: false },
-        { key: 'rabId', labelEN: 'RAB ID', labelBN: 'র‍্যাব আইডি', hint: 'RabId', defaultVisible: false },
+        { key: 'personnel', labelEN: 'SRB Personnel', labelBN: 'এসআরবি সদস্য', hint: 'RabPersonnelComposite', defaultVisible: false },
+        { key: 'rabId', labelEN: 'SRB ID', labelBN: 'এসআরবি আইডি', hint: 'RabId', defaultVisible: false },
         { key: 'nameEnglish', labelEN: 'Name (EN)', labelBN: 'নাম (ইংরেজি)', hint: 'Plain', defaultVisible: false },
         { key: 'nameBangla', labelEN: 'Name (BN)', labelBN: 'নাম (বাংলা)', hint: 'Plain', defaultVisible: false },
         { key: 'nid', labelEN: 'NID', labelBN: 'এনআইডি', hint: 'Plain', defaultVisible: false },
@@ -173,8 +173,8 @@ export class ReportEducationComponent implements OnInit, OnChanges, OnDestroy {
         { key: 'motherUnit', labelEN: 'Last Unit', labelBN: 'শেষ ইউনিট', hint: 'Plain', defaultVisible: false },
         { key: 'dateOfCommission', labelEN: 'Commission Date', labelBN: 'কমিশন তারিখ', hint: 'Plain', defaultVisible: false },
         { key: 'joiningDate', labelEN: 'Joining Date', labelBN: 'যোগদান তারিখ', hint: 'Plain', defaultVisible: false },
-        { key: 'rabServiceFrom', labelEN: 'RAB Joining Date', labelBN: 'র‍্যাবে যোগদান তারিখ', hint: 'Plain', defaultVisible: false },
-        { key: 'rabServiceTo', labelEN: 'RAB End Date', labelBN: 'র‍্যাব শেষ তারিখ', hint: 'Plain', defaultVisible: false },
+        { key: 'rabServiceFrom', labelEN: 'SRB Joining Date', labelBN: 'এসআরবিে যোগদান তারিখ', hint: 'Plain', defaultVisible: false },
+        { key: 'rabServiceTo', labelEN: 'SRB End Date', labelBN: 'এসআরবি শেষ তারিখ', hint: 'Plain', defaultVisible: false },
         { key: 'division', labelEN: 'Division', labelBN: 'বিভাগ', hint: 'Plain', defaultVisible: false },
         { key: 'district', labelEN: 'District', labelBN: 'জেলা', hint: 'Plain', defaultVisible: false },
         { key: 'upazila', labelEN: 'Upazila', labelBN: 'উপজেলা', hint: 'Plain', defaultVisible: false },
@@ -393,7 +393,7 @@ export class ReportEducationComponent implements OnInit, OnChanges, OnDestroy {
         multi(this.selectedTradeIds, this.tradeOptions, L['report.search.trade']);
         if (this.selectedOrgNodeIds.length > 0) {
             const names = this.orgNodesLabel(this.lang === 'bn');
-            if (names) items.push({ label: this.lang === 'bn' ? 'র‍্যাব ইউনিট' : 'RAB Unit', value: names });
+            if (names) items.push({ label: this.lang === 'bn' ? 'এসআরবি ইউনিট' : 'SRB Unit', value: names });
         }
         multi(this.selectedBoardTypeIds, this.boardTypeOptions, this.lang === 'bn' ? 'বোর্ড/বিশ্ববিদ্যালয়' : 'Board/University');
         multi(this.selectedInstitutionIds, this.institutionOptions, this.lang === 'bn' ? 'প্রতিষ্ঠানের নাম' : 'Institution Name');
@@ -407,7 +407,7 @@ export class ReportEducationComponent implements OnInit, OnChanges, OnDestroy {
         return this.lang === 'bn' ? 'গণপ্রজাতন্ত্রী বাংলাদেশ সরকার' : "GOVERNMENT OF THE PEOPLE'S REPUBLIC OF BANGLADESH";
     }
     get rabOrgTitle(): string {
-        return this.lang === 'bn' ? 'র‍্যাপিড অ্যাকশন ব্যাটালিয়ন' : 'RAPID ACTION BATTALION';
+        return this.lang === 'bn' ? 'স্পেশাল রেসপন্স ব্যাটালিয়ন' : 'SPECIAL RESPONSE BATTALION';
     }
     get rabOrgSubtitle(): string {
         return this.lang === 'bn' ? 'বাংলাদেশ পুলিশ · সদর দপ্তর, কুর্মিটোলা, ঢাকা' : 'Bangladesh Police · Headquarters, Kurmitola, Dhaka';
@@ -497,7 +497,7 @@ export class ReportEducationComponent implements OnInit, OnChanges, OnDestroy {
         multi(this.selectedTradeIds, this.tradeOptions, L['report.search.trade']);
         if (this.selectedOrgNodeIds.length > 0) {
             const names = this.orgNodesLabel(this.lang === 'bn');
-            if (names) lines.push(`${this.lang === 'bn' ? 'র‍্যাব ইউনিট' : 'RAB Unit'}: ${names}`);
+            if (names) lines.push(`${this.lang === 'bn' ? 'এসআরবি ইউনিট' : 'SRB Unit'}: ${names}`);
         }
         multi(this.selectedBoardTypeIds, this.boardTypeOptions, this.lang === 'bn' ? 'বোর্ড/বিশ্ববিদ্যালয়' : 'Board/University');
         multi(this.selectedInstitutionIds, this.institutionOptions, this.lang === 'bn' ? 'প্রতিষ্ঠানের নাম' : 'Institution Name');

@@ -186,7 +186,7 @@ export class RabIdAllocation implements OnInit {
 
     generateId(): void {
         if (!this.canUpdate) {
-            this.messageService.add({ severity: 'warn', summary: 'Permission Denied', detail: 'You do not have permission to generate RAB IDs.' });
+            this.messageService.add({ severity: 'warn', summary: 'Permission Denied', detail: 'You do not have permission to generate SRB IDs.' });
             return;
         }
         if (!this.list?.length) {
@@ -201,7 +201,7 @@ export class RabIdAllocation implements OnInit {
             this.messageService.add({
                 severity: 'warn',
                 summary: 'Validation',
-                detail: 'Select at least one employee to generate RAB ID.'
+                detail: 'Select at least one employee to generate SRB ID.'
             });
             return;
         }
@@ -221,8 +221,8 @@ export class RabIdAllocation implements OnInit {
         }
         const count = employeeIds.length;
         this.confirmationService.confirm({
-            message: `Generate RAB ID for ${count} selected employee(s)?`,
-            header: 'Confirm Generate RAB ID',
+            message: `Generate SRB ID for ${count} selected employee(s)?`,
+            header: 'Confirm Generate SRB ID',
             icon: 'pi pi-id-card',
             accept: () => this.doGenerateId(employeeIds)
         });
@@ -233,12 +233,12 @@ export class RabIdAllocation implements OnInit {
         if (count <= 0) {
             detail = 'List refreshed.';
         } else if (count === 1 && succeeded?.length) {
-            detail = `RAB ID ${succeeded[0].rabID} allocated. List refreshed.`;
+            detail = `SRB ID ${succeeded[0].rabID} allocated. List refreshed.`;
         } else if (count <= 5 && succeeded?.length) {
             const idList = succeeded.map((r) => `Employee ${r.employeeId}: ${r.rabID}`).join('; ');
-            detail = `${count} RAB ID(s) allocated: ${idList}. List refreshed.`;
+            detail = `${count} SRB ID(s) allocated: ${idList}. List refreshed.`;
         } else {
-            detail = `${count} RAB ID(s) allocated. List refreshed.`;
+            detail = `${count} SRB ID(s) allocated. List refreshed.`;
         }
         this.messageService.add({
             severity: 'success',
@@ -282,7 +282,7 @@ export class RabIdAllocation implements OnInit {
                 this.messageService.add({
                     severity: 'error',
                     summary: 'Error',
-                    detail: err?.error?.message ?? 'Failed to generate RAB IDs'
+                    detail: err?.error?.message ?? 'Failed to generate SRB IDs'
                 });
             }
         });

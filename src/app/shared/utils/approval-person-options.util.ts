@@ -38,7 +38,7 @@ export function buildApprovalPersonOptions(userList: any[], mappingList: any[]):
         const rabId = pick(m, 'rabID', 'rABID', 'rabid', 'RABID', 'RabID');
         let head = [rank, name].filter(Boolean).join(' ');
         if (appointment) head = head ? `${head} (${appointment})` : `(${appointment})`;
-        opts.push({ label: [head, serviceId ? `SVC: ${serviceId}` : '', rabId ? `RAB: ${rabId}` : ''].filter(Boolean).join(' | '), value: empId });
+        opts.push({ label: [head, serviceId ? `SVC: ${serviceId}` : '', rabId ? `SRB: ${rabId}` : ''].filter(Boolean).join(' | '), value: empId });
     }
     return opts.sort((a, b) => a.label.localeCompare(b.label));
 }

@@ -56,7 +56,7 @@ export class MotherOrgRankVacancyDistributionComponent implements OnInit {
     canUpdate = true;
     canDelete = true;
 
-    title = 'Vacancy Distribution (RAB)';
+    title = 'Vacancy Distribution (SRB)';
     orgList: OrganizationModel[] = [];
     rankOptions: { codeId: number; label: string }[] = [];
     selectedOrg: OrganizationModel | null = null;
@@ -75,7 +75,7 @@ export class MotherOrgRankVacancyDistributionComponent implements OnInit {
     editingDistributionId: number | null = null;
     tableConfig: TableConfig = {
         tableColumns: [
-            { field: 'rabName', header: 'RAB Unit / Wing / Branch' },
+            { field: 'rabName', header: 'SRB Unit / Wing / Branch' },
             { field: 'quantity', header: 'Quantity' }
         ]
     };
@@ -236,7 +236,7 @@ export class MotherOrgRankVacancyDistributionComponent implements OnInit {
     addDistribution(): void {
         const ctx = this.selectedOrgRank;
         if (!ctx || this.rabCodeId == null) {
-            this.messageService.add({ severity: 'warn', summary: 'Warning', detail: 'Select organization, rank, and a RAB unit, wing, or branch' });
+            this.messageService.add({ severity: 'warn', summary: 'Warning', detail: 'Select organization, rank, and a SRB unit, wing, or branch' });
             return;
         }
         const qty = this.distributionForm.get('quantity')?.value ?? 0;

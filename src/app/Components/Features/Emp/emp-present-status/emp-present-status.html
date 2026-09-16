@@ -42,7 +42,7 @@
                         <span class="ml-2 font-semibold">{{ employeeBasicInfo.fullNameEN || employeeBasicInfo.FullNameEN || 'N/A' }}</span>
                     </div>
                     <div>
-                        <span class="text-500 text-sm">RAB ID:</span>
+                        <span class="text-500 text-sm">SRB ID:</span>
                         <span class="ml-2 font-semibold">{{ employeeBasicInfo.rabid || employeeBasicInfo.RABID || employeeBasicInfo.Rabid || 'N/A' }}</span>
                     </div>
                     <div>
@@ -166,7 +166,7 @@
                     <p-datepicker formControlName="dateOfRelease" dateFormat="dd-mm-yy" placeholder="Select Date" appendTo="body" styleClass="w-full"></p-datepicker>
                 </div>
                 <div>
-                    <label class="font-semibold block mb-2 text-700">Date of Reduce from RAB Strength</label>
+                    <label class="font-semibold block mb-2 text-700">Date of Reduce from SRB Strength</label>
                     <p-datepicker formControlName="dateOfReduceFromRabStrength" dateFormat="dd-mm-yy" placeholder="Select Date" appendTo="body" styleClass="w-full"></p-datepicker>
                 </div>
                 <div class="col-span-2 flex align-items-center gap-2">
@@ -319,7 +319,7 @@
                         <span class="ps-field__value">{{ formatDate(viewRecord.dateOfRelease) }}</span>
                     </div>
                     <div class="ps-field">
-                        <span class="ps-field__label">Date of Reduce from RAB Strength</span>
+                        <span class="ps-field__label">Date of Reduce from SRB Strength</span>
                         <span class="ps-field__value">{{ formatDate(viewRecord.reduceFromRABStrength) }}</span>
                     </div>
                 }

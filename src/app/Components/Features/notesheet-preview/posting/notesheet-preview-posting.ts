@@ -2786,7 +2786,7 @@ html, body { margin: 0; padding: 0; background: transparent; }
                     const r1: TableCell[] = [];
                     for (const k of visKeys) {
                         if (durationKeys.includes(k)) continue;
-                        if (k === 'joinDate') r1.push(plainHdrCell(bn ? 'র‌্যাবে অবস্থানকাল' : 'Tenure in RAB', wOf[k] + durationW, { columnSpan: 4 }));
+                        if (k === 'joinDate') r1.push(plainHdrCell(bn ? 'এসআরবিে অবস্থানকাল' : 'Tenure in SRB', wOf[k] + durationW, { columnSpan: 4 }));
                         else r1.push(plainHdrCell(iHdr[k], wOf[k], { verticalMerge: VerticalMergeType.RESTART }));
                     }
 

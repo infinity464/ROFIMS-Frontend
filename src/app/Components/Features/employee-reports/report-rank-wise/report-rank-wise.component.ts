@@ -114,7 +114,7 @@ export class ReportRankWiseComponent implements OnInit, OnDestroy {
         { key: 'ser', labelEN: 'Ser', labelBN: 'ক্রমিক', hint: 'Serial', defaultVisible: true },
         { key: 'serviceId', labelEN: 'Service ID', labelBN: 'ব্যক্তিগত নম্বর', hint: 'Plain', defaultVisible: true },
         { key: 'rank', labelEN: 'Rank', labelBN: 'পদবি', hint: 'Plain', defaultVisible: true },
-        { key: 'rabRank', labelEN: 'RAB Rank', labelBN: 'র‍্যাব র‍্যাঙ্ক', hint: 'Plain', defaultVisible: false },
+        { key: 'rabRank', labelEN: 'SRB Rank', labelBN: 'এসআরবি র‍্যাঙ্ক', hint: 'Plain', defaultVisible: false },
         { key: 'corps', labelEN: 'Corps', labelBN: 'কোর', hint: 'Plain', defaultVisible: true },
         { key: 'trade', labelEN: 'Trade', labelBN: 'ট্রেড', hint: 'Plain', defaultVisible: true },
         { key: 'name', labelEN: 'Name', labelBN: 'নাম', hint: 'Plain', defaultVisible: true },
@@ -130,13 +130,13 @@ export class ReportRankWiseComponent implements OnInit, OnDestroy {
         { key: 'spouseHomeDistrict', labelEN: 'Spouse District', labelBN: 'স্ত্রীর জেলা', hint: 'Plain', defaultVisible: false },
         { key: 'motherUnit', labelEN: 'Mother Unit', labelBN: 'মাতৃ ইউনিট', hint: 'Plain', defaultVisible: false },
         { key: 'dob', labelEN: 'Date of Birth', labelBN: 'জন্ম তারিখ', hint: 'Date', defaultVisible: false },
-        { key: 'joiningInRab', labelEN: 'Date of Joining in RAB', labelBN: 'র‍্যাবে যোগদানের তারিখ', hint: 'Date', defaultVisible: true },
+        { key: 'joiningInRab', labelEN: 'Date of Joining in SRB', labelBN: 'এসআরবিে যোগদানের তারিখ', hint: 'Date', defaultVisible: true },
         { key: 'joiningPresentUnit', labelEN: 'Joining in Present Unit', labelBN: 'বর্তমান ইউনিটে যোগদান', hint: 'Date', defaultVisible: true },
         { key: 'presentWorkplace', labelEN: 'Present Workplace', labelBN: 'বর্তমান কর্মস্থল', hint: 'Plain', defaultVisible: true },
         { key: 'rmks', labelEN: 'Remark', labelBN: 'মন্তব্য', hint: 'Remarks', defaultVisible: true },
         // ── Opt-in extras (registry FieldKeys) — hidden by default ────────
         { key: 'nameBangla', labelEN: 'Name (Bangla)', labelBN: 'নাম (বাংলা)', hint: 'Plain', defaultVisible: false },
-        { key: 'rabId', labelEN: 'RAB ID', labelBN: 'র‍্যাব আইডি', hint: 'Plain', defaultVisible: false },
+        { key: 'rabId', labelEN: 'SRB ID', labelBN: 'এসআরবি আইডি', hint: 'Plain', defaultVisible: false },
         { key: 'nid', labelEN: 'NID', labelBN: 'এনআইডি', hint: 'Plain', defaultVisible: false },
         { key: 'prefix', labelEN: 'Prefix', labelBN: 'প্রিফিক্স', hint: 'Plain', defaultVisible: false },
         { key: 'appointment', labelEN: 'Appointment', labelBN: 'নিয়োগ', hint: 'Plain', defaultVisible: false },
@@ -144,7 +144,7 @@ export class ReportRankWiseComponent implements OnInit, OnDestroy {
         { key: 'motherOrganization', labelEN: 'Mother Org', labelBN: 'মাতৃ সংস্থা', hint: 'Plain', defaultVisible: false },
         { key: 'gender', labelEN: 'Gender', labelBN: 'লিঙ্গ', hint: 'Plain', defaultVisible: false },
         // Trimmed job hierarchy (Battalion, Wing … deepest level — first two + last). Opt-in.
-        { key: 'rabUnitHierarchy', labelEN: 'RAB Unit', labelBN: 'র‍্যাব ইউনিট', hint: 'Plain', defaultVisible: false },
+        { key: 'rabUnitHierarchy', labelEN: 'SRB Unit', labelBN: 'এসআরবি ইউনিট', hint: 'Plain', defaultVisible: false },
         { key: 'officerType', labelEN: 'Officer Type', labelBN: 'অফিসার ধরণ', hint: 'Plain', defaultVisible: false },
         { key: 'dateOfCommission', labelEN: 'Commission Date', labelBN: 'কমিশন তারিখ', hint: 'Date', defaultVisible: false },
         { key: 'postingStatus', labelEN: 'Posting Status', labelBN: 'নিয়োগ অবস্থা', hint: 'Plain', defaultVisible: false },
@@ -527,12 +527,12 @@ export class ReportRankWiseComponent implements OnInit, OnDestroy {
         multi(this.selectedOrgIds, this.orgOptions, 'Mother Org', 'মাতৃ সংস্থা');
         multi(this.selectedMemberTypeIds, this.memberTypeOptions, 'Member Type', 'সদস্য ধরন');
         multi(this.selectedRankIds, this.rankOptions, 'Rank', 'পদবী');
-        multi(this.selectedRabRankIds, this.rabRankOptions, 'RAB Rank', 'র‍্যাব পদবি');
+        multi(this.selectedRabRankIds, this.rabRankOptions, 'SRB Rank', 'এসআরবি পদবি');
         multi(this.selectedCorpsIds, this.corpsOptions, 'Corps', 'কোর');
         multi(this.selectedTradeIds, this.tradeOptions, 'Trade', 'ট্রেড');
         if (this.selectedOrgNodeIds.length > 0) {
             const names = this.orgNodesLabel(this.lang === 'bn');
-            if (names) items.push({ label: this.lang === 'bn' ? 'র‍্যাব ইউনিট' : 'RAB Unit', value: names });
+            if (names) items.push({ label: this.lang === 'bn' ? 'এসআরবি ইউনিট' : 'SRB Unit', value: names });
         }
         return items;
     }
@@ -591,7 +591,7 @@ export class ReportRankWiseComponent implements OnInit, OnDestroy {
         // Rank is required — but RAB Rank is an equivalent way of naming it, so
         // either one satisfies the rule (they are mutually exclusive in the UI).
         if (!this.selectedOrgIds.length || (!this.selectedRankIds.length && !this.selectedRabRankIds.length)) {
-            this.messageService.add({ severity: 'warn', summary: 'Required', detail: 'Please select at least one Mother Org and one Rank (or RAB Rank) first.' });
+            this.messageService.add({ severity: 'warn', summary: 'Required', detail: 'Please select at least one Mother Org and one Rank (or SRB Rank) first.' });
             return;
         }
         this.first = 0;
@@ -706,7 +706,7 @@ export class ReportRankWiseComponent implements OnInit, OnDestroy {
         return this.lang === 'bn' ? 'গণপ্রজাতন্ত্রী বাংলাদেশ সরকার' : "GOVERNMENT OF THE PEOPLE'S REPUBLIC OF BANGLADESH";
     }
     get rabOrgTitle(): string {
-        return this.lang === 'bn' ? 'র‍্যাপিড অ্যাকশন ব্যাটালিয়ন' : 'RAPID ACTION BATTALION';
+        return this.lang === 'bn' ? 'স্পেশাল রেসপন্স ব্যাটালিয়ন' : 'SPECIAL RESPONSE BATTALION';
     }
     get rabOrgSubtitle(): string {
         return this.lang === 'bn' ? 'বাংলাদেশ পুলিশ · সদর দপ্তর, কুর্মিটোলা, ঢাকা' : 'Bangladesh Police · Headquarters, Kurmitola, Dhaka';

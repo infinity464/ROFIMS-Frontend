@@ -88,7 +88,7 @@ export class PostedOutServedReportComponent implements OnInit {
         { key: 'corps',        labelEN: 'Corps',      labelBN: 'কোর',                   hint: 'Plain' },
         { key: 'trade',        labelEN: 'Trade',      labelBN: 'ট্রেড',                 hint: 'Plain' },
         { key: 'name',         labelEN: 'Name',       labelBN: 'নাম',                   hint: 'Plain' },
-        { key: 'joiningDate',  labelEN: 'Date of Joining in RAB', labelBN: 'র‍্যাবে যোগদানের তারিখ', hint: 'Date' },
+        { key: 'joiningDate',  labelEN: 'Date of Joining in SRB', labelBN: 'এসআরবিে যোগদানের তারিখ', hint: 'Date' },
         { key: 'duration',     labelEN: 'Duration',   labelBN: 'মেয়াদ',                 hint: 'Duration' },
         { key: 'presentUnit',  labelEN: 'Battalion', labelBN: 'ব্যাটালিয়ন', hint: 'Plain' },
         { key: 'postedUnit',   labelEN: 'Posted Unit', labelBN: 'বদলিকৃত ইউনিট',         hint: 'Plain' },
@@ -112,14 +112,14 @@ export class PostedOutServedReportComponent implements OnInit {
             ? 'গণপ্রজাতন্ত্রী বাংলাদেশ সরকার'
             : "GOVERNMENT OF THE PEOPLE'S REPUBLIC OF BANGLADESH";
     }
-    get rabOrgTitle(): string { return this.lang === 'bn' ? 'র‍্যাপিড অ্যাকশন ব্যাটালিয়ন' : 'RAPID ACTION BATTALION'; }
+    get rabOrgTitle(): string { return this.lang === 'bn' ? 'স্পেশাল রেসপন্স ব্যাটালিয়ন' : 'SPECIAL RESPONSE BATTALION'; }
     get rabOrgSubtitle(): string {
         return this.lang === 'bn'
             ? 'বাংলাদেশ পুলিশ · সদর দপ্তর, কুর্মিটোলা, ঢাকা'
             : 'Bangladesh Police · Headquarters, Kurmitola, Dhaka';
     }
     get rabSectionTitle(): string {
-        return this.lang === 'bn' ? 'র‍্যাবে কর্মরত পোস্টেড আউট সদস্যগণ' : 'POSTED OUT MEMBERS SERVED IN RAB';
+        return this.lang === 'bn' ? 'এসআরবিে কর্মরত পোস্টেড আউট সদস্যগণ' : 'POSTED OUT MEMBERS SERVED IN SRB';
     }
     get rabCriteriaTitle(): string { return this.lang === 'bn' ? 'নির্বাচন মানদণ্ড' : 'SELECTION CRITERIA'; }
     get rabGeneratedLabel(): string { return this.lang === 'bn' ? 'তারিখ' : 'GENERATED'; }

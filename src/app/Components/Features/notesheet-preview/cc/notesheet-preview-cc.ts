@@ -389,7 +389,7 @@ export class NotesheetPreviewCCComponent implements OnInit {
 
         const rabUnitBn = (rabUnitId != null ? this.rabUnitLabels.get(rabUnitId)?.bn : '')
             ?? (o.rabUnit ?? o.RabUnit ?? '');
-        this.sutroBn = rabUnitBn || 'র‍্যাব সদর দপ্তর';
+        this.sutroBn = rabUnitBn || 'এসআরবি সদর দপ্তর';
 
         // Col 1: prefer the Battalion HQ Bangla location once loaded.
         this.applyDistrictAndStation();

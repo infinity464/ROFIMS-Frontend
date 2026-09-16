@@ -81,7 +81,7 @@
                 ><p-checkbox [(ngModel)]="showTradeRemarks" [binary]="true" inputId="chkTradeR" [disabled]="!showTradeColumn"></p-checkbox><label for="chkTradeR" style="cursor: pointer">ট্রেড বিবরণ</label></span
             >
             <span *ngIf="isInterPosting()" style="display: inline-flex; align-items: center; gap: 0.3rem"
-                ><p-checkbox [(ngModel)]="showTenure" [binary]="true" inputId="chkTenure"></p-checkbox><label for="chkTenure" style="cursor: pointer">র‌্যাবে অবস্থানকাল</label></span
+                ><p-checkbox [(ngModel)]="showTenure" [binary]="true" inputId="chkTenure"></p-checkbox><label for="chkTenure" style="cursor: pointer">এসআরবিে অবস্থানকাল</label></span
             >
             <span style="display: inline-flex; align-items: center; gap: 0.3rem"
                 ><p-checkbox [(ngModel)]="showOwnDistrictDetail" [binary]="true" inputId="chkOwnDist"></p-checkbox><label for="chkOwnDist" style="cursor: pointer">নিজ জেলা বিবরণ</label></span
@@ -342,7 +342,7 @@
                                         <th rowspan="3">{{ isEnglish() ? 'Name' : 'নাম' }}</th>
                                         <th rowspan="3" style="width: 45px; max-width: 45px; word-break: break-word">{{ isEnglish() ? 'Own District (Responsible Area)' : 'নিজ জেলা (দায়িত্বপূর্ণ এলাকা)' }}</th>
                                         <th rowspan="3">{{ isEnglish() ? "Husband/Wife's District (Responsible Area)" : 'স্বামী/স্ত্রীর জেলা (দায়িত্বপূর্ণ এলাকা)' }}</th>
-                                        <th colspan="4">{{ isEnglish() ? 'Tenure in RAB' : 'র‌্যাবে অবস্থানকাল' }}</th>
+                                        <th colspan="4">{{ isEnglish() ? 'Tenure in SRB' : 'এসআরবিে অবস্থানকাল' }}</th>
                                         <th rowspan="3" style="width: 100px">{{ isEnglish() ? 'Previous Workplace' : 'পূর্ববতী কর্মস্থল' }}</th>
                                         <th rowspan="3">{{ isEnglish() ? 'Transfer Station' : 'বদলিকৃত কর্মস্থল' }}</th>
                                         <th rowspan="3" style="min-width: 200px">{{ isEnglish() ? 'Remarks' : 'মন্তব্য' }}</th>
@@ -509,7 +509,7 @@
                     <th *ngIf="isColVisible('name')" [attr.rowspan]="showTenure ? 3 : 1">{{ isEnglish() ? 'Name' : 'নাম' }}</th>
                     <th *ngIf="isColVisible('ownDistrict')" [attr.rowspan]="showTenure ? 3 : 1" style="width: 45px; max-width: 45px; word-break: break-word">{{ isEnglish() ? 'Own District (Responsible Area)' : 'নিজ জেলা (দায়িত্বপূর্ণ এলাকা)' }}</th>
                     <th *ngIf="isColVisible('spouseDistrict')" [attr.rowspan]="showTenure ? 3 : 1">{{ isEnglish() ? "Husband/Wife's District (Responsible Area)" : 'স্বামী/স্ত্রীর জেলা (দায়িত্বপূর্ণ এলাকা)' }}</th>
-                    <th *ngIf="showTenure" colspan="4">{{ isEnglish() ? 'Tenure in RAB' : 'র‌্যাবে অবস্থানকাল' }}</th>
+                    <th *ngIf="showTenure" colspan="4">{{ isEnglish() ? 'Tenure in SRB' : 'এসআরবিে অবস্থানকাল' }}</th>
                     <th *ngIf="isColVisible('prevWorkplace')" [attr.rowspan]="showTenure ? 3 : 1" style="width: 100px">{{ isEnglish() ? 'Previous Workplace' : 'পূর্ববতী কর্মস্থল' }}</th>
                     <th *ngIf="isColVisible('transferUnit')" [attr.rowspan]="showTenure ? 3 : 1">{{ isEnglish() ? 'Transfer Station' : 'বদলিকৃত কর্মস্থল' }}</th>
                     <th *ngIf="showRemarks" [attr.rowspan]="showTenure ? 3 : 1" style="min-width: 90px">{{ isEnglish() ? 'Remarks' : 'মন্তব্য' }}</th>

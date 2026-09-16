@@ -396,7 +396,7 @@ export class OfficeOrderExBdLeavePreviewComponent implements OnInit {
 
         let text = '';
         if (bn) {
-            text = 'র‍্যাব প্রেষণে নিয়োজিত বর্তমানে';
+            text = 'এসআরবি প্রেষণে নিয়োজিত বর্তমানে';
             if (unitName) text += ` ${unitName}`;
             text += ` এ কর্মরত নং-${rabId} ${empName}`;
             if (purpose) text += ` এর নিজের ${purpose}র জন্য`;
@@ -640,8 +640,8 @@ export class OfficeOrderExBdLeavePreviewComponent implements OnInit {
 
         // Government Header
         const headerLines = this.isBangla
-            ? ['গণপ্রজাতন্ত্রী বাংলাদেশ সরকার', 'বাংলাদেশ পুলিশ', 'র‍্যাব ফোর্সেস সদর দপ্তর', 'কুর্মিটোলা, ঢাকা।']
-            : ["People's Republic of Bangladesh", 'Bangladesh Police', 'RAB Forces Headquarters', 'Kurmitola, Dhaka.'];
+            ? ['গণপ্রজাতন্ত্রী বাংলাদেশ সরকার', 'বাংলাদেশ পুলিশ', 'এসআরবি ফোর্সেস সদর দপ্তর', 'কুর্মিটোলা, ঢাকা।']
+            : ["People's Republic of Bangladesh", 'Bangladesh Police', 'SRB Forces Headquarters', 'Kurmitola, Dhaka.'];
         for (const line of headerLines) {
             children.push(new Paragraph({ children: [new TextRun({ text: line, font, size: titleSize, bold: true })], alignment: AlignmentType.CENTER, spacing: { after: 20 } }));
         }

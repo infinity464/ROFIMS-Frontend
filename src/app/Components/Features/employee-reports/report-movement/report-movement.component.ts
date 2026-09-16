@@ -141,7 +141,7 @@ export class ReportMovementComponent implements OnInit, OnDestroy {
         { key: 'ser', labelEN: 'Ser', labelBN: 'ক্রমিক', hint: 'Serial', defaultVisible: true },
         { key: 'serviceId', labelEN: 'Service ID', labelBN: 'ব্যক্তিগত নম্বর', hint: 'Plain', defaultVisible: true },
         { key: 'rank', labelEN: 'Rank', labelBN: 'পদবি', hint: 'Plain', defaultVisible: true },
-        { key: 'rabRank', labelEN: 'RAB Rank', labelBN: 'র‍্যাব র‍্যাঙ্ক', hint: 'Plain', defaultVisible: false },
+        { key: 'rabRank', labelEN: 'SRB Rank', labelBN: 'এসআরবি র‍্যাঙ্ক', hint: 'Plain', defaultVisible: false },
         { key: 'corps', labelEN: 'Corps', labelBN: 'কোর', hint: 'Plain', defaultVisible: true },
         { key: 'trade', labelEN: 'Trade', labelBN: 'ট্রেড', hint: 'Plain', defaultVisible: true },
         { key: 'name', labelEN: 'Name', labelBN: 'নাম', hint: 'Plain', defaultVisible: true },
@@ -161,7 +161,7 @@ export class ReportMovementComponent implements OnInit, OnDestroy {
         { key: 'takeoverDate', labelEN: 'Takeover Date', labelBN: 'দায়িত্ব গ্রহণের তারিখ', hint: 'Date', defaultVisible: false },
         { key: 'handoverDate', labelEN: 'Handover Date', labelBN: 'দায়িত্ব হস্তান্তরের তারিখ', hint: 'Date', defaultVisible: false },
         { key: 'returnDate', labelEN: 'Return Date', labelBN: 'প্রত্যাবর্তনের তারিখ', hint: 'Date', defaultVisible: false },
-        { key: 'rabId', labelEN: 'RAB ID', labelBN: 'র‍্যাব আইডি', hint: 'Plain', defaultVisible: false },
+        { key: 'rabId', labelEN: 'SRB ID', labelBN: 'এসআরবি আইডি', hint: 'Plain', defaultVisible: false },
         { key: 'nameBangla', labelEN: 'Name (Bangla)', labelBN: 'নাম (বাংলা)', hint: 'Plain', defaultVisible: false },
         { key: 'nid', labelEN: 'NID', labelBN: 'এনআইডি', hint: 'Plain', defaultVisible: false },
         { key: 'prefix', labelEN: 'Prefix', labelBN: 'প্রিফিক্স', hint: 'Plain', defaultVisible: false },
@@ -170,9 +170,9 @@ export class ReportMovementComponent implements OnInit, OnDestroy {
         { key: 'motherOrganization', labelEN: 'Mother Org', labelBN: 'মাতৃ সংস্থা', hint: 'Plain', defaultVisible: false },
         { key: 'motherUnit', labelEN: 'Mother Unit', labelBN: 'মাতৃ ইউনিট', hint: 'Plain', defaultVisible: false },
         { key: 'gender', labelEN: 'Gender', labelBN: 'লিঙ্গ', hint: 'Plain', defaultVisible: false },
-        { key: 'rabUnitHierarchy', labelEN: 'RAB Unit', labelBN: 'র‍্যাব ইউনিট', hint: 'Plain', defaultVisible: false },
+        { key: 'rabUnitHierarchy', labelEN: 'SRB Unit', labelBN: 'এসআরবি ইউনিট', hint: 'Plain', defaultVisible: false },
         { key: 'officerType', labelEN: 'Officer Type', labelBN: 'অফিসার ধরণ', hint: 'Plain', defaultVisible: false },
-        { key: 'joiningInRab', labelEN: 'RAB Joining Date', labelBN: 'র‍্যাবে যোগদানের তারিখ', hint: 'Date', defaultVisible: false },
+        { key: 'joiningInRab', labelEN: 'SRB Joining Date', labelBN: 'এসআরবিে যোগদানের তারিখ', hint: 'Date', defaultVisible: false },
         { key: 'dateOfCommission', labelEN: 'Commission Date', labelBN: 'কমিশন তারিখ', hint: 'Date', defaultVisible: false },
         { key: 'postingStatus', labelEN: 'Posting Status', labelBN: 'নিয়োগ অবস্থা', hint: 'Plain', defaultVisible: false },
         { key: 'dob', labelEN: 'Date of Birth', labelBN: 'জন্ম তারিখ', hint: 'Date', defaultVisible: false },
@@ -600,14 +600,14 @@ export class ReportMovementComponent implements OnInit, OnDestroy {
         }
         if (this.selectedRabRankId != null) {
             const opt = this.rabRankOptions.find((o) => o.value === this.selectedRabRankId);
-            const lbl = this.lang === 'en' ? 'RAB Rank' : 'র‍্যাব পদবি';
+            const lbl = this.lang === 'en' ? 'SRB Rank' : 'এসআরবি পদবি';
             if (opt) items.push({ label: lbl, value: this.lang === 'bn' ? opt.labelBn : opt.label });
         }
         multi(this.selectedCorpsIds, this.corpsOptions, 'Corps', 'কোর');
         multi(this.selectedTradeIds, this.tradeOptions, 'Trade', 'ট্রেড');
         if (this.selectedOrgNodeIds.length > 0) {
             const names = this.orgNodesLabel(this.lang === 'bn');
-            if (names) items.push({ label: this.lang === 'en' ? 'RAB Unit' : 'র‍্যাব ইউনিট', value: names });
+            if (names) items.push({ label: this.lang === 'en' ? 'SRB Unit' : 'এসআরবি ইউনিট', value: names });
         }
         single(this.selectedMovementType, this.movementTypeOptions, 'Movement Type', 'মুভমেন্টের ধরন');
         single(this.selectedMoveOrderType, this.moveOrderTypeOptions, 'Order Type', 'আদেশের ধরন');
@@ -796,7 +796,7 @@ export class ReportMovementComponent implements OnInit, OnDestroy {
         return this.lang === 'bn' ? 'গণপ্রজাতন্ত্রী বাংলাদেশ সরকার' : "GOVERNMENT OF THE PEOPLE'S REPUBLIC OF BANGLADESH";
     }
     get rabOrgTitle(): string {
-        return this.lang === 'bn' ? 'র‍্যাপিড অ্যাকশন ব্যাটালিয়ন' : 'RAPID ACTION BATTALION';
+        return this.lang === 'bn' ? 'স্পেশাল রেসপন্স ব্যাটালিয়ন' : 'SPECIAL RESPONSE BATTALION';
     }
     get rabOrgSubtitle(): string {
         return this.lang === 'bn' ? 'বাংলাদেশ পুলিশ · সদর দপ্তর, কুর্মিটোলা, ঢাকা' : 'Bangladesh Police · Headquarters, Kurmitola, Dhaka';

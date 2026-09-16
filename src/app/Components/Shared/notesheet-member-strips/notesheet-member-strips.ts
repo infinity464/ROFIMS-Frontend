@@ -74,7 +74,7 @@ export class NotesheetMemberStripsComponent {
             { label: 'Rank', value: pick('armyRank', 'armyRankBN') },
             { label: 'Mother Org', value: pick('motherOrganization', 'motherOrganizationBN') },
             { label: 'Mother Unit', value: pick('motherUnit', 'motherUnitBN') },
-            { label: 'RAB Unit', value: rabUnit || 'N/A' }
+            { label: 'SRB Unit', value: rabUnit || 'N/A' }
         ];
     }
 }

@@ -70,8 +70,8 @@ interface ChipField {
         <div class="surface-50 border-round-2xl py-4 mb-4">
             <div class="flex flex-wrap align-items-end gap-3">
                 <div style="min-width: 140px; max-width: 160px;">
-                    <label class="font-semibold block mb-2 text-700">RAB ID</label>
-                    <input pInputText class="w-full" placeholder="RAB ID" inputmode="numeric" [(ngModel)]="searchRabId" (ngModelChange)="onRabIdInput($event)" (keypress)="onNumericKeypress($event, false)" (paste)="onRabIdPaste()" (keydown.enter)="$event.preventDefault(); search()" />
+                    <label class="font-semibold block mb-2 text-700">SRB ID</label>
+                    <input pInputText class="w-full" placeholder="SRB ID" inputmode="numeric" [(ngModel)]="searchRabId" (ngModelChange)="onRabIdInput($event)" (keypress)="onNumericKeypress($event, false)" (paste)="onRabIdPaste()" (keydown.enter)="$event.preventDefault(); search()" />
                 </div>
                 <div style="min-width: 140px; max-width: 160px;">
                     <label class="font-semibold block mb-2 text-700">Service ID</label>
@@ -461,7 +461,7 @@ export class EmployeeSearchComponent implements OnChanges {
         shift: any | null,
         orgUnits: any[]
     ): { label: string; value: string }[] {
-        const rows: { label: string; value: string }[] = [{ label: 'Last RAB Unit', value: this.lastRabUnitName(previousRabService) }];
+        const rows: { label: string; value: string }[] = [{ label: 'Last SRB Unit', value: this.lastRabUnitName(previousRabService) }];
         const statusType = shift?.presentStatusType ?? null;
 
         if (statusType === PresentStatusType.RegularPostingOut || statusType === PresentStatusType.RTUOnDisciplineIssue) {
@@ -648,7 +648,7 @@ export class EmployeeSearchComponent implements OnChanges {
             this.messageService.add({
                 severity: 'warn',
                 summary: 'Warning',
-                detail: 'Please enter RAB ID or Service ID'
+                detail: 'Please enter SRB ID or Service ID'
             });
             return;
         }
@@ -931,7 +931,7 @@ export class EmployeeSearchComponent implements OnChanges {
         if (this.showTrade) fields.push({ label: 'Trade', value: e.tradeDisplay || 'N/A' });
         fields.push({ label: 'Mother Org', value: motherOrg || 'N/A' });
         if (this.showMotherUnit) fields.push({ label: 'Mother Unit', value: e.motherUnitDisplay || 'N/A' });
-        if (this.showRabUnit) fields.push({ label: 'RAB Unit', value: e.rabUnitDisplay || 'N/A' });
+        if (this.showRabUnit) fields.push({ label: 'SRB Unit', value: e.rabUnitDisplay || 'N/A' });
         fields.push(...this.exMemberChipFields);
         return fields;
     }

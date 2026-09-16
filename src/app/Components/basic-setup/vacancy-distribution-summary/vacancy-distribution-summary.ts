@@ -541,10 +541,10 @@ export class VacancyDistributionSummaryComponent implements OnInit {
                             this.buildDisplayRows(this.lastDistributionList);
                         }
                     },
-                    error: (err: any) => { console.error('Failed to build RAB tree — grid will render flat', err); }
+                    error: (err: any) => { console.error('Failed to build SRB tree — grid will render flat', err); }
                 });
             },
-            error: (err: any) => { console.error('Failed to load RAB units', err); }
+            error: (err: any) => { console.error('Failed to load SRB units', err); }
         });
     }
 

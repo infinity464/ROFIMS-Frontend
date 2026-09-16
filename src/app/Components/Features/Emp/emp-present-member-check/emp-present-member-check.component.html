@@ -34,7 +34,7 @@
 
 @if (exMemberEmployee) {
     <div class="card mt-4">
-        <h3 class="text-lg font-semibold mb-3">Previous RAB History of : {{ exMemberDetailsText }}</h3>
+        <h3 class="text-lg font-semibold mb-3">Previous SRB History of : {{ exMemberDetailsText }}</h3>
         <p-table [value]="exMemberViewList" [loading]="isLoadingExMemberData" [tableStyle]="{ 'min-width': '50rem' }" styleClass="p-datatable-sm">
             <ng-template pTemplate="header">
                 <tr>
@@ -62,7 +62,7 @@
             </ng-template>
             <ng-template pTemplate="emptymessage">
                 <tr>
-                    <td colspan="7" class="text-center text-500">No previous RAB service records. Please do Previous RAB Posting History Manually Entry .</td>
+                    <td colspan="7" class="text-center text-500">No previous SRB service records. Please do Previous SRB Posting History Manually Entry .</td>
                 </tr>
             </ng-template>
         </p-table>
@@ -148,7 +148,7 @@
                 <td>
                     @if (row.isExMember) {
                         <p-button
-                            label="Previous RAB Service History"
+                            label="Previous SRB Service History"
                             icon="pi pi-history"
                             size="small"
                             severity="info"

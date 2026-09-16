@@ -161,7 +161,7 @@ export class LeaveApplicationApplyComponent implements OnInit {
                         const name = emp?.fullNameEN ?? emp?.FullNameEN ?? '';
                         const rabId = emp?.rabid ?? emp?.RABID ?? emp?.Rabid ?? '';
                         const serviceId = emp?.serviceId ?? emp?.ServiceId ?? '';
-                        const parts = [name, rabId ? `RAB: ${rabId}` : '', serviceId ? `SVC: ${serviceId}` : ''].filter(Boolean);
+                        const parts = [name, rabId ? `SRB: ${rabId}` : '', serviceId ? `SVC: ${serviceId}` : ''].filter(Boolean);
                         this.preparedByDisplay = parts.join(' | ') || `Employee #${empId}`;
                     }
                 });
@@ -336,7 +336,7 @@ export class LeaveApplicationApplyComponent implements OnInit {
                         // Rank Name (Appointment) | SVC | RAB
                         let head = [rank, name].filter(Boolean).join(' ');
                         if (appointment) head = head ? `${head} (${appointment})` : `(${appointment})`;
-                        const parts = [head, serviceId ? `SVC: ${serviceId}` : '', rabId ? `RAB: ${rabId}` : ''].filter(Boolean);
+                        const parts = [head, serviceId ? `SVC: ${serviceId}` : '', rabId ? `SRB: ${rabId}` : ''].filter(Boolean);
                         return {
                             label: parts.join(' | ') || `Employee #${empId}`,
                             value: empId as number
@@ -613,7 +613,7 @@ export class LeaveApplicationApplyComponent implements OnInit {
                             const name = emp?.fullNameEN ?? emp?.FullNameEN ?? '';
                             const rabId = emp?.rabid ?? emp?.RABID ?? emp?.Rabid ?? '';
                             const serviceId = emp?.serviceId ?? emp?.ServiceId ?? '';
-                            const parts = [name, rabId ? `RAB: ${rabId}` : '', serviceId ? `SVC: ${serviceId}` : ''].filter(Boolean);
+                            const parts = [name, rabId ? `SRB: ${rabId}` : '', serviceId ? `SVC: ${serviceId}` : ''].filter(Boolean);
                             this.employeeNameCache[empId] = parts.join(' | ') || `Employee #${empId}`;
                         }
                     });

@@ -128,7 +128,7 @@ export class ReportDeceasedComponent implements OnInit {
         { key: 'serviceId',      labelEN: 'Service ID',           labelBN: 'সার্ভিস আইডি',           hint: 'Plain',      defaultVisible: true  },
         { key: 'rank',           labelEN: 'Rank',                 labelBN: 'পদবী',                   hint: 'Plain',      defaultVisible: true  },
         { key: 'corps',          labelEN: 'Corps',                labelBN: 'কোর',                    hint: 'Plain',      defaultVisible: true  },
-        { key: 'rabRank',        labelEN: 'RAB Rank',             labelBN: 'র‍্যাব র‍্যাঙ্ক',         hint: 'Plain',      defaultVisible: false },
+        { key: 'rabRank',        labelEN: 'SRB Rank',             labelBN: 'এসআরবি র‍্যাঙ্ক',         hint: 'Plain',      defaultVisible: false },
         { key: 'trade',          labelEN: 'Trade',                labelBN: 'ট্রেড',                  hint: 'Plain',      defaultVisible: true  },
         { key: 'name',           labelEN: 'Name',                 labelBN: 'নাম',                    hint: 'Personnel',  defaultVisible: true  },
         { key: 'rabUnit',        labelEN: 'Battalion',            labelBN: 'ব্যাটালিয়ন',             hint: 'Plain',      defaultVisible: false },
@@ -139,13 +139,13 @@ export class ReportDeceasedComponent implements OnInit {
         // Profile-style composite: line 1 = Prefix + Service No + Rank; line 2 =
         // Name with awards, professional qualification and corps. Opt-in.
         { key: 'callNoRankName', labelEN: 'No Rank Name',         labelBN: 'নং র‍্যাঙ্ক নাম',        hint: 'CallNoRankName', defaultVisible: false },
-        { key: 'joiningInRab',   labelEN: 'RAB Joining Date',     labelBN: 'র‍্যাবে যোগদানের তারিখ',  hint: 'Date',       defaultVisible: true  },
+        { key: 'joiningInRab',   labelEN: 'SRB Joining Date',     labelBN: 'এসআরবিে যোগদানের তারিখ',  hint: 'Date',       defaultVisible: true  },
         { key: 'lastUnit',       labelEN: 'Last Bn/Wg',           labelBN: 'সর্বশেষ ইউনিট',          hint: 'Plain',      defaultVisible: true  },
         { key: 'dateOfDeath',    labelEN: 'Date of Death',        labelBN: 'মৃত্যুবরণের তারিখ',       hint: 'Date',       defaultVisible: true  },
         { key: 'deceasedReason', labelEN: 'Death Reason',         labelBN: 'মৃত্যুর কারণ',           hint: 'Plain',      defaultVisible: true  },
         { key: 'rmks',           labelEN: 'Remark',               labelBN: 'মন্তব্য',                hint: 'Remarks',    defaultVisible: true  },
         // ── Opt-in extras (registry FieldKeys) — hidden by default ────────
-        { key: 'rabId',          labelEN: 'RAB ID',               labelBN: 'র‍্যাব আইডি',            hint: 'Plain',      defaultVisible: false },
+        { key: 'rabId',          labelEN: 'SRB ID',               labelBN: 'এসআরবি আইডি',            hint: 'Plain',      defaultVisible: false },
         { key: 'nameBangla',     labelEN: 'Name (Bangla)',        labelBN: 'নাম (বাংলা)',            hint: 'Plain',      defaultVisible: false },
         { key: 'nid',            labelEN: 'NID',                  labelBN: 'এনআইডি',                hint: 'Plain',      defaultVisible: false },
         { key: 'prefix',         labelEN: 'Prefix',               labelBN: 'প্রিফিক্স',              hint: 'Plain',      defaultVisible: false },
@@ -155,10 +155,10 @@ export class ReportDeceasedComponent implements OnInit {
         { key: 'gender',         labelEN: 'Gender',               labelBN: 'লিঙ্গ',                  hint: 'Plain',      defaultVisible: false },
         { key: 'motherUnit',     labelEN: 'Mother Unit',          labelBN: 'মাতৃ ইউনিট',             hint: 'Plain',      defaultVisible: false },
         // Trimmed job hierarchy (Battalion, Wing … deepest level — first two + last). Opt-in.
-        { key: 'rabUnitHierarchy', labelEN: 'RAB Unit',           labelBN: 'র‍্যাব ইউনিট',           hint: 'Plain',      defaultVisible: false },
+        { key: 'rabUnitHierarchy', labelEN: 'SRB Unit',           labelBN: 'এসআরবি ইউনিট',           hint: 'Plain',      defaultVisible: false },
         { key: 'dateOfCommission', labelEN: 'Commission Date',    labelBN: 'কমিশন তারিখ',            hint: 'Date',       defaultVisible: false },
-        { key: 'rabServiceFrom', labelEN: 'RAB Service From',     labelBN: 'র‍্যাব স্থিতিকাল হইতে',   hint: 'Date',       defaultVisible: false },
-        { key: 'rabServiceTo',   labelEN: 'RAB Service To',       labelBN: 'র‍্যাব স্থিতিকাল পর্যন্ত', hint: 'Date',      defaultVisible: false },
+        { key: 'rabServiceFrom', labelEN: 'SRB Service From',     labelBN: 'এসআরবি স্থিতিকাল হইতে',   hint: 'Date',       defaultVisible: false },
+        { key: 'rabServiceTo',   labelEN: 'SRB Service To',       labelBN: 'এসআরবি স্থিতিকাল পর্যন্ত', hint: 'Date',      defaultVisible: false },
         { key: 'postingStatus',  labelEN: 'Posting Status',       labelBN: 'নিয়োগ অবস্থা',          hint: 'Plain',      defaultVisible: false },
         { key: 'officerType',    labelEN: 'Officer Type',         labelBN: 'অফিসার ধরণ',             hint: 'Plain',      defaultVisible: false },
         { key: 'dob',            labelEN: 'Date of Birth',        labelBN: 'জন্ম তারিখ',             hint: 'Date',       defaultVisible: false },
@@ -535,7 +535,7 @@ export class ReportDeceasedComponent implements OnInit {
         multi(this.selectedTradeIds, this.tradeOptions, 'Trade', 'ট্রেড');
         if (this.selectedOrgNodeIds.length > 0) {
             const names = this.orgNodesLabel(this.lang === 'bn');
-            if (names) items.push({ label: this.lang === 'bn' ? 'র‍্যাব ইউনিট' : 'RAB Unit', value: names });
+            if (names) items.push({ label: this.lang === 'bn' ? 'এসআরবি ইউনিট' : 'SRB Unit', value: names });
         }
         return items;
     }
@@ -784,7 +784,7 @@ export class ReportDeceasedComponent implements OnInit {
             ? 'গণপ্রজাতন্ত্রী বাংলাদেশ সরকার'
             : "GOVERNMENT OF THE PEOPLE'S REPUBLIC OF BANGLADESH";
     }
-    get rabOrgTitle(): string { return this.lang === 'bn' ? 'র‍্যাপিড অ্যাকশন ব্যাটালিয়ন' : 'RAPID ACTION BATTALION'; }
+    get rabOrgTitle(): string { return this.lang === 'bn' ? 'স্পেশাল রেসপন্স ব্যাটালিয়ন' : 'SPECIAL RESPONSE BATTALION'; }
     get rabOrgSubtitle(): string {
         return this.lang === 'bn'
             ? 'বাংলাদেশ পুলিশ · সদর দপ্তর, কুর্মিটোলা, ঢাকা'

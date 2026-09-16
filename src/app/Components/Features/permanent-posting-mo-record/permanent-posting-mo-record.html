@@ -50,8 +50,8 @@
             <!-- Search Row -->
             <div class="form-row" style="align-items:flex-end;">
                 <div class="form-field">
-                    <label class="form-label">RAB ID</label>
-                    <input pInputText class="w-full" [(ngModel)]="poSearchRabId" placeholder="RAB ID"
+                    <label class="form-label">SRB ID</label>
+                    <input pInputText class="w-full" [(ngModel)]="poSearchRabId" placeholder="SRB ID"
                         (keyup.enter)="searchPostedOut()" />
                 </div>
                 <div class="form-field">
@@ -95,7 +95,7 @@
             <div class="form-row">
                 @if (postedOutEmployee) {
                     <div class="form-field form-field-half">
-                        <label class="form-label text-500">RAB Unit</label>
+                        <label class="form-label text-500">SRB Unit</label>
                         <input pInputText class="w-full" [value]="postedOutRabUnitName || '-'" readonly />
                     </div>
                 }

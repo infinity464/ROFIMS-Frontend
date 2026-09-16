@@ -54,7 +54,7 @@
                         [filter]="true" appendTo="body"></p-multiSelect>
                 </div>
                 <div class="report-filter-field">
-                    <label>RAB Rank</label>
+                    <label>SRB Rank</label>
                     <p-multiSelect [options]="rabRankOptions" [(ngModel)]="selectedRabRankIds" [disabled]="selectedRankIds.length > 0"
                         optionLabel="label" optionValue="value" display="chip" placeholder="Select" styleClass="w-full"
                         [filter]="true" appendTo="body"></p-multiSelect>
@@ -75,7 +75,7 @@
                      level (Battalion / Wing / Branch / Sub-Branch / Section /
                      Sub-Section). Picking an ancestor covers its descendants. -->
                 <div class="report-filter-field">
-                    <label>RAB Unit</label>
+                    <label>SRB Unit</label>
                     <app-org-tree-multi-select
                         [(ngModel)]="selectedOrgNodeIds"
                         placeholder="Select units, wings, branches…"
@@ -142,7 +142,7 @@
                 [(ngModel)]="idSearchText"
                 (ngModelChange)="onIdSearchInput()"
                 (keydown.enter)="onIdSearch()"
-                [placeholder]="lang === 'bn' ? 'সার্ভিস আইডি / র‍্যাব আইডি' : 'Service ID / RAB ID'" />
+                [placeholder]="lang === 'bn' ? 'সার্ভিস আইডি / এসআরবি আইডি' : 'Service ID / SRB ID'" />
             @if (idSearchText) {
                 <button type="button" class="rab-search-clear" (click)="clearIdSearch()" title="Clear search">
                     <i class="pi pi-times"></i>

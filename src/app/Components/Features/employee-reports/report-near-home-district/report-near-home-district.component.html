@@ -49,7 +49,7 @@
                         [disabled]="selectedOrgIds.length === 0" [filter]="true" [showClear]="true" appendTo="body"></p-select>
                 </div>
                 <div class="report-filter-field">
-                    <label>RAB Rank</label>
+                    <label>SRB Rank</label>
                     <p-select [options]="rabRankOptions" [(ngModel)]="selectedRabRankId" (ngModelChange)="onFilterChange()"
                         optionLabel="label" optionValue="value" placeholder="Select" styleClass="w-full"
                         [disabled]="selectedRankId != null" [filter]="true" [showClear]="true" appendTo="body"></p-select>
@@ -69,7 +69,7 @@
                         placeholder="Select" styleClass="w-full" appendTo="body"></p-multiSelect>
                 </div>
                 <div class="report-filter-field">
-                    <label>RAB Unit</label>
+                    <label>SRB Unit</label>
                     <app-org-tree-multi-select [(ngModel)]="selectedOrgNodeIds" placeholder="Select units, wings, branches…"></app-org-tree-multi-select>
                 </div>
             </div>
@@ -133,7 +133,7 @@
                 [(ngModel)]="idSearchText"
                 (ngModelChange)="onIdSearchInput()"
                 (keydown.enter)="onIdSearch()"
-                [placeholder]="lang === 'bn' ? 'সার্ভিস আইডি / র‍্যাব আইডি' : 'Service ID / RAB ID'" />
+                [placeholder]="lang === 'bn' ? 'সার্ভিস আইডি / এসআরবি আইডি' : 'Service ID / SRB ID'" />
             @if (idSearchText) {
                 <button type="button" class="rab-search-clear" (click)="clearIdSearch()" title="Clear search">
                     <i class="pi pi-times"></i>

@@ -90,7 +90,7 @@ export class NoteSheetApproverConfigComponent implements OnInit {
                     const name = e.fullNameEN || e.FullNameEN || '';
                     const rabId = e.rabid || e.Rabid || e.RABID || '';
                     const serviceId = e.serviceId || e.ServiceId || '';
-                    const parts = [name, rabId ? `RAB: ${rabId}` : '', serviceId ? `SVC: ${serviceId}` : ''].filter(Boolean);
+                    const parts = [name, rabId ? `SRB: ${rabId}` : '', serviceId ? `SVC: ${serviceId}` : ''].filter(Boolean);
                     return {
                         label: parts.join(' | ') || `ID ${e.employeeID ?? e.EmployeeID}`,
                         value: e.employeeID ?? e.EmployeeID

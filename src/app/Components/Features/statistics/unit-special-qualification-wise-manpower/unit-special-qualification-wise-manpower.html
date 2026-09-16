@@ -5,13 +5,13 @@
 
         <div class="report-toolbar-row">
             <div class="report-filter-block">
-                <label class="filter-label">{{ lang === 'en' ? 'RAB Unit:' : 'র‍্যাব ইউনিট:' }}</label>
+                <label class="filter-label">{{ lang === 'en' ? 'SRB Unit:' : 'এসআরবি ইউনিট:' }}</label>
                 <p-multiSelect
                     [options]="rabUnitOptions"
                     [(ngModel)]="selectedRabUnitIds"
                     optionLabel="label"
                     optionValue="value"
-                    [placeholder]="lang === 'en' ? 'All RAB Units (top-level)' : 'সকল র‍্যাব ইউনিট'"
+                    [placeholder]="lang === 'en' ? 'All SRB Units (top-level)' : 'সকল এসআরবি ইউনিট'"
                     [showClear]="true"
                     [filter]="true"
                     display="chip"

@@ -323,8 +323,8 @@ export class UnitRankWiseManpowerComponent implements OnInit {
         const rowEN = isWingMode ? 'WING' : 'UNIT';
         const rowBN = isWingMode ? 'উইং'   : 'ইউনিট';
         return this.lang === 'en'
-            ? `${rowEN}-WISE MANPOWER STATE BY RAB RANK`
-            : `${rowBN} অনুযায়ী র‍্যাব পদবী ভিত্তিক জনবলের পরিসংখ্যান`;
+            ? `${rowEN}-WISE MANPOWER STATE BY SRB RANK`
+            : `${rowBN} অনুযায়ী এসআরবি পদবী ভিত্তিক জনবলের পরিসংখ্যান`;
     }
 
     get unitHeader(): string {

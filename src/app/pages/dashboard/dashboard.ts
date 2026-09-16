@@ -339,8 +339,8 @@ type CalItem = { id: string; day: string; mon: string; dow: string; title: strin
             <!-- ===== Row 3: Map + Event Calendar ===== -->
             <div class="col-span-12 xl:col-span-7">
                 <div class="card mb-0 h-full">
-                    <div class="font-semibold text-lg text-surface-900 dark:text-surface-0">RAB Area of Responsibility Map</div>
-                    <div class="text-muted-color text-sm mb-4">Bangladesh · RAB Unit AOR</div>
+                    <div class="font-semibold text-lg text-surface-900 dark:text-surface-0">SRB Area of Responsibility Map</div>
+                    <div class="text-muted-color text-sm mb-4">Bangladesh · SRB Unit AOR</div>
                     <app-rab-unit-aor-map [bare]="true" [hideTitle]="true" [hideLegend]="true" [heightPx]="420"></app-rab-unit-aor-map>
                 </div>
             </div>
@@ -430,7 +430,7 @@ type CalItem = { id: string; day: string; mon: string; dow: string; title: strin
                                     }
                                     <div class="flex flex-wrap gap-2 mt-3">
                                         <span class="inline-flex items-center gap-2 px-3 py-1 rounded-md bg-surface-100 dark:bg-surface-800 border border-surface-200 dark:border-surface-700 text-sm">
-                                            <span class="text-muted-color uppercase text-xs">RAB ID</span>
+                                            <span class="text-muted-color uppercase text-xs">SRB ID</span>
                                             <span class="font-semibold text-surface-900 dark:text-surface-0">{{ r.rabId || '—' }}</span>
                                         </span>
                                         <span class="inline-flex items-center gap-2 px-3 py-1 rounded-md bg-surface-100 dark:bg-surface-800 border border-surface-200 dark:border-surface-700 text-sm">
@@ -491,14 +491,14 @@ type CalItem = { id: string; day: string; mon: string; dow: string; title: strin
                                 </div>
                             </div>
 
-                            <!-- mother unit + RAB unit -->
+                            <!-- mother unit + SRB unit -->
                             <div class="grid grid-cols-2 border-t border-surface-200 dark:border-surface-700">
                                 <div class="p-3 border-r border-surface-200 dark:border-surface-700">
                                     <div class="flex items-center gap-2 text-muted-color text-xs uppercase mb-1"><i class="pi pi-sitemap"></i> Mother Unit</div>
                                     <div class="text-surface-900 dark:text-surface-0 truncate" [class.text-muted-color]="!r.motherUnit" [class.italic]="!r.motherUnit">{{ r.motherUnit || 'Not assigned' }}</div>
                                 </div>
                                 <div class="p-3">
-                                    <div class="flex items-center gap-2 text-muted-color text-xs uppercase mb-1"><i class="pi pi-map-marker"></i> RAB Unit</div>
+                                    <div class="flex items-center gap-2 text-muted-color text-xs uppercase mb-1"><i class="pi pi-map-marker"></i> SRB Unit</div>
                                     <div class="text-surface-900 dark:text-surface-0 truncate" [class.text-muted-color]="!r.rabUnit" [class.italic]="!r.rabUnit">{{ r.rabUnit || 'Not assigned' }}</div>
                                 </div>
                             </div>
@@ -509,7 +509,7 @@ type CalItem = { id: string; day: string; mon: string; dow: string; title: strin
                             </div>
                         </div>
                     } @else {
-                        <div class="mt-6 py-10 text-center text-muted-color border border-dashed border-surface-300 dark:border-surface-600 rounded">Search by RAB ID, Service ID, Mobile, Office Mobile, NID, Old NID, Passport or Email</div>
+                        <div class="mt-6 py-10 text-center text-muted-color border border-dashed border-surface-300 dark:border-surface-600 rounded">Search by SRB ID, Service ID, Mobile, Office Mobile, NID, Old NID, Passport or Email</div>
                     }
                 </div>
             </div>
@@ -609,7 +609,7 @@ type CalItem = { id: string; day: string; mon: string; dow: string; title: strin
                         </div>
                         <div class="flex-1 min-w-0">
                             <div class="font-medium text-surface-900 dark:text-surface-0 truncate">{{ c.name || 'Unknown' }}</div>
-                            <div class="text-sm text-muted-color truncate">RAB ID: {{ c.rabId || '—' }} · Service ID: {{ c.serviceId || '—' }} · {{ c.motherOrg || '—' }}</div>
+                            <div class="text-sm text-muted-color truncate">SRB ID: {{ c.rabId || '—' }} · Service ID: {{ c.serviceId || '—' }} · {{ c.motherOrg || '—' }}</div>
                         </div>
                         <button type="button" pButton label="Select" size="small" (click)="chooseCandidate(c)"></button>
                     </div>

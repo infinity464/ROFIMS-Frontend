@@ -10,9 +10,9 @@ const BN_MONTHS = [
 ];
 
 /** Bangla column headings, in the order the printed roll uses. */
-const COLUMNS_BN = ['ক্রমিক', 'ব্যক্তিগত নং', 'পদবি', 'নাম', 'মাতৃ ইউনিট', 'র‍্যাব আইডি'];
+const COLUMNS_BN = ['ক্রমিক', 'ব্যক্তিগত নং', 'পদবি', 'নাম', 'মাতৃ ইউনিট', 'এসআরবি আইডি'];
 
-const DOC_TITLE_BN = 'র‍্যাব ওরিয়েন্টেশন ট্রেনিং এ অংশগ্রহণের নিমিত্তে সংযুক্তকৃত র‍্যাব সদস্যদের নামীয় তালিকা';
+const DOC_TITLE_BN = 'এসআরবি ওরিয়েন্টেশন ট্রেনিং এ অংশগ্রহণের নিমিত্তে সংযুক্তকৃত এসআরবি সদস্যদের নামীয় তালিকা';
 
 /** Default first line of the memo block. */
 const ANNEXURE_LABEL_BN = 'ক্রোড়পত্র ক';
@@ -120,7 +120,7 @@ export class RftsNominalRollService {
         const label = opts && 'annexureLabel' in opts ? opts.annexureLabel : ANNEXURE_LABEL_BN;
         return [
             ...(label ? [label] : []),
-            'র‍্যাব ফোর্সেস সদর দপ্তর',
+            'এসআরবি ফোর্সেস সদর দপ্তর',
             // The course / reference no stands on its own — no "স্মারক নং-" label,
             // since these numbers are not government memo numbers.
             this.toBnDigits(roll.courseRefNo),
@@ -283,9 +283,9 @@ export class RftsNominalRollService {
   tr { page-break-inside: avoid; break-inside: avoid; }
   .band td { font-weight: bold; text-align: left; }
   .c0 { text-align: center; }
-  /* No nowrap: a long personal / RAB number must wrap rather than spill out. */
+  /* No nowrap: a long personal / SRB number must wrap rather than spill out. */
   .c1 { text-align: left; }   /* ব্যক্তিগত নং */
-  .c5 { text-align: center; } /* র‍্যাব আইডি */
+  .c5 { text-align: center; } /* এসআরবি আইডি */
   .empty { text-align: center; padding: 18px; }
   /* Widths are %, because the table is 100% of the printable width. On A4
      portrait with 10mm side margins that is 190mm ≈ 718px, so 1% ≈ 7.2px.

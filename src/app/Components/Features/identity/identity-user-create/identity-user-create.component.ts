@@ -338,14 +338,14 @@ export class IdentityUserCreateComponent implements OnInit {
 
   private buildEmployeeMeta(rabID: string | null, serviceId: string | null): string | null {
     const parts: string[] = [];
-    if (rabID) parts.push(`RAB: ${rabID}`);
+    if (rabID) parts.push(`SRB: ${rabID}`);
     if (serviceId) parts.push(`Service: ${serviceId}`);
     return parts.length ? parts.join(' · ') : null;
   }
 
   private buildEmployeeLabel(name: string, rabID: string | null, serviceId: string | null): string {
     const parts: string[] = [];
-    if (rabID) parts.push(`RAB: ${rabID}`);
+    if (rabID) parts.push(`SRB: ${rabID}`);
     if (serviceId) parts.push(`Service: ${serviceId}`);
     return parts.length ? `${name} (${parts.join(' / ')})` : name;
   }
@@ -361,7 +361,7 @@ export class IdentityUserCreateComponent implements OnInit {
     const parts = [
       memberType,
       rank,
-      rabID ? `RAB: ${rabID}` : null,
+      rabID ? `SRB: ${rabID}` : null,
       serviceId ? `Service: ${serviceId}` : null,
       name
     ].filter((p): p is string => !!p);
@@ -555,7 +555,7 @@ export class IdentityUserCreateComponent implements OnInit {
                     summary: 'Partial Update',
                     detail: !memberOk
                       ? (memberAccess.description ?? 'User updated but member-type access save failed.')
-                      : (rabAccess.description ?? 'User updated but RAB Unit access save failed.')
+                      : (rabAccess.description ?? 'User updated but SRB Unit access save failed.')
                   });
                 }
                 this.onReset();
@@ -671,7 +671,7 @@ export class IdentityUserCreateComponent implements OnInit {
                   } else if (!memberOk) {
                     detail = memberAccess.description ?? 'User created but member-type access save failed.';
                   } else {
-                    detail = rabAccess.description ?? 'User created but RAB Unit access save failed.';
+                    detail = rabAccess.description ?? 'User created but SRB Unit access save failed.';
                   }
                   this.messageService.add({
                     severity: 'warn',

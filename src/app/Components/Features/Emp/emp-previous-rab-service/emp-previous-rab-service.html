@@ -3,7 +3,7 @@
         @if (!hideTitle) {
             <div class="form-card-header">
                 <h3 class="form-card-title">
-                    Previous Service in RAB Entry
+                    Previous Service in SRB Entry
                     @if (mode === 'view') {
                         <span class="text-500 text-base font-normal">(View Mode)</span>
                     }
@@ -36,7 +36,7 @@
         @if (employeeFound) {
             <div class="form-section">
                 <div class="flex align-items-center gap-3 mb-3 flex-wrap">
-                    <h3 class="form-subtitle m-0">Previous RAB Service List</h3>
+                    <h3 class="form-subtitle m-0">Previous SRB Service List</h3>
                     @if (!isReadonly && !showInlineForm) {
                         <div class="ml-auto">
                             <p-button label="Add row" icon="pi pi-plus" (onClick)="openAddDialog()"></p-button>
@@ -47,7 +47,7 @@
                 @if (showInlineForm) {
                     <div class="surface-50 border-round-xl p-4 mb-4" style="border: 1px solid var(--surface-300);">
                         <div class="flex align-items-center justify-content-between mb-3">
-                            <h4 class="m-0 text-700">{{ isEditMode ? 'Edit Previous RAB Service' : 'Add Previous RAB Service' }}</h4>
+                            <h4 class="m-0 text-700">{{ isEditMode ? 'Edit Previous SRB Service' : 'Add Previous SRB Service' }}</h4>
                         </div>
                         <form [formGroup]="serviceForm" class="service-form">
                             <div class="grid grid-cols-2 gap-4">
@@ -65,7 +65,7 @@
                                         [class.p-invalid]="serviceForm.get('rabUnitCodeId')?.invalid && serviceForm.get('rabUnitCodeId')?.touched"></p-select>
                                 </div>
                                 <div>
-                                    <label class="font-semibold block mb-2 text-700">RAB Wing</label>
+                                    <label class="font-semibold block mb-2 text-700">SRB Wing</label>
                                     <p-select
                                         formControlName="rabWingCodeId"
                                         [options]="rabWingOptions"
@@ -208,7 +208,7 @@
                             <tr>
                                 <th style="width: 60px; background: var(--surface-100)">Ser</th>
                                 <th style="min-width: 150px; background: var(--surface-100)">Battalion Name</th>
-                                <th style="min-width: 120px; background: var(--surface-100)">RAB Wing</th>
+                                <th style="min-width: 120px; background: var(--surface-100)">SRB Wing</th>
                                 <th style="min-width: 120px; background: var(--surface-100)">Branch</th>
                                 <th style="min-width: 120px; background: var(--surface-100)">Sub-Branch</th>
                                 <th style="min-width: 120px; background: var(--surface-100)">Section</th>
@@ -244,7 +244,7 @@
                         <ng-template pTemplate="emptymessage">
                             <tr>
                                 <td [attr.colspan]="11" class="text-center py-4 text-500">
-                                    No previous RAB service entries. Click "Add row" to add.
+                                    No previous SRB service entries. Click "Add row" to add.
                                 </td>
                             </tr>
                         </ng-template>

@@ -526,8 +526,8 @@ export class OfficeOrderPreviewComponent implements OnInit {
 
         // ── Government Header (centered, 9pt) ──
         const headerLines = this.isBangla
-            ? ['গণপ্রজাতন্ত্রী বাংলাদেশ সরকার', 'বাংলাদেশ পুলিশ', 'র‌্যাব ফোর্সেস সদর দপ্তর', 'কুর্মিটোলা, ঢাকা']
-            : ["Government of the People's Republic of Bangladesh", 'Bangladesh Police', 'RAB Forces Headquarters', 'Kurmitola, Dhaka'];
+            ? ['গণপ্রজাতন্ত্রী বাংলাদেশ সরকার', 'বাংলাদেশ পুলিশ', 'এসআরবি ফোর্সেস সদর দপ্তর', 'কুর্মিটোলা, ঢাকা']
+            : ["Government of the People's Republic of Bangladesh", 'Bangladesh Police', 'SRB Forces Headquarters', 'Kurmitola, Dhaka'];
         for (const line of headerLines) {
             children.push(new Paragraph({
                 children: [new TextRun({ text: line, font, size: headerSize, bold: true })],

@@ -107,7 +107,7 @@
                 </div>
                 <p-iconfield iconPosition="left">
                     <p-inputicon styleClass="pi pi-search"></p-inputicon>
-                    <input pInputText type="text" placeholder="Search by Name / Service ID / RAB ID"
+                    <input pInputText type="text" placeholder="Search by Name / Service ID / SRB ID"
                         [(ngModel)]="searchText" (ngModelChange)="onSearchChange()" [style]="{ paddingLeft: '2.5rem' }" />
                 </p-iconfield>
             </div>
@@ -144,7 +144,7 @@
                         <th>Name</th>
                         <th>Mother Org</th>
                         <th>Date of Joining</th>
-                        <th>RAB ID</th>
+                        <th>SRB ID</th>
                     </tr>
                 </ng-template>
                 <ng-template pTemplate="body" let-row let-rowIndex="rowIndex">

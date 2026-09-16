@@ -439,7 +439,7 @@ export class Employeeinfo implements OnInit {
                     {
                         fromDate: '01-01-2010',
                         toDate: '01-01-2013',
-                        battalion: 'RAB-1',
+                        battalion: 'SRB-1',
                         appointment: 'Ops Offr'
                     }
                 ];

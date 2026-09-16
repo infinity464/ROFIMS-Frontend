@@ -99,7 +99,7 @@
                 <i *ngIf="loadingApplicant" class="pi pi-spin pi-spinner text-500"></i>
                 <ng-container *ngIf="applicantInfo">
                     <span class="text-600">Applicant: <strong>{{ applicantInfo.FullNameEN || applicantInfo.fullNameEN }}</strong></span>
-                    <span *ngIf="applicantInfo.RABID || applicantInfo.rabID" class="text-600">| RAB ID: <strong>{{ applicantInfo.RABID || applicantInfo.rabID }}</strong></span>
+                    <span *ngIf="applicantInfo.RABID || applicantInfo.rabID" class="text-600">| SRB ID: <strong>{{ applicantInfo.RABID || applicantInfo.rabID }}</strong></span>
                     <span *ngIf="applicantInfo.ServiceId || applicantInfo.serviceId" class="text-600">| Service ID: <strong>{{ applicantInfo.ServiceId || applicantInfo.serviceId }}</strong></span>
                     <span *ngIf="applicantInfo.Rank || applicantInfo.rank" class="text-600">| Rank: <strong>{{ applicantInfo.Rank || applicantInfo.rank }}</strong></span>
                     <span *ngIf="applicantInfo.MotherOrganization || applicantInfo.motherOrganization" class="text-600">| Mother Org: <strong>{{ applicantInfo.MotherOrganization || applicantInfo.motherOrganization }}</strong></span>

@@ -196,7 +196,7 @@ export class ReportCourseComponent implements OnInit, OnChanges {
      * doesn't confusingly read as a permission issue.
      */
     showNotFoundDialog = false;
-    notFoundMessage = 'No member found with the given RAB ID / Service ID / NID.';
+    notFoundMessage = 'No member found with the given SRB ID / Service ID / NID.';
 
     get noMatchMessage(): string {
         return this.lang === 'bn'
@@ -244,7 +244,7 @@ export class ReportCourseComponent implements OnInit, OnChanges {
         { key: 'country',           labelEN: 'Country',       labelBN: 'দেশ',           hint: 'Plain',     defaultVisible: true  },
         { key: 'courseRemarks',     labelEN: 'Remarks',       labelBN: 'মন্তব্য',        hint: 'Plain',     defaultVisible: true  },
         // ── Employee extras (opt-in) ─────────────────────────────────
-        { key: 'rabRank',           labelEN: 'RAB Rank',      labelBN: 'র‍্যাব র‍্যাঙ্ক', hint: 'Plain',     defaultVisible: false },
+        { key: 'rabRank',           labelEN: 'SRB Rank',      labelBN: 'এসআরবি র‍্যাঙ্ক', hint: 'Plain',     defaultVisible: false },
         // ── Course extras (opt-in) ───────────────────────────────────
         { key: 'courseType',        labelEN: 'Course Type',   labelBN: 'কোর্সের ধরন',     hint: 'Plain',     defaultVisible: false },
         { key: 'courseAddress',     labelEN: 'Address',       labelBN: 'ঠিকানা',        hint: 'Plain',     defaultVisible: false },
@@ -357,8 +357,8 @@ export class ReportCourseComponent implements OnInit, OnChanges {
         multi(this.selectedRankIds, this.rankOptions, L['report.search.rank']);
         multi(this.selectedCorpsIds, this.corpsOptions, L['report.table.corps'] ?? 'Corps');
         multi(this.selectedTradeIds, this.tradeOptions, L['report.search.trade']);
-        multi(this.selectedRabUnitIds, this.rabUnitOptions, this.lang === 'bn' ? 'র‍্যাব ইউনিট' : 'RAB Unit');
-        if (this.searchRabId.trim())     items.push({ label: 'RAB ID',     value: this.searchRabId.trim() });
+        multi(this.selectedRabUnitIds, this.rabUnitOptions, this.lang === 'bn' ? 'এসআরবি ইউনিট' : 'SRB Unit');
+        if (this.searchRabId.trim())     items.push({ label: 'SRB ID',     value: this.searchRabId.trim() });
         if (this.searchServiceId.trim()) items.push({ label: 'Service ID', value: this.searchServiceId.trim() });
         if (this.searchNid.trim())       items.push({ label: 'NID',        value: this.searchNid.trim() });
         return items;
@@ -383,9 +383,9 @@ export class ReportCourseComponent implements OnInit, OnChanges {
             { label: L('Corps',       'কোর'),                value: this.codeValue(row.corps,   row.corpsBN) },
             { label: L('Trade',       'ট্রেড'),              value: this.codeValue(row.trade,   row.tradeBN) },
             { label: L('Mother Org',  'মাতৃ সংস্থা'),         value: this.codeValue(row.orgName, row.orgNameBN) },
-            { label: L('RAB Unit',    'র‍্যাব ইউনিট'),       value: this.codeValue((row as any).rabUnit, (row as any).rabUnitBN) },
+            { label: L('SRB Unit',    'এসআরবি ইউনিট'),       value: this.codeValue((row as any).rabUnit, (row as any).rabUnitBN) },
             { label: L('Service ID',  'সার্ভিস আইডি'),       value: this.displayNum(row.serviceId) },
-            { label: L('RAB ID',      'র‍্যাব আইডি'),         value: row.rabid ? this.displayNum(row.rabid) : '—' },
+            { label: L('SRB ID',      'এসআরবি আইডি'),         value: row.rabid ? this.displayNum(row.rabid) : '—' },
         ];
     }
 
@@ -399,7 +399,7 @@ export class ReportCourseComponent implements OnInit, OnChanges {
             ? 'গণপ্রজাতন্ত্রী বাংলাদেশ সরকার'
             : "GOVERNMENT OF THE PEOPLE'S REPUBLIC OF BANGLADESH";
     }
-    get rabOrgTitle(): string { return this.lang === 'bn' ? 'র‍্যাপিড অ্যাকশন ব্যাটালিয়ন' : 'RAPID ACTION BATTALION'; }
+    get rabOrgTitle(): string { return this.lang === 'bn' ? 'স্পেশাল রেসপন্স ব্যাটালিয়ন' : 'SPECIAL RESPONSE BATTALION'; }
     get rabOrgSubtitle(): string {
         return this.lang === 'bn'
             ? 'বাংলাদেশ পুলিশ · সদর দপ্তর, কুর্মিটোলা, ঢাকা'
@@ -468,8 +468,8 @@ export class ReportCourseComponent implements OnInit, OnChanges {
         multi(this.selectedRankIds, this.rankOptions, L['report.search.rank']);
         multi(this.selectedCorpsIds, this.corpsOptions, L['report.table.corps'] ?? 'Corps');
         multi(this.selectedTradeIds, this.tradeOptions, L['report.search.trade']);
-        multi(this.selectedRabUnitIds, this.rabUnitOptions, this.lang === 'bn' ? 'র‍্যাব ইউনিট' : 'RAB Unit');
-        if (this.searchRabId.trim())     lines.push(`RAB ID: ${this.searchRabId.trim()}`);
+        multi(this.selectedRabUnitIds, this.rabUnitOptions, this.lang === 'bn' ? 'এসআরবি ইউনিট' : 'SRB Unit');
+        if (this.searchRabId.trim())     lines.push(`SRB ID: ${this.searchRabId.trim()}`);
         if (this.searchServiceId.trim()) lines.push(`Service ID: ${this.searchServiceId.trim()}`);
         if (this.searchNid.trim())       lines.push(`NID: ${this.searchNid.trim()}`);
         return lines;
@@ -624,7 +624,7 @@ export class ReportCourseComponent implements OnInit, OnChanges {
     toggleFilter(): void { this.filterOpen = !this.filterOpen; }
 
     filterSubtitle(): string {
-        if (this.activeFilterCount === 0) return 'Enter RAB ID, Service ID or NID to begin';
+        if (this.activeFilterCount === 0) return 'Enter SRB ID, Service ID or NID to begin';
         const n = this.lang === 'bn' ? BanglaNumerals.toBangla(String(this.activeFilterCount)) : String(this.activeFilterCount);
         return n + ' active filter(s)';
     }
@@ -655,7 +655,7 @@ export class ReportCourseComponent implements OnInit, OnChanges {
     load(): void {
         // Guard: require at least one identifier (this is a per-person report).
         if (!this.searchRabId.trim() && !this.searchServiceId.trim() && !this.searchNid.trim()) {
-            this.messageService.add({ severity: 'warn', summary: 'Search', detail: 'Enter RAB ID, Service ID or NID.' });
+            this.messageService.add({ severity: 'warn', summary: 'Search', detail: 'Enter SRB ID, Service ID or NID.' });
             return;
         }
         this.loading = true;

@@ -135,8 +135,8 @@ export class ReportRftsCompletionComponent implements OnInit, OnDestroy {
         // Profile-style composite: line 1 = Prefix + Service No + Rank; line 2 =
         // Name with awards, professional qualification and corps. Opt-in.
         { key: 'callNoRankName',       labelEN: 'No Rank Name',     labelBN: 'নং র‍্যাঙ্ক নাম',  hint: 'CallNoRankName', defaultVisible: false },
-        { key: 'rabId',                labelEN: 'RAB ID',           labelBN: 'র‍্যাব আইডি',     hint: 'Plain',  defaultVisible: false },
-        { key: 'rabRank',              labelEN: 'RAB Rank',         labelBN: 'র‍্যাব র‍্যাঙ্ক',  hint: 'Plain',  defaultVisible: false },
+        { key: 'rabId',                labelEN: 'SRB ID',           labelBN: 'এসআরবি আইডি',     hint: 'Plain',  defaultVisible: false },
+        { key: 'rabRank',              labelEN: 'SRB Rank',         labelBN: 'এসআরবি র‍্যাঙ্ক',  hint: 'Plain',  defaultVisible: false },
         { key: 'orgName',              labelEN: 'Mother Org',       labelBN: 'মাতৃ সংস্থা',     hint: 'Plain',  defaultVisible: true  },
         { key: 'latestCourseNo',       labelEN: 'Course No',        labelBN: 'কোর্স নং',         hint: 'Plain', defaultVisible: true,  courseOnly: true },
         { key: 'latestCourseDateFrom', labelEN: 'From',             labelBN: 'হইতে',            hint: 'Date',   defaultVisible: true,  courseOnly: true },
@@ -151,9 +151,9 @@ export class ReportRftsCompletionComponent implements OnInit, OnDestroy {
         { key: 'gender',               labelEN: 'Gender',           labelBN: 'লিঙ্গ',           hint: 'Plain',  defaultVisible: false },
         { key: 'motherUnit',           labelEN: 'Mother Unit',      labelBN: 'মাতৃ ইউনিট',      hint: 'Plain',  defaultVisible: false },
         // Trimmed job hierarchy (Battalion, Wing … deepest level — first two + last). Opt-in.
-        { key: 'rabUnitHierarchy',     labelEN: 'RAB Unit',         labelBN: 'র‍্যাব ইউনিট',    hint: 'Plain',  defaultVisible: false },
+        { key: 'rabUnitHierarchy',     labelEN: 'SRB Unit',         labelBN: 'এসআরবি ইউনিট',    hint: 'Plain',  defaultVisible: false },
         { key: 'dateOfCommission',     labelEN: 'Commission Date',  labelBN: 'কমিশন তারিখ',     hint: 'Date',   defaultVisible: false },
-        { key: 'joiningInRab',         labelEN: 'RAB Joining Date', labelBN: 'র‍্যাবে যোগদান',   hint: 'Date',   defaultVisible: false },
+        { key: 'joiningInRab',         labelEN: 'SRB Joining Date', labelBN: 'এসআরবিে যোগদান',   hint: 'Date',   defaultVisible: false },
         { key: 'officerType',          labelEN: 'Officer Type',     labelBN: 'অফিসার ধরণ',      hint: 'Plain',  defaultVisible: false },
         { key: 'postingStatus',        labelEN: 'Posting Status',   labelBN: 'নিয়োগ অবস্থা',    hint: 'Plain',  defaultVisible: false },
         { key: 'dob',                  labelEN: 'Date of Birth',    labelBN: 'জন্ম তারিখ',      hint: 'Date',   defaultVisible: false },
@@ -522,12 +522,12 @@ export class ReportRftsCompletionComponent implements OnInit, OnDestroy {
         multi(this.selectedOrgIds, this.motherOrgOptions, 'Mother Org');
         multi(this.selectedMemberTypeIds, this.memberTypeOptions, 'Member Type');
         multi(this.selectedRankIds, this.rankOptions, 'Rank');
-        multi(this.selectedRabRankIds, this.rabRankOptions, 'RAB Rank');
+        multi(this.selectedRabRankIds, this.rabRankOptions, 'SRB Rank');
         multi(this.selectedCorpsIds, this.corpsOptions, 'Corps');
         multi(this.selectedTradeIds, this.tradeOptions, 'Trade');
         if (this.selectedOrgNodeIds.length > 0) {
             const names = this.orgNodesLabel(this.lang === 'bn');
-            if (names) items.push({ label: this.lang === 'bn' ? 'র‍্যাব ইউনিট' : 'RAB Unit', value: names });
+            if (names) items.push({ label: this.lang === 'bn' ? 'এসআরবি ইউনিট' : 'SRB Unit', value: names });
         }
         return items;
     }
@@ -838,7 +838,7 @@ export class ReportRftsCompletionComponent implements OnInit, OnDestroy {
         return this.lang === 'bn' ? 'গণপ্রজাতন্ত্রী বাংলাদেশ সরকার' : "GOVERNMENT OF THE PEOPLE'S REPUBLIC OF BANGLADESH";
     }
     get rabOrgTitle(): string {
-        return this.lang === 'bn' ? 'র‍্যাপিড অ্যাকশন ব্যাটালিয়ন' : 'RAPID ACTION BATTALION';
+        return this.lang === 'bn' ? 'স্পেশাল রেসপন্স ব্যাটালিয়ন' : 'SPECIAL RESPONSE BATTALION';
     }
     get rabOrgSubtitle(): string {
         return this.lang === 'bn' ? 'বাংলাদেশ পুলিশ · সদর দপ্তর, কুর্মিটোলা, ঢাকা' : 'Bangladesh Police · Headquarters, Kurmitola, Dhaka';

@@ -140,11 +140,11 @@ export class ReportPunishmentComponent implements OnInit, OnDestroy {
         { key: 'name', labelEN: 'Name', labelBN: 'নাম', hint: 'Plain', defaultVisible: true },
         { key: 'offenseType', labelEN: 'Offence Type', labelBN: 'অপরাধের ধরন', hint: 'Plain', defaultVisible: true },
         { key: 'briefStatementOfOffence', labelEN: 'Short Details', labelBN: 'সংক্ষিপ্ত বিবরণ', hint: 'Plain', defaultVisible: true },
-        { key: 'punishment', labelEN: 'Action by RAB', labelBN: 'র‍্যাব কর্তৃক ব্যবস্থা', hint: 'Plain', defaultVisible: true },
+        { key: 'punishment', labelEN: 'Action by SRB', labelBN: 'এসআরবি কর্তৃক ব্যবস্থা', hint: 'Plain', defaultVisible: true },
         { key: 'punishmentDate', labelEN: 'Date', labelBN: 'তারিখ', hint: 'Date', defaultVisible: true },
         { key: 'punishmentMo', labelEN: 'Action by Mother Org', labelBN: 'মাতৃ সংস্থার ব্যবস্থা', hint: 'Plain', defaultVisible: true },
         { key: 'punishmentDateMo', labelEN: 'Date', labelBN: 'তারিখ', hint: 'Date', defaultVisible: true },
-        { key: 'rabRank', labelEN: 'RAB Rank', labelBN: 'র‍্যাব র‍্যাঙ্ক', hint: 'Plain', defaultVisible: false },
+        { key: 'rabRank', labelEN: 'SRB Rank', labelBN: 'এসআরবি র‍্যাঙ্ক', hint: 'Plain', defaultVisible: false },
         { key: 'corps', labelEN: 'Corps', labelBN: 'কোর', hint: 'Plain', defaultVisible: false },
         { key: 'trade', labelEN: 'Trade', labelBN: 'ট্রেড', hint: 'Plain', defaultVisible: false },
         { key: 'rabUnit', labelEN: 'Battalion', labelBN: 'ব্যাটালিয়ন', hint: 'Plain', defaultVisible: false },
@@ -160,7 +160,7 @@ export class ReportPunishmentComponent implements OnInit, OnDestroy {
         // ── Opt-in extras (registry FieldKeys) — hidden by default ────────
         { key: 'offenseDate', labelEN: 'Offence Date', labelBN: 'অপরাধের তারিখ', hint: 'Date', defaultVisible: false },
         { key: 'disciplineAction', labelEN: 'Action', labelBN: 'ব্যবস্থা', hint: 'Plain', defaultVisible: false },
-        { key: 'rabId', labelEN: 'RAB ID', labelBN: 'র‍্যাব আইডি', hint: 'Plain', defaultVisible: false },
+        { key: 'rabId', labelEN: 'SRB ID', labelBN: 'এসআরবি আইডি', hint: 'Plain', defaultVisible: false },
         { key: 'nameBangla', labelEN: 'Name (Bangla)', labelBN: 'নাম (বাংলা)', hint: 'Plain', defaultVisible: false },
         { key: 'nid', labelEN: 'NID', labelBN: 'এনআইডি', hint: 'Plain', defaultVisible: false },
         { key: 'prefix', labelEN: 'Prefix', labelBN: 'প্রিফিক্স', hint: 'Plain', defaultVisible: false },
@@ -170,7 +170,7 @@ export class ReportPunishmentComponent implements OnInit, OnDestroy {
         { key: 'motherUnit', labelEN: 'Mother Unit', labelBN: 'মাতৃ ইউনিট', hint: 'Plain', defaultVisible: false },
         { key: 'gender', labelEN: 'Gender', labelBN: 'লিঙ্গ', hint: 'Plain', defaultVisible: false },
         // Trimmed job hierarchy (Battalion, Wing … deepest level — first two + last). Opt-in.
-        { key: 'rabUnitHierarchy', labelEN: 'RAB Unit', labelBN: 'র‍্যাব ইউনিট', hint: 'Plain', defaultVisible: false },
+        { key: 'rabUnitHierarchy', labelEN: 'SRB Unit', labelBN: 'এসআরবি ইউনিট', hint: 'Plain', defaultVisible: false },
         { key: 'officerType', labelEN: 'Officer Type', labelBN: 'অফিসার ধরণ', hint: 'Plain', defaultVisible: false },
         { key: 'postingStatus', labelEN: 'Posting Status', labelBN: 'নিয়োগ অবস্থা', hint: 'Plain', defaultVisible: false },
         { key: 'dob', labelEN: 'Date of Birth', labelBN: 'জন্ম তারিখ', hint: 'Date', defaultVisible: false },
@@ -601,16 +601,16 @@ export class ReportPunishmentComponent implements OnInit, OnDestroy {
         }
         if (this.selectedRabRankId != null) {
             const opt = this.rabRankOptions.find((o) => o.value === this.selectedRabRankId);
-            const lbl = this.lang === 'en' ? 'RAB Rank' : 'র‍্যাব পদবি';
+            const lbl = this.lang === 'en' ? 'SRB Rank' : 'এসআরবি পদবি';
             if (opt) items.push({ label: lbl, value: this.lang === 'bn' ? opt.labelBn : opt.label });
         }
         multi(this.selectedCorpsIds, this.corpsOptions, 'Corps', 'কোর');
         multi(this.selectedTradeIds, this.tradeOptions, 'Trade', 'ট্রেড');
         if (this.selectedOrgNodeIds.length > 0) {
             const names = this.orgNodesLabel(this.lang === 'bn');
-            if (names) items.push({ label: this.lang === 'en' ? 'RAB Unit' : 'র‍্যাব ইউনিট', value: names });
+            if (names) items.push({ label: this.lang === 'en' ? 'SRB Unit' : 'এসআরবি ইউনিট', value: names });
         }
-        if (this.filterRabId.trim()) items.push({ label: 'RAB ID', value: this.filterRabId.trim() });
+        if (this.filterRabId.trim()) items.push({ label: 'SRB ID', value: this.filterRabId.trim() });
         if (this.filterServiceId.trim()) items.push({ label: 'Service ID', value: this.filterServiceId.trim() });
         if (this.filterName.trim()) items.push({ label: 'Name', value: this.filterName.trim() });
         if (this.selectedOffenceTypeId != null) {
@@ -625,8 +625,8 @@ export class ReportPunishmentComponent implements OnInit, OnDestroy {
             const opt = this.punishmentByOptions.find((o) => o.value === this.selectedPunishmentById);
             if (opt) items.push({ label: 'Action/Punishment By', value: this.lang === 'bn' ? opt.labelBn : opt.label });
         }
-        if (this.punRabFrom != null) items.push({ label: 'Date of Punishment (RAB) From', value: this.formatDateLabel(this.fmtDate(this.punRabFrom)) });
-        if (this.punRabTo != null) items.push({ label: 'Date of Punishment (RAB) To', value: this.formatDateLabel(this.fmtDate(this.punRabTo)) });
+        if (this.punRabFrom != null) items.push({ label: 'Date of Punishment (SRB) From', value: this.formatDateLabel(this.fmtDate(this.punRabFrom)) });
+        if (this.punRabTo != null) items.push({ label: 'Date of Punishment (SRB) To', value: this.formatDateLabel(this.fmtDate(this.punRabTo)) });
         if (this.punMoFrom != null) items.push({ label: 'Date of Punishment (MO) From', value: this.formatDateLabel(this.fmtDate(this.punMoFrom)) });
         if (this.punMoTo != null) items.push({ label: 'Date of Punishment (MO) To', value: this.formatDateLabel(this.fmtDate(this.punMoTo)) });
         if (this.filterIsRTU) items.push({ label: 'RTU for Discipline Case (With Court of Inquiry)', value: 'Yes' });
@@ -819,7 +819,7 @@ export class ReportPunishmentComponent implements OnInit, OnDestroy {
         return this.lang === 'bn' ? 'গণপ্রজাতন্ত্রী বাংলাদেশ সরকার' : "GOVERNMENT OF THE PEOPLE'S REPUBLIC OF BANGLADESH";
     }
     get rabOrgTitle(): string {
-        return this.lang === 'bn' ? 'র‍্যাপিড অ্যাকশন ব্যাটালিয়ন' : 'RAPID ACTION BATTALION';
+        return this.lang === 'bn' ? 'স্পেশাল রেসপন্স ব্যাটালিয়ন' : 'SPECIAL RESPONSE BATTALION';
     }
     get rabOrgSubtitle(): string {
         return this.lang === 'bn' ? 'বাংলাদেশ পুলিশ · সদর দপ্তর, কুর্মিটোলা, ঢাকা' : 'Bangladesh Police · Headquarters, Kurmitola, Dhaka';

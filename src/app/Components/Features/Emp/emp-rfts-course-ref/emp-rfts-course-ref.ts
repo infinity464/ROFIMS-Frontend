@@ -309,7 +309,7 @@ export class EmpRftsCourseRefComponent implements OnInit {
     }
 
     selectTooltip(row: EmployeeSearchInfoModel): string {
-        return this.isSelectable(row) ? '' : 'RAB ID not generated yet';
+        return this.isSelectable(row) ? '' : 'SRB ID not generated yet';
     }
 
     /**
@@ -328,7 +328,7 @@ export class EmpRftsCourseRefComponent implements OnInit {
             this.messageService.add({
                 severity: 'warn',
                 summary: 'Cannot select',
-                detail: `RAB ID not generated yet for ${who}.`
+                detail: `SRB ID not generated yet for ${who}.`
             });
             return;
         }
@@ -386,7 +386,7 @@ export class EmpRftsCourseRefComponent implements OnInit {
             this.messageService.add({
                 severity: 'warn',
                 summary: 'Cannot select',
-                detail: 'RAB ID not generated yet for any member on this page.'
+                detail: 'SRB ID not generated yet for any member on this page.'
             });
             return;
         }

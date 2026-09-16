@@ -41,8 +41,8 @@
                         </div>
                         <div class="ds-criteria-grid">
                             <div class="ds-field">
-                                <label class="ds-field-label">RAB ID</label>
-                                <input pInputText type="text" [(ngModel)]="searchRabId" placeholder="Enter RAB ID" class="w-full" />
+                                <label class="ds-field-label">SRB ID</label>
+                                <input pInputText type="text" [(ngModel)]="searchRabId" placeholder="Enter SRB ID" class="w-full" />
                             </div>
                             <div class="ds-field">
                                 <label class="ds-field-label">Service ID</label>
@@ -83,7 +83,7 @@
                                 <p-multiSelect [options]="tradeOptions" [(ngModel)]="selectedTradeIds" optionLabel="label" optionValue="value" display="chip" [filter]="true" placeholder="Select" styleClass="w-full" [disabled]="selectedCorpsIds.length === 0" appendTo="body"></p-multiSelect>
                             </div>
                             <div class="ds-field">
-                                <label class="ds-field-label">{{ lang === 'bn' ? 'র‍্যাব ইউনিট' : 'RAB Unit' }}</label>
+                                <label class="ds-field-label">{{ lang === 'bn' ? 'এসআরবি ইউনিট' : 'SRB Unit' }}</label>
                                 <p-multiSelect [options]="rabUnitOptions" [(ngModel)]="selectedRabUnitIds" optionLabel="label" optionValue="value" display="chip" [filter]="true" placeholder="Select" styleClass="w-full" appendTo="body"></p-multiSelect>
                             </div>
                         </div>

@@ -420,8 +420,8 @@ export class SupernumeraryList implements OnInit {
         if (!this.rabIdOf(row)) {
             this.messageService.add({
                 severity: 'warn',
-                summary: 'RAB ID Not Allcoated for the Member',
-                detail: 'Please Allocate RAB ID'
+                summary: 'SRB ID Not Allcoated for the Member',
+                detail: 'Please Allocate SRB ID'
             });
             this.selectedIds.delete(row.employeeID);
             return;
@@ -650,8 +650,8 @@ export class SupernumeraryList implements OnInit {
         if (!this.rabIdOf(row)) {
             this.messageService.add({
                 severity: 'warn',
-                summary: 'RAB ID Not Allcoated for the Member',
-                detail: 'Please Allocate RAB ID'
+                summary: 'SRB ID Not Allcoated for the Member',
+                detail: 'Please Allocate SRB ID'
             });
             return;
         }

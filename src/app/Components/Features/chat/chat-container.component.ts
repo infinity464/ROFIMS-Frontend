@@ -1090,7 +1090,7 @@ import { catchError, debounceTime, distinctUntilChanged, switchMap, takeUntil } 
             </div>
             <div class="border-t border-surface-200 dark:border-surface-700"></div>
             <div class="flex justify-between items-center text-[13px] py-1.5">
-              <span class="text-surface-500 dark:text-surface-400">RAB ID</span>
+              <span class="text-surface-500 dark:text-surface-400">SRB ID</span>
               <span class="font-mono font-semibold text-surface-900 dark:text-surface-0 text-right">{{ p.rabId || '—' }}</span>
             </div>
             <div class="border-t border-surface-200 dark:border-surface-700"></div>

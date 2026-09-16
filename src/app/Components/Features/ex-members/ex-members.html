@@ -32,8 +32,8 @@
             <div class="report-filter-body-inner">
                 <div class="report-fields-row">
                     <div class="report-filter-field">
-                        <label>RAB ID</label>
-                        <input pInputText type="text" [(ngModel)]="filter.rabId" placeholder="RAB ID" class="w-full" />
+                        <label>SRB ID</label>
+                        <input pInputText type="text" [(ngModel)]="filter.rabId" placeholder="SRB ID" class="w-full" />
                     </div>
                     <div class="report-filter-field">
                         <label>Service ID</label>
@@ -103,7 +103,7 @@
                         </p-select>
                     </div>
                     <div class="report-filter-field">
-                        <label>RAB Unit</label>
+                        <label>SRB Unit</label>
                         <p-select
                             [(ngModel)]="filter.rabUnit"
                             [options]="rabUnitOptions"
@@ -167,7 +167,7 @@
                 </div>
                 <div class="report-fields-row">
                     <div class="report-filter-field report-filter-field-date">
-                        <label>RAB duration from</label>
+                        <label>SRB duration from</label>
                         <p-datepicker
                             [(ngModel)]="filter.durationFrom"
                             placeholder="From"
@@ -178,7 +178,7 @@
                         </p-datepicker>
                     </div>
                     <div class="report-filter-field report-filter-field-date">
-                        <label>RAB duration to</label>
+                        <label>SRB duration to</label>
                         <p-datepicker
                             [(ngModel)]="filter.durationTo"
                             placeholder="To"
@@ -225,7 +225,7 @@
                 <input
                     pInputText
                     type="text"
-                    placeholder="Search by Service ID / RAB ID"
+                    placeholder="Search by Service ID / SRB ID"
                     [(ngModel)]="searchText"
                     (ngModelChange)="onSearchChange()"
                     class="ex-search-input" />
@@ -257,8 +257,8 @@
                         <th>Corps</th>
                         <th>Trade</th>
                         <th>Name</th>
-                        <th>RAB Unit (Last Posting)</th>
-                        <th>Joining Date in RAB</th>
+                        <th>SRB Unit (Last Posting)</th>
+                        <th>Joining Date in SRB</th>
                         <th>Home District (Permanent)</th>
                         <th>Action</th>
                     </tr>

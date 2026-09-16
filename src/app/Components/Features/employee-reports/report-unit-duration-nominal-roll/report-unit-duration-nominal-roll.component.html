@@ -23,7 +23,7 @@
         <div class="report-filter-body-inner">
             <div class="report-fields-row">
                 <div class="report-filter-field">
-                    <label>{{ lang === 'en' ? 'RAB Unit' : 'র‍্যাব ইউনিট' }} <span style="color:#b03a3a">*</span></label>
+                    <label>{{ lang === 'en' ? 'SRB Unit' : 'এসআরবি ইউনিট' }} <span style="color:#b03a3a">*</span></label>
                     <app-org-tree-multi-select [(ngModel)]="selectedOrgNodeIds" placeholder="Select units, wings, branches…"></app-org-tree-multi-select>
                 </div>
                 <div class="report-filter-field">
@@ -45,7 +45,7 @@
                         [disabled]="selectedOrgIds.length === 0" [placeholder]="lang === 'en' ? 'Select' : 'নির্বাচন করুন'" styleClass="w-full" appendTo="body"></p-multiSelect>
                 </div>
                 <div class="report-filter-field">
-                    <label>{{ lang === 'en' ? 'RAB Rank' : 'র‍্যাব পদবি' }}</label>
+                    <label>{{ lang === 'en' ? 'SRB Rank' : 'এসআরবি পদবি' }}</label>
                     <p-multiSelect [options]="rabRankOptions" [(ngModel)]="selectedRabRankIds" (ngModelChange)="onFilterChange()"
                         optionLabel="label" optionValue="value" display="chip" [filter]="true"
                         [disabled]="selectedRankIds.length > 0" [placeholder]="lang === 'en' ? 'Select' : 'নির্বাচন করুন'" styleClass="w-full" appendTo="body"></p-multiSelect>
@@ -139,7 +139,7 @@
                 [(ngModel)]="idSearchText"
                 (ngModelChange)="onIdSearchInput()"
                 (keydown.enter)="onIdSearch()"
-                [placeholder]="lang === 'bn' ? 'সার্ভিস আইডি / র‍্যাব আইডি' : 'Service ID / RAB ID'" />
+                [placeholder]="lang === 'bn' ? 'সার্ভিস আইডি / এসআরবি আইডি' : 'Service ID / SRB ID'" />
             @if (idSearchText) {
                 <button type="button" class="rab-search-clear" (click)="clearIdSearch()" title="Clear search">
                     <i class="pi pi-times"></i>

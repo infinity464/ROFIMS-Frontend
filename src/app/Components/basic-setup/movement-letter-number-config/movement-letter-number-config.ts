@@ -115,7 +115,7 @@ export class MovementLetterNumberConfigComponent implements OnInit {
                 this.messageService.add({
                     severity: 'error',
                     summary: 'Error',
-                    detail: err?.error?.message || 'Failed to load RAB Units'
+                    detail: err?.error?.message || 'Failed to load SRB Units'
                 });
             }
         });

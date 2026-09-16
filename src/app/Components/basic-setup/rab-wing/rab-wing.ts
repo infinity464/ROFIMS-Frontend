@@ -47,7 +47,7 @@ export class RabWing {
         formFields: [
             {
                 name: 'rabUnitId',
-                label: 'RAB Unit',
+                label: 'SRB Unit',
                 type: 'select',
                 required: false,
                 options: [] as { label: string; value: any }[]
@@ -80,9 +80,9 @@ export class RabWing {
 
         tableConfig: TableConfig = {
         tableColumns: [
-            { field: 'rabUnitNameDisplay', header: 'RAB Unit' },
-            { field: 'codeValueEN', header: 'RAB Wing Name (EN)' },
-            { field: 'codeValueBN', header: 'RAB Wing Name (BN)' },
+            { field: 'rabUnitNameDisplay', header: 'SRB Unit' },
+            { field: 'codeValueEN', header: 'SRB Wing Name (EN)' },
+            { field: 'codeValueBN', header: 'SRB Wing Name (BN)' },
             {
                 field: 'status',
                 header: 'Status',
@@ -155,11 +155,11 @@ export class RabWing {
                 this.getAllData();
             },
             error: (err) => {
-                console.error('Error loading RAB Unit:', err);
+                console.error('Error loading SRB Unit:', err);
                 this.messageService.add({
                     severity: 'error',
                     summary: 'Error',
-                    detail: err?.error?.message || 'Failed to load RAB Unit'
+                    detail: err?.error?.message || 'Failed to load SRB Unit'
                 });
             }
         });
@@ -204,7 +204,7 @@ export class RabWing {
         const rabUnitId = this.commonCodeForm.get('rabUnitId')?.value;
         const status = this.commonCodeForm.get('status')?.value;
         if (rabUnitId == null || rabUnitId === '') {
-            this.messageService.add({ severity: 'warn', summary: 'Validation', detail: 'Please select RAB Unit' });
+            this.messageService.add({ severity: 'warn', summary: 'Validation', detail: 'Please select SRB Unit' });
             return;
         }
         if (status == null) {
@@ -247,7 +247,7 @@ export class RabWing {
                 this.messageService.add({
                     severity: 'success',
                     summary: 'Success',
-                    detail: 'RAB Wing created successfully'
+                    detail: 'SRB Wing created successfully'
                 });
                 this.isSubmitting = false;
             },
@@ -281,7 +281,7 @@ export class RabWing {
                 this.messageService.add({
                     severity: 'success',
                     summary: 'Success',
-                    detail: 'RAB Wing updated successfully'
+                    detail: 'SRB Wing updated successfully'
                 });
                 this.isSubmitting = false;
             },
