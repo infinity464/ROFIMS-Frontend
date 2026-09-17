@@ -208,13 +208,14 @@ export class ReportMemberTypeServingComponent implements OnInit, OnDestroy {
     canDelete = true;
 
     // Catalog order doubles as the default column order: `selectedColumnKeys` is
-    // seeded by filtering this list on `defaultVisible`. The first twelve entries
+    // seeded by filtering this list on `defaultVisible`. The first thirteen entries
     // are the Nominal Roll default table, in the order the spec prints them —
-    // Ser, Service Id, Rank, Corps, Trade, Name, Mother Org, RAB Joining Date,
-    // Present Unit, Unit Joining Date, Appointment, Remarks. Keep them contiguous
+    // Ser, SRB ID, Service Id, Rank, Corps, Trade, Name, Mother Org, RAB Joining
+    // Date, SRB Unit, Unit Joining Date, Appointment, Remarks. Keep them contiguous
     // and in that order; everything below is opt-in via the column picker.
     columnCatalog: { key: string; labelEN: string; labelBN: string; hint: string; defaultVisible: boolean }[] = [
         { key: 'ser',          labelEN: 'Ser',           labelBN: 'ক্রঃ',          hint: 'Serial',                defaultVisible: true  },
+        { key: 'rabId',        labelEN: 'SRB ID',        labelBN: 'এসআরবি আইডি',    hint: 'RabId',                 defaultVisible: true  },
         { key: 'serviceId',    labelEN: 'Service ID',    labelBN: 'সার্ভিস আইডি',    hint: 'Plain',                 defaultVisible: true  },
         { key: 'armyRank',     labelEN: 'Rank',          labelBN: 'র‍্যাঙ্ক',        hint: 'Plain',                 defaultVisible: true  },
         { key: 'corps',        labelEN: 'Corps',         labelBN: 'কোর',           hint: 'Plain',                 defaultVisible: true  },
@@ -224,7 +225,7 @@ export class ReportMemberTypeServingComponent implements OnInit, OnDestroy {
         // Joining in RAB (EmployeeInfo.JoiningDate) — the same field the
         // "Joining in RAB" date-range filter above targets.
         { key: 'joiningDate',  labelEN: 'SRB Joining Date', labelBN: 'এসআরবিে যোগদান তারিখ', hint: 'JoiningDate',  defaultVisible: true  },
-        { key: 'rabUnit',      labelEN: 'Present Unit',  labelBN: 'বর্তমান ইউনিট',   hint: 'Plain',                 defaultVisible: true  },
+        { key: 'rabUnitHierarchy', labelEN: 'SRB Unit', labelBN: 'এসআরবি ইউনিট', hint: 'Plain', defaultVisible: true },
         // RABServiceFrom is the ServiceFrom of the member's currently-active
         // PreviousRABServiceInfo row — the same row Present Unit resolves from —
         // so it is the date they joined that unit, not their RAB joining date.
@@ -235,9 +236,8 @@ export class ReportMemberTypeServingComponent implements OnInit, OnDestroy {
         { key: 'callNoRankName', labelEN: 'No Rank Name', labelBN: 'নং র‍্যাঙ্ক নাম', hint: 'CallNoRankName', defaultVisible: false },
         { key: 'nameEnglish',  labelEN: 'Name',          labelBN: 'নাম',           hint: 'Plain',                 defaultVisible: false },
         { key: 'personnel',    labelEN: 'SRB Personnel', labelBN: 'এসআরবি সদস্য',   hint: 'RabPersonnelComposite', defaultVisible: false },
-        { key: 'rabId',        labelEN: 'SRB ID',        labelBN: 'এসআরবি আইডি',    hint: 'RabId',                 defaultVisible: false },
         { key: 'memberType',   labelEN: 'Member Type',   labelBN: 'সদস্য ধরন',      hint: 'Plain',                 defaultVisible: false },
-        { key: 'rabUnitHierarchy', labelEN: 'SRB Unit', labelBN: 'এসআরবি ইউনিট (পূর্ণ)', hint: 'Plain', defaultVisible: false },
+        { key: 'rabUnit',      labelEN: 'Present Unit',  labelBN: 'বর্তমান ইউনিট',   hint: 'Plain',                 defaultVisible: false },
         { key: 'rabWing',      labelEN: 'SRB Wing',      labelBN: 'এসআরবি উইং',     hint: 'Plain',                 defaultVisible: false },
         { key: 'rabRank',      labelEN: 'SRB Rank',      labelBN: 'এসআরবি র‍্যাঙ্ক', hint: 'Plain',                 defaultVisible: false },
         { key: 'nameBangla',        labelEN: 'Name (BN)',        labelBN: 'নাম (বাংলা)',        hint: 'Plain', defaultVisible: false },
