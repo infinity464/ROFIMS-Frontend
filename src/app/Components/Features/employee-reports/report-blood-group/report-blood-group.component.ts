@@ -430,6 +430,8 @@ export class ReportBloodGroupComponent implements OnInit, OnChanges, OnDestroy {
 
     /** Total DB-filtered result count, localized (shown in the criteria strip,
         so it appears on screen + Print + Word + Excel). */
+    toBanglaNum(n: number): string { return BanglaNumerals.toBangla(String(n)); }
+
     get rabTotalText(): string {
         const n = this.lang === 'bn' ? BanglaNumerals.toBangla(String(this.totalRecords)) : String(this.totalRecords);
         return this.lang === 'bn' ? `মোট · ${n} রেকর্ড` : `Total · ${n} records`;

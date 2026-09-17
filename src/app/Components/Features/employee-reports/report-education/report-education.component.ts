@@ -443,6 +443,8 @@ export class ReportEducationComponent implements OnInit, OnChanges, OnDestroy {
     get rabPageOfLabel(): string {
         return this.lang === 'bn' ? 'পৃষ্ঠা ১ / ১' : 'PAGE 1 OF 1';
     }
+    toBanglaNum(n: number): string { return BanglaNumerals.toBangla(String(n)); }
+
     get rabTotalText(): string {
         const n = this.lang === 'bn' ? BanglaNumerals.toBangla(String(this.totalRecords)) : String(this.totalRecords);
         return this.lang === 'bn' ? `মোট · ${n} রেকর্ড` : `Total · ${n} records`;

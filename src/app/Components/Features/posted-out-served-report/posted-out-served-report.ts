@@ -54,6 +54,9 @@ interface ReportColumn {
 })
 export class PostedOutServedReportComponent implements OnInit {
     private _router = inject(Router);
+
+    toBanglaNum(n: number): string { return BanglaNumerals.toBangla(String(n)); }
+
     private recordSvc = inject(PermanentPostingMORecordService);
     private commonCodeService = inject(CommonCodeService);
     private messageService = inject(MessageService);

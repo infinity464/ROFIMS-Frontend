@@ -206,3 +206,40 @@
 :host-context(.app-dark) ::ng-deep .report-filter-body-inner .report-filter-field label {
     color: var(--text-color);
 }
+
+/* ── Total record badge (screen only) — top-right of the paper head, all reports ── */
+.rab-paper-head {
+    position: relative;
+}
+
+/* Eye-catching record count, top-right of the paper head. Screen only. */
+.rab-total-badge {
+    position: absolute;
+    top: -0.75rem;
+    right: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    line-height: 1;
+    color: #d32f2f;
+}
+.rab-total-badge-num {
+    font-size: 2.75rem;
+    font-weight: 800;
+}
+.rab-total-badge-label {
+    margin-top: 0.3rem;
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+@media (max-width: 720px) {
+    .rab-total-badge {
+        position: static;
+        margin-bottom: 0.75rem;
+    }
+}
+@media print {
+    .rab-total-badge { display: none !important; }
+}

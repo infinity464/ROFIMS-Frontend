@@ -727,6 +727,8 @@ export class ReportNearHomeDistrictComponent implements OnInit, OnDestroy {
         const now = new Date();
         return this.lang === 'bn' ? now.toLocaleDateString('bn-BD', { day: 'numeric', month: 'long', year: 'numeric' }).toUpperCase() : now.toLocaleDateString('en-US', { day: 'numeric', month: 'long', year: 'numeric' }).toUpperCase();
     }
+    toBanglaNum(n: number): string { return BanglaNumerals.toBangla(String(n)); }
+
     get rabTotalText(): string {
         const n = this.lang === 'bn' ? BanglaNumerals.toBangla(String(this.totalRecords)) : String(this.totalRecords);
         return this.lang === 'bn' ? `মোট · ${n} রেকর্ড` : `Total · ${n} records`;

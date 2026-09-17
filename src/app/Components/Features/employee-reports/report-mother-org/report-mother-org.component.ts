@@ -492,6 +492,8 @@ export class ReportMotherOrgComponent implements OnInit, OnChanges, OnDestroy {
     get rabConfidentialLabel(): string { return this.lang === 'bn' ? 'গোপনীয়' : 'CONFIDENTIAL'; }
     get rabWarningLabel(): string { return this.lang === 'bn' ? 'অননুমোদিত প্রকাশ নিষিদ্ধ' : 'UNAUTHORIZED DISCLOSURE PROHIBITED'; }
     get rabPageOfLabel(): string { return this.lang === 'bn' ? 'পৃষ্ঠা ১ / ১' : 'PAGE 1 OF 1'; }
+    toBanglaNum(n: number): string { return BanglaNumerals.toBangla(String(n)); }
+
     get rabTotalText(): string {
         const n = this.lang === 'bn' ? BanglaNumerals.toBangla(String(this.totalRecords)) : String(this.totalRecords);
         return this.lang === 'bn' ? `মোট · ${n} রেকর্ড` : `Total · ${n} records`;

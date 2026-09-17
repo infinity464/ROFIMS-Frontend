@@ -696,6 +696,8 @@ export class ReportAddressLocationComponent implements OnInit, OnDestroy {
         return this.lang === 'bn' ? 'প্রস্তুতকৃত' : 'GENERATED';
     }
 
+    toBanglaNum(n: number): string { return BanglaNumerals.toBangla(String(n)); }
+
     get rabTotalText(): string {
         const n = this.lang === 'bn' ? BanglaNumerals.toBangla(String(this.totalRecords)) : String(this.totalRecords);
         return this.lang === 'bn' ? `মোট · ${n} রেকর্ড` : `Total · ${n} records`;
