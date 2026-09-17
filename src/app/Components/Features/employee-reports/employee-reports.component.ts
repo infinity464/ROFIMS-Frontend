@@ -293,7 +293,7 @@ export class EmployeeReportsComponent implements OnInit {
         this.commonCodeService.getAllActiveCommonCodesType(codeType).subscribe({
             next: (list: CommonCodeModel[]) => {
                 const raw = list || [];
-                if (this.reportType === 'corps' || this.reportType === 'trade') {
+                if (this.reportType === 'corps' || this.reportType === 'trade' || this.reportType === 'officerType') {
                     // Multiple "N/A" CommonCode rows can exist (one per mother org); collapse them into
                     // a single synthetic option whose value is NA_SENTINEL_VALUE. We remember the
                     // underlying CodeIds so selectedCommonCodeIds can return them to the child component.
@@ -327,7 +327,8 @@ export class EmployeeReportsComponent implements OnInit {
                     });
                     this.naCommonCodeIds = naIds;
                     this.commonCodeOptions = nonNa;
-                    if (naIds.length > 0) {
+                    // Officer Type hides the N/A bucket entirely.
+                    if (naIds.length > 0 && this.reportType !== 'officerType') {
                         this.commonCodeOptions.push({
                             label: 'N/A',
                             labelBn: 'N/A',

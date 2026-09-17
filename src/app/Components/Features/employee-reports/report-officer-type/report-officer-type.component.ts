@@ -52,8 +52,9 @@ import { debounceTime, forkJoin, Subject, Subscription } from 'rxjs';
 /**
  * Officer Type Report — same shape as report-member-appointment.
  *
- * Parent's `commonCodeId` is the selected OFFICER TYPE (CommonCode of type
- * "OfficerType"). The filter panel still exposes Mother Org / Rank / Corps
+ * Parent's `commonCodeIds` is the selected OFFICER TYPE (CommonCode of type
+ * "OfficerType") — every CodeId sharing the picked name, since the same
+ * officer type exists once per mother org. The filter panel still exposes Mother Org / Rank / Corps
  * / Trade because Officer Type and Mother Org are independent dimensions.
  *
  * Backend: runs against runDynamicEmployeeBaseReport. The `officerType`
@@ -80,8 +81,8 @@ import { debounceTime, forkJoin, Subject, Subscription } from 'rxjs';
 export class ReportOfficerTypeComponent implements OnInit, OnChanges, OnDestroy {
     L = REPORT_LABELS;
     @Input() lang: ReportLang = 'en';
-    /** Parent-locked Officer Type CommonCode CodeId. */
-    @Input() commonCodeId: number | null = null;
+    /** Parent-locked Officer Type CodeId(s). Same-name rows (one per mother org) arrive bundled. */
+    @Input() commonCodeIds: number[] = [];
     @Input() reportTypeLabel = '';
     @Input() commonCodeLabel = '';
     @Input() postingStatus: string = 'Servings';
@@ -1150,7 +1151,7 @@ export class ReportOfficerTypeComponent implements OnInit, OnChanges, OnDestroy 
     }
 
     ngOnChanges(changes: SimpleChanges): void {
-        if (changes['commonCodeId'] && !changes['commonCodeId'].firstChange) {
+        if (changes['commonCodeIds'] && !changes['commonCodeIds'].firstChange) {
             this.first = 0;
             this.load();
         } else if (changes['postingStatus'] && !changes['postingStatus'].firstChange) {
@@ -1339,8 +1340,13 @@ export class ReportOfficerTypeComponent implements OnInit, OnChanges, OnDestroy 
             criteria.push({ fieldKey: 'trade', idValues: this.selectedTradeIds });
         if (this.selectedOrgNodeIds.length > 0)
             criteria.push({ fieldKey: 'rabOrgNode', idValues: this.selectedOrgNodeIds });
-        if (this.commonCodeId != null && this.commonCodeId > 0)
-            criteria.push({ fieldKey: 'officerType', idValue: this.commonCodeId });
+        if (Array.isArray(this.commonCodeIds) && this.commonCodeIds.length > 0) {
+            if (this.commonCodeIds.length === 1) {
+                criteria.push({ fieldKey: 'officerType', idValue: this.commonCodeIds[0] });
+            } else {
+                criteria.push({ fieldKey: 'officerType', idValues: [...this.commonCodeIds] });
+            }
+        }
 
         this.reportService.runDynamicEmployeeBaseReport({
             columns: this.backendColumnKeys(),

@@ -87,7 +87,7 @@
                     <app-report-mother-org [lang]="reportLang" [commonCodeId]="selectedCommonCodeId" [reportTypeLabel]="selectedReportTypeLabel" [commonCodeLabel]="selectedCommonCodeLabel" [postingStatus]="selectedPostingStatus" [statusLabel]="selectedStatusLabel" [statusLabelBn]="selectedStatusLabelBn" (langToggle)="toggleReportLang()" (scopeChange)="onChildScopeChange($event)" />
                 }
                 @case ('officerType') {
-                    <app-report-officer-type [lang]="reportLang" [commonCodeId]="selectedCommonCodeId" [reportTypeLabel]="selectedReportTypeLabel" [commonCodeLabel]="selectedCommonCodeLabel" [postingStatus]="selectedPostingStatus" [statusLabel]="selectedStatusLabel" [statusLabelBn]="selectedStatusLabelBn" (langToggle)="toggleReportLang()" (scopeChange)="onChildScopeChange($event)" />
+                    <app-report-officer-type [lang]="reportLang" [commonCodeIds]="selectedCommonCodeIds" [reportTypeLabel]="selectedReportTypeLabel" [commonCodeLabel]="selectedCommonCodeLabel" [postingStatus]="selectedPostingStatus" [statusLabel]="selectedStatusLabel" [statusLabelBn]="selectedStatusLabelBn" (langToggle)="toggleReportLang()" (scopeChange)="onChildScopeChange($event)" />
                 }
                 @case ('rabUnit') {
                     <app-report-rab-unit [lang]="reportLang" [commonCodeId]="selectedCommonCodeId" [reportTypeLabel]="selectedReportTypeLabel" [commonCodeLabel]="selectedCommonCodeLabel" [postingStatus]="selectedPostingStatus" [statusLabel]="selectedStatusLabel" [statusLabelBn]="selectedStatusLabelBn" (langToggle)="toggleReportLang()" (scopeChange)="onChildScopeChange($event)" />
