@@ -3067,7 +3067,15 @@ html, body { margin: 0; padding: 0; background: transparent; }
         const pageHeight = this.selectedPageSize === 'A4' ? 16838 : 20160; // twips
 
         return new Document({
-            styles: bn ? { default: { document: { run: { language: { value: 'bn-BD', bidirectional: 'bn-BD' } } } } } : undefined,
+            // 1.25 line spacing (line: 300 = 1.25 × 240) by default, matching the preview's .ns-para.
+            styles: {
+                default: {
+                    document: {
+                        paragraph: { spacing: { line: 300 } },
+                        ...(bn ? { run: { language: { value: 'bn-BD', bidirectional: 'bn-BD' } } } : {})
+                    }
+                }
+            },
             sections: [
                 {
                     properties: {

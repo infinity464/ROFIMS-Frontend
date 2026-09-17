@@ -74,7 +74,16 @@
 /* Members table: align its left edge with the body paragraphs (১।/ক।) instead of
    the shared 16px Word-style indent. Loaded after notesheet-preview.scss, so it wins. */
 .ns-members-preview-table {
+    /* Span the full text width so the right edge lines up with the justified paragraphs
+       (.ns-para pads 1px left / 2px right). */
+    width: calc(100% - 3px);
     margin-left: 1px;
+    margin-right: 2px;
+
+    th,
+    td {
+        line-height: 1.25;
+    }
 }
 
 /* Note has no serial — keep it on the same left edge as the members table/paragraphs. */
@@ -154,6 +163,16 @@
 .ns-para,
 .ns-para-no {
     font-size: fs(10);
+}
+/* Body paragraphs at 1.25 line height (shared style uses 1.85) — same as Ex-BD leave
+   and Posting. The text is injected via [innerHTML] and pasted content can carry its
+   own inline line-height, so pierce to the inner nodes with !important. */
+.ns-para {
+    line-height: 1.25 !important;
+
+    ::ng-deep * {
+        line-height: 1.25 !important;
+    }
 }
 .ns-cell-ref {
     font-size: fs(10); /* সূত্রঃ / ক. / খ. — was 7pt */
@@ -301,4 +320,13 @@
         font-size: 0.875rem;
         user-select: none;
     }
+}
+
+/* Reference HTML from the rich editor — keep the first paragraph on the same line as the label / serial. */
+:host ::ng-deep .ns-ref-html p {
+    margin: 0;
+}
+:host ::ng-deep .ns-ref-inline p:first-child,
+:host ::ng-deep .ns-ref-item .ns-ref-html p:first-child {
+    display: inline;
 }

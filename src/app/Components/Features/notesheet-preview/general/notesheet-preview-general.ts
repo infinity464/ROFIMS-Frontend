@@ -1503,6 +1503,11 @@ export class NotesheetPreviewGeneralComponent extends NotesheetPreviewBase imple
         }
     }
 
+    /** Reference text comes from the rich editor, so it can carry HTML — render it, don't print the tags. */
+    getReferenceSafe(html: string): SafeHtml {
+        return this.sanitizer.bypassSecurityTrustHtml(this.fixBanglaWordBreaks(html ?? ''));
+    }
+
     /** Get ক,খ,গ / a,b,c serial label for reference paragraphs */
     refSerialLabel(index: number): string {
         if (!this.isEnglish()) {
@@ -1884,6 +1889,10 @@ html, body { margin: 0; padding: 0; background: transparent; }
     font-family: 'Times New Roman', 'SolaimanLipi', Times, serif !important;
     color: #000 !important;
 }
+
+/* Body paragraphs at 1.25 — mirrors .ns-para in notesheet-preview-general.scss. */
+.pdf-flow .ns-para, .pdf-flow .ns-para * { line-height: 1.25 !important; }
+.pdf-flow .ns-members-preview-table th, .pdf-flow .ns-members-preview-table td { line-height: 1.25 !important; }
 
 .pdf-flow .ns-doc-box { border: none !important; }
 
@@ -2310,7 +2319,7 @@ html, body { margin: 0; padding: 0; background: transparent; }
         }
 
         // Reference / Date (8pt)
-        const refs = this.parsedReferences;
+        const refs = this.parsedReferences.map(r => this.stripHtml(r).trim()).filter(r => r);
         if (refs.length === 1) {
             mainChildren.push(new Paragraph({
                 children: [
@@ -2400,19 +2409,19 @@ html, body { margin: 0; padding: 0; background: transparent; }
             const colPcts = rawCol.map((w) => Math.round((w / rawSum) * (100 - slPct) * 10) / 10);
 
             const mkWidth = (pct: number) => ({ size: pct, type: WidthType.PERCENTAGE });
-            const slHeaderCell = new TableCell({ width: mkWidth(slPct), children: [new Paragraph({ children: [new TextRun({ text: slLabel, bold: true, size: tblSize, sizeComplexScript: csTbl, font, language: lang })], alignment: AlignmentType.CENTER })], borders: { top: thinBorder, bottom: thinBorder, left: thinBorder, right: thinBorder } });
+            const slHeaderCell = new TableCell({ width: mkWidth(slPct), children: [new Paragraph({ children: [new TextRun({ text: slLabel, bold: true, size: tblSize, sizeComplexScript: csTbl, font, language: lang })], alignment: AlignmentType.CENTER, spacing: { line: 300, before: 0, after: 0 } })], borders: { top: thinBorder, bottom: thinBorder, left: thinBorder, right: thinBorder } });
             const headerRow = new TableRow({
-                children: [slHeaderCell, ...cols.map((c, ci) => new TableCell({ width: mkWidth(colPcts[ci]), children: [new Paragraph({ children: [new TextRun({ text: this.getMemberColHeader(c), bold: true, size: tblSize, sizeComplexScript: csTbl, font, language: lang })], alignment: AlignmentType.CENTER })], borders: { top: thinBorder, bottom: thinBorder, left: thinBorder, right: thinBorder } }))]
+                children: [slHeaderCell, ...cols.map((c, ci) => new TableCell({ width: mkWidth(colPcts[ci]), children: [new Paragraph({ children: [new TextRun({ text: this.getMemberColHeader(c), bold: true, size: tblSize, sizeComplexScript: csTbl, font, language: lang })], alignment: AlignmentType.CENTER, spacing: { line: 300, before: 0, after: 0 } })], borders: { top: thinBorder, bottom: thinBorder, left: thinBorder, right: thinBorder } }))]
             });
             const dataRows = rows.map((row: Record<string, string>, ri: number) => {
                 const slVal = bn ? String(ri + 1).replace(/\d/g, d => bnDigits[+d]) + '।' : String(ri + 1) + '.';
-                const slCell = new TableCell({ width: mkWidth(slPct), children: [new Paragraph({ children: [new TextRun({ text: slVal, size: tblSize, sizeComplexScript: csTbl, font, language: lang })], alignment: AlignmentType.CENTER })], borders: { top: thinBorder, bottom: thinBorder, left: thinBorder, right: thinBorder } });
+                const slCell = new TableCell({ width: mkWidth(slPct), children: [new Paragraph({ children: [new TextRun({ text: slVal, size: tblSize, sizeComplexScript: csTbl, font, language: lang })], alignment: AlignmentType.CENTER, spacing: { line: 300, before: 0, after: 0 } })], borders: { top: thinBorder, bottom: thinBorder, left: thinBorder, right: thinBorder } });
                 return new TableRow({
                     children: [slCell, ...cols.map((c, ci) => {
                         let val = this.memberCellValue(row, c as any);
                         val = convertDigits(val);
                         const cellAlign = this.isNameColumn(c) ? AlignmentType.LEFT : AlignmentType.CENTER;
-                        return new TableCell({ width: mkWidth(colPcts[ci]), children: [new Paragraph({ children: [new TextRun({ text: val, size: tblSize, sizeComplexScript: csTbl, font, language: lang })], alignment: cellAlign })], borders: { top: thinBorder, bottom: thinBorder, left: thinBorder, right: thinBorder } });
+                        return new TableCell({ width: mkWidth(colPcts[ci]), children: [new Paragraph({ children: [new TextRun({ text: val, size: tblSize, sizeComplexScript: csTbl, font, language: lang })], alignment: cellAlign, spacing: { line: 300, before: 0, after: 0 } })], borders: { top: thinBorder, bottom: thinBorder, left: thinBorder, right: thinBorder } });
                     })]
                 });
             });
@@ -2605,7 +2614,15 @@ html, body { margin: 0; padding: 0; background: transparent; }
         const docChildren: (Paragraph | Table)[] = [outerTable];
 
         return new Document({
-            styles: bn ? { default: { document: { run: { language: { value: 'bn-BD', bidirectional: 'bn-BD' } } } } } : undefined,
+            // 1.25 line spacing (line: 300 = 1.25 × 240) by default, matching the preview's .ns-para.
+            styles: {
+                default: {
+                    document: {
+                        paragraph: { spacing: { line: 300 } },
+                        ...(bn ? { run: { language: { value: 'bn-BD', bidirectional: 'bn-BD' } } } : {})
+                    }
+                }
+            },
             sections: [{
                 properties: {
                     page: {

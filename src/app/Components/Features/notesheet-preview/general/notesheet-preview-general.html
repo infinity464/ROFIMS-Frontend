@@ -156,7 +156,7 @@
                     </div>
 
                     <!-- ── Reference Number Paragraphs ── -->
-                    <p-fieldset legend="Reference Number" [toggleable]="true" [collapsed]="true">
+                    <p-fieldset legend="Reference Number" [toggleable]="true" [collapsed]="parsedReferences.length === 0">
                         <div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.5rem;">
                             <p-button icon="pi pi-plus" label="Add Reference" [rounded]="false" [text]="true" severity="success" size="small" (onClick)="addReferenceParagraph()" pTooltip="Add Reference"></p-button>
                         </div>
@@ -449,17 +449,20 @@
 
                 <!-- ── Reference (date now sits with the notesheet no above) ── -->
                 <div class="ns-cell-ref" *ngIf="parsedReferences.length > 0">
-                    <span class="ns-ref-key">{{ isEnglish() ? 'Reference:' : 'সূত্রঃ' }}</span>
-                    <div class="ns-ref-content">
-                        <ng-container *ngIf="parsedReferences.length === 1">
-                            {{ parsedReferences[0] }}
-                        </ng-container>
-                        <ng-container *ngIf="parsedReferences.length > 1">
+                    <!-- Single reference: inline on the same line as সূত্রঃ (matches Ex-BD leave) -->
+                    <ng-container *ngIf="parsedReferences.length === 1; else refList">
+                        <span class="ns-ref-key">{{ isEnglish() ? 'Reference:' : 'সূত্রঃ' }}</span>
+                        <span class="ns-ref-html ns-ref-inline" style="margin-left: 0.4em" [innerHTML]="getReferenceSafe(parsedReferences[0])"></span>
+                    </ng-container>
+                    <!-- Multiple references: label on its own line, items below -->
+                    <ng-template #refList>
+                        <span class="ns-ref-key">{{ isEnglish() ? 'Reference:' : 'সূত্রঃ' }}</span>
+                        <div class="ns-ref-content">
                             <div *ngFor="let ref of parsedReferences; let ri = index" class="ns-ref-item">
-                                <span class="ns-ref-serial">{{ refSerialLabel(ri) }}</span> {{ ref }}
+                                <span class="ns-ref-serial">{{ refSerialLabel(ri) }}</span> <span class="ns-ref-html" [innerHTML]="getReferenceSafe(ref)"></span>
                             </div>
-                        </ng-container>
-                    </div>
+                        </div>
+                    </ng-template>
                 </div>
 
                 <!-- ── ১।..N। Main Text blocks ── -->
