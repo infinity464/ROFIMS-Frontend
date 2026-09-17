@@ -122,6 +122,7 @@ export class ReportRftsCompletionComponent implements OnInit, OnDestroy {
 
     columnCatalog: { key: string; labelEN: string; labelBN: string; hint: 'Serial' | 'Name' | 'Date' | 'Plain' | 'Remarks' | 'NameSuffix' | 'CallNoRankName'; defaultVisible: boolean; courseOnly?: boolean }[] = [
         { key: 'ser',                  labelEN: 'Ser',              labelBN: 'ক্রঃ',            hint: 'Serial', defaultVisible: true  },
+        { key: 'rabId',                labelEN: 'SRB ID',           labelBN: 'এসআরবি আইডি',     hint: 'Plain',  defaultVisible: true },
         { key: 'serviceId',            labelEN: 'Service ID',       labelBN: 'সার্ভিস আইডি',    hint: 'Plain',  defaultVisible: true  },
         { key: 'rank',                 labelEN: 'Rank',             labelBN: 'পদবী',            hint: 'Plain',  defaultVisible: true  },
         { key: 'corps',                labelEN: 'Corps',            labelBN: 'কোর',             hint: 'Plain',  defaultVisible: true  },
@@ -135,7 +136,6 @@ export class ReportRftsCompletionComponent implements OnInit, OnDestroy {
         // Profile-style composite: line 1 = Prefix + Service No + Rank; line 2 =
         // Name with awards, professional qualification and corps. Opt-in.
         { key: 'callNoRankName',       labelEN: 'No Rank Name',     labelBN: 'নং র‍্যাঙ্ক নাম',  hint: 'CallNoRankName', defaultVisible: false },
-        { key: 'rabId',                labelEN: 'SRB ID',           labelBN: 'এসআরবি আইডি',     hint: 'Plain',  defaultVisible: false },
         { key: 'rabRank',              labelEN: 'SRB Rank',         labelBN: 'এসআরবি র‍্যাঙ্ক',  hint: 'Plain',  defaultVisible: false },
         { key: 'orgName',              labelEN: 'Mother Org',       labelBN: 'মাতৃ সংস্থা',     hint: 'Plain',  defaultVisible: true  },
         { key: 'latestCourseNo',       labelEN: 'Course No',        labelBN: 'কোর্স নং',         hint: 'Plain', defaultVisible: true,  courseOnly: true },

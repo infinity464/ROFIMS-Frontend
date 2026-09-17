@@ -184,6 +184,7 @@ export class ReportAddressLocationComponent implements OnInit, OnDestroy {
         defaultVisible: boolean;
     }[] = [
         { key: 'ser',          labelEN: 'Ser',           labelBN: 'ক্রঃ',           hint: 'Serial',             defaultVisible: true },
+        { key: 'rabId',        labelEN: 'SRB ID',        labelBN: 'এসআরবি আইডি',     hint: 'RabId',              defaultVisible: true },
         { key: 'serviceId',    labelEN: 'Service ID',    labelBN: 'সার্ভিস আইডি',     hint: 'Plain',              defaultVisible: true },
         { key: 'armyRank',     labelEN: 'Rank',          labelBN: 'র‍্যাঙ্ক',         hint: 'Plain',              defaultVisible: true },
         { key: 'corps',        labelEN: 'Corps',         labelBN: 'কোর',             hint: 'Plain',              defaultVisible: true },
@@ -201,7 +202,6 @@ export class ReportAddressLocationComponent implements OnInit, OnDestroy {
         // the identity renders as separate plain columns (serviceId/rank/corps/
         // trade/name) by default instead.
         { key: 'personnel',    labelEN: 'Personnel',     labelBN: 'সদস্য',          hint: 'PersonnelComposite', defaultVisible: false },
-        { key: 'rabId',        labelEN: 'SRB ID',        labelBN: 'এসআরবি আইডি',     hint: 'RabId',              defaultVisible: false },
         { key: 'addressOwner', labelEN: 'Address Owner', labelBN: 'ঠিকানার মালিক',   hint: 'AddressOwner',       defaultVisible: false },
         { key: 'locationType', labelEN: 'Address Type',  labelBN: 'ঠিকানার ধরন',     hint: 'LocationType',       defaultVisible: false },
         { key: 'address',      labelEN: 'Address',       labelBN: 'ঠিকানা',         hint: 'AddressComposite',   defaultVisible: true },

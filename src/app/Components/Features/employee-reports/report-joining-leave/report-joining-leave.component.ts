@@ -107,6 +107,7 @@ export class ReportJoiningLeaveComponent implements OnInit, OnDestroy {
 
     columnCatalog: { key: string; labelEN: string; labelBN: string; hint: 'Serial' | 'Personnel' | 'Date' | 'Plain' | 'Remarks' | 'NameSuffix' | 'CallNoRankName'; defaultVisible: boolean }[] = [
         { key: 'ser', labelEN: 'Ser', labelBN: 'ক্রমিক', hint: 'Serial', defaultVisible: true },
+        { key: 'rabId', labelEN: 'SRB ID', labelBN: 'এসআরবি আইডি', hint: 'Plain', defaultVisible: true },
         { key: 'serviceId', labelEN: 'Service ID', labelBN: 'ব্যক্তিগত নম্বর', hint: 'Plain', defaultVisible: true },
         { key: 'rank', labelEN: 'Rank', labelBN: 'পদবি', hint: 'Plain', defaultVisible: true },
         { key: 'rabRank', labelEN: 'SRB Rank', labelBN: 'এসআরবি র‍্যাঙ্ক', hint: 'Plain', defaultVisible: false },
@@ -121,14 +122,13 @@ export class ReportJoiningLeaveComponent implements OnInit, OnDestroy {
         // Profile-style composite: line 1 = Prefix + Service No + Rank; line 2 =
         // Name with awards, professional qualification and corps. Opt-in.
         { key: 'callNoRankName', labelEN: 'No Rank Name', labelBN: 'নং র‍্যাঙ্ক নাম', hint: 'CallNoRankName', defaultVisible: false },
-        { key: 'presentBnWg', labelEN: 'Present Bn', labelBN: 'বর্তমান ইউনিট', hint: 'Plain', defaultVisible: true },
+        { key: 'rabUnitHierarchy', labelEN: 'SRB Unit', labelBN: 'এসআরবি ইউনিট', hint: 'Plain', defaultVisible: true },
         { key: 'postedBnWg', labelEN: 'Posted Bn', labelBN: 'বদলিকৃত ইউনিট', hint: 'Plain', defaultVisible: true },
         { key: 'joiningLeaveFrom', labelEN: 'Joining Leave From', labelBN: 'ছুটি শুরুর তারিখ', hint: 'Date', defaultVisible: true },
         { key: 'joiningDate', labelEN: 'Joining Leave To', labelBN: 'ছুটি শেষের তারিখ', hint: 'Date', defaultVisible: true },
         { key: 'leaveDuration', labelEN: 'Leave Duration', labelBN: 'ছুটির মেয়াদকাল', hint: 'Plain', defaultVisible: true },
         { key: 'rmks', labelEN: 'Remark', labelBN: 'মন্তব্য', hint: 'Remarks', defaultVisible: true },
         // ── Opt-in extras (registry FieldKeys) — hidden by default ────────
-        { key: 'rabId', labelEN: 'SRB ID', labelBN: 'এসআরবি আইডি', hint: 'Plain', defaultVisible: false },
         { key: 'nameBangla', labelEN: 'Name (Bangla)', labelBN: 'নাম (বাংলা)', hint: 'Plain', defaultVisible: false },
         { key: 'nid', labelEN: 'NID', labelBN: 'এনআইডি', hint: 'Plain', defaultVisible: false },
         { key: 'prefix', labelEN: 'Prefix', labelBN: 'প্রিফিক্স', hint: 'Plain', defaultVisible: false },
@@ -138,7 +138,7 @@ export class ReportJoiningLeaveComponent implements OnInit, OnDestroy {
         { key: 'motherUnit', labelEN: 'Mother Unit', labelBN: 'মাতৃ ইউনিট', hint: 'Plain', defaultVisible: false },
         { key: 'gender', labelEN: 'Gender', labelBN: 'লিঙ্গ', hint: 'Plain', defaultVisible: false },
         // Trimmed job hierarchy (Battalion, Wing … deepest level — first two + last). Opt-in.
-        { key: 'rabUnitHierarchy', labelEN: 'SRB Unit', labelBN: 'এসআরবি ইউনিট', hint: 'Plain', defaultVisible: false },
+        { key: 'presentBnWg', labelEN: 'Present Bn', labelBN: 'বর্তমান ইউনিট', hint: 'Plain', defaultVisible: false},
         { key: 'officerType', labelEN: 'Officer Type', labelBN: 'অফিসার ধরণ', hint: 'Plain', defaultVisible: false },
         { key: 'joiningInRab', labelEN: 'SRB Joining Date', labelBN: 'এসআরবিে যোগদানের তারিখ', hint: 'Date', defaultVisible: false },
         { key: 'dateOfCommission', labelEN: 'Commission Date', labelBN: 'কমিশন তারিখ', hint: 'Date', defaultVisible: false },

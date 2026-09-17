@@ -147,6 +147,7 @@ export class ReportPendingInterPostingComponent implements OnInit, OnDestroy {
         property accessor (via cellValue() / formatDate()) and the chip id. */
     columnCatalog: { key: string; labelEN: string; labelBN: string; hint: 'Serial' | 'Personnel' | 'NoRankName' | 'Date' | 'Plain' | 'Remarks'; defaultVisible: boolean }[] = [
         { key: 'ser',                labelEN: 'Ser',            labelBN: 'ক্রঃ',           hint: 'Serial',     defaultVisible: true  },
+        { key: 'rabID',              labelEN: 'SRB ID',         labelBN: 'এসআরবি আইডি',    hint: 'Plain',      defaultVisible: true },
         { key: 'serviceId',          labelEN: 'Service ID',     labelBN: 'সার্ভিস আইডি',    hint: 'Plain',      defaultVisible: true  },
         { key: 'rank',               labelEN: 'Rank',           labelBN: 'র‍্যাঙ্ক',        hint: 'Plain',      defaultVisible: true  },
         { key: 'rabRank',            labelEN: 'SRB Rank',       labelBN: 'এসআরবি র‍্যাঙ্ক',  hint: 'Plain',      defaultVisible: false },
@@ -154,16 +155,15 @@ export class ReportPendingInterPostingComponent implements OnInit, OnDestroy {
         { key: 'trade',              labelEN: 'Trade',          labelBN: 'ট্রেড',          hint: 'Plain',      defaultVisible: true  },
         { key: 'name',               labelEN: 'Name',           labelBN: 'নাম',            hint: 'Personnel',  defaultVisible: true  },
         { key: 'motherOrganization', labelEN: 'Mother Org',     labelBN: 'মাতৃ সংস্থা',     hint: 'Plain',      defaultVisible: true  },
-        { key: 'presentBnWg',        labelEN: 'Present Bn/Wg',  labelBN: 'বর্তমান বিএন/উইং', hint: 'Plain',      defaultVisible: true  },
+        { key: 'fromHierarchy',      labelEN: 'SRB Unit', labelBN: 'এসআরবি ইউনিট', hint: 'Plain', defaultVisible: true  },
         { key: 'postedBnWg',         labelEN: 'Posted Bn/Wg',   labelBN: 'পোস্টেড বিএন/উইং', hint: 'Plain',      defaultVisible: true  },
         { key: 'postingOrderDate',   labelEN: 'Posting Order Date', labelBN: 'পোস্টিং অর্ডার তারিখ', hint: 'Date', defaultVisible: true  },
         { key: 'rmks',               labelEN: 'Remark',        labelBN: 'মন্তব্য',        hint: 'Remarks',    defaultVisible: true  },
         // Opt-in extras
-        { key: 'rabID',              labelEN: 'SRB ID',         labelBN: 'এসআরবি আইডি',    hint: 'Plain',      defaultVisible: false },
         { key: 'postingOrderNo',     labelEN: 'Order No',       labelBN: 'অর্ডার নম্বর',    hint: 'Plain',      defaultVisible: false },
         { key: 'noteSheetNo',        labelEN: 'NoteSheet No',   labelBN: 'নোটশীট নম্বর',    hint: 'Plain',      defaultVisible: false },
         { key: 'transferToHierarchy',labelEN: 'Posted (Full Path)', labelBN: 'পোস্টেড (পূর্ণ পথ)', hint: 'Plain', defaultVisible: false },
-        { key: 'fromHierarchy',      labelEN: 'SRB Unit (Full)', labelBN: 'এসআরবি ইউনিট (পূর্ণ)', hint: 'Plain', defaultVisible: true  },
+        { key: 'presentBnWg',        labelEN: 'Present Bn/Wg',  labelBN: 'বর্তমান বিএন/উইং', hint: 'Plain',      defaultVisible: false },
         { key: 'noRankName',         labelEN: 'No Rank Name',   labelBN: 'নং র‍্যাঙ্ক নাম',   hint: 'NoRankName', defaultVisible: false },
         { key: 'motherUnitName',     labelEN: 'Mother Unit',    labelBN: 'মাতৃ ইউনিট',      hint: 'Plain',      defaultVisible: false },
         { key: 'memberType',         labelEN: 'Member Type',    labelBN: 'সদস্য ধরন',       hint: 'Plain',      defaultVisible: false },

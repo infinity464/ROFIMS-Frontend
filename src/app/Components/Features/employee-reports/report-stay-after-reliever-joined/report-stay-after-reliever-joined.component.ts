@@ -131,6 +131,7 @@ export class ReportStayAfterRelieverJoinedComponent implements OnInit, OnDestroy
 
     columnCatalog: { key: string; labelEN: string; labelBN: string; hint: 'Serial' | 'Personnel' | 'Date' | 'Plain' | 'Remarks' | 'Duration' | 'NameSuffix' | 'CallNoRankName'; defaultVisible: boolean }[] = [
         { key: 'ser', labelEN: 'Ser', labelBN: 'ক্রঃ', hint: 'Serial', defaultVisible: true },
+        { key: 'rabId', labelEN: 'SRB ID', labelBN: 'এসআরবি আইডি', hint: 'Plain', defaultVisible: true },
         { key: 'serviceId', labelEN: 'Service ID', labelBN: 'ব্যক্তিগত নম্বর', hint: 'Plain', defaultVisible: true },
         { key: 'rank', labelEN: 'Rank', labelBN: 'পদবী', hint: 'Plain', defaultVisible: true },
         { key: 'corps', labelEN: 'Corps', labelBN: 'কোর', hint: 'Plain', defaultVisible: true },
@@ -146,7 +147,7 @@ export class ReportStayAfterRelieverJoinedComponent implements OnInit, OnDestroy
         { key: 'callNoRankName', labelEN: 'No Rank Name', labelBN: 'নং র‍্যাঙ্ক নাম', hint: 'CallNoRankName', defaultVisible: false },
         { key: 'joiningInRab', labelEN: 'SRB Joining Date', labelBN: 'এসআরবিে যোগদানের তারিখ', hint: 'Date', defaultVisible: true },
         { key: 'durationOfStay', labelEN: 'Duration of Stay', labelBN: 'অবস্থানের মেয়াদকাল', hint: 'Duration', defaultVisible: true },
-        { key: 'presentUnit', labelEN: 'Battalion', labelBN: 'ব্যাটালিয়ন', hint: 'Plain', defaultVisible: true },
+        { key: 'rabUnitHierarchy', labelEN: 'SRB Unit', labelBN: 'এসআরবি ইউনিট', hint: 'Plain', defaultVisible: true },
         { key: 'postedOutUnit', labelEN: 'Posted-out Unit', labelBN: 'বদলিকৃত ইউনিট', hint: 'Plain', defaultVisible: true },
         { key: 'relieverYesNo', labelEN: 'Reliever (Yes/No)', labelBN: 'প্রতিস্থাপক (হ্যাঁ/না)', hint: 'Plain', defaultVisible: false },
         { key: 'relieverJoiningDate', labelEN: 'Reliever Joining Date', labelBN: 'প্রতিস্থাপক যোগদানের তারিখ', hint: 'Date', defaultVisible: true },
@@ -161,7 +162,6 @@ export class ReportStayAfterRelieverJoinedComponent implements OnInit, OnDestroy
         { key: 'postingOrderDate', labelEN: 'Posting Order Date', labelBN: 'প্রেষনাদেশের তারিখ', hint: 'Date', defaultVisible: false },
         { key: 'motherUnit', labelEN: 'Mother Unit', labelBN: 'মাতৃ ইউনিট', hint: 'Plain', defaultVisible: false },
         { key: 'rabRank', labelEN: 'SRB Rank', labelBN: 'এসআরবি র‍্যাঙ্ক', hint: 'Plain', defaultVisible: false },
-        { key: 'rabId', labelEN: 'SRB ID', labelBN: 'এসআরবি আইডি', hint: 'Plain', defaultVisible: false },
         { key: 'nameBangla', labelEN: 'Name (Bangla)', labelBN: 'নাম (বাংলা)', hint: 'Plain', defaultVisible: false },
         { key: 'nid', labelEN: 'NID', labelBN: 'এনআইডি', hint: 'Plain', defaultVisible: false },
         { key: 'prefix', labelEN: 'Prefix', labelBN: 'প্রিফিক্স', hint: 'Plain', defaultVisible: false },
@@ -170,7 +170,7 @@ export class ReportStayAfterRelieverJoinedComponent implements OnInit, OnDestroy
         { key: 'motherOrganization', labelEN: 'Mother Org', labelBN: 'মাতৃ সংস্থা', hint: 'Plain', defaultVisible: false },
         { key: 'gender', labelEN: 'Gender', labelBN: 'লিঙ্গ', hint: 'Plain', defaultVisible: false },
         // Full job hierarchy (Battalion › Wing › Branch › Sub-Branch › Section › Sub-Section). Opt-in.
-        { key: 'rabUnitHierarchy', labelEN: 'SRB Unit', labelBN: 'এসআরবি ইউনিট', hint: 'Plain', defaultVisible: false },
+        { key: 'presentUnit', labelEN: 'Battalion', labelBN: 'ব্যাটালিয়ন', hint: 'Plain', defaultVisible: false},
         { key: 'dateOfCommission', labelEN: 'Commission Date', labelBN: 'কমিশন তারিখ', hint: 'Date', defaultVisible: false },
         { key: 'rabServiceFrom', labelEN: 'SRB Service From', labelBN: 'এসআরবি স্থিতিকাল হইতে', hint: 'Date', defaultVisible: false },
         { key: 'rabServiceTo', labelEN: 'SRB Service To', labelBN: 'এসআরবি স্থিতিকাল পর্যন্ত', hint: 'Date', defaultVisible: false },

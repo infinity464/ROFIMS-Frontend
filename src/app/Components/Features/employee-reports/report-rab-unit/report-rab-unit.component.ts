@@ -144,13 +144,14 @@ export class ReportRabUnitComponent implements OnInit, OnChanges, OnDestroy {
 
     columnCatalog: { key: string; labelEN: string; labelBN: string; hint: string; defaultVisible: boolean }[] = [
         { key: 'ser',          labelEN: 'Ser',           labelBN: 'ক্রঃ',          hint: 'Serial',                defaultVisible: true  },
+        { key: 'rabId',        labelEN: 'SRB ID',        labelBN: 'এসআরবি আইডি',    hint: 'RabId',                 defaultVisible: true },
         { key: 'serviceId',    labelEN: 'Service ID',    labelBN: 'সার্ভিস আইডি',  hint: 'Plain',                 defaultVisible: true  },
         { key: 'armyRank',     labelEN: 'Rank',          labelBN: 'র‍্যাঙ্ক',       hint: 'Plain',                 defaultVisible: true  },
         { key: 'rabRank',      labelEN: 'SRB Rank',      labelBN: 'এসআরবি র‍্যাঙ্ক', hint: 'Plain',                 defaultVisible: false },
         { key: 'corps',        labelEN: 'Corps',         labelBN: 'কোর',           hint: 'Plain',                 defaultVisible: true  },
         { key: 'trade',        labelEN: 'Trade',         labelBN: 'ট্রেড',         hint: 'Plain',                 defaultVisible: true  },
         { key: 'name',         labelEN: 'Name',          labelBN: 'নাম',           hint: 'Name',                  defaultVisible: true  },
-        { key: 'rabUnit',      labelEN: 'Battalion',     labelBN: 'ব্যাটালিয়ন',     hint: 'Plain',                 defaultVisible: true  },
+        { key: 'rabUnitHierarchy', labelEN: 'SRB Unit', labelBN: 'এসআরবি ইউনিট', hint: 'Plain', defaultVisible: true },
         // Single toggle that folds Award + Professional Qualification + Corps
         // INTO the Name cell when ticked. Never renders as its own column —
         // see visibleColumns + nameColumnValue. Default off.
@@ -170,8 +171,7 @@ export class ReportRabUnitComponent implements OnInit, OnChanges, OnDestroy {
         // Default-visible; users can hide via the column picker.
         // Opt-in extras.
         { key: 'personnel',    labelEN: 'SRB Personnel', labelBN: 'এসআরবি সদস্য',   hint: 'RabPersonnelComposite', defaultVisible: false },
-        { key: 'rabId',        labelEN: 'SRB ID',        labelBN: 'এসআরবি আইডি',    hint: 'RabId',                 defaultVisible: false },
-        { key: 'rabUnitHierarchy', labelEN: 'SRB Unit', labelBN: 'এসআরবি ইউনিট (পূর্ণ)', hint: 'Plain', defaultVisible: false },
+        { key: 'rabUnit',      labelEN: 'Battalion',     labelBN: 'ব্যাটালিয়ন',     hint: 'Plain',                 defaultVisible: false },
         { key: 'motherOrganization',labelEN: 'Mother Org', labelBN: 'মাতৃ সংস্থা',  hint: 'Plain',                 defaultVisible: false },
         { key: 'joiningDate',  labelEN: 'Joining Date',  labelBN: 'যোগদান তারিখ',   hint: 'JoiningDate',          defaultVisible: false },
         { key: 'rmks',         labelEN: 'Remark',        labelBN: 'মন্তব্য',       hint: 'Remarks',               defaultVisible: true },

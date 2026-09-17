@@ -154,6 +154,7 @@ export class ReportFamilyOccupationComponent implements OnInit, OnDestroy {
      */
     columnCatalog: { key: string; labelEN: string; labelBN: string; hint: string; defaultVisible: boolean }[] = [
         { key: 'ser',                labelEN: 'Ser',                  labelBN: 'ক্রঃ',                hint: 'Serial',                defaultVisible: true  },
+        { key: 'rabId',              labelEN: 'SRB ID',               labelBN: 'এসআরবি আইডি',         hint: 'RabId',                 defaultVisible: true },
         // ── Printed-header default employee columns (SER · SERVICE ID · RANK · CORPS · TRADE · NAME) ──
         // Plain cells whose keys MATCH FamilyReportFieldRegistry FieldKeys so
         // the picker → backend projection round-trip works; resolved via
@@ -175,7 +176,6 @@ export class ReportFamilyOccupationComponent implements OnInit, OnDestroy {
         { key: 'callNoRankName',     labelEN: 'No Rank Name',         labelBN: 'নং র‍্যাঙ্ক নাম',    hint: 'CallNoRankName',        defaultVisible: false },
         // Composite: Name + (SVC · Rank · Mother Org) on a secondary line. Opt-in.
         { key: 'rabPersonnel',       labelEN: 'SRB Personnel',        labelBN: 'এসআরবি সদস্য',        hint: 'RabPersonnelComposite', defaultVisible: false },
-        { key: 'rabId',              labelEN: 'SRB ID',               labelBN: 'এসআরবি আইডি',         hint: 'RabId',                 defaultVisible: false },
         { key: 'familyMemberName',   labelEN: 'Family Member Name',   labelBN: 'পরিবারের সদস্যের নাম', hint: 'FamilyName',            defaultVisible: true  },
         { key: 'relation',           labelEN: 'Relation',             labelBN: 'সম্পর্ক',             hint: 'Relation',              defaultVisible: true  },
         { key: 'occupation',         labelEN: 'Occupation',           labelBN: 'পেশা',               hint: 'Occupation',            defaultVisible: true  },

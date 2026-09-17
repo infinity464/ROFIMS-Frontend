@@ -121,6 +121,7 @@ export class ReportUnitDurationNominalRollComponent implements OnInit, OnDestroy
 
     columnCatalog: { key: string; labelEN: string; labelBN: string; hint: 'Serial' | 'Personnel' | 'Date' | 'Plain' | 'Remarks' | 'Multiline' | 'Duration' | 'NameSuffix' | 'CallNoRankName'; defaultVisible: boolean }[] = [
         { key: 'ser',            labelEN: 'Ser',                 labelBN: 'ক্রঃ',                   hint: 'Serial',    defaultVisible: true  },
+        { key: 'rabId',          labelEN: 'SRB ID',              labelBN: 'এসআরবি আইডি',            hint: 'Plain',     defaultVisible: true  },
         { key: 'orgName',        labelEN: 'Org Name',            labelBN: 'বাহিনীর নাম',            hint: 'Plain',     defaultVisible: false },
         { key: 'serviceId',      labelEN: 'Service ID',          labelBN: 'ব্যক্তিগত নম্বর',         hint: 'Plain',     defaultVisible: true  },
         { key: 'rank',           labelEN: 'Rank',                labelBN: 'পদবি',                   hint: 'Plain',     defaultVisible: true  },
@@ -136,7 +137,7 @@ export class ReportUnitDurationNominalRollComponent implements OnInit, OnDestroy
         // Profile-style composite: line 1 = Prefix + Service No + Rank; line 2 =
         // Name with awards, professional qualification and corps. Opt-in.
         { key: 'callNoRankName', labelEN: 'No Rank Name',        labelBN: 'নং র‍্যাঙ্ক নাম',         hint: 'CallNoRankName', defaultVisible: false },
-        { key: 'presentUnit',    labelEN: 'Present Unit',        labelBN: 'বর্তমান ইউনিট',          hint: 'Plain',     defaultVisible: true  },
+        { key: 'rabUnitHierarchy', labelEN: 'SRB Unit',          labelBN: 'এসআরবি ইউনিট',           hint: 'Plain',     defaultVisible: true  },
         { key: 'durationOfStay', labelEN: 'Duration of Stay',    labelBN: 'অবস্থানের মেয়াদকাল',     hint: 'Duration',  defaultVisible: true  },
         { key: 'serviceHistory', labelEN: 'Service History',     labelBN: 'চাকরির ইতিহাস',          hint: 'Multiline', defaultVisible: true  },
         { key: 'rmks',           labelEN: 'Remark',             labelBN: 'মন্তব্য',                hint: 'Remarks',   defaultVisible: true  },
@@ -148,7 +149,6 @@ export class ReportUnitDurationNominalRollComponent implements OnInit, OnDestroy
         { key: 'relieverTrade',      labelEN: 'Reliever Trade',     labelBN: 'প্রতিস্থাপক ট্রেড',       hint: 'Plain',    defaultVisible: false },
         { key: 'relieverJoiningDate',labelEN: 'Reliever Joining Date',labelBN: 'প্রতিস্থাপক যোগদানের তারিখ', hint: 'Date', defaultVisible: false },
         { key: 'possibleJoiningDate',labelEN: 'Possible Joining Date',labelBN: 'সম্ভাব্য যোগদানের তারিখ', hint: 'Date',  defaultVisible: false },
-        { key: 'rabId',          labelEN: 'SRB ID',              labelBN: 'এসআরবি আইডি',            hint: 'Plain',     defaultVisible: false },
         { key: 'nameBangla',     labelEN: 'Name (Bangla)',       labelBN: 'নাম (বাংলা)',            hint: 'Plain',     defaultVisible: false },
         { key: 'nid',            labelEN: 'NID',                 labelBN: 'এনআইডি',                hint: 'Plain',     defaultVisible: false },
         { key: 'prefix',         labelEN: 'Prefix',              labelBN: 'প্রিফিক্স',              hint: 'Plain',     defaultVisible: false },
@@ -156,7 +156,7 @@ export class ReportUnitDurationNominalRollComponent implements OnInit, OnDestroy
         { key: 'memberType',     labelEN: 'Member Type',         labelBN: 'সদস্য ধরন',              hint: 'Plain',     defaultVisible: false },
         { key: 'gender',         labelEN: 'Gender',              labelBN: 'লিঙ্গ',                  hint: 'Plain',     defaultVisible: false },
         { key: 'motherUnit',     labelEN: 'Mother Unit',         labelBN: 'মাতৃ ইউনিট',             hint: 'Plain',     defaultVisible: false },
-        { key: 'rabUnitHierarchy', labelEN: 'SRB Unit',          labelBN: 'এসআরবি ইউনিট',           hint: 'Plain',     defaultVisible: false },
+        { key: 'presentUnit',    labelEN: 'Present Unit',        labelBN: 'বর্তমান ইউনিট',          hint: 'Plain',     defaultVisible: false },
         { key: 'dateOfCommission', labelEN: 'Commission Date',   labelBN: 'কমিশন তারিখ',            hint: 'Date',      defaultVisible: false },
         { key: 'joiningInRab',   labelEN: 'SRB Joining Date',    labelBN: 'এসআরবিে যোগদানের তারিখ',  hint: 'Date',      defaultVisible: false },
         { key: 'postingStatus',  labelEN: 'Posting Status',      labelBN: 'নিয়োগ অবস্থা',          hint: 'Plain',     defaultVisible: false },

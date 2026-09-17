@@ -123,13 +123,14 @@ export class ReportEducationComponent implements OnInit, OnChanges, OnDestroy {
      */
     columnCatalog: { key: string; labelEN: string; labelBN: string; hint: string; defaultVisible: boolean }[] = [
         { key: 'ser', labelEN: 'Ser', labelBN: 'ক্রঃ', hint: 'Serial', defaultVisible: true },
+        { key: 'rabId', labelEN: 'SRB ID', labelBN: 'এসআরবি আইডি', hint: 'RabId', defaultVisible: true },
         { key: 'serviceId', labelEN: 'Service ID', labelBN: 'সার্ভিস আইডি', hint: 'Plain', defaultVisible: true },
         { key: 'armyRank', labelEN: 'Rank', labelBN: 'র‍্যাঙ্ক', hint: 'Plain', defaultVisible: true },
         { key: 'rabRank', labelEN: 'SRB Rank', labelBN: 'এসআরবি র‍্যাঙ্ক', hint: 'Plain', defaultVisible: false },
         { key: 'corps', labelEN: 'Corps', labelBN: 'কোর', hint: 'Plain', defaultVisible: true },
         { key: 'trade', labelEN: 'Trade', labelBN: 'ট্রেড', hint: 'Plain', defaultVisible: true },
         { key: 'name', labelEN: 'Name', labelBN: 'নাম', hint: 'Name', defaultVisible: true },
-        { key: 'rabUnit', labelEN: 'Battalion', labelBN: 'ব্যাটালিয়ন', hint: 'Plain', defaultVisible: true },
+        { key: 'rabUnitHierarchy', labelEN: 'SRB Unit', labelBN: 'এসআরবি ইউনিট', hint: 'Plain', defaultVisible: true },
         // Single toggle that folds Award + Professional Qualification + Corps
         // INTO the Name cell when ticked (e.g. "Md Shahidul Islam, PPM, BPM,
         // NDC, psc"). Never renders as its own column — see visibleColumns +
@@ -139,7 +140,7 @@ export class ReportEducationComponent implements OnInit, OnChanges, OnDestroy {
         // Name with awards, professional qualification and corps. Opt-in.
         { key: 'callNoRankName', labelEN: 'No Rank Name', labelBN: 'নং র‍্যাঙ্ক নাম', hint: 'CallNoRankName', defaultVisible: false },
         // Full job hierarchy (Battalion › Wing › Branch › Sub-Branch › Section › Sub-Section). Opt-in.
-        { key: 'rabUnitHierarchy', labelEN: 'SRB Unit', labelBN: 'এসআরবি ইউনিট (পূর্ণ)', hint: 'Plain', defaultVisible: false },
+        { key: 'rabUnit', labelEN: 'Battalion', labelBN: 'ব্যাটালিয়ন', hint: 'Plain', defaultVisible: false},
         // Selected-value column: header mirrors the chosen report type
         // (e.g. "Education") and every cell shows the picked CommonCode
         // value (e.g. "SSC") — the filter context surfaced per row.
@@ -160,7 +161,6 @@ export class ReportEducationComponent implements OnInit, OnChanges, OnDestroy {
         { key: 'rmks', labelEN: 'Remark', labelBN: 'মন্তব্য', hint: 'Remarks', defaultVisible: true },
         // Opt-in extras (same as member-appointment / batch-course catalog).
         { key: 'personnel', labelEN: 'SRB Personnel', labelBN: 'এসআরবি সদস্য', hint: 'RabPersonnelComposite', defaultVisible: false },
-        { key: 'rabId', labelEN: 'SRB ID', labelBN: 'এসআরবি আইডি', hint: 'RabId', defaultVisible: false },
         { key: 'nameEnglish', labelEN: 'Name (EN)', labelBN: 'নাম (ইংরেজি)', hint: 'Plain', defaultVisible: false },
         { key: 'nameBangla', labelEN: 'Name (BN)', labelBN: 'নাম (বাংলা)', hint: 'Plain', defaultVisible: false },
         { key: 'nid', labelEN: 'NID', labelBN: 'এনআইডি', hint: 'Plain', defaultVisible: false },

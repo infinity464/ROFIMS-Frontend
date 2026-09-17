@@ -125,6 +125,7 @@ export class ReportDeceasedComponent implements OnInit {
      */
     columnCatalog: { key: string; labelEN: string; labelBN: string; hint: 'Serial' | 'Personnel' | 'Date' | 'Plain' | 'Remarks' | 'NameSuffix' | 'CallNoRankName'; defaultVisible: boolean }[] = [
         { key: 'ser',            labelEN: 'Ser',                  labelBN: 'ক্রঃ',                   hint: 'Serial',     defaultVisible: true  },
+        { key: 'rabId',          labelEN: 'SRB ID',               labelBN: 'এসআরবি আইডি',            hint: 'Plain',      defaultVisible: true },
         { key: 'serviceId',      labelEN: 'Service ID',           labelBN: 'সার্ভিস আইডি',           hint: 'Plain',      defaultVisible: true  },
         { key: 'rank',           labelEN: 'Rank',                 labelBN: 'পদবী',                   hint: 'Plain',      defaultVisible: true  },
         { key: 'corps',          labelEN: 'Corps',                labelBN: 'কোর',                    hint: 'Plain',      defaultVisible: true  },
@@ -145,7 +146,6 @@ export class ReportDeceasedComponent implements OnInit {
         { key: 'deceasedReason', labelEN: 'Death Reason',         labelBN: 'মৃত্যুর কারণ',           hint: 'Plain',      defaultVisible: true  },
         { key: 'rmks',           labelEN: 'Remark',               labelBN: 'মন্তব্য',                hint: 'Remarks',    defaultVisible: true  },
         // ── Opt-in extras (registry FieldKeys) — hidden by default ────────
-        { key: 'rabId',          labelEN: 'SRB ID',               labelBN: 'এসআরবি আইডি',            hint: 'Plain',      defaultVisible: false },
         { key: 'nameBangla',     labelEN: 'Name (Bangla)',        labelBN: 'নাম (বাংলা)',            hint: 'Plain',      defaultVisible: false },
         { key: 'nid',            labelEN: 'NID',                  labelBN: 'এনআইডি',                hint: 'Plain',      defaultVisible: false },
         { key: 'prefix',         labelEN: 'Prefix',               labelBN: 'প্রিফিক্স',              hint: 'Plain',      defaultVisible: false },

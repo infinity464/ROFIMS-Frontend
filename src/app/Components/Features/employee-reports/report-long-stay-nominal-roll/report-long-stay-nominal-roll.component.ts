@@ -135,6 +135,7 @@ export class ReportLongStayNominalRollComponent implements OnInit, OnDestroy {
 
     columnCatalog: { key: string; labelEN: string; labelBN: string; hint: 'Serial' | 'Personnel' | 'Date' | 'Plain' | 'Remarks' | 'Duration' | 'NameSuffix' | 'CallNoRankName'; defaultVisible: boolean }[] = [
         { key: 'ser',                labelEN: 'Ser',                labelBN: 'ক্রঃ',                   hint: 'Serial',    defaultVisible: true  },
+        { key: 'rabId',              labelEN: 'SRB ID',             labelBN: 'এসআরবি আইডি',            hint: 'Plain',     defaultVisible: true  },
         { key: 'serviceId',          labelEN: 'Service ID',         labelBN: 'ব্যক্তিগত নম্বর',         hint: 'Plain',     defaultVisible: true  },
         { key: 'rank',               labelEN: 'Rank',               labelBN: 'পদবী',                   hint: 'Plain',     defaultVisible: true  },
         { key: 'name',               labelEN: 'Name',               labelBN: 'নাম',                    hint: 'Plain',     defaultVisible: true  },
@@ -149,7 +150,7 @@ export class ReportLongStayNominalRollComponent implements OnInit, OnDestroy {
         { key: 'motherUnit',         labelEN: 'Mother Unit',        labelBN: 'মাতৃ ইউনিট',             hint: 'Plain',     defaultVisible: false },
         { key: 'joiningInRab',       labelEN: 'SRB Joining Date',   labelBN: 'এসআরবিে যোগদানের তারিখ',  hint: 'Date',      defaultVisible: true  },
         { key: 'durationOfStay',     labelEN: 'Duration of Stay',   labelBN: 'অবস্থানের মেয়াদকাল',     hint: 'Duration',  defaultVisible: true  },
-        { key: 'presentUnit',        labelEN: 'Battalion',          labelBN: 'ব্যাটালিয়ন',             hint: 'Plain',     defaultVisible: true  },
+        { key: 'presentUnit',        labelEN: 'Battalion',          labelBN: 'ব্যাটালিয়ন',             hint: 'Plain',     defaultVisible: false },
         { key: 'postedOutUnit',      labelEN: 'Posted-out Unit',    labelBN: 'বদলিকৃত ইউনিট',          hint: 'Plain',     defaultVisible: true  },
         { key: 'postingOrderDate',   labelEN: 'Posting Order Date', labelBN: 'প্রেষনাদেশের তারিখ',     hint: 'Date',      defaultVisible: true  },
         { key: 'relieverJoiningDate',labelEN: 'Reliever Joining Date', labelBN: 'প্রতিস্থাপক যোগদানের তারিখ', hint: 'Date', defaultVisible: true },
@@ -164,7 +165,6 @@ export class ReportLongStayNominalRollComponent implements OnInit, OnDestroy {
         { key: 'corps',              labelEN: 'Corps',              labelBN: 'কোর',                    hint: 'Plain',     defaultVisible: true  },
         { key: 'rabRank',            labelEN: 'SRB Rank',           labelBN: 'এসআরবি র‍্যাঙ্ক',         hint: 'Plain',     defaultVisible: false },
         { key: 'trade',              labelEN: 'Trade',              labelBN: 'ট্রেড',                  hint: 'Plain',     defaultVisible: true  },
-        { key: 'rabId',              labelEN: 'SRB ID',             labelBN: 'এসআরবি আইডি',            hint: 'Plain',     defaultVisible: false },
         { key: 'nameBangla',         labelEN: 'Name (Bangla)',      labelBN: 'নাম (বাংলা)',            hint: 'Plain',     defaultVisible: false },
         { key: 'nid',                labelEN: 'NID',                labelBN: 'এনআইডি',                hint: 'Plain',     defaultVisible: false },
         { key: 'prefix',             labelEN: 'Prefix',             labelBN: 'প্রিফিক্স',              hint: 'Plain',     defaultVisible: false },
@@ -173,7 +173,7 @@ export class ReportLongStayNominalRollComponent implements OnInit, OnDestroy {
         { key: 'motherOrganization', labelEN: 'Mother Org',         labelBN: 'মাতৃ সংস্থা',            hint: 'Plain',     defaultVisible: false },
         { key: 'gender',             labelEN: 'Gender',             labelBN: 'লিঙ্গ',                  hint: 'Plain',     defaultVisible: false },
         // Trimmed job hierarchy (first two levels + deepest). Opt-in.
-        { key: 'rabUnitHierarchy',   labelEN: 'SRB Unit',           labelBN: 'এসআরবি ইউনিট',           hint: 'Plain',     defaultVisible: false },
+        { key: 'rabUnitHierarchy',   labelEN: 'SRB Unit',           labelBN: 'এসআরবি ইউনিট',           hint: 'Plain',     defaultVisible: true  },
         { key: 'dateOfCommission',   labelEN: 'Commission Date',    labelBN: 'কমিশন তারিখ',            hint: 'Date',      defaultVisible: false },
         { key: 'rabServiceFrom',     labelEN: 'SRB Service From',   labelBN: 'এসআরবি স্থিতিকাল হইতে',   hint: 'Date',      defaultVisible: false },
         { key: 'rabServiceTo',       labelEN: 'SRB Service To',     labelBN: 'এসআরবি স্থিতিকাল পর্যন্ত', hint: 'Date',     defaultVisible: false },
@@ -188,8 +188,8 @@ export class ReportLongStayNominalRollComponent implements OnInit, OnDestroy {
     ];
     /** Default visible columns in display order — Corps/Trade slotted after Rank. */
     selectedColumnKeys: string[] = [
-        'ser', 'serviceId', 'rank', 'corps', 'trade', 'name', 'joiningInRab',
-        'durationOfStay', 'presentUnit', 'postedOutUnit', 'postingOrderDate', 'relieverJoiningDate', 'rmks',
+        'ser', 'rabId', 'serviceId', 'rank', 'corps', 'trade', 'name', 'joiningInRab',
+        'durationOfStay', 'rabUnitHierarchy', 'postedOutUnit', 'postingOrderDate', 'relieverJoiningDate', 'rmks',
     ];
     draggingColumnKey: string | null = null;
 
