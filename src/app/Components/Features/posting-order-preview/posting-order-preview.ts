@@ -688,13 +688,13 @@ export class PostingOrderPreviewPageComponent implements OnInit {
 
     /**
      * Navy members carry "বিএন" (EN: "BN") after the rank in signature blocks,
-     * e.g. "কমান্ডার, বিএন". Detected from the brief profile's root mother org.
+     * e.g. "কমান্ডার বিএন". Detected from the brief profile's root mother org.
      */
     private navyRank(emp: any, bn: boolean): string {
         const rank = (bn ? emp?.rankBN : emp?.rankEN) ?? '';
         if (!rank) return '';
         const isNavy = /navy/i.test(emp?.motherOrgEN || '') || (emp?.motherOrgBN || '').includes('নৌ');
-        return isNavy ? `${rank}, ${bn ? 'বিএন' : 'BN'}` : rank;
+        return isNavy ? `${rank} ${bn ? 'বিএন' : 'BN'}` : rank;
     }
 
     private loadApprovalPerson(employeeId: number | null): void {
