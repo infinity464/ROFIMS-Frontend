@@ -160,8 +160,14 @@ export class NoteSheetSubject implements OnInit {
     }
 
     onFilterTypeChange() {
+        this.syncCategoryColumnVisibility();
         this.first = 0;
         this.load({ first: 0, rows: this.rows });
+    }
+
+    private syncCategoryColumnVisibility(): void {
+        const col = this.tableConfig.tableColumns.find((c) => c.field === 'subjectCategoryLabel');
+        if (col) col.hidden = this.selectedFilterType === NoteSheetType.NewPosting || this.selectedFilterType === NoteSheetType.InterPosting;
     }
 
     onSearch(keyword: string) {
