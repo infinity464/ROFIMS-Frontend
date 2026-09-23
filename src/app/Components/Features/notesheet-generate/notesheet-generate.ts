@@ -29,7 +29,7 @@ import { UserMenuService } from '@/services/user-menu.service';
 import { IdentityUserMappingService } from '@/services/identity-user-mapping.service';
 import { IdentityUserMemberTypeAccessService } from '@/services/identity-user-member-type-access.service';
 import { PostingService } from '@/services/posting.service';
-import { NoteSheetType, NoteSheetOperationType, NoteSheetOperationTypeOptions, ApprovalStatus, CodeType } from '@/models/enums';
+import { NoteSheetType, NoteSheetOperationType, NoteSheetOperationTypeOptions, ApprovalStatus, CodeType, SubjectCategory } from '@/models/enums';
 import { encodeNoteSheetId, decodeNoteSheetId } from '@/shared/utils/notesheet-id-codec';
 import { NotesheetApproverSelectComponent } from '@/Components/Common/notesheet-approver-select/notesheet-approver-select';
 import { BanglaNumerals } from '@/Core/i18n/bangla-numerals';
@@ -444,12 +444,12 @@ export class NotesheetGenerateComponent implements OnInit {
         return picked ? ((isBn ? picked.subjectBN : picked.subjectEN) || picked.subjectEN || picked.subjectBN || '') : '';
     }
 
-    /** True when the selected subject is flagged IsClearanceSubject — members become required
+    /** True when the selected subject's category is Clearance — members become required
      *  and each must be a posted-out member (with a Permanent Posting MO Change record). */
     get isClearanceSubjectSelected(): boolean {
         const id = this.form.get('noteSheetSubjectId')?.value;
         if (id == null) return false;
-        return !!this.subjectPickList.find((s) => s.id === id)?.isClearanceSubject;
+        return this.subjectPickList.find((s) => s.id === id)?.subjectCategory === SubjectCategory.Clearance;
     }
     /** Selected subject's display label (language-aware) — used for the read-only field in edit mode. */
     get selectedSubjectLabel(): string {

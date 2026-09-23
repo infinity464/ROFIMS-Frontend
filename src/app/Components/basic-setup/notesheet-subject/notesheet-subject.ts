@@ -1,20 +1,19 @@
 import { Component, inject, OnInit } from '@angular/core';
 import { UserMenuService } from '@/services/user-menu.service';
 import { Router } from '@angular/router';
-import { FormBuilder, FormGroup, FormsModule, Validators } from '@angular/forms';
+import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { ConfirmationService, MessageService } from 'primeng/api';
 import { FormConfig } from '../shared/models/formConfig';
 import { TableConfig } from '../shared/models/dataTableConfig';
 import { DynamicFormComponent } from '../shared/componets/dynamic-form-component/dynamic-form';
 import { DataTable } from '../shared/componets/data-table/data-table';
 import { Fluid } from 'primeng/fluid';
-import { Select } from 'primeng/select';
 import { NoteSheetSubjectModel, NoteSheetSubjectService } from '../shared/services/NoteSheetSubjectService';
-import { NoteSheetType } from '@/models/enums';
+import { NoteSheetType, SubjectCategoryOptions } from '@/models/enums';
 
 @Component({
     selector: 'app-notesheet-subject',
-    imports: [DynamicFormComponent, DataTable, Fluid, Select, FormsModule],
+    imports: [DynamicFormComponent, DataTable, Fluid],
     templateUrl: './notesheet-subject.html',
     styleUrl: './notesheet-subject.scss'
 })
@@ -38,14 +37,8 @@ export class NoteSheetSubject implements OnInit {
     searchValue = '';
     isSubmitting = false;
 
-    // Grid type filter ('' = all types)
+    // Grid type filter — driven by the form's Note Sheet Type ('' = all types)
     selectedFilterType = '';
-    filterTypeOptions = [
-        { label: 'All Types', value: '' },
-        { label: 'General', value: NoteSheetType.General },
-        { label: 'New Posting', value: NoteSheetType.NewPosting },
-        { label: 'Inter Posting', value: NoteSheetType.InterPosting }
-    ];
 
     private typeLabels: Record<string, string> = {
         [NoteSheetType.General]: 'General',
@@ -69,10 +62,11 @@ export class NoteSheetSubject implements OnInit {
             { name: 'subjectEN', label: 'Subject (English)', type: 'text', required: true },
             { name: 'subjectBN', label: 'Subject (Bangla)', type: 'text', required: true },
             {
-                // Only shown for General note sheets; marks the subject as a clearance subject.
-                name: 'isClearanceSubject',
-                label: 'Is Clearance Subject',
-                type: 'checkbox',
+                // Only shown for General note sheets; classifies the subject (null = none).
+                name: 'subjectCategory',
+                label: 'Subject Category',
+                type: 'select',
+                options: SubjectCategoryOptions,
                 visibleWhen: { field: 'noteSheetType', equals: NoteSheetType.General }
             },
             {
@@ -94,7 +88,7 @@ export class NoteSheetSubject implements OnInit {
             { field: 'noteSheetTypeLabel', header: 'Note Sheet Type' },
             { field: 'subjectEN', header: 'Subject (EN)' },
             { field: 'subjectBN', header: 'Subject (BN)' },
-            { field: 'isClearanceSubject', header: 'Clearance Subject', type: 'boolean', trueLabel: 'Yes', falseLabel: 'No' },
+            { field: 'subjectCategoryLabel', header: 'Subject Category' },
             { field: 'status', header: 'Status', type: 'boolean', trueLabel: 'Active', falseLabel: 'Inactive' },
             { field: 'id', header: 'ID', hidden: true }
         ]
@@ -123,15 +117,18 @@ export class NoteSheetSubject implements OnInit {
             noteSheetType: [null, Validators.required],
             subjectEN: ['', Validators.required],
             subjectBN: ['', Validators.required],
-            isClearanceSubject: [false],
+            subjectCategory: [null],
             status: [true, Validators.required]
         });
 
-        // The clearance flag only applies to General subjects — clear it for other types.
+        // The category only applies to General subjects — clear it for other types.
+        // The picked type also drives the grid filter, so the table lists only that type.
         this.form.get('noteSheetType')!.valueChanges.subscribe((type) => {
             if (type !== NoteSheetType.General) {
-                this.form.get('isClearanceSubject')?.setValue(false, { emitEvent: false });
+                this.form.get('subjectCategory')?.setValue(null, { emitEvent: false });
             }
+            this.selectedFilterType = type ?? '';
+            this.onFilterTypeChange();
         });
     }
 
@@ -144,7 +141,8 @@ export class NoteSheetSubject implements OnInit {
             next: (res) => {
                 this.data = (res.datalist ?? []).map((r: NoteSheetSubjectModel) => ({
                     ...r,
-                    noteSheetTypeLabel: this.typeLabels[r.noteSheetType] ?? r.noteSheetType
+                    noteSheetTypeLabel: this.typeLabels[r.noteSheetType] ?? r.noteSheetType,
+                    subjectCategoryLabel: r.subjectCategory ?? '-'
                 }));
                 this.totalRecords = res.pages?.rows ?? 0;
                 this.rows = pageSize;
@@ -187,7 +185,7 @@ export class NoteSheetSubject implements OnInit {
             noteSheetType: value.noteSheetType,
             subjectEN: value.subjectEN,
             subjectBN: value.subjectBN,
-            isClearanceSubject: value.noteSheetType === NoteSheetType.General ? !!value.isClearanceSubject : false,
+            subjectCategory: value.noteSheetType === NoteSheetType.General ? (value.subjectCategory ?? null) : null,
             status: value.status
         };
 
@@ -204,7 +202,6 @@ export class NoteSheetSubject implements OnInit {
                     return;
                 }
                 this.resetForm();
-                this.load({ first: this.first, rows: this.rows });
                 this.messageService.add({
                     severity: 'success',
                     summary: 'Success',
@@ -229,7 +226,7 @@ export class NoteSheetSubject implements OnInit {
             noteSheetType: row.noteSheetType,
             subjectEN: row.subjectEN,
             subjectBN: row.subjectBN,
-            isClearanceSubject: !!row.isClearanceSubject,
+            subjectCategory: row.subjectCategory ?? null,
             status: row.status
         });
     }
@@ -273,7 +270,7 @@ export class NoteSheetSubject implements OnInit {
             noteSheetType: null,
             subjectEN: '',
             subjectBN: '',
-            isClearanceSubject: false,
+            subjectCategory: null,
             status: true
         });
     }

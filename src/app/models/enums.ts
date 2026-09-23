@@ -127,6 +127,19 @@ export const NoteSheetTypeOptions = [
     { label: 'Inter Posting', value: NoteSheetType.InterPosting }
 ];
 
+/** SubjectCategory – classification of a (General) note-sheet subject. Null = none. */
+export enum SubjectCategory {
+    Clearance = 'Clearance',
+    RTU       = 'RTU',
+    Promotion = 'Promotion'
+}
+
+export const SubjectCategoryOptions = [
+    { label: 'Clearance', value: SubjectCategory.Clearance },
+    { label: 'RTU',       value: SubjectCategory.RTU },
+    { label: 'Promotion', value: SubjectCategory.Promotion }
+];
+
 /**
  * NoteSheetCurrentStatus – overall workflow position of a note-sheet.
  * Flow: Draft → Initiator → Recommender → FinalApproval | Cancel

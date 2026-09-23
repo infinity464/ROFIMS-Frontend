@@ -28,7 +28,7 @@ import { NotesheetPreviewBase } from '../notesheet-preview-base';
 import { NoteSheetSubjectService, NoteSheetSubjectModel } from '@/Components/basic-setup/shared/services/NoteSheetSubjectService';
 import { MemberColumnDef, MemberRow, MembersJsonData, AVAILABLE_MEMBER_COLUMNS, ReferenceParagraph, PostedOutClearanceInfo } from '../../notesheet-generate/notesheet-generate';
 import { MainTextBlock, parseMainTextBlocks, serializeMainTextBlocks } from '@/shared/utils/notesheet-main-text';
-import { NoteSheetCurrentStatus, NoteSheetCurrentStatusOptions, NoteSheetOperationTypeOptions, ApprovalStatus, NoteSheetRemarkAction, NoteSheetPreviewFrom, ApprovalLogAction, ApprovalLogActionOptions } from '@/models/enums';
+import { NoteSheetCurrentStatus, NoteSheetCurrentStatusOptions, NoteSheetOperationTypeOptions, ApprovalStatus, NoteSheetRemarkAction, NoteSheetPreviewFrom, ApprovalLogAction, ApprovalLogActionOptions, SubjectCategory } from '@/models/enums';
 import { SharedService } from '@/shared/services/shared-service';
 import { FlexibleDateDirective } from '@/shared/directives/flexible-date.directive';
 import { environment } from '@/Core/Environments/environment';
@@ -302,12 +302,12 @@ export class NotesheetPreviewGeneralComponent extends NotesheetPreviewBase imple
     private noteSheetSubjectService = inject(NoteSheetSubjectService);
     private noteSheetSubjects: NoteSheetSubjectModel[] = [];
 
-    /** True when this note sheet's subject is a clearance subject: members must be verified posted-out
-     *  members (same rule as /notesheet-generate). */
+    /** True when this note sheet's subject has the Clearance category: members must be verified
+     *  posted-out members (same rule as /notesheet-generate). */
     get isClearanceSubject(): boolean {
         const id = this.noteSheet?.noteSheetSubjectId;
         if (id == null) return false;
-        return !!this.noteSheetSubjects.find((s) => s.id === id)?.isClearanceSubject;
+        return this.noteSheetSubjects.find((s) => s.id === id)?.subjectCategory === SubjectCategory.Clearance;
     }
 
     // ── Edit model fields ────────────────────────────────────
