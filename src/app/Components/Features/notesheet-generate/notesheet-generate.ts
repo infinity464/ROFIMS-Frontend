@@ -1341,6 +1341,7 @@ export class NotesheetGenerateComponent implements OnInit {
     }
 
     removeMember(index: number): void {
+        this.commitMemberCellEdit(); // settle an open cell edit before the rows below shift up
         this.membersData.members.splice(index, 1);
     }
 
@@ -1529,13 +1530,24 @@ export class NotesheetGenerateComponent implements OnInit {
         return !col.mergedFrom;
     }
 
+    /** Cell-edit identity is the MEMBER, not the row number: adding (which re-sorts) or
+     *  removing a member shifts row indexes, and a row-keyed edit would then be written into
+     *  a different member's cell — blanking or overwriting their name / rank / service id. */
+    private editingMember: MemberRow | null = null;
+    private editingColKey: string | null = null;
+
     memberCellKey(rowIndex: number, colKey: string): string {
-        return `${rowIndex}_${colKey}`;
+        return `${this.membersData.members[rowIndex]?.employeeId}_${colKey}`;
     }
 
     startEditMemberCell(rowIndex: number, colKey: string, event: Event): void {
+        const member = this.membersData.members[rowIndex];
+        if (!member) return;
+        this.commitMemberCellEdit();
+        this.editingMember = member;
+        this.editingColKey = colKey;
         this.editingMemberCellKey = this.memberCellKey(rowIndex, colKey);
-        this.editingMemberCellValue = this.membersData.members[rowIndex]?.values[colKey] ?? '';
+        this.editingMemberCellValue = (member.values[colKey] ?? '').toString();
         setTimeout(() => {
             const el = (event.target as HTMLElement)?.closest('td')?.querySelector('input');
             el?.focus();
@@ -1544,24 +1556,48 @@ export class NotesheetGenerateComponent implements OnInit {
     }
 
     onMemberCellBlur(rowIndex: number, colKey: string): void {
-        if (this.editingMemberCellKey === this.memberCellKey(rowIndex, colKey)) {
-            this.saveMemberCell(rowIndex, colKey);
+        if (this.editingMember && this.editingMember === this.membersData.members[rowIndex] && this.editingColKey === colKey) {
+            this.commitMemberCellEdit();
         }
     }
 
     onMemberCellKeydown(event: KeyboardEvent, rowIndex: number, colKey: string): void {
         if (event.key === 'Enter') {
             event.preventDefault();
-            this.saveMemberCell(rowIndex, colKey);
+            this.commitMemberCellEdit();
         } else if (event.key === 'Escape') {
-            this.editingMemberCellKey = null;
+            this.cancelMemberCellEdit();
         }
     }
 
-    private saveMemberCell(rowIndex: number, colKey: string): void {
-        if (this.membersData.members[rowIndex]) {
-            this.membersData.members[rowIndex].values[colKey] = this.editingMemberCellValue;
+    /** Name / rank / service-id cells can be corrected but never blanked while the member has a value. */
+    private isRequiredMemberCell(colKey: string): boolean {
+        return ['nameEnglish', 'nameBN', 'formattedName', 'formattedNameBN', 'armyRank', 'armyRankBN',
+            'serviceId', 'prefixWithServiceId', 'prefixWithServiceIdBN'].includes(colKey);
+    }
+
+    /** Write the open cell edit into the member it was opened on (wherever that row is now). */
+    private commitMemberCellEdit(): void {
+        const member = this.editingMember, colKey = this.editingColKey;
+        if (member && colKey && this.membersData.members.includes(member)) {
+            const next = (this.editingMemberCellValue ?? '').trim();
+            const current = (member.values[colKey] ?? '').toString().trim();
+            if (!next && current && this.isRequiredMemberCell(colKey)) {
+                this.messageService.add({
+                    severity: 'warn',
+                    summary: 'Required',
+                    detail: this.isBangla ? 'নাম, পদবি ও সার্ভিস আইডি খালি রাখা যাবে না।' : 'Name, rank and service ID cannot be empty.'
+                });
+            } else {
+                member.values[colKey] = next;
+            }
         }
+        this.cancelMemberCellEdit();
+    }
+
+    private cancelMemberCellEdit(): void {
+        this.editingMember = null;
+        this.editingColKey = null;
         this.editingMemberCellKey = null;
     }
 
@@ -1761,6 +1797,7 @@ export class NotesheetGenerateComponent implements OnInit {
 
     submit(): void {
         if (this.isSubmitting) return;
+        this.commitMemberCellEdit();
         if (this.editMode ? !this.canUpdate : !this.canInsert) {
             this.messageService.add({ severity: 'warn', summary: 'Permission Denied', detail: 'You do not have permission to perform this action.' });
             return;

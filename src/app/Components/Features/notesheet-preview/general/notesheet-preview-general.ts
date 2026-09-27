@@ -514,6 +514,7 @@ export class NotesheetPreviewGeneralComponent extends NotesheetPreviewBase imple
     }
 
     cancelEdit(): void {
+        this.cancelMemberCellEdit();
         this.editing = false;
         this.fileRows = [];
         this.editMembersData = { columns: [], members: [] };
@@ -678,6 +679,7 @@ export class NotesheetPreviewGeneralComponent extends NotesheetPreviewBase imple
     // ── Save changes ─────────────────────────────────────────
     saveChanges(): void {
         if (!this.noteSheet || this.saving) return;
+        this.commitMemberCellEdit();
         // Clearance subject → at least one (posted-out) member is required (same rule as /notesheet-generate).
         if (this.isClearanceSubject && this.editMembersData.members.length === 0) {
             this.messageService.add({ severity: 'warn', summary: 'Members required', detail: 'This is a clearance subject — add at least one posted-out member.' });
@@ -1244,6 +1246,7 @@ export class NotesheetPreviewGeneralComponent extends NotesheetPreviewBase imple
     }
 
     removeMember(index: number): void {
+        this.commitMemberCellEdit(); // settle an open cell edit before the rows below shift up
         this.editMembersData.members.splice(index, 1);
     }
 
@@ -1324,13 +1327,24 @@ export class NotesheetPreviewGeneralComponent extends NotesheetPreviewBase imple
         return this.editTextType === 'bn' ? this.toBanglaDigits(v) : v;
     }
 
+    /** Cell-edit identity is the MEMBER, not the row number: adding (which re-sorts) or
+     *  removing a member shifts row indexes, and a row-keyed edit would then be written into
+     *  a different member's cell — blanking or overwriting their name / rank / service id. */
+    private editingMember: MemberRow | null = null;
+    private editingColKey: string | null = null;
+
     memberCellKey(rowIndex: number, colKey: string): string {
-        return `${rowIndex}_${colKey}`;
+        return `${this.editMembersData.members[rowIndex]?.employeeId}_${colKey}`;
     }
 
     startEditMemberCell(rowIndex: number, colKey: string, event: Event): void {
+        const member = this.editMembersData.members[rowIndex];
+        if (!member) return;
+        this.commitMemberCellEdit();
+        this.editingMember = member;
+        this.editingColKey = colKey;
         this.editingMemberCellKey = this.memberCellKey(rowIndex, colKey);
-        this.editingMemberCellValue = this.editMembersData.members[rowIndex]?.values[colKey] ?? '';
+        this.editingMemberCellValue = (member.values[colKey] ?? '').toString();
         setTimeout(() => {
             const el = (event.target as HTMLElement)?.closest('td')?.querySelector('input');
             el?.focus();
@@ -1339,40 +1353,48 @@ export class NotesheetPreviewGeneralComponent extends NotesheetPreviewBase imple
     }
 
     onMemberCellBlur(rowIndex: number, colKey: string): void {
-        if (this.editingMemberCellKey === this.memberCellKey(rowIndex, colKey)) {
-            this.saveMemberCell(rowIndex, colKey);
+        if (this.editingMember && this.editingMember === this.editMembersData.members[rowIndex] && this.editingColKey === colKey) {
+            this.commitMemberCellEdit();
         }
     }
 
     onMemberCellKeydown(event: KeyboardEvent, rowIndex: number, colKey: string): void {
         if (event.key === 'Enter') {
             event.preventDefault();
-            this.saveMemberCell(rowIndex, colKey);
+            this.commitMemberCellEdit();
         } else if (event.key === 'Escape') {
-            this.editingMemberCellKey = null;
+            this.cancelMemberCellEdit();
         }
     }
 
-    /** Name / rank cells can be corrected but never blanked while the member has a value. */
+    /** Name / rank / service-id cells can be corrected but never blanked while the member has a value. */
     private isRequiredMemberCell(colKey: string): boolean {
-        return this.nameColumnKeys.includes(colKey) || colKey === 'armyRank' || colKey === 'armyRankBN';
+        return ['nameEnglish', 'nameBN', 'formattedName', 'formattedNameBN', 'armyRank', 'armyRankBN',
+            'serviceId', 'prefixWithServiceId', 'prefixWithServiceIdBN'].includes(colKey);
     }
 
-    private saveMemberCell(rowIndex: number, colKey: string): void {
-        const member = this.editMembersData.members[rowIndex];
-        if (member) {
+    /** Write the open cell edit into the member it was opened on (wherever that row is now). */
+    private commitMemberCellEdit(): void {
+        const member = this.editingMember, colKey = this.editingColKey;
+        if (member && colKey && this.editMembersData.members.includes(member)) {
             const next = (this.editingMemberCellValue ?? '').trim();
             const current = (member.values[colKey] ?? '').toString().trim();
             if (!next && current && this.isRequiredMemberCell(colKey)) {
                 this.messageService.add({
                     severity: 'warn',
                     summary: 'Required',
-                    detail: this.editTextType === 'bn' ? 'নাম ও পদবি খালি রাখা যাবে না।' : 'Name and rank cannot be empty.'
+                    detail: this.editTextType === 'bn' ? 'নাম, পদবি ও সার্ভিস আইডি খালি রাখা যাবে না।' : 'Name, rank and service ID cannot be empty.'
                 });
             } else {
                 member.values[colKey] = next;
             }
         }
+        this.cancelMemberCellEdit();
+    }
+
+    private cancelMemberCellEdit(): void {
+        this.editingMember = null;
+        this.editingColKey = null;
         this.editingMemberCellKey = null;
     }
 
