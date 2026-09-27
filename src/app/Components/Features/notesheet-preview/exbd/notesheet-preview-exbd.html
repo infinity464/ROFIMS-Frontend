@@ -10,11 +10,7 @@
             <p-button *ngIf="editing" icon="pi pi-check" label="Save" (onClick)="saveChanges()" [loading]="saving" styleClass="p-button-success"></p-button>
             <p-select *ngIf="!editing" [options]="pageSizeOptions" [(ngModel)]="selectedPageSize" (onChange)="onPageSizeChange()" optionLabel="label" optionValue="value"
                       [style]="{'width':'95px'}" pTooltip="Page size for PDF / Print Preview"></p-select>
-            <!-- Font size of the WHOLE note sheet, as a point offset (−2 … +2, 0.25 steps):
-                 the body sizes move together instead of being set to one value. Sizing
-                 down usually pulls a trailing block back onto the previous page. -->
-            <p-select *ngIf="!editing" [options]="fontDeltaOptions" [(ngModel)]="fontDelta" (onChange)="onFontDeltaChange()" optionLabel="label" optionValue="value"
-                      [style]="{'width':'165px'}" pTooltip="Front size of the note sheet (−2 pt to +2 pt)"></p-select>
+            <p-button *ngIf="!editing" icon="pi pi-sliders-h" label="Style" (onClick)="showStyleDialog = true" styleClass="p-button-outlined" pTooltip="Font size and signature spacing"></p-button>
             <p-button *ngIf="!editing" icon="pi pi-print" label="Print Preview" (onClick)="printPreview()" [loading]="printingPreview" styleClass="p-button-outlined p-button-info"></p-button>
             <p-button *ngIf="!editing" icon="pi pi-file-word" label="Word"  (onClick)="exportWord()" styleClass="p-button-outlined"></p-button>
             <p-button *ngIf="!editing" icon="pi pi-file-pdf"  label="PDF"   (onClick)="exportPdf()" [loading]="exportingPdf" styleClass="p-button-outlined"></p-button>
@@ -177,7 +173,7 @@
                     <div class="ns-edit-field ns-app-info-panel">
                         <div class="ns-app-info-grid">
                             <div class="ns-app-info-item">
-                                <span class="ns-app-info-label">RAB Employee</span>
+                                <span class="ns-app-info-label">SRB Employee</span>
                                 <span class="ns-app-info-value">{{ getEditEmployeeDisplay() }}</span>
                             </div>
                             <div class="ns-app-info-item">
@@ -257,14 +253,14 @@
                 </div>
 
                 <!-- ── Notesheet No & Date ── -->
-                <div style="display:flex; justify-content:space-between; align-items:baseline; padding:4px 8px 2px; font-size:calc(12pt + var(--ns-fs-delta, 0) * 1pt);">
+                <div style="display:flex; justify-content:space-between; align-items:baseline; padding:4px 2px 0 1px; font-size:calc(12pt + var(--ns-fs-delta, 0) * 1pt);">
                     <span *ngIf="noteSheet.noteSheetNo">{{ noteSheet.noteSheetNo }}</span>
                     <span *ngIf="!noteSheet.noteSheetNo"></span>
                     <span *ngIf="noteSheet.noteSheetDate">{{ isEnglish() ? 'Date:' : 'তারিখ :' }} {{ formatDate(noteSheet.noteSheetDate) }}</span>
                 </div>
 
                 <!-- ── Subject ── -->
-                <div *ngIf="getSubjectLabel(noteSheet.exBdLeaveSubjectId) || noteSheet.subject" style="margin-top:5px; padding:2px 8px 4px; font-size:calc(12pt + var(--ns-fs-delta, 0) * 1pt);">
+                <div *ngIf="getSubjectLabel(noteSheet.exBdLeaveSubjectId) || noteSheet.subject" style="margin-top:12px; padding:0 2px 0 1px; font-size:calc(12pt + var(--ns-fs-delta, 0) * 1pt);">
                     <strong><u style="text-underline-offset:3px; text-decoration-skip-ink:none;">{{ getSubjectLabel(noteSheet.exBdLeaveSubjectId) || noteSheet.subject }}</u></strong>
                 </div>
 
@@ -475,4 +471,42 @@
             }
         </div>
     }
+</p-dialog>
+
+<!-- Document style: non-modal and docked right so the page keeps scrolling behind it;
+     "Save" stores it for every note sheet this preview renders (screen, Print Preview, PDF, Word). -->
+<p-dialog
+    header="Document Style"
+    [(visible)]="showStyleDialog"
+    [modal]="false"
+    [blockScroll]="false"
+    [draggable]="true"
+    [resizable]="false"
+    [keepInViewport]="true"
+    position="right"
+    [style]="{ width: '320px', maxHeight: '90vh' }"
+    [contentStyle]="{ overflowY: 'auto' }"
+    [breakpoints]="{ '575px': '92vw' }"
+>
+    <div class="ns-style-form">
+        <p class="ns-style-hint">Changes show on the sheet immediately — scroll the page to check them. <b>Save</b> keeps them for this note sheet only; <b>Reset</b> removes this note sheet's saved style. Other note sheets are not affected.</p>
+        <p class="ns-style-hint">Now using: {{ styleConfig.noteSheetId ? "this note sheet's own style" : (styleConfig.configId ? 'the default style of this type' : 'the built-in defaults') }}.</p>
+
+        <label for="stFontDelta">Font size</label>
+        <p-select inputId="stFontDelta" [options]="fontDeltaOptions" [(ngModel)]="fontDelta" (onChange)="onFontDeltaChange()" optionLabel="label" optionValue="value" appendTo="body" [style]="{ width: '100%' }"></p-select>
+
+        <label for="stApproverGapEm">Gap between approver blocks (lines)</label>
+        <p-inputNumber inputId="stApproverGapEm" [(ngModel)]="styleConfig.approverGapEm" (ngModelChange)="onStyleChange()" mode="decimal" [minFractionDigits]="0" [maxFractionDigits]="2" [step]="0.25" [min]="0" [max]="30" [showButtons]="true"></p-inputNumber>
+
+        <label for="stInitiatorTop">Space above initiator signature (px)</label>
+        <p-inputNumber inputId="stInitiatorTop" [(ngModel)]="styleConfig.initiatorTopMarginPx" (ngModelChange)="onStyleChange()" [step]="5" [min]="0" [max]="200" [showButtons]="true"></p-inputNumber>
+
+        <label for="stSigDateGap">Space above signature date (lines)</label>
+        <p-inputNumber inputId="stSigDateGap" [(ngModel)]="styleConfig.sigDateGapEm" (ngModelChange)="onStyleChange()" mode="decimal" [minFractionDigits]="0" [maxFractionDigits]="2" [step]="0.25" [min]="0" [max]="10" [showButtons]="true"></p-inputNumber>
+    </div>
+    <ng-template pTemplate="footer">
+        <p-button label="Reset" icon="pi pi-refresh" severity="secondary" [text]="true" [disabled]="!styleConfig.noteSheetId" (onClick)="resetStyleToDefault()"></p-button>
+        <p-button label="Close" severity="secondary" [outlined]="true" (onClick)="showStyleDialog = false"></p-button>
+        <p-button label="Save" icon="pi pi-save" [loading]="savingStyle" (onClick)="saveStyle()"></p-button>
+    </ng-template>
 </p-dialog>

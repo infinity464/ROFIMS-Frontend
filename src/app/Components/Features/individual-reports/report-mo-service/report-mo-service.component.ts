@@ -96,7 +96,7 @@ export class ReportMoServiceIndividualComponent implements OnInit, OnChanges {
     showAccessDeniedDialog = false;
     accessDeniedMessage = 'You do not have permission to view this employee. Either they are outside your accessible scope or no longer presently serving.';
     showNotFoundDialog = false;
-    notFoundMessage = 'No member found with the given RAB ID / Service ID / NID.';
+    notFoundMessage = 'No member found with the given SRB ID / Service ID / NID.';
 
     showPickerDialog = false;
     pickerRows: Array<{ employeeId: number; displayName: string; orgName: string; status: string; }> = [];
@@ -186,9 +186,9 @@ export class ReportMoServiceIndividualComponent implements OnInit, OnChanges {
             { label: Lx('Corps',       'কোর'),           value: this.codeValue(d['corps'] as string, d['corpsBN'] as string) },
             { label: Lx('Trade',       'ট্রেড'),         value: this.codeValue(d['trade'] as string, d['tradeBN'] as string) },
             { label: Lx('Mother Org',  'মাতৃ সংস্থা'),    value: this.codeValue(d['motherOrganization'] as string, d['motherOrganizationBN'] as string) },
-            { label: Lx('RAB Unit',    'র‍্যাব ইউনিট'),  value: this.codeValue(d['rabUnit'] as string, d['rabUnitBN'] as string) },
+            { label: Lx('SRB Unit',    'এসআরবি ইউনিট'),  value: this.codeValue(d['rabUnit'] as string, d['rabUnitBN'] as string) },
             { label: Lx('Service ID',  'সার্ভিস আইডি'),  value: this.displayNum(d['serviceId'] as string) },
-            { label: Lx('RAB ID',      'র‍্যাব আইডি'),    value: d['rabId'] ? this.displayNum(d['rabId'] as string) : '-' },
+            { label: Lx('SRB ID',      'এসআরবি আইডি'),    value: d['rabId'] ? this.displayNum(d['rabId'] as string) : '-' },
         ];
     }
     get employeeInfoCardTitle(): string { return this.lang === 'bn' ? 'সদস্যের তথ্য' : 'MEMBER DETAILS'; }
@@ -203,7 +203,7 @@ export class ReportMoServiceIndividualComponent implements OnInit, OnChanges {
 
     // ── RAB paper getters ─────────────────────────────────────────────
     get rabOverlineText(): string { return this.lang === 'bn' ? 'গণপ্রজাতন্ত্রী বাংলাদেশ সরকার' : "GOVERNMENT OF THE PEOPLE'S REPUBLIC OF BANGLADESH"; }
-    get rabOrgTitle(): string { return this.lang === 'bn' ? 'র‍্যাপিড অ্যাকশন ব্যাটালিয়ন' : 'RAPID ACTION BATTALION'; }
+    get rabOrgTitle(): string { return this.lang === 'bn' ? 'স্পেশাল রেসপন্স ব্যাটালিয়ন' : 'SPECIAL RESPONSE BATTALION'; }
     get rabOrgSubtitle(): string { return this.lang === 'bn' ? 'বাংলাদেশ পুলিশ · সদর দপ্তর, কুর্মিটোলা, ঢাকা' : 'Bangladesh Police · Headquarters, Kurmitola, Dhaka'; }
     get rabSectionTitle(): string { return this.lang === 'bn' ? 'মাতৃ সংস্থায় চাকরির ইতিহাস' : 'SERVICE HISTORY IN MOTHER ORGANIZATION'; }
     get rabGeneratedLabel(): string { return this.lang === 'bn' ? 'তারিখ' : 'GENERATED'; }
@@ -248,7 +248,7 @@ export class ReportMoServiceIndividualComponent implements OnInit, OnChanges {
 
     buildFilterLines(): string[] {
         const lines: string[] = [];
-        if (this.searchRabId.trim())     lines.push(`RAB ID: ${this.searchRabId.trim()}`);
+        if (this.searchRabId.trim())     lines.push(`SRB ID: ${this.searchRabId.trim()}`);
         if (this.searchServiceId.trim()) lines.push(`Service ID: ${this.searchServiceId.trim()}`);
         if (this.searchNid.trim())       lines.push(`NID: ${this.searchNid.trim()}`);
         return lines;
@@ -285,7 +285,7 @@ export class ReportMoServiceIndividualComponent implements OnInit, OnChanges {
     }
     toggleFilter(): void { this.filterOpen = !this.filterOpen; }
     filterSubtitle(): string {
-        if (this.activeFilterCount === 0) return 'Enter RAB ID, Service ID or NID to begin';
+        if (this.activeFilterCount === 0) return 'Enter SRB ID, Service ID or NID to begin';
         const n = this.lang === 'bn' ? BanglaNumerals.toBangla(String(this.activeFilterCount)) : String(this.activeFilterCount);
         return n + ' active filter(s)';
     }
@@ -294,7 +294,7 @@ export class ReportMoServiceIndividualComponent implements OnInit, OnChanges {
 
     load(): void {
         if (!this.searchRabId.trim() && !this.searchServiceId.trim() && !this.searchNid.trim()) {
-            this.messageService.add({ severity: 'warn', summary: 'Search', detail: 'Enter RAB ID, Service ID or NID.' });
+            this.messageService.add({ severity: 'warn', summary: 'Search', detail: 'Enter SRB ID, Service ID or NID.' });
             return;
         }
         this.loading = true;

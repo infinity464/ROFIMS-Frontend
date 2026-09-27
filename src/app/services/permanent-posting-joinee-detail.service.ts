@@ -79,6 +79,16 @@ export interface PermanentPostingJoineeDetailFilterRequest {
     dateTo?: string | null;
     possibleJoiningDateFrom?: string | null;
     possibleJoiningDateTo?: string | null;
+    /** Joinee's Mother Organization — matches ANY of the given org ids. */
+    motherOrgIds?: number[] | null;
+    /** Joinee's Member Type — matches ANY of the given common-code ids. */
+    memberTypeIds?: number[] | null;
+    /** Joinee's Rank (MotherOrgRank code id). Mutually exclusive with rabRankEquivalentId. */
+    rankId?: number | null;
+    /** Universal RAB rank tier (EquivalentName code id), resolved to Mother Org Ranks server-side. */
+    rabRankEquivalentId?: number | null;
+    corpsIds?: number[] | null;
+    tradeIds?: number[] | null;
 }
 
 export interface PermanentPostingJoineeDetailPaginatedFilterRequest {

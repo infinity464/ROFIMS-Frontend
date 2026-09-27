@@ -230,7 +230,7 @@ export class ManpowerSummaryEquivalentComponent implements OnInit {
             : "GOVERNMENT OF THE PEOPLE'S REPUBLIC OF BANGLADESH";
     }
     private get rabOrgTitle(): string {
-        return this.lang === 'bn' ? 'র‍্যাপিড অ্যাকশন ব্যাটালিয়ন' : 'RAPID ACTION BATTALION';
+        return this.lang === 'bn' ? 'স্পেশাল রেসপন্স ব্যাটালিয়ন' : 'SPECIAL RESPONSE BATTALION';
     }
     private get rabOrgSubtitle(): string {
         return this.lang === 'bn'
@@ -457,7 +457,7 @@ export class ManpowerSummaryEquivalentComponent implements OnInit {
     get titleLabel(): string {
         return this.lang === 'en'
             ? 'OVERALL MANPOWER SUMMARY'
-            : 'জনবলের পরিসংখ্যান-র‌্যাব ফোর্সেস';
+            : 'জনবলের পরিসংখ্যান-এসআরবি ফোর্সেস';
     }
 
     get dateLine(): string {

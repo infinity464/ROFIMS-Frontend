@@ -20,7 +20,7 @@
                 <ng-template pTemplate="header">
                     <tr>
                         <th style="width: 48px">#</th>
-                        <th>RAB ID</th>
+                        <th>SRB ID</th>
                         <th>SVC ID</th>
                         <th>Name</th>
                         <th>Rank</th>
@@ -61,7 +61,7 @@
         @if (hideDestination && !hasMixedTransferUnits) {
             <div class="mv-destined-banner">
                 <i class="pi pi-map-marker"></i>
-                <span class="mv-destined-label">Transfer To (RAB Unit):</span>
+                <span class="mv-destined-label">Transfer To (SRB Unit):</span>
                 <span class="mv-destined-value">{{ destinedRABUnitLabel || '—' }}</span>
             </div>
         }
@@ -159,7 +159,7 @@
                             formControlName="destinedRABUnitId"
                             [options]="rabUnitOptions"
                             optionLabel="label" optionValue="value"
-                            placeholder="Select RAB unit..."
+                            placeholder="Select SRB unit..."
                             [filter]="true" [showClear]="!lockOnEdit" appendTo="body"
                             [disabled]="lockOnEdit"
                             [virtualScroll]="true" [virtualScrollItemSize]="38"

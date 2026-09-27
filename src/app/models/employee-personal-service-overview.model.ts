@@ -11,6 +11,9 @@ export interface EmployeeBriefProfile {
     appointmentBN: string | null;
     mobileNo: string | null;
     mobileNoOfficial: string | null;
+    /** Root mother organisation (Army / Navy / …) — drives the Navy "বিএন" rank suffix in signature blocks. */
+    motherOrgEN: string | null;
+    motherOrgBN: string | null;
 }
 
 /**

@@ -56,7 +56,7 @@ export class RabUnitAor implements OnInit {
     canUpdate = true;
     canDelete = true;
 
-    title = 'RAB Unit Area of Responsibility';
+    title = 'SRB Unit Area of Responsibility';
 
     form: FormGroup;
     isSubmitting = false;
@@ -172,7 +172,7 @@ export class RabUnitAor implements OnInit {
                 this.rabUnitOptions = (units ?? []).map((u) => ({ label: u.codeValueEN, value: u.codeId }));
             },
             error: (err: any) => {
-                this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.message || 'Failed to load RAB units' });
+                this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.message || 'Failed to load SRB units' });
             }
         });
     }

@@ -3,6 +3,7 @@ import { HttpClient } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
 import { PagedResponse } from '@/Core/Models/Pagination';
+import { SubjectCategory } from '@/models/enums';
 
 export interface NoteSheetSubjectModel {
     id: number;
@@ -10,7 +11,8 @@ export interface NoteSheetSubjectModel {
     subjectEN: string;
     subjectBN: string;
     status: boolean;
-    isClearanceSubject?: boolean;
+    /** Clearance / RTU / Promotion; null = none. Only set for General subjects. */
+    subjectCategory?: SubjectCategory | null;
 }
 
 @Injectable({ providedIn: 'root' })

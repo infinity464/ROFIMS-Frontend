@@ -25,8 +25,9 @@
         text-transform: uppercase;
     }
 
+    /* ক্রমিক / SL — 35px so the Bangla header sits on one line. */
     th:first-child, td:first-child {
-        width: 30px;
-        min-width: 30px;
+        width: 35px;
+        min-width: 35px;
     }
 }

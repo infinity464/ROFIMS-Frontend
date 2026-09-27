@@ -40,6 +40,8 @@ export interface NoteSheetInfoFull {
     unitId?: number;
     employeeId?: number;
     isSecret?: boolean;
+    /** False hides the members table (members stay linked). Missing/true = show. */
+    showMembersTable?: boolean;
     noteSheetOperationType?: string;
     // ── Initiator ──────────────────────────────────────────────────────
     initiatorId?: number;
@@ -259,6 +261,7 @@ export abstract class NotesheetPreviewBase implements OnInit {
                     this.noteSheet.note = normalizeRab(this.noteSheet.note);
                     this.noteSheet.paragraphText = normalizeRab(this.noteSheet.paragraphText);
                     this.resolvePermissions();
+                    this.onNoteSheetLoaded();
                     this.loadApprovalChain();
                     this.loadBackHistory();
                     if (this.isNewPosting() && this.noteSheet.draftPostingMasterId) {
@@ -310,6 +313,9 @@ export abstract class NotesheetPreviewBase implements OnInit {
     }
 
     protected onPostingEmployeesLoaded(_employees: DraftPostingEmployeeRow[]): void { }
+
+    /** Called once the note sheet (and so its type) is known. */
+    protected onNoteSheetLoaded(): void { }
 
     protected loadApprovalChain(): void {
         if (!this.noteSheet) return;
@@ -503,7 +509,7 @@ export abstract class NotesheetPreviewBase implements OnInit {
 
     /** Returns the organizational header lines for the notesheet (inside the bordered box, centered). */
     getOrgHeaderLine1(): string {
-        return this.isEnglish() ? 'RAB Forces Headquarters' : 'র‍্যাব ফোর্সেস সদর দপ্তর';
+        return this.isEnglish() ? 'SRB Forces Headquarters' : 'এসআরবি ফোর্সেস সদর দপ্তর';
     }
     getOrgHeaderLine2(): string {
         return this.isEnglish() ? 'Administration & Finance Wing (Personnel Branch)' : 'প্রশাসন ও অর্থ উইং (পার্সোনেল শাখা)';

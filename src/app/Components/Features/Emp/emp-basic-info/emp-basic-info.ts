@@ -224,13 +224,13 @@ export class EmpBasicInfo implements OnInit {
                     if (this.isDuplicateRabId) {
                         this.messageService.add({
                             severity: 'warn',
-                            summary: 'Duplicate RAB ID',
-                            detail: `RAB ID "${rabIdStr}" already exists`
+                            summary: 'Duplicate SRB ID',
+                            detail: `SRB ID "${rabIdStr}" already exists`
                         });
                     }
                 },
                 error: (err) => {
-                    console.error('Error checking duplicate RAB ID', err);
+                    console.error('Error checking duplicate SRB ID', err);
                     this.isCheckingRabId = false;
                 }
             });
@@ -638,8 +638,8 @@ export class EmpBasicInfo implements OnInit {
         if (this.isDuplicateRabId) {
             this.messageService.add({
                 severity: 'warn',
-                summary: 'Duplicate RAB ID',
-                detail: 'A member with the same RAB ID already exists'
+                summary: 'Duplicate SRB ID',
+                detail: 'A member with the same SRB ID already exists'
             });
             return;
         }
@@ -888,7 +888,7 @@ export class EmpBasicInfo implements OnInit {
                     this.messageService.add({
                         severity: 'warn',
                         summary: 'Duplicate Entry',
-                        detail: err?.error?.description || 'RAB ID or Service ID already exist',
+                        detail: err?.error?.description || 'SRB ID or Service ID already exist',
                         life: 10000
                     });
                     return;
@@ -1702,7 +1702,7 @@ export class EmpBasicInfo implements OnInit {
         if (!selectedRankCodeId || this.rankEquivalentListWithOrg.length === 0) {
             this.rabRankEquivalentDisplay = '';
             this.selectedRabEquivalentNameId = null;
-            console.log('[RAB Rank Mapping] No mapping context', {
+            console.log('[SRB Rank Mapping] No mapping context', {
                 selectedRankId: selectedRankCodeId,
                 equivalentNameOptions: this.rabRankDropdownOptions.length,
                 rankEquivalentCount: this.rankEquivalentListWithOrg.length
@@ -1714,7 +1714,7 @@ export class EmpBasicInfo implements OnInit {
         if (!selectedRankEquivalent) {
             this.rabRankEquivalentDisplay = '';
             this.selectedRabEquivalentNameId = null;
-            console.log('[RAB Rank Mapping] Selected rank has no equivalent setup', {
+            console.log('[SRB Rank Mapping] Selected rank has no equivalent setup', {
                 selectedRankId: selectedRankCodeId
             });
             return;
@@ -1724,7 +1724,7 @@ export class EmpBasicInfo implements OnInit {
         this.rabRankEquivalentDisplay =
             this.rabRankDropdownOptions.find((x) => Number(x.value) === Number(this.selectedRabEquivalentNameId))?.label ?? '';
 
-        console.log('[RAB Rank Mapping] Resolved equivalent rank', {
+        console.log('[SRB Rank Mapping] Resolved equivalent rank', {
             selectedRankId: selectedRankCodeId,
             selectedEquivalentNameId: this.selectedRabEquivalentNameId,
             resolvedEquivalentName: this.rabRankEquivalentDisplay

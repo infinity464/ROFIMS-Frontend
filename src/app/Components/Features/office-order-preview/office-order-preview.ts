@@ -20,7 +20,7 @@ import { MessageService } from 'primeng/api';
 import { environment } from '@/Core/Environments/environment';
 import { OfficeOrderService } from '@/services/office-order.service';
 import { EmpService } from '@/services/emp-service';
-import { GeneralNotesheetOfficeOrderDto, GeneralNotesheetOfficeOrderWithDetailsDto, ReferenceNoEntry, OnulipiEntry } from '@/models/office-order.model';
+import { GeneralNotesheetOfficeOrderDto, GeneralNotesheetOfficeOrderWithDetailsDto, ReferenceNoEntry, OnulipiEntry, AttachmentEntry } from '@/models/office-order.model';
 import { mainTextBlocksToHtml } from '@/shared/utils/notesheet-main-text';
 import { ApprovalStatus } from '@/models/enums';
 import { NotesheetMembersTableComponent } from '@/Components/Shared/notesheet-members-table/notesheet-members-table';
@@ -81,6 +81,8 @@ export class OfficeOrderPreviewComponent implements OnInit {
     // Parsed JSON fields
     referenceEntries: ReferenceNoEntry[] = [];
     onulipiEntries: OnulipiEntry[] = [];
+    /** সংযুক্ত list — rendered directly above the Onulipi, same as the ex-BD leave order. */
+    attachmentEntries: AttachmentEntry[] = [];
 
     // Onulipi show/hide filter
     showOnulipiFilter = false;
@@ -233,10 +235,31 @@ export class OfficeOrderPreviewComponent implements OnInit {
         try { this.referenceEntries = this.order.referenceNo ? JSON.parse(this.order.referenceNo) : []; } catch { this.referenceEntries = []; }
         try { this.onulipiEntries = this.order.onulipi ? JSON.parse(this.order.onulipi) : []; } catch { this.onulipiEntries = []; }
         this.onulipiChecked = this.onulipiEntries.map(() => true);
+        try {
+            const atts = this.order.attachments ? JSON.parse(this.order.attachments) : [];
+            this.attachmentEntries = Array.isArray(atts) ? atts.map((a: any) => ({ text: a?.text ?? '' })) : [];
+        } catch { this.attachmentEntries = []; }
     }
 
     private parseNoteSheetFields(): void {
         if (!this.order) return;
+
+        // The office order keeps its OWN numbered paragraphs (seeded from the note sheet
+        // on the generate screen, then edited there) in Body, as a JSON array of { text }.
+        // When they are present they are what the order says, so they replace the live
+        // note-sheet text everywhere below — screen, Word and PDF all read these fields.
+        // Orders saved before that list existed hold a plain HTML Body instead; those fall
+        // through to the note-sheet content, exactly as before.
+        const ownParagraphs = this.parseOwnBodyParagraphs(this.order.body);
+        if (ownParagraphs.length > 0) {
+            // First paragraph takes serial ১। and carries the members table, like the
+            // note-sheet Main Text it was seeded from.
+            this.nsMainText = ownParagraphs[0];
+            this.nsNote = '';
+            this.nsParagraphs = ownParagraphs.slice(1);
+            return;
+        }
+
         // Note-sheet Main Text is stored as a JSON array of blocks — flatten to combined HTML.
         this.nsMainText = mainTextBlocksToHtml(this.order.nsMainText);
         this.nsNote = this.order.nsNote ?? '';
@@ -252,6 +275,23 @@ export class OfficeOrderPreviewComponent implements OnInit {
         } else {
             // Legacy General notesheets stored a single plain HTML string
             this.nsParagraphs = [pt];
+        }
+    }
+
+    /** Body → the order's own paragraph blocks. Only the JSON-array form counts: a legacy
+     *  plain-HTML Body is left to the existing fallback rendering. */
+    private parseOwnBodyParagraphs(raw: string | null | undefined): string[] {
+        const s = (raw ?? '').trim();
+        if (!s.startsWith('[')) return [];
+        try {
+            const arr = JSON.parse(s);
+            if (!Array.isArray(arr)) return [];
+            return arr
+                .map((it: any) => (typeof it === 'string' ? it : String(it?.text ?? it?.Text ?? '')))
+                .map((t: string) => (t ?? '').trim())
+                .filter((t: string) => t !== '');
+        } catch {
+            return [];
         }
     }
 
@@ -475,7 +515,6 @@ export class OfficeOrderPreviewComponent implements OnInit {
         if (!this.order) throw new Error('No order loaded');
 
         const font = this.isBangla ? { ascii: 'Times New Roman', hAnsi: 'Times New Roman', cs: 'SolaimanLipi', hint: 'cs' as const } : 'Times New Roman';
-        const titleSize = 22; // 11pt — document title (অফিস আদেশ)
         const headerSize = 18; // 9pt — government header lines
         const contentSize = 18; // 9pt — body / meta / reference / onulipi
         const children: (Paragraph | Table)[] = [];
@@ -487,8 +526,8 @@ export class OfficeOrderPreviewComponent implements OnInit {
 
         // ── Government Header (centered, 9pt) ──
         const headerLines = this.isBangla
-            ? ['গণপ্রজাতন্ত্রী বাংলাদেশ সরকার', 'বাংলাদেশ পুলিশ', 'র‌্যাব ফোর্সেস সদর দপ্তর', 'কুর্মিটোলা, ঢাকা']
-            : ["Government of the People's Republic of Bangladesh", 'Bangladesh Police', 'RAB Forces Headquarters', 'Kurmitola, Dhaka'];
+            ? ['গণপ্রজাতন্ত্রী বাংলাদেশ সরকার', 'বাংলাদেশ পুলিশ', 'এসআরবি ফোর্সেস সদর দপ্তর', 'কুর্মিটোলা, ঢাকা']
+            : ["Government of the People's Republic of Bangladesh", 'Bangladesh Police', 'SRB Forces Headquarters', 'Kurmitola, Dhaka'];
         for (const line of headerLines) {
             children.push(new Paragraph({
                 children: [new TextRun({ text: line, font, size: headerSize, bold: true })],
@@ -497,26 +536,20 @@ export class OfficeOrderPreviewComponent implements OnInit {
             }));
         }
 
-        // ── Title (11pt, bold, underlined, centered) ──
-        children.push(new Paragraph({
-            children: [new TextRun({ text: this.isBangla ? 'অফিস আদেশ' : 'OFFICE ORDER', font, size: titleSize, bold: true, underline: {} })],
-            alignment: AlignmentType.CENTER,
-            spacing: { before: 160, after: 160 }
-        }));
-
         // ── Letter No (left) ──
         children.push(new Paragraph({
             children: [
-                new TextRun({ text: `${this.isBangla ? 'স্মারক নং: ' : 'Letter No: '}`, font, size: contentSize, bold: true }),
+                new TextRun({ text: `${this.isBangla ? 'স্মারক নং: ' : 'Letter No: '}`, font, size: contentSize }),
                 new TextRun({ text: this.order.letterNo || '.............', font, size: contentSize })
             ],
-            spacing: { after: 40 }
+            // Gap kept from when the অফিস আদেশ title sat above this line.
+            spacing: { before: 160, after: 40 }
         }));
 
         // ── Date (right aligned) ──
         children.push(new Paragraph({
             children: [
-                new TextRun({ text: `${this.isBangla ? 'তারিখ: ' : 'Date: '}`, font, size: contentSize, bold: true }),
+                new TextRun({ text: `${this.isBangla ? 'তারিখ: ' : 'Date: '}`, font, size: contentSize }),
                 new TextRun({ text: this.formatDate(this.order.letterDate), font, size: contentSize })
             ],
             alignment: AlignmentType.RIGHT,
@@ -551,7 +584,7 @@ export class OfficeOrderPreviewComponent implements OnInit {
         // ── Reference No (8pt) ──
         if (this.referenceEntries.length > 0) {
             children.push(new Paragraph({
-                children: [new TextRun({ text: this.isBangla ? 'সূত্র:' : 'Reference:', font, size: contentSize, bold: true })],
+                children: [new TextRun({ text: this.isBangla ? 'সূত্র:' : 'Reference:', font, size: contentSize })],
                 spacing: { before: 80 }
             }));
             for (const ref of this.referenceEntries) {
@@ -571,7 +604,7 @@ export class OfficeOrderPreviewComponent implements OnInit {
                 const plainMain = this.htmlToPlainText(this.nsMainText);
                 children.push(new Paragraph({
                     children: [
-                        new TextRun({ text: `${this.serial(1)} `, font, size: contentSize, bold: true }),
+                        new TextRun({ text: `${this.serial(1)} `, font, size: contentSize }),
                         new TextRun({ text: plainMain, font, size: contentSize })
                     ],
                     alignment: AlignmentType.JUSTIFIED,
@@ -591,7 +624,7 @@ export class OfficeOrderPreviewComponent implements OnInit {
                 const plainNote = this.htmlToPlainText(this.nsNote);
                 children.push(new Paragraph({
                     children: [
-                        new TextRun({ text: `${this.serial(this.noteSerial)} `, font, size: contentSize, bold: true }),
+                        new TextRun({ text: `${this.serial(this.noteSerial)} `, font, size: contentSize }),
                         new TextRun({ text: plainNote, font, size: contentSize })
                     ],
                     alignment: AlignmentType.JUSTIFIED,
@@ -605,7 +638,7 @@ export class OfficeOrderPreviewComponent implements OnInit {
                 if (plainPara) {
                     children.push(new Paragraph({
                         children: [
-                            new TextRun({ text: `${this.serial(this.lastTextStartSerial + pi)} `, font, size: contentSize, bold: true }),
+                            new TextRun({ text: `${this.serial(this.lastTextStartSerial + pi)} `, font, size: contentSize }),
                             new TextRun({ text: plainPara, font, size: contentSize })
                         ],
                         alignment: AlignmentType.JUSTIFIED,
@@ -663,6 +696,23 @@ export class OfficeOrderPreviewComponent implements OnInit {
                     indent: { left: sigIndent }
                 }));
             }
+        }
+
+        // ── Attachments (সংযুক্ত, 8pt) — printed directly above the Onulipi ──
+        if (this.attachmentEntries.length > 0) {
+            children.push(new Paragraph({
+                children: [new TextRun({ text: this.isBangla ? 'সংযুক্ত:' : 'Attachment:', font, size: contentSize, bold: true })],
+                spacing: { before: 300, after: 0 }
+            }));
+            this.attachmentEntries.forEach((att, idx) => {
+                const ser = this.isBangla ? this.toBanglaDigits(String(idx + 1)) : String(idx + 1);
+                children.push(new Paragraph({
+                    children: [new TextRun({ text: `${ser}।\t${att.text}`, font, size: contentSize })],
+                    indent: { left: 432, hanging: 432 },
+                    tabStops: [{ type: TabStopType.LEFT, position: 432 }],
+                    spacing: { after: 20 }
+                }));
+            });
         }
 
         // ── Onulipi (8pt) — only checked entries ──

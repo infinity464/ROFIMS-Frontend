@@ -17,7 +17,7 @@
                 </div>
                 <div>
                     <div class="report-filter-title">Search &amp; filter</div>
-                    <div class="report-filter-subtitle">By RAB ID, Service ID, leave type, date range</div>
+                    <div class="report-filter-subtitle">By SRB ID, Service ID, leave type, date range</div>
                 </div>
             </div>
             <div class="report-filter-header-right">
@@ -34,8 +34,8 @@
             <div class="report-filter-body-inner">
                 <div class="report-fields-row">
                     <div class="report-filter-field">
-                        <label>RAB ID</label>
-                        <input pInputText type="text" [(ngModel)]="filterRabId" placeholder="RAB ID" class="w-full" />
+                        <label>SRB ID</label>
+                        <input pInputText type="text" [(ngModel)]="filterRabId" placeholder="SRB ID" class="w-full" />
                     </div>
                     <div class="report-filter-field">
                         <label>Service ID</label>
@@ -137,7 +137,7 @@
                 <p-table [value]="currentList" dataKey="leaveApplicationId" [tableStyle]="{ 'min-width': '50rem' }" styleClass="p-datatable-sm" [loading]="loading">
                     <ng-template pTemplate="header">
                         <tr>
-                            <th>RAB ID</th>
+                            <th>SRB ID</th>
                             <th>Service ID</th>
                             <th>Applicant</th>
                             <th>Leave Type</th>

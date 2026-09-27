@@ -122,14 +122,47 @@
    scopes it to the Ex-BD preview; the PDF/Print paths snapshot this same DOM, so
    the gap carries through there too. 2.5em ≈ 2 lines at the 1.25 body line-height. */
 :host .ns-initiator-area {
-    margin-top: 2.5em;
+    margin-top: var(--ns-initiator-top, 2.5em);
 }
 
 /* Leave five blank body lines after each approver's signature block before the
    next numbered approver section begins. Do not add the extra trailing gap after
-   the final approver, because that empty space can spill into a blank page. */
+   the final approver, because that empty space can spill into a blank page.
+   The --ns-* variables come from the saved document style (applyStyleVars()); each
+   fallback is the built-in default. */
 :host .ns-approver-section:not(:last-child) {
-    padding-bottom: calc(24px + 6.25em);
+    padding-bottom: calc(var(--ns-approver-gap-px, 24px) + var(--ns-approver-gap-em, 6.25) * 1em);
+}
+
+/* Not :host-scoped, so the PDF snapshot (which has no host element) gets them too. */
+.ns-approver-section {
+    min-height: var(--ns-approver-min-h, 90px);
+}
+.ns-sig-date {
+    margin-top: calc(var(--ns-sig-date-gap-em, 2) * 1em);
+}
+
+/* Style dialog (app chrome, not printed). */
+.ns-style-form {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+
+    label {
+        font-size: 0.85rem;
+        font-weight: 600;
+        margin-top: 0.5rem;
+    }
+
+    ::ng-deep .p-inputnumber,
+    ::ng-deep .p-inputnumber input {
+        width: 100%;
+    }
+}
+.ns-style-hint {
+    margin: 0;
+    font-size: 0.8rem;
+    color: var(--p-text-muted-color, #6b7280);
 }
 
 /* ── Approver-role underline (this screen only) ────
@@ -140,4 +173,52 @@
 :host .ns-approver-role {
     text-underline-offset: 4px;
     text-decoration-skip-ink: none;
+}
+
+/* ── সূত্রঃ label weight (this screen only) ─────────────
+   The shared sheet bolds the reference key (`.ns-ref-key { font-weight: 700 }` in
+   notesheet-preview.scss). On the Ex-BD sheet the label reads as ordinary body
+   text, so pull it back to normal. `:host` keeps the other note-sheet types bold.
+   The PDF/Print counterpart is `.pdf-flow .ns-ref-key` in buildJsReportPdf(), and
+   the Word counterpart is `bold: false` on the referenceLabel runs in
+   buildWordDocument(). */
+:host .ns-ref-key {
+    font-weight: normal;
+}
+
+/* ── Serial gutter: one shared text column ──────────────
+   Both serial kinds (১। ২। for body paragraphs, ক। খ। for reference items) sat in
+   the normal text flow with their own trailing margin (1em vs 0.5em), so their
+   text started at two different x positions.
+
+   Each serial is now a fixed-width inline-block, so the first line's text always
+   begins at --ns-serial-col no matter which serial precedes it. Wrapped lines
+   deliberately return to the left margin (under the serial), which is how the
+   note sheet is written — do NOT convert this into a hanging indent.
+   The PDF/Print counterpart lives in buildJsReportPdf() (`.pdf-flow .ns-para-no`
+   / `.ns-ref-serial`), and Word gets the same column from the tab stop at
+   NS_SERIAL_INDENT in buildWordDocument(). */
+:host .a4-paper,
+:host .page-measure {
+    --ns-serial-col: 2.4em;
+
+    /* Reference block shares the body paragraph's left base (shared sheet gives it
+       4px vs the paragraph's 1px), so both serial columns start from the same edge.
+       padding-top is 14px, not the 10px block gap used lower down
+       (`.ns-para { padding-top: 10px }`), because the subject line above is underlined:
+       the rule is drawn ~4px below the text (offset 3px + its own thickness) and reads
+       as ink inside the gap, so 14 − 4 leaves the same 10px of empty space and the
+       subject → সূত্রঃ and সূত্রঃ → ১। gaps read alike. The no/date → subject gap
+       is set inline in notesheet-preview-exbd.html. */
+    .ns-cell-ref {
+        padding-left: 1px;
+        padding-top: 14px;
+    }
+
+    .ns-para-no,
+    .ns-ref-serial {
+        display: inline-block;
+        width: var(--ns-serial-col);
+        margin-right: 0;
+    }
 }

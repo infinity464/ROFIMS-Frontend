@@ -77,6 +77,20 @@ export enum PostingStatus {
     ExMember = 'ExMember'
 }
 
+/**
+ * RelieverNotGivenReason – the standard reasons offered when a Permanent Posting
+ * (MO Change) record has "Is Reliever Assigned? = No". Selecting one writes its text
+ * into PermanentPostingMORecord.RelieverNotGivenReason and sets the matching flag
+ * column, so reports filter on the flag rather than string-matching the text.
+ */
+export enum RelieverNotGivenReason {
+    TransferWithoutReliever = 'বিমোচক ব্যতীত বদলি'
+}
+
+export const RelieverNotGivenReasonOptions = [
+    { label: RelieverNotGivenReason.TransferWithoutReliever, value: RelieverNotGivenReason.TransferWithoutReliever }
+];
+
 /** IsSendingNotesheetStatus – stored in EmployeeInfo and DraftPostingDetail. */
 export enum IsSendingNotesheetStatus {
     Draft = 'draft',
@@ -111,6 +125,19 @@ export const NoteSheetTypeOptions = [
     { label: 'Ex-BD Leave',   value: NoteSheetType.ExBDLeave },
     { label: 'New Posting',   value: NoteSheetType.NewPosting },
     { label: 'Inter Posting', value: NoteSheetType.InterPosting }
+];
+
+/** SubjectCategory – classification of a (General) note-sheet subject. Null = none. */
+export enum SubjectCategory {
+    Clearance = 'Clearance',
+    RTU       = 'RTU',
+    Promotion = 'Promotion'
+}
+
+export const SubjectCategoryOptions = [
+    { label: 'Clearance', value: SubjectCategory.Clearance },
+    { label: 'RTU',       value: SubjectCategory.RTU },
+    { label: 'Promotion', value: SubjectCategory.Promotion }
 ];
 
 /**
@@ -461,7 +488,7 @@ export enum Article47LetterRecipient {
 }
 export const Article47LetterRecipientOptions = [
     { label: 'ইন্সপেক্টর জেনারেল, বাংলাদেশ পুলিশ, পুলিশ হেডকোয়ার্টার্স, ঢাকা।',                value: Article47LetterRecipient.InspectorGeneralBP,      sortOrder: 1 },
-    { label: 'মহাপরিচালক, র‍্যাব ফোর্সেস হেডকোয়ার্টার্স, কুর্মিটোলা, ঢাকা।',                  value: Article47LetterRecipient.DirectorGeneralRAB,      sortOrder: 2 },
+    { label: 'মহাপরিচালক, এসআরবি ফোর্সেস হেডকোয়ার্টার্স, কুর্মিটোলা, ঢাকা।',                  value: Article47LetterRecipient.DirectorGeneralRAB,      sortOrder: 2 },
     { label: 'ডিআইজি (প্রশাসন), বাংলাদেশ পুলিশ, পুলিশ হেডকোয়ার্টার্স, ঢাকা।',                value: Article47LetterRecipient.DIGAdminBP,              sortOrder: 3 },
     { label: 'প্রধান হিসাব রক্ষক কর্মকর্তা, স্বরাষ্ট্র মন্ত্রণালয়, সেগুন বাগিচা, ঢাকা।',         value: Article47LetterRecipient.ChiefAccountOfficerMOHA, sortOrder: 4 },
     { label: 'ব্যক্তিগত কপি।',                                                              value: Article47LetterRecipient.PersonalCopy,            sortOrder: 5 },
@@ -484,14 +511,14 @@ export enum MOLetterRecipient {
 }
 export const MOLetterRecipientOptions = [
     { label: 'ব্যক্তিগত কপি।',                                                                            value: MOLetterRecipient.PersonalCopy,        sortOrder: 1 },
-    { label: 'ট্রেনিং উইং, র‍্যাব ফোর্সেস সদর দপ্তর।',                                                      value: MOLetterRecipient.TrainingWing,        sortOrder: 2 },
-    { label: 'পার্সোনেল শাখা, র‍্যাব ফোর্সেস সদর দপ্তর।',                                                   value: MOLetterRecipient.PersonnelBranch,     sortOrder: 3 },
-    { label: 'ডিওএমএস, প্রবৃত্তে পার্সোনেল শাখা, র‍্যাব ফোর্সেস সদর দপ্তর।',                                 value: MOLetterRecipient.DOMSPersonnelBranch, sortOrder: 4 },
-    { label: 'রেকর্ড শাখা, র‍্যাব ফোর্সেস সদর দপ্তর।',                                                      value: MOLetterRecipient.RecordBranch,        sortOrder: 5 },
-    { label: 'অর্থ শাখা, র‍্যাব ফোর্সেস সদর দপ্তর।',                                                        value: MOLetterRecipient.FinanceBranch,       sortOrder: 6 },
-    { label: 'ফোর্সেস মেস শাখা, র‍্যাব ফোর্সেস সদর দপ্তর।',                                                 value: MOLetterRecipient.ForcesMessBranch,    sortOrder: 7 },
-    { label: 'রেশন অফিস, র‍্যাব ফোর্সেস সদর দপ্তর।',                                                        value: MOLetterRecipient.RationOffice,        sortOrder: 8 },
-    { label: 'ডেইলি অফিস, র‍্যাব ফোর্সেস সদর দপ্তর।',                                                       value: MOLetterRecipient.DailyOffice,         sortOrder: 9 },
+    { label: 'ট্রেনিং উইং, এসআরবি ফোর্সেস সদর দপ্তর।',                                                      value: MOLetterRecipient.TrainingWing,        sortOrder: 2 },
+    { label: 'পার্সোনেল শাখা, এসআরবি ফোর্সেস সদর দপ্তর।',                                                   value: MOLetterRecipient.PersonnelBranch,     sortOrder: 3 },
+    { label: 'ডিওএমএস, প্রবৃত্তে পার্সোনেল শাখা, এসআরবি ফোর্সেস সদর দপ্তর।',                                 value: MOLetterRecipient.DOMSPersonnelBranch, sortOrder: 4 },
+    { label: 'রেকর্ড শাখা, এসআরবি ফোর্সেস সদর দপ্তর।',                                                      value: MOLetterRecipient.RecordBranch,        sortOrder: 5 },
+    { label: 'অর্থ শাখা, এসআরবি ফোর্সেস সদর দপ্তর।',                                                        value: MOLetterRecipient.FinanceBranch,       sortOrder: 6 },
+    { label: 'ফোর্সেস মেস শাখা, এসআরবি ফোর্সেস সদর দপ্তর।',                                                 value: MOLetterRecipient.ForcesMessBranch,    sortOrder: 7 },
+    { label: 'রেশন অফিস, এসআরবি ফোর্সেস সদর দপ্তর।',                                                        value: MOLetterRecipient.RationOffice,        sortOrder: 8 },
+    { label: 'ডেইলি অফিস, এসআরবি ফোর্সেস সদর দপ্তর।',                                                       value: MOLetterRecipient.DailyOffice,         sortOrder: 9 },
     { label: 'অফিস কপি।',                                                                                value: MOLetterRecipient.OfficeCopy,          sortOrder: 10 }
 ];
 

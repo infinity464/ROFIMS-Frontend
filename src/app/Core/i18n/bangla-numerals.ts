@@ -110,7 +110,7 @@ export function formatDateBangla(date: Date | null | undefined): string {
   const d = date.getDate();
   const m = BANGLA_MONTHS[date.getMonth()];
   const y = date.getFullYear();
-  return `${BanglaNumerals.toBangla(String(d))} ${m}, ${BanglaNumerals.toBangla(String(y))}`;
+  return `${BanglaNumerals.toBangla(String(d))} ${m} ${BanglaNumerals.toBangla(String(y))}`;
 }
 
 export function formatDateEnglish(date: Date | null | undefined): string {

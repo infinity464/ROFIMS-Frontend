@@ -122,7 +122,7 @@
                     </div>
 
                     <div class="form-field">
-                        <label class="form-label"> Date of Joining in RAB <span class="form-label-required">*</span> </label>
+                        <label class="form-label"> Date of Joining in SRB <span class="form-label-required">*</span> </label>
                         <p-datepicker formControlName="joiningDate" dateFormat="dd-mm-yy" placeholder="Select Date" styleClass="w-full"> </p-datepicker>
                         @if (isFieldInvalid('joiningDate')) {
                         <small class="form-error">{{ getErrorMessage('joiningDate') }}</small>
@@ -199,7 +199,7 @@
                     </div>
 
                     <div class="form-field">
-                        <label class="form-label">RAB Rank</label>
+                        <label class="form-label">SRB Rank</label>
                         <p-select
                             [options]="rabRankDropdownOptions"
                             optionLabel="label"
@@ -300,7 +300,7 @@
                     </div>
 
                     <div class="form-field">
-                        <label class="form-label">RAB ID</label>
+                        <label class="form-label">SRB ID</label>
                         <div class="p-inputgroup">
                             <input pInputText class="w-full" placeholder="Auto Generated if left blank" formControlName="rabid" inputmode="numeric" (input)="onDigitsOnlyInput($event, 'rabid')" />
                             @if (isCheckingRabId) {
@@ -310,7 +310,7 @@
                             }
                         </div>
                         @if (isDuplicateRabId) {
-                        <small class="form-error">This RAB ID already exists</small>
+                        <small class="form-error">This SRB ID already exists</small>
                         }
                     </div>
                 </div>

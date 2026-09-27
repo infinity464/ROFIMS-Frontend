@@ -126,12 +126,12 @@ export class EmployeeReportsComponent implements OnInit {
         { label: 'Education', labelBn: 'শিক্ষা', value: 'education' },
         { label: 'Mother Org', labelBn: 'মাতৃ সংস্থা', value: 'motherOrg' },
         { label: 'Officer Type', labelBn: 'অফিসার ধরণ', value: 'officerType' },
-        { label: 'RAB UNIT', labelBn: 'র‍্যাব ইউনিট', value: 'rabUnit' },
+        { label: 'SRB UNIT', labelBn: 'এসআরবি ইউনিট', value: 'rabUnit' },
         { label: 'Blood Group', labelBn: 'রক্তের গ্রুপ', value: 'bloodGroup' },
         { label: 'Personal Qualification', labelBn: 'ব্যক্তিগত যোগ্যতা', value: 'personalQualification' },
         { label: 'Professional Qualification', labelBn: 'পেশাগত যোগ্যতা', value: 'professionalQualification' },
         { label: 'Special Qualification', labelBn: 'বিশেষ যোগ্যতা', value: 'specialQualification' },
-        { label: 'RAB Rank', labelBn: 'র‍্যাব পদবি', value: 'rabRank' },
+        { label: 'SRB Rank', labelBn: 'এসআরবি পদবি', value: 'rabRank' },
         { label: 'Corps', labelBn: 'কোর', value: 'corps' },
         { label: 'Trade', labelBn: 'ট্রেড', value: 'trade' },
         { label: 'Gallantry Awards/Decoration', labelBn: 'বীরত্বসূচক পদক', value: 'decoration' },
@@ -293,7 +293,7 @@ export class EmployeeReportsComponent implements OnInit {
         this.commonCodeService.getAllActiveCommonCodesType(codeType).subscribe({
             next: (list: CommonCodeModel[]) => {
                 const raw = list || [];
-                if (this.reportType === 'corps' || this.reportType === 'trade') {
+                if (this.reportType === 'corps' || this.reportType === 'trade' || this.reportType === 'officerType') {
                     // Multiple "N/A" CommonCode rows can exist (one per mother org); collapse them into
                     // a single synthetic option whose value is NA_SENTINEL_VALUE. We remember the
                     // underlying CodeIds so selectedCommonCodeIds can return them to the child component.
@@ -327,7 +327,8 @@ export class EmployeeReportsComponent implements OnInit {
                     });
                     this.naCommonCodeIds = naIds;
                     this.commonCodeOptions = nonNa;
-                    if (naIds.length > 0) {
+                    // Officer Type hides the N/A bucket entirely.
+                    if (naIds.length > 0 && this.reportType !== 'officerType') {
                         this.commonCodeOptions.push({
                             label: 'N/A',
                             labelBn: 'N/A',

@@ -477,7 +477,7 @@ export class EmpPresentMemberCheckComponent implements OnInit, AfterViewInit {
             },
             error: (err) => {
                 this.isLoadingExMemberData = false;
-                console.error('Failed to load previous RAB service view', err);
+                console.error('Failed to load previous SRB service view', err);
                 this.showInfo('Error', 'Failed to load previous service data.', 'error');
             }
         });

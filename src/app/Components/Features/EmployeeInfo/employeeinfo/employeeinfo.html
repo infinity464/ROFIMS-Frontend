@@ -3,7 +3,7 @@
         <div class="flex gap-4">
             <div>
                 <h2 class="m-0 text-3xl font-bold text-primary-900 letter-spacing-tight">DATA ENTRY</h2>
-                <p class="m-0 mt-1 text-primary-600 font-medium">New Joining & Re-Joining in RAB</p>
+                <p class="m-0 mt-1 text-primary-600 font-medium">New Joining & Re-Joining in SRB</p>
             </div>
             <!-- <div class="flex align-items-center gap-2 text-primary-700">
                 <i class="pi pi-shield text-4xl"></i>
@@ -29,7 +29,7 @@
                                 <!-- <i class="pi pi-search text-primary-700 text-xl"></i> -->
                                 <!-- </div> -->
                                 <div class="flex-1">
-                                    <h3 class="m-0 text-xl font-bold text-900">New Joining & Re-Joining in RAB</h3>
+                                    <h3 class="m-0 text-xl font-bold text-900">New Joining & Re-Joining in SRB</h3>
                                     <p class="m-0 mt-1 text-600 line-height-3">Search option will check Present Member & Ex-member database</p>
                                 </div>
                             </div>
@@ -59,7 +59,7 @@
                     <div *ngIf="serviceRecords?.length" class="my-5">
                         <div class="flex align-items-center gap-2 mb-4">
                             <i class="pi pi-history text-primary-600 text-2xl"></i>
-                            <h3 class="m-0 text-xl font-bold text-900">Previous RAB Service Record</h3>
+                            <h3 class="m-0 text-xl font-bold text-900">Previous SRB Service Record</h3>
                         </div>
 
                         <p-table [value]="serviceRecords" responsiveLayout="scroll" styleClass="p-datatable-sm" [paginator]="true" [rows]="5">
@@ -141,7 +141,7 @@
                                 </div>
 
                                 <div class="flex-1" style="min-width: 200px">
-                                    <label class="font-semibold block mb-2 text-700"> Date of Joining in RAB <span class="text-red-500">*</span> </label>
+                                    <label class="font-semibold block mb-2 text-700"> Date of Joining in SRB <span class="text-red-500">*</span> </label>
                                     <p-datepicker formControlName="joiningDate" dateFormat="dd-mm-yy" placeholder="Select Date" styleClass="w-full"></p-datepicker>
                                 </div>
                             </div>
@@ -185,7 +185,7 @@
                                 </div>
 
                                 <div class="flex-1" style="min-width: 200px">
-                                    <label class="font-semibold block mb-2 text-700">RAB ID</label>
+                                    <label class="font-semibold block mb-2 text-700">SRB ID</label>
                                     <input pInputText class="w-full surface-100" placeholder="Auto Generated" formControlName="rabId" readonly />
                                 </div>
                             </div>
@@ -279,8 +279,8 @@
                                 </div>
 
                                 <div class="flex-1" style="min-width: 250px" *ngIf="form.get('isReliever')?.value === true">
-                                    <label class="font-semibold block mb-2 text-700">Enter RAB ID/Service No</label>
-                                    <input pInputText class="w-full" placeholder="RAB ID / Service No" formControlName="relieverRabId" />
+                                    <label class="font-semibold block mb-2 text-700">Enter SRB ID/Service No</label>
+                                    <input pInputText class="w-full" placeholder="SRB ID / Service No" formControlName="relieverRabId" />
                                 </div>
 
                                 <div class="flex-1" style="min-width: 200px">

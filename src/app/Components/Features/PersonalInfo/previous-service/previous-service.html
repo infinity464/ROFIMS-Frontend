@@ -1,19 +1,19 @@
 <form [formGroup]="form" class="rab-form">
   <div class="mb-5">
     <div class="flex align-items-center gap-2 mb-4">
-      <h3 class="m-0 text-xl font-bold text-900">Previous Service in RAB Entry</h3>
+      <h3 class="m-0 text-xl font-bold text-900">Previous Service in SRB Entry</h3>
     </div>
 
     <div class="surface-50 border-round-2xl p-4">
       <!-- ID Input Section -->
       <div class="flex flex-wrap gap-3 mb-4">
         <div class="flex-1" style="min-width: 280px">
-          <label class="font-semibold block mb-2 text-700">RAB ID</label>
+          <label class="font-semibold block mb-2 text-700">SRB ID</label>
           <input
             pInputText
             class="w-full"
             formControlName="rabId"
-            placeholder="Enter RAB ID"
+            placeholder="Enter SRB ID"
             (blur)="onIdBlur()"
           />
         </div>
@@ -33,7 +33,7 @@
       <div class="mb-4">
         <small class="text-600 block">
           <i class="pi pi-info-circle mr-1"></i>
-          RAB ID/Service ID Input করলে নিচের তথ্য সমূহ Auto Load হবে ***
+          SRB ID/Service ID Input করলে নিচের তথ্য সমূহ Auto Load হবে ***
         </small>
       </div>
 
@@ -113,7 +113,7 @@
         <div class="flex flex-wrap gap-3 mb-4">
           <div class="flex-1" style="min-width: 100%">
             <label class="font-semibold block mb-2 text-700">
-              RAB Wing/Battalion Name <span class="text-red-500">*</span>
+              SRB Wing/Battalion Name <span class="text-red-500">*</span>
             </label>
             <p-select
               formControlName="wingBattalionId"

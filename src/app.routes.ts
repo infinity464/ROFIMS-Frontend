@@ -1,242 +1,16 @@
 import { Routes } from '@angular/router';
 import { AppLayout } from './app/layout/component/app.layout';
-import { Dashboard } from './app/pages/dashboard/dashboard';
-import { Documentation } from './app/pages/documentation/documentation';
-import { Landing } from './app/pages/landing/landing';
 import { Notfound } from './app/pages/notfound/notfound';
 // import { Login } from '@/pages/auth/login';
 import { Login } from '@/Components/Features/Authentication/Login/login';
-import { ChangePassword } from '@/Components/Features/Authentication/change-password/change-password';
 import { AuthGuard } from '@/Core/Guard/auth.guard';
 import { MemberTypePermissionGuard } from '@/Core/Guard/member-type-permission.guard';
-import { DynamicSearchComponent } from '@/Components/Shared/dynamic-search/dynamic-search';
 // import { MotherOrg } from '@/Components/basic-setup/mother-org/mother-org';
-import { Employeeinfo } from '@/Components/Features/EmployeeInfo/employeeinfo/employeeinfo';
-import { Division } from '@/Components/basic-setup/division/division';
-import { District } from '@/Components/basic-setup/district/district';
-import { Upazila } from '@/Components/basic-setup/upazila/upazila';
-import { BloodGroup } from '@/Components/basic-setup/blood-group/blood-group';
-import { MovementReason } from '@/Components/basic-setup/movement-reason/movement-reason';
-import { MovementInfoComponent } from '@/Components/Features/movement-info/movement-info';
-import { MovementListComponent } from '@/Components/Features/movement-list/movement-list';
-import { Article47TakeoverBulkComponent } from '@/Components/Features/article-47-takeover-bulk/article-47-takeover-bulk';
-import { NotesheetPreviewArticle47TakeoverComponent } from '@/Components/Features/notesheet-preview/article-47-takeover/notesheet-preview-article-47-takeover';
-import { NotesheetPreviewArticle47HandoverComponent } from '@/Components/Features/notesheet-preview/article-47-handover/notesheet-preview-article-47-handover';
-import { NotesheetPreviewMOComponent } from '@/Components/Features/notesheet-preview/mo/notesheet-preview-mo';
-import { NotesheetPreviewCCComponent } from '@/Components/Features/notesheet-preview/cc/notesheet-preview-cc';
-import { MovementLetterNumberConfigComponent } from '@/Components/basic-setup/movement-letter-number-config/movement-letter-number-config';
-import { Relationship } from '@/Components/basic-setup/relationship/relationship';
-import { MaritalStatus } from '@/Components/basic-setup/marital-status/marital-status';
-import { Occupation } from '@/Components/basic-setup/occupation/occupation';
-import { EducationQualification } from '@/Components/basic-setup/education-qualification/education-qualification';
-import { EducationInstitutionType } from '@/Components/basic-setup/education-institution-type/education-institution-type';
-import { CourseType } from '@/Components/basic-setup/course-type/course-type';
-import { CourseGrade } from '@/Components/basic-setup/course-grade/course-grade';
-import { PersonalQualification } from '@/Components/basic-setup/personal-qualification/personal-qualification';
-import { SpecialQualification } from '@/Components/basic-setup/special-qualification/special-qualification';
-import { VisitType } from '@/Components/basic-setup/visit-type/visit-type';
-import { PunishmentType } from '@/Components/basic-setup/punishment-type/punishment-type';
-import { OffenceType } from '@/Components/basic-setup/offence-type/offence-type';
-import { BriefStatementOfOffence } from '@/Components/basic-setup/brief-statement-of-offence/brief-statement-of-offence';
-import { MedicalCategoryType } from '@/Components/basic-setup/medical-category-type/medical-category-type';
-import { PurposeOfVisitType } from '@/Components/basic-setup/purpose-of-visit-type/purpose-of-visit-type';
-import { SubjectType } from '@/Components/basic-setup/subject-type/subject-type';
-import { NoteSheetSubject } from '@/Components/basic-setup/notesheet-subject/notesheet-subject';
-import { LeaveType } from '@/Components/basic-setup/leave-type/leave-type';
-import { EquivalentName } from '@/Components/basic-setup/equivalent-name/equivalent-name';
-import { EmployeeStatusType } from '@/Components/basic-setup/employee-status-type/employee-status-type';
-import { EmployeeType } from '@/Components/basic-setup/employee-type/employee-type';
-import { AppointmentCategory } from '@/Components/basic-setup/appointment-category/appointment-category';
-import { RabId } from '@/Components/basic-setup/rab-id/rab-id';
-import { RabUnit } from '@/Components/basic-setup/rab-unit/rab-unit';
-import { RabStructureComponent } from '@/Components/basic-setup/rab-structure/rab-structure';
-import { OrgTreeComponent } from '@/Components/basic-setup/org-tree/org-tree.component';
-import { OfficerType } from '@/Components/basic-setup/officer-type/officer-type';
-import { RabWing } from '@/Components/basic-setup/rab-wing/rab-wing';
-import { EducationInstitution } from '@/Components/basic-setup/education-institution/education-institution';
-import { EducationResult } from '@/Components/basic-setup/education-result/education-result';
-import { PersonalInfo } from '@/Components/Features/PersonalInfo/personal-info/personal-info';
-import { Organization } from '@/Components/basic-setup/organization-setup/organization/organization';
-import { OrganizationUnit } from '@/Components/basic-setup/organization-setup/organization-unit/organization-unit';
-import { MotherOrgOfficeHeadComponent } from '@/Components/basic-setup/mother-org-office-head/mother-org-office-head';
-import { MotherOrgRank } from '@/Components/basic-setup/mother-org-rank/mother-org-rank';
-import { MotherOrgRankVacancyDistributionComponent } from '@/Components/basic-setup/mother-org-rank-vacancy-distribution/mother-org-rank-vacancy-distribution';
-import { VacancyDistributionSummaryComponent } from '@/Components/basic-setup/vacancy-distribution-summary/vacancy-distribution-summary';
-import { EquivalentNameVacancyComponent } from '@/Components/basic-setup/equivalent-name-vacancy/equivalent-name-vacancy';
-import { Corps } from '@/Components/basic-setup/corps/corps';
-import { CorpsOffice } from '@/Components/basic-setup/corps-office/corps-office';
-import { Batch } from '@/Components/basic-setup/batch/batch';
-import { Decoration } from '@/Components/basic-setup/decoration/decoration';
-import { ProfessionalQualification } from '@/Components/basic-setup/professional-qualification/professional-qualification';
-import { PostOffice } from '@/Components/basic-setup/post-office/post-office';
-import { EducationalDepartment } from '@/Components/basic-setup/educational-department/educational-department';
-import { EducationSubject } from '@/Components/basic-setup/education-subject/education-subject';
-import { Trade } from '@/Components/basic-setup/trade/trade';
-import { Country } from '@/Components/basic-setup/country/country';
-import { RabBranch } from '@/Components/basic-setup/rab-branch/rab-branch';
-import { CourseName } from '@/Components/basic-setup/course-name/course-name';
-import { EmpBasicInfo } from '@/Components/Features/Emp/emp-basic-info/emp-basic-info';
-import { ServingMemberEntry } from '@/Components/Features/Emp/serving-member-entry/serving-member-entry';
-import { ServicePostingEntry } from '@/Components/Features/Emp/service-posting-entry/service-posting-entry';
-import { EmpBulkImport } from '@/Components/Features/Emp/emp-bulk-import/emp-bulk-import';
-import { EmpList } from '@/Components/Features/Emp/emp-list/emp-list';
-import { EmpPersonalInfo } from '@/Components/Features/Emp/emp-personal-info/emp-personal-info';
-import { EmpAddressInfo } from '@/Components/Features/Emp/emp-address-info/emp-address-info';
-import { EmpFamilyInfo } from '@/Components/Features/Emp/emp-family-info/emp-family-info';
-import { EmpNomineeInfo } from '@/Components/Features/Emp/emp-nominee-info/emp-nominee-info';
-import { EmpPreviousRabService } from '@/Components/Features/Emp/emp-previous-rab-service/emp-previous-rab-service';
-import { EmpServiceHistory } from '@/Components/Features/Emp/emp-service-history/emp-service-history';
-import { EmpPromotionInfo } from '@/Components/Features/Emp/emp-promotion-info/emp-promotion-info';
-import { EmpRankConfirmationComponent } from '@/Components/Features/Emp/emp-rank-confirmation/emp-rank-confirmation';
-import { EmpEducationInfoComponent } from '@/Components/Features/Emp/emp-education-info/emp-education-info';
-import { EmpCourseInfoComponent } from '@/Components/Features/Emp/emp-course-info/emp-course-info';
-import { EmpSendToCourseComponent } from '@/Components/Features/Emp/emp-send-to-course/emp-send-to-course';
-import { EmpRftsCourseRefComponent } from '@/Components/Features/Emp/emp-rfts-course-ref/emp-rfts-course-ref';
-import { EmpRftsCourseListComponent } from '@/Components/Features/Emp/emp-rfts-course-list/emp-rfts-course-list';
-import { EmpDraftListComponent } from '@/Components/Features/Emp/emp-draft-list/emp-draft-list';
-import { EmpPendingFinalApprovalComponent } from '@/Components/Features/Emp/emp-pending-final-approval/emp-pending-final-approval';
-import { EmpRftsCompletedComponent } from '@/Components/Features/Emp/emp-rfts-completed/emp-rfts-completed';
-import { EmpDisciplineInfoComponent } from '@/Components/Features/Emp/emp-discipline-info/emp-discipline-info';
-import { EmpBankAccount } from '@/Components/Features/Emp/emp-bank-account/emp-bank-account.component';
-import { EmpForeignVisit } from '@/Components/Features/Emp/emp-foreign-visit/emp-foreign-visit.component';
-import { EmpLeaveInfo } from '@/Components/Features/Emp/emp-leave-info/emp-leave-info.component';
-import { EmpMedicalCategory } from '@/Components/Features/Emp/emp-medical-category/emp-medical-category.component';
-import { EmpAdditionalRemarks } from '@/Components/Features/Emp/emp-additional-remarks/emp-additional-remarks.component';
-import { EmpConfidentialRemarks } from '@/Components/Features/Emp/emp-confidential-remarks/emp-confidential-remarks.component';
-import { EmpPermPostingMotherOrg } from '@/Components/Features/Emp/emp-perm-posting-mother-org/emp-perm-posting-mother-org.component';
-import { PermanentPostingMORecordComponent } from '@/Components/Features/permanent-posting-mo-record/permanent-posting-mo-record';
-import { PostedOutPersonListComponent } from '@/Components/Features/posted-out-person-list/posted-out-person-list';
-import { NewJoiningPersonListComponent } from '@/Components/Features/new-joining-person-list/new-joining-person-list';
-import { PostedOutRelieverReportComponent } from '@/Components/Features/posted-out-reliever-report/posted-out-reliever-report';
-import { PostedOutServedReportComponent } from '@/Components/Features/posted-out-served-report/posted-out-served-report';
-import { EmpPresentStatus } from '@/Components/Features/Emp/emp-present-status/emp-present-status';
-import { EmpPersonalServiceInfoComponent } from '@/Components/Features/Emp/emp-personal-service-info/emp-personal-service-info';
-import { EmpPresentMemberCheckComponent } from '@/Components/Features/Emp/emp-present-member-check/emp-present-member-check.component';
-import { RabIdAllocation } from '@/Components/Features/rab-id-allocation/rab-id-allocation';
-import { SupernumeraryList } from '@/Components/Features/supernumerary-list/supernumerary-list';
-import { SupernumeraryProfile } from '@/Components/Features/supernumerary-profile/supernumerary-profile';
-import { NewJoineeSendingNotesheet } from '@/Components/Features/new-joinee-sending-notesheet/new-joinee-sending-notesheet';
-import { AddDraftNewPostingComponent } from '@/Components/Features/add-draft-new-posting/add-draft-new-posting';
-import { PostingNotesheetGenerateComponent } from '@/Components/Features/posting-notesheet-generate/posting-notesheet-generate';
-import { PostingOrderReceiveComponent } from '@/Components/Features/posting-order-receive/posting-order-receive';
-import { PendingPostingJoiningComponent } from '@/Components/Features/pending-posting-joining/pending-posting-joining';
-import { PendingJoiningTransferUnitComponent } from '@/Components/Features/pending-joining-transfer-unit/pending-joining-transfer-unit';
-import { PendingInterJoiningTransferUnitComponent } from '@/Components/Features/pending-inter-joining-transfer-unit/pending-inter-joining-transfer-unit';
-import { PendingInterPostingJoiningComponent } from '@/Components/Features/pending-inter-posting-joining/pending-inter-posting-joining';
-import { PostingOrderGenerateComponent } from '@/Components/Features/posting-order-generate/posting-order-generate';
-import { PostingOrderListComponent } from '@/Components/Features/posting-order-list/posting-order-list';
-import { PostingOrderPreviewPageComponent } from '@/Components/Features/posting-order-preview/posting-order-preview';
-import { EmployeeSignatureUploadComponent } from '@/Components/Features/employee-signature-upload/employee-signature-upload';
-import { EmployeeFaceSearchComponent } from '@/Components/Features/employee-face-search/employee-face-search';
-import { EmployeeFaceSearchHistoryComponent } from '@/Components/Features/employee-face-search-history/employee-face-search-history';
-import { AddDraftInterPostingComponent } from '@/Components/Features/add-draft-inter-posting/add-draft-inter-posting';
-import { InterPostingNotesheetGenerateComponent } from '@/Components/Features/inter-posting-notesheet-generate/inter-posting-notesheet-generate';
-import { PresentlyServingMembers } from '@/Components/Features/presently-serving-members/presently-serving-members';
-import { OrgTreeServingComponent } from '@/Components/Features/presently-serving-members/org-tree-serving/org-tree-serving';
-import { ServingMemberProfile } from '@/Components/Features/presently-serving-members/serving-member-profile/serving-member-profile';
-import { RabOrganogramComponent } from '@/Components/Features/presently-serving-members/rab-organogram/rab-organogram';
-import { RabOrganogramMembersComponent } from '@/Components/Features/presently-serving-members/rab-organogram/rab-organogram-members/rab-organogram-members';
-import { ExMembers } from '@/Components/Features/ex-members/ex-members';
-import { ExMemberProfile } from '@/Components/Features/ex-members/ex-member-profile/ex-member-profile';
-import { Prefix } from '@/Components/basic-setup/prefix/prefix';
-import { Gender } from '@/Components/basic-setup/gender/gender';
-import { Bank } from '@/Components/basic-setup/bank/bank';
-import { BankBranchComponent } from '@/Components/basic-setup/bank-branch/bank-branch';
-import { TrainingInstitution } from '@/Components/basic-setup/training-institution/training-institution';
-import { RankEquivalent } from '@/Components/basic-setup/rank-equivalent/rank-equivalent';
-import { Religion } from '@/Components/basic-setup/religion/religion';
-import { RabIdSerial } from '@/Components/basic-setup/rab-id-serial/rab-id-serial';
-import { AbsentType } from '@/Components/basic-setup/absent-type/absent-type';
-import { NotesheetTemplateComponent } from '@/Components/basic-setup/notesheet-template/notesheet-template';
-import { NoteSheetNumberConfigComponent } from '@/Components/basic-setup/notesheet-number-config/notesheet-number-config';
-import { LeaveCardNumberConfigComponent } from '@/Components/basic-setup/leave-card-number-config/leave-card-number-config';
-import { NoteSheetApproverConfigComponent } from '@/Components/basic-setup/notesheet-approver-config/notesheet-approver-config';
-import { PostingOrderNumberConfigComponent } from '@/Components/basic-setup/posting-order-number-config/posting-order-number-config';
-import { OnulipiConfigComponent } from '@/Components/basic-setup/onulipi-config/onulipi-config';
-import { NotesheetGenerateComponent } from '@/Components/Features/notesheet-generate/notesheet-generate';
-import { NotesheetExBdLeaveComponent } from '@/Components/Features/notesheet-ex-bd-leave/notesheet-ex-bd-leave';
-import { ExBdLeaveApplyComponent } from '@/Components/Features/ex-bd-leave-application/ex-bd-leave-apply/ex-bd-leave-apply.component';
-import { ExBdLeaveListComponent } from '@/Components/Features/ex-bd-leave-application/ex-bd-leave-list/ex-bd-leave-list.component';
-import { NotesheetListComponent } from '@/Components/Features/notesheet-list/notesheet-list';
-import { NotesheetPreviewComponent } from '@/Components/Features/notesheet-preview/notesheet-preview';
-import { NotesheetPreviewGeneralComponent } from '@/Components/Features/notesheet-preview/general/notesheet-preview-general';
-import { NotesheetPreviewPostingComponent } from '@/Components/Features/notesheet-preview/posting/notesheet-preview-posting';
-import { NotesheetPreviewExbdComponent } from '@/Components/Features/notesheet-preview/exbd/notesheet-preview-exbd';
-import { LeaveApplicationApplyComponent } from '@/Components/Features/leave-application/leave-application-apply/leave-application-apply.component';
-import { LeaveApplicationListComponent } from '@/Components/Features/leave-application/leave-application-list/leave-application-list.component';
-import { LeavePendingApprovalListComponent } from '@/Components/Features/leave-application/leave-pending-approval-list/leave-pending-approval-list.component';
-import { LeavePendingApprovalPreviewComponent } from '@/Components/Features/leave-application/leave-pending-approval-preview/leave-pending-approval-preview.component';
-import { LeaveHistoryListComponent } from '@/Components/Features/leave-application/leave-history-list/leave-history-list.component';
-import { LeaveMyApplicationsComponent } from '@/Components/Features/leave-application/leave-my-applications/leave-my-applications.component';
-import { LeaveApplyForOtherComponent } from '@/Components/Features/leave-application/leave-apply-for-other/leave-apply-for-other.component';
-import { LeaveActionTakenByMeComponent } from '@/Components/Features/leave-application/leave-action-taken-by-me/leave-action-taken-by-me.component';
-import { LeaveCardComponent } from '@/Components/Features/leave-application/leave-card/leave-card.component';
-import { CalendarComponent } from '@/Components/Features/calendar/calendar.component';
-import { TaskEventListComponent } from '@/Components/Features/calendar/task-event-list.component';
-import { ChatContainerComponent } from '@/Components/Features/chat/chat-container.component';
-import { IdentityUserCreateComponent } from '@/Components/Features/identity/identity-user-create/identity-user-create.component';
-import { RoleListComponent } from '@/Components/Features/identity/role-list/role-list.component';
-import { NoticeListComponent } from '@/Components/Features/notice/notice-list/notice-list.component';
-import { AuditTimelineComponent } from '@/Components/Features/audit/audit-timeline.component';
-import { MenuManagement } from '@/Components/Features/menu-management/menu-management';
-import { RoleMenuPermission } from '@/Components/Features/role-menu-permission/role-menu-permission';
-import { LoginAuditComponent } from '@/Components/Features/login-audit/login-audit.component';
-import { MyLoginAuditComponent } from '@/Components/Features/my-login-audit/my-login-audit.component';
-import { SessionPolicyComponent } from '@/Components/Features/settings/session-policy/session-policy.component';
-import { EmployeeReportsComponent } from '@/Components/Features/employee-reports/employee-reports.component';
-import { ReportFamilyOccupationComponent } from '@/Components/Features/employee-reports/report-family-occupation/report-family-occupation.component';
-import { ReportRftsCompletionComponent } from '@/Components/Features/employee-reports/report-rfts-completion/report-rfts-completion.component';
-import { ReportAddressLocationComponent } from '@/Components/Features/employee-reports/report-address-location/report-address-location.component';
-import { ReportDynamicComponent } from '@/Components/Features/employee-reports/report-dynamic/report-dynamic.component';
-import { ReportMemberTypeServingComponent } from '@/Components/Features/employee-reports/report-member-type-serving/report-member-type-serving.component';
-import { ReportPendingInterPostingComponent } from '@/Components/Features/employee-reports/report-pending-inter-posting/report-pending-inter-posting.component';
-import { ReportSupernumeraryComponent } from '@/Components/Features/employee-reports/report-supernumerary/report-supernumerary.component';
-import { ReportPresentStatusByMotherOrgComponent } from '@/Components/Features/employee-reports/report-present-status-by-mother-org/report-present-status-by-mother-org.component';
-import { ReportPresentStatusUnitWiseComponent } from '@/Components/Features/employee-reports/report-present-status-unit-wise/report-present-status-unit-wise.component';
-import { ReportUnitDurationNominalRollComponent } from '@/Components/Features/employee-reports/report-unit-duration-nominal-roll/report-unit-duration-nominal-roll.component';
-import { ReportLongStayNominalRollComponent } from '@/Components/Features/employee-reports/report-long-stay-nominal-roll/report-long-stay-nominal-roll.component';
-import { ReportStayAfterRelieverJoinedComponent } from '@/Components/Features/employee-reports/report-stay-after-reliever-joined/report-stay-after-reliever-joined.component';
-import { ReportNearHomeDistrictComponent } from '@/Components/Features/employee-reports/report-near-home-district/report-near-home-district.component';
-import { ReportJoiningLeaveComponent } from '@/Components/Features/employee-reports/report-joining-leave/report-joining-leave.component';
-import { ReportMovementComponent } from '@/Components/Features/employee-reports/report-movement/report-movement.component';
-import { ReportLeaveComponent } from '@/Components/Features/employee-reports/report-leave/report-leave.component';
-import { ReportPunishmentComponent } from '@/Components/Features/employee-reports/report-punishment/report-punishment.component';
-import { ReportPresentStatusComponent } from '@/Components/Features/employee-reports/report-present-status/report-present-status.component';
-import { ReportRankWiseComponent } from '@/Components/Features/employee-reports/report-rank-wise/report-rank-wise.component';
-import { ReportDeceasedComponent } from '@/Components/Features/employee-reports/report-deceased/report-deceased.component';
-import { ReportConfidentialRemarksComponent } from '@/Components/Features/employee-reports/report-confidential-remarks/report-confidential-remarks.component';
-import { IndividualReportsComponent } from '@/Components/Features/individual-reports/individual-reports.component';
-import { RabUnitAor } from '@/Components/basic-setup/rab-unit-aor/rab-unit-aor';
-import { RabUnitAorMap } from '@/Components/basic-setup/rab-unit-aor-map/rab-unit-aor-map';
-import { ManpowerSummaryComponent } from '@/Components/Features/statistics/manpower-summary/manpower-summary';
-import { ManpowerSummaryEquivalentComponent } from '@/Components/Features/statistics/manpower-summary-equivalent/manpower-summary-equivalent';
-import { ManpowerChartComponent } from '@/Components/Features/statistics/manpower-chart/manpower-chart';
-import { ManpowerChartEquivalentComponent } from '@/Components/Features/statistics/manpower-chart-equivalent/manpower-chart-equivalent';
-import { RankWiseManpowerComponent } from '@/Components/Features/statistics/rank-wise-manpower/rank-wise-manpower';
-import { EquivalentNameWiseManpowerComponent } from '@/Components/Features/statistics/equivalent-name-wise-manpower/equivalent-name-wise-manpower';
-import { MotherUnitWiseManpowerComponent } from '@/Components/Features/statistics/mother-unit-wise-manpower/mother-unit-wise-manpower';
-import { CorpsWiseManpowerComponent } from '@/Components/Features/statistics/corps-wise-manpower/corps-wise-manpower';
-import { TradeWiseManpowerComponent } from '@/Components/Features/statistics/trade-wise-manpower/trade-wise-manpower';
-import { MemberTypeWiseManpowerComponent } from '@/Components/Features/statistics/member-type-wise-manpower/member-type-wise-manpower';
-import { MemberTypeWiseEquivalentManpowerComponent } from '@/Components/Features/statistics/member-type-wise-equivalent-manpower/member-type-wise-equivalent-manpower';
-import { UnitWiseBarChartComponent } from '@/Components/Features/statistics/unit-wise-bar-chart/unit-wise-bar-chart';
-import { UnitRankWiseManpowerComponent } from '@/Components/Features/statistics/unit-rank-wise-manpower/unit-rank-wise-manpower';
-import { UnitRankWiseEquivalentManpowerComponent } from '@/Components/Features/statistics/unit-rank-wise-equivalent-manpower/unit-rank-wise-equivalent-manpower';
-import { UnitTradeWiseManpowerComponent } from '@/Components/Features/statistics/unit-trade-wise-manpower/unit-trade-wise-manpower';
-import { UnitSpecialQualificationWiseManpowerComponent } from '@/Components/Features/statistics/unit-special-qualification-wise-manpower/unit-special-qualification-wise-manpower';
-import { SystemMonitoringComponent } from '@/Components/Features/system-monitoring/system-monitoring';
-import { OfficeOrderGenerateComponent } from '@/Components/Features/office-order-generate/office-order-generate';
-import { OfficeOrderPreviewComponent } from '@/Components/Features/office-order-preview/office-order-preview';
-import { OfficeOrderExBdLeaveGenerateComponent } from '@/Components/Features/office-order-ex-bd-leave-generate/office-order-ex-bd-leave-generate';
-import { OfficeOrderExBdLeavePreviewComponent } from '@/Components/Features/office-order-ex-bd-leave-preview/office-order-ex-bd-leave-preview';
-import { ClearanceExBdLeaveGenerateComponent } from '@/Components/Features/clearance-ex-bd-leave-generate/clearance-ex-bd-leave-generate';
-import { ClearanceExBdLeavePreviewComponent } from '@/Components/Features/clearance-ex-bd-leave-preview/clearance-ex-bd-leave-preview';
-import { ClearanceExBdLeaveListComponent } from '@/Components/Features/clearance-ex-bd-leave-list/clearance-ex-bd-leave-list';
 
 export const appRoutes: Routes = [
     // Public routes
     { path: 'login', component: Login },
-    { path: 'landing', component: Landing },
+    { path: 'landing', loadComponent: () => import('./app/pages/landing/landing').then(m => m.Landing) },
 
     // Protected routes (inside layout)
     {
@@ -246,288 +20,288 @@ export const appRoutes: Routes = [
         canActivateChild: [AuthGuard],
         children: [
             { path: '', redirectTo: 'dashboard', pathMatch: 'full' },
-            { path: 'dashboard', component: Dashboard },
-            { path: 'calendar', component: CalendarComponent },
-            { path: 'task-event-list', component: TaskEventListComponent },
-            { path: 'chat', component: ChatContainerComponent },
-            { path: 'identity/user-create', component: IdentityUserCreateComponent },
-            { path: 'identity/roles', component: RoleListComponent },
-            { path: 'notice/list', component: NoticeListComponent },
-            { path: 'admin/audit', component: AuditTimelineComponent },
-            { path: 'employee-info', component: Employeeinfo },
-            { path: 'basic-setup/division', component: Division },
-            { path: 'basic-setup/district', component: District },
-            { path: 'basic-setup/upazila', component: Upazila },
-            { path: 'basic-setup/blood-group', component: BloodGroup },
-            { path: 'basic-setup/movement-reason', component: MovementReason },
-            { path: 'basic-setup/movement-letter-number-config', component: MovementLetterNumberConfigComponent },
-            { path: 'movement-info', component: MovementInfoComponent },
-            { path: 'movement/article-47-takeover-bulk', component: Article47TakeoverBulkComponent },
-            { path: 'movement-list', component: MovementListComponent },
-            { path: 'movement-preview/article-47-takeover', component: NotesheetPreviewArticle47TakeoverComponent },
-            { path: 'movement-preview/article-47-handover', component: NotesheetPreviewArticle47HandoverComponent },
-            { path: 'movement-preview/mo', component: NotesheetPreviewMOComponent },
-            { path: 'movement-preview/cc', component: NotesheetPreviewCCComponent },
-            { path: 'movement-preview/cc/:token', component: NotesheetPreviewCCComponent },
-            { path: 'basic-setup/relationship', component: Relationship },
-            { path: 'basic-setup/marital-status', component: MaritalStatus },
-            { path: 'basic-setup/occupation', component: Occupation },
-            { path: 'basic-setup/education-qualification', component: EducationQualification },
-            { path: 'basic-setup/education-institution-type', component: EducationInstitutionType },
-            { path: 'basic-setup/education-institution', component: EducationInstitution },
-            { path: 'basic-setup/education-result', component: EducationResult },
-            { path: 'basic-setup/course-type', component: CourseType },
-            { path: 'basic-setup/course-grade', component: CourseGrade },
-            { path: 'basic-setup/personal-qualification', component: PersonalQualification },
-            { path: 'basic-setup/special-qualification', component: SpecialQualification },
-            { path: 'basic-setup/visit-type', component: VisitType },
-            { path: 'basic-setup/punishment-type', component: PunishmentType },
-            { path: 'basic-setup/offence-type', component: OffenceType },
-            { path: 'basic-setup/brief-statement-of-offence', component: BriefStatementOfOffence },
-            { path: 'basic-setup/medical-category-type', component: MedicalCategoryType },
-            { path: 'basic-setup/purpose-of-visit-type', component: PurposeOfVisitType },
-            { path: 'basic-setup/subject-type', component: SubjectType },
-            { path: 'basic-setup/notesheet-subject', component: NoteSheetSubject },
-            { path: 'basic-setup/leave-type', component: LeaveType },
-            { path: 'basic-setup/equivalent-name', component: EquivalentName },
-            { path: 'basic-setup/employee-status-type', component: EmployeeStatusType },
-            { path: 'basic-setup/employee-type', component: EmployeeType },
-            { path: 'basic-setup/appointment-category', component: AppointmentCategory },
-            { path: 'basic-setup/rab-id', component: RabId },
-            { path: 'basic-setup/rab-structure', component: RabStructureComponent },
-            { path: 'basic-setup/org-tree', component: OrgTreeComponent },
-            { path: 'basic-setup/rab-unit', component: RabUnit },
-            { path: 'basic-setup/rab-unit-aor', component: RabUnitAor },
-            { path: 'basic-setup/rab-unit-aor-map', component: RabUnitAorMap },
-            { path: 'basic-setup/officer-type', component: OfficerType },
-            { path: 'basic-setup/rab-wing', component: RabWing },
-            { path: 'basic-setup/mother-org', component: Organization },
-            { path: 'basic-setup/organization-unit', component: OrganizationUnit },
-            { path: 'basic-setup/mother-org-office-head', component: MotherOrgOfficeHeadComponent },
-            { path: 'basic-setup/mother-org-rank', component: MotherOrgRank },
-            { path: 'basic-setup/mother-org-rank-vacancy-distribution', component: MotherOrgRankVacancyDistributionComponent },
-            { path: 'basic-setup/vacancy-distribution-summary', component: VacancyDistributionSummaryComponent },
-            { path: 'basic-setup/equivalent-name-vacancy', component: EquivalentNameVacancyComponent },
-            { path: 'basic-setup/corps', component: Corps },
-            { path: 'basic-setup/corps-office', component: CorpsOffice },
-            { path: 'basic-setup/prefix', component: Prefix },
-            { path: 'basic-setup/gender', component: Gender },
-            { path: 'basic-setup/batch', component: Batch },
-            { path: 'basic-setup/decoration', component: Decoration },
-            { path: 'basic-setup/professional-qualification', component: ProfessionalQualification },
-            { path: 'basic-setup/post-office', component: PostOffice },
-            { path: 'basic-setup/educational-department', component: EducationalDepartment },
-            { path: 'basic-setup/education-subject', component: EducationSubject },
-            { path: 'basic-setup/trade', component: Trade },
-            { path: 'basic-setup/country', component: Country },
-            { path: 'basic-setup/rab-branch', component: RabBranch },
-            { path: 'basic-setup/course-name', component: CourseName },
-            { path: 'personal-info', component: PersonalInfo },
-            { path: 'basic-setup/bank', component: Bank },
-            { path: 'basic-setup/bank-branch', component: BankBranchComponent },
-            { path: 'basic-setup/training-institution', component: TrainingInstitution },
-            { path: 'basic-setup/rank-equivalent', component: RankEquivalent },
-            { path: 'basic-setup/religion', component: Religion },
-            { path: 'basic-setup/rab-id-serial', component: RabIdSerial },
-            { path: 'basic-setup/absent-type', component: AbsentType },
-            { path: 'basic-setup/notesheet-template', component: NotesheetTemplateComponent },
-            { path: 'basic-setup/notesheet-number-config', component: NoteSheetNumberConfigComponent },
-            { path: 'basic-setup/leave-card-number-config', component: LeaveCardNumberConfigComponent },
-            { path: 'basic-setup/notesheet-approver-config', component: NoteSheetApproverConfigComponent },
-            { path: 'basic-setup/posting-order-number-config', component: PostingOrderNumberConfigComponent },
-            { path: 'basic-setup/onulipi-config', component: OnulipiConfigComponent },
-            { path: 'notesheet-generate', component: NotesheetGenerateComponent },
-            { path: 'notesheet-ex-bd-leave', component: NotesheetExBdLeaveComponent },
-            { path: 'ex-bd-leave/apply', component: ExBdLeaveApplyComponent },
-            { path: 'ex-bd-leave/apply/:id', component: ExBdLeaveApplyComponent },
-            { path: 'ex-bd-leave/list', component: ExBdLeaveListComponent },
+            { path: 'dashboard', loadComponent: () => import('./app/pages/dashboard/dashboard').then(m => m.Dashboard) },
+            { path: 'calendar', loadComponent: () => import('@/Components/Features/calendar/calendar.component').then(m => m.CalendarComponent) },
+            { path: 'task-event-list', loadComponent: () => import('@/Components/Features/calendar/task-event-list.component').then(m => m.TaskEventListComponent) },
+            { path: 'chat', loadComponent: () => import('@/Components/Features/chat/chat-container.component').then(m => m.ChatContainerComponent) },
+            { path: 'identity/user-create', loadComponent: () => import('@/Components/Features/identity/identity-user-create/identity-user-create.component').then(m => m.IdentityUserCreateComponent) },
+            { path: 'identity/roles', loadComponent: () => import('@/Components/Features/identity/role-list/role-list.component').then(m => m.RoleListComponent) },
+            { path: 'notice/list', loadComponent: () => import('@/Components/Features/notice/notice-list/notice-list.component').then(m => m.NoticeListComponent) },
+            { path: 'admin/audit', loadComponent: () => import('@/Components/Features/audit/audit-timeline.component').then(m => m.AuditTimelineComponent) },
+            { path: 'employee-info', loadComponent: () => import('@/Components/Features/EmployeeInfo/employeeinfo/employeeinfo').then(m => m.Employeeinfo) },
+            { path: 'basic-setup/division', loadComponent: () => import('@/Components/basic-setup/division/division').then(m => m.Division) },
+            { path: 'basic-setup/district', loadComponent: () => import('@/Components/basic-setup/district/district').then(m => m.District) },
+            { path: 'basic-setup/upazila', loadComponent: () => import('@/Components/basic-setup/upazila/upazila').then(m => m.Upazila) },
+            { path: 'basic-setup/blood-group', loadComponent: () => import('@/Components/basic-setup/blood-group/blood-group').then(m => m.BloodGroup) },
+            { path: 'basic-setup/movement-reason', loadComponent: () => import('@/Components/basic-setup/movement-reason/movement-reason').then(m => m.MovementReason) },
+            { path: 'basic-setup/movement-letter-number-config', loadComponent: () => import('@/Components/basic-setup/movement-letter-number-config/movement-letter-number-config').then(m => m.MovementLetterNumberConfigComponent) },
+            { path: 'movement-info', loadComponent: () => import('@/Components/Features/movement-info/movement-info').then(m => m.MovementInfoComponent) },
+            { path: 'movement/article-47-takeover-bulk', loadComponent: () => import('@/Components/Features/article-47-takeover-bulk/article-47-takeover-bulk').then(m => m.Article47TakeoverBulkComponent) },
+            { path: 'movement-list', loadComponent: () => import('@/Components/Features/movement-list/movement-list').then(m => m.MovementListComponent) },
+            { path: 'movement-preview/article-47-takeover', loadComponent: () => import('@/Components/Features/notesheet-preview/article-47-takeover/notesheet-preview-article-47-takeover').then(m => m.NotesheetPreviewArticle47TakeoverComponent) },
+            { path: 'movement-preview/article-47-handover', loadComponent: () => import('@/Components/Features/notesheet-preview/article-47-handover/notesheet-preview-article-47-handover').then(m => m.NotesheetPreviewArticle47HandoverComponent) },
+            { path: 'movement-preview/mo', loadComponent: () => import('@/Components/Features/notesheet-preview/mo/notesheet-preview-mo').then(m => m.NotesheetPreviewMOComponent) },
+            { path: 'movement-preview/cc', loadComponent: () => import('@/Components/Features/notesheet-preview/cc/notesheet-preview-cc').then(m => m.NotesheetPreviewCCComponent) },
+            { path: 'movement-preview/cc/:token', loadComponent: () => import('@/Components/Features/notesheet-preview/cc/notesheet-preview-cc').then(m => m.NotesheetPreviewCCComponent) },
+            { path: 'basic-setup/relationship', loadComponent: () => import('@/Components/basic-setup/relationship/relationship').then(m => m.Relationship) },
+            { path: 'basic-setup/marital-status', loadComponent: () => import('@/Components/basic-setup/marital-status/marital-status').then(m => m.MaritalStatus) },
+            { path: 'basic-setup/occupation', loadComponent: () => import('@/Components/basic-setup/occupation/occupation').then(m => m.Occupation) },
+            { path: 'basic-setup/education-qualification', loadComponent: () => import('@/Components/basic-setup/education-qualification/education-qualification').then(m => m.EducationQualification) },
+            { path: 'basic-setup/education-institution-type', loadComponent: () => import('@/Components/basic-setup/education-institution-type/education-institution-type').then(m => m.EducationInstitutionType) },
+            { path: 'basic-setup/education-institution', loadComponent: () => import('@/Components/basic-setup/education-institution/education-institution').then(m => m.EducationInstitution) },
+            { path: 'basic-setup/education-result', loadComponent: () => import('@/Components/basic-setup/education-result/education-result').then(m => m.EducationResult) },
+            { path: 'basic-setup/course-type', loadComponent: () => import('@/Components/basic-setup/course-type/course-type').then(m => m.CourseType) },
+            { path: 'basic-setup/course-grade', loadComponent: () => import('@/Components/basic-setup/course-grade/course-grade').then(m => m.CourseGrade) },
+            { path: 'basic-setup/personal-qualification', loadComponent: () => import('@/Components/basic-setup/personal-qualification/personal-qualification').then(m => m.PersonalQualification) },
+            { path: 'basic-setup/special-qualification', loadComponent: () => import('@/Components/basic-setup/special-qualification/special-qualification').then(m => m.SpecialQualification) },
+            { path: 'basic-setup/visit-type', loadComponent: () => import('@/Components/basic-setup/visit-type/visit-type').then(m => m.VisitType) },
+            { path: 'basic-setup/punishment-type', loadComponent: () => import('@/Components/basic-setup/punishment-type/punishment-type').then(m => m.PunishmentType) },
+            { path: 'basic-setup/offence-type', loadComponent: () => import('@/Components/basic-setup/offence-type/offence-type').then(m => m.OffenceType) },
+            { path: 'basic-setup/brief-statement-of-offence', loadComponent: () => import('@/Components/basic-setup/brief-statement-of-offence/brief-statement-of-offence').then(m => m.BriefStatementOfOffence) },
+            { path: 'basic-setup/medical-category-type', loadComponent: () => import('@/Components/basic-setup/medical-category-type/medical-category-type').then(m => m.MedicalCategoryType) },
+            { path: 'basic-setup/purpose-of-visit-type', loadComponent: () => import('@/Components/basic-setup/purpose-of-visit-type/purpose-of-visit-type').then(m => m.PurposeOfVisitType) },
+            { path: 'basic-setup/subject-type', loadComponent: () => import('@/Components/basic-setup/subject-type/subject-type').then(m => m.SubjectType) },
+            { path: 'basic-setup/notesheet-subject', loadComponent: () => import('@/Components/basic-setup/notesheet-subject/notesheet-subject').then(m => m.NoteSheetSubject) },
+            { path: 'basic-setup/leave-type', loadComponent: () => import('@/Components/basic-setup/leave-type/leave-type').then(m => m.LeaveType) },
+            { path: 'basic-setup/equivalent-name', loadComponent: () => import('@/Components/basic-setup/equivalent-name/equivalent-name').then(m => m.EquivalentName) },
+            { path: 'basic-setup/employee-status-type', loadComponent: () => import('@/Components/basic-setup/employee-status-type/employee-status-type').then(m => m.EmployeeStatusType) },
+            { path: 'basic-setup/employee-type', loadComponent: () => import('@/Components/basic-setup/employee-type/employee-type').then(m => m.EmployeeType) },
+            { path: 'basic-setup/appointment-category', loadComponent: () => import('@/Components/basic-setup/appointment-category/appointment-category').then(m => m.AppointmentCategory) },
+            { path: 'basic-setup/rab-id', loadComponent: () => import('@/Components/basic-setup/rab-id/rab-id').then(m => m.RabId) },
+            { path: 'basic-setup/rab-structure', loadComponent: () => import('@/Components/basic-setup/rab-structure/rab-structure').then(m => m.RabStructureComponent) },
+            { path: 'basic-setup/org-tree', loadComponent: () => import('@/Components/basic-setup/org-tree/org-tree.component').then(m => m.OrgTreeComponent) },
+            { path: 'basic-setup/rab-unit', loadComponent: () => import('@/Components/basic-setup/rab-unit/rab-unit').then(m => m.RabUnit) },
+            { path: 'basic-setup/rab-unit-aor', loadComponent: () => import('@/Components/basic-setup/rab-unit-aor/rab-unit-aor').then(m => m.RabUnitAor) },
+            { path: 'basic-setup/rab-unit-aor-map', loadComponent: () => import('@/Components/basic-setup/rab-unit-aor-map/rab-unit-aor-map').then(m => m.RabUnitAorMap) },
+            { path: 'basic-setup/officer-type', loadComponent: () => import('@/Components/basic-setup/officer-type/officer-type').then(m => m.OfficerType) },
+            { path: 'basic-setup/rab-wing', loadComponent: () => import('@/Components/basic-setup/rab-wing/rab-wing').then(m => m.RabWing) },
+            { path: 'basic-setup/mother-org', loadComponent: () => import('@/Components/basic-setup/organization-setup/organization/organization').then(m => m.Organization) },
+            { path: 'basic-setup/organization-unit', loadComponent: () => import('@/Components/basic-setup/organization-setup/organization-unit/organization-unit').then(m => m.OrganizationUnit) },
+            { path: 'basic-setup/mother-org-office-head', loadComponent: () => import('@/Components/basic-setup/mother-org-office-head/mother-org-office-head').then(m => m.MotherOrgOfficeHeadComponent) },
+            { path: 'basic-setup/mother-org-rank', loadComponent: () => import('@/Components/basic-setup/mother-org-rank/mother-org-rank').then(m => m.MotherOrgRank) },
+            { path: 'basic-setup/mother-org-rank-vacancy-distribution', loadComponent: () => import('@/Components/basic-setup/mother-org-rank-vacancy-distribution/mother-org-rank-vacancy-distribution').then(m => m.MotherOrgRankVacancyDistributionComponent) },
+            { path: 'basic-setup/vacancy-distribution-summary', loadComponent: () => import('@/Components/basic-setup/vacancy-distribution-summary/vacancy-distribution-summary').then(m => m.VacancyDistributionSummaryComponent) },
+            { path: 'basic-setup/equivalent-name-vacancy', loadComponent: () => import('@/Components/basic-setup/equivalent-name-vacancy/equivalent-name-vacancy').then(m => m.EquivalentNameVacancyComponent) },
+            { path: 'basic-setup/corps', loadComponent: () => import('@/Components/basic-setup/corps/corps').then(m => m.Corps) },
+            { path: 'basic-setup/corps-office', loadComponent: () => import('@/Components/basic-setup/corps-office/corps-office').then(m => m.CorpsOffice) },
+            { path: 'basic-setup/prefix', loadComponent: () => import('@/Components/basic-setup/prefix/prefix').then(m => m.Prefix) },
+            { path: 'basic-setup/gender', loadComponent: () => import('@/Components/basic-setup/gender/gender').then(m => m.Gender) },
+            { path: 'basic-setup/batch', loadComponent: () => import('@/Components/basic-setup/batch/batch').then(m => m.Batch) },
+            { path: 'basic-setup/decoration', loadComponent: () => import('@/Components/basic-setup/decoration/decoration').then(m => m.Decoration) },
+            { path: 'basic-setup/professional-qualification', loadComponent: () => import('@/Components/basic-setup/professional-qualification/professional-qualification').then(m => m.ProfessionalQualification) },
+            { path: 'basic-setup/post-office', loadComponent: () => import('@/Components/basic-setup/post-office/post-office').then(m => m.PostOffice) },
+            { path: 'basic-setup/educational-department', loadComponent: () => import('@/Components/basic-setup/educational-department/educational-department').then(m => m.EducationalDepartment) },
+            { path: 'basic-setup/education-subject', loadComponent: () => import('@/Components/basic-setup/education-subject/education-subject').then(m => m.EducationSubject) },
+            { path: 'basic-setup/trade', loadComponent: () => import('@/Components/basic-setup/trade/trade').then(m => m.Trade) },
+            { path: 'basic-setup/country', loadComponent: () => import('@/Components/basic-setup/country/country').then(m => m.Country) },
+            { path: 'basic-setup/rab-branch', loadComponent: () => import('@/Components/basic-setup/rab-branch/rab-branch').then(m => m.RabBranch) },
+            { path: 'basic-setup/course-name', loadComponent: () => import('@/Components/basic-setup/course-name/course-name').then(m => m.CourseName) },
+            { path: 'personal-info', loadComponent: () => import('@/Components/Features/PersonalInfo/personal-info/personal-info').then(m => m.PersonalInfo) },
+            { path: 'basic-setup/bank', loadComponent: () => import('@/Components/basic-setup/bank/bank').then(m => m.Bank) },
+            { path: 'basic-setup/bank-branch', loadComponent: () => import('@/Components/basic-setup/bank-branch/bank-branch').then(m => m.BankBranchComponent) },
+            { path: 'basic-setup/training-institution', loadComponent: () => import('@/Components/basic-setup/training-institution/training-institution').then(m => m.TrainingInstitution) },
+            { path: 'basic-setup/rank-equivalent', loadComponent: () => import('@/Components/basic-setup/rank-equivalent/rank-equivalent').then(m => m.RankEquivalent) },
+            { path: 'basic-setup/religion', loadComponent: () => import('@/Components/basic-setup/religion/religion').then(m => m.Religion) },
+            { path: 'basic-setup/rab-id-serial', loadComponent: () => import('@/Components/basic-setup/rab-id-serial/rab-id-serial').then(m => m.RabIdSerial) },
+            { path: 'basic-setup/absent-type', loadComponent: () => import('@/Components/basic-setup/absent-type/absent-type').then(m => m.AbsentType) },
+            { path: 'basic-setup/notesheet-template', loadComponent: () => import('@/Components/basic-setup/notesheet-template/notesheet-template').then(m => m.NotesheetTemplateComponent) },
+            { path: 'basic-setup/notesheet-number-config', loadComponent: () => import('@/Components/basic-setup/notesheet-number-config/notesheet-number-config').then(m => m.NoteSheetNumberConfigComponent) },
+            { path: 'basic-setup/leave-card-number-config', loadComponent: () => import('@/Components/basic-setup/leave-card-number-config/leave-card-number-config').then(m => m.LeaveCardNumberConfigComponent) },
+            { path: 'basic-setup/notesheet-approver-config', loadComponent: () => import('@/Components/basic-setup/notesheet-approver-config/notesheet-approver-config').then(m => m.NoteSheetApproverConfigComponent) },
+            { path: 'basic-setup/posting-order-number-config', loadComponent: () => import('@/Components/basic-setup/posting-order-number-config/posting-order-number-config').then(m => m.PostingOrderNumberConfigComponent) },
+            { path: 'basic-setup/onulipi-config', loadComponent: () => import('@/Components/basic-setup/onulipi-config/onulipi-config').then(m => m.OnulipiConfigComponent) },
+            { path: 'notesheet-generate', loadComponent: () => import('@/Components/Features/notesheet-generate/notesheet-generate').then(m => m.NotesheetGenerateComponent) },
+            { path: 'notesheet-ex-bd-leave', loadComponent: () => import('@/Components/Features/notesheet-ex-bd-leave/notesheet-ex-bd-leave').then(m => m.NotesheetExBdLeaveComponent) },
+            { path: 'ex-bd-leave/apply', loadComponent: () => import('@/Components/Features/ex-bd-leave-application/ex-bd-leave-apply/ex-bd-leave-apply.component').then(m => m.ExBdLeaveApplyComponent) },
+            { path: 'ex-bd-leave/apply/:id', loadComponent: () => import('@/Components/Features/ex-bd-leave-application/ex-bd-leave-apply/ex-bd-leave-apply.component').then(m => m.ExBdLeaveApplyComponent) },
+            { path: 'ex-bd-leave/list', loadComponent: () => import('@/Components/Features/ex-bd-leave-application/ex-bd-leave-list/ex-bd-leave-list.component').then(m => m.ExBdLeaveListComponent) },
             { path: 'notesheet-list', redirectTo: 'notesheet-list/draft', pathMatch: 'full' },
-            { path: 'notesheet-list/draft', component: NotesheetListComponent, data: { section: 'draft', noteSheetTypeFilter: 'General' } },
-            { path: 'notesheet-list/pending', component: NotesheetListComponent, data: { section: 'pending', noteSheetTypeFilter: 'General' } },
-            { path: 'notesheet-list/approved', component: NotesheetListComponent, data: { section: 'approved', noteSheetTypeFilter: 'General' } },
-            { path: 'notesheet-list/declined', component: NotesheetListComponent, data: { section: 'declined', noteSheetTypeFilter: 'General' } },
-            { path: 'notesheet-list/all', component: NotesheetListComponent, data: { section: 'all', noteSheetTypeFilter: 'General' } },
-            { path: 'notesheet-list/draft-ex-bd-leave', component: NotesheetListComponent, data: { section: 'draft', noteSheetTypeFilter: 'ExBDLeave' } },
-            { path: 'notesheet-list/pending-ex-bd-leave', component: NotesheetListComponent, data: { section: 'pending', noteSheetTypeFilter: 'ExBDLeave' } },
-            { path: 'notesheet-list/approved-ex-bd-leave', component: NotesheetListComponent, data: { section: 'approved', noteSheetTypeFilter: 'ExBDLeave' } },
-            { path: 'notesheet-list/declined-ex-bd-leave', component: NotesheetListComponent, data: { section: 'declined', noteSheetTypeFilter: 'ExBDLeave' } },
-            { path: 'notesheet-list/all-ex-bd-leave', component: NotesheetListComponent, data: { section: 'all', noteSheetTypeFilter: 'ExBDLeave' } },
-            { path: 'notesheet-list/pending-new-posting', component: NotesheetListComponent, data: { section: 'pending', noteSheetTypeFilter: 'NewPosting' } },
-            { path: 'notesheet-list/pending-finalized-new-posting', component: NotesheetListComponent, data: { section: 'draft', noteSheetTypeFilter: 'NewPosting' } },
-            { path: 'notesheet-list/approved-new-posting', component: NotesheetListComponent, data: { section: 'approved', noteSheetTypeFilter: 'NewPosting' } },
-            { path: 'notesheet-list/declined-new-posting', component: NotesheetListComponent, data: { section: 'declined', noteSheetTypeFilter: 'NewPosting' } },
-            { path: 'notesheet-list/all-new-posting', component: NotesheetListComponent, data: { section: 'all', noteSheetTypeFilter: 'NewPosting' } },
-            { path: 'notesheet-list/draft-inter-posting', component: NotesheetListComponent, data: { section: 'draft', noteSheetTypeFilter: 'InterPosting' } },
-            { path: 'notesheet-list/pending-inter-posting', component: NotesheetListComponent, data: { section: 'pending', noteSheetTypeFilter: 'InterPosting' } },
-            { path: 'notesheet-list/approved-inter-posting', component: NotesheetListComponent, data: { section: 'approved', noteSheetTypeFilter: 'InterPosting' } },
-            { path: 'notesheet-list/declined-inter-posting', component: NotesheetListComponent, data: { section: 'declined', noteSheetTypeFilter: 'InterPosting' } },
-            { path: 'notesheet-list/all-inter-posting', component: NotesheetListComponent, data: { section: 'all', noteSheetTypeFilter: 'InterPosting' } },
+            { path: 'notesheet-list/draft', loadComponent: () => import('@/Components/Features/notesheet-list/notesheet-list').then(m => m.NotesheetListComponent), data: { section: 'draft', noteSheetTypeFilter: 'General' } },
+            { path: 'notesheet-list/pending', loadComponent: () => import('@/Components/Features/notesheet-list/notesheet-list').then(m => m.NotesheetListComponent), data: { section: 'pending', noteSheetTypeFilter: 'General' } },
+            { path: 'notesheet-list/approved', loadComponent: () => import('@/Components/Features/notesheet-list/notesheet-list').then(m => m.NotesheetListComponent), data: { section: 'approved', noteSheetTypeFilter: 'General' } },
+            { path: 'notesheet-list/declined', loadComponent: () => import('@/Components/Features/notesheet-list/notesheet-list').then(m => m.NotesheetListComponent), data: { section: 'declined', noteSheetTypeFilter: 'General' } },
+            { path: 'notesheet-list/all', loadComponent: () => import('@/Components/Features/notesheet-list/notesheet-list').then(m => m.NotesheetListComponent), data: { section: 'all', noteSheetTypeFilter: 'General' } },
+            { path: 'notesheet-list/draft-ex-bd-leave', loadComponent: () => import('@/Components/Features/notesheet-list/notesheet-list').then(m => m.NotesheetListComponent), data: { section: 'draft', noteSheetTypeFilter: 'ExBDLeave' } },
+            { path: 'notesheet-list/pending-ex-bd-leave', loadComponent: () => import('@/Components/Features/notesheet-list/notesheet-list').then(m => m.NotesheetListComponent), data: { section: 'pending', noteSheetTypeFilter: 'ExBDLeave' } },
+            { path: 'notesheet-list/approved-ex-bd-leave', loadComponent: () => import('@/Components/Features/notesheet-list/notesheet-list').then(m => m.NotesheetListComponent), data: { section: 'approved', noteSheetTypeFilter: 'ExBDLeave' } },
+            { path: 'notesheet-list/declined-ex-bd-leave', loadComponent: () => import('@/Components/Features/notesheet-list/notesheet-list').then(m => m.NotesheetListComponent), data: { section: 'declined', noteSheetTypeFilter: 'ExBDLeave' } },
+            { path: 'notesheet-list/all-ex-bd-leave', loadComponent: () => import('@/Components/Features/notesheet-list/notesheet-list').then(m => m.NotesheetListComponent), data: { section: 'all', noteSheetTypeFilter: 'ExBDLeave' } },
+            { path: 'notesheet-list/pending-new-posting', loadComponent: () => import('@/Components/Features/notesheet-list/notesheet-list').then(m => m.NotesheetListComponent), data: { section: 'pending', noteSheetTypeFilter: 'NewPosting' } },
+            { path: 'notesheet-list/pending-finalized-new-posting', loadComponent: () => import('@/Components/Features/notesheet-list/notesheet-list').then(m => m.NotesheetListComponent), data: { section: 'draft', noteSheetTypeFilter: 'NewPosting' } },
+            { path: 'notesheet-list/approved-new-posting', loadComponent: () => import('@/Components/Features/notesheet-list/notesheet-list').then(m => m.NotesheetListComponent), data: { section: 'approved', noteSheetTypeFilter: 'NewPosting' } },
+            { path: 'notesheet-list/declined-new-posting', loadComponent: () => import('@/Components/Features/notesheet-list/notesheet-list').then(m => m.NotesheetListComponent), data: { section: 'declined', noteSheetTypeFilter: 'NewPosting' } },
+            { path: 'notesheet-list/all-new-posting', loadComponent: () => import('@/Components/Features/notesheet-list/notesheet-list').then(m => m.NotesheetListComponent), data: { section: 'all', noteSheetTypeFilter: 'NewPosting' } },
+            { path: 'notesheet-list/draft-inter-posting', loadComponent: () => import('@/Components/Features/notesheet-list/notesheet-list').then(m => m.NotesheetListComponent), data: { section: 'draft', noteSheetTypeFilter: 'InterPosting' } },
+            { path: 'notesheet-list/pending-inter-posting', loadComponent: () => import('@/Components/Features/notesheet-list/notesheet-list').then(m => m.NotesheetListComponent), data: { section: 'pending', noteSheetTypeFilter: 'InterPosting' } },
+            { path: 'notesheet-list/approved-inter-posting', loadComponent: () => import('@/Components/Features/notesheet-list/notesheet-list').then(m => m.NotesheetListComponent), data: { section: 'approved', noteSheetTypeFilter: 'InterPosting' } },
+            { path: 'notesheet-list/declined-inter-posting', loadComponent: () => import('@/Components/Features/notesheet-list/notesheet-list').then(m => m.NotesheetListComponent), data: { section: 'declined', noteSheetTypeFilter: 'InterPosting' } },
+            { path: 'notesheet-list/all-inter-posting', loadComponent: () => import('@/Components/Features/notesheet-list/notesheet-list').then(m => m.NotesheetListComponent), data: { section: 'all', noteSheetTypeFilter: 'InterPosting' } },
             // System-generate "My Approval" lists — per-logged-in-user, only note sheets currently awaiting their action.
-            { path: 'notesheet-list/my-approval', component: NotesheetListComponent, data: { section: 'my-pending', noteSheetTypeFilter: 'General' } },
-            { path: 'notesheet-list/my-approval-ex-bd-leave', component: NotesheetListComponent, data: { section: 'my-pending', noteSheetTypeFilter: 'ExBDLeave' } },
-            { path: 'notesheet-list/my-approval-new-posting', component: NotesheetListComponent, data: { section: 'my-pending', noteSheetTypeFilter: 'NewPosting' } },
-            { path: 'notesheet-list/my-approval-inter-posting', component: NotesheetListComponent, data: { section: 'my-pending', noteSheetTypeFilter: 'InterPosting' } },
-            { path: 'notesheet-preview', component: NotesheetPreviewComponent },
-            { path: 'notesheet-preview/general', component: NotesheetPreviewGeneralComponent },
-            { path: 'notesheet-preview/posting', component: NotesheetPreviewPostingComponent },
-            { path: 'notesheet-preview/exbd', component: NotesheetPreviewExbdComponent },
+            { path: 'notesheet-list/my-approval', loadComponent: () => import('@/Components/Features/notesheet-list/notesheet-list').then(m => m.NotesheetListComponent), data: { section: 'my-pending', noteSheetTypeFilter: 'General' } },
+            { path: 'notesheet-list/my-approval-ex-bd-leave', loadComponent: () => import('@/Components/Features/notesheet-list/notesheet-list').then(m => m.NotesheetListComponent), data: { section: 'my-pending', noteSheetTypeFilter: 'ExBDLeave' } },
+            { path: 'notesheet-list/my-approval-new-posting', loadComponent: () => import('@/Components/Features/notesheet-list/notesheet-list').then(m => m.NotesheetListComponent), data: { section: 'my-pending', noteSheetTypeFilter: 'NewPosting' } },
+            { path: 'notesheet-list/my-approval-inter-posting', loadComponent: () => import('@/Components/Features/notesheet-list/notesheet-list').then(m => m.NotesheetListComponent), data: { section: 'my-pending', noteSheetTypeFilter: 'InterPosting' } },
+            { path: 'notesheet-preview', loadComponent: () => import('@/Components/Features/notesheet-preview/notesheet-preview').then(m => m.NotesheetPreviewComponent) },
+            { path: 'notesheet-preview/general', loadComponent: () => import('@/Components/Features/notesheet-preview/general/notesheet-preview-general').then(m => m.NotesheetPreviewGeneralComponent) },
+            { path: 'notesheet-preview/posting', loadComponent: () => import('@/Components/Features/notesheet-preview/posting/notesheet-preview-posting').then(m => m.NotesheetPreviewPostingComponent) },
+            { path: 'notesheet-preview/exbd', loadComponent: () => import('@/Components/Features/notesheet-preview/exbd/notesheet-preview-exbd').then(m => m.NotesheetPreviewExbdComponent) },
 
             // Leave Application (apply and approve/reject - standalone from notesheet)
-            { path: 'leave-application/apply', component: LeaveApplicationApplyComponent },
-            { path: 'leave-application/list', component: LeaveApplicationListComponent },
-            { path: 'leave-application/pending-approval', component: LeavePendingApprovalListComponent },
-            { path: 'leave-application/preview', component: LeavePendingApprovalPreviewComponent },
-            { path: 'leave-application/history', component: LeaveHistoryListComponent },
-            { path: 'leave-application/my-applications', component: LeaveMyApplicationsComponent },
-            { path: 'leave-application/apply-for-other', component: LeaveApplyForOtherComponent },
-            { path: 'leave-application/action-taken-by-me', component: LeaveActionTakenByMeComponent },
-            { path: 'leave-application/card', component: LeaveCardComponent },
+            { path: 'leave-application/apply', loadComponent: () => import('@/Components/Features/leave-application/leave-application-apply/leave-application-apply.component').then(m => m.LeaveApplicationApplyComponent) },
+            { path: 'leave-application/list', loadComponent: () => import('@/Components/Features/leave-application/leave-application-list/leave-application-list.component').then(m => m.LeaveApplicationListComponent) },
+            { path: 'leave-application/pending-approval', loadComponent: () => import('@/Components/Features/leave-application/leave-pending-approval-list/leave-pending-approval-list.component').then(m => m.LeavePendingApprovalListComponent) },
+            { path: 'leave-application/preview', loadComponent: () => import('@/Components/Features/leave-application/leave-pending-approval-preview/leave-pending-approval-preview.component').then(m => m.LeavePendingApprovalPreviewComponent) },
+            { path: 'leave-application/history', loadComponent: () => import('@/Components/Features/leave-application/leave-history-list/leave-history-list.component').then(m => m.LeaveHistoryListComponent) },
+            { path: 'leave-application/my-applications', loadComponent: () => import('@/Components/Features/leave-application/leave-my-applications/leave-my-applications.component').then(m => m.LeaveMyApplicationsComponent) },
+            { path: 'leave-application/apply-for-other', loadComponent: () => import('@/Components/Features/leave-application/leave-apply-for-other/leave-apply-for-other.component').then(m => m.LeaveApplyForOtherComponent) },
+            { path: 'leave-application/action-taken-by-me', loadComponent: () => import('@/Components/Features/leave-application/leave-action-taken-by-me/leave-action-taken-by-me.component').then(m => m.LeaveActionTakenByMeComponent) },
+            { path: 'leave-application/card', loadComponent: () => import('@/Components/Features/leave-application/leave-card/leave-card.component').then(m => m.LeaveCardComponent) },
 
             // EMP
-            { path: 'emp-list', component: EmpList },
-            { path: 'emp-basic-info', component: EmpBasicInfo, canActivate: [MemberTypePermissionGuard] },
-            { path: 'serving-member-entry', component: ServingMemberEntry, canActivate: [MemberTypePermissionGuard] },
-            { path: 'service-posting-entry', component: ServicePostingEntry, canActivate: [MemberTypePermissionGuard] },
-            { path: 'emp-bulk-import', component: EmpBulkImport, canActivate: [MemberTypePermissionGuard] },
-            { path: 'emp-personal-service-info', component: EmpPersonalServiceInfoComponent, canActivate: [MemberTypePermissionGuard] },
-            { path: 'emp-personal-info', component: EmpPersonalInfo, canActivate: [MemberTypePermissionGuard] },
-            { path: 'emp-address-info', component: EmpAddressInfo, canActivate: [MemberTypePermissionGuard] },
-            { path: 'emp-family-info', component: EmpFamilyInfo, canActivate: [MemberTypePermissionGuard] },
-            { path: 'emp-nominee-info', component: EmpNomineeInfo, canActivate: [MemberTypePermissionGuard] },
-            { path: 'emp-previous-rab-service', component: EmpPreviousRabService, canActivate: [MemberTypePermissionGuard] },
-            { path: 'emp-service-history', component: EmpServiceHistory, canActivate: [MemberTypePermissionGuard] },
-            { path: 'emp-promotion-info', component: EmpPromotionInfo, canActivate: [MemberTypePermissionGuard] },
-            { path: 'emp-rank-confirmation', component: EmpRankConfirmationComponent, canActivate: [MemberTypePermissionGuard] },
-            { path: 'emp-education-info', component: EmpEducationInfoComponent, canActivate: [MemberTypePermissionGuard] },
-            { path: 'emp-course-info', component: EmpCourseInfoComponent, canActivate: [MemberTypePermissionGuard] },
-            { path: 'emp-send-to-course', component: EmpSendToCourseComponent, canActivate: [MemberTypePermissionGuard] },
-            { path: 'emp-rfts-course-ref', component: EmpRftsCourseRefComponent, canActivate: [MemberTypePermissionGuard] },
-            { path: 'emp-rfts-course-list', component: EmpRftsCourseListComponent, canActivate: [MemberTypePermissionGuard] },
-            { path: 'emp-draft-list', component: EmpDraftListComponent, canActivate: [MemberTypePermissionGuard] },
-            { path: 'emp-pending-final-approval', component: EmpPendingFinalApprovalComponent, canActivate: [MemberTypePermissionGuard] },
-            { path: 'emp-rfts-completed', component: EmpRftsCompletedComponent, canActivate: [MemberTypePermissionGuard] },
-            { path: 'emp-discipline-info', component: EmpDisciplineInfoComponent, canActivate: [MemberTypePermissionGuard] },
-            { path: 'emp-bank-account', component: EmpBankAccount, canActivate: [MemberTypePermissionGuard] },
-            { path: 'emp-foreign-visit', component: EmpForeignVisit, canActivate: [MemberTypePermissionGuard] },
-            { path: 'emp-leave-info', component: EmpLeaveInfo, canActivate: [MemberTypePermissionGuard] },
-            { path: 'emp-medical-category', component: EmpMedicalCategory, canActivate: [MemberTypePermissionGuard] },
-            { path: 'emp-additional-remarks', component: EmpAdditionalRemarks, canActivate: [MemberTypePermissionGuard] },
-            { path: 'emp-confidential-remarks', component: EmpConfidentialRemarks, canActivate: [MemberTypePermissionGuard] },
-            { path: 'emp-perm-posting-mother-org', component: EmpPermPostingMotherOrg, canActivate: [MemberTypePermissionGuard] },
-            { path: 'emp-present-status', component: EmpPresentStatus, canActivate: [MemberTypePermissionGuard] },
-            { path: 'emp-present-member-check', component: EmpPresentMemberCheckComponent, canActivate: [MemberTypePermissionGuard] },
-            { path: 'rab-id-allocation', component: RabIdAllocation },
-            { path: 'supernumerary-list', component: SupernumeraryList },
-            { path: 'supernumerary-profile/:id', component: SupernumeraryProfile },
-            { path: 'new-joinee-sending-notesheet', component: NewJoineeSendingNotesheet },
-            { path: 'posting/permanent-posting-mo-record', component: PermanentPostingMORecordComponent },
-            { path: 'posting/posted-out-person-list', component: PostedOutPersonListComponent },
-            { path: 'posting/new-joining-person-list', component: NewJoiningPersonListComponent },
-            { path: 'posting/posted-out-reliever-report', component: PostedOutRelieverReportComponent },
-            { path: 'posting/posted-out-served-report', component: PostedOutServedReportComponent },
-            { path: 'posting/add-draft-new-posting', component: AddDraftNewPostingComponent },
-            { path: 'posting/notesheet-generate', component: PostingNotesheetGenerateComponent },
-            { path: 'posting/add-draft-inter-posting', component: AddDraftInterPostingComponent },
-            { path: 'posting/inter-posting-notesheet-generate', component: InterPostingNotesheetGenerateComponent },
-            { path: 'posting/posting-order-generate', component: PostingOrderGenerateComponent, data: { postingType: 'NewPosting' } },
-            { path: 'posting/inter-posting-order-generate', component: PostingOrderGenerateComponent, data: { postingType: 'InterPosting' } },
-            { path: 'posting/posting-order-receive', component: PostingOrderReceiveComponent },
-            { path: 'posting/pending-posting-joining', component: PendingPostingJoiningComponent },
-            { path: 'posting/pending-joining-transfer-unit', component: PendingJoiningTransferUnitComponent },
-            { path: 'posting/pending-inter-joining-transfer-unit', component: PendingInterJoiningTransferUnitComponent },
-            { path: 'posting/pending-inter-posting-joining', component: PendingInterPostingJoiningComponent },
-            { path: 'posting/posting-order-list', component: PostingOrderListComponent },
-            { path: 'posting/posting-order-preview', component: PostingOrderPreviewPageComponent },
-            { path: 'office-order/generate', component: OfficeOrderGenerateComponent },
-            { path: 'office-order/preview', component: OfficeOrderPreviewComponent },
-            { path: 'office-order-ex-bd-leave/generate', component: OfficeOrderExBdLeaveGenerateComponent },
-            { path: 'office-order-ex-bd-leave/list', component: OfficeOrderExBdLeavePreviewComponent },
-            { path: 'office-order-ex-bd-leave/preview', component: OfficeOrderExBdLeavePreviewComponent },
-            { path: 'clearance-ex-bd-leave/generate', component: ClearanceExBdLeaveGenerateComponent },
-            { path: 'clearance-ex-bd-leave/preview', component: ClearanceExBdLeavePreviewComponent },
-            { path: 'clearance-ex-bd-leave-list', component: ClearanceExBdLeaveListComponent },
-            { path: 'employee-signature-upload', component: EmployeeSignatureUploadComponent },
-            { path: 'employee-face-search', component: EmployeeFaceSearchComponent },
-            { path: 'employee-face-search-history', component: EmployeeFaceSearchHistoryComponent },
-            { path: 'presently-serving-members', component: PresentlyServingMembers },
-            { path: 'serving-members-for-inter-posting', component: PresentlyServingMembers, data: { mode: 'interPosting' } },
-            { path: 'presently-serving-members/organogram', component: OrgTreeServingComponent },
-            { path: 'organogram', component: RabOrganogramComponent },
-            { path: 'presently-serving-members/rab-organogram-members', component: RabOrganogramMembersComponent },
-            { path: 'presently-serving-members/profile/:employeeId', component: ServingMemberProfile },
-            { path: 'ex-members', component: ExMembers },
-            { path: 'ex-members/profile/:employeeId', component: ExMemberProfile },
-            { path: 'members/profile/:employeeId', component: ExMemberProfile },
+            { path: 'emp-list', loadComponent: () => import('@/Components/Features/Emp/emp-list/emp-list').then(m => m.EmpList) },
+            { path: 'emp-basic-info', loadComponent: () => import('@/Components/Features/Emp/emp-basic-info/emp-basic-info').then(m => m.EmpBasicInfo), canActivate: [MemberTypePermissionGuard] },
+            { path: 'serving-member-entry', loadComponent: () => import('@/Components/Features/Emp/serving-member-entry/serving-member-entry').then(m => m.ServingMemberEntry), canActivate: [MemberTypePermissionGuard] },
+            { path: 'service-posting-entry', loadComponent: () => import('@/Components/Features/Emp/service-posting-entry/service-posting-entry').then(m => m.ServicePostingEntry), canActivate: [MemberTypePermissionGuard] },
+            { path: 'emp-bulk-import', loadComponent: () => import('@/Components/Features/Emp/emp-bulk-import/emp-bulk-import').then(m => m.EmpBulkImport), canActivate: [MemberTypePermissionGuard] },
+            { path: 'emp-personal-service-info', loadComponent: () => import('@/Components/Features/Emp/emp-personal-service-info/emp-personal-service-info').then(m => m.EmpPersonalServiceInfoComponent), canActivate: [MemberTypePermissionGuard] },
+            { path: 'emp-personal-info', loadComponent: () => import('@/Components/Features/Emp/emp-personal-info/emp-personal-info').then(m => m.EmpPersonalInfo), canActivate: [MemberTypePermissionGuard] },
+            { path: 'emp-address-info', loadComponent: () => import('@/Components/Features/Emp/emp-address-info/emp-address-info').then(m => m.EmpAddressInfo), canActivate: [MemberTypePermissionGuard] },
+            { path: 'emp-family-info', loadComponent: () => import('@/Components/Features/Emp/emp-family-info/emp-family-info').then(m => m.EmpFamilyInfo), canActivate: [MemberTypePermissionGuard] },
+            { path: 'emp-nominee-info', loadComponent: () => import('@/Components/Features/Emp/emp-nominee-info/emp-nominee-info').then(m => m.EmpNomineeInfo), canActivate: [MemberTypePermissionGuard] },
+            { path: 'emp-previous-rab-service', loadComponent: () => import('@/Components/Features/Emp/emp-previous-rab-service/emp-previous-rab-service').then(m => m.EmpPreviousRabService), canActivate: [MemberTypePermissionGuard] },
+            { path: 'emp-service-history', loadComponent: () => import('@/Components/Features/Emp/emp-service-history/emp-service-history').then(m => m.EmpServiceHistory), canActivate: [MemberTypePermissionGuard] },
+            { path: 'emp-promotion-info', loadComponent: () => import('@/Components/Features/Emp/emp-promotion-info/emp-promotion-info').then(m => m.EmpPromotionInfo), canActivate: [MemberTypePermissionGuard] },
+            { path: 'emp-rank-confirmation', loadComponent: () => import('@/Components/Features/Emp/emp-rank-confirmation/emp-rank-confirmation').then(m => m.EmpRankConfirmationComponent), canActivate: [MemberTypePermissionGuard] },
+            { path: 'emp-education-info', loadComponent: () => import('@/Components/Features/Emp/emp-education-info/emp-education-info').then(m => m.EmpEducationInfoComponent), canActivate: [MemberTypePermissionGuard] },
+            { path: 'emp-course-info', loadComponent: () => import('@/Components/Features/Emp/emp-course-info/emp-course-info').then(m => m.EmpCourseInfoComponent), canActivate: [MemberTypePermissionGuard] },
+            { path: 'emp-send-to-course', loadComponent: () => import('@/Components/Features/Emp/emp-send-to-course/emp-send-to-course').then(m => m.EmpSendToCourseComponent), canActivate: [MemberTypePermissionGuard] },
+            { path: 'emp-rfts-course-ref', loadComponent: () => import('@/Components/Features/Emp/emp-rfts-course-ref/emp-rfts-course-ref').then(m => m.EmpRftsCourseRefComponent), canActivate: [MemberTypePermissionGuard] },
+            { path: 'emp-rfts-course-list', loadComponent: () => import('@/Components/Features/Emp/emp-rfts-course-list/emp-rfts-course-list').then(m => m.EmpRftsCourseListComponent), canActivate: [MemberTypePermissionGuard] },
+            { path: 'emp-draft-list', loadComponent: () => import('@/Components/Features/Emp/emp-draft-list/emp-draft-list').then(m => m.EmpDraftListComponent), canActivate: [MemberTypePermissionGuard] },
+            { path: 'emp-pending-final-approval', loadComponent: () => import('@/Components/Features/Emp/emp-pending-final-approval/emp-pending-final-approval').then(m => m.EmpPendingFinalApprovalComponent), canActivate: [MemberTypePermissionGuard] },
+            { path: 'emp-rfts-completed', loadComponent: () => import('@/Components/Features/Emp/emp-rfts-completed/emp-rfts-completed').then(m => m.EmpRftsCompletedComponent), canActivate: [MemberTypePermissionGuard] },
+            { path: 'emp-discipline-info', loadComponent: () => import('@/Components/Features/Emp/emp-discipline-info/emp-discipline-info').then(m => m.EmpDisciplineInfoComponent), canActivate: [MemberTypePermissionGuard] },
+            { path: 'emp-bank-account', loadComponent: () => import('@/Components/Features/Emp/emp-bank-account/emp-bank-account.component').then(m => m.EmpBankAccount), canActivate: [MemberTypePermissionGuard] },
+            { path: 'emp-foreign-visit', loadComponent: () => import('@/Components/Features/Emp/emp-foreign-visit/emp-foreign-visit.component').then(m => m.EmpForeignVisit), canActivate: [MemberTypePermissionGuard] },
+            { path: 'emp-leave-info', loadComponent: () => import('@/Components/Features/Emp/emp-leave-info/emp-leave-info.component').then(m => m.EmpLeaveInfo), canActivate: [MemberTypePermissionGuard] },
+            { path: 'emp-medical-category', loadComponent: () => import('@/Components/Features/Emp/emp-medical-category/emp-medical-category.component').then(m => m.EmpMedicalCategory), canActivate: [MemberTypePermissionGuard] },
+            { path: 'emp-additional-remarks', loadComponent: () => import('@/Components/Features/Emp/emp-additional-remarks/emp-additional-remarks.component').then(m => m.EmpAdditionalRemarks), canActivate: [MemberTypePermissionGuard] },
+            { path: 'emp-confidential-remarks', loadComponent: () => import('@/Components/Features/Emp/emp-confidential-remarks/emp-confidential-remarks.component').then(m => m.EmpConfidentialRemarks), canActivate: [MemberTypePermissionGuard] },
+            { path: 'emp-perm-posting-mother-org', loadComponent: () => import('@/Components/Features/Emp/emp-perm-posting-mother-org/emp-perm-posting-mother-org.component').then(m => m.EmpPermPostingMotherOrg), canActivate: [MemberTypePermissionGuard] },
+            { path: 'emp-present-status', loadComponent: () => import('@/Components/Features/Emp/emp-present-status/emp-present-status').then(m => m.EmpPresentStatus), canActivate: [MemberTypePermissionGuard] },
+            { path: 'emp-present-member-check', loadComponent: () => import('@/Components/Features/Emp/emp-present-member-check/emp-present-member-check.component').then(m => m.EmpPresentMemberCheckComponent), canActivate: [MemberTypePermissionGuard] },
+            { path: 'rab-id-allocation', loadComponent: () => import('@/Components/Features/rab-id-allocation/rab-id-allocation').then(m => m.RabIdAllocation) },
+            { path: 'supernumerary-list', loadComponent: () => import('@/Components/Features/supernumerary-list/supernumerary-list').then(m => m.SupernumeraryList) },
+            { path: 'supernumerary-profile/:id', loadComponent: () => import('@/Components/Features/supernumerary-profile/supernumerary-profile').then(m => m.SupernumeraryProfile) },
+            { path: 'new-joinee-sending-notesheet', loadComponent: () => import('@/Components/Features/new-joinee-sending-notesheet/new-joinee-sending-notesheet').then(m => m.NewJoineeSendingNotesheet) },
+            { path: 'posting/permanent-posting-mo-record', loadComponent: () => import('@/Components/Features/permanent-posting-mo-record/permanent-posting-mo-record').then(m => m.PermanentPostingMORecordComponent) },
+            { path: 'posting/posted-out-person-list', loadComponent: () => import('@/Components/Features/posted-out-person-list/posted-out-person-list').then(m => m.PostedOutPersonListComponent) },
+            { path: 'posting/new-joining-person-list', loadComponent: () => import('@/Components/Features/new-joining-person-list/new-joining-person-list').then(m => m.NewJoiningPersonListComponent) },
+            { path: 'posting/posted-out-reliever-report', loadComponent: () => import('@/Components/Features/posted-out-reliever-report/posted-out-reliever-report').then(m => m.PostedOutRelieverReportComponent) },
+            { path: 'posting/posted-out-served-report', loadComponent: () => import('@/Components/Features/posted-out-served-report/posted-out-served-report').then(m => m.PostedOutServedReportComponent) },
+            { path: 'posting/add-draft-new-posting', loadComponent: () => import('@/Components/Features/add-draft-new-posting/add-draft-new-posting').then(m => m.AddDraftNewPostingComponent) },
+            { path: 'posting/notesheet-generate', loadComponent: () => import('@/Components/Features/posting-notesheet-generate/posting-notesheet-generate').then(m => m.PostingNotesheetGenerateComponent) },
+            { path: 'posting/add-draft-inter-posting', loadComponent: () => import('@/Components/Features/add-draft-inter-posting/add-draft-inter-posting').then(m => m.AddDraftInterPostingComponent) },
+            { path: 'posting/inter-posting-notesheet-generate', loadComponent: () => import('@/Components/Features/inter-posting-notesheet-generate/inter-posting-notesheet-generate').then(m => m.InterPostingNotesheetGenerateComponent) },
+            { path: 'posting/posting-order-generate', loadComponent: () => import('@/Components/Features/posting-order-generate/posting-order-generate').then(m => m.PostingOrderGenerateComponent), data: { postingType: 'NewPosting' } },
+            { path: 'posting/inter-posting-order-generate', loadComponent: () => import('@/Components/Features/posting-order-generate/posting-order-generate').then(m => m.PostingOrderGenerateComponent), data: { postingType: 'InterPosting' } },
+            { path: 'posting/posting-order-receive', loadComponent: () => import('@/Components/Features/posting-order-receive/posting-order-receive').then(m => m.PostingOrderReceiveComponent) },
+            { path: 'posting/pending-posting-joining', loadComponent: () => import('@/Components/Features/pending-posting-joining/pending-posting-joining').then(m => m.PendingPostingJoiningComponent) },
+            { path: 'posting/pending-joining-transfer-unit', loadComponent: () => import('@/Components/Features/pending-joining-transfer-unit/pending-joining-transfer-unit').then(m => m.PendingJoiningTransferUnitComponent) },
+            { path: 'posting/pending-inter-joining-transfer-unit', loadComponent: () => import('@/Components/Features/pending-inter-joining-transfer-unit/pending-inter-joining-transfer-unit').then(m => m.PendingInterJoiningTransferUnitComponent) },
+            { path: 'posting/pending-inter-posting-joining', loadComponent: () => import('@/Components/Features/pending-inter-posting-joining/pending-inter-posting-joining').then(m => m.PendingInterPostingJoiningComponent) },
+            { path: 'posting/posting-order-list', loadComponent: () => import('@/Components/Features/posting-order-list/posting-order-list').then(m => m.PostingOrderListComponent) },
+            { path: 'posting/posting-order-preview', loadComponent: () => import('@/Components/Features/posting-order-preview/posting-order-preview').then(m => m.PostingOrderPreviewPageComponent) },
+            { path: 'office-order/generate', loadComponent: () => import('@/Components/Features/office-order-generate/office-order-generate').then(m => m.OfficeOrderGenerateComponent) },
+            { path: 'office-order/preview', loadComponent: () => import('@/Components/Features/office-order-preview/office-order-preview').then(m => m.OfficeOrderPreviewComponent) },
+            { path: 'office-order-ex-bd-leave/generate', loadComponent: () => import('@/Components/Features/office-order-ex-bd-leave-generate/office-order-ex-bd-leave-generate').then(m => m.OfficeOrderExBdLeaveGenerateComponent) },
+            { path: 'office-order-ex-bd-leave/list', loadComponent: () => import('@/Components/Features/office-order-ex-bd-leave-preview/office-order-ex-bd-leave-preview').then(m => m.OfficeOrderExBdLeavePreviewComponent) },
+            { path: 'office-order-ex-bd-leave/preview', loadComponent: () => import('@/Components/Features/office-order-ex-bd-leave-preview/office-order-ex-bd-leave-preview').then(m => m.OfficeOrderExBdLeavePreviewComponent) },
+            { path: 'clearance-ex-bd-leave/generate', loadComponent: () => import('@/Components/Features/clearance-ex-bd-leave-generate/clearance-ex-bd-leave-generate').then(m => m.ClearanceExBdLeaveGenerateComponent) },
+            { path: 'clearance-ex-bd-leave/preview', loadComponent: () => import('@/Components/Features/clearance-ex-bd-leave-preview/clearance-ex-bd-leave-preview').then(m => m.ClearanceExBdLeavePreviewComponent) },
+            { path: 'clearance-ex-bd-leave-list', loadComponent: () => import('@/Components/Features/clearance-ex-bd-leave-list/clearance-ex-bd-leave-list').then(m => m.ClearanceExBdLeaveListComponent) },
+            { path: 'employee-signature-upload', loadComponent: () => import('@/Components/Features/employee-signature-upload/employee-signature-upload').then(m => m.EmployeeSignatureUploadComponent) },
+            { path: 'employee-face-search', loadComponent: () => import('@/Components/Features/employee-face-search/employee-face-search').then(m => m.EmployeeFaceSearchComponent) },
+            { path: 'employee-face-search-history', loadComponent: () => import('@/Components/Features/employee-face-search-history/employee-face-search-history').then(m => m.EmployeeFaceSearchHistoryComponent) },
+            { path: 'presently-serving-members', loadComponent: () => import('@/Components/Features/presently-serving-members/presently-serving-members').then(m => m.PresentlyServingMembers) },
+            { path: 'serving-members-for-inter-posting', loadComponent: () => import('@/Components/Features/presently-serving-members/presently-serving-members').then(m => m.PresentlyServingMembers), data: { mode: 'interPosting' } },
+            { path: 'presently-serving-members/organogram', loadComponent: () => import('@/Components/Features/presently-serving-members/org-tree-serving/org-tree-serving').then(m => m.OrgTreeServingComponent) },
+            { path: 'organogram', loadComponent: () => import('@/Components/Features/presently-serving-members/rab-organogram/rab-organogram').then(m => m.RabOrganogramComponent) },
+            { path: 'presently-serving-members/rab-organogram-members', loadComponent: () => import('@/Components/Features/presently-serving-members/rab-organogram/rab-organogram-members/rab-organogram-members').then(m => m.RabOrganogramMembersComponent) },
+            { path: 'presently-serving-members/profile/:employeeId', loadComponent: () => import('@/Components/Features/presently-serving-members/serving-member-profile/serving-member-profile').then(m => m.ServingMemberProfile) },
+            { path: 'ex-members', loadComponent: () => import('@/Components/Features/ex-members/ex-members').then(m => m.ExMembers) },
+            { path: 'ex-members/profile/:employeeId', loadComponent: () => import('@/Components/Features/ex-members/ex-member-profile/ex-member-profile').then(m => m.ExMemberProfile) },
+            { path: 'members/profile/:employeeId', loadComponent: () => import('@/Components/Features/ex-members/ex-member-profile/ex-member-profile').then(m => m.ExMemberProfile) },
 
             // Employee Reports
-            { path: 'employee-reports', component: EmployeeReportsComponent },
-            { path: 'report-family-occupation', component: ReportFamilyOccupationComponent },
-            { path: 'report-rfts-completion', component: ReportRftsCompletionComponent },
-            { path: 'report-address-location', component: ReportAddressLocationComponent },
-            { path: 'report-dynamic', component: ReportDynamicComponent },
-            { path: 'member-type-reporting', component: ReportMemberTypeServingComponent },
-            { path: 'report-pending-inter-posting', component: ReportPendingInterPostingComponent },
-            { path: 'report-supernumerary', component: ReportSupernumeraryComponent },
-            { path: 'report-present-status-by-mother-org', component: ReportPresentStatusByMotherOrgComponent },
-            { path: 'report-present-status-unit-wise', component: ReportPresentStatusUnitWiseComponent },
-            { path: 'report-unit-duration-nominal-roll', component: ReportUnitDurationNominalRollComponent },
-            { path: 'report-long-stay-nominal-roll', component: ReportLongStayNominalRollComponent },
-            { path: 'report-stay-after-reliever-joined', component: ReportStayAfterRelieverJoinedComponent },
-            { path: 'report-near-home-district', component: ReportNearHomeDistrictComponent },
-            { path: 'report-joining-leave', component: ReportJoiningLeaveComponent },
-            { path: 'report-movement', component: ReportMovementComponent },
-            { path: 'report-leave', component: ReportLeaveComponent },
-            { path: 'report-punishment', component: ReportPunishmentComponent },
-            { path: 'report-present-status', component: ReportPresentStatusComponent },
-            { path: 'report-rank-wise', component: ReportRankWiseComponent },
-            { path: 'report-deceased', component: ReportDeceasedComponent },
-            { path: 'report-confidential-remarks', component: ReportConfidentialRemarksComponent },
+            { path: 'employee-reports', loadComponent: () => import('@/Components/Features/employee-reports/employee-reports.component').then(m => m.EmployeeReportsComponent) },
+            { path: 'report-family-occupation', loadComponent: () => import('@/Components/Features/employee-reports/report-family-occupation/report-family-occupation.component').then(m => m.ReportFamilyOccupationComponent) },
+            { path: 'report-rfts-completion', loadComponent: () => import('@/Components/Features/employee-reports/report-rfts-completion/report-rfts-completion.component').then(m => m.ReportRftsCompletionComponent) },
+            { path: 'report-address-location', loadComponent: () => import('@/Components/Features/employee-reports/report-address-location/report-address-location.component').then(m => m.ReportAddressLocationComponent) },
+            { path: 'report-dynamic', loadComponent: () => import('@/Components/Features/employee-reports/report-dynamic/report-dynamic.component').then(m => m.ReportDynamicComponent) },
+            { path: 'member-type-reporting', loadComponent: () => import('@/Components/Features/employee-reports/report-member-type-serving/report-member-type-serving.component').then(m => m.ReportMemberTypeServingComponent) },
+            { path: 'report-pending-inter-posting', loadComponent: () => import('@/Components/Features/employee-reports/report-pending-inter-posting/report-pending-inter-posting.component').then(m => m.ReportPendingInterPostingComponent) },
+            { path: 'report-supernumerary', loadComponent: () => import('@/Components/Features/employee-reports/report-supernumerary/report-supernumerary.component').then(m => m.ReportSupernumeraryComponent) },
+            { path: 'report-present-status-by-mother-org', loadComponent: () => import('@/Components/Features/employee-reports/report-present-status-by-mother-org/report-present-status-by-mother-org.component').then(m => m.ReportPresentStatusByMotherOrgComponent) },
+            { path: 'report-present-status-unit-wise', loadComponent: () => import('@/Components/Features/employee-reports/report-present-status-unit-wise/report-present-status-unit-wise.component').then(m => m.ReportPresentStatusUnitWiseComponent) },
+            { path: 'report-unit-duration-nominal-roll', loadComponent: () => import('@/Components/Features/employee-reports/report-unit-duration-nominal-roll/report-unit-duration-nominal-roll.component').then(m => m.ReportUnitDurationNominalRollComponent) },
+            { path: 'report-long-stay-nominal-roll', loadComponent: () => import('@/Components/Features/employee-reports/report-long-stay-nominal-roll/report-long-stay-nominal-roll.component').then(m => m.ReportLongStayNominalRollComponent) },
+            { path: 'report-stay-after-reliever-joined', loadComponent: () => import('@/Components/Features/employee-reports/report-stay-after-reliever-joined/report-stay-after-reliever-joined.component').then(m => m.ReportStayAfterRelieverJoinedComponent) },
+            { path: 'report-near-home-district', loadComponent: () => import('@/Components/Features/employee-reports/report-near-home-district/report-near-home-district.component').then(m => m.ReportNearHomeDistrictComponent) },
+            { path: 'report-joining-leave', loadComponent: () => import('@/Components/Features/employee-reports/report-joining-leave/report-joining-leave.component').then(m => m.ReportJoiningLeaveComponent) },
+            { path: 'report-movement', loadComponent: () => import('@/Components/Features/employee-reports/report-movement/report-movement.component').then(m => m.ReportMovementComponent) },
+            { path: 'report-leave', loadComponent: () => import('@/Components/Features/employee-reports/report-leave/report-leave.component').then(m => m.ReportLeaveComponent) },
+            { path: 'report-punishment', loadComponent: () => import('@/Components/Features/employee-reports/report-punishment/report-punishment.component').then(m => m.ReportPunishmentComponent) },
+            { path: 'report-present-status', loadComponent: () => import('@/Components/Features/employee-reports/report-present-status/report-present-status.component').then(m => m.ReportPresentStatusComponent) },
+            { path: 'report-rank-wise', loadComponent: () => import('@/Components/Features/employee-reports/report-rank-wise/report-rank-wise.component').then(m => m.ReportRankWiseComponent) },
+            { path: 'report-deceased', loadComponent: () => import('@/Components/Features/employee-reports/report-deceased/report-deceased.component').then(m => m.ReportDeceasedComponent) },
+            { path: 'report-confidential-remarks', loadComponent: () => import('@/Components/Features/employee-reports/report-confidential-remarks/report-confidential-remarks.component').then(m => m.ReportConfidentialRemarksComponent) },
 
             // Individual Personnel Report (parent with dropdown — Course, then more)
-            { path: 'individual-reports', component: IndividualReportsComponent },
+            { path: 'individual-reports', loadComponent: () => import('@/Components/Features/individual-reports/individual-reports.component').then(m => m.IndividualReportsComponent) },
 
             // Statistics
-            { path: 'statistics/manpower-summary', component: ManpowerSummaryComponent },
-            { path: 'statistics/manpower-summary-equivalent', component: ManpowerSummaryEquivalentComponent },
-            { path: 'statistics/manpower-chart', component: ManpowerChartComponent },
-            { path: 'statistics/manpower-chart-equivalent', component: ManpowerChartEquivalentComponent },
-            { path: 'statistics/rank-wise-manpower', component: RankWiseManpowerComponent },
-            { path: 'statistics/equivalent-name-wise-manpower', component: EquivalentNameWiseManpowerComponent },
-            { path: 'statistics/mother-unit-wise-manpower', component: MotherUnitWiseManpowerComponent },
-            { path: 'statistics/corps-wise-manpower', component: CorpsWiseManpowerComponent },
-            { path: 'statistics/trade-wise-manpower', component: TradeWiseManpowerComponent },
-            { path: 'statistics/member-type-wise-manpower', component: MemberTypeWiseManpowerComponent },
-            { path: 'statistics/member-type-wise-equivalent-manpower', component: MemberTypeWiseEquivalentManpowerComponent },
-            { path: 'statistics/unit-wise-bar-chart', component: UnitWiseBarChartComponent },
-            { path: 'statistics/unit-rank-wise-manpower', component: UnitRankWiseManpowerComponent },
-            { path: 'statistics/unit-rank-wise-equivalent-manpower', component: UnitRankWiseEquivalentManpowerComponent },
-            { path: 'statistics/unit-trade-wise-manpower', component: UnitTradeWiseManpowerComponent },
-            { path: 'statistics/unit-special-qualification-wise-manpower', component: UnitSpecialQualificationWiseManpowerComponent },
+            { path: 'statistics/manpower-summary', loadComponent: () => import('@/Components/Features/statistics/manpower-summary/manpower-summary').then(m => m.ManpowerSummaryComponent) },
+            { path: 'statistics/manpower-summary-equivalent', loadComponent: () => import('@/Components/Features/statistics/manpower-summary-equivalent/manpower-summary-equivalent').then(m => m.ManpowerSummaryEquivalentComponent) },
+            { path: 'statistics/manpower-chart', loadComponent: () => import('@/Components/Features/statistics/manpower-chart/manpower-chart').then(m => m.ManpowerChartComponent) },
+            { path: 'statistics/manpower-chart-equivalent', loadComponent: () => import('@/Components/Features/statistics/manpower-chart-equivalent/manpower-chart-equivalent').then(m => m.ManpowerChartEquivalentComponent) },
+            { path: 'statistics/rank-wise-manpower', loadComponent: () => import('@/Components/Features/statistics/rank-wise-manpower/rank-wise-manpower').then(m => m.RankWiseManpowerComponent) },
+            { path: 'statistics/equivalent-name-wise-manpower', loadComponent: () => import('@/Components/Features/statistics/equivalent-name-wise-manpower/equivalent-name-wise-manpower').then(m => m.EquivalentNameWiseManpowerComponent) },
+            { path: 'statistics/mother-unit-wise-manpower', loadComponent: () => import('@/Components/Features/statistics/mother-unit-wise-manpower/mother-unit-wise-manpower').then(m => m.MotherUnitWiseManpowerComponent) },
+            { path: 'statistics/corps-wise-manpower', loadComponent: () => import('@/Components/Features/statistics/corps-wise-manpower/corps-wise-manpower').then(m => m.CorpsWiseManpowerComponent) },
+            { path: 'statistics/trade-wise-manpower', loadComponent: () => import('@/Components/Features/statistics/trade-wise-manpower/trade-wise-manpower').then(m => m.TradeWiseManpowerComponent) },
+            { path: 'statistics/member-type-wise-manpower', loadComponent: () => import('@/Components/Features/statistics/member-type-wise-manpower/member-type-wise-manpower').then(m => m.MemberTypeWiseManpowerComponent) },
+            { path: 'statistics/member-type-wise-equivalent-manpower', loadComponent: () => import('@/Components/Features/statistics/member-type-wise-equivalent-manpower/member-type-wise-equivalent-manpower').then(m => m.MemberTypeWiseEquivalentManpowerComponent) },
+            { path: 'statistics/unit-wise-bar-chart', loadComponent: () => import('@/Components/Features/statistics/unit-wise-bar-chart/unit-wise-bar-chart').then(m => m.UnitWiseBarChartComponent) },
+            { path: 'statistics/unit-rank-wise-manpower', loadComponent: () => import('@/Components/Features/statistics/unit-rank-wise-manpower/unit-rank-wise-manpower').then(m => m.UnitRankWiseManpowerComponent) },
+            { path: 'statistics/unit-rank-wise-equivalent-manpower', loadComponent: () => import('@/Components/Features/statistics/unit-rank-wise-equivalent-manpower/unit-rank-wise-equivalent-manpower').then(m => m.UnitRankWiseEquivalentManpowerComponent) },
+            { path: 'statistics/unit-trade-wise-manpower', loadComponent: () => import('@/Components/Features/statistics/unit-trade-wise-manpower/unit-trade-wise-manpower').then(m => m.UnitTradeWiseManpowerComponent) },
+            { path: 'statistics/unit-special-qualification-wise-manpower', loadComponent: () => import('@/Components/Features/statistics/unit-special-qualification-wise-manpower/unit-special-qualification-wise-manpower').then(m => m.UnitSpecialQualificationWiseManpowerComponent) },
 
             // Dynamic Search
-            { path: 'dynamic-search', component: DynamicSearchComponent },
+            { path: 'dynamic-search', loadComponent: () => import('@/Components/Shared/dynamic-search/dynamic-search').then(m => m.DynamicSearchComponent) },
 
             // System Monitoring
-            { path: 'system-monitoring', component: SystemMonitoringComponent },
+            { path: 'system-monitoring', loadComponent: () => import('@/Components/Features/system-monitoring/system-monitoring').then(m => m.SystemMonitoringComponent) },
 
             // Menu Management
-            { path: 'menu-management', component: MenuManagement },
+            { path: 'menu-management', loadComponent: () => import('@/Components/Features/menu-management/menu-management').then(m => m.MenuManagement) },
 
             // Role Menu Permissions
-            { path: 'identity/role-menu-permission', component: RoleMenuPermission },
+            { path: 'identity/role-menu-permission', loadComponent: () => import('@/Components/Features/role-menu-permission/role-menu-permission').then(m => m.RoleMenuPermission) },
 
             // Login Audit
-            { path: 'identity/login-audit', component: LoginAuditComponent },
-            { path: 'identity/my-login-audit', component: MyLoginAuditComponent },
+            { path: 'identity/login-audit', loadComponent: () => import('@/Components/Features/login-audit/login-audit.component').then(m => m.LoginAuditComponent) },
+            { path: 'identity/my-login-audit', loadComponent: () => import('@/Components/Features/my-login-audit/my-login-audit.component').then(m => m.MyLoginAuditComponent) },
 
             // Change Password
-            { path: 'change-password', component: ChangePassword },
+            { path: 'change-password', loadComponent: () => import('@/Components/Features/Authentication/change-password/change-password').then(m => m.ChangePassword) },
 
             // Settings
-            { path: 'settings/session-policy', component: SessionPolicyComponent },
+            { path: 'settings/session-policy', loadComponent: () => import('@/Components/Features/settings/session-policy/session-policy.component').then(m => m.SessionPolicyComponent) },
 
             { path: 'uikit', loadChildren: () => import('./app/pages/uikit/uikit.routes') },
-            { path: 'documentation', component: Documentation },
+            { path: 'documentation', loadComponent: () => import('./app/pages/documentation/documentation').then(m => m.Documentation) },
             { path: 'pages', loadChildren: () => import('./app/pages/pages.routes') }
         ]
     },

@@ -43,6 +43,8 @@ export interface ServingMemberFilterRequest {
     appointmentId?: number | null;
     /** Subtree filter: placement under this CommonCode org node (inclusive). */
     organogramNodeCodeId?: number | null;
+    /** Single-box quick search: matches Service ID OR RAB ID (contains). */
+    quickSearch?: string;
 }
 
 /** Rollup serving counts per org tree node (API: GetServingOrganogramCounts). */

@@ -826,7 +826,7 @@ export class ServingMemberProfile implements OnInit, OnDestroy {
         const labels: Record<string, string> = {
             PersonalInfo: 'Personal Info',
             EmployeeInfo: 'Employee Info',
-            PreviousRABServiceInfo: 'Previous RAB Service',
+            PreviousRABServiceInfo: 'Previous SRB Service',
             PromotionInfo: 'Promotion',
             RankConfirmationInfo: 'Rank Confirmation',
             BankAccInfo: 'Bank Account',

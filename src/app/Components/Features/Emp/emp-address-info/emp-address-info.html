@@ -15,7 +15,7 @@
         <!-- Employee Search Section - Only show in search mode (form-section for same left align as form) -->
         @if (mode === 'search') {
         <div class="form-section">
-            <app-employee-search (onEmployeeFound)="onEmployeeSearchFound($event)" (onSearchReset)="onEmployeeSearchReset()"> </app-employee-search>
+            <app-employee-search [exMemberNotice]="true" (onEmployeeFound)="onEmployeeSearchFound($event)" (onSearchReset)="onEmployeeSearchReset()"> </app-employee-search>
         </div>
         }
 

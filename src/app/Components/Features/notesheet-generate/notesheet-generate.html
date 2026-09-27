@@ -196,6 +196,25 @@
           </div>
         </div>
 
+        <!-- Show the members table in the note sheet? Members stay linked either way. -->
+        <div class="form-row">
+          <div class="form-field" style="flex-basis: 100%">
+            <div style="display: flex; align-items: flex-start; gap: 0.5rem;">
+              <p-checkbox formControlName="showMembersTable" [binary]="true" inputId="showMembersTable"></p-checkbox>
+              <div style="line-height: 1.3;">
+                <label for="showMembersTable" style="cursor: pointer; font-weight: 500;">Show members table in the note sheet</label>
+                <div class="text-500 text-xs" style="margin-top: 0.15rem;">
+                  @if (form.get('showMembersTable')?.value) {
+                    Untick to hide the table. Added members stay linked to this note sheet.
+                  } @else {
+                    Table hidden in the preview, PDF and Word. Members below are still linked to this note sheet.
+                  }
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
         <!-- Members Table (collapsible) -->
         <p-fieldset legend="Members" [toggleable]="true" [collapsed]="true">
           <!-- Employee Search to add members -->
@@ -209,6 +228,7 @@
             }
           </div>
 
+          @if (form.get('showMembersTable')?.value) {
           <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem; flex-wrap: wrap;">
             <p-button
               label="Add Column"
@@ -230,9 +250,22 @@
             </p-button>
             -->
           </div>
+          }
 
-          <!-- Members table (all columns dynamic) -->
-          @if (membersData.members.length > 0 && membersData.columns.length > 0) {
+          <!-- Table hidden → compact member strips, so it stays clear who is linked; otherwise the editable table -->
+          @if (!form.get('showMembersTable')?.value) {
+            @if (membersData.members.length > 0) {
+              <app-notesheet-member-strips
+                [members]="membersData.members"
+                [bangla]="isBangla"
+                (removeMember)="removeMember($event)">
+              </app-notesheet-member-strips>
+            } @else {
+              <div class="members-empty-hint">
+                No members linked yet. Use the search above to find and add members.
+              </div>
+            }
+          } @else if (membersData.members.length > 0 && membersData.columns.length > 0) {
             <div class="members-table-wrap">
               <table class="members-table" style="table-layout:fixed;width:100%;">
                 <thead>

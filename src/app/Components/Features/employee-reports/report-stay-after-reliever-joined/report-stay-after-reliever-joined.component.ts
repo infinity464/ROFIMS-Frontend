@@ -62,14 +62,15 @@ export class ReportStayAfterRelieverJoinedComponent implements OnInit, OnDestroy
     searched = false;
 
     /** Report mode — reliever joined (default) vs reliever not yet joined. */
-    relieverMode: 'joined' | 'notJoined' | 'standRelease' | 'newPosting' = 'joined';
+    relieverMode: 'joined' | 'notJoined' | 'standRelease' | 'allPostedOut' | 'newPosting' = 'joined';
     /** Mode of the CURRENTLY DISPLAYED results — updated only on Search, so the
         table/columns don't change when the dropdown changes before searching. */
-    appliedMode: 'joined' | 'notJoined' | 'standRelease' | 'newPosting' = 'joined';
-    relieverModeOptions: { label: string; value: 'joined' | 'notJoined' | 'standRelease' | 'newPosting' }[] = [
+    appliedMode: 'joined' | 'notJoined' | 'standRelease' | 'allPostedOut' | 'newPosting' = 'joined';
+    relieverModeOptions: { label: string; value: 'joined' | 'notJoined' | 'standRelease' | 'allPostedOut' | 'newPosting' }[] = [
         { label: 'Stay After Reliever Joined', value: 'joined' },
         { label: 'Member Stay Reliever Not Joined', value: 'notJoined' },
         { label: 'Stand Release', value: 'standRelease' },
+        { label: 'All Posted Out', value: 'allPostedOut' },
         { label: 'New Posting Person List', value: 'newPosting' }
     ];
 
@@ -130,6 +131,7 @@ export class ReportStayAfterRelieverJoinedComponent implements OnInit, OnDestroy
 
     columnCatalog: { key: string; labelEN: string; labelBN: string; hint: 'Serial' | 'Personnel' | 'Date' | 'Plain' | 'Remarks' | 'Duration' | 'NameSuffix' | 'CallNoRankName'; defaultVisible: boolean }[] = [
         { key: 'ser', labelEN: 'Ser', labelBN: 'ক্রঃ', hint: 'Serial', defaultVisible: true },
+        { key: 'rabId', labelEN: 'SRB ID', labelBN: 'এসআরবি আইডি', hint: 'Plain', defaultVisible: true },
         { key: 'serviceId', labelEN: 'Service ID', labelBN: 'ব্যক্তিগত নম্বর', hint: 'Plain', defaultVisible: true },
         { key: 'rank', labelEN: 'Rank', labelBN: 'পদবী', hint: 'Plain', defaultVisible: true },
         { key: 'corps', labelEN: 'Corps', labelBN: 'কোর', hint: 'Plain', defaultVisible: true },
@@ -143,9 +145,9 @@ export class ReportStayAfterRelieverJoinedComponent implements OnInit, OnDestroy
         // Profile-style composite: line 1 = Prefix + Service No + Rank; line 2 =
         // Name with awards, professional qualification and corps. Opt-in.
         { key: 'callNoRankName', labelEN: 'No Rank Name', labelBN: 'নং র‍্যাঙ্ক নাম', hint: 'CallNoRankName', defaultVisible: false },
-        { key: 'joiningInRab', labelEN: 'RAB Joining Date', labelBN: 'র‍্যাবে যোগদানের তারিখ', hint: 'Date', defaultVisible: true },
+        { key: 'joiningInRab', labelEN: 'SRB Joining Date', labelBN: 'এসআরবিে যোগদানের তারিখ', hint: 'Date', defaultVisible: true },
         { key: 'durationOfStay', labelEN: 'Duration of Stay', labelBN: 'অবস্থানের মেয়াদকাল', hint: 'Duration', defaultVisible: true },
-        { key: 'presentUnit', labelEN: 'Battalion', labelBN: 'ব্যাটালিয়ন', hint: 'Plain', defaultVisible: true },
+        { key: 'rabUnitHierarchy', labelEN: 'SRB Unit', labelBN: 'এসআরবি ইউনিট', hint: 'Plain', defaultVisible: true },
         { key: 'postedOutUnit', labelEN: 'Posted-out Unit', labelBN: 'বদলিকৃত ইউনিট', hint: 'Plain', defaultVisible: true },
         { key: 'relieverYesNo', labelEN: 'Reliever (Yes/No)', labelBN: 'প্রতিস্থাপক (হ্যাঁ/না)', hint: 'Plain', defaultVisible: false },
         { key: 'relieverJoiningDate', labelEN: 'Reliever Joining Date', labelBN: 'প্রতিস্থাপক যোগদানের তারিখ', hint: 'Date', defaultVisible: true },
@@ -159,8 +161,7 @@ export class ReportStayAfterRelieverJoinedComponent implements OnInit, OnDestroy
         { key: 'possibleJoiningDate', labelEN: 'Possible Joining Date', labelBN: 'সম্ভাব্য যোগদানের তারিখ', hint: 'Date', defaultVisible: false },
         { key: 'postingOrderDate', labelEN: 'Posting Order Date', labelBN: 'প্রেষনাদেশের তারিখ', hint: 'Date', defaultVisible: false },
         { key: 'motherUnit', labelEN: 'Mother Unit', labelBN: 'মাতৃ ইউনিট', hint: 'Plain', defaultVisible: false },
-        { key: 'rabRank', labelEN: 'RAB Rank', labelBN: 'র‍্যাব র‍্যাঙ্ক', hint: 'Plain', defaultVisible: false },
-        { key: 'rabId', labelEN: 'RAB ID', labelBN: 'র‍্যাব আইডি', hint: 'Plain', defaultVisible: false },
+        { key: 'rabRank', labelEN: 'SRB Rank', labelBN: 'এসআরবি র‍্যাঙ্ক', hint: 'Plain', defaultVisible: false },
         { key: 'nameBangla', labelEN: 'Name (Bangla)', labelBN: 'নাম (বাংলা)', hint: 'Plain', defaultVisible: false },
         { key: 'nid', labelEN: 'NID', labelBN: 'এনআইডি', hint: 'Plain', defaultVisible: false },
         { key: 'prefix', labelEN: 'Prefix', labelBN: 'প্রিফিক্স', hint: 'Plain', defaultVisible: false },
@@ -169,10 +170,10 @@ export class ReportStayAfterRelieverJoinedComponent implements OnInit, OnDestroy
         { key: 'motherOrganization', labelEN: 'Mother Org', labelBN: 'মাতৃ সংস্থা', hint: 'Plain', defaultVisible: false },
         { key: 'gender', labelEN: 'Gender', labelBN: 'লিঙ্গ', hint: 'Plain', defaultVisible: false },
         // Full job hierarchy (Battalion › Wing › Branch › Sub-Branch › Section › Sub-Section). Opt-in.
-        { key: 'rabUnitHierarchy', labelEN: 'RAB Unit', labelBN: 'র‍্যাব ইউনিট', hint: 'Plain', defaultVisible: false },
+        { key: 'presentUnit', labelEN: 'Battalion', labelBN: 'ব্যাটালিয়ন', hint: 'Plain', defaultVisible: false},
         { key: 'dateOfCommission', labelEN: 'Commission Date', labelBN: 'কমিশন তারিখ', hint: 'Date', defaultVisible: false },
-        { key: 'rabServiceFrom', labelEN: 'RAB Service From', labelBN: 'র‍্যাব স্থিতিকাল হইতে', hint: 'Date', defaultVisible: false },
-        { key: 'rabServiceTo', labelEN: 'RAB Service To', labelBN: 'র‍্যাব স্থিতিকাল পর্যন্ত', hint: 'Date', defaultVisible: false },
+        { key: 'rabServiceFrom', labelEN: 'SRB Service From', labelBN: 'এসআরবি স্থিতিকাল হইতে', hint: 'Date', defaultVisible: false },
+        { key: 'rabServiceTo', labelEN: 'SRB Service To', labelBN: 'এসআরবি স্থিতিকাল পর্যন্ত', hint: 'Date', defaultVisible: false },
         { key: 'postingStatus', labelEN: 'Posting Status', labelBN: 'নিয়োগ অবস্থা', hint: 'Plain', defaultVisible: false },
         { key: 'officerType', labelEN: 'Officer Type', labelBN: 'অফিসার ধরণ', hint: 'Plain', defaultVisible: false },
         { key: 'dob', labelEN: 'Date of Birth', labelBN: 'জন্ম তারিখ', hint: 'Date', defaultVisible: false },
@@ -199,7 +200,7 @@ export class ReportStayAfterRelieverJoinedComponent implements OnInit, OnDestroy
         { key: 'replaceId', labelEN: 'Replace ID', labelBN: 'প্রতিস্থাপিত আইডি', hint: 'Plain', defaultVisible: true },
         { key: 'replaceRank', labelEN: 'Replace Rank', labelBN: 'প্রতিস্থাপিত পদবী', hint: 'Plain', defaultVisible: true },
         { key: 'replaceName', labelEN: 'Replace Name', labelBN: 'প্রতিস্থাপিত নাম', hint: 'Plain', defaultVisible: true },
-        { key: 'rabUnit', labelEN: 'RAB Unit', labelBN: 'র‍্যাব ইউনিট', hint: 'Plain', defaultVisible: true }
+        { key: 'rabUnit', labelEN: 'SRB Unit', labelBN: 'এসআরবি ইউনিট', hint: 'Plain', defaultVisible: true }
     ];
 
     selectedColumnKeys: string[] = this.columnCatalog.filter((c) => c.defaultVisible).map((c) => c.key);
@@ -613,11 +614,12 @@ export class ReportStayAfterRelieverJoinedComponent implements OnInit, OnDestroy
         (columns/data) only change on Search via appliedMode. */
     onModeChange(): void {}
 
-    /** Show the derived "Reliever (Yes/No)" column only when Stand Release is the
-        applied (searched) mode. Called from search() after appliedMode is set. */
+    /** Show the derived "Reliever (Yes/No)" column for the modes that mix members
+        with and without a reliever — Stand Release and All Posted Out. Called from
+        search() after appliedMode is set. */
     private syncStandReleaseColumn(): void {
         const key = 'relieverYesNo';
-        if (this.appliedMode === 'standRelease') {
+        if (this.appliedMode === 'standRelease' || this.appliedMode === 'allPostedOut') {
             if (!this.selectedColumnKeys.includes(key)) {
                 const arr = [...this.selectedColumnKeys];
                 const at = arr.indexOf('relieverJoiningDate');
@@ -638,16 +640,15 @@ export class ReportStayAfterRelieverJoinedComponent implements OnInit, OnDestroy
 
     get activeFilterCount(): number {
         let c = 0;
-        // Member filters apply to every mode except New Posting (joinee list has none).
-        if (this.relieverMode !== 'newPosting') {
-            if (this.selectedOrgIds.length > 0) c++;
-            if (this.selectedRankId != null) c++;
-            if (this.selectedRabRankId != null) c++;
-            if (this.selectedMemberTypeIds.length > 0) c++;
-            if (this.selectedCorpsIds.length > 0) c++;
-            if (this.selectedTradeIds.length > 0) c++;
-            if (this.selectedOrgNodeIds.length > 0) c++;
-        }
+        // Member filters apply to every mode. RAB Unit is the exception — a New
+        // Posting joinee has no RAB unit yet, so that field is hidden there.
+        if (this.selectedOrgIds.length > 0) c++;
+        if (this.selectedRankId != null) c++;
+        if (this.selectedRabRankId != null) c++;
+        if (this.selectedMemberTypeIds.length > 0) c++;
+        if (this.selectedCorpsIds.length > 0) c++;
+        if (this.selectedTradeIds.length > 0) c++;
+        if (this.relieverMode !== 'newPosting' && this.selectedOrgNodeIds.length > 0) c++;
         if (this.relieverMode === 'standRelease' && this.releaseFrom) c++;
         if (this.relieverMode === 'standRelease' && this.releaseTo) c++;
         if (this.relieverMode === 'newPosting' && this.joiningFrom) c++;
@@ -670,25 +671,24 @@ export class ReportStayAfterRelieverJoinedComponent implements OnInit, OnDestroy
                 .map((o) => (this.lang === 'bn' ? o.labelBn : o.label));
             if (names.length) items.push({ label: this.lang === 'en' ? en : bn, value: names.join(', ') });
         };
-        if (this.appliedMode !== 'newPosting') {
-            multi(this.selectedOrgIds, this.orgOptions, 'Mother Org', 'মাতৃ সংস্থা');
-            multi(this.selectedMemberTypeIds, this.memberTypeOptions, 'Member Type', 'সদস্য ধরন');
-            if (this.selectedRankId != null) {
-                const opt = this.rankOptions.find((o) => o.value === this.selectedRankId);
-                const lbl = this.lang === 'en' ? 'Rank' : 'পদবী';
-                if (opt) items.push({ label: lbl, value: this.lang === 'bn' ? opt.labelBn : opt.label });
-            }
-            if (this.selectedRabRankId != null) {
-                const opt = this.rabRankOptions.find((o) => o.value === this.selectedRabRankId);
-                const lbl = this.lang === 'en' ? 'RAB Rank' : 'র‍্যাব পদবি';
-                if (opt) items.push({ label: lbl, value: this.lang === 'bn' ? opt.labelBn : opt.label });
-            }
-            multi(this.selectedCorpsIds, this.corpsOptions, 'Corps', 'কোর');
-            multi(this.selectedTradeIds, this.tradeOptions, 'Trade', 'ট্রেড');
-            if (this.selectedOrgNodeIds.length > 0) {
-                const names = this.orgNodesLabel(this.lang === 'bn');
-                if (names) items.push({ label: this.lang === 'bn' ? 'র‍্যাব ইউনিট' : 'RAB Unit', value: names });
-            }
+        multi(this.selectedOrgIds, this.orgOptions, 'Mother Org', 'মাতৃ সংস্থা');
+        multi(this.selectedMemberTypeIds, this.memberTypeOptions, 'Member Type', 'সদস্য ধরন');
+        if (this.selectedRankId != null) {
+            const opt = this.rankOptions.find((o) => o.value === this.selectedRankId);
+            const lbl = this.lang === 'en' ? 'Rank' : 'পদবী';
+            if (opt) items.push({ label: lbl, value: this.lang === 'bn' ? opt.labelBn : opt.label });
+        }
+        if (this.selectedRabRankId != null) {
+            const opt = this.rabRankOptions.find((o) => o.value === this.selectedRabRankId);
+            const lbl = this.lang === 'en' ? 'SRB Rank' : 'এসআরবি পদবি';
+            if (opt) items.push({ label: lbl, value: this.lang === 'bn' ? opt.labelBn : opt.label });
+        }
+        multi(this.selectedCorpsIds, this.corpsOptions, 'Corps', 'কোর');
+        multi(this.selectedTradeIds, this.tradeOptions, 'Trade', 'ট্রেড');
+        // RAB Unit is not a New Posting filter — a joinee has no RAB unit yet.
+        if (this.appliedMode !== 'newPosting' && this.selectedOrgNodeIds.length > 0) {
+            const names = this.orgNodesLabel(this.lang === 'bn');
+            if (names) items.push({ label: this.lang === 'bn' ? 'এসআরবি ইউনিট' : 'SRB Unit', value: names });
         }
         if (this.appliedMode === 'standRelease') {
             if (this.releaseFrom) items.push({ label: this.lang === 'en' ? 'Possible Release From' : 'সম্ভাব্য রিলিজ হইতে', value: this.formatDateLabel(this.fmtDate(this.releaseFrom)!) });
@@ -813,6 +813,7 @@ export class ReportStayAfterRelieverJoinedComponent implements OnInit, OnDestroy
                 relieverJoinedOnly: this.appliedMode === 'joined',
                 relieverNotJoinedOnly: this.appliedMode === 'notJoined',
                 postedOutAllOnly: this.appliedMode === 'standRelease',
+                allPostedOutOnly: this.appliedMode === 'allPostedOut',
                 idSearchText: (this.idSearchText ?? '').trim() || undefined,
                 pagination: { page_no: pageNo, row_per_page: this.rows }
             })
@@ -842,7 +843,15 @@ export class ReportStayAfterRelieverJoinedComponent implements OnInit, OnDestroy
                 filter: {
                     isAddedInNewJoineeDataEntry: false,
                     possibleJoiningDateFrom: this.fmtDate(this.joiningFrom),
-                    possibleJoiningDateTo: this.fmtDate(this.joiningTo)
+                    possibleJoiningDateTo: this.fmtDate(this.joiningTo),
+                    // Member attributes captured on the Permanent Posting MO Record.
+                    // RAB Unit is deliberately absent — a joinee has none yet.
+                    motherOrgIds: this.selectedOrgIds.length ? this.selectedOrgIds : null,
+                    memberTypeIds: this.selectedMemberTypeIds.length ? this.selectedMemberTypeIds : null,
+                    rankId: this.selectedRankId ?? null,
+                    rabRankEquivalentId: this.selectedRabRankId ?? null,
+                    corpsIds: this.selectedCorpsIds.length ? this.selectedCorpsIds : null,
+                    tradeIds: this.selectedTradeIds.length ? this.selectedTradeIds : null
                 }
             })
             .subscribe({
@@ -914,10 +923,13 @@ export class ReportStayAfterRelieverJoinedComponent implements OnInit, OnDestroy
         if (this.appliedMode === 'standRelease') {
             return this.lang === 'en' ? 'Nominal Roll of Stand Release' : 'স্ট্যান্ড রিলিজ এর নামীয় তালিকা';
         }
-        if (this.appliedMode === 'notJoined') {
-            return this.lang === 'en' ? 'Nominal Roll of Stay in RAB though Reliever Not Joined' : 'প্রতিস্থাপক যোগদান না করা সত্ত্বেও র‍্যাবে অবস্থানরত সদস্যের নামীয় তালিকা';
+        if (this.appliedMode === 'allPostedOut') {
+            return this.lang === 'en' ? 'Nominal Roll of All Posted Out Members' : 'সকল বদলিকৃত সদস্যের নামীয় তালিকা';
         }
-        return this.lang === 'en' ? 'Nominal Roll of Stay in RAB after Reliever Joined' : 'প্রতিস্থাপক যোগদানের পর র‍্যাবে অবস্থানরত সদস্যের নামীয় তালিকা';
+        if (this.appliedMode === 'notJoined') {
+            return this.lang === 'en' ? 'Nominal Roll of Stay in SRB though Reliever Not Joined' : 'প্রতিস্থাপক যোগদান না করা সত্ত্বেও এসআরবিে অবস্থানরত সদস্যের নামীয় তালিকা';
+        }
+        return this.lang === 'en' ? 'Nominal Roll of Stay in SRB after Reliever Joined' : 'প্রতিস্থাপক যোগদানের পর এসআরবিে অবস্থানরত সদস্যের নামীয় তালিকা';
     }
 
     // ── RAB paper getters ─────────────────────────────────────────────
@@ -925,7 +937,7 @@ export class ReportStayAfterRelieverJoinedComponent implements OnInit, OnDestroy
         return this.lang === 'bn' ? 'গণপ্রজাতন্ত্রী বাংলাদেশ সরকার' : "GOVERNMENT OF THE PEOPLE'S REPUBLIC OF BANGLADESH";
     }
     get rabOrgTitle(): string {
-        return this.lang === 'bn' ? 'র‍্যাপিড অ্যাকশন ব্যাটালিয়ন' : 'RAPID ACTION BATTALION';
+        return this.lang === 'bn' ? 'স্পেশাল রেসপন্স ব্যাটালিয়ন' : 'SPECIAL RESPONSE BATTALION';
     }
     get rabOrgSubtitle(): string {
         return this.lang === 'bn' ? 'বাংলাদেশ পুলিশ · সদর দপ্তর, কুর্মিটোলা, ঢাকা' : 'Bangladesh Police · Headquarters, Kurmitola, Dhaka';
@@ -954,6 +966,8 @@ export class ReportStayAfterRelieverJoinedComponent implements OnInit, OnDestroy
     }
     /** Total DB-filtered result count, localized (shown in the criteria strip,
         so it appears on screen + Print + Word + Excel). */
+    toBanglaNum(n: number): string { return BanglaNumerals.toBangla(String(n)); }
+
     get rabTotalText(): string {
         const n = this.lang === 'bn' ? BanglaNumerals.toBangla(String(this.totalRecords)) : String(this.totalRecords);
         return this.lang === 'bn' ? `মোট · ${n} রেকর্ড` : `Total · ${n} records`;

@@ -29,7 +29,7 @@ import { UserMenuService } from '@/services/user-menu.service';
 import { IdentityUserMappingService } from '@/services/identity-user-mapping.service';
 import { IdentityUserMemberTypeAccessService } from '@/services/identity-user-member-type-access.service';
 import { PostingService } from '@/services/posting.service';
-import { NoteSheetType, NoteSheetOperationType, NoteSheetOperationTypeOptions, ApprovalStatus, CodeType } from '@/models/enums';
+import { NoteSheetType, NoteSheetOperationType, NoteSheetOperationTypeOptions, ApprovalStatus, CodeType, SubjectCategory } from '@/models/enums';
 import { encodeNoteSheetId, decodeNoteSheetId } from '@/shared/utils/notesheet-id-codec';
 import { NotesheetApproverSelectComponent } from '@/Components/Common/notesheet-approver-select/notesheet-approver-select';
 import { BanglaNumerals } from '@/Core/i18n/bangla-numerals';
@@ -43,6 +43,7 @@ import { OrgService } from '@/Components/basic-setup/org-tree/org.service';
 import { DialogModule } from 'primeng/dialog';
 import { ServingMembersService } from '@/services/serving-members.service';
 import { EmployeeSearchComponent, EmployeeBasicInfo } from '@/Components/Shared/employee-search/employee-search';
+import { NotesheetMemberStripsComponent } from '@/Components/Shared/notesheet-member-strips/notesheet-member-strips';
 import { FamilyInfoService, FamilyInfoByEmployeeView } from '@/services/family-info-service';
 import { MainTextBlock, parseMainTextBlocks, serializeMainTextBlocks } from '@/shared/utils/notesheet-main-text';
 import { getFormattedMemberName } from '@/shared/utils/member-display-name.util';
@@ -58,6 +59,10 @@ export interface ReferenceParagraph {
 export interface MemberColumnDef {
     key: string;
     label: string;
+    /** Bangla header override typed by the user (general note-sheet preview edit
+     *  mode). When absent the Bangla preview falls back to its built-in Bangla
+     *  label map, then to `label`. */
+    labelBN?: string;
     group: 'basic' | 'personal' | 'family' | 'custom' | 'merged';
     /** Only for merged columns — stores source keys + separator */
     mergedFrom?: { keys: string[]; separator: string };
@@ -101,7 +106,7 @@ export interface MembersJsonData {
 export const AVAILABLE_MEMBER_COLUMNS: MemberColumnDef[] = [
     // Basic Info
     { key: 'serviceId', label: 'Service ID', group: 'basic' },
-    { key: 'rabId', label: 'RAB ID', group: 'basic' },
+    { key: 'rabId', label: 'SRB ID', group: 'basic' },
     { key: 'nameEnglish', label: 'Name (EN)', group: 'basic' },
     { key: 'nameBN', label: 'Name (BN)', group: 'basic' },
     // Composite name as shown at the top of the member profile: Name, Award, Qualification, Corps.
@@ -121,17 +126,17 @@ export const AVAILABLE_MEMBER_COLUMNS: MemberColumnDef[] = [
     { key: 'memberTypeBN', label: 'Member Type (BN)', group: 'basic' },
     { key: 'appointment', label: 'Appointment (EN)', group: 'basic' },
     { key: 'appointmentBN', label: 'Appointment (BN)', group: 'basic' },
-    { key: 'joiningDate', label: 'Joining Date in RAB', group: 'basic' },
+    { key: 'joiningDate', label: 'Joining Date in SRB', group: 'basic' },
     { key: 'gender', label: 'Gender (EN)', group: 'basic' },
     { key: 'genderBN', label: 'Gender (BN)', group: 'basic' },
     { key: 'batch', label: 'Batch (EN)', group: 'basic' },
     { key: 'batchBN', label: 'Batch (BN)', group: 'basic' },
-    { key: 'rabUnit', label: 'RAB Unit (EN)', group: 'basic' },
-    { key: 'rabUnitBN', label: 'RAB Unit (BN)', group: 'basic' },
+    { key: 'rabUnit', label: 'SRB Unit (EN)', group: 'basic' },
+    { key: 'rabUnitBN', label: 'SRB Unit (BN)', group: 'basic' },
     // Full present-posting hierarchy path (Unit > Wing > Branch > Sub-branch > Section > Sub-section)
     // from the currently-active Previous RAB Service row.
-    { key: 'presentRabUnit', label: 'Present RAB Unit — Full (EN)', group: 'basic' },
-    { key: 'presentRabUnitBN', label: 'Present RAB Unit — Full (BN)', group: 'basic' },
+    { key: 'presentRabUnit', label: 'Present SRB Unit — Full (EN)', group: 'basic' },
+    { key: 'presentRabUnitBN', label: 'Present SRB Unit — Full (BN)', group: 'basic' },
     // Posted-out Posting Unit (mother-org transfer destination) — populated for clearance-subject members.
     { key: 'postingUnit', label: 'Posting Unit (EN)', group: 'basic' },
     { key: 'postingUnitBN', label: 'Posting Unit (BN)', group: 'basic' },
@@ -201,6 +206,7 @@ export const AVAILABLE_MEMBER_COLUMNS: MemberColumnDef[] = [
         TreeSelectModule,
         DialogModule,
         EmployeeSearchComponent,
+        NotesheetMemberStripsComponent,
         NotesheetApproverSelectComponent
     ],
     templateUrl: './notesheet-generate.html',
@@ -352,6 +358,8 @@ export class NotesheetGenerateComponent implements OnInit {
             recommenderIds: [[] as number[]],
             finalApproverId: [null as number | null, Validators.required],
             isSecret: [false],
+            /** Print the members table in the note sheet. Members are linked either way. */
+            showMembersTable: [true],
             noteSheetOperationType: [NoteSheetOperationType.Manual as string, Validators.required],
             referenceEmployeeIds: [[] as number[]],
             memberTypeIds: [[] as number[]]
@@ -436,14 +444,13 @@ export class NotesheetGenerateComponent implements OnInit {
         return picked ? ((isBn ? picked.subjectBN : picked.subjectEN) || picked.subjectEN || picked.subjectBN || '') : '';
     }
 
-    /** True when the selected subject is flagged IsClearanceSubject — members become required
+    /** True when the selected subject's category is Clearance — members become required
      *  and each must be a posted-out member (with a Permanent Posting MO Change record). */
     get isClearanceSubjectSelected(): boolean {
         const id = this.form.get('noteSheetSubjectId')?.value;
         if (id == null) return false;
-        return !!this.subjectPickList.find((s) => s.id === id)?.isClearanceSubject;
+        return this.subjectPickList.find((s) => s.id === id)?.subjectCategory === SubjectCategory.Clearance;
     }
-
     /** Selected subject's display label (language-aware) — used for the read-only field in edit mode. */
     get selectedSubjectLabel(): string {
         const id = this.form.get('noteSheetSubjectId')?.value;
@@ -870,7 +877,7 @@ export class NotesheetGenerateComponent implements OnInit {
                     const name = e.nameEnglish || e.NameEnglish || '';
                     const rabId = e.rabId || e.RabId || '';
                     const serviceId = e.serviceId || e.ServiceId || '';
-                    const parts = [name, rabId ? `RAB: ${rabId}` : '', serviceId ? `SVC: ${serviceId}` : ''].filter(Boolean);
+                    const parts = [name, rabId ? `SRB: ${rabId}` : '', serviceId ? `SVC: ${serviceId}` : ''].filter(Boolean);
                     return {
                         label: parts.join(' | ') || `ID ${e.employeeID ?? e.EmployeeID}`,
                         labelBn: e.nameBN || e.NameBN || null,
@@ -897,7 +904,7 @@ export class NotesheetGenerateComponent implements OnInit {
                             const name = emp?.FullNameEN || emp?.fullNameEN || '';
                             const rabId = emp?.RABID || emp?.rabid || emp?.Rabid || '';
                             const serviceId = emp?.ServiceId || emp?.serviceId || '';
-                            const parts = [name, rabId ? `RAB: ${rabId}` : '', serviceId ? `SVC: ${serviceId}` : ''].filter(Boolean);
+                            const parts = [name, rabId ? `SRB: ${rabId}` : '', serviceId ? `SVC: ${serviceId}` : ''].filter(Boolean);
                             this.form.get('preparedBy')?.setValue(parts.join(' | ') || `Employee #${empId}`);
                         }
                     });
@@ -983,6 +990,7 @@ export class NotesheetGenerateComponent implements OnInit {
             recommenderIds,
             finalApproverId: d.finalApprovalId ?? d.FinalApprovalId ?? null,
             isSecret: !!(d.isSecret ?? d.IsSecret ?? false),
+            showMembersTable: (d.showMembersTable ?? d.ShowMembersTable) !== false,
             noteSheetOperationType: d.noteSheetOperationType ?? d.NoteSheetOperationType ?? null,
             memberTypeIds: this.parseMemberTypeIds(d.employeeTypeIds ?? d.EmployeeTypeIds)
         });
@@ -1371,10 +1379,10 @@ export class NotesheetGenerateComponent implements OnInit {
         const bn = this.isBangla;
         const lbl = (en: string, bnLabel: string) => (bn ? bnLabel : en);
         const cols: MemberColumnDef[] = [
-            { key: bn ? 'prefixWithServiceIdBN' : 'prefixWithServiceId', label: lbl('Prefix & Service ID', 'সার্ভিস আইডি'), group: 'basic' },
+            { key: bn ? 'prefixWithServiceIdBN' : 'prefixWithServiceId', label: lbl('Prefix & Service ID', 'ব্যক্তিগত নম্বর'), group: 'basic' },
             { key: bn ? 'armyRankBN' : 'armyRank', label: lbl('Rank', 'পদবি'), group: 'basic' },
             { key: bn ? 'formattedNameBN' : 'formattedName', label: lbl('Name', 'নাম'), group: 'basic' },
-            { key: bn ? 'presentRabUnitBN' : 'presentRabUnit', label: lbl('Present RAB Unit', 'বর্তমান র‍্যাব ইউনিট'), group: 'basic' }
+            { key: bn ? 'presentRabUnitBN' : 'presentRabUnit', label: lbl('Present SRB Unit', 'বর্তমান এসআরবি ইউনিট'), group: 'basic' }
         ];
         // Clearance subjects: show the posted-out destination (mother-org transfer / Posting Unit).
         if (this.isClearanceSubjectSelected) {
@@ -1734,6 +1742,7 @@ export class NotesheetGenerateComponent implements OnInit {
             recommenderIds: [],
             finalApproverId: null,
             isSecret: false,
+            showMembersTable: true,
             noteSheetOperationType: 'manual',
             referenceEmployeeIds: [],
             memberTypeIds: []
@@ -1806,7 +1815,8 @@ export class NotesheetGenerateComponent implements OnInit {
                             };
 
                             // Sync members to NoteSheetReferenceEmployee, then open the preview so it
-                            // reflects the freshly-synced members.
+                            // reflects the freshly-synced members. Always synced — even when the table is
+                            // hidden (showMembersTable) the note sheet stays linked to each member.
                             if (noteSheetId) {
                                 const refApi = `${environment.apis.core}/NoteSheetReferenceEmployee`;
                                 const employees = this.membersData.members.map(m => ({
@@ -1965,6 +1975,7 @@ export class NotesheetGenerateComponent implements OnInit {
                 : null,
             textType: d.textType === 'bn' ? 1 : 0,
             isSecret: d.isSecret ?? false,
+            showMembersTable: d.showMembersTable !== false,
             noteSheetOperationType: d.noteSheetOperationType ?? null,
             // Member types selected for this General note-sheet (comma-separated CommonCode ids).
             employeeTypeIds: (Array.isArray(d.memberTypeIds) ? d.memberTypeIds : []).join(',') || null,

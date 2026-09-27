@@ -284,8 +284,8 @@ export class EquivalentNameWiseManpowerComponent implements OnInit {
 
     get titleLabel(): string {
         return this.lang === 'en'
-            ? 'ORGANIZATION & RAB RANK WISE MANPOWER STATE'
-            : 'বাহিনী এবং র‍্যাব পদবী অনুযায়ী জনবলের সারাংশ';
+            ? 'ORGANIZATION & SRB RANK WISE MANPOWER STATE'
+            : 'বাহিনী এবং এসআরবি পদবী অনুযায়ী জনবলের সারাংশ';
     }
 
     get dateLine(): string {

@@ -1,4 +1,4 @@
-﻿import { AfterViewChecked, ChangeDetectorRef, Component, ElementRef, Input, ViewChild, inject } from '@angular/core';
+import { AfterViewChecked, ChangeDetectorRef, Component, ElementRef, Input, ViewChild, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ConfirmationService, MessageService, TreeNode } from 'primeng/api';
@@ -11,6 +11,9 @@ import { TooltipModule } from 'primeng/tooltip';
 import { InputTextModule } from 'primeng/inputtext';
 import { TextareaModule } from 'primeng/textarea';
 import { SelectModule } from 'primeng/select';
+import { InputNumberModule } from 'primeng/inputnumber';
+import { NotesheetStyleConfigService } from '@/services/notesheet-style-config.service';
+import { NotesheetStyleConfig, defaultNotesheetStyle } from '@/models/notesheet-style-config.model';
 
 import { CheckboxModule } from 'primeng/checkbox';
 import { DatePickerModule } from 'primeng/datepicker';
@@ -57,6 +60,22 @@ interface ApprovalLogEntry {
     rank?: string;
 }
 
+/** One employee-table column of the posting preview — see columnLayout(). */
+interface PostingColumn {
+    key: string;
+    label: string;
+    /** Relative width; only the ratio between columns matters. */
+    weight: number;
+    defaultWeight: number;
+    visible: boolean;
+    /** Keeps its share of the table when other columns are hidden. */
+    fixed?: boolean;
+    /** Columns sharing a group show and hide together. */
+    group?: string;
+    /** Always shown. */
+    lockVisible?: boolean;
+}
+
 @Component({
     selector: 'app-notesheet-preview-posting',
     standalone: true,
@@ -72,6 +91,7 @@ interface ApprovalLogEntry {
         InputTextModule,
         TextareaModule,
         SelectModule,
+        InputNumberModule,
         CheckboxModule,
         DatePickerModule,
         TreeSelectModule,
@@ -91,7 +111,7 @@ export class NotesheetPreviewPostingComponent extends NotesheetPreviewBase imple
     @ViewChild('pagesContainer') pagesContainer!: ElementRef<HTMLDivElement>;
 
     private cdr = inject(ChangeDetectorRef);
-    /** Host element — carries the --ns-fs-delta font-size offset for the whole preview. */
+    /** Host element — carries the --ns-* document style variables (font offset, gaps) for the whole preview. */
     private hostEl = inject(ElementRef) as ElementRef<HTMLElement>;
     private confirmationService = inject(ConfirmationService);
     private sharedService = inject(SharedService);
@@ -174,8 +194,9 @@ export class NotesheetPreviewPostingComponent extends NotesheetPreviewBase imple
      *  spilled onto a page of its own back up and saves the extra sheet.
      *
      *  Applied as the --ns-fs-delta custom property on the component host — see
-     *  applyFontDelta(), the fs() function in the component SCSS, and the
-     *  .pdf-flow restatement in buildJsReportPdf(). */
+     *  applyStyleVars(), the fs() function in the component SCSS, and the
+     *  .pdf-flow restatement in buildJsReportPdf(). Saved with the rest of the
+     *  document style (saveStyle). */
     fontDelta = 0;
     /** +2.00 … 0 … -2.00 pt in 0.25 steps, largest first (like the page-size list). */
     readonly fontDeltaOptions = Array.from({ length: 17 }, (_, i) => {
@@ -192,41 +213,262 @@ export class NotesheetPreviewPostingComponent extends NotesheetPreviewBase imple
         return `Font: ${value > 0 ? '+' : '-'}${Math.abs(value).toFixed(2)} pt`;
     }
 
-    /**
-     * Font-size dropdown changed. The offset is written to the host element so it
-     * inherits into the visible pages, the hidden .page-measure div and the
-     * repeated table headers at once. Every tier resizes, so the content height
-     * changes: clearing lastMeasuredHeight makes the next ngAfterViewChecked
-     * re-measure and re-paginate against the new size.
-     */
     onFontDeltaChange(): void {
-        this.applyFontDelta();
+        this.onStyleChange();
+    }
+
+    // ── Saved document style ─────────────────────────────────
+    private styleConfigService = inject(NotesheetStyleConfigService);
+    /** Signature-block spacing, saved per note sheet (styleConfig.noteSheetId set); a note
+     *  sheet without one falls back to an older type-wide saved style, then the defaults.
+     *  fontDelta and selectedPageSize stay separate fields (the export bar binds them) and
+     *  are folded in on save. */
+    styleConfig: NotesheetStyleConfig = defaultNotesheetStyle(NoteSheetType.NewPosting);
+    showStyleDialog = false;
+    savingStyle = false;
+
+    /** Cached style first so the sheet paginates in the saved style straight away,
+     *  then the server's copy — this note sheet's own style, else its type default. */
+    protected override onNoteSheetLoaded(): void {
+        const type = this.noteSheet?.noteSheetType;
+        if (!type) return;
+        this.applyStyleConfig(this.styleConfigService.cached(type, this.noteSheetId));
+        this.styleConfigService.load(type, this.noteSheetId).subscribe((cfg) => this.applyStyleConfig(cfg));
+    }
+
+    private applyStyleConfig(cfg: NotesheetStyleConfig): void {
+        this.styleConfig = { ...cfg };
+        this.fontDelta = cfg.fontDelta;
+        if (this.selectedPageSize !== cfg.defaultPageSize) {
+            this.selectedPageSize = cfg.defaultPageSize;
+            this.applyStyleVars();
+            this.onPageSizeChange();
+        } else {
+            this.onStyleChange();
+        }
+    }
+
+    /**
+     * Font size or a gap changed. The values are written to the host element so they
+     * inherit into the visible pages, the hidden .page-measure div and the repeated
+     * table headers at once. The content height changes with them: clearing
+     * lastMeasuredHeight makes the next ngAfterViewChecked re-measure and re-paginate.
+     */
+    onStyleChange(): void {
+        this.applyStyleVars();
         this.lastMeasuredHeight = 0;
         this.cdr.detectChanges();
     }
 
-    /** Unitless — the SCSS multiplies it by 1pt, which keeps a negative offset a
-     *  plain multiplication instead of a signed operand inside calc(). */
-    private applyFontDelta(): void {
-        this.hostEl.nativeElement.style.setProperty('--ns-fs-delta', `${this.fontDelta}`);
+    /** Current style with cleared inputs (p-inputNumber emits null) put back to defaults. */
+    private currentStyle(): NotesheetStyleConfig {
+        const d = defaultNotesheetStyle(this.noteSheet?.noteSheetType ?? this.styleConfig.noteSheetType);
+        const s = this.styleConfig;
+        return {
+            ...d,
+            configId: s.configId,
+            fontDelta: this.fontDelta ?? d.fontDelta,
+            defaultPageSize: this.selectedPageSize === 'A4' ? 'A4' : 'Legal',
+            approverGapPx: s.approverGapPx ?? d.approverGapPx,
+            approverGapEm: s.approverGapEm ?? d.approverGapEm,
+            sigDateGapEm: s.sigDateGapEm ?? d.sigDateGapEm,
+            initiatorTopMarginPx: s.initiatorTopMarginPx ?? d.initiatorTopMarginPx,
+            approverMinHeightPx: s.approverMinHeightPx ?? d.approverMinHeightPx
+        };
+    }
+
+    /** The custom properties the component SCSS reads. Unitless values (font delta, em
+     *  counts) are multiplied by 1pt / 1em there, which keeps a negative offset a plain
+     *  multiplication instead of a signed operand inside calc(). */
+    private styleVars(): [string, string][] {
+        const s = this.currentStyle();
+        return [
+            ['--ns-fs-delta', `${s.fontDelta}`],
+            ['--ns-approver-gap-px', `${s.approverGapPx}px`],
+            ['--ns-approver-gap-em', `${s.approverGapEm}`],
+            ['--ns-sig-date-gap-em', `${s.sigDateGapEm}`],
+            ['--ns-initiator-top', `${s.initiatorTopMarginPx}px`],
+            ['--ns-approver-min-h', `${s.approverMinHeightPx}px`]
+        ];
+    }
+
+    private applyStyleVars(): void {
+        const el = this.hostEl.nativeElement;
+        for (const [name, value] of this.styleVars()) el.style.setProperty(name, value);
+    }
+
+    /** Saves the dialog's style for this note sheet only. */
+    saveStyle(): void {
+        const type = this.noteSheet?.noteSheetType;
+        const noteSheetId = this.noteSheetId;
+        if (!type || !noteSheetId || this.savingStyle) return;
+        this.savingStyle = true;
+        const user = this.sharedService.getCurrentUser() || 'system';
+        const now = new Date().toISOString();
+        this.styleConfigService.save({ ...this.currentStyle(), noteSheetType: type, noteSheetId, createdBy: user, createdDate: now, lastUpdatedBy: user, lastupdate: now }).subscribe({
+            next: (saved) => {
+                this.savingStyle = false;
+                this.styleConfig = { ...saved };
+                this.showStyleDialog = false;
+                this.messageService.add({ severity: 'success', summary: 'Saved', detail: 'Style saved for this note sheet.' });
+            },
+            error: (err) => {
+                this.savingStyle = false;
+                this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.description || 'Failed to save style.' });
+            }
+        });
+    }
+
+    /** Removes the style saved for this note sheet only — other note sheets keep theirs. */
+    resetStyleToDefault(): void {
+        const type = this.noteSheet?.noteSheetType;
+        const noteSheetId = this.noteSheetId;
+        if (!type || !noteSheetId || !this.styleConfig.noteSheetId) return;
+        this.confirmationService.confirm({
+            header: 'Reset Style',
+            message: 'Remove the style saved for this note sheet? Other note sheets are not affected.',
+            icon: 'pi pi-exclamation-triangle',
+            accept: () =>
+                this.styleConfigService.reset(type, noteSheetId).subscribe({
+                    next: (cfg) => {
+                        this.applyStyleConfig(cfg);
+                        this.messageService.add({ severity: 'success', summary: 'Reset', detail: 'Style reset for this note sheet.' });
+                    },
+                    error: () => this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to reset style.' })
+                })
+        });
     }
 
     // ── Export detail toggles ──────────────────────────────────
     showRankQualifications = true;
-    /** Show/hide the whole Trade column (header + cells) across preview / print / PDF / Word. */
-    showTradeColumn = true;
     showTradeRemarks = true;
     showOwnDistrictDetail = true;
     showSpouseDistrictDetail = true;
     showPrevWorkplaceDetail = true;
-    showRemarks = true;
-    /** Inter-posting only: show/hide the "র‌্যাবে অবস্থানকাল" (Tenure in RAB) column
-     *  group — Joining Date + Duration (Year/Month/Day). Header collapses to one row when off. */
-    showTenure = true;
     showSignatureImage = true;
     showCorps = true;
     showProfQualification = true;
     showGallantryAwards = true;
+
+    // ── Employee table columns (temporary — reset on reload) ──
+    /** Visibility and relative width per table column. columnLayout() turns the widths
+     *  into percentages of the visible columns; the preview <colgroup> (and so the PDF)
+     *  and the Word table both use it. `fixed` columns keep their share when others are
+     *  hidden, the rest share the freed space. Defaults are the previous pixel widths on
+     *  a Legal sheet, so an untouched table looks as before. */
+    interColumns: PostingColumn[] = NotesheetPreviewPostingComponent.defaultColumns(true);
+    newColumns: PostingColumn[] = NotesheetPreviewPostingComponent.defaultColumns(false);
+    showColumnSettings = false;
+
+    private static defaultColumns(inter: boolean): PostingColumn[] {
+        const cols: Omit<PostingColumn, 'defaultWeight' | 'visible'>[] = inter
+            ? [
+                  { key: 'ser', label: 'ক্রমিক', weight: 30, fixed: true, lockVisible: true },
+                  { key: 'serviceId', label: 'ব্যক্তিগত নং', weight: 80 },
+                  { key: 'rank', label: 'পদবি', weight: 70 },
+                  { key: 'trade', label: 'ট্রেড', weight: 56 },
+                  { key: 'name', label: 'নাম', weight: 82 },
+                  { key: 'ownDistrict', label: 'নিজ জেলা', weight: 48 },
+                  { key: 'spouseDistrict', label: 'স্বামী/স্ত্রীর জেলা', weight: 56 },
+                  { key: 'joinDate', label: 'যোগদানের তারিখ', weight: 64, group: 'tenure' },
+                  { key: 'yr', label: 'বছর', weight: 32, fixed: true, group: 'tenure' },
+                  { key: 'mo', label: 'মাস', weight: 24, fixed: true, group: 'tenure' },
+                  { key: 'day', label: 'দিন', weight: 24, fixed: true, group: 'tenure' },
+                  { key: 'prevWorkplace', label: 'পূর্ববতী কর্মস্থল', weight: 85 },
+                  { key: 'transferUnit', label: 'বদলিকৃত কর্মস্থল', weight: 48 },
+                  { key: 'remarks', label: 'মন্তব্য', weight: 58 }
+              ]
+            : [
+                  { key: 'ser', label: 'ক্রমিক', weight: 38, fixed: true, lockVisible: true },
+                  { key: 'serviceId', label: 'ব্যক্তিগত নম্বর', weight: 94 },
+                  { key: 'rank', label: 'পদবি', weight: 98 },
+                  { key: 'trade', label: 'ট্রেড', weight: 56 },
+                  { key: 'name', label: 'নাম', weight: 106 },
+                  { key: 'ownDistrict', label: 'নিজ জেলা', weight: 64 },
+                  { key: 'spouseDistrict', label: 'স্পাউস জেলা', weight: 64 },
+                  { key: 'prevWorkplace', label: 'পূর্ববতী কর্মস্থল', weight: 83 },
+                  { key: 'transferUnit', label: 'বদলি ইউনিট', weight: 88 },
+                  { key: 'remarks', label: 'মন্তব্য', weight: 66 }
+              ];
+        return cols.map((c) => ({ ...c, defaultWeight: c.weight, visible: true }));
+    }
+
+    get postingColumns(): PostingColumn[] {
+        return this.isInterPosting() ? this.interColumns : this.newColumns;
+    }
+
+    isColVisible(key: string): boolean {
+        return this.postingColumns.some((c) => c.key === key && c.visible);
+    }
+
+    setColVisible(key: string, visible: boolean): void {
+        const target = this.postingColumns.find((c) => c.key === key);
+        if (!target || target.lockVisible) return;
+        for (const c of this.postingColumns) {
+            if (c === target || (target.group && c.group === target.group)) c.visible = visible;
+        }
+        this.onColumnsChange();
+    }
+
+    /** Show/hide the whole Trade column (header + cells) across preview / print / PDF / Word. */
+    get showTradeColumn(): boolean {
+        return this.isColVisible('trade');
+    }
+    set showTradeColumn(visible: boolean) {
+        this.setColVisible('trade', visible);
+    }
+
+    get showRemarks(): boolean {
+        return this.isColVisible('remarks');
+    }
+    set showRemarks(visible: boolean) {
+        this.setColVisible('remarks', visible);
+    }
+
+    /** Inter-posting only: the "র‌্যাবে অবস্থানকাল" (Tenure in RAB) column group — Joining
+     *  Date + Duration (Year/Month/Day). Header collapses to one row when off. */
+    get showTenure(): boolean {
+        return this.isInterPosting() && this.isColVisible('joinDate');
+    }
+    set showTenure(visible: boolean) {
+        this.setColVisible('joinDate', visible);
+    }
+
+    /** Visible columns with their width as a percentage of the table. */
+    columnLayout(): { key: string; pct: number }[] {
+        const cols = this.postingColumns;
+        const w = (c: PostingColumn) => (c.weight > 0 ? c.weight : c.defaultWeight);
+        const visible = cols.filter((c) => c.visible);
+        const flex = visible.filter((c) => !c.fixed);
+        if (flex.length === 0) {
+            const total = visible.reduce((a, c) => a + w(c), 0) || 1;
+            return visible.map((c) => ({ key: c.key, pct: (w(c) / total) * 100 }));
+        }
+        const totalAll = cols.reduce((a, c) => a + w(c), 0);
+        const fixedPct = visible.filter((c) => c.fixed).reduce((a, c) => a + (w(c) / totalAll) * 100, 0);
+        const flexPct = Math.max(0, 100 - fixedPct);
+        const flexTotal = flex.reduce((a, c) => a + w(c), 0);
+        return visible.map((c) => ({ key: c.key, pct: c.fixed ? (w(c) / totalAll) * 100 : (w(c) / flexTotal) * flexPct }));
+    }
+
+    columnPercent(key: string): number {
+        return this.columnLayout().find((c) => c.key === key)?.pct ?? 0;
+    }
+
+    trackByColumnKey(_index: number, column: { key: string }): string {
+        return column.key;
+    }
+
+    /** Column widths change row heights, so the pages must be re-measured. */
+    onColumnsChange(): void {
+        this.lastMeasuredHeight = 0;
+    }
+
+    resetColumns(): void {
+        this.interColumns = NotesheetPreviewPostingComponent.defaultColumns(true);
+        this.newColumns = NotesheetPreviewPostingComponent.defaultColumns(false);
+        this.onColumnsChange();
+    }
 
     // ── Edit state ───────────────────────────────────────────
     editing = false;
@@ -1075,16 +1317,21 @@ export class NotesheetPreviewPostingComponent extends NotesheetPreviewBase imple
         // row when the tail does not fit. A populated note disables this special rule
         // and lets the table and following content paginate normally.
         //
-        // The unit runs to the end of the note-sheet, and its registered height is CLAMPED
-        // to one page. A tail taller than a page can never satisfy a literal keep-together,
-        // so an unclamped block would just be dropped and nothing would move; clamping keeps
-        // the rule active, because the goal is only to push the break above the last row so
-        // the tail restarts at the top of a fresh page with the most room available. Any
-        // remainder flows on normally from there.
+        // The unit ENDS at the initiator signature block: the approver sections below it
+        // are deliberately excluded, so their (tall, mostly blank) boxes cannot drag the
+        // break above the last row and cost a sheet. They paginate on their own, each held
+        // whole by its .ns-approver-section keep-together entry above — role title, serial,
+        // signature and date always land on one page.
+        //
+        // The unit's registered height is CLAMPED to one page. A tail taller than a page can
+        // never satisfy a literal keep-together, so an unclamped block would just be dropped
+        // and nothing would move; clamping keeps the rule active, because the goal is only to
+        // push the break above the last row so the tail restarts at the top of a fresh page
+        // with the most room available. Any remainder flows on normally from there.
         const lastRowEl = tbodyEl?.querySelector('tr:last-child') as HTMLElement | null;
         let lastRowTop = -1;
         if (lastRowEl && !this.hasNoteText()) {
-            const tailEls = container.querySelectorAll('.ns-approver-section, .ns-initiator-area, .ns-para, .ns-note') as NodeListOf<HTMLElement>;
+            const tailEls = container.querySelectorAll('.ns-initiator-area, .ns-para, .ns-note') as NodeListOf<HTMLElement>;
             const top = lastRowEl.getBoundingClientRect().top - containerTop;
             lastRowTop = top;
             let tailBottom = top;
@@ -1185,15 +1432,7 @@ export class NotesheetPreviewPostingComponent extends NotesheetPreviewBase imple
      *  Used for the PDF header-gap spacer row's colspan (a wrong value squishes the
      *  table because table-layout:fixed would add phantom columns). */
     get postingColumnCount(): number {
-        if (this.isInterPosting()) {
-            // Ser, Service ID, Rank, Name, Own/Spouse District, Previous Workplace,
-            // Transfer Station (8) + Tenure group (Joining Date, Year, Month, Day = 4)
-            // + Trade + Remarks.
-            return (this.showTenure ? 12 : 8) + (this.showTradeColumn ? 1 : 0) + (this.showRemarks ? 1 : 0);
-        }
-        // Ser, Service ID, Rank, Name, Own/Spouse District, Previous Workplace,
-        // Transfer Unit (+ Trade + Remarks).
-        return 8 + (this.showTradeColumn ? 1 : 0) + (this.showRemarks ? 1 : 0);
+        return this.columnLayout().length;
     }
 
     // ── Toggle edit mode ─────────────────────────────────────
@@ -1320,16 +1559,14 @@ export class NotesheetPreviewPostingComponent extends NotesheetPreviewBase imple
             .map((part) => part.trim())
             .filter(Boolean);
 
-        // Headquarters destinations are more useful at wing/branch level than as
-        // only the deepest hierarchy node: "Admin Wing (General Branch)".  Keep
-        // the existing deepest-node display for every non-HQ unit.
+        // RAB HQ destinations show only the deepest selected level
+        // (wing/branch/sub-branch); every other destination shows the FULL
+        // comma-separated path.
         if (this.isRabHeadquarters(parts[0] || '')) {
-            const wing = parts[1] || parts[0];
-            const branch = parts[2];
-            return branch ? `${wing} (${branch})` : wing;
+            return parts[parts.length - 1] || '';
         }
 
-        return parts[parts.length - 1] || '';
+        return parts.join(', ');
     }
 
     /** Match both Bangla HQ names and common English forms such as RAB HQ. */
@@ -1759,8 +1996,12 @@ export class NotesheetPreviewPostingComponent extends NotesheetPreviewBase imple
 
     /**
      * Snapshot of the unpaginated content for the PDF flow. When the note has no
-     * visible text, everything trailing the employee table is moved into one wrapper
-     * div so the PDF mirrors the web view's special last-row keep-together rule.
+     * visible text, the content trailing the employee table — up to and INCLUDING the
+     * initiator signature block — is moved into one wrapper div so the PDF mirrors the
+     * web view's special last-row keep-together rule. The approver sections stay behind
+     * as siblings of that wrapper: they are outside the rule (matching
+     * calculatePageOffsets) and each is already held whole by `break-inside: avoid` on
+     * .ns-approver-section, so a role title never parts from its signature and date.
      *
      * The PDF is paginated by Chromium from this flat flow, not by
      * calculatePageOffsets, so the web view's keep-together rules do not apply
@@ -1786,12 +2027,16 @@ export class NotesheetPreviewPostingComponent extends NotesheetPreviewBase imple
 
         const tail = document.createElement('div');
         tail.className = 'ns-tail-keep';
+        // Stop at the initiator signature block — the approver sections after it are not
+        // part of the keep-together unit. Missing (older markup): fall back to the whole tail.
+        const stopAfter = clone.querySelector('.ns-initiator-area');
         // appendChild moves the node, so cache the next sibling before each move.
         let node = tableWrap.nextSibling;
         while (node) {
             const next = node.nextSibling;
+            const isLast = node === stopAfter;
             tail.appendChild(node);
-            node = next;
+            node = isLast ? null : next;
         }
 
         const srcTable = tableWrap.querySelector('table');
@@ -1831,7 +2076,9 @@ export class NotesheetPreviewPostingComponent extends NotesheetPreviewBase imple
             tail.className += ' ns-tail-keep--page';
         }
 
-        if (tail.childNodes.length > 0) col.appendChild(tail);
+        // Back into the flow where the moved nodes were: directly after the table, ahead of
+        // the approver sections left behind (nextSibling is null when none remain → append).
+        if (tail.childNodes.length > 0) col.insertBefore(tail, tableWrap.nextSibling);
         return clone.innerHTML;
     }
 
@@ -1904,45 +2151,28 @@ html, body { margin: 0; padding: 0; background: transparent; }
     box-sizing: border-box;
     width: ${contentWidth};
     font-family: 'Times New Roman', 'SolaimanLipi', Times, serif;
-    /* Font-size offset picked in the export bar. The web view carries it on the
-       component host, which is outside the cloned snapshot — restated here so the
-       tiers below and the scoped component rules resolve to the same sizes the
-       preview shows. */
-    --ns-fs-delta: ${this.fontDelta};
+    /* Font-size offset and signature gaps (the saved document style). The web view
+       carries them on the component host, which is outside the cloned snapshot —
+       restated here so the tiers below and the scoped component rules resolve to the
+       same sizes and gaps the preview shows. */
+    ${this.styleVars().map(([name, value]) => `${name}: ${value};`).join(' ')}
     font-size: ${this.pdfFs(10)};
     line-height: 1.7;
     color: #000;
 }
 
-/* Per-element font-size tiers restated so they win over scoped component styles
-   (1:1 with the web view). */
-.pdf-flow .ns-title-bn,
-.pdf-flow .ns-title-en { font-size: ${this.pdfFs(11)} !important; }   /* title — match প্রজ্ঞাপন / Word */
-
+/* Font sizes: the clone keeps its _ngcontent attributes, so the component SCSS tiers
+   (fs(), incl. the 9pt inter-posting body and 9pt signature lines) apply here
+   exactly as on screen. Restating the title, body, signature or table sizes would make
+   the PDF taller or shorter than the web view and break its page count — only elements
+   the component SCSS does not size are set below. */
 .pdf-flow .ns-cell-subject,
 .pdf-flow .ns-edit-field,
 .pdf-flow .ns-exbd-info,
 .pdf-flow .ns-file-attachments-label,
 .pdf-flow .ns-page-no { font-size: ${this.pdfFs(10)} !important; }
 
-/* The trailing block mixes 10pt body text with 9pt signature lines on screen;
-   the PDF flattens all of it to 10pt (+ offset), as it always has. */
-.pdf-flow .ns-approver-left,
-.pdf-flow .ns-approver-remark,
-.pdf-flow .ns-approver-role,
-.pdf-flow .ns-cell-ref,
-.pdf-flow .ns-file-item,
-.pdf-flow .ns-note,
-.pdf-flow .ns-para,
-.pdf-flow .ns-posting-note,
-.pdf-flow .ns-sanglagni-col,
-.pdf-flow .ns-sig-appoint,
-.pdf-flow .ns-sig-date,
-.pdf-flow .ns-sig-name,
-.pdf-flow .ns-sig-paren,
-.pdf-flow .ns-sig-rank { font-size: ${this.pdfFs(10)} !important; }
-
-.pdf-flow .ns-closing-text { font-size: ${this.pdfFs(10)} !important; }
+.pdf-flow .ns-file-item { font-size: ${this.pdfFs(10)} !important; }
 
 .pdf-flow .ns-members-preview-table,
 .pdf-flow .ns-members-preview-table th,
@@ -1950,10 +2180,6 @@ html, body { margin: 0; padding: 0; background: transparent; }
 .pdf-flow .ns-ref-file-btn,
 .pdf-flow .ns-ref-file-btn i { font-size: 7pt !important; }
 
-.pdf-flow .ns-posting-table td { font-size: ${this.pdfFs(8)} !important; }    /* table content (inter) */
-.pdf-flow .ns-posting-table.ns-posting-new td { font-size: ${this.pdfFs(9)} !important; }  /* new posting content */
-.pdf-flow .ns-posting-table th { font-size: ${this.pdfFs(6.5)} !important; }  /* table header (inter) */
-.pdf-flow .ns-posting-table.ns-posting-new th { font-size: ${this.pdfFs(9)} !important; font-weight: normal !important; }  /* new posting header (not bold) */
 
 /* No shading — plain white rows and header (no zebra, no grey header). */
 .pdf-flow .ns-posting-table th,
@@ -1984,7 +2210,17 @@ html, body { margin: 0; padding: 0; background: transparent; }
 /* Match the screen and Ex-BD preview: five blank body lines between approver
    signature sections for both new posting and inter posting. */
 .pdf-flow .ns-approver-section:not(:last-child) {
-    padding-bottom: calc(24px + 6.25em);
+    padding-bottom: calc(var(--ns-approver-gap-px, 24px) + var(--ns-approver-gap-em, 6.25) * 1em);
+}
+
+/* The web view paginates by the last drawn pixel (measureRenderedBottom), so the final
+   approver's reserved-but-blank signature space never costs a page there. Here that
+   block carries break-inside: avoid, so the same blank space would push it onto a new
+   page. It is the end of the document — nothing below it shows — so drop it. */
+.pdf-flow .ns-approver-section:last-child,
+.pdf-flow .ns-approver-section:last-child .ns-approver-body {
+    min-height: 0 !important;
+    padding-bottom: 0 !important;
 }
 
 /* .ns-doc-box draws its own border that the frame replaces. */
@@ -1996,13 +2232,17 @@ html, body { margin: 0; padding: 0; background: transparent; }
 .ns-org-header,
 .ns-title-block { page-break-inside: avoid; break-inside: avoid; }
 
-/* The whole block after the employee table (নোটঃ, the paragraphs, the initiator
-   signature, the approver sections) — plus the table's last row, re-emitted by
+/* The block after the employee table up to the initiator signature (নোটঃ, the
+   paragraphs, the signature) — plus the table's last row, re-emitted by
    buildPdfBodyHtml() as a one-row .ns-tail-row-table — is wrapped in a single
    .ns-tail-keep box, so Chromium moves the lot to the next page intact instead of
    splitting it. That matches the web view, where calculatePageOffsets pushes the
    break above the last row. Chromium drops break-inside on a box taller than the
    printable area, so an over-long tail still fragments as it does today.
+
+   The approver sections BELOW the signature are deliberately left outside the box:
+   they are excluded from the rule (same as the web view), and each carries its own
+   break-inside: avoid so it stays whole on one page.
 
    The head/foot gap margin cancellations above compensate for the repeated
    thead/tfoot of a table Chromium fragments across pages. The one-row table is
@@ -2361,12 +2601,25 @@ html, body { margin: 0; padding: 0; background: transparent; }
         const model = this.buildDocumentModel();
         const bn = model.isBangla;
         const font = bn ? { ascii: 'Times New Roman', hAnsi: 'Times New Roman', cs: 'SolaimanLipi', hint: 'cs' as const } : 'Times New Roman';
-        // Font sizes in half-points (1pt = 2 half-pts) — matched to posting-order-preview
-        const ORG_SZ = 18; // 9pt — org header (HEADER — kept)
-        const BODY_SZ = 20; // 10pt — body text, paragraphs, note, reference
-        const TBL_SZ = this.isInterPosting() ? 16 : 18; // 8pt inter / 9pt new posting — table content
-        const TBL_HDR_SZ = this.isInterPosting() ? 13 : 18; // 6.5pt inter / 9pt new posting — table header
-        const SIG_SZ = 20; // 10pt — signature & approver
+        // Font sizes in half-points (1pt = 2 half-pts) — matched to posting-order-preview,
+        // each shifted by the saved font offset. Word only has half-point steps, so a
+        // ±0.25pt offset rounds to the nearest one.
+        const hp = (pt: number) => this.wordHalfPoints(pt);
+        const ORG_SZ = hp(9); // org header (HEADER — kept)
+        const BODY_SZ = hp(10); // body text, paragraphs, note, reference
+        const TBL_SZ = hp(this.isInterPosting() ? 8 : 9); // table content — inter / new posting
+        const TBL_HDR_SZ = hp(this.isInterPosting() ? 6.5 : 9); // table header — inter / new posting
+        const SIG_SZ = hp(10); // signature & approver
+        const TITLE_SZ = hp(12);
+        // Signature-block spacing in twips (1pt = 20, 1px = 15) from the saved style. The
+        // em gaps are taken against the 10pt (+offset) signature text, as the PDF renders
+        // it; the fixed parts keep the values Word used before styles were configurable.
+        const style = this.currentStyle();
+        const emTwips = (em: number) => Math.round(em * (10 + style.fontDelta) * 20);
+        const INITIATOR_BEFORE = Math.max(0, 655 + (style.initiatorTopMarginPx - 25) * 15);
+        const SIG_DATE_BEFORE = emTwips(style.sigDateGapEm);
+        const APPROVER_GAP = style.approverGapPx * 15 + emTwips(style.approverGapEm);
+        const APPROVER_SIG_BEFORE = Math.max(0, 100 + (style.approverMinHeightPx - 45) * 15);
         const NODATE_SZ = BODY_SZ; // 10pt — notesheet no + date (matches body)
         const csSize = bn ? BODY_SZ : undefined;
         const csNoDate = bn ? NODATE_SZ : undefined;
@@ -2497,188 +2750,144 @@ html, body { margin: 0; padding: 0; background: transparent; }
                 return new TableCell({ children: cellParas, borders: cellBorders, width: { size: w, type: WidthType.DXA }, margins: cellMargins });
             };
 
-            if (this.isInterPosting()) {
-                // ── Inter-posting: 14-column, 3-row header ──
-                // Indices: 0=ser,1=svcId,2=rank,3=trade,4=name,5=ownDist,6=spouseDist,
-                //          7=joinDate,8=yr,9=mo,10=day,11=prevWp,12=trUnit,13=remarks
-                //          ser svcId rank trade name own  spo  jdt  yr  mo  day prev unit rem
-                // When tenure is hidden, give the freed width to Name / Previous
-                // Workplace / Transfer Station (idx 4 / 11 / 12).
-                const iBase = this.showTenure ? [300, 1150, 850, 700, 1000, 900, 900, 800, 400, 400, 400, 700, 900, 650] : [300, 1150, 850, 700, 1600, 900, 900, 800, 400, 400, 400, 1300, 1400, 650];
-                const iBnHdr = ['ক্রমিক', 'ব্যক্তিগত নং', 'পদবি', 'ট্রেড', 'নাম', 'নিজ জেলা (দায়িত্বপূর্ণ এলাকা)', 'স্বামী/স্ত্রীর জেলা (দায়িত্বপূর্ণ এলাকা)', '', '', '', '', 'পূর্ববতী কর্মস্থল', 'বদলিকৃত কর্মস্থল', 'মন্তব্য'];
-                const iEnHdr = ['Ser', 'Service ID', 'Rank', 'Trade', 'Name', 'Own District (Responsible Area)', "Husband/Wife's District (Responsible Area)", '', '', '', '', 'Previous Workplace', 'Transfer Station', 'Remarks'];
-                const iVisIdx = iBase
-                    .map((_, i) => i)
-                    .filter((i) => {
-                        if (i === 13) return this.showRemarks; // Remarks
-                        if (i === 3) return this.showTradeColumn; // Trade
-                        if (i >= 7 && i <= 10) return this.showTenure; // Tenure group (join date + Y/M/D)
-                        return true;
-                    });
-                // Scale to the VISIBLE columns so the table fills the page width even
-                // when the tenure (or remarks) columns are hidden.
-                const iBaseTotal = iVisIdx.reduce((a, oi) => a + iBase[oi], 0);
-                const iW = iBase.map((w) => Math.round((w * pageUsable) / iBaseTotal));
+            // Column widths come from the same layout as the preview's <colgroup>
+            // (columnLayout()), so the Word table matches the screen and the PDF.
+            const layout = this.columnLayout();
+            const visKeys = layout.map((c) => c.key);
+            const wOf: Record<string, number> = {};
+            for (const c of layout) wOf[c.key] = Math.round((c.pct * pageUsable) / 100);
+            const columnWidths = visKeys.map((k) => wOf[k]);
+            const tableWidth = columnWidths.reduce((a, b) => a + b, 0);
+            const plainHdrCell = (text: string, w: number, extra?: any) =>
+                new TableCell({
+                    children: [hdrParaFn(text)],
+                    borders: cellBorders,
+                    width: { size: w, type: WidthType.DXA },
+                    margins: cellMargins,
+                    ...extra
+                });
+            const contCell = (w: number) => new TableCell({ children: [new Paragraph({})], verticalMerge: VerticalMergeType.CONTINUE, borders: cellBorders, width: { size: w, type: WidthType.DXA }, margins: cellMargins });
+            const rankValue = (emp: DraftPostingEmployeeRow) =>
+                (bn ? emp.rankNameBN || emp.rankName || '' : (emp.rankName ?? '')) + (this.showRankQualifications && this.getRankQualifications(emp) ? '\n(' + this.getRankQualifications(emp) + ')' : '');
+            const tradeValue = (emp: DraftPostingEmployeeRow) => (bn ? emp.tradeNameBN || emp.tradeName || '' : (emp.tradeName ?? '')) + (this.showTradeRemarks && emp.tradeRemarks ? '\n(' + emp.tradeRemarks + ')' : '');
 
-                const iMkHdrCell = (text: string, w: number, extra?: any) =>
-                    new TableCell({
-                        children: [hdrParaFn(text)],
-                        borders: cellBorders,
-                        width: { size: w, type: WidthType.DXA },
-                        margins: cellMargins,
-                        ...extra
-                    });
-                const iContCell = (w: number) => new TableCell({ children: [new Paragraph({})], verticalMerge: VerticalMergeType.CONTINUE, borders: cellBorders, width: { size: w, type: WidthType.DXA }, margins: cellMargins });
+            if (this.isInterPosting()) {
+                // ── Inter-posting: 3-row header when the tenure group is shown ──
+                const iHdr: Record<string, string> = bn
+                    ? { ser: 'ক্রমিক', serviceId: 'ব্যক্তিগত নং', rank: 'পদবি', trade: 'ট্রেড', name: 'নাম', ownDistrict: 'নিজ জেলা (দায়িত্বপূর্ণ এলাকা)', spouseDistrict: 'স্বামী/স্ত্রীর জেলা (দায়িত্বপূর্ণ এলাকা)', prevWorkplace: 'পূর্ববতী কর্মস্থল', transferUnit: 'বদলিকৃত কর্মস্থল', remarks: 'মন্তব্য' }
+                    : { ser: 'Ser', serviceId: 'Service ID', rank: 'Rank', trade: 'Trade', name: 'Name', ownDistrict: 'Own District (Responsible Area)', spouseDistrict: "Husband/Wife's District (Responsible Area)", prevWorkplace: 'Previous Workplace', transferUnit: 'Transfer Station', remarks: 'Remarks' };
+                const durationKeys = ['yr', 'mo', 'day'];
+                const isTenureKey = (k: string) => k === 'joinDate' || durationKeys.includes(k);
 
                 let iHdrRows: TableRow[];
                 if (this.showTenure) {
-                    // Row 1: outer cols span 3 rows, tenure block colspan=4
+                    const durationW = wOf['yr'] + wOf['mo'] + wOf['day'];
+                    // Row 1: outer columns span 3 rows; the tenure block spans its 4 columns
                     const r1: TableCell[] = [];
-                    for (const oi of iVisIdx) {
-                        if (oi >= 8 && oi <= 10) continue; // covered by colspan=4 from oi=7
-                        if (oi === 7) {
-                            r1.push(iMkHdrCell(bn ? 'র‌্যাবে অবস্থানকাল' : 'Tenure in RAB', iW[7] + iW[8] + iW[9] + iW[10], { columnSpan: 4 }));
-                        } else {
-                            r1.push(iMkHdrCell(bn ? iBnHdr[oi] : iEnHdr[oi], iW[oi], { verticalMerge: VerticalMergeType.RESTART }));
-                        }
+                    for (const k of visKeys) {
+                        if (durationKeys.includes(k)) continue;
+                        if (k === 'joinDate') r1.push(plainHdrCell(bn ? 'এসআরবিে অবস্থানকাল' : 'Tenure in SRB', wOf[k] + durationW, { columnSpan: 4 }));
+                        else r1.push(plainHdrCell(iHdr[k], wOf[k], { verticalMerge: VerticalMergeType.RESTART }));
                     }
 
-                    // Row 2: joining date spans 2 rows, duration colspan=3
+                    // Row 2: joining date spans 2 rows, duration spans 3 columns
                     const r2: TableCell[] = [];
-                    for (const oi of iVisIdx) {
-                        if (oi < 7 || oi >= 11) {
-                            r2.push(iContCell(iW[oi]));
-                        } else if (oi === 7) {
-                            r2.push(iMkHdrCell(bn ? 'যোগদানের তারিখ' : 'Joining Date', iW[7], { verticalMerge: VerticalMergeType.RESTART }));
-                        } else if (oi === 8) {
-                            r2.push(iMkHdrCell(bn ? 'অবস্থানকাল' : 'Duration', iW[8] + iW[9] + iW[10], { columnSpan: 3 }));
-                        }
-                        // oi 9,10: skipped (covered by colspan=3)
+                    for (const k of visKeys) {
+                        if (!isTenureKey(k)) r2.push(contCell(wOf[k]));
+                        else if (k === 'joinDate') r2.push(plainHdrCell(bn ? 'যোগদানের তারিখ' : 'Joining Date', wOf[k], { verticalMerge: VerticalMergeType.RESTART }));
+                        else if (k === 'yr') r2.push(plainHdrCell(bn ? 'অবস্থানকাল' : 'Duration', durationW, { columnSpan: 3 }));
                     }
 
-                    // Row 3: joining date continues, বছর/মাস/দিন cells
-                    const r3: TableCell[] = [];
-                    const subBn = ['বছর', 'মাস', 'দিন'];
-                    const subEn = ['Year', 'Month', 'Day'];
-                    for (const oi of iVisIdx) {
-                        if (oi < 7 || oi >= 11) {
-                            r3.push(iContCell(iW[oi]));
-                        } else if (oi === 7) {
-                            r3.push(iContCell(iW[7]));
-                        } else {
-                            r3.push(iMkHdrCell(bn ? subBn[oi - 8] : subEn[oi - 8], iW[oi]));
-                        }
-                    }
+                    // Row 3: বছর / মাস / দিন
+                    const subLabel: Record<string, string> = bn ? { yr: 'বছর', mo: 'মাস', day: 'দিন' } : { yr: 'Year', mo: 'Month', day: 'Day' };
+                    const r3 = visKeys.map((k) => (durationKeys.includes(k) ? plainHdrCell(subLabel[k], wOf[k]) : contCell(wOf[k])));
 
                     iHdrRows = [new TableRow({ tableHeader: true, children: r1 }), new TableRow({ tableHeader: true, children: r2 }), new TableRow({ tableHeader: true, children: r3 })];
                 } else {
-                    // Tenure hidden → single-row header (indices 6-9 already dropped from iVisIdx)
-                    const r1 = iVisIdx.map((oi) => iMkHdrCell(bn ? iBnHdr[oi] : iEnHdr[oi], iW[oi]));
-                    iHdrRows = [new TableRow({ tableHeader: true, children: r1 })];
+                    iHdrRows = [new TableRow({ tableHeader: true, children: visKeys.map((k) => plainHdrCell(iHdr[k], wOf[k])) })];
                 }
 
                 const iDataRows = this.postingEmployees.map((emp, i) => {
                     const t = this.calcTenure(emp.joiningDateInRAB);
-                    const allV: string[] = [
-                        bn ? this.serial(i + 1) : String(i + 1),
-                        this.getServiceIdDisplay(emp),
-                        (bn ? emp.rankNameBN || emp.rankName || '' : (emp.rankName ?? '')) + (this.showRankQualifications && this.getRankQualifications(emp) ? '\n(' + this.getRankQualifications(emp) + ')' : ''),
-                        (bn ? emp.tradeNameBN || emp.tradeName || '' : (emp.tradeName ?? '')) + (this.showTradeRemarks && emp.tradeRemarks ? '\n(' + emp.tradeRemarks + ')' : ''),
-                        bn ? emp.fullNameBN || emp.fullNameEN || '' : (emp.fullNameEN ?? ''),
-                        bn ? emp.permanentDistrictNameBN || emp.permanentDistrictName || '' : (emp.permanentDistrictName ?? ''),
-                        bn ? emp.spousePermanentDistrictNameBN || emp.spousePermanentDistrictName || '' : (emp.spousePermanentDistrictName ?? ''),
-                        bn ? this.toBnDigits(this.formatJoiningDate(emp.joiningDateInRAB)) : this.formatJoiningDate(emp.joiningDateInRAB),
-                        bn ? this.toBnDigits(String(t.y)) : String(t.y),
-                        bn ? this.toBnDigits(String(t.m)) : String(t.m),
-                        bn ? this.toBnDigits(String(t.d)) : String(t.d),
-                        this.getInterPrevWorkplace(emp),
-                        this.getTransferUnitShort(emp),
-                        this.getCombinedRemarks(emp)
-                    ];
+                    const v: Record<string, string> = {
+                        ser: bn ? this.serial(i + 1) : String(i + 1),
+                        serviceId: this.getServiceIdDisplay(emp),
+                        rank: rankValue(emp),
+                        trade: tradeValue(emp),
+                        name: bn ? emp.fullNameBN || emp.fullNameEN || '' : (emp.fullNameEN ?? ''),
+                        ownDistrict: bn ? emp.permanentDistrictNameBN || emp.permanentDistrictName || '' : (emp.permanentDistrictName ?? ''),
+                        spouseDistrict: bn ? emp.spousePermanentDistrictNameBN || emp.spousePermanentDistrictName || '' : (emp.spousePermanentDistrictName ?? ''),
+                        joinDate: bn ? this.toBnDigits(this.formatJoiningDate(emp.joiningDateInRAB)) : this.formatJoiningDate(emp.joiningDateInRAB),
+                        yr: bn ? this.toBnDigits(String(t.y)) : String(t.y),
+                        mo: bn ? this.toBnDigits(String(t.m)) : String(t.m),
+                        day: bn ? this.toBnDigits(String(t.d)) : String(t.d),
+                        prevWorkplace: this.getInterPrevWorkplace(emp),
+                        transferUnit: this.getTransferUnitShort(emp),
+                        remarks: this.getCombinedRemarks(emp)
+                    };
                     // cantSplit: keep each employee row whole — Word must not break a
                     // multi-line row across pages (that leaves a stray fragment after
                     // the repeated header on the next page).
                     // Every value left-aligned, matching the preview (headers stay centered).
-                    return new TableRow({ cantSplit: true, children: iVisIdx.map((oi) => dataCellFn(allV[oi], iW[oi])) });
+                    return new TableRow({ cantSplit: true, children: visKeys.map((k) => dataCellFn(v[k], wOf[k])) });
                 });
 
-                const iTotalW = iVisIdx.reduce((a, oi) => a + iW[oi], 0);
                 mainChildren.push(new Paragraph({ spacing: { before: 200 }, children: [] }));
-                mainChildren.push(new Table({ width: { size: iTotalW, type: WidthType.DXA }, rows: [...iHdrRows, ...iDataRows], columnWidths: iVisIdx.map((oi) => iW[oi]), alignment: AlignmentType.LEFT, indent: { size: 100, type: WidthType.DXA } }));
+                mainChildren.push(new Table({ width: { size: tableWidth, type: WidthType.DXA }, rows: [...iHdrRows, ...iDataRows], columnWidths, alignment: AlignmentType.LEFT, indent: { size: 100, type: WidthType.DXA } }));
             } else {
-                // ── New posting: 10-column, single-row header ──
-                const allColKeys = ['ser', 'serviceId', 'rank', 'trade', 'name', 'ownDistrict', 'spouseDistrict', 'prevWorkplace', 'transferUnit', 'remarks'];
-                const allColHeaders = bn
-                    ? ['ক্রমিক', 'ব্যক্তিগত নম্বর', 'পদবি', 'ট্রেড', 'নাম', 'নিজ জেলা (দায়িত্বপূর্ণ এলাকা)', 'স্পাউস জেলা (দায়িত্বপূর্ণ এলাকা)', 'পূর্ববতী কর্মস্থল', 'বদলি ইউনিট', 'মন্তব্য']
-                    : ['Ser', 'Service ID', 'Rank', 'Trade', 'Name', 'Own District (Responsible Area)', 'Spouse District (Responsible Area)', 'Previous Workplace', 'Transfer Unit', 'Remarks'];
-                //                    ser  svcId rank trade name  own   spouse prev  unit  rem
-                const allBaseWidths = [620, 1480, 850, 820, 1380, 1400, 1220, 1040, 780, 800];
+                // ── New posting: single-row header ──
+                const hdr: Record<string, string> = bn
+                    ? { ser: 'ক্রমিক', serviceId: 'ব্যক্তিগত নম্বর', rank: 'পদবি', trade: 'ট্রেড', name: 'নাম', ownDistrict: 'নিজ জেলা (দায়িত্বপূর্ণ এলাকা)', spouseDistrict: 'স্পাউস জেলা (দায়িত্বপূর্ণ এলাকা)', prevWorkplace: 'পূর্ববতী কর্মস্থল', transferUnit: 'বদলি ইউনিট', remarks: 'মন্তব্য' }
+                    : { ser: 'Ser', serviceId: 'Service ID', rank: 'Rank', trade: 'Trade', name: 'Name', ownDistrict: 'Own District (Responsible Area)', spouseDistrict: 'Spouse District (Responsible Area)', prevWorkplace: 'Previous Workplace', transferUnit: 'Transfer Unit', remarks: 'Remarks' };
+                const district = (full: string, detail: boolean) => (detail ? full : full.split('\n')[0].replace(/\s*\(.*$/, ''));
 
-                const visibleIndices = allColKeys
-                    .map((k, i) => {
-                        if (k === 'remarks' && !this.showRemarks) return -1;
-                        if (k === 'trade' && !this.showTradeColumn) return -1;
-                        return i;
-                    })
-                    .filter((i) => i >= 0);
-                const cols = visibleIndices.map((i) => allColHeaders[i]);
-                const baseWidths = visibleIndices.map((i) => allBaseWidths[i]);
-                const baseTotal = baseWidths.reduce((a, b) => a + b, 0);
-                const colWidths = baseWidths.map((w) => Math.round((w * pageUsable) / baseTotal));
-
-                const hdrCell = (text: string, wi: number, extra?: any) =>
-                    new TableCell({
-                        children: [hdrParaFn(text)],
-                        borders: cellBorders,
-                        width: { size: colWidths[wi], type: WidthType.DXA },
-                        margins: cellMargins,
-                        ...extra
-                    });
-
-                const buildAllCellValues = (emp: any, i: number): string[] => [
-                    bn ? this.serial(i + 1) : String(i + 1),
-                    this.getServiceIdDisplay(emp),
-                    (bn ? emp.rankNameBN || emp.rankName || '' : (emp.rankName ?? '')) + (this.showRankQualifications && this.getRankQualifications(emp) ? '\n(' + this.getRankQualifications(emp) + ')' : ''),
-                    (bn ? emp.tradeNameBN || emp.tradeName || '' : (emp.tradeName ?? '')) + (this.showTradeRemarks && emp.tradeRemarks ? '\n(' + emp.tradeRemarks + ')' : ''),
-                    bn ? emp.fullNameBN || emp.fullNameEN || '' : (emp.fullNameEN ?? ''),
-                    this.showOwnDistrictDetail
-                        ? bn
-                            ? emp.permanentDistrictNameBN || emp.permanentDistrictName || ''
-                            : (emp.permanentDistrictName ?? '')
-                        : (bn ? emp.permanentDistrictNameBN || emp.permanentDistrictName || '' : (emp.permanentDistrictName ?? '')).split('\n')[0].replace(/\s*\(.*$/, ''),
-                    this.showSpouseDistrictDetail
-                        ? bn
-                            ? emp.spousePermanentDistrictNameBN || emp.spousePermanentDistrictName || ''
-                            : (emp.spousePermanentDistrictName ?? '')
-                        : (bn ? emp.spousePermanentDistrictNameBN || emp.spousePermanentDistrictName || '' : (emp.spousePermanentDistrictName ?? '')).split('\n')[0].replace(/\s*\(.*$/, ''),
-                    this.getPreviousWorkplace(emp),
-                    this.getTransferUnitShort(emp),
-                    this.getCombinedRemarks(emp)
-                ];
-
-                const headerRows = [new TableRow({ tableHeader: true, children: cols.map((c, vi) => hdrCell(c, vi)) })];
+                const headerRows = [new TableRow({ tableHeader: true, children: visKeys.map((k) => plainHdrCell(hdr[k], wOf[k])) })];
                 const dataRows = this.postingEmployees.map((emp, i) => {
-                    const allVals = buildAllCellValues(emp, i);
+                    const v: Record<string, string> = {
+                        ser: bn ? this.serial(i + 1) : String(i + 1),
+                        serviceId: this.getServiceIdDisplay(emp),
+                        rank: rankValue(emp),
+                        trade: tradeValue(emp),
+                        name: bn ? emp.fullNameBN || emp.fullNameEN || '' : (emp.fullNameEN ?? ''),
+                        ownDistrict: district(bn ? emp.permanentDistrictNameBN || emp.permanentDistrictName || '' : (emp.permanentDistrictName ?? ''), this.showOwnDistrictDetail),
+                        spouseDistrict: district(bn ? emp.spousePermanentDistrictNameBN || emp.spousePermanentDistrictName || '' : (emp.spousePermanentDistrictName ?? ''), this.showSpouseDistrictDetail),
+                        prevWorkplace: this.getPreviousWorkplace(emp),
+                        transferUnit: this.getTransferUnitShort(emp),
+                        remarks: this.getCombinedRemarks(emp)
+                    };
                     // cantSplit: keep each employee row whole across page breaks.
                     // Every value left-aligned, matching the preview (headers stay centered).
-                    return new TableRow({ cantSplit: true, children: visibleIndices.map((oi, vi) => dataCellFn(allVals[oi], colWidths[vi])) });
+                    return new TableRow({ cantSplit: true, children: visKeys.map((k) => dataCellFn(v[k], wOf[k])) });
                 });
-                const tableRows = [...headerRows, ...dataRows];
                 mainChildren.push(new Paragraph({ spacing: { before: 200 }, children: [] }));
-                const totalColW = colWidths.reduce((a, b) => a + b, 0);
-                mainChildren.push(new Table({ width: { size: totalColW, type: WidthType.DXA }, rows: tableRows, columnWidths: colWidths, alignment: AlignmentType.LEFT, indent: { size: 100, type: WidthType.DXA } }));
+                mainChildren.push(new Table({ width: { size: tableWidth, type: WidthType.DXA }, rows: [...headerRows, ...dataRows], columnWidths, alignment: AlignmentType.LEFT, indent: { size: 100, type: WidthType.DXA } }));
             }
         }
 
-        // Note (between employee table and paragraphs, matching view order)
+        // Note (between employee table and paragraphs, matching view order).
+        // The note is rich HTML from the editor — parse it into content blocks so
+        // the formatting survives instead of the raw tags landing in the document.
         if (model.note) {
-            const noteLines = model.note.split('\n').filter((l: string) => l.trim());
-            for (const line of noteLines) {
+            const noteBlocks = this.parseHtmlToContentBlocks(this.fixBanglaWordBreaks(model.note));
+            for (const b of noteBlocks) {
+                if (b.type === 'table' && b.rows?.length) {
+                    mainChildren.push(...this.contentBlocksToDocx([b], font, bn));
+                    continue;
+                }
+                if (!b.text) continue;
+                let align: (typeof AlignmentType)[keyof typeof AlignmentType] | undefined;
+                if (b.alignment === 'center') align = AlignmentType.CENTER;
+                else if (b.alignment === 'right') align = AlignmentType.RIGHT;
+                else if (b.alignment === 'justify') align = AlignmentType.JUSTIFIED;
+                const children = b.runs?.length
+                    ? b.runs.map((r) => new TextRun({ text: r.text, bold: r.bold, italics: r.italic, underline: r.underline ? {} : undefined, size: BODY_SZ, sizeComplexScript: csSize, font, language: lang }))
+                    : [new TextRun({ text: b.text, bold: b.bold, italics: b.italic, size: BODY_SZ, sizeComplexScript: csSize, font, language: lang })];
                 mainChildren.push(
                     new Paragraph({
-                        children: [new TextRun({ text: line, size: BODY_SZ, sizeComplexScript: csSize, font, language: lang })],
-                        indent: { left: 100 },
-                        spacing: { before: 40, after: 40 }
+                        children,
+                        indent: { left: b.indent === 'list' ? 400 : 100 },
+                        spacing: { before: 40, after: 40 },
+                        alignment: align
                     })
                 );
             }
@@ -2727,7 +2936,7 @@ html, body { margin: 0; padding: 0; background: transparent; }
                             ],
                             alignment: AlignmentType.LEFT,
                             indent: initIndent,
-                            spacing: { before: 280, after: 80 },
+                            spacing: { before: INITIATOR_BEFORE, after: 80 },
                             keepNext: true,
                             keepLines: true
                         })
@@ -2736,7 +2945,7 @@ html, body { margin: 0; padding: 0; background: transparent; }
                     /* no sig */
                 }
             } else {
-                mainChildren.push(new Paragraph({ spacing: { before: 280, after: 80 }, keepNext: true }));
+                mainChildren.push(new Paragraph({ spacing: { before: INITIATOR_BEFORE, after: 80 }, keepNext: true }));
             }
 
             // Name
@@ -2780,19 +2989,21 @@ html, body { margin: 0; padding: 0; background: transparent; }
                         children: [new TextRun({ text: model.initiator.date, size: SIG_SZ, sizeComplexScript: bn ? SIG_SZ : undefined, font, language: lang })],
                         alignment: AlignmentType.LEFT,
                         indent: initIndent,
-                        spacing: { before: 400 }
+                        spacing: { before: SIG_DATE_BEFORE }
                     })
                 );
             }
         }
 
         // Approvers — keep each approver block together
-        for (const ap of model.approvers) {
+        // The gap between approver blocks sits below every block but the last (the SCSS
+        // :not(:last-child) padding) — in Word, above every block but the first.
+        for (const [apIndex, ap] of model.approvers.entries()) {
             mainChildren.push(
                 new Paragraph({
                     children: [new TextRun({ text: ap.role, underline: {}, size: SIG_SZ, sizeComplexScript: bn ? SIG_SZ : undefined, font, language: lang })],
                     indent: { left: 100 },
-                    spacing: { before: 280 },
+                    spacing: { before: 280 + (apIndex > 0 ? APPROVER_GAP : 0) },
                     keepNext: true,
                     keepLines: true
                 })
@@ -2812,7 +3023,7 @@ html, body { margin: 0; padding: 0; background: transparent; }
                                 })
                             ],
                             alignment: AlignmentType.CENTER,
-                            spacing: { before: 100, after: 40 },
+                            spacing: { before: APPROVER_SIG_BEFORE, after: 40 },
                             keepNext: true
                         })
                     );
@@ -2820,7 +3031,7 @@ html, body { margin: 0; padding: 0; background: transparent; }
                     /* no sig */
                 }
             } else {
-                mainChildren.push(new Paragraph({ alignment: AlignmentType.CENTER, spacing: { before: 100, after: 40 }, keepNext: true }));
+                mainChildren.push(new Paragraph({ alignment: AlignmentType.CENTER, spacing: { before: APPROVER_SIG_BEFORE, after: 40 }, keepNext: true }));
             }
             if (ap.date) {
                 mainChildren.push(
@@ -2835,12 +3046,12 @@ html, body { margin: 0; padding: 0; background: transparent; }
         // Title paragraphs — inside the page border at the top
         const titleChildren: (Paragraph | Table)[] = [
             new Paragraph({
-                children: [new TextRun({ text: 'NOTE SHEET', bold: true, size: 24, font: 'Times New Roman' })],
+                children: [new TextRun({ text: 'NOTE SHEET', bold: true, size: TITLE_SZ, font: 'Times New Roman' })],
                 alignment: AlignmentType.CENTER,
                 spacing: { before: 80, after: 40 }
             }),
             new Paragraph({
-                children: [new TextRun({ text: 'মন্তব্য পত্র', size: 24, font: { ascii: 'Times New Roman', hAnsi: 'Times New Roman', cs: 'SolaimanLipi', hint: 'cs' as const } })],
+                children: [new TextRun({ text: 'মন্তব্য পত্র', size: TITLE_SZ, font: { ascii: 'Times New Roman', hAnsi: 'Times New Roman', cs: 'SolaimanLipi', hint: 'cs' as const } })],
                 alignment: AlignmentType.CENTER,
                 spacing: { after: 100 }
             })
@@ -2856,7 +3067,15 @@ html, body { margin: 0; padding: 0; background: transparent; }
         const pageHeight = this.selectedPageSize === 'A4' ? 16838 : 20160; // twips
 
         return new Document({
-            styles: bn ? { default: { document: { run: { language: { value: 'bn-BD', bidirectional: 'bn-BD' } } } } } : undefined,
+            // 1.25 line spacing (line: 300 = 1.25 × 240) by default, matching the preview's .ns-para.
+            styles: {
+                default: {
+                    document: {
+                        paragraph: { spacing: { line: 300 } },
+                        ...(bn ? { run: { language: { value: 'bn-BD', bidirectional: 'bn-BD' } } } : {})
+                    }
+                }
+            },
             sections: [
                 {
                     properties: {
@@ -2881,13 +3100,18 @@ html, body { margin: 0; padding: 0; background: transparent; }
         return s.replace(/\u00A0/g, ' ').replace(/\u200B/g, '');
     }
 
+    /** A base point size plus the saved font offset, as docx half-points. */
+    private wordHalfPoints(pt: number): number {
+        return Math.max(2, Math.round((pt + this.currentStyle().fontDelta) * 2));
+    }
+
     /** Convert shared content blocks to docx Paragraph/Table elements. */
     private contentBlocksToDocx(blocks: ContentBlock[], font: any, bn: boolean): (Paragraph | Table)[] {
         const result: (Paragraph | Table)[] = [];
         const thinBorder = { style: BorderStyle.SINGLE, size: 1, color: '000000' };
         const cellBorders = { top: thinBorder, bottom: thinBorder, left: thinBorder, right: thinBorder };
         const lang = bn ? { value: 'bn-BD', bidirectional: 'bn-BD' } : undefined;
-        const bodySize = 16; // 8pt
+        const bodySize = this.wordHalfPoints(8);
         const csSize = bn ? bodySize : undefined;
 
         for (const b of blocks) {
