@@ -199,7 +199,7 @@ export class RabIdSerial implements OnInit {
                 this.messageService.add({
                     severity: 'error',
                     summary: 'Error',
-                    detail: err?.error?.message || 'Failed to fetch RAB ID Serial data'
+                    detail: err?.error?.message || 'Failed to fetch SRB ID Serial data'
                 });
             }
         });
@@ -261,7 +261,7 @@ export class RabIdSerial implements OnInit {
                 this.messageService.add({
                     severity: 'success',
                     summary: 'Success',
-                    detail: 'RAB ID Serial created successfully'
+                    detail: 'SRB ID Serial created successfully'
                 });
                 this.onReset();
                 this.getAll();
@@ -271,7 +271,7 @@ export class RabIdSerial implements OnInit {
                 this.messageService.add({
                     severity: 'error',
                     summary: 'Error',
-                    detail: err?.error?.message || 'Failed to create RAB ID Serial'
+                    detail: err?.error?.message || 'Failed to create SRB ID Serial'
                 });
                 this.isSubmitting = false;
             }

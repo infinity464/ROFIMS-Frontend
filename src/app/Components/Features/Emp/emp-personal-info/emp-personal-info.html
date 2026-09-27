@@ -10,6 +10,7 @@
         @if (!embedMode && !hideTitle) {
             <div class="form-section">
                 <app-employee-search
+                    [exMemberNotice]="true"
                     (onEmployeeFound)="onEmployeeSearchFound($event)"
                     (onSearchReset)="onEmployeeSearchReset()">
                 </app-employee-search>
@@ -243,3 +244,4 @@
         }
     </div>
 </p-fluid>
+

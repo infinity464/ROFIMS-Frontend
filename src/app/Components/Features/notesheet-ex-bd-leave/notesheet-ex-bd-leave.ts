@@ -767,7 +767,7 @@ export class NotesheetExBdLeaveComponent implements OnInit {
     private buildAppLabel(app: ExBdLeaveApplicationListViewModel): string {
         const parts = [
             app.applicantName || '',
-            app.rabid ? `RAB: ${app.rabid}` : '',
+            app.rabid ? `SRB: ${app.rabid}` : '',
             app.visitTypeName || '',
             app.destinationCountriesDisplay || '',
             `${app.fromDate?.slice(0, 10) ?? ''} ~ ${app.toDate?.slice(0, 10) ?? ''}`
@@ -927,16 +927,18 @@ export class NotesheetExBdLeaveComponent implements OnInit {
         const nameWithSuffixBN = overview ? getFormattedMemberName(overview, true) : nameBN;
         const nameWithSuffixEN = overview ? getFormattedMemberName(overview, false) : nameEN;
 
-        // Person identifier: "Prefix-ServiceId Name, psc, Arty" — prefix & service id joined by a
-        // dash (e.g. বিএ-৭৪৪২ মোঃ কামরুল হাসান); empties skipped to avoid stray spaces/dashes.
+        // Person identifier: "Prefix-ServiceId Rank Name, psc, Arty" — prefix & service id joined by
+        // a dash (e.g. বিএ-৭৪৪২ মেজর মোঃ কামরুল হাসান); empties skipped to avoid stray spaces/dashes.
         const prefixSvcBN = [prefixBN, BanglaNumerals.toBangla(serviceId)].filter(Boolean).join('-');
         const prefixSvcEN = [prefixEN, serviceId].filter(Boolean).join('-');
-        const personBN = [prefixSvcBN, nameWithSuffixBN].filter(Boolean).join(' ');
-        const personEN = [prefixSvcEN, nameWithSuffixEN].filter(Boolean).join(' ');
+        const rankBN = overview?.armyRankBN || overview?.armyRank || app.applicantRank || '';
+        const rankEN = overview?.armyRank || app.applicantRank || '';
+        const personBN = [prefixSvcBN, rankBN, nameWithSuffixBN].filter(Boolean).join(' ');
+        const personEN = [prefixSvcEN, rankEN, nameWithSuffixEN].filter(Boolean).join(' ');
 
-        const dynamicBN = `র‍্যাব প্রেষণে নিয়োজিত বর্তমানে ${rabUnitBN} এ কর্মরত ${personBN} এর ${purposeBN} জন্য${familySectionBN} আগামী ${formatDateBangla(fromDate)} হতে ${formatDateBangla(toDate)} তারিখ পর্যন্ত ${daysBN} (${daysWordsBN}) দিন অথবা উল্লিখিত সময়ের মধ্যে যাত্রার তারিখ হতে ${daysBN} (${daysWordsBN}) দিন ${countriesBN} গমনের জন্য অর্জিত `;
+        const dynamicBN = `এসআরবি প্রেষণে নিয়োজিত বর্তমানে ${rabUnitBN} এ কর্মরত ${personBN} এর ${purposeBN} জন্য${familySectionBN} আগামী ${formatDateBangla(fromDate)} হতে ${formatDateBangla(toDate)} তারিখ পর্যন্ত ${daysBN} (${daysWordsBN}) দিন অথবা উল্লিখিত সময়ের মধ্যে যাত্রার তারিখ হতে ${daysBN} (${daysWordsBN}) দিন ${countriesBN} গমনের জন্য অর্জিত `;
 
-        const dynamicEN = `Currently serving at ${rabUnitEN} under RAB deputation, ${personEN} has applied for ${purposeEN}${familySectionEN}, for ${totalDays} (${daysWordsEN}) days from ${formatDateEnglish(fromDate)} to ${formatDateEnglish(toDate)}, or ${totalDays} (${daysWordsEN}) days from the date of journey within the aforementioned period, to ${countriesEN} for earned `;
+        const dynamicEN = `Currently serving at ${rabUnitEN} under SRB deputation, ${personEN} has applied for ${purposeEN}${familySectionEN}, for ${totalDays} (${daysWordsEN}) days from ${formatDateEnglish(fromDate)} to ${formatDateEnglish(toDate)}, or ${totalDays} (${daysWordsEN}) days from the date of journey within the aforementioned period, to ${countriesEN} for earned `;
 
         this.generatedMainTextBN = dynamicBN + this.defaultMainTextBN;
         this.generatedMainTextEN = dynamicEN + this.defaultMainTextEN;
@@ -1064,7 +1066,7 @@ export class NotesheetExBdLeaveComponent implements OnInit {
                             const name = emp?.FullNameEN || emp?.fullNameEN || '';
                             const rabId = emp?.RABID || emp?.Rabid || emp?.rabid || '';
                             const serviceId = emp?.ServiceId || emp?.serviceId || '';
-                            const parts = [name, rabId ? `RAB: ${rabId}` : '', serviceId ? `SVC: ${serviceId}` : ''].filter(Boolean);
+                            const parts = [name, rabId ? `SRB: ${rabId}` : '', serviceId ? `SVC: ${serviceId}` : ''].filter(Boolean);
                             this.form.get('preparedBy')?.setValue(parts.join(' | ') || `Employee #${empId}`);
                         }
                     });
@@ -1712,7 +1714,7 @@ export class NotesheetExBdLeaveComponent implements OnInit {
         const sigBlock = (detail: any, align: string) => {
             if (!detail) return '';
             const lines = [
-                detail.rabId && detail.rabId !== '-' ? `RAB ID: ${detail.rabId}` : '',
+                detail.rabId && detail.rabId !== '-' ? `SRB ID: ${detail.rabId}` : '',
                 detail.rank && detail.rank !== '-' ? detail.rank : '',
                 detail.appointment && detail.appointment !== '-' ? detail.appointment : ''
             ].filter(Boolean);
@@ -1807,7 +1809,7 @@ export class NotesheetExBdLeaveComponent implements OnInit {
             }));
             const lines = [
                 detail.name,
-                detail.rabId && detail.rabId !== '-' ? `RAB ID: ${detail.rabId}` : '',
+                detail.rabId && detail.rabId !== '-' ? `SRB ID: ${detail.rabId}` : '',
                 detail.rank && detail.rank !== '-' ? detail.rank : '',
                 detail.appointment && detail.appointment !== '-' ? detail.appointment : ''
             ].filter((l: string) => l && l !== '-' && l !== '—');

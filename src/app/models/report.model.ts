@@ -739,6 +739,8 @@ export interface DynamicReportRequest {
   relieverNotJoinedOnly?: boolean | null;
   /** Stay-After-Reliever (Stand Release): every member in the posted-out list. */
   postedOutAllOnly?: boolean | null;
+  /** All Posted Out mode — posted out with or without a reliever. */
+  allPostedOutOnly?: boolean | null;
   /** Stay-After-Reliever (New Posting Person List): joinee-detail entry still pending. */
   newPostingPendingOnly?: boolean | null;
   /** Long-Stay: minimum RAB tenure threshold value (paired with minStayUnit). */

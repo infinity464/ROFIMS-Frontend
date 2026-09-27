@@ -1,3 +1,46 @@
 :host {
   display: block;
 }
+
+/* User management access grid — the table may be wider than the card, so it scrolls on its own. */
+.access-grid-wrap {
+  overflow-x: auto;
+  border: 1px solid var(--p-content-border-color);
+  border-radius: 6px;
+}
+
+.access-grid {
+  width: 100%;
+  min-width: 40rem;
+  border-collapse: collapse;
+  font-size: 0.875rem;
+
+  th,
+  td {
+    padding: 0.5rem 0.75rem;
+    text-align: center;
+    border-bottom: 1px solid var(--p-content-border-color);
+  }
+
+  th {
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
+    color: var(--p-text-muted-color);
+    white-space: nowrap;
+  }
+
+  .target-col {
+    text-align: left;
+    white-space: nowrap;
+  }
+
+  tbody tr:last-child td {
+    border-bottom: none;
+  }
+
+  .all-roles-row td {
+    background: color-mix(in srgb, var(--p-primary-color) 7%, transparent);
+  }
+}

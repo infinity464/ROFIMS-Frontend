@@ -336,7 +336,7 @@ export class PostingNotesheetGenerateComponent implements OnInit {
                             const name = emp?.FullNameEN || emp?.fullNameEN || '';
                             const rabId = emp?.RABID || emp?.rabid || emp?.Rabid || '';
                             const serviceId = emp?.ServiceId || emp?.serviceId || '';
-                            const parts = [name, rabId ? `RAB: ${rabId}` : '', serviceId ? `SVC: ${serviceId}` : ''].filter(Boolean);
+                            const parts = [name, rabId ? `SRB: ${rabId}` : '', serviceId ? `SVC: ${serviceId}` : ''].filter(Boolean);
                             this.form.get('preparedBy')?.setValue(parts.join(' | ') || `Employee #${empId}`);
                         }
                     });

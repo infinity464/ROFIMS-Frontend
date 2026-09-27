@@ -1,4 +1,14 @@
-﻿/* ── Document font ─────────────────────────────────────
+﻿/* -- Whole-sheet font size (user-selectable) -----------
+   The export bar's font dropdown sets --ns-fs-delta on the component host: a point
+   offset (-2 ... +2 in 0.25 steps) that every body size below is expressed against
+   through fs(). With no offset the 0 fallback leaves every size exactly as it was.
+   The PDF restates the same offset on .pdf-flow in buildJsReportPdf() (via a matching
+   inline calc), because the export snapshots the paper's innerHTML, not the host. */
+@function fs($pt) {
+    @return calc(#{$pt}pt + var(--ns-fs-delta, 0) * 1pt);
+}
+
+/* ── Document font ─────────────────────────────────────
    SolaimanLipi (bundled, see styles.scss) replaces SolaimanLipi as the Bangla
    face for this preview. Times New Roman stays first so Latin text and digits
    are unchanged — Bangla codepoints have no Times glyphs and fall through to
@@ -52,7 +62,7 @@
 .ns-sig-rank,
 .ns-sig-appoint,
 .ns-sig-date {
-    font-size: 10pt;
+    font-size: fs(10);
     font-weight: normal;
 }
 
@@ -64,7 +74,16 @@
 /* Members table: align its left edge with the body paragraphs (১।/ক।) instead of
    the shared 16px Word-style indent. Loaded after notesheet-preview.scss, so it wins. */
 .ns-members-preview-table {
+    /* Span the full text width so the right edge lines up with the justified paragraphs
+       (.ns-para pads 1px left / 2px right). */
+    width: calc(100% - 3px);
     margin-left: 1px;
+    margin-right: 2px;
+
+    th,
+    td {
+        line-height: 1.25;
+    }
 }
 
 /* Note has no serial — keep it on the same left edge as the members table/paragraphs. */
@@ -137,27 +156,37 @@
    Title (.ns-title-*) + org header have their own explicit sizes, so they are unaffected. */
 .a4-paper,
 .page-measure {
-    font-size: 10pt; /* base — anything without its own size */
+    font-size: fs(10); /* base — anything without its own size */
 }
 /* Numbered paragraphs + note + last-text: shared style pins these at 8pt, so an
    explicit override is required (the base bump alone does not reach them). */
 .ns-para,
 .ns-para-no {
-    font-size: 10pt;
+    font-size: fs(10);
+}
+/* Body paragraphs at 1.25 line height (shared style uses 1.85) — same as Ex-BD leave
+   and Posting. The text is injected via [innerHTML] and pasted content can carry its
+   own inline line-height, so pierce to the inner nodes with !important. */
+.ns-para {
+    line-height: 1.25 !important;
+
+    ::ng-deep * {
+        line-height: 1.25 !important;
+    }
 }
 .ns-cell-ref {
-    font-size: 10pt; /* সূত্রঃ / ক. / খ. — was 7pt */
+    font-size: fs(10); /* সূত্রঃ / ক. / খ. — was 7pt */
 }
 .ns-members-preview-table,
 .ns-members-preview-table th {
-    font-size: 9pt; /* members table — 1pt smaller than body so columns fit */
+    font-size: fs(9); /* members table — 1pt smaller than body so columns fit */
 }
 .ns-sig-name,
 .ns-sig-rank,
 .ns-sig-paren,
 .ns-sig-appoint,
 .ns-sig-date {
-    font-size: 10pt; /* signature block */
+    font-size: fs(10); /* signature block */
 }
 
 /* Edit-mode members table: mark every editable data cell (same affordance as the
@@ -190,4 +219,114 @@
 .a4-paper:not(.paginated) {
     width: 100%;
     max-width: 100%;
+}
+
+/* The shared ≤1200px responsive rules un-slice the paginated pages (static .page-inner,
+   auto height): every page then shows the full content and the bottom cover lands over
+   the signature block — and the browser zoom decides whether that kicks in. Keep the
+   real page geometry at every width here; a narrow window scrolls sideways instead.
+   The offset comes from --ns-page-offset because the shared rule's
+   `transform: none !important` also cancels the inline translate. */
+@media screen and (max-width: 1200px) {
+    :host .a4-paper-container {
+        align-items: flex-start;
+        overflow-x: auto;
+    }
+    :host .a4-paper.paginated {
+        width: 210mm;
+        height: 297mm !important;
+        min-height: 297mm;
+        padding: 14mm 6mm 20mm;
+        overflow: hidden !important;
+    }
+    :host .a4-paper.paginated.a4-paper--legal {
+        width: 215.9mm;
+        height: 355.6mm !important;
+        min-height: 355.6mm;
+    }
+    :host .page-viewport {
+        overflow: hidden !important;
+    }
+    :host .page-inner {
+        position: absolute !important;
+        transform: translateY(calc(-1 * var(--ns-page-offset, 0px))) !important;
+    }
+}
+
+/* Header block (notesheet no / date, subject, reference) shares the body's 1px
+   left edge. The shared style pads .ns-cell-ref 4px from the left, which left
+   the top block sitting right of the numbered paragraphs and members table. */
+.ns-cell-ref {
+    padding-left: 1px;
+}
+
+/* Signature block sits a little lower — 10px more breathing room above the
+   initiator signature than the shared 14px top padding gives. The --ns-* variables
+   below come from the saved document style (applyStyleVars()); each fallback is the
+   built-in default, so an unsaved sheet renders unchanged. */
+.ns-initiator-area {
+    padding-top: var(--ns-initiator-top, 24px);
+}
+.ns-approver-section {
+    min-height: var(--ns-approver-min-h, 90px);
+}
+.ns-approver-section:not(:last-child) {
+    padding-bottom: calc(var(--ns-approver-gap-px, 24px) + var(--ns-approver-gap-em, 0) * 1em);
+}
+.ns-sig-date {
+    margin-top: calc(var(--ns-sig-date-gap-em, 2) * 1em);
+}
+
+/* Style dialog (app chrome, not printed). */
+.ns-style-form {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+
+    label {
+        font-size: 0.85rem;
+        font-weight: 600;
+        margin-top: 0.5rem;
+    }
+
+    ::ng-deep .p-inputnumber,
+    ::ng-deep .p-inputnumber input {
+        width: 100%;
+    }
+}
+.ns-style-hint {
+    margin: 0;
+    font-size: 0.8rem;
+    color: var(--p-text-muted-color, #6b7280);
+}
+
+/* Note-sheet no. / date line and the subject line carry their padding inline in
+   the template; their size lives here so the export bar's font offset reaches
+   them too (an inline font-size would win over fs()). */
+.ns-notesheet-no,
+.ns-subject-line {
+    font-size: fs(10);
+}
+
+/* Export-bar detail toggle (কোর in the Name column) — sits inline with the
+   page-size / font dropdowns and buttons. */
+.ns-detail-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+
+    label {
+        cursor: pointer;
+        font-size: 0.875rem;
+        user-select: none;
+    }
+}
+
+/* Reference HTML from the rich editor — keep the first paragraph on the same line as the label / serial. */
+:host ::ng-deep .ns-ref-html p {
+    margin: 0;
+}
+:host ::ng-deep .ns-ref-inline p:first-child,
+:host ::ng-deep .ns-ref-item .ns-ref-html p:first-child {
+    display: inline;
 }

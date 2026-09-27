@@ -8,6 +8,9 @@ import { TooltipModule } from 'primeng/tooltip';
 import { InputTextModule } from 'primeng/inputtext';
 import { TextareaModule } from 'primeng/textarea';
 import { SelectModule } from 'primeng/select';
+import { InputNumberModule } from 'primeng/inputnumber';
+import { NotesheetStyleConfigService } from '@/services/notesheet-style-config.service';
+import { NotesheetStyleConfig, defaultNotesheetStyle } from '@/models/notesheet-style-config.model';
 import { DatePickerModule } from 'primeng/datepicker';
 import { ConfirmDialogModule } from 'primeng/confirmdialog';
 import { DialogModule } from 'primeng/dialog';
@@ -37,6 +40,12 @@ import {
     WidthType, BorderStyle, AlignmentType, ImageRun,
     VerticalAlign, TableLayoutType, HeightRule, PageOrientation, TabStopType, TabStopPosition
 } from 'docx';
+
+/* Serial gutter for the Word export, in twips (1pt = 20 twips): 2.4em at the 12pt
+   body size = 28.8pt = 576. Same column the screen/PDF reserve with
+   --ns-serial-col (notesheet-preview-exbd.scss), so ১।/২। and ক।/খ। text starts at
+   one x position and wrapped lines hang under it. */
+const NS_SERIAL_INDENT = 576;
 import { saveAs } from 'file-saver';
 import type { NotesheetDocumentModel, ContentBlock } from '../notesheet-document-model';
 
@@ -56,7 +65,7 @@ interface ApprovalLogEntry {
     standalone: true,
     imports: [
         CommonModule, FormsModule, ButtonModule, ToastModule, ConfirmDialogModule, DialogModule, TooltipModule,
-        InputTextModule, TextareaModule, SelectModule, DatePickerModule, FlexibleDateDirective, FieldsetModule,
+        InputTextModule, TextareaModule, SelectModule, InputNumberModule, DatePickerModule, FlexibleDateDirective, FieldsetModule,
         NotesheetSignatoryComponent, RichEditorComponent, NotesheetApproverSelectComponent, FileReferencesFormComponent
     ],
     providers: [MessageService, ConfirmationService],
@@ -75,7 +84,7 @@ export class NotesheetPreviewExbdComponent extends NotesheetPreviewBase implemen
     private readonly exBdLeaveAppService = inject(ExBdLeaveApplicationService);
     private cdr = inject(ChangeDetectorRef);
     private jsreportService = inject(JsReportService);
-    /** Host element — carries the --ns-fs-delta font-size offset for the whole preview. */
+    /** Host element — carries the --ns-* document style variables (font offset, gaps) for the whole preview. */
     private hostEl = inject(ElementRef) as ElementRef<HTMLElement>;
 
     // ── Page size for jsReport export (Legal default, A4 optional) ──
@@ -98,24 +107,127 @@ export class NotesheetPreviewExbdComponent extends NotesheetPreviewBase implemen
     });
 
     private fontDeltaLabel(value: number): string {
-        if (value === 0) return 'Default Front Size';
-        return `Front: ${value > 0 ? '+' : '-'}${Math.abs(value).toFixed(2)} pt`;
+        if (value === 0) return 'Default Font Size';
+        return `Font: ${value > 0 ? '+' : '-'}${Math.abs(value).toFixed(2)} pt`;
     }
 
-    /** Font dropdown changed — restate the offset on the host and re-paginate against
-     *  the new size (same reset as onPageSizeChange). */
     onFontDeltaChange(): void {
-        this.applyFontDelta();
+        this.onStyleChange();
+    }
+
+    // ── Saved document style ─────────────────────────────────
+    private styleConfigService = inject(NotesheetStyleConfigService);
+    /** Style type for this preview layout: keys the type default and the built-in defaults.
+     *  A note sheet's own saved style (styleConfig.noteSheetId set) overrides both. */
+    private readonly styleType = 'ExBDLeave';
+    /** Signature-block spacing, saved per note sheet. fontDelta and
+     *  selectedPageSize stay separate fields (the page-size select binds one) and are folded in on save. */
+    styleConfig: NotesheetStyleConfig = defaultNotesheetStyle('ExBDLeave');
+    showStyleDialog = false;
+    savingStyle = false;
+
+    /** Cached style first so the sheet paginates in the saved style straight away,
+     *  then the server's copy — this note sheet's own style, else its type default. */
+    protected override onNoteSheetLoaded(): void {
+        this.applyStyleConfig(this.styleConfigService.cached(this.styleType, this.noteSheetId));
+        this.styleConfigService.load(this.styleType, this.noteSheetId).subscribe((cfg) => this.applyStyleConfig(cfg));
+    }
+
+    private applyStyleConfig(cfg: NotesheetStyleConfig): void {
+        this.styleConfig = { ...cfg };
+        this.fontDelta = cfg.fontDelta;
+        this.selectedPageSize = cfg.defaultPageSize;
+        this.onStyleChange();
+    }
+
+    /**
+     * Font size, page size or a gap changed. The values are written to the host element
+     * so they inherit into the visible pages and the hidden .page-measure div; the content
+     * height changes with them, so pagination is reset and re-measured.
+     */
+    onStyleChange(): void {
+        this.applyStyleVars();
         this.pageContentHeightPx = 0;
         this.lastMeasuredHeight = 0;
         this.pageOffsets = [0];
         this.cdr.detectChanges();
     }
 
-    /** Unitless — the SCSS multiplies it by 1pt, so a negative offset stays a plain
-     *  multiplication rather than a signed operand inside calc(). */
-    private applyFontDelta(): void {
-        this.hostEl.nativeElement.style.setProperty('--ns-fs-delta', `${this.fontDelta}`);
+    /** Current style with cleared inputs (p-inputNumber emits null) put back to defaults. */
+    private currentStyle(): NotesheetStyleConfig {
+        const d = defaultNotesheetStyle(this.styleType);
+        const s = this.styleConfig;
+        return {
+            ...d,
+            configId: s.configId,
+            fontDelta: this.fontDelta ?? d.fontDelta,
+            defaultPageSize: this.selectedPageSize === 'A4' ? 'A4' : 'Legal',
+            approverGapPx: s.approverGapPx ?? d.approverGapPx,
+            approverGapEm: s.approverGapEm ?? d.approverGapEm,
+            sigDateGapEm: s.sigDateGapEm ?? d.sigDateGapEm,
+            initiatorTopMarginPx: s.initiatorTopMarginPx ?? d.initiatorTopMarginPx,
+            approverMinHeightPx: s.approverMinHeightPx ?? d.approverMinHeightPx
+        };
+    }
+
+    /** The custom properties the component SCSS reads. Unitless values (font delta, em
+     *  counts) are multiplied by 1pt / 1em there, which keeps a negative offset a plain
+     *  multiplication instead of a signed operand inside calc(). */
+    private styleVars(): [string, string][] {
+        const s = this.currentStyle();
+        return [
+            ['--ns-fs-delta', `${s.fontDelta}`],
+            ['--ns-approver-gap-px', `${s.approverGapPx}px`],
+            ['--ns-approver-gap-em', `${s.approverGapEm}`],
+            ['--ns-sig-date-gap-em', `${s.sigDateGapEm}`],
+            ['--ns-initiator-top', `${s.initiatorTopMarginPx}px`],
+            ['--ns-approver-min-h', `${s.approverMinHeightPx}px`]
+        ];
+    }
+
+    private applyStyleVars(): void {
+        const el = this.hostEl.nativeElement;
+        for (const [name, value] of this.styleVars()) el.style.setProperty(name, value);
+    }
+
+    /** Saves the dialog's style for this note sheet only. */
+    saveStyle(): void {
+        const noteSheetId = this.noteSheetId;
+        if (this.savingStyle || !noteSheetId) return;
+        this.savingStyle = true;
+        const user = this.sharedService.getCurrentUser() || 'system';
+        const now = new Date().toISOString();
+        this.styleConfigService.save({ ...this.currentStyle(), noteSheetType: this.styleType, noteSheetId, createdBy: user, createdDate: now, lastUpdatedBy: user, lastupdate: now }).subscribe({
+            next: (saved) => {
+                this.savingStyle = false;
+                this.styleConfig = { ...saved };
+                this.showStyleDialog = false;
+                this.messageService.add({ severity: 'success', summary: 'Saved', detail: 'Style saved for this note sheet.' });
+            },
+            error: (err) => {
+                this.savingStyle = false;
+                this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.description || 'Failed to save style.' });
+            }
+        });
+    }
+
+    /** Removes the style saved for this note sheet only — other note sheets keep theirs. */
+    resetStyleToDefault(): void {
+        const noteSheetId = this.noteSheetId;
+        if (!noteSheetId || !this.styleConfig.noteSheetId) return;
+        this.confirmationService.confirm({
+            header: 'Reset Style',
+            message: 'Remove the style saved for this note sheet? Other note sheets are not affected.',
+            icon: 'pi pi-exclamation-triangle',
+            accept: () =>
+                this.styleConfigService.reset(this.styleType, noteSheetId).subscribe({
+                    next: (cfg) => {
+                        this.applyStyleConfig(cfg);
+                        this.messageService.add({ severity: 'success', summary: 'Reset', detail: 'Style reset for this note sheet.' });
+                    },
+                    error: () => this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to reset style.' })
+                })
+        });
     }
 
     // ── Pagination ────────────────────────────────────────────
@@ -1106,7 +1218,7 @@ html, body { margin: 0; padding: 0; background: transparent; }
     /* Restate the export bar's font offset here: the snapshot is the paper's
        innerHTML, not the host that carries --ns-fs-delta on screen. Every 12pt
        below is written against it, mirroring fs() in notesheet-preview-exbd.scss. */
-    --ns-fs-delta: ${this.fontDelta};
+    ${this.styleVars().map(([name, value]) => `${name}: ${value};`).join(' ')}
     font-size: calc(12pt + var(--ns-fs-delta, 0) * 1pt);
     line-height: 1.25;
     color: #000;
@@ -1149,6 +1261,19 @@ html, body { margin: 0; padding: 0; background: transparent; }
 .pdf-flow .ns-para-no    { font-weight: normal; margin-right: 1em; }
 .pdf-flow .ns-ref-serial { font-weight: normal; margin-right: 0.5em; }
 
+/* সূত্রঃ label is NOT bold (mirrors the :host .ns-ref-key rule in the SCSS) — the
+   shared sheet's .ns-ref-key{font-weight:700} would otherwise win in the snapshot. */
+.pdf-flow .ns-ref-key { font-weight: normal; }
+
+/* Serial gutter — ১।/২। and ক।/খ। share one text column: each serial is a
+   fixed-width inline-block, so the first line's text starts at the same x for both
+   serial kinds while wrapped lines return to the left margin (no hanging indent —
+   that is the intended note-sheet shape). Mirrors the --ns-serial-col block in
+   notesheet-preview-exbd.scss (2.4em there; written out here because the snapshot
+   is the paper's innerHTML, not the host that carries the custom property). */
+.pdf-flow .ns-cell-ref { padding-left: 1px; padding-top: 12px; }
+.pdf-flow .ns-para-no, .pdf-flow .ns-ref-serial { display: inline-block; width: 2.4em; margin-right: 0; }
+
 /* Body line gap — override the shared \`.ns-para { line-height: 1.85 }\` that
    collectDocumentStyles() pulls in, matching the on-screen 1.25 (see the
    \`.ns-para\` rule in notesheet-preview-exbd.scss). */
@@ -1157,15 +1282,33 @@ html, body { margin: 0; padding: 0; background: transparent; }
 /* Match the five blank body lines between approver signatures in the screen
    preview. The final approver keeps the normal bottom padding to avoid an empty
    overflow page. */
-.pdf-flow .ns-approver-section:not(:last-child) { padding-bottom: calc(24px + 6.25em); }
+.pdf-flow .ns-approver-section:not(:last-child) { padding-bottom: calc(var(--ns-approver-gap-px, 24px) + var(--ns-approver-gap-em, 6.25) * 1em); }
+
+/* The screen rule is :host-scoped and the snapshot has no host element — restated here. */
+.pdf-flow .ns-initiator-area { margin-top: var(--ns-initiator-top, 2.5em); }
 
 /* Push the approver-role underline below the Bangla descenders so it stays one
    continuous line (mirrors the :host .ns-approver-role rule in the SCSS). */
 .pdf-flow .ns-approver-role { text-underline-offset: 4px; text-decoration-skip-ink: none; }
 
+/* Keep each block whole on one page — the approver sections included, so a role
+   title never parts from its signature and date (mirrors the keepTogether list in
+   calculatePageOffsets, which does the same for the on-screen preview). */
 .ns-posting-table tr,
+.ns-approver-section,
+.ns-initiator-area,
 .ns-org-header,
-.ns-title-block { page-break-inside: avoid; }
+.ns-title-block { page-break-inside: avoid; break-inside: avoid; }
+
+/* The web view paginates by the last drawn pixel, so the final approver's reserved-but-
+   blank signature space never costs a page there. Here the section carries a keep-
+   together rule, so that blank space would push it onto a new page. It is the end of
+   the document — nothing below it shows — so drop it. */
+.pdf-flow .ns-approver-section:last-child,
+.pdf-flow .ns-approver-section:last-child .ns-approver-body {
+    min-height: 0 !important;
+    padding-bottom: 0 !important;
+}
 </style>
 </head>
 <body>
@@ -1412,6 +1555,16 @@ html, body { margin: 0; padding: 0; background: transparent; }
         const sigSize = contentSize;          // signature/approver = body size
         const noDateSize = contentSize;       // notesheet no + date = body size
         const titleHdrSize = hdrSize + 2;     // 11pt — NOTE SHEET / মন্তব্য পত্র (header)
+        // Signature-block spacing in twips (1pt = 20, 1px = 15) from the saved style. The
+        // initiator, date and signature-spacer values move by their difference from the
+        // built-in default, so an unsaved sheet keeps Word's usual spacing; the approver
+        // gap is added in full, as the print renders it.
+        const style = this.currentStyle();
+        const styleBase = defaultNotesheetStyle(style.noteSheetType);
+        const INITIATOR_BEFORE = Math.max(0, 280 + (style.initiatorTopMarginPx - styleBase.initiatorTopMarginPx) * 15);
+        const SIG_DATE_BEFORE = Math.max(0, Math.round((400 * style.sigDateGapEm) / (styleBase.sigDateGapEm || 1)));
+        const APPROVER_GAP = Math.round(style.approverGapPx * 15 + style.approverGapEm * (12 + this.fontDelta) * 20);
+        const APPROVER_SIG_BEFORE = Math.max(0, 100 + (style.approverMinHeightPx - styleBase.approverMinHeightPx) * 15);
         const csContent = bn ? contentSize : undefined;
         const csNoDate = bn ? noDateSize : undefined;
         const csSig = bn ? sigSize : undefined;
@@ -1453,7 +1606,7 @@ html, body { margin: 0; padding: 0; background: transparent; }
         if (model.subject) {
             mainChildren.push(new Paragraph({
                 children: [new TextRun({ text: model.subject, bold: true, underline: {}, size: contentSize, sizeComplexScript: csContent, font, language: lang })],
-                spacing: { before: 20, after: 60 }
+                spacing: { before: 180, after: 180 }
             }));
         }
 
@@ -1461,21 +1614,21 @@ html, body { margin: 0; padding: 0; background: transparent; }
         if (model.referenceBlocks.length === 1) {
             mainChildren.push(new Paragraph({
                 children: [
-                    new TextRun({ text: `${model.referenceLabel.trim()}  `, bold: true, size: contentSize, sizeComplexScript: csContent, font, language: lang }),
+                    new TextRun({ text: `${model.referenceLabel.trim()}  `, bold: false, size: contentSize, sizeComplexScript: csContent, font, language: lang }),
                     new TextRun({ text: model.referenceBlocks[0].text ?? '', size: contentSize, sizeComplexScript: csContent, font, language: lang })
                 ],
                 spacing: { after: 80 }, alignment: AlignmentType.JUSTIFIED
             }));
         } else if (model.referenceBlocks.length > 0) {
             mainChildren.push(new Paragraph({
-                children: [new TextRun({ text: model.referenceLabel.trim(), bold: true, size: contentSize, sizeComplexScript: csContent, font, language: lang })],
+                children: [new TextRun({ text: model.referenceLabel.trim(), bold: false, size: contentSize, sizeComplexScript: csContent, font, language: lang })],
                 spacing: { after: 0 }
             }));
             mainChildren.push(...this.contentBlocksToDocx(model.referenceBlocks, font, bn));
         } else if (this.noteSheet?.referenceNumber) {
             const plain = this.stripHtml(this.noteSheet.referenceNumber ?? '');
             mainChildren.push(new Paragraph({
-                children: [new TextRun({ text: model.referenceLabel.trim(), bold: true, size: contentSize, sizeComplexScript: csContent, font, language: lang })],
+                children: [new TextRun({ text: model.referenceLabel.trim(), bold: false, size: contentSize, sizeComplexScript: csContent, font, language: lang })],
                 spacing: { after: 0 }
             }));
             mainChildren.push(new Paragraph({
@@ -1487,7 +1640,7 @@ html, body { margin: 0; padding: 0; background: transparent; }
         // Merge serial (১।) with first text block so they appear inline
         if (model.mainBlocks.length > 0 && model.mainBlocks[0].type === 'paragraph' && model.mainBlocks[0].text) {
             const firstBlock = model.mainBlocks[0];
-            const serialRun = new TextRun({ text: `${model.mainSerialText}  `, bold: false, size: contentSize, sizeComplexScript: csContent, font, language: lang });
+            const serialRun = new TextRun({ text: `${model.mainSerialText}	`, bold: false, size: contentSize, sizeComplexScript: csContent, font, language: lang });
             const contentRuns = (firstBlock.runs && firstBlock.runs.length > 0)
                 ? firstBlock.runs.map(r => new TextRun({
                     text: r.text,
@@ -1502,7 +1655,8 @@ html, body { margin: 0; padding: 0; background: transparent; }
                 : [new TextRun({ text: firstBlock.text!, bold: firstBlock.bold, italics: firstBlock.italic, size: contentSize, sizeComplexScript: csContent, font, language: lang })];
             mainChildren.push(new Paragraph({
                 children: [serialRun, ...contentRuns],
-                spacing: { before: 160, after: 80 }, alignment: AlignmentType.JUSTIFIED
+                spacing: { before: 160, after: 80 }, alignment: AlignmentType.JUSTIFIED,
+                tabStops: [{ type: TabStopType.LEFT, position: NS_SERIAL_INDENT }]
             }));
             if (model.mainBlocks.length > 1) {
                 mainChildren.push(...this.contentBlocksToDocx(model.mainBlocks.slice(1), font, bn));
@@ -1532,10 +1686,11 @@ html, body { margin: 0; padding: 0; background: transparent; }
             if (!text) return;
             mainChildren.push(new Paragraph({
                 children: [
-                    new TextRun({ text: `${this.serial(this.paragraphSerialNo + i)}  `, bold: false, size: contentSize, sizeComplexScript: csContent, font, language: lang }),
+                    new TextRun({ text: `${this.serial(this.paragraphSerialNo + i)}	`, bold: false, size: contentSize, sizeComplexScript: csContent, font, language: lang }),
                     new TextRun({ text, size: contentSize, sizeComplexScript: csContent, font, language: lang })
                 ],
-                spacing: { before: 80, after: 80 }, alignment: AlignmentType.JUSTIFIED
+                spacing: { before: 80, after: 80 }, alignment: AlignmentType.JUSTIFIED,
+                tabStops: [{ type: TabStopType.LEFT, position: NS_SERIAL_INDENT }]
             }));
         });
 
@@ -1557,12 +1712,12 @@ html, body { margin: 0; padding: 0; background: transparent; }
                             type: 'png', data: this.base64ToBytes(model.initiator.signatureDataUrl),
                             transformation: { width: 100, height: 40 }
                         })],
-                        alignment: AlignmentType.LEFT, indent: initIndent, spacing: { before: 280, after: 80 },
+                        alignment: AlignmentType.LEFT, indent: initIndent, spacing: { before: INITIATOR_BEFORE, after: 80 },
                         keepNext: true, keepLines: true
                     }));
                 } catch { /* no sig */ }
             } else {
-                mainChildren.push(new Paragraph({ spacing: { before: 280, after: 80 }, keepNext: true }));
+                mainChildren.push(new Paragraph({ spacing: { before: INITIATOR_BEFORE, after: 80 }, keepNext: true }));
             }
 
             mainChildren.push(new Paragraph({
@@ -1587,16 +1742,16 @@ html, body { margin: 0; padding: 0; background: transparent; }
             if (model.initiator.date) {
                 mainChildren.push(new Paragraph({
                     children: [new TextRun({ text: model.initiator.date, size: sigSize, sizeComplexScript: csSig, font, language: lang })],
-                    alignment: AlignmentType.LEFT, indent: initIndent, spacing: { before: 400 }
+                    alignment: AlignmentType.LEFT, indent: initIndent, spacing: { before: SIG_DATE_BEFORE }
                 }));
             }
         }
 
         // Approvers — keep each approver block together
-        for (const ap of model.approvers) {
+        for (const [apIndex, ap] of model.approvers.entries()) {
             mainChildren.push(new Paragraph({
                 children: [new TextRun({ text: ap.role, underline: {}, size: sigSize, sizeComplexScript: csSig, font, language: lang })],
-                spacing: { before: 280 }, keepNext: true, keepLines: true
+                spacing: { before: 280 + (apIndex > 0 ? APPROVER_GAP : 0) }, keepNext: true, keepLines: true
             }));
             const runs: TextRun[] = [new TextRun({ text: ap.serialText, bold: true, size: sigSize, sizeComplexScript: csSig, font, language: lang })];
             if (ap.remark) runs.push(new TextRun({ text: ` ${ap.remark}`, size: sigSize, sizeComplexScript: csSig, font, language: lang }));
@@ -1609,12 +1764,12 @@ html, body { margin: 0; padding: 0; background: transparent; }
                             transformation: { width: 100, height: 40 }
                         })],
                         alignment: AlignmentType.CENTER,
-                        spacing: { before: 100, after: 40 },
+                        spacing: { before: APPROVER_SIG_BEFORE, after: 40 },
                         keepNext: true
                     }));
                 } catch { /* no sig */ }
             } else {
-                mainChildren.push(new Paragraph({ alignment: AlignmentType.CENTER, spacing: { before: 100, after: 40 }, keepNext: true }));
+                mainChildren.push(new Paragraph({ alignment: AlignmentType.CENTER, spacing: { before: APPROVER_SIG_BEFORE, after: 40 }, keepNext: true }));
             }
             if (ap.date) {
                 mainChildren.push(new Paragraph({
@@ -1672,7 +1827,15 @@ html, body { margin: 0; padding: 0; background: transparent; }
         const docChildren: (Paragraph | Table)[] = [outerTable];
 
         return new Document({
-            styles: bn ? { default: { document: { run: { language: { value: 'bn-BD', bidirectional: 'bn-BD' } } } } } : undefined,
+            // 1.25 line spacing (line: 300 = 1.25 × 240) by default, matching the preview's .ns-para.
+            styles: {
+                default: {
+                    document: {
+                        paragraph: { spacing: { line: 300 } },
+                        ...(bn ? { run: { language: { value: 'bn-BD', bidirectional: 'bn-BD' } } } : {})
+                    }
+                }
+            },
             sections: [{
                 properties: {
                     page: {
@@ -1717,7 +1880,13 @@ html, body { margin: 0; padding: 0; background: transparent; }
                 else if (b.alignment === 'right') align = AlignmentType.RIGHT;
                 else if (b.alignment === 'justify') align = AlignmentType.JUSTIFIED;
                 else align = b.indent === 'list' ? AlignmentType.LEFT : AlignmentType.JUSTIFIED;
+                /* Blocks built as `serial	text` (the ক।/খ। reference items) tab to the same
+                   column as ১।/২। so every serial's text starts at one x. No hanging
+                   indent: wrapped lines return to the left margin, matching the screen
+                   (--ns-serial-col in notesheet-preview-exbd.scss). */
+                const hasSerialTab = (b.text ?? '').includes('	');
                 const indent = b.indent === 'list' ? { left: 240 } : undefined;
+                const tabStops = hasSerialTab ? [{ type: TabStopType.LEFT, position: NS_SERIAL_INDENT }] : undefined;
                 const children = (b.runs && b.runs.length > 0)
                     ? b.runs.map(r => new TextRun({
                         text: r.text,
@@ -1733,6 +1902,7 @@ html, body { margin: 0; padding: 0; background: transparent; }
                 result.push(new Paragraph({
                     children,
                     indent,
+                    tabStops,
                     spacing: { after: b.indent === 'list' ? 60 : 80 },
                     alignment: align
                 } as any));
@@ -1802,12 +1972,47 @@ html, body { margin: 0; padding: 0; background: transparent; }
         return heightPx;
     }
 
+    /**
+     * Bottom-most pixel that renders something inside `container`: a text line, a
+     * signature image or a table border. Anything below it is blank padding or reserved
+     * height, which may fall past a page break without hiding anything. Returns 0 when
+     * nothing was found, letting the caller fall back to the box height.
+     */
+    private measureRenderedBottom(container: HTMLElement, containerTop: number): number {
+        let bottom = 0;
+
+        const walker = document.createTreeWalker(container, NodeFilter.SHOW_TEXT);
+        let textNode: Node | null;
+        while ((textNode = walker.nextNode())) {
+            if (!textNode.textContent?.trim()) continue;
+            const range = document.createRange();
+            range.selectNodeContents(textNode);
+            const rects = range.getClientRects();
+            for (let r = 0; r < rects.length; r++) {
+                if (rects[r].height > 0) bottom = Math.max(bottom, rects[r].bottom - containerTop);
+            }
+        }
+
+        for (const el of Array.from(container.querySelectorAll('img, table')) as HTMLElement[]) {
+            const rect = el.getBoundingClientRect();
+            if (rect.height > 0) bottom = Math.max(bottom, rect.bottom - containerTop);
+        }
+
+        return bottom;
+    }
+
     private calculatePageOffsets(totalHeight: number): number[] {
         const container = this.contentMeasure?.nativeElement;
         const pageH = this.pageContentHeightPx;
         if (!container || pageH <= 0) return [0];
 
         const containerTop = container.getBoundingClientRect().top;
+
+        // Paginate against the bottom of the last thing actually drawn, not scrollHeight:
+        // trailing blank space (the last approver's reserved signature height, padding)
+        // would otherwise earn an extra page whenever the sheet is a few pixels over.
+        const drawnBottom = this.measureRenderedBottom(container, containerTop);
+        if (drawnBottom > 0) totalHeight = Math.min(totalHeight, drawnBottom);
 
         const titleEl = container.querySelector('.ns-title-block') as HTMLElement;
         const docBox = container.querySelector('.ns-doc-box') as HTMLElement;
@@ -1818,13 +2023,21 @@ html, body { margin: 0; padding: 0; background: transparent; }
         const firstPageH = pageH - this.titleBlockHeightPx;
         if (totalHeight <= firstPageH + this.titleBlockHeightPx) return [this.titleBlockHeightPx];
 
+        // Blocks that must not be split across pages. Each .ns-approver-section is one
+        // unit — role title, serial, signature and date always land on the same page, and
+        // the section moves down whole rather than parting from its heading.
         const keepTogether = Array.from(
             container.querySelectorAll(
-                '.ns-title-block, .ns-title-area, .ns-org-header, .ns-note, .ns-initiator-area'
+                '.ns-title-block, .ns-title-area, .ns-org-header, .ns-note, .ns-initiator-area, .ns-approver-section'
             ) as NodeListOf<HTMLElement>
         ).map(el => {
             const rect = el.getBoundingClientRect();
-            return { top: rect.top - containerTop, bottom: rect.top - containerTop + rect.height, height: rect.height };
+            const top = rect.top - containerTop;
+            // Only what is drawn has to stay on the page; blank space at the bottom of the
+            // block may fall past the break (the page's bottom cover hides it).
+            const drawn = this.measureRenderedBottom(el, containerTop);
+            const bottom = drawn > top ? drawn : top + rect.height;
+            return { top, bottom, height: rect.height };
         }).filter(b => b.height > 0 && b.height < pageH)
           .sort((a, b) => a.top - b.top);
 
@@ -1870,7 +2083,7 @@ html, body { margin: 0; padding: 0; background: transparent; }
             while (adjusted) {
                 adjusted = false;
                 for (const block of keepTogether) {
-                    if (block.top > cursor && block.top < nextBreak && block.bottom > nextBreak) {
+                    if (block.top > cursor && block.top < nextBreak && block.bottom > nextBreak + 1) {
                         nextBreak = block.top;
                         adjusted = true;
                         break;

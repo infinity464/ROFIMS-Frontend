@@ -1071,7 +1071,7 @@ export class NotesheetListComponent implements OnInit {
       }));
       const lines = [
         detail.name,
-        detail.rabId && detail.rabId !== '-' ? `RAB ID: ${detail.rabId}` : '',
+        detail.rabId && detail.rabId !== '-' ? `SRB ID: ${detail.rabId}` : '',
         detail.rank && detail.rank !== '-' ? detail.rank : '',
         detail.appointment && detail.appointment !== '-' ? detail.appointment : ''
       ].filter((l: string) => l && l !== '-' && l !== '—');
@@ -1223,7 +1223,7 @@ export class NotesheetListComponent implements OnInit {
       if (!detail) return '';
       const lineMargin = align === 'right' ? 'margin-left:auto' : align === 'center' ? marginCenter : '';
       const lines = [
-        detail.rabId && detail.rabId !== '-' ? `RAB ID: ${detail.rabId}` : '',
+        detail.rabId && detail.rabId !== '-' ? `SRB ID: ${detail.rabId}` : '',
         detail.rank && detail.rank !== '-' ? detail.rank : '',
         detail.appointment && detail.appointment !== '-' ? detail.appointment : ''
       ].filter(Boolean);

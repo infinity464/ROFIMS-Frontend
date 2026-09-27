@@ -146,7 +146,7 @@ export class EmpDisciplineInfoComponent implements OnInit {
     buildForm(): void {
         this.disciplineForm = this.fb.group({
             disciplineId: [null],
-            offenseDate: [null, Validators.required],
+            offenseDate: [null],
             offenseType: [null, Validators.required],
             briefStatementOfOffenceId: [null, Validators.required],
             offenseDetails: [''],

@@ -34,6 +34,7 @@ export interface GeneralNotesheetOfficeOrderWithDetailsDto {
     referenceNo: string | null;     // JSON string
     body: string | null;            // Rich text HTML
     onulipi: string | null;         // JSON string
+    attachments: string | null;     // JSON array of { text } — সংযুক্ত list, shown above the Onulipi
     textType: string | null;
     filesReferences: string | null;
     status: string;

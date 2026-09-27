@@ -54,7 +54,7 @@ export class RabUnitAorMap implements OnInit {
     /** Override the map host height (px). When set, the default 4:5 aspect-ratio is ignored. */
     @Input() heightPx?: number;
 
-    title = 'RAB Unit AOR — Upazila Map';
+    title = 'SRB Unit AOR — Upazila Map';
     loading = true;
     errorMessage = '';
 

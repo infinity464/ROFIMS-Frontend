@@ -125,7 +125,7 @@ export class DynamicSearchComponent implements OnInit, OnDestroy {
         { key: 'ser',             labelEN: 'Ser',          labelBN: 'ক্রঃ',           hint: 'Serial',          defaultVisible: true  },
         { key: 'picture',         labelEN: 'Picture',      labelBN: 'ছবি',            hint: 'Photo',           defaultVisible: true  },
         { key: 'serviceId',       labelEN: 'Service ID',   labelBN: 'সার্ভিস আইডি',    hint: 'Plain',           defaultVisible: true  },
-        { key: 'rabid',           labelEN: 'RAB ID',       labelBN: 'র‍্যাব আইডি',     hint: 'Plain',           defaultVisible: true  },
+        { key: 'rabid',           labelEN: 'SRB ID',       labelBN: 'এসআরবি আইডি',     hint: 'Plain',           defaultVisible: true  },
         { key: 'nameEnglish',     labelEN: 'Name (EN)',    labelBN: 'নাম (ইংরেজি)',    hint: 'NameWithProfile', defaultVisible: true  },
         { key: 'nameBangla',      labelEN: 'Name (BN)',    labelBN: 'নাম (বাংলা)',     hint: 'Plain',           defaultVisible: false },
         { key: 'armyRank',        labelEN: 'Rank',         labelBN: 'র‍্যাঙ্ক',         hint: 'Plain',           defaultVisible: true  },
@@ -138,10 +138,10 @@ export class DynamicSearchComponent implements OnInit, OnDestroy {
         { key: 'motherOrganization', labelEN: 'Mother Org', labelBN: 'মাতৃ সংস্থা',     hint: 'Plain',           defaultVisible: false },
         { key: 'motherUnit',      labelEN: 'Last Unit',    labelBN: 'শেষ ইউনিট',        hint: 'Plain',           defaultVisible: false },
         { key: 'location',        labelEN: 'Location',     labelBN: 'অবস্থান',         hint: 'Plain',           defaultVisible: false },
-        { key: 'rabUnit',         labelEN: 'RAB Unit',     labelBN: 'র‍্যাব ইউনিট',     hint: 'UnitBadge',       defaultVisible: true  },
+        { key: 'rabUnit',         labelEN: 'SRB Unit',     labelBN: 'এসআরবি ইউনিট',     hint: 'UnitBadge',       defaultVisible: true  },
         { key: 'gender',          labelEN: 'Gender',       labelBN: 'লিঙ্গ',           hint: 'Plain',           defaultVisible: false },
         { key: 'dob',             labelEN: 'Date of Birth', labelBN: 'জন্ম তারিখ',      hint: 'Date',            defaultVisible: false },
-        { key: 'joiningDate',     labelEN: 'Date of Joining in RAB', labelBN: 'র‍্যাবে যোগদান', hint: 'Date',     defaultVisible: false },
+        { key: 'joiningDate',     labelEN: 'Date of Joining in SRB', labelBN: 'এসআরবিে যোগদান', hint: 'Date',     defaultVisible: false },
         { key: 'dateOfCommission', labelEN: 'Commission Date', labelBN: 'কমিশন তারিখ',  hint: 'Date',            defaultVisible: false },
         { key: 'dateOfJoiningInServiceTraining', labelEN: 'Date of Joining in Service/Training', labelBN: 'সেবা/প্রশিক্ষণে যোগদান', hint: 'Date', defaultVisible: false },
         { key: 'religionName',    labelEN: 'Religion',     labelBN: 'ধর্ম',             hint: 'Plain',           defaultVisible: false },
@@ -482,7 +482,7 @@ export class DynamicSearchComponent implements OnInit, OnDestroy {
             alignment: AlignmentType.CENTER,
             spacing: { after: 40 },
             children: [new TextRun({
-                text: 'RAPID ACTION BATTALION',
+                text: 'SPECIAL RESPONSE BATTALION',
                 font: serif, size: S.title, bold: true, color: C.black,
                 characterSpacing: 24,
             })],
@@ -993,7 +993,7 @@ export class DynamicSearchComponent implements OnInit, OnDestroy {
     <div class="paper">
         <header class="paper-head">
             <div class="overline">GOVERNMENT OF THE PEOPLE'S REPUBLIC OF BANGLADESH</div>
-            <h1 class="paper-title">RAPID ACTION BATTALION</h1>
+            <h1 class="paper-title">SPECIAL RESPONSE BATTALION</h1>
             <div class="paper-sub"><em>Bangladesh Police &middot; Headquarters, Kurmitola, Dhaka</em></div>
             <div class="orn-divider">
                 <span class="orn-line"></span>

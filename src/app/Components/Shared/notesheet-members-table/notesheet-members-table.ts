@@ -94,7 +94,7 @@ export class NotesheetMembersTableComponent implements OnInit, OnChanges {
     /** Bangla header text per column key (EN + BN variants map to one Bangla
      *  label). Falls back to the configured English label when not listed. */
     private readonly colHeaderBN: Record<string, string> = {
-        serviceId: 'সার্ভিস আইডি', rabId: 'র‍্যাব আইডি', prefixWithServiceId: 'সার্ভিস আইডি', prefixWithServiceIdBN: 'সার্ভিস আইডি',
+        serviceId: 'সার্ভিস আইডি', rabId: 'এসআরবি আইডি', prefixWithServiceId: 'সার্ভিস আইডি', prefixWithServiceIdBN: 'সার্ভিস আইডি',
         nameEnglish: 'নাম', nameBN: 'নাম',
         armyRank: 'পদবি', armyRankBN: 'পদবি',
         corps: 'কোর', corpsBN: 'কোর',
@@ -104,7 +104,7 @@ export class NotesheetMembersTableComponent implements OnInit, OnChanges {
         memberType: 'সদস্য ধরন', memberTypeBN: 'সদস্য ধরন',
         appointment: 'নিয়োগ', appointmentBN: 'নিয়োগ',
         joiningDate: 'যোগদানের তারিখ',
-        rabUnit: 'র‍্যাব ইউনিট', rabUnitBN: 'র‍্যাব ইউনিট',
+        rabUnit: 'এসআরবি ইউনিট', rabUnitBN: 'এসআরবি ইউনিট',
         gender: 'লিঙ্গ', genderBN: 'লিঙ্গ',
         batch: 'ব্যাচ', batchBN: 'ব্যাচ',
         postingStatus: 'পোস্টিং অবস্থা',

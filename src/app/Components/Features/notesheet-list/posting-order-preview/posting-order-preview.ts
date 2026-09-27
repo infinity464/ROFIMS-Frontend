@@ -292,7 +292,7 @@ export class PostingOrderPreviewComponent implements OnChanges, OnInit {
             }));
             const lines = [
                 detail.name,
-                detail.rabId && detail.rabId !== '-' ? `RAB ID: ${detail.rabId}` : '',
+                detail.rabId && detail.rabId !== '-' ? `SRB ID: ${detail.rabId}` : '',
                 detail.rank && detail.rank !== '-' ? detail.rank : '',
                 detail.appointment && detail.appointment !== '-' ? detail.appointment : ''
             ].filter(l => l && l !== '-' && l !== '—');
@@ -551,7 +551,7 @@ export class PostingOrderPreviewComponent implements OnChanges, OnInit {
         const sigBlock = (detail: any, align: string, showDate = false) => {
             if (!detail) return '';
             const lines = [
-                detail.rabId && detail.rabId !== '-' ? `RAB ID: ${detail.rabId}` : '',
+                detail.rabId && detail.rabId !== '-' ? `SRB ID: ${detail.rabId}` : '',
                 detail.rank && detail.rank !== '-' ? detail.rank : '',
                 detail.appointment && detail.appointment !== '-' ? detail.appointment : '',
                 showDate ? this.formatDate(this.noteSheet?.noteSheetDate) : ''

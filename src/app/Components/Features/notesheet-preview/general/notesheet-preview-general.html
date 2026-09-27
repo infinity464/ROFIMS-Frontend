@@ -10,6 +10,14 @@
             <p-button *ngIf="editing" icon="pi pi-check" label="Save" (onClick)="saveChanges()" [loading]="saving" styleClass="p-button-success"></p-button>
             <p-select *ngIf="!editing" [options]="pageSizeOptions" [(ngModel)]="selectedPageSize" (onChange)="onPageSizeChange()" optionLabel="label" optionValue="value"
                       [style]="{'width':'95px'}" pTooltip="Page size for PDF / Print Preview"></p-select>
+            <p-button *ngIf="!editing" icon="pi pi-sliders-h" label="Style" (onClick)="showStyleDialog = true" styleClass="p-button-outlined" pTooltip="Font size and signature spacing"></p-button>
+            <!-- Members table: show/hide the corps part inside the Name column (the stored
+                 name is "name, decoration, professional qualification, corps"). -->
+            <span *ngIf="!editing && canToggleCorpsInName" class="ns-detail-toggle">
+                <p-checkbox [(ngModel)]="showCorpsInName" [binary]="true" inputId="chkCorpsInName"
+                            (onChange)="onShowCorpsInNameChange()"></p-checkbox>
+                <label for="chkCorpsInName" pTooltip="Show কোর in the Name column">কোর</label>
+            </span>
             <p-button *ngIf="showWord && !editing" icon="pi pi-file-word" label="Word"  (onClick)="exportWord()" styleClass="p-button-outlined"></p-button>
             <p-button *ngIf="showPdf && !editing" icon="pi pi-file-pdf"  label="PDF"   (onClick)="exportPdf()" [loading]="exportingPdf" styleClass="p-button-outlined"></p-button>
             <p-button *ngIf="!editing" icon="pi pi-print" label="Print Preview" (onClick)="printPreview()" [loading]="printingPreview" styleClass="p-button-outlined p-button-info"></p-button>
@@ -74,7 +82,7 @@
         <div class="a4-paper-container" #pagesContainer>
             <div *ngFor="let offset of pageOffsets; let i = index; trackBy: trackByIndex" class="a4-paper paginated" [class.a4-paper--legal]="selectedPageSize === 'Legal'">
                 <div class="page-viewport ns-general-page">
-                    <div class="page-inner" [style.transform]="'translateY(-' + offset + 'px)'">
+                    <div class="page-inner" [style.transform]="'translateY(-' + offset + 'px)'" [style.--ns-page-offset]="offset + 'px'">
                         <ng-container *ngTemplateOutlet="viewContent"></ng-container>
                     </div>
                     <div class="page-bottom-cover"
@@ -148,7 +156,7 @@
                     </div>
 
                     <!-- ── Reference Number Paragraphs ── -->
-                    <p-fieldset legend="Reference Number" [toggleable]="true" [collapsed]="true">
+                    <p-fieldset legend="Reference Number" [toggleable]="true" [collapsed]="parsedReferences.length === 0">
                         <div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.5rem;">
                             <p-button icon="pi pi-plus" label="Add Reference" [rounded]="false" [text]="true" severity="success" size="small" (onClick)="addReferenceParagraph()" pTooltip="Add Reference"></p-button>
                         </div>
@@ -213,6 +221,21 @@
 
                     <!-- ── Members Table (Edit) ── -->
                     <p-fieldset legend="Members" [toggleable]="true" [collapsed]="editMembersData.members.length === 0">
+                        <!-- Show / hide the members table in the note sheet. Members stay linked either way. -->
+                        <div style="display:flex;align-items:flex-start;gap:0.5rem;margin-bottom:0.75rem;">
+                            <p-checkbox [(ngModel)]="editShowMembersTable" [binary]="true" inputId="chkEditShowMembersTable"></p-checkbox>
+                            <div style="line-height:1.3;">
+                                <label for="chkEditShowMembersTable" style="cursor:pointer;font-weight:600;">Show members table in the note sheet</label>
+                                <div style="color:#6c757d;font-size:8pt;margin-top:0.15rem;">
+                                    @if (editShowMembersTable) {
+                                        Untick to hide the table. Members stay linked to this note sheet.
+                                    } @else {
+                                        Table hidden in the note sheet, PDF and Word. The linked members are listed below.
+                                    }
+                                </div>
+                            </div>
+                        </div>
+
                         <div class="members-search-row" style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.5rem;">
                             <app-employee-search
                                 (onEmployeeFound)="onMemberFound($event)">
@@ -222,11 +245,26 @@
                             }
                         </div>
 
-                        <div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.5rem;flex-wrap:wrap;">
-                            <p-button label="Add Column" icon="pi pi-plus" size="small" severity="info" [outlined]="true" (onClick)="openAddColumnDialog()"></p-button>
-                        </div>
+                        @if (editShowMembersTable) {
+                            <div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.5rem;flex-wrap:wrap;">
+                                <p-button label="Add Column" icon="pi pi-plus" size="small" severity="info" [outlined]="true" (onClick)="openAddColumnDialog()"></p-button>
+                            </div>
+                        }
 
-                        @if (editMembersData.members.length > 0 && editMembersData.columns.length > 0) {
+                        @if (!editShowMembersTable) {
+                            <!-- Table hidden → compact member strips, so it stays clear who is linked -->
+                            @if (editMembersData.members.length > 0) {
+                                <app-notesheet-member-strips
+                                    [members]="editMembersData.members"
+                                    [bangla]="editTextType === 'bn'"
+                                    (removeMember)="removeMember($event)">
+                                </app-notesheet-member-strips>
+                            } @else {
+                                <div style="color:#6c757d;font-size:8pt;padding:0.5rem 0;">
+                                    No members linked yet. Use the search above to add members.
+                                </div>
+                            }
+                        } @else if (editMembersData.members.length > 0 && editMembersData.columns.length > 0) {
                             <div style="overflow-x:auto;max-width:100%;">
                                 <table class="ns-members-preview-table" style="font-size:8pt;text-align:left;table-layout:fixed;width:100%;">
                                     <thead>
@@ -253,8 +291,8 @@
                                                                 (keydown.enter)="saveColLabel(col.key)"
                                                                 (keydown.escape)="editingColLabelKey = null" />
                                                         } @else {
-                                                            <span (dblclick)="startEditColLabel(col.key, col.label, $event)" title="Double-click to rename" style="font-size:7pt;">{{ col.label }}</span>
-                                                            <button type="button" style="border:none;background:none;cursor:pointer;color:#3b82f6;padding:0;font-size:9px;opacity:0.6;" (click)="startEditColLabel(col.key, col.label, $event)" title="Rename column">
+                                                            <span (dblclick)="startEditColLabel(col.key, getMemberColHeader(col), $event)" title="Double-click to rename" style="font-size:7pt;">{{ getMemberColHeader(col) }}</span>
+                                                            <button type="button" style="border:none;background:none;cursor:pointer;color:#3b82f6;padding:0;font-size:9px;opacity:0.6;" (click)="startEditColLabel(col.key, getMemberColHeader(col), $event)" title="Rename column">
                                                                 <i class="pi pi-pencil"></i>
                                                             </button>
                                                         }
@@ -399,29 +437,32 @@
 
                 <!-- Notesheet no (left) + date (right), same line -->
                 <div class="ns-notesheet-no" *ngIf="noteSheet.noteSheetNo || noteSheet.noteSheetDate"
-                     style="display:flex; justify-content:space-between; align-items:baseline; gap:1rem; padding:4px 2px 2px 4px; font-size:10pt;">
+                     style="display:flex; justify-content:space-between; align-items:baseline; gap:1rem; padding:4px 2px 2px 1px;">
                     <span>{{ noteSheet.noteSheetNo }}</span>
                     <span *ngIf="noteSheet.noteSheetDate" style="white-space:nowrap;">{{ isEnglish() ? 'Date: ' : 'তারিখঃ ' }}{{ formatDate(noteSheet.noteSheetDate) }}</span>
                 </div>
 
                 <!-- ── Subject ── -->
-                <div *ngIf="displaySubject" style="padding:2px 2px 4px 4px; font-size:10pt;">
+                <div class="ns-subject-line" *ngIf="displaySubject" style="padding:2px 2px 4px 1px;">
                     <strong><u>{{ displaySubject }}</u></strong>
                 </div>
 
                 <!-- ── Reference (date now sits with the notesheet no above) ── -->
                 <div class="ns-cell-ref" *ngIf="parsedReferences.length > 0">
-                    <span class="ns-ref-key">{{ isEnglish() ? 'Reference:' : 'সূত্রঃ' }}</span>
-                    <div class="ns-ref-content">
-                        <ng-container *ngIf="parsedReferences.length === 1">
-                            {{ parsedReferences[0] }}
-                        </ng-container>
-                        <ng-container *ngIf="parsedReferences.length > 1">
+                    <!-- Single reference: inline on the same line as সূত্রঃ (matches Ex-BD leave) -->
+                    <ng-container *ngIf="parsedReferences.length === 1; else refList">
+                        <span class="ns-ref-key">{{ isEnglish() ? 'Reference:' : 'সূত্রঃ' }}</span>
+                        <span class="ns-ref-html ns-ref-inline" style="margin-left: 0.4em" [innerHTML]="getReferenceSafe(parsedReferences[0])"></span>
+                    </ng-container>
+                    <!-- Multiple references: label on its own line, items below -->
+                    <ng-template #refList>
+                        <span class="ns-ref-key">{{ isEnglish() ? 'Reference:' : 'সূত্রঃ' }}</span>
+                        <div class="ns-ref-content">
                             <div *ngFor="let ref of parsedReferences; let ri = index" class="ns-ref-item">
-                                <span class="ns-ref-serial">{{ refSerialLabel(ri) }}</span> {{ ref }}
+                                <span class="ns-ref-serial">{{ refSerialLabel(ri) }}</span> <span class="ns-ref-html" [innerHTML]="getReferenceSafe(ref)"></span>
                             </div>
-                        </ng-container>
-                    </div>
+                        </div>
+                    </ng-template>
                 </div>
 
                 <!-- ── ১।..N। Main Text blocks ── -->
@@ -433,7 +474,7 @@
                 </div>
 
                 <!-- ── Members table — renders after ALL main body blocks ── -->
-                <div *ngIf="previewMembersRows.length > 0 && previewMembersColumns.length > 0" class="ns-members-preview-table-wrap">
+                <div *ngIf="noteSheet?.showMembersTable !== false && previewMembersRows.length > 0 && previewMembersColumns.length > 0" class="ns-members-preview-table-wrap">
                     <table class="ns-members-preview-table">
                         <thead>
                             <tr>
@@ -679,5 +720,43 @@
         <p-button label="Add Column" icon="pi pi-plus"
             [disabled]="addColumnMode === 'field' ? !selectedColumnKey : !newCustomColumnName.trim()"
             (onClick)="confirmAddColumn()"></p-button>
+    </ng-template>
+</p-dialog>
+
+<!-- Document style: non-modal and docked right so the page keeps scrolling behind it;
+     "Save" stores it for every note sheet this preview renders (screen, Print Preview, PDF, Word). -->
+<p-dialog
+    header="Document Style"
+    [(visible)]="showStyleDialog"
+    [modal]="false"
+    [blockScroll]="false"
+    [draggable]="true"
+    [resizable]="false"
+    [keepInViewport]="true"
+    position="right"
+    [style]="{ width: '320px', maxHeight: '90vh' }"
+    [contentStyle]="{ overflowY: 'auto' }"
+    [breakpoints]="{ '575px': '92vw' }"
+>
+    <div class="ns-style-form">
+        <p class="ns-style-hint">Changes show on the sheet immediately — scroll the page to check them. <b>Save</b> keeps them for this note sheet only; <b>Reset</b> removes this note sheet's saved style. Other note sheets are not affected.</p>
+        <p class="ns-style-hint">Now using: {{ styleConfig.noteSheetId ? "this note sheet's own style" : (styleConfig.configId ? 'the default style of this type' : 'the built-in defaults') }}.</p>
+
+        <label for="stFontDelta">Font size</label>
+        <p-select inputId="stFontDelta" [options]="fontDeltaOptions" [(ngModel)]="fontDelta" (onChange)="onFontDeltaChange()" optionLabel="label" optionValue="value" appendTo="body" [style]="{ width: '100%' }"></p-select>
+
+        <label for="stApproverGapEm">Gap between approver blocks (lines)</label>
+        <p-inputNumber inputId="stApproverGapEm" [(ngModel)]="styleConfig.approverGapEm" (ngModelChange)="onStyleChange()" mode="decimal" [minFractionDigits]="0" [maxFractionDigits]="2" [step]="0.25" [min]="0" [max]="30" [showButtons]="true"></p-inputNumber>
+
+        <label for="stInitiatorTop">Space above initiator signature (px)</label>
+        <p-inputNumber inputId="stInitiatorTop" [(ngModel)]="styleConfig.initiatorTopMarginPx" (ngModelChange)="onStyleChange()" [step]="5" [min]="0" [max]="200" [showButtons]="true"></p-inputNumber>
+
+        <label for="stSigDateGap">Space above signature date (lines)</label>
+        <p-inputNumber inputId="stSigDateGap" [(ngModel)]="styleConfig.sigDateGapEm" (ngModelChange)="onStyleChange()" mode="decimal" [minFractionDigits]="0" [maxFractionDigits]="2" [step]="0.25" [min]="0" [max]="10" [showButtons]="true"></p-inputNumber>
+    </div>
+    <ng-template pTemplate="footer">
+        <p-button label="Reset" icon="pi pi-refresh" severity="secondary" [text]="true" [disabled]="!styleConfig.noteSheetId" (onClick)="resetStyleToDefault()"></p-button>
+        <p-button label="Close" severity="secondary" [outlined]="true" (onClick)="showStyleDialog = false"></p-button>
+        <p-button label="Save" icon="pi pi-save" [loading]="savingStyle" (onClick)="saveStyle()"></p-button>
     </ng-template>
 </p-dialog>

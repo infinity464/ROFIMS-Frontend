@@ -127,11 +127,8 @@
                             [class.pi-times-circle]="clearanceStatus!.clearanceCancelled"
                             [class.pi-clock]="!clearanceStatus!.clearanceApproved && !clearanceStatus!.clearanceCancelled"
                         ></i>
-                        <span class="sp-chip-key">{{ L['clearance.label'] }}</span>
-                        <span class="sp-chip-val">
-                            @if (clearanceStatus!.clearanceCancelled) { {{ L['clearance.cancelled'] }} } @else if (clearanceStatus!.clearanceApproved) { {{ L['clearance.generated'] }} } @else if (clearanceStatus!.hasClearanceNoteSheet) { {{
-                            L['clearance.noteSheet'] }} } @else { {{ L['clearance.postedOut'] }} }
-                        </span>
+                        <span class="sp-chip-key">{{ clearanceChipKey }}</span>
+                        <span class="sp-chip-val">{{ clearanceChipValue }}</span>
                     </span>
                 </div>
                 }

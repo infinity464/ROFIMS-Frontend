@@ -105,7 +105,7 @@
                     </p-multiSelect>
                 </div>
                 <div class="report-filter-field">
-                    <label>RAB Unit</label>
+                    <label>SRB Unit</label>
                     <app-org-tree-multi-select [(ngModel)]="selectedOrgNodeIds" placeholder="Select units, wings, branches…"></app-org-tree-multi-select>
                 </div>
             </div>
@@ -193,7 +193,7 @@
                 [(ngModel)]="idSearchText"
                 (ngModelChange)="onIdSearchInput()"
                 (keydown.enter)="onIdSearch()"
-                [placeholder]="lang === 'bn' ? 'সার্ভিস আইডি / র‍্যাব আইডি' : 'Service ID / RAB ID'" />
+                [placeholder]="lang === 'bn' ? 'সার্ভিস আইডি / এসআরবি আইডি' : 'Service ID / SRB ID'" />
             @if (idSearchText) {
                 <button type="button" class="rab-search-clear" (click)="clearIdSearch()" title="Clear search">
                     <i class="pi pi-times"></i>
@@ -236,6 +236,11 @@
     <!-- Formal report paper -->
     <div class="rab-paper" [class.rab-lang-bn]="lang === 'bn'">
         <header class="rab-paper-head">
+            <!-- Screen-only record count (Print builds its own HTML; also hidden via @media print). -->
+            <div class="rab-total-badge no-print" aria-live="polite">
+                <span class="rab-total-badge-num">{{ lang === 'bn' ? toBanglaNum(totalRecords) : totalRecords }}</span>
+                <span class="rab-total-badge-label">{{ lang === 'bn' ? 'মোট রেকর্ড' : 'Total Records' }}</span>
+            </div>
             <div class="rab-overline">{{ rabOverlineText }}</div>
             <h1 class="rab-paper-title">{{ rabOrgTitle }}</h1>
             <div class="rab-paper-sub"><em>{{ rabOrgSubtitle }}</em></div>

@@ -149,7 +149,7 @@ export class ServingMemberEntry implements OnInit {
      * operator still sees where to look.
      */
     private applyServerDuplicate(err: any): void {
-        const message = err?.error?.description || 'RAB ID or Service ID already exist';
+        const message = err?.error?.description || 'SRB ID or Service ID already exist';
         const field = err?.error?.data?.field ?? err?.error?.Data?.Field ?? null;
 
         if (field === 'rabid') {
@@ -187,13 +187,13 @@ export class ServingMemberEntry implements OnInit {
                     if (this.isDuplicateRabId) {
                         this.messageService.add({
                             severity: 'warn',
-                            summary: 'Duplicate RAB ID',
-                            detail: `RAB ID "${rabIdStr}" already exists`
+                            summary: 'Duplicate SRB ID',
+                            detail: `SRB ID "${rabIdStr}" already exists`
                         });
                     }
                 },
                 error: (err) => {
-                    console.error('Error checking duplicate RAB ID', err);
+                    console.error('Error checking duplicate SRB ID', err);
                     this.isCheckingRabId = false;
                 }
             });
@@ -300,8 +300,8 @@ export class ServingMemberEntry implements OnInit {
         if (this.isDuplicateRabId || this.serverDuplicateRabIdError) {
             this.messageService.add({
                 severity: 'warn',
-                summary: 'Duplicate RAB ID',
-                detail: this.serverDuplicateRabIdError || 'A member with the same RAB ID already exists'
+                summary: 'Duplicate SRB ID',
+                detail: this.serverDuplicateRabIdError || 'A member with the same SRB ID already exists'
             });
             return;
         }
@@ -513,7 +513,7 @@ export class ServingMemberEntry implements OnInit {
                     this.messageService.add({
                         severity: 'warn',
                         summary: 'Duplicate Entry',
-                        detail: err?.error?.description || 'RAB ID or Service ID already exist',
+                        detail: err?.error?.description || 'SRB ID or Service ID already exist',
                         life: 10000
                     });
                     return;
@@ -838,7 +838,7 @@ export class ServingMemberEntry implements OnInit {
                     value: item.codeId ?? item.CodeId
                 }));
             },
-            error: (err) => console.error('Failed to load RAB units', err)
+            error: (err) => console.error('Failed to load SRB units', err)
         });
     }
 

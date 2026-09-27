@@ -9,6 +9,10 @@ import { TooltipModule } from 'primeng/tooltip';
 import { InputTextModule } from 'primeng/inputtext';
 import { TextareaModule } from 'primeng/textarea';
 import { SelectModule } from 'primeng/select';
+import { InputNumberModule } from 'primeng/inputnumber';
+import { NotesheetStyleConfigService } from '@/services/notesheet-style-config.service';
+import { NotesheetStyleConfig, defaultNotesheetStyle } from '@/models/notesheet-style-config.model';
+import { CheckboxModule } from 'primeng/checkbox';
 import { FieldsetModule } from 'primeng/fieldset';
 
 import { DatePickerModule } from 'primeng/datepicker';
@@ -19,11 +23,12 @@ import { RichEditorComponent } from '@/Components/Common/rich-editor/rich-editor
 import { FileReferencesFormComponent, FileRowData } from '@/Components/Common/file-references-form/file-references-form';
 import { NotesheetApproverSelectComponent } from '@/Components/Common/notesheet-approver-select/notesheet-approver-select';
 import { EmployeeSearchComponent, EmployeeBasicInfo } from '@/Components/Shared/employee-search/employee-search';
+import { NotesheetMemberStripsComponent } from '@/Components/Shared/notesheet-member-strips/notesheet-member-strips';
 import { NotesheetPreviewBase } from '../notesheet-preview-base';
 import { NoteSheetSubjectService, NoteSheetSubjectModel } from '@/Components/basic-setup/shared/services/NoteSheetSubjectService';
-import { MemberColumnDef, MemberRow, MembersJsonData, AVAILABLE_MEMBER_COLUMNS, ReferenceParagraph } from '../../notesheet-generate/notesheet-generate';
+import { MemberColumnDef, MemberRow, MembersJsonData, AVAILABLE_MEMBER_COLUMNS, ReferenceParagraph, PostedOutClearanceInfo } from '../../notesheet-generate/notesheet-generate';
 import { MainTextBlock, parseMainTextBlocks, serializeMainTextBlocks } from '@/shared/utils/notesheet-main-text';
-import { NoteSheetCurrentStatus, NoteSheetCurrentStatusOptions, NoteSheetOperationTypeOptions, ApprovalStatus, NoteSheetRemarkAction, NoteSheetPreviewFrom, ApprovalLogAction, ApprovalLogActionOptions } from '@/models/enums';
+import { NoteSheetCurrentStatus, NoteSheetCurrentStatusOptions, NoteSheetOperationTypeOptions, ApprovalStatus, NoteSheetRemarkAction, NoteSheetPreviewFrom, ApprovalLogAction, ApprovalLogActionOptions, SubjectCategory } from '@/models/enums';
 import { SharedService } from '@/shared/services/shared-service';
 import { FlexibleDateDirective } from '@/shared/directives/flexible-date.directive';
 import { environment } from '@/Core/Environments/environment';
@@ -61,9 +66,9 @@ interface ApprovalLogEntry {
     standalone: true,
     imports: [
         CommonModule, FormsModule, ButtonModule, ToastModule, ConfirmDialogModule, DialogModule, TooltipModule,
-        InputTextModule, TextareaModule, SelectModule, DatePickerModule, FlexibleDateDirective, FieldsetModule,
+        InputTextModule, TextareaModule, SelectModule, InputNumberModule, CheckboxModule, DatePickerModule, FlexibleDateDirective, FieldsetModule,
         NotesheetSignatoryComponent, RichEditorComponent, FileReferencesFormComponent, NotesheetApproverSelectComponent,
-        EmployeeSearchComponent
+        EmployeeSearchComponent, NotesheetMemberStripsComponent
     ],
     providers: [MessageService, ConfirmationService],
     templateUrl: './notesheet-preview-general.html',
@@ -81,6 +86,8 @@ export class NotesheetPreviewGeneralComponent extends NotesheetPreviewBase imple
     private sharedService = inject(SharedService);
     private familyInfoService = inject(FamilyInfoService);
     private jsreportService = inject(JsReportService);
+    /** Host element — carries the --ns-* document style variables (font offset, gaps) for the whole preview. */
+    private hostEl = inject(ElementRef) as ElementRef<HTMLElement>;
 
     // ── Page size for jsReport export (Legal default, A4 optional) ──
     selectedPageSize = 'A4';
@@ -89,6 +96,166 @@ export class NotesheetPreviewGeneralComponent extends NotesheetPreviewBase imple
         { label: 'A4', value: 'A4' }
     ];
 
+    // ── Whole-sheet font size, as a point offset (−2 … 0 … +2 in 0.25 steps) ──
+    // Applied as the --ns-fs-delta custom property on the host; every body size in
+    // notesheet-preview-general.scss is expressed against it via fs(), the PDF restates
+    // it on .pdf-flow in buildJsReportPdf(), and buildWordDocument() adds the same offset
+    // to its half-point sizes. Sizing down usually pulls a trailing block back onto the
+    // previous page and saves a sheet.
+    fontDelta = 0;
+    /** +2.00 … 0 … −2.00 pt in 0.25 steps, largest first (like the page-size list). */
+    readonly fontDeltaOptions = Array.from({ length: 17 }, (_, i) => {
+        const value = +(2 - i * 0.25).toFixed(2);
+        return { label: this.fontDeltaLabel(value), value };
+    });
+
+    private fontDeltaLabel(value: number): string {
+        if (value === 0) return 'Default Font Size';
+        return `Font: ${value > 0 ? '+' : '-'}${Math.abs(value).toFixed(2)} pt`;
+    }
+
+    onFontDeltaChange(): void {
+        this.onStyleChange();
+    }
+
+    // ── Saved document style ─────────────────────────────────
+    private styleConfigService = inject(NotesheetStyleConfigService);
+    /** Style type for this preview layout: keys the type default and the built-in defaults.
+     *  A note sheet's own saved style (styleConfig.noteSheetId set) overrides both. */
+    private readonly styleType = 'General';
+    /** Signature-block spacing, saved per note sheet. fontDelta and
+     *  selectedPageSize stay separate fields (the page-size select binds one) and are folded in on save. */
+    styleConfig: NotesheetStyleConfig = defaultNotesheetStyle('General');
+    showStyleDialog = false;
+    savingStyle = false;
+
+    /** Cached style first so the sheet paginates in the saved style straight away,
+     *  then the server's copy — this note sheet's own style, else its type default. */
+    protected override onNoteSheetLoaded(): void {
+        this.applyStyleConfig(this.styleConfigService.cached(this.styleType, this.noteSheetId));
+        this.styleConfigService.load(this.styleType, this.noteSheetId).subscribe((cfg) => this.applyStyleConfig(cfg));
+    }
+
+    private applyStyleConfig(cfg: NotesheetStyleConfig): void {
+        this.styleConfig = { ...cfg };
+        this.fontDelta = cfg.fontDelta;
+        this.selectedPageSize = cfg.defaultPageSize;
+        this.onStyleChange();
+    }
+
+    /**
+     * Font size, page size or a gap changed. The values are written to the host element
+     * so they inherit into the visible pages and the hidden .page-measure div; the content
+     * height changes with them, so pagination is reset and re-measured.
+     */
+    onStyleChange(): void {
+        this.applyStyleVars();
+        this.pageContentHeightPx = 0;
+        this.lastMeasuredHeight = 0;
+        this.pageOffsets = [0];
+        this.cdr.detectChanges();
+    }
+
+    /** Current style with cleared inputs (p-inputNumber emits null) put back to defaults. */
+    private currentStyle(): NotesheetStyleConfig {
+        const d = defaultNotesheetStyle(this.styleType);
+        const s = this.styleConfig;
+        return {
+            ...d,
+            configId: s.configId,
+            fontDelta: this.fontDelta ?? d.fontDelta,
+            defaultPageSize: this.selectedPageSize === 'A4' ? 'A4' : 'Legal',
+            approverGapPx: s.approverGapPx ?? d.approverGapPx,
+            approverGapEm: s.approverGapEm ?? d.approverGapEm,
+            sigDateGapEm: s.sigDateGapEm ?? d.sigDateGapEm,
+            initiatorTopMarginPx: s.initiatorTopMarginPx ?? d.initiatorTopMarginPx,
+            approverMinHeightPx: s.approverMinHeightPx ?? d.approverMinHeightPx
+        };
+    }
+
+    /** The custom properties the component SCSS reads. Unitless values (font delta, em
+     *  counts) are multiplied by 1pt / 1em there, which keeps a negative offset a plain
+     *  multiplication instead of a signed operand inside calc(). */
+    private styleVars(): [string, string][] {
+        const s = this.currentStyle();
+        return [
+            ['--ns-fs-delta', `${s.fontDelta}`],
+            ['--ns-approver-gap-px', `${s.approverGapPx}px`],
+            ['--ns-approver-gap-em', `${s.approverGapEm}`],
+            ['--ns-sig-date-gap-em', `${s.sigDateGapEm}`],
+            ['--ns-initiator-top', `${s.initiatorTopMarginPx}px`],
+            ['--ns-approver-min-h', `${s.approverMinHeightPx}px`]
+        ];
+    }
+
+    private applyStyleVars(): void {
+        const el = this.hostEl.nativeElement;
+        for (const [name, value] of this.styleVars()) el.style.setProperty(name, value);
+    }
+
+    /** Saves the dialog's style for this note sheet only. */
+    saveStyle(): void {
+        const noteSheetId = this.noteSheetId;
+        if (this.savingStyle || !noteSheetId) return;
+        this.savingStyle = true;
+        const user = this.sharedService.getCurrentUser() || 'system';
+        const now = new Date().toISOString();
+        this.styleConfigService.save({ ...this.currentStyle(), noteSheetType: this.styleType, noteSheetId, createdBy: user, createdDate: now, lastUpdatedBy: user, lastupdate: now }).subscribe({
+            next: (saved) => {
+                this.savingStyle = false;
+                this.styleConfig = { ...saved };
+                this.showStyleDialog = false;
+                this.messageService.add({ severity: 'success', summary: 'Saved', detail: 'Style saved for this note sheet.' });
+            },
+            error: (err) => {
+                this.savingStyle = false;
+                this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.description || 'Failed to save style.' });
+            }
+        });
+    }
+
+    /** Removes the style saved for this note sheet only — other note sheets keep theirs. */
+    resetStyleToDefault(): void {
+        const noteSheetId = this.noteSheetId;
+        if (!noteSheetId || !this.styleConfig.noteSheetId) return;
+        this.confirmationService.confirm({
+            header: 'Reset Style',
+            message: 'Remove the style saved for this note sheet? Other note sheets are not affected.',
+            icon: 'pi pi-exclamation-triangle',
+            accept: () =>
+                this.styleConfigService.reset(this.styleType, noteSheetId).subscribe({
+                    next: (cfg) => {
+                        this.applyStyleConfig(cfg);
+                        this.messageService.add({ severity: 'success', summary: 'Reset', detail: 'Style reset for this note sheet.' });
+                    },
+                    error: () => this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to reset style.' })
+                })
+        });
+    }
+
+    // ── Members table detail toggle ───────────────────────
+    /** কোর (corps) inside the Name column. The stored name is the composite built by
+     *  getFormattedMemberName() — "name, decoration, professional qualification, corps"
+     *  (navy: "name, corps, …, বিএন") — so switching this off drops the corps part from
+     *  the cell instead of hiding a column. Preview, print, PDF and Word all read the
+     *  value through memberCellValue(). */
+    showCorpsInName = true;
+
+    /** The toggle only makes sense when the table actually shows a name column AND the
+     *  rows carry a corps value to strip (older saved rows may not). */
+    get canToggleCorpsInName(): boolean {
+        if (this.noteSheet?.showMembersTable === false) return false;
+        if (this.previewMembersRows.length === 0) return false;
+        if (!this.previewMembersColumns.some(c => this.isNameColumn(c))) return false;
+        return this.previewMembersRows.some(r => ((r['corpsBN'] || r['corps'] || '').trim().length > 0));
+    }
+
+    /** Dropping/restoring the corps part can reflow the table, so re-paginate. */
+    onShowCorpsInNameChange(): void {
+        this.lastMeasuredHeight = 0;
+        this.cdr.detectChanges();
+    }
+
     // ── Button visibility (configurable by parent) ───────────
     @Input() showEdit = true;
     @Input() showWord = true;
@@ -96,6 +263,8 @@ export class NotesheetPreviewGeneralComponent extends NotesheetPreviewBase imple
 
     // ── Edit state ───────────────────────────────────────────
     editing = false;
+    /** Edit-mode copy of NoteSheetInfo.ShowMembersTable. False hides the table; members stay linked. */
+    editShowMembersTable = true;
     saving = false;
 
     // ── Submit for approval state ─────────────────────────────
@@ -132,6 +301,20 @@ export class NotesheetPreviewGeneralComponent extends NotesheetPreviewBase imple
     // ── General subject master (resolve NoteSheetSubjectId → BN/EN for display) ──
     private noteSheetSubjectService = inject(NoteSheetSubjectService);
     private noteSheetSubjects: NoteSheetSubjectModel[] = [];
+    /** armyRank → EquivalentName SortOrder (cross-org RAB seniority) + root MotherOrg.SortOrder — cached for posting-style member sort. */
+    private equivalentSortByRankId = new Map<number, number>();
+    private motherOrgSortByOrgId = new Map<number, number>();
+    /** Raw motherOrganizationId per member (from InformationJson.values.motherOrganizationId). */
+    private loadedMemberMotherOrgIds: (number | null)[] = [];
+    private pendingMemberSort = false;
+
+    /** True when this note sheet's subject has the Clearance category: members must be verified
+     *  posted-out members (same rule as /notesheet-generate). */
+    get isClearanceSubject(): boolean {
+        const id = this.noteSheet?.noteSheetSubjectId;
+        if (id == null) return false;
+        return this.noteSheetSubjects.find((s) => s.id === id)?.subjectCategory === SubjectCategory.Clearance;
+    }
 
     // ── Edit model fields ────────────────────────────────────
     editSubject = '';
@@ -214,9 +397,12 @@ export class NotesheetPreviewGeneralComponent extends NotesheetPreviewBase imple
     }
 
     // ── Members table data (loaded from NoteSheetReferenceEmployee) ──
-    previewMembersColumns: { key: string; label: string; mergedFrom?: string[]; width?: number }[] = [];
+    previewMembersColumns: { key: string; label: string; labelBN?: string; mergedFrom?: string[]; width?: number }[] = [];
     previewMembersRows: Record<string, string>[] = [];
     private loadedMemberEmployeeIds: number[] = [];
+    /** Posted-out (clearance) link per loaded member, index-aligned with loadedMemberEmployeeIds.
+     *  Carried through edit + Sync so saving from the preview never drops it. */
+    private loadedMemberPostedOutIds: (number | null)[] = [];
 
     // ── Computed ─────────────────────────────────────────────
     get canEdit(): boolean {
@@ -311,15 +497,18 @@ export class NotesheetPreviewGeneralComponent extends NotesheetPreviewBase imple
         const cols: MemberColumnDef[] = this.previewMembersColumns.map(c => ({
             key: c.key,
             label: c.label,
+            ...(c.labelBN ? { labelBN: c.labelBN } : {}),
             group: (c as any).group ?? 'basic',
             ...(c.mergedFrom ? { mergedFrom: (c as any).mergedFrom } : {}),
             ...(c.width != null ? { width: c.width } : {})
         }));
         const members: MemberRow[] = this.previewMembersRows.map((row, i) => ({
             employeeId: this.loadedMemberEmployeeIds[i] ?? 0,
-            values: { ...row }
+            values: { ...row },
+            postedOutId: this.loadedMemberPostedOutIds[i] ?? null
         }));
         this.editMembersData = { columns: cols, members };
+        this.editShowMembersTable = this.noteSheet.showMembersTable !== false;
     }
 
     cancelEdit(): void {
@@ -487,6 +676,11 @@ export class NotesheetPreviewGeneralComponent extends NotesheetPreviewBase imple
     // ── Save changes ─────────────────────────────────────────
     saveChanges(): void {
         if (!this.noteSheet || this.saving) return;
+        // Clearance subject → at least one (posted-out) member is required (same rule as /notesheet-generate).
+        if (this.isClearanceSubject && this.editMembersData.members.length === 0) {
+            this.messageService.add({ severity: 'warn', summary: 'Members required', detail: 'This is a clearance subject — add at least one posted-out member.' });
+            return;
+        }
         this.saving = true;
 
         const existingRefs = this.fileReferencesForm?.getExistingFileReferences() || [];
@@ -507,6 +701,7 @@ export class NotesheetPreviewGeneralComponent extends NotesheetPreviewBase imple
                     : null,
                 textType: this.editTextType === 'bn' ? 1 : 0,
                 noteSheetOperationType: this.editOperationType,
+                showMembersTable: this.editShowMembersTable,
                 noteSheetDate: this.editNoteSheetDate ? this.formatDateOnly(this.editNoteSheetDate) : this.noteSheet!.noteSheetDate,
                 initiatorId: this.editInitiatorId ?? 0,
                 recommendersJson,
@@ -521,41 +716,48 @@ export class NotesheetPreviewGeneralComponent extends NotesheetPreviewBase imple
 
             this.http.post(`${this.api}/UpdateAsyn`, payload).subscribe({
                 next: () => {
-                    // Sync members to NoteSheetReferenceEmployee
                     const noteSheetId = this.noteSheet!.noteSheetId ?? (this.noteSheet as any).NoteSheetId;
-                    if (noteSheetId) {
-                        const refApi = `${environment.apis.core}/NoteSheetReferenceEmployee`;
-                        const employees = this.editMembersData.members.map(m => ({
-                            employeeId: m.employeeId,
-                            informationJson: JSON.stringify({
-                                columns: this.editMembersData.columns,
-                                values: m.values
-                            })
-                        }));
-                        const syncPayload = {
-                            noteSheetId,
-                            employees,
-                            updatedBy: payload['lastUpdatedBy'] ?? 'system'
-                        };
-                        this.http.post(refApi + '/Sync', syncPayload).subscribe({
-                            error: () => this.messageService.add({ severity: 'warn', summary: 'Warning', detail: 'Saved but failed to sync members.' })
-                        });
-                    }
-                    // Reflect the edits in the in-memory model right away so the view updates
-                    // immediately — the paginated view otherwise keeps the pre-save layout until a
-                    // manual reload. The async reload below still re-syncs server truth.
-                    this.applyEditsToNoteSheet(payload, referenceNumberJson);
+                    const refApi = `${environment.apis.core}/NoteSheetReferenceEmployee`;
+                    const employees = this.editMembersData.members.map(m => ({
+                        employeeId: m.employeeId,
+                        postedOutId: m.postedOutId ?? null,
+                        informationJson: JSON.stringify({
+                            columns: this.editMembersData.columns,
+                            values: m.values
+                        })
+                    }));
+                    const syncPayload = {
+                        noteSheetId,
+                        employees,
+                        updatedBy: payload['lastUpdatedBy'] ?? 'system'
+                    };
+                    const sync$ = noteSheetId
+                        ? this.http.post(refApi + '/Sync', syncPayload).pipe(catchError(() => {
+                            this.messageService.add({ severity: 'warn', summary: 'Warning', detail: 'Saved but failed to sync members.' });
+                            return of(null);
+                        }))
+                        : of(null);
 
-                    this.messageService.add({ severity: 'success', summary: 'Success', detail: 'Note-sheet updated successfully.' });
-                    this.editing = false;
-                    this.saving = false;
-                    this.fileRows = [];
-                    // Force a clean re-measure + re-pagination for the now-updated content.
-                    this.pageContentHeightPx = 0;
-                    this.lastMeasuredHeight = 0;
-                    this.pageOffsets = [0];
-                    this.reloadNoteSheet();
-                    this.cdr.detectChanges();
+                    sync$.subscribe({
+                        next: () => {
+                            this.applyEditsToNoteSheet(payload, referenceNumberJson);
+                            this.messageService.add({ severity: 'success', summary: 'Success', detail: 'Note-sheet updated successfully.' });
+                            this.editing = false;
+                            this.saving = false;
+                            this.fileRows = [];
+                            this.pageContentHeightPx = 0;
+                            this.lastMeasuredHeight = 0;
+                            this.pageOffsets = [0];
+                            this.cdr.detectChanges();
+                            // Defer server re-sync until after the optimistic view has rendered.
+                            // The view is paginated via hidden .page-measure; if we set
+                            // loading=true immediately it hides that element before
+                            // ngAfterViewChecked can re-measure, so the preview looks
+                            // frozen until a hard reload. A microtask lets Angular render
+                            // the optimistic state first.
+                            setTimeout(() => this.reloadNoteSheet(), 0);
+                        }
+                    });
                 },
                 error: (err: any) => {
                     this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.message || 'Failed to update note-sheet.' });
@@ -619,13 +821,29 @@ export class NotesheetPreviewGeneralComponent extends NotesheetPreviewBase imple
             ns.textType = payload['textType'] as number;
             ns.noteSheetDate = payload['noteSheetDate'];
             ns.noteSheetOperationType = this.editOperationType ?? null;
+            ns.showMembersTable = this.editShowMembersTable;
             if (payload['filesReferences'] !== undefined) ns.filesReferences = payload['filesReferences'] ?? null;
         }
-        // View mode reads the members from previewMembers* — mirror the edited set.
+        // View mode reads the members from previewMembers* — mirror the edited set,
+        // preserving motherOrganizationId so the posting-style sort still works on save.
         // (Cast as-any to match the loaded path, which assigns parsed JSON columns.)
         this.previewMembersColumns = this.editMembersData.columns.map((c) => ({ ...c })) as any;
+        const existingOrgByEmp = new Map<number, number | null>();
+        for (let i = 0; i < (this.loadedMemberEmployeeIds ?? []).length; i++) {
+            const id = this.loadedMemberEmployeeIds[i];
+            if (id) existingOrgByEmp.set(id, this.loadedMemberMotherOrgIds[i] ?? null);
+        }
         this.previewMembersRows = this.editMembersData.members.map((m) => ({ ...m.values }));
         this.loadedMemberEmployeeIds = this.editMembersData.members.map((m) => m.employeeId);
+        this.loadedMemberPostedOutIds = this.editMembersData.members.map((m) => m.postedOutId ?? null);
+        this.loadedMemberMotherOrgIds = this.editMembersData.members.map((m) => {
+            const raw = (m.values as any).motherOrganizationId ?? (m.values as any).motherOrganisationId ?? (m.values as any).motherOrgId ?? (m.values as any).orgId ?? null;
+            const n = raw != null ? Number(raw) : null;
+            if (n != null && !isNaN(n)) return n;
+            return existingOrgByEmp.get(m.employeeId) ?? null;
+        });
+        // Keep the preview in posting order even while staying in view mode after save.
+        this.sortPreviewMembers();
     }
 
     // ── Parse file references from noteSheet ─────────────────
@@ -696,6 +914,7 @@ export class NotesheetPreviewGeneralComponent extends NotesheetPreviewBase imple
     // ── Lifecycle: detect pending mode, resolve current user ──
     override ngOnInit(): void {
         super.ngOnInit();
+        this.loadRankSeniorityData();
         // Load the General subject master so the preview can resolve NoteSheetSubjectId → BN/EN.
         this.noteSheetSubjectService.getActiveByType('General').subscribe({
             next: (list) => {
@@ -722,6 +941,39 @@ export class NotesheetPreviewGeneralComponent extends NotesheetPreviewBase imple
         }
     }
 
+    /** Preload RAB seniority ladders: RankEquivalent (armyRank → EquivalentName.SortOrder) + root MotherOrg.SortOrder. */
+    private loadRankSeniorityData(): void {
+        this.masterBasicSetup.getAllRankEquivalents().subscribe({
+            next: (list) => {
+                const bestByRank = new Map<number, number>();
+                for (const r of list ?? []) {
+                    const cur = bestByRank.get(r.motherOrgRankId);
+                    const s = r.sortOrder ?? 9999;
+                    if (cur == null || s < cur) bestByRank.set(r.motherOrgRankId, s);
+                }
+                this.equivalentSortByRankId = bestByRank;
+                // RankEquivalent alone is enough to sort — don't gate on the org fetch.
+                if (this.pendingMemberSort) {
+                    this.pendingMemberSort = false;
+                    this.sortPreviewMembers();
+                }
+            },
+            error: () => { this.equivalentSortByRankId = new Map(); }
+        });
+        this.masterBasicSetup.getAllActiveMotherOrgs().subscribe({
+            next: (orgs) => {
+                const m = new Map<number, number>();
+                for (const o of orgs ?? []) if (o.orgId != null && o.sortOrder != null) m.set(o.orgId, o.sortOrder);
+                this.motherOrgSortByOrgId = m;
+                // Org sort is a secondary tie-breaker — re-sort if members already arrived via rank-only path.
+                if (this.previewMembersRows.length > 1) {
+                    this.sortPreviewMembers();
+                }
+            },
+            error: () => {}
+        });
+    }
+
     // ── Override loadNoteSheet to also load members ───────────
     protected override loadNoteSheet(): void {
         super.loadNoteSheet();
@@ -740,19 +992,151 @@ export class NotesheetPreviewGeneralComponent extends NotesheetPreviewBase imple
                                 return parsed.values ?? {};
                             });
                             this.loadedMemberEmployeeIds = rows.map(r => r.employeeId ?? r.EmployeeId ?? 0);
+                            this.loadedMemberPostedOutIds = rows.map(r => r.postedOutId ?? r.PostedOutId ?? null);
+                            this.loadedMemberMotherOrgIds = rows.map(r => {
+                                try {
+                                    const parsed = JSON.parse(r.informationJson || r.InformationJson);
+                                    const v = parsed.values ?? {};
+                                    const raw = v.motherOrganizationId ?? v.motherOrganisationId ?? v.motherOrgId ?? v.orgId ?? null;
+                                    const n = raw != null ? Number(raw) : null;
+                                    return n != null && !isNaN(n) ? n : null;
+                                } catch { return null; }
+                            });
+                            // Posting-style ORDER BY needs RankEquivalent; if it's loaded we can sort
+                            // now, otherwise defer until the lookup arrives.
+                            if (this.equivalentSortByRankId.size > 0) {
+                                this.sortPreviewMembers();
+                            } else {
+                                this.pendingMemberSort = true;
+                            }
                         } catch {
                             this.previewMembersColumns = [];
                             this.previewMembersRows = [];
                             this.loadedMemberEmployeeIds = [];
+                            this.loadedMemberPostedOutIds = [];
+                            this.loadedMemberMotherOrgIds = [];
                         }
                     } else {
                         this.previewMembersColumns = [];
                         this.previewMembersRows = [];
                         this.loadedMemberEmployeeIds = [];
+                        this.loadedMemberPostedOutIds = [];
+                        this.loadedMemberMotherOrgIds = [];
                     }
+                    this.lastMeasuredHeight = 0;
+                    this.cdr.detectChanges();
                 }
             });
         }
+    }
+
+    private sortPreviewMembers(): void {
+        if (this.previewMembersRows.length <= 1) {
+            this.lastMeasuredHeight = 0;
+            this.cdr.detectChanges();
+            return;
+        }
+        type Item = { row: Record<string, string>; empId: number; postedOutId: number | null; orgId: number | null };
+        const items: Item[] = this.previewMembersRows.map((row, i) => ({
+            row,
+            empId: this.loadedMemberEmployeeIds[i] ?? 0,
+            postedOutId: this.loadedMemberPostedOutIds[i] ?? null,
+            orgId: this.loadedMemberMotherOrgIds[i] ?? null
+        }));
+        const rankOf = (row: Record<string, string>): number | null => {
+            const raw = (row['armyRankId'] ?? '').toString().trim();
+            if (raw && !isNaN(Number(raw)) && String(Number(raw)) === raw) return Number(raw);
+            return null;
+        };
+        const svcNum = (row: Record<string, string>): number | null => {
+            const s = (row['serviceId'] ?? '').toString().trim();
+            if (!s) return null;
+            const n = Number(s.replace(/\D/g, ''));
+            return isNaN(n) ? null : n;
+        };
+        // Posting ORDER BY: EquivalentName.SortOrder → mother-org RankSortOrder is NOT stored
+        // in the general note-sheet row (only armyRank label, not its CommonCode.SortOrder), so
+        // the posting "RankSortOrder" tie-breaker collapses. Next key that IS available is
+        // root MotherOrg.SortOrder (via motherOrganizationId), then trade, then numeric
+        // ServiceId. Trade-null/empty rows sort last within their group, matching the SPs'
+        // "CASE WHEN TradeName IS NULL THEN 1 ELSE 0 END".
+        const cmp = (a: Item, b: Item): number => {
+            const ra = rankOf(a.row), rb = rankOf(b.row);
+            const ea = ra != null ? this.equivalentSortByRankId.get(ra) : undefined;
+            const eb = rb != null ? this.equivalentSortByRankId.get(rb) : undefined;
+            const eaNull = ea == null, ebNull = eb == null;
+            if (eaNull !== ebNull) return eaNull ? 1 : -1;
+            if (ea != null && eb != null && ea !== eb) return ea - eb;
+            const oa = a.orgId != null ? this.motherOrgSortByOrgId.get(a.orgId) : undefined;
+            const ob = b.orgId != null ? this.motherOrgSortByOrgId.get(b.orgId) : undefined;
+            const oaNull = oa == null, obNull = ob == null;
+            if (oaNull !== obNull) return oaNull ? 1 : -1;
+            if (oa != null && ob != null && oa !== ob) return oa - ob;
+            const ta = (a.row['trade'] ?? '').toString().trim(), tb = (b.row['trade'] ?? '').toString().trim();
+            if (!ta !== !tb) return !ta ? 1 : -1;
+            if (ta !== tb) return ta.localeCompare(tb);
+            const sa = svcNum(a.row), sb = svcNum(b.row);
+            if (sa != null && sb != null && sa !== sb) return sa - sb;
+            const ssa = (a.row['serviceId'] ?? '').toString(), ssb = (b.row['serviceId'] ?? '').toString();
+            if (ssa !== ssb) return ssa.localeCompare(ssb);
+            return a.empId - b.empId;
+        };
+        items.sort(cmp);
+        this.previewMembersRows = items.map(x => x.row);
+        this.loadedMemberEmployeeIds = items.map(x => x.empId);
+        this.loadedMemberPostedOutIds = items.map(x => x.postedOutId);
+        this.loadedMemberMotherOrgIds = items.map(x => x.orgId);
+        this.lastMeasuredHeight = 0;
+        this.cdr.detectChanges();
+    }
+
+    private applyEditsSortIfNeeded(): void {
+        if (!this.previewMembersRows.length) return;
+        this.sortPreviewMembers();
+    }
+
+    private sortEditMembersByPostingOrder(): void {
+        if (this.editMembersData.members.length <= 1) return;
+        const rankOf = (m: MemberRow): number | null => {
+            const raw = (m.values['armyRankId'] ?? m.values['armyRank'] ?? '').toString().trim();
+            if (!raw) return null;
+            const n = Number(raw);
+            if (!isNaN(n) && String(n) === raw) return n;
+            return null;
+        };
+        const svcNum = (m: MemberRow): number | null => {
+            const s = (m.values['serviceId'] ?? '').toString().trim();
+            if (!s) return null;
+            const n = Number(s.replace(/\D/g, ''));
+            return isNaN(n) ? null : n;
+        };
+        const orgOf = (m: MemberRow): number | null => {
+            const raw = (m.values['motherOrganizationId'] ?? (m.values as any).motherOrganisationId ?? (m.values as any).motherOrgId ?? (m.values as any).orgId ?? '').toString().trim();
+            if (!raw) return null;
+            const n = Number(raw);
+            return isNaN(n) ? null : n;
+        };
+        this.editMembersData.members.sort((a, b) => {
+            const ra = rankOf(a), rb = rankOf(b);
+            const ea = ra != null ? this.equivalentSortByRankId.get(ra) : undefined;
+            const eb = rb != null ? this.equivalentSortByRankId.get(rb) : undefined;
+            const eaNull = ea == null, ebNull = eb == null;
+            if (eaNull !== ebNull) return eaNull ? 1 : -1;
+            if (ea != null && eb != null && ea !== eb) return ea - eb;
+            const oa = orgOf(a) != null ? this.motherOrgSortByOrgId.get(orgOf(a)!) : undefined;
+            const ob = orgOf(b) != null ? this.motherOrgSortByOrgId.get(orgOf(b)!) : undefined;
+            const oaNull = oa == null, obNull = ob == null;
+            if (oaNull !== obNull) return oaNull ? 1 : -1;
+            if (oa != null && ob != null && oa !== ob) return oa - ob;
+            const ta = (a.values['trade'] ?? '').toString().trim(), tb = (b.values['trade'] ?? '').toString().trim();
+            if (!ta !== !tb) return !ta ? 1 : -1;
+            if (ta !== tb) return ta.localeCompare(tb);
+            const sa = svcNum(a), sb = svcNum(b);
+            if (sa != null && sb != null && sa !== sb) return sa - sb;
+            const ssa = (a.values['serviceId'] ?? '').toString(), ssb = (b.values['serviceId'] ?? '').toString();
+            if (ssa !== ssb) return ssa.localeCompare(ssb);
+            return a.employeeId - b.employeeId;
+        });
     }
 
     // ── Serial computation: main blocks (1..M), note, last-text blocks, then approvers ──
@@ -777,7 +1161,86 @@ export class NotesheetPreviewGeneralComponent extends NotesheetPreviewBase imple
 
     // ── Members edit methods ────────────────────────────────────
 
+    /**
+     * Same gates as /notesheet-generate: the logged-in user's access scope first (resilient on a network
+     * error), then — for clearance subjects — the posted-out lookup and one-active-note-sheet check.
+     */
     onMemberFound(emp: EmployeeBasicInfo): void {
+        this.servingMembersService.checkMemberAccess(emp.employeeID).subscribe({
+            next: (res) => {
+                if (res && res.accessible === false) {
+                    this.messageService.add({
+                        severity: 'error',
+                        summary: 'Access denied',
+                        detail: res.reason || "You don't have permission to view this employee (outside your assigned units / member types)."
+                    });
+                    return;
+                }
+                this.proceedAddMember(emp);
+            },
+            error: () => this.proceedAddMember(emp)
+        });
+    }
+
+    /** Clearance subject → verify the posted-out record + cross-note-sheet duplicate first; otherwise add normally. */
+    private proceedAddMember(emp: EmployeeBasicInfo): void {
+        if (this.editMembersData.members.some(m => m.employeeId === emp.employeeID)) {
+            this.messageService.add({ severity: 'warn', summary: 'Duplicate', detail: 'This member is already added.' });
+            return;
+        }
+        if (!this.isClearanceSubject) {
+            this.addFoundMember(emp, null);
+            return;
+        }
+
+        this.memberAddLoading = true;
+        const api = `${environment.apis.core}/NoteSheetReferenceEmployee`;
+        const params: Record<string, string> = { employeeId: String(emp.employeeID) };
+        // This note sheet's own rows must not count as "already in another note-sheet".
+        if (this.noteSheetId) params['excludeNoteSheetId'] = String(this.noteSheetId);
+        this.http.get<PostedOutClearanceInfo>(`${api}/GetPostedOutClearanceInfo`, { params }).subscribe({
+            next: (info) => {
+                this.memberAddLoading = false;
+                if (!info?.hasPostedOut) {
+                    this.messageService.add({
+                        severity: 'error',
+                        summary: 'No Posted Out record',
+                        detail: `${emp.fullNameEN || 'This member'} has no Posted Out entry. Please generate the Posted Out (Permanent Posting MO Change) record first.`,
+                        life: 7000
+                    });
+                    return;
+                }
+                if (info.usedInNoteSheetId != null) {
+                    const nsRef = info.usedInNoteSheetNo || ('#' + info.usedInNoteSheetId);
+                    this.messageService.add({
+                        severity: 'error',
+                        summary: info.usedInNoteSheetApproved ? 'Clearance already approved' : 'Already in a note-sheet',
+                        detail: info.usedInNoteSheetApproved
+                            ? `This posted-out member's clearance is already approved in note-sheet ${nsRef} and cannot be added again.`
+                            : `This posted-out member is already in note-sheet ${nsRef}. A posted-out member can be in only one active note-sheet. (If that note-sheet is cancelled, the member becomes available again.)`,
+                        life: 8000
+                    });
+                    return;
+                }
+                if (info.hasCancelledNoteSheet) {
+                    const cancelledRef = info.cancelledNoteSheetNo ? ` (${info.cancelledNoteSheetNo})` : '';
+                    this.messageService.add({
+                        severity: 'warn',
+                        summary: 'Previously cancelled',
+                        detail: `This member's earlier clearance note-sheet${cancelledRef} was cancelled. Adding to this note-sheet.`,
+                        life: 7000
+                    });
+                }
+                this.addFoundMember(emp, info.postedOutId, info.postingUnitName ?? '', info.postingUnitNameBN ?? '');
+            },
+            error: () => {
+                this.memberAddLoading = false;
+                this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to verify the posted-out record. Please try again.' });
+            }
+        });
+    }
+
+    private addFoundMember(emp: EmployeeBasicInfo, postedOutId: number | null, postingUnitEN: string = '', postingUnitBN: string = ''): void {
         if (this.editMembersData.members.some(m => m.employeeId === emp.employeeID)) {
             this.messageService.add({ severity: 'warn', summary: 'Duplicate', detail: 'This member is already added.' });
             return;
@@ -857,7 +1320,17 @@ export class NotesheetPreviewGeneralComponent extends NotesheetPreviewBase imple
                 values['family_father'] = father?.name ?? '';
                 values['family_mother'] = mother?.name ?? '';
                 values['family_members'] = family.map((f: any) => `${f.relation ?? ''}: ${f.name ?? ''}`).join('; ');
-                this.editMembersData.members.push({ employeeId: emp.employeeID, values });
+                // Posted-out Posting Unit (mother-org transfer destination) — populated for clearance subjects.
+                values['postingUnit'] = postingUnitEN;
+                values['postingUnitBN'] = postingUnitBN;
+                values['motherOrganizationId'] = profile.motherOrganizationId != null ? String(profile.motherOrganizationId) : '';
+                values['armyRankId'] = profile.armyRankId != null ? String(profile.armyRankId) : '';
+                // Keep any already-present custom columns (e.g. Remarks) in sync for the new row.
+                for (const col of this.editMembersData.columns) {
+                    if (col.group === 'custom' && values[col.key] === undefined) values[col.key] = '';
+                }
+                this.editMembersData.members.push({ employeeId: emp.employeeID, values, postedOutId });
+                this.sortEditMembersByPostingOrder();
                 this.memberAddLoading = false;
                 this.messageService.add({ severity: 'success', summary: 'Member Added', detail: `${profile.nameEnglish || emp.fullNameEN} added.` });
             },
@@ -985,6 +1458,8 @@ export class NotesheetPreviewGeneralComponent extends NotesheetPreviewBase imple
         this.editingMemberCellKey = null;
     }
 
+    /** `currentLabel` is the header as displayed (Bangla when the note-sheet is
+     *  Bangla), so the input opens on the text the user actually sees. */
     startEditColLabel(colKey: string, currentLabel: string, event: Event): void {
         event.stopPropagation();
         this.editingColLabelKey = colKey;
@@ -996,11 +1471,17 @@ export class NotesheetPreviewGeneralComponent extends NotesheetPreviewBase imple
         });
     }
 
+    /** A Bangla note-sheet renders headers from `labelBN` / the built-in Bangla
+     *  map, so a rename made while editing in Bangla must land on `labelBN` —
+     *  writing `label` alone was silently overridden by the map. */
     saveColLabel(colKey: string): void {
         const trimmed = this.editingColLabelValue.trim();
         if (trimmed) {
             const col = this.editMembersData.columns.find(c => c.key === colKey);
-            if (col) col.label = trimmed;
+            if (col) {
+                if (this.editTextType === 'bn') col.labelBN = trimmed;
+                else col.label = trimmed;
+            }
         }
         this.editingColLabelKey = null;
     }
@@ -1117,10 +1598,10 @@ export class NotesheetPreviewGeneralComponent extends NotesheetPreviewBase imple
      *  EN and BN variants map to the same Bangla label). Falls back to the
      *  configured English label for anything not listed. */
     private readonly memberColHeaderBN: Record<string, string> = {
-        serviceId: 'সার্ভিস আইডি', rabId: 'র‍্যাব আইডি', prefixWithServiceId: 'সার্ভিস আইডি', prefixWithServiceIdBN: 'সার্ভিস আইডি',
+        serviceId: 'সার্ভিস আইডি', rabId: 'এসআরবি আইডি', prefixWithServiceId: 'সার্ভিস আইডি', prefixWithServiceIdBN: 'সার্ভিস আইডি',
         nameEnglish: 'নাম', nameBN: 'নাম', formattedName: 'নাম', formattedNameBN: 'নাম',
         armyRank: 'পদবি', armyRankBN: 'পদবি',
-        presentRabUnit: 'বর্তমান র‍্যাব ইউনিট', presentRabUnitBN: 'বর্তমান র‍্যাব ইউনিট',
+        presentRabUnit: 'বর্তমান এসআরবি ইউনিট', presentRabUnitBN: 'বর্তমান এসআরবি ইউনিট',
         corps: 'কোর', corpsBN: 'কোর',
         trade: 'ট্রেড', tradeBN: 'ট্রেড', tradeRemarks: 'ট্রেড মন্তব্য',
         motherOrganization: 'মূল সংস্থা', motherOrganizationBN: 'মূল সংস্থা',
@@ -1128,7 +1609,7 @@ export class NotesheetPreviewGeneralComponent extends NotesheetPreviewBase imple
         memberType: 'সদস্য ধরন', memberTypeBN: 'সদস্য ধরন',
         appointment: 'নিয়োগ', appointmentBN: 'নিয়োগ',
         joiningDate: 'যোগদানের তারিখ',
-        rabUnit: 'র‍্যাব ইউনিট', rabUnitBN: 'র‍্যাব ইউনিট',
+        rabUnit: 'এসআরবি ইউনিট', rabUnitBN: 'এসআরবি ইউনিট',
         gender: 'লিঙ্গ', genderBN: 'লিঙ্গ',
         batch: 'ব্যাচ', batchBN: 'ব্যাচ',
         postingStatus: 'পোস্টিং অবস্থা',
@@ -1136,12 +1617,13 @@ export class NotesheetPreviewGeneralComponent extends NotesheetPreviewBase imple
         prefix: 'উপসর্গ', prefixBN: 'উপসর্গ',
     };
 
-    /** Column header for the members table — Bangla when the note-sheet is
-     *  Bangla, the configured English label otherwise. Drives web + PDF + preview
-     *  (all render from this same template). */
-    getMemberColHeader(col: { key: string; label: string }): string {
+    /** Column header for the members table. English note-sheet → `label`.
+     *  Bangla note-sheet → the user's `labelBN` rename if there is one, else the
+     *  built-in Bangla label for the key, else `label`. Drives web + PDF + Word
+     *  (all render from this same helper). */
+    getMemberColHeader(col: { key: string; label: string; labelBN?: string }): string {
         if (this.isEnglish()) return col.label;
-        return this.memberColHeaderBN[col.key] ?? col.label;
+        return col.labelBN?.trim() || this.memberColHeaderBN[col.key] || col.label;
     }
 
     /** Column keys that hold a person's name — their cells are left-aligned. */
@@ -1162,14 +1644,31 @@ export class NotesheetPreviewGeneralComponent extends NotesheetPreviewBase imple
         return String(n).replace(/\d/g, d => bn[+d]) + '।';
     }
 
+    /** Raw cell text for a members-table column — merged columns joined, and the
+     *  কোর toggle applied to the name column. Shared by the preview / PDF (through
+     *  formatMemberCell) and the Word export, so all three read the same value. */
+    memberCellValue(row: Record<string, string>, col: { key: string; mergedFrom?: string[] }): string {
+        const val = col.mergedFrom?.length
+            ? col.mergedFrom.map(k => row[k] || '').filter(Boolean).join(' ')
+            : (row[col.key] || '');
+        return this.stripCorpsFromName(val, row, col);
+    }
+
+    /** Remove the corps part from a name cell when the কোর toggle is off. The composite
+     *  name is a comma-joined list of parts, so the corps value is dropped as a whole
+     *  part — a substring replace would also hit a corps that appears inside the name. */
+    private stripCorpsFromName(val: string, row: Record<string, string>, col: { key: string; mergedFrom?: string[] }): string {
+        if (this.showCorpsInName || !val || !this.isNameColumn(col)) return val;
+        const corps = [row['corpsBN'], row['corps']].map(v => (v ?? '').trim()).filter(Boolean);
+        if (corps.length === 0) return val;
+        const parts = val.split(',').map(p => p.trim()).filter(Boolean);
+        const kept = parts.filter(p => !corps.includes(p));
+        return kept.length ? kept.join(', ') : val;
+    }
+
     /** Get cell value for preview members table — handles merged columns + Bangla numeral conversion */
     formatMemberCell(row: Record<string, string>, col: { key: string; mergedFrom?: string[] }): string {
-        let val: string;
-        if (col.mergedFrom?.length) {
-            val = col.mergedFrom.map(k => row[k] || '').filter(Boolean).join(' ');
-        } else {
-            val = row[col.key] || '';
-        }
+        let val = this.memberCellValue(row, col);
         if (!val) return '';
         // Auto-convert digits to Bangla when notesheet language is Bangla
         if (!this.isEnglish() && /\d/.test(val)) {
@@ -1193,6 +1692,11 @@ export class NotesheetPreviewGeneralComponent extends NotesheetPreviewBase imple
             // Legacy plain string
             return raw.trim() ? [raw] : [];
         }
+    }
+
+    /** Reference text comes from the rich editor, so it can carry HTML — render it, don't print the tags. */
+    getReferenceSafe(html: string): SafeHtml {
+        return this.sanitizer.bypassSecurityTrustHtml(this.fixBanglaWordBreaks(html ?? ''));
     }
 
     /** Get ক,খ,গ / a,b,c serial label for reference paragraphs */
@@ -1560,7 +2064,11 @@ html, body { margin: 0; padding: 0; background: transparent; }
     box-sizing: border-box;
     width: ${colWidth};
     font-family: 'Times New Roman', 'SolaimanLipi', Times, serif;
-    font-size: 10pt;
+    /* Restate the export bar's font offset here: the snapshot is the paper's
+       innerHTML, not the host that carries --ns-fs-delta on screen. The sizes in
+       the collected component styles are written against it through fs(). */
+    ${this.styleVars().map(([name, value]) => `${name}: ${value};`).join(' ')}
+    font-size: calc(10pt + var(--ns-fs-delta, 0) * 1pt);
     line-height: 1.7;
     color: #000;
 }
@@ -1573,6 +2081,10 @@ html, body { margin: 0; padding: 0; background: transparent; }
     color: #000 !important;
 }
 
+/* Body paragraphs at 1.25 — mirrors .ns-para in notesheet-preview-general.scss. */
+.pdf-flow .ns-para, .pdf-flow .ns-para * { line-height: 1.25 !important; }
+.pdf-flow .ns-members-preview-table th, .pdf-flow .ns-members-preview-table td { line-height: 1.25 !important; }
+
 .pdf-flow .ns-doc-box { border: none !important; }
 
 /* Avoid awkward breaks: keep table rows + signatory blocks together */
@@ -1580,6 +2092,16 @@ html, body { margin: 0; padding: 0; background: transparent; }
 .ns-approver-section,
 .ns-org-header,
 .ns-title-block { page-break-inside: avoid; }
+
+/* The web view paginates by the last drawn pixel, so the final approver's reserved-but-
+   blank signature space never costs a page there. Here the section carries a keep-
+   together rule, so that blank space would push it onto a new page. It is the end of
+   the document — nothing below it shows — so drop it. */
+.pdf-flow .ns-approver-section:last-child,
+.pdf-flow .ns-approver-section:last-child .ns-approver-body {
+    min-height: 0 !important;
+    padding-bottom: 0 !important;
+}
 </style>
 </head>
 <body>
@@ -1731,8 +2253,8 @@ html, body { margin: 0; padding: 0; background: transparent; }
         };
         if (this.noteSheet.note) model.note = this.noteSheet.note;
 
-        // Add members table info to model
-        if (this.previewMembersRows.length > 0 && this.previewMembersColumns.length > 0) {
+        // Add members table info to model (skipped when the note sheet hides its table)
+        if (this.noteSheet?.showMembersTable !== false && this.previewMembersRows.length > 0 && this.previewMembersColumns.length > 0) {
             (model as any).membersColumns = this.previewMembersColumns;
             (model as any).membersRows = this.previewMembersRows;
         }
@@ -1919,14 +2441,26 @@ html, body { margin: 0; padding: 0; background: transparent; }
             : 'Times New Roman';
         // Font sizes in half-points: title/org=9pt(18), body=8pt(16), table=7pt(14), sig=9pt(18)
         const titleSize = 18;   // 9pt — org header (HEADER — kept)
-        const bodySize = 20;    // 10pt — main text, reference, note, notesheet no, subject
-        const tblSize = 18;        // 9pt — members table (1pt smaller than body so columns fit)
+        // Body / table sizes follow the export bar's font offset (docx half-points),
+        // mirroring fs() on screen; the org header + NOTE SHEET title keep their size.
+        const bodySize = Math.round((10 + this.fontDelta) * 2);    // 10pt ± offset — main text, reference, note, notesheet no, subject
+        const tblSize = Math.round((9 + this.fontDelta) * 2);      // 9pt ± offset — members table (1pt smaller than body so columns fit)
         const sigSize = bodySize;  // signature sections — uniform with body (10pt)
         const csTitle = bn ? titleSize : undefined;
         const csBody = bn ? bodySize : undefined;
         const csTbl = bn ? tblSize : undefined;
         const csSig = bn ? sigSize : undefined;
         const titleHdrSize = titleSize + 2;   // 10pt — NOTE SHEET / মন্তব্য পত্র (HEADER — kept)
+        // Signature-block spacing in twips (1pt = 20, 1px = 15) from the saved style. The
+        // initiator, date and signature-spacer values move by their difference from the
+        // built-in default, so an unsaved sheet keeps Word's usual spacing; the approver
+        // gap is added in full, as the print renders it.
+        const style = this.currentStyle();
+        const styleBase = defaultNotesheetStyle(style.noteSheetType);
+        const INITIATOR_BEFORE = Math.max(0, 280 + (style.initiatorTopMarginPx - styleBase.initiatorTopMarginPx) * 15);
+        const SIG_DATE_BEFORE = Math.max(0, Math.round((400 * style.sigDateGapEm) / (styleBase.sigDateGapEm || 1)));
+        const APPROVER_GAP = Math.round(style.approverGapPx * 15 + style.approverGapEm * (10 + this.fontDelta) * 20);
+        const APPROVER_SIG_BEFORE = Math.max(0, 100 + (style.approverMinHeightPx - styleBase.approverMinHeightPx) * 15);
         const lang = bn ? { value: 'bn-BD', bidirectional: 'bn-BD' } : undefined;
 
         // Page size follows the selected option (A4 default / Legal). Margins are
@@ -1976,7 +2510,7 @@ html, body { margin: 0; padding: 0; background: transparent; }
         }
 
         // Reference / Date (8pt)
-        const refs = this.parsedReferences;
+        const refs = this.parsedReferences.map(r => this.stripHtml(r).trim()).filter(r => r);
         if (refs.length === 1) {
             mainChildren.push(new Paragraph({
                 children: [
@@ -2052,7 +2586,7 @@ html, body { margin: 0; padding: 0; background: transparent; }
         const mModel = model as any;
         if (mModel.membersColumns?.length > 0 && mModel.membersRows?.length > 0) {
             const thinBorder = { style: BorderStyle.SINGLE, size: 2, color: '666666' } as const;
-            const cols = mModel.membersColumns as { key: string; label: string; mergedFrom?: string[] }[];
+            const cols = mModel.membersColumns as { key: string; label: string; labelBN?: string; mergedFrom?: string[] }[];
             const slLabel = bn ? 'ক্রমিক' : 'SL';
             const bnDigits = ['০','১','২','৩','৪','৫','৬','৭','৮','৯'];
             const convertDigits = (s: string) => bn && /\d/.test(s) ? s.replace(/\d/g, d => bnDigits[+d]) : s;
@@ -2066,19 +2600,19 @@ html, body { margin: 0; padding: 0; background: transparent; }
             const colPcts = rawCol.map((w) => Math.round((w / rawSum) * (100 - slPct) * 10) / 10);
 
             const mkWidth = (pct: number) => ({ size: pct, type: WidthType.PERCENTAGE });
-            const slHeaderCell = new TableCell({ width: mkWidth(slPct), children: [new Paragraph({ children: [new TextRun({ text: slLabel, bold: true, size: tblSize, sizeComplexScript: csTbl, font, language: lang })], alignment: AlignmentType.CENTER })], borders: { top: thinBorder, bottom: thinBorder, left: thinBorder, right: thinBorder } });
+            const slHeaderCell = new TableCell({ width: mkWidth(slPct), children: [new Paragraph({ children: [new TextRun({ text: slLabel, bold: true, size: tblSize, sizeComplexScript: csTbl, font, language: lang })], alignment: AlignmentType.CENTER, spacing: { line: 300, before: 0, after: 0 } })], borders: { top: thinBorder, bottom: thinBorder, left: thinBorder, right: thinBorder } });
             const headerRow = new TableRow({
-                children: [slHeaderCell, ...cols.map((c, ci) => new TableCell({ width: mkWidth(colPcts[ci]), children: [new Paragraph({ children: [new TextRun({ text: this.getMemberColHeader(c), bold: true, size: tblSize, sizeComplexScript: csTbl, font, language: lang })], alignment: AlignmentType.CENTER })], borders: { top: thinBorder, bottom: thinBorder, left: thinBorder, right: thinBorder } }))]
+                children: [slHeaderCell, ...cols.map((c, ci) => new TableCell({ width: mkWidth(colPcts[ci]), children: [new Paragraph({ children: [new TextRun({ text: this.getMemberColHeader(c), bold: true, size: tblSize, sizeComplexScript: csTbl, font, language: lang })], alignment: AlignmentType.CENTER, spacing: { line: 300, before: 0, after: 0 } })], borders: { top: thinBorder, bottom: thinBorder, left: thinBorder, right: thinBorder } }))]
             });
             const dataRows = rows.map((row: Record<string, string>, ri: number) => {
                 const slVal = bn ? String(ri + 1).replace(/\d/g, d => bnDigits[+d]) + '।' : String(ri + 1) + '.';
-                const slCell = new TableCell({ width: mkWidth(slPct), children: [new Paragraph({ children: [new TextRun({ text: slVal, size: tblSize, sizeComplexScript: csTbl, font, language: lang })], alignment: AlignmentType.CENTER })], borders: { top: thinBorder, bottom: thinBorder, left: thinBorder, right: thinBorder } });
+                const slCell = new TableCell({ width: mkWidth(slPct), children: [new Paragraph({ children: [new TextRun({ text: slVal, size: tblSize, sizeComplexScript: csTbl, font, language: lang })], alignment: AlignmentType.CENTER, spacing: { line: 300, before: 0, after: 0 } })], borders: { top: thinBorder, bottom: thinBorder, left: thinBorder, right: thinBorder } });
                 return new TableRow({
                     children: [slCell, ...cols.map((c, ci) => {
-                        let val = c.mergedFrom ? c.mergedFrom.map((k: string) => row[k] || '').filter(Boolean).join(' ') : (row[c.key] || '');
+                        let val = this.memberCellValue(row, c as any);
                         val = convertDigits(val);
                         const cellAlign = this.isNameColumn(c) ? AlignmentType.LEFT : AlignmentType.CENTER;
-                        return new TableCell({ width: mkWidth(colPcts[ci]), children: [new Paragraph({ children: [new TextRun({ text: val, size: tblSize, sizeComplexScript: csTbl, font, language: lang })], alignment: cellAlign })], borders: { top: thinBorder, bottom: thinBorder, left: thinBorder, right: thinBorder } });
+                        return new TableCell({ width: mkWidth(colPcts[ci]), children: [new Paragraph({ children: [new TextRun({ text: val, size: tblSize, sizeComplexScript: csTbl, font, language: lang })], alignment: cellAlign, spacing: { line: 300, before: 0, after: 0 } })], borders: { top: thinBorder, bottom: thinBorder, left: thinBorder, right: thinBorder } });
                     })]
                 });
             });
@@ -2158,12 +2692,12 @@ html, body { margin: 0; padding: 0; background: transparent; }
                             type: 'png', data: this.base64ToBytes(model.initiator.signatureDataUrl),
                             transformation: { width: 100, height: 40 }
                         })],
-                        alignment: AlignmentType.LEFT, indent: initIndent, spacing: { before: 280, after: 80 },
+                        alignment: AlignmentType.LEFT, indent: initIndent, spacing: { before: INITIATOR_BEFORE, after: 80 },
                         keepNext: true, keepLines: true
                     }));
                 } catch { /* no sig */ }
             } else {
-                mainChildren.push(new Paragraph({ spacing: { before: 280, after: 80 }, keepNext: true }));
+                mainChildren.push(new Paragraph({ spacing: { before: INITIATOR_BEFORE, after: 80 }, keepNext: true }));
             }
 
             // Name
@@ -2192,16 +2726,16 @@ html, body { margin: 0; padding: 0; background: transparent; }
             if (model.initiator.date) {
                 mainChildren.push(new Paragraph({
                     children: [new TextRun({ text: model.initiator.date, size: sigSize, sizeComplexScript: csSig, font, language: lang })],
-                    alignment: AlignmentType.LEFT, indent: initIndent, spacing: { before: 400 }
+                    alignment: AlignmentType.LEFT, indent: initIndent, spacing: { before: SIG_DATE_BEFORE }
                 }));
             }
         }
 
         // Approvers — 9pt
-        for (const ap of model.approvers) {
+        for (const [apIndex, ap] of model.approvers.entries()) {
             mainChildren.push(new Paragraph({
                 children: [new TextRun({ text: ap.role, underline: {}, size: sigSize, sizeComplexScript: csSig, font, language: lang })],
-                indent: { left: 40 }, spacing: { before: 280 }, keepNext: true, keepLines: true
+                indent: { left: 40 }, spacing: { before: 280 + (apIndex > 0 ? APPROVER_GAP : 0) }, keepNext: true, keepLines: true
             }));
             const runs: TextRun[] = [new TextRun({ text: ap.serialText, bold: true, size: sigSize, sizeComplexScript: csSig, font, language: lang })];
             if (ap.remark) runs.push(new TextRun({ text: ` ${ap.remark}`, size: sigSize, sizeComplexScript: csSig, font, language: lang }));
@@ -2214,12 +2748,12 @@ html, body { margin: 0; padding: 0; background: transparent; }
                             transformation: { width: 100, height: 40 }
                         })],
                         alignment: AlignmentType.CENTER,
-                        spacing: { before: 100, after: 40 },
+                        spacing: { before: APPROVER_SIG_BEFORE, after: 40 },
                         keepNext: true
                     }));
                 } catch { /* no sig */ }
             } else {
-                mainChildren.push(new Paragraph({ alignment: AlignmentType.CENTER, spacing: { before: 100, after: 40 }, keepNext: true }));
+                mainChildren.push(new Paragraph({ alignment: AlignmentType.CENTER, spacing: { before: APPROVER_SIG_BEFORE, after: 40 }, keepNext: true }));
             }
             if (ap.date) {
                 mainChildren.push(new Paragraph({
@@ -2271,7 +2805,15 @@ html, body { margin: 0; padding: 0; background: transparent; }
         const docChildren: (Paragraph | Table)[] = [outerTable];
 
         return new Document({
-            styles: bn ? { default: { document: { run: { language: { value: 'bn-BD', bidirectional: 'bn-BD' } } } } } : undefined,
+            // 1.25 line spacing (line: 300 = 1.25 × 240) by default, matching the preview's .ns-para.
+            styles: {
+                default: {
+                    document: {
+                        paragraph: { spacing: { line: 300 } },
+                        ...(bn ? { run: { language: { value: 'bn-BD', bidirectional: 'bn-BD' } } } : {})
+                    }
+                }
+            },
             sections: [{
                 properties: {
                     page: {
@@ -2440,12 +2982,47 @@ html, body { margin: 0; padding: 0; background: transparent; }
         return heightPx;
     }
 
+    /**
+     * Bottom-most pixel that renders something inside `container`: a text line, a
+     * signature image or a table border. Anything below it is blank padding or reserved
+     * height, which may fall past a page break without hiding anything. Returns 0 when
+     * nothing was found, letting the caller fall back to the box height.
+     */
+    private measureRenderedBottom(container: HTMLElement, containerTop: number): number {
+        let bottom = 0;
+
+        const walker = document.createTreeWalker(container, NodeFilter.SHOW_TEXT);
+        let textNode: Node | null;
+        while ((textNode = walker.nextNode())) {
+            if (!textNode.textContent?.trim()) continue;
+            const range = document.createRange();
+            range.selectNodeContents(textNode);
+            const rects = range.getClientRects();
+            for (let r = 0; r < rects.length; r++) {
+                if (rects[r].height > 0) bottom = Math.max(bottom, rects[r].bottom - containerTop);
+            }
+        }
+
+        for (const el of Array.from(container.querySelectorAll('img, table')) as HTMLElement[]) {
+            const rect = el.getBoundingClientRect();
+            if (rect.height > 0) bottom = Math.max(bottom, rect.bottom - containerTop);
+        }
+
+        return bottom;
+    }
+
     private calculatePageOffsets(totalHeight: number): number[] {
         const container = this.contentMeasure?.nativeElement;
         const pageH = this.pageContentHeightPx;
         if (!container || pageH <= 0) return [0];
 
         const containerTop = container.getBoundingClientRect().top;
+
+        // Paginate against the bottom of the last thing actually drawn, not scrollHeight:
+        // trailing blank space (the last approver's reserved signature height, padding)
+        // would otherwise earn an extra page whenever the sheet is a few pixels over.
+        const drawnBottom = this.measureRenderedBottom(container, containerTop);
+        if (drawnBottom > 0) totalHeight = Math.min(totalHeight, drawnBottom);
 
         const titleEl = container.querySelector('.ns-title-block') as HTMLElement;
         const docBox = container.querySelector('.ns-doc-box') as HTMLElement;
@@ -2462,7 +3039,12 @@ html, body { margin: 0; padding: 0; background: transparent; }
             ) as NodeListOf<HTMLElement>
         ).map(el => {
             const rect = el.getBoundingClientRect();
-            return { top: rect.top - containerTop, bottom: rect.top - containerTop + rect.height, height: rect.height };
+            const top = rect.top - containerTop;
+            // Only what is drawn has to stay on the page; blank space at the bottom of the
+            // block may fall past the break (the page's bottom cover hides it).
+            const drawn = this.measureRenderedBottom(el, containerTop);
+            const bottom = drawn > top ? drawn : top + rect.height;
+            return { top, bottom, height: rect.height };
         }).filter(b => b.height > 0 && b.height < pageH)
           .sort((a, b) => a.top - b.top);
 
@@ -2508,7 +3090,7 @@ html, body { margin: 0; padding: 0; background: transparent; }
             while (adjusted) {
                 adjusted = false;
                 for (const block of keepTogether) {
-                    if (block.top > cursor && block.top < nextBreak && block.bottom > nextBreak) {
+                    if (block.top > cursor && block.top < nextBreak && block.bottom > nextBreak + 1) {
                         nextBreak = block.top;
                         adjusted = true;
                         break;

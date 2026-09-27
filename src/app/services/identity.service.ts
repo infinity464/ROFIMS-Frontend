@@ -3,14 +3,17 @@ import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { environment } from '@/Core/Environments/environment';
 import type {
-  ApplicationUser,
+  UserListItem,
   ApplicationRole,
   UserModel,
   UpdateRoleModel,
   CreateRoleModel,
   Responses,
   AdminResetPasswordModel,
-  SetUserActiveModel
+  SetUserActiveModel,
+  SetUserHiddenModel,
+  MyUserAccessRules,
+  RoleUserAccessRules
 } from '@/models/identity.model';
 
 const BASE = `${environment.apis.auth}/Identity`;
@@ -19,8 +22,24 @@ const BASE = `${environment.apis.auth}/Identity`;
 export class IdentityService {
   constructor(private http: HttpClient) {}
 
-  getAllUsers(): Observable<ApplicationUser[]> {
-    return this.http.get<ApplicationUser[]>(`${BASE}/GetAllUsers`);
+  /** Every user (approver / recipient pickers). Not filtered by user-management rules. */
+  getAllUsers(): Observable<UserListItem[]> {
+    return this.http.get<UserListItem[]>(`${BASE}/GetAllUsers`);
+  }
+
+  /** Users the caller may see on /identity/user-create (View rule), hidden users included. */
+  getManageableUsers(): Observable<UserListItem[]> {
+    return this.http.get<UserListItem[]>(`${BASE}/GetManageableUsers`);
+  }
+
+  /** The caller's current user-management rules (fresh from the server, not the login copy). */
+  getMyUserAccessRules(): Observable<MyUserAccessRules> {
+    return this.http.get<MyUserAccessRules>(`${BASE}/GetMyUserAccessRules`);
+  }
+
+  /** Every role's user-management rules. Full-access callers only (403 otherwise). */
+  getRoleUserAccessRules(): Observable<RoleUserAccessRules[]> {
+    return this.http.get<RoleUserAccessRules[]>(`${BASE}/GetRoleUserAccessRules`);
   }
 
   getRoles(): Observable<ApplicationRole[]> {
@@ -49,6 +68,11 @@ export class IdentityService {
 
   setUserActive(model: SetUserActiveModel): Observable<Responses> {
     return this.http.post<Responses>(`${BASE}/SetUserActive`, model);
+  }
+
+  /** Hide or unhide a disabled user in the /identity/user-create list. */
+  setUserHidden(model: SetUserHiddenModel): Observable<Responses> {
+    return this.http.post<Responses>(`${BASE}/SetUserHidden`, model);
   }
 
   // --- Session policy + force logout ---

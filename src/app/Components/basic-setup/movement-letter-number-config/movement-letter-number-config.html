@@ -6,10 +6,10 @@
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
                 <!-- RAB Unit -->
                 <div class="field">
-                    <label for="rabUnitId" class="block mb-2"> RAB Unit <span class="text-red-500">*</span> </label>
-                    <p-select id="rabUnitId" formControlName="rabUnitId" [options]="rabUnitOptions" optionLabel="label" optionValue="value" [filter]="true" filterBy="label" placeholder="Select RAB Unit" class="w-full"> </p-select>
+                    <label for="rabUnitId" class="block mb-2"> SRB Unit <span class="text-red-500">*</span> </label>
+                    <p-select id="rabUnitId" formControlName="rabUnitId" [options]="rabUnitOptions" optionLabel="label" optionValue="value" [filter]="true" filterBy="label" placeholder="Select SRB Unit" class="w-full"> </p-select>
                     @if (configForm.get('rabUnitId')?.invalid && configForm.get('rabUnitId')?.touched) {
-                    <small class="text-red-500 block mt-1"> RAB Unit is required </small>
+                    <small class="text-red-500 block mt-1"> SRB Unit is required </small>
                     }
                 </div>
 
@@ -113,7 +113,7 @@
         <ng-template pTemplate="header">
             <tr>
                 <th style="width: 5%">#</th>
-                <th>RAB Unit</th>
+                <th>SRB Unit</th>
                 <th>Move Order Type</th>
                 <th>Prefix (EN)</th>
                 <th>Prefix (BN)</th>

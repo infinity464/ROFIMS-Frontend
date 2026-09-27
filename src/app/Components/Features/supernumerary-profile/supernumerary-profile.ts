@@ -86,7 +86,7 @@ export class SupernumeraryProfile implements OnInit, OnDestroy {
         // Basic Service Information
         addSection('Basic Service Information', ['Field', 'Value'], [
             kv('Service ID', val(p.serviceId)),
-            kv('RAB ID', val(p.rabId)),
+            kv('SRB ID', val(p.rabId)),
             kv('Name', val(p.name)),
             kv('Type of Member', val(p.typeOfMember)),
             kv('Rank', val(p.rank)),
@@ -96,7 +96,7 @@ export class SupernumeraryProfile implements OnInit, OnDestroy {
             kv('Last Unit', val(p.lastUnit)),
             kv('Last Unit District', val(p.location)),
             kv('Appointment', val(p.appointment)),
-            kv('Date of Joining in RAB', this.formatDateOfJoining(this.serviceOverview?.joiningDate ?? this.getDateOfJoiningInRAB(p))),
+            kv('Date of Joining in SRB', this.formatDateOfJoining(this.serviceOverview?.joiningDate ?? this.getDateOfJoiningInRAB(p))),
             kv('Special Qualifications', val(this.serviceOverview?.specialQualifications ?? null)),
             kv('Marital Status', val(this.serviceOverview?.maritalStatus ?? null)),
         ], true);
@@ -369,7 +369,7 @@ export class SupernumeraryProfile implements OnInit, OnDestroy {
         const labels: Record<string, string> = {
             PersonalInfo: 'Personal Info',
             EmployeeInfo: 'Employee Info',
-            PreviousRABServiceInfo: 'Previous RAB Service',
+            PreviousRABServiceInfo: 'Previous SRB Service',
             PromotionInfo: 'Promotion',
             RankConfirmationInfo: 'Rank Confirmation',
             BankAccInfo: 'Bank Account',

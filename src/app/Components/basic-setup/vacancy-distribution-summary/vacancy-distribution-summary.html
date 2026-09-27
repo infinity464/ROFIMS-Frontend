@@ -20,7 +20,7 @@
                 </div>
             </div>
             <div class="dist-filter-field">
-                <label class="dist-dropdown-label">Filter by RAB Unit</label>
+                <label class="dist-dropdown-label">Filter by SRB Unit</label>
                 <div class="dist-filter-field__input">
                     <p-select
                         [options]="unitFilterOptions"
@@ -55,7 +55,7 @@
             </div>
         } @else if (selectedOrg && dynamicColumns.length > 0 && displayRows.length === 0 && !loading) {
             <div class="p-4 border surface-border border-round text-color-secondary">
-                No distribution data yet. Use Vacancy Distribution (RAB) to assign quantities to RAB units.
+                No distribution data yet. Use Vacancy Distribution (SRB) to assign quantities to SRB units.
             </div>
         } @else if (selectedOrg && dynamicColumns.length > 0 && displayRows.length > 0) {
             <div class="dist-edit-hint">

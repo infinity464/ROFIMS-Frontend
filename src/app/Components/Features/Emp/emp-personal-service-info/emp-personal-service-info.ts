@@ -96,7 +96,7 @@ export class EmpPersonalServiceInfoComponent implements OnInit {
             { label: 'Address Info', icon: 'pi pi-map-marker', command: () => this.setActiveTab(2) },
             { label: 'Family Info', icon: 'pi pi-users', command: () => this.setActiveTab(3) },
             { label: 'Nominee Info', icon: 'pi pi-user-plus', command: () => this.setActiveTab(4) },
-            { label: 'Previous RAB Service', icon: 'pi pi-history', command: () => this.setActiveTab(5) },
+            { label: 'Previous SRB Service', icon: 'pi pi-history', command: () => this.setActiveTab(5) },
             { label: 'Service History', icon: 'pi pi-clock', command: () => this.setActiveTab(6) },
             { label: 'Promotion Info', icon: 'pi pi-arrow-up', command: () => this.setActiveTab(7) },
             { label: 'Rank Confirmation', icon: 'pi pi-check-circle', command: () => this.setActiveTab(8) },

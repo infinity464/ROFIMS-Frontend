@@ -17,6 +17,7 @@ import { EditorModule } from 'primeng/editor';
 import { DialogModule } from 'primeng/dialog';
 import { TagModule } from 'primeng/tag';
 import { CheckboxModule } from 'primeng/checkbox';
+import { InputNumberModule } from 'primeng/inputnumber';
 import { PostingService } from '@/services/posting.service';
 import { IdentityService } from '@/services/identity.service';
 import { IdentityUserMappingService } from '@/services/identity-user-mapping.service';
@@ -58,6 +59,18 @@ interface TransferUnitOption {
     name: string;
 }
 
+/** One employee-table column of the posting order — see columnLayout(). */
+interface PostingOrderColumn {
+    key: string;
+    labelBN: string;
+    labelEN: string;
+    /** Relative width; only the ratio between columns matters. */
+    weight: number;
+    defaultWeight: number;
+    /** Keeps its share of the table when other columns are hidden. */
+    fixed?: boolean;
+}
+
 @Component({
     selector: 'app-posting-order-preview',
     standalone: true,
@@ -77,7 +90,8 @@ interface TransferUnitOption {
         EditorModule,
         DialogModule,
         TagModule,
-        CheckboxModule
+        CheckboxModule,
+        InputNumberModule
     ],
     providers: [MessageService, ConfirmationService],
     templateUrl: './posting-order-preview.html',
@@ -177,6 +191,103 @@ export class PostingOrderPreviewPageComponent implements OnInit {
     showCorps = true;
     // পদবি বিবরণ — special qualifications shown under the rank (matches the notesheet পদবি column).
     showRankQualifications = true;
+
+    // ── Employee table column widths (temporary — reset on reload) ──
+    /** Relative width per table column, like the note-sheet posting preview's column
+     *  settings. columnLayout() turns them into percentages of the visible columns; the
+     *  preview <colgroup> (and so the PDF / Print Preview snapshot) and the Word table
+     *  both use it. Visibility stays on the show* flags above. `fixed` columns keep their
+     *  share when others are hidden, the rest share the freed space. Defaults are the
+     *  previous header percentages, so an untouched table looks as before. */
+    interColumns: PostingOrderColumn[] = PostingOrderPreviewPageComponent.defaultColumns(true);
+    newColumns: PostingOrderColumn[] = PostingOrderPreviewPageComponent.defaultColumns(false);
+    showColumnDialog = false;
+
+    private static defaultColumns(inter: boolean): PostingOrderColumn[] {
+        const cols: Omit<PostingOrderColumn, 'defaultWeight'>[] = inter
+            ? [
+                  { key: 'ser', labelBN: 'ক্রমিক', labelEN: 'Ser', weight: 6, fixed: true },
+                  { key: 'serviceId', labelBN: 'ব্যক্তিগত নং', labelEN: 'Service ID', weight: 13 },
+                  { key: 'rank', labelBN: 'পদবি', labelEN: 'Rank', weight: 10 },
+                  { key: 'trade', labelBN: 'ট্রেড', labelEN: 'Trade', weight: 8 },
+                  { key: 'name', labelBN: 'নাম', labelEN: 'Name', weight: 16 },
+                  { key: 'ownDistrict', labelBN: 'নিজ জেলা', labelEN: 'Own District', weight: 8 },
+                  { key: 'prevWorkplace', labelBN: 'পূর্ববতী কর্মস্থল', labelEN: 'Previous Workplace', weight: 12 },
+                  { key: 'transferUnit', labelBN: 'বদলিকৃত কর্মস্থল', labelEN: 'Transfer Station', weight: 12 },
+                  { key: 'remarks', labelBN: 'মন্তব্য', labelEN: 'Remarks', weight: 8 }
+              ]
+            : [
+                  { key: 'ser', labelBN: 'ক্রমিক', labelEN: 'Ser', weight: 6, fixed: true },
+                  { key: 'serviceId', labelBN: 'ব্যক্তিগত নম্বর', labelEN: 'Service ID', weight: 9 },
+                  { key: 'rank', labelBN: 'পদবি', labelEN: 'Rank', weight: 9 },
+                  { key: 'trade', labelBN: 'ট্রেড', labelEN: 'Trade', weight: 8 },
+                  { key: 'name', labelBN: 'নাম', labelEN: 'Name', weight: 12 },
+                  { key: 'ownDistrict', labelBN: 'নিজ জেলা', labelEN: 'Own District', weight: 8 },
+                  { key: 'prevWorkplace', labelBN: 'পূর্ববতী কর্মস্থল', labelEN: 'Previous Workplace', weight: 11 },
+                  { key: 'transferUnit', labelBN: 'বদলিকৃত কর্মস্থল', labelEN: 'Transfer Unit', weight: 11 },
+                  { key: 'rabId', labelBN: 'এসআরবি আইডি', labelEN: 'SRB ID', weight: 9 },
+                  { key: 'remarks', labelBN: 'মন্তব্য', labelEN: 'Remarks', weight: 8 }
+              ];
+        return cols.map((c) => ({ ...c, defaultWeight: c.weight }));
+    }
+
+    get postingColumns(): PostingOrderColumn[] {
+        return this.isInterPosting ? this.interColumns : this.newColumns;
+    }
+
+    /** Only these columns can be hidden; the rest are always part of the order. */
+    isColToggleable(key: string): boolean {
+        return key === 'trade' || key === 'ownDistrict' || key === 'prevWorkplace' || key === 'remarks';
+    }
+
+    isColShown(key: string): boolean {
+        switch (key) {
+            case 'trade': return this.showTradeColumn;
+            case 'ownDistrict': return this.showOwnDistrict;
+            case 'prevWorkplace': return this.showPrevWorkplaceUnit;
+            case 'remarks': return this.showRemarks;
+            default: return true;
+        }
+    }
+
+    setColShown(key: string, visible: boolean): void {
+        switch (key) {
+            case 'trade': this.showTradeColumn = visible; break;
+            case 'ownDistrict': this.showOwnDistrict = visible; break;
+            case 'prevWorkplace': this.showPrevWorkplaceUnit = visible; break;
+            case 'remarks': this.showRemarks = visible; break;
+        }
+    }
+
+    /** Visible columns with their width as a percentage of the table. */
+    columnLayout(): { key: string; pct: number }[] {
+        const cols = this.postingColumns;
+        const w = (c: PostingOrderColumn) => (c.weight > 0 ? c.weight : c.defaultWeight);
+        const visible = cols.filter((c) => this.isColShown(c.key));
+        const flex = visible.filter((c) => !c.fixed);
+        if (flex.length === 0) {
+            const total = visible.reduce((a, c) => a + w(c), 0) || 1;
+            return visible.map((c) => ({ key: c.key, pct: (w(c) / total) * 100 }));
+        }
+        const totalAll = cols.reduce((a, c) => a + w(c), 0);
+        const fixedPct = visible.filter((c) => c.fixed).reduce((a, c) => a + (w(c) / totalAll) * 100, 0);
+        const flexPct = Math.max(0, 100 - fixedPct);
+        const flexTotal = flex.reduce((a, c) => a + w(c), 0);
+        return visible.map((c) => ({ key: c.key, pct: c.fixed ? (w(c) / totalAll) * 100 : (w(c) / flexTotal) * flexPct }));
+    }
+
+    columnPercent(key: string): number {
+        return this.columnLayout().find((c) => c.key === key)?.pct ?? 0;
+    }
+
+    trackByColumnKey(_index: number, column: { key: string }): string {
+        return column.key;
+    }
+
+    resetColumns(): void {
+        this.interColumns = PostingOrderPreviewPageComponent.defaultColumns(true);
+        this.newColumns = PostingOrderPreviewPageComponent.defaultColumns(false);
+    }
 
     private syncParagraphChecked(): void {
         const paras = this.filteredFooterParagraphs;
@@ -575,6 +686,17 @@ export class PostingOrderPreviewPageComponent implements OnInit {
         });
     }
 
+    /**
+     * Navy members carry "বিএন" (EN: "BN") after the rank in signature blocks,
+     * e.g. "কমান্ডার বিএন". Detected from the brief profile's root mother org.
+     */
+    private navyRank(emp: any, bn: boolean): string {
+        const rank = (bn ? emp?.rankBN : emp?.rankEN) ?? '';
+        if (!rank) return '';
+        const isNavy = /navy/i.test(emp?.motherOrgEN || '') || (emp?.motherOrgBN || '').includes('নৌ');
+        return isNavy ? `${rank} ${bn ? 'বিএন' : 'BN'}` : rank;
+    }
+
     private loadApprovalPerson(employeeId: number | null): void {
         if (!employeeId) return;
         this.servingMembersService.getEmployeeBriefProfile(employeeId).subscribe({
@@ -582,8 +704,8 @@ export class PostingOrderPreviewPageComponent implements OnInit {
                 if (emp) {
                     this.approvalPersonName = emp.nameEN ?? '';
                     this.approvalPersonNameBN = emp.nameBN ?? '';
-                    this.approvalPersonRank = emp.rankEN ?? '';
-                    this.approvalPersonRankBN = emp.rankBN ?? '';
+                    this.approvalPersonRank = this.navyRank(emp, false);
+                    this.approvalPersonRankBN = this.navyRank(emp, true);
                     this.approvalPersonAppointment = emp.appointmentEN ?? '';
                     this.approvalPersonAppointmentBN = emp.appointmentBN ?? '';
                 }
@@ -715,8 +837,8 @@ export class PostingOrderPreviewPageComponent implements OnInit {
                             if (emp) {
                                 this.initiatorName = emp.nameEN ?? '';
                                 this.initiatorNameBN = emp.nameBN ?? '';
-                                this.initiatorRank = emp.rankEN ?? '';
-                                this.initiatorRankBN = emp.rankBN ?? '';
+                                this.initiatorRank = this.navyRank(emp, false);
+                                this.initiatorRankBN = this.navyRank(emp, true);
                                 this.initiatorAppointment = emp.appointmentEN ?? '';
                                 this.initiatorAppointmentBN = emp.appointmentBN ?? '';
                                 this.initiatorPhone = emp.mobileNo ?? '';
@@ -741,8 +863,8 @@ export class PostingOrderPreviewPageComponent implements OnInit {
                             if (emp) {
                                 this.approverName = emp.nameEN ?? '';
                                 this.approverNameBN = emp.nameBN ?? '';
-                                this.approverRank = emp.rankEN ?? '';
-                                this.approverRankBN = emp.rankBN ?? '';
+                                this.approverRank = this.navyRank(emp, false);
+                                this.approverRankBN = this.navyRank(emp, true);
                                 this.approverAppointment = emp.appointmentEN ?? '';
                                 this.approverAppointmentBN = emp.appointmentBN ?? '';
                                 this.approverPhone = emp.mobileNoOfficial ?? '';
@@ -994,8 +1116,15 @@ export class PostingOrderPreviewPageComponent implements OnInit {
     empTransferUnit(emp: PostingOrderEmployeeRow): string {
         const full = (this.isBangla ? (emp.transferRabUnitNameBN || emp.transferRabUnitName) : emp.transferRabUnitName) || '';
         if (!full) return '-';
-        const parts = full.split(',');
-        return parts[parts.length - 1].trim();
+        const parts = full.split(',').map((part) => part.trim()).filter(Boolean);
+        if (emp.transferIsHq === true || this.isRabHq(parts[0] || '')) {
+            const wing = parts[1] || parts[0];
+            const branch = parts[2];
+            return branch ? `${wing} (${branch})` : wing;
+        }
+        // Non-HQ destinations show the FULL comma-separated path (matches the
+        // notesheet preview's বদলি ইউনিট rule).
+        return parts.join(', ') || '-';
     }
 
     empRabId(emp: PostingOrderEmployeeRow): string {
@@ -1037,10 +1166,10 @@ export class PostingOrderPreviewPageComponent implements OnInit {
         return n.includes('সদর দপ্তর') || /head\s*quarter/i.test(n) || /\bHQ\b/i.test(n);
     }
 
-    /** True if the top-level unit segment is a RAB battalion (র‍্যাব-১ … / RAB-1 …). */
+    /** True if the top-level unit segment is a battalion (এসআরবি-১ … / SRB-1 …). */
     private isRabBattalion(name: string): boolean {
         const n = this.stripZeroWidth(name);
-        return /যাব\s*[-–—]\s*[০-৯0-9]/.test(n) || /^RAB\s*[-–—]\s*\d+/i.test(n);
+        return /এসআরবি\s*[-–—]\s*[০-৯0-9]/.test(n) || /^SRB\s*[-–—]\s*\d+/i.test(n);
     }
 
     /**
@@ -2355,8 +2484,8 @@ html, body { margin: 0; padding: 0; background: transparent; }
 
         // ── Government Header (9pt, bold, centered) ──
         const headerLines = bn
-            ? ['গণপ্রজাতন্ত্রী বাংলাদেশ সরকার', 'বাংলাদেশ পুলিশ', 'র‌্যাব ফোর্সেস সদর দপ্তর', 'কুর্মিটোলা, ঢাকা']
-            : ['Government of the Peoples Republic of Bangladesh', 'Bangladesh Police', 'RAB Forces Headquarters', 'Kurmitola, Dhaka'];
+            ? ['গণপ্রজাতন্ত্রী বাংলাদেশ সরকার', 'বাংলাদেশ পুলিশ', 'এসআরবি ফোর্সেস সদর দপ্তর', 'কুর্মিটোলা, ঢাকা']
+            : ['Government of the Peoples Republic of Bangladesh', 'Bangladesh Police', 'SRB Forces Headquarters', 'Kurmitola, Dhaka'];
 
         const headerParas = headerLines.map(line => new Paragraph({
             children: [new TextRun({ text: line, bold: true, size: hdrSize, sizeComplexScript: hdrCsSize, font, language: lang })],
@@ -2377,7 +2506,7 @@ html, body { margin: 0; padding: 0; background: transparent; }
             children: [
                 new TextRun({ text: this.postingOrderNo, size: ctxSize, sizeComplexScript: csSize, font, language: lang }),
                 new TextRun({ text: '\t', font }),
-                new TextRun({ text: bn ? 'তারিখ: ' : 'Date: ', bold: true, size: ctxSize, sizeComplexScript: csSize, font, language: lang }),
+                new TextRun({ text: bn ? 'তারিখঃ ' : 'Date: ', size: ctxSize, sizeComplexScript: csSize, font, language: lang }),
                 new TextRun({ text: this.previewDate, size: ctxSize, sizeComplexScript: csSize, font, language: lang })
             ],
             spacing: { after: 80 }
@@ -2388,13 +2517,13 @@ html, body { margin: 0; padding: 0; background: transparent; }
         const referenceParas: Paragraph[] = refEntries.length === 0 ? [] :
             refEntries.length === 1 ? [new Paragraph({
                 children: [
-                    new TextRun({ text: bn ? 'সূত্রঃ ' : 'Reference: ', bold: true, size: ctxSize, sizeComplexScript: csSize, font, language: lang }),
+                    new TextRun({ text: bn ? 'সূত্রঃ ' : 'Reference: ', size: ctxSize, sizeComplexScript: csSize, font, language: lang }),
                     new TextRun({ text: this.referenceEntryText(refEntries[0]), size: ctxSize, sizeComplexScript: csSize, font, language: lang })
                 ],
                 spacing: { after: 160 }
             })] : [
                 new Paragraph({
-                    children: [new TextRun({ text: bn ? 'সূত্রঃ' : 'Reference:', bold: true, size: ctxSize, sizeComplexScript: csSize, font, language: lang })],
+                    children: [new TextRun({ text: bn ? 'সূত্রঃ' : 'Reference:', size: ctxSize, sizeComplexScript: csSize, font, language: lang })],
                     spacing: { after: 40 }
                 }),
                 ...refEntries.map((ref, i) => new Paragraph({
@@ -2427,38 +2556,17 @@ html, body { margin: 0; padding: 0; background: transparent; }
         const cols = isInter
             ? (bn ? ['ক্রমিক', 'ব্যক্তিগত নং', 'পদবি', ...(st ? ['ট্রেড'] : []), 'নাম', ...(sd ? ['নিজ জেলা'] : []), ...(sp ? ['পূর্ববতী কর্মস্থল'] : []), 'বদলিকৃত কর্মস্থল', ...(sr ? ['মন্তব্য'] : [])]
                    : ['Ser', 'Service ID', 'Rank', ...(st ? ['Trade'] : []), 'Name', ...(sd ? ['Own District'] : []), ...(sp ? ['Previous Workplace'] : []), 'Transfer Station', ...(sr ? ['Remarks'] : [])])
-            : (bn ? ['ক্রমিক', 'ব্যক্তিগত নম্বর', 'পদবি', ...(st ? ['ট্রেড'] : []), 'নাম', ...(sd ? ['নিজ জেলা'] : []), ...(sp ? ['পূর্ববতী কর্মস্থল'] : []), 'বদলিকৃত কর্মস্থল', 'র‌্যাব আইডি', ...(sr ? ['মন্তব্য'] : [])]
-                   : ['Ser', 'Service ID', 'Rank', ...(st ? ['Trade'] : []), 'Name', ...(sd ? ['Own District'] : []), ...(sp ? ['Previous Workplace'] : []), 'Transfer Unit', 'RAB ID', ...(sr ? ['Remarks'] : [])]);
+            : (bn ? ['ক্রমিক', 'ব্যক্তিগত নম্বর', 'পদবি', ...(st ? ['ট্রেড'] : []), 'নাম', ...(sd ? ['নিজ জেলা'] : []), ...(sp ? ['পূর্ববতী কর্মস্থল'] : []), 'বদলিকৃত কর্মস্থল', 'এসআরবি আইডি', ...(sr ? ['মন্তব্য'] : [])]
+                   : ['Ser', 'Service ID', 'Rank', ...(st ? ['Trade'] : []), 'Name', ...(sd ? ['Own District'] : []), ...(sp ? ['Previous Workplace'] : []), 'Transfer Unit', 'SRB ID', ...(sr ? ['Remarks'] : [])]);
         // Column widths in DXA – must sum to full content width.
         // Legal: page 12240 − margins 567*2 = 11106. A4: page 11906 − margins 567*2 = 10772.
+        // Shares come from columnLayout() (the Columns dialog), in the same order as `cols`,
+        // so the Word table matches the preview and the PDF. Rounding is absorbed by নাম.
         const tblContentWidth = this.selectedPageSize === 'legal' ? 11106 : 10772;
-        const buildColW = (): number[] => {
-            if (isInter) {
-                const tradeW = st ? 924 : 0;      // ট্রেড — same width as the new-posting order's
-                const base = st ? [600, 1300, 1000, tradeW] : [600, 1300, 1000];   // ক্রমিক / ব্যক্তিগত নং / পদবি — wider
-                const rem = tblContentWidth - base.reduce((a, b) => a + b, 0);
-                const nameW = 2200;
-                const transferW = 1200;            // বদলিকৃত কর্মস্থল — smaller
-                const distW = sd ? 1000 : 0;       // নিজ জেলা — smaller
-                const prevW = sp ? 1200 : 0;       // পূর্ববতী কর্মস্থল — smaller
-                const remW = sr ? 1000 : 0;        // মন্তব্য — smaller
-                const fixedW = nameW + transferW + distW + prevW + remW;
-                const adjust = rem - fixedW;
-                return [...base, nameW + adjust, ...(sd ? [distW] : []), ...(sp ? [prevW] : []), transferW, ...(sr ? [remW] : [])];
-            }
-            const base = st ? [580, 1100, 860, 924] : [580, 1100, 860];
-            const fixedSum = base.reduce((a, b) => a + b, 0);
-            const nameW = 2800;
-            const transferW = 1374;
-            const rabIdW = 1160;
-            const distW = sd ? 1200 : 0;
-            const prevW = sp ? 1374 : 0;
-            const remW = sr ? 1100 : 0;
-            const usedW = fixedSum + nameW + transferW + rabIdW + distW + prevW + remW;
-            const adjust = tblContentWidth - usedW;
-            return [...base, nameW + adjust, ...(sd ? [distW] : []), ...(sp ? [prevW] : []), transferW, rabIdW, ...(sr ? [remW] : [])];
-        };
-        const colW = buildColW();
+        const layout = this.columnLayout();
+        const colW = layout.map(c => Math.round((c.pct * tblContentWidth) / 100));
+        const nameIdx = layout.findIndex(c => c.key === 'name');
+        colW[nameIdx] += tblContentWidth - colW.reduce((a, b) => a + b, 0);
 
         const hdrPara = (text: string) => new Paragraph({ children: [new TextRun({ text, bold: true, size: tblHdrSize, sizeComplexScript: tblHdrCsSize, font, language: lang })], alignment: AlignmentType.CENTER });
         const hdrCell = (text: string, ci: number, extra?: Partial<ConstructorParameters<typeof TableCell>[0]>) => new TableCell({

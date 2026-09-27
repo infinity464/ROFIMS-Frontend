@@ -20,7 +20,7 @@
                     @if (loading()) {
                     <div class="panel-loading"><i class="pi pi-spin pi-spinner"></i> Loading tree…</div>
                     } @else if (treeNodes().length === 0) {
-                    <div class="panel-empty">No RAB units found.</div>
+                    <div class="panel-empty">No SRB units found.</div>
                     } @else {
                     <div class="tree-wrap">
                         @for (node of treeNodes(); track node.id) {

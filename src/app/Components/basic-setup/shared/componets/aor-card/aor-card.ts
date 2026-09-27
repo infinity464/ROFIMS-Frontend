@@ -83,18 +83,18 @@ export class AorCardComponent {
     focusedDivisionId: number | null = null;
     focusedDistrictId: number | null = null;
 
-    /** First letters of the unit name; "RAB HQ" -> "HQ", "RAB-1" -> "R1". */
+    /** First letters of the unit name; "SRB HQ" -> "HQ", "SRB-1" -> "SR". */
     get initials(): string {
         const raw = (this.data?.unitName || '').trim();
         if (!raw) return '?';
-        // Try last whole word first ("RAB HQ" -> "HQ").
+        // Try last whole word first ("SRB HQ" -> "HQ").
         const parts = raw.split(/\s+/);
         if (parts.length > 1) {
             const last = parts[parts.length - 1].replace(/[^A-Za-z0-9]/g, '');
             if (last.length >= 2) return last.slice(0, 2).toUpperCase();
         }
-        // Fall back: drop common "RAB" prefix and take a couple of significant chars.
-        const stripped = raw.replace(/^RAB[-_\s]*/i, '');
+        // Fall back: drop the common "SRB" prefix and take a couple of significant chars.
+        const stripped = raw.replace(/^SRB[-_\s]*/i, '');
         if (stripped) {
             const compact = stripped.replace(/[^A-Za-z0-9]/g, '');
             if (compact) return compact.slice(0, 2).toUpperCase();

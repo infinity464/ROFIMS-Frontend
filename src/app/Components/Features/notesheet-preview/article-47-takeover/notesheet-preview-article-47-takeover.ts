@@ -379,7 +379,7 @@ export class NotesheetPreviewArticle47TakeoverComponent implements OnInit {
     /** Unit shown when the member/approver has no resolvable RAB unit. Its location
      *  is NOT hardcoded — the AOR lookup falls back to the RAB HQ unit so the
      *  value comes from /basic-setup/rab-unit-aor. */
-    private readonly HQ_UNIT_BN = 'র‍্যাব ফোর্সেস সদর দপ্তর';
+    private readonly HQ_UNIT_BN = 'এসআরবি ফোর্সেস সদর দপ্তর';
     /** CommonCode id of the RAB HQ RabUnit — the row with the smallest SortOrder,
      *  the same convention vw_NewPostingOrderWithEmployees uses. The AOR lookup
      *  targets this when a person has no RAB unit of their own. */

@@ -11,6 +11,7 @@ import { PagedResponse } from '@/Core/Models/Pagination';
 export interface GetSupernumeraryListRequest {
     orgIds?: number[] | null;
     memberTypeId?: number | null;
+    memberTypeIds?: number[] | null;
     rankId?: number | null;
     tradeId?: number | null;
     joiningDateFrom?: string | null;

@@ -22,7 +22,7 @@ import { OfficeOrderService } from '@/services/office-order.service';
 import { IdentityService } from '@/services/identity.service';
 import { IdentityUserMappingService } from '@/services/identity-user-mapping.service';
 import { buildApprovalPersonOptions } from '@/shared/utils/approval-person-options.util';
-import { mainTextBlocksToHtml } from '@/shared/utils/notesheet-main-text';
+import { MainTextBlock, parseMainTextBlocks } from '@/shared/utils/notesheet-main-text';
 import { MasterBasicSetupService } from '@/Components/basic-setup/shared/services/MasterBasicSetupService';
 import { ApprovedNoteSheetItem } from '@/models/posting.model';
 import { PostingOrderNumberConfigModel } from '@/Components/basic-setup/shared/models/posting-order-number-config';
@@ -34,6 +34,21 @@ import { EmpService } from '@/services/emp-service';
 /** Reference No paragraph entry. */
 interface ReferenceNoEntry {
     serial: string;
+    text: string;
+}
+
+/** Body paragraph entry — one numbered paragraph of the office order, seeded from
+ *  the note sheet (Main Text blocks, Note, then the extra paragraphs) and freely
+ *  editable / removable afterwards. Stored in GeneralNotesheetOfficeOrder.Body as a
+ *  JSON array of { text }, the same convention as NoteSheetInfo.MainText. */
+interface BodyParagraph {
+    text: string;
+}
+
+/** Attachment (সংযুক্ত) entry — plain text, rendered above the Onulipi, same as the
+ *  ex-BD leave office order. Stored in GeneralNotesheetOfficeOrder.Attachments as a
+ *  JSON array of { text }. */
+interface AttachmentEntry {
     text: string;
 }
 
@@ -115,9 +130,10 @@ export class OfficeOrderGenerateComponent implements OnInit {
     subject = '';
     addressTo = '';  // Rich text HTML
     referenceEntries: ReferenceNoEntry[] = [];
-    bodyText = '';
+    bodyParagraphs: BodyParagraph[] = [];
     fileRows: FileRowData[] = [];
     onulipiParagraphs: OnulipiParagraph[] = [];
+    attachmentEntries: AttachmentEntry[] = [];
     remarks = '';
     saving = false;
 
@@ -136,6 +152,13 @@ export class OfficeOrderGenerateComponent implements OnInit {
         return this.isBangla
             ? (this.banglaSerials[index] ?? String(index + 1))
             : String.fromCharCode(65 + index);  // A, B, C...
+    }
+
+    /** Body paragraphs are numbered ১। ২। … (Bangla) / 1. 2. … (English), matching how
+     *  the office-order preview numbers them. */
+    getParagraphSerial(index: number): string {
+        const n = String(index + 1);
+        return this.isBangla ? `${this.toBanglaDigits(n)}।` : `${n}.`;
     }
 
     constructor(
@@ -179,7 +202,7 @@ export class OfficeOrderGenerateComponent implements OnInit {
                 this.manualLetterNo = data.letterNo ?? '';
                 this.subject = data.subject ?? '';
                 this.addressTo = data.addressTo ?? '';
-                this.bodyText = data.body ?? '';
+                this.bodyParagraphs = this.parseBodyParagraphs(data.body);
                 this.remarks = data.remarks ?? '';
                 this.selectedApprovalEmployeeId = data.approvalEmployeeId ?? null;
 
@@ -201,6 +224,12 @@ export class OfficeOrderGenerateComponent implements OnInit {
 
                 // Onulipi
                 try { this.onulipiParagraphs = data.onulipi ? JSON.parse(data.onulipi) : []; } catch { this.onulipiParagraphs = []; }
+
+                // Attachments (সংযুক্ত)
+                try {
+                    const atts = data.attachments ? JSON.parse(data.attachments) : [];
+                    this.attachmentEntries = Array.isArray(atts) ? atts.map((a: any) => ({ text: a?.text ?? '' })) : [];
+                } catch { this.attachmentEntries = []; }
 
                 // File references
                 try {
@@ -326,11 +355,15 @@ export class OfficeOrderGenerateComponent implements OnInit {
         });
     }
 
-    /** When a notesheet is selected, auto-fill Subject and TextType. */
+    /** When a notesheet is selected, auto-fill Subject, TextType, body and the
+     *  সূত্র (Reference No) list. */
     onNoteSheetChange(): void {
         this.selectedNoteSheetNo = null;
         this.selectedNoteSheetApprovedDate = null;
         this.subject = '';
+        this.referenceEntries = [];
+        this.bodyParagraphs = [];
+        this.attachmentEntries = [];  // সংযুক্ত has no default — the user adds entries on demand
         if (!this.selectedNoteSheetId) return;
 
         this.http.get<any>(`${this.noteSheetApi}/GetFilteredByKeysAsyn/${this.selectedNoteSheetId}`).subscribe({
@@ -342,8 +375,15 @@ export class OfficeOrderGenerateComponent implements OnInit {
                 this.selectedNoteSheetApprovedDate = ns.finalApprovalApprovedDate ?? ns.lastupdate;
                 this.selectedTextType = (ns.textType === 1 || ns.textType === '1') ? 'bn' : 'en';
                 this.subject = ns.subject ?? '';
-                // Main Text is a JSON array of blocks — flatten to combined HTML for the office-order body.
-                this.bodyText = mainTextBlocksToHtml(ns.mainText ?? ns.MainText);
+                // সূত্র — carried over from the note sheet as a starting point; the rows stay
+                // fully editable and removable, and serials follow the note sheet's language
+                // (selectedTextType is set just above, so getReferenceSerial reads the new one).
+                this.referenceEntries = this.parseNoteSheetReferences(ns.referenceNumber ?? ns.ReferenceNumber)
+                    .map((text, i) => ({ serial: this.getReferenceSerial(i), text }));
+                // Body paragraphs — the note sheet's Main Text blocks, then its Note, then its
+                // extra paragraphs, in the same order the office-order preview numbers them.
+                // Seeded here only; the rows are editable and removable from this point on.
+                this.bodyParagraphs = this.buildParagraphsFromNoteSheet(ns);
                 this.postingOrderNumberConfigId = null;
                 this.rebuildConfigOptions();
                 this.loadOnulipiFromConfig();
@@ -355,6 +395,24 @@ export class OfficeOrderGenerateComponent implements OnInit {
     }
 
     // ─── Reference No entries ───────────────────────────
+    /** Note-sheet ReferenceNumber → plain text lines. Stored as a JSON array of
+     *  { text } entries; legacy rows hold a single plain string. */
+    private parseNoteSheetReferences(raw: string | null | undefined): string[] {
+        if (!raw || !raw.trim()) return [];
+        try {
+            const arr = JSON.parse(raw);
+            if (Array.isArray(arr)) {
+                return arr
+                    .map((item: any) => (typeof item === 'string' ? item : (item?.text ?? item?.Text ?? '')))
+                    .map((t: string) => (t ?? '').trim())
+                    .filter((t: string) => t.length > 0);
+            }
+            return [];
+        } catch {
+            return [raw.trim()];
+        }
+    }
+
     addReferenceEntry(): void {
         const serial = this.getReferenceSerial(this.referenceEntries.length);
         this.referenceEntries.push({ serial, text: '' });
@@ -366,6 +424,101 @@ export class OfficeOrderGenerateComponent implements OnInit {
         this.referenceEntries.forEach((e, i) => {
             e.serial = this.getReferenceSerial(i);
         });
+    }
+
+    // ─── Body paragraphs ────────────────────
+    /** Seed the paragraph list from a note sheet: Main Text blocks, then the Note, then
+     *  the extra paragraphs (ParagraphText, a JSON array of HTML strings on current rows,
+     *  a single HTML string on legacy ones). */
+    private buildParagraphsFromNoteSheet(ns: any): BodyParagraph[] {
+        const texts: string[] = parseMainTextBlocks(ns.mainText ?? ns.MainText).map((b: MainTextBlock) => b.text);
+
+        const note = (ns.note ?? ns.Note ?? '').trim();
+        if (note) texts.push(note);
+
+        const extra = (ns.paragraphText ?? ns.ParagraphText ?? '').trim();
+        if (extra) {
+            if (extra.startsWith('[')) {
+                try {
+                    const arr = JSON.parse(extra);
+                    if (Array.isArray(arr)) {
+                        texts.push(...arr.map((it: any) => (typeof it === 'string' ? it : String(it?.text ?? it?.Text ?? ''))));
+                    }
+                } catch { texts.push(extra); }
+            } else {
+                texts.push(extra);
+            }
+        }
+
+        return texts.map(t => (t ?? '').trim()).filter(t => t !== '').map(text => ({ text }));
+    }
+
+    /** Stored Body → paragraph rows. Current rows hold a JSON array of { text }; orders
+     *  saved before this list existed hold one plain HTML blob, which becomes one row. */
+    private parseBodyParagraphs(raw: string | null | undefined): BodyParagraph[] {
+        const s = (raw ?? '').trim();
+        if (!s) return [];
+        if (s.startsWith('[')) {
+            try {
+                const arr = JSON.parse(s);
+                if (Array.isArray(arr)) {
+                    return arr
+                        .map((it: any) => ({ text: typeof it === 'string' ? it : String(it?.text ?? it?.Text ?? '') }))
+                        .filter(b => b.text.trim() !== '');
+                }
+            } catch { /* not JSON — treat as one legacy paragraph */ }
+        }
+        return [{ text: s }];
+    }
+
+    addBodyParagraph(): void {
+        this.bodyParagraphs.push({ text: '' });
+    }
+
+    removeBodyParagraph(index: number): void {
+        this.bodyParagraphs.splice(index, 1);
+    }
+
+    moveBodyParagraphUp(index: number): void {
+        if (index <= 0) return;
+        [this.bodyParagraphs[index - 1], this.bodyParagraphs[index]] =
+            [this.bodyParagraphs[index], this.bodyParagraphs[index - 1]];
+    }
+
+    moveBodyParagraphDown(index: number): void {
+        if (index >= this.bodyParagraphs.length - 1) return;
+        [this.bodyParagraphs[index], this.bodyParagraphs[index + 1]] =
+            [this.bodyParagraphs[index + 1], this.bodyParagraphs[index]];
+    }
+
+    /** Non-empty paragraphs as the stored JSON array, or null when there are none.
+     *  Quill leaves an empty editor as "<p><br></p>", which must not count as text. */
+    private get bodyJson(): string | null {
+        const cleaned = this.bodyParagraphs
+            .map(b => ({ text: (b.text ?? '').trim() }))
+            .filter(b => b.text !== '' && b.text.replace(/<[^>]*>/g, '').replace(/&nbsp;/g, ' ').trim() !== '');
+        return cleaned.length > 0 ? JSON.stringify(cleaned) : null;
+    }
+
+    // ─── Attachments (সংযুক্ত) ──────────────
+    addAttachmentEntry(): void {
+        this.attachmentEntries.push({ text: '' });
+    }
+
+    removeAttachmentEntry(index: number): void {
+        this.attachmentEntries.splice(index, 1);
+    }
+
+    moveAttachmentUp(index: number): void {
+        if (index <= 0) return;
+        [this.attachmentEntries[index - 1], this.attachmentEntries[index]] =
+            [this.attachmentEntries[index], this.attachmentEntries[index - 1]];
+    }
+
+    moveAttachmentDown(index: number): void {
+        if (index >= this.attachmentEntries.length - 1) return;
+        [this.attachmentEntries[index], this.attachmentEntries[index + 1]] =
+            [this.attachmentEntries[index + 1], this.attachmentEntries[index]];
     }
 
     // ─── File References ─────────────────────────────────
@@ -466,6 +619,9 @@ export class OfficeOrderGenerateComponent implements OnInit {
                     transferRabUnitName: p.transferRabUnitName
                 })))
                 : null;
+            const attachmentsJson = this.attachmentEntries.filter(a => a.text.trim()).length > 0
+                ? JSON.stringify(this.attachmentEntries.filter(a => a.text.trim()).map(a => ({ text: a.text.trim() })))
+                : null;
 
             const saveObs = this.editMode && this.editId
                 ? this.officeOrderService.updateOfficeOrder({
@@ -475,8 +631,9 @@ export class OfficeOrderGenerateComponent implements OnInit {
                     subject: this.subject || null,
                     addressTo: this.addressTo?.trim() || null,
                     referenceNo: refJson,
-                    body: this.bodyText?.trim() || null,
+                    body: this.bodyJson,
                     onulipi: onulipiJson,
+                    attachments: attachmentsJson,
                     textType: this.selectedTextType === 'bn' ? 'bn' : 'en',
                     filesReferences: filesReferencesJson,
                     remarks: this.remarks || null,
@@ -490,8 +647,9 @@ export class OfficeOrderGenerateComponent implements OnInit {
                     subject: this.subject || null,
                     addressTo: this.addressTo?.trim() || null,
                     referenceNo: refJson,
-                    body: this.bodyText?.trim() || null,
+                    body: this.bodyJson,
                     onulipi: onulipiJson,
+                    attachments: attachmentsJson,
                     textType: this.selectedTextType === 'bn' ? 'bn' : 'en',
                     filesReferences: filesReferencesJson,
                     remarks: this.remarks || null,

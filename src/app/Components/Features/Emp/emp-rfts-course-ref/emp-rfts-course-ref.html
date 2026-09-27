@@ -128,7 +128,7 @@
                 </div>
                 <p-iconfield iconPosition="left">
                     <p-inputicon styleClass="pi pi-search"></p-inputicon>
-                    <input pInputText type="text" placeholder="Search by Name / Service ID / RAB ID"
+                    <input pInputText type="text" placeholder="Search by Name / Service ID / SRB ID"
                         [(ngModel)]="memberSearchText" (ngModelChange)="onMemberSearchChange()" [style]="{ paddingLeft: '2.5rem' }" />
                 </p-iconfield>
             </div>
@@ -159,7 +159,7 @@
                                 [class.opacity-40]="hasNoSelectableRows"
                                 [style.cursor]="hasNoSelectableRows ? 'not-allowed' : 'pointer'"
                                 (change)="toggleSelectAllVisible(selectAllCb.checked, selectAllCb)"
-                                [pTooltip]="hasNoSelectableRows ? 'RAB ID not generated yet for any member on this page' : 'Select all on this page'"
+                                [pTooltip]="hasNoSelectableRows ? 'SRB ID not generated yet for any member on this page' : 'Select all on this page'"
                                 tooltipPosition="top" />
                         </th>
                         <th style="width: 4rem">Ser</th>
@@ -170,7 +170,7 @@
                         <th>Name</th>
                         <th>Mother Unit</th>
                         <th>Date of Joining</th>
-                        <th>RAB ID</th>
+                        <th>SRB ID</th>
                         @if (canUpdate) {
                             <th style="width: 12rem">Action</th>
                         }
@@ -202,7 +202,7 @@
                             <td style="white-space: nowrap">
                                 <p-button label="Not Applicable" icon="pi pi-ban" severity="warn" [outlined]="true"
                                     size="small" [fluid]="false" (onClick)="openMarkNotApplicable(row)"
-                                    pTooltip="Exempt this member from RAB Orientation Training"
+                                    pTooltip="Exempt this member from SRB Orientation Training"
                                     tooltipPosition="top"></p-button>
                             </td>
                         }
@@ -247,7 +247,7 @@
                             <th>Trade</th>
                             <th>Name</th>
                             <th>Mother Unit</th>
-                            <th>RAB ID</th>
+                            <th>SRB ID</th>
                             <th style="width: 5rem">Remove</th>
                         </tr>
                     </ng-template>
@@ -304,7 +304,7 @@
     [style]="{ width: '32rem' }" [breakpoints]="{ '640px': '92vw' }" (onHide)="closeMarkNotApplicable()">
     <div class="flex flex-col gap-3">
         <p class="m-0">
-            <span class="font-semibold">{{ naTargetName }}</span> will be exempted from RAB Orientation Training
+            <span class="font-semibold">{{ naTargetName }}</span> will be exempted from SRB Orientation Training
             and will no longer appear in this list.
         </p>
         <div>

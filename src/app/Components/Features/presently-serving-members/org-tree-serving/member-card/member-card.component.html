@@ -4,7 +4,7 @@
         <span class="name">{{ member.nameEnglish }}</span>
         <span class="ids">
             @if ((member.rabID || member.rabId) && member.rabID !== 'null' && member.rabId !== 'null') {
-                (RAB ID : {{ member.rabID || member.rabId }} | Service ID : {{ member.serviceId }})
+                (SRB ID : {{ member.rabID || member.rabId }} | Service ID : {{ member.serviceId }})
             } @else {
                 (Service ID : {{ member.serviceId }})
             }

@@ -523,7 +523,7 @@ export class EmpPreviousRabService implements OnInit {
             req.subscribe(res => {
                 this.isSaving = false;
                 if (res != null) {
-                    this.messageService.add({ severity: 'success', summary: 'Saved', detail: this.isEditMode ? 'Previous RAB service updated.' : 'Previous RAB service added.' });
+                    this.messageService.add({ severity: 'success', summary: 'Saved', detail: this.isEditMode ? 'Previous SRB service updated.' : 'Previous SRB service added.' });
                     this.showInlineForm = false;
                     this.loadServiceList();
                 }
@@ -674,7 +674,7 @@ export class EmpPreviousRabService implements OnInit {
 
     confirmDelete(row: PreviousRABServiceListRow): void {
         this.confirmationService.confirm({
-            message: 'Delete this previous RAB service record?',
+            message: 'Delete this previous SRB service record?',
             header: 'Delete Confirmation',
             icon: 'pi pi-exclamation-triangle',
             rejectButtonProps: { label: 'Cancel', severity: 'secondary', outlined: true },
@@ -687,7 +687,7 @@ export class EmpPreviousRabService implements OnInit {
         if (!this.selectedEmployeeId) return;
         this.previousRABService.delete(this.selectedEmployeeId, row.previousRABServiceID).subscribe({
             next: () => {
-                this.messageService.add({ severity: 'success', summary: 'Deleted', detail: 'Previous RAB service deleted.' });
+                this.messageService.add({ severity: 'success', summary: 'Deleted', detail: 'Previous SRB service deleted.' });
                 this.loadServiceList();
             },
             error: err => {
