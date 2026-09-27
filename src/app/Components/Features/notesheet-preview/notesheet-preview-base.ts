@@ -758,10 +758,12 @@ html, body { margin: 0; padding: 0; background: transparent; }
 
     shouldShowSignature(step: string): boolean {
         const cs = this.noteSheet?.currentStatus;
+        // A cancelled note sheet carries no signatures at all — not even ones given before the cancel.
+        if ((cs ?? '').toString().toLowerCase() === NoteSheetCurrentStatus.Cancel) return false;
         if (step === ApprovalStep.PreparedBy || step === 'প্রস্তুতকারী') return true;
         if (step === ApprovalStep.Initiator) return this.noteSheet?.initiatorStatus?.toLowerCase() === ApprovalStatus.Approve;
         if (step.startsWith(ApprovalStep.Recommender))
-            return cs === NoteSheetCurrentStatus.FinalApproval || cs === NoteSheetCurrentStatus.Cancel || this.isApproved();
+            return cs === NoteSheetCurrentStatus.FinalApproval || this.isApproved();
         if (step === ApprovalStep.FinalApprover) return this.isApproved();
         return false;
     }
