@@ -32,8 +32,9 @@ import { NoteSheetCurrentStatus, NoteSheetCurrentStatusOptions, NoteSheetOperati
 import { SharedService } from '@/shared/services/shared-service';
 import { FlexibleDateDirective } from '@/shared/directives/flexible-date.directive';
 import { environment } from '@/Core/Environments/environment';
-import { forkJoin, of } from 'rxjs';
-import { catchError, map } from 'rxjs/operators';
+import { forkJoin, Observable, of } from 'rxjs';
+import { catchError, map, shareReplay } from 'rxjs/operators';
+import { EquivalentRankModel } from '@/Components/basic-setup/shared/models/equivalent-rank';
 import { FamilyInfoService } from '@/services/family-info-service';
 import { JsReportService } from '@/services/jsreport.service';
 import {
@@ -301,12 +302,13 @@ export class NotesheetPreviewGeneralComponent extends NotesheetPreviewBase imple
     // ── General subject master (resolve NoteSheetSubjectId → BN/EN for display) ──
     private noteSheetSubjectService = inject(NoteSheetSubjectService);
     private noteSheetSubjects: NoteSheetSubjectModel[] = [];
-    /** armyRank → EquivalentName SortOrder (cross-org RAB seniority) + root MotherOrg.SortOrder — cached for posting-style member sort. */
-    private equivalentSortByRankId = new Map<number, number>();
-    private motherOrgSortByOrgId = new Map<number, number>();
-    /** Raw motherOrganizationId per member (from InformationJson.values.motherOrganizationId). */
-    private loadedMemberMotherOrgIds: (number | null)[] = [];
-    private pendingMemberSort = false;
+    /** Posting-order ladders, only for slotting members added in edit mode. View mode needs none:
+     *  NoteSheetReferenceEmployee/GetByNoteSheetId already returns members in posting order, using
+     *  the same keys. Loaded lazily on the first add (see loadSeniorityLookups). */
+    private equivalentSortByRankId = new Map<number, number>(); // armyRankId → EquivalentName CommonCode.SortOrder
+    private rankSortByRankId = new Map<number, number>();       // armyRankId → MotherOrgRank CommonCode.SortOrder
+    private motherOrgSortByOrgId = new Map<number, number>();   // orgId → ROOT MotherOrg.SortOrder
+    private seniorityLookups$?: Observable<void>;
 
     /** True when this note sheet's subject has the Clearance category: members must be verified
      *  posted-out members (same rule as /notesheet-generate). */
@@ -824,26 +826,16 @@ export class NotesheetPreviewGeneralComponent extends NotesheetPreviewBase imple
             ns.showMembersTable = this.editShowMembersTable;
             if (payload['filesReferences'] !== undefined) ns.filesReferences = payload['filesReferences'] ?? null;
         }
-        // View mode reads the members from previewMembers* — mirror the edited set,
-        // preserving motherOrganizationId so the posting-style sort still works on save.
+        // View mode reads the members from previewMembers* — mirror the edited set. It is
+        // already in posting order (loaded server-ordered, adds slotted in by
+        // sortEditMembersByPostingOrder); the reload that follows re-syncs the server order.
         // (Cast as-any to match the loaded path, which assigns parsed JSON columns.)
         this.previewMembersColumns = this.editMembersData.columns.map((c) => ({ ...c })) as any;
-        const existingOrgByEmp = new Map<number, number | null>();
-        for (let i = 0; i < (this.loadedMemberEmployeeIds ?? []).length; i++) {
-            const id = this.loadedMemberEmployeeIds[i];
-            if (id) existingOrgByEmp.set(id, this.loadedMemberMotherOrgIds[i] ?? null);
-        }
         this.previewMembersRows = this.editMembersData.members.map((m) => ({ ...m.values }));
         this.loadedMemberEmployeeIds = this.editMembersData.members.map((m) => m.employeeId);
         this.loadedMemberPostedOutIds = this.editMembersData.members.map((m) => m.postedOutId ?? null);
-        this.loadedMemberMotherOrgIds = this.editMembersData.members.map((m) => {
-            const raw = (m.values as any).motherOrganizationId ?? (m.values as any).motherOrganisationId ?? (m.values as any).motherOrgId ?? (m.values as any).orgId ?? null;
-            const n = raw != null ? Number(raw) : null;
-            if (n != null && !isNaN(n)) return n;
-            return existingOrgByEmp.get(m.employeeId) ?? null;
-        });
-        // Keep the preview in posting order even while staying in view mode after save.
-        this.sortPreviewMembers();
+        this.lastMeasuredHeight = 0;
+        this.cdr.detectChanges();
     }
 
     // ── Parse file references from noteSheet ─────────────────
@@ -914,7 +906,6 @@ export class NotesheetPreviewGeneralComponent extends NotesheetPreviewBase imple
     // ── Lifecycle: detect pending mode, resolve current user ──
     override ngOnInit(): void {
         super.ngOnInit();
-        this.loadRankSeniorityData();
         // Load the General subject master so the preview can resolve NoteSheetSubjectId → BN/EN.
         this.noteSheetSubjectService.getActiveByType('General').subscribe({
             next: (list) => {
@@ -941,87 +932,67 @@ export class NotesheetPreviewGeneralComponent extends NotesheetPreviewBase imple
         }
     }
 
-    /** Preload RAB seniority ladders: RankEquivalent (armyRank → EquivalentName.SortOrder) + root MotherOrg.SortOrder. */
-    private loadRankSeniorityData(): void {
-        this.masterBasicSetup.getAllRankEquivalents().subscribe({
-            next: (list) => {
-                const bestByRank = new Map<number, number>();
-                for (const r of list ?? []) {
-                    const cur = bestByRank.get(r.motherOrgRankId);
-                    const s = r.sortOrder ?? 9999;
-                    if (cur == null || s < cur) bestByRank.set(r.motherOrgRankId, s);
+    /** RAB seniority ladders for sorting members added in edit mode, fetched once and cached.
+     *  Mirrors the ORDER BY of NoteSheetReferenceEmployee/GetByNoteSheetId. */
+    private loadSeniorityLookups(): Observable<void> {
+        this.seniorityLookups$ ??= forkJoin({
+            equivalents: this.masterBasicSetup.getAllRankEquivalents().pipe(catchError(() => of([] as EquivalentRankModel[]))),
+            equivalentNames: this.masterBasicSetup.getAllByType('EquivalentName').pipe(catchError(() => of([]))),
+            ranks: this.masterBasicSetup.getAllByType('MotherOrgRank').pipe(catchError(() => of([]))),
+            orgs: this.masterBasicSetup.getAllActiveMotherOrgs().pipe(catchError(() => of([])))
+        }).pipe(
+            map(({ equivalents, equivalentNames, ranks, orgs }) => {
+                // A rank maps to the EquivalentName of its lowest-SortOrder mapping (then lowest
+                // EquivalentNameID; a NULL SortOrder wins, as in T-SQL); that code's SortOrder is the key.
+                const nameSort = new Map<number, number>();
+                for (const c of equivalentNames ?? []) if (c.sortOrder != null) nameSort.set(c.codeId, c.sortOrder);
+                const best = new Map<number, EquivalentRankModel>();
+                for (const r of equivalents ?? []) {
+                    const cur = best.get(r.motherOrgRankId);
+                    const s = r.sortOrder ?? -Infinity, cs = cur ? (cur.sortOrder ?? -Infinity) : Infinity;
+                    if (s < cs || (s === cs && r.equivalentNameID < cur!.equivalentNameID)) best.set(r.motherOrgRankId, r);
                 }
-                this.equivalentSortByRankId = bestByRank;
-                // RankEquivalent alone is enough to sort — don't gate on the org fetch.
-                if (this.pendingMemberSort) {
-                    this.pendingMemberSort = false;
-                    this.sortPreviewMembers();
+                this.equivalentSortByRankId = new Map();
+                for (const [rankId, r] of best) {
+                    const s = nameSort.get(r.equivalentNameID);
+                    if (s != null) this.equivalentSortByRankId.set(rankId, s);
                 }
-            },
-            error: () => { this.equivalentSortByRankId = new Map(); }
-        });
-        this.masterBasicSetup.getAllActiveMotherOrgs().subscribe({
-            next: (orgs) => {
-                const m = new Map<number, number>();
-                for (const o of orgs ?? []) if (o.orgId != null && o.sortOrder != null) m.set(o.orgId, o.sortOrder);
-                this.motherOrgSortByOrgId = m;
-                // Org sort is a secondary tie-breaker — re-sort if members already arrived via rank-only path.
-                if (this.previewMembersRows.length > 1) {
-                    this.sortPreviewMembers();
+                this.rankSortByRankId = new Map();
+                for (const c of ranks ?? []) if (c.sortOrder != null) this.rankSortByRankId.set(c.codeId, c.sortOrder);
+                // Group by the ROOT org: a unit takes its parent's SortOrder, a root its own.
+                const byId = new Map((orgs ?? []).map((o) => [o.orgId, o]));
+                this.motherOrgSortByOrgId = new Map();
+                for (const o of orgs ?? []) {
+                    const parent = o.parentOrg != null ? byId.get(o.parentOrg) : undefined;
+                    const s = parent ? parent.sortOrder : o.sortOrder;
+                    if (s != null) this.motherOrgSortByOrgId.set(o.orgId, s);
                 }
-            },
-            error: () => {}
-        });
+            }),
+            shareReplay(1)
+        );
+        return this.seniorityLookups$;
     }
 
     // ── Override loadNoteSheet to also load members ───────────
     protected override loadNoteSheet(): void {
         super.loadNoteSheet();
-        // After base loads, also load members from NoteSheetReferenceEmployee
+        // After base loads, also load members from NoteSheetReferenceEmployee — already in posting order.
         if (this.noteSheetId) {
             const refApi = `${environment.apis.core}/NoteSheetReferenceEmployee`;
             this.http.get<any[]>(`${refApi}/GetByNoteSheetId/${this.noteSheetId}`).subscribe({
                 next: (list) => {
                     const rows = (Array.isArray(list) ? list : []).filter(r => r.informationJson || r.InformationJson);
-                    if (rows.length > 0) {
-                        try {
-                            const firstParsed = JSON.parse(rows[0].informationJson || rows[0].InformationJson);
-                            this.previewMembersColumns = Array.isArray(firstParsed.columns) ? firstParsed.columns : [];
-                            this.previewMembersRows = rows.map(r => {
-                                const parsed = JSON.parse(r.informationJson || r.InformationJson);
-                                return parsed.values ?? {};
-                            });
-                            this.loadedMemberEmployeeIds = rows.map(r => r.employeeId ?? r.EmployeeId ?? 0);
-                            this.loadedMemberPostedOutIds = rows.map(r => r.postedOutId ?? r.PostedOutId ?? null);
-                            this.loadedMemberMotherOrgIds = rows.map(r => {
-                                try {
-                                    const parsed = JSON.parse(r.informationJson || r.InformationJson);
-                                    const v = parsed.values ?? {};
-                                    const raw = v.motherOrganizationId ?? v.motherOrganisationId ?? v.motherOrgId ?? v.orgId ?? null;
-                                    const n = raw != null ? Number(raw) : null;
-                                    return n != null && !isNaN(n) ? n : null;
-                                } catch { return null; }
-                            });
-                            // Posting-style ORDER BY needs RankEquivalent; if it's loaded we can sort
-                            // now, otherwise defer until the lookup arrives.
-                            if (this.equivalentSortByRankId.size > 0) {
-                                this.sortPreviewMembers();
-                            } else {
-                                this.pendingMemberSort = true;
-                            }
-                        } catch {
-                            this.previewMembersColumns = [];
-                            this.previewMembersRows = [];
-                            this.loadedMemberEmployeeIds = [];
-                            this.loadedMemberPostedOutIds = [];
-                            this.loadedMemberMotherOrgIds = [];
-                        }
-                    } else {
+                    try {
+                        const parsed = rows.map(r => JSON.parse(r.informationJson || r.InformationJson));
+                        this.previewMembersColumns = Array.isArray(parsed[0]?.columns) ? parsed[0].columns : [];
+                        this.previewMembersRows = parsed.map(p => p.values ?? {});
+                        this.loadedMemberEmployeeIds = rows.map(r => r.employeeId ?? r.EmployeeId ?? 0);
+                        this.loadedMemberPostedOutIds = rows.map(r => r.postedOutId ?? r.PostedOutId ?? null);
+                    } catch {
                         this.previewMembersColumns = [];
                         this.previewMembersRows = [];
                         this.loadedMemberEmployeeIds = [];
                         this.loadedMemberPostedOutIds = [];
-                        this.loadedMemberMotherOrgIds = [];
                     }
                     this.lastMeasuredHeight = 0;
                     this.cdr.detectChanges();
@@ -1030,108 +1001,38 @@ export class NotesheetPreviewGeneralComponent extends NotesheetPreviewBase imple
         }
     }
 
-    private sortPreviewMembers(): void {
-        if (this.previewMembersRows.length <= 1) {
-            this.lastMeasuredHeight = 0;
-            this.cdr.detectChanges();
-            return;
-        }
-        type Item = { row: Record<string, string>; empId: number; postedOutId: number | null; orgId: number | null };
-        const items: Item[] = this.previewMembersRows.map((row, i) => ({
-            row,
-            empId: this.loadedMemberEmployeeIds[i] ?? 0,
-            postedOutId: this.loadedMemberPostedOutIds[i] ?? null,
-            orgId: this.loadedMemberMotherOrgIds[i] ?? null
-        }));
-        const rankOf = (row: Record<string, string>): number | null => {
-            const raw = (row['armyRankId'] ?? '').toString().trim();
-            if (raw && !isNaN(Number(raw)) && String(Number(raw)) === raw) return Number(raw);
-            return null;
-        };
-        const svcNum = (row: Record<string, string>): number | null => {
-            const s = (row['serviceId'] ?? '').toString().trim();
-            if (!s) return null;
-            const n = Number(s.replace(/\D/g, ''));
-            return isNaN(n) ? null : n;
-        };
-        // Posting ORDER BY: EquivalentName.SortOrder → mother-org RankSortOrder is NOT stored
-        // in the general note-sheet row (only armyRank label, not its CommonCode.SortOrder), so
-        // the posting "RankSortOrder" tie-breaker collapses. Next key that IS available is
-        // root MotherOrg.SortOrder (via motherOrganizationId), then trade, then numeric
-        // ServiceId. Trade-null/empty rows sort last within their group, matching the SPs'
-        // "CASE WHEN TradeName IS NULL THEN 1 ELSE 0 END".
-        const cmp = (a: Item, b: Item): number => {
-            const ra = rankOf(a.row), rb = rankOf(b.row);
-            const ea = ra != null ? this.equivalentSortByRankId.get(ra) : undefined;
-            const eb = rb != null ? this.equivalentSortByRankId.get(rb) : undefined;
-            const eaNull = ea == null, ebNull = eb == null;
-            if (eaNull !== ebNull) return eaNull ? 1 : -1;
-            if (ea != null && eb != null && ea !== eb) return ea - eb;
-            const oa = a.orgId != null ? this.motherOrgSortByOrgId.get(a.orgId) : undefined;
-            const ob = b.orgId != null ? this.motherOrgSortByOrgId.get(b.orgId) : undefined;
-            const oaNull = oa == null, obNull = ob == null;
-            if (oaNull !== obNull) return oaNull ? 1 : -1;
-            if (oa != null && ob != null && oa !== ob) return oa - ob;
-            const ta = (a.row['trade'] ?? '').toString().trim(), tb = (b.row['trade'] ?? '').toString().trim();
-            if (!ta !== !tb) return !ta ? 1 : -1;
-            if (ta !== tb) return ta.localeCompare(tb);
-            const sa = svcNum(a.row), sb = svcNum(b.row);
-            if (sa != null && sb != null && sa !== sb) return sa - sb;
-            const ssa = (a.row['serviceId'] ?? '').toString(), ssb = (b.row['serviceId'] ?? '').toString();
-            if (ssa !== ssb) return ssa.localeCompare(ssb);
-            return a.empId - b.empId;
-        };
-        items.sort(cmp);
-        this.previewMembersRows = items.map(x => x.row);
-        this.loadedMemberEmployeeIds = items.map(x => x.empId);
-        this.loadedMemberPostedOutIds = items.map(x => x.postedOutId);
-        this.loadedMemberMotherOrgIds = items.map(x => x.orgId);
-        this.lastMeasuredHeight = 0;
-        this.cdr.detectChanges();
-    }
-
-    private applyEditsSortIfNeeded(): void {
-        if (!this.previewMembersRows.length) return;
-        this.sortPreviewMembers();
-    }
-
+    /** Slot edit-mode members into posting order — same keys as the server: RAB-equivalent rank →
+     *  mother-org rank → root mother org → trade → numeric service id, NULLs last per key.
+     *  Needs loadSeniorityLookups() to have completed. */
     private sortEditMembersByPostingOrder(): void {
         if (this.editMembersData.members.length <= 1) return;
-        const rankOf = (m: MemberRow): number | null => {
-            const raw = (m.values['armyRankId'] ?? m.values['armyRank'] ?? '').toString().trim();
-            if (!raw) return null;
-            const n = Number(raw);
-            if (!isNaN(n) && String(n) === raw) return n;
-            return null;
+        const num = (raw: unknown): number | null => {
+            const s = (raw ?? '').toString().trim();
+            return /^\d+$/.test(s) ? Number(s) : null;
         };
-        const svcNum = (m: MemberRow): number | null => {
-            const s = (m.values['serviceId'] ?? '').toString().trim();
-            if (!s) return null;
-            const n = Number(s.replace(/\D/g, ''));
-            return isNaN(n) ? null : n;
-        };
-        const orgOf = (m: MemberRow): number | null => {
-            const raw = (m.values['motherOrganizationId'] ?? (m.values as any).motherOrganisationId ?? (m.values as any).motherOrgId ?? (m.values as any).orgId ?? '').toString().trim();
-            if (!raw) return null;
-            const n = Number(raw);
-            return isNaN(n) ? null : n;
+        const rankOf = (m: MemberRow): number | null => num(m.values['armyRankId']);
+        const orgOf = (m: MemberRow): number | null =>
+            num(m.values['motherOrganizationId'] ?? (m.values as any).motherOrganisationId ?? (m.values as any).motherOrgId ?? (m.values as any).orgId);
+        /** Compare two keys, NULL last. */
+        const byKey = (a: number | null | undefined, b: number | null | undefined): number => {
+            if ((a == null) !== (b == null)) return a == null ? 1 : -1;
+            return a != null && b != null ? a - b : 0;
         };
         this.editMembersData.members.sort((a, b) => {
             const ra = rankOf(a), rb = rankOf(b);
-            const ea = ra != null ? this.equivalentSortByRankId.get(ra) : undefined;
-            const eb = rb != null ? this.equivalentSortByRankId.get(rb) : undefined;
-            const eaNull = ea == null, ebNull = eb == null;
-            if (eaNull !== ebNull) return eaNull ? 1 : -1;
-            if (ea != null && eb != null && ea !== eb) return ea - eb;
-            const oa = orgOf(a) != null ? this.motherOrgSortByOrgId.get(orgOf(a)!) : undefined;
-            const ob = orgOf(b) != null ? this.motherOrgSortByOrgId.get(orgOf(b)!) : undefined;
-            const oaNull = oa == null, obNull = ob == null;
-            if (oaNull !== obNull) return oaNull ? 1 : -1;
-            if (oa != null && ob != null && oa !== ob) return oa - ob;
+            let c = byKey(ra != null ? this.equivalentSortByRankId.get(ra) : null, rb != null ? this.equivalentSortByRankId.get(rb) : null);
+            if (c) return c;
+            c = byKey(ra != null ? this.rankSortByRankId.get(ra) : null, rb != null ? this.rankSortByRankId.get(rb) : null);
+            if (c) return c;
+            const oa = orgOf(a), ob = orgOf(b);
+            c = byKey(oa != null ? this.motherOrgSortByOrgId.get(oa) : null, ob != null ? this.motherOrgSortByOrgId.get(ob) : null);
+            if (c) return c;
             const ta = (a.values['trade'] ?? '').toString().trim(), tb = (b.values['trade'] ?? '').toString().trim();
             if (!ta !== !tb) return !ta ? 1 : -1;
             if (ta !== tb) return ta.localeCompare(tb);
-            const sa = svcNum(a), sb = svcNum(b);
+            // Service id: numeric compare; a non-numeric id sorts first, like T-SQL's NULL from TRY_CAST.
+            const sa = num(a.values['serviceId']), sb = num(b.values['serviceId']);
+            if ((sa == null) !== (sb == null)) return sa == null ? -1 : 1;
             if (sa != null && sb != null && sa !== sb) return sa - sb;
             const ssa = (a.values['serviceId'] ?? '').toString(), ssb = (b.values['serviceId'] ?? '').toString();
             if (ssa !== ssb) return ssa.localeCompare(ssb);
@@ -1248,9 +1149,10 @@ export class NotesheetPreviewGeneralComponent extends NotesheetPreviewBase imple
         this.memberAddLoading = true;
         forkJoin([
             this.servingMembersService.getEmployeePersonalServiceOverview(emp.employeeID),
-            this.familyInfoService.getFamilyInfoByEmployeeView(emp.employeeID)
+            this.familyInfoService.getFamilyInfoByEmployeeView(emp.employeeID),
+            this.loadSeniorityLookups()
         ]).subscribe({
-            next: ([profile, familyList]: [any, any]) => {
+            next: ([profile, familyList]: [any, any, void]) => {
                 const values: Record<string, string> = {};
                 values['serviceId'] = profile.serviceId ?? '';
                 values['rabId'] = profile.rabId ?? '';
@@ -1451,9 +1353,25 @@ export class NotesheetPreviewGeneralComponent extends NotesheetPreviewBase imple
         }
     }
 
+    /** Name / rank cells can be corrected but never blanked while the member has a value. */
+    private isRequiredMemberCell(colKey: string): boolean {
+        return this.nameColumnKeys.includes(colKey) || colKey === 'armyRank' || colKey === 'armyRankBN';
+    }
+
     private saveMemberCell(rowIndex: number, colKey: string): void {
-        if (this.editMembersData.members[rowIndex]) {
-            this.editMembersData.members[rowIndex].values[colKey] = this.editingMemberCellValue;
+        const member = this.editMembersData.members[rowIndex];
+        if (member) {
+            const next = (this.editingMemberCellValue ?? '').trim();
+            const current = (member.values[colKey] ?? '').toString().trim();
+            if (!next && current && this.isRequiredMemberCell(colKey)) {
+                this.messageService.add({
+                    severity: 'warn',
+                    summary: 'Required',
+                    detail: this.editTextType === 'bn' ? 'নাম ও পদবি খালি রাখা যাবে না।' : 'Name and rank cannot be empty.'
+                });
+            } else {
+                member.values[colKey] = next;
+            }
         }
         this.editingMemberCellKey = null;
     }
