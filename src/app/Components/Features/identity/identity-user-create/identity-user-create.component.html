@@ -141,7 +141,7 @@
           </div>
           <div class="field">
             <label for="employeeId" class="block mb-2 font-medium">
-              Employee @if (!editingUser) { <span class="text-red-500">*</span> }
+              Employee @if (!editingUser || editingUser.employeeId) { <span class="text-red-500">*</span> }
             </label>
             <p-select
               id="employeeId"
@@ -149,7 +149,7 @@
               [options]="employees"
               optionLabel="displayLabel"
               optionValue="employeeID"
-              [placeholder]="editingUser ? 'Mapping cannot be changed' : 'Select employee'"
+              placeholder="Select employee"
                [filter]="true"
                (onFilter)="onEmployeeFilter($event)"
                [showClear]="!editingUser"
@@ -159,7 +159,13 @@
               styleClass="w-full"
             />
             @if (editingUser) {
-              <small class="text-color-secondary block mt-1">Employee mapping cannot be changed after create.</small>
+              @if (isSelf(editingUser)) {
+                <small class="text-color-secondary block mt-1">You can't change the employee mapped to your own account.</small>
+              } @else {
+                <small class="text-color-secondary block mt-1">
+                  Changing the employee re-links this account and signs the user out.
+                </small>
+              }
             }
             @if (form.get('employeeId')?.invalid && form.get('employeeId')?.touched) {
               <small class="text-red-500 block mt-1">Employee is required</small>
@@ -714,5 +720,34 @@
         </div>
       }
     }
+  </p-dialog>
+
+  <!-- Confirm changing the mapped employee on edit -->
+  <p-dialog
+    header="Change mapped employee?"
+    [(visible)]="remapConfirmVisible"
+    [modal]="true"
+    [style]="{ width: '32rem' }"
+    [breakpoints]="{ '575px': '95vw' }"
+    (onHide)="cancelRemap()"
+  >
+    <div class="flex flex-col gap-3">
+      <div class="text-sm">
+        <span class="font-medium">{{ editingUser?.userName || editingUser?.email }}</span>
+        will be re-linked:
+      </div>
+      <div class="p-3 rounded-lg border border-surface bg-surface-50 dark:bg-surface-800 text-sm flex flex-col gap-1">
+        <div><span class="text-color-secondary">From:</span> {{ employeeLabel(editingUser?.employeeId) }}</div>
+        <div><span class="text-color-secondary">To:</span> {{ employeeLabel(form.get('employeeId')?.value) }}</div>
+      </div>
+      <div class="text-sm text-color-secondary leading-snug">
+        The user will be signed out from every device. Their approvals, note sheets and notifications will follow the
+        new employee from now on; the previous employee will no longer have a login.
+      </div>
+      <div class="flex justify-end gap-2">
+        <p-button label="Cancel" severity="secondary" [text]="true" [fluid]="false" (onClick)="cancelRemap()" />
+        <p-button label="Change employee" icon="pi pi-link" severity="warn" [fluid]="false" (onClick)="confirmRemap()" />
+      </div>
+    </div>
   </p-dialog>
 </p-fluid>

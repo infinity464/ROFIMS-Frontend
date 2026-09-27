@@ -24,7 +24,8 @@ import { TooltipModule } from 'primeng/tooltip';
 import { DialogModule } from 'primeng/dialog';
 import { TagModule } from 'primeng/tag';
 import { CheckboxModule } from 'primeng/checkbox';
-import { forkJoin } from 'rxjs';
+import { forkJoin, of } from 'rxjs';
+import { catchError } from 'rxjs/operators';
 import { CodeType } from '@/models/enums';
 import { IdentityService } from '@/services/identity.service';
 import {
@@ -157,6 +158,10 @@ export class IdentityUserCreateComponent implements OnInit {
   private rabUnitAccesses: UserRabUnitAccessDto[] = [];
   editingUser: UserRow | null = null;
   isSubmitting = false;
+
+  /** Confirm dialog shown before an edit that changes the mapped employee. */
+  remapConfirmVisible = false;
+  private remapConfirmed = false;
 
   resetDialogVisible = false;
   resetTargetUser: UserRow | null = null;
@@ -390,6 +395,7 @@ export class IdentityUserCreateComponent implements OnInit {
             displayLabel: this.buildEmployeeDropdownLabel(memberType, rank, rabID, serviceId, fullNameEN)
           };
         });
+        this.ensureEditingEmployeeOption();
       },
       error: (err: any) => {
         if (requestId !== this.employeeSearchRequestId) return;
@@ -404,6 +410,59 @@ export class IdentityUserCreateComponent implements OnInit {
    */
   onEmployeeFilter(event: { filter?: string }): void {
     this.loadEmployees(event?.filter ?? '');
+  }
+
+  /**
+   * While editing, keep the user's current employee in the options even when the (max 2,000 / filtered)
+   * search result doesn't include it, so the select can still show the existing mapping.
+   */
+  private ensureEditingEmployeeOption(): void {
+    const user = this.editingUser;
+    if (!user?.employeeId || this.employees.some((e) => e.employeeID === user.employeeId)) return;
+    const m = this.mappings.find((x) => x.userId === user.id);
+    const name = m?.employeeName ?? user.employeeName ?? `Employee #${user.employeeId}`;
+    const rabID = m?.rabID ?? null;
+    const serviceId = m?.serviceId ?? null;
+    const rank = m?.rank ?? null;
+    const memberType = m?.memberType ?? null;
+    this.employees = [
+      {
+        employeeID: user.employeeId,
+        fullNameEN: name,
+        rabID,
+        serviceId,
+        rank,
+        memberType,
+        displayLabel: this.buildEmployeeDropdownLabel(memberType, rank, rabID, serviceId, name)
+      },
+      ...this.employees
+    ];
+  }
+
+  /** True when editing and the selected employee differs from the user's current mapping. */
+  private isEmployeeChanged(employeeId: number | null): boolean {
+    return !!this.editingUser && !!employeeId && employeeId !== (this.editingUser.employeeId ?? null);
+  }
+
+  /** Label of an employee for the re-map confirm dialog. */
+  employeeLabel(employeeId: number | null | undefined): string {
+    if (!employeeId) return 'No employee';
+    return (
+      this.employees.find((e) => e.employeeID === employeeId)?.displayLabel ??
+      this.mappings.find((m) => m.employeeId === employeeId)?.employeeName ??
+      `Employee #${employeeId}`
+    );
+  }
+
+  confirmRemap(): void {
+    this.remapConfirmVisible = false;
+    this.remapConfirmed = true;
+    this.onSubmit();
+  }
+
+  cancelRemap(): void {
+    this.remapConfirmVisible = false;
+    this.remapConfirmed = false;
   }
 
   initForm(): void {
@@ -485,8 +544,8 @@ export class IdentityUserCreateComponent implements OnInit {
       }
     }
 
-    if (!this.editingUser && value.employeeId) {
-      const mapped = this.mappings.find((m) => m.employeeId === value.employeeId);
+    if (value.employeeId) {
+      const mapped = this.mappings.find((m) => m.employeeId === value.employeeId && m.userId !== editingId);
       if (mapped) {
         const label = mapped.employeeName ?? `employee #${value.employeeId}`;
         return `${label} is already linked to another user account (${mapped.userName ?? mapped.email}). One employee can only have one user.`;
@@ -518,12 +577,28 @@ export class IdentityUserCreateComponent implements OnInit {
       return;
     }
 
+    // Changing the mapped employee re-links the account (and signs the user out), so ask first.
+    const remap = this.isEmployeeChanged(value.employeeId);
+    if (remap && !this.remapConfirmed) {
+      this.remapConfirmVisible = true;
+      return;
+    }
+    this.remapConfirmed = false;
+
     this.isSubmitting = true;
 
     if (this.editingUser) {
       const editingUserId = this.editingUser.id;
       const memberTypeIds: number[] = Array.isArray(value.memberTypeIds) ? value.memberTypeIds : [];
       const rabUnitIds: number[] = this.buildRabUnitIds();
+      // A failed re-map must not hide the other saves' results, so it reports instead of erroring.
+      const mapping$ = remap
+        ? this.mappingService.setMapping({ userId: editingUserId, employeeId: value.employeeId as number }).pipe(
+            catchError((err: any) =>
+              of({ statusCode: err?.status ?? 500, description: err?.error?.description ?? err?.error ?? null } as any)
+            )
+          )
+        : of(null);
       this.identityService
         .updateUser({
           email: value.email,
@@ -541,12 +616,31 @@ export class IdentityUserCreateComponent implements OnInit {
             }
             forkJoin({
               memberAccess: this.accessService.setAccesses({ userId: editingUserId, memberTypeIds }),
-              rabAccess: this.rabUnitAccessService.setAccesses({ userId: editingUserId, rabUnitIds })
+              rabAccess: this.rabUnitAccessService.setAccesses({ userId: editingUserId, rabUnitIds }),
+              mapping: mapping$
             }).subscribe({
-              next: ({ memberAccess, rabAccess }) => {
+              next: ({ memberAccess, rabAccess, mapping }) => {
                 this.isSubmitting = false;
                 const memberOk = memberAccess.statusCode === 200;
                 const rabOk = rabAccess.statusCode === 200;
+                const mappingOk = !mapping || mapping.statusCode === 200;
+                if (!mappingOk) {
+                  this.messageService.add({
+                    severity: 'error',
+                    summary: 'Employee not changed',
+                    detail:
+                      (typeof mapping?.description === 'string' && mapping.description) ||
+                      'User updated, but the mapped employee could not be changed.',
+                    life: 8000
+                  });
+                } else if (mapping) {
+                  this.messageService.add({
+                    severity: 'info',
+                    summary: 'Employee changed',
+                    detail: 'The account is now linked to the new employee. The user has been signed out.',
+                    life: 6000
+                  });
+                }
                 if (memberOk && rabOk) {
                   this.messageService.add({ severity: 'success', summary: 'Success', detail: res.message ?? 'User updated.' });
                 } else {
@@ -748,9 +842,20 @@ export class IdentityUserCreateComponent implements OnInit {
     this.form.get('userName')?.disable();
     this.form.get('password')?.clearValidators();
     this.form.get('password')?.updateValueAndValidity();
-    this.form.get('employeeId')?.disable();
-    this.form.get('employeeId')?.clearValidators();
-    this.form.get('employeeId')?.updateValueAndValidity();
+    // The mapped employee can be changed, but not cleared, and never on your own account (the API blocks it too).
+    this.ensureEditingEmployeeOption();
+    const employeeCtrl = this.form.get('employeeId');
+    if (this.isSelf(user)) {
+      employeeCtrl?.disable();
+    } else {
+      employeeCtrl?.enable();
+    }
+    if (user.employeeId) {
+      employeeCtrl?.setValidators(Validators.required);
+    } else {
+      employeeCtrl?.clearValidators();
+    }
+    employeeCtrl?.updateValueAndValidity();
 
     if (user.id) {
       forkJoin({
@@ -780,6 +885,8 @@ export class IdentityUserCreateComponent implements OnInit {
 
   onReset(): void {
     this.editingUser = null;
+    this.remapConfirmVisible = false;
+    this.remapConfirmed = false;
     this.form.get('userName')?.enable();
     this.form.get('password')?.setValidators([
       Validators.required,
