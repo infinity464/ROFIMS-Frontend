@@ -330,3 +330,50 @@
 :host ::ng-deep .ns-ref-item .ns-ref-html p:first-child {
     display: inline;
 }
+
+/* Style dialog → Table columns (dynamic column list). */
+.ns-style-section {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-top: 0.75rem;
+    padding-top: 0.5rem;
+    border-top: 1px solid var(--p-content-border-color, #e5e7eb);
+    font-weight: 600;
+    font-size: 0.9rem;
+}
+.ns-style-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.25rem 0;
+    border: 0;
+    background: none;
+    color: inherit;
+    font: inherit;
+    cursor: pointer;
+
+    .pi {
+        font-size: 0.8rem;
+    }
+}
+.ns-style-form .ns-col-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 6.5rem 3.2rem;
+    align-items: center;
+    gap: 0.4rem;
+
+    label {
+        margin-top: 0;
+        font-weight: 400;
+        font-size: 0.8rem;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+}
+.ns-col-pct {
+    font-size: 0.75rem;
+    text-align: right;
+    color: var(--p-text-muted-color, #6b7280);
+}

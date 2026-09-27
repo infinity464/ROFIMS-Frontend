@@ -204,9 +204,13 @@ export class NotesheetPreviewGeneralComponent extends NotesheetPreviewBase imple
         this.savingStyle = true;
         const user = this.sharedService.getCurrentUser() || 'system';
         const now = new Date().toISOString();
-        this.styleConfigService.save({ ...this.currentStyle(), noteSheetType: this.styleType, noteSheetId, createdBy: user, createdDate: now, lastUpdatedBy: user, lastupdate: now }).subscribe({
-            next: (saved) => {
+        forkJoin([
+            this.styleConfigService.save({ ...this.currentStyle(), noteSheetType: this.styleType, noteSheetId, createdBy: user, createdDate: now, lastUpdatedBy: user, lastupdate: now }),
+            this.saveStyleColumns(noteSheetId, user)
+        ]).subscribe({
+            next: ([saved]) => {
                 this.savingStyle = false;
+                this.styleColumnsDirty = false;
                 this.styleConfig = { ...saved };
                 this.showStyleDialog = false;
                 this.messageService.add({ severity: 'success', summary: 'Saved', detail: 'Style saved for this note sheet.' });
@@ -1544,6 +1548,46 @@ export class NotesheetPreviewGeneralComponent extends NotesheetPreviewBase imple
 
     getPreviewColWidth(col: { key: string; width?: number }): number {
         return col.width ?? this.defaultColWidthByKey[col.key] ?? this.getDefaultColWidth(this.previewMembersColumns.length);
+    }
+
+    // ── Style dialog → Table columns ─────────────────────────
+    // The column set is per note sheet (any number, any keys), so the dialog lists
+    // previewMembersColumns as-is. Widths live on those column defs — the same field edit
+    // mode's −/+ writes — so screen, Print, PDF and Word all pick a change up at once.
+    showColumnSettings = false;
+    /** Widths changed in the dialog but not saved yet. */
+    private styleColumnsDirty = false;
+
+    trackByColumnKey = (_: number, col: { key: string }): string => col.key;
+
+    setStyleColWidth(col: { key: string; width?: number }, value: number | null): void {
+        if (value == null || isNaN(Number(value))) return;
+        col.width = Math.max(3, Math.min(80, Math.round(Number(value) * 10) / 10));
+        this.styleColumnsDirty = true;
+        this.onStyleChange(); // wider/narrower columns change row heights → re-paginate
+    }
+
+    /** The column's share of the member columns' total width. */
+    styleColumnPercent(col: { key: string; width?: number }): number {
+        const total = this.previewMembersColumns.reduce((sum, c) => sum + this.getPreviewColWidth(c), 0) || 1;
+        return (this.getPreviewColWidth(col) / total) * 100;
+    }
+
+    /** Back to the per-key defaults (takes effect on Save). */
+    resetStyleColumns(): void {
+        for (const col of this.previewMembersColumns) delete col.width;
+        this.styleColumnsDirty = true;
+        this.onStyleChange();
+    }
+
+    /** Stores the column set (with widths) on every member row of this note sheet. */
+    private saveStyleColumns(noteSheetId: number, user: string): Observable<unknown> {
+        if (!this.styleColumnsDirty) return of(null);
+        return this.http.post(`${environment.apis.core}/NoteSheetReferenceEmployee/UpdateColumns`, {
+            noteSheetId,
+            columnsJson: JSON.stringify(this.previewMembersColumns),
+            updatedBy: user
+        });
     }
 
     /** Bangla header text for member-table columns (keyed by column key, both
