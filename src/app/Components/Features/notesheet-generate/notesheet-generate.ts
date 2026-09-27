@@ -47,6 +47,7 @@ import { NotesheetMemberStripsComponent } from '@/Components/Shared/notesheet-me
 import { FamilyInfoService, FamilyInfoByEmployeeView } from '@/services/family-info-service';
 import { MainTextBlock, parseMainTextBlocks, serializeMainTextBlocks } from '@/shared/utils/notesheet-main-text';
 import { getFormattedMemberName } from '@/shared/utils/member-display-name.util';
+import { buildRabUnitPath, findActiveRabService } from '@/shared/utils/rab-unit-path.util';
 import { PreviousRABServiceService, VwPreviousRABServiceInfoModel } from '@/services/previous-rab-service.service';
 
 /** Reference paragraph row (serial + text + optional file) */
@@ -1309,10 +1310,9 @@ export class NotesheetGenerateComponent implements OnInit {
 
                 // Present RAB unit as the full hierarchy path (Unit > Wing > Branch > Sub-branch >
                 // Section > Sub-section) from the currently-active Previous RAB Service row.
-                const activeRab = (Array.isArray(rabServiceList) ? rabServiceList : [])
-                    .find((r) => (r.isCurrentlyActive as any) === true || (r.isCurrentlyActive as any) === 1);
-                values['presentRabUnit'] = this.buildRabUnitPath(activeRab, false) || (profile.rabUnit ?? '');
-                values['presentRabUnitBN'] = this.buildRabUnitPath(activeRab, true) || (profile.rabUnitBN ?? profile.rabUnit ?? '');
+                const activeRab = findActiveRabService(rabServiceList);
+                values['presentRabUnit'] = buildRabUnitPath(activeRab, false) || (profile.rabUnit ?? '');
+                values['presentRabUnitBN'] = buildRabUnitPath(activeRab, true) || (profile.rabUnitBN ?? profile.rabUnit ?? '');
 
                 // Posted-out Posting Unit (mother-org transfer destination) — populated for clearance subjects.
                 values['postingUnit'] = postingUnitEN;
@@ -1350,20 +1350,6 @@ export class NotesheetGenerateComponent implements OnInit {
      * "Unit, Wing, Branch, Sub-branch, Section, Sub-section", skipping empty levels.
      * In Bangla it uses each level's BN name, falling back to the EN name when BN is unset.
      */
-    private buildRabUnitPath(row: VwPreviousRABServiceInfoModel | undefined | null, bn: boolean): string {
-        if (!row) return '';
-        const lvl = (en?: string | null, bnName?: string | null): string =>
-            (bn ? ((bnName ?? '').trim() || (en ?? '').trim()) : (en ?? '').trim());
-        return [
-            lvl(row.rabUnitName, row.rabUnitNameBN),
-            lvl(row.rabWingName, row.rabWingNameBN),
-            lvl(row.rabBranchName, row.rabBranchNameBN),
-            lvl(row.rabSubBranchName, row.rabSubBranchNameBN),
-            lvl(row.rabSectionName, row.rabSectionNameBN),
-            lvl(row.rabSubSectionName, row.rabSubSectionNameBN)
-        ].filter((p) => p !== '').join(', ');
-    }
-
     /** Cell display value: digits become Bangla numerals when the note-sheet is Bangla,
      *  stay Latin otherwise. Follows the same rule as the preview and the dates. */
     formatMemberCellDisplay(value: string | null | undefined): string {

@@ -35,6 +35,9 @@ import { environment } from '@/Core/Environments/environment';
 import { forkJoin, Observable, of } from 'rxjs';
 import { catchError, map, shareReplay } from 'rxjs/operators';
 import { EquivalentRankModel } from '@/Components/basic-setup/shared/models/equivalent-rank';
+import { getFormattedMemberName } from '@/shared/utils/member-display-name.util';
+import { buildRabUnitPath, findActiveRabService } from '@/shared/utils/rab-unit-path.util';
+import { PreviousRABServiceService, VwPreviousRABServiceInfoModel } from '@/services/previous-rab-service.service';
 import { FamilyInfoService } from '@/services/family-info-service';
 import { JsReportService } from '@/services/jsreport.service';
 import {
@@ -301,6 +304,7 @@ export class NotesheetPreviewGeneralComponent extends NotesheetPreviewBase imple
 
     // ── General subject master (resolve NoteSheetSubjectId → BN/EN for display) ──
     private noteSheetSubjectService = inject(NoteSheetSubjectService);
+    private previousRABService = inject(PreviousRABServiceService);
     private noteSheetSubjects: NoteSheetSubjectModel[] = [];
     /** Posting-order ladders, only for slotting members added in edit mode. View mode needs none:
      *  NoteSheetReferenceEmployee/GetByNoteSheetId already returns members in posting order, using
@@ -1152,9 +1156,10 @@ export class NotesheetPreviewGeneralComponent extends NotesheetPreviewBase imple
         forkJoin([
             this.servingMembersService.getEmployeePersonalServiceOverview(emp.employeeID),
             this.familyInfoService.getFamilyInfoByEmployeeView(emp.employeeID),
+            this.previousRABService.getViewByEmployeeId(emp.employeeID).pipe(catchError(() => of([] as VwPreviousRABServiceInfoModel[]))),
             this.loadSeniorityLookups()
         ]).subscribe({
-            next: ([profile, familyList]: [any, any, void]) => {
+            next: ([profile, familyList, rabServiceList]: [any, any, VwPreviousRABServiceInfoModel[], void]) => {
                 const values: Record<string, string> = {};
                 values['serviceId'] = profile.serviceId ?? '';
                 values['rabId'] = profile.rabId ?? '';
@@ -1225,6 +1230,13 @@ export class NotesheetPreviewGeneralComponent extends NotesheetPreviewBase imple
                 values['family_mother'] = mother?.name ?? '';
                 values['family_members'] = family.map((f: any) => `${f.relation ?? ''}: ${f.name ?? ''}`).join('; ');
                 // Posted-out Posting Unit (mother-org transfer destination) — populated for clearance subjects.
+                // Same derived fields as /notesheet-generate — the default columns (নাম, বর্তমান
+                // এসআরবি ইউনিট) are keyed on these, not on nameBN / rabUnitBN.
+                values['formattedName'] = getFormattedMemberName(profile, false);
+                values['formattedNameBN'] = getFormattedMemberName(profile, true);
+                const activeRab = findActiveRabService(rabServiceList);
+                values['presentRabUnit'] = buildRabUnitPath(activeRab, false) || (profile.rabUnit ?? '');
+                values['presentRabUnitBN'] = buildRabUnitPath(activeRab, true) || (profile.rabUnitBN ?? profile.rabUnit ?? '');
                 values['postingUnit'] = postingUnitEN;
                 values['postingUnitBN'] = postingUnitBN;
                 values['motherOrganizationId'] = profile.motherOrganizationId != null ? String(profile.motherOrganizationId) : '';
