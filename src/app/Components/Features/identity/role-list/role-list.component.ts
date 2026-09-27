@@ -39,7 +39,7 @@ interface AccessGridRow {
 }
 
 function emptyFlags(): UserAccessFlags {
-  return { canView: false, canCreate: false, canEdit: false, canDisable: false, canResetPassword: false, canForceLogout: false };
+  return { canView: false, canCreate: false, canEdit: false, canDisable: false, canResetPassword: false, canForceLogout: false, canMapEmployee: false };
 }
 
 @Component({

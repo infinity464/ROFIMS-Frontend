@@ -842,13 +842,14 @@ export class IdentityUserCreateComponent implements OnInit {
     this.form.get('userName')?.disable();
     this.form.get('password')?.clearValidators();
     this.form.get('password')?.updateValueAndValidity();
-    // The mapped employee can be changed, but not cleared, and never on your own account (the API blocks it too).
+    // The mapped employee can be changed (but not cleared) only with the "Change mapped employee" permission,
+    // and never on your own account; the API enforces the same.
     this.ensureEditingEmployeeOption();
     const employeeCtrl = this.form.get('employeeId');
-    if (this.isSelf(user)) {
-      employeeCtrl?.disable();
-    } else {
+    if (this.canChangeEmployee(user)) {
       employeeCtrl?.enable();
+    } else {
+      employeeCtrl?.disable();
     }
     if (user.employeeId) {
       employeeCtrl?.setValidators(Validators.required);
@@ -931,6 +932,16 @@ export class IdentityUserCreateComponent implements OnInit {
   /** `can()` plus the no-self-action rule. */
   canActOn(action: UserAccessAction, user: UserRow): boolean {
     return !this.isSelf(user) && this.can(action, user.roleName);
+  }
+
+  /**
+   * Edit form: may the employee select be changed? Re-mapping needs "Change mapped employee"; a user with
+   * no mapping yet may also be mapped with Create (mirrors IdentityUserMappingController.SetMapping).
+   */
+  canChangeEmployee(user: UserRow | null): boolean {
+    if (!user) return false;
+    if (this.canActOn('mapEmployee', user)) return true;
+    return !user.employeeId && this.canActOn('create', user);
   }
 
   /** Role dropdown: roles the caller can create users in; when editing, the user's current role stays selectable. */

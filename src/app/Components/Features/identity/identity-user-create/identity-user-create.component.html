@@ -161,6 +161,10 @@
             @if (editingUser) {
               @if (isSelf(editingUser)) {
                 <small class="text-color-secondary block mt-1">You can't change the employee mapped to your own account.</small>
+              } @else if (!canChangeEmployee(editingUser)) {
+                <small class="text-color-secondary block mt-1">
+                  You don't have the "Change mapped employee" permission for this user's role.
+                </small>
               } @else {
                 <small class="text-color-secondary block mt-1">
                   Changing the employee re-links this account and signs the user out.

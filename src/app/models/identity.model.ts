@@ -30,7 +30,7 @@ export interface ApplicationRole {
 // --- User management access rules (backend: RoleUserAccessRule) ---
 
 /** Actions a role can be granted over the user accounts of another role. */
-export type UserAccessAction = 'view' | 'create' | 'edit' | 'disable' | 'resetPassword' | 'forceLogout';
+export type UserAccessAction = 'view' | 'create' | 'edit' | 'disable' | 'resetPassword' | 'forceLogout' | 'mapEmployee';
 
 export interface UserAccessFlags {
   canView: boolean;
@@ -39,6 +39,7 @@ export interface UserAccessFlags {
   canDisable: boolean;
   canResetPassword: boolean;
   canForceLogout: boolean;
+  canMapEmployee: boolean;
 }
 
 /** One rule: which actions are allowed on users of `targetRoleId` (`'*'` = all roles, incl. future ones). */
@@ -60,7 +61,8 @@ export const USER_ACCESS_ACTIONS: ReadonlyArray<{
   { action: 'edit', field: 'canEdit', label: 'Edit', shortLabel: 'Edit' },
   { action: 'disable', field: 'canDisable', label: 'Disable / Enable', shortLabel: 'Disable' },
   { action: 'resetPassword', field: 'canResetPassword', label: 'Reset password', shortLabel: 'Reset pwd' },
-  { action: 'forceLogout', field: 'canForceLogout', label: 'Force logout', shortLabel: 'Force logout' }
+  { action: 'forceLogout', field: 'canForceLogout', label: 'Force logout', shortLabel: 'Force logout' },
+  { action: 'mapEmployee', field: 'canMapEmployee', label: 'Change mapped employee', shortLabel: 'Map employee' }
 ];
 
 /** Every rule held by one role (GetRoleUserAccessRules). */
@@ -71,7 +73,7 @@ export interface RoleUserAccessRules {
 
 /** The logged-in user's own rules (login response / GetMyUserAccessRules). */
 export interface MyUserAccessRules {
-  /** All six actions on all roles — may edit role permissions and the session policy. */
+  /** Every action on all roles — may edit role permissions and the session policy. */
   hasFullUserAccess: boolean;
   rules: UserAccessRule[];
 }
