@@ -520,16 +520,17 @@ export class StatisticsService {
     }
 
     getUnitWiseBarChart(
-        orgId?: number,
-        memberTypeId?: number,
-        rankId?: number,
-        tradeId?: number
+        orgIds: number[] = [],
+        memberTypeIds: number[] = [],
+        rankIds: number[] = [],
+        tradeIds: number[] = []
     ): Observable<UnitWiseBarChartResponse> {
+        // Arrays serialize as repeated keys (orgIds=1&orgIds=2) which ASP.NET binds to List<int>.
         const params: any = {};
-        if (orgId != null)        params.orgId        = orgId;
-        if (memberTypeId != null) params.memberTypeId = memberTypeId;
-        if (rankId != null)       params.rankId       = rankId;
-        if (tradeId != null)      params.tradeId      = tradeId;
+        if (orgIds.length)        params.orgIds        = orgIds;
+        if (memberTypeIds.length) params.memberTypeIds = memberTypeIds;
+        if (rankIds.length)       params.rankIds       = rankIds;
+        if (tradeIds.length)      params.tradeIds      = tradeIds;
         return this.http.get<UnitWiseBarChartResponse>(
             `${this.apiUrl}/GetUnitWiseBarChart`, { params }
         );

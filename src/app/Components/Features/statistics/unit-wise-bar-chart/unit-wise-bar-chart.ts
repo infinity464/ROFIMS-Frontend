@@ -2,7 +2,7 @@
 import { Router } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { SelectModule } from 'primeng/select';
+import { MultiSelectModule } from 'primeng/multiselect';
 import { ChartModule } from 'primeng/chart';
 import { BanglaNumerals } from '@/Core/i18n/bangla-numerals';
 import {
@@ -28,7 +28,7 @@ const BAR_COLORS = [
 @Component({
     selector: 'app-unit-wise-bar-chart',
     standalone: true,
-    imports: [CommonModule, FormsModule, SelectModule, ChartModule],
+    imports: [CommonModule, FormsModule, MultiSelectModule, ChartModule],
     templateUrl: './unit-wise-bar-chart.html',
     styleUrl: './unit-wise-bar-chart.scss'
 })
@@ -41,18 +41,21 @@ export class UnitWiseBarChartComponent implements OnInit {
     loading = false;
 
     orgOptions: MotherUnitOrgOption[] = [];
-    selectedOrgId: number | null = null;
+    selectedOrgIds: number[] = [];
 
     memberTypeOptions: MemberTypeOption[] = [];
-    selectedMemberTypeId: number | null = null;
+    selectedMemberTypeIds: number[] = [];
 
-    /** Full rank list from the API (all orgs). UI cascades from selectedOrgId / selectedMemberTypeId. */
+    /** Full rank list from the API (all orgs). UI cascades from selectedOrgIds / selectedMemberTypeIds. */
     private allRankOptions: UnitWiseRankOption[] = [];
     rankOptions: { label: string; value: number }[] = [];
-    selectedRankId: number | null = null;
+    selectedRankIds: number[] = [];
 
     tradeOptions: UnitWiseTradeOption[] = [];
-    selectedTradeId: number | null = null;
+    selectedTradeIds: number[] = [];
+
+    /** Guards against out-of-order responses when filters change quickly. */
+    private loadSeq = 0;
 
     units: UnitBarItem[] = [];
     total = 0;
@@ -85,35 +88,31 @@ export class UnitWiseBarChartComponent implements OnInit {
         this.loadData();
     }
 
-    onOrgChange(): void {
-        // Reset rank if it no longer belongs to the chosen org
-        if (this.selectedRankId != null && this.selectedOrgId != null) {
-            const r = this.allRankOptions.find(x => x.rankId === this.selectedRankId);
-            if (r && r.orgId !== this.selectedOrgId) {
-                this.selectedRankId = null;
-            }
-        }
+    onOrgChange(ids: number[] | null): void {
+        this.selectedOrgIds = ids ?? [];
+        this.onRankScopeChange();
+    }
+
+    onMemberTypeChange(ids: number[] | null): void {
+        this.selectedMemberTypeIds = ids ?? [];
+        this.onRankScopeChange();
+    }
+
+    onRankChange(ids: number[] | null): void {
+        this.selectedRankIds = ids ?? [];
+        this.loadData();
+    }
+
+    onTradeChange(ids: number[] | null): void {
+        this.selectedTradeIds = ids ?? [];
+        this.loadData();
+    }
+
+    /** Org / member type changed: drop selected ranks that fall outside the new scope, then reload. */
+    private onRankScopeChange(): void {
         this.rebuildRankOptions();
-        this.loadData();
-    }
-
-    onMemberTypeChange(): void {
-        // Reset rank if it no longer belongs to the chosen member type
-        if (this.selectedRankId != null) {
-            const r = this.allRankOptions.find(x => x.rankId === this.selectedRankId);
-            if (this.selectedMemberTypeId != null && r && r.memberTypeId !== this.selectedMemberTypeId) {
-                this.selectedRankId = null;
-            }
-        }
-        this.rebuildRankOptions();
-        this.loadData();
-    }
-
-    onRankChange(): void {
-        this.loadData();
-    }
-
-    onTradeChange(): void {
+        const visible = new Set(this.rankOptions.map(o => o.value));
+        this.selectedRankIds = this.selectedRankIds.filter(id => visible.has(id));
         this.loadData();
     }
 
@@ -135,21 +134,25 @@ export class UnitWiseBarChartComponent implements OnInit {
         return out;
     }
 
-    /** Rebuild the rank dropdown options, narrowed to the selected org and/or member type. */
+    /** Rebuild the rank dropdown options, narrowed to the selected orgs and/or member types. */
     private rebuildRankOptions(): void {
         let list = this.allRankOptions;
-        if (this.selectedOrgId != null) {
-            list = list.filter(r => r.orgId === this.selectedOrgId);
+        if (this.selectedOrgIds.length) {
+            const orgs = new Set(this.selectedOrgIds);
+            list = list.filter(r => r.orgId != null && orgs.has(r.orgId));
         }
-        if (this.selectedMemberTypeId != null) {
-            list = list.filter(r => r.memberTypeId === this.selectedMemberTypeId);
+        if (this.selectedMemberTypeIds.length) {
+            const mts = new Set(this.selectedMemberTypeIds);
+            list = list.filter(r => r.memberTypeId != null && mts.has(r.memberTypeId));
         }
+        // Org prefix is redundant only when exactly one org is chosen.
+        const singleOrg = this.selectedOrgIds.length === 1;
         this.rankOptions = list.map(r => ({
             label: this.lang === 'en'
-                ? (this.selectedOrgId != null
+                ? (singleOrg
                     ? r.rankName
                     : `${r.orgName ? r.orgName + ' - ' : ''}${r.rankName}`)
-                : (this.selectedOrgId != null
+                : (singleOrg
                     ? (r.rankNameBN || r.rankName)
                     : `${r.orgNameBN || r.orgName ? (r.orgNameBN || r.orgName) + ' - ' : ''}${r.rankNameBN || r.rankName}`),
             value: r.rankId
@@ -166,12 +169,6 @@ export class UnitWiseBarChartComponent implements OnInit {
 
     // ── Computed labels ──────────────────────────────────────────────────
 
-    get selectedMemberType(): MemberTypeOption | undefined {
-        return this.selectedMemberTypeId != null
-            ? this.memberTypeOptions.find(m => m.memberTypeId === this.selectedMemberTypeId)
-            : undefined;
-    }
-
     get titleLabel(): string {
         return this.lang === 'en'
             ? 'UNIT WISE SERVING MANPOWER'
@@ -179,38 +176,32 @@ export class UnitWiseBarChartComponent implements OnInit {
     }
 
     /**
-     * Active filter chips rendered below the title (e.g. "Organization: Army").
-     * Each chip = one applied dropdown filter, in the same order as the toolbar.
+     * Active filter chips rendered below the title (e.g. "Organization: Army, Navy").
+     * Each chip = one applied dropdown filter (selected values comma-joined), in toolbar order.
      */
     get filterChips(): { label: string; value: string }[] {
         const chips: { label: string; value: string }[] = [];
+        const en = this.lang === 'en';
+        const push = (label: string, names: string[]) => {
+            if (names.length) chips.push({ label, value: names.join(', ') });
+        };
 
-        if (this.selectedOrgId != null) {
-            const o = this.orgOptions.find(x => x.orgId === this.selectedOrgId);
-            if (o) chips.push({
-                label: this.lang === 'en' ? 'Organization' : 'বাহিনী',
-                value: this.lang === 'en' ? o.orgName : (o.orgNameBN || o.orgName)
-            });
-        }
-        const mt = this.selectedMemberType;
-        if (mt) chips.push({
-            label: this.lang === 'en' ? 'Member Type' : 'সদস্য প্রকার',
-            value: this.lang === 'en' ? mt.memberTypeName : (mt.memberTypeNameBN || mt.memberTypeName)
-        });
-        if (this.selectedRankId != null) {
-            const r = this.allRankOptions.find(x => x.rankId === this.selectedRankId);
-            if (r) chips.push({
-                label: this.lang === 'en' ? 'Rank' : 'পদবী',
-                value: this.lang === 'en' ? r.rankName : (r.rankNameBN || r.rankName)
-            });
-        }
-        if (this.selectedTradeId != null) {
-            const t = this.tradeOptions.find(x => x.tradeId === this.selectedTradeId);
-            if (t) chips.push({
-                label: this.lang === 'en' ? 'Trade' : 'ট্রেড',
-                value: this.lang === 'en' ? t.tradeName : (t.tradeNameBN || t.tradeName)
-            });
-        }
+        push(en ? 'Organization' : 'বাহিনী',
+            this.orgOptions
+                .filter(o => this.selectedOrgIds.includes(o.orgId))
+                .map(o => en ? o.orgName : (o.orgNameBN || o.orgName)));
+        push(en ? 'Member Type' : 'সদস্য প্রকার',
+            this.memberTypeOptions
+                .filter(m => this.selectedMemberTypeIds.includes(m.memberTypeId))
+                .map(m => this.memberTypeLabel(m)));
+        push(en ? 'Rank' : 'পদবী',
+            this.allRankOptions
+                .filter(r => this.selectedRankIds.includes(r.rankId))
+                .map(r => en ? r.rankName : (r.rankNameBN || r.rankName)));
+        push(en ? 'Trade' : 'ট্রেড',
+            this.tradeOptions
+                .filter(t => this.selectedTradeIds.includes(t.tradeId))
+                .map(t => en ? t.tradeName : (t.tradeNameBN || t.tradeName)));
         return chips;
     }
 
@@ -243,13 +234,15 @@ export class UnitWiseBarChartComponent implements OnInit {
 
     private loadData(): void {
         this.loading = true;
+        const seq = ++this.loadSeq;
         this.statisticsService.getUnitWiseBarChart(
-            this.selectedOrgId        ?? undefined,
-            this.selectedMemberTypeId ?? undefined,
-            this.selectedRankId       ?? undefined,
-            this.selectedTradeId      ?? undefined
+            this.selectedOrgIds,
+            this.selectedMemberTypeIds,
+            this.selectedRankIds,
+            this.selectedTradeIds
         ).subscribe({
             next: (res: UnitWiseBarChartResponse) => {
+                if (seq !== this.loadSeq) return; // superseded by a newer filter change
                 this.orgOptions        = res.orgs        ?? [];
                 this.memberTypeOptions = res.memberTypes ?? [];
                 this.allRankOptions    = res.ranks       ?? [];
@@ -262,7 +255,7 @@ export class UnitWiseBarChartComponent implements OnInit {
                 this.buildChart();
                 this.loading = false;
             },
-            error: () => { this.loading = false; }
+            error: () => { if (seq === this.loadSeq) this.loading = false; }
         });
     }
 

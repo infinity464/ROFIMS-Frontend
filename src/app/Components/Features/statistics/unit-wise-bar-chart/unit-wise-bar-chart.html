@@ -7,10 +7,14 @@
         <!-- Row 1: filter left | buttons right -->
         <div class="chart-toolbar-row">
 
+            <!-- Filters are multi-select; not disabled while loading so the panel stays
+                 open while ticking several values (stale responses are dropped in loadData). -->
+
             <!-- Organization filter -->
             <div class="filter-wrap">
-                <p-select
-                    [(ngModel)]="selectedOrgId"
+                <p-multiselect
+                    [ngModel]="selectedOrgIds"
+                    (ngModelChange)="onOrgChange($event)"
                     [options]="orgOptions"
                     optionLabel="orgName"
                     optionValue="orgId"
@@ -18,16 +22,16 @@
                     [showClear]="true"
                     [filter]="true"
                     filterBy="orgName"
-                    (onChange)="onOrgChange()"
-                    styleClass="filter-select"
-                    [disabled]="loading">
-                </p-select>
+                    [maxSelectedLabels]="2"
+                    styleClass="filter-select">
+                </p-multiselect>
             </div>
 
             <!-- Member Type filter -->
             <div class="filter-wrap">
-                <p-select
-                    [(ngModel)]="selectedMemberTypeId"
+                <p-multiselect
+                    [ngModel]="selectedMemberTypeIds"
+                    (ngModelChange)="onMemberTypeChange($event)"
                     [options]="memberTypeOptions"
                     optionLabel="memberTypeName"
                     optionValue="memberTypeId"
@@ -35,16 +39,16 @@
                     [showClear]="true"
                     [filter]="true"
                     filterBy="memberTypeName"
-                    (onChange)="onMemberTypeChange()"
-                    styleClass="filter-select"
-                    [disabled]="loading">
-                </p-select>
+                    [maxSelectedLabels]="2"
+                    styleClass="filter-select">
+                </p-multiselect>
             </div>
 
-            <!-- Rank filter (cascades from Member Type if one is selected) -->
+            <!-- Rank filter (cascades from selected Organizations / Member Types) -->
             <div class="filter-wrap">
-                <p-select
-                    [(ngModel)]="selectedRankId"
+                <p-multiselect
+                    [ngModel]="selectedRankIds"
+                    (ngModelChange)="onRankChange($event)"
                     [options]="rankOptions"
                     optionLabel="label"
                     optionValue="value"
@@ -52,16 +56,16 @@
                     [showClear]="true"
                     [filter]="true"
                     filterBy="label"
-                    (onChange)="onRankChange()"
-                    styleClass="filter-select"
-                    [disabled]="loading">
-                </p-select>
+                    [maxSelectedLabels]="2"
+                    styleClass="filter-select">
+                </p-multiselect>
             </div>
 
             <!-- Trade filter -->
             <div class="filter-wrap">
-                <p-select
-                    [(ngModel)]="selectedTradeId"
+                <p-multiselect
+                    [ngModel]="selectedTradeIds"
+                    (ngModelChange)="onTradeChange($event)"
                     [options]="tradeOptions"
                     optionLabel="tradeName"
                     optionValue="tradeId"
@@ -69,10 +73,9 @@
                     [showClear]="true"
                     [filter]="true"
                     filterBy="tradeName"
-                    (onChange)="onTradeChange()"
-                    styleClass="filter-select"
-                    [disabled]="loading">
-                </p-select>
+                    [maxSelectedLabels]="2"
+                    styleClass="filter-select">
+                </p-multiselect>
             </div>
 
             <!-- Lang + Print -->
