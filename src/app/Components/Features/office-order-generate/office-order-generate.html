@@ -30,7 +30,7 @@
                 <!-- NoteSheet (read-only in edit mode) -->
                 <div class="field flex-1 min-w-300px" *ngIf="editMode">
                     <label class="font-semibold block mb-2 text-700">Note Sheet</label>
-                    <input pInputText [value]="selectedNoteSheetNo || ''" class="w-full" [readonly]="true" />
+                    <input pInputText [value]="isWithoutNoteSheet ? 'Office Order without notesheet' : (selectedNoteSheetNo || '')" class="w-full" [readonly]="true" />
                 </div>
 
                 <!-- Letter Date -->
@@ -94,6 +94,43 @@
                 <span *ngIf="selectedNoteSheetApprovedDate" class="text-600">| Approved: <strong>{{ formatDate(selectedNoteSheetApprovedDate) }}</strong></span>
             </div>
 
+            <!-- Without a note sheet: the inputs a General note sheet would carry -->
+            @if (isWithoutNoteSheet) {
+                <div class="field mb-4 p-4 surface-50 border-round">
+                    <div class="flex flex-wrap gap-4 align-items-end">
+                        <div class="field" style="flex: 0 0 140px">
+                            <label class="font-semibold block mb-2 text-700">Text Type</label>
+                            <p-select
+                                [options]="textTypeOptions"
+                                [(ngModel)]="selectedTextType"
+                                optionLabel="label"
+                                optionValue="value"
+                                styleClass="w-full"
+                                (onChange)="onTextTypeChange()"
+                            ></p-select>
+                        </div>
+                        <div class="field flex-1 min-w-300px">
+                            <label class="font-semibold block mb-2 text-700">Select Unit</label>
+                            <app-unit-hierarchy-select></app-unit-hierarchy-select>
+                        </div>
+                        <div class="field flex-1 min-w-250px">
+                            <label class="font-semibold block mb-2 text-700">Member Type</label>
+                            <p-multiSelect
+                                [options]="memberTypeOptions"
+                                [(ngModel)]="memberTypeIds"
+                                optionLabel="label"
+                                optionValue="value"
+                                placeholder="Select Member Type(s)"
+                                display="chip"
+                                [filter]="true"
+                                appendTo="body"
+                                styleClass="w-full"
+                            ></p-multiSelect>
+                        </div>
+                    </div>
+                </div>
+            }
+
             <!-- Reference No (+) -->
             <div class="field mb-4 p-4 surface-50 border-round">
                 <div class="flex align-items-center gap-2 mb-3">
@@ -142,9 +179,62 @@
 
             <!-- Subject -->
             <div class="field mb-4">
-                <label class="font-semibold block mb-2 text-700">Subject</label>
-                <input pInputText [(ngModel)]="subject" class="w-full" placeholder="Enter subject..." />
+                <div class="flex align-items-center justify-content-between gap-3 mb-2">
+                    <label class="font-semibold text-700">Subject @if (isWithoutNoteSheet) { <span class="text-red-500">*</span> }</label>
+                    @if (isWithoutNoteSheet) {
+                        <!-- Search the subject master, or type the subject by hand -->
+                        <div class="flex align-items-center gap-3 text-sm">
+                            <label class="flex align-items-center gap-1 cursor-pointer">
+                                <input type="radio" name="subjectMode" [checked]="!subjectManual" (change)="setSubjectManual(false)" /> Search
+                            </label>
+                            <label class="flex align-items-center gap-1 cursor-pointer">
+                                <input type="radio" name="subjectMode" [checked]="subjectManual" (change)="setSubjectManual(true)" /> Write manually
+                            </label>
+                        </div>
+                    }
+                </div>
+                @if (isWithoutNoteSheet && !subjectManual) {
+                    <!-- Picked from the General subject master (as on the note sheet); its text is printed -->
+                    <p-select
+                        [options]="subjectOptions"
+                        [(ngModel)]="noteSheetSubjectId"
+                        optionLabel="label"
+                        optionValue="value"
+                        [filter]="true"
+                        [showClear]="true"
+                        placeholder="Select subject"
+                        appendTo="body"
+                        styleClass="w-full"
+                        (onChange)="onSubjectPicked()"
+                    ></p-select>
+                } @else {
+                    <input pInputText [(ngModel)]="subject" class="w-full" placeholder="Enter subject..." />
+                }
             </div>
+
+            @if (isWithoutNoteSheet) {
+                <!-- Order Format — tracking-only tag; one or none (ticking one clears the other) -->
+                <div class="field mb-4 flex flex-wrap align-items-center gap-5">
+                    <div class="flex align-items-center gap-2">
+                        <p-checkbox
+                            inputId="orderFormatFormal"
+                            [binary]="true"
+                            [ngModel]="orderFormat === OrderFormat.Formal"
+                            (onChange)="toggleOrderFormat(OrderFormat.Formal)"
+                        ></p-checkbox>
+                        <label for="orderFormatFormal" class="cursor-pointer">Formal</label>
+                    </div>
+                    <div class="flex align-items-center gap-2">
+                        <p-checkbox
+                            inputId="orderFormatClearance"
+                            [binary]="true"
+                            [ngModel]="orderFormat === OrderFormat.Clearance"
+                            (onChange)="toggleOrderFormat(OrderFormat.Clearance)"
+                        ></p-checkbox>
+                        <label for="orderFormatClearance" class="cursor-pointer">Clearance</label>
+                    </div>
+                </div>
+            }
 
             <!-- Paragraphs (+) — seeded from the selected note sheet, then editable -->
             <div class="field mb-4 p-4 surface-50 border-round">
@@ -158,7 +248,7 @@
                         pTooltip="Add paragraph"
                         (onClick)="addBodyParagraph()"
                     ></p-button>
-                    <small class="text-500">Loaded from the note sheet — edit or remove as needed.</small>
+                    <small class="text-500">{{ isWithoutNoteSheet ? 'Write the order\'s numbered paragraphs.' : 'Loaded from the note sheet — edit or remove as needed.' }}</small>
                 </div>
                 @for (para of bodyParagraphs; track trackByIndex($index); let i = $index) {
                     <div class="flex gap-2 align-items-start mb-3">
@@ -201,6 +291,22 @@
                     <div class="text-500 text-sm py-2">No paragraphs. Click "+" to add one.</div>
                 }
             </div>
+
+            @if (isWithoutNoteSheet) {
+                <!-- Members — shown in the order under paragraph 1, like a note sheet's members table -->
+                <div class="field mb-4">
+                    <div class="flex align-items-center gap-2 mb-3">
+                        <p-checkbox inputId="showMembersTable" [binary]="true" [(ngModel)]="showMembersTable"></p-checkbox>
+                        <label for="showMembersTable" class="cursor-pointer font-medium">Show members table in the office order</label>
+                    </div>
+                    <app-members-editor
+                        [membersData]="membersData"
+                        [isBangla]="isBangla"
+                        [isClearance]="isClearanceSubject"
+                        [showTable]="showMembersTable"
+                    ></app-members-editor>
+                </div>
+            }
 
             <!-- Attachment / সংযুক্ত (rendered above the Onulipi in the document) -->
             <div class="field mb-4 p-4 surface-50 border-round">

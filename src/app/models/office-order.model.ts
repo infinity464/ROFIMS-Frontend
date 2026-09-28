@@ -3,10 +3,12 @@ export interface GeneralNotesheetOfficeOrderDto {
     id: number;
     letterNo: string;
     letterDate: string;
-    noteSheetId: number;
+    /** null → office order generated without a note sheet. */
+    noteSheetId: number | null;
     noteSheetNo: string | null;
-    /** Linked note-sheet's member-type ids — used to scope the list by user access. */
+    /** Member-type ids (linked note sheet's, or the order's own) — used to scope the list by user access. */
     employeeTypeIds?: string | null;
+    orderFormat?: string | null;
     subject: string | null;
     textType: string | null;
     status: string;
@@ -27,7 +29,8 @@ export interface GeneralNotesheetOfficeOrderWithDetailsDto {
     id: number;
     letterNo: string;
     letterDate: string;
-    noteSheetId: number;
+    /** null → office order generated without a note sheet. */
+    noteSheetId: number | null;
     noteSheetNo: string | null;
     subject: string | null;
     addressTo: string | null;       // Rich text HTML
@@ -48,6 +51,17 @@ export interface GeneralNotesheetOfficeOrderWithDetailsDto {
     approvalNote?: string | null;
     cancelReason?: string | null;
     approvalDate?: string | null;
+    // Own note-sheet style inputs (office order without a note sheet)
+    noteSheetSubjectId?: number | null;
+    employeeTypeIds?: string | null;
+    showMembersTable?: boolean;
+    orderFormat?: string | null;
+    unitId?: number | null;
+    wingBattalionId?: number | null;
+    branchId?: number | null;
+    subBranchId?: number | null;
+    sectionId?: number | null;
+    subSectionId?: number | null;
     // NoteSheet content (from view)
     nsMainText?: string | null;
     nsNote?: string | null;
@@ -78,4 +92,29 @@ export interface OnulipiEntry {
 /** Attachment (সংযুক্ত) list entry — plain text, rendered above the Onulipi. */
 export interface AttachmentEntry {
     text: string;
+}
+
+/** Member row of an office order generated without a note sheet (NoteSheetReferenceEmployee shape). */
+export interface OfficeOrderMember {
+    id?: number;
+    officeOrderId?: number;
+    employeeId: number;
+    postedOutId: number | null;
+    informationJson: string | null;   // { columns, values }
+}
+
+/** Note-sheet style inputs an office order carries itself when it has no note sheet. */
+export interface OfficeOrderOwnFields {
+    noteSheetSubjectId?: number | null;
+    employeeTypeIds?: string | null;
+    showMembersTable?: boolean | null;
+    orderFormat?: string | null;
+    unitId?: number | null;
+    wingBattalionId?: number | null;
+    branchId?: number | null;
+    subBranchId?: number | null;
+    sectionId?: number | null;
+    subSectionId?: number | null;
+    /** Omit/null on update to leave members untouched. */
+    members?: OfficeOrderMember[] | null;
 }

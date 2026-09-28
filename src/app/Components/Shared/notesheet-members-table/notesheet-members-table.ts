@@ -22,6 +22,9 @@ export class NotesheetMembersTableComponent implements OnInit, OnChanges {
     private http = inject(HttpClient);
 
     @Input() noteSheetId: number | null = null;
+    /** Office order generated without a note sheet — its members live on the order itself.
+     *  Used only when noteSheetId is empty. */
+    @Input() officeOrderId: number | null = null;
     @Input() isBangla = false;
 
     columns: MembersColumnDef[] = [];
@@ -33,15 +36,20 @@ export class NotesheetMembersTableComponent implements OnInit, OnChanges {
     }
 
     ngOnChanges(changes: SimpleChanges): void {
-        if (changes['noteSheetId'] && !changes['noteSheetId'].firstChange) {
+        const changed = ['noteSheetId', 'officeOrderId'].some(k => changes[k] && !changes[k].firstChange);
+        if (changed) {
             this.loadMembers();
         }
     }
 
     private loadMembers(): void {
-        if (!this.noteSheetId) return;
+        const api = this.noteSheetId
+            ? `${environment.apis.core}/NoteSheetReferenceEmployee/GetByNoteSheetId/${this.noteSheetId}`
+            : this.officeOrderId
+                ? `${environment.apis.core}/OfficeOrder/GetOfficeOrderMembers/${this.officeOrderId}`
+                : null;
+        if (!api) return;
         this.loading = true;
-        const api = `${environment.apis.core}/NoteSheetReferenceEmployee/GetByNoteSheetId/${this.noteSheetId}`;
         this.http.get<any[]>(api).subscribe({
             next: (list) => {
                 const filtered = (Array.isArray(list) ? list : []).filter(r => r.informationJson || r.InformationJson);

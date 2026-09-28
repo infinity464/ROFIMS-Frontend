@@ -2,7 +2,7 @@ import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { environment } from '@/Core/Environments/environment';
-import { GeneralNotesheetOfficeOrderDto, GeneralNotesheetOfficeOrderWithDetailsDto } from '@/models/office-order.model';
+import { GeneralNotesheetOfficeOrderDto, GeneralNotesheetOfficeOrderWithDetailsDto, OfficeOrderMember, OfficeOrderOwnFields } from '@/models/office-order.model';
 import { ApprovedNoteSheetItem } from '@/models/posting.model';
 
 const API = `${environment.apis.core}/OfficeOrder`;
@@ -26,11 +26,16 @@ export class OfficeOrderService {
         return this.http.get<GeneralNotesheetOfficeOrderWithDetailsDto>(`${API}/GetOfficeOrderById/${id}`);
     }
 
-    /** Create a new Office Order. */
-    createOfficeOrder(body: {
+    /** Members of an office order generated without a note sheet. */
+    getOfficeOrderMembers(id: number): Observable<OfficeOrderMember[]> {
+        return this.http.get<OfficeOrderMember[]>(`${API}/GetOfficeOrderMembers/${id}`);
+    }
+
+    /** Create a new Office Order. noteSheetId null → without a note sheet (own fields required). */
+    createOfficeOrder(body: OfficeOrderOwnFields & {
         letterNo: string;
         letterDate: string;
-        noteSheetId: number;
+        noteSheetId: number | null;
         subject?: string | null;
         addressTo?: string | null;
         referenceNo?: string | null;
@@ -48,7 +53,7 @@ export class OfficeOrderService {
     }
 
     /** Update an existing Office Order (blocked if already approved). */
-    updateOfficeOrder(body: {
+    updateOfficeOrder(body: OfficeOrderOwnFields & {
         id: number;
         letterNo: string;
         letterDate: string;

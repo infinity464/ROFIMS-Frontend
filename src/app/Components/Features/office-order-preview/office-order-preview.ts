@@ -177,6 +177,11 @@ export class OfficeOrderPreviewComponent implements OnInit {
         this.router.navigate(['/office-order/generate'], { queryParams: { id: row.id } });
     }
 
+    /** Orders from a note sheet always show members; orders without one follow their own setting. */
+    get showMembersTable(): boolean {
+        return !!this.order && (this.order.noteSheetId != null || this.order.showMembersTable !== false);
+    }
+
     ngOnInit(): void {
         const id = decodeOrderId(this.route.snapshot.queryParamMap.get('id'));
         if (id) {
@@ -385,9 +390,12 @@ export class OfficeOrderPreviewComponent implements OnInit {
 
     /** Load members table data for export */
     private async loadMembersForExport(): Promise<{ columns: any[]; rows: Record<string, string>[] }> {
-        if (!this.order?.noteSheetId) return { columns: [], rows: [] };
+        if (!this.order || !this.showMembersTable) return { columns: [], rows: [] };
         try {
-            const api = `${environment.apis.core}/NoteSheetReferenceEmployee/GetByNoteSheetId/${this.order.noteSheetId}`;
+            // Without a note sheet the members live on the order itself (same row shape).
+            const api = this.order.noteSheetId != null
+                ? `${environment.apis.core}/NoteSheetReferenceEmployee/GetByNoteSheetId/${this.order.noteSheetId}`
+                : `${environment.apis.core}/OfficeOrder/GetOfficeOrderMembers/${this.order.id}`;
             const list = await firstValueFrom(this.http.get<any[]>(api));
             const filtered = (Array.isArray(list) ? list : []).filter(r => r.informationJson || r.InformationJson);
             if (filtered.length > 0) {

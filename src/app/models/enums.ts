@@ -127,6 +127,15 @@ export const NoteSheetTypeOptions = [
     { label: 'Inter Posting', value: NoteSheetType.InterPosting }
 ];
 
+/**
+ * OrderFormat – tag picked under the Subject on an office order generated without a
+ * note sheet. One or none. Tracking only for now.
+ */
+export enum OrderFormat {
+    Formal      = 'Formal',
+    Clearance   = 'Clearance'
+}
+
 /** SubjectCategory – classification of a (General) note-sheet subject. Null = none. */
 export enum SubjectCategory {
     Clearance = 'Clearance',

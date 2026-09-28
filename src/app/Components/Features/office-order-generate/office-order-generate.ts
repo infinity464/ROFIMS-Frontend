@@ -26,7 +26,15 @@ import { MainTextBlock, parseMainTextBlocks } from '@/shared/utils/notesheet-mai
 import { MasterBasicSetupService } from '@/Components/basic-setup/shared/services/MasterBasicSetupService';
 import { ApprovedNoteSheetItem } from '@/models/posting.model';
 import { PostingOrderNumberConfigModel } from '@/Components/basic-setup/shared/models/posting-order-number-config';
-import { CodeType, PostingType } from '@/models/enums';
+import { CodeType, NoteSheetType, OrderFormat, PostingType, SubjectCategory } from '@/models/enums';
+import { buildOfficeOrderLetterNoOptions, toOfficeOrderBodyJson, OFFICE_ORDER_WITHOUT_NOTESHEET } from '@/shared/utils/office-order.util';
+import { NoteSheetSubjectService, NoteSheetSubjectModel } from '@/Components/basic-setup/shared/services/NoteSheetSubjectService';
+import { MultiSelectModule } from 'primeng/multiselect';
+import { CheckboxModule } from 'primeng/checkbox';
+import { MembersEditorComponent } from '@/Components/Shared/members-editor/members-editor';
+import { UnitHierarchySelectComponent } from '@/Components/Shared/unit-hierarchy-select/unit-hierarchy-select';
+import { MembersJsonData } from '@/Components/Features/notesheet-generate/notesheet-generate';
+import { GeneralNotesheetOfficeOrderWithDetailsDto, OfficeOrderOwnFields } from '@/models/office-order.model';
 import { FlexibleDateDirective } from '@/shared/directives/flexible-date.directive';
 import { FileReferencesFormComponent, FileRowData } from '@/Components/Common/file-references-form/file-references-form';
 import { EmpService } from '@/services/emp-service';
@@ -74,7 +82,11 @@ interface OnulipiParagraph {
         Toast,
         ConfirmDialogModule,
         TooltipModule,
-        FileReferencesFormComponent
+        FileReferencesFormComponent,
+        MultiSelectModule,
+        CheckboxModule,
+        MembersEditorComponent,
+        UnitHierarchySelectComponent
     ],
     providers: [MessageService, ConfirmationService],
     templateUrl: './office-order-generate.html',
@@ -137,6 +149,33 @@ export class OfficeOrderGenerateComponent implements OnInit {
     remarks = '';
     saving = false;
 
+    // ─── Office Order without notesheet ──────────────────
+    // Picked from the note-sheet dropdown: the inputs a General note sheet would carry
+    // (language, unit, member types, subject, members) are taken right here instead.
+    readonly OFFICE_ORDER_WITHOUT_NOTESHEET = OFFICE_ORDER_WITHOUT_NOTESHEET;
+    readonly OrderFormat = OrderFormat;
+    @ViewChild(MembersEditorComponent) membersEditor?: MembersEditorComponent;
+    @ViewChild(UnitHierarchySelectComponent) unitSelect?: UnitHierarchySelectComponent;
+    readonly textTypeOptions = [
+        { label: 'English', value: 'en' },
+        { label: 'Bangla', value: 'bn' }
+    ];
+    private subjectPickList: NoteSheetSubjectModel[] = [];
+    subjectOptions: { label: string; value: number }[] = [];
+    noteSheetSubjectId: number | null = null;
+    /** Subject typed by hand instead of picked from the subject master (no subject id then). */
+    subjectManual = false;
+    /** Tracking-only tag under the Subject: Formal | Clearance | null (one or none). */
+    orderFormat: string | null = null;
+    private allMemberTypes: { value: number; en: string; bn: string }[] = [];
+    memberTypeIds: number[] = [];
+    showMembersTable = true;
+    membersData: MembersJsonData = { columns: [], members: [] };
+
+    get isWithoutNoteSheet(): boolean {
+        return this.selectedNoteSheetId === OFFICE_ORDER_WITHOUT_NOTESHEET;
+    }
+
 /** Bangla serial letters */
     private banglaSerials = ['ক', 'খ', 'গ', 'ঘ', 'ঙ', 'চ', 'ছ', 'জ', 'ঝ', 'ঞ', 'ট', 'ঠ', 'ড', 'ঢ', 'ণ', 'ত', 'থ', 'দ', 'ধ', 'ন'];
 
@@ -170,7 +209,8 @@ export class OfficeOrderGenerateComponent implements OnInit {
         private http: HttpClient,
         private router: Router,
         private messageService: MessageService,
-        private confirmationService: ConfirmationService
+        private confirmationService: ConfirmationService,
+        private noteSheetSubjectService: NoteSheetSubjectService
     ) {}
 
     ngOnInit(): void {
@@ -197,6 +237,7 @@ export class OfficeOrderGenerateComponent implements OnInit {
         this.officeOrderService.getOfficeOrderById(id).subscribe({
             next: (data) => {
                 if (!data) return;
+                if (data.noteSheetId == null) this.applyOwnFieldsForEdit(id, data);
                 this.selectedTextType = data.textType === 'bn' ? 'bn' : 'en';
                 this.letterDate = data.letterDate ? new Date(data.letterDate) : new Date();
                 this.manualLetterNo = data.letterNo ?? '';
@@ -289,6 +330,9 @@ export class OfficeOrderGenerateComponent implements OnInit {
             next: ({ configs, memberTypes }) => {
                 this.memberTypeMap = {};
                 (memberTypes ?? []).forEach((t) => { this.memberTypeMap[t.codeId] = t.codeValueEN; });
+                this.allMemberTypes = (memberTypes ?? [])
+                    .filter((mt: any) => mt.status !== false)
+                    .map((mt: any) => ({ value: mt.codeId, en: mt.codeValueEN ?? '', bn: mt.codeValueBN ?? mt.codeValueEN ?? '' }));
                 this.allConfigs = configs ?? [];
                 this.rebuildConfigOptions();
             },
@@ -297,35 +341,7 @@ export class OfficeOrderGenerateComponent implements OnInit {
     }
 
     private rebuildConfigOptions(): void {
-        const isBN = this.selectedTextType === 'bn';
-        const now = new Date();
-        const nowYear = now.getFullYear();
-        const nowMonth = now.getMonth() + 1;
-        this.configOptions = this.allConfigs
-            .filter((c) => c.postingType === PostingType.General && c.status)
-            .map((c) => {
-                const prefixLabel = isBN ? (c.prefixBN || c.prefix) : c.prefix;
-                const yearReset = c.currentYear !== nowYear || c.currentMonth !== nowMonth;
-                const nextNum = yearReset ? c.startNumber : c.currentNumber + 1;
-                let yearStr = String(nowYear);
-                let monthStr = String(nowMonth).padStart(2, '0');
-                let numStr = String(nextNum);
-                if (isBN) {
-                    yearStr = this.toBanglaDigits(yearStr);
-                    monthStr = this.toBanglaDigits(monthStr);
-                    numStr = this.toBanglaDigits(numStr);
-                }
-                const previewNo = c.includeDate
-                    ? `${prefixLabel}/${yearStr}/${monthStr}/${numStr}`
-                    : `${prefixLabel}/${numStr}`;
-                const memberTypeLabel = (c.memberTypeIds ?? '').split(',').filter(Boolean)
-                    .map(id => this.memberTypeMap[+id]).filter(Boolean).join(', ');
-                const memberTypeSuffix = memberTypeLabel ? `  ${memberTypeLabel}` : '';
-                return {
-                    label: `${previewNo}${memberTypeSuffix}`,
-                    value: c.configId
-                };
-            });
+        this.configOptions = buildOfficeOrderLetterNoOptions(this.allConfigs, this.memberTypeMap, this.selectedTextType === 'bn');
         // Auto-select if only one config; force refresh display if already selected
         const currentVal = this.postingOrderNumberConfigId;
         if (this.configOptions.length === 1) {
@@ -336,12 +352,121 @@ export class OfficeOrderGenerateComponent implements OnInit {
     }
 
     get noteSheetDropdownOptions() {
-        return this.approvedNoteSheets
+        const noteSheets = this.approvedNoteSheets
             .filter(ns => this.memberTypeAccess.isAccessible(ns.employeeTypeIds, this.allowedMemberTypeIds))
             .map(ns => ({
                 label: ns.noteSheetNo,
                 value: ns.noteSheetId
             }));
+        // First entry: an order with no note sheet behind it — its note-sheet inputs are taken here.
+        return [{ label: 'Office Order without notesheet', value: OFFICE_ORDER_WITHOUT_NOTESHEET }, ...noteSheets];
+    }
+
+    // ─── Office Order without notesheet ──────────────────
+    /** Start a fresh order with no note sheet: clear the note-sheet seeded fields and load the
+     *  pick lists the extra inputs need. */
+    private startWithoutNoteSheet(): void {
+        this.selectedNoteSheetNo = null;
+        this.selectedNoteSheetApprovedDate = null;
+        this.selectedTextType = 'bn';   // Bangla by default; Letter No, subjects and Onulipi below follow it
+        this.subject = '';
+        this.noteSheetSubjectId = null;
+        this.subjectManual = false;
+        this.orderFormat = null;
+        this.memberTypeIds = [];
+        this.showMembersTable = true;
+        this.membersData = { columns: [], members: [] };
+        this.referenceEntries = [];
+        this.bodyParagraphs = [{ text: '' }];
+        this.attachmentEntries = [];
+        this.postingOrderNumberConfigId = null;
+        this.rebuildConfigOptions();
+        this.loadOnulipiFromConfig();
+        this.loadSubjectPickList();
+    }
+
+    /** Edit an order that has no note sheet: its own fields fill the extra inputs. */
+    private applyOwnFieldsForEdit(id: number, data: GeneralNotesheetOfficeOrderWithDetailsDto): void {
+        this.selectedNoteSheetId = OFFICE_ORDER_WITHOUT_NOTESHEET;
+        this.noteSheetSubjectId = data.noteSheetSubjectId ?? null;
+        // Saved without a subject id → it was typed by hand.
+        this.subjectManual = this.noteSheetSubjectId == null && !!(data.subject ?? '').trim();
+        this.orderFormat = data.orderFormat ?? null;
+        this.memberTypeIds = (data.employeeTypeIds ?? '').split(',').map(s => parseInt(s.trim(), 10)).filter(n => !isNaN(n));
+        this.showMembersTable = data.showMembersTable !== false;
+        this.loadSubjectPickList();
+        const deepestId = data.subSectionId ?? data.sectionId ?? data.subBranchId ?? data.branchId ?? data.wingBattalionId ?? data.unitId;
+        this.officeOrderService.getOfficeOrderMembers(id).subscribe({
+            next: (rows) => {
+                // The editors render once the mode flips on — fill them on the next tick.
+                setTimeout(() => {
+                    this.membersEditor?.loadSavedRows(rows);
+                    this.unitSelect?.selectNode(deepestId);
+                });
+            },
+            error: () => setTimeout(() => this.unitSelect?.selectNode(deepestId))
+        });
+    }
+
+    private loadSubjectPickList(): void {
+        if (this.subjectPickList.length > 0) { this.buildSubjectOptions(); return; }
+        this.noteSheetSubjectService.getActiveByType(NoteSheetType.General).subscribe({
+            next: (list) => {
+                this.subjectPickList = Array.isArray(list) ? list : [];
+                this.buildSubjectOptions();
+            },
+            error: () => { this.subjectPickList = []; this.subjectOptions = []; }
+        });
+    }
+
+    /** Subject labels follow the order's language. */
+    private buildSubjectOptions(): void {
+        this.subjectOptions = this.subjectPickList.map((s) => ({
+            label: (this.isBangla ? s.subjectBN : s.subjectEN) || s.subjectEN || s.subjectBN || '',
+            value: s.id
+        }));
+    }
+
+    /** Mirror the picked subject's text (current language) into the printed subject. */
+    onSubjectPicked(): void {
+        const picked = this.subjectPickList.find((s) => s.id === this.noteSheetSubjectId);
+        this.subject = picked ? ((this.isBangla ? picked.subjectBN : picked.subjectEN) || picked.subjectEN || picked.subjectBN || '') : '';
+    }
+
+    /** Switch between searching the subject master and typing the subject by hand. Going manual
+     *  keeps the picked text as a starting point; going back to search clears the typed text. */
+    setSubjectManual(manual: boolean): void {
+        if (this.subjectManual === manual) return;
+        this.subjectManual = manual;
+        this.noteSheetSubjectId = null;
+        if (!manual) this.subject = '';
+    }
+
+    /** Clearance subject → members must be posted-out (checked when adding) and at least one is required. */
+    get isClearanceSubject(): boolean {
+        return this.subjectPickList.find((s) => s.id === this.noteSheetSubjectId)?.subjectCategory === SubjectCategory.Clearance;
+    }
+
+    /** Member type options limited to the user's accessible set (label follows language). */
+    get memberTypeOptions(): { label: string; value: number }[] {
+        const allowed = this.allowedMemberTypeIds;
+        return this.allMemberTypes
+            .filter((o) => allowed == null || allowed.includes(o.value))
+            .map((o) => ({ label: (this.isBangla ? o.bn : o.en) || o.en || o.bn || String(o.value), value: o.value }));
+    }
+
+    /** Language switch (without-notesheet mode): relabel pick lists, serials and the subject. */
+    onTextTypeChange(): void {
+        this.rebuildConfigOptions();
+        this.buildSubjectOptions();
+        if (!this.subjectManual && this.noteSheetSubjectId != null) this.onSubjectPicked();
+        this.referenceEntries.forEach((e, i) => e.serial = this.getReferenceSerial(i));
+        if (!this.editMode) this.loadOnulipiFromConfig();
+    }
+
+    /** Order Format checkboxes behave like a clearable radio pair: one or none. */
+    toggleOrderFormat(value: OrderFormat): void {
+        this.orderFormat = this.orderFormat === value ? null : value;
     }
 
     /** Resolve the current user's accessible member type ids (cache first, then always refetch). */
@@ -358,6 +483,10 @@ export class OfficeOrderGenerateComponent implements OnInit {
     /** When a notesheet is selected, auto-fill Subject, TextType, body and the
      *  সূত্র (Reference No) list. */
     onNoteSheetChange(): void {
+        if (this.isWithoutNoteSheet) {
+            this.startWithoutNoteSheet();
+            return;
+        }
         this.selectedNoteSheetNo = null;
         this.selectedNoteSheetApprovedDate = null;
         this.subject = '';
@@ -494,10 +623,7 @@ export class OfficeOrderGenerateComponent implements OnInit {
     /** Non-empty paragraphs as the stored JSON array, or null when there are none.
      *  Quill leaves an empty editor as "<p><br></p>", which must not count as text. */
     private get bodyJson(): string | null {
-        const cleaned = this.bodyParagraphs
-            .map(b => ({ text: (b.text ?? '').trim() }))
-            .filter(b => b.text !== '' && b.text.replace(/<[^>]*>/g, '').replace(/&nbsp;/g, ' ').trim() !== '');
-        return cleaned.length > 0 ? JSON.stringify(cleaned) : null;
+        return toOfficeOrderBodyJson(this.bodyParagraphs.map(b => b.text));
     }
 
     // ─── Attachments (সংযুক্ত) ──────────────
@@ -587,6 +713,20 @@ export class OfficeOrderGenerateComponent implements OnInit {
         return `${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
     }
 
+    /** The order's own note-sheet style inputs — only for an order without a note sheet. */
+    private buildOwnFields(): OfficeOrderOwnFields {
+        if (!this.isWithoutNoteSheet) return {};
+        return {
+            noteSheetSubjectId: this.noteSheetSubjectId,
+            employeeTypeIds: this.memberTypeIds.join(',') || null,
+            showMembersTable: this.showMembersTable,
+            orderFormat: this.orderFormat,
+            ...(this.unitSelect?.getHierarchyIds() ?? {}),
+            // null (editor not rendered) leaves saved members untouched on update
+            members: this.membersEditor?.toSaveRows() ?? null
+        };
+    }
+
     onGenerate(): void {
         // Guard against double submission while a save is already in flight.
         if (this.saving) return;
@@ -601,6 +741,16 @@ export class OfficeOrderGenerateComponent implements OnInit {
         if (!this.selectedApprovalEmployeeId) {
             this.messageService.add({ severity: 'warn', summary: 'Warning', detail: 'Please select an approval person.' });
             return;
+        }
+        if (this.isWithoutNoteSheet) {
+            if (this.subjectManual ? !this.subject?.trim() : !this.noteSheetSubjectId) {
+                this.messageService.add({ severity: 'warn', summary: 'Warning', detail: this.subjectManual ? 'Please write the subject.' : 'Please select a subject.' });
+                return;
+            }
+            if (this.isClearanceSubject && this.membersData.members.length === 0) {
+                this.messageService.add({ severity: 'warn', summary: 'Members required', detail: 'This is a clearance subject — add at least one posted-out member.' });
+                return;
+            }
         }
 
         this.saving = true;
@@ -622,9 +772,11 @@ export class OfficeOrderGenerateComponent implements OnInit {
             const attachmentsJson = this.attachmentEntries.filter(a => a.text.trim()).length > 0
                 ? JSON.stringify(this.attachmentEntries.filter(a => a.text.trim()).map(a => ({ text: a.text.trim() })))
                 : null;
+            const ownFields = this.buildOwnFields();
 
             const saveObs = this.editMode && this.editId
                 ? this.officeOrderService.updateOfficeOrder({
+                    ...ownFields,
                     id: this.editId,
                     letterNo: this.manualLetterNo || '',
                     letterDate: this.formatDateToString(this.letterDate),
@@ -641,9 +793,10 @@ export class OfficeOrderGenerateComponent implements OnInit {
                     approvalEmployeeId: this.selectedApprovalEmployeeId ?? null
                 })
                 : this.officeOrderService.createOfficeOrder({
+                    ...ownFields,
                     letterNo: '',
                     letterDate: this.formatDateToString(this.letterDate),
-                    noteSheetId: this.selectedNoteSheetId!,
+                    noteSheetId: this.isWithoutNoteSheet ? null : this.selectedNoteSheetId!,
                     subject: this.subject || null,
                     addressTo: this.addressTo?.trim() || null,
                     referenceNo: refJson,
