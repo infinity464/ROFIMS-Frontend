@@ -19,6 +19,7 @@ import { EducationInfoService, EducationInfoByEmployeeView } from '@/services/ed
 import { ForeignVisitInfoService, ForeignVisitInfoByEmployeeView } from '@/services/foreign-visit-info.service';
 import { LeaveInfoService, LeaveInfoByEmployeeView, LeaveInfoSummaryItem } from '@/services/leave-info.service';
 import { AdditionalRemarksInfoService, AdditionalRemarksInfo } from '@/services/additional-remarks-info.service';
+import { OfficeOrderService } from '@/services/office-order.service';
 import { AddressInfoService, AddressInfoByEmployeeView } from '@/services/address-info.service';
 import { MOServHistoryService, MOServHistoryByEmployeeView } from '@/services/mo-serv-history.service';
 import { DisciplineInfoService, DisciplineInfoByEmployeeView } from '@/services/discipline-info.service';
@@ -131,6 +132,15 @@ export class ExMemberProfile implements OnInit, OnDestroy {
     foreignVisitList: ForeignVisitInfoByEmployeeView[] = [];
     leaveList: LeaveInfoByEmployeeView[] = [];
     additionalRemarksList: AdditionalRemarksInfo[] = [];
+    /** "Formal / Clearance is given (subject)" from the member's latest approved office order. */
+    officeOrderRemark: { remark: string | null; remarkBN: string | null } | null = null;
+
+    /** Office-order remark in the profile's language, or '' when there is none. */
+    get officeOrderRemarkText(): string {
+        const r = this.officeOrderRemark;
+        if (!r) return '';
+        return ((this.isBn ? (r.remarkBN || r.remark) : (r.remark || r.remarkBN)) ?? '').trim();
+    }
     addressList: AddressInfoByEmployeeView[] = [];
     moServHistoryList: MOServHistoryByEmployeeView[] = [];
     disciplineList: DisciplineInfoByEmployeeView[] = [];
@@ -200,7 +210,8 @@ export class ExMemberProfile implements OnInit, OnDestroy {
         private movementInfoService: MovementInfoService,
         private postingService: PostingService,
         private permanentPostingMORecordService: PermanentPostingMORecordService,
-        private http: HttpClient
+        private http: HttpClient,
+        private officeOrderService: OfficeOrderService
     ) {}
 
     @HostListener('document:click')
@@ -493,6 +504,12 @@ export class ExMemberProfile implements OnInit, OnDestroy {
 
         // Additional Remarks
         const remRows = this.additionalRemarksList.map((row, i) => [this.rowNum(i) + '.', this.val(row.additionalRemarks)]);
+        // Office-order remark (Formal / Clearance is given) leads the list, as on screen.
+        const ooRemark = this.officeOrderRemarkText;
+        if (ooRemark) {
+            remRows.forEach((r, i) => (r[0] = this.rowNum(i + 1) + '.'));
+            remRows.unshift([this.rowNum(0) + '.', ooRemark]);
+        }
         if (remRows.length === 0) remRows.push([L['empty.noAdditionalRemarks']]);
         addSection(L['section.additionalRemarks'], [L['table.ser'], L['table.additionalRemarks']], remRows);
 
@@ -902,6 +919,7 @@ export class ExMemberProfile implements OnInit, OnDestroy {
             this.computePresentLeaveAndMovement();
         });
         this.loadSection('additionalRemarks', this.additionalRemarksInfoService.getByEmployeeId(id), (v) => (this.additionalRemarksList = v ?? []));
+        this.loadSection('officeOrderRemark', this.officeOrderService.getMemberOfficeOrderRemark(id), (v) => (this.officeOrderRemark = v ?? null));
         this.loadSection('address', this.addressInfoService.getViewByEmployeeId(id), (v) => (this.addressList = v ?? []));
         this.loadSection('moServHistory', this.moServHistoryService.getViewByEmployeeId(id), (v) => (this.moServHistoryList = v ?? []));
         this.loadSection('discipline', this.disciplineInfoService.getViewByEmployeeId(id), (v) => (this.disciplineList = v ?? []));

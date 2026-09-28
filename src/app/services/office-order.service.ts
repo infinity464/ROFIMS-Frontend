@@ -26,6 +26,11 @@ export class OfficeOrderService {
         return this.http.get<GeneralNotesheetOfficeOrderWithDetailsDto>(`${API}/GetOfficeOrderById/${id}`);
     }
 
+    /** A member's "Formal / Clearance is given (subject)" remark (both null when none). */
+    getMemberOfficeOrderRemark(employeeId: number): Observable<{ remark: string | null; remarkBN: string | null }> {
+        return this.http.get<{ remark: string | null; remarkBN: string | null }>(`${API}/GetMemberOfficeOrderRemark/${employeeId}`);
+    }
+
     /** Members of an office order generated without a note sheet. */
     getOfficeOrderMembers(id: number): Observable<OfficeOrderMember[]> {
         return this.http.get<OfficeOrderMember[]>(`${API}/GetOfficeOrderMembers/${id}`);
