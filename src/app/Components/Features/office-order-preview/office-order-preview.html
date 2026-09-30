@@ -5,6 +5,16 @@
     <div class="form-card">
         <div class="form-card-header">
             <h3 class="form-card-title">Office Order List</h3>
+            <!-- Order Format filter (Formal / Clearance); cleared → all orders -->
+            <p-select
+                [options]="orderFormatOptions"
+                [(ngModel)]="orderFormatFilter"
+                optionLabel="label"
+                optionValue="value"
+                placeholder="All Formats"
+                [showClear]="true"
+                styleClass="w-12rem"
+            ></p-select>
         </div>
 
         <p-table

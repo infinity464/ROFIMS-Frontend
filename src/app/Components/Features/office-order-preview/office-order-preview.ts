@@ -16,6 +16,7 @@ import { TableModule } from 'primeng/table';
 import { IconField as IconFieldModule } from 'primeng/iconfield';
 import { InputIcon as InputIconModule } from 'primeng/inputicon';
 import { InputTextModule } from 'primeng/inputtext';
+import { SelectModule } from 'primeng/select';
 import { MessageService } from 'primeng/api';
 import { environment } from '@/Core/Environments/environment';
 import { OfficeOrderService } from '@/services/office-order.service';
@@ -46,6 +47,7 @@ import { firstValueFrom } from 'rxjs';
         IconFieldModule,
         InputIconModule,
         InputTextModule,
+        SelectModule,
         NotesheetMembersTableComponent
     ],
     providers: [MessageService],
@@ -73,8 +75,12 @@ export class OfficeOrderPreviewComponent implements OnInit {
     // ─── List mode ───────────────────────────────────
     orders: GeneralNotesheetOfficeOrderDto[] = [];
     loadingList = false;
-    /** List filter by Order Format: Formal | Clearance | null (all). One or none, like the generate page. */
+    /** List filter by Order Format: Formal | Clearance | null (all). */
     orderFormatFilter: OrderFormat | null = null;
+    readonly orderFormatOptions = [
+        { label: 'Formal', value: OrderFormat.Formal },
+        { label: 'Clearance', value: OrderFormat.Clearance }
+    ];
 
     get filteredOrders(): GeneralNotesheetOfficeOrderDto[] {
         return this.orderFormatFilter ? this.orders.filter(o => o.orderFormat === this.orderFormatFilter) : this.orders;
@@ -220,10 +226,6 @@ export class OfficeOrderPreviewComponent implements OnInit {
         this.viewMode = 'detail';
         this.router.navigate(['/office-order/preview'], { queryParams: { id: encodeOrderId(row.id) } });
         this.loadOrder(row.id);
-    }
-
-    toggleOrderFormatFilter(value: OrderFormat): void {
-        this.orderFormatFilter = this.orderFormatFilter === value ? null : value;
     }
 
     onGlobalFilter(table: any, event: Event): void {
