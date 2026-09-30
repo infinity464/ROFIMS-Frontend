@@ -19,7 +19,7 @@ import { EducationInfoService, EducationInfoByEmployeeView } from '@/services/ed
 import { ForeignVisitInfoService, ForeignVisitInfoByEmployeeView } from '@/services/foreign-visit-info.service';
 import { LeaveInfoService, LeaveInfoByEmployeeView, LeaveInfoSummaryItem } from '@/services/leave-info.service';
 import { AdditionalRemarksInfoService, AdditionalRemarksInfo } from '@/services/additional-remarks-info.service';
-import { OfficeOrderService } from '@/services/office-order.service';
+import { OfficeOrderService, MemberOfficeOrderRemark } from '@/services/office-order.service';
 import { AddressInfoService, AddressInfoByEmployeeView } from '@/services/address-info.service';
 import { MOServHistoryService, MOServHistoryByEmployeeView } from '@/services/mo-serv-history.service';
 import { DisciplineInfoService, DisciplineInfoByEmployeeView } from '@/services/discipline-info.service';
@@ -133,13 +133,20 @@ export class ExMemberProfile implements OnInit, OnDestroy {
     leaveList: LeaveInfoByEmployeeView[] = [];
     additionalRemarksList: AdditionalRemarksInfo[] = [];
     /** "Formal / Clearance is given (subject)" from the member's latest approved office order. */
-    officeOrderRemark: { remark: string | null; remarkBN: string | null } | null = null;
+    officeOrderRemark: MemberOfficeOrderRemark | null = null;
 
     /** Office-order remark in the profile's language, or '' when there is none. */
     get officeOrderRemarkText(): string {
         const r = this.officeOrderRemark;
         if (!r) return '';
         return ((this.isBn ? (r.remarkBN || r.remark) : (r.remark || r.remarkBN)) ?? '').trim();
+    }
+
+    /** "RTU (subject, date)" in the profile's language when an RTU office order marked the member, else ''. */
+    get rtuRemarkText(): string {
+        const r = this.officeOrderRemark;
+        if (!r) return '';
+        return ((this.isBn ? (r.rtuRemarkBN || r.rtuRemark) : (r.rtuRemark || r.rtuRemarkBN)) ?? '').trim();
     }
     addressList: AddressInfoByEmployeeView[] = [];
     moServHistoryList: MOServHistoryByEmployeeView[] = [];

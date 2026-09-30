@@ -7,6 +7,14 @@ import { ApprovedNoteSheetItem } from '@/models/posting.model';
 
 const API = `${environment.apis.core}/OfficeOrder`;
 
+/** Member remarks from vw_MemberAllRemarks (same text as the member-type report's Remarks column). */
+export interface MemberOfficeOrderRemark {
+    remark: string | null;
+    remarkBN: string | null;
+    rtuRemark?: string | null;
+    rtuRemarkBN?: string | null;
+}
+
 @Injectable({ providedIn: 'root' })
 export class OfficeOrderService {
     constructor(private http: HttpClient) {}
@@ -26,9 +34,9 @@ export class OfficeOrderService {
         return this.http.get<GeneralNotesheetOfficeOrderWithDetailsDto>(`${API}/GetOfficeOrderById/${id}`);
     }
 
-    /** A member's "Formal / Clearance is given (subject)" remark (both null when none). */
-    getMemberOfficeOrderRemark(employeeId: number): Observable<{ remark: string | null; remarkBN: string | null }> {
-        return this.http.get<{ remark: string | null; remarkBN: string | null }>(`${API}/GetMemberOfficeOrderRemark/${employeeId}`);
+    /** A member's "Formal / Clearance is given (subject)" remark and "RTU (subject, date)" remark (null when none). */
+    getMemberOfficeOrderRemark(employeeId: number): Observable<MemberOfficeOrderRemark> {
+        return this.http.get<MemberOfficeOrderRemark>(`${API}/GetMemberOfficeOrderRemark/${employeeId}`);
     }
 
     /** Members of an office order generated without a note sheet. */

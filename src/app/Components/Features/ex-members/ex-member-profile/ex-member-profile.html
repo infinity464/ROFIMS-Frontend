@@ -56,6 +56,24 @@
                     }
                 </div>
                 }
+                <!-- Line: RTU (set by an approved RTU office order) -->
+                @if (rtuRemarkText) {
+                <div class="sp-chip-row">
+                    <span class="sp-chip sp-chip--danger">
+                        <i class="pi pi-undo"></i>
+                        <span class="sp-chip-val">{{ rtuRemarkText }}</span>
+                    </span>
+                </div>
+                }
+                <!-- Line: Formal / Clearance is given (set by an approved office order) -->
+                @if (officeOrderRemarkText) {
+                <div class="sp-chip-row">
+                    <span class="sp-chip sp-chip--location">
+                        <i class="pi pi-file-check"></i>
+                        <span class="sp-chip-val">{{ officeOrderRemarkText }}</span>
+                    </span>
+                </div>
+                }
                 <!-- Line: New Posting -->
                 @if (postingProcessingStatus?.newPostingStep && !postingProcessingStatus!.newPostingOrderReceived) {
                 <div class="sp-chip-row">
@@ -1165,12 +1183,6 @@
             }
         </div>
         @if (editingSection !== 'additionalRemarks') {
-        @if (officeOrderRemarkText) {
-        <!-- From the latest approved office order tagged Formal / Clearance (not editable here) -->
-        <div class="mb-2 px-3 py-2 border-round surface-100 text-700">
-            <i class="pi pi-file-check mr-2 text-primary"></i>{{ officeOrderRemarkText }}
-        </div>
-        }
         <div class="sp-table-wrap">
             <p-table [value]="additionalRemarksList" [loading]="sectionLoading['additionalRemarks']" [tableStyle]="{ 'min-width': '40rem' }" styleClass="p-datatable-sm p-datatable-gridlines family-info-table">
                 <ng-template pTemplate="header">
