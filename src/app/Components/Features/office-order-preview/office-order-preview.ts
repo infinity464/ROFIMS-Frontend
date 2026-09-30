@@ -22,7 +22,7 @@ import { OfficeOrderService } from '@/services/office-order.service';
 import { EmpService } from '@/services/emp-service';
 import { GeneralNotesheetOfficeOrderDto, GeneralNotesheetOfficeOrderWithDetailsDto, ReferenceNoEntry, OnulipiEntry, AttachmentEntry } from '@/models/office-order.model';
 import { mainTextBlocksToHtml } from '@/shared/utils/notesheet-main-text';
-import { ApprovalStatus } from '@/models/enums';
+import { ApprovalStatus, OrderFormat } from '@/models/enums';
 import { NotesheetMembersTableComponent } from '@/Components/Shared/notesheet-members-table/notesheet-members-table';
 import { JsReportService } from '@/services/jsreport.service';
 import { Document, Packer, Paragraph, TextRun, AlignmentType, BorderStyle, HeadingLevel, Table, TableRow, TableCell, WidthType, VerticalAlign, TableLayoutType, TabStopType } from 'docx';
@@ -65,6 +65,7 @@ export class OfficeOrderPreviewComponent implements OnInit {
     @ViewChild('legalPaper') legalPaper!: ElementRef<HTMLDivElement>;
 
     readonly ApprovalStatus = ApprovalStatus;
+    readonly OrderFormat = OrderFormat;
 
     // ─── View mode ───────────────────────────────────
     viewMode: 'list' | 'detail' = 'list';
@@ -72,6 +73,12 @@ export class OfficeOrderPreviewComponent implements OnInit {
     // ─── List mode ───────────────────────────────────
     orders: GeneralNotesheetOfficeOrderDto[] = [];
     loadingList = false;
+    /** List filter by Order Format: Formal | Clearance | null (all). One or none, like the generate page. */
+    orderFormatFilter: OrderFormat | null = null;
+
+    get filteredOrders(): GeneralNotesheetOfficeOrderDto[] {
+        return this.orderFormatFilter ? this.orders.filter(o => o.orderFormat === this.orderFormatFilter) : this.orders;
+    }
 
     // ─── Detail mode ─────────────────────────────────
     order: GeneralNotesheetOfficeOrderWithDetailsDto | null = null;
@@ -213,6 +220,10 @@ export class OfficeOrderPreviewComponent implements OnInit {
         this.viewMode = 'detail';
         this.router.navigate(['/office-order/preview'], { queryParams: { id: encodeOrderId(row.id) } });
         this.loadOrder(row.id);
+    }
+
+    toggleOrderFormatFilter(value: OrderFormat): void {
+        this.orderFormatFilter = this.orderFormatFilter === value ? null : value;
     }
 
     onGlobalFilter(table: any, event: Event): void {
@@ -958,14 +969,23 @@ html, body { margin: 0; padding: 0; background: transparent; }
                     this.savingApproval = false;
                     if (res.statusCode === 200) {
                         this.messageService.add({ severity: 'success', summary: 'Success', detail: this.isBangla ? 'অফিস আদেশ অনুমোদিত হয়েছে।' : 'Office Order approved.' });
-                        // Promotion subject → server applied promotion history + rank per member.
-                        const promotion = (res as any).data;
-                        if (promotion && typeof promotion.applied === 'number') {
+                        // Promotion subject → promotion history + rank per member; RTU subject → members flagged RTU.
+                        const approvalResult = (res as any).data;
+                        if (approvalResult && typeof approvalResult.applied === 'number') {
                             this.messageService.add({
-                                severity: promotion.rankMismatch > 0 ? 'warn' : 'info',
+                                severity: approvalResult.rankMismatch > 0 ? 'warn' : 'info',
                                 summary: 'Promotion',
-                                detail: `Rank updated: ${promotion.applied}, already on promoted rank: ${promotion.alreadyOnRank}`
-                                    + (promotion.rankMismatch > 0 ? `, not updated (rank did not match previous rank): ${promotion.rankMismatch}` : ''),
+                                detail: `Rank updated: ${approvalResult.applied}, already on promoted rank: ${approvalResult.alreadyOnRank}`
+                                    + (approvalResult.rankMismatch > 0 ? `, not updated (rank did not match previous rank): ${approvalResult.rankMismatch}` : ''),
+                                life: 8000
+                            });
+                        }
+                        // RTU subject → server flagged the members as RTU.
+                        if (approvalResult && typeof approvalResult.rtuMarked === 'number') {
+                            this.messageService.add({
+                                severity: 'info',
+                                summary: 'RTU',
+                                detail: `Marked RTU: ${approvalResult.rtuMarked}, already RTU: ${approvalResult.alreadyRtu}`,
                                 life: 8000
                             });
                         }

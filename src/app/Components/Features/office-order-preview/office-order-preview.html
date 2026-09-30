@@ -9,7 +9,7 @@
 
         <p-table
             #dt
-            [value]="orders"
+            [value]="filteredOrders"
             [loading]="loadingList"
             dataKey="id"
             [tableStyle]="{ 'min-width': '60rem' }"
@@ -34,6 +34,7 @@
                     <th style="min-width: 110px">Date</th>
                     <th style="min-width: 200px">Subject</th>
                     <th style="min-width: 140px">NoteSheet No</th>
+                    <th style="min-width: 100px">Format</th>
                     <th style="min-width: 90px">Status</th>
                     <th style="min-width: 120px">Approval</th>
                     <th style="min-width: 100px">Created By</th>
@@ -48,6 +49,7 @@
                     <td>{{ formatDate(row.letterDate) }}</td>
                     <td>{{ row.subject || '-' }}</td>
                     <td>{{ row.noteSheetId == null ? 'Without Note Sheet' : (row.noteSheetNo || '-') }}</td>
+                    <td>{{ row.orderFormat || '-' }}</td>
                     <td>{{ row.status || '-' }}</td>
                     <td>
                         <p-tag [value]="approvalStatusLabel(row.approvalStatus)" [severity]="approvalStatusSeverity(row.approvalStatus)"></p-tag>
@@ -62,7 +64,7 @@
             </ng-template>
             <ng-template pTemplate="emptymessage">
                 <tr>
-                    <td colspan="10" class="text-center p-4">
+                    <td colspan="11" class="text-center p-4">
                         <div class="flex flex-column align-items-center gap-3 py-5">
                             <i class="pi pi-inbox text-5xl text-400"></i>
                             <span class="text-lg text-500">No office orders found.</span>
