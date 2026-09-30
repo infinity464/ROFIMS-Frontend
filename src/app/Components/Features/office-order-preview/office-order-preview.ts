@@ -958,6 +958,17 @@ html, body { margin: 0; padding: 0; background: transparent; }
                     this.savingApproval = false;
                     if (res.statusCode === 200) {
                         this.messageService.add({ severity: 'success', summary: 'Success', detail: this.isBangla ? 'অফিস আদেশ অনুমোদিত হয়েছে।' : 'Office Order approved.' });
+                        // Promotion subject → server applied promotion history + rank per member.
+                        const promotion = (res as any).data;
+                        if (promotion && typeof promotion.applied === 'number') {
+                            this.messageService.add({
+                                severity: promotion.rankMismatch > 0 ? 'warn' : 'info',
+                                summary: 'Promotion',
+                                detail: `Rank updated: ${promotion.applied}, already on promoted rank: ${promotion.alreadyOnRank}`
+                                    + (promotion.rankMismatch > 0 ? `, not updated (rank did not match previous rank): ${promotion.rankMismatch}` : ''),
+                                life: 8000
+                            });
+                        }
                         this.showApprovalModal = false;
                         this.loadOrder(id);
                     } else {

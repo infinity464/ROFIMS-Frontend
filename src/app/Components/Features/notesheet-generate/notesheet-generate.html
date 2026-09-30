@@ -144,6 +144,55 @@
           </div>
         </div>
 
+        <!-- Promotion subject: ranks + date, applied to every member when the office order is approved -->
+        @if (isPromotionSubjectSelected) {
+        <div class="form-row">
+          <div class="form-field">
+            <label class="form-label">Previous Rank <span class="form-label-required">*</span></label>
+            <p-select
+              formControlName="promotionPreviousRankId"
+              [options]="promotionRankOptions"
+              optionLabel="label"
+              optionValue="value"
+              [filter]="true"
+              [showClear]="true"
+              [placeholder]="promotionRankOptions.length ? 'Select previous rank' : 'Add a member to load ranks'"
+              appendTo="body"
+              styleClass="w-full">
+            </p-select>
+            @if (form.get('promotionPreviousRankId')?.invalid && form.get('promotionPreviousRankId')?.touched) {
+              <small class="form-error">Previous rank is required</small>
+            }
+          </div>
+
+          <div class="form-field">
+            <label class="form-label">Promoted Rank <span class="form-label-required">*</span></label>
+            <p-select
+              formControlName="promotionPromotedRankId"
+              [options]="promotionRankOptions"
+              optionLabel="label"
+              optionValue="value"
+              [filter]="true"
+              [showClear]="true"
+              [placeholder]="promotionRankOptions.length ? 'Select promoted rank' : 'Add a member to load ranks'"
+              appendTo="body"
+              styleClass="w-full">
+            </p-select>
+            @if (form.get('promotionPromotedRankId')?.invalid && form.get('promotionPromotedRankId')?.touched) {
+              <small class="form-error">Promoted rank is required</small>
+            }
+          </div>
+
+          <div class="form-field" style="flex: 0 0 180px; max-width: 180px;">
+            <label class="form-label">Promotion Date <span class="form-label-required">*</span></label>
+            <p-datepicker formControlName="promotionDate" dateFormat="dd-mm-yy" styleClass="w-full" placeholder="Select date" appendTo="body"></p-datepicker>
+            @if (form.get('promotionDate')?.invalid && form.get('promotionDate')?.touched) {
+              <small class="form-error">Promotion date is required</small>
+            }
+          </div>
+        </div>
+        }
+
         <!-- Reference Number Paragraphs (collapsible) -->
         <p-fieldset legend="Reference Number" [toggleable]="true" [collapsed]="true">
           <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem;">

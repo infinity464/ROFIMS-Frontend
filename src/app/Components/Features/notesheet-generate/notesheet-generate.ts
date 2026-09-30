@@ -299,6 +299,13 @@ export class NotesheetGenerateComponent implements OnInit {
     private subjectPickList: NoteSheetSubjectModel[] = [];
     subjectOptions: { label: string; value: number }[] = [];
 
+    // Promotion subject — Previous / Promoted rank (CommonCode 'MotherOrgRank' of the members'
+    // mother org) + promotion date. Applied to every member when the office order is approved.
+    private promotionRanks: CommonCode[] = [];
+    promotionRankOptions: { label: string; value: number }[] = [];
+    /** Mother org of the promotion members — every member must share it (ranks are per org). */
+    private promotionOrgId: number | null = null;
+
     // NoteSheet number config
     allNoteSheetConfigs: any[] = [];
     private memberTypeMap = new Map<number, { en: string; bn: string }>();
@@ -363,7 +370,11 @@ export class NotesheetGenerateComponent implements OnInit {
             showMembersTable: [true],
             noteSheetOperationType: [NoteSheetOperationType.Manual as string, Validators.required],
             referenceEmployeeIds: [[] as number[]],
-            memberTypeIds: [[] as number[]]
+            memberTypeIds: [[] as number[]],
+            // Promotion subject only — required via applyPromotionValidators().
+            promotionPreviousRankId: [null as number | null],
+            promotionPromotedRankId: [null as number | null],
+            promotionDate: [null as Date | null]
         });
     }
 
@@ -401,6 +412,7 @@ export class NotesheetGenerateComponent implements OnInit {
         this.form.get('textType')?.valueChanges.subscribe((newType: string) => {
             this.buildNoteSheetConfigOptions();
             this.buildSubjectOptions();
+            this.buildPromotionRankOptions();
             // Type drives the whole document's language — reflect it in the (untouched) member table too.
             this.relanguageDefaultColumns();
             if (this.editMode) {
@@ -417,6 +429,8 @@ export class NotesheetGenerateComponent implements OnInit {
             next: (list) => {
                 this.subjectPickList = Array.isArray(list) ? list : [];
                 this.buildSubjectOptions();
+                this.applyPromotionValidators();
+                this.ensurePromotionRanksLoaded();
             },
             error: () => {
                 this.subjectPickList = [];
@@ -437,6 +451,11 @@ export class NotesheetGenerateComponent implements OnInit {
     /** Mirror the picked subject's text into `subject` (stored for list/search; preview resolves BN/EN by id). */
     onSubjectPicked(id: number | null): void {
         this.form.get('subject')?.setValue(this.subjectTextById(id, this.form.get('textType')?.value === 'bn'));
+        if (!this.isPromotionSubjectSelected) {
+            this.form.patchValue({ promotionPreviousRankId: null, promotionPromotedRankId: null, promotionDate: null });
+        }
+        this.applyPromotionValidators();
+        this.ensurePromotionRanksLoaded();
     }
 
     /** Resolve a subject's display text (current language) from the master list by id. */
@@ -451,6 +470,95 @@ export class NotesheetGenerateComponent implements OnInit {
         const id = this.form.get('noteSheetSubjectId')?.value;
         if (id == null) return false;
         return this.subjectPickList.find((s) => s.id === id)?.subjectCategory === SubjectCategory.Clearance;
+    }
+
+    /** True when the selected subject's category is Promotion — Previous rank, Promoted rank and
+     *  Promotion date become required; on office order approval each member's rank is updated. */
+    get isPromotionSubjectSelected(): boolean {
+        const id = this.form.get('noteSheetSubjectId')?.value;
+        if (id == null) return false;
+        return this.subjectPickList.find((s) => s.id === id)?.subjectCategory === SubjectCategory.Promotion;
+    }
+
+    private applyPromotionValidators(): void {
+        const required = this.isPromotionSubjectSelected;
+        for (const name of ['promotionPreviousRankId', 'promotionPromotedRankId', 'promotionDate']) {
+            const ctrl = this.form.get(name);
+            if (!ctrl) continue;
+            ctrl.setValidators(required ? Validators.required : null);
+            ctrl.updateValueAndValidity({ emitEvent: false });
+        }
+    }
+
+    /** Load the rank list for the promotion org (or the first member's org, e.g. in edit mode). */
+    private ensurePromotionRanksLoaded(): void {
+        if (!this.isPromotionSubjectSelected || this.promotionRanks.length > 0) return;
+        if (this.promotionOrgId != null) {
+            this.loadPromotionRanks(this.promotionOrgId);
+            return;
+        }
+        const first = this.membersData.members[0];
+        if (!first) return;
+        this.servingMembersService.getEmployeePersonalServiceOverview(first.employeeId).pipe(catchError(() => of(null))).subscribe((profile) => {
+            if (profile?.motherOrganizationId != null && this.promotionOrgId == null) {
+                this.promotionOrgId = profile.motherOrganizationId;
+                this.loadPromotionRanks(profile.motherOrganizationId);
+            }
+        });
+    }
+
+    private loadPromotionRanks(orgId: number): void {
+        this.masterBasicSetupService.getAllActiveCommonCodesByOrgIdAndType(orgId, CodeType.MotherOrgRank)
+            .pipe(catchError(() => of([] as CommonCode[])))
+            .subscribe((list) => {
+                this.promotionRanks = Array.isArray(list) ? list : [];
+                this.buildPromotionRankOptions();
+            });
+    }
+
+    private buildPromotionRankOptions(): void {
+        const bn = this.isBangla;
+        this.promotionRankOptions = this.promotionRanks.map((c) => ({
+            label: (bn ? c.codeValueBN : c.codeValueEN) || c.codeValueEN || c.codeValueBN || '',
+            value: c.codeId
+        }));
+    }
+
+    /**
+     * Promotion subject: every member must be from the same mother org (the rank list is per org).
+     * The first member fixes the org, loads its ranks and pre-fills Previous rank. A member whose
+     * current rank isn't the Previous rank is allowed but warned — approval won't change their rank.
+     * Returns false when the member must not be added.
+     */
+    private checkPromotionMember(profile: { motherOrganizationId: number | null; armyRankId: number | null; nameEnglish?: string | null }): boolean {
+        if (!this.isPromotionSubjectSelected) return true;
+        const orgId = profile.motherOrganizationId;
+        if (this.promotionOrgId != null && orgId != null && orgId !== this.promotionOrgId) {
+            this.messageService.add({
+                severity: 'error',
+                summary: 'Different organization',
+                detail: 'All members of a promotion note-sheet must be from the same mother organization.',
+                life: 7000
+            });
+            return false;
+        }
+        if (this.promotionOrgId == null && orgId != null) {
+            this.promotionOrgId = orgId;
+            this.promotionRanks = [];
+            this.loadPromotionRanks(orgId);
+        }
+        const prevCtrl = this.form.get('promotionPreviousRankId');
+        if (prevCtrl?.value == null && profile.armyRankId != null) {
+            prevCtrl?.setValue(profile.armyRankId);
+        } else if (prevCtrl?.value != null && profile.armyRankId != null && profile.armyRankId !== prevCtrl.value) {
+            this.messageService.add({
+                severity: 'warn',
+                summary: 'Rank mismatch',
+                detail: `${profile.nameEnglish || 'This member'}: current rank is not the Previous rank, so the rank will not be updated on approval.`,
+                life: 7000
+            });
+        }
+        return true;
     }
     /** Selected subject's display label (language-aware) — used for the read-only field in edit mode. */
     get selectedSubjectLabel(): string {
@@ -993,8 +1101,12 @@ export class NotesheetGenerateComponent implements OnInit {
             isSecret: !!(d.isSecret ?? d.IsSecret ?? false),
             showMembersTable: (d.showMembersTable ?? d.ShowMembersTable) !== false,
             noteSheetOperationType: d.noteSheetOperationType ?? d.NoteSheetOperationType ?? null,
-            memberTypeIds: this.parseMemberTypeIds(d.employeeTypeIds ?? d.EmployeeTypeIds)
+            memberTypeIds: this.parseMemberTypeIds(d.employeeTypeIds ?? d.EmployeeTypeIds),
+            promotionPreviousRankId: d.promotionPreviousRankId ?? d.PromotionPreviousRankId ?? null,
+            promotionPromotedRankId: d.promotionPromotedRankId ?? d.PromotionPromotedRankId ?? null,
+            promotionDate: (d.promotionDate ?? d.PromotionDate) ? this.parseDate(d.promotionDate ?? d.PromotionDate) : null
         });
+        this.applyPromotionValidators();
         if (d.createdBy ?? d.CreatedBy) this.form.get('preparedBy')?.setValue(d.createdBy ?? d.CreatedBy);
 
         // Load Main Text blocks (JSON array; legacy HTML string → single block)
@@ -1063,6 +1175,7 @@ export class NotesheetGenerateComponent implements OnInit {
                                 };
                             });
                             this.membersData = { columns, members };
+                            this.ensurePromotionRanksLoaded();
                             // Match create-mode behaviour in edit mode:
                             //  • no saved column config → show the default set;
                             //  • saved config that IS the default set → let a language switch relanguage it;
@@ -1228,6 +1341,10 @@ export class NotesheetGenerateComponent implements OnInit {
             this.previousRABService.getViewByEmployeeId(emp.employeeID).pipe(catchError(() => of([] as VwPreviousRABServiceInfoModel[])))
         ]).subscribe({
             next: ([profile, familyList, rabServiceList]) => {
+                if (!this.checkPromotionMember(profile)) {
+                    this.memberAddLoading = false;
+                    return;
+                }
                 const values: Record<string, string> = {};
 
                 // Basic Info fields (EN + BN)
@@ -1343,6 +1460,8 @@ export class NotesheetGenerateComponent implements OnInit {
     removeMember(index: number): void {
         this.commitMemberCellEdit(); // settle an open cell edit before the rows below shift up
         this.membersData.members.splice(index, 1);
+        // Last member gone → a promotion note-sheet may now take members of another org.
+        if (this.membersData.members.length === 0) this.promotionOrgId = null;
     }
 
     /**
@@ -1798,6 +1917,17 @@ export class NotesheetGenerateComponent implements OnInit {
             this.messageService.add({ severity: 'warn', summary: 'Members required', detail: 'This is a clearance subject — add at least one posted-out member.' });
             return;
         }
+        if (this.isPromotionSubjectSelected) {
+            if (this.membersData.members.length === 0) {
+                this.messageService.add({ severity: 'warn', summary: 'Members required', detail: 'This is a promotion subject — add at least one member.' });
+                return;
+            }
+            const pv = this.form.getRawValue();
+            if (pv.promotionPreviousRankId === pv.promotionPromotedRankId) {
+                this.messageService.add({ severity: 'warn', summary: 'Validation', detail: 'Promoted rank must be different from the previous rank.' });
+                return;
+            }
+        }
         this.isSubmitting = true;
 
         // First upload reference paragraph files, then main supporting docs
@@ -2008,6 +2138,10 @@ export class NotesheetGenerateComponent implements OnInit {
             initiatorId: d.initiatorId ?? 0,
             recommendersJson,
             finalApprovalId: d.finalApproverId ?? null,
+            // Promotion subject inputs (server clears them for any other subject).
+            promotionPreviousRankId: this.isPromotionSubjectSelected ? (d.promotionPreviousRankId ?? null) : null,
+            promotionPromotedRankId: this.isPromotionSubjectSelected ? (d.promotionPromotedRankId ?? null) : null,
+            promotionDate: this.isPromotionSubjectSelected && d.promotionDate ? this.formatNoteSheetDate(d.promotionDate) : null,
             familyInfoJson: null,
             createdBy,
             lastUpdatedBy,
