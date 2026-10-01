@@ -119,14 +119,24 @@ export interface AdminResetPasswordModel {
 }
 
 export interface SetUserActiveModel {
-  email: string;
+  /** Preferred key: a disabled user may have had their email cleared. */
+  userId: string;
+  email?: string | null;
   isActive: boolean;
   /** Only used when disabling: also hide the user from the normal list. */
   hide?: boolean;
+  /** Only used when disabling: reset the user's email and phone number to null. */
+  clearContact?: boolean;
+  /** Required when enabling: unique email the account is enabled with. */
+  newEmail?: string;
+  /** Required when enabling: unique phone number the account is enabled with. */
+  newPhoneNumber?: string;
 }
 
 export interface SetUserHiddenModel {
-  email: string;
+  /** Preferred key: a disabled user may have had their email cleared. */
+  userId: string;
+  email?: string | null;
   isHidden: boolean;
 }
 
