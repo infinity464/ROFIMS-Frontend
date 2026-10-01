@@ -490,19 +490,30 @@ export class NotesheetGenerateComponent implements OnInit {
         }
     }
 
-    /** Load the rank list for the promotion org (or the first member's org, e.g. in edit mode). */
+    /** Load the rank list for the promotion org (or the first member's org, e.g. in edit mode),
+     *  and auto-load Previous Rank from the (first) member's current rank when still empty. */
     private ensurePromotionRanksLoaded(): void {
-        if (!this.isPromotionSubjectSelected || this.promotionRanks.length > 0) return;
-        if (this.promotionOrgId != null) {
+        if (!this.isPromotionSubjectSelected) return;
+
+        if (this.promotionOrgId != null && this.promotionRanks.length === 0) {
             this.loadPromotionRanks(this.promotionOrgId);
-            return;
         }
+
+        // Nothing to seed while the field is already chosen or no member is present.
+        const prevCtrl = this.form.get('promotionPreviousRankId');
+        if (prevCtrl?.value != null) return;
         const first = this.membersData.members[0];
         if (!first) return;
+
         this.servingMembersService.getEmployeePersonalServiceOverview(first.employeeId).pipe(catchError(() => of(null))).subscribe((profile) => {
-            if (profile?.motherOrganizationId != null && this.promotionOrgId == null) {
+            if (!profile) return;
+            if (this.promotionOrgId == null && profile.motherOrganizationId != null) {
                 this.promotionOrgId = profile.motherOrganizationId;
                 this.loadPromotionRanks(profile.motherOrganizationId);
+            }
+            const ctrl = this.form.get('promotionPreviousRankId');
+            if (ctrl && ctrl.value == null && profile.armyRankId != null) {
+                ctrl.setValue(profile.armyRankId);
             }
         });
     }
