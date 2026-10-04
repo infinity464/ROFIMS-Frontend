@@ -2155,7 +2155,9 @@ html, body { margin: 0; padding: 0; background: transparent; }
        carries them on the component host, which is outside the cloned snapshot —
        restated here so the tiers below and the scoped component rules resolve to the
        same sizes and gaps the preview shows. */
-    ${this.styleVars().map(([name, value]) => `${name}: ${value};`).join(' ')}
+    ${this.styleVars()
+        .map(([name, value]) => `${name}: ${value};`)
+        .join(' ')}
     font-size: ${this.pdfFs(10)};
     line-height: 1.7;
     color: #000;
@@ -2774,8 +2776,30 @@ html, body { margin: 0; padding: 0; background: transparent; }
             if (this.isInterPosting()) {
                 // ── Inter-posting: 3-row header when the tenure group is shown ──
                 const iHdr: Record<string, string> = bn
-                    ? { ser: 'ক্রমিক', serviceId: 'ব্যক্তিগত নং', rank: 'পদবি', trade: 'ট্রেড', name: 'নাম', ownDistrict: 'নিজ জেলা (দায়িত্বপূর্ণ এলাকা)', spouseDistrict: 'স্বামী/স্ত্রীর জেলা (দায়িত্বপূর্ণ এলাকা)', prevWorkplace: 'পূর্ববতী কর্মস্থল', transferUnit: 'বদলিকৃত কর্মস্থল', remarks: 'মন্তব্য' }
-                    : { ser: 'Ser', serviceId: 'Service ID', rank: 'Rank', trade: 'Trade', name: 'Name', ownDistrict: 'Own District (Responsible Area)', spouseDistrict: "Husband/Wife's District (Responsible Area)", prevWorkplace: 'Previous Workplace', transferUnit: 'Transfer Station', remarks: 'Remarks' };
+                    ? {
+                          ser: 'ক্রমিক',
+                          serviceId: 'ব্যক্তিগত নং',
+                          rank: 'পদবি',
+                          trade: 'ট্রেড',
+                          name: 'নাম',
+                          ownDistrict: 'নিজ জেলা (দায়িত্বপূর্ণ এলাকা)',
+                          spouseDistrict: 'স্বামী/স্ত্রীর জেলা (দায়িত্বপূর্ণ এলাকা)',
+                          prevWorkplace: 'পূর্ববতী কর্মস্থল',
+                          transferUnit: 'বদলিকৃত কর্মস্থল',
+                          remarks: 'মন্তব্য'
+                      }
+                    : {
+                          ser: 'Ser',
+                          serviceId: 'Service ID',
+                          rank: 'Rank',
+                          trade: 'Trade',
+                          name: 'Name',
+                          ownDistrict: 'Own District (Responsible Area)',
+                          spouseDistrict: "Husband/Wife's District (Responsible Area)",
+                          prevWorkplace: 'Previous Workplace',
+                          transferUnit: 'Transfer Station',
+                          remarks: 'Remarks'
+                      };
                 const durationKeys = ['yr', 'mo', 'day'];
                 const isTenureKey = (k: string) => k === 'joinDate' || durationKeys.includes(k);
 
@@ -2786,7 +2810,7 @@ html, body { margin: 0; padding: 0; background: transparent; }
                     const r1: TableCell[] = [];
                     for (const k of visKeys) {
                         if (durationKeys.includes(k)) continue;
-                        if (k === 'joinDate') r1.push(plainHdrCell(bn ? 'এসআরবিে অবস্থানকাল' : 'Tenure in SRB', wOf[k] + durationW, { columnSpan: 4 }));
+                        if (k === 'joinDate') r1.push(plainHdrCell(bn ? 'এসআরবিতে অবস্থানকাল' : 'Tenure in SRB', wOf[k] + durationW, { columnSpan: 4 }));
                         else r1.push(plainHdrCell(iHdr[k], wOf[k], { verticalMerge: VerticalMergeType.RESTART }));
                     }
 
@@ -2837,8 +2861,30 @@ html, body { margin: 0; padding: 0; background: transparent; }
             } else {
                 // ── New posting: single-row header ──
                 const hdr: Record<string, string> = bn
-                    ? { ser: 'ক্রমিক', serviceId: 'ব্যক্তিগত নম্বর', rank: 'পদবি', trade: 'ট্রেড', name: 'নাম', ownDistrict: 'নিজ জেলা (দায়িত্বপূর্ণ এলাকা)', spouseDistrict: 'স্পাউস জেলা (দায়িত্বপূর্ণ এলাকা)', prevWorkplace: 'পূর্ববতী কর্মস্থল', transferUnit: 'বদলি ইউনিট', remarks: 'মন্তব্য' }
-                    : { ser: 'Ser', serviceId: 'Service ID', rank: 'Rank', trade: 'Trade', name: 'Name', ownDistrict: 'Own District (Responsible Area)', spouseDistrict: 'Spouse District (Responsible Area)', prevWorkplace: 'Previous Workplace', transferUnit: 'Transfer Unit', remarks: 'Remarks' };
+                    ? {
+                          ser: 'ক্রমিক',
+                          serviceId: 'ব্যক্তিগত নম্বর',
+                          rank: 'পদবি',
+                          trade: 'ট্রেড',
+                          name: 'নাম',
+                          ownDistrict: 'নিজ জেলা (দায়িত্বপূর্ণ এলাকা)',
+                          spouseDistrict: 'স্পাউস জেলা (দায়িত্বপূর্ণ এলাকা)',
+                          prevWorkplace: 'পূর্ববতী কর্মস্থল',
+                          transferUnit: 'বদলি ইউনিট',
+                          remarks: 'মন্তব্য'
+                      }
+                    : {
+                          ser: 'Ser',
+                          serviceId: 'Service ID',
+                          rank: 'Rank',
+                          trade: 'Trade',
+                          name: 'Name',
+                          ownDistrict: 'Own District (Responsible Area)',
+                          spouseDistrict: 'Spouse District (Responsible Area)',
+                          prevWorkplace: 'Previous Workplace',
+                          transferUnit: 'Transfer Unit',
+                          remarks: 'Remarks'
+                      };
                 const district = (full: string, detail: boolean) => (detail ? full : full.split('\n')[0].replace(/\s*\(.*$/, ''));
 
                 const headerRows = [new TableRow({ tableHeader: true, children: visKeys.map((k) => plainHdrCell(hdr[k], wOf[k])) })];
