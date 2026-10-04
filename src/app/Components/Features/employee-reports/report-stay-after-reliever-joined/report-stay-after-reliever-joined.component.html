@@ -92,6 +92,14 @@
                         <p-datepicker [(ngModel)]="releaseTo" dateFormat="dd-mm-yy" placeholder="Select" [showIcon]="true" appendTo="body"></p-datepicker>
                     </div>
                 }
+                @if (relieverMode === 'allPostedOut') {
+                    <div class="report-filter-field">
+                        <label>{{ lang === 'en' ? 'Formal/Clearance' : 'ফরমাল/ক্লিয়ারেন্স' }}</label>
+                        <p-select [options]="orderFormatFilterOptions" [(ngModel)]="filterOrderFormat"
+                            optionLabel="label" optionValue="value" placeholder="All" [showClear]="true"
+                            styleClass="w-full" appendTo="body"></p-select>
+                    </div>
+                }
                 @if (relieverMode === 'newPosting') {
                     <div class="report-filter-field">
                         <label>{{ lang === 'en' ? 'Possible Joining From' : 'সম্ভাব্য যোগদান হইতে' }}</label>

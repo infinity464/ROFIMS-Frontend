@@ -181,7 +181,7 @@ export const AVAILABLE_MEMBER_COLUMNS: MemberColumnDef[] = [
     { key: 'family_spouse', label: 'Spouse Name', group: 'family' },
     { key: 'family_father', label: 'Father Name', group: 'family' },
     { key: 'family_mother', label: 'Mother Name', group: 'family' },
-    { key: 'family_members', label: 'Family Members (All)', group: 'family' },
+    { key: 'family_members', label: 'Family Members (All)', group: 'family' }
 ];
 
 @Component({
@@ -196,7 +196,8 @@ export const AVAILABLE_MEMBER_COLUMNS: MemberColumnDef[] = [
         ButtonModule,
         SelectModule,
         MultiSelectModule,
-        DatePickerModule, FlexibleDateDirective,
+        DatePickerModule,
+        FlexibleDateDirective,
         AutoCompleteModule,
         RichEditorComponent,
         FileReferencesFormComponent,
@@ -287,7 +288,7 @@ export class NotesheetGenerateComponent implements OnInit {
         { label: 'Dash', value: '-' },
         { label: 'Slash', value: '/' },
         { label: 'Parentheses ( )', value: '()' },
-        { label: 'Custom', value: '__custom__' },
+        { label: 'Custom', value: '__custom__' }
     ];
 
     // Subject autocomplete (legacy free-text — kept for backward compat)
@@ -457,7 +458,7 @@ export class NotesheetGenerateComponent implements OnInit {
     /** Resolve a subject's display text (current language) from the master list by id. */
     private subjectTextById(id: number | null | undefined, isBn: boolean): string {
         const picked = this.subjectPickList.find((s) => s.id === id);
-        return picked ? ((isBn ? picked.subjectBN : picked.subjectEN) || picked.subjectEN || picked.subjectBN || '') : '';
+        return picked ? (isBn ? picked.subjectBN : picked.subjectEN) || picked.subjectEN || picked.subjectBN || '' : '';
     }
 
     /** True when the selected subject's category is Clearance — members become required
@@ -488,15 +489,19 @@ export class NotesheetGenerateComponent implements OnInit {
         const first = this.membersData.members[0];
         if (!first) return;
 
-        this.servingMembersService.getEmployeePersonalServiceOverview(first.employeeId).pipe(catchError(() => of(null))).subscribe((profile) => {
-            if (!profile || profile.motherOrganizationId == null) return;
-            this.promotionOrgId = profile.motherOrganizationId;
-            this.loadPromotionRanks(profile.motherOrganizationId);
-        });
+        this.servingMembersService
+            .getEmployeePersonalServiceOverview(first.employeeId)
+            .pipe(catchError(() => of(null)))
+            .subscribe((profile) => {
+                if (!profile || profile.motherOrganizationId == null) return;
+                this.promotionOrgId = profile.motherOrganizationId;
+                this.loadPromotionRanks(profile.motherOrganizationId);
+            });
     }
 
     private loadPromotionRanks(orgId: number): void {
-        this.masterBasicSetupService.getAllActiveCommonCodesByOrgIdAndType(orgId, CodeType.MotherOrgRank)
+        this.masterBasicSetupService
+            .getAllActiveCommonCodesByOrgIdAndType(orgId, CodeType.MotherOrgRank)
             .pipe(catchError(() => of([] as CommonCode[])))
             .subscribe((list) => {
                 this.promotionRanks = Array.isArray(list) ? list : [];
@@ -569,7 +574,9 @@ export class NotesheetGenerateComponent implements OnInit {
                 this.unitTreeLoading = false;
                 this.unitTreeReady$.next();
             },
-            error: () => { this.unitTreeLoading = false; }
+            error: () => {
+                this.unitTreeLoading = false;
+            }
         });
     }
 
@@ -630,7 +637,7 @@ export class NotesheetGenerateComponent implements OnInit {
             { key: 'subSectionId', codeType: 'Sub-Section' }
         ];
         const result: Record<string, number | null> = {};
-        levels.forEach(l => result[l.key] = null);
+        levels.forEach((l) => (result[l.key] = null));
 
         if (!this.selectedUnitNode) return result;
 
@@ -644,7 +651,7 @@ export class NotesheetGenerateComponent implements OnInit {
 
         for (const node of chain) {
             const ct = node.data?.codeType ?? '';
-            const match = levels.find(l => l.codeType === ct);
+            const match = levels.find((l) => l.codeType === ct);
             if (match) {
                 result[match.key] = Number(node.key);
             }
@@ -718,8 +725,12 @@ export class NotesheetGenerateComponent implements OnInit {
     searchSubject(event: { query: string }): void {
         const api = `${environment.apis.core}/NoteSheetInfo`;
         this.http.get<string[]>(`${api}/SearchSubjects`, { params: { query: event.query } }).subscribe({
-            next: (results) => { this.subjectSuggestions = results ?? []; },
-            error: () => { this.subjectSuggestions = []; }
+            next: (results) => {
+                this.subjectSuggestions = results ?? [];
+            },
+            error: () => {
+                this.subjectSuggestions = [];
+            }
         });
     }
 
@@ -810,7 +821,9 @@ export class NotesheetGenerateComponent implements OnInit {
                     const blocks = arr.map((p: any) => String(p ?? '')).filter((p) => p.trim() !== '');
                     return blocks.length ? blocks : [''];
                 }
-            } catch { /* legacy HTML string below */ }
+            } catch {
+                /* legacy HTML string below */
+            }
         }
         return [s];
     }
@@ -819,12 +832,9 @@ export class NotesheetGenerateComponent implements OnInit {
 
     private loadNoteSheetNumberConfig(): void {
         const configApi = `${environment.apis.core}/NoteSheetNumberConfig`;
-        forkJoin([
-            this.http.get<any[]>(`${configApi}/GetAll`),
-            this.masterBasicSetupService.getAllByType(CodeType.EmployeeType)
-        ]).subscribe({
+        forkJoin([this.http.get<any[]>(`${configApi}/GetAll`), this.masterBasicSetupService.getAllByType(CodeType.EmployeeType)]).subscribe({
             next: ([configs, memberTypes]) => {
-                (memberTypes ?? []).forEach(mt => {
+                (memberTypes ?? []).forEach((mt) => {
                     this.memberTypeMap.set(mt.codeId, {
                         en: mt.codeValueEN ?? '',
                         bn: mt.codeValueBN ?? mt.codeValueEN ?? ''
@@ -832,14 +842,9 @@ export class NotesheetGenerateComponent implements OnInit {
                 });
 
                 // Options for the "Member Type" multi-select (accessible subset applied by getter).
-                this.allMemberTypes = (memberTypes ?? [])
-                    .filter((mt: any) => mt.status !== false)
-                    .map((mt: any) => ({ value: mt.codeId, en: mt.codeValueEN ?? '', bn: mt.codeValueBN ?? mt.codeValueEN ?? '' }));
+                this.allMemberTypes = (memberTypes ?? []).filter((mt: any) => mt.status !== false).map((mt: any) => ({ value: mt.codeId, en: mt.codeValueEN ?? '', bn: mt.codeValueBN ?? mt.codeValueEN ?? '' }));
 
-                this.allNoteSheetConfigs = (configs ?? []).filter(
-                    (c: any) => (c.noteSheetType ?? c.NoteSheetType) === 'General'
-                        && (c.status ?? c.Status) !== false
-                );
+                this.allNoteSheetConfigs = (configs ?? []).filter((c: any) => (c.noteSheetType ?? c.NoteSheetType) === 'General' && (c.status ?? c.Status) !== false);
 
                 const first = this.allNoteSheetConfigs[0];
                 if (first) {
@@ -857,12 +862,16 @@ export class NotesheetGenerateComponent implements OnInit {
 
         this.noteSheetConfigOptions = this.allNoteSheetConfigs.map((c: any) => {
             const configId = c.configId ?? c.ConfigId;
-            const prefix = isBn
-                ? (c.prefixBN ?? c.PrefixBN ?? c.prefix ?? c.Prefix ?? '')
-                : (c.prefix ?? c.Prefix ?? '');
-            const memberLabel = (c.memberTypeIds ?? c.MemberTypeIds ?? '').split(',').filter(Boolean)
-                .map((id: string) => { const mt = this.memberTypeMap.get(+id); return mt ? (isBn ? mt.bn : mt.en) : ''; })
-                .filter(Boolean).join(', ');
+            const prefix = isBn ? (c.prefixBN ?? c.PrefixBN ?? c.prefix ?? c.Prefix ?? '') : (c.prefix ?? c.Prefix ?? '');
+            const memberLabel = (c.memberTypeIds ?? c.MemberTypeIds ?? '')
+                .split(',')
+                .filter(Boolean)
+                .map((id: string) => {
+                    const mt = this.memberTypeMap.get(+id);
+                    return mt ? (isBn ? mt.bn : mt.en) : '';
+                })
+                .filter(Boolean)
+                .join(', ');
             const includeDate = c.includeDateInNumber ?? c.IncludeDateInNumber ?? false;
 
             let pattern: string;
@@ -884,7 +893,7 @@ export class NotesheetGenerateComponent implements OnInit {
         const currentVal = ctrl?.value;
         if (this.noteSheetConfigOptions.length === 1) {
             ctrl?.setValue(this.noteSheetConfigOptions[0].value);
-        } else if (currentVal != null && this.noteSheetConfigOptions.some(o => o.value === currentVal)) {
+        } else if (currentVal != null && this.noteSheetConfigOptions.some((o) => o.value === currentVal)) {
             // Force PrimeNG p-select to refresh displayed label after options rebuild
             ctrl?.setValue(currentVal);
         }
@@ -911,18 +920,28 @@ export class NotesheetGenerateComponent implements OnInit {
      *  so admin changes apply without a re-login). */
     private loadCurrentUserMemberTypePermissions(): void {
         const userId = this.sharedService.getCurrentUserId?.() ?? null;
-        if (!userId) { this.allowedMemberTypeIds = null; return; }
+        if (!userId) {
+            this.allowedMemberTypeIds = null;
+            return;
+        }
         this.allowedMemberTypeIds = this.memberTypeAccess.getCachedMemberTypeIds(userId);
         this.memberTypeAccess.cacheForUser(userId).subscribe({
-            next: (ids) => { this.allowedMemberTypeIds = Array.isArray(ids) ? ids : []; },
-            error: () => { /* keep cached value on network error */ }
+            next: (ids) => {
+                this.allowedMemberTypeIds = Array.isArray(ids) ? ids : [];
+            },
+            error: () => {
+                /* keep cached value on network error */
+            }
         });
     }
 
     /** Parse comma-separated "1,2,3" → number[]. */
     private parseMemberTypeIds(ids: string | null | undefined): number[] {
         if (!ids) return [];
-        return String(ids).split(',').map((s) => parseInt(s.trim(), 10)).filter((n) => !isNaN(n));
+        return String(ids)
+            .split(',')
+            .map((s) => parseInt(s.trim(), 10))
+            .filter((n) => !isNaN(n));
     }
 
     memberSerial(index: number): string {
@@ -953,7 +972,9 @@ export class NotesheetGenerateComponent implements OnInit {
 
     private loadPreparedByOptions(): void {
         this.postingService.getApprovalEmployees().subscribe({
-            next: (opts) => { this.preparedByOptions = opts ?? []; },
+            next: (opts) => {
+                this.preparedByOptions = opts ?? [];
+            },
             error: () => {}
         });
     }
@@ -1001,7 +1022,9 @@ export class NotesheetGenerateComponent implements OnInit {
                     this.isPreparedByMapped = false;
                 }
             },
-            error: () => { this.isPreparedByMapped = false; }
+            error: () => {
+                this.isPreparedByMapped = false;
+            }
         });
     }
 
@@ -1113,12 +1136,7 @@ export class NotesheetGenerateComponent implements OnInit {
         }
 
         // Expand tree to the deepest selected unit level in edit mode
-        const deepestId = d.subSectionId ?? d.SubSectionId
-            ?? d.sectionId ?? d.SectionId
-            ?? d.subBranchId ?? d.SubBranchId
-            ?? d.branchId ?? d.BranchId
-            ?? d.wingBattalionId ?? d.WingBattalionId
-            ?? d.unitId ?? d.UnitId;
+        const deepestId = d.subSectionId ?? d.SubSectionId ?? d.sectionId ?? d.SectionId ?? d.subBranchId ?? d.SubBranchId ?? d.branchId ?? d.BranchId ?? d.wingBattalionId ?? d.WingBattalionId ?? d.unitId ?? d.UnitId;
         if (deepestId) {
             this.expandTreeToNode(deepestId);
         }
@@ -1129,12 +1147,12 @@ export class NotesheetGenerateComponent implements OnInit {
             const refApi = `${environment.apis.core}/NoteSheetReferenceEmployee`;
             this.http.get<any[]>(`${refApi}/GetByNoteSheetId/${noteSheetId}`).subscribe({
                 next: (list) => {
-                    const rows = (Array.isArray(list) ? list : []).filter(r => r.informationJson || r.InformationJson);
+                    const rows = (Array.isArray(list) ? list : []).filter((r) => r.informationJson || r.InformationJson);
                     if (rows.length > 0) {
                         try {
                             const firstParsed = JSON.parse(rows[0].informationJson || rows[0].InformationJson);
                             const columns = Array.isArray(firstParsed.columns) ? firstParsed.columns : [];
-                            const members: MemberRow[] = rows.map(r => {
+                            const members: MemberRow[] = rows.map((r) => {
                                 const parsed = JSON.parse(r.informationJson || r.InformationJson);
                                 const vals = parsed.values || {};
                                 // Recompute derived fields if missing
@@ -1163,7 +1181,9 @@ export class NotesheetGenerateComponent implements OnInit {
                             } else {
                                 this.columnsAreDefault = this.columnsMatchDefaultSet(columns);
                             }
-                        } catch { /* malformed JSON — leave default */ }
+                        } catch {
+                            /* malformed JSON — leave default */
+                        }
                     } else {
                         // Draft has no saved members → let the default columns appear when one is added.
                         this.defaultColumnsApplied = false;
@@ -1182,7 +1202,7 @@ export class NotesheetGenerateComponent implements OnInit {
     }
 
     private toEnglishDigits(str: string): string {
-        return str.replace(/[\u09E6-\u09EF]/g, (c) => String(c.charCodeAt(0) - 0x09E6));
+        return str.replace(/[\u09E6-\u09EF]/g, (c) => String(c.charCodeAt(0) - 0x09e6));
     }
 
     private transformNoteSheetNo(newTextType: string): void {
@@ -1239,7 +1259,7 @@ export class NotesheetGenerateComponent implements OnInit {
     /** Route the found member: for a clearance subject, verify the posted-out record + cross-note-sheet
      *  duplicate first; otherwise add normally. */
     private proceedAddMember(emp: EmployeeBasicInfo): void {
-        if (this.membersData.members.some(m => m.employeeId === emp.employeeID)) {
+        if (this.membersData.members.some((m) => m.employeeId === emp.employeeID)) {
             this.messageService.add({ severity: 'warn', summary: 'Duplicate', detail: 'This member is already added.' });
             return;
         }
@@ -1267,7 +1287,7 @@ export class NotesheetGenerateComponent implements OnInit {
                     return;
                 }
                 if (info.usedInNoteSheetId != null) {
-                    const nsRef = info.usedInNoteSheetNo || ('#' + info.usedInNoteSheetId);
+                    const nsRef = info.usedInNoteSheetNo || '#' + info.usedInNoteSheetId;
                     this.messageService.add({
                         severity: 'error',
                         summary: info.usedInNoteSheetApproved ? 'Clearance already approved' : 'Already in a note-sheet',
@@ -1305,7 +1325,7 @@ export class NotesheetGenerateComponent implements OnInit {
     }
 
     private addFoundMember(emp: EmployeeBasicInfo, postedOutId: number | null, postingUnitEN: string = '', postingUnitBN: string = ''): void {
-        if (this.membersData.members.some(m => m.employeeId === emp.employeeID)) {
+        if (this.membersData.members.some((m) => m.employeeId === emp.employeeID)) {
             this.messageService.add({ severity: 'warn', summary: 'Duplicate', detail: 'This member is already added.' });
             return;
         }
@@ -1391,13 +1411,13 @@ export class NotesheetGenerateComponent implements OnInit {
 
                 // Family Info — extract specific relations
                 const family = Array.isArray(familyList) ? familyList : [];
-                const spouse = family.find(f => (f.relation ?? '').toLowerCase().includes('spouse') || (f.relation ?? '').toLowerCase().includes('wife') || (f.relation ?? '').toLowerCase().includes('husband'));
-                const father = family.find(f => (f.relation ?? '').toLowerCase().includes('father'));
-                const mother = family.find(f => (f.relation ?? '').toLowerCase().includes('mother'));
+                const spouse = family.find((f) => (f.relation ?? '').toLowerCase().includes('spouse') || (f.relation ?? '').toLowerCase().includes('wife') || (f.relation ?? '').toLowerCase().includes('husband'));
+                const father = family.find((f) => (f.relation ?? '').toLowerCase().includes('father'));
+                const mother = family.find((f) => (f.relation ?? '').toLowerCase().includes('mother'));
                 values['family_spouse'] = spouse?.name ?? '';
                 values['family_father'] = father?.name ?? '';
                 values['family_mother'] = mother?.name ?? '';
-                values['family_members'] = family.map(f => `${f.relation ?? ''}: ${f.name ?? ''}`).join('; ');
+                values['family_members'] = family.map((f) => `${f.relation ?? ''}: ${f.name ?? ''}`).join('; ');
 
                 // Composite name exactly as shown at the top of the member profile.
                 values['formattedName'] = getFormattedMemberName(profile, false);
@@ -1474,12 +1494,9 @@ export class NotesheetGenerateComponent implements OnInit {
         // Rank select sits to its right (the label is stored under `promotedRank` for the
         // preview/PDF, while `promotedRankId` carries the id for the rank update on approval).
         if (this.isPromotionSubjectSelected) {
-            cols.push({ key: 'promotedRank', label: lbl('Promoted Rank', 'পদোন্নতির পদবি'), group: 'promotion' });
+            cols.push({ key: 'promotedRank', label: lbl('Promoted Rank', 'বর্তমান পদবি'), group: 'promotion' });
         }
-        cols.push(
-            { key: bn ? 'formattedNameBN' : 'formattedName', label: lbl('Name', 'নাম'), group: 'basic' },
-            { key: bn ? 'presentRabUnitBN' : 'presentRabUnit', label: lbl('Present SRB Unit', 'বর্তমান এসআরবি ইউনিট'), group: 'basic' }
-        );
+        cols.push({ key: bn ? 'formattedNameBN' : 'formattedName', label: lbl('Name', 'নাম'), group: 'basic' }, { key: bn ? 'presentRabUnitBN' : 'presentRabUnit', label: lbl('Present SRB Unit', 'বর্তমান এসআরবি ইউনিট'), group: 'basic' });
         // Clearance subjects: show the posted-out destination (mother-org transfer / Posting Unit).
         if (this.isClearanceSubjectSelected) {
             cols.push({ key: bn ? 'postingUnitBN' : 'postingUnit', label: lbl('Posting Unit', 'বদলি ইউনিট'), group: 'basic' });
@@ -1556,8 +1573,8 @@ export class NotesheetGenerateComponent implements OnInit {
 
     // Column management
     get unusedColumns(): MemberColumnDef[] {
-        const usedKeys = new Set(this.membersData.columns.map(c => c.key));
-        return this.availableColumns.filter(c => !usedKeys.has(c.key));
+        const usedKeys = new Set(this.membersData.columns.map((c) => c.key));
+        return this.availableColumns.filter((c) => !usedKeys.has(c.key));
     }
 
     get groupedUnusedColumns(): { label: string; value: string; items: { label: string; value: string }[] }[] {
@@ -1596,8 +1613,8 @@ export class NotesheetGenerateComponent implements OnInit {
                 this.messageService.add({ severity: 'warn', summary: 'Validation', detail: 'Please select a field.' });
                 return;
             }
-            const def = this.availableColumns.find(c => c.key === this.selectedColumnKey);
-            if (def && !this.membersData.columns.some(c => c.key === def.key)) {
+            const def = this.availableColumns.find((c) => c.key === this.selectedColumnKey);
+            if (def && !this.membersData.columns.some((c) => c.key === def.key)) {
                 this.membersData.columns.push({ ...def });
             }
         } else {
@@ -1607,7 +1624,7 @@ export class NotesheetGenerateComponent implements OnInit {
                 return;
             }
             const key = `custom_${name}`;
-            if (this.membersData.columns.some(c => c.key === key)) {
+            if (this.membersData.columns.some((c) => c.key === key)) {
                 this.messageService.add({ severity: 'warn', summary: 'Validation', detail: 'A column with that name already exists.' });
                 return;
             }
@@ -1622,7 +1639,7 @@ export class NotesheetGenerateComponent implements OnInit {
     }
 
     removeColumn(colKey: string): void {
-        this.membersData.columns = this.membersData.columns.filter(c => c.key !== colKey);
+        this.membersData.columns = this.membersData.columns.filter((c) => c.key !== colKey);
         this.columnsAreDefault = false;
     }
 
@@ -1641,7 +1658,7 @@ export class NotesheetGenerateComponent implements OnInit {
     saveColLabel(colKey: string): void {
         const trimmed = this.editingColLabelValue.trim();
         if (trimmed) {
-            const col = this.membersData.columns.find(c => c.key === colKey);
+            const col = this.membersData.columns.find((c) => c.key === colKey);
             if (col) col.label = trimmed;
             this.columnsAreDefault = false;
         }
@@ -1700,13 +1717,13 @@ export class NotesheetGenerateComponent implements OnInit {
 
     /** Name / rank / service-id cells can be corrected but never blanked while the member has a value. */
     private isRequiredMemberCell(colKey: string): boolean {
-        return ['nameEnglish', 'nameBN', 'formattedName', 'formattedNameBN', 'armyRank', 'armyRankBN',
-            'serviceId', 'prefixWithServiceId', 'prefixWithServiceIdBN'].includes(colKey);
+        return ['nameEnglish', 'nameBN', 'formattedName', 'formattedNameBN', 'armyRank', 'armyRankBN', 'serviceId', 'prefixWithServiceId', 'prefixWithServiceIdBN'].includes(colKey);
     }
 
     /** Write the open cell edit into the member it was opened on (wherever that row is now). */
     private commitMemberCellEdit(): void {
-        const member = this.editingMember, colKey = this.editingColKey;
+        const member = this.editingMember,
+            colKey = this.editingColKey;
         if (member && colKey && this.membersData.members.includes(member)) {
             const next = (this.editingMemberCellValue ?? '').trim();
             const current = (member.values[colKey] ?? '').toString().trim();
@@ -1840,7 +1857,7 @@ export class NotesheetGenerateComponent implements OnInit {
     get mergePreview(): string {
         if (this.mergeSelectedColumns.length < 2) return '';
         const separator = this.mergeSeparator === '__custom__' ? this.mergeCustomSeparator : this.mergeSeparator;
-        const sampleValues = this.mergeSelectedColumns.map(c => c.label);
+        const sampleValues = this.mergeSelectedColumns.map((c) => c.label);
         if (separator === '()') {
             return `${sampleValues[0]} (${sampleValues.slice(1).join(', ')})`;
         }
@@ -1852,18 +1869,18 @@ export class NotesheetGenerateComponent implements OnInit {
             this.messageService.add({ severity: 'warn', summary: 'Validation', detail: 'Select at least 2 columns to merge.' });
             return;
         }
-        const keys = this.mergeSelectedColumns.map(c => c.key);
+        const keys = this.mergeSelectedColumns.map((c) => c.key);
         const separator = this.mergeSeparator === '__custom__' ? this.mergeCustomSeparator : this.mergeSeparator;
         const mergedCol: MemberColumnDef = {
             key: 'merged_' + keys.join('_'),
-            label: this.mergeLabel.trim() || this.mergeSelectedColumns.map(c => c.label).join(' + '),
+            label: this.mergeLabel.trim() || this.mergeSelectedColumns.map((c) => c.label).join(' + '),
             group: 'merged',
             mergedFrom: { keys, separator }
         };
 
         // Insert merged column at position of first source column, remove source columns
-        const firstIndex = Math.min(...keys.map(k => this.membersData.columns.findIndex(c => c.key === k)));
-        this.membersData.columns = this.membersData.columns.filter(c => !keys.includes(c.key));
+        const firstIndex = Math.min(...keys.map((k) => this.membersData.columns.findIndex((c) => c.key === k)));
+        this.membersData.columns = this.membersData.columns.filter((c) => !keys.includes(c.key));
         this.membersData.columns.splice(firstIndex, 0, mergedCol);
         this.columnsAreDefault = false;
         this.closeMergeColumnDialog();
@@ -1873,11 +1890,16 @@ export class NotesheetGenerateComponent implements OnInit {
         if (!col.mergedFrom) return member.values[col.key] || '—';
         const { keys, separator } = col.mergedFrom;
         if (separator === '()') {
-            const parts = keys.map(k => member.values[k] || '').filter(Boolean);
+            const parts = keys.map((k) => member.values[k] || '').filter(Boolean);
             if (parts.length <= 1) return parts[0] || '—';
             return `${parts[0]} (${parts.slice(1).join(', ')})`;
         }
-        return keys.map(k => member.values[k] || '').filter(Boolean).join(separator) || '—';
+        return (
+            keys
+                .map((k) => member.values[k] || '')
+                .filter(Boolean)
+                .join(separator) || '—'
+        );
     }
 
     // ── Reset ────────────────────────────────────────────────────────────
@@ -1964,111 +1986,106 @@ export class NotesheetGenerateComponent implements OnInit {
         this.isSubmitting = true;
 
         // First upload reference paragraph files, then main supporting docs
-        this.uploadReferenceParagraphFiles().then((refParagraphsJson) => {
-            const existingRefs = this.fileReferencesForm?.getExistingFileReferences() || [];
-            const filesToUpload = this.fileReferencesForm?.getFilesToUpload() || [];
+        this.uploadReferenceParagraphFiles()
+            .then((refParagraphsJson) => {
+                const existingRefs = this.fileReferencesForm?.getExistingFileReferences() || [];
+                const filesToUpload = this.fileReferencesForm?.getFilesToUpload() || [];
 
-            const doSave = (filesReferencesJson: string | null) => {
-                try {
-                    const payload = this.buildNoteSheetInfoPayload(filesReferencesJson, refParagraphsJson);
-                    if (this.editMode && this.editId != null) {
-                        (payload as any).noteSheetId = this.editId;
-                    }
-                    const api = `${environment.apis.core}/NoteSheetInfo`;
-                    const endpoint = this.editMode && this.editId != null ? '/UpdateAsyn' : '/SaveAsyn';
-                    this.http.post<any>(api + endpoint, payload).subscribe({
-                        next: (res) => {
-                            const noteSheetId = this.editMode && this.editId != null
-                                ? this.editId
-                                : (res?.data?.noteSheetId ?? res?.data?.NoteSheetId ?? res?.Data?.NoteSheetId ?? null);
+                const doSave = (filesReferencesJson: string | null) => {
+                    try {
+                        const payload = this.buildNoteSheetInfoPayload(filesReferencesJson, refParagraphsJson);
+                        if (this.editMode && this.editId != null) {
+                            (payload as any).noteSheetId = this.editId;
+                        }
+                        const api = `${environment.apis.core}/NoteSheetInfo`;
+                        const endpoint = this.editMode && this.editId != null ? '/UpdateAsyn' : '/SaveAsyn';
+                        this.http.post<any>(api + endpoint, payload).subscribe({
+                            next: (res) => {
+                                const noteSheetId = this.editMode && this.editId != null ? this.editId : (res?.data?.noteSheetId ?? res?.data?.NoteSheetId ?? res?.Data?.NoteSheetId ?? null);
 
-                            this.messageService.add({
-                                severity: 'success',
-                                summary: 'Note Sheet',
-                                detail: this.editMode ? 'Note Sheet updated successfully.' : 'Note Sheet generated successfully.'
-                            });
-                            this.isSubmitting = false;
-
-                            // Save → jump straight to preview mode for the saved note-sheet.
-                            const goToPreview = () => {
-                                if (noteSheetId) {
-                                    this.router.navigate(['/notesheet-preview/general'], { queryParams: { id: encodeNoteSheetId(noteSheetId) } });
-                                } else if (this.editMode) {
-                                    this.router.navigate(['/notesheet-list/draft']);
-                                } else {
-                                    this.resetForm();
-                                }
-                            };
-
-                            // Sync members to NoteSheetReferenceEmployee, then open the preview so it
-                            // reflects the freshly-synced members. Always synced — even when the table is
-                            // hidden (showMembersTable) the note sheet stays linked to each member.
-                            if (noteSheetId) {
-                                const refApi = `${environment.apis.core}/NoteSheetReferenceEmployee`;
-                                const employees = this.membersData.members.map(m => ({
-                                    employeeId: m.employeeId,
-                                    postedOutId: m.postedOutId ?? null,
-                                    informationJson: JSON.stringify({
-                                        columns: this.membersData.columns,
-                                        values: m.values
-                                    })
-                                }));
-                                const syncPayload = {
-                                    noteSheetId,
-                                    employees,
-                                    updatedBy: payload.createdBy ?? payload.lastUpdatedBy ?? 'system'
-                                };
-                                this.http.post(refApi + '/Sync', syncPayload).subscribe({
-                                    next: () => goToPreview(),
-                                    error: () => {
-                                        this.messageService.add({ severity: 'warn', summary: 'Warning', detail: 'Saved but failed to sync members.' });
-                                        goToPreview();
-                                    }
+                                this.messageService.add({
+                                    severity: 'success',
+                                    summary: 'Note Sheet',
+                                    detail: this.editMode ? 'Note Sheet updated successfully.' : 'Note Sheet generated successfully.'
                                 });
-                            } else {
-                                goToPreview();
+                                this.isSubmitting = false;
+
+                                // Save → jump straight to preview mode for the saved note-sheet.
+                                const goToPreview = () => {
+                                    if (noteSheetId) {
+                                        this.router.navigate(['/notesheet-preview/general'], { queryParams: { id: encodeNoteSheetId(noteSheetId) } });
+                                    } else if (this.editMode) {
+                                        this.router.navigate(['/notesheet-list/draft']);
+                                    } else {
+                                        this.resetForm();
+                                    }
+                                };
+
+                                // Sync members to NoteSheetReferenceEmployee, then open the preview so it
+                                // reflects the freshly-synced members. Always synced — even when the table is
+                                // hidden (showMembersTable) the note sheet stays linked to each member.
+                                if (noteSheetId) {
+                                    const refApi = `${environment.apis.core}/NoteSheetReferenceEmployee`;
+                                    const employees = this.membersData.members.map((m) => ({
+                                        employeeId: m.employeeId,
+                                        postedOutId: m.postedOutId ?? null,
+                                        informationJson: JSON.stringify({
+                                            columns: this.membersData.columns,
+                                            values: m.values
+                                        })
+                                    }));
+                                    const syncPayload = {
+                                        noteSheetId,
+                                        employees,
+                                        updatedBy: payload.createdBy ?? payload.lastUpdatedBy ?? 'system'
+                                    };
+                                    this.http.post(refApi + '/Sync', syncPayload).subscribe({
+                                        next: () => goToPreview(),
+                                        error: () => {
+                                            this.messageService.add({ severity: 'warn', summary: 'Warning', detail: 'Saved but failed to sync members.' });
+                                            goToPreview();
+                                        }
+                                    });
+                                } else {
+                                    goToPreview();
+                                }
+                            },
+                            error: (err) => {
+                                const detail = this.getApiErrorMessage(err);
+                                this.messageService.add({ severity: 'error', summary: 'Error', detail });
+                                this.isSubmitting = false;
                             }
+                        });
+                    } catch (e) {
+                        this.messageService.add({ severity: 'error', summary: 'Error', detail: e instanceof Error ? e.message : 'Failed to build or send request.' });
+                        this.isSubmitting = false;
+                    }
+                };
+
+                if (filesToUpload.length > 0) {
+                    const uploads = filesToUpload.map((r: FileRowData) => this.empService.uploadEmployeeFile(r.file!, r.displayName?.trim() || r.file!.name));
+                    forkJoin(uploads).subscribe({
+                        next: (results: unknown) => {
+                            const resultsArray = Array.isArray(results) ? results : [];
+                            const newRefs = (resultsArray as { fileId: number; fileName: string }[]).map((r) => ({ FileId: r.fileId, fileName: r.fileName }));
+                            const allRefs: { FileId: number; fileName: string }[] = [...existingRefs.map((r) => ({ FileId: r.FileId, fileName: r.fileName })), ...newRefs];
+                            doSave(allRefs.length > 0 ? JSON.stringify(allRefs) : null);
                         },
-                        error: (err) => {
-                            const detail = this.getApiErrorMessage(err);
-                            this.messageService.add({ severity: 'error', summary: 'Error', detail });
+                        error: (err: any) => {
+                            this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.message || 'Failed to upload one or more files.' });
                             this.isSubmitting = false;
                         }
                     });
-                } catch (e) {
-                    this.messageService.add({ severity: 'error', summary: 'Error', detail: e instanceof Error ? e.message : 'Failed to build or send request.' });
-                    this.isSubmitting = false;
+                    return;
                 }
-            };
 
-            if (filesToUpload.length > 0) {
-                const uploads = filesToUpload.map((r: FileRowData) =>
-                    this.empService.uploadEmployeeFile(r.file!, r.displayName?.trim() || r.file!.name)
-                );
-                forkJoin(uploads).subscribe({
-                    next: (results: unknown) => {
-                        const resultsArray = Array.isArray(results) ? results : [];
-                        const newRefs = (resultsArray as { fileId: number; fileName: string }[]).map((r) => ({ FileId: r.fileId, fileName: r.fileName }));
-                        const allRefs: { FileId: number; fileName: string }[] = [
-                            ...existingRefs.map((r) => ({ FileId: r.FileId, fileName: r.fileName })),
-                            ...newRefs
-                        ];
-                        doSave(allRefs.length > 0 ? JSON.stringify(allRefs) : null);
-                    },
-                    error: (err: any) => {
-                        this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.message || 'Failed to upload one or more files.' });
-                        this.isSubmitting = false;
-                    }
-                });
-                return;
-            }
-
-            const filesReferencesJson = existingRefs.length > 0 ? JSON.stringify(existingRefs) : null;
-            doSave(filesReferencesJson);
-        }).catch(() => {
-            this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to upload reference files.' });
-            this.isSubmitting = false;
-        });
+                const filesReferencesJson = existingRefs.length > 0 ? JSON.stringify(existingRefs) : null;
+                doSave(filesReferencesJson);
+            })
+            .catch(() => {
+                this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to upload reference files.' });
+                this.isSubmitting = false;
+            });
     }
 
     /** Upload files in reference paragraphs and return the final JSON string */
@@ -2076,13 +2093,13 @@ export class NotesheetGenerateComponent implements OnInit {
         const result: { text: string; files: { FileId: number; fileName: string }[] }[] = [];
 
         for (const para of this.referenceParagraphs) {
-            const existingFiles = para.fileRows.filter(r => r.fileId != null).map(r => ({ FileId: r.fileId!, fileName: r.displayName ?? '' }));
-            const newFiles = para.fileRows.filter(r => r.file != null);
+            const existingFiles = para.fileRows.filter((r) => r.fileId != null).map((r) => ({ FileId: r.fileId!, fileName: r.displayName ?? '' }));
+            const newFiles = para.fileRows.filter((r) => r.file != null);
 
             if (newFiles.length > 0) {
-                const uploads = newFiles.map(r => this.empService.uploadEmployeeFile(r.file!, r.displayName?.trim() || r.file!.name).toPromise());
+                const uploads = newFiles.map((r) => this.empService.uploadEmployeeFile(r.file!, r.displayName?.trim() || r.file!.name).toPromise());
                 const uploaded = await Promise.all(uploads);
-                const uploadedRefs = (uploaded as any[]).map(r => ({ FileId: r.fileId, fileName: r.fileName }));
+                const uploadedRefs = (uploaded as any[]).map((r) => ({ FileId: r.fileId, fileName: r.fileName }));
                 result.push({ text: para.text, files: [...existingFiles, ...uploadedRefs] });
             } else {
                 result.push({ text: para.text, files: existingFiles });
@@ -2093,16 +2110,14 @@ export class NotesheetGenerateComponent implements OnInit {
     }
 
     private getApiErrorMessage(err: any): string {
-        if (err?.status === 0 || err?.message === 'Http failure response')
-            return 'Cannot reach server. Check that the API is running at ' + (environment?.apis?.core ?? '') + ' and CORS is allowed.';
+        if (err?.status === 0 || err?.message === 'Http failure response') return 'Cannot reach server. Check that the API is running at ' + (environment?.apis?.core ?? '') + ' and CORS is allowed.';
         const body = err?.error;
         if (!body) return err?.message || 'Failed to generate Note Sheet.';
         if (typeof body === 'string') return body;
         if (body.description) return body.description;
         if (body.message) return body.message;
         if (body.errors && typeof body.errors === 'object') {
-            const parts = Object.entries(body.errors as Record<string, string[]>)
-                .flatMap(([k, v]) => (Array.isArray(v) ? v : [v]).map((s: string) => `${k}: ${s}`));
+            const parts = Object.entries(body.errors as Record<string, string[]>).flatMap(([k, v]) => (Array.isArray(v) ? v : [v]).map((s: string) => `${k}: ${s}`));
             if (parts.length) return parts.join(' ');
         }
         return body.title || 'Failed to generate Note Sheet.';
@@ -2110,11 +2125,12 @@ export class NotesheetGenerateComponent implements OnInit {
 
     private formatNoteSheetDate(value: Date | string | null | undefined): string {
         if (value instanceof Date) {
-            const y = value.getFullYear(), m = value.getMonth(), d = value.getDate();
+            const y = value.getFullYear(),
+                m = value.getMonth(),
+                d = value.getDate();
             return `${y}-${String(m + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
         }
-        if (typeof value === 'string' && /^\d{4}-\d{2}-\d{2}/.test(value))
-            return value.slice(0, 10);
+        if (typeof value === 'string' && /^\d{4}-\d{2}-\d{2}/.test(value)) return value.slice(0, 10);
         const today = new Date();
         return `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
     }
@@ -2129,20 +2145,22 @@ export class NotesheetGenerateComponent implements OnInit {
 
         const recommenderIds: number[] = Array.isArray(d.recommenderIds) ? d.recommenderIds : [];
         const recommendersJson = recommenderIds.length
-            ? JSON.stringify(recommenderIds.map((id, idx) => ({
-                recomender_no: idx + 1,
-                recomender_id: id,
-                recomender_status: ApprovalStatus.Pending,
-                recomender_approve_remark: '',
-                recomender_cancel_remark: '',
-                recomender_approved_date: null
-            })))
+            ? JSON.stringify(
+                  recommenderIds.map((id, idx) => ({
+                      recomender_no: idx + 1,
+                      recomender_id: id,
+                      recomender_status: ApprovalStatus.Pending,
+                      recomender_approve_remark: '',
+                      recomender_cancel_remark: '',
+                      recomender_approved_date: null
+                  }))
+              )
             : null;
 
         const payload: Record<string, unknown> = {
             noteSheetId: 0,
             noteSheetType: NoteSheetType.General,
-            noteSheetNo: this.editMode ? (d.noteSheetNo || 'AUTO') : 'AUTO',
+            noteSheetNo: this.editMode ? d.noteSheetNo || 'AUTO' : 'AUTO',
             noteSheetNumberConfigId: d.noteSheetNumberConfigId ?? null,
             noteSheetNoStaticWord: (d.noteSheetNoStaticWord && String(d.noteSheetNoStaticWord).trim()) || null,
             noteSheetDate: dateStr,
@@ -2156,9 +2174,7 @@ export class NotesheetGenerateComponent implements OnInit {
             mainText: serializeMainTextBlocks(this.mainTextParagraphs),
             note: d.note != null ? String(d.note) : null,
             // Last Text stored as a JSON array of HTML strings (each its own serial), or null when empty.
-            paragraphText: this.lastTextParagraphs.some((p) => (p ?? '').trim() !== '')
-                ? JSON.stringify(this.lastTextParagraphs.filter((p) => (p ?? '').trim() !== ''))
-                : null,
+            paragraphText: this.lastTextParagraphs.some((p) => (p ?? '').trim() !== '') ? JSON.stringify(this.lastTextParagraphs.filter((p) => (p ?? '').trim() !== '')) : null,
             textType: d.textType === 'bn' ? 1 : 0,
             isSecret: d.isSecret ?? false,
             showMembersTable: d.showMembersTable !== false,

@@ -79,8 +79,13 @@ export class OfficeOrderPreviewComponent implements OnInit {
     orderFormatFilter: OrderFormat | null = null;
     readonly orderFormatOptions = [
         { label: 'Formal', value: OrderFormat.Formal },
-        { label: 'Clearance', value: OrderFormat.Clearance }
+        { label: 'Clearance (DAD and Others)', value: OrderFormat.Clearance }
     ];
+
+    /** Friendly label for the raw stored OrderFormat value (Clearance → "Clearance (DAD and Others)"). */
+    orderFormatLabel(value: string | null | undefined): string {
+        return value === OrderFormat.Clearance ? 'Clearance (DAD and Others)' : (value ?? '-');
+    }
 
     get filteredOrders(): GeneralNotesheetOfficeOrderDto[] {
         return this.orderFormatFilter ? this.orders.filter(o => o.orderFormat === this.orderFormatFilter) : this.orders;

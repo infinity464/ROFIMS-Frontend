@@ -45,6 +45,8 @@ export class MembersEditorComponent implements OnChanges {
     @Input() isBangla = false;
     /** Clearance subject → each member must be posted-out; adds the Posting Unit column. */
     @Input() isClearance = false;
+    /** Order Format set (Formal/Clearance) → check posted-out, but only WARN (allow) when absent. */
+    @Input() warnIfNotPostedOut = false;
     /** Show the editable table; otherwise compact member strips. */
     @Input() showTable = true;
     @Input() collapsed = false;
@@ -56,6 +58,9 @@ export class MembersEditorComponent implements OnChanges {
      *  switch rebuild them; cleared once the user manually adds/removes/renames a column. */
     private columnsAreDefault = false;
     memberAddLoading = false;
+    /** Warn dialog state for a member not found in the posted-out list (Order Format path). */
+    showNotPostedOutConfirm = false;
+    pendingNotPostedOutEmp: EmployeeBasicInfo | null = null;
     showAddColumnDialog = false;
     addColumnMode: 'field' | 'custom' = 'field';
     selectedColumnKey: string | null = null;
@@ -152,13 +157,13 @@ export class MembersEditorComponent implements OnChanges {
         });
     }
 
-    /** Clearance: verify the posted-out record + that no note sheet already uses it; otherwise add normally. */
+    /** Clearance (hard block) or Order Format (soft warn) → verify the posted-out record; otherwise add normally. */
     private proceedAddMember(emp: EmployeeBasicInfo): void {
         if (this.membersData.members.some(m => m.employeeId === emp.employeeID)) {
             this.messageService.add({ severity: 'warn', summary: 'Duplicate', detail: 'This member is already added.' });
             return;
         }
-        if (!this.isClearance) {
+        if (!this.isClearance && !this.warnIfNotPostedOut) {
             this.addFoundMember(emp, null);
             return;
         }
@@ -168,6 +173,19 @@ export class MembersEditorComponent implements OnChanges {
         this.http.get<PostedOutClearanceInfo>(`${api}/GetPostedOutClearanceInfo`, { params: { employeeId: String(emp.employeeID) } }).subscribe({
             next: (info) => {
                 this.memberAddLoading = false;
+
+                // Order Format (Formal/Clearance): only WARN when the member is not in the
+                // posted-out list — let the user decide whether to add them anyway.
+                if (!this.isClearance) {
+                    if (!info?.hasPostedOut) {
+                        this.pendingNotPostedOutEmp = emp;
+                        this.showNotPostedOutConfirm = true;
+                        return;
+                    }
+                    this.addFoundMember(emp, info.postedOutId, info.postingUnitName ?? '', info.postingUnitNameBN ?? '');
+                    return;
+                }
+
                 if (!info?.hasPostedOut) {
                     this.messageService.add({
                         severity: 'error',
@@ -196,6 +214,19 @@ export class MembersEditorComponent implements OnChanges {
                 this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Failed to verify the posted-out record. Please try again.' });
             }
         });
+    }
+
+    /** User confirmed adding a member who is not in the posted-out list (Formal/Clearance order). */
+    confirmAddNotPostedOut(): void {
+        const emp = this.pendingNotPostedOutEmp;
+        this.pendingNotPostedOutEmp = null;
+        this.showNotPostedOutConfirm = false;
+        if (emp) this.addFoundMember(emp, null);
+    }
+
+    cancelAddNotPostedOut(): void {
+        this.pendingNotPostedOutEmp = null;
+        this.showNotPostedOutConfirm = false;
     }
 
     private addFoundMember(emp: EmployeeBasicInfo, postedOutId: number | null, postingUnitEN = '', postingUnitBN = ''): void {

@@ -47,6 +47,7 @@ export class PostedOutPersonListComponent implements OnInit {
     /** Present battalion of the posted-out member. */
     filterRabUnitId: number | null = null;
     filterIsReliever: boolean | null = null;
+    filterOrderFormat: string | null = null;
     releaseDateFrom: Date | null = null;
     releaseDateTo: Date | null = null;
     private _searchTimer: any;
@@ -61,6 +62,7 @@ export class PostedOutPersonListComponent implements OnInit {
         { label: 'Yes', value: true },
         { label: 'No', value: false },
     ];
+    orderFormatOptions: { label: string; value: string }[] = [];
 
     exportDropdownOpen = false;
     exporting = false;
@@ -106,6 +108,7 @@ export class PostedOutPersonListComponent implements OnInit {
         this.rankOptions = distinct(this.allRecords.map(r => r.postedOutRank));
         this.corpsOptions = distinct(this.allRecords.map(r => r.postedOutCorps));
         this.tradeOptions = distinct(this.allRecords.map(r => r.postedOutTrade));
+        this.orderFormatOptions = distinct(this.allRecords.map(r => r.orderFormat));
 
         const unitMap = new Map<number, string>();
         for (const r of this.allRecords) {
@@ -135,6 +138,7 @@ export class PostedOutPersonListComponent implements OnInit {
             if (this.filterPostingUnitId != null && r.postingUnitId !== this.filterPostingUnitId) return false;
             if (this.filterRabUnitId != null && r.postedOutRabUnitId !== this.filterRabUnitId) return false;
             if (this.filterIsReliever != null && r.isReliever !== this.filterIsReliever) return false;
+            if (this.filterOrderFormat && r.orderFormat !== this.filterOrderFormat) return false;
 
             if (from || to) {
                 if (!r.possibleReleaseDate) return false;
@@ -168,6 +172,7 @@ export class PostedOutPersonListComponent implements OnInit {
         this.filterPostingUnitId = null;
         this.filterRabUnitId = null;
         this.filterIsReliever = null;
+        this.filterOrderFormat = null;
         this.releaseDateFrom = null;
         this.releaseDateTo = null;
     }
