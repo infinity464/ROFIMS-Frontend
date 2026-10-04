@@ -1332,9 +1332,9 @@ export class NotesheetPreviewGeneralComponent extends NotesheetPreviewBase imple
         return col.group === 'custom';
     }
 
-    /** Any non-merged cell is inline-editable (same as the generate page). */
+    /** Any non-merged, non-promotion cell is inline-editable (same as the generate page). */
     isEditableCell(col: MemberColumnDef): boolean {
-        return !col.mergedFrom;
+        return !col.mergedFrom && col.group !== 'promotion';
     }
 
     /** Edit-table cell display: Bangla digits when the edited language is Bangla. */

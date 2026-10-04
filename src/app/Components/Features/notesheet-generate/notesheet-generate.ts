@@ -64,7 +64,7 @@ export interface MemberColumnDef {
      *  mode). When absent the Bangla preview falls back to its built-in Bangla
      *  label map, then to `label`. */
     labelBN?: string;
-    group: 'basic' | 'personal' | 'family' | 'custom' | 'merged';
+    group: 'basic' | 'personal' | 'family' | 'custom' | 'merged' | 'promotion';
     /** Only for merged columns — stores source keys + separator */
     mergedFrom?: { keys: string[]; separator: string };
     /** Column width as percentage (auto-distributed if omitted) */
@@ -370,11 +370,7 @@ export class NotesheetGenerateComponent implements OnInit {
             showMembersTable: [true],
             noteSheetOperationType: [NoteSheetOperationType.Manual as string, Validators.required],
             referenceEmployeeIds: [[] as number[]],
-            memberTypeIds: [[] as number[]],
-            // Promotion subject only — required via applyPromotionValidators().
-            promotionPreviousRankId: [null as number | null],
-            promotionPromotedRankId: [null as number | null],
-            promotionDate: [null as Date | null]
+            memberTypeIds: [[] as number[]]
         });
     }
 
@@ -429,7 +425,6 @@ export class NotesheetGenerateComponent implements OnInit {
             next: (list) => {
                 this.subjectPickList = Array.isArray(list) ? list : [];
                 this.buildSubjectOptions();
-                this.applyPromotionValidators();
                 this.ensurePromotionRanksLoaded();
             },
             error: () => {
@@ -451,11 +446,12 @@ export class NotesheetGenerateComponent implements OnInit {
     /** Mirror the picked subject's text into `subject` (stored for list/search; preview resolves BN/EN by id). */
     onSubjectPicked(id: number | null): void {
         this.form.get('subject')?.setValue(this.subjectTextById(id, this.form.get('textType')?.value === 'bn'));
-        if (!this.isPromotionSubjectSelected) {
-            this.form.patchValue({ promotionPreviousRankId: null, promotionPromotedRankId: null, promotionDate: null });
-        }
-        this.applyPromotionValidators();
         this.ensurePromotionRanksLoaded();
+        // A Promotion subject must surface the Promoted Rank column even when members were
+        // added before the subject was chosen (create mode). Edit mode already handles this.
+        if (this.isPromotionSubjectSelected && this.membersData.members.length > 0) {
+            this.ensurePromotionColumns();
+        }
     }
 
     /** Resolve a subject's display text (current language) from the master list by id. */
@@ -480,41 +476,22 @@ export class NotesheetGenerateComponent implements OnInit {
         return this.subjectPickList.find((s) => s.id === id)?.subjectCategory === SubjectCategory.Promotion;
     }
 
-    private applyPromotionValidators(): void {
-        const required = this.isPromotionSubjectSelected;
-        for (const name of ['promotionPreviousRankId', 'promotionPromotedRankId', 'promotionDate']) {
-            const ctrl = this.form.get(name);
-            if (!ctrl) continue;
-            ctrl.setValidators(required ? Validators.required : null);
-            ctrl.updateValueAndValidity({ emitEvent: false });
-        }
-    }
-
-    /** Load the rank list for the promotion org (or the first member's org, e.g. in edit mode),
-     *  and auto-load Previous Rank from the (first) member's current rank when still empty. */
+    /** Load the rank list for the promotion org (or the first member's org, e.g. in edit mode). */
     private ensurePromotionRanksLoaded(): void {
         if (!this.isPromotionSubjectSelected) return;
 
         if (this.promotionOrgId != null && this.promotionRanks.length === 0) {
             this.loadPromotionRanks(this.promotionOrgId);
         }
+        if (this.promotionOrgId != null) return;
 
-        // Nothing to seed while the field is already chosen or no member is present.
-        const prevCtrl = this.form.get('promotionPreviousRankId');
-        if (prevCtrl?.value != null) return;
         const first = this.membersData.members[0];
         if (!first) return;
 
         this.servingMembersService.getEmployeePersonalServiceOverview(first.employeeId).pipe(catchError(() => of(null))).subscribe((profile) => {
-            if (!profile) return;
-            if (this.promotionOrgId == null && profile.motherOrganizationId != null) {
-                this.promotionOrgId = profile.motherOrganizationId;
-                this.loadPromotionRanks(profile.motherOrganizationId);
-            }
-            const ctrl = this.form.get('promotionPreviousRankId');
-            if (ctrl && ctrl.value == null && profile.armyRankId != null) {
-                ctrl.setValue(profile.armyRankId);
-            }
+            if (!profile || profile.motherOrganizationId == null) return;
+            this.promotionOrgId = profile.motherOrganizationId;
+            this.loadPromotionRanks(profile.motherOrganizationId);
         });
     }
 
@@ -535,11 +512,14 @@ export class NotesheetGenerateComponent implements OnInit {
         }));
     }
 
+    /** Promoted Rank select options keyed by string id — the members table stores ids as strings. */
+    get promotedRankSelectOptions(): { label: string; value: string }[] {
+        return this.promotionRankOptions.map((o) => ({ label: o.label, value: String(o.value) }));
+    }
+
     /**
      * Promotion subject: every member must be from the same mother org (the rank list is per org).
-     * The first member fixes the org, loads its ranks and pre-fills Previous rank. A member whose
-     * current rank isn't the Previous rank is allowed but warned — approval won't change their rank.
-     * Returns false when the member must not be added.
+     * The first member fixes the org and loads its ranks. Returns false when the member must not be added.
      */
     private checkPromotionMember(profile: { motherOrganizationId: number | null; armyRankId: number | null; nameEnglish?: string | null }): boolean {
         if (!this.isPromotionSubjectSelected) return true;
@@ -557,17 +537,6 @@ export class NotesheetGenerateComponent implements OnInit {
             this.promotionOrgId = orgId;
             this.promotionRanks = [];
             this.loadPromotionRanks(orgId);
-        }
-        const prevCtrl = this.form.get('promotionPreviousRankId');
-        if (prevCtrl?.value == null && profile.armyRankId != null) {
-            prevCtrl?.setValue(profile.armyRankId);
-        } else if (prevCtrl?.value != null && profile.armyRankId != null && profile.armyRankId !== prevCtrl.value) {
-            this.messageService.add({
-                severity: 'warn',
-                summary: 'Rank mismatch',
-                detail: `${profile.nameEnglish || 'This member'}: current rank is not the Previous rank, so the rank will not be updated on approval.`,
-                life: 7000
-            });
         }
         return true;
     }
@@ -1112,12 +1081,8 @@ export class NotesheetGenerateComponent implements OnInit {
             isSecret: !!(d.isSecret ?? d.IsSecret ?? false),
             showMembersTable: (d.showMembersTable ?? d.ShowMembersTable) !== false,
             noteSheetOperationType: d.noteSheetOperationType ?? d.NoteSheetOperationType ?? null,
-            memberTypeIds: this.parseMemberTypeIds(d.employeeTypeIds ?? d.EmployeeTypeIds),
-            promotionPreviousRankId: d.promotionPreviousRankId ?? d.PromotionPreviousRankId ?? null,
-            promotionPromotedRankId: d.promotionPromotedRankId ?? d.PromotionPromotedRankId ?? null,
-            promotionDate: (d.promotionDate ?? d.PromotionDate) ? this.parseDate(d.promotionDate ?? d.PromotionDate) : null
+            memberTypeIds: this.parseMemberTypeIds(d.employeeTypeIds ?? d.EmployeeTypeIds)
         });
-        this.applyPromotionValidators();
         if (d.createdBy ?? d.CreatedBy) this.form.get('preparedBy')?.setValue(d.createdBy ?? d.CreatedBy);
 
         // Load Main Text blocks (JSON array; legacy HTML string → single block)
@@ -1187,6 +1152,7 @@ export class NotesheetGenerateComponent implements OnInit {
                             });
                             this.membersData = { columns, members };
                             this.ensurePromotionRanksLoaded();
+                            this.ensurePromotionColumns();
                             // Match create-mode behaviour in edit mode:
                             //  • no saved column config → show the default set;
                             //  • saved config that IS the default set → let a language switch relanguage it;
@@ -1365,6 +1331,7 @@ export class NotesheetGenerateComponent implements OnInit {
                 values['nameBN'] = profile.nameBN ?? '';
                 values['armyRank'] = profile.armyRank ?? '';
                 values['armyRankBN'] = profile.armyRankBN ?? '';
+                values['armyRankId'] = profile.armyRankId != null ? String(profile.armyRankId) : '';
                 values['corps'] = profile.corps ?? '';
                 values['corpsBN'] = profile.corpsBN ?? '';
                 values['trade'] = profile.trade ?? '';
@@ -1450,6 +1417,10 @@ export class NotesheetGenerateComponent implements OnInit {
                 for (const col of this.membersData.columns) {
                     if (col.group === 'custom' && values[col.key] === undefined) values[col.key] = '';
                 }
+                if (this.isPromotionSubjectSelected && values['promotedRank'] === undefined) {
+                    values['promotedRank'] = '';
+                    values['promotedRankId'] = '';
+                }
 
                 this.membersData.members.push({ employeeId: emp.employeeID, values, postedOutId });
                 // First member added with no columns configured → show a sensible default set.
@@ -1497,10 +1468,18 @@ export class NotesheetGenerateComponent implements OnInit {
         const lbl = (en: string, bnLabel: string) => (bn ? bnLabel : en);
         const cols: MemberColumnDef[] = [
             { key: bn ? 'prefixWithServiceIdBN' : 'prefixWithServiceId', label: lbl('Prefix & Service ID', 'ব্যক্তিগত নম্বর'), group: 'basic' },
-            { key: bn ? 'armyRankBN' : 'armyRank', label: lbl('Rank', 'পদবি'), group: 'basic' },
+            { key: bn ? 'armyRankBN' : 'armyRank', label: this.isPromotionSubjectSelected ? lbl('Previous Rank', 'পূর্ববর্তী পদবি') : lbl('Rank', 'পদবি'), labelBN: this.isPromotionSubjectSelected ? 'পূর্ববর্তী পদবি' : undefined, group: 'basic' }
+        ];
+        // Promotion subjects: the current rank column doubles as "Previous Rank"; a Promoted
+        // Rank select sits to its right (the label is stored under `promotedRank` for the
+        // preview/PDF, while `promotedRankId` carries the id for the rank update on approval).
+        if (this.isPromotionSubjectSelected) {
+            cols.push({ key: 'promotedRank', label: lbl('Promoted Rank', 'পদোন্নতির পদবি'), group: 'promotion' });
+        }
+        cols.push(
             { key: bn ? 'formattedNameBN' : 'formattedName', label: lbl('Name', 'নাম'), group: 'basic' },
             { key: bn ? 'presentRabUnitBN' : 'presentRabUnit', label: lbl('Present SRB Unit', 'বর্তমান এসআরবি ইউনিট'), group: 'basic' }
-        ];
+        );
         // Clearance subjects: show the posted-out destination (mother-org transfer / Posting Unit).
         if (this.isClearanceSubjectSelected) {
             cols.push({ key: bn ? 'postingUnitBN' : 'postingUnit', label: lbl('Posting Unit', 'বদলি ইউনিট'), group: 'basic' });
@@ -1538,8 +1517,41 @@ export class NotesheetGenerateComponent implements OnInit {
         // Clearance-subject variant carries an extra Posting Unit column before Remarks.
         const enC = ['prefixWithServiceId', 'armyRank', 'formattedName', 'presentRabUnit', 'postingUnit', 'custom_Remarks'];
         const bnC = ['prefixWithServiceIdBN', 'armyRankBN', 'formattedNameBN', 'presentRabUnitBN', 'postingUnitBN', 'custom_Remarks'];
+        // Promotion-subject variant carries a Promoted Rank column right after the (Previous) Rank.
+        const enP = ['prefixWithServiceId', 'armyRank', 'promotedRank', 'formattedName', 'presentRabUnit', 'custom_Remarks'];
+        const bnP = ['prefixWithServiceIdBN', 'armyRankBN', 'promotedRank', 'formattedNameBN', 'presentRabUnitBN', 'custom_Remarks'];
         const eq = (a: string[]) => a.length === keys.length && a.every((k, i) => k === keys[i]);
-        return eq(en) || eq(bn) || eq(enC) || eq(bnC);
+        return eq(en) || eq(bn) || eq(enC) || eq(bnC) || eq(enP) || eq(bnP);
+    }
+
+    /** For a promotion note sheet, make the (current) rank column read "Previous Rank" and ensure
+     *  a Promoted Rank select column sits right after it. Used in edit mode, where the saved column
+     *  set may predate the per-member promotion flow or miss the promoted rank column. */
+    private ensurePromotionColumns(): void {
+        if (!this.isPromotionSubjectSelected) return;
+        const bn = this.isBangla;
+        const rankKey = bn ? 'armyRankBN' : 'armyRank';
+        const rankIdx = this.membersData.columns.findIndex((c) => c.key === rankKey);
+        if (rankIdx >= 0) {
+            this.membersData.columns[rankIdx].label = bn ? 'পূর্ববর্তী পদবি' : 'Previous Rank';
+            this.membersData.columns[rankIdx].labelBN = 'পূর্ববর্তী পদবি';
+        }
+        if (!this.membersData.columns.some((c) => c.key === 'promotedRank')) {
+            const col: MemberColumnDef = { key: 'promotedRank', label: bn ? 'পদোন্নতির পদবি' : 'Promoted Rank', group: 'promotion' };
+            if (rankIdx >= 0) this.membersData.columns.splice(rankIdx + 1, 0, col);
+            else this.membersData.columns.push(col);
+        }
+        for (const m of this.membersData.members) {
+            if (m.values['promotedRank'] === undefined) m.values['promotedRank'] = '';
+            if (m.values['promotedRankId'] === undefined) m.values['promotedRankId'] = '';
+        }
+    }
+
+    /** Write a promoted-rank selection onto a member: id for the rank update, label for display. */
+    onPromotedRankChange(member: MemberRow, id: string | null): void {
+        member.values['promotedRankId'] = id ?? '';
+        const opt = this.promotionRankOptions.find((o) => String(o.value) === id);
+        member.values['promotedRank'] = opt ? opt.label : '';
     }
 
     // Column management
@@ -1641,9 +1653,9 @@ export class NotesheetGenerateComponent implements OnInit {
         return col.group === 'custom';
     }
 
-    /** Any non-merged cell is inline-editable, so users can adjust the fetched values. */
+    /** Any non-merged, non-promotion cell is inline-editable, so users can adjust the fetched values. */
     isEditableCell(col: MemberColumnDef): boolean {
-        return !col.mergedFrom;
+        return !col.mergedFrom && col.group !== 'promotion';
     }
 
     /** Cell-edit identity is the MEMBER, not the row number: adding (which re-sorts) or
@@ -1905,6 +1917,9 @@ export class NotesheetGenerateComponent implements OnInit {
         this.membersData = { columns: [], members: [] };
         this.defaultColumnsApplied = false;
         this.columnsAreDefault = false;
+        this.promotionOrgId = null;
+        this.promotionRanks = [];
+        this.promotionRankOptions = [];
         this.selectedUnitNode = null;
         this.resolvePreparedByMapping();
     }
@@ -1933,10 +1948,17 @@ export class NotesheetGenerateComponent implements OnInit {
                 this.messageService.add({ severity: 'warn', summary: 'Members required', detail: 'This is a promotion subject — add at least one member.' });
                 return;
             }
-            const pv = this.form.getRawValue();
-            if (pv.promotionPreviousRankId === pv.promotionPromotedRankId) {
-                this.messageService.add({ severity: 'warn', summary: 'Validation', detail: 'Promoted rank must be different from the previous rank.' });
-                return;
+            for (const m of this.membersData.members) {
+                const promotedId = (m.values['promotedRankId'] ?? '').trim();
+                if (!promotedId) {
+                    this.messageService.add({ severity: 'warn', summary: 'Promoted rank required', detail: 'Select a promoted rank for every member.' });
+                    return;
+                }
+                const prevId = (m.values['armyRankId'] ?? '').trim();
+                if (prevId && promotedId === prevId) {
+                    this.messageService.add({ severity: 'warn', summary: 'Validation', detail: 'Promoted rank must be different from the previous rank.' });
+                    return;
+                }
             }
         }
         this.isSubmitting = true;
@@ -2149,10 +2171,6 @@ export class NotesheetGenerateComponent implements OnInit {
             initiatorId: d.initiatorId ?? 0,
             recommendersJson,
             finalApprovalId: d.finalApproverId ?? null,
-            // Promotion subject inputs (server clears them for any other subject).
-            promotionPreviousRankId: this.isPromotionSubjectSelected ? (d.promotionPreviousRankId ?? null) : null,
-            promotionPromotedRankId: this.isPromotionSubjectSelected ? (d.promotionPromotedRankId ?? null) : null,
-            promotionDate: this.isPromotionSubjectSelected && d.promotionDate ? this.formatNoteSheetDate(d.promotionDate) : null,
             familyInfoJson: null,
             createdBy,
             lastUpdatedBy,
