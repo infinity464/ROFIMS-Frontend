@@ -169,7 +169,7 @@
             }
           </div>
           <div class="field md:col-span-2">
-            <div class="font-medium mb-1">Accessible organization scope</div>
+            <div class="font-medium mb-1">Accessible unit scope</div>
             <p class="text-sm text-color-secondary mb-3">
               Which org-tree nodes' data should this user see? Pick at any level —
               Unit, Wing, Branch, Sub-Branch, Section or Sub-Section.
@@ -262,6 +262,31 @@
                 }
               </div>
             }
+          </div>
+          <div class="field">
+            <label for="ipAddress" class="block mb-2 font-medium">IP Address</label>
+            <input
+              pInputText
+              id="ipAddress"
+              formControlName="ipAddress"
+              placeholder="e.g. 192.168.0.1"
+              class="w-full"
+            />
+          </div>
+          <div class="field">
+            <label for="organizationScope" class="block mb-2 font-medium">Organization Scope</label>
+            <p-select
+              id="organizationScope"
+              formControlName="organizationScope"
+              [options]="organizationScopeOptions"
+              optionLabel="orgNameEN"
+              optionValue="orgId"
+              placeholder="Loading organization scope…"
+              [loading]="organizationScopeLoading"
+              [showClear]="true"
+              appendTo="body"
+              styleClass="w-full"
+            />
           </div>
         </div>
       </div>

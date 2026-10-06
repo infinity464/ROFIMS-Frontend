@@ -47,6 +47,7 @@ import { LEVEL_COLORS } from '@/Components/basic-setup/org-tree/models/org-node.
 import { MasterBasicSetupService } from '@/Components/basic-setup/shared/services/MasterBasicSetupService';
 import { SharedService } from '@/shared/services/shared-service';
 import { OrgTreeMultiSelectComponent } from '@/shared/components/org-tree-multi-select/org-tree-multi-select.component';
+import { OrganizationModel } from '@/Components/basic-setup/organization-setup/models/organization';
 import {
   rulesAllow,
   type ApplicationRole,
@@ -172,6 +173,8 @@ export class IdentityUserCreateComponent implements OnInit {
   private rabUnitAccesses: UserRabUnitAccessDto[] = [];
   editingUser: UserRow | null = null;
   isSubmitting = false;
+  organizationScopeOptions: OrganizationModel[] = [];
+  organizationScopeLoading = false;
 
   resetDialogVisible = false;
   resetTargetUser: UserRow | null = null;
@@ -209,7 +212,26 @@ export class IdentityUserCreateComponent implements OnInit {
     this.loadRoles();
     this.loadEmployees();
     this.loadMemberTypes();
+    this.loadOrganizationScope();
     this.loadUsersAndMappings();
+  }
+
+  loadOrganizationScope(): void {
+    this.organizationScopeLoading = true;
+    this.masterBasicSetupService.getAllActiveMotherOrgs().subscribe({
+      next: (list) => {
+        this.organizationScopeOptions = Array.isArray(list) ? list : [];
+        this.organizationScopeLoading = false;
+      },
+      error: (err: any) => {
+        this.organizationScopeLoading = false;
+        this.messageService.add({
+          severity: 'error',
+          summary: 'Error',
+          detail: err?.error?.message || 'Failed to load organization scope'
+        });
+      }
+    });
   }
 
   loadMemberTypes(): void {
@@ -436,6 +458,7 @@ export class IdentityUserCreateComponent implements OnInit {
       email: ['', [Validators.required, Validators.email]],
       userName: ['', [Validators.required, Validators.minLength(3), Validators.pattern(USERNAME_PATTERN)]],
       phoneNumber: ['', [Validators.required, phoneValidator]],
+      ipAddress: [''],
       password: [
         '',
         [
@@ -446,6 +469,7 @@ export class IdentityUserCreateComponent implements OnInit {
       ],
       roleName: ['', Validators.required],
       employeeId: [null as number | null, Validators.required],
+      organizationScope: [null],
       memberTypeIds: [[] as number[]],
       rabUnitMode: ['all' as 'all' | 'specific'],
       rabUnitIds: [[] as number[]],
@@ -768,6 +792,8 @@ export class IdentityUserCreateComponent implements OnInit {
       memberTypeIds: [],
       rabUnitMode: 'all',
       rabUnitIds: [],
+      ipAddress: '',
+      organizationScope: null,
       confirmUrl
     });
   }
@@ -848,6 +874,8 @@ export class IdentityUserCreateComponent implements OnInit {
       memberTypeIds: [],
       rabUnitMode: 'all',
       rabUnitIds: [],
+      ipAddress: '',
+      organizationScope: null,
       confirmUrl: confirmUrl ?? ''
     });
   }
