@@ -226,9 +226,9 @@
                         <span class="oo-doc-para-no">{{ serial(1) }}</span>
                         <div class="oo-doc-para-text">
                             <div class="oo-doc-rich-content" [innerHTML]="getMainTextSafe()"></div>
-                            <!-- Members Table -->
+                            <!-- Members Table — under this paragraph unless the order picked another -->
                             <app-notesheet-members-table
-                                *ngIf="showMembersTable"
+                                *ngIf="showMembersTable && tableAfterParagraph === 0"
                                 [noteSheetId]="order!.noteSheetId"
                                 [officeOrderId]="order!.noteSheetId == null ? order!.id : null"
                                 [isBangla]="isBangla"
@@ -250,6 +250,13 @@
                             <span class="oo-doc-para-no">{{ serial(lastTextStartSerial + pi) }}</span>
                             <div class="oo-doc-para-text">
                                 <div class="oo-doc-rich-content" [innerHTML]="getParagraphSafe(para)"></div>
+                                <!-- Members Table — when the order picked this paragraph -->
+                                <app-notesheet-members-table
+                                    *ngIf="showMembersTable && tableAfterParagraph === pi + 1"
+                                    [noteSheetId]="order!.noteSheetId"
+                                    [officeOrderId]="order!.noteSheetId == null ? order!.id : null"
+                                    [isBangla]="isBangla"
+                                ></app-notesheet-members-table>
                             </div>
                         </div>
                     </ng-container>

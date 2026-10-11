@@ -37,6 +37,7 @@ import { MembersJsonData } from '@/Components/Features/notesheet-generate/notesh
 import { GeneralNotesheetOfficeOrderWithDetailsDto, OfficeOrderOwnFields } from '@/models/office-order.model';
 import { FlexibleDateDirective } from '@/shared/directives/flexible-date.directive';
 import { FileReferencesFormComponent, FileRowData } from '@/Components/Common/file-references-form/file-references-form';
+import { NotesheetMembersTableComponent } from '@/Components/Shared/notesheet-members-table/notesheet-members-table';
 import { EmpService } from '@/services/emp-service';
 import '@/shared/utils/quill-keep-tabs'; // keep Tab gaps when saved HTML is reloaded into the editor
 
@@ -52,6 +53,8 @@ interface ReferenceNoEntry {
  *  JSON array of { text }, the same convention as NoteSheetInfo.MainText. */
 interface BodyParagraph {
     text: string;
+    /** The members table goes under this paragraph (at most one; none → the first). */
+    tableAfter?: boolean;
 }
 
 /** Attachment (সংযুক্ত) entry — plain text, rendered above the Onulipi, same as the
@@ -87,7 +90,8 @@ interface OnulipiParagraph {
         MultiSelectModule,
         CheckboxModule,
         MembersEditorComponent,
-        UnitHierarchySelectComponent
+        UnitHierarchySelectComponent,
+        NotesheetMembersTableComponent
     ],
     providers: [MessageService, ConfirmationService],
     templateUrl: './office-order-generate.html',
@@ -594,7 +598,10 @@ export class OfficeOrderGenerateComponent implements OnInit {
                 const arr = JSON.parse(s);
                 if (Array.isArray(arr)) {
                     return arr
-                        .map((it: any) => ({ text: typeof it === 'string' ? it : String(it?.text ?? it?.Text ?? '') }))
+                        .map((it: any) => ({
+                            text: typeof it === 'string' ? it : String(it?.text ?? it?.Text ?? ''),
+                            tableAfter: it?.tableAfter === true
+                        }))
                         .filter(b => b.text.trim() !== '');
                 }
             } catch { /* not JSON — treat as one legacy paragraph */ }
@@ -622,10 +629,22 @@ export class OfficeOrderGenerateComponent implements OnInit {
             [this.bodyParagraphs[index + 1], this.bodyParagraphs[index]];
     }
 
+    /** Index of the paragraph the members table sits under — the flagged one, else the first. */
+    get tableAfterIndex(): number {
+        return Math.max(0, this.bodyParagraphs.findIndex(b => b.tableAfter));
+    }
+
+    setTableAfter(index: number): void {
+        this.bodyParagraphs.forEach((b, i) => (b.tableAfter = i === index));
+    }
+
     /** Non-empty paragraphs as the stored JSON array, or null when there are none.
-     *  Quill leaves an empty editor as "<p><br></p>", which must not count as text. */
+     *  Quill leaves an empty editor as "<p><br></p>", which must not count as text.
+     *  The chosen paragraph carries tableAfter; the flag travels with it, so blank rows
+     *  dropped before it don't shift it. */
     private get bodyJson(): string | null {
-        return toOfficeOrderBodyJson(this.bodyParagraphs.map(b => b.text));
+        const at = this.tableAfterIndex;
+        return toOfficeOrderBodyJson(this.bodyParagraphs.map((b, i) => ({ text: b.text, tableAfter: i === at })));
     }
 
     // ─── Attachments (সংযুক্ত) ──────────────

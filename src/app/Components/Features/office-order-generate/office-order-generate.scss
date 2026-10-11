@@ -40,3 +40,16 @@
     min-width: 300px;
 }
 
+/* "Members table below this paragraph" — one radio per paragraph card */
+.table-after-option {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: 6px;
+    font-size: 0.85rem;
+    color: var(--text-color-secondary);
+    cursor: pointer;
+    user-select: none;
+
+    input { cursor: pointer; }
+}

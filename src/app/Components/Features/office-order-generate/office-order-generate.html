@@ -255,6 +255,12 @@
                         <span class="para-number font-semibold text-600 mt-2" style="min-width: 30px">{{ getParagraphSerial(i) }}</span>
                         <div class="flex-1">
                             <p-editor [(ngModel)]="bodyParagraphs[i].text" [style]="{ height: '140px' }"></p-editor>
+                            @if (showMembersTable && (isWithoutNoteSheet || selectedNoteSheetId)) {
+                                <label class="table-after-option">
+                                    <input type="radio" name="membersTableAfter" [checked]="tableAfterIndex === i" (change)="setTableAfter(i)" />
+                                    Members table below this paragraph
+                                </label>
+                            }
                         </div>
                         <div class="flex flex-column gap-1">
                             <p-button
@@ -308,11 +314,20 @@
                     ></app-members-editor>
                 </div>
             } @else if (selectedNoteSheetId) {
-                <!-- Members come from the note sheet, but showing them is this order's own choice -->
+                <!-- Members come from the note sheet (read-only here), but showing them is this order's own choice -->
                 <div class="field mb-4">
-                    <div class="flex align-items-center gap-2">
+                    <div class="flex align-items-center gap-2 mb-3">
                         <p-checkbox inputId="showMembersTable" [binary]="true" [(ngModel)]="showMembersTable"></p-checkbox>
                         <label for="showMembersTable" class="cursor-pointer font-medium">Show members table in the office order</label>
+                    </div>
+                    <div class="text-600 text-sm mb-2">
+                        Members from the note sheet{{ showMembersTable ? '' : ' — not printed in this order' }}
+                    </div>
+                    <div [class.opacity-60]="!showMembersTable">
+                        <app-notesheet-members-table
+                            [noteSheetId]="selectedNoteSheetId"
+                            [isBangla]="isBangla"
+                        ></app-notesheet-members-table>
                     </div>
                 </div>
             }

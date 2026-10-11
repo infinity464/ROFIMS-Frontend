@@ -145,6 +145,8 @@ export class OfficeOrderPreviewComponent implements OnInit {
     // Parsed notesheet paragraphs (from DTO)
     nsMainText = '';
     nsNote = '';
+    /** Which paragraph the members table sits under: 0 = ১। (nsMainText), k = nsParagraphs[k - 1]. */
+    tableAfterParagraph = 0;
     nsParagraphs: string[] = [];
 
     get isBangla(): boolean {
@@ -308,13 +310,15 @@ export class OfficeOrderPreviewComponent implements OnInit {
         // note-sheet text everywhere below — screen, Word and PDF all read these fields.
         // Orders saved before that list existed hold a plain HTML Body instead; those fall
         // through to the note-sheet content, exactly as before.
+        this.tableAfterParagraph = 0;
         const ownParagraphs = this.parseOwnBodyParagraphs(this.order.body);
         if (ownParagraphs.length > 0) {
-            // First paragraph takes serial ১। and carries the members table, like the
-            // note-sheet Main Text it was seeded from.
-            this.nsMainText = ownParagraphs[0];
+            // First paragraph takes serial ১।; the members table goes under the paragraph
+            // flagged tableAfter on the generate screen, or under ১। when none is.
+            this.nsMainText = ownParagraphs[0].text;
             this.nsNote = '';
-            this.nsParagraphs = ownParagraphs.slice(1);
+            this.nsParagraphs = ownParagraphs.slice(1).map(p => p.text);
+            this.tableAfterParagraph = Math.max(0, ownParagraphs.findIndex(p => p.tableAfter));
             return;
         }
 
@@ -338,16 +342,18 @@ export class OfficeOrderPreviewComponent implements OnInit {
 
     /** Body → the order's own paragraph blocks. Only the JSON-array form counts: a legacy
      *  plain-HTML Body is left to the existing fallback rendering. */
-    private parseOwnBodyParagraphs(raw: string | null | undefined): string[] {
+    private parseOwnBodyParagraphs(raw: string | null | undefined): { text: string; tableAfter: boolean }[] {
         const s = (raw ?? '').trim();
         if (!s.startsWith('[')) return [];
         try {
             const arr = JSON.parse(s);
             if (!Array.isArray(arr)) return [];
             return arr
-                .map((it: any) => (typeof it === 'string' ? it : String(it?.text ?? it?.Text ?? '')))
-                .map((t: string) => (t ?? '').trim())
-                .filter((t: string) => t !== '');
+                .map((it: any) => ({
+                    text: (typeof it === 'string' ? it : String(it?.text ?? it?.Text ?? '')).trim(),
+                    tableAfter: it?.tableAfter === true
+                }))
+                .filter(p => p.text !== '');
         } catch {
             return [];
         }
@@ -664,6 +670,15 @@ export class OfficeOrderPreviewComponent implements OnInit {
 
         // ── Notesheet Content (8pt with table at 7pt) ──
         if (this.hasNoteSheetContent) {
+            // Members table (7pt) — goes under the paragraph the order picked (tableAfterParagraph).
+            const { columns, rows } = await this.loadMembersForExport();
+            const pushMembersTable = () => {
+                if (columns.length > 0 && rows.length > 0) {
+                    children.push(this.buildMembersTable(columns, rows, font));
+                    children.push(new Paragraph({ text: '', spacing: { after: 40 } }));
+                }
+            };
+
             // Main Text (serial 1)
             if (this.nsMainText) {
                 const plainMain = this.htmlToPlainText(this.nsMainText);
@@ -677,12 +692,7 @@ export class OfficeOrderPreviewComponent implements OnInit {
                     spacing: { after: 40 }
                 }));
 
-                // Members Table (7pt)
-                const { columns, rows } = await this.loadMembersForExport();
-                if (columns.length > 0 && rows.length > 0) {
-                    children.push(this.buildMembersTable(columns, rows, font));
-                    children.push(new Paragraph({ text: '', spacing: { after: 40 } }));
-                }
+                if (this.tableAfterParagraph === 0) pushMembersTable();
             }
 
             // Note (serial 2)
@@ -690,9 +700,10 @@ export class OfficeOrderPreviewComponent implements OnInit {
                 const plainNote = this.htmlToPlainText(this.nsNote);
                 children.push(new Paragraph({
                     children: [
-                        new TextRun({ text: `${this.serial(this.noteSerial)} `, font, size: contentSize }),
+                        new TextRun({ text: `${this.serial(this.noteSerial)}	`, font, size: contentSize }),
                         new TextRun({ text: plainNote, font, size: contentSize })
                     ],
+                    tabStops: [{ type: TabStopType.LEFT, position: this.membersTableIndentDxa }],
                     alignment: AlignmentType.JUSTIFIED,
                     spacing: { after: 40 }
                 }));
@@ -704,13 +715,15 @@ export class OfficeOrderPreviewComponent implements OnInit {
                 if (plainPara) {
                     children.push(new Paragraph({
                         children: [
-                            new TextRun({ text: `${this.serial(this.lastTextStartSerial + pi)} `, font, size: contentSize }),
+                            new TextRun({ text: `${this.serial(this.lastTextStartSerial + pi)}	`, font, size: contentSize }),
                             new TextRun({ text: plainPara, font, size: contentSize })
                         ],
+                        tabStops: [{ type: TabStopType.LEFT, position: this.membersTableIndentDxa }],
                         alignment: AlignmentType.JUSTIFIED,
                         spacing: { after: 40 }
                     }));
                 }
+                if (this.tableAfterParagraph === pi + 1) pushMembersTable();
             }
         } else if (this.order.body) {
             // Fallback body (8pt)

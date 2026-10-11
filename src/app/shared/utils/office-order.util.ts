@@ -42,11 +42,13 @@ export function buildOfficeOrderLetterNoOptions(
 /**
  * Office-order Body — the non-empty paragraphs as a JSON array of { text }, or null when there
  * are none. Quill leaves an empty editor as "<p><br></p>", which must not count as text.
+ * The paragraph the members table sits under carries tableAfter: true (none → under the first).
  */
-export function toOfficeOrderBodyJson(texts: (string | null | undefined)[]): string | null {
-    const cleaned = (texts ?? [])
-        .map(t => ({ text: (t ?? '').trim() }))
-        .filter(b => b.text !== '' && b.text.replace(/<[^>]*>/g, '').replace(/&nbsp;/g, ' ').trim() !== '');
+export function toOfficeOrderBodyJson(paragraphs: ({ text?: string | null; tableAfter?: boolean } | null | undefined)[]): string | null {
+    const cleaned = (paragraphs ?? [])
+        .map(p => ({ text: (p?.text ?? '').trim(), tableAfter: p?.tableAfter === true }))
+        .filter(b => b.text !== '' && b.text.replace(/<[^>]*>/g, '').replace(/&nbsp;/g, ' ').trim() !== '')
+        .map(b => (b.tableAfter ? b : { text: b.text }));
     return cleaned.length > 0 ? JSON.stringify(cleaned) : null;
 }
 
