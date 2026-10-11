@@ -271,7 +271,10 @@
 }
 
 .oo-doc-para-no {
-    margin-right: 2em;   /* reads as the tab between the number and the text */
+    /* A fixed-width box acts as a tab stop: the text after the number always starts
+       3em in, so the members table below can line up with it. */
+    display: inline-block;
+    min-width: 3em;
 }
 
 .oo-doc-para-text {
@@ -290,9 +293,10 @@
     }
 }
 
-/* ── Members table: full document width ──────────
-   The table renders inside paragraph ১।, which spans the page, so it only needs the
-   child component's own 8px inset dropped to reach both edges. ::ng-deep is what reaches
+/* ── Members table: from the tab stop to the right edge ──────────
+   The table renders inside paragraph ১।, which spans the page. It starts at the same
+   3em tab stop as the paragraph text (see .oo-doc-para-no) and runs to the right edge,
+   with the child component's own 8px inset dropped. ::ng-deep is what reaches
    into app-notesheet-members-table's encapsulated styles; the PDF picks this up through
    collectDocumentStyles(). */
 /* The paragraph text is an inline box now, so the table's own host has to be a block
@@ -302,8 +306,8 @@
 }
 
 .oo-doc-para-text ::ng-deep .members-table-wrap {
-    width: 100%;
-    margin-left: 0;
+    width: calc(100% - 3em);
+    margin-left: 3em;
 }
 
 .oo-doc-para-text ::ng-deep .members-table {

@@ -214,6 +214,7 @@ export const appRoutes: Routes = [
             { path: 'posting/posting-order-preview', loadComponent: () => import('@/Components/Features/posting-order-preview/posting-order-preview').then(m => m.PostingOrderPreviewPageComponent) },
             { path: 'office-order/generate', loadComponent: () => import('@/Components/Features/office-order-generate/office-order-generate').then(m => m.OfficeOrderGenerateComponent) },
             { path: 'office-order/preview', loadComponent: () => import('@/Components/Features/office-order-preview/office-order-preview').then(m => m.OfficeOrderPreviewComponent) },
+            { path: 'r', loadComponent: () => import('@/Components/Features/office-order-member-list/office-order-member-list').then(m => m.OfficeOrderMemberListComponent) },
             { path: 'office-order-ex-bd-leave/generate', loadComponent: () => import('@/Components/Features/office-order-ex-bd-leave-generate/office-order-ex-bd-leave-generate').then(m => m.OfficeOrderExBdLeaveGenerateComponent) },
             { path: 'office-order-ex-bd-leave/list', loadComponent: () => import('@/Components/Features/office-order-ex-bd-leave-preview/office-order-ex-bd-leave-preview').then(m => m.OfficeOrderExBdLeavePreviewComponent) },
             { path: 'office-order-ex-bd-leave/preview', loadComponent: () => import('@/Components/Features/office-order-ex-bd-leave-preview/office-order-ex-bd-leave-preview').then(m => m.OfficeOrderExBdLeavePreviewComponent) },

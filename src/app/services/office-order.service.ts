@@ -2,7 +2,7 @@ import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { environment } from '@/Core/Environments/environment';
-import { GeneralNotesheetOfficeOrderDto, GeneralNotesheetOfficeOrderWithDetailsDto, OfficeOrderMember, OfficeOrderOwnFields } from '@/models/office-order.model';
+import { GeneralNotesheetOfficeOrderDto, GeneralNotesheetOfficeOrderWithDetailsDto, OfficeOrderMember, OfficeOrderMemberRowFilter, OfficeOrderMemberRowsPage, OfficeOrderOwnFields } from '@/models/office-order.model';
 import { ApprovedNoteSheetItem } from '@/models/posting.model';
 
 const API = `${environment.apis.core}/OfficeOrder`;
@@ -27,6 +27,21 @@ export class OfficeOrderService {
     /** List all Office Orders. */
     getOfficeOrderMasters(): Observable<GeneralNotesheetOfficeOrderDto[]> {
         return this.http.get<GeneralNotesheetOfficeOrderDto[]>(`${API}/GetOfficeOrderMasters`);
+    }
+
+    /** Office orders expanded to one row per member (same access scope as the order list), server-side paged.
+     *  includeOptions → also returns the Letter No / NoteSheet / Mother Organization dropdown values. */
+    getOfficeOrderMemberRowsPaged(
+        pageNo: number,
+        rowPerPage: number,
+        filter: OfficeOrderMemberRowFilter,
+        includeOptions = false
+    ): Observable<OfficeOrderMemberRowsPage> {
+        return this.http.post<OfficeOrderMemberRowsPage>(`${API}/GetOfficeOrderMemberRowsPaginated`, {
+            pagination: { page_no: pageNo, row_per_page: rowPerPage },
+            filter,
+            includeOptions
+        });
     }
 
     /** Get single Office Order by id with full details. */

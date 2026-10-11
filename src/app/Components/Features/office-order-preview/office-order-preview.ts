@@ -358,7 +358,7 @@ export class OfficeOrderPreviewComponent implements OnInit {
                 const year = this.toBanglaDigits(String(d.getFullYear()));
                 return `${day} ${month} ${year}`;
             }
-            return d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+            return d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }).replace(/,/g, '');
         } catch { return String(value); }
     }
 
@@ -429,11 +429,14 @@ export class OfficeOrderPreviewComponent implements OnInit {
         return { columns: [], rows: [] };
     }
 
+    /** Tab stop after the paragraph serial; the members table starts here too (3em at 9pt) */
+    private readonly membersTableIndentDxa = 540;
+
     /** Calculate dynamic column widths in twips (DXA) based on content */
     private calcColumnWidthsDxa(columns: any[], rows: Record<string, string>[]): number[] {
-        // Total usable width in twips: page width - left margin - right margin
+        // Usable width in twips: page width - left/right margins (720 each) - table indent
         const pageWidth = this.selectedPageSize === 'legal' ? 12240 : 11906;
-        const totalWidth = pageWidth - 720 - 720; // margins are 720 twips each
+        const totalWidth = pageWidth - 720 - 720 - this.membersTableIndentDxa;
 
         const slHeader = this.isBangla ? 'ক্রমিক' : 'SL';
         const slMaxLen = Math.max(slHeader.length, String(rows.length).length);
@@ -532,6 +535,7 @@ export class OfficeOrderPreviewComponent implements OnInit {
             borders,
             rows: [new TableRow({ children: headerCells, tableHeader: true }), ...dataRows],
             width: { size: totalWidth, type: WidthType.DXA },
+            indent: { size: this.membersTableIndentDxa, type: WidthType.DXA },
             layout: TableLayoutType.FIXED,
             columnWidths: colWidths
         });
@@ -630,9 +634,10 @@ export class OfficeOrderPreviewComponent implements OnInit {
                 const plainMain = this.htmlToPlainText(this.nsMainText);
                 children.push(new Paragraph({
                     children: [
-                        new TextRun({ text: `${this.serial(1)} `, font, size: contentSize }),
+                        new TextRun({ text: `${this.serial(1)}\t`, font, size: contentSize }),
                         new TextRun({ text: plainMain, font, size: contentSize })
                     ],
+                    tabStops: [{ type: TabStopType.LEFT, position: this.membersTableIndentDxa }],
                     alignment: AlignmentType.JUSTIFIED,
                     spacing: { after: 80 }
                 }));

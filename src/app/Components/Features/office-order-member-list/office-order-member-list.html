@@ -1,0 +1,227 @@
+<p-toast position="top-center"></p-toast>
+
+<div class="office-order-member-list">
+    <div class="form-card">
+        <div class="form-card-header flex justify-content-between align-items-center">
+            <h3 class="form-card-title">Office Order — Member List</h3>
+            <p-button
+                icon="pi pi-refresh"
+                [rounded]="true"
+                [text]="true"
+                severity="secondary"
+                pTooltip="Reload"
+                [loading]="loading"
+                (onClick)="reload()"
+            ></p-button>
+        </div>
+
+        <!-- Filters -->
+        <div class="filter-bar">
+            <div class="filter-row">
+                <div class="filter-item">
+                    <label class="filter-label">Letter No</label>
+                    <p-select
+                        [options]="letterNoOptions"
+                        [(ngModel)]="letterNoFilter"
+                        optionLabel="label"
+                        optionValue="value"
+                        placeholder="All Letter Nos"
+                        [showClear]="true"
+                        [filter]="true"
+                        filterPlaceholder="Search..."
+                        (onChange)="applyFilters()"
+                        styleClass="w-full"
+                    ></p-select>
+                </div>
+                <div class="filter-item">
+                    <label class="filter-label">NoteSheet</label>
+                    <p-select
+                        [options]="noteSheetOptions"
+                        [(ngModel)]="noteSheetFilter"
+                        optionLabel="label"
+                        optionValue="value"
+                        placeholder="All NoteSheets"
+                        [showClear]="true"
+                        [filter]="true"
+                        filterPlaceholder="Search..."
+                        (onChange)="applyFilters()"
+                        styleClass="w-full"
+                    ></p-select>
+                </div>
+                <div class="filter-item">
+                    <label class="filter-label">Mother Organization</label>
+                    <p-select
+                        [options]="motherOrgOptions"
+                        [(ngModel)]="motherOrgFilter"
+                        optionLabel="label"
+                        optionValue="value"
+                        placeholder="All Mother Organizations"
+                        [showClear]="true"
+                        [filter]="true"
+                        filterPlaceholder="Search..."
+                        (onChange)="applyFilters()"
+                        styleClass="w-full"
+                    ></p-select>
+                </div>
+                <div class="filter-item">
+                    <label class="filter-label">Order Type</label>
+                    <p-select
+                        [options]="orderFormatOptions"
+                        [(ngModel)]="orderFormatFilter"
+                        optionLabel="label"
+                        optionValue="value"
+                        placeholder="All Order Types"
+                        [showClear]="true"
+                        (onChange)="applyFilters()"
+                        styleClass="w-full"
+                    ></p-select>
+                </div>
+                <div class="filter-item">
+                    <label class="filter-label">Subject Category</label>
+                    <p-select
+                        [options]="subjectCategoryOptions"
+                        [(ngModel)]="subjectCategoryFilter"
+                        optionLabel="label"
+                        optionValue="value"
+                        placeholder="All Categories"
+                        [showClear]="true"
+                        (onChange)="applyFilters()"
+                        styleClass="w-full"
+                    ></p-select>
+                </div>
+                <div class="filter-item">
+                    <label class="filter-label">Approval</label>
+                    <p-select
+                        [options]="approvalOptions"
+                        [(ngModel)]="approvalFilter"
+                        optionLabel="label"
+                        optionValue="value"
+                        placeholder="All"
+                        [showClear]="true"
+                        (onChange)="applyFilters()"
+                        styleClass="w-full"
+                    ></p-select>
+                </div>
+                <div class="filter-item filter-action">
+                    <p-button
+                        icon="pi pi-filter-slash"
+                        label="Clear"
+                        severity="secondary"
+                        [text]="true"
+                        size="small"
+                        (onClick)="clearFilters()"
+                    ></p-button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Server-side paging: each page / filter / search change is one request. -->
+        <p-table
+            [value]="rows"
+            [loading]="loading"
+            [tableStyle]="{ 'min-width': '95rem' }"
+            styleClass="p-datatable-striped p-datatable-gridlines"
+            [lazy]="true"
+            (onLazyLoad)="onLazyLoad($event)"
+            [paginator]="true"
+            [rows]="pageSize"
+            [first]="first"
+            [totalRecords]="totalRecords"
+            [rowsPerPageOptions]="[15, 25, 50, 100]"
+        >
+            <ng-template pTemplate="caption">
+                <div class="flex justify-content-between align-items-center flex-wrap gap-3">
+                    <span class="text-600 white-space-nowrap">
+                        Total members: <b>{{ totalRecords }}</b>
+                        <span *ngIf="hasFilters">(filtered)</span>
+                    </span>
+                    <p-iconfield>
+                        <p-inputicon styleClass="pi pi-search"></p-inputicon>
+                        <input
+                            pInputText
+                            type="text"
+                            placeholder="Search..."
+                            [value]="searchText"
+                            (input)="onSearch($event)"
+                        />
+                    </p-iconfield>
+                </div>
+            </ng-template>
+            <ng-template pTemplate="header">
+                <tr>
+                    <th style="width: 50px">Ser</th>
+                    <th style="min-width: 175px">Letter No</th>
+                    <th style="min-width: 110px; white-space: nowrap">Order Date</th>
+                    <th style="min-width: 90px">Service ID</th>
+                    <th style="min-width: 80px">SRB ID</th>
+                    <th style="min-width: 80px">Rank</th>
+                    <th style="min-width: 140px">Full Name</th>
+                    <th style="min-width: 120px">Mother Organization</th>
+                    <th style="min-width: 120px">Mother Unit</th>
+                    <th style="min-width: 200px">Subject</th>
+                    <th style="min-width: 160px; white-space: nowrap">NoteSheet No</th>
+                    <th style="min-width: 100px">Order Type</th>
+                    <th style="min-width: 130px">Subject Category</th>
+                    <th style="min-width: 100px">Approval</th>
+                    <th style="width: 100px">Action</th>
+                </tr>
+            </ng-template>
+            <ng-template pTemplate="body" let-row let-rowIndex="rowIndex">
+                <tr>
+                    <!-- rowIndex is page-absolute in lazy mode -->
+                    <td>{{ rowIndex + 1 }}</td>
+                    <td><span class="font-semibold">{{ row.letterNo || '-' }}</span></td>
+                    <td>{{ formatDate(row.letterDate) }}</td>
+                    <td>{{ row.serviceId || '-' }}</td>
+                    <td>{{ row.rabID || '-' }}</td>
+                    <td>{{ row.rankName || '-' }}</td>
+                    <td>{{ row.fullNameEN || '-' }}</td>
+                    <td>{{ row.motherOrganization || '-' }}</td>
+                    <td>{{ row.motherUnitName || '-' }}</td>
+                    <td>{{ row.subject || '-' }}</td>
+                    <td style="white-space: nowrap">
+                        {{ row.noteSheetId == null ? 'Without Note Sheet' : (row.noteSheetNo || '-') }}
+                    </td>
+                    <td>{{ orderFormatLabel(row.orderFormat) }}</td>
+                    <td>{{ subjectCategoryLabel(row.subjectCategory) }}</td>
+                    <td>
+                        <p-tag
+                            [value]="approvalStatusLabel(row.approvalStatus)"
+                            [severity]="approvalStatusSeverity(row.approvalStatus)"
+                        ></p-tag>
+                    </td>
+                    <td>
+                        <div class="flex gap-1">
+                            <p-button
+                                icon="pi pi-user"
+                                [rounded]="true"
+                                [text]="true"
+                                size="small"
+                                pTooltip="View Profile"
+                                (onClick)="openProfile(row)"
+                            ></p-button>
+                            <p-button
+                                icon="pi pi-eye"
+                                [rounded]="true"
+                                [text]="true"
+                                size="small"
+                                pTooltip="View Office Order"
+                                (onClick)="openOfficeOrder(row)"
+                            ></p-button>
+                        </div>
+                    </td>
+                </tr>
+            </ng-template>
+            <ng-template pTemplate="emptymessage">
+                <tr>
+                    <td colspan="15" class="text-center p-4">
+                        <div class="flex flex-column align-items-center gap-3 py-5">
+                            <i class="pi pi-inbox text-5xl text-400"></i>
+                            <span class="text-lg text-500">No office order members found.</span>
+                        </div>
+                    </td>
+                </tr>
+            </ng-template>
+        </p-table>
+    </div>
+</div>

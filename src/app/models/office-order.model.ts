@@ -24,6 +24,51 @@ export interface GeneralNotesheetOfficeOrderDto {
     approvalDate?: string | null;
 }
 
+/** One row per (office order, member) for the member-wise office order list. */
+export interface OfficeOrderMemberRowDto {
+    officeOrderId: number;
+    letterNo: string;
+    letterDate: string;
+    noteSheetId: number | null;
+    noteSheetNo: string | null;
+    orderFormat?: string | null;
+    subject: string | null;
+    /** Subject's category (Clearance - Officer / RTU / Promotion); null → General. */
+    subjectCategory?: string | null;
+    status: string;
+    approvalStatus?: string | null;
+    approvalDate?: string | null;
+    createdBy: string;
+    createdDate: string;
+    employeeId: number;
+    serviceId: string | null;
+    rabID: string | null;
+    rankName: string | null;
+    fullNameEN: string | null;
+    memberType: string | null;
+    motherOrganization: string | null;
+    motherUnitName: string | null;
+}
+
+/** Server-side filters for the member-wise list ('__none__' = without note sheet, '__general__' = empty value). */
+export interface OfficeOrderMemberRowFilter {
+    letterNo?: string | null;
+    noteSheetNo?: string | null;
+    motherOrganization?: string | null;
+    orderFormat?: string | null;
+    subjectCategory?: string | null;
+    approvalStatus?: string | null;
+    search?: string | null;
+}
+
+/** One page of the member-wise list; options only when requested. */
+export interface OfficeOrderMemberRowsPage {
+    datalist: OfficeOrderMemberRowDto[];
+    /** The API camel-cases JSON, so the controller's Rows/TotalPages arrive as rows/totalPages. */
+    pages: { rows: number; totalPages: number };
+    options?: { letterNos: string[]; noteSheetNos: string[]; motherOrganizations: string[] } | null;
+}
+
 /** Office Order full detail (for preview/edit). */
 export interface GeneralNotesheetOfficeOrderWithDetailsDto {
     id: number;
