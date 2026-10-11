@@ -31,6 +31,7 @@ import { ApprovedNoteSheetItem, PostingOrderMasterDto, EmployeeRemovalInfo, Canc
 import { PostingOrderNumberConfigModel } from '@/Components/basic-setup/shared/models/posting-order-number-config';
 import { NoteSheetType, CodeType, ApprovalStatus, PostingType } from '@/models/enums';
 import { FlexibleDateDirective } from '@/shared/directives/flexible-date.directive';
+import '@/shared/utils/quill-keep-tabs'; // keep Tab gaps when saved HTML is reloaded into the editor
 
 interface NoteSheetEmployee {
     employeeId: number;

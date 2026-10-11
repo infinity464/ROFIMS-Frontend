@@ -46,6 +46,7 @@ import {
 } from 'docx';
 import { saveAs } from 'file-saver';
 import { FlexibleDateDirective } from '@/shared/directives/flexible-date.directive';
+import '@/shared/utils/quill-keep-tabs'; // keep Tab gaps when saved HTML is reloaded into the editor
 
 /** A footer paragraph linked to a specific transfer (RAB) unit. */
 interface FooterParagraph {

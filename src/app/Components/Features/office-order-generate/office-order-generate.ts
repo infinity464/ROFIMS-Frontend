@@ -38,6 +38,7 @@ import { GeneralNotesheetOfficeOrderWithDetailsDto, OfficeOrderOwnFields } from 
 import { FlexibleDateDirective } from '@/shared/directives/flexible-date.directive';
 import { FileReferencesFormComponent, FileRowData } from '@/Components/Common/file-references-form/file-references-form';
 import { EmpService } from '@/services/emp-service';
+import '@/shared/utils/quill-keep-tabs'; // keep Tab gaps when saved HTML is reloaded into the editor
 
 /** Reference No paragraph entry. */
 interface ReferenceNoEntry {

@@ -212,7 +212,7 @@
 
 /* ── Sections (Address To, Reference No, Attachment, Onulipi) ── */
 .oo-doc-section {
-    margin: 10px 0;
+    margin: 5px 0;
     font-size: 9pt;
 }
 
@@ -238,7 +238,7 @@
 
 /* ── Subject ──────────────────────────────────────── */
 .oo-doc-subject {
-    margin: 10px 0;
+    margin: 5px 0;
     font-size: 9pt;
 }
 
@@ -256,7 +256,7 @@
    paragraph that wraps runs back to the page's left edge — the continuation lines start
    under the number, not under the text. Same arrangement as the note sheet's .ns-para. */
 .oo-doc-para {
-    margin: 10px 0;
+    margin: 5px 0;
     font-size: 9pt;
     /* Tight 1.25 leading. The text is injected with [innerHTML], so the rich-content
        rule further down (and any line-height Quill wrote inline) would otherwise win
@@ -325,20 +325,59 @@
 }
 
 /* ── Signature Area ──────────────────────────────── */
-.oo-doc-signature-area {
+/* Attachment/Onulipi on the left, signature on the right. Both are bottom-aligned, and the
+   lists get blank space underneath for each signature line after the name
+   (--sig-extra-lines, set in the template), so the name sits level with the last Onulipi
+   line and rank / appointment / unit run on below it. */
+.oo-doc-closing {
     display: flex;
+    align-items: flex-end;
+    gap: 16px;
+    /* Same gap as between the paragraphs above; the lists' own top margins are dropped
+       below so there is no extra space before সংযুক্ত / অনুলিপি. */
+    margin-top: 10px;
+
+    .oo-doc-attachments,
+    .oo-doc-onulipi {
+        margin-top: 5px;
+        padding-top: 0;
+    }
+
+    .oo-doc-closing-lists > :first-child {
+        margin-top: 0;
+    }
+}
+
+.oo-doc-closing-lists {
+    flex: 1 1 auto;
+    min-width: 0;
+    padding-bottom: calc(var(--sig-extra-lines, 0) * 1.5 * 9pt); /* one .oo-doc-sig-rank line each */
+}
+
+.oo-doc-signature-area {
+    flex: 0 0 auto;
+    /* Matches the space under the last Onulipi baseline (section 5px + line 2px + its
+       taller 2.0 leading) so the name and the last Onulipi line share a baseline. */
+    margin-bottom: 10px;
+}
+
+/* No Attachment/Onulipi: the signature just sits on the right as before. */
+.oo-doc-closing--sig-only {
     justify-content: flex-end;
-    margin: 40px 0 20px;
+
+    .oo-doc-closing-lists { display: none; }
+    .oo-doc-signature-area { margin-bottom: 20px; }
 }
 
 .oo-doc-signature-block {
-    text-align: center;
+    text-align: left;
     min-width: 200px;
 }
 
 .oo-doc-sig-name {
     font-weight: 700;
     font-size: 9pt;
+    line-height: 1.5;
     border-top: 1px solid transparent;
     padding-top: 4px;
 }
@@ -449,8 +488,13 @@
         text-align: justify;
         word-break: normal;
         overflow-wrap: break-word;
+        /* Keep the \t the editor's Tab key inserts as a real tab gap (the editor itself
+           shows it with pre-wrap / tab-size 4); normal white-space would collapse it
+           to a single space. */
+        white-space: pre-wrap;
+        tab-size: 4;
 
-        p { margin: 4px 0; text-align: justify; }
+        p { margin: 2px 0; text-align: justify; }
         ul, ol { padding-left: 24px !important; margin: 4px 0; list-style-type: disc !important; }
         li { display: list-item !important; list-style-type: disc !important; }
         strong { font-weight: 700; }

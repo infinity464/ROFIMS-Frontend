@@ -8,6 +8,10 @@
     @return calc(#{$pt}pt + var(--ns-fs-delta, 0) * 1pt);
 }
 
+/* Tab stop after a body paragraph's serial (১।): 1.8 × the 10pt serial size, which is
+   the old "serial + 0.8em gap" width for a one-digit serial. */
+$ns-tab-stop: calc(#{fs(10)} * 1.8);
+
 /* ── Document font ─────────────────────────────────────
    SolaimanLipi (bundled, see styles.scss) replaces SolaimanLipi as the Bangla
    face for this preview. Times New Roman stays first so Latin text and digits
@@ -48,7 +52,11 @@
    (whose body is this component's innerHTML), while posting / ex-bd previews
    keep their own spacing. Loaded after notesheet-preview.scss, so it wins. */
 .ns-para-no {
-    margin-right: 0.8em;
+    /* A fixed-width box acts as the tab stop, so the text after the serial always starts
+       at the same place and the members table can line up with it ($ns-tab-stop). */
+    display: inline-block;
+    min-width: $ns-tab-stop;
+    margin-right: 0;
     font-weight: normal;   /* serial numbers (১। ২। …) not bold */
 }
 
@@ -71,13 +79,13 @@
     font-weight: normal;
 }
 
-/* Members table: align its left edge with the body paragraphs (১।/ক।) instead of
-   the shared 16px Word-style indent. Loaded after notesheet-preview.scss, so it wins. */
+/* Members table: starts at the paragraph tab stop (where the text after ১। begins)
+   instead of the shared 16px Word-style indent, and runs to the right edge of the
+   justified paragraphs (.ns-para pads 1px left / 2px right). Loaded after
+   notesheet-preview.scss, so it wins. */
 .ns-members-preview-table {
-    /* Span the full text width so the right edge lines up with the justified paragraphs
-       (.ns-para pads 1px left / 2px right). */
-    width: calc(100% - 3px);
-    margin-left: 1px;
+    width: calc(100% - 3px - #{$ns-tab-stop});
+    margin-left: calc(1px + #{$ns-tab-stop});
     margin-right: 2px;
 
     th,

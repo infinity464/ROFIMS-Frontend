@@ -35,6 +35,7 @@ import { ExBdLeaveApplicationService } from '@/services/ex-bd-leave-application.
 import { OnulipiItem } from '@/Components/basic-setup/shared/models/onulipi-config';
 import { CommonCodeService } from '@/services/common-code-service';
 import { CommonCodeModel } from '@/models/common-code-model';
+import '@/shared/utils/quill-keep-tabs'; // keep Tab gaps when saved HTML is reloaded into the editor
 
 /** Reference No paragraph entry. */
 interface ReferenceNoEntry {

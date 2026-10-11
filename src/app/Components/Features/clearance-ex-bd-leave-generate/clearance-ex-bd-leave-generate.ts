@@ -36,6 +36,7 @@ import { OnulipiItem } from '@/Components/basic-setup/shared/models/onulipi-conf
 import { CommonCodeService } from '@/services/common-code-service';
 import { CommonCodeModel } from '@/models/common-code-model';
 import { formatDateEnglishDMY } from '@/Core/i18n/bangla-numerals';
+import '@/shared/utils/quill-keep-tabs'; // keep Tab gaps when saved HTML is reloaded into the editor
 
 /** Reference No paragraph entry. */
 interface ReferenceNoEntry {

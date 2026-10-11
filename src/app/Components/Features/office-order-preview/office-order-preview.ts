@@ -195,6 +195,14 @@ export class OfficeOrderPreviewComponent implements OnInit {
         this.router.navigate(['/office-order/generate'], { queryParams: { id: row.id } });
     }
 
+    /** Signature lines after the name (rank, appointment, unit) — the preview reserves this many
+     *  lines under the Onulipi so the name lines up with the last Onulipi line. */
+    get sigExtraLines(): number {
+        const o = this.order;
+        if (!o) return 0;
+        return [o.approvalEmployeeRank, o.approvalEmployeeAppointment, o.approvalEmployeeRabUnit].filter(Boolean).length;
+    }
+
     /** Orders from a note sheet always show members; orders without one follow their own setting. */
     get showMembersTable(): boolean {
         return !!this.order && (this.order.noteSheetId != null || this.order.showMembersTable !== false);
@@ -596,7 +604,7 @@ export class OfficeOrderPreviewComponent implements OnInit {
                         spacing: { after: 20 }
                     }));
                 }
-                children.push(new Paragraph({ text: '', spacing: { after: 80 } }));
+                children.push(new Paragraph({ text: '', spacing: { after: 40 } }));
             }
         }
 
@@ -607,7 +615,7 @@ export class OfficeOrderPreviewComponent implements OnInit {
                     new TextRun({ text: `${this.isBangla ? 'বিষয়: ' : 'Subject: '}`, font, size: contentSize, bold: true }),
                     new TextRun({ text: this.order.subject, font, size: contentSize, bold: true, underline: {} })
                 ],
-                spacing: { after: 100 }
+                spacing: { after: 50 }
             }));
         }
 
@@ -615,7 +623,7 @@ export class OfficeOrderPreviewComponent implements OnInit {
         if (this.referenceEntries.length > 0) {
             children.push(new Paragraph({
                 children: [new TextRun({ text: this.isBangla ? 'সূত্র:' : 'Reference:', font, size: contentSize })],
-                spacing: { before: 80 }
+                spacing: { before: 40 }
             }));
             for (const ref of this.referenceEntries) {
                 children.push(new Paragraph({
@@ -624,7 +632,7 @@ export class OfficeOrderPreviewComponent implements OnInit {
                     spacing: { after: 20 }
                 }));
             }
-            children.push(new Paragraph({ text: '', spacing: { after: 60 } }));
+            children.push(new Paragraph({ text: '', spacing: { after: 30 } }));
         }
 
         // ── Notesheet Content (8pt with table at 7pt) ──
@@ -639,14 +647,14 @@ export class OfficeOrderPreviewComponent implements OnInit {
                     ],
                     tabStops: [{ type: TabStopType.LEFT, position: this.membersTableIndentDxa }],
                     alignment: AlignmentType.JUSTIFIED,
-                    spacing: { after: 80 }
+                    spacing: { after: 40 }
                 }));
 
                 // Members Table (7pt)
                 const { columns, rows } = await this.loadMembersForExport();
                 if (columns.length > 0 && rows.length > 0) {
                     children.push(this.buildMembersTable(columns, rows, font));
-                    children.push(new Paragraph({ text: '', spacing: { after: 80 } }));
+                    children.push(new Paragraph({ text: '', spacing: { after: 40 } }));
                 }
             }
 
@@ -659,7 +667,7 @@ export class OfficeOrderPreviewComponent implements OnInit {
                         new TextRun({ text: plainNote, font, size: contentSize })
                     ],
                     alignment: AlignmentType.JUSTIFIED,
-                    spacing: { after: 80 }
+                    spacing: { after: 40 }
                 }));
             }
 
@@ -673,7 +681,7 @@ export class OfficeOrderPreviewComponent implements OnInit {
                             new TextRun({ text: plainPara, font, size: contentSize })
                         ],
                         alignment: AlignmentType.JUSTIFIED,
-                        spacing: { after: 80 }
+                        spacing: { after: 40 }
                     }));
                 }
             }
@@ -685,59 +693,65 @@ export class OfficeOrderPreviewComponent implements OnInit {
                     children.push(new Paragraph({
                         children: [new TextRun({ text: line.trim(), font, size: contentSize })],
                         alignment: AlignmentType.JUSTIFIED,
-                        spacing: { after: 60 }
+                        spacing: { after: 30 }
                     }));
                 }
             }
         }
 
-        // ── Approval Signature (8pt, left-aligned but indented to right side) ──
+        // ── Approval Signature (8pt, left-aligned but on the right side) ──
+        // Built here, placed below: beside the Attachment/Onulipi when there is one, so its
+        // last line sits level with the last Onulipi line.
+        const sigIndent = 8500; // twips from the left margin to the signature block
+        const sigParas: Paragraph[] = [];
+        const sigSideBySide = this.attachmentEntries.length > 0 || this.exportOnulipiEntries.length > 0;
         if (this.order.approvalEmployeeName) {
-            const sigIndent = 8500; // twips indent from left to push signature block further right
-            children.push(new Paragraph({ text: '', spacing: { before: 400 } }));
             const sigName = this.isBangla
                 ? (this.order.approvalEmployeeNameBN || this.order.approvalEmployeeName)
                 : this.order.approvalEmployeeName;
-            children.push(new Paragraph({
+            sigParas.push(new Paragraph({
                 children: [new TextRun({ text: sigName, font, size: contentSize, bold: true })],
                 alignment: AlignmentType.LEFT,
-                indent: { left: sigIndent }
+                indent: sigSideBySide ? undefined : { left: sigIndent }
             }));
             if (this.order.approvalEmployeeRank) {
                 const rank = this.isBangla ? (this.order.approvalEmployeeRankBN || this.order.approvalEmployeeRank) : this.order.approvalEmployeeRank;
-                children.push(new Paragraph({
+                sigParas.push(new Paragraph({
                     children: [new TextRun({ text: rank, font, size: contentSize })],
                     alignment: AlignmentType.LEFT,
-                    indent: { left: sigIndent }
+                    indent: sigSideBySide ? undefined : { left: sigIndent }
                 }));
             }
             if (this.order.approvalEmployeeAppointment) {
                 const appt = this.isBangla ? (this.order.approvalEmployeeAppointmentBN || this.order.approvalEmployeeAppointment) : this.order.approvalEmployeeAppointment;
-                children.push(new Paragraph({
+                sigParas.push(new Paragraph({
                     children: [new TextRun({ text: appt, font, size: contentSize })],
                     alignment: AlignmentType.LEFT,
-                    indent: { left: sigIndent }
+                    indent: sigSideBySide ? undefined : { left: sigIndent }
                 }));
             }
             if (this.order.approvalEmployeeRabUnit) {
                 const unit = this.isBangla ? (this.order.approvalEmployeeRabUnitBN || this.order.approvalEmployeeRabUnit) : this.order.approvalEmployeeRabUnit;
-                children.push(new Paragraph({
+                sigParas.push(new Paragraph({
                     children: [new TextRun({ text: unit, font, size: contentSize })],
                     alignment: AlignmentType.LEFT,
-                    indent: { left: sigIndent }
+                    indent: sigSideBySide ? undefined : { left: sigIndent }
                 }));
             }
         }
 
+        // Attachment + Onulipi go into their own list so they can share a row with the signature.
+        const closing: Paragraph[] = [];
+
         // ── Attachments (সংযুক্ত, 8pt) — printed directly above the Onulipi ──
         if (this.attachmentEntries.length > 0) {
-            children.push(new Paragraph({
+            closing.push(new Paragraph({
                 children: [new TextRun({ text: this.isBangla ? 'সংযুক্ত:' : 'Attachment:', font, size: contentSize, bold: true })],
-                spacing: { before: 300, after: 0 }
+                spacing: { before: 100, after: 0 }
             }));
             this.attachmentEntries.forEach((att, idx) => {
                 const ser = this.isBangla ? this.toBanglaDigits(String(idx + 1)) : String(idx + 1);
-                children.push(new Paragraph({
+                closing.push(new Paragraph({
                     children: [new TextRun({ text: `${ser}।\t${att.text}`, font, size: contentSize })],
                     indent: { left: 432, hanging: 432 },
                     tabStops: [{ type: TabStopType.LEFT, position: 432 }],
@@ -749,22 +763,61 @@ export class OfficeOrderPreviewComponent implements OnInit {
         // ── Onulipi (8pt) — only checked entries ──
         const exportOnulipi = this.exportOnulipiEntries;
         if (exportOnulipi.length > 0) {
-            children.push(new Paragraph({
+            closing.push(new Paragraph({
                 children: [new TextRun({
                     text: this.isBangla ? 'অনুলিপি (জ্যেষ্ঠতার ভিত্তিতে নহে):' : 'Copy (not in order of seniority):',
                     font, size: contentSize, bold: true
                 })],
-                spacing: { before: 300 }
+                spacing: { before: 100 }
             }));
             exportOnulipi.forEach((entry, idx) => {
                 const ser = this.isBangla ? this.toBanglaDigits(String(idx + 1)) : String(idx + 1);
-                children.push(new Paragraph({
+                closing.push(new Paragraph({
                     children: [new TextRun({ text: `${ser}।\t${entry.text}`, font, size: contentSize })],
                     indent: { left: 360 },
                     tabStops: [{ type: TabStopType.LEFT, position: 760 }],
                     spacing: { after: 20 }
                 }));
             });
+        }
+
+        if (sigParas.length > 0 && closing.length > 0) {
+            // Borderless two-column table: Attachment/Onulipi on the left, signature on the
+            // right. The last Onulipi line gets its own row next to the signature, so the
+            // signature's name line starts level with it and the rest runs on below.
+            const pageWidth = pageSize.width - 720 - 720;
+            const leftWidth = sigIndent;
+            const rightWidth = pageWidth - leftWidth;
+            const noBorder = { style: BorderStyle.NONE, size: 0, color: 'FFFFFF' };
+            const noBorders = { top: noBorder, bottom: noBorder, left: noBorder, right: noBorder };
+            const noMargins = { top: 0, bottom: 0, left: 0, right: 0 };
+            children.push(new Paragraph({ text: '', spacing: { before: 100 } }));
+            children.push(new Table({
+                borders: { ...noBorders, insideHorizontal: noBorder, insideVertical: noBorder },
+                width: { size: pageWidth, type: WidthType.DXA },
+                layout: TableLayoutType.FIXED,
+                columnWidths: [leftWidth, rightWidth],
+                rows: [
+                    ...(closing.length > 1 ? [new TableRow({
+                        children: [
+                            new TableCell({ children: closing.slice(0, -1), width: { size: leftWidth, type: WidthType.DXA }, borders: noBorders, margins: noMargins }),
+                            new TableCell({ children: [new Paragraph({ text: '' })], width: { size: rightWidth, type: WidthType.DXA }, borders: noBorders, margins: noMargins })
+                        ]
+                    })] : []),
+                    new TableRow({
+                        children: [
+                            new TableCell({ children: closing.slice(-1), width: { size: leftWidth, type: WidthType.DXA }, borders: noBorders, margins: noMargins, verticalAlign: VerticalAlign.TOP }),
+                            new TableCell({ children: sigParas, width: { size: rightWidth, type: WidthType.DXA }, borders: noBorders, margins: noMargins, verticalAlign: VerticalAlign.TOP })
+                        ]
+                    })
+                ]
+            }));
+        } else {
+            if (sigParas.length > 0) {
+                children.push(new Paragraph({ text: '', spacing: { before: 400 } }));
+                for (const p of sigParas) children.push(p);
+            }
+            children.push(...closing);
         }
 
         return new Document({

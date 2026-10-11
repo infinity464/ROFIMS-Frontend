@@ -11,6 +11,7 @@ import { ControlValueAccessor, NG_VALUE_ACCESSOR, FormsModule } from '@angular/f
 import { CommonModule } from '@angular/common';
 import { Editor, EditorModule } from 'primeng/editor';
 import Quill from 'quill';
+import '@/shared/utils/quill-keep-tabs'; // keep Tab gaps when saved HTML is reloaded into the editor
 
 // Register custom fonts once at module load time
 const Font = Quill.import('formats/font') as any;

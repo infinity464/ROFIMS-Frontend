@@ -2539,11 +2539,17 @@ html, body { margin: 0; padding: 0; background: transparent; }
                 ? model.mainSections
                 : [{ serialText: model.mainSerialText, blocks: model.mainBlocks }];
 
+        // Tab stop after the serial (১।) — same as the preview's .ns-para-no min-width
+        // (1.8 × the 10pt serial size) — measured from the 40-twip body indent. The members
+        // table starts here too.
+        const serialTabTw = Math.round((10 + this.fontDelta) * 1.8 * 20);
+        const serialTabPos = 40 + serialTabTw;
+
         const renderMainSection = (section: { serialText: string; blocks: ContentBlock[] }) => {
             const blocks = section.blocks ?? [];
             if (blocks.length > 0 && blocks[0].type === 'paragraph' && blocks[0].text) {
                 const firstBlock = blocks[0];
-                const serialRun = new TextRun({ text: `${section.serialText}  `, bold: true, size: bodySize, sizeComplexScript: csBody, font, language: lang });
+                const serialRun = new TextRun({ text: `${section.serialText}	`, bold: true, size: bodySize, sizeComplexScript: csBody, font, language: lang });
                 const contentRuns = (firstBlock.runs && firstBlock.runs.length > 0)
                     ? firstBlock.runs.map(r => new TextRun({
                         text: r.text,
@@ -2558,6 +2564,7 @@ html, body { margin: 0; padding: 0; background: transparent; }
                     : [new TextRun({ text: firstBlock.text!, bold: firstBlock.bold, italics: firstBlock.italic, size: bodySize, sizeComplexScript: csBody, font, language: lang })];
                 mainChildren.push(new Paragraph({
                     children: [serialRun, ...contentRuns],
+                    tabStops: [{ type: TabStopType.LEFT, position: serialTabPos }],
                     indent: { left: 40 }, spacing: { before: 160, after: 80 }, alignment: AlignmentType.JUSTIFIED
                 }));
                 if (blocks.length > 1) {
@@ -2612,14 +2619,13 @@ html, body { margin: 0; padding: 0; background: transparent; }
                     })]
                 });
             });
-            // Align the table with the body paragraphs: same left indent (240) and the same
-            // right edge (spans to the cell's content-right), so it lines up like the preview.
-            // Align with the body paragraphs: same left indent (40) and span to the cell's
-            // content-right edge (content box = wordCellWidth − 240 from the 120-twip cell margins).
+            // Start at the serial's tab stop (where the text after ১। begins) and span to the
+            // cell's content-right edge (content box = wordCellWidth − 240 from the 120-twip
+            // cell margins), so it lines up like the preview.
             mainChildren.push(new Table({
                 layout: TableLayoutType.FIXED,
-                indent: { size: 40, type: WidthType.DXA },
-                width: { size: wordCellWidth - 280, type: WidthType.DXA },
+                indent: { size: serialTabPos, type: WidthType.DXA },
+                width: { size: wordCellWidth - 280 - serialTabTw, type: WidthType.DXA },
                 rows: [headerRow, ...dataRows]
             }));
         }

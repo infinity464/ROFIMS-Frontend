@@ -250,37 +250,46 @@
                     <div class="oo-doc-rich-content" [innerHTML]="order.body"></div>
                 </div>
 
-                <!-- ═══ Approval Person Signature ═══ -->
-                <div class="oo-doc-signature-area" *ngIf="order.approvalEmployeeName">
-                    <div class="oo-doc-signature-block">
-                        <div class="oo-doc-sig-name">
-                            {{ isBangla ? (order.approvalEmployeeNameBN || order.approvalEmployeeName) : order.approvalEmployeeName }}
+                <!-- ═══ Closing: Attachment + Onulipi on the left, approval signature on the right.
+                     The signature's name starts level with the last Onulipi line and the rest runs
+                     on below it; with no lists it just sits on the right on its own. ═══ -->
+                <div class="oo-doc-closing" *ngIf="order.approvalEmployeeName || attachmentEntries.length > 0 || exportOnulipiEntries.length > 0"
+                     [class.oo-doc-closing--sig-only]="attachmentEntries.length === 0 && exportOnulipiEntries.length === 0"
+                     [style.--sig-extra-lines]="order.approvalEmployeeName ? sigExtraLines : 0">
+                    <div class="oo-doc-closing-lists">
+                        <!-- ═══ Attachment (সংযুক্ত) — rendered above Onulipi ═══ -->
+                        <div class="oo-doc-section oo-doc-attachments" *ngIf="attachmentEntries.length > 0">
+                            <div class="oo-doc-section-label">{{ isBangla ? 'সংযুক্ত:' : 'Attachment:' }}</div>
+                            <div class="oo-doc-list">
+                                <p *ngFor="let att of attachmentEntries; let i = index"><span class="oo-copy-no">{{ isBangla ? toBanglaDigits('' + (i + 1)) : (i + 1) }}।</span>{{ att.text }}</p>
+                            </div>
                         </div>
-                        <div class="oo-doc-sig-rank" *ngIf="order.approvalEmployeeRank">
-                            {{ isBangla ? (order.approvalEmployeeRankBN || order.approvalEmployeeRank) : order.approvalEmployeeRank }}
-                        </div>
-                        <div class="oo-doc-sig-appointment" *ngIf="order.approvalEmployeeAppointment">
-                            {{ isBangla ? (order.approvalEmployeeAppointmentBN || order.approvalEmployeeAppointment) : order.approvalEmployeeAppointment }}
-                        </div>
-                        <div class="oo-doc-sig-unit" *ngIf="order.approvalEmployeeRabUnit">
-                            {{ isBangla ? (order.approvalEmployeeRabUnitBN || order.approvalEmployeeRabUnit) : order.approvalEmployeeRabUnit }}
+
+                        <!-- ═══ Onulipi (Copy Distribution) ═══ -->
+                        <div class="oo-doc-section oo-doc-onulipi" *ngIf="exportOnulipiEntries.length > 0">
+                            <div class="oo-doc-section-label">{{ isBangla ? 'অনুলিপি (জ্যেষ্ঠতার ভিত্তিতে নহে):' : 'Copy (not in order of seniority):' }}</div>
+                            <div class="oo-doc-list">
+                                <p *ngFor="let entry of exportOnulipiEntries; let i = index"><span class="oo-copy-no">{{ isBangla ? toBanglaDigits('' + (i + 1)) : (i + 1) }}।</span>{{ entry.text }}</p>
+                            </div>
                         </div>
                     </div>
-                </div>
 
-                <!-- ═══ Attachment (সংযুক্ত) — rendered above Onulipi ═══ -->
-                <div class="oo-doc-section oo-doc-attachments" *ngIf="attachmentEntries.length > 0">
-                    <div class="oo-doc-section-label">{{ isBangla ? 'সংযুক্ত:' : 'Attachment:' }}</div>
-                    <div class="oo-doc-list">
-                        <p *ngFor="let att of attachmentEntries; let i = index"><span class="oo-copy-no">{{ isBangla ? toBanglaDigits('' + (i + 1)) : (i + 1) }}।</span>{{ att.text }}</p>
-                    </div>
-                </div>
-
-                <!-- ═══ Onulipi (Copy Distribution) ═══ -->
-                <div class="oo-doc-section oo-doc-onulipi" *ngIf="exportOnulipiEntries.length > 0">
-                    <div class="oo-doc-section-label">{{ isBangla ? 'অনুলিপি (জ্যেষ্ঠতার ভিত্তিতে নহে):' : 'Copy (not in order of seniority):' }}</div>
-                    <div class="oo-doc-list">
-                        <p *ngFor="let entry of exportOnulipiEntries; let i = index"><span class="oo-copy-no">{{ isBangla ? toBanglaDigits('' + (i + 1)) : (i + 1) }}।</span>{{ entry.text }}</p>
+                    <!-- ═══ Approval Person Signature ═══ -->
+                    <div class="oo-doc-signature-area" *ngIf="order.approvalEmployeeName">
+                        <div class="oo-doc-signature-block">
+                            <div class="oo-doc-sig-name">
+                                {{ isBangla ? (order.approvalEmployeeNameBN || order.approvalEmployeeName) : order.approvalEmployeeName }}
+                            </div>
+                            <div class="oo-doc-sig-rank" *ngIf="order.approvalEmployeeRank">
+                                {{ isBangla ? (order.approvalEmployeeRankBN || order.approvalEmployeeRank) : order.approvalEmployeeRank }}
+                            </div>
+                            <div class="oo-doc-sig-appointment" *ngIf="order.approvalEmployeeAppointment">
+                                {{ isBangla ? (order.approvalEmployeeAppointmentBN || order.approvalEmployeeAppointment) : order.approvalEmployeeAppointment }}
+                            </div>
+                            <div class="oo-doc-sig-unit" *ngIf="order.approvalEmployeeRabUnit">
+                                {{ isBangla ? (order.approvalEmployeeRabUnitBN || order.approvalEmployeeRabUnit) : order.approvalEmployeeRabUnit }}
+                            </div>
+                        </div>
                     </div>
                 </div>
 
