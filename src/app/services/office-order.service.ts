@@ -111,6 +111,11 @@ export class OfficeOrderService {
         return this.http.post<{ statusCode: number; description: string }>(`${API}/CancelOfficeOrder`, { id, cancelReason, cancelledBy });
     }
 
+    /** Show or hide the members table in an office order (blocked once approved). */
+    setShowMembersTable(id: number, showMembersTable: boolean, updatedBy: string): Observable<{ statusCode: number; description: string }> {
+        return this.http.post<{ statusCode: number; description: string }>(`${API}/SetShowMembersTable`, { id, showMembersTable, updatedBy });
+    }
+
     /** Get employees for approval person dropdown. */
     getApprovalEmployees(): Observable<{ value: number; label: string }[]> {
         return this.http.get<{ value: number; label: string }[]>(`${API}/GetApprovalEmployees`);

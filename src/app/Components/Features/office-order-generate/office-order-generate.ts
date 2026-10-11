@@ -251,6 +251,7 @@ export class OfficeOrderGenerateComponent implements OnInit {
                 // NoteSheet — add to dropdown if not already present, then select
                 if (data.noteSheetId) {
                     this.selectedNoteSheetId = data.noteSheetId;
+                    this.showMembersTable = data.showMembersTable !== false;
                     this.selectedNoteSheetNo = data.noteSheetNo ?? null;
                     const existing = this.approvedNoteSheets.find(ns => ns.noteSheetId === data.noteSheetId);
                     if (!existing) {
@@ -714,9 +715,10 @@ export class OfficeOrderGenerateComponent implements OnInit {
         return `${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
     }
 
-    /** The order's own note-sheet style inputs — only for an order without a note sheet. */
+    /** The order's own note-sheet style inputs — only for an order without a note sheet.
+     *  The members-table show/hide is the order's own either way (independent of the note sheet's). */
     private buildOwnFields(): OfficeOrderOwnFields {
-        if (!this.isWithoutNoteSheet) return {};
+        if (!this.isWithoutNoteSheet) return { showMembersTable: this.showMembersTable };
         return {
             noteSheetSubjectId: this.noteSheetSubjectId,
             employeeTypeIds: this.memberTypeIds.join(',') || null,

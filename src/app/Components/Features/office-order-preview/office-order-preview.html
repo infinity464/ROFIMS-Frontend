@@ -94,6 +94,16 @@
         <div class="preview-actions">
             <ng-container *ngIf="!loading && !error && order">
                 <p-button *ngIf="!isApproved" icon="pi pi-pencil" label="Edit" (onClick)="goEdit()" styleClass="p-button-outlined" severity="info"></p-button>
+                <!-- Members table on/off — the order's own setting, saved straight away -->
+                <label class="oo-members-toggle" *ngIf="nsMainText"
+                       [class.oo-members-toggle--disabled]="isApproved || savingShowMembersTable"
+                       [title]="isApproved ? 'Approved orders cannot be changed' : 'Show the members table in this office order'">
+                    <input type="checkbox"
+                           [checked]="showMembersTable"
+                           [disabled]="isApproved || savingShowMembersTable"
+                           (change)="toggleShowMembersTable($any($event.target).checked)" />
+                    Members table
+                </label>
                 <!-- Page Size Selector -->
                 <select [(ngModel)]="selectedPageSize" class="page-size-select">
                     <option value="a4">A4</option>

@@ -20,6 +20,7 @@ import { SelectModule } from 'primeng/select';
 import { MessageService } from 'primeng/api';
 import { environment } from '@/Core/Environments/environment';
 import { OfficeOrderService } from '@/services/office-order.service';
+import { SharedService } from '@/shared/services/shared-service';
 import { EmpService } from '@/services/emp-service';
 import { GeneralNotesheetOfficeOrderDto, GeneralNotesheetOfficeOrderWithDetailsDto, ReferenceNoEntry, OnulipiEntry, AttachmentEntry } from '@/models/office-order.model';
 import { mainTextBlocksToHtml } from '@/shared/utils/notesheet-main-text';
@@ -59,6 +60,7 @@ export class OfficeOrderPreviewComponent implements OnInit {
     private router = inject(Router);
     private http = inject(HttpClient);
     private officeOrderService = inject(OfficeOrderService);
+    private sharedService = inject(SharedService);
     private empService = inject(EmpService);
     private messageService = inject(MessageService);
     private sanitizer = inject(DomSanitizer);
@@ -203,9 +205,34 @@ export class OfficeOrderPreviewComponent implements OnInit {
         return [o.approvalEmployeeRank, o.approvalEmployeeAppointment, o.approvalEmployeeRabUnit].filter(Boolean).length;
     }
 
-    /** Orders from a note sheet always show members; orders without one follow their own setting. */
+    /** The order's own show/hide setting — independent of the note sheet's. */
     get showMembersTable(): boolean {
-        return !!this.order && (this.order.noteSheetId != null || this.order.showMembersTable !== false);
+        return !!this.order && this.order.showMembersTable !== false;
+    }
+
+    savingShowMembersTable = false;
+
+    /** Preview toolbar toggle: show/hide the members table and save it on the order straight away. */
+    toggleShowMembersTable(show: boolean): void {
+        if (!this.order || this.isApproved || this.savingShowMembersTable) return;
+        const order = this.order;
+        const previous = order.showMembersTable;
+        order.showMembersTable = show;
+        this.savingShowMembersTable = true;
+        this.officeOrderService.setShowMembersTable(order.id, show, this.sharedService.getCurrentUser() ?? 'system').subscribe({
+            next: (res) => {
+                this.savingShowMembersTable = false;
+                if (res.statusCode !== 200) {
+                    order.showMembersTable = previous;
+                    this.messageService.add({ severity: 'error', summary: 'Error', detail: res.description ?? 'Failed.' });
+                }
+            },
+            error: (err) => {
+                this.savingShowMembersTable = false;
+                order.showMembersTable = previous;
+                this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.description ?? 'Failed to save the members table setting.' });
+            }
+        });
     }
 
     ngOnInit(): void {

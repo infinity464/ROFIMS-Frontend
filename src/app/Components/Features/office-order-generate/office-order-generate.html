@@ -307,6 +307,14 @@
                         [showTable]="showMembersTable"
                     ></app-members-editor>
                 </div>
+            } @else if (selectedNoteSheetId) {
+                <!-- Members come from the note sheet, but showing them is this order's own choice -->
+                <div class="field mb-4">
+                    <div class="flex align-items-center gap-2">
+                        <p-checkbox inputId="showMembersTable" [binary]="true" [(ngModel)]="showMembersTable"></p-checkbox>
+                        <label for="showMembersTable" class="cursor-pointer font-medium">Show members table in the office order</label>
+                    </div>
+                </div>
             }
 
             <!-- Attachment / সংযুক্ত (rendered above the Onulipi in the document) -->
