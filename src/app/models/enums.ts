@@ -138,15 +138,15 @@ export enum OrderFormat {
 
 /** SubjectCategory – classification of a (General) note-sheet subject. Null = none. */
 export enum SubjectCategory {
-    Clearance = 'Clearance',
+    Clearance = 'Clearance - Officer',
     RTU       = 'RTU',
     Promotion = 'Promotion'
 }
 
 export const SubjectCategoryOptions = [
-    { label: 'Clearance', value: SubjectCategory.Clearance },
-    { label: 'RTU',       value: SubjectCategory.RTU },
-    { label: 'Promotion', value: SubjectCategory.Promotion }
+    { label: 'Clearance - Officer', value: SubjectCategory.Clearance },
+    { label: 'RTU',                 value: SubjectCategory.RTU },
+    { label: 'Promotion',           value: SubjectCategory.Promotion }
 ];
 
 /**

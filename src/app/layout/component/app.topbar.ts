@@ -41,7 +41,7 @@ import { EmployeePersonalServiceOverview } from '@/models/employee-personal-serv
             </button>
             <a class="layout-topbar-logo" routerLink="/">
                 <img class="layout-topbar-logo" style="width: 40px;" src="https://upload.wikimedia.org/wikipedia/en/thumb/d/d0/Rapid_Action_Battalion_%28RAB%29_Emblem.svg/250px-Rapid_Action_Battalion_%28RAB%29_Emblem.svg.png" alt="logo" />
-                <span>ROFIMS</span>
+                <span>SOFIMS</span>
             </a>
         </div>
 

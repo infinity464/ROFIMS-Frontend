@@ -231,7 +231,7 @@
                             [ngModel]="orderFormat === OrderFormat.Clearance"
                             (onChange)="toggleOrderFormat(OrderFormat.Clearance)"
                         ></p-checkbox>
-                        <label for="orderFormatClearance" class="cursor-pointer">Clearance</label>
+                        <label for="orderFormatClearance" class="cursor-pointer">Clearance (DAD and Others)</label>
                     </div>
                 </div>
             }
@@ -303,6 +303,7 @@
                         [membersData]="membersData"
                         [isBangla]="isBangla"
                         [isClearance]="isClearanceSubject"
+                        [warnIfNotPostedOut]="orderFormat != null"
                         [showTable]="showMembersTable"
                     ></app-members-editor>
                 </div>

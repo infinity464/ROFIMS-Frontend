@@ -92,6 +92,12 @@ export class ReportStayAfterRelieverJoinedComponent implements OnInit, OnDestroy
     selectedMemberTypeIds: number[] = [];
     selectedCorpsIds: number[] = [];
     selectedTradeIds: number[] = [];
+    /** Formal/Clearance order-format filter — All Posted Out mode only. */
+    filterOrderFormat: string | null = null;
+    orderFormatFilterOptions = [
+        { label: 'Formal', value: 'Formal' },
+        { label: 'Clearance(DAD and Others)', value: 'Clearance' }
+    ];
     /**
      * Multi-select RAB org-tree filter — the user checks any nodes at any level
      * (Unit / Wing / Branch / Sub-Branch / Section / Sub-Section) in the shared
@@ -170,7 +176,7 @@ export class ReportStayAfterRelieverJoinedComponent implements OnInit, OnDestroy
         { key: 'motherOrganization', labelEN: 'Mother Org', labelBN: 'মাতৃ সংস্থা', hint: 'Plain', defaultVisible: false },
         { key: 'gender', labelEN: 'Gender', labelBN: 'লিঙ্গ', hint: 'Plain', defaultVisible: false },
         // Full job hierarchy (Battalion › Wing › Branch › Sub-Branch › Section › Sub-Section). Opt-in.
-        { key: 'presentUnit', labelEN: 'Battalion', labelBN: 'ব্যাটালিয়ন', hint: 'Plain', defaultVisible: false},
+        { key: 'presentUnit', labelEN: 'Battalion', labelBN: 'ব্যাটালিয়ন', hint: 'Plain', defaultVisible: false },
         { key: 'dateOfCommission', labelEN: 'Commission Date', labelBN: 'কমিশন তারিখ', hint: 'Date', defaultVisible: false },
         { key: 'rabServiceFrom', labelEN: 'SRB Service From', labelBN: 'এসআরবি স্থিতিকাল হইতে', hint: 'Date', defaultVisible: false },
         { key: 'rabServiceTo', labelEN: 'SRB Service To', labelBN: 'এসআরবি স্থিতিকাল পর্যন্ত', hint: 'Date', defaultVisible: false },
@@ -358,7 +364,10 @@ export class ReportStayAfterRelieverJoinedComponent implements OnInit, OnDestroy
      *  hierarchy chain. Chains of 3 or fewer levels are returned unchanged. */
     private trimHierarchy(value: string): string {
         if (!value || value === '-' || value === '—') return value;
-        const parts = value.split(',').map((s) => s.trim()).filter(Boolean);
+        const parts = value
+            .split(',')
+            .map((s) => s.trim())
+            .filter(Boolean);
         if (parts.length <= 3) return parts.join(', ');
         return [parts[0], parts[1], parts[parts.length - 1]].join(', ');
     }
@@ -432,9 +441,7 @@ export class ReportStayAfterRelieverJoinedComponent implements OnInit, OnDestroy
         this.loadOrgNodeLabels();
         // Do not auto-run; the list loads only after the user clicks Search.
 
-        this.idSearchSub = this.idSearchInput$
-            .pipe(debounceTime(400))
-            .subscribe((term) => this.applyIdSearch(term));
+        this.idSearchSub = this.idSearchInput$.pipe(debounceTime(400)).subscribe((term) => this.applyIdSearch(term));
     }
 
     ngOnDestroy(): void {
@@ -472,9 +479,7 @@ export class ReportStayAfterRelieverJoinedComponent implements OnInit, OnDestroy
     /** Build the id → label map for every org node, so the criteria strip can
      *  resolve the selected node ids to names. */
     loadOrgNodeLabels(): void {
-        forkJoin(
-            ReportStayAfterRelieverJoinedComponent.ORG_CODE_TYPES.map((t) => this.commonCodeService.getAllActiveCommonCodesType(t))
-        ).subscribe({
+        forkJoin(ReportStayAfterRelieverJoinedComponent.ORG_CODE_TYPES.map((t) => this.commonCodeService.getAllActiveCommonCodesType(t))).subscribe({
             next: (buckets) => {
                 this.orgNodeLabels.clear();
                 for (const codes of buckets) {
@@ -569,7 +574,7 @@ export class ReportStayAfterRelieverJoinedComponent implements OnInit, OnDestroy
     loadRabRankOptions(): void {
         this.commonCodeService.getAllActiveCommonCodesType('EquivalentName').subscribe({
             next: (codes: CommonCodeModel[]) => (this.rabRankOptions = this.mapCodes(codes || [])),
-            error: () => (this.rabRankOptions = []),
+            error: () => (this.rabRankOptions = [])
         });
     }
 
@@ -651,6 +656,7 @@ export class ReportStayAfterRelieverJoinedComponent implements OnInit, OnDestroy
         if (this.relieverMode !== 'newPosting' && this.selectedOrgNodeIds.length > 0) c++;
         if (this.relieverMode === 'standRelease' && this.releaseFrom) c++;
         if (this.relieverMode === 'standRelease' && this.releaseTo) c++;
+        if (this.relieverMode === 'allPostedOut' && this.filterOrderFormat) c++;
         if (this.relieverMode === 'newPosting' && this.joiningFrom) c++;
         if (this.relieverMode === 'newPosting' && this.joiningTo) c++;
         return c;
@@ -694,6 +700,9 @@ export class ReportStayAfterRelieverJoinedComponent implements OnInit, OnDestroy
             if (this.releaseFrom) items.push({ label: this.lang === 'en' ? 'Possible Release From' : 'সম্ভাব্য রিলিজ হইতে', value: this.formatDateLabel(this.fmtDate(this.releaseFrom)!) });
             if (this.releaseTo) items.push({ label: this.lang === 'en' ? 'Possible Release To' : 'সম্ভাব্য রিলিজ পর্যন্ত', value: this.formatDateLabel(this.fmtDate(this.releaseTo)!) });
         }
+        if (this.appliedMode === 'allPostedOut' && this.filterOrderFormat) {
+            items.push({ label: this.lang === 'en' ? 'Formal/Clearance' : 'ফরমাল/ক্লিয়ারেন্স', value: this.filterOrderFormat });
+        }
         if (this.appliedMode === 'newPosting') {
             if (this.joiningFrom) items.push({ label: this.lang === 'en' ? 'Possible Joining From' : 'সম্ভাব্য যোগদান হইতে', value: this.formatDateLabel(this.fmtDate(this.joiningFrom)!) });
             if (this.joiningTo) items.push({ label: this.lang === 'en' ? 'Possible Joining To' : 'সম্ভাব্য যোগদান পর্যন্ত', value: this.formatDateLabel(this.fmtDate(this.joiningTo)!) });
@@ -720,6 +729,7 @@ export class ReportStayAfterRelieverJoinedComponent implements OnInit, OnDestroy
         this.selectedOrgNodeIds = [];
         this.releaseFrom = null;
         this.releaseTo = null;
+        this.filterOrderFormat = null;
         this.joiningFrom = null;
         this.joiningTo = null;
         this.first = 0;
@@ -798,6 +808,9 @@ export class ReportStayAfterRelieverJoinedComponent implements OnInit, OnDestroy
             const rFrom = this.fmtDate(this.releaseFrom);
             const rTo = this.fmtDate(this.releaseTo);
             if (rFrom || rTo) criteria.push({ fieldKey: 'possibleReleaseDate', dateFrom: rFrom, dateTo: rTo });
+        }
+        if (this.appliedMode === 'allPostedOut' && this.filterOrderFormat) {
+            criteria.push({ fieldKey: 'orderFormat', textValue: this.filterOrderFormat });
         }
 
         // Map column keys → registry FieldKeys; always include joiningInRab so
@@ -966,7 +979,9 @@ export class ReportStayAfterRelieverJoinedComponent implements OnInit, OnDestroy
     }
     /** Total DB-filtered result count, localized (shown in the criteria strip,
         so it appears on screen + Print + Word + Excel). */
-    toBanglaNum(n: number): string { return BanglaNumerals.toBangla(String(n)); }
+    toBanglaNum(n: number): string {
+        return BanglaNumerals.toBangla(String(n));
+    }
 
     get rabTotalText(): string {
         const n = this.lang === 'bn' ? BanglaNumerals.toBangla(String(this.totalRecords)) : String(this.totalRecords);
@@ -1156,7 +1171,17 @@ export class ReportStayAfterRelieverJoinedComponent implements OnInit, OnDestroy
                 stripCell(
                     [
                         new TextRun({ text: wsafe(this.rabTotalText), font: sans, size: S.stripDate, ...bnRunExtras(S.stripDate), bold: true, color: C.black, characterSpacing: isBn ? 0 : 30, allCaps: !isBn }),
-                        new TextRun({ text: wsafe(`${this.rabGeneratedLabel} · ${this.rabFormattedDate}`), font: sans, size: S.stripDate, ...bnRunExtras(S.stripDate), bold: true, color: C.mutedText, characterSpacing: isBn ? 0 : 30, allCaps: !isBn, break: 1 })
+                        new TextRun({
+                            text: wsafe(`${this.rabGeneratedLabel} · ${this.rabFormattedDate}`),
+                            font: sans,
+                            size: S.stripDate,
+                            ...bnRunExtras(S.stripDate),
+                            bold: true,
+                            color: C.mutedText,
+                            characterSpacing: isBn ? 0 : 30,
+                            allCaps: !isBn,
+                            break: 1
+                        })
                     ],
                     AlignmentType.RIGHT
                 )
@@ -1440,7 +1465,9 @@ export class ReportStayAfterRelieverJoinedComponent implements OnInit, OnDestroy
         };
         const tableBodyHtml = this.list.map((row, i) => `<tr>${visibleCols.map((c) => renderCell(row, c, i)).join('')}</tr>`).join('');
         const items = this.criteriaItems;
-        const criteriaGridHtml = items.length ? `<div class="criteria-grid">${items.map((item) => `<div class="cell"><div class="cell-label">${esc(item.label)}</div><div class="cell-value">${esc(item.value).replace(/\n/g, '<br>')}</div></div>`).join('')}</div>` : '';
+        const criteriaGridHtml = items.length
+            ? `<div class="criteria-grid">${items.map((item) => `<div class="cell"><div class="cell-label">${esc(item.label)}</div><div class="cell-value">${esc(item.value).replace(/\n/g, '<br>')}</div></div>`).join('')}</div>`
+            : '';
         const confidential = this.rabConfidentialLabel;
         const warning = this.rabWarningLabel;
         const pageWord = isBn ? 'পৃষ্ঠা' : 'PAGE';

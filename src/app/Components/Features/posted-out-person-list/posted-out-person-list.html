@@ -91,6 +91,12 @@
                         styleClass="text-sm" [style]="{'min-width':'7rem'}"></p-select>
                 </div>
                 <div class="filter-group">
+                    <label>Formal/Clearance</label>
+                    <p-select [options]="orderFormatOptions" [(ngModel)]="filterOrderFormat" optionLabel="label" optionValue="value"
+                        placeholder="All" [showClear]="true" appendTo="body"
+                        styleClass="text-sm" [style]="{'min-width':'9rem'}"></p-select>
+                </div>
+                <div class="filter-group">
                     <label>Release Date (From)</label>
                     <p-datepicker [(ngModel)]="releaseDateFrom" dateFormat="dd-mm-yy" placeholder="dd-mm-yyyy" [showIcon]="true" appendTo="body" class="w-full" [inputStyle]="{'width':'100%'}" [showClear]="true"></p-datepicker>
                 </div>

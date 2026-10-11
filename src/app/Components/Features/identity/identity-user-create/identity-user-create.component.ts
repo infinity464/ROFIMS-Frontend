@@ -3,10 +3,12 @@ import { UserMenuService } from '@/services/user-menu.service';
 import { Router } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import {
+  AbstractControl,
   FormBuilder,
   FormGroup,
   FormsModule,
   ReactiveFormsModule,
+  ValidationErrors,
   Validators
 } from '@angular/forms';
 import { InputTextModule } from 'primeng/inputtext';
@@ -45,10 +47,12 @@ import { LEVEL_COLORS } from '@/Components/basic-setup/org-tree/models/org-node.
 import { MasterBasicSetupService } from '@/Components/basic-setup/shared/services/MasterBasicSetupService';
 import { SharedService } from '@/shared/services/shared-service';
 import { OrgTreeMultiSelectComponent } from '@/shared/components/org-tree-multi-select/org-tree-multi-select.component';
+import { OrganizationModel } from '@/Components/basic-setup/organization-setup/models/organization';
 import {
   rulesAllow,
   type ApplicationRole,
   type MyUserAccessRules,
+  type SetUserActiveModel,
   type UserAccessAction,
   type UserListItem
 } from '@/models/identity.model';
@@ -81,6 +85,18 @@ interface MemberTypeOption {
 }
 
 const USERNAME_PATTERN = /^[A-Za-z0-9._@-]+$/;
+/** Same rule as the API: 10-15 digits, optional leading +, once spaces, dashes and brackets are removed. */
+const PHONE_PATTERN = /^\+?\d{10,15}$/;
+const EMAIL_PATTERN = /^([\w.\-]+)@([\w\-]+)((\.(\w){2,3})+)$/;
+
+function cleanPhone(value: string | null | undefined): string {
+  return (value ?? '').toString().trim().replace(/[\s\-()]/g, '');
+}
+
+function phoneValidator(control: AbstractControl): ValidationErrors | null {
+  const v = cleanPhone(control.value);
+  return !v || PHONE_PATTERN.test(v) ? null : { phone: true };
+}
 
 type UserActionKind = 'disable' | 'enable' | 'hide' | 'forceLogout';
 
@@ -157,6 +173,8 @@ export class IdentityUserCreateComponent implements OnInit {
   private rabUnitAccesses: UserRabUnitAccessDto[] = [];
   editingUser: UserRow | null = null;
   isSubmitting = false;
+  organizationScopeOptions: OrganizationModel[] = [];
+  organizationScopeLoading = false;
 
   resetDialogVisible = false;
   resetTargetUser: UserRow | null = null;
@@ -173,6 +191,12 @@ export class IdentityUserCreateComponent implements OnInit {
   actionKind: UserActionKind | null = null;
   actionTarget: UserRow | null = null;
   actionAlsoHide = false;
+  /** Disable only: reset the user's email and phone number to null. */
+  actionClearContact = false;
+  /** Enable only: the (unique) email and phone the account is enabled with. */
+  enableEmail = '';
+  enablePhone = '';
+  enableError: string | null = null;
 
   ngOnInit(): void {
         const _perms = this._userMenuService.getPermissionsByRoute(this._router.url);
@@ -188,7 +212,26 @@ export class IdentityUserCreateComponent implements OnInit {
     this.loadRoles();
     this.loadEmployees();
     this.loadMemberTypes();
+    this.loadOrganizationScope();
     this.loadUsersAndMappings();
+  }
+
+  loadOrganizationScope(): void {
+    this.organizationScopeLoading = true;
+    this.masterBasicSetupService.getAllActiveMotherOrgs().subscribe({
+      next: (list) => {
+        this.organizationScopeOptions = Array.isArray(list) ? list : [];
+        this.organizationScopeLoading = false;
+      },
+      error: (err: any) => {
+        this.organizationScopeLoading = false;
+        this.messageService.add({
+          severity: 'error',
+          summary: 'Error',
+          detail: err?.error?.message || 'Failed to load organization scope'
+        });
+      }
+    });
   }
 
   loadMemberTypes(): void {
@@ -414,7 +457,8 @@ export class IdentityUserCreateComponent implements OnInit {
     this.form = this.fb.group({
       email: ['', [Validators.required, Validators.email]],
       userName: ['', [Validators.required, Validators.minLength(3), Validators.pattern(USERNAME_PATTERN)]],
-      phoneNumber: ['', Validators.required],
+      phoneNumber: ['', [Validators.required, phoneValidator]],
+      ipAddress: [''],
       password: [
         '',
         [
@@ -425,6 +469,7 @@ export class IdentityUserCreateComponent implements OnInit {
       ],
       roleName: ['', Validators.required],
       employeeId: [null as number | null, Validators.required],
+      organizationScope: [null],
       memberTypeIds: [[] as number[]],
       rabUnitMode: ['all' as 'all' | 'specific'],
       rabUnitIds: [[] as number[]],
@@ -453,18 +498,11 @@ export class IdentityUserCreateComponent implements OnInit {
     phoneNumber: string;
     employeeId: number | null;
   }): string | null {
-    const editingId = this.editingUser?.id ?? null;
-    const email = (value.email ?? '').toString().trim().toLowerCase();
     const userName = (value.userName ?? '').toString().trim().toLowerCase();
-    const phone = this.normalizePhone(value.phoneNumber);
 
-    if (email) {
-      const dupe = this.users.find(
-        (u) => u.id !== editingId && (u.email ?? '').toString().trim().toLowerCase() === email
-      );
-      if (dupe) {
-        return `Email "${value.email}" is already used by ${dupe.userName ?? dupe.email}.`;
-      }
+    const contactDupe = this.findContactDuplicate(value.email, value.phoneNumber, this.editingUser?.id ?? null);
+    if (contactDupe) {
+      return contactDupe;
     }
 
     if (!this.editingUser && userName) {
@@ -473,15 +511,6 @@ export class IdentityUserCreateComponent implements OnInit {
       );
       if (dupe) {
         return `Username "${value.userName}" is already taken.`;
-      }
-    }
-
-    if (phone) {
-      const dupe = this.users.find(
-        (u) => u.id !== editingId && this.normalizePhone(u.phoneNumber) === phone
-      );
-      if (dupe) {
-        return `Phone number "${value.phoneNumber}" is already registered to ${dupe.userName ?? dupe.email}.`;
       }
     }
 
@@ -496,8 +525,42 @@ export class IdentityUserCreateComponent implements OnInit {
     return null;
   }
 
+  /**
+   * Email / phone already used by another loaded user (disabled and hidden users included)?
+   * The API runs the same check against the database; this just answers early.
+   */
+  private findContactDuplicate(
+    email: string | null | undefined,
+    phoneNumber: string | null | undefined,
+    excludeUserId: string | null
+  ): string | null {
+    const normEmail = (email ?? '').toString().trim().toLowerCase();
+    const phone = this.normalizePhone(phoneNumber);
+
+    if (normEmail) {
+      const dupe = this.users.find(
+        (u) => u.id !== excludeUserId && (u.email ?? '').toString().trim().toLowerCase() === normEmail
+      );
+      if (dupe) {
+        return `Email "${email}" is already used by ${dupe.userName ?? dupe.email}.`;
+      }
+    }
+
+    if (phone) {
+      const dupe = this.users.find((u) => u.id !== excludeUserId && this.normalizePhone(u.phoneNumber) === phone);
+      if (dupe) {
+        return `Phone number "${phoneNumber}" is already registered to ${dupe.userName ?? dupe.email}.`;
+      }
+    }
+
+    return null;
+  }
+
+  /** Digits only, "880" country code folded to a leading 0 — mirrors PhoneKey in the API. */
   private normalizePhone(value: string | null | undefined): string {
-    return (value ?? '').toString().replace(/[\s\-()+]/g, '').trim();
+    let digits = (value ?? '').toString().replace(/\D/g, '');
+    if (digits.length === 13 && digits.startsWith('880')) digits = '0' + digits.substring(3);
+    return digits;
   }
 
   onSubmit(): void {
@@ -729,11 +792,21 @@ export class IdentityUserCreateComponent implements OnInit {
       memberTypeIds: [],
       rabUnitMode: 'all',
       rabUnitIds: [],
+      ipAddress: '',
+      organizationScope: null,
       confirmUrl
     });
   }
 
   onEdit(user: UserRow): void {
+    if (!user.email) {
+      this.messageService.add({
+        severity: 'warn',
+        summary: 'No email',
+        detail: "This user's email and phone were cleared when it was disabled. Enable it with a new email and phone first."
+      });
+      return;
+    }
     this.editingUser = user;
     this.form.patchValue({
       email: user.email,
@@ -801,6 +874,8 @@ export class IdentityUserCreateComponent implements OnInit {
       memberTypeIds: [],
       rabUnitMode: 'all',
       rabUnitIds: [],
+      ipAddress: '',
+      organizationScope: null,
       confirmUrl: confirmUrl ?? ''
     });
   }
@@ -895,6 +970,10 @@ export class IdentityUserCreateComponent implements OnInit {
     this.actionKind = kind;
     this.actionTarget = user;
     this.actionAlsoHide = false;
+    this.actionClearContact = false;
+    this.enableEmail = kind === 'enable' ? user.email ?? '' : '';
+    this.enablePhone = kind === 'enable' ? user.phoneNumber ?? '' : '';
+    this.enableError = null;
     this.actionDialogVisible = true;
   }
 
@@ -904,6 +983,21 @@ export class IdentityUserCreateComponent implements OnInit {
     this.actionKind = null;
     this.actionTarget = null;
     this.actionAlsoHide = false;
+    this.actionClearContact = false;
+    this.enableEmail = '';
+    this.enablePhone = '';
+    this.enableError = null;
+  }
+
+  /** Enable dialog: required, well-formed and unique email + phone. Returns the problem, or null. */
+  private validateEnableContact(user: UserRow): string | null {
+    const email = this.enableEmail.trim();
+    const phone = cleanPhone(this.enablePhone);
+    if (!email) return 'Email is required.';
+    if (!EMAIL_PATTERN.test(email)) return 'Enter a valid email.';
+    if (!phone) return 'Phone number is required.';
+    if (!PHONE_PATTERN.test(phone)) return 'Enter a valid phone number (10-15 digits, optional leading +).';
+    return this.findContactDuplicate(email, phone, user.id);
   }
 
   get actionBusy(): boolean {
@@ -961,11 +1055,24 @@ export class IdentityUserCreateComponent implements OnInit {
     if (!user || this.actionBusy) return;
     switch (this.actionKind) {
       case 'disable':
-        this.setActive(user, false, this.actionAlsoHide);
+        this.setActive(user, {
+          userId: user.id,
+          isActive: false,
+          hide: this.actionAlsoHide,
+          clearContact: this.actionClearContact
+        });
         break;
-      case 'enable':
-        this.setActive(user, true, false);
+      case 'enable': {
+        this.enableError = this.validateEnableContact(user);
+        if (this.enableError) return;
+        this.setActive(user, {
+          userId: user.id,
+          isActive: true,
+          newEmail: this.enableEmail.trim(),
+          newPhoneNumber: cleanPhone(this.enablePhone)
+        });
         break;
+      }
       case 'hide':
         this.runSetHidden(user, true);
         break;
@@ -975,10 +1082,11 @@ export class IdentityUserCreateComponent implements OnInit {
     }
   }
 
-  private setActive(user: UserRow, isActive: boolean, hide: boolean): void {
+  private setActive(user: UserRow, model: SetUserActiveModel): void {
+    const isActive = model.isActive;
     const action = isActive ? 'enable' : 'disable';
     this.togglingUserId = user.id;
-    this.identityService.setUserActive({ email: user.email, isActive, hide }).subscribe({
+    this.identityService.setUserActive(model).subscribe({
       next: (res) => {
         this.togglingUserId = null;
         if (res.isSuccess) {
@@ -990,6 +1098,7 @@ export class IdentityUserCreateComponent implements OnInit {
           this.closeUserAction();
           this.loadUsersAndMappings();
         } else {
+          if (isActive) this.enableError = res.message ?? null;
           this.messageService.add({
             severity: 'error',
             summary: 'Error',
@@ -1000,6 +1109,8 @@ export class IdentityUserCreateComponent implements OnInit {
       error: (err) => {
         this.togglingUserId = null;
         const msg = err?.error?.message ?? (typeof err?.message === 'string' ? err.message : `Failed to ${action} user.`);
+        // e.g. 409 "This email is already used by another user." — show it next to the fields too.
+        if (isActive) this.enableError = err?.error?.message ?? null;
         this.messageService.add({ severity: 'error', summary: 'Error', detail: msg });
       }
     });
@@ -1010,7 +1121,7 @@ export class IdentityUserCreateComponent implements OnInit {
    * still disabled, straight away.
    */
   setUserHidden(user: UserRow, isHidden: boolean): void {
-    if (!user?.id || !user.email || this.hidingUserId || !this.canActOn('disable', user)) return;
+    if (!user?.id || this.hidingUserId || !this.canActOn('disable', user)) return;
     if (isHidden) {
       this.openUserAction('hide', user);
       return;
@@ -1020,7 +1131,7 @@ export class IdentityUserCreateComponent implements OnInit {
 
   private runSetHidden(user: UserRow, isHidden: boolean): void {
     this.hidingUserId = user.id;
-    this.identityService.setUserHidden({ email: user.email, isHidden }).subscribe({
+    this.identityService.setUserHidden({ userId: user.id, email: user.email, isHidden }).subscribe({
       next: (res) => {
         this.hidingUserId = null;
         if (res.isSuccess) this.closeUserAction();

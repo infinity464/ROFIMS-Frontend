@@ -79,8 +79,13 @@ export class OfficeOrderPreviewComponent implements OnInit {
     orderFormatFilter: OrderFormat | null = null;
     readonly orderFormatOptions = [
         { label: 'Formal', value: OrderFormat.Formal },
-        { label: 'Clearance', value: OrderFormat.Clearance }
+        { label: 'Clearance (DAD and Others)', value: OrderFormat.Clearance }
     ];
+
+    /** Friendly label for the raw stored OrderFormat value (Clearance → "Clearance (DAD and Others)"). */
+    orderFormatLabel(value: string | null | undefined): string {
+        return value === OrderFormat.Clearance ? 'Clearance (DAD and Others)' : (value ?? '-');
+    }
 
     get filteredOrders(): GeneralNotesheetOfficeOrderDto[] {
         return this.orderFormatFilter ? this.orders.filter(o => o.orderFormat === this.orderFormatFilter) : this.orders;
@@ -971,26 +976,6 @@ html, body { margin: 0; padding: 0; background: transparent; }
                     this.savingApproval = false;
                     if (res.statusCode === 200) {
                         this.messageService.add({ severity: 'success', summary: 'Success', detail: this.isBangla ? 'অফিস আদেশ অনুমোদিত হয়েছে।' : 'Office Order approved.' });
-                        // Promotion subject → promotion history + rank per member; RTU subject → members flagged RTU.
-                        const approvalResult = (res as any).data;
-                        if (approvalResult && typeof approvalResult.applied === 'number') {
-                            this.messageService.add({
-                                severity: approvalResult.rankMismatch > 0 ? 'warn' : 'info',
-                                summary: 'Promotion',
-                                detail: `Rank updated: ${approvalResult.applied}, already on promoted rank: ${approvalResult.alreadyOnRank}`
-                                    + (approvalResult.rankMismatch > 0 ? `, not updated (rank did not match previous rank): ${approvalResult.rankMismatch}` : ''),
-                                life: 8000
-                            });
-                        }
-                        // RTU subject → server flagged the members as RTU.
-                        if (approvalResult && typeof approvalResult.rtuMarked === 'number') {
-                            this.messageService.add({
-                                severity: 'info',
-                                summary: 'RTU',
-                                detail: `Marked RTU: ${approvalResult.rtuMarked}, already RTU: ${approvalResult.alreadyRtu}`,
-                                life: 8000
-                            });
-                        }
                         this.showApprovalModal = false;
                         this.loadOrder(id);
                     } else {

@@ -27,6 +27,7 @@ export interface PermanentPostingMORecordModel {
     nsClearanceDate: string | null;
     clearanceGiven: boolean | null;
     clearanceGivenDate: string | null;
+    orderFormat: string | null;
     postingOrderFilesReferences: string | null;
     isFinalPostedOut: boolean;
     status: string;

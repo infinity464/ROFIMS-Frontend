@@ -229,3 +229,38 @@
     </p-button>
   </ng-template>
 </p-dialog>
+
+<!-- Not-in-posted-out-list warning (Order Format = Formal/Clearance) -->
+<p-dialog
+  header="Not in Posted-Out List"
+  [(visible)]="showNotPostedOutConfirm"
+  [modal]="true"
+  [style]="{ width: '440px' }"
+  [closable]="true"
+  [draggable]="false"
+  [resizable]="false"
+  (onHide)="cancelAddNotPostedOut()">
+
+  <div style="padding: 0.5rem 0;">
+    <p class="m-0">
+      {{ pendingNotPostedOutEmp?.fullNameEN || 'This member' }} is not in the posted-out list.
+      Do you want to create the Formal/Clearance office order anyway?
+    </p>
+  </div>
+
+  <ng-template pTemplate="footer">
+    <p-button
+      label="Cancel"
+      icon="pi pi-times"
+      severity="secondary"
+      [outlined]="true"
+      (onClick)="cancelAddNotPostedOut()">
+    </p-button>
+    <p-button
+      label="Yes, add member"
+      icon="pi pi-check"
+      severity="warn"
+      (onClick)="confirmAddNotPostedOut()">
+    </p-button>
+  </ng-template>
+</p-dialog>
