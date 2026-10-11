@@ -19,7 +19,7 @@ import { RichEditorComponent } from '@/Components/Common/rich-editor/rich-editor
 import { CommonCode } from '@/Components/basic-setup/shared/models/common-code';
 import { environment } from '@/Core/Environments/environment';
 import { HttpClient } from '@angular/common/http';
-import { forkJoin, Subject, of } from 'rxjs';
+import { forkJoin, Subject, Observable, of } from 'rxjs';
 import { take, catchError } from 'rxjs/operators';
 import { FileReferencesFormComponent, FileRowData } from '@/Components/Common/file-references-form/file-references-form';
 import { EmpService } from '@/services/emp-service';
@@ -95,6 +95,73 @@ export interface PostedOutClearanceInfo {
     postingUnitId: number | null;
     postingUnitName: string | null;
     postingUnitNameBN: string | null;
+    /** Reliever of the posted-out member — joined EmployeeInfo row first, else the joinee-detail entry. */
+    relieverName: string | null;
+    relieverNameBN: string | null;
+    relieverRank: string | null;
+    relieverRankBN: string | null;
+    relieverCorps: string | null;
+    relieverCorpsBN: string | null;
+    relieverTrade: string | null;
+    relieverTradeBN: string | null;
+    /** Reliever's Joining Date in SRB — only once the reliever exists in EmployeeInfo. */
+    relieverJoiningDate: string | null;
+}
+
+/** Member values for the reliever columns, from the posted-out clearance lookup (empty when none). */
+export function buildRelieverValues(info: PostedOutClearanceInfo | null): Record<string, string> {
+    return {
+        relieverName: info?.relieverName ?? '',
+        relieverNameBN: info?.relieverNameBN ?? '',
+        relieverRank: info?.relieverRank ?? '',
+        relieverRankBN: info?.relieverRankBN ?? '',
+        relieverCorps: info?.relieverCorps ?? '',
+        relieverCorpsBN: info?.relieverCorpsBN ?? '',
+        relieverTrade: info?.relieverTrade ?? '',
+        relieverTradeBN: info?.relieverTradeBN ?? '',
+        relieverJoiningDate: info?.relieverJoiningDate ?? ''
+    };
+}
+
+/** Table header for picker columns whose picker label (with its EN/BN tag) shouldn't be the header. */
+const MEMBER_COLUMN_TABLE_LABELS: Record<string, string> = {
+    relieverName: 'প্রতিস্থাপকের নাম',
+    relieverNameBN: 'প্রতিস্থাপকের নাম',
+    relieverRank: 'প্রতিস্থাপকের পদবি',
+    relieverRankBN: 'প্রতিস্থাপকের পদবি',
+    relieverCorps: 'প্রতিস্থাপকের কোর',
+    relieverCorpsBN: 'প্রতিস্থাপকের কোর',
+    relieverTrade: 'প্রতিস্থাপকের ট্রেড',
+    relieverTradeBN: 'প্রতিস্থাপকের ট্রেড',
+    relieverJoiningDate: 'প্রতিস্থাপকের যোগদানের তারিখ'
+};
+
+/** Copy of a picker column for the members table, with its table header applied. */
+export function toTableColumn(def: MemberColumnDef): MemberColumnDef {
+    return { ...def, label: MEMBER_COLUMN_TABLE_LABELS[def.key] ?? def.label };
+}
+
+/** GetPostedOutClearanceInfo for one employee; null on a lookup error so it never blocks an add. */
+export function fetchPostedOutInfo(http: HttpClient, employeeId: number, excludeNoteSheetId?: number | null): Observable<PostedOutClearanceInfo | null> {
+    const params: Record<string, string> = { employeeId: String(employeeId) };
+    if (excludeNoteSheetId != null) params['excludeNoteSheetId'] = String(excludeNoteSheetId);
+    return http
+        .get<PostedOutClearanceInfo>(`${environment.apis.core}/NoteSheetReferenceEmployee/GetPostedOutClearanceInfo`, { params })
+        .pipe(catchError(() => of(null)));
+}
+
+/** Members saved before the reliever columns existed carry no reliever values — look them up once on load. */
+export function backfillRelieverValues(http: HttpClient, members: MemberRow[]): void {
+    for (const m of members) {
+        if (!m.employeeId || m.values['relieverName'] !== undefined) continue;
+        fetchPostedOutInfo(http, m.employeeId).subscribe((info) => {
+            Object.assign(m.values, buildRelieverValues(info));
+            if (!m.values['postingUnit'] && info?.postingUnitName) {
+                m.values['postingUnit'] = info.postingUnitName;
+                m.values['postingUnitBN'] = info.postingUnitNameBN ?? '';
+            }
+        });
+    }
 }
 
 /** Shape stored in NoteSheetInfo.MembersJson */
@@ -141,6 +208,16 @@ export const AVAILABLE_MEMBER_COLUMNS: MemberColumnDef[] = [
     // Posted-out Posting Unit (mother-org transfer destination) — populated for clearance-subject members.
     { key: 'postingUnit', label: 'Posting Unit (EN)', group: 'basic' },
     { key: 'postingUnitBN', label: 'Posting Unit (BN)', group: 'basic' },
+    // Reliever of the posted-out member (Posted Out Person List) — populated for clearance-subject members.
+    { key: 'relieverName', label: 'Reliever Name (EN)', group: 'basic' },
+    { key: 'relieverNameBN', label: 'Reliever Name (BN)', group: 'basic' },
+    { key: 'relieverRank', label: 'Reliever Rank (EN)', group: 'basic' },
+    { key: 'relieverRankBN', label: 'Reliever Rank (BN)', group: 'basic' },
+    { key: 'relieverCorps', label: 'Reliever Corps (EN)', group: 'basic' },
+    { key: 'relieverCorpsBN', label: 'Reliever Corps (BN)', group: 'basic' },
+    { key: 'relieverTrade', label: 'Reliever Trade (EN)', group: 'basic' },
+    { key: 'relieverTradeBN', label: 'Reliever Trade (BN)', group: 'basic' },
+    { key: 'relieverJoiningDate', label: 'Reliever Joining Date in SRB', group: 'basic' },
     { key: 'postingStatus', label: 'Posting Status', group: 'basic' },
     { key: 'permanentDistrictTypeName', label: 'Permanent District (EN)', group: 'basic' },
     { key: 'permanentDistrictTypeNameBN', label: 'Permanent District (BN)', group: 'basic' },
@@ -1169,6 +1246,7 @@ export class NotesheetGenerateComponent implements OnInit {
                                 };
                             });
                             this.membersData = { columns, members };
+                            backfillRelieverValues(this.http, members);
                             this.ensurePromotionRanksLoaded();
                             this.ensurePromotionColumns();
                             // Match create-mode behaviour in edit mode:
@@ -1264,7 +1342,13 @@ export class NotesheetGenerateComponent implements OnInit {
             return;
         }
         if (!this.isClearanceSubjectSelected) {
-            this.addFoundMember(emp, null);
+            // No posted-out gate here, but still pull the Posting Unit + reliever columns.
+            // postedOutId stays null — only clearance subjects link the posted-out record.
+            this.memberAddLoading = true;
+            fetchPostedOutInfo(this.http, emp.employeeID).subscribe((info) => {
+                this.memberAddLoading = false;
+                this.addFoundMember(emp, info ? { ...info, postedOutId: null } : null);
+            });
             return;
         }
 
@@ -1315,7 +1399,7 @@ export class NotesheetGenerateComponent implements OnInit {
                         life: 5000
                     });
                 }
-                this.addFoundMember(emp, info.postedOutId, info.postingUnitName ?? '', info.postingUnitNameBN ?? '');
+                this.addFoundMember(emp, info);
             },
             error: () => {
                 this.memberAddLoading = false;
@@ -1324,7 +1408,7 @@ export class NotesheetGenerateComponent implements OnInit {
         });
     }
 
-    private addFoundMember(emp: EmployeeBasicInfo, postedOutId: number | null, postingUnitEN: string = '', postingUnitBN: string = ''): void {
+    private addFoundMember(emp: EmployeeBasicInfo, info: PostedOutClearanceInfo | null): void {
         if (this.membersData.members.some((m) => m.employeeId === emp.employeeID)) {
             this.messageService.add({ severity: 'warn', summary: 'Duplicate', detail: 'This member is already added.' });
             return;
@@ -1430,8 +1514,9 @@ export class NotesheetGenerateComponent implements OnInit {
                 values['presentRabUnitBN'] = buildRabUnitPath(activeRab, true) || (profile.rabUnitBN ?? profile.rabUnit ?? '');
 
                 // Posted-out Posting Unit (mother-org transfer destination) — populated for clearance subjects.
-                values['postingUnit'] = postingUnitEN;
-                values['postingUnitBN'] = postingUnitBN;
+                values['postingUnit'] = info?.postingUnitName ?? '';
+                values['postingUnitBN'] = info?.postingUnitNameBN ?? '';
+                Object.assign(values, buildRelieverValues(info));
 
                 // Keep any already-present custom columns (e.g. Remarks) in sync for the new row.
                 for (const col of this.membersData.columns) {
@@ -1442,7 +1527,7 @@ export class NotesheetGenerateComponent implements OnInit {
                     values['promotedRankId'] = '';
                 }
 
-                this.membersData.members.push({ employeeId: emp.employeeID, values, postedOutId });
+                this.membersData.members.push({ employeeId: emp.employeeID, values, postedOutId: info?.postedOutId ?? null });
                 // First member added with no columns configured → show a sensible default set.
                 this.applyDefaultMemberColumnsIfEmpty();
                 this.memberAddLoading = false;
@@ -1615,7 +1700,7 @@ export class NotesheetGenerateComponent implements OnInit {
             }
             const def = this.availableColumns.find((c) => c.key === this.selectedColumnKey);
             if (def && !this.membersData.columns.some((c) => c.key === def.key)) {
-                this.membersData.columns.push({ ...def });
+                this.membersData.columns.push(toTableColumn(def));
             }
         } else {
             const name = this.newCustomColumnName.trim();

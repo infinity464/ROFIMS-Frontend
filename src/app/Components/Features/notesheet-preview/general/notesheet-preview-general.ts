@@ -26,7 +26,7 @@ import { EmployeeSearchComponent, EmployeeBasicInfo } from '@/Components/Shared/
 import { NotesheetMemberStripsComponent } from '@/Components/Shared/notesheet-member-strips/notesheet-member-strips';
 import { NotesheetPreviewBase } from '../notesheet-preview-base';
 import { NoteSheetSubjectService, NoteSheetSubjectModel } from '@/Components/basic-setup/shared/services/NoteSheetSubjectService';
-import { MemberColumnDef, MemberRow, MembersJsonData, AVAILABLE_MEMBER_COLUMNS, ReferenceParagraph, PostedOutClearanceInfo } from '../../notesheet-generate/notesheet-generate';
+import { MemberColumnDef, MemberRow, MembersJsonData, AVAILABLE_MEMBER_COLUMNS, ReferenceParagraph, PostedOutClearanceInfo, buildRelieverValues, fetchPostedOutInfo, backfillRelieverValues, toTableColumn } from '../../notesheet-generate/notesheet-generate';
 import { MainTextBlock, parseMainTextBlocks, serializeMainTextBlocks } from '@/shared/utils/notesheet-main-text';
 import { NoteSheetCurrentStatus, NoteSheetCurrentStatusOptions, NoteSheetOperationTypeOptions, ApprovalStatus, NoteSheetRemarkAction, NoteSheetPreviewFrom, ApprovalLogAction, ApprovalLogActionOptions, SubjectCategory } from '@/models/enums';
 import { SharedService } from '@/shared/services/shared-service';
@@ -518,6 +518,7 @@ export class NotesheetPreviewGeneralComponent extends NotesheetPreviewBase imple
             postedOutId: this.loadedMemberPostedOutIds[i] ?? null
         }));
         this.editMembersData = { columns: cols, members };
+        backfillRelieverValues(this.http, members);
         this.editShowMembersTable = this.noteSheet.showMembersTable !== false;
     }
 
@@ -1100,7 +1101,12 @@ export class NotesheetPreviewGeneralComponent extends NotesheetPreviewBase imple
             return;
         }
         if (!this.isClearanceSubject) {
-            this.addFoundMember(emp, null);
+            // No posted-out gate, but still pull the Posting Unit + reliever columns (postedOutId stays null).
+            this.memberAddLoading = true;
+            fetchPostedOutInfo(this.http, emp.employeeID).subscribe((info) => {
+                this.memberAddLoading = false;
+                this.addFoundMember(emp, info ? { ...info, postedOutId: null } : null);
+            });
             return;
         }
 
@@ -1142,7 +1148,7 @@ export class NotesheetPreviewGeneralComponent extends NotesheetPreviewBase imple
                         life: 7000
                     });
                 }
-                this.addFoundMember(emp, info.postedOutId, info.postingUnitName ?? '', info.postingUnitNameBN ?? '');
+                this.addFoundMember(emp, info);
             },
             error: () => {
                 this.memberAddLoading = false;
@@ -1151,7 +1157,7 @@ export class NotesheetPreviewGeneralComponent extends NotesheetPreviewBase imple
         });
     }
 
-    private addFoundMember(emp: EmployeeBasicInfo, postedOutId: number | null, postingUnitEN: string = '', postingUnitBN: string = ''): void {
+    private addFoundMember(emp: EmployeeBasicInfo, info: PostedOutClearanceInfo | null): void {
         if (this.editMembersData.members.some(m => m.employeeId === emp.employeeID)) {
             this.messageService.add({ severity: 'warn', summary: 'Duplicate', detail: 'This member is already added.' });
             return;
@@ -1241,15 +1247,16 @@ export class NotesheetPreviewGeneralComponent extends NotesheetPreviewBase imple
                 const activeRab = findActiveRabService(rabServiceList);
                 values['presentRabUnit'] = buildRabUnitPath(activeRab, false) || (profile.rabUnit ?? '');
                 values['presentRabUnitBN'] = buildRabUnitPath(activeRab, true) || (profile.rabUnitBN ?? profile.rabUnit ?? '');
-                values['postingUnit'] = postingUnitEN;
-                values['postingUnitBN'] = postingUnitBN;
+                values['postingUnit'] = info?.postingUnitName ?? '';
+                values['postingUnitBN'] = info?.postingUnitNameBN ?? '';
+                Object.assign(values, buildRelieverValues(info));
                 values['motherOrganizationId'] = profile.motherOrganizationId != null ? String(profile.motherOrganizationId) : '';
                 values['armyRankId'] = profile.armyRankId != null ? String(profile.armyRankId) : '';
                 // Keep any already-present custom columns (e.g. Remarks) in sync for the new row.
                 for (const col of this.editMembersData.columns) {
                     if (col.group === 'custom' && values[col.key] === undefined) values[col.key] = '';
                 }
-                this.editMembersData.members.push({ employeeId: emp.employeeID, values, postedOutId });
+                this.editMembersData.members.push({ employeeId: emp.employeeID, values, postedOutId: info?.postedOutId ?? null });
                 this.sortEditMembersByPostingOrder();
                 this.memberAddLoading = false;
                 this.messageService.add({ severity: 'success', summary: 'Member Added', detail: `${profile.nameEnglish || emp.fullNameEN} added.` });
@@ -1303,7 +1310,7 @@ export class NotesheetPreviewGeneralComponent extends NotesheetPreviewBase imple
             }
             const def = this.availableColumns.find(c => c.key === this.selectedColumnKey);
             if (def && !this.editMembersData.columns.some(c => c.key === def.key)) {
-                this.editMembersData.columns.push({ ...def });
+                this.editMembersData.columns.push(toTableColumn(def));
             }
         } else {
             const name = this.newCustomColumnName.trim();
@@ -1611,6 +1618,11 @@ export class NotesheetPreviewGeneralComponent extends NotesheetPreviewBase imple
         postingStatus: 'পোস্টিং অবস্থা',
         permanentDistrictTypeName: 'স্থায়ী জেলা', permanentDistrictTypeNameBN: 'স্থায়ী জেলা',
         prefix: 'উপসর্গ', prefixBN: 'উপসর্গ',
+        relieverName: 'প্রতিস্থাপকের নাম', relieverNameBN: 'প্রতিস্থাপকের নাম',
+        relieverRank: 'প্রতিস্থাপকের পদবি', relieverRankBN: 'প্রতিস্থাপকের পদবি',
+        relieverCorps: 'প্রতিস্থাপকের কোর', relieverCorpsBN: 'প্রতিস্থাপকের কোর',
+        relieverTrade: 'প্রতিস্থাপকের ট্রেড', relieverTradeBN: 'প্রতিস্থাপকের ট্রেড',
+        relieverJoiningDate: 'প্রতিস্থাপকের যোগদানের তারিখ',
     };
 
     /** Column header for the members table. English note-sheet → `label`.

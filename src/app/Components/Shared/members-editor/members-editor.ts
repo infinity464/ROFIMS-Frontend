@@ -24,7 +24,11 @@ import {
     MemberColumnDef,
     MemberRow,
     MembersJsonData,
-    PostedOutClearanceInfo
+    PostedOutClearanceInfo,
+    buildRelieverValues,
+    fetchPostedOutInfo,
+    backfillRelieverValues,
+    toTableColumn
 } from '@/Components/Features/notesheet-generate/notesheet-generate';
 
 /**
@@ -117,6 +121,7 @@ export class MembersEditorComponent implements OnChanges {
             });
             this.membersData.columns = columns;
             this.membersData.members = members;
+            backfillRelieverValues(this.http, members);
             if (columns.length === 0) {
                 this.defaultColumnsApplied = false;
                 this.applyDefaultMemberColumnsIfEmpty();
@@ -164,7 +169,12 @@ export class MembersEditorComponent implements OnChanges {
             return;
         }
         if (!this.isClearance && !this.warnIfNotPostedOut) {
-            this.addFoundMember(emp, null);
+            // No posted-out gate, but still pull the Posting Unit + reliever columns (postedOutId stays null).
+            this.memberAddLoading = true;
+            fetchPostedOutInfo(this.http, emp.employeeID).subscribe((info) => {
+                this.memberAddLoading = false;
+                this.addFoundMember(emp, info ? { ...info, postedOutId: null } : null);
+            });
             return;
         }
 
@@ -182,7 +192,7 @@ export class MembersEditorComponent implements OnChanges {
                         this.showNotPostedOutConfirm = true;
                         return;
                     }
-                    this.addFoundMember(emp, info.postedOutId, info.postingUnitName ?? '', info.postingUnitNameBN ?? '');
+                    this.addFoundMember(emp, info);
                     return;
                 }
 
@@ -207,7 +217,7 @@ export class MembersEditorComponent implements OnChanges {
                     });
                     return;
                 }
-                this.addFoundMember(emp, info.postedOutId, info.postingUnitName ?? '', info.postingUnitNameBN ?? '');
+                this.addFoundMember(emp, info);
             },
             error: () => {
                 this.memberAddLoading = false;
@@ -229,7 +239,7 @@ export class MembersEditorComponent implements OnChanges {
         this.showNotPostedOutConfirm = false;
     }
 
-    private addFoundMember(emp: EmployeeBasicInfo, postedOutId: number | null, postingUnitEN = '', postingUnitBN = ''): void {
+    private addFoundMember(emp: EmployeeBasicInfo, info: PostedOutClearanceInfo | null): void {
         this.memberAddLoading = true;
         forkJoin([
             this.servingMembersService.getEmployeePersonalServiceOverview(emp.employeeID),
@@ -328,15 +338,16 @@ export class MembersEditorComponent implements OnChanges {
                 values['presentRabUnitBN'] = buildRabUnitPath(activeRab, true) || (profile.rabUnitBN ?? profile.rabUnit ?? '');
 
                 // Posted-out Posting Unit (mother-org transfer destination) — clearance only.
-                values['postingUnit'] = postingUnitEN;
-                values['postingUnitBN'] = postingUnitBN;
+                values['postingUnit'] = info?.postingUnitName ?? '';
+                values['postingUnitBN'] = info?.postingUnitNameBN ?? '';
+                Object.assign(values, buildRelieverValues(info));
 
                 // Keep any already-present custom columns (e.g. Remarks) in sync for the new row.
                 for (const col of this.membersData.columns) {
                     if (col.group === 'custom' && values[col.key] === undefined) values[col.key] = '';
                 }
 
-                this.membersData.members.push({ employeeId: emp.employeeID, values, postedOutId });
+                this.membersData.members.push({ employeeId: emp.employeeID, values, postedOutId: info?.postedOutId ?? null });
                 this.applyDefaultMemberColumnsIfEmpty();
                 this.memberAddLoading = false;
                 this.messageService.add({ severity: 'success', summary: 'Member Added', detail: `${profile.nameEnglish || emp.fullNameEN} added.` });
@@ -457,7 +468,7 @@ export class MembersEditorComponent implements OnChanges {
             }
             const def = this.availableColumns.find(c => c.key === this.selectedColumnKey);
             if (def && !this.membersData.columns.some(c => c.key === def.key)) {
-                this.membersData.columns.push({ ...def });
+                this.membersData.columns.push(toTableColumn(def));
             }
         } else {
             const name = this.newCustomColumnName.trim();
