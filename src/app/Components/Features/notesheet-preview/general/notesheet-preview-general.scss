@@ -159,12 +159,21 @@ $ns-tab-stop: calc(#{fs(10)} * 1.8);
     &:active { filter: brightness(0.92); }
 }
 
-/* ── Whole body at one uniform 10pt (general note-sheet only; header keeps its own sizes) ──
-   Visible page (.a4-paper) and hidden measure (.page-measure) must match for pagination.
-   Title (.ns-title-*) + org header have their own explicit sizes, so they are unaffected. */
+/* ── Whole body at one uniform 10pt (general note-sheet only) ──
+   Visible page (.a4-paper) and hidden measure (.page-measure) must match for pagination. */
 .a4-paper,
 .page-measure {
     font-size: fs(10); /* base — anything without its own size */
+}
+/* Header follows the font offset too. Title sizes come from the shared stylesheet. */
+.ns-title-en,
+.ns-title-bn {
+    font-size: fs(10); /* NOTE SHEET / মন্তব্য পত্র */
+}
+/* Org header carries its size inline in the template; !important is what beats a
+   non-important inline style. */
+.ns-org-header {
+    font-size: fs(9) !important;
 }
 /* Numbered paragraphs + note + last-text: shared style pins these at 8pt, so an
    explicit override is required (the base bump alone does not reach them). */
@@ -195,6 +204,11 @@ $ns-tab-stop: calc(#{fs(10)} * 1.8);
 .ns-sig-appoint,
 .ns-sig-date {
     font-size: fs(10); /* signature block */
+}
+.ns-approver-role,
+.ns-approver-left,
+.ns-approver-remark {
+    font-size: fs(10); /* approval section — shared style pins these at 9pt */
 }
 
 /* Edit-mode members table: mark every editable data cell (same affordance as the

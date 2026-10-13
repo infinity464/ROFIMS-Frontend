@@ -2456,9 +2456,8 @@ html, body { margin: 0; padding: 0; background: transparent; }
             ? { ascii: 'Times New Roman', hAnsi: 'Times New Roman', cs: 'SolaimanLipi', hint: 'cs' as const }
             : 'Times New Roman';
         // Font sizes in half-points: title/org=9pt(18), body=8pt(16), table=7pt(14), sig=9pt(18)
-        const titleSize = 18;   // 9pt — org header (HEADER — kept)
-        // Body / table sizes follow the export bar's font offset (docx half-points),
-        // mirroring fs() on screen; the org header + NOTE SHEET title keep their size.
+        // All sizes follow the export bar's font offset (docx half-points), mirroring fs() on screen.
+        const titleSize = Math.round((9 + this.fontDelta) * 2);    // 9pt ± offset — org header
         const bodySize = Math.round((10 + this.fontDelta) * 2);    // 10pt ± offset — main text, reference, note, notesheet no, subject
         const tblSize = Math.round((9 + this.fontDelta) * 2);      // 9pt ± offset — members table (1pt smaller than body so columns fit)
         const sigSize = bodySize;  // signature sections — uniform with body (10pt)
@@ -2466,7 +2465,7 @@ html, body { margin: 0; padding: 0; background: transparent; }
         const csBody = bn ? bodySize : undefined;
         const csTbl = bn ? tblSize : undefined;
         const csSig = bn ? sigSize : undefined;
-        const titleHdrSize = titleSize + 2;   // 10pt — NOTE SHEET / মন্তব্য পত্র (HEADER — kept)
+        const titleHdrSize = titleSize + 2;   // 10pt ± offset — NOTE SHEET / মন্তব্য পত্র
         // Signature-block spacing in twips (1pt = 20, 1px = 15) from the saved style. The
         // initiator, date and signature-spacer values move by their difference from the
         // built-in default, so an unsaved sheet keeps Word's usual spacing; the approver
