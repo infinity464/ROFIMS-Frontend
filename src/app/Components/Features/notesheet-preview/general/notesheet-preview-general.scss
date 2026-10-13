@@ -330,13 +330,20 @@ $ns-tab-stop: calc(#{fs(10)} * 1.8);
     }
 }
 
-/* Reference HTML from the rich editor — keep the first paragraph on the same line as the label / serial. */
+/* Reference HTML from the rich editor — keep the first paragraph on the same line as the label / serial.
+   :host doesn't match in the JsReport PDF (its body is innerHTML, no host element) — buildJsReportPdf()
+   repeats these rules under .pdf-flow; keep both in sync. */
 :host ::ng-deep .ns-ref-html p {
     margin: 0;
 }
 :host ::ng-deep .ns-ref-inline p:first-child,
 :host ::ng-deep .ns-ref-item .ns-ref-html p:first-child {
     display: inline;
+}
+/* Blank editor line (<p><br></p>) between references — 30% shorter than a text line.
+   line-height is unitless, so it scales with the font size. */
+:host ::ng-deep .ns-ref-html p:has(> br:only-child) {
+    font-size: 70%;
 }
 
 /* Style dialog → Table columns (dynamic column list). */

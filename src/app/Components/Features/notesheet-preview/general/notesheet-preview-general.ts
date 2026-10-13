@@ -2095,6 +2095,14 @@ html, body { margin: 0; padding: 0; background: transparent; }
 
 .pdf-flow .ns-doc-box { border: none !important; }
 
+/* Reference HTML: first paragraph on the same line as সূত্রঃ / ক।. Mirrors the
+   :host ::ng-deep rules in notesheet-preview-general.scss — those compile to
+   [_nghost-…] selectors, and the host element isn't part of this snapshot. */
+.pdf-flow .ns-ref-html p { margin: 0; }
+.pdf-flow .ns-ref-inline p:first-child,
+.pdf-flow .ns-ref-item .ns-ref-html p:first-child { display: inline; }
+.pdf-flow .ns-ref-html p:has(> br:only-child) { font-size: 70%; }
+
 /* Avoid awkward breaks: keep table rows + signatory blocks together */
 .ns-posting-table tr,
 .ns-approver-section,
