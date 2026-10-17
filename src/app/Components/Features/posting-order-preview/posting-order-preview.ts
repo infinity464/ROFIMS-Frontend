@@ -972,7 +972,7 @@ export class PostingOrderPreviewPageComponent implements OnInit {
 
     get hasMultipleReferences(): boolean { return this.referenceEntries.length > 1; }
 
-    /** One সূত্র line as "<no>, তারিখঃ <date>" (date omitted when absent). */
+    /** One সূত্র line as "<no> তারিখঃ <date>" (date omitted when absent). */
     referenceEntryText(entry: ReferenceEntry): string {
         const no = (entry.referenceNo ?? '').trim();
         if (!no) return '';
@@ -981,7 +981,7 @@ export class PostingOrderPreviewPageComponent implements OnInit {
             : '';
         if (!dateStr) return no;
         const dateLabel = this.isBangla ? 'তারিখঃ' : 'Date:';
-        return `${no}, ${dateLabel} ${dateStr}`;
+        return `${no} ${dateLabel} ${dateStr}`;
     }
 
     /** The single-line সূত্র (first entry) — used for the one-reference layout and Word. */
