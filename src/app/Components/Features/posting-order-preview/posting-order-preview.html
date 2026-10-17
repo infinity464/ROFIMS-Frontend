@@ -729,26 +729,25 @@
                     </div>
                     <table class="po-doc-copy-table" *ngIf="copyLineFirst">
                         <tr>
-                            <td class="po-doc-copy-left">
+                            <td class="po-doc-copy-left po-doc-copy-full">
                                 <div class="po-doc-copy-list">
                                     <p><span class="po-copy-no">{{ copyLineFirst.no }}।</span>{{ copyLineFirst.text }}</p>
                                 </div>
                             </td>
-                            <td class="po-doc-copy-right"></td>
                         </tr>
                     </table>
                 </div>
             </div>
 
-            <!-- Middle lines — one row each, free to break across pages. -->
+            <!-- Middle lines — one row each, free to break across pages. They sit above
+                 the signature, so they use the full width (no reserved right column). -->
             <table class="po-doc-copy-table" *ngIf="copyLinesMiddle.length > 0">
                 <tr *ngFor="let line of copyLinesMiddle">
-                    <td class="po-doc-copy-left">
+                    <td class="po-doc-copy-left po-doc-copy-full">
                         <div class="po-doc-copy-list">
                             <p><span class="po-copy-no">{{ line.no }}।</span>{{ line.text }}</p>
                         </div>
                     </td>
-                    <td class="po-doc-copy-right"></td>
                 </tr>
             </table>
             <!-- Tail: the last few lines plus the approver signature, kept on one page.

@@ -416,6 +416,11 @@ $doc-block-gap: 6px;
     width: 80%;
     vertical-align: top;
     padding: 0;
+
+    /* Lines above the signature tail have nothing beside them — use the full width. */
+    &.po-doc-copy-full {
+        width: 100%;
+    }
 }
 
 .po-doc-copy-title {
