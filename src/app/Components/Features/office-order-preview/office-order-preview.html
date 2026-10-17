@@ -94,16 +94,8 @@
         <div class="preview-actions">
             <ng-container *ngIf="!loading && !error && order">
                 <p-button *ngIf="!isApproved" icon="pi pi-pencil" label="Edit" (onClick)="goEdit()" styleClass="p-button-outlined" severity="info"></p-button>
-                <!-- Members table on/off — the order's own setting, saved straight away -->
-                <label class="oo-members-toggle" *ngIf="nsMainText"
-                       [class.oo-members-toggle--disabled]="isApproved || savingShowMembersTable"
-                       [title]="isApproved ? 'Approved orders cannot be changed' : 'Show the members table in this office order'">
-                    <input type="checkbox"
-                           [checked]="showMembersTable"
-                           [disabled]="isApproved || savingShowMembersTable"
-                           (change)="toggleShowMembersTable($any($event.target).checked)" />
-                    Members table
-                </label>
+                <!-- Font size + table column widths (view only, reset on reload) -->
+                <p-button icon="pi pi-sliders-h" label="Style" (onClick)="showStyleDialog = true" styleClass="p-button-outlined" pTooltip="Font size and table column widths — not saved, a reload resets them"></p-button>
                 <!-- Page Size Selector -->
                 <select [(ngModel)]="selectedPageSize" class="page-size-select">
                     <option value="a4">A4</option>
@@ -176,7 +168,9 @@
     <!-- ─── A4 Paper Preview ─── -->
     <div class="legal-paper-container" *ngIf="!loading && !error && order">
         <div class="legal-paper" [class.legal-paper--legal]="selectedPageSize === 'legal'" #legalPaper>
-            <div class="oo-doc-box">
+            <!-- --oo-fs-delta sits on the box (not the host) so it travels with the paper's
+                 innerHTML into the PDF. -->
+            <div class="oo-doc-box" [style.--oo-fs-delta]="fontDelta">
 
                 <!-- Government Header -->
                 <div class="oo-doc-header">
@@ -232,6 +226,10 @@
                                 [noteSheetId]="order!.noteSheetId"
                                 [officeOrderId]="order!.noteSheetId == null ? order!.id : null"
                                 [isBangla]="isBangla"
+                                [resizable]="true"
+                                [widthOverrides]="colWidthOverrides"
+                                (columnsLoaded)="membersColumns = $event"
+                                (columnResize)="setColWidth($event.key, $event.width)"
                             ></app-notesheet-members-table>
                         </div>
                     </div>
@@ -256,6 +254,10 @@
                                     [noteSheetId]="order!.noteSheetId"
                                     [officeOrderId]="order!.noteSheetId == null ? order!.id : null"
                                     [isBangla]="isBangla"
+                                    [resizable]="true"
+                                    [widthOverrides]="colWidthOverrides"
+                                    (columnsLoaded)="membersColumns = $event"
+                                    (columnResize)="setColWidth($event.key, $event.width)"
                                 ></app-notesheet-members-table>
                             </div>
                         </div>
@@ -332,6 +334,47 @@
     </div>
 
 </div>
+
+<!-- ─── Document Style: font size + members-table column widths ───
+     Non-modal and docked right so the page keeps scrolling behind it. Nothing is saved:
+     it only changes this view (paper, Print Preview, PDF, Word), and a reload resets it. -->
+<p-dialog
+    header="Document Style"
+    [(visible)]="showStyleDialog"
+    [modal]="false"
+    [blockScroll]="false"
+    [draggable]="true"
+    [resizable]="false"
+    [keepInViewport]="true"
+    position="right"
+    [style]="{ width: '320px', maxHeight: '90vh' }"
+    [contentStyle]="{ overflowY: 'auto' }"
+    [breakpoints]="{ '575px': '92vw' }"
+>
+    <div class="oo-style-form">
+        <p class="oo-style-hint">Changes show on the order straight away and carry into Print Preview, PDF and Word. They are <b>not saved</b> — reload the page to go back to the defaults.</p>
+
+        <label for="ooFontDelta">Font size</label>
+        <p-select inputId="ooFontDelta" [options]="fontDeltaOptions" [(ngModel)]="fontDelta" optionLabel="label" optionValue="value" appendTo="body" [style]="{ width: '100%' }"></p-select>
+
+        <ng-container *ngIf="showMembersTable && membersColumns.length > 0">
+            <div class="oo-style-section">
+                <span>Table columns</span>
+                <p-button label="Reset columns" icon="pi pi-refresh" [text]="true" size="small" [disabled]="!hasColWidthOverrides" (onClick)="resetColumnWidths()"></p-button>
+            </div>
+            <p class="oo-style-hint">Width is relative; the % is the column's share of the table. You can also drag a column header's right edge on the page.</p>
+            <div class="oo-col-row" *ngFor="let col of membersColumns; trackBy: trackByColumnKey">
+                <label [attr.for]="'ooCol_' + col.key" [title]="colHeader(col)">{{ colHeader(col) }}</label>
+                <p-inputNumber [inputId]="'ooCol_' + col.key" [ngModel]="colWidth(col)" (ngModelChange)="setColWidth(col.key, $event)" [min]="3" [max]="80" [step]="1" [showButtons]="true"></p-inputNumber>
+                <span class="oo-col-pct">{{ colPercent(col) | number: '1.0-1' }}%</span>
+            </div>
+        </ng-container>
+    </div>
+    <ng-template pTemplate="footer">
+        <p-button label="Reset" icon="pi pi-refresh" severity="secondary" [text]="true" [disabled]="fontDelta === 0 && !hasColWidthOverrides" (onClick)="resetStyle()"></p-button>
+        <p-button label="Close" severity="secondary" [outlined]="true" (onClick)="showStyleDialog = false"></p-button>
+    </ng-template>
+</p-dialog>
 
 <!-- ─── Approval Modal ─── -->
 <p-dialog

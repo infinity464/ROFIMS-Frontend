@@ -3,10 +3,12 @@
     overflow-x: auto;
 }
 
+/* --oo-fs-delta: point offset from the office-order preview's font-size option (set on
+   its .oo-doc-box). Unset on every other screen, so the table stays at 7pt there. */
 .members-table {
     width: calc(100% - 8px);
     border-collapse: collapse;
-    font-size: 7pt;
+    font-size: calc(7pt + var(--oo-fs-delta, 0) * 1pt);
     margin: 4px 0 4px 8px;
     table-layout: fixed;
 
@@ -20,8 +22,29 @@
 
     th {
         font-weight: 600;
-        font-size: 7pt;
+        background: #f5f5f5;
+        font-size: calc(7pt + var(--oo-fs-delta, 0) * 1pt);
         text-transform: uppercase;
+    }
+
+    /* Drag handle on the header's right edge (resizable tables only). It stays inside the
+       cell so it can't widen the wrap's scroll area; the PDF drops it via .no-print. */
+    .members-th--resizable {
+        position: relative;
+    }
+
+    .members-col-resizer {
+        position: absolute;
+        top: 0;
+        right: 0;
+        bottom: 0;
+        width: 5px;
+        cursor: col-resize;
+        z-index: 1;
+
+        &:hover {
+            background: rgba(59, 130, 246, 0.35);
+        }
     }
 
     /* ক্রমিক / SL — 35px so the Bangla header sits on one line. */

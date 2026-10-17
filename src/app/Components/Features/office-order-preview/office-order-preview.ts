@@ -17,15 +17,15 @@ import { IconField as IconFieldModule } from 'primeng/iconfield';
 import { InputIcon as InputIconModule } from 'primeng/inputicon';
 import { InputTextModule } from 'primeng/inputtext';
 import { SelectModule } from 'primeng/select';
+import { InputNumberModule } from 'primeng/inputnumber';
 import { MessageService } from 'primeng/api';
 import { environment } from '@/Core/Environments/environment';
 import { OfficeOrderService } from '@/services/office-order.service';
-import { SharedService } from '@/shared/services/shared-service';
 import { EmpService } from '@/services/emp-service';
 import { GeneralNotesheetOfficeOrderDto, GeneralNotesheetOfficeOrderWithDetailsDto, ReferenceNoEntry, OnulipiEntry, AttachmentEntry } from '@/models/office-order.model';
 import { mainTextBlocksToHtml } from '@/shared/utils/notesheet-main-text';
 import { ApprovalStatus, OrderFormat } from '@/models/enums';
-import { NotesheetMembersTableComponent } from '@/Components/Shared/notesheet-members-table/notesheet-members-table';
+import { NotesheetMembersTableComponent, MembersColumnDef, membersColHeader, membersColWidth } from '@/Components/Shared/notesheet-members-table/notesheet-members-table';
 import { JsReportService } from '@/services/jsreport.service';
 import { Document, Packer, Paragraph, TextRun, AlignmentType, BorderStyle, HeadingLevel, Table, TableRow, TableCell, WidthType, VerticalAlign, TableLayoutType, TabStopType } from 'docx';
 import { saveAs } from 'file-saver';
@@ -49,6 +49,7 @@ import { firstValueFrom } from 'rxjs';
         InputIconModule,
         InputTextModule,
         SelectModule,
+        InputNumberModule,
         NotesheetMembersTableComponent
     ],
     providers: [MessageService],
@@ -60,7 +61,6 @@ export class OfficeOrderPreviewComponent implements OnInit {
     private router = inject(Router);
     private http = inject(HttpClient);
     private officeOrderService = inject(OfficeOrderService);
-    private sharedService = inject(SharedService);
     private empService = inject(EmpService);
     private messageService = inject(MessageService);
     private sanitizer = inject(DomSanitizer);
@@ -131,6 +131,67 @@ export class OfficeOrderPreviewComponent implements OnInit {
 
     // Page size for export
     selectedPageSize: 'a4' | 'legal' = 'a4';
+
+    // ─── Style: font size + members-table column widths ──────────
+    // View-only, like the Onulipi reorder: kept in memory and never saved, so a reload
+    // puts the defaults back. The paper, Print Preview / PDF (its innerHTML) and Word all
+    // read these.
+    showStyleDialog = false;
+
+    /** Whole-order font size as a point offset (−2 … 0 … +2 in 0.25 steps). Bound as
+     *  --oo-fs-delta on .oo-doc-box, which every size on the paper is written against;
+     *  buildWordDocument() adds the same offset to its half-point sizes. */
+    fontDelta = 0;
+    /** +2.00 … 0 … −2.00 pt in 0.25 steps, largest first — same list as the note sheet. */
+    readonly fontDeltaOptions = Array.from({ length: 17 }, (_, i) => {
+        const value = +(2 - i * 0.25).toFixed(2);
+        return { label: value === 0 ? 'Default Font Size' : `Font: ${value > 0 ? '+' : '-'}${Math.abs(value).toFixed(2)} pt`, value };
+    });
+
+    /** The members table's columns, as its component loaded them — listed in the Style dialog. */
+    membersColumns: MembersColumnDef[] = [];
+    /** Widths changed on this page (header drag or the Style dialog), by column key. Kept
+     *  here rather than on the columns so they survive the table being hidden and shown. */
+    colWidthOverrides: Record<string, number> = {};
+
+    get hasColWidthOverrides(): boolean {
+        return Object.keys(this.colWidthOverrides).length > 0;
+    }
+
+    trackByColumnKey = (_: number, col: MembersColumnDef): string => col.key;
+
+    colHeader(col: MembersColumnDef): string {
+        return membersColHeader(col, this.isBangla);
+    }
+
+    colWidth(col: MembersColumnDef): number {
+        return membersColWidth(col, this.membersColumns.length, this.colWidthOverrides);
+    }
+
+    setColWidth(key: string, value: number | null): void {
+        if (value == null || isNaN(Number(value))) return; // p-inputNumber emits null when cleared
+        this.colWidthOverrides = { ...this.colWidthOverrides, [key]: Math.max(3, Math.min(80, Math.round(Number(value) * 10) / 10)) };
+    }
+
+    /** The column's share of the member columns' total width. */
+    colPercent(col: MembersColumnDef): number {
+        const total = this.membersColumns.reduce((sum, c) => sum + this.colWidth(c), 0) || 1;
+        return (this.colWidth(col) / total) * 100;
+    }
+
+    resetColumnWidths(): void {
+        this.colWidthOverrides = {};
+    }
+
+    resetStyle(): void {
+        this.fontDelta = 0;
+        this.resetColumnWidths();
+    }
+
+    /** A Word size in half-points: `pt` at the default size, moved by the font offset. */
+    private halfPoints(pt: number): number {
+        return Math.round((pt + this.fontDelta) * 2);
+    }
 
     // Export states
     exportingPdf = false;
@@ -207,34 +268,9 @@ export class OfficeOrderPreviewComponent implements OnInit {
         return [o.approvalEmployeeRank, o.approvalEmployeeAppointment, o.approvalEmployeeRabUnit].filter(Boolean).length;
     }
 
-    /** The order's own show/hide setting — independent of the note sheet's. */
+    /** The order's own show/hide setting (set on the generate screen) — independent of the note sheet's. */
     get showMembersTable(): boolean {
         return !!this.order && this.order.showMembersTable !== false;
-    }
-
-    savingShowMembersTable = false;
-
-    /** Preview toolbar toggle: show/hide the members table and save it on the order straight away. */
-    toggleShowMembersTable(show: boolean): void {
-        if (!this.order || this.isApproved || this.savingShowMembersTable) return;
-        const order = this.order;
-        const previous = order.showMembersTable;
-        order.showMembersTable = show;
-        this.savingShowMembersTable = true;
-        this.officeOrderService.setShowMembersTable(order.id, show, this.sharedService.getCurrentUser() ?? 'system').subscribe({
-            next: (res) => {
-                this.savingShowMembersTable = false;
-                if (res.statusCode !== 200) {
-                    order.showMembersTable = previous;
-                    this.messageService.add({ severity: 'error', summary: 'Error', detail: res.description ?? 'Failed.' });
-                }
-            },
-            error: (err) => {
-                this.savingShowMembersTable = false;
-                order.showMembersTable = previous;
-                this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.description ?? 'Failed to save the members table setting.' });
-            }
-        });
     }
 
     ngOnInit(): void {
@@ -470,14 +506,28 @@ export class OfficeOrderPreviewComponent implements OnInit {
         return { columns: [], rows: [] };
     }
 
-    /** Tab stop after the paragraph serial; the members table starts here too (3em at 9pt) */
-    private readonly membersTableIndentDxa = 540;
+    /** Tab stop after the paragraph serial; the members table starts here too (3em of the
+     *  body size — 540 twips at the default 9pt). */
+    private get membersTableIndentDxa(): number {
+        return Math.round(3 * (9 + this.fontDelta) * 20);
+    }
 
     /** Calculate dynamic column widths in twips (DXA) based on content */
     private calcColumnWidthsDxa(columns: any[], rows: Record<string, string>[]): number[] {
         // Usable width in twips: page width - left/right margins (720 each) - table indent
         const pageWidth = this.selectedPageSize === 'legal' ? 12240 : 11906;
         const totalWidth = pageWidth - 720 - 720 - this.membersTableIndentDxa;
+
+        // Widths changed on the preview: SL keeps its minimum and the member columns share
+        // the rest in the same proportions as on screen.
+        if (this.hasColWidthOverrides) {
+            const slWidth = 600;
+            const rel = columns.map((col: MembersColumnDef) => membersColWidth(col, columns.length, this.colWidthOverrides));
+            const relTotal = rel.reduce((sum, w) => sum + w, 0) || 1;
+            const widths = [slWidth, ...rel.map(w => Math.round((w / relTotal) * (totalWidth - slWidth)))];
+            widths[widths.length - 1] += totalWidth - widths.reduce((sum, w) => sum + w, 0);
+            return widths;
+        }
 
         const slHeader = this.isBangla ? 'ক্রমিক' : 'SL';
         const slMaxLen = Math.max(slHeader.length, String(rows.length).length);
@@ -520,7 +570,7 @@ export class OfficeOrderPreviewComponent implements OnInit {
 
     /** Build members table as docx Table */
     private buildMembersTable(columns: any[], rows: Record<string, string>[], font: string | { ascii: string; hAnsi: string; cs: string; hint: 'cs' }): Table {
-        const tableFontSize = 14; // 7pt in half-points
+        const tableFontSize = this.halfPoints(7); // 7pt ± the font offset
         const borderStyle = { style: BorderStyle.SINGLE, size: 1, color: '000000' };
         const borders = {
             top: borderStyle, bottom: borderStyle, left: borderStyle, right: borderStyle,
@@ -586,8 +636,8 @@ export class OfficeOrderPreviewComponent implements OnInit {
         if (!this.order) throw new Error('No order loaded');
 
         const font = this.isBangla ? { ascii: 'Times New Roman', hAnsi: 'Times New Roman', cs: 'SolaimanLipi', hint: 'cs' as const } : 'Times New Roman';
-        const headerSize = 18; // 9pt — government header lines
-        const contentSize = 18; // 9pt — body / meta / reference / onulipi
+        const headerSize = this.halfPoints(9); // 9pt ± the font offset — government header lines
+        const contentSize = this.halfPoints(9); // 9pt ± the font offset — body / meta / reference / onulipi
         const children: (Paragraph | Table)[] = [];
 
         // ── Page size ──

@@ -1,3 +1,10 @@
+/* Style dialog → Font size: a point offset bound as --oo-fs-delta on .oo-doc-box, so it
+   travels with the paper's innerHTML into the PDF. Every size on the paper goes through
+   fs(); the members table (its own component) reads the same variable for its 7pt. */
+@function fs($pt) {
+    @return calc(#{$pt}pt + var(--oo-fs-delta, 0) * 1pt);
+}
+
 :host {
     display: block;
     min-height: 100vh;
@@ -174,6 +181,7 @@
     max-width: 100%;
     overflow: hidden;
     word-break: normal;
+    font-size: fs(9);
 }
 
 /* ── Document Styles ──────────────────────────────── */
@@ -184,7 +192,7 @@
 
 .oo-doc-header-line {
     font-weight: 700;
-    font-size: 9pt;
+    font-size: fs(9);
     line-height: 1.5;
 }
 
@@ -195,12 +203,12 @@
        government header. */
     margin-top: 12px;
     margin-bottom: 6px;
-    font-size: 9pt;
+    font-size: fs(9);
 }
 
 .oo-doc-reference {
     margin-bottom: 10px;
-    font-size: 9pt;
+    font-size: fs(9);
     font-style: italic;
 
     .oo-doc-reference-label {
@@ -213,13 +221,13 @@
 /* ── Sections (Address To, Reference No, Attachment, Onulipi) ── */
 .oo-doc-section {
     margin: 5px 0;
-    font-size: 9pt;
+    font-size: fs(9);
 }
 
 .oo-doc-section-label {
     font-weight: 700;
     margin-bottom: 4px;
-    font-size: 9pt;
+    font-size: fs(9);
 }
 
 /* সূত্র reads as plain text; অনুলিপি keeps the bold label. */
@@ -239,7 +247,7 @@
 /* ── Subject ──────────────────────────────────────── */
 .oo-doc-subject {
     margin: 5px 0;
-    font-size: 9pt;
+    font-size: fs(9);
 }
 
 .oo-doc-subject-label {
@@ -257,7 +265,7 @@
    under the number, not under the text. Same arrangement as the note sheet's .ns-para. */
 .oo-doc-para {
     margin: 5px 0;
-    font-size: 9pt;
+    font-size: fs(9);
     /* Tight 1.25 leading. The text is injected with [innerHTML], so the rich-content
        rule further down (and any line-height Quill wrote inline) would otherwise win
        over plain inheritance — hence !important on the descendants, the same way the
@@ -316,12 +324,18 @@
     margin-right: 0;
 }
 
+/* No header fill on the general office order (the shared table keeps its grey on the
+   other screens); !important beats the component's own, more specific th rule. */
+.oo-doc-para-text ::ng-deep .members-table th {
+    background: none !important;
+}
+
 /* ── Body ─────────────────────────────────────────── */
 .oo-doc-body {
     margin: 12px 0;
     line-height: 1.8;
     text-align: justify;
-    font-size: 9pt;
+    font-size: fs(9);
 }
 
 /* ── Signature Area ──────────────────────────────── */
@@ -351,7 +365,7 @@
 .oo-doc-closing-lists {
     flex: 1 1 auto;
     min-width: 0;
-    padding-bottom: calc(var(--sig-extra-lines, 0) * 1.5 * 9pt); /* one .oo-doc-sig-rank line each */
+    padding-bottom: calc(var(--sig-extra-lines, 0) * 1.5 * #{fs(9)}); /* one .oo-doc-sig-rank line each */
 }
 
 .oo-doc-signature-area {
@@ -376,7 +390,7 @@
 
 .oo-doc-sig-name {
     font-weight: 700;
-    font-size: 9pt;
+    font-size: fs(9);
     line-height: 1.5;
     border-top: 1px solid transparent;
     padding-top: 4px;
@@ -385,7 +399,7 @@
 .oo-doc-sig-rank,
 .oo-doc-sig-appointment,
 .oo-doc-sig-unit {
-    font-size: 9pt;
+    font-size: fs(9);
     line-height: 1.5;
 }
 
@@ -481,7 +495,7 @@
 /* ── Rich HTML sections (innerHTML) ── */
 :host ::ng-deep {
     .oo-doc-rich-content {
-        font-size: 9pt;
+        font-size: fs(9);
         line-height: 1.8;
         width: 100%;
         max-width: 100%;
@@ -631,21 +645,59 @@
     }
 }
 
-/* Toolbar: members table on/off */
-.oo-members-toggle {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    font-size: 0.875rem;
-    cursor: pointer;
-    user-select: none;
+/* Style dialog (app chrome, not printed) — same layout as the note sheet's. */
+.oo-style-form {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
 
-    input { cursor: pointer; }
+    label {
+        font-size: 0.85rem;
+        font-weight: 600;
+        margin-top: 0.5rem;
+    }
+
+    ::ng-deep .p-inputnumber,
+    ::ng-deep .p-inputnumber input {
+        width: 100%;
+    }
+
+    .oo-col-row {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) 6.5rem 3.2rem;
+        align-items: center;
+        gap: 0.4rem;
+
+        label {
+            margin-top: 0;
+            font-weight: 400;
+            font-size: 0.8rem;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+    }
 }
 
-.oo-members-toggle--disabled {
-    opacity: 0.6;
-    cursor: not-allowed;
+.oo-style-hint {
+    margin: 0;
+    font-size: 0.8rem;
+    color: var(--p-text-muted-color, #6b7280);
+}
 
-    input { cursor: not-allowed; }
+.oo-style-section {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-top: 0.75rem;
+    padding-top: 0.5rem;
+    border-top: 1px solid var(--p-content-border-color, #e5e7eb);
+    font-weight: 600;
+    font-size: 0.9rem;
+}
+
+.oo-col-pct {
+    font-size: 0.75rem;
+    text-align: right;
+    color: var(--p-text-muted-color, #6b7280);
 }
