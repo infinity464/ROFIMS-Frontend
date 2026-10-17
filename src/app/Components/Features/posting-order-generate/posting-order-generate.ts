@@ -9,6 +9,7 @@ import { forkJoin } from 'rxjs';
 import { TableModule } from 'primeng/table';
 import { ButtonModule } from 'primeng/button';
 import { SelectModule } from 'primeng/select';
+import { MultiSelectModule } from 'primeng/multiselect';
 import { DatePickerModule } from 'primeng/datepicker';
 import { InputTextModule } from 'primeng/inputtext';
 import { TextareaModule } from 'primeng/textarea';
@@ -27,7 +28,7 @@ import { IdentityService } from '@/services/identity.service';
 import { IdentityUserMappingService } from '@/services/identity-user-mapping.service';
 import { buildApprovalPersonOptions } from '@/shared/utils/approval-person-options.util';
 import { MasterBasicSetupService } from '@/Components/basic-setup/shared/services/MasterBasicSetupService';
-import { ApprovedNoteSheetItem, PostingOrderMasterDto, EmployeeRemovalInfo, CancelledInterPostingInfo, ReferenceEntry } from '@/models/posting.model';
+import { ApprovedNoteSheetItem, PostingOrderMasterDto, EmployeeRemovalInfo, CancelledInterPostingInfo, ReferenceEntry, PostingOrderMemberInput } from '@/models/posting.model';
 import { PostingOrderNumberConfigModel } from '@/Components/basic-setup/shared/models/posting-order-number-config';
 import { NoteSheetType, CodeType, ApprovalStatus, PostingType } from '@/models/enums';
 import { FlexibleDateDirective } from '@/shared/directives/flexible-date.directive';
@@ -64,6 +65,11 @@ interface NoteSheetEmployee {
     interPostingRemark: string | null;
     sendingRemark: string | null;
     joiningDateInRAB: string | null;
+    /** Source note-sheet (split / merge: rows of several note-sheets on one page). */
+    noteSheetId: number;
+    noteSheetNo: string | null;
+    /** Multi mode: checked = goes into the order being generated; unchecked stays remaining. */
+    selected: boolean;
 }
 
 /** A footer paragraph linked to a specific transfer (RAB) unit. */
@@ -82,6 +88,7 @@ interface FooterParagraph {
         TableModule,
         ButtonModule,
         SelectModule,
+        MultiSelectModule,
         DatePickerModule, FlexibleDateDirective,
         InputTextModule,
         TextareaModule,
@@ -121,6 +128,13 @@ export class PostingOrderGenerateComponent implements OnInit {
 
     /** Fixed by route data — null means show the dropdown selector. */
     fixedPostingType: string | null = null;
+    /** Split / merge mode (route data `multi: true`): pick several note-sheets and check the
+     *  members that go into this order. Unchecked members stay remaining for a later order. */
+    multi = false;
+    /** Multi mode: selected note-sheets, in selection order (first = primary). */
+    selectedNoteSheetIds: number[] = [];
+    /** Multi mode: the primary note-sheet whose main text pre-fills the posting text. */
+    private multiPrimaryNoteSheetId: number | null = null;
     selectedPostingType: string | null = null;
     approvedNoteSheets: ApprovedNoteSheetItem[] = [];
     selectedNoteSheetId: number | null = null;
@@ -172,8 +186,10 @@ export class PostingOrderGenerateComponent implements OnInit {
     footerParagraphs: FooterParagraph[] = [];
     /** সূত্র (references). Index 0 is auto-filled from the selected note-sheet (its no +
      *  approval date); further entries are added with "+" and are text-only. Serialized
-     *  to PostingOrderMaster.ReferenceNumber as a JSON array on generate. */
+     *  to PostingOrderMaster.ReferenceNumber as a JSON array on generate.
+     *  Multi mode: the first `autoReferenceCount` entries are one per selected note-sheet. */
     references: ReferenceEntry[] = [];
+    autoReferenceCount = 0;
 
     /** true = Bangla, false = English */
     get isBangla(): boolean {
@@ -250,6 +266,7 @@ export class PostingOrderGenerateComponent implements OnInit {
 
         // Lock posting type from route data if provided — must be set BEFORE loadPostingOrderNumberConfigs
         const routePostingType = this.route.snapshot.data['postingType'] as string | undefined;
+        this.multi = this.route.snapshot.data['multi'] === true;
         if (routePostingType) {
             this.fixedPostingType = routePostingType;
             this.selectedPostingType = routePostingType;
@@ -284,17 +301,25 @@ export class PostingOrderGenerateComponent implements OnInit {
     onPostingTypeChange(showEmptyToast = true, skipConfigReload = false): void {
         this.approvedNoteSheets = [];
         this.selectedNoteSheetId = null;
+        this.selectedNoteSheetIds = [];
         this.employees = [];
         this.postingOrderNumberConfigId = null;
         if (!skipConfigReload) this.loadPostingOrderNumberConfigs();
 
         if (!this.selectedPostingType) return;
+        this.loadApprovedNoteSheets(showEmptyToast);
+    }
 
+    /** Approved note-sheets of the page's type that still have remaining members
+     *  (the backend hides note-sheets whose members are all in posting orders). */
+    private loadApprovedNoteSheets(showEmptyToast = true, onLoaded?: () => void): void {
+        if (!this.selectedPostingType) return;
         this.loadingNoteSheets = true;
         this.postingService.getApprovedNoteSheetsByType(this.selectedPostingType).subscribe({
             next: (notesheets) => {
                 this.approvedNoteSheets = notesheets ?? [];
                 this.loadingNoteSheets = false;
+                onLoaded?.();
                 if (showEmptyToast && this.approvedNoteSheets.length === 0) {
                     this.messageService.add({ severity: 'info', summary: this.isBangla ? 'তথ্য' : 'Info', detail: this.isBangla ? 'এই ধরনের জন্য কোনো অনুমোদিত নোটশীট পাওয়া যায়নি।' : 'No approved notesheets found for this type.' });
                 }
@@ -349,9 +374,50 @@ export class PostingOrderGenerateComponent implements OnInit {
         return this.approvedNoteSheets
             .filter(ns => this.memberTypeAccess.isAccessible(ns.employeeTypeIds, this.allowedMemberTypeIds))
             .map(ns => ({
-                label: ns.noteSheetNo,
+                label: ns.totalMembers != null && ns.remainingMembers != null
+                    ? `${ns.noteSheetNo} (${ns.remainingMembers}/${ns.totalMembers} ${this.isBangla ? 'অবশিষ্ট' : 'remaining'})`
+                    : ns.noteSheetNo,
                 value: ns.noteSheetId
             }));
+    }
+
+    /** Map a remaining-member row (draft SP shape + noteSheetId/noteSheetNo) to a table row. */
+    private toEmployeeRow(e: any, selected: boolean): NoteSheetEmployee {
+        return {
+            employeeId: e.employeeId,
+            serviceId: e.serviceId,
+            rabID: e.rabID,
+            prefixName: e.prefixName,
+            prefixNameBN: e.prefixNameBN,
+            fullNameEN: e.fullNameEN,
+            fullNameBN: e.fullNameBN,
+            rankName: e.rankName,
+            rankNameBN: e.rankNameBN,
+            corpsName: e.corpsName,
+            corpsNameBN: e.corpsNameBN,
+            tradeName: e.tradeName,
+            tradeNameBN: e.tradeNameBN,
+            motherUnitName: e.motherUnitName,
+            motherUnitNameBN: e.motherUnitNameBN,
+            permanentDistrictName: e.permanentDistrictName,
+            permanentDistrictNameBN: e.permanentDistrictNameBN,
+            spousePermanentDistrictName: e.spousePermanentDistrictName,
+            spousePermanentDistrictNameBN: e.spousePermanentDistrictNameBN,
+            motherOrgLocationName: e.motherOrgLocationName,
+            motherOrgLocationNameBN: e.motherOrgLocationNameBN,
+            previousRabUnits: e.previousRabUnits ?? null,
+            previousRabUnitsBN: e.previousRabUnitsBN ?? null,
+            transferRabUnitId: e.transferRabUnitId,
+            transferRabUnitName: e.transferRabUnitName,
+            transferRabUnitNameBN: e.transferRabUnitNameBN ?? null,
+            remarks: e.remarks ?? null,
+            interPostingRemark: e.interPostingRemark ?? null,
+            sendingRemark: e.sendingRemark ?? null,
+            joiningDateInRAB: e.joiningDateInRAB,
+            noteSheetId: e.noteSheetId,
+            noteSheetNo: e.noteSheetNo ?? null,
+            selected
+        };
     }
 
     /** Resolve the current user's accessible member type ids (cache first, then always refetch). */
@@ -395,44 +461,13 @@ export class PostingOrderGenerateComponent implements OnInit {
                 const draftPostingMasterId = ns.draftPostingMasterId;
                 if (draftPostingMasterId) {
                     const isInterPosting = this.selectedPostingType === NoteSheetType.InterPosting;
-                    const empObs = isInterPosting
-                        ? this.postingService.getDraftInterPostingEmployees(draftPostingMasterId)
-                        : this.postingService.getDraftPostingEmployees(draftPostingMasterId);
+                    // Remaining members only — members already put in a posting order (split /
+                    // merge) are left out; members dropped here stay remaining for a later order.
+                    const empObs = this.postingService.getRemainingNoteSheetMembers([this.selectedNoteSheetId!], this.selectedPostingType!);
 
                     empObs.subscribe({
                         next: (emps) => {
-                            this.employees = (emps ?? []).map(e => ({
-                                employeeId: e.employeeId,
-                                serviceId: e.serviceId,
-                                rabID: e.rabID,
-                                prefixName: e.prefixName,
-                                prefixNameBN: e.prefixNameBN,
-                                fullNameEN: e.fullNameEN,
-                                fullNameBN: e.fullNameBN,
-                                rankName: e.rankName,
-                                rankNameBN: e.rankNameBN,
-                                corpsName: e.corpsName,
-                                corpsNameBN: e.corpsNameBN,
-                                tradeName: e.tradeName,
-                                tradeNameBN: e.tradeNameBN,
-                                motherUnitName: e.motherUnitName,
-                                motherUnitNameBN: e.motherUnitNameBN,
-                                permanentDistrictName: e.permanentDistrictName,
-                                permanentDistrictNameBN: e.permanentDistrictNameBN,
-                                spousePermanentDistrictName: e.spousePermanentDistrictName,
-                                spousePermanentDistrictNameBN: e.spousePermanentDistrictNameBN,
-                                motherOrgLocationName: e.motherOrgLocationName,
-                                motherOrgLocationNameBN: e.motherOrgLocationNameBN,
-                                previousRabUnits: e.previousRabUnits ?? null,
-                                previousRabUnitsBN: e.previousRabUnitsBN ?? null,
-                                transferRabUnitId: e.transferRabUnitId,
-                                transferRabUnitName: e.transferRabUnitName,
-                                transferRabUnitNameBN: e.transferRabUnitNameBN ?? null,
-                                remarks: e.remarks ?? null,
-                                interPostingRemark: e.interPostingRemark ?? null,
-                                sendingRemark: e.sendingRemark ?? null,
-                                joiningDateInRAB: e.joiningDateInRAB
-                            }));
+                            this.employees = (emps ?? []).map(e => this.toEmployeeRow(e, true));
                             this.loadingEmployees = false;
                             // Same combined remark as the note-sheet preview (incl. removal +
                             // "previous transfer order cancelled" note).
@@ -464,7 +499,9 @@ export class PostingOrderGenerateComponent implements OnInit {
     removeEmployee(emp: NoteSheetEmployee): void {
         const name = (this.isBangla ? emp.fullNameBN : emp.fullNameEN) || emp.fullNameEN || emp.serviceId || '';
         this.confirmationService.confirm({
-            message: `"${name}" কে তালিকা থেকে সরাতে চান?`,
+            message: this.isBangla
+                ? `"${name}" কে এই আদেশ থেকে বাদ দিতে চান? সদস্যটি নোটশীটে অবশিষ্ট থাকবে এবং পরে অন্য আদেশে দেওয়া যাবে।`
+                : `Leave "${name}" out of this order? The member stays remaining in the notesheet for a later order.`,
             header: 'নিশ্চিত করুন',
             icon: 'pi pi-exclamation-triangle',
             acceptLabel: 'হ্যাঁ',
@@ -472,6 +509,150 @@ export class PostingOrderGenerateComponent implements OnInit {
             accept: () => {
                 this.employees = this.employees.filter(e => e.employeeId !== emp.employeeId);
             }
+        });
+    }
+
+    // ─── Split / merge (multi mode) ──────────────────────
+
+    /** Note-sheets picked in multi mode, in selection order. */
+    get selectedNoteSheets(): ApprovedNoteSheetItem[] {
+        return this.selectedNoteSheetIds
+            .map(id => this.approvedNoteSheets.find(ns => ns.noteSheetId === id))
+            .filter((ns): ns is ApprovedNoteSheetItem => !!ns);
+    }
+
+    /** Bangla and English note-sheets cannot be merged into one order (one order = one language). */
+    get hasMixedTextType(): boolean {
+        return new Set(this.selectedNoteSheets.map(ns => ns.textType === 1)).size > 1;
+    }
+
+    /** Members checked for the order being generated (multi mode). */
+    get selectedMembers(): NoteSheetEmployee[] {
+        return this.employees.filter(e => e.selected);
+    }
+
+    /** Members that go into the order: checked rows in multi mode, every listed row in single mode. */
+    get membersToGenerate(): NoteSheetEmployee[] {
+        return this.multi ? this.selectedMembers : this.employees;
+    }
+
+    /** Rows of one source note-sheet (multi mode group). */
+    groupRows(noteSheetId: number): NoteSheetEmployee[] {
+        return this.employees.filter(e => e.noteSheetId === noteSheetId);
+    }
+
+    isGroupAllSelected(noteSheetId: number): boolean {
+        const rows = this.groupRows(noteSheetId);
+        return rows.length > 0 && rows.every(e => e.selected);
+    }
+
+    toggleGroup(noteSheetId: number, checked: boolean): void {
+        this.groupRows(noteSheetId).forEach(e => (e.selected = checked));
+    }
+
+    toggleAll(checked: boolean): void {
+        this.employees.forEach(e => (e.selected = checked));
+    }
+
+    get allSelected(): boolean {
+        return this.employees.length > 0 && this.employees.every(e => e.selected);
+    }
+
+    /** Multi mode: note-sheet selection changed — reload remaining members of every selected
+     *  note-sheet (checked state is kept for members still listed) and the auto সূত্র lines. */
+    onMultiNoteSheetsChange(): void {
+        // The multiselect appends picks in click order, so the first id is the primary note-sheet.
+        this.selectedNoteSheetIds = (this.selectedNoteSheetIds ?? []).filter((id, i, arr) => arr.indexOf(id) === i);
+
+        this.rebuildAutoReferences();
+
+        const selected = this.selectedNoteSheets;
+        if (selected.length === 0) {
+            this.employees = [];
+            this.multiPrimaryNoteSheetId = null;
+            return;
+        }
+
+        // Language follows the primary (first) note-sheet.
+        this.selectedTextType = selected[0].textType === 1 ? 'bn' : 'en';
+        this.rebuildConfigOptions();
+
+        if (this.hasMixedTextType) {
+            this.messageService.add({ severity: 'warn', summary: this.isBangla ? 'সতর্কতা' : 'Warning', detail: this.isBangla ? 'বাংলা ও ইংরেজি নোটশীট একই আদেশে একত্র করা যাবে না।' : 'Bangla and English notesheets cannot be merged into one order.' });
+        }
+
+        if (this.multiPrimaryNoteSheetId !== selected[0].noteSheetId) {
+            this.multiPrimaryNoteSheetId = selected[0].noteSheetId;
+            this.loadPrimaryNoteSheetText(selected[0].noteSheetId);
+        }
+
+        this.loadMultiMembers();
+    }
+
+    /** One locked সূত্র line per selected note-sheet (no + approval date), then the user's extra lines. */
+    private rebuildAutoReferences(): void {
+        const extra = this.references.slice(this.autoReferenceCount);
+        const auto = this.selectedNoteSheets.map(ns => ({ referenceNo: ns.noteSheetNo ?? '', date: ns.finalApprovalApprovedDate ?? null }));
+        this.references = [...auto, ...extra];
+        this.autoReferenceCount = auto.length;
+    }
+
+    /** Posting text + onulipi pre-fill from the primary note-sheet (multi mode). */
+    private loadPrimaryNoteSheetText(noteSheetId: number): void {
+        this.http.get<any[]>(`${this.noteSheetApi}/GetFilteredByKeysAsyn/${noteSheetId}`).subscribe({
+            next: (data) => {
+                const ns = Array.isArray(data) ? data[0] : data;
+                this.postingText = ns?.mainText ?? '';
+                this.footerParagraphs = [];
+                this.loadOnulipiFromConfig();
+            },
+            error: () => {}
+        });
+    }
+
+    /** Remaining members of the selected note-sheets. Rows already listed keep their checkbox;
+     *  members of a newly added note-sheet start checked. */
+    private loadMultiMembers(): void {
+        const ids = this.selectedNoteSheetIds.slice();
+        if (!ids.length || !this.selectedPostingType) { this.employees = []; return; }
+
+        const previous = new Map(this.employees.map(e => [`${e.noteSheetId}:${e.employeeId}`, e.selected]));
+        const previousNoteSheets = new Set(this.employees.map(e => e.noteSheetId));
+
+        this.loadingEmployees = true;
+        this.postingService.getRemainingNoteSheetMembers(ids, this.selectedPostingType).subscribe({
+            next: (rows) => {
+                this.employees = (rows ?? []).map(e => {
+                    const key = `${e.noteSheetId}:${e.employeeId}`;
+                    const selected = previous.has(key) ? previous.get(key)! : !previousNoteSheets.has(e.noteSheetId);
+                    return this.toEmployeeRow(e, selected);
+                });
+                this.loadingEmployees = false;
+                this.loadRemarkExtras(this.employees, this.selectedPostingType === NoteSheetType.InterPosting);
+            },
+            error: (err: any) => {
+                this.loadingEmployees = false;
+                this.messageService.add({ severity: 'error', summary: this.isBangla ? 'ত্রুটি' : 'Error', detail: err?.error?.message || (this.isBangla ? 'কর্মচারী লোড ব্যর্থ হয়েছে।' : 'Failed to load employees.') });
+            }
+        });
+    }
+
+    /** After an order is generated in multi mode: refresh the note-sheet list (fully used
+     *  note-sheets drop out) and the remaining members, keeping the rest of the form for the
+     *  next order of a split. */
+    private refreshAfterMultiGenerate(): void {
+        this.loadApprovedNoteSheets(false, () => {
+            const stillAvailable = new Set(this.approvedNoteSheets.map(ns => ns.noteSheetId));
+            this.selectedNoteSheetIds = this.selectedNoteSheetIds.filter(id => stillAvailable.has(id));
+            // Generated members are gone from the list; whatever is left starts unchecked.
+            this.employees = this.employees.filter(e => !e.selected);
+            this.rebuildAutoReferences();
+            if (this.selectedNoteSheetIds.length === 0) {
+                this.employees = [];
+                this.multiPrimaryNoteSheetId = null;
+                return;
+            }
+            this.loadMultiMembers();
         });
     }
 
@@ -525,6 +706,11 @@ export class PostingOrderGenerateComponent implements OnInit {
     /** Remove a সূত্র line (the auto first one re-populates when a note-sheet is re-selected). */
     removeReference(index: number): void { this.references.splice(index, 1); }
 
+    /** সূত্র lines taken from the selected note-sheet(s) are read-only. */
+    isAutoReference(index: number): boolean {
+        return this.multi ? index < this.autoReferenceCount : index === 0;
+    }
+
     trackByIndex(index: number): number {
         return index;
     }
@@ -542,8 +728,14 @@ export class PostingOrderGenerateComponent implements OnInit {
 
     onGeneratePostingOrder(): void {
         if (this.saving) return;
-        if (!this.selectedPostingType || !this.selectedNoteSheetId || this.employees.length === 0) {
+        const members = this.membersToGenerate;
+        const hasNoteSheet = this.multi ? this.selectedNoteSheetIds.length > 0 : !!this.selectedNoteSheetId;
+        if (!this.selectedPostingType || !hasNoteSheet || members.length === 0) {
             this.messageService.add({ severity: 'warn', summary: this.isBangla ? 'সতর্কতা' : 'Warning', detail: this.isBangla ? 'পোস্টিং ধরন, নোটশীট নির্বাচন করুন এবং কর্মচারী আছে কিনা নিশ্চিত করুন।' : 'Select posting type, notesheet and ensure employees exist.' });
+            return;
+        }
+        if (this.multi && this.hasMixedTextType) {
+            this.messageService.add({ severity: 'warn', summary: this.isBangla ? 'সতর্কতা' : 'Warning', detail: this.isBangla ? 'বাংলা ও ইংরেজি নোটশীট একই আদেশে একত্র করা যাবে না।' : 'Bangla and English notesheets cannot be merged into one order.' });
             return;
         }
         if (!this.postingOrderNumberConfigId) {
@@ -577,25 +769,36 @@ export class PostingOrderGenerateComponent implements OnInit {
             .filter(r => r.referenceNo.length > 0);
         const referenceNumber = refs.length > 0 ? JSON.stringify(refs) : null;
 
+        // Every member goes in with its source note-sheet (split / merge). The primary
+        // note-sheet is the single page's note-sheet, or the first one picked in multi mode.
+        const memberInputs: PostingOrderMemberInput[] = members.map(e => ({ noteSheetId: e.noteSheetId, employeeId: e.employeeId }));
+        const primaryNoteSheetId = this.multi ? this.selectedNoteSheetIds[0] : this.selectedNoteSheetId!;
+
         this.postingService.createPostingOrder({
             postingOrderNo: '',  // auto-generated by backend
             postingOrderDate: this.formatDateToString(this.postingOrderDate),
             postingType: this.selectedPostingType!,
-            noteSheetId: this.selectedNoteSheetId,
+            noteSheetId: primaryNoteSheetId,
             referenceNumber: referenceNumber,
             textType: this.selectedTextType === 'bn' ? 'bn' : 'en',
             mainText: mainText,
             subText: this.subText.trim() || null,
             remarks: this.remarks || null,
             footerText: footerText,
-            employeeIds: this.employees.map(e => e.employeeId),
+            employeeIds: members.map(e => e.employeeId),
+            members: memberInputs,
             createdBy: this.auditUser,
             postingOrderNumberConfigId: this.postingOrderNumberConfigId ?? null,
             approvalEmployeeId: this.selectedApprovalEmployeeId ?? null
         }).subscribe({
             next: (res) => {
                 this.saving = false;
-                if (res.statusCode === 200) {
+                if (res.statusCode === 200 && this.multi) {
+                    // Split: stay on the page so the remaining members can go into the next order.
+                    this.messageService.add({ severity: 'success', summary: this.isBangla ? 'সফল' : 'Success', detail: this.isBangla ? 'পোস্টিং অর্ডার তৈরি হয়েছে। অবশিষ্ট সদস্যদের জন্য আরেকটি আদেশ তৈরি করা যাবে।' : 'Posting Order generated. Remaining members can go into another order.' });
+                    this.refreshAfterMultiGenerate();
+                    if (this.showGeneratedList) this.loadGeneratedOrders();
+                } else if (res.statusCode === 200) {
                     this.messageService.add({ severity: 'success', summary: this.isBangla ? 'সফল' : 'Success', detail: this.isBangla ? 'পোস্টিং অর্ডার সফলভাবে তৈরি হয়েছে।' : 'Posting Order generated successfully.' });
                     // Reset form
                     this.employees = [];
@@ -621,6 +824,11 @@ export class PostingOrderGenerateComponent implements OnInit {
                     }
                 } else {
                     this.messageService.add({ severity: 'error', summary: this.isBangla ? 'ত্রুটি' : 'Error', detail: res.description ?? (this.isBangla ? 'পোস্টিং অর্ডার তৈরি ব্যর্থ হয়েছে।' : 'Failed to generate posting order.') });
+                    // Someone else just used some of these members — reload what is still remaining.
+                    if (res.statusCode === 409) {
+                        if (this.multi) this.loadMultiMembers();
+                        else this.onNoteSheetChange();
+                    }
                 }
             },
             error: (err) => {

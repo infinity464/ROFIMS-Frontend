@@ -429,9 +429,13 @@ export interface PostingOrderMasterDto {
     postingOrderNo: string;
     postingOrderDate: string;
     postingType: string;
+    /** Primary (first selected) note-sheet. */
     noteSheetId: number;
+    /** Every source note-sheet no, comma-separated (primary first) — several for a merged order. */
     noteSheetNo: string | null;
-    /** Linked note-sheet's member-type ids — used to scope the list by user access. */
+    /** Source note-sheet ids (primary first). */
+    noteSheetIds?: number[];
+    /** Union of the source note-sheets' member-type ids — used to scope the list by user access. */
     employeeTypeIds?: string | null;
     refPostingOrderMasterId: number | null;
     referenceNumber: string | null;
@@ -602,6 +606,20 @@ export interface ApprovedNoteSheetItem {
     noteSheetType: string;
     /** Comma-separated CommonCode member-type ids — used to scope the dropdown by user access. */
     employeeTypeIds?: string | null;
+    /** 1 = Bangla, else English. */
+    textType?: number | null;
+    /** Final approval date — the সূত্র date for this note-sheet. */
+    finalApprovalApprovedDate?: string | null;
+    /** Members in the note-sheet's draft. */
+    totalMembers?: number;
+    /** Members not yet put in any posting order. */
+    remainingMembers?: number;
+}
+
+/** One member picked for a posting order, with the note-sheet it comes from (split / merge). */
+export interface PostingOrderMemberInput {
+    noteSheetId: number;
+    employeeId: number;
 }
 
 /** Pending joining item (approved posting order, not yet joined). */
