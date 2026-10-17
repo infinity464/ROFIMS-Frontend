@@ -1206,6 +1206,7 @@ export class PostingOrderPreviewPageComponent implements OnInit {
         const bn = this.isBangla;
         const hqWings: string[] = [];
         const hqSeen = new Set<string>();
+        let hqName = '';                       // HQ unit name, appended after the পরিচালক wings
         const rabUnits: string[] = [];
         const rabSeen = new Set<string>();
         const commandant: string[] = [];       // RAB Forces Training School — its own কমান্ড্যান্ট line
@@ -1225,7 +1226,10 @@ export class PostingOrderPreviewPageComponent implements OnInit {
                 // Hard-coded: RAB Forces Training School is its own কমান্ড্যান্ট line, not a পরিচালক wing.
                 if (this.isRabTrainingSchool(wing)) {
                     if (!commandantSeen.has(wing)) { commandantSeen.add(wing); commandant.push(wing); }
-                } else if (!hqSeen.has(wing)) { hqSeen.add(wing); hqWings.push(wing); }
+                } else {
+                    if (parts[1] && !hqName) hqName = top;
+                    if (!hqSeen.has(wing)) { hqSeen.add(wing); hqWings.push(wing); }
+                }
             } else if (this.isRabBattalion(top)) {
                 if (!rabSeen.has(top)) { rabSeen.add(top); rabUnits.push(top); }
             } else if (this.isRabTrainingSchool(top)) {
@@ -1261,7 +1265,10 @@ export class PostingOrderPreviewPageComponent implements OnInit {
         }
 
         const lines: string[] = [];
-        if (hqWings.length) lines.push(`${bn ? 'পরিচালক' : 'Director'}, ${this.sortUnitsNaturally(hqWings).join('/ ')}`);
+        if (hqWings.length) {
+            const wings = this.sortUnitsNaturally(hqWings).filter((w) => w !== hqName).join('/ ');
+            lines.push(`${bn ? 'পরিচালক' : 'Director'}, ${[wings, hqName].filter(Boolean).join(', ')}`);
+        }
         if (commandant.length) lines.push(`${bn ? 'কমান্ড্যান্ট' : 'Commandant'}, ${this.sortUnitsNaturally(commandant).join('/ ')}`);
         if (rabUnits.length) lines.push(`${bn ? 'অধিনায়ক' : 'Commanding Officer'}, ${this.sortUnitsNaturally(rabUnits).join('/ ')}`);
         if (others.length) lines.push(this.sortUnitsNaturally(others).join(', '));
