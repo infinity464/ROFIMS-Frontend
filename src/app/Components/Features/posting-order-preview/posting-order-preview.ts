@@ -471,6 +471,7 @@ export class PostingOrderPreviewPageComponent implements OnInit {
     ngOnInit(): void {
         this.loadCurrentUserMemberTypePermissions();
         this.loadUnitSortOrders();
+        this.loadOfficerMemberTypeIds();
         this.loadCorpsOfficeMap();
         this.loadMotherOrgOfficeHeadMap();
         this.route.queryParams.subscribe(params => {
@@ -1109,6 +1110,10 @@ export class PostingOrderPreviewPageComponent implements OnInit {
                 bn ? (emp.presentRabSubSectionNameBN || emp.presentRabSubSectionName || '') : (emp.presentRabSubSectionName || ''),
             ].filter(p => p);
             chain = rabLevels[rabLevels.length - 1] ?? '';
+        } else if (emp.memberTypeId != null && this.officerMemberTypeIds.has(emp.memberTypeId)) {
+            // Officers show only the latest RAB posting (last in the chain) after the mother unit.
+            const parts = chain.split('/ ').filter(p => p.trim());
+            chain = parts[parts.length - 1] ?? '';
         }
 
         return [motherUnit, chain].filter(p => p).join('/ ');
@@ -1121,7 +1126,9 @@ export class PostingOrderPreviewPageComponent implements OnInit {
         if (emp.transferIsHq === true || this.isRabHq(parts[0] || '')) {
             const wing = parts[1] || parts[0];
             const branch = parts[2];
-            return branch ? `${wing} (${branch})` : wing;
+            if (branch) return `${wing} (${branch})`;
+            // Wing-level HQ destination → "<wing>, <HQ unit name>" (e.g. "ইন্ট উইং, র‌্যাব ফোর্সেস সদর দপ্তর").
+            return parts[1] ? `${wing}, ${parts[0]}` : wing;
         }
         // Non-HQ destinations show the FULL comma-separated path (matches the
         // notesheet preview's বদলি ইউনিট rule).
@@ -1287,6 +1294,20 @@ export class PostingOrderPreviewPageComponent implements OnInit {
                 }
             },
             error: () => { /* fall back to numeric sort below */ }
+        });
+    }
+
+    /** Member Type (EmployeeType CommonCode) ids labelled "Officer" — set on serving-member-entry. */
+    private officerMemberTypeIds = new Set<number>();
+
+    private loadOfficerMemberTypeIds(): void {
+        this.masterBasicSetupService.getAllByType('EmployeeType').subscribe({
+            next: (types) => {
+                this.officerMemberTypeIds = new Set(
+                    (types ?? []).filter(t => (t.codeValueEN ?? '').trim().toLowerCase() === 'officer').map(t => t.codeId)
+                );
+            },
+            error: () => { /* no officer ids → full chain for everyone */ }
         });
     }
 
