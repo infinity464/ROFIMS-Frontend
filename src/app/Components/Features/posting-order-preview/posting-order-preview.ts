@@ -588,7 +588,8 @@ export class PostingOrderPreviewPageComponent implements OnInit {
                                 this.filesReferences  = master.filesReferences ?? '';
                                 this.status           = master.status ?? '';
                                 this.masterRemarks    = this.fixBanglaWordBreaks(master.remarks ?? '');
-                                this.noteSheetNo      = master.noteSheetNo ?? '';
+                                // A merged order lists several note-sheet nos — the memo prefix comes from the primary (first).
+                                this.noteSheetNo      = (master.noteSheetNo ?? '').split(',')[0].trim();
                                 this.referenceNumber  = master.referenceNumber ?? '';
                                 this.isBangla         = this.textType === 'bn' || this.textType === '1' || this.textType === 'Bangla';
                                 this.postingText      = this.fixBanglaWordBreaks(master.mainText ?? '');
