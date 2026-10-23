@@ -1,0 +1,16 @@
+.org-form-empty {
+  padding: 2rem;
+  text-align: center;
+}
+
+.org-form-panel {
+  padding: 1rem 1.25rem;
+
+  .form-title { margin: 0 0 0.75rem 0; font-size: 1.15rem; }
+  .breadcrumb {
+    font-size: 0.85rem;
+    color: var(--p-text-muted-color);
+    .breadcrumb-sep { margin: 0 0.25rem; }
+    .breadcrumb-item { font-weight: 500; }
+  }
+}

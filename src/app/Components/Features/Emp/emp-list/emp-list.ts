@@ -1,4 +1,5 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, inject } from '@angular/core';
+import { UserMenuService } from '@/services/user-menu.service';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
@@ -35,6 +36,12 @@ import { EmpService } from '@/services/emp-service';
     styleUrl: './emp-list.scss'
 })
 export class EmpList implements OnInit {
+    private _router = inject(Router);
+    private _userMenuService = inject(UserMenuService);
+    canInsert = true;
+    canUpdate = true;
+    canDelete = true;
+
     employees: any[] = [];
     loading: boolean = true;
     searchValue: string = '';
@@ -47,6 +54,11 @@ export class EmpList implements OnInit {
     ) {}
 
     ngOnInit(): void {
+        const _perms = this._userMenuService.getPermissionsByRoute(this._router.url);
+        this.canInsert = _perms.canInsert;
+        this.canUpdate = _perms.canUpdate;
+        this.canDelete = _perms.canDelete;
+
         this.loadEmployees();
     }
 
@@ -62,7 +74,7 @@ export class EmpList implements OnInit {
                 this.messageService.add({
                     severity: 'error',
                     summary: 'Error',
-                    detail: 'Failed to load employees'
+                    detail: err?.error?.message || 'Failed to load employees'
                 });
                 this.loading = false;
             }
@@ -93,9 +105,10 @@ export class EmpList implements OnInit {
     confirmDelete(employee: any): void {
         this.confirmationService.confirm({
             message: `Are you sure you want to delete ${employee.fullNameEN}?`,
-            header: 'Confirm Delete',
+            header: 'Delete Confirmation',
             icon: 'pi pi-exclamation-triangle',
-            acceptButtonStyleClass: 'p-button-danger',
+            rejectButtonProps: { label: 'Cancel', severity: 'secondary', outlined: true },
+            acceptButtonProps: { label: 'Delete', severity: 'danger' },
             accept: () => {
                 this.deleteEmployee(employee);
             }
@@ -117,7 +130,7 @@ export class EmpList implements OnInit {
                 this.messageService.add({
                     severity: 'error',
                     summary: 'Error',
-                    detail: 'Failed to delete employee'
+                    detail: err?.error?.message || 'Failed to delete employee'
                 });
             }
         });

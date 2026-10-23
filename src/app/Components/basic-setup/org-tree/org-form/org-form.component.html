@@ -1,0 +1,55 @@
+@if (mode === 'empty') {
+  <div class="org-form-empty">
+    <p class="text-color-secondary">Select a node to edit, or use <strong>+ New Unit</strong> / <strong>+ Add Child</strong> to create.</p>
+  </div>
+} @else {
+  <div class="org-form-panel">
+    @if (!hideTitle) {
+      <h3 class="form-title">{{ formTitle }}</h3>
+    }
+    @if (breadcrumbPath.length) {
+      <nav class="breadcrumb mb-3">
+        @for (node of breadcrumbPath; track node.id) {
+          <span class="breadcrumb-sep" *ngIf="!$first"> / </span>
+          <span class="breadcrumb-item">{{ node.nameEN || node.commCode }}</span>
+        }
+      </nav>
+    }
+    <form [formGroup]="form" (ngSubmit)="submit()" class="mt-3">
+      <div class="grid grid-cols-2 gap-4">
+        <div>
+          <label for="codeValueEN" class="font-semibold block mb-2 text-700">Name (English) <span class="text-red-500">*</span></label>
+          <input pInputText id="codeValueEN" formControlName="codeValueEN" class="w-full" placeholder="Name (English)" />
+          @if (form.get('codeValueEN')?.invalid && form.get('codeValueEN')?.touched) {
+            <small class="text-red-500">Required</small>
+          }
+        </div>
+        <div>
+          <label for="codeValueBN" class="font-semibold block mb-2 text-700">Name (Bangla) <span class="text-red-500">*</span></label>
+          <input pInputText id="codeValueBN" formControlName="codeValueBN" class="w-full" placeholder="Name (Bangla)" />
+          @if (form.get('codeValueBN')?.invalid && form.get('codeValueBN')?.touched) {
+            <small class="text-red-500">Required</small>
+          }
+        </div>
+        @if (mode === 'edit') {
+          <div>
+            <label for="status" class="font-semibold block mb-2 text-700">Status</label>
+            <p-select id="status" formControlName="status"
+              [options]="statusOptions"
+              optionLabel="label" optionValue="value" placeholder="Select status"
+              [showClear]="false" class="w-full" appendTo="body" [filter]="true" />
+          </div>
+        }
+        <div>
+          <label for="sortOrder" class="font-semibold block mb-2 text-700">Sort Order</label>
+          <p-inputNumber id="sortOrder" formControlName="sortOrder" [min]="1" [useGrouping]="false"
+            placeholder="Sort order" class="w-full" />
+        </div>
+      </div>
+      <div class="flex justify-end gap-2 mt-4">
+        <p-button [label]="cancelLabel" icon="pi pi-times" severity="secondary" [outlined]="true" (onClick)="cancel()" [disabled]="saving"></p-button>
+        <p-button [label]="submitLabel" icon="pi pi-check" [loading]="saving" [disabled]="saving" (onClick)="submit()"></p-button>
+      </div>
+    </form>
+  </div>
+}

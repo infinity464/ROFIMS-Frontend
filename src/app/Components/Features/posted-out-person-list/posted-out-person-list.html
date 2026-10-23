@@ -1,0 +1,163 @@
+<p-toast position="top-center"></p-toast>
+<p-confirmdialog></p-confirmdialog>
+
+<div class="form-card">
+    <div class="form-card-header">
+        <div>
+            <h3 class="form-card-title">
+                <i class="pi pi-user-minus" style="font-size:1.1rem"></i>
+                Posted Out Person List
+            </h3>
+            @if (hiddenNoPostingUnitCount > 0) {
+                <div style="font-size:0.78rem; color:var(--text-color-secondary); margin-top:0.2rem; padding-left:0.1rem;">
+                    <i class="pi pi-info-circle" style="font-size:0.7rem"></i>
+                    {{ hiddenNoPostingUnitCount }} record(s) hidden — no Posting Unit entered, so the member is not yet actually posted out.
+                </div>
+            }
+        </div>
+        <div class="flex gap-2 align-items-center">
+            <div class="report-export-wrap" (click)="$event.stopPropagation()">
+                <button type="button" class="report-btn-export" [disabled]="!allRecords.length || exporting" (click)="toggleExportDropdown($event)">
+                    @if (exporting) {
+                        <i class="pi pi-spin pi-spinner" style="font-size:13px"></i> Generating...
+                    } @else {
+                        <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
+                            <path d="M6.5 1v7M3.5 5.5l3 3 3-3M1.5 10.5h10"
+                                  stroke="currentColor" stroke-width="1.5"
+                                  stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                        Export
+                    }
+                </button>
+                @if (exportDropdownOpen) {
+                <div class="report-export-dropdown" (click)="$event.stopPropagation()">
+                    <button type="button" class="report-export-item report-export-print" (click)="exportAs('print')">
+                        <i class="pi pi-print" style="font-size:0.75rem"></i> Print
+                    </button>
+                    <button type="button" class="report-export-item report-export-pdf" (click)="exportAs('pdf')">
+                        <span class="report-export-icon">&#11015;</span> PDF
+                    </button>
+                    <button type="button" class="report-export-item report-export-word" (click)="exportAs('word')">
+                        <span class="report-export-icon">&#11015;</span> Word
+                    </button>
+                    <button type="button" class="report-export-item report-export-excel" (click)="exportAs('excel')">
+                        <span class="report-export-icon">&#11015;</span> Excel
+                    </button>
+                </div>
+                }
+            </div>
+        </div>
+    </div>
+
+    <p-table [value]="filteredRecords" [loading]="loading" dataKey="id"
+             styleClass="p-datatable-striped p-datatable-gridlines themed-table"
+             [paginator]="true" [rows]="rows" [rowsPerPageOptions]="[10,25,50]">
+        <ng-template pTemplate="caption">
+            <div class="filter-bar">
+                <div class="filter-group">
+                    <label>Rank</label>
+                    <p-select [options]="rankOptions" [(ngModel)]="filterRank" optionLabel="label" optionValue="value"
+                        placeholder="All" [filter]="true" filterBy="label" [showClear]="true" appendTo="body"
+                        styleClass="text-sm" [style]="{'min-width':'9rem'}"></p-select>
+                </div>
+                <div class="filter-group">
+                    <label>Corps</label>
+                    <p-select [options]="corpsOptions" [(ngModel)]="filterCorps" optionLabel="label" optionValue="value"
+                        placeholder="All" [filter]="true" filterBy="label" [showClear]="true" appendTo="body"
+                        styleClass="text-sm" [style]="{'min-width':'9rem'}"></p-select>
+                </div>
+                <div class="filter-group">
+                    <label>Trade</label>
+                    <p-select [options]="tradeOptions" [(ngModel)]="filterTrade" optionLabel="label" optionValue="value"
+                        placeholder="All" [filter]="true" filterBy="label" [showClear]="true" appendTo="body"
+                        styleClass="text-sm" [style]="{'min-width':'9rem'}"></p-select>
+                </div>
+                <div class="filter-group">
+                    <label>RAB Unit</label>
+                    <p-select [options]="rabUnitOptions" [(ngModel)]="filterRabUnitId" optionLabel="label" optionValue="value"
+                        placeholder="All" [filter]="true" filterBy="label" [showClear]="true" appendTo="body"
+                        styleClass="text-sm" [style]="{'min-width':'11rem'}"></p-select>
+                </div>
+                <div class="filter-group">
+                    <label>Posted Unit</label>
+                    <p-select [options]="postingUnitOptions" [(ngModel)]="filterPostingUnitId" optionLabel="label" optionValue="value"
+                        placeholder="All" [filter]="true" filterBy="label" [showClear]="true" appendTo="body"
+                        styleClass="text-sm" [style]="{'min-width':'11rem'}"></p-select>
+                </div>
+                <div class="filter-group">
+                    <label>Is Reliever</label>
+                    <p-select [options]="relieverOptions" [(ngModel)]="filterIsReliever" optionLabel="label" optionValue="value"
+                        placeholder="All" [showClear]="true" appendTo="body"
+                        styleClass="text-sm" [style]="{'min-width':'7rem'}"></p-select>
+                </div>
+                <div class="filter-group">
+                    <label>Release Date (From)</label>
+                    <p-datepicker [(ngModel)]="releaseDateFrom" dateFormat="dd-mm-yy" placeholder="dd-mm-yyyy" [showIcon]="true" appendTo="body" class="w-full" [inputStyle]="{'width':'100%'}" [showClear]="true"></p-datepicker>
+                </div>
+                <div class="filter-group">
+                    <label>Release Date (To)</label>
+                    <p-datepicker [(ngModel)]="releaseDateTo" dateFormat="dd-mm-yy" placeholder="dd-mm-yyyy" [showIcon]="true" appendTo="body" class="w-full" [inputStyle]="{'width':'100%'}" [showClear]="true"></p-datepicker>
+                </div>
+                <div class="filter-btn">
+                    <p-button icon="pi pi-filter-slash" label="Clear" severity="secondary" [outlined]="true" size="small" (onClick)="clearFilters()"></p-button>
+                </div>
+            </div>
+            <div class="filter-bar" style="padding-top:0; justify-content:flex-end;">
+                <div class="filter-search">
+                    <label>Search</label>
+                    <p-iconfield styleClass="w-full">
+                        <p-inputicon styleClass="pi pi-search"></p-inputicon>
+                        <input pInputText type="text" class="w-full" placeholder="Search..." (input)="onSearch($event)" />
+                    </p-iconfield>
+                </div>
+            </div>
+        </ng-template>
+        <ng-template pTemplate="header">
+            <tr>
+                <th style="width:3rem">#</th>
+                <th>Service ID</th>
+                <th>Rank</th>
+                <th>Corps</th>
+                <th>Trade</th>
+                <th>Name</th>
+                <th>RAB ID</th>
+                <th>Posting Unit</th>
+                <th style="width:10rem">Is Reliever Assigned?</th>
+                <th style="width:5rem">Actions</th>
+            </tr>
+        </ng-template>
+        <ng-template pTemplate="body" let-row let-i="rowIndex">
+            <tr>
+                <td>{{ i + 1 }}</td>
+                <td>{{ prefixServiceId(row) }}</td>
+                <td>{{ row.postedOutRank ?? '-' }}</td>
+                <td>{{ row.postedOutCorps ?? '-' }}</td>
+                <td>{{ row.postedOutTrade ?? '-' }}</td>
+                <td>{{ row.postedOutName ?? '-' }}</td>
+                <td>{{ row.postedOutRabId ?? '-' }}</td>
+                <td>{{ row.postingUnitName ?? '-' }}</td>
+                <td>
+                    <span [class]="row.isReliever === true ? 'text-green-600 font-semibold' : row.isReliever === false ? 'text-orange-500' : 'text-500'">
+                        {{ yesNo(row.isReliever) }}
+                    </span>
+                </td>
+                <td>
+                    <div class="flex gap-1">
+                        <p-button icon="pi pi-pencil" [class.perm-hidden]="!canUpdate" size="small" [text]="true"
+                            pTooltip="Edit" tooltipPosition="top" (onClick)="onEdit(row)"></p-button>
+                        <p-button icon="pi pi-trash" [class.perm-hidden]="!canDelete" size="small" [text]="true"
+                            severity="danger" pTooltip="Delete" tooltipPosition="top"
+                            (onClick)="onDelete(row)"></p-button>
+                    </div>
+                </td>
+            </tr>
+        </ng-template>
+        <ng-template pTemplate="emptymessage">
+            <tr>
+                <td colspan="10" class="text-center p-4 text-500">
+                    <i class="pi pi-inbox text-2xl mb-2 block"></i>No records found.
+                </td>
+            </tr>
+        </ng-template>
+    </p-table>
+</div>

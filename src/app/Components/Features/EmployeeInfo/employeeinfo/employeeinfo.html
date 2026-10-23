@@ -305,7 +305,7 @@
             <div class="flex gap-4">
                 <button pButton type="button" label="Reset Form" icon="pi pi-refresh" class="p-button-outlined p-button-secondary"></button>
 
-                <button pButton type="button" label="SUBMIT & CREATE PROFILE" icon="pi pi-check-circle" class="p-button-success p-button-lg" (click)="onSubmit()"></button>
+                <button pButton type="button" label="SUBMIT & CREATE PROFILE" icon="pi pi-check-circle" class="p-button-success p-button-lg" [class.perm-hidden]="mode === 'edit' ? !canUpdate : !canInsert" (click)="onSubmit()"></button>
             </div>
         </div>
     </p-card>

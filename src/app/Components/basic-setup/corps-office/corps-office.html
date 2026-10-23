@@ -1,0 +1,119 @@
+<p-fluid>
+    <div class="card">
+        <div class="font-semibold text-xl mb-5">{{ title }} Setup</div>
+
+        <form [formGroup]="form" (ngSubmit)="submit()" class="grid grid-cols-12 gap-4">
+            <!-- Mother Organization -->
+            <div class="col-span-12 md:col-span-6">
+                <label class="block mb-2">Mother Organization <span class="text-red-500">*</span></label>
+                <p-select
+                    formControlName="orgId"
+                    [options]="orgOptions"
+                    optionLabel="label"
+                    optionValue="value"
+                    placeholder="Select Mother Organization"
+                    [filter]="true"
+                    appendTo="body"
+                    styleClass="w-full">
+                </p-select>
+            </div>
+
+            <!-- Corps (multi-select) -->
+            <div class="col-span-12 md:col-span-6">
+                <label class="block mb-2">Corps <span class="text-red-500">*</span></label>
+                <p-multiSelect
+                    formControlName="corpsCodeIds"
+                    [options]="corpsOptions"
+                    optionLabel="label"
+                    optionValue="value"
+                    display="chip"
+                    placeholder="Select Corps"
+                    [filter]="true"
+                    appendTo="body"
+                    styleClass="w-full">
+                </p-multiSelect>
+            </div>
+
+            <!-- Member Type (multi-select) -->
+            <div class="col-span-12 md:col-span-6">
+                <label class="block mb-2">Member Type <span class="text-red-500">*</span></label>
+                <p-multiSelect
+                    formControlName="memberTypeIds"
+                    [options]="memberTypeOptions"
+                    optionLabel="label"
+                    optionValue="value"
+                    display="chip"
+                    placeholder="Select Member Type"
+                    [filter]="true"
+                    appendTo="body"
+                    styleClass="w-full">
+                </p-multiSelect>
+            </div>
+
+            <!-- Authorization -->
+            <div class="col-span-12 md:col-span-6">
+                <label class="block mb-2">Authorization <span class="text-red-500">*</span></label>
+                <p-inputNumber
+                    formControlName="authorization"
+                    [min]="0"
+                    [useGrouping]="false"
+                    placeholder="Authorization"
+                    styleClass="w-full"
+                    inputStyleClass="w-full">
+                </p-inputNumber>
+            </div>
+
+            <!-- Status -->
+            <div class="col-span-12 md:col-span-6">
+                <label class="block mb-2">Status <span class="text-red-500">*</span></label>
+                <p-select
+                    formControlName="status"
+                    [options]="statusOptions"
+                    optionLabel="label"
+                    optionValue="value"
+                    placeholder="Select Status"
+                    appendTo="body"
+                    styleClass="w-full">
+                </p-select>
+            </div>
+
+            <!-- Office Name English -->
+            <div class="col-span-12 md:col-span-6">
+                <label class="block mb-2">Office Name (English) <span class="text-red-500">*</span></label>
+                <input pInputText formControlName="officeNameEN" placeholder="Office Name (English)" class="w-full" />
+            </div>
+
+            <!-- Office Name Bangla -->
+            <div class="col-span-12 md:col-span-6">
+                <label class="block mb-2">Office Name (Bangla) <span class="text-red-500">*</span></label>
+                <input pInputText formControlName="officeNameBN" placeholder="Office Name (Bangla)" class="w-full" />
+            </div>
+
+            <!-- Actions -->
+            <div class="col-span-12 flex gap-2">
+                <p-button
+                    type="submit"
+                    [label]="editingId ? 'Update' : 'Save'"
+                    [disabled]="isSubmitting || (editingId ? !canUpdate : !canInsert)"
+                    [loading]="isSubmitting">
+                </p-button>
+                <p-button type="button" label="Reset" severity="secondary" [outlined]="true" (click)="resetForm()"></p-button>
+            </div>
+        </form>
+    </div>
+</p-fluid>
+
+<app-data-table
+    [config]="tableConfig"
+    [data]="tableData"
+    [first]="first"
+    [totalRecords]="totalRecords"
+    [rows]="rows"
+    [loading]="loading"
+    [lazy]="false"
+    (edit)="edit($event)"
+    (delete)="delete($event.row, $event.event)"
+    (search)="onSearch($event)"
+    [canUpdate]="canUpdate"
+    [canDelete]="canDelete">
+</app-data-table>

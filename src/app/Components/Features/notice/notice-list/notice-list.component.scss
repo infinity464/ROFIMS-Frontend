@@ -1,0 +1,12 @@
+:host {
+    display: block;
+}
+
+.notice-topic-cell {
+    display: inline-block;
+    max-width: 20rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    vertical-align: middle;
+}

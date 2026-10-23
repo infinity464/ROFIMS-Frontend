@@ -1,0 +1,316 @@
+<p-toast position="top-center"></p-toast>
+
+<!-- ═══════════ LIST MODE ═══════════ -->
+<div class="office-order-list" *ngIf="viewMode === 'list'">
+    <div class="form-card">
+        <div class="form-card-header">
+            <h3 class="form-card-title">Ex-BD Leave Clearance List</h3>
+        </div>
+
+        <p-table
+            #dt
+            [value]="orders"
+            [loading]="loadingList"
+            dataKey="id"
+            [tableStyle]="{ 'min-width': '60rem' }"
+            styleClass="p-datatable-striped p-datatable-gridlines"
+            [paginator]="true"
+            [rows]="10"
+            [rowsPerPageOptions]="[10, 25, 50]"
+            [globalFilterFields]="['letterNo', 'noteSheetNo', 'subject', 'approvalStatus']"
+        >
+            <ng-template pTemplate="caption">
+                <div class="flex justify-content-end">
+                    <p-iconfield>
+                        <p-inputicon styleClass="pi pi-search"></p-inputicon>
+                        <input pInputText type="text" placeholder="Search..." (input)="onGlobalFilter(dt, $event)" />
+                    </p-iconfield>
+                </div>
+            </ng-template>
+            <ng-template pTemplate="header">
+                <tr>
+                    <th style="width: 50px">SL</th>
+                    <th style="min-width: 160px">Reference No</th>
+                    <th style="min-width: 110px">Date</th>
+                    <th style="min-width: 200px">Subject</th>
+                    <th style="min-width: 140px">NoteSheet No</th>
+                    <th style="min-width: 120px">Status</th>
+                    <th style="min-width: 110px">Created Date</th>
+                    <th style="width: 80px">Action</th>
+                </tr>
+            </ng-template>
+            <ng-template pTemplate="body" let-row let-rowIndex="rowIndex">
+                <tr>
+                    <td>{{ rowIndex + 1 }}</td>
+                    <td><span class="font-semibold">{{ row.letterNo || '-' }}</span></td>
+                    <td>{{ formatDate(row.letterDate) }}</td>
+                    <td>{{ row.subject || '-' }}</td>
+                    <td>{{ row.noteSheetNo || '-' }}</td>
+                    <td>
+                        <p-tag [value]="approvalStatusLabel(row.approvalStatus)" [severity]="approvalStatusSeverity(row.approvalStatus)"></p-tag>
+                    </td>
+                    <td>{{ formatDate(row.createdDate) }}</td>
+                    <td>
+                        <p-button icon="pi pi-eye" [rounded]="true" [text]="true" size="small" pTooltip="View" (onClick)="viewOrder(row)"></p-button>
+                        <p-button *ngIf="row.approvalStatus !== ApprovalStatus.Approve" icon="pi pi-pencil" [rounded]="true" [text]="true" size="small" severity="info" pTooltip="Edit" (onClick)="goEditFromList(row)"></p-button>
+                    </td>
+                </tr>
+            </ng-template>
+            <ng-template pTemplate="emptymessage">
+                <tr>
+                    <td colspan="8" class="text-center p-4">
+                        <div class="flex flex-column align-items-center gap-3 py-5">
+                            <i class="pi pi-inbox text-5xl text-400"></i>
+                            <span class="text-lg text-500">No clearances found.</span>
+                        </div>
+                    </td>
+                </tr>
+            </ng-template>
+        </p-table>
+    </div>
+</div>
+
+<!-- ═══════════ DETAIL MODE ═══════════ -->
+<div class="preview-page" *ngIf="viewMode === 'detail'">
+
+    <!-- ─── Toolbar ─── -->
+    <div class="preview-header no-print">
+        <div class="preview-actions">
+            <ng-container *ngIf="!loading && !error && order">
+                <p-button *ngIf="!isApproved" icon="pi pi-pencil" label="Edit" (onClick)="goEdit()" styleClass="p-button-outlined" severity="info"></p-button>
+                <select [(ngModel)]="selectedPageSize" class="page-size-select">
+                    <option value="a4">A4</option>
+                    <option value="legal">Legal</option>
+                </select>
+                <p-button icon="pi pi-file-word" label="Word" (onClick)="exportWord()" styleClass="p-button-outlined"></p-button>
+                <p-button icon="pi pi-file-pdf" label="PDF" (onClick)="exportPdf()" [loading]="exportingPdf" styleClass="p-button-outlined"></p-button>
+                <p-button icon="pi pi-print" label="Print Preview" (onClick)="printPreview()" [loading]="printingPreview" styleClass="p-button-outlined"></p-button>
+            </ng-container>
+        </div>
+
+        <!-- Approval Status (right side) -->
+        <div class="approval-header-right" *ngIf="order">
+            <p-tag [value]="approvalStatusLabel(order.approvalStatus)" [severity]="approvalStatusSeverity(order.approvalStatus)"></p-tag>
+            <span *ngIf="order.approvalStatus === ApprovalStatus.Cancel && order.cancelReason" class="text-500 text-xs">{{ order.cancelReason }}</span>
+            <ng-container *ngIf="isPending">
+                <p-button
+                    icon="pi pi-check"
+                    label="Approve"
+                    severity="success"
+                    size="small"
+                    (onClick)="selectApprovalAction(ApprovalStatus.Approve); showApprovalModal = true"
+                ></p-button>
+                <p-button
+                    icon="pi pi-times"
+                    label="Cancel"
+                    severity="danger"
+                    size="small"
+                    (onClick)="selectApprovalAction(ApprovalStatus.Cancel); showApprovalModal = true"
+                ></p-button>
+            </ng-container>
+        </div>
+    </div>
+
+    <!-- ─── Loading ─── -->
+    <div class="preview-loading" *ngIf="loading">
+        <i class="pi pi-spin pi-spinner" style="font-size:2rem"></i>
+        <p>Loading clearance...</p>
+    </div>
+
+    <!-- ─── Error ─── -->
+    <div class="preview-error" *ngIf="error && !loading">
+        <i class="pi pi-exclamation-circle" style="font-size:3rem; color:var(--red-500)"></i>
+        <p>Failed to load clearance.</p>
+        <p-button label="Go Back" icon="pi pi-arrow-left" (onClick)="goBack()"></p-button>
+    </div>
+
+    <!-- ─── Copy Filter ─── -->
+    <div class="oo-onulipi-filter no-print" *ngIf="!loading && !error && order && onulipiEntries.length > 0">
+        <span class="oo-onulipi-filter-toggle" (click)="showOnulipiFilter = !showOnulipiFilter">
+            <i class="pi" [ngClass]="showOnulipiFilter ? 'pi-chevron-down' : 'pi-chevron-right'"></i>
+            Copy Filter
+        </span>
+        <div class="oo-onulipi-filter-list" *ngIf="showOnulipiFilter">
+            <div *ngFor="let entry of onulipiEntries; let i = index" class="oo-onulipi-filter-item">
+                <button type="button" (click)="moveOnulipiUp(i)" [disabled]="i === 0" title="Up"
+                        style="border:none;background:none;padding:0 0.15rem;cursor:pointer;" [style.opacity]="i === 0 ? 0.3 : 1">
+                    <i class="pi pi-arrow-up" style="font-size:0.7rem;"></i>
+                </button>
+                <button type="button" (click)="moveOnulipiDown(i)" [disabled]="i === onulipiEntries.length - 1" title="Down"
+                        style="border:none;background:none;padding:0 0.15rem;cursor:pointer;" [style.opacity]="i === onulipiEntries.length - 1 ? 0.3 : 1">
+                    <i class="pi pi-arrow-down" style="font-size:0.7rem;"></i>
+                </button>
+                <p-checkbox [(ngModel)]="onulipiChecked[i]" [binary]="true" [inputId]="'onulipiChk' + i"></p-checkbox>
+                <label [for]="'onulipiChk' + i">{{ i + 1 }}. {{ entry.text }}</label>
+            </div>
+        </div>
+    </div>
+
+    <!-- ─── A4 Paper Preview ─── -->
+    <div class="legal-paper-container" *ngIf="!loading && !error && order">
+        <div class="legal-paper" [class.legal-paper--legal]="selectedPageSize === 'legal'" #legalPaper>
+            <div class="oo-doc-box">
+
+                <!-- Government Header -->
+                <div class="oo-doc-header">
+                    <div class="oo-doc-header-line">Government of the People's Republic of Bangladesh</div>
+                    <div class="oo-doc-header-line">Bangladesh Police</div>
+                    <div class="oo-doc-header-line">Rapid Action Battalion Forces Headquarters</div>
+                    <div class="oo-doc-header-line">Kurmitola, Dhaka.</div>
+                </div>
+
+                <!-- Reference number & Date -->
+                <div class="oo-doc-meta">
+                    <span><strong>Reference number:</strong> {{ order.letterNo || '.............' }}</span>
+                    <span>Date: {{ formatDate(order.letterDate) }}</span>
+                </div>
+
+                <!-- Address To -->
+                <div class="oo-doc-section" *ngIf="order.addressTo">
+                    <div class="oo-doc-rich-content" [innerHTML]="order.addressTo"></div>
+                </div>
+
+                <!-- Subject -->
+                <div class="oo-doc-subject" *ngIf="order.subject">
+                    <span class="oo-doc-subject-label">SUBJ: </span>
+                    <span class="oo-doc-subject-text">{{ order.subject }}</span>
+                </div>
+
+                <!-- Reference No -->
+                <div class="oo-doc-section" *ngIf="referenceEntries.length > 0">
+                    <!-- Single reference: label and value on the SAME line, no serial. -->
+                    <ng-container *ngIf="referenceEntries.length === 1; else refMulti">
+                        <span class="oo-doc-section-label">References:</span>
+                        <span class="oo-ref-inline">{{ referenceEntries[0].text }}</span>
+                    </ng-container>
+                    <!-- Two or more: label on its own line, serialed list below. -->
+                    <ng-template #refMulti>
+                        <div class="oo-doc-section-label">References:</div>
+                        <div class="oo-doc-list">
+                            <p *ngFor="let ref of referenceEntries; let i = index"><span class="oo-ref-serial">{{ referenceSerial(i) }}</span>{{ ref.text }}</p>
+                        </div>
+                    </ng-template>
+                </div>
+
+                <!-- ═══ Body (paragraph 1 stored, paragraph 2 = Remarks) ═══ -->
+                <div class="oo-doc-body" *ngIf="order.body">
+                    <span class="oo-body-serial">1.</span><span class="oo-doc-rich-content oo-doc-rich-content--inline" [innerHTML]="getBodySafe()"></span>
+                </div>
+                <div class="oo-doc-body" *ngIf="order.remarks">
+                    <span class="oo-body-serial">2.</span>{{ order.remarks }}
+                </div>
+
+                <!-- ═══ Attachment — rendered above Information ═══ -->
+                <div class="oo-doc-section oo-doc-attachments" *ngIf="attachmentEntries.length > 0">
+                    <div class="oo-doc-section-label">Attachment:</div>
+                    <div class="oo-doc-list">
+                        <p *ngFor="let att of attachmentEntries; let i = index">
+                            <span class="oo-ref-serial">{{ i + 1 }}.</span>{{ att.text }}
+                        </p>
+                    </div>
+                </div>
+
+                <!-- ═══ Information (Copy Distribution) ═══ -->
+                <div class="oo-doc-section oo-doc-onulipi" *ngIf="exportOnulipiEntries.length > 0">
+                    <div class="oo-doc-onulipi-header">
+                        <div class="oo-doc-section-label">Information:</div>
+                    </div>
+                    <div class="oo-doc-list">
+                        <p *ngFor="let entry of exportOnulipiEntries; let i = index">
+                            <span class="oo-ref-serial">{{ i + 1 }}.</span>{{ entry.text }}
+                        </p>
+                    </div>
+                </div>
+
+                <!-- ═══ Approval Person Signature ═══ -->
+                <div class="oo-doc-signature-area" *ngIf="order.approvalEmployeeName">
+                    <div class="oo-doc-signature-block">
+                        <div class="oo-doc-sig-name">
+                            {{ order.approvalEmployeeName }}
+                        </div>
+                        <div class="oo-doc-sig-rank" *ngIf="order.approvalEmployeeRank">
+                            {{ order.approvalEmployeeRank }}
+                        </div>
+                        <div class="oo-doc-sig-appointment" *ngIf="order.approvalEmployeeAppointment">
+                            {{ order.approvalEmployeeAppointment }}
+                        </div>
+                        <div class="oo-doc-sig-onbehalf">For Director General</div>
+                    </div>
+                </div>
+
+            </div><!-- /oo-doc-box -->
+        </div>
+
+        <!-- ═══ File Attachments (Download buttons - outside paper, no-print) ═══ -->
+        <div class="oo-file-attachments no-print" *ngIf="viewFileAttachments.length > 0">
+            <div class="oo-file-attachments-label">
+                <i class="pi pi-paperclip"></i>
+                Download Attachments ({{ viewFileAttachments.length }})
+            </div>
+            <div class="oo-file-list">
+                <div class="oo-file-item" *ngFor="let file of viewFileAttachments; let fi = index">
+                    <i class="pi pi-file"></i>
+                    <span class="oo-file-name">{{ fi + 1 }}. {{ file.fileName }}</span>
+                    <button class="oo-file-download-btn" (click)="downloadAttachment(file)" pTooltip="Download">
+                        <i class="pi pi-download"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<!-- ─── Approval Modal ─── -->
+<p-dialog
+    [header]="approvalAction === ApprovalStatus.Approve
+        ? 'Approve Clearance'
+        : 'Cancel Clearance'"
+    [(visible)]="showApprovalModal"
+    [modal]="true"
+    [style]="{ width: '500px' }"
+    [closable]="true"
+>
+    <div class="mb-3" *ngIf="order">
+        <div class="flex gap-3 mb-2">
+            <span class="text-600">Reference No:</span>
+            <strong>{{ order.letterNo }}</strong>
+        </div>
+        <div class="flex gap-3 mb-3">
+            <span class="text-600">Date:</span>
+            <strong>{{ formatDate(order.letterDate) }}</strong>
+        </div>
+
+        @if (approvalAction) {
+            <div class="field">
+                <label class="font-semibold block mb-2 text-700">
+                    {{ approvalAction === ApprovalStatus.Approve
+                        ? 'Approval Note'
+                        : 'Cancel Reason' }}
+                </label>
+                <textarea
+                    pTextarea
+                    [(ngModel)]="approvalRemarks"
+                    rows="4"
+                    class="w-full"
+                    [placeholder]="approvalAction === ApprovalStatus.Approve
+                        ? 'Enter approval note...'
+                        : 'Enter cancel reason...'"
+                    [autoResize]="true"
+                ></textarea>
+            </div>
+
+            <div class="flex justify-content-end mt-3">
+                <p-button
+                    [label]="approvalAction === ApprovalStatus.Approve
+                        ? 'Approve'
+                        : 'Cancel Order'"
+                    [icon]="approvalAction === ApprovalStatus.Approve ? 'pi pi-check' : 'pi pi-times'"
+                    [severity]="approvalAction === ApprovalStatus.Approve ? 'success' : 'danger'"
+                    [loading]="savingApproval"
+                    (onClick)="saveApproval()"
+                ></p-button>
+            </div>
+        }
+    </div>
+</p-dialog>

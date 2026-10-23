@@ -1,0 +1,283 @@
+<p-toast position="top-center"></p-toast>
+
+<div class="employee-reports-page">
+<div class="report-filter-card">
+    <div class="report-filter-card-title">
+        <h1 class="report-page-title">Dynamic Employee Report</h1>
+    </div>
+    <div class="report-filter-header" [class.open]="filterOpen" (click)="toggleFilter()" role="button" tabindex="0" (keydown.enter)="toggleFilter()" (keydown.space)="toggleFilter()">
+        <div class="report-filter-header-left">
+            <div class="report-filter-icon">
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                    <path d="M2 4h12M4 8h8M6 12h4" stroke="var(--primary-color)" stroke-width="1.8" stroke-linecap="round"/>
+                </svg>
+            </div>
+            <div>
+                <div class="report-filter-title">Search</div>
+                <div class="report-filter-subtitle">
+                    @if (activeFilterCount === 0) { Pick a column set and run a search. }
+                    @else { {{ activeFilterCount }} filters applied }
+                </div>
+            </div>
+        </div>
+        <div class="report-filter-header-right">
+            @if (activeFilterCount > 0) {
+                <span class="ds-field-count">{{ activeFilterCount }} active</span>
+            }
+            <div class="report-chevron">
+                <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+                    <path d="M2 4l4 4 4-4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+            </div>
+        </div>
+    </div>
+
+    <div class="report-filter-body" [class.open]="filterOpen">
+        <div class="report-filter-body-inner">
+            <div class="ds-criteria-section">
+
+                <!-- Group 1: Address & Status (default filters from address-location) -->
+                <div class="ds-field-group">
+                    <div class="ds-group-divider">
+                        <span class="ds-group-label">Address &amp; Status</span>
+                        <span class="ds-group-line"></span>
+                    </div>
+                    <div class="ds-criteria-grid">
+                        <div class="ds-field">
+                            <label class="ds-field-label">Address Owner</label>
+                            <p-select
+                                [options]="addressOwnerOptions"
+                                [(ngModel)]="selectedAddressOwner"
+                                optionLabel="label"
+                                optionValue="value"
+                                styleClass="w-full"
+                                [filter]="true"
+                                appendTo="body">
+                            </p-select>
+                        </div>
+                        <div class="ds-field">
+                            <label class="ds-field-label">Address Type</label>
+                            <p-select
+                                [options]="locationTypeOptions"
+                                [(ngModel)]="selectedLocationType"
+                                optionLabel="label"
+                                optionValue="value"
+                                styleClass="w-full"
+                                appendTo="body">
+                            </p-select>
+                        </div>
+                        <div class="ds-field">
+                            <label class="ds-field-label">RAB Member Status</label>
+                            <p-select
+                                [options]="statusOptions"
+                                [(ngModel)]="selectedPostingStatus"
+                                optionLabel="label"
+                                optionValue="value"
+                                placeholder="Select Status"
+                                styleClass="w-full"
+                                [disabled]="statusLocked"
+                                appendTo="body">
+                            </p-select>
+                            @if (statusLocked) {
+                                <small class="ds-field-hint">Locked to Presently Serving — your access scope is restricted.</small>
+                            }
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Group 2: Geographic Location (cascading) -->
+                <div class="ds-field-group">
+                    <div class="ds-group-divider">
+                        <span class="ds-group-label">Geographic Location</span>
+                        <span class="ds-group-line"></span>
+                    </div>
+                    <div class="ds-criteria-grid">
+                        <div class="ds-field">
+                            <label class="ds-field-label">Division</label>
+                            <p-select
+                                [options]="divisionOptions"
+                                [(ngModel)]="selectedDivisionId"
+                                (ngModelChange)="onDivisionChange()"
+                                optionLabel="label"
+                                optionValue="value"
+                                placeholder="Select Division"
+                                styleClass="w-full"
+                                [filter]="true"
+                                [showClear]="true"
+                                appendTo="body">
+                            </p-select>
+                        </div>
+                        <div class="ds-field">
+                            <label class="ds-field-label">District</label>
+                            <p-select
+                                [options]="districtOptions"
+                                [(ngModel)]="selectedDistrictId"
+                                (ngModelChange)="onDistrictChange()"
+                                optionLabel="label"
+                                optionValue="value"
+                                placeholder="Select District"
+                                styleClass="w-full"
+                                [disabled]="selectedDivisionId == null"
+                                [filter]="true"
+                                [showClear]="true"
+                                appendTo="body">
+                            </p-select>
+                        </div>
+                        <div class="ds-field">
+                            <label class="ds-field-label">Upazila</label>
+                            <p-select
+                                [options]="upazilaOptions"
+                                [(ngModel)]="selectedUpazilaId"
+                                (ngModelChange)="onUpazilaChange()"
+                                optionLabel="label"
+                                optionValue="value"
+                                placeholder="Select Upazila"
+                                styleClass="w-full"
+                                [disabled]="selectedDistrictId == null"
+                                [filter]="true"
+                                [showClear]="true"
+                                appendTo="body">
+                            </p-select>
+                        </div>
+                        <div class="ds-field">
+                            <label class="ds-field-label">Post Office</label>
+                            <p-select
+                                [options]="postOfficeOptions"
+                                [(ngModel)]="selectedPostOfficeId"
+                                optionLabel="label"
+                                optionValue="value"
+                                placeholder="Select Post Office"
+                                styleClass="w-full"
+                                [disabled]="selectedUpazilaId == null"
+                                [filter]="true"
+                                [showClear]="true"
+                                appendTo="body">
+                            </p-select>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Group 3: Columns picker -->
+                <div class="ds-field-group">
+                    <div class="ds-group-divider">
+                        <span class="ds-group-label">Columns</span>
+                        <span class="ds-group-line"></span>
+                    </div>
+                    <div class="ds-field">
+                        <label class="ds-field-label">Visible columns (drag chips to reorder later)</label>
+                        <p-multiSelect
+                            [options]="columnPickerOptions"
+                            [(ngModel)]="selectedColumnKeys"
+                            optionLabel="label"
+                            optionValue="value"
+                            display="chip"
+                            [filter]="true"
+                            placeholder="Pick columns…"
+                            styleClass="w-full"
+                            appendTo="body">
+                        </p-multiSelect>
+                    </div>
+                </div>
+
+            </div>
+
+            <div class="ds-actions">
+                <button type="button" class="ds-btn-clear" (click)="clearFilters()">
+                    <i class="pi pi-times"></i>
+                    Clear
+                </button>
+                <button type="button" class="ds-btn-search" (click)="load()" [disabled]="loading">
+                    <i class="pi pi-search"></i>
+                    Search
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@if (searched) {
+<div class="rab-report-document">
+    <div class="rab-toolbar">
+        <button type="button" class="report-lang-toggle" (click)="toggleLang()">
+            {{ lang === 'en' ? 'বাংলা' : 'English' }}
+        </button>
+    </div>
+
+    <div class="rab-paper" [class.rab-lang-bn]="lang === 'bn'">
+        <div class="rab-paper-table-wrap">
+            <p-table
+                [value]="list"
+                [loading]="loading"
+                [lazy]="true"
+                [first]="first"
+                [rows]="rows"
+                [totalRecords]="totalRecords"
+                [paginator]="false"
+                styleClass="rab-data-table p-datatable-sm">
+                <ng-template pTemplate="header">
+                    <tr>
+                        @for (col of visibleColumns; track col.key) {
+                            <th>{{ col.label }}</th>
+                        }
+                    </tr>
+                </ng-template>
+                <ng-template pTemplate="body" let-row let-rowIndex="rowIndex">
+                    <tr>
+                        @for (col of visibleColumns; track col.key) {
+                            @switch (col.hint) {
+                                @case ('Serial') {
+                                    <td><span class="rab-ser">{{ serValue(rowIndex) }}</span></td>
+                                }
+                                @case ('PersonnelComposite') {
+                                    <td>
+                                        <div class="rab-personnel-name">{{ personnelName(row) }}</div>
+                                        <div class="rab-personnel-meta">{{ personnelMetaLine(row) }}</div>
+                                    </td>
+                                }
+                                @case ('AddressComposite') {
+                                    <td>
+                                        <div class="rab-addr-crumb">
+                                            @for (part of addressCrumbsFor(row); track $index; let last = $last) {
+                                                <span class="rab-addr-part">
+                                                    <span class="rab-addr-part-label">{{ part.label }}:</span>
+                                                    <span class="rab-addr-part-value">{{ part.value }}</span>
+                                                </span>
+                                                @if (!last) { <span class="rab-addr-sep">&rsaquo;</span> }
+                                            }
+                                        </div>
+                                        @if (addressDetailFor(row)) {
+                                            <div class="rab-addr-detail">{{ addressDetailFor(row) }}</div>
+                                        }
+                                    </td>
+                                }
+                                @default {
+                                    <td>{{ plainCell(row, col.key) }}</td>
+                                }
+                            }
+                        }
+                    </tr>
+                </ng-template>
+                <ng-template pTemplate="emptymessage">
+                    <tr>
+                        <td [attr.colspan]="visibleColumns.length || 1" class="text-center p-4">No records</td>
+                    </tr>
+                </ng-template>
+            </p-table>
+        </div>
+    </div>
+
+    @if (totalRecords > 0) {
+        <div class="rab-paginator-bar">
+            <p-paginator
+                [first]="first"
+                [rows]="rows"
+                [totalRecords]="totalRecords"
+                [rowsPerPageOptions]="rowsPerPageOptions"
+                (onPageChange)="onPage($event)"
+                dropdownAppendTo="body">
+            </p-paginator>
+        </div>
+    }
+</div>
+}
+</div>

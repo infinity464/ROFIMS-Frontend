@@ -1,4 +1,6 @@
-import { Component } from '@angular/core';
+import { Component, inject } from '@angular/core';
+import { UserMenuService } from '@/services/user-menu.service';
+import { Router } from '@angular/router';
 import { FormConfig } from '../shared/models/formConfig';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { MasterBasicSetupService } from '../shared/services/MasterBasicSetupService';
@@ -12,16 +14,23 @@ import { SharedService } from '@/shared/services/shared-service';
 
 @Component({
   selector: 'app-prefix',
-  imports: [DynamicFormComponent,  Fluid, DataTable],
+  imports: [DynamicFormComponent, Fluid, DataTable],
   providers: [],
   templateUrl: './prefix.html',
   styleUrl: './prefix.scss',
 })
 export class Prefix {
+    private _router = inject(Router);
+    private _userMenuService = inject(UserMenuService);
+    canInsert = true;
+    canUpdate = true;
+    canDelete = true;
+
 
     codeType = "Prefix";
     title = "Prefix";
 
+    allData: any[] = [];
     commonData: any[] = [];
     editingId: number | null = null;
     commonForm!: FormGroup;
@@ -33,6 +42,7 @@ export class Prefix {
     searchValue: string = '';
     isSubmitting = false;
 
+    orgOptions: { label: string; value: any; sortOrder?: number | null }[] = [];
 
     formConfig: FormConfig = {
         formFields: [
@@ -40,8 +50,9 @@ export class Prefix {
                 name: 'orgId',
                 label: 'Mother Organization',
                 type: 'select',
-                required: true,
-                options: [] // Will be populated in ngOnInit
+                required: false,
+                default: null,
+                options: []
             },
             {
                 name: 'codeValueEN',
@@ -59,14 +70,14 @@ export class Prefix {
                 name: 'sortOrder',
                 label: 'Seniority',
                 type: 'number',
-                required: true
+                required: false
             },
             {
                 name: 'status',
                 label: 'Status',
                 type: 'select',
-                required: true,
-                default: true,
+                required: false,
+                default: null,
                 options: [
                     { label: 'Active', value: true },
                     { label: 'Inactive', value: false }
@@ -75,9 +86,9 @@ export class Prefix {
         ]
     };
 
-        tableConfig: TableConfig = {
+    tableConfig: TableConfig = {
         tableColumns: [
-
+            { field: 'orgNameDisplay', header: 'Mother Organization' },
             { field: 'codeValueEN', header: 'Prefix Name (EN)' },
             { field: 'codeValueBN', header: 'Prefix Name (BN)' },
             { field: 'sortOrder', header: 'Seniority' },
@@ -92,7 +103,7 @@ export class Prefix {
         ]
     };
 
-        constructor(
+    constructor(
         private masterBasicSetupService: MasterBasicSetupService,
         private messageService: MessageService,
         private confirmationService: ConfirmationService,
@@ -101,27 +112,34 @@ export class Prefix {
     ) { }
 
     ngOnInit(): void {
+        const _perms = this._userMenuService.getPermissionsByRoute(this._router.url);
+        this.canInsert = _perms.canInsert;
+        this.canUpdate = _perms.canUpdate;
+        this.canDelete = _perms.canDelete;
+
         this.initForm();
-        this.loadActiveMotherOrgs(); // Load motherOrgRanks for dropdown
-        this.getCommonCodeWithPaging({
-            first: this.first,
-            rows: this.rows
-        });
+        this.setupFormFilterListeners();
+        this.loadActiveMotherOrgs();
     }
 
-      initForm() {
+    private setupFormFilterListeners() {
+        this.commonForm.get('orgId')?.valueChanges.subscribe(() => { this.first = 0; this.buildTableData(); });
+        this.commonForm.get('status')?.valueChanges.subscribe(() => { this.first = 0; this.buildTableData(); });
+    }
+
+    initForm() {
         this.commonForm = this.fb.group({
+            orgId: [null],
             codeValueEN: ['', Validators.required],
             codeValueBN: ['', Validators.required],
-            status: [true, Validators.required],
-            orgId: ['', Validators.required],
+            sortOrder: [null],
+            status: [null],
             codeId: [0],
             codeType: ['Prefix'],
-            parentCodeId: [null], // Will store motherOrgId
+            parentCodeId: [null],
             commCode: [null],
             displayCodeValueEN: [null],
             displayCodeValueBN: [null],
-            sortOrder: [null],
             level: [null],
             createdBy: [''],
             createdDate: [''],
@@ -130,82 +148,86 @@ export class Prefix {
         });
     }
 
-    // Load all motherOrgRanks for the dropdown
     loadActiveMotherOrgs() {
         this.masterBasicSetupService.getAllActiveMotherOrgs().subscribe({
             next: (motherOrgRanks) => {
-                const motherOrgOptions = motherOrgRanks.map(d => ({
-                    label: d.orgNameEN,
-                    value: d.orgId
-                }));
-
-                // Update form config with motherOrg options
-                const motherOrgField = this.formConfig.formFields.find(f => f.name === 'orgId');
-                if (motherOrgField) {
-                    motherOrgField.options = motherOrgOptions;
-                }
+                this.orgOptions = motherOrgRanks.map(d => ({ label: d.orgNameEN, value: d.orgId, sortOrder: d.sortOrder }));
+                const orgField = this.formConfig.formFields.find(f => f.name === 'orgId');
+                if (orgField) orgField.options = this.orgOptions;
+                this.getAllData();
             },
             error: (err) => {
                 console.error('Error loading prefix:', err);
-                this.messageService.add({
-                    severity: 'error',
-                    summary: 'Error',
-                    detail: 'Failed to load prefix'
-                });
+                this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.message || 'Failed to load organizations' });
             }
         });
     }
 
-    getCommonCodeWithPaging(event?: any) {
+    getAllData() {
         this.loading = true;
-        const pageNo = event ? event.first / event.rows + 1 : 1;
-        const pageSize = event?.rows ?? this.rows;
-
-        const apiCall = this.searchValue
-            ? this.masterBasicSetupService.getByKeyordWithPaging('Prefix', this.searchValue, pageNo, pageSize)
-            : this.masterBasicSetupService.getAllWithPaging('Prefix', pageNo, pageSize);
-
-        apiCall.subscribe({
+        this.masterBasicSetupService.getAllByType('Prefix').subscribe({
             next: (res) => {
-                this.commonData = res.datalist;
-                this.totalRecords = res.pages.rows;
-                this.rows = pageSize;
+                this.allData = Array.isArray(res) ? res : [];
+                this.buildTableData();
                 this.loading = false;
             },
             error: (err) => {
                 console.error('Error fetching data:', err);
-                this.messageService.add({
-                    severity: 'error',
-                    summary: 'Error',
-                    detail: 'Failed to load data'
-                });
+                this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.message || 'Failed to load data' });
                 this.loading = false;
             }
         });
     }
 
+    private buildTableData() {
+        const getOrgName = (id: number) => this.orgOptions.find((o: any) => o.value === id)?.label ?? '-';
+        let list = this.allData.map((r: any) => ({ ...r, orgNameDisplay: getOrgName(r.orgId ?? 0) }));
+        const orgId = this.commonForm?.get('orgId')?.value;
+        const status = this.commonForm?.get('status')?.value;
+        if (orgId != null && orgId !== '') list = list.filter((r: any) => r.orgId === orgId);
+        if (status != null) list = list.filter((r: any) => r.status === status);
+        const q = (this.searchValue ?? '').toLowerCase().trim();
+        if (q) list = list.filter((r: any) => r.codeValueEN?.toLowerCase().includes(q) || r.codeValueBN?.toLowerCase().includes(q));
+        // Order by Mother Organization's sort order first, then by the prefix's own sort order.
+        const getOrgSortOrder = (id: number) =>
+            this.orgOptions.find((o: any) => o.value === id)?.sortOrder ?? Number.MAX_SAFE_INTEGER;
+        list.sort((a: any, b: any) => {
+            const parentDiff = getOrgSortOrder(a.orgId) - getOrgSortOrder(b.orgId);
+            if (parentDiff !== 0) return parentDiff;
+            return (a.sortOrder ?? 0) - (b.sortOrder ?? 0);
+        });
+        this.commonData = list;
+        this.totalRecords = list.length;
+        this.first = 0;
+    }
+
     submit(data: any) {
+        const orgId = this.commonForm.get('orgId')?.value;
+        const status = this.commonForm.get('status')?.value;
+        if (orgId == null || orgId === '') {
+            this.messageService.add({ severity: 'warn', summary: 'Validation', detail: 'Please select Mother Organization' });
+            return;
+        }
+        if (status == null) {
+            this.messageService.add({ severity: 'warn', summary: 'Validation', detail: 'Please select Status' });
+            return;
+        }
         if (this.commonForm.invalid) {
             this.commonForm.markAllAsTouched();
             return;
         }
 
         const currentUser = this.getCurrentUser();
-        const currentDateTime = this.shareService.getCurrentDateTime()
-
-
-        // this.commonForm.patchValue({
-        //     parentCodeId: this.commonForm.value.divisionId
-        // });
+        const currentDateTime = this.shareService.getCurrentDateTime();
 
         if (this.editingId) {
-            this.updateDistrict(currentUser, currentDateTime);
+            this.updatePrefix(currentUser, currentDateTime);
         } else {
-            this.createDistrict(currentUser, currentDateTime);
+            this.createPrefix(currentUser, currentDateTime);
         }
     }
 
-    private createDistrict(currentUser: string, currentDateTime: string) {
+    private createPrefix(currentUser: string, currentDateTime: string) {
         this.isSubmitting = true;
         const createPayload = {
             ...this.commonForm.value,
@@ -216,34 +238,21 @@ export class Prefix {
         };
 
         this.masterBasicSetupService.create(createPayload).subscribe({
-            next: (res) => {
-                console.log('Created:', res);
+            next: () => {
                 this.resetForm();
-                this.getCommonCodeWithPaging({
-                    first: this.first,
-                    rows: this.rows
-                });
-                this.messageService.add({
-                    severity: 'success',
-                    summary: 'Success',
-                    detail: 'Prefix created successfully'
-                });
+                this.getAllData();
+                this.messageService.add({ severity: 'success', summary: 'Success', detail: 'Prefix created successfully' });
                 this.isSubmitting = false;
             },
             error: (err) => {
                 console.error('Error creating:', err);
-                this.messageService.add({
-                    severity: 'error',
-                    summary: 'Error',
-                    detail: 'Failed to create prefix'
-                });
-
+                this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.message || 'Failed to create prefix' });
                 this.isSubmitting = false;
             }
         });
     }
 
-    private updateDistrict(currentUser: string, currentDateTime: string) {
+    private updatePrefix(currentUser: string, currentDateTime: string) {
         this.isSubmitting = true;
         const updatePayload = {
             ...this.commonForm.value,
@@ -255,27 +264,15 @@ export class Prefix {
         };
 
         this.masterBasicSetupService.update(updatePayload).subscribe({
-            next: (res) => {
-                console.log('Updated:', res);
+            next: () => {
                 this.resetForm();
-                this.getCommonCodeWithPaging({
-                    first: this.first,
-                    rows: this.rows
-                });
-                this.messageService.add({
-                    severity: 'success',
-                    summary: 'Success',
-                    detail: 'Prefix updated successfully'
-                });
+                this.getAllData();
+                this.messageService.add({ severity: 'success', summary: 'Success', detail: 'Prefix updated successfully' });
                 this.isSubmitting = false;
             },
             error: (err) => {
                 console.error('Error updating:', err);
-                this.messageService.add({
-                    severity: 'error',
-                    summary: 'Error',
-                    detail: 'Failed to update prefix'
-                });
+                this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.message || 'Failed to update prefix' });
                 this.isSubmitting = false;
             }
         });
@@ -284,13 +281,12 @@ export class Prefix {
     update(row: any) {
         this.editingId = row.codeId;
         this.commonForm.patchValue({
-            orgId: row.orgId, // parentCodeId contains divisionId
+            orgId: row.orgId,
             codeValueEN: row.codeValueEN,
             codeValueBN: row.codeValueBN,
             status: row.status,
             sortOrder: row.sortOrder
         });
-        console.log('Edit:', row);
     }
 
     delete(row: any, event: Event) {
@@ -300,35 +296,17 @@ export class Prefix {
             header: 'Delete Confirmation',
             icon: 'pi pi-info-circle',
             rejectLabel: 'Cancel',
-            rejectButtonProps: {
-                label: 'Cancel',
-                severity: 'secondary',
-                outlined: true
-            },
-            acceptButtonProps: {
-                label: 'Delete',
-                severity: 'danger'
-            },
+            rejectButtonProps: { label: 'Cancel', severity: 'secondary', outlined: true },
+            acceptButtonProps: { label: 'Delete', severity: 'danger' },
             accept: () => {
                 this.masterBasicSetupService.delete(row.codeId).subscribe({
                     next: () => {
-                        this.getCommonCodeWithPaging({
-                            first: this.first,
-                            rows: this.rows
-                        });
-                        this.messageService.add({
-                            severity: 'success',
-                            summary: 'Success',
-                            detail: 'Prefix deleted successfully'
-                        });
+                        this.getAllData();
+                        this.messageService.add({ severity: 'success', summary: 'Success', detail: 'Prefix deleted successfully' });
                     },
                     error: (err) => {
                         console.error('Error deleting:', err);
-                        this.messageService.add({
-                            severity: 'error',
-                            summary: 'Error',
-                            detail: 'Failed to delete prefix'
-                        });
+                        this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.message || 'Failed to delete prefix' });
                     }
                 });
             }
@@ -338,11 +316,12 @@ export class Prefix {
     resetForm() {
         this.editingId = null;
         this.isSubmitting = false;
+        this.searchValue = '';
         this.commonForm.reset({
-            orgId: '',
+            orgId: null,
             codeId: 0,
             codeType: 'Prefix',
-            status: true,
+            status: null,
             parentCodeId: null,
             commCode: null,
             displayCodeValueEN: null,
@@ -354,17 +333,16 @@ export class Prefix {
             lastUpdatedBy: '',
             lastupdate: ''
         });
+        this.buildTableData();
     }
 
     onSearch(keyword: string) {
-        this.searchValue = keyword;
+        this.searchValue = keyword ?? '';
         this.first = 0;
-        this.getCommonCodeWithPaging({ first: 0, rows: this.rows });
+        this.buildTableData();
     }
 
     private getCurrentUser(): string {
-        return this.shareService.getCurrentUser()
+        return this.shareService.getCurrentUser();
     }
-
-
 }

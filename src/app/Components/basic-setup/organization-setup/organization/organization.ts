@@ -1,5 +1,7 @@
 import { CommonModule } from '@angular/common';
-import { Component, OnInit } from '@angular/core';
+import { Router } from '@angular/router';
+import { Component, OnInit, inject } from '@angular/core';
+import { UserMenuService } from '@/services/user-menu.service';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { DatePickerModule } from 'primeng/datepicker';
 import { Fluid } from 'primeng/fluid';
@@ -18,15 +20,22 @@ import { Tag } from 'primeng/tag';
 import { IconField } from 'primeng/iconfield';
 import { InputIcon } from 'primeng/inputicon';
 import { SharedService } from '@/shared/services/shared-service';
+import { FlexibleDateDirective } from '@/shared/directives/flexible-date.directive';
 
 @Component({
     selector: 'app-organization',
-    imports: [Fluid, ReactiveFormsModule, InputTextModule, SelectModule, DatePickerModule, InputNumberModule, Button, TableModule, IconField, InputIcon, ButtonModule, CommonModule],
+    imports: [Fluid, ReactiveFormsModule, InputTextModule, SelectModule, DatePickerModule, FlexibleDateDirective, InputNumberModule, Button, TableModule, IconField, InputIcon, ButtonModule, CommonModule],
     providers: [],
     templateUrl: './organization.html',
     styleUrl: './organization.scss'
 })
 export class Organization implements OnInit {
+    private _router = inject(Router);
+    private _userMenuService = inject(UserMenuService);
+    canInsert = true;
+    canUpdate = true;
+    canDelete = true;
+
     organizationForm!: FormGroup;
     isSubmitting = false;
     organizations: OrganizationModel[] = [];
@@ -56,6 +65,11 @@ export class Organization implements OnInit {
     ) {}
 
     ngOnInit(): void {
+        const _perms = this._userMenuService.getPermissionsByRoute(this._router.url);
+        this.canInsert = _perms.canInsert;
+        this.canUpdate = _perms.canUpdate;
+        this.canDelete = _perms.canDelete;
+
         this.getAll();
         this.currentUser = this.sharedService.getCurrentUser();
         this.initForm();
@@ -72,7 +86,7 @@ export class Organization implements OnInit {
             locationEN: [''],
             locationBN: [''],
             email: ['', [Validators.email]],
-            sortOrder: [0, Validators.required],
+            sortOrder: [null],
             status: [true, Validators.required],
             remarks: [''],
             parentOrg: [null],
@@ -83,20 +97,30 @@ export class Organization implements OnInit {
         });
     }
 
+    /** Sort by SortOrder ascending; nulls last, then by English name. */
+    private sortBySortOrder(list: OrganizationModel[]): OrganizationModel[] {
+        return [...list].sort((a, b) => {
+            const sa = a.sortOrder ?? Number.POSITIVE_INFINITY;
+            const sb = b.sortOrder ?? Number.POSITIVE_INFINITY;
+            if (sa !== sb) return sa - sb;
+            return (a.orgNameEN ?? '').localeCompare(b.orgNameEN ?? '');
+        });
+    }
+
     getAll() {
         this.organizationService.getAllMotherOrg().subscribe({
             next: (res: OrganizationModel[]) => {
                 console.log('Organizations fetched successfully', res);
-                this.organizations = res;
-                this.filteredOrganizations = [...res]; // Make a copy
-                this.totalRecords = res.length;
+                this.organizations = this.sortBySortOrder(res);
+                this.filteredOrganizations = [...this.organizations]; // Make a copy
+                this.totalRecords = this.organizations.length;
             },
             error: (err: any) => {
                 console.log('Error fetching organizations');
                 this.messageService.add({
                     severity: 'error',
                     summary: 'Error',
-                    detail: 'Failed to fetch organizations'
+                    detail: err?.error?.message || 'Failed to fetch organizations'
                 });
             }
         });
@@ -107,7 +131,7 @@ export class Organization implements OnInit {
         this.searchValue = target.value.toLowerCase().trim();
 
         if (this.searchValue) {
-            this.filteredOrganizations = this.organizations.filter((org) => org.orgNameEN?.toLowerCase().includes(this.searchValue) || org.orgNameBN?.toLowerCase().includes(this.searchValue));
+            this.filteredOrganizations = this.sortBySortOrder(this.organizations.filter((org) => org.orgNameEN?.toLowerCase().includes(this.searchValue) || org.orgNameBN?.toLowerCase().includes(this.searchValue)));
         } else {
             this.filteredOrganizations = [...this.organizations];
         }
@@ -151,7 +175,7 @@ export class Organization implements OnInit {
                 this.messageService.add({
                     severity: 'error',
                     summary: 'Error',
-                    detail: 'Failed to create organization'
+                    detail: err?.error?.message || 'Failed to create organization'
                 });
                 this.isSubmitting = false;
             }
@@ -183,7 +207,7 @@ export class Organization implements OnInit {
                 this.messageService.add({
                     severity: 'error',
                     summary: 'Error',
-                    detail: 'Failed to update organization'
+                    detail: err?.error?.message || 'Failed to update organization'
                 });
                 this.isSubmitting = false;
             }
@@ -230,7 +254,7 @@ export class Organization implements OnInit {
                         this.messageService.add({
                             severity: 'error',
                             summary: 'Error',
-                            detail: 'Failed to delete organization'
+                            detail: err?.error?.message || 'Failed to delete organization'
                         });
                     }
                 });
@@ -242,6 +266,7 @@ export class Organization implements OnInit {
         this.editingId = null;
         this.organizationForm.reset({
             orgId: 0,
+            sortOrder: null,
             status: true,
             createdDate: new Date(),
             lastupdate: new Date(),

@@ -1,33 +1,46 @@
-import { Component, OnInit } from '@angular/core';
-import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
+import { Component, OnInit, inject } from '@angular/core';
+import { UserMenuService } from '@/services/user-menu.service';
+import { Router } from '@angular/router';
+import { AbstractControl, FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Fluid } from 'primeng/fluid';
 import { ButtonModule } from 'primeng/button';
 import { RabIdSerialModel } from '../shared/models/rab-id-serial';
 import { CommonCode } from '../shared/models/common-code';
+import { OrganizationModel } from '../organization-setup/models/organization';
 import { MessageService } from 'primeng/api';
 import { SharedService } from '@/shared/services/shared-service';
 import { MasterBasicSetupService } from '../shared/services/MasterBasicSetupService';
+import { CodeType } from '@/models/enums';
 import { InputText } from 'primeng/inputtext';
 import { InputNumber } from 'primeng/inputnumber';
 import { IconField } from 'primeng/iconfield';
 import { InputIcon } from 'primeng/inputicon';
 import { TableModule } from 'primeng/table';
 import { Select } from 'primeng/select';
+import { MultiSelectModule } from 'primeng/multiselect';
 
 @Component({
     selector: 'app-rab-id-serial',
-    imports: [ReactiveFormsModule, TableModule, InputText, InputNumber, Fluid, ButtonModule, IconField, InputIcon, Select],
+    imports: [ReactiveFormsModule, TableModule, InputText, InputNumber, Fluid, ButtonModule, IconField, InputIcon, Select, MultiSelectModule],
     templateUrl: './rab-id-serial.html',
     styleUrl: './rab-id-serial.scss'
 })
 export class RabIdSerial implements OnInit {
+    private _router = inject(Router);
+    private _userMenuService = inject(UserMenuService);
+    canInsert = true;
+    canUpdate = true;
+    canDelete = true;
+
     isSubmitting = false;
     rabIdSerialForm!: FormGroup;
 
     rabIdSerials: RabIdSerialModel[] = [];
     filteredRabIdSerials: RabIdSerialModel[] = [];
-    officerTypes: CommonCode[] = [];
-    officerTypeOptions: { label: string; value: number }[] = [];
+    employeeTypes: CommonCode[] = [];
+    employeeTypeOptions: { label: string; value: number }[] = [];
+    motherOrgs: OrganizationModel[] = [];
+    motherOrgOptions: { label: string; value: number }[] = [];
 
     currentUser: string = '';
 
@@ -47,18 +60,84 @@ export class RabIdSerial implements OnInit {
     ) {}
 
     ngOnInit(): void {
+        const _perms = this._userMenuService.getPermissionsByRoute(this._router.url);
+        this.canInsert = _perms.canInsert;
+        this.canUpdate = _perms.canUpdate;
+        this.canDelete = _perms.canDelete;
+
         this.currentUser = this.sharedService.getCurrentUser();
         this.initForm();
-        this.loadOfficerTypes();
+        this.loadEmployeeTypes();
+        this.loadMotherOrgs();
         this.getAll();
+    }
+
+    private setupFormFilterListeners() {
+        this.rabIdSerialForm.get('employeeTypeId')?.valueChanges.subscribe(() => {
+            this.first = 0;
+            this.buildTableData();
+        });
+        this.rabIdSerialForm.get('motherOrgIds')?.valueChanges.subscribe(() => {
+            this.first = 0;
+            this.buildTableData();
+        });
+    }
+
+    private buildTableData() {
+        let list = [...this.rabIdSerials];
+        const employeeTypeId = this.rabIdSerialForm?.get('employeeTypeId')?.value;
+        if (employeeTypeId != null) {
+            list = list.filter((r) => r.employeeTypeId === employeeTypeId);
+        }
+        const selectedOrgIds = (this.rabIdSerialForm?.get('motherOrgIds')?.value as number[]) ?? [];
+        if (selectedOrgIds.length > 0) {
+            list = list.filter((r) => {
+                const rowOrgIds = this.parseMotherOrgIds(r.motherOrgIds);
+                return selectedOrgIds.some((id) => rowOrgIds.includes(id));
+            });
+        }
+        const q = (this.searchValue ?? '').toLowerCase().trim();
+        if (q) {
+            list = list.filter((r) => {
+                const employeeTypeName = this.getEmployeeTypeName(r.employeeTypeId).toLowerCase();
+                const motherOrgNames = this.getMotherOrgNames(r.motherOrgIds).toLowerCase();
+                return (
+                    employeeTypeName.includes(q) ||
+                    motherOrgNames.includes(q) ||
+                    String(r.minId).includes(q)
+                );
+            });
+        }
+        this.filteredRabIdSerials = list;
+        this.totalRecords = list.length;
+        this.first = 0;
+    }
+
+    parseMotherOrgIds(motherOrgIds: string | null | undefined): number[] {
+        if (!motherOrgIds || !motherOrgIds.trim()) return [];
+        return motherOrgIds
+            .split(',')
+            .map((s) => parseInt(s.trim(), 10))
+            .filter((n) => !isNaN(n));
+    }
+
+    getMotherOrgNames(motherOrgIds: string | null | undefined): string {
+        const ids = this.parseMotherOrgIds(motherOrgIds);
+        if (ids.length === 0) return 'All';
+        return ids
+            .map((id) => this.motherOrgs.find((o) => o.orgId === id)?.orgNameEN ?? String(id))
+            .join(', ');
     }
 
     initForm() {
         this.rabIdSerialForm = this.fb.group({
             rabIdSerialId: [0],
-            officerTypeId: [null, Validators.required],
+            employeeTypeId: [null],
+            motherOrgIds: [
+                [] as number[],
+                [(c: AbstractControl) => (Array.isArray(c?.value) && c.value.length > 0 ? null : { required: true })]
+            ],
             minId: [null, [Validators.required, Validators.min(1)]],
-            maxId: [null, [Validators.required, Validators.min(1)]],
             currentId: [null],
             createdBy: [this.currentUser],
             createdDate: [new Date().toISOString()],
@@ -67,20 +146,40 @@ export class RabIdSerial implements OnInit {
         });
     }
 
-    loadOfficerTypes() {
-        this.masterBasicSetupService.getAllByType('OfficerType').subscribe({
+    loadEmployeeTypes() {
+        this.masterBasicSetupService.getAllByType(CodeType.EmployeeType).subscribe({
             next: (res: CommonCode[]) => {
-                this.officerTypes = res;
-                this.officerTypeOptions = res.map((o) => ({
+                this.employeeTypes = res;
+                this.employeeTypeOptions = res.map((o) => ({
                     label: o.codeValueEN,
                     value: o.codeId
                 }));
+                this.setupFormFilterListeners();
             },
-            error: () => {
+            error: (err: any) => {
                 this.messageService.add({
                     severity: 'error',
                     summary: 'Error',
-                    detail: 'Failed to load officer types'
+                    detail: err?.error?.message || 'Failed to load employee types'
+                });
+            }
+        });
+    }
+
+    loadMotherOrgs() {
+        this.masterBasicSetupService.getAllActiveMotherOrgs().subscribe({
+            next: (res: OrganizationModel[]) => {
+                this.motherOrgs = res ?? [];
+                this.motherOrgOptions = this.motherOrgs.map((o) => ({
+                    label: o.orgNameEN,
+                    value: o.orgId
+                }));
+            },
+            error: (err: any) => {
+                this.messageService.add({
+                    severity: 'error',
+                    summary: 'Error',
+                    detail: err?.error?.message || 'Failed to load mother organizations'
                 });
             }
         });
@@ -89,59 +188,50 @@ export class RabIdSerial implements OnInit {
     getAll() {
         this.masterBasicSetupService.getAllRabIdSerial().subscribe({
             next: (res: RabIdSerialModel[]) => {
-                this.rabIdSerials = res;
-                this.filteredRabIdSerials = [...res];
-                this.totalRecords = res.length;
+                // Map legacy officerTypeId to employeeTypeId for backward compatibility
+                this.rabIdSerials = (res ?? []).map((r) => ({
+                    ...r,
+                    employeeTypeId: r.employeeTypeId ?? (r as unknown as { officerTypeId?: number }).officerTypeId ?? 0
+                }));
+                this.buildTableData();
             },
-            error: () => {
+            error: (err: any) => {
                 this.messageService.add({
                     severity: 'error',
                     summary: 'Error',
-                    detail: 'Failed to fetch RAB ID Serial data'
+                    detail: err?.error?.message || 'Failed to fetch RAB ID Serial data'
                 });
             }
         });
     }
 
-    getOfficerTypeName(officerTypeId: number): string {
-        const officerType = this.officerTypes.find((o) => o.codeId === officerTypeId);
-        return officerType ? officerType.codeValueEN : '-';
+    getEmployeeTypeName(employeeTypeId: number): string {
+        const employeeType = this.employeeTypes.find((o) => o.codeId === employeeTypeId);
+        return employeeType ? employeeType.codeValueEN : '-';
     }
 
     onSearch(event: Event) {
         const target = event.target as HTMLInputElement;
-        this.searchValue = target.value.toLowerCase().trim();
-
-        if (this.searchValue) {
-            this.filteredRabIdSerials = this.rabIdSerials.filter((r) => {
-                const officerTypeName = this.getOfficerTypeName(r.officerTypeId).toLowerCase();
-                return officerTypeName.includes(this.searchValue) || r.minId.toString().includes(this.searchValue) || r.maxId.toString().includes(this.searchValue);
-            });
-        } else {
-            this.filteredRabIdSerials = [...this.rabIdSerials];
-        }
-
-        this.totalRecords = this.filteredRabIdSerials.length;
+        this.searchValue = (target?.value ?? '').toLowerCase().trim();
         this.first = 0;
+        this.buildTableData();
     }
 
     onSubmit() {
         if (this.isSubmitting) return;
 
-        if (this.rabIdSerialForm.invalid) {
-            this.rabIdSerialForm.markAllAsTouched();
+        const employeeTypeId = this.rabIdSerialForm.get('employeeTypeId')?.value;
+        if (employeeTypeId == null) {
+            this.messageService.add({ severity: 'warn', summary: 'Validation', detail: 'Please select Employee Type' });
             return;
         }
-
-        // Validate min <= max
-        const minId = this.rabIdSerialForm.value.minId;
-        const maxId = this.rabIdSerialForm.value.maxId;
-        if (minId > maxId) {
-            this.messageService.add({
-                severity: 'error',
-                summary: 'Validation Error',
-                detail: 'Min ID cannot be greater than Max ID'
-            });
+        const motherOrgIds = (this.rabIdSerialForm.get('motherOrgIds')?.value as number[]) ?? [];
+        if (motherOrgIds.length === 0) {
+            this.messageService.add({ severity: 'warn', summary: 'Validation', detail: 'Please select at least one Mother Org' });
+            return;
+        }
+        if (this.rabIdSerialForm.invalid) {
+            this.rabIdSerialForm.markAllAsTouched();
             return;
         }
 
@@ -152,8 +242,13 @@ export class RabIdSerial implements OnInit {
         this.isSubmitting = true;
         const currentDateTime = this.sharedService.getCurrentDateTime();
 
+        const motherOrgIdsArr = (this.rabIdSerialForm.get('motherOrgIds')?.value as number[]) ?? [];
+        const motherOrgIdsStr =
+            motherOrgIdsArr.length > 0 ? motherOrgIdsArr.join(',') : '';
+
         const payload = {
             ...this.rabIdSerialForm.value,
+            motherOrgIds: motherOrgIdsStr || null,
             currentId: this.rabIdSerialForm.value.minId, // Set currentId to minId on create
             createdBy: this.currentUser,
             createdDate: currentDateTime,
@@ -172,35 +267,31 @@ export class RabIdSerial implements OnInit {
                 this.getAll();
                 this.isSubmitting = false;
             },
-            error: () => {
+            error: (err: any) => {
                 this.messageService.add({
                     severity: 'error',
                     summary: 'Error',
-                    detail: 'Failed to create RAB ID Serial'
+                    detail: err?.error?.message || 'Failed to create RAB ID Serial'
                 });
                 this.isSubmitting = false;
             }
         });
     }
 
-    isMaxLessThanMin(): boolean {
-        const minId = this.rabIdSerialForm.get('minId')?.value;
-        const maxId = this.rabIdSerialForm.get('maxId')?.value;
-        return minId && maxId && maxId < minId;
-    }
-
     onReset() {
+        this.searchValue = '';
         this.rabIdSerialForm.reset({
             rabIdSerialId: 0,
-            officerTypeId: null,
+            employeeTypeId: null,
+            motherOrgIds: [],
             minId: null,
-            maxId: null,
             currentId: null,
             createdBy: this.currentUser,
             createdDate: new Date().toISOString(),
             lastUpdatedBy: this.currentUser,
             lastupdate: new Date().toISOString()
         });
+        this.buildTableData();
         this.isSubmitting = false;
     }
 }

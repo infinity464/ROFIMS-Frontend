@@ -1,0 +1,95 @@
+:host {
+    display: block;
+}
+
+// Serving status badge in the header
+.serving-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--primary-color);
+    background: var(--report-accent-bg, rgba(59, 130, 246, 0.1));
+    padding: 4px 12px;
+    border-radius: 6px;
+}
+
+// Side-by-side address layout (Permanent | Present, Spouse Permanent | Spouse Present)
+.address-pair {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1.5rem;
+    align-items: stretch;
+
+    .address-col {
+        // Two columns + two gaps (1.5rem each) + 1px divider must fit one row.
+        flex: 1 1 calc(50% - 1.6rem);
+        min-width: 280px;
+    }
+
+    .address-divider {
+        flex: 0 0 1px;
+        align-self: stretch;
+        background: var(--surface-border, #dee2e6);
+    }
+
+    @media (max-width: 991px) {
+        .address-col {
+            flex: 1 1 100%;
+            min-width: 100%;
+        }
+
+        .address-divider {
+            display: none;
+        }
+    }
+}
+
+// Profile photo thumbnail styles
+.profile-photo-container {
+    width: 80px;
+    height: 100px;
+    margin: 0 auto;
+    border-radius: 8px;
+    overflow: hidden;
+    border: 2px solid var(--surface-border, #dee2e6);
+    background: var(--surface-100, #f8f9fa);
+    cursor: pointer;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+
+    &:hover {
+        border-color: var(--primary-color, #3B82F6);
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+    }
+}
+
+.profile-photo {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    display: block;
+}
+
+// Collapsible section header
+.collapsible-header {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    cursor: pointer;
+    user-select: none;
+
+    i {
+        font-size: 0.85rem;
+        transition: transform 0.15s ease;
+    }
+}
+
+:host ::ng-deep .file-section-compact {
+    app-file-references-form h3 {
+        font-size: 1rem !important;
+        font-weight: 600 !important;
+        color: var(--text-color-secondary) !important;
+        margin-bottom: 0.5rem !important;
+    }
+}

@@ -1,0 +1,152 @@
+<p-toast></p-toast>
+
+<div class="preview-header">
+    <div class="preview-actions">
+        <button type="button" pButton label="Back" icon="pi pi-arrow-left"
+                severity="secondary" [outlined]="true" (click)="onBack()"></button>
+    </div>
+    <div class="preview-status-actions">
+        <app-movement-return-button [movement]="movement"></app-movement-return-button>
+        <button type="button" pButton label="Edit" icon="pi pi-pencil"
+                [outlined]="true"
+                (click)="onEdit()" [disabled]="loading || !!error || !movement"></button>
+        <button type="button" pButton label="Word" icon="pi pi-file-word"
+                [outlined]="true" (click)="exportWord()"
+                [disabled]="loading || !!error || !movement"></button>
+        <button type="button" pButton label="PDF" icon="pi pi-file-pdf"
+                [outlined]="true" (click)="exportPdf()"
+                [disabled]="loading || !!error || !movement || exportingPdf"
+                [loading]="exportingPdf"></button>
+        <button type="button" pButton label="Print Preview" icon="pi pi-print"
+                [outlined]="true" (click)="printPreview()"
+                [disabled]="loading || !!error || !movement || printingPreview"
+                [loading]="printingPreview"></button>
+    </div>
+</div>
+
+@if (!loading && !error && movement) {
+    <div class="export-options-bar no-print"
+         style="display:flex; gap:0.75rem; align-items:center; padding:0.5rem 1rem; background:var(--surface-ground); border-radius:6px; margin:0.5rem 1rem;">
+        <span style="font-weight:600; font-size:0.85rem;">
+            <i class="pi pi-cog" style="margin-right:0.3rem;"></i>Export:
+        </span>
+        <p-select [options]="pageSizeOptions" [(ngModel)]="selectedPageSize"
+                  optionLabel="label" optionValue="value"
+                  [style]="{ width: '110px' }"></p-select>
+    </div>
+}
+
+@if (loading) {
+    <div class="preview-loading">
+        <i class="pi pi-spin pi-spinner" style="font-size:2rem"></i>
+        <div>Loading…</div>
+    </div>
+}
+
+@if (error) {
+    <div class="preview-error">
+        <i class="pi pi-exclamation-triangle" style="font-size:2rem"></i>
+        <div>{{ error }}</div>
+    </div>
+}
+
+@if (!loading && !error && movement) {
+    <div class="a4-paper-container">
+        <div class="a4-paper" #paper [class.a4-paper--legal]="selectedPageSize === 'Legal'">
+
+            <!-- Org header — matches notesheet-preview/posting's .ns-org-header style. -->
+            <div style="font-size:8pt; line-height:1.5; margin-bottom:8pt;">
+                বাংলাদেশ ফরম নং-২৪০৩
+            </div>
+
+            <!-- Memo number + Date row — 2-line gap above the form header. -->
+            <div style="display:flex; justify-content:space-between; margin-top:36pt; font-size:9pt;">
+                <div>স্মারক নং- {{ memoNoBn }}</div>
+                <div>{{ letterDateBn }}</div>
+            </div>
+
+            <!-- Reference line — 2 empty lines above and below সূত্র. -->
+            <div style="margin-top:36pt; font-size:9pt;">
+                <div style="display:flex; gap:0; align-items:flex-start;">
+                    <div style="min-width:50pt;">সূত্র:</div>
+                    <div class="mv-rich" [innerHTML]="movement.auth || '---'"></div>
+                </div>
+            </div>
+
+            <!-- প্রতি (To) block -->
+            <div style="margin-top:36pt; font-size:9pt;">
+                <div>প্রতি,</div>
+                <table style="margin-left:50pt; margin-top:4pt; border-collapse:collapse;">
+                    @for (line of recipientLines; track $index) {
+                        <tr>
+                            <td style="vertical-align:top; padding:1pt 8pt 1pt 0; white-space:nowrap;">
+                                {{ serialBn($index + 1) }}
+                            </td>
+                            <td style="vertical-align:top; padding:1pt 0;">{{ line }}</td>
+                        </tr>
+                    }
+                </table>
+            </div>
+
+            <!-- Body — sourced from MovementInfo.remarks (rich text) -->
+            <div class="mv-rich" style="margin-top:18pt; font-size:9pt;"
+                 [innerHTML]="movement.remarks || ''"></div>
+
+            <!-- Static "অগ্রগামী করা হইল।" on its own left-aligned line, with a 2-line gap above. -->
+            <div style="margin-top:34pt; font-size:9pt;">
+                অগ্রগামী করা হইল।
+            </div>
+
+            <!-- Two signature blocks on one row: the Final Approver on the left,
+                 the member on the right, both in the same shape. The left block is
+                 omitted entirely when the movement carries no approver. -->
+            <div style="margin-top:30pt; font-size:9pt; display:flex; justify-content:space-between; align-items:flex-start; gap:18pt;">
+                <div style="text-align:center;">
+                    @if (hasApprover) {
+                        <!-- No caption and no rule above the name — the spacer is kept
+                             (borderless) so the signing space remains. -->
+                        <div style="margin-top:36pt; min-width:220pt;"></div>
+                        <div style="margin-top:4pt;">{{ approverIdLineBn }} {{ approverRankBn }}</div>
+                        <div>{{ approverNameBn }}{{ approverCorpsBn ? ', ' + approverCorpsBn : '' }}</div>
+                        <div>{{ approverUnitBn }}{{ approverUnitLocationBn ? ', ' + approverUnitLocationBn : '' }}</div>
+                    }
+                </div>
+                <div style="text-align:center;">
+                    <div style="margin-top:36pt; min-width:220pt;"></div>
+                    <div style="margin-top:4pt;">{{ employeeIdLineBn }} {{ employeeRankBn }}</div>
+                    <div>{{ employeeNameBn }}{{ employeeCorpsBn ? ', ' + employeeCorpsBn : '' }}</div>
+                    <div>{{ employeeUnitBn }}{{ employeeUnitLocationBn ? ', ' + employeeUnitLocationBn : '' }}</div>
+                </div>
+            </div>
+
+            <!-- Witness / Rule 78 block -->
+            <div style="margin-top:28pt; font-size:9pt;">
+                <div>
+                    বেসামরিক হিসাব পদ্ধতির ৭৮ নং বিধি অনুযায়ী আমি (গ্রহণকারী কর্মকর্তা)
+                </div>
+                <div style="border-bottom:1px dotted #000; height:14pt; margin-top:6pt;"></div>
+                <div style="border-bottom:1px dotted #000; height:14pt; margin-top:14pt;"></div>
+                <div style="border-bottom:1px dotted #000; height:14pt; margin-top:14pt;"></div>
+                <div style="margin-top:8pt;">
+                    সমুদয় স্থায়ী অগ্রিম লেনদেনের টাকা গ্রহণের প্রাপ্তি স্বীকার দিলাম
+                    <span style="display:inline-block; border-bottom:1px dotted #000; min-width:160pt;"></span>
+                    <span style="margin-left:8pt;">জেলা</span>
+                </div>
+
+                <!-- Bottom signature stubs (স্বাক্ষরঃ starts at 70% from left) -->
+                <div style="display:flex; margin-top:8pt;">
+                    <div style="flex:0 0 70%;">
+                        জেলাঃ
+                    </div>
+                    <div style="flex:0 0 30%;">
+                        স্বাক্ষরঃ
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@if (!loading && !error && movement) {
+    <app-movement-files-info [movement]="movement"></app-movement-files-info>
+}

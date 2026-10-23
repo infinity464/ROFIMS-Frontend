@@ -1,4 +1,6 @@
-import { Component } from '@angular/core';
+import { Component, inject } from '@angular/core';
+import { UserMenuService } from '@/services/user-menu.service';
+import { Router } from '@angular/router';
 import { FormConfig } from '../shared/models/formConfig';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { MasterBasicSetupService } from '../shared/services/MasterBasicSetupService';
@@ -18,9 +20,16 @@ import { SharedService } from '@/shared/services/shared-service';
     styleUrl: './trade.scss'
 })
 export class Trade {
+    private _router = inject(Router);
+    private _userMenuService = inject(UserMenuService);
+    canInsert = true;
+    canUpdate = true;
+    canDelete = true;
+
     codeType = 'Trade';
     title = 'Trade';
 
+    allData: any[] = [];
     commonData: any[] = [];
     editingId: number | null = null;
     commonForm!: FormGroup;
@@ -33,6 +42,7 @@ export class Trade {
     isSubmitting = false;
 
     corpsOptions: { label: string; value: any }[] = [];
+    allCorpsMap: Map<number, string> = new Map();
 
     formConfig: FormConfig = {
         formFields: [
@@ -40,15 +50,15 @@ export class Trade {
                 name: 'orgId',
                 label: 'Mother Organization',
                 type: 'select',
-                required: true,
-                options: []
+                required: false,
+                options: [] as { label: string; value: any }[]
             },
             {
                 name: 'corpsId',
                 label: 'Corps',
                 type: 'select',
-                required: true,
-                options: [],
+                required: false,
+                options: [] as { label: string; value: any }[],
                 dependsOn: 'orgId',
                 cascadeLoad: true
             },
@@ -68,8 +78,8 @@ export class Trade {
                 name: 'status',
                 label: 'Status',
                 type: 'select',
-                required: true,
-                default: true,
+                required: false,
+                default: null,
                 options: [
                     { label: 'Active', value: true },
                     { label: 'Inactive', value: false }
@@ -80,6 +90,8 @@ export class Trade {
 
     tableConfig: TableConfig = {
         tableColumns: [
+            { field: 'orgNameDisplay', header: 'Mother Organization' },
+            { field: 'corpsNameDisplay', header: 'Corps' },
             { field: 'codeValueEN', header: 'Trade Name (EN)' },
             { field: 'codeValueBN', header: 'Trade Name (BN)' },
             {
@@ -102,23 +114,31 @@ export class Trade {
     ) {}
 
     ngOnInit(): void {
+        const _perms = this._userMenuService.getPermissionsByRoute(this._router.url);
+        this.canInsert = _perms.canInsert;
+        this.canUpdate = _perms.canUpdate;
+        this.canDelete = _perms.canDelete;
+
         this.initForm();
+        this.setupFormValueChanges();
+        this.setupFormFilterListeners();
         this.loadActiveMotherOrgs();
-        this.setupFormValueChanges(); // ADD THIS LINE
-        this.getCommonCodeWithPaging({
-            first: this.first,
-            rows: this.rows
-        });
+    }
+
+    private setupFormFilterListeners() {
+        this.commonForm.get('orgId')?.valueChanges.subscribe(() => { this.first = 0; this.buildTableData(); });
+        this.commonForm.get('corpsId')?.valueChanges.subscribe(() => { this.first = 0; this.buildTableData(); });
+        this.commonForm.get('status')?.valueChanges.subscribe(() => { this.first = 0; this.buildTableData(); });
     }
 
     initForm() {
         this.commonForm = this.fb.group({
-            orgId: ['', Validators.required],
-            corpsId: ['', Validators.required],
+            orgId: [null],
+            corpsId: [null],
             codeValueEN: ['', Validators.required],
             codeValueBN: ['', Validators.required],
             sortOrder: [null],
-            status: [true, Validators.required],
+            status: [null],
             codeId: [0],
             codeType: ['Trade'],
             parentCodeId: [null],
@@ -135,7 +155,6 @@ export class Trade {
 
     setupFormValueChanges() {
         this.commonForm.get('orgId')?.valueChanges.subscribe((orgId) => {
-            console.log('OrgId changed:', orgId);
             if (orgId) {
                 // Reset corpsId when orgId changes
                 this.commonForm.patchValue({ corpsId: '' }, { emitEvent: false });
@@ -166,20 +185,22 @@ export class Trade {
             next: (motherOrgRanks) => {
                 const motherOrgOptions = motherOrgRanks.map((d) => ({
                     label: d.orgNameEN,
-                    value: d.orgId
+                    value: d.orgId,
+                    sortOrder: d.sortOrder
                 }));
 
                 const motherOrgField = this.formConfig.formFields.find((f) => f.name === 'orgId');
                 if (motherOrgField) {
                     motherOrgField.options = motherOrgOptions;
                 }
+                this.getAllData();
             },
             error: (err) => {
                 console.error('Error loading mother organizations:', err);
                 this.messageService.add({
                     severity: 'error',
                     summary: 'Error',
-                    detail: 'Failed to load mother organizations'
+                    detail: err?.error?.message || 'Failed to load mother organizations'
                 });
             }
         });
@@ -192,24 +213,22 @@ export class Trade {
 
         apiCall.subscribe({
             next: (corps) => {
-                this.corpsOptions = corps.map((d) => ({
-                    label: d.codeValueEN,
-                    value: d.codeId
-                }));
+        this.corpsOptions = corps.map((d) => ({
+            label: d.codeValueEN,
+            value: d.codeId
+        }));
 
-                const corpsField = this.formConfig.formFields.find((f) => f.name === 'corpsId');
-                if (corpsField) {
-                    corpsField.options = this.corpsOptions;
-                }
-
-                console.log('Corps loaded:', this.corpsOptions);
+        const corpsField = this.formConfig.formFields.find((f) => f.name === 'corpsId');
+        if (corpsField) {
+            corpsField.options = this.corpsOptions;
+        }
             },
             error: (err) => {
                 console.error('Error loading corps:', err);
                 this.messageService.add({
                     severity: 'error',
                     summary: 'Error',
-                    detail: 'Failed to load corps'
+                    detail: err?.error?.message || 'Failed to load corps'
                 });
             }
         });
@@ -225,35 +244,76 @@ export class Trade {
         }
     }
 
-    getCommonCodeWithPaging(event?: any) {
+    loadAllCorpsForDisplay() {
+        this.masterBasicSetupService.getAllByType('Corps').subscribe({
+            next: (corps) => {
+                this.allCorpsMap = new Map(corps.map((d: any) => [d.codeId, d.codeValueEN]));
+                this.buildTableData();
+            },
+            error: (err) => {
+                console.error('Error loading all corps for display:', err);
+            }
+        });
+    }
+
+    getAllData() {
         this.loading = true;
-        const pageNo = event ? event.first / event.rows + 1 : 1;
-        const pageSize = event?.rows ?? this.rows;
-
-        const apiCall = this.searchValue
-            ? this.masterBasicSetupService.getByKeyordWithPaging('Trade', this.searchValue, pageNo, pageSize)
-            : this.masterBasicSetupService.getAllWithPaging('Trade', pageNo, pageSize);
-
-        apiCall.subscribe({
+        this.masterBasicSetupService.getAllByType('Trade').subscribe({
             next: (res) => {
-                this.commonData = res.datalist;
-                this.totalRecords = res.pages.rows;
-                this.rows = pageSize;
+                this.allData = Array.isArray(res) ? res : [];
+                this.loadAllCorpsForDisplay();
                 this.loading = false;
             },
             error: (err) => {
                 console.error('Error fetching data:', err);
-                this.messageService.add({
-                    severity: 'error',
-                    summary: 'Error',
-                    detail: 'Failed to load data'
-                });
+                this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.message || 'Failed to load data' });
                 this.loading = false;
             }
         });
     }
 
+    private buildTableData() {
+        const orgOpts = (this.formConfig.formFields.find(f => f.name === 'orgId')?.options as { label: string; value: any }[]) || [];
+        const getOrgName = (id: number) => orgOpts.find((o: any) => o.value === id)?.label ?? '-';
+        const getCorpsName = (id: number) => this.allCorpsMap.get(id) ?? '-';
+        let list = this.allData.map((r: any) => ({ ...r, orgNameDisplay: getOrgName(r.orgId), corpsNameDisplay: getCorpsName(r.parentCodeId) }));
+        const orgId = this.commonForm?.get('orgId')?.value;
+        const corpsId = this.commonForm?.get('corpsId')?.value;
+        const status = this.commonForm?.get('status')?.value;
+        if (orgId != null && orgId !== '') list = list.filter((r: any) => r.orgId === orgId);
+        if (corpsId != null && corpsId !== '') list = list.filter((r: any) => r.parentCodeId === corpsId);
+        if (status != null) list = list.filter((r: any) => r.status === status);
+        const q = (this.searchValue ?? '').toLowerCase().trim();
+        if (q) list = list.filter((r: any) => r.codeValueEN?.toLowerCase().includes(q) || r.codeValueBN?.toLowerCase().includes(q));
+        // Order by Mother Organization's sort order first, then by the trade's own sort order.
+        const getOrgSortOrder = (id: number) =>
+            (orgOpts.find((o: any) => o.value === id) as any)?.sortOrder ?? Number.MAX_SAFE_INTEGER;
+        list.sort((a: any, b: any) => {
+            const parentDiff = getOrgSortOrder(a.orgId) - getOrgSortOrder(b.orgId);
+            if (parentDiff !== 0) return parentDiff;
+            return (a.sortOrder ?? 0) - (b.sortOrder ?? 0);
+        });
+        this.commonData = list;
+        this.totalRecords = list.length;
+        this.first = 0;
+    }
+
     submit(data: any) {
+        const orgId = this.commonForm.get('orgId')?.value;
+        const corpsId = this.commonForm.get('corpsId')?.value;
+        const status = this.commonForm.get('status')?.value;
+        if (orgId == null || orgId === '') {
+            this.messageService.add({ severity: 'warn', summary: 'Validation', detail: 'Please select Mother Organization' });
+            return;
+        }
+        if (corpsId == null || corpsId === '') {
+            this.messageService.add({ severity: 'warn', summary: 'Validation', detail: 'Please select Corps' });
+            return;
+        }
+        if (status == null) {
+            this.messageService.add({ severity: 'warn', summary: 'Validation', detail: 'Please select Status (Active or Inactive)' });
+            return;
+        }
         if (this.commonForm.invalid) {
             this.commonForm.markAllAsTouched();
             return;
@@ -287,10 +347,7 @@ export class Trade {
             next: (res) => {
                 console.log('Created:', res);
                 this.resetForm();
-                this.getCommonCodeWithPaging({
-                    first: this.first,
-                    rows: this.rows
-                });
+                this.getAllData();
                 this.messageService.add({
                     severity: 'success',
                     summary: 'Success',
@@ -303,7 +360,7 @@ export class Trade {
                 this.messageService.add({
                     severity: 'error',
                     summary: 'Error',
-                    detail: 'Failed to create trade'
+                    detail: err?.error?.message || 'Failed to create trade'
                 });
                 this.isSubmitting = false;
             }
@@ -325,10 +382,7 @@ export class Trade {
             next: (res) => {
                 console.log('Updated:', res);
                 this.resetForm();
-                this.getCommonCodeWithPaging({
-                    first: this.first,
-                    rows: this.rows
-                });
+                this.getAllData();
                 this.messageService.add({
                     severity: 'success',
                     summary: 'Success',
@@ -341,7 +395,7 @@ export class Trade {
                 this.messageService.add({
                     severity: 'error',
                     summary: 'Error',
-                    detail: 'Failed to update trade'
+                    detail: err?.error?.message || 'Failed to update trade'
                 });
                 this.isSubmitting = false;
             }
@@ -415,10 +469,7 @@ export class Trade {
             accept: () => {
                 this.masterBasicSetupService.delete(row.codeId).subscribe({
                     next: () => {
-                        this.getCommonCodeWithPaging({
-                            first: this.first,
-                            rows: this.rows
-                        });
+                        this.getAllData();
                         this.messageService.add({
                             severity: 'success',
                             summary: 'Success',
@@ -430,7 +481,7 @@ export class Trade {
                         this.messageService.add({
                             severity: 'error',
                             summary: 'Error',
-                            detail: 'Failed to delete trade'
+                            detail: err?.error?.message || 'Failed to delete trade'
                         });
                     }
                 });
@@ -448,12 +499,13 @@ export class Trade {
         }
         this.corpsOptions = [];
 
+        this.searchValue = '';
         this.commonForm.reset({
-            orgId: '',
-            corpsId: '',
+            orgId: null,
+            corpsId: null,
             codeId: 0,
             codeType: 'Trade',
-            status: true,
+            status: null,
             parentCodeId: null,
             commCode: null,
             displayCodeValueEN: null,
@@ -465,12 +517,13 @@ export class Trade {
             lastUpdatedBy: '',
             lastupdate: ''
         });
+        this.buildTableData();
     }
 
     onSearch(keyword: string) {
-        this.searchValue = keyword;
+        this.searchValue = keyword ?? '';
         this.first = 0;
-        this.getCommonCodeWithPaging({ first: 0, rows: this.rows });
+        this.buildTableData();
     }
 
     private getCurrentUser(): string {

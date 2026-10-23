@@ -1,0 +1,143 @@
+<p-toast></p-toast>
+<p-confirmDialog></p-confirmDialog>
+
+<p-fluid>
+    <div class="card">
+        <div class="font-semibold text-xl mb-5">Mother Organization Office Head</div>
+        <form [formGroup]="officeHeadForm" (ngSubmit)="onSubmit()">
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
+                <!-- Mother Organization -->
+                <div class="field">
+                    <label for="motherOrgId" class="block mb-2">
+                        Mother Organization
+                        <span class="text-red-500">*</span>
+                    </label>
+                    <p-select id="motherOrgId" formControlName="motherOrgId" [options]="motherOrgOptions"
+                        optionLabel="label" optionValue="value" placeholder="Select Mother Organization"
+                        [showClear]="true" [filter]="true" filterPlaceholder="Search" styleClass="w-full"></p-select>
+                    @if (officeHeadForm.get('motherOrgId')?.invalid && officeHeadForm.get('motherOrgId')?.touched) {
+                    <small class="text-red-500 block mt-1">Mother Organization is required</small>
+                    }
+                </div>
+
+                <!-- Mother Org Unit(s) -->
+                <div class="field">
+                    <label for="unitOrgIds" class="block mb-2">
+                        Mother Org Unit(s)
+                        <span class="text-red-500">*</span>
+                    </label>
+                    <p-multiSelect id="unitOrgIds" formControlName="unitOrgIds" [options]="unitOptions"
+                        optionLabel="label" optionValue="value" placeholder="Select Unit(s)" styleClass="w-full"
+                        [showClear]="true" [filter]="true" display="chip"
+                        [disabled]="!officeHeadForm.get('motherOrgId')?.value"></p-multiSelect>
+                    @if (officeHeadForm.get('unitOrgIds')?.invalid && officeHeadForm.get('unitOrgIds')?.touched) {
+                    <small class="text-red-500 block mt-1">At least one unit is required</small>
+                    }
+                </div>
+
+                <!-- Head Name (English) -->
+                <div class="field">
+                    <label for="headNameEN" class="block mb-2">
+                        Head Name (English)
+                        <span class="text-red-500">*</span>
+                    </label>
+                    <input pInputText id="headNameEN" formControlName="headNameEN" placeholder="Enter head name"
+                        class="w-full" />
+                    @if (officeHeadForm.get('headNameEN')?.invalid && officeHeadForm.get('headNameEN')?.touched) {
+                    <small class="text-red-500 block mt-1">Head Name (English) is required</small>
+                    }
+                </div>
+
+                <!-- Head Name (Bangla) -->
+                <div class="field">
+                    <label for="headNameBN" class="block mb-2">
+                        Head Name (Bangla)
+                        <span class="text-red-500">*</span>
+                    </label>
+                    <input pInputText id="headNameBN" formControlName="headNameBN" placeholder="Enter head name (Bangla)"
+                        class="w-full" />
+                    @if (officeHeadForm.get('headNameBN')?.invalid && officeHeadForm.get('headNameBN')?.touched) {
+                    <small class="text-red-500 block mt-1">Head Name (Bangla) is required</small>
+                    }
+                </div>
+
+                <!-- Status (update only, absolute last) -->
+                @if (editingId) {
+                    <div class="field">
+                        <label for="status" class="block mb-2">Status</label>
+                        <p-select id="status" formControlName="status" [options]="statusOptions" optionLabel="label"
+                            optionValue="value" placeholder="Select status" styleClass="w-full"></p-select>
+                    </div>
+                }
+            </div>
+
+            <!-- Buttons -->
+            <div class="flex justify-end gap-2">
+                <p-button [label]="editingId ? 'Update' : 'Save'" type="submit"
+                    [class.perm-hidden]="editingId ? !canUpdate : !canInsert"
+                    [disabled]="officeHeadForm.invalid || isSubmitting || (editingId ? !canUpdate : !canInsert)"></p-button>
+                <p-button label="Reset" icon="pi pi-refresh" severity="secondary" (onClick)="onReset()" type="button"
+                    [disabled]="isSubmitting"></p-button>
+            </div>
+        </form>
+    </div>
+</p-fluid>
+
+<div class="card mt-4">
+    <div class="mb-4 flex justify-end">
+        <p-iconfield iconPosition="left" class="w-full max-w-md">
+            <p-inputicon>
+                <i class="pi pi-search"></i>
+            </p-inputicon>
+            <input pInputText type="text" placeholder="Search keyword" [(ngModel)]="searchValue"
+                [ngModelOptions]="{ standalone: true }" (ngModelChange)="onSearch()" />
+        </p-iconfield>
+    </div>
+
+    <p-table [value]="filteredOfficeHeads" [paginator]="true" [(first)]="first" [rows]="rows"
+        [rowsPerPageOptions]="[10, 25, 50]" sortMode="single" styleClass="p-datatable-sm">
+        <ng-template pTemplate="header">
+            <tr>
+                <th style="width: 5%">#</th>
+                <th>Mother Organization</th>
+                <th>Head Name (English)</th>
+                <th>Head Name (Bangla)</th>
+                <th>Mother Org Unit(s)</th>
+                <th>Status</th>
+                <th style="width: 15%">Action</th>
+            </tr>
+        </ng-template>
+
+        <ng-template pTemplate="body" let-row let-rowIndex="rowIndex">
+            <tr>
+                <td>{{ rowIndex + 1 }}</td>
+                <td>{{ row.motherOrgDisplay || '-' }}</td>
+                <td>{{ row.headNameEN }}</td>
+                <td>{{ row.headNameBN || '-' }}</td>
+                <td>{{ row.unitsDisplay || '-' }}</td>
+                <td>
+                    <span [ngClass]="{
+                        'text-green-600 font-semibold': row.status,
+                        'text-red-600 font-semibold': !row.status
+                    }">
+                        {{ row.status ? 'Active' : 'Inactive' }}
+                    </span>
+                </td>
+                <td>
+                    <div class="flex gap-2">
+                        <button class="mx-2" pButton icon="pi pi-pencil" [class.perm-hidden]="!canUpdate"
+                            (click)="onEdit(row)"></button>
+                        <button pButton icon="pi pi-trash" [class.perm-hidden]="!canDelete"
+                            (click)="onDelete(row, $event)" class="p-button-danger"></button>
+                    </div>
+                </td>
+            </tr>
+        </ng-template>
+
+        <ng-template pTemplate="emptymessage">
+            <tr>
+                <td colspan="7" class="text-center">No office heads found.</td>
+            </tr>
+        </ng-template>
+    </p-table>
+</div>

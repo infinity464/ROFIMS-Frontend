@@ -1,0 +1,25 @@
+.eq-card {
+    background: var(--p-content-background);
+    transition: border-color 0.15s ease, background 0.15s ease;
+
+    &:hover {
+        border-color: var(--p-primary-color);
+    }
+}
+
+.eq-chip {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.25rem 0.75rem;
+    border-radius: 9999px;
+    font-size: 0.875rem;
+    font-weight: 600;
+    line-height: 1.25rem;
+    color: var(--p-text-color);
+    background: var(--p-surface-200);
+}
+
+:host-context(.app-dark) .eq-chip {
+    background: var(--p-surface-700);
+    color: var(--p-surface-0);
+}

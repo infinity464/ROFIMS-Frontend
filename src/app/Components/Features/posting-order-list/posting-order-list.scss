@@ -1,0 +1,19 @@
+.posting-order-list {
+    .form-card {
+        background: var(--surface-card);
+        border-radius: 12px;
+        padding: 1.5rem;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    }
+
+    .form-card-header {
+        margin-bottom: 1rem;
+    }
+
+    .form-card-title {
+        margin: 0;
+        font-size: 1.25rem;
+        font-weight: 600;
+        color: var(--text-color);
+    }
+}

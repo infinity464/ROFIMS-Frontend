@@ -1,0 +1,424 @@
+<p-toast position="top-center"></p-toast>
+<p-confirmDialog></p-confirmDialog>
+
+<div class="card">
+    <div class="flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
+        <h2 class="m-0 text-2xl font-bold text-900">Menu Management</h2>
+        <div class="flex gap-2">
+            <p-button label="Refresh" icon="pi pi-refresh" severity="info" [outlined]="true" (onClick)="loadMenus()"></p-button>
+            <p-button label="Add Root Menu" icon="pi pi-plus" (onClick)="openNewDialog()"></p-button>
+        </div>
+    </div>
+
+    <!-- Filters -->
+    <div class="flex flex-wrap gap-3 align-items-center mb-4">
+        <p-iconfield>
+            <p-inputicon styleClass="pi pi-search"></p-inputicon>
+            <input pInputText type="text" [(ngModel)]="searchValue" (input)="applyFilters()" placeholder="Search menus..." />
+        </p-iconfield>
+        <p-select [options]="menuTypeFilterOptions" [(ngModel)]="selectedTypeFilter" optionLabel="label" optionValue="value" placeholder="All Types" [showClear]="true" (onChange)="applyFilters()" styleClass="w-12rem"></p-select>
+        <p-select [options]="statusFilterOptions" [(ngModel)]="selectedStatusFilter" optionLabel="label" optionValue="value" placeholder="All Status" [showClear]="true" (onChange)="applyFilters()" styleClass="w-10rem"></p-select>
+        <p-button icon="pi pi-filter-slash" severity="secondary" [outlined]="true" [text]="true" pTooltip="Clear Filters" (onClick)="clearFilters()"></p-button>
+
+        <span class="mx-1" style="border-left: 1px solid var(--surface-border); height: 2rem;"></span>
+
+        <p-button label="Expand All" icon="pi pi-angle-double-down" severity="secondary" [outlined]="true" size="small" (onClick)="expandAll()"></p-button>
+        <p-button label="Collapse All" icon="pi pi-angle-double-up" severity="secondary" [outlined]="true" size="small" (onClick)="collapseAll()"></p-button>
+    </div>
+
+    <!-- Tree Table -->
+    <p-treeTable
+        [value]="filteredTreeData"
+        [loading]="loading"
+        [paginator]="true"
+        [rows]="rows"
+        [rowsPerPageOptions]="[10, 25, 50, 100]"
+        [totalRecords]="totalRecords"
+        [showCurrentPageReport]="true"
+        currentPageReportTemplate="Showing {first} to {last} of {totalRecords} menus"
+        [tableStyle]="{ 'table-layout': 'fixed', 'width': '100%' }">
+
+        <ng-template pTemplate="colgroup">
+            <colgroup>
+                <col style="width: 26%">
+                <!-- <col style="width: 18%"> Menu Name (BN) - hidden -->
+                <col style="width: 12%">
+                <col style="width: 22%">
+                <col style="width: 8%">
+                <col style="width: 8%">
+                <col style="width: 8%">
+                <col style="width: 16%">
+            </colgroup>
+        </ng-template>
+
+        <ng-template pTemplate="header">
+            <tr>
+                <th>Menu Name (EN)</th>
+                <!-- <th>Menu Name (BN)</th> -->
+                <th class="text-center">Type</th>
+                <th>Route / URL</th>
+                <th class="text-center">Order</th>
+                <th class="text-center">Visible</th>
+                <th class="text-center">Active</th>
+                <th class="text-center">Actions</th>
+            </tr>
+        </ng-template>
+
+        <ng-template pTemplate="body" let-rowNode let-rowData="rowData">
+            <tr [class.parent-row]="!rowData.parentMenuId">
+                <td class="cell-nowrap">
+                    <p-treeTableToggler [rowNode]="rowNode"></p-treeTableToggler>
+                    @if (rowData.iconName) {
+                        <i [class]="getIconClass(rowData)" class="mr-2 text-primary"></i>
+                    }
+                    <span [class]="rowData.parentMenuId ? 'text-700' : 'font-bold text-900'">{{ rowData.menuNameEn }}</span>
+                </td>
+                <!-- <td class="cell-nowrap">
+                    <span class="text-700">{{ rowData.menuNameBangla || '-' }}</span>
+                </td> -->
+                <td class="text-center">
+                    <p-tag [value]="getMenuTypeLabel(rowData.menuType)" [severity]="getMenuTypeSeverity(rowData.menuType)" [style]="{'font-size': '0.75rem'}"></p-tag>
+                </td>
+                <td class="cell-nowrap">
+                    @if (getRouteDisplay(rowData) !== '-') {
+                        <code class="route-code">{{ getRouteDisplay(rowData) }}</code>
+                    } @else {
+                        <span class="text-400">-</span>
+                    }
+                </td>
+                <td class="text-center">
+                    <span class="font-medium">{{ rowData.sortOrder }}</span>
+                </td>
+                <td class="text-center">
+                    @if (rowData.isVisible) {
+                        <i class="pi pi-check-circle text-green-500"></i>
+                    } @else {
+                        <i class="pi pi-times-circle text-red-400"></i>
+                    }
+                </td>
+                <td class="text-center">
+                    @if (rowData.isActive) {
+                        <i class="pi pi-check-circle text-green-500"></i>
+                    } @else {
+                        <i class="pi pi-times-circle text-red-400"></i>
+                    }
+                </td>
+                <td class="text-center">
+                    <div class="flex flex-nowrap gap-1 justify-content-center">
+                        <p-button icon="pi pi-eye" size="small" [rounded]="true" [text]="true" severity="info" pTooltip="View" tooltipPosition="top" (onClick)="openViewDialog(rowData)"></p-button>
+                        @if (rowData.menuType === MenuType.Header) {
+                            <p-button icon="pi pi-plus" size="small" [rounded]="true" [text]="true" severity="success" pTooltip="Add Child" tooltipPosition="top" (onClick)="openNewDialog(rowData.id)"></p-button>
+                        }
+                        <p-button icon="pi pi-pencil" [class.perm-hidden]="!canUpdate" size="small" [rounded]="true" [text]="true" pTooltip="Edit" tooltipPosition="top" (onClick)="openEditDialog(rowData)"></p-button>
+                        <p-button icon="pi pi-trash" [class.perm-hidden]="!canDelete" size="small" [rounded]="true" [text]="true" severity="danger" pTooltip="Delete" tooltipPosition="top" (onClick)="confirmDelete(rowData, $event)"></p-button>
+                    </div>
+                </td>
+            </tr>
+        </ng-template>
+
+        <ng-template pTemplate="emptymessage">
+            <tr>
+                <td colspan="7" class="text-center p-4">
+                    <div class="flex flex-column align-items-center gap-3 py-5">
+                        <i class="pi pi-bars text-5xl text-400"></i>
+                        <span class="text-lg text-500">No menus found. Click "Add Root Menu" to create one.</span>
+                    </div>
+                </td>
+            </tr>
+        </ng-template>
+    </p-treeTable>
+</div>
+
+<!-- Create/Edit Dialog -->
+<p-dialog
+    [header]="editingId ? 'Edit Menu' : 'Create Menu'"
+    [(visible)]="dialogVisible"
+    [modal]="true"
+    [style]="{ width: '720px' }"
+    [closable]="true"
+    [draggable]="false">
+
+    <form [formGroup]="menuForm" (ngSubmit)="saveMenu()">
+        <!-- Basic Info -->
+        <div class="font-semibold text-lg mb-3 text-primary">Basic Information</div>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+            <div>
+                <label class="font-medium block mb-2">Menu Name (English) <span class="text-red-500">*</span></label>
+                <input pInputText formControlName="menuNameEn" placeholder="Enter menu name" class="w-full" />
+                @if (menuForm.get('menuNameEn')?.invalid && menuForm.get('menuNameEn')?.touched) {
+                    <small class="text-red-500 block mt-1">Menu name is required</small>
+                }
+            </div>
+            <!-- <div>
+                <label class="font-medium block mb-2">Menu Name (Bangla)</label>
+                <input pInputText formControlName="menuNameBangla" placeholder="মেনু নাম লিখুন" class="w-full" />
+            </div> -->
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+            <div>
+                <label class="font-medium block mb-2">Parent Menu</label>
+                <p-select [options]="parentOptions" formControlName="parentMenuId" optionLabel="label" optionValue="value" placeholder="Select Parent" styleClass="w-full" [showClear]="true"></p-select>
+            </div>
+            <div>
+                <label class="font-medium block mb-2">Menu Type <span class="text-red-500">*</span></label>
+                <p-select [options]="menuTypeOptions" formControlName="menuType" optionLabel="label" optionValue="value" placeholder="Select Type" styleClass="w-full"></p-select>
+            </div>
+        </div>
+
+        <!-- Routing (shown when menuType = AngularRoute) -->
+        @if (selectedMenuType === MenuType.AngularRoute) {
+            <div class="font-semibold text-lg mb-3 mt-4 text-primary">Routing</div>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                <div>
+                    <label class="font-medium block mb-2">Router Path</label>
+                    <input pInputText formControlName="routerName" placeholder="e.g. /dashboard" class="w-full" />
+                </div>
+                <div>
+                    <label class="font-medium block mb-2">Router Outlet</label>
+                    <input pInputText formControlName="routerOutlet" placeholder="e.g. primary" class="w-full" />
+                </div>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                <div class="flex align-items-center gap-2">
+                    <p-checkbox formControlName="exactMatch" [binary]="true" inputId="exactMatch"></p-checkbox>
+                    <label for="exactMatch" class="font-medium cursor-pointer">Exact Match</label>
+                </div>
+            </div>
+        }
+
+        <!-- External Link (shown when menuType = ExternalLink) -->
+        @if (selectedMenuType === MenuType.ExternalLink) {
+            <div class="font-semibold text-lg mb-3 mt-4 text-primary">External Link</div>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                <div>
+                    <label class="font-medium block mb-2">URL</label>
+                    <input pInputText formControlName="url" placeholder="https://example.com" class="w-full" />
+                </div>
+                <div>
+                    <label class="font-medium block mb-2">Target</label>
+                    <p-select [options]="linkTargetOptions" formControlName="target" optionLabel="label" optionValue="value" styleClass="w-full"></p-select>
+                </div>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                <div class="flex align-items-center gap-2">
+                    <p-checkbox formControlName="isExternal" [binary]="true" inputId="isExternal"></p-checkbox>
+                    <label for="isExternal" class="font-medium cursor-pointer">Is External</label>
+                </div>
+            </div>
+        }
+
+        <!-- Appearance -->
+        <div class="font-semibold text-lg mb-3 mt-4 text-primary">Appearance</div>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+            <div>
+                <label class="font-medium block mb-2">Icon Name</label>
+                <input pInputText formControlName="iconName" placeholder="e.g. pi-home" class="w-full" />
+            </div>
+            <div>
+                <label class="font-medium block mb-2">Icon Type</label>
+                <p-select [options]="iconTypeOptions" formControlName="iconType" optionLabel="label" optionValue="value" styleClass="w-full"></p-select>
+            </div>
+            <div>
+                <label class="font-medium block mb-2">CSS Class</label>
+                <input pInputText formControlName="cssClass" placeholder="Custom CSS class" class="w-full" />
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+            <div>
+                <label class="font-medium block mb-2">Sort Order</label>
+                <p-inputNumber formControlName="sortOrder" [showButtons]="true" [min]="0" [max]="9999" styleClass="w-full"></p-inputNumber>
+            </div>
+        </div>
+
+        <!-- Settings -->
+        <div class="font-semibold text-lg mb-3 mt-4 text-primary">Settings</div>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+            <div class="flex align-items-center gap-2">
+                <p-checkbox formControlName="isVisible" [binary]="true" inputId="isVisible"></p-checkbox>
+                <label for="isVisible" class="font-medium cursor-pointer">Visible</label>
+            </div>
+            <div class="flex align-items-center gap-2">
+                <p-checkbox formControlName="isActive" [binary]="true" inputId="isActive"></p-checkbox>
+                <label for="isActive" class="font-medium cursor-pointer">Active</label>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+            <div>
+                <label class="font-medium block mb-2">Permission Key</label>
+                <input pInputText formControlName="permissionKey" placeholder="e.g. menu.admin" class="w-full" />
+            </div>
+            <div>
+                <label class="font-medium block mb-2">Route Params (JSON)</label>
+                <textarea pTextarea formControlName="routeParamsJson" rows="2" placeholder='{"key": "value"}' class="w-full"></textarea>
+            </div>
+        </div>
+
+        <!-- Footer Buttons -->
+        <div class="flex justify-end gap-2 mt-4 pt-3" style="border-top: 1px solid var(--surface-border)">
+            <p-button type="button" label="Cancel" severity="secondary" [outlined]="true" (onClick)="dialogVisible = false"></p-button>
+            <p-button type="submit" [label]="editingId ? 'Update' : 'Save'" [loading]="isSubmitting" [disabled]="menuForm.invalid || isSubmitting"></p-button>
+        </div>
+    </form>
+</p-dialog>
+
+<!-- View Details Dialog -->
+<p-dialog
+    header="Menu Details"
+    [(visible)]="viewDialogVisible"
+    [modal]="true"
+    [style]="{ width: '650px' }"
+    [closable]="true"
+    [draggable]="false">
+
+    @if (viewingMenu) {
+        <!-- Header with icon and name -->
+        <div class="flex align-items-center gap-3 mb-4 pb-3" style="border-bottom: 2px solid var(--primary-color)">
+            @if (viewingMenu.iconName) {
+                <i [class]="getIconClass(viewingMenu)" style="font-size: 2rem; color: var(--primary-color)"></i>
+            }
+            <div>
+                <div class="text-xl font-bold text-900">{{ viewingMenu.menuNameEn }}</div>
+                <!-- @if (viewingMenu.menuNameBangla) {
+                    <div class="text-lg text-600">{{ viewingMenu.menuNameBangla }}</div>
+                } -->
+            </div>
+            <div class="ml-auto">
+                <p-tag [value]="getMenuTypeLabel(viewingMenu.menuType)" [severity]="getMenuTypeSeverity(viewingMenu.menuType)"></p-tag>
+            </div>
+        </div>
+
+        <!-- Details Grid -->
+        <div class="grid grid-cols-2 gap-x-4 gap-y-3">
+            <!-- Basic Info -->
+            <div class="detail-label">ID</div>
+            <div class="detail-value">{{ viewingMenu.id }}</div>
+
+            <div class="detail-label">Parent Menu</div>
+            <div class="detail-value">{{ getParentName(viewingMenu.parentMenuId) }}</div>
+
+            <div class="detail-label">Menu Type</div>
+            <div class="detail-value">
+                <p-tag [value]="getMenuTypeLabel(viewingMenu.menuType)" [severity]="getMenuTypeSeverity(viewingMenu.menuType)" [style]="{'font-size': '0.75rem'}"></p-tag>
+            </div>
+
+            <div class="detail-label">Sort Order</div>
+            <div class="detail-value">{{ viewingMenu.sortOrder }}</div>
+
+            <!-- Routing -->
+            @if (viewingMenu.menuType === MenuType.AngularRoute) {
+                <div class="col-span-2 font-semibold text-primary mt-2 mb-1">Routing</div>
+
+                <div class="detail-label">Router Path</div>
+                <div class="detail-value">
+                    @if (viewingMenu.routerName) {
+                        <code class="route-code">{{ viewingMenu.routerName }}</code>
+                    } @else {
+                        <span class="text-400">-</span>
+                    }
+                </div>
+
+                <div class="detail-label">Router Outlet</div>
+                <div class="detail-value">{{ viewingMenu.routerOutlet || '-' }}</div>
+
+                <div class="detail-label">Exact Match</div>
+                <div class="detail-value">
+                    @if (viewingMenu.exactMatch) {
+                        <i class="pi pi-check-circle text-green-500 mr-1"></i> Yes
+                    } @else {
+                        <i class="pi pi-times-circle text-red-400 mr-1"></i> No
+                    }
+                </div>
+            }
+
+            <!-- External Link -->
+            @if (viewingMenu.menuType === MenuType.ExternalLink) {
+                <div class="col-span-2 font-semibold text-primary mt-2 mb-1">External Link</div>
+
+                <div class="detail-label">URL</div>
+                <div class="detail-value" style="word-break: break-all;">{{ viewingMenu.url || '-' }}</div>
+
+                <div class="detail-label">Target</div>
+                <div class="detail-value">{{ viewingMenu.target || '-' }}</div>
+
+                <div class="detail-label">Is External</div>
+                <div class="detail-value">
+                    @if (viewingMenu.isExternal) {
+                        <i class="pi pi-check-circle text-green-500 mr-1"></i> Yes
+                    } @else {
+                        <i class="pi pi-times-circle text-red-400 mr-1"></i> No
+                    }
+                </div>
+            }
+
+            <!-- Appearance -->
+            <div class="col-span-2 font-semibold text-primary mt-2 mb-1">Appearance</div>
+
+            <div class="detail-label">Icon</div>
+            <div class="detail-value">
+                @if (viewingMenu.iconName) {
+                    <i [class]="getIconClass(viewingMenu)" class="mr-2"></i>
+                    <span>{{ viewingMenu.iconName }}</span>
+                    <span class="text-400 ml-1">({{ viewingMenu.iconType }})</span>
+                } @else {
+                    <span class="text-400">-</span>
+                }
+            </div>
+
+            <div class="detail-label">CSS Class</div>
+            <div class="detail-value">{{ viewingMenu.cssClass || '-' }}</div>
+
+            <!-- Settings -->
+            <div class="col-span-2 font-semibold text-primary mt-2 mb-1">Settings</div>
+
+            <div class="detail-label">Visible</div>
+            <div class="detail-value">
+                @if (viewingMenu.isVisible) {
+                    <i class="pi pi-check-circle text-green-500 mr-1"></i> Yes
+                } @else {
+                    <i class="pi pi-times-circle text-red-400 mr-1"></i> No
+                }
+            </div>
+
+            <div class="detail-label">Active</div>
+            <div class="detail-value">
+                @if (viewingMenu.isActive) {
+                    <i class="pi pi-check-circle text-green-500 mr-1"></i> Yes
+                } @else {
+                    <i class="pi pi-times-circle text-red-400 mr-1"></i> No
+                }
+            </div>
+
+            <div class="detail-label">Permission Key</div>
+            <div class="detail-value">{{ viewingMenu.permissionKey || '-' }}</div>
+
+            @if (viewingMenu.routeParamsJson) {
+                <div class="detail-label">Route Params</div>
+                <div class="detail-value"><code class="route-code">{{ viewingMenu.routeParamsJson }}</code></div>
+            }
+
+            <!-- Audit -->
+            <div class="col-span-2 font-semibold text-primary mt-2 mb-1">Audit Info</div>
+
+            <div class="detail-label">Created By</div>
+            <div class="detail-value">{{ viewingMenu.createdBy }}</div>
+
+            <div class="detail-label">Created Date</div>
+            <div class="detail-value">{{ viewingMenu.createdDate | date:'medium' }}</div>
+
+            <div class="detail-label">Last Updated By</div>
+            <div class="detail-value">{{ viewingMenu.lastUpdatedBy }}</div>
+
+            <div class="detail-label">Last Updated</div>
+            <div class="detail-value">{{ viewingMenu.lastupdate | date:'medium' }}</div>
+        </div>
+
+        <!-- Footer -->
+        <div class="flex justify-end gap-2 mt-4 pt-3" style="border-top: 1px solid var(--surface-border)">
+            <p-button label="Edit" icon="pi pi-pencil" [class.perm-hidden]="!canUpdate" severity="info" [outlined]="true" (onClick)="viewDialogVisible = false; openEditDialog(viewingMenu)"></p-button>
+            <p-button label="Close" severity="secondary" [outlined]="true" (onClick)="viewDialogVisible = false"></p-button>
+        </div>
+    }
+</p-dialog>

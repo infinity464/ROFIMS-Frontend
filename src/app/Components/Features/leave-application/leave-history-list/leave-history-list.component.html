@@ -1,0 +1,139 @@
+<p-toast position="top-center"></p-toast>
+
+<div class="employee-reports-page">
+    <!-- Header + collapsible search -->
+    <div class="report-filter-card">
+        <div class="report-filter-card-title leave-app-header-row">
+            <div>
+                <h1 class="report-page-title">Leave Application History</h1>
+                <p class="page-subtitle">Full administrative view of every leave application across the organization.</p>
+            </div>
+            <div class="header-status-filter">
+                <label for="historyStatusFilter" class="filter-label">Status:</label>
+                <p-select
+                    inputId="historyStatusFilter"
+                    [options]="statusOptions"
+                    [(ngModel)]="statusFilter"
+                    optionLabel="label"
+                    optionValue="value"
+                    (onChange)="onStatusFilterChange()"
+                    styleClass="leave-history-status-select"
+                    appendTo="body">
+                </p-select>
+            </div>
+        </div>
+
+        <div class="report-filter-header" [class.open]="filterOpen" (click)="toggleFilter()" role="button" tabindex="0" (keydown.enter)="toggleFilter()" (keydown.space)="toggleFilter()">
+            <div class="report-filter-header-left">
+                <div class="report-filter-icon">
+                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                        <path d="M2 4h12M4 8h8M6 12h4" stroke="var(--primary-color)" stroke-width="1.8" stroke-linecap="round"/>
+                    </svg>
+                </div>
+                <div>
+                    <div class="report-filter-title">Search &amp; filter</div>
+                    <div class="report-filter-subtitle">By RAB ID, Service ID, date range, status</div>
+                </div>
+            </div>
+            <div class="report-filter-header-right">
+                <span class="report-filters-badge" [class.show]="activeFilterCount > 0">{{ activeFilterCount }} active</span>
+                <div class="report-chevron">
+                    <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+                        <path d="M2 4l4 4 4-4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                </div>
+            </div>
+        </div>
+
+        <div class="report-filter-body" [class.open]="filterOpen">
+            <div class="report-filter-body-inner">
+                <div class="report-fields-row">
+                    <div class="report-filter-field">
+                        <label>RAB ID</label>
+                        <input pInputText type="text" [(ngModel)]="filterRabId" placeholder="RAB ID" class="w-full" />
+                    </div>
+                    <div class="report-filter-field">
+                        <label>Service ID</label>
+                        <input pInputText type="text" [(ngModel)]="filterServiceId" placeholder="Service ID" class="w-full" />
+                    </div>
+                </div>
+                <div class="report-fields-row">
+                    <div class="report-filter-field report-filter-field-date">
+                        <label>From Date</label>
+                        <p-datepicker [(ngModel)]="filterFromDate" dateFormat="dd-mm-yy" [showIcon]="true" placeholder="From" styleClass="w-full" appendTo="body"></p-datepicker>
+                    </div>
+                    <div class="report-filter-field report-filter-field-date">
+                        <label>To Date</label>
+                        <p-datepicker [(ngModel)]="filterToDate" dateFormat="dd-mm-yy" [showIcon]="true" placeholder="To" styleClass="w-full" appendTo="body"></p-datepicker>
+                    </div>
+                </div>
+                <div class="report-filter-actions">
+                    <button type="button" class="report-btn-secondary" (click)="clearFilter()"><i class="pi pi-times mr-1"></i>Clear</button>
+                    <button type="button" class="report-btn-primary" (click)="search()"><i class="pi pi-search mr-1"></i>Search</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Results card -->
+    <div class="report-filter-card">
+        <h3 class="report-panel-title">Applications ({{ totalRecords }})</h3>
+        <p-table
+            [value]="currentList"
+            dataKey="leaveApplicationId"
+            [tableStyle]="{ 'min-width': '70rem' }"
+            styleClass="p-datatable-sm"
+            [loading]="loading"
+            [lazy]="true"
+            [paginator]="true"
+            [(first)]="firstRow"
+            [rows]="pageSize"
+            [totalRecords]="totalRecords"
+            [rowsPerPageOptions]="[5, 10, 20, 50]"
+            (onLazyLoad)="onLazyLoad($event)">
+            <ng-template pTemplate="header">
+                <tr>
+                    <th style="width: 4rem;">Ser</th>
+                    <th>Applicant</th>
+                    <th>Unit</th>
+                    <th>Appointment</th>
+                    <th>From</th>
+                    <th>To</th>
+                    <th>Total Days</th>
+                    <th>Reliever</th>
+                    <th>Status</th>
+                    <th>Action</th>
+                </tr>
+            </ng-template>
+            <ng-template pTemplate="body" let-row let-i="rowIndex">
+                <tr>
+                    <td>{{ firstRow + i + 1 }}</td>
+                    <td>{{ getApplicantName(row.applicantEmployeeId) }}</td>
+                    <td>{{ getApplicantUnit(row.applicantEmployeeId) }}</td>
+                    <td>{{ getApplicantAppointment(row.applicantEmployeeId) }}</td>
+                    <td>{{ formatDate(row.fromDate) }}</td>
+                    <td>{{ formatDate(row.toDate) }}</td>
+                    <td>{{ getTotalDays(row.fromDate, row.toDate) }}</td>
+                    <td>{{ getApplicantName(row.relieverEmployeeId) }}</td>
+                    <td>
+                        <span class="status-pill" [ngClass]="getPresentStatus(row).cssClass">
+                            {{ getPresentStatus(row).label }}
+                        </span>
+                    </td>
+                    <td>
+                        <div class="leave-history-actions">
+                            @if (row.leaveApplicationStatusId !== 3) {
+                                <button type="button" class="report-btn-secondary" [routerLink]="['/leave-application/preview']" [queryParams]="{ id: row.leaveApplicationId }" title="Preview"><i class="pi pi-eye"></i></button>
+                            } @else {
+                                <button type="button" class="report-btn-secondary" [routerLink]="['/leave-application/card']" [queryParams]="{ id: row.leaveApplicationId }" title="Leave Card"><i class="pi pi-id-card"></i></button>
+                            }
+                        </div>
+                    </td>
+                </tr>
+            </ng-template>
+            <ng-template pTemplate="emptymessage">
+                <tr><td colspan="10" class="text-center p-4">No applications found.</td></tr>
+            </ng-template>
+        </p-table>
+    </div>
+</div>

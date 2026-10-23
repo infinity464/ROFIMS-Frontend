@@ -1,0 +1,372 @@
+/* ── Page wrapper ─────────────────────────────────── */
+:host {
+    display: block;
+    background: #d8d8d8;
+    min-height: 100vh;
+}
+
+.leave-card-page {
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+}
+
+/* ── Toolbar ──────────────────────────────────────── */
+/* Transparent + no bottom border so the host's #d8d8d8 background flows
+   through, matching the leave-preview look (gray everywhere, white paper).
+   Constrained to the same 210mm width as .lc-paper and centered, so Back
+   sits above the card's left edge and English/Export above its right edge. */
+.leave-card-toolbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+    max-width: 210mm;
+    margin: 0 auto;
+    padding: 0.6rem 0;
+    background: transparent;
+    border-bottom: none;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+}
+
+.leave-card-toolbar-right {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.leave-card-loading,
+.leave-card-empty {
+    text-align: center;
+    padding: 40px;
+    color: var(--text-color-secondary, #777);
+    font-size: 0.95rem;
+}
+
+/* ── A4 Paper ─────────────────────────────────────── */
+.lc-paper-container {
+    display: flex;
+    justify-content: center;
+    padding: 2rem;
+}
+
+.lc-paper {
+    width: 210mm;
+    min-height: 297mm;
+    padding: 18mm 16mm;
+    background: #fff;
+    box-shadow: 0 6px 24px rgba(0, 0, 0, 0.25);
+    box-sizing: border-box;
+    color: #000;
+    /* SolaimanLipi (bundled, see styles.scss) is the Bangla face; Times New Roman
+       stays first so Latin text and digits are unchanged. */
+    font-family: 'Times New Roman', 'SolaimanLipi', serif;
+    font-size: 10pt;
+    line-height: 1.7;
+}
+
+/* ── Org header (govt + police + unit lines) ──────── */
+.lc-org-header {
+    text-align: center;
+    margin-bottom: 14px;
+}
+
+.lc-org-line {
+    font-weight: 600;
+    font-size: 10pt;
+    line-height: 1.55;
+}
+
+/* The first two lines are the gov / police title and should read slightly larger
+   than the unit-name and address lines below. */
+.lc-org-header > .lc-org-line {
+    font-size: 12pt;
+}
+
+.lc-org-line--underline {
+    display: inline-block;
+    padding: 0 30px 1px;
+    border-bottom: 1px solid #000;
+}
+
+/* Wraps each underlined line so consecutive --underline blocks don't sit on the same row. */
+.lc-org-row {
+    display: block;
+    margin-top: 4px;
+}
+
+.lc-org-line__hint {
+    display: inline-block;
+    margin-left: 6px;
+    font-weight: 400;
+}
+
+/* ── Title ────────────────────────────────────────── */
+.lc-title {
+    text-align: center;
+    margin-top: 24px;
+    margin-bottom: 18px;
+}
+
+.lc-title__text {
+    font-weight: 700;
+    font-size: 11pt;
+    letter-spacing: 1px;
+    border-bottom: 1px solid #000;
+    padding-bottom: 1px;
+}
+
+/* ── Number / Date row ───────────────────────────── */
+.lc-meta-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    margin-bottom: 14px;
+    font-weight: 600;
+}
+
+/* ── Body paragraphs ─────────────────────────────── */
+.lc-body-text {
+    margin: 12px 0;
+    line-height: 1.9;
+    text-align: justify;
+}
+
+/* ── Leave detail table ──────────────────────────── */
+.lc-table-wrap {
+    margin: 12px 40px;
+}
+
+.lc-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 9pt;
+
+    th, td {
+        border: 1px solid #000;
+        padding: 4px 8px;
+        text-align: center;
+        vertical-align: middle;
+    }
+
+    th {
+        font-weight: 700;
+        background: #f0f0f0;
+        font-size: 9pt;
+    }
+
+    &__total td {
+        font-weight: 700;
+    }
+}
+
+/* ── Address during leave ────────────────────────── */
+.lc-address-block {
+    margin: 22px 0 0;
+}
+
+.lc-address-label {
+    display: inline-block;
+    font-weight: 600;
+    border-bottom: 1px solid #000;
+    padding-bottom: 1px;
+    margin-bottom: 4px;
+}
+
+.lc-address-text {
+    white-space: pre-line;
+}
+
+/* ── Signature footer ────────────────────────────── */
+.lc-footer {
+    display: flex;
+    justify-content: flex-end;
+    margin-top: 28px;
+}
+
+.lc-footer__signature {
+    text-align: left;
+    min-width: 260px;
+}
+
+.lc-footer__sysnote {
+    font-style: italic;
+    margin-bottom: 4px;
+}
+
+.lc-footer__name {
+    font-weight: 700;
+}
+
+.lc-footer__rank,
+.lc-footer__appointment {
+    font-size: 10pt;
+}
+
+.lc-footer__date {
+    margin-top: 4px;
+}
+
+/* ── Toolbar buttons — match the leave-preview look (white bg, gray border) ── */
+.report-btn-back,
+.report-lang-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: #fff;
+    border: 1px solid #d1d5db;
+    border-radius: 0.4rem;
+    padding: 0.4rem 0.85rem;
+    font-size: 0.85rem;
+    font-weight: 500;
+    color: #1f2937;
+    cursor: pointer;
+    transition: all 0.18s;
+
+    &:hover {
+        background: #f3f4f6;
+        border-color: #9ca3af;
+        color: #1f2937;
+    }
+}
+
+/* Export button — green primary CTA, matching the preview */
+.report-btn-export {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    background: var(--primary-color, #22c55e);
+    color: #fff;
+    border: none;
+    border-radius: 0.4rem;
+    padding: 0.45rem 0.9rem;
+    font-size: 0.85rem;
+    font-weight: 500;
+    height: auto;
+    cursor: pointer;
+    transition: all 0.18s;
+
+    &:hover:not(:disabled) {
+        filter: brightness(1.05);
+        background: var(--primary-color, #22c55e);
+        color: #fff;
+    }
+
+    &:disabled {
+        opacity: 0.7;
+        cursor: not-allowed;
+    }
+}
+
+/* ════════════════════════════════════════════════════════════════════
+   DARK MODE — backdrop + the toolbar/buttons/dropdown that sit OUTSIDE
+   the white sheet. The A4 sheet (.lc-paper) stays WHITE.
+   The shared report-theme-common.scss adds `!important` overrides for
+   buttons in dark mode, so we must use `!important` here to beat them.
+   ════════════════════════════════════════════════════════════════════ */
+:host-context(.app-dark) {
+
+    /* Backdrop — ROFIMS standard dark navy */
+    background: #2a2d35;
+
+    /* A4 sheet stays white; just a stronger shadow on the dark backdrop */
+    .lc-paper {
+        background: #fff;
+        color: #000;
+        box-shadow: 0 10px 40px rgba(0, 0, 0, 0.6);
+    }
+
+    /* Loading / empty states sit on the dark backdrop */
+    .leave-card-loading,
+    .leave-card-empty {
+        color: #94a3b8;
+    }
+
+    /* Back and English — dark surfaces on the dark backdrop */
+    .report-btn-back,
+    .report-lang-toggle {
+        background: #1e2230 !important;
+        border: 1px solid #3a3f4e !important;
+        color: #cbd5e1 !important;
+
+        &:hover {
+            background: #232838 !important;
+            border-color: #4a5062 !important;
+            color: #e2e8f0 !important;
+        }
+    }
+
+    /* Export — keep its green primary CTA fill */
+    .report-btn-export {
+        background: var(--primary-color, #22c55e) !important;
+        color: #fff !important;
+        border: none !important;
+
+        &:hover:not(:disabled) {
+            background: var(--primary-color, #22c55e) !important;
+            color: #fff !important;
+            filter: brightness(1.05);
+        }
+    }
+
+    /* Export dropdown menu — dark surface, dark items */
+    .report-export-dropdown {
+        background: #12151a;
+        border: 1px solid #3a3f4e;
+    }
+    .report-export-item {
+        background: #12151a;
+        color: #cbd5e1;
+
+        &:hover {
+            background: #232838;
+            color: #e2e8f0;
+        }
+
+        & + & {
+            border-top-color: #3a3f4e;
+        }
+    }
+}
+
+/* ── Print ───────────────────────────────────────── */
+@media print {
+    :host { background: #fff !important; }
+
+    .no-print { display: none !important; }
+
+    .lc-paper-container {
+        padding: 0 !important;
+    }
+
+    .lc-paper {
+        box-shadow: none !important;
+        margin: 0 !important;
+        width: 100% !important;
+        min-height: auto !important;
+        padding: 12mm 14mm !important;
+    }
+}
+
+/* ── Responsive ──────────────────────────────────── */
+@media (max-width: 820px) {
+    .leave-card-toolbar {
+        padding: 0.6rem 12px;
+    }
+
+    .lc-paper-container {
+        padding: 12px;
+    }
+
+    .lc-paper {
+        width: 100%;
+        min-height: auto;
+        padding: 14mm 10mm;
+    }
+
+    .lc-table-wrap {
+        margin: 12px 0;
+    }
+}

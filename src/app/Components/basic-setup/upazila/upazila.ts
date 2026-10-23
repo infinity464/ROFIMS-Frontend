@@ -1,4 +1,6 @@
-import { Component } from '@angular/core';
+import { Component, inject } from '@angular/core';
+import { UserMenuService } from '@/services/user-menu.service';
+import { Router } from '@angular/router';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { FormConfig } from '../shared/models/formConfig';
 import { TableConfig } from '../shared/models/dataTableConfig';
@@ -13,12 +15,19 @@ import { SharedService } from '@/shared/services/shared-service';
 
 @Component({
     selector: 'app-upazila',
-    imports: [DynamicFormComponent, DataTable, Fluid, ],
+    imports: [DynamicFormComponent, DataTable, Fluid],
     templateUrl: './upazila.html',
     styleUrl: './upazila.scss',
     providers: []
 })
 export class Upazila {
+    private _router = inject(Router);
+    private _userMenuService = inject(UserMenuService);
+    canInsert = true;
+    canUpdate = true;
+    canDelete = true;
+
+    allData: any[] = [];
     upazilaData: any[] = [];
     editingId: number | null = null;
     upazilaForm!: FormGroup;
@@ -33,6 +42,7 @@ export class Upazila {
 
     divisionOptions: { label: string; value: any }[] = [];
     districtOptions: { label: string; value: any }[] = [];
+    allDistricts: any[] = [];
     ancestors: CommonCode[] = [];
 
     formConfig: FormConfig = {
@@ -41,14 +51,16 @@ export class Upazila {
                 name: 'divisionId',
                 label: 'Division',
                 type: 'select',
-                required: true,
+                required: false,
+                default: null,
                 options: []
             },
             {
                 name: 'districtId',
                 label: 'District',
                 type: 'select',
-                required: true,
+                required: false,
+                default: null,
                 options: [],
                 dependsOn: 'divisionId',
                 cascadeLoad: true
@@ -69,8 +81,8 @@ export class Upazila {
                 name: 'status',
                 label: 'Status',
                 type: 'select',
-                required: true,
-                default: true,
+                required: false,
+                default: null,
                 options: [
                     { label: 'Active', value: true },
                     { label: 'Inactive', value: false }
@@ -81,8 +93,8 @@ export class Upazila {
 
     tableConfig: TableConfig = {
         tableColumns: [
-            // { field: 'divisionName', header: 'Division' },
-            // { field: 'districtName', header: 'District' },
+            { field: 'divisionNameDisplay', header: 'Division' },
+            { field: 'districtNameDisplay', header: 'District' },
             { field: 'codeValueEN', header: 'Upazila Name (EN)' },
             { field: 'codeValueBN', header: 'Upazila Name (BN)' },
             {
@@ -105,25 +117,40 @@ export class Upazila {
     ) {}
 
     ngOnInit(): void {
+        const _perms = this._userMenuService.getPermissionsByRoute(this._router.url);
+        this.canInsert = _perms.canInsert;
+        this.canUpdate = _perms.canUpdate;
+        this.canDelete = _perms.canDelete;
+
         this.initForm();
-        this.loadDivisions(); // Load divisions on init
-        this.getUpazilaWithPaging({
-            first: this.first,
-            rows: this.rows
+        this.setupFormFilterListeners();
+        this.loadDivisions();
+    }
+
+    private setupFormFilterListeners() {
+        this.upazilaForm.get('divisionId')?.valueChanges.subscribe((divisionId) => {
+            this.upazilaForm.patchValue({ districtId: null }, { emitEvent: false });
+            const districtField = this.formConfig.formFields.find((f) => f.name === 'districtId');
+            if (districtField) districtField.options = [];
+            if (divisionId) this.loadDistricts(divisionId);
+            this.first = 0;
+            this.buildTableData();
         });
+        this.upazilaForm.get('districtId')?.valueChanges.subscribe(() => { this.first = 0; this.buildTableData(); });
+        this.upazilaForm.get('status')?.valueChanges.subscribe(() => { this.first = 0; this.buildTableData(); });
     }
 
     initForm() {
         this.upazilaForm = this.fb.group({
-            divisionId: [null, Validators.required],
-            districtId: [null, Validators.required],
+            divisionId: [null],
+            districtId: [null],
             codeValueEN: ['', Validators.required],
             codeValueBN: ['', Validators.required],
-            status: [true, Validators.required],
+            status: [null],
             orgId: [0],
             codeId: [0],
             codeType: ['Upazila'],
-            parentCodeId: [null], // Will store districtId
+            parentCodeId: [null],
             commCode: [null],
             displayCodeValueEN: [null],
             displayCodeValueBN: [null],
@@ -136,28 +163,22 @@ export class Upazila {
         });
     }
 
-    // Load all divisions
     loadDivisions() {
         this.masterBasicSetupService.getAllByType('Division').subscribe({
             next: (divisions) => {
-                this.divisionOptions = divisions.map((d) => ({
-                    label: d.codeValueEN,
-                    value: d.codeId
-                }));
-
-                // Update form config with division options
+                this.divisionOptions = divisions.map((d) => ({ label: d.codeValueEN, value: d.codeId }));
                 const divisionField = this.formConfig.formFields.find((f) => f.name === 'divisionId');
-                if (divisionField) {
-                    divisionField.options = this.divisionOptions;
-                }
+                if (divisionField) divisionField.options = this.divisionOptions;
+                this.masterBasicSetupService.getAllByType('District').subscribe({
+                    next: (districts) => {
+                        this.allDistricts = Array.isArray(districts) ? districts : [];
+                        this.getAllData();
+                    }
+                });
             },
             error: (err) => {
                 console.error('Error loading divisions:', err);
-                this.messageService.add({
-                    severity: 'error',
-                    summary: 'Error',
-                    detail: 'Failed to load divisions'
-                });
+                this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.message || 'Failed to load divisions' });
             }
         });
     }
@@ -165,88 +186,93 @@ export class Upazila {
     loadDistricts(divisionId: number) {
         this.masterBasicSetupService.getByParentId(divisionId).subscribe({
             next: (districts) => {
-                this.districtOptions = districts.map((d) => ({
-                    label: d.codeValueEN,
-                    value: d.codeId
-                }));
+                this.districtOptions = districts.map((d) => ({ label: d.codeValueEN, value: d.codeId }));
                 const districtField = this.formConfig.formFields.find((f) => f.name === 'districtId');
-                if (districtField) {
-                    districtField.options = this.districtOptions;
-                }
+                if (districtField) districtField.options = this.districtOptions;
             },
             error: (err) => {
                 console.error('Error loading districts:', err);
-                this.messageService.add({
-                    severity: 'error',
-                    summary: 'Error',
-                    detail: 'Failed to load districts'
-                });
+                this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.message || 'Failed to load districts' });
             }
         });
     }
 
-    // Handle field changes (for cascading dropdowns)
     onFieldChange(event: { fieldName: string; value: any }) {
-        console.log('Field changed:', event);
-
-        // When districtId field needs to be updated (because divisionId changed)
-        if (event.fieldName === 'districtId' && event.value.parentField === 'divisionId') {
+        if (event.fieldName === 'districtId' && event.value?.parentField === 'divisionId') {
             const divisionId = event.value.parentValue;
-            this.loadDistricts(divisionId);
+            if (divisionId) this.loadDistricts(divisionId);
         }
     }
 
-    loadAnscestors(codeId: number) {
-        this.masterBasicSetupService.getAncestorsOfCommonCode(codeId).subscribe({
-            next: (res) => {
-                this.ancestors = res;
-                console.log('Ancestors:', this.ancestors);
-            },
-            error: (err) => {
-                console.error('Error loading ancestors:');
-            }
-        });
-    }
-
-    getUpazilaWithPaging(event?: any) {
+    getAllData() {
         this.loading = true;
-        const pageNo = event ? event.first / event.rows + 1 : 1;
-        const pageSize = event?.rows ?? this.rows;
-
-        const apiCall = this.searchValue ? this.masterBasicSetupService.getByKeyordWithPaging('Upazila', this.searchValue, pageNo, pageSize) : this.masterBasicSetupService.getAllWithPaging('Upazila', pageNo, pageSize);
-
-        apiCall.subscribe({
+        this.masterBasicSetupService.getAllByType('Upazila').subscribe({
             next: (res) => {
-                this.upazilaData = res.datalist;
-                this.totalRecords = res.pages.rows;
-                this.rows = pageSize;
+                this.allData = Array.isArray(res) ? res : [];
+                this.buildTableData();
                 this.loading = false;
             },
             error: (err) => {
                 console.error('Error fetching data:', err);
-                this.messageService.add({
-                    severity: 'error',
-                    summary: 'Error',
-                    detail: 'Failed to load data'
-                });
+                this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.message || 'Failed to load data' });
                 this.loading = false;
             }
         });
     }
 
+    private buildTableData() {
+        const divisionOpts = this.divisionOptions;
+        const getDivisionName = (id: number) => divisionOpts.find((o: any) => o.value === id)?.label ?? '-';
+        const getDistrictName = (id: number) => {
+            const d = this.allDistricts.find((x: any) => x.codeId === id);
+            return d?.codeValueEN ?? this.districtOptions.find((o: any) => o.value === id)?.label ?? '-';
+        };
+        const districtToDivisionId = (districtId: number) => this.allDistricts.find((d: any) => d.codeId === districtId)?.parentCodeId;
+        let list = this.allData.map((r: any) => ({
+            ...r,
+            districtNameDisplay: getDistrictName(r.parentCodeId),
+            divisionNameDisplay: getDivisionName(districtToDivisionId(r.parentCodeId) ?? 0)
+        }));
+        const divisionId = this.upazilaForm?.get('divisionId')?.value;
+        const districtId = this.upazilaForm?.get('districtId')?.value;
+        const status = this.upazilaForm?.get('status')?.value;
+        if (districtId != null && districtId !== '') list = list.filter((r: any) => r.parentCodeId === districtId);
+        else if (divisionId != null && divisionId !== '') {
+            const districtIds = this.allDistricts.filter((d: any) => d.parentCodeId === divisionId).map((d: any) => d.codeId);
+            list = list.filter((r: any) => districtIds.includes(r.parentCodeId));
+        }
+        if (status != null) list = list.filter((r: any) => r.status === status);
+        const q = (this.searchValue ?? '').toLowerCase().trim();
+        if (q) list = list.filter((r: any) => r.codeValueEN?.toLowerCase().includes(q) || r.codeValueBN?.toLowerCase().includes(q));
+        this.upazilaData = list;
+        this.totalRecords = list.length;
+        this.first = 0;
+    }
+
     submit(data: any) {
+        const divisionId = this.upazilaForm.get('divisionId')?.value;
+        const districtId = this.upazilaForm.get('districtId')?.value;
+        const status = this.upazilaForm.get('status')?.value;
+        if (divisionId == null || divisionId === '') {
+            this.messageService.add({ severity: 'warn', summary: 'Validation', detail: 'Please select Division' });
+            return;
+        }
+        if (districtId == null || districtId === '') {
+            this.messageService.add({ severity: 'warn', summary: 'Validation', detail: 'Please select District' });
+            return;
+        }
+        if (status == null) {
+            this.messageService.add({ severity: 'warn', summary: 'Validation', detail: 'Please select Status' });
+            return;
+        }
         if (this.upazilaForm.invalid) {
             this.upazilaForm.markAllAsTouched();
             return;
         }
 
         const currentUser = this.getCurrentUser();
-        const currentDateTime = this.shareService.getCurrentDateTime()
-
-        // Set parentCodeId to selected districtId
-        this.upazilaForm.patchValue({
-            parentCodeId: this.upazilaForm.value.districtId
-        });
+        const currentDateTime = this.shareService.getCurrentDateTime();
+        this.upazilaForm.patchValue({ parentCodeId: this.upazilaForm.value.districtId });
 
         if (this.editingId) {
             this.updateUpazila(currentUser, currentDateTime);
@@ -256,111 +282,57 @@ export class Upazila {
     }
 
     private createUpazila(currentUser: string, currentDateTime: string) {
-        const createPayload = {
-            ...this.upazilaForm.value,
-            createdBy: currentUser,
-            createdDate: currentDateTime,
-            lastUpdatedBy: currentUser,
-            lastupdate: currentDateTime
-        };
-
+        const createPayload = { ...this.upazilaForm.value, createdBy: currentUser, createdDate: currentDateTime, lastUpdatedBy: currentUser, lastupdate: currentDateTime };
         this.masterBasicSetupService.create(createPayload).subscribe({
-            next: (res) => {
-                console.log('Created:', res);
+            next: () => {
                 this.resetForm();
-                this.getUpazilaWithPaging({
-                    first: this.first,
-                    rows: this.rows
-                });
-                this.messageService.add({
-                    severity: 'success',
-                    summary: 'Success',
-                    detail: 'Upazila created successfully'
-                });
+                this.getAllData();
+                this.messageService.add({ severity: 'success', summary: 'Success', detail: 'Upazila created successfully' });
             },
             error: (err) => {
                 console.error('Error creating:', err);
-                this.messageService.add({
-                    severity: 'error',
-                    summary: 'Error',
-                    detail: 'Failed to create upazila'
-                });
+                this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.message || 'Failed to create upazila' });
             }
         });
     }
 
     private updateUpazila(currentUser: string, currentDateTime: string) {
-        const updatePayload = {
-            ...this.upazilaForm.value,
-            codeId: this.editingId,
-            lastUpdatedBy: currentUser,
-            lastupdate: currentDateTime,
-            createdDate: currentDateTime,
-            createdBy: currentUser
-        };
-
+        const updatePayload = { ...this.upazilaForm.value, codeId: this.editingId, lastUpdatedBy: currentUser, lastupdate: currentDateTime, createdDate: currentDateTime, createdBy: currentUser };
         this.masterBasicSetupService.update(updatePayload).subscribe({
-            next: (res) => {
-                console.log('Updated:', res);
+            next: () => {
                 this.resetForm();
-                this.getUpazilaWithPaging({
-                    first: this.first,
-                    rows: this.rows
-                });
-                this.messageService.add({
-                    severity: 'success',
-                    summary: 'Success',
-                    detail: 'Upazila updated successfully'
-                });
+                this.getAllData();
+                this.messageService.add({ severity: 'success', summary: 'Success', detail: 'Upazila updated successfully' });
             },
             error: (err) => {
                 console.error('Error updating:', err);
-                this.messageService.add({
-                    severity: 'error',
-                    summary: 'Error',
-                    detail: 'Failed to update upazila'
-                });
+                this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.message || 'Failed to update upazila' });
             }
         });
     }
 
     update(row: any) {
-    this.editingId = row.codeId;
-
-    this.loadAnscestors(row.codeId);
-
-    // Move the logic inside the loadAnscestors subscribe callback
-    this.masterBasicSetupService.getAncestorsOfCommonCode(row.codeId).subscribe({
-        next: (ancestors) => {
-            this.ancestors = ancestors;
-            console.log('Ancestors:', this.ancestors);
-
-            const divisionId = this.ancestors[0]?.codeId;
-
-            if (divisionId) {
-                console.log('Loading districts for divisionId:', divisionId);
-                this.loadDistricts(divisionId);
-
-                // Patch the form after districts are loaded
-                // Use setTimeout or subscribe to loadDistricts completion
-
-                    this.upazilaForm.patchValue({
-                        divisionId: divisionId,
-                        districtId: row.parentCodeId,
-                        codeValueEN: row.codeValueEN,
-                        codeValueBN: row.codeValueBN,
-                        status: row.status
-                    });
-
-            }
-        },
-        error: (err) => {
-            console.error('Error loading ancestors:', err);
-        }
-    });
-
-    console.log('Edit:', row);
-}
+        this.editingId = row.codeId;
+        this.masterBasicSetupService.getAncestorsOfCommonCode(row.codeId).subscribe({
+            next: (ancestors) => {
+                this.ancestors = ancestors;
+                const divisionId = this.ancestors[0]?.codeId;
+                if (divisionId) {
+                    this.loadDistricts(divisionId);
+                    setTimeout(() => {
+                        this.upazilaForm.patchValue({
+                            divisionId: divisionId,
+                            districtId: row.parentCodeId,
+                            codeValueEN: row.codeValueEN,
+                            codeValueBN: row.codeValueBN,
+                            status: row.status
+                        });
+                    }, 100);
+                }
+            },
+            error: (err) => console.error('Error loading ancestors:', err)
+        });
+    }
 
     delete(row: any, event: Event) {
         this.confirmationService.confirm({
@@ -369,35 +341,17 @@ export class Upazila {
             header: 'Delete Confirmation',
             icon: 'pi pi-info-circle',
             rejectLabel: 'Cancel',
-            rejectButtonProps: {
-                label: 'Cancel',
-                severity: 'secondary',
-                outlined: true
-            },
-            acceptButtonProps: {
-                label: 'Delete',
-                severity: 'danger'
-            },
+            rejectButtonProps: { label: 'Cancel', severity: 'secondary', outlined: true },
+            acceptButtonProps: { label: 'Delete', severity: 'danger' },
             accept: () => {
                 this.masterBasicSetupService.delete(row.codeId).subscribe({
                     next: () => {
-                        this.getUpazilaWithPaging({
-                            first: this.first,
-                            rows: this.rows
-                        });
-                        this.messageService.add({
-                            severity: 'success',
-                            summary: 'Success',
-                            detail: 'Upazila deleted successfully'
-                        });
+                        this.getAllData();
+                        this.messageService.add({ severity: 'success', summary: 'Success', detail: 'Upazila deleted successfully' });
                     },
                     error: (err) => {
                         console.error('Error deleting:', err);
-                        this.messageService.add({
-                            severity: 'error',
-                            summary: 'Error',
-                            detail: 'Failed to delete upazila'
-                        });
+                        this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.message || 'Failed to delete upazila' });
                     }
                 });
             }
@@ -406,20 +360,16 @@ export class Upazila {
 
     resetForm() {
         this.editingId = null;
-
-        // Clear district options when resetting
+        this.searchValue = '';
         const districtField = this.formConfig.formFields.find((f) => f.name === 'districtId');
-        if (districtField) {
-            districtField.options = [];
-        }
-
+        if (districtField) districtField.options = [];
         this.upazilaForm.reset({
             divisionId: null,
             districtId: null,
             orgId: 0,
             codeId: 0,
             codeType: 'Upazila',
-            status: true,
+            status: null,
             parentCodeId: null,
             commCode: null,
             displayCodeValueEN: null,
@@ -431,16 +381,16 @@ export class Upazila {
             lastUpdatedBy: '',
             lastupdate: ''
         });
+        this.buildTableData();
     }
 
     onSearch(keyword: string) {
-        this.searchValue = keyword;
+        this.searchValue = keyword ?? '';
         this.first = 0;
-        this.getUpazilaWithPaging({ first: 0, rows: this.rows });
+        this.buildTableData();
     }
 
     private getCurrentUser(): string {
-        // TODO: Get from authentication service
-        return this.shareService.getCurrentUser()
+        return this.shareService.getCurrentUser();
     }
 }

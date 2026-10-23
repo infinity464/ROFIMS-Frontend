@@ -1,4 +1,6 @@
-import { Component } from '@angular/core';
+import { Component, inject } from '@angular/core';
+import { UserMenuService } from '@/services/user-menu.service';
+import { Router } from '@angular/router';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { FormConfig } from '../shared/models/formConfig';
 import { TableConfig } from '../shared/models/dataTableConfig';
@@ -13,13 +15,20 @@ import { SharedService } from '@/shared/services/shared-service';
 
 @Component({
     selector: 'app-rab-branch',
-    imports: [DynamicFormComponent, DataTable, Fluid, ],
+    imports: [DynamicFormComponent, DataTable, Fluid],
     templateUrl: './rab-branch.html',
     styleUrl: './rab-branch.scss',
     providers: []
 })
 export class RabBranch {
-    upazilaData: any[] = [];
+    private _router = inject(Router);
+    private _userMenuService = inject(UserMenuService);
+    canInsert = true;
+    canUpdate = true;
+    canDelete = true;
+
+    allData: any[] = [];
+    rabBranchData: any[] = [];
     editingId: number | null = null;
     upazilaForm!: FormGroup;
     title = 'Rab Branch';
@@ -30,9 +39,11 @@ export class RabBranch {
     first = 0;
     loading = false;
     searchValue: string = '';
+    isSubmitting = false;
 
     rabUnitOptions: { label: string; value: any }[] = [];
     rabWingOptions: { label: string; value: any }[] = [];
+    allRabWings: any[] = [];
     ancestors: CommonCode[] = [];
 
     formConfig: FormConfig = {
@@ -41,14 +52,16 @@ export class RabBranch {
                 name: 'rabUnitId',
                 label: 'RabUnit',
                 type: 'select',
-                required: true,
+                required: false,
+                default: null,
                 options: []
             },
             {
                 name: 'rabWingId',
                 label: 'RabWing',
                 type: 'select',
-                required: true,
+                required: false,
+                default: null,
                 options: [],
                 dependsOn: 'rabUnitId',
                 cascadeLoad: true
@@ -69,8 +82,8 @@ export class RabBranch {
                 name: 'status',
                 label: 'Status',
                 type: 'select',
-                required: true,
-                default: true,
+                required: false,
+                default: null,
                 options: [
                     { label: 'Active', value: true },
                     { label: 'Inactive', value: false }
@@ -81,8 +94,8 @@ export class RabBranch {
 
     tableConfig: TableConfig = {
         tableColumns: [
-            // { field: 'rabUnitName', header: 'RabUnit' },
-            // { field: 'rabWingName', header: 'RabWing' },
+            { field: 'rabUnitNameDisplay', header: 'RAB Unit' },
+            { field: 'rabWingNameDisplay', header: 'RAB Wing' },
             { field: 'codeValueEN', header: 'Rab Branch (EN)' },
             { field: 'codeValueBN', header: 'Rab Branch (BN)' },
             {
@@ -105,25 +118,40 @@ export class RabBranch {
     ) {}
 
     ngOnInit(): void {
+        const _perms = this._userMenuService.getPermissionsByRoute(this._router.url);
+        this.canInsert = _perms.canInsert;
+        this.canUpdate = _perms.canUpdate;
+        this.canDelete = _perms.canDelete;
+
         this.initForm();
-        this.loadRabUnits(); // Load rabUnits on init
-        this.getUpazilaWithPaging({
-            first: this.first,
-            rows: this.rows
+        this.setupFormFilterListeners();
+        this.loadRabUnits();
+    }
+
+    private setupFormFilterListeners() {
+        this.upazilaForm.get('rabUnitId')?.valueChanges.subscribe((rabUnitId) => {
+            this.upazilaForm.patchValue({ rabWingId: null }, { emitEvent: false });
+            const rabWingField = this.formConfig.formFields.find((f) => f.name === 'rabWingId');
+            if (rabWingField) rabWingField.options = [];
+            if (rabUnitId) this.loadRabWings(rabUnitId);
+            this.first = 0;
+            this.buildTableData();
         });
+        this.upazilaForm.get('rabWingId')?.valueChanges.subscribe(() => { this.first = 0; this.buildTableData(); });
+        this.upazilaForm.get('status')?.valueChanges.subscribe(() => { this.first = 0; this.buildTableData(); });
     }
 
     initForm() {
         this.upazilaForm = this.fb.group({
-            rabUnitId: [null, Validators.required],
-            rabWingId: [null, Validators.required],
+            rabUnitId: [null],
+            rabWingId: [null],
             codeValueEN: ['', Validators.required],
             codeValueBN: ['', Validators.required],
-            status: [true, Validators.required],
+            status: [null],
             orgId: [0],
             codeId: [0],
             codeType: ['RabBranch'],
-            parentCodeId: [null], // Will store rabWingId
+            parentCodeId: [null],
             commCode: [null],
             displayCodeValueEN: [null],
             displayCodeValueBN: [null],
@@ -136,28 +164,22 @@ export class RabBranch {
         });
     }
 
-    // Load all rabUnits
     loadRabUnits() {
         this.masterBasicSetupService.getAllByType('RabUnit').subscribe({
             next: (rabUnits) => {
-                this.rabUnitOptions = rabUnits.map((d) => ({
-                    label: d.codeValueEN,
-                    value: d.codeId
-                }));
-
-                // Update form config with rabUnit options
+                this.rabUnitOptions = rabUnits.map((d) => ({ label: d.codeValueEN, value: d.codeId }));
                 const rabUnitField = this.formConfig.formFields.find((f) => f.name === 'rabUnitId');
-                if (rabUnitField) {
-                    rabUnitField.options = this.rabUnitOptions;
-                }
+                if (rabUnitField) rabUnitField.options = this.rabUnitOptions;
+                this.masterBasicSetupService.getAllByType('RabWing').subscribe({
+                    next: (wings) => {
+                        this.allRabWings = Array.isArray(wings) ? wings : [];
+                        this.getAllData();
+                    }
+                });
             },
             error: (err) => {
                 console.error('Error loading rabUnits:', err);
-                this.messageService.add({
-                    severity: 'error',
-                    summary: 'Error',
-                    detail: 'Failed to load rabUnits'
-                });
+                this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.message || 'Failed to load rabUnits' });
             }
         });
     }
@@ -165,88 +187,96 @@ export class RabBranch {
     loadRabWings(rabUnitId: number) {
         this.masterBasicSetupService.getByParentId(rabUnitId).subscribe({
             next: (rabWings) => {
-                this.rabWingOptions = rabWings.map((d) => ({
-                    label: d.codeValueEN,
-                    value: d.codeId
-                }));
+                this.rabWingOptions = rabWings.map((d) => ({ label: d.codeValueEN, value: d.codeId }));
                 const rabWingField = this.formConfig.formFields.find((f) => f.name === 'rabWingId');
-                if (rabWingField) {
-                    rabWingField.options = this.rabWingOptions;
-                }
+                if (rabWingField) rabWingField.options = this.rabWingOptions;
             },
             error: (err) => {
                 console.error('Error loading rabWings:', err);
-                this.messageService.add({
-                    severity: 'error',
-                    summary: 'Error',
-                    detail: 'Failed to load rabWings'
-                });
+                this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.message || 'Failed to load rabWings' });
             }
         });
     }
 
-    // Handle field changes (for cascading dropdowns)
     onFieldChange(event: { fieldName: string; value: any }) {
-        console.log('Field changed:', event);
-
-        // When rabWingId field needs to be updated (because rabUnitId changed)
-        if (event.fieldName === 'rabWingId' && event.value.parentField === 'rabUnitId') {
+        if (event.fieldName === 'rabWingId' && event.value?.parentField === 'rabUnitId') {
             const rabUnitId = event.value.parentValue;
-            this.loadRabWings(rabUnitId);
+            if (rabUnitId) this.loadRabWings(rabUnitId);
         }
     }
 
-    loadAnscestors(codeId: number) {
-        this.masterBasicSetupService.getAncestorsOfCommonCode(codeId).subscribe({
-            next: (res) => {
-                this.ancestors = res;
-                console.log('Ancestors:', this.ancestors);
-            },
-            error: (err) => {
-                console.error('Error loading ancestors:');
-            }
-        });
-    }
-
-    getUpazilaWithPaging(event?: any) {
+    getAllData() {
         this.loading = true;
-        const pageNo = event ? event.first / event.rows + 1 : 1;
-        const pageSize = event?.rows ?? this.rows;
-
-        const apiCall = this.searchValue ? this.masterBasicSetupService.getByKeyordWithPaging('RabBranch', this.searchValue, pageNo, pageSize) : this.masterBasicSetupService.getAllWithPaging('RabBranch', pageNo, pageSize);
-
-        apiCall.subscribe({
+        this.masterBasicSetupService.getAllByType('RabBranch').subscribe({
             next: (res) => {
-                this.upazilaData = res.datalist;
-                this.totalRecords = res.pages.rows;
-                this.rows = pageSize;
+                this.allData = Array.isArray(res) ? res : [];
+                this.buildTableData();
                 this.loading = false;
             },
             error: (err) => {
                 console.error('Error fetching data:', err);
-                this.messageService.add({
-                    severity: 'error',
-                    summary: 'Error',
-                    detail: 'Failed to load data'
-                });
+                this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.message || 'Failed to load data' });
                 this.loading = false;
             }
         });
     }
 
+    private buildTableData() {
+        const rabUnitOpts = this.rabUnitOptions;
+        const getRabUnitName = (id: number) => rabUnitOpts.find((o: any) => o.value === id)?.label ?? '-';
+        const getRabWingName = (id: number) => {
+            const w = this.allRabWings.find((x: any) => x.codeId === id);
+            return w?.codeValueEN ?? this.rabWingOptions.find((o: any) => o.value === id)?.label ?? '-';
+        };
+        const wingToUnitId = (wingId: number) => this.allRabWings.find((w: any) => w.codeId === wingId)?.parentCodeId;
+        let list = this.allData.map((r: any) => ({
+            ...r,
+            rabWingNameDisplay: getRabWingName(r.parentCodeId),
+            rabUnitNameDisplay: getRabUnitName(wingToUnitId(r.parentCodeId) ?? 0)
+        }));
+        const rabUnitId = this.upazilaForm?.get('rabUnitId')?.value;
+        const rabWingId = this.upazilaForm?.get('rabWingId')?.value;
+        const status = this.upazilaForm?.get('status')?.value;
+        if (rabWingId != null && rabWingId !== '') list = list.filter((r: any) => r.parentCodeId === rabWingId);
+        else if (rabUnitId != null && rabUnitId !== '' && this.rabWingOptions.length) {
+            const wingIds = this.rabWingOptions.map((o: any) => o.value);
+            list = list.filter((r: any) => wingIds.includes(r.parentCodeId));
+        } else if (rabUnitId != null && rabUnitId !== '') {
+            const wingIds = this.allRabWings.filter((w: any) => w.parentCodeId === rabUnitId).map((w: any) => w.codeId);
+            list = list.filter((r: any) => wingIds.includes(r.parentCodeId));
+        }
+        if (status != null) list = list.filter((r: any) => r.status === status);
+        const q = (this.searchValue ?? '').toLowerCase().trim();
+        if (q) list = list.filter((r: any) => r.codeValueEN?.toLowerCase().includes(q) || r.codeValueBN?.toLowerCase().includes(q));
+        this.rabBranchData = list;
+        this.totalRecords = list.length;
+        this.first = 0;
+    }
+
     submit(data: any) {
+        const rabUnitId = this.upazilaForm.get('rabUnitId')?.value;
+        const rabWingId = this.upazilaForm.get('rabWingId')?.value;
+        const status = this.upazilaForm.get('status')?.value;
+        if (rabUnitId == null || rabUnitId === '') {
+            this.messageService.add({ severity: 'warn', summary: 'Validation', detail: 'Please select RAB Unit' });
+            return;
+        }
+        if (rabWingId == null || rabWingId === '') {
+            this.messageService.add({ severity: 'warn', summary: 'Validation', detail: 'Please select RAB Wing' });
+            return;
+        }
+        if (status == null) {
+            this.messageService.add({ severity: 'warn', summary: 'Validation', detail: 'Please select Status' });
+            return;
+        }
         if (this.upazilaForm.invalid) {
             this.upazilaForm.markAllAsTouched();
             return;
         }
 
         const currentUser = this.getCurrentUser();
-        const currentDateTime = this.shareService.getCurrentDateTime()
-
-        // Set parentCodeId to selected rabWingId
-        this.upazilaForm.patchValue({
-            parentCodeId: this.upazilaForm.value.rabWingId
-        });
+        const currentDateTime = this.shareService.getCurrentDateTime();
+        this.upazilaForm.patchValue({ parentCodeId: this.upazilaForm.value.rabWingId });
 
         if (this.editingId) {
             this.updateUpazila(currentUser, currentDateTime);
@@ -256,111 +286,63 @@ export class RabBranch {
     }
 
     private createUpazila(currentUser: string, currentDateTime: string) {
-        const createPayload = {
-            ...this.upazilaForm.value,
-            createdBy: currentUser,
-            createdDate: currentDateTime,
-            lastUpdatedBy: currentUser,
-            lastupdate: currentDateTime
-        };
-
+        this.isSubmitting = true;
+        const createPayload = { ...this.upazilaForm.value, createdBy: currentUser, createdDate: currentDateTime, lastUpdatedBy: currentUser, lastupdate: currentDateTime };
         this.masterBasicSetupService.create(createPayload).subscribe({
-            next: (res) => {
-                console.log('Created:', res);
+            next: () => {
                 this.resetForm();
-                this.getUpazilaWithPaging({
-                    first: this.first,
-                    rows: this.rows
-                });
-                this.messageService.add({
-                    severity: 'success',
-                    summary: 'Success',
-                    detail: 'RabBranch created successfully'
-                });
+                this.getAllData();
+                this.messageService.add({ severity: 'success', summary: 'Success', detail: 'RabBranch created successfully' });
+                this.isSubmitting = false;
             },
             error: (err) => {
                 console.error('Error creating:', err);
-                this.messageService.add({
-                    severity: 'error',
-                    summary: 'Error',
-                    detail: 'Failed to create rab-branch'
-                });
+                this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.message || 'Failed to create rab-branch' });
+                this.isSubmitting = false;
             }
         });
     }
 
     private updateUpazila(currentUser: string, currentDateTime: string) {
-        const updatePayload = {
-            ...this.upazilaForm.value,
-            codeId: this.editingId,
-            lastUpdatedBy: currentUser,
-            lastupdate: currentDateTime,
-            createdDate: currentDateTime,
-            createdBy: currentUser
-        };
-
+        this.isSubmitting = true;
+        const updatePayload = { ...this.upazilaForm.value, codeId: this.editingId, lastUpdatedBy: currentUser, lastupdate: currentDateTime, createdDate: currentDateTime, createdBy: currentUser };
         this.masterBasicSetupService.update(updatePayload).subscribe({
-            next: (res) => {
-                console.log('Updated:', res);
+            next: () => {
                 this.resetForm();
-                this.getUpazilaWithPaging({
-                    first: this.first,
-                    rows: this.rows
-                });
-                this.messageService.add({
-                    severity: 'success',
-                    summary: 'Success',
-                    detail: 'RabBranch updated successfully'
-                });
+                this.getAllData();
+                this.messageService.add({ severity: 'success', summary: 'Success', detail: 'RabBranch updated successfully' });
+                this.isSubmitting = false;
             },
             error: (err) => {
                 console.error('Error updating:', err);
-                this.messageService.add({
-                    severity: 'error',
-                    summary: 'Error',
-                    detail: 'Failed to update rab-branch'
-                });
+                this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.message || 'Failed to update rab-branch' });
+                this.isSubmitting = false;
             }
         });
     }
 
     update(row: any) {
-    this.editingId = row.codeId;
-
-    this.loadAnscestors(row.codeId);
-
-    // Move the logic inside the loadAnscestors subscribe callback
-    this.masterBasicSetupService.getAncestorsOfCommonCode(row.codeId).subscribe({
-        next: (ancestors) => {
-            this.ancestors = ancestors;
-            console.log('Ancestors:', this.ancestors);
-
-            const rabUnitId = this.ancestors[0]?.codeId;
-
-            if (rabUnitId) {
-                console.log('Loading rabWings for rabUnitId:', rabUnitId);
-                this.loadRabWings(rabUnitId);
-
-                // Patch the form after rabWings are loaded
-                // Use setTimeout or subscribe to loadRabWings completion
-
-                    this.upazilaForm.patchValue({
-                        rabUnitId: rabUnitId,
-                        rabWingId: row.parentCodeId,
-                        codeValueEN: row.codeValueEN,
-                        codeValueBN: row.codeValueBN,
-                        status: row.status
-                    });
-
-            }
-        },
-        error: (err) => {
-            console.error('Error loading ancestors:', err);
-        }
-    });
-
-    console.log('Edit:', row);
-}
+        this.editingId = row.codeId;
+        this.masterBasicSetupService.getAncestorsOfCommonCode(row.codeId).subscribe({
+            next: (ancestors) => {
+                this.ancestors = ancestors;
+                const rabUnitId = this.ancestors[0]?.codeId;
+                if (rabUnitId) {
+                    this.loadRabWings(rabUnitId);
+                    setTimeout(() => {
+                        this.upazilaForm.patchValue({
+                            rabUnitId: rabUnitId,
+                            rabWingId: row.parentCodeId,
+                            codeValueEN: row.codeValueEN,
+                            codeValueBN: row.codeValueBN,
+                            status: row.status
+                        });
+                    }, 100);
+                }
+            },
+            error: (err) => console.error('Error loading ancestors:', err)
+        });
+    }
 
     delete(row: any, event: Event) {
         this.confirmationService.confirm({
@@ -369,35 +351,17 @@ export class RabBranch {
             header: 'Delete Confirmation',
             icon: 'pi pi-info-circle',
             rejectLabel: 'Cancel',
-            rejectButtonProps: {
-                label: 'Cancel',
-                severity: 'secondary',
-                outlined: true
-            },
-            acceptButtonProps: {
-                label: 'Delete',
-                severity: 'danger'
-            },
+            rejectButtonProps: { label: 'Cancel', severity: 'secondary', outlined: true },
+            acceptButtonProps: { label: 'Delete', severity: 'danger' },
             accept: () => {
                 this.masterBasicSetupService.delete(row.codeId).subscribe({
                     next: () => {
-                        this.getUpazilaWithPaging({
-                            first: this.first,
-                            rows: this.rows
-                        });
-                        this.messageService.add({
-                            severity: 'success',
-                            summary: 'Success',
-                            detail: 'RabBranch deleted successfully'
-                        });
+                        this.getAllData();
+                        this.messageService.add({ severity: 'success', summary: 'Success', detail: 'RabBranch deleted successfully' });
                     },
                     error: (err) => {
                         console.error('Error deleting:', err);
-                        this.messageService.add({
-                            severity: 'error',
-                            summary: 'Error',
-                            detail: 'Failed to delete rab-branch'
-                        });
+                        this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.message || 'Failed to delete rab-branch' });
                     }
                 });
             }
@@ -406,20 +370,17 @@ export class RabBranch {
 
     resetForm() {
         this.editingId = null;
-
-        // Clear rabWing options when resetting
+        this.isSubmitting = false;
+        this.searchValue = '';
         const rabWingField = this.formConfig.formFields.find((f) => f.name === 'rabWingId');
-        if (rabWingField) {
-            rabWingField.options = [];
-        }
-
+        if (rabWingField) rabWingField.options = [];
         this.upazilaForm.reset({
             rabUnitId: null,
             rabWingId: null,
             orgId: 0,
             codeId: 0,
             codeType: 'RabBranch',
-            status: true,
+            status: null,
             parentCodeId: null,
             commCode: null,
             displayCodeValueEN: null,
@@ -431,16 +392,16 @@ export class RabBranch {
             lastUpdatedBy: '',
             lastupdate: ''
         });
+        this.buildTableData();
     }
 
     onSearch(keyword: string) {
-        this.searchValue = keyword;
+        this.searchValue = keyword ?? '';
         this.first = 0;
-        this.getUpazilaWithPaging({ first: 0, rows: this.rows });
+        this.buildTableData();
     }
 
     private getCurrentUser(): string {
-        // TODO: Get from authentication service
-        return this.shareService.getCurrentUser()
+        return this.shareService.getCurrentUser();
     }
 }

@@ -20,7 +20,7 @@
                 <div class="flex justify-content-between align-items-center mb-3">
                     <h3 class="m-0 text-xl font-bold text-900">Member {{ i + 1 }}</h3>
 
-                    <button pButton type="button" icon="pi pi-trash" class="p-button-danger p-button-sm" (click)="removeFamilyMember(i)" *ngIf="familyMembers.length > 1"></button>
+                    <button pButton type="button" icon="pi pi-trash" [class.perm-hidden]="!canDelete" class="p-button-danger p-button-sm" (click)="removeFamilyMember(i)" *ngIf="familyMembers.length > 1"></button>
                 </div>
 
                 <!-- ================= BASIC INFO ================= -->

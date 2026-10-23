@@ -1,27 +1,31 @@
 export interface OrganizationModel {
-  orgId: number;
+    orgId: number;
 
-  orgNameEN: string;
-  orgNameBN: string;
+    orgNameEN: string;
+    orgNameBN: string;
 
-  contactName?: string;
-  contactNumber?: string;
+    contactName?: string;
+    contactNumber?: string;
 
-  locationCode?: string;
-  locationEN?: string;
-  locationBN?: string;
+    locationCode?: string;
+    locationEN?: string;
+    locationBN?: string;
 
-  email?: string;
+    districtId?: number | null;
 
-  status?: boolean;
+    email?: string;
 
-  remarks?: string;
+    status?: boolean;
 
-  parentOrg?: number;
+    sortOrder?: number | null;
 
-  createdBy: string;
-  createdDate: string; // or Date
+    remarks?: string;
 
-  lastUpdatedBy: string;
-  lastupdate: string; // or Date
+    parentOrg?: number;
+
+    createdBy: string;
+    createdDate: string; // or Date
+
+    lastUpdatedBy: string;
+    lastupdate: string; // or Date
 }

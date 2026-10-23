@@ -5,23 +5,48 @@
         <form [formGroup]="rabIdSerialForm" (ngSubmit)="onSubmit()">
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
 
-                <!-- Officer Type -->
+                <!-- Employee Type -->
                 <div class="field">
-                    <label for="officerTypeId" class="block mb-2">
-                        Officer Type <span class="text-red-500">*</span>
+                    <label for="employeeTypeId" class="block mb-2">
+                        Employee Type <span class="text-red-500">*</span>
                     </label>
                     <p-select
-                        id="officerTypeId"
-                        formControlName="officerTypeId"
-                        [options]="officerTypeOptions"
+                        id="employeeTypeId"
+                        formControlName="employeeTypeId"
+                        [options]="employeeTypeOptions"
                         optionLabel="label"
                         optionValue="value"
-                        placeholder="Select Officer Type"
-                        class="w-full">
+                        placeholder="Select Employee Type"
+                        [showClear]="true"
+                        styleClass="w-full">
                     </p-select>
-                    @if (rabIdSerialForm.get('officerTypeId')?.invalid && rabIdSerialForm.get('officerTypeId')?.touched) {
+                    @if (rabIdSerialForm.get('employeeTypeId')?.invalid && rabIdSerialForm.get('employeeTypeId')?.touched) {
                         <small class="text-red-500 block mt-1">
-                            Officer Type is required
+                            Employee Type is required
+                        </small>
+                    }
+                </div>
+
+                <!-- Mother Org Name (multi-select) -->
+                <div class="field">
+                    <label for="motherOrgIds" class="block mb-2">
+                        Mother Org Name <span class="text-red-500">*</span>
+                    </label>
+                    <p-multiselect
+                        id="motherOrgIds"
+                        formControlName="motherOrgIds"
+                        [options]="motherOrgOptions"
+                        optionLabel="label"
+                        optionValue="value"
+                        placeholder="Select Mother Org(s)"
+                        [showClear]="true"
+                        [filter]="true"
+                        display="chip"
+                        styleClass="w-full">
+                    </p-multiselect>
+                    @if (rabIdSerialForm.get('motherOrgIds')?.invalid && rabIdSerialForm.get('motherOrgIds')?.touched) {
+                        <small class="text-red-500 block mt-1">
+                            Mother Org Name is required
                         </small>
                     }
                 </div>
@@ -45,30 +70,6 @@
                     }
                 </div>
 
-                <!-- Max ID -->
-                <div class="field">
-                    <label for="maxId" class="block mb-2">
-                        End To <span class="text-red-500">*</span>
-                    </label>
-                    <p-inputnumber
-                        id="maxId"
-                        formControlName="maxId"
-                        placeholder="Enter End To"
-                        [useGrouping]="false"
-                        class="w-full">
-                    </p-inputnumber>
-                    @if (rabIdSerialForm.get('maxId')?.invalid && rabIdSerialForm.get('maxId')?.touched) {
-                        <small class="text-red-500 block mt-1">
-                            End To is required and must be greater than 0
-                        </small>
-                    }
-                    @if (rabIdSerialForm.get('maxId')?.value && rabIdSerialForm.get('minId')?.value && rabIdSerialForm.get('maxId')?.value < rabIdSerialForm.get('minId')?.value) {
-                        <small class="text-red-500 block mt-1">
-                            End To cannot be less than Start From
-                        </small>
-                    }
-                </div>
-
             </div>
 
             <!-- Buttons -->
@@ -76,7 +77,7 @@
                 <p-button
                     label="Save"
                     type="submit"
-                    [disabled]="rabIdSerialForm.invalid || isSubmitting || isMaxLessThanMin()">
+                    [disabled]="rabIdSerialForm.invalid || isSubmitting">
                 </p-button>
 
                 <p-button
@@ -109,7 +110,7 @@
     <p-table
         [value]="filteredRabIdSerials"
         [paginator]="true"
-        [first]="first"
+        [(first)]="first"
         [rows]="rows"
         [totalRecords]="totalRecords"
         [rowsPerPageOptions]="[10, 25, 50]">
@@ -117,9 +118,9 @@
         <ng-template pTemplate="header">
             <tr>
                 <th style="width:5%">#</th>
-                <th>Officer Type</th>
+                <th>Employee Type</th>
+                <th>Mother Org Name</th>
                 <th>Start From</th>
-                <th>End To</th>
                 <th>Current ID</th>
             </tr>
         </ng-template>
@@ -127,16 +128,16 @@
         <ng-template pTemplate="body" let-row let-rowIndex="rowIndex">
             <tr>
                 <td>{{ first + rowIndex + 1 }}</td>
-                <td>{{ getOfficerTypeName(row.officerTypeId) }}</td>
+                <td>{{ getEmployeeTypeName(row.employeeTypeId) }}</td>
+                <td>{{ getMotherOrgNames(row.motherOrgIds) }}</td>
                 <td>{{ row.minId }}</td>
-                <td>{{ row.maxId }}</td>
                 <td>{{ row.currentId ?? '-' }}</td>
             </tr>
         </ng-template>
 
         <ng-template pTemplate="emptymessage">
             <tr>
-                <td colspan="6" class="text-center">No records found.</td>
+                <td colspan="5" class="text-center">No records found.</td>
             </tr>
         </ng-template>
 

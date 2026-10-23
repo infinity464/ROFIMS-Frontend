@@ -1,4 +1,6 @@
-import { Component } from '@angular/core';
+import { Component, inject } from '@angular/core';
+import { UserMenuService } from '@/services/user-menu.service';
+import { Router } from '@angular/router';
 import { CommonCode } from '../shared/models/common-code';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { MasterBasicSetupService } from '../shared/services/MasterBasicSetupService';
@@ -6,21 +8,46 @@ import { ConfirmationService, MessageService } from 'primeng/api';
 import { FormConfig } from '../shared/models/formConfig';
 import { TableConfig } from '../shared/models/dataTableConfig';
 import { DynamicFormComponent } from '../shared/componets/dynamic-form-component/dynamic-form';
-import { DataTable } from '../shared/componets/data-table/data-table';
 
 import { Fluid } from 'primeng/fluid';
 import { SharedService } from '@/shared/services/shared-service';
+import { CommonModule } from '@angular/common';
+import { ButtonModule } from 'primeng/button';
+import { TagModule } from 'primeng/tag';
+import { PaginatorModule } from 'primeng/paginator';
+import { InputTextModule } from 'primeng/inputtext';
+import { IconFieldModule } from 'primeng/iconfield';
+import { InputIconModule } from 'primeng/inputicon';
+import { ProgressSpinnerModule } from 'primeng/progressspinner';
+import { debounceTime, distinctUntilChanged, Subject } from 'rxjs';
 
 @Component({
     selector: 'app-education-qualification',
-    imports: [DynamicFormComponent, DataTable,   Fluid],
+    imports: [
+        DynamicFormComponent,
+        Fluid,
+        CommonModule,
+        ButtonModule,
+        TagModule,
+        PaginatorModule,
+        InputTextModule,
+        IconFieldModule,
+        InputIconModule,
+        ProgressSpinnerModule
+    ],
     templateUrl: './education-qualification.html',
     providers: [],
     styleUrl: './education-qualification.scss'
 })
 export class EducationQualification {
+    private _router = inject(Router);
+    private _userMenuService = inject(UserMenuService);
+    canInsert = true;
+    canUpdate = true;
+    canDelete = true;
+
     codeType: string = 'EducationQualification';
-    commonCodeData: CommonCode[] = [];
+    commonCodeData: (CommonCode & { departmentNames?: string; departmentChips?: string[] })[] = [];
     editingId: number | null = null;
     commonCodeForm!: FormGroup;
 
@@ -30,6 +57,12 @@ export class EducationQualification {
     loading = false;
     serchValue: string = '';
     isSubmitting = false;
+
+    // Department multiselect support
+    allDepartments: any[] = [];
+    departmentOptions: { label: string; value: any }[] = [];
+    /** qualificationCodeId -> department codeIds[] */
+    private mappingByQualification = new Map<number, number[]>();
 
     // Form Configuration
     formConfig: FormConfig = {
@@ -45,6 +78,14 @@ export class EducationQualification {
                 label: 'Education Qualification Name (Bangla)',
                 type: 'text',
                 required: true
+            },
+            {
+                name: 'departmentIds',
+                label: 'Department',
+                type: 'multiselect',
+                required: false,
+                default: [],
+                options: []
             },
             {
                 name: 'status',
@@ -65,6 +106,7 @@ export class EducationQualification {
         tableColumns: [
             { field: 'codeValueEN', header: 'Education Qualification Name (EN)' },
             { field: 'codeValueBN', header: 'Education Qualification Name (BN)' },
+            { field: 'departmentNames', header: 'Department(s)' },
             {
                 field: 'status',
                 header: 'Status',
@@ -85,15 +127,81 @@ export class EducationQualification {
     ) {}
 
     ngOnInit(): void {
+        const _perms = this._userMenuService.getPermissionsByRoute(this._router.url);
+        this.canInsert = _perms.canInsert;
+        this.canUpdate = _perms.canUpdate;
+        this.canDelete = _perms.canDelete;
+
         this.initForm();
-        this.getCommonCodeWithPaging({
-            first: this.first,
-            rows: this.rows
+        this.searchSubject.pipe(debounceTime(500), distinctUntilChanged()).subscribe((keyword) => this.onSearch(keyword));
+        this.loadDepartments();
+    }
+
+    /** Load the department options (EducationalDepartment common codes) then the grid. */
+    private loadDepartments() {
+        this.masterBasicSetupService.getAllByType('EducationalDepartment').subscribe({
+            next: (depts) => {
+                this.allDepartments = Array.isArray(depts) ? depts : [];
+                this.departmentOptions = this.allDepartments.map((d) => ({ label: d.codeValueEN, value: d.codeId }));
+                const field = this.formConfig.formFields.find((f) => f.name === 'departmentIds');
+                if (field) field.options = this.departmentOptions;
+                this.loadMappingsThenGrid();
+            },
+            error: (err) => {
+                console.error('Error loading departments:', err);
+                this.loadMappingsThenGrid();
+            }
         });
+    }
+
+    /** Load all qualification→department mappings, then load the paged grid. */
+    private loadMappingsThenGrid() {
+        this.masterBasicSetupService.getAllQualificationDepartments().subscribe({
+            next: (rows) => {
+                this.buildMappingIndex(rows);
+                this.getCommonCodeWithPaging({ first: this.first, rows: this.rows });
+            },
+            error: (err) => {
+                console.error('Error loading qualification-department mappings:', err);
+                this.getCommonCodeWithPaging({ first: this.first, rows: this.rows });
+            }
+        });
+    }
+
+    private buildMappingIndex(rows: any[]) {
+        this.mappingByQualification.clear();
+        (Array.isArray(rows) ? rows : []).forEach((r: any) => {
+            const list = this.mappingByQualification.get(r.qualificationCodeId) ?? [];
+            list.push(r.departmentCodeId);
+            this.mappingByQualification.set(r.qualificationCodeId, list);
+        });
+    }
+
+    private departmentNamesFor(qualificationCodeId: number): string {
+        const ids = this.mappingByQualification.get(qualificationCodeId) ?? [];
+        if (!ids.length) return '-';
+        return ids
+            .map((id) => this.allDepartments.find((d) => d.codeId === id)?.codeValueEN ?? `#${id}`)
+            .join(', ');
+    }
+
+    private departmentChipsFor(qualificationCodeId: number): string[] {
+        const ids = this.mappingByQualification.get(qualificationCodeId) ?? [];
+        return ids.map((id) => this.allDepartments.find((d) => d.codeId === id)?.codeValueEN ?? `#${id}`);
+    }
+
+    /** Debounced search wired to the card-list search box. */
+    searchSubject = new Subject<string>();
+
+    onPageChange(event: any) {
+        this.first = event.first;
+        this.rows = event.rows;
+        this.getCommonCodeWithPaging({ first: event.first, rows: event.rows });
     }
 
     initForm() {
         this.commonCodeForm = this.fb.group({
+            departmentIds: [[]],
             codeValueEN: ['', Validators.required],
             codeValueBN: ['', Validators.required],
             status: [true, Validators.required],
@@ -122,7 +230,11 @@ export class EducationQualification {
 
         apiCall.subscribe({
             next: (res) => {
-                this.commonCodeData = res.datalist;
+                this.commonCodeData = (res.datalist ?? []).map((r: any) => ({
+                    ...r,
+                    departmentNames: this.departmentNamesFor(r.codeId),
+                    departmentChips: this.departmentChipsFor(r.codeId)
+                }));
                 this.totalRecords = res.pages.rows;
                 this.rows = pageSize;
                 this.loading = false;
@@ -132,7 +244,7 @@ export class EducationQualification {
                 this.messageService.add({
                     severity: 'error',
                     summary: 'Error',
-                    detail: 'Failed to load data'
+                    detail: err?.error?.message || 'Failed to load data'
                 });
                 this.loading = false;
             }
@@ -158,8 +270,10 @@ export class EducationQualification {
 
     private createCommonCode(currentUser: string, currentDateTime: string) {
         this.isSubmitting = true;
+        const departmentIds: number[] = this.commonCodeForm.value.departmentIds ?? [];
+        const { departmentIds: _ignored, ...rest } = this.commonCodeForm.value;
         const createPayload = {
-            ...this.commonCodeForm.value,
+            ...rest,
             createdBy: currentUser,
             createdDate: currentDateTime,
             lastUpdatedBy: currentUser,
@@ -167,26 +281,16 @@ export class EducationQualification {
         };
 
         this.masterBasicSetupService.create(createPayload).subscribe({
-            next: (res) => {
-                console.log('Created:', res);
-                this.resetForm();
-                this.getCommonCodeWithPaging({
-                    first: this.first,
-                    rows: this.rows
-                });
-                this.messageService.add({
-                    severity: 'success',
-                    summary: 'Success',
-                    detail: 'EducationQualification created successfully'
-                });
-                this.isSubmitting = false;
+            next: (res: any) => {
+                const newCodeId = res?.data?.codeId ?? res?.codeId;
+                this.saveDepartmentsThenFinish(newCodeId, departmentIds, currentUser, currentDateTime, 'created');
             },
             error: (err) => {
                 console.error('Error creating:', err);
                 this.messageService.add({
                     severity: 'error',
                     summary: 'Error',
-                    detail: 'Failed to create education-qualification'
+                    detail: err?.error?.message || 'Failed to create education-qualification'
                 });
                 this.isSubmitting = false;
             }
@@ -195,35 +299,75 @@ export class EducationQualification {
 
     private updateCommonCode(currentUser: string, currentDateTime: string) {
         this.isSubmitting = true;
+        const departmentIds: number[] = this.commonCodeForm.value.departmentIds ?? [];
+        const editingId = this.editingId;
+        const { departmentIds: _ignored, ...rest } = this.commonCodeForm.value;
         const updatePayload = {
-            ...this.commonCodeForm.value,
-            codeId: this.editingId,
+            ...rest,
+            codeId: editingId,
             lastUpdatedBy: currentUser,
             lastupdate: currentDateTime
         };
 
         this.masterBasicSetupService.update(updatePayload).subscribe({
-            next: (res) => {
-                console.log('Updated:', res);
-                this.resetForm();
-                this.getCommonCodeWithPaging({
-                    first: this.first,
-                    rows: this.rows
-                });
-                this.messageService.add({
-                    severity: 'success',
-                    summary: 'Success',
-                    detail: 'EducationQualification updated successfully'
-                });
-                this.isSubmitting = false;
+            next: () => {
+                this.saveDepartmentsThenFinish(editingId, departmentIds, currentUser, currentDateTime, 'updated');
             },
             error: (err) => {
                 console.error('Error updating:', err);
                 this.messageService.add({
                     severity: 'error',
                     summary: 'Error',
-                    detail: 'Failed to update education-qualification'
+                    detail: err?.error?.message || 'Failed to update education-qualification'
                 });
+                this.isSubmitting = false;
+            }
+        });
+    }
+
+    /** Persist the department mapping for a saved qualification, then refresh UI. */
+    private saveDepartmentsThenFinish(
+        qualificationCodeId: number | null | undefined,
+        departmentIds: number[],
+        currentUser: string,
+        currentDateTime: string,
+        action: 'created' | 'updated'
+    ) {
+        const finish = () => {
+            this.resetForm();
+            this.loadMappingsThenGrid();
+            this.messageService.add({
+                severity: 'success',
+                summary: 'Success',
+                detail: `EducationQualification ${action} successfully`
+            });
+            this.isSubmitting = false;
+        };
+
+        if (qualificationCodeId == null) {
+            // Could not resolve the qualification id — finish without the mapping.
+            finish();
+            return;
+        }
+
+        this.masterBasicSetupService.saveQualificationDepartments({
+            qualificationCodeId,
+            departmentCodeIds: departmentIds ?? [],
+            orgId: this.commonCodeForm.get('orgId')?.value ?? 0,
+            status: true,
+            createdBy: currentUser,
+            lastUpdatedBy: currentUser
+        }).subscribe({
+            next: () => finish(),
+            error: (err) => {
+                console.error('Error saving departments:', err);
+                this.messageService.add({
+                    severity: 'warn',
+                    summary: 'Partial save',
+                    detail: 'Record saved, but department mapping failed'
+                });
+                this.resetForm();
+                this.loadMappingsThenGrid();
                 this.isSubmitting = false;
             }
         });
@@ -232,7 +376,9 @@ export class EducationQualification {
     update(row: any) {
         this.editingId = row.codeId;
         this.commonCodeForm.patchValue(row);
-        console.log('Edit:', row);
+        this.commonCodeForm.patchValue({
+            departmentIds: this.mappingByQualification.get(row.codeId) ?? []
+        });
     }
 
     delete(row: any, event: Event) {
@@ -269,7 +415,7 @@ export class EducationQualification {
                         this.messageService.add({
                             severity: 'error',
                             summary: 'Error',
-                            detail: 'Failed to delete education-qualification'
+                            detail: err?.error?.message || 'Failed to delete education-qualification'
                         });
                     }
                 });
@@ -281,6 +427,7 @@ export class EducationQualification {
         this.isSubmitting = false;
         this.editingId = null;
         this.commonCodeForm.reset({
+            departmentIds: [],
             orgId: 0,
             codeId: 0,
             codeType: this.codeType,

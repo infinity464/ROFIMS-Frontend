@@ -22,4 +22,38 @@
     &.p-toast-top-center {
         top: 100px;
     }
+    &.p-toast-center {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    .p-toast-message {
+        min-width: 480px;
+        max-width: 95vw;
+        padding: 1.5rem 2rem;
+        font-size: 1.2rem;
+        font-weight: 700;
+        letter-spacing: 0.02em;
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+        border-radius: 12px;
+        border-left: 5px solid currentColor;
+        .p-toast-message-content {
+            padding: 0.75rem 0;
+        }
+        .p-toast-summary {
+            font-size: 1.35rem;
+            font-weight: 800;
+            letter-spacing: 0.03em;
+        }
+        .p-toast-detail {
+            font-size: 1.15rem;
+            font-weight: 600;
+            margin-top: 0.5rem;
+        }
+        .p-toast-message-icon,
+        .p-toast-icon {
+            font-size: 2rem !important;
+            font-weight: bold;
+        }
+    }
 }

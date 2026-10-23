@@ -1,0 +1,194 @@
+<!-- ── Rank-Wise Manpower State Report ───────────────────────────────────── -->
+<div class="report-results-card">
+
+    <!-- Header -->
+    <div class="report-results-header">
+
+        <!-- Row 1: filter left | buttons right -->
+        <div class="report-toolbar-row">
+
+            <!-- Org filter multiselect -->
+            <div class="org-filter-wrap">
+                <p-multiselect
+                    #orgSelect
+                    [(ngModel)]="selectedOrgIds"
+                    [options]="orgOptions"
+                    optionLabel="label"
+                    optionValue="value"
+                    placeholder="All Organizations"
+                    [showClear]="true"
+                    [filter]="true"
+                    display="chip"
+                    (onChange)="onOrgFilterChange()"
+                    styleClass="org-filter-select"
+                    [disabled]="loading">
+                </p-multiselect>
+            </div>
+
+            <!-- Lang + Export -->
+            <div class="report-results-actions">
+                <label class="equiv-toggle">
+                    <p-checkbox [(ngModel)]="showEquivalentRanks" [binary]="true" inputId="showEquivRanks"></p-checkbox>
+                    <span>{{ lang === 'en' ? 'Show equivalent ranks' : 'সমতুল্য পদবী দেখান' }}</span>
+                </label>
+
+                <label class="equiv-toggle">
+                    <p-checkbox [(ngModel)]="showPostingOut" [binary]="true" inputId="showPostingOut"></p-checkbox>
+                    <span>{{ lang === 'en' ? 'Show Posted Out' : 'প্রেষণাদেশ বাতিল দেখান' }}</span>
+                </label>
+
+                <button type="button" class="report-lang-toggle" (click)="toggleLang()">
+                    {{ lang === 'en' ? 'বাংলা' : 'English' }}
+                </button>
+
+                <div class="report-export-wrap">
+                    <button type="button" class="report-btn-export"
+                            (click)="toggleExportDropdown($event)"
+                            [disabled]="loading || exporting || filteredOrgs.length === 0">
+                        @if (exporting) {
+                            <i class="pi pi-spin pi-spinner" style="font-size:13px"></i>
+                            Generating...
+                        } @else {
+                            <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
+                                <path d="M6.5 1v7M3.5 5.5l3 3 3-3M1.5 10.5h10"
+                                      stroke="currentColor" stroke-width="1.5"
+                                      stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                            Export
+                        }
+                    </button>
+
+                    @if (exportDropdownOpen) {
+                        <div class="report-export-dropdown" (click)="$event.stopPropagation()">
+                            <button type="button" class="report-export-item report-export-print"
+                                    (click)="exportAs('print')">
+                                <i class="pi pi-print" style="font-size:0.75rem"></i> Print
+                            </button>
+                            <button type="button" class="report-export-item report-export-word"
+                                    (click)="exportAs('word')">
+                                <span class="report-export-icon">⬇</span> Word
+                            </button>
+                            <button type="button" class="report-export-item report-export-excel"
+                                    (click)="exportAs('excel')">
+                                <span class="report-export-icon">⬇</span> Excel
+                            </button>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+
+        <!-- RAB org-tree cascade filter (collapsible) -->
+        <app-org-tree-filter (filterChange)="onOrgTreeFilter($event)"></app-org-tree-filter>
+
+        <!-- Row 2: centered title -->
+        <div class="report-header-title-block">
+            <div class="report-main-title">{{ titleLabel }}</div>
+            @if (scopeLine) {
+                <div class="report-scope-line">{{ scopeLine }}</div>
+            }
+            <div class="report-date-line">{{ dateLine }}</div>
+        </div>
+
+    </div>
+
+    <!-- Loading skeleton -->
+    <div *ngIf="loading" class="skeleton-wrapper">
+        <div *ngFor="let i of [1,2,3,4,5,6,7,8]" class="skeleton-row"></div>
+    </div>
+
+    <!-- Report body -->
+    <div class="report-body" *ngIf="!loading">
+
+        <!-- Empty state -->
+        <div *ngIf="filteredOrgs.length === 0" class="empty-state">
+            <i class="pi pi-inbox"></i>
+            <p>No data found.</p>
+        </div>
+
+        <!-- One table per org -->
+        <div *ngFor="let org of filteredOrgs" class="org-section">
+
+            <!-- Org name banner -->
+            <div class="org-banner">{{ orgLabel(org) }}</div>
+
+            <div class="report-table-wrap">
+                <table class="report-table">
+                    <colgroup *ngIf="!showPostingOut">
+                        <col style="width: 8%">
+                        <col style="width: 62%">
+                        <col style="width: 30%">
+                    </colgroup>
+                    <colgroup *ngIf="showPostingOut">
+                        <col style="width: 7%">
+                        <col style="width: 53%">
+                        <col style="width: 20%">
+                        <col style="width: 20%">
+                    </colgroup>
+                    <thead>
+                        <tr>
+                            <th *ngFor="let h of colHeaders">{{ h }}</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr *ngFor="let row of org.rows; let i = index">
+                            <td class="num-cell">{{ fmt(i + 1) }}</td>
+                            <td class="rank-name">{{ rankLabel(row) }}</td>
+                            <!-- <td class="num-cell">{{ fmt(row.auth) }}</td> -->
+                            <td class="num-cell">{{ fmt(row.held) }}</td>
+                            <!-- <td class="num-cell" [class.cell-danger]="row.def > 0">{{ fmt(row.def) }}</td> -->
+                            <!-- <td class="num-cell" [class.cell-warning]="row.sur > 0">{{ fmt(row.sur) }}</td> -->
+                            <!-- <td class="num-cell" [class.cell-danger]="row.defPct > 0">{{ fmtPct(row.defPct) }}</td> -->
+                            <td class="num-cell" *ngIf="showPostingOut">{{ fmt(row.postedOut) }}</td>
+                        </tr>
+                    </tbody>
+                    <tfoot>
+                        <tr class="subtotals-row">
+                            <td></td>
+                            <td class="totals-label">{{ subtotalLabel }}</td>
+                            <!-- <td class="num-cell">{{ fmt(org.subtotal.auth) }}</td> -->
+                            <td class="num-cell">{{ fmt(org.subtotal.held) }}</td>
+                            <!-- <td class="num-cell">{{ fmt(org.subtotal.def) }}</td> -->
+                            <!-- <td class="num-cell">{{ fmt(org.subtotal.sur) }}</td> -->
+                            <!-- <td class="num-cell">{{ fmtPct(org.subtotal.defPct) }}</td> -->
+                            <td class="num-cell" *ngIf="showPostingOut">{{ fmt(org.subtotal.postedOut) }}</td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+        </div>
+
+        <!-- Grand total table -->
+        <div class="grand-total-section" *ngIf="filteredOrgs.length > 0">
+            <div class="report-table-wrap">
+                <table class="report-table">
+                    <colgroup *ngIf="!showPostingOut">
+                        <col style="width: 8%">
+                        <col style="width: 62%">
+                        <col style="width: 30%">
+                    </colgroup>
+                    <colgroup *ngIf="showPostingOut">
+                        <col style="width: 7%">
+                        <col style="width: 53%">
+                        <col style="width: 20%">
+                        <col style="width: 20%">
+                    </colgroup>
+                    <tbody>
+                        <tr class="grand-total-row">
+                            <td class="num-cell"></td>
+                            <td class="totals-label">{{ grandTotalLabel }}</td>
+                            <!-- <td class="num-cell">{{ fmt(grandTotal.auth) }}</td> -->
+                            <td class="num-cell">{{ fmt(grandTotal.held) }}</td>
+                            <!-- <td class="num-cell">{{ fmt(grandTotal.def) }}</td> -->
+                            <!-- <td class="num-cell">{{ fmt(grandTotal.sur) }}</td> -->
+                            <!-- <td class="num-cell">{{ fmtPct(grandTotal.defPct) }}</td> -->
+                            <td class="num-cell" *ngIf="showPostingOut">{{ fmt(grandTotal.postedOut) }}</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+    </div>
+
+</div>

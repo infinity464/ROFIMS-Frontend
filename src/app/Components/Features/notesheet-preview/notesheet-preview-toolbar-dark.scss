@@ -1,0 +1,39 @@
+/* Shared dark-mode treatment for movement preview toolbars
+   (MO / Article 47 Handover / Article 47 Takeover).
+   Imported per-component via styleUrls so Angular's emulated encapsulation
+   keeps the rules scoped to the consuming component only — the older
+   `posting` preview keeps its original light-only header. */
+
+:host {
+    background: var(--p-content-background, #d8d8d8);
+}
+
+.preview-header {
+    background: var(--p-content-background, #fff);
+    color: var(--p-text-color, #1e293b);
+    border-bottom: 1px solid var(--p-content-border-color, var(--surface-border));
+}
+
+:host-context(.app-dark) {
+    background: var(--p-content-background, #0f172a);
+
+    .preview-header {
+        background: var(--p-content-background, #1e293b);
+        color: var(--p-text-color, #e2e8f0);
+        border-bottom-color: var(--p-content-border-color, rgba(255, 255, 255, 0.1));
+    }
+
+    .ns-status-badge {
+        background: rgba(255, 255, 255, 0.08);
+        color: var(--p-text-color, #e2e8f0);
+    }
+    .ns-status-badge--pending {
+        background: rgba(251, 191, 36, 0.18);
+        color: #fde68a;
+    }
+
+    .preview-loading,
+    .preview-error {
+        color: var(--p-text-muted-color, #94a3b8);
+    }
+}

@@ -1,0 +1,454 @@
+<p-toast position="top-center"></p-toast>
+
+<div class="card supernumerary-profile-page text-900">
+    <!-- Action bar: title left, buttons right -->
+    <div class="profile-action-bar">
+        <h1 class="profile-page-title">Supernumerary Profile</h1>
+        <div class="profile-action-buttons">
+            <button type="button" class="profile-btn-back" (click)="goBack()">
+                <i class="pi pi-arrow-left"></i>
+                Back
+            </button>
+            @if (profile && !loading) {
+                <div class="profile-export-wrap">
+                    <button type="button" class="profile-btn-export" (click)="toggleExportDropdown($event)">
+                        <i class="pi pi-download"></i>
+                        Export
+                    </button>
+                    @if (exportDropdownOpen) {
+                        <div class="profile-export-dropdown" (click)="$event.stopPropagation()">
+                            <button type="button" class="profile-export-item" (click)="exportAs('pdf')">
+                                <i class="pi pi-file-pdf"></i> PDF
+                            </button>
+                            <button type="button" class="profile-export-item" (click)="exportAs('word')">
+                                <i class="pi pi-file-word"></i> Word
+                            </button>
+                        </div>
+                    }
+                </div>
+            }
+        </div>
+    </div>
+
+    @if (loading) {
+        <div class="flex align-items-center justify-content-center p-5">
+            <i class="pi pi-spin pi-spinner text-4xl text-500"></i>
+        </div>
+    } @else if (profile) {
+        <!-- Hero: Avatar + Name/badges + IDs -->
+        <div class="profile-hero">
+            <div class="profile-avatar-box">
+                @if (profileImageUrl) {
+                    <img [src]="profileImageUrl" alt="Profile" class="profile-avatar-img" />
+                } @else {
+                    <div class="profile-avatar-initials">{{ getInitials(profile.name) }}</div>
+                }
+            </div>
+            <div class="profile-hero-info">
+                <div class="profile-hero-name">{{ profile.name || '-' }}{{ profile.corpsName && profile.corpsName !== 'N/A' ? ', + ' + profile.corpsName : '' }}</div>
+                <div class="profile-hero-subtitle">{{ profile.appointment || '' }}{{ profile.appointment && profile.rank ? ' \u00B7 ' : '' }}{{ profile.rank || '' }}</div>
+                <div class="profile-hero-badges">
+                    @if (profile.typeOfMember) {
+                        <span class="profile-badge">{{ profile.typeOfMember }}</span>
+                    }
+                    @if (profile.motherOrganization) {
+                        <span class="profile-badge">{{ profile.motherOrganization }}</span>
+                    }
+                    <span class="profile-badge">Supernumerary</span>
+                </div>
+            </div>
+            <div class="profile-hero-ids">
+                <div class="profile-id-block">
+                    <span class="profile-id-label">SERVICE ID</span>
+                    <span class="profile-id-value">{{ profile.serviceId || '-' }}</span>
+                </div>
+                <div class="profile-id-block">
+                    <span class="profile-id-label">RAB ID</span>
+                    <span class="profile-id-value">{{ profile.rabId || '-' }}</span>
+                </div>
+                @if (postingProcessingStatus?.newPostingStep && !postingProcessingStatus!.newPostingOrderReceived) {
+                    <div class="sp-posting-status-group">
+                        <div class="sp-posting-status-badge" [class.sp-status-info]="!isPostingTerminalState(postingProcessingStatus!.newPostingStep)" [class.sp-status-danger]="isPostingTerminalState(postingProcessingStatus!.newPostingStep)">
+                            <i class="pi pi-arrows-h"></i> New Posting: {{ getPostingStepLabel(postingProcessingStatus!.newPostingStep!) }}
+                        </div>
+                        @if (postingProcessingStatus!.newPostingForceOrderGenerated && !isPostingTerminalState(postingProcessingStatus!.newPostingStep)) {
+                            <div class="sp-posting-flags">
+                                <span class="sp-flag" [class.sp-flag-yes]="postingProcessingStatus!.newPostingForceOrderApproved" [class.sp-flag-no]="!postingProcessingStatus!.newPostingForceOrderApproved">
+                                    {{ postingProcessingStatus!.newPostingForceOrderApproved ? 'Posting Approved' : 'Posting Not Approved' }}
+                                </span>
+                                @if (postingProcessingStatus!.newPostingForceOrderApproved) {
+                                    <span class="sp-flag" [class.sp-flag-yes]="postingProcessingStatus!.newPostingOrderReceived" [class.sp-flag-no]="!postingProcessingStatus!.newPostingOrderReceived">
+                                        {{ postingProcessingStatus!.newPostingOrderReceived ? 'Posting Received' : 'Posting Not Received' }}
+                                    </span>
+                                }
+                            </div>
+                        }
+                    </div>
+                }
+                @if (postingProcessingStatus?.interPostingStep && !postingProcessingStatus!.interPostingOrderReceived) {
+                    <div class="sp-posting-status-group">
+                        <div class="sp-posting-status-badge" [class.sp-status-warn]="!isPostingTerminalState(postingProcessingStatus!.interPostingStep)" [class.sp-status-danger]="isPostingTerminalState(postingProcessingStatus!.interPostingStep)">
+                            <i class="pi pi-arrows-h"></i> Inter Posting: {{ getPostingStepLabel(postingProcessingStatus!.interPostingStep!) }}
+                        </div>
+                        @if (postingProcessingStatus!.interPostingForceOrderGenerated && !isPostingTerminalState(postingProcessingStatus!.interPostingStep)) {
+                            <div class="sp-posting-flags">
+                                <span class="sp-flag" [class.sp-flag-yes]="postingProcessingStatus!.interPostingForceOrderApproved" [class.sp-flag-no]="!postingProcessingStatus!.interPostingForceOrderApproved">
+                                    {{ postingProcessingStatus!.interPostingForceOrderApproved ? 'Posting Approved' : 'Posting Not Approved' }}
+                                </span>
+                                @if (postingProcessingStatus!.interPostingForceOrderApproved) {
+                                    <span class="sp-flag" [class.sp-flag-yes]="postingProcessingStatus!.interPostingOrderReceived" [class.sp-flag-no]="!postingProcessingStatus!.interPostingOrderReceived">
+                                        {{ postingProcessingStatus!.interPostingOrderReceived ? 'Posting Received' : 'Posting Not Received' }}
+                                    </span>
+                                }
+                            </div>
+                        }
+                    </div>
+                }
+            </div>
+        </div>
+
+        <!-- Service Details: one heading, two balanced columns -->
+        <div class="profile-section">
+            <div class="profile-section-heading">SERVICE DETAILS</div>
+            <div class="profile-two-col">
+                <div class="profile-field-list">
+                    <div class="profile-field-row">
+                        <span class="profile-field-label">Type of member</span>
+                        <span class="profile-field-value">{{ profile.typeOfMember || '-' }}</span>
+                    </div>
+                    <div class="profile-field-row">
+                        <span class="profile-field-label">Rank</span>
+                        <span class="profile-field-value">{{ profile.rank || '-' }}</span>
+                    </div>
+                    <div class="profile-field-row">
+                        <span class="profile-field-label">Corps</span>
+                        <span class="profile-field-value">{{ profile.corpsName || profile.corps || '-' }}</span>
+                    </div>
+                    <div class="profile-field-row">
+                        <span class="profile-field-label">Trade</span>
+                        <span class="profile-field-value">{{ profile.trade || 'N/A' }}</span>
+                    </div>
+                    <div class="profile-field-row">
+                        <span class="profile-field-label">Mother org.</span>
+                        <span class="profile-field-value">{{ profile.motherOrganization || '-' }}</span>
+                    </div>
+                    <div class="profile-field-row">
+                        <span class="profile-field-label">Special Qualifications</span>
+                        <span class="profile-field-value">{{ serviceOverview?.specialQualifications || '-' }}</span>
+                    </div>
+                </div>
+                <div class="profile-field-list">
+                    <div class="profile-field-row">
+                        <span class="profile-field-label">Appointment</span>
+                        <span class="profile-field-value">{{ profile.appointment || '-' }}</span>
+                    </div>
+                    <div class="profile-field-row">
+                        <span class="profile-field-label">Last unit</span>
+                        <span class="profile-field-value">{{ profile.lastUnit || '-' }}</span>
+                    </div>
+                    <div class="profile-field-row">
+                        <span class="profile-field-label">Last unit district</span>
+                        <span class="profile-field-value">{{ profile.location || '-' }}</span>
+                    </div>
+                    <div class="profile-field-row">
+                        <span class="profile-field-label">Date of joining RAB</span>
+                        <span class="profile-field-value">{{ formatDateOfJoining(serviceOverview?.joiningDate ?? getDateOfJoiningInRAB(profile)) }}</span>
+                    </div>
+                    <div class="profile-field-row">
+                        <span class="profile-field-label">Marital Status</span>
+                        <span class="profile-field-value">{{ serviceOverview?.maritalStatus || '-' }}</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Own addresses: Permanent + Present side-by-side -->
+        @if (hasAddress(profile.ownPermanentAddress) || hasAddress(profile.ownPresentAddress)) {
+            <div class="profile-section">
+                <div class="profile-two-col">
+                    <div class="profile-field-list">
+                        @if (hasAddress(profile.ownPermanentAddress)) {
+                            <div class="profile-col-heading">PERMANENT ADDRESS</div>
+                            <div class="profile-field-row">
+                                <span class="profile-field-label">Village / Area</span>
+                                <span class="profile-field-value">{{ addrVal(profile.ownPermanentAddress, 'villageArea') }}</span>
+                            </div>
+                            <div class="profile-field-row">
+                                <span class="profile-field-label">Post office</span>
+                                <span class="profile-field-value">{{ addrVal(profile.ownPermanentAddress, 'postOffice') }}</span>
+                            </div>
+                            <div class="profile-field-row">
+                                <span class="profile-field-label">Upazila / Thana</span>
+                                <span class="profile-field-value">{{ addrVal(profile.ownPermanentAddress, 'upazilaThana') }}</span>
+                            </div>
+                            <div class="profile-field-row">
+                                <span class="profile-field-label">District</span>
+                                <span class="profile-field-value">{{ addrVal(profile.ownPermanentAddress, 'district') }}</span>
+                            </div>
+                            <div class="profile-field-row">
+                                <span class="profile-field-label">Division</span>
+                                <span class="profile-field-value">{{ addrVal(profile.ownPermanentAddress, 'division') }}</span>
+                            </div>
+                        }
+                    </div>
+                    <div class="profile-field-list">
+                        @if (hasAddress(profile.ownPresentAddress)) {
+                            <div class="profile-col-heading">PRESENT ADDRESS</div>
+                            <div class="profile-field-row">
+                                <span class="profile-field-label">Village / Area</span>
+                                <span class="profile-field-value">{{ addrVal(profile.ownPresentAddress, 'villageArea') }}</span>
+                            </div>
+                            <div class="profile-field-row">
+                                <span class="profile-field-label">Post office</span>
+                                <span class="profile-field-value">{{ addrVal(profile.ownPresentAddress, 'postOffice') }}</span>
+                            </div>
+                            <div class="profile-field-row">
+                                <span class="profile-field-label">Upazila / Thana</span>
+                                <span class="profile-field-value">{{ addrVal(profile.ownPresentAddress, 'upazilaThana') }}</span>
+                            </div>
+                            <div class="profile-field-row">
+                                <span class="profile-field-label">District</span>
+                                <span class="profile-field-value">{{ addrVal(profile.ownPresentAddress, 'district') }}</span>
+                            </div>
+                            <div class="profile-field-row">
+                                <span class="profile-field-label">Division</span>
+                                <span class="profile-field-value">{{ addrVal(profile.ownPresentAddress, 'division') }}</span>
+                            </div>
+                        }
+                    </div>
+                </div>
+            </div>
+        }
+
+        <!-- Spouse addresses -->
+        @if (hasAddress(profile.spousePermanentAddress) || hasAddress(profile.spousePresentAddress)) {
+            <div class="profile-section">
+                <div class="profile-two-col">
+                    <div class="profile-field-list">
+                        @if (hasAddress(profile.spousePermanentAddress)) {
+                            <div class="profile-col-heading">SPOUSE PERMANENT ADDRESS</div>
+                            <div class="profile-field-row">
+                                <span class="profile-field-label">Village / Area</span>
+                                <span class="profile-field-value">{{ addrVal(profile.spousePermanentAddress, 'villageArea') }}</span>
+                            </div>
+                            <div class="profile-field-row">
+                                <span class="profile-field-label">Post office</span>
+                                <span class="profile-field-value">{{ addrVal(profile.spousePermanentAddress, 'postOffice') }}</span>
+                            </div>
+                            <div class="profile-field-row">
+                                <span class="profile-field-label">Upazila / Thana</span>
+                                <span class="profile-field-value">{{ addrVal(profile.spousePermanentAddress, 'upazilaThana') }}</span>
+                            </div>
+                            <div class="profile-field-row">
+                                <span class="profile-field-label">District</span>
+                                <span class="profile-field-value">{{ addrVal(profile.spousePermanentAddress, 'district') }}</span>
+                            </div>
+                            <div class="profile-field-row">
+                                <span class="profile-field-label">Division</span>
+                                <span class="profile-field-value">{{ addrVal(profile.spousePermanentAddress, 'division') }}</span>
+                            </div>
+                        }
+                    </div>
+                    <div class="profile-field-list">
+                        @if (hasAddress(profile.spousePresentAddress)) {
+                            <div class="profile-col-heading">SPOUSE PRESENT ADDRESS</div>
+                            <div class="profile-field-row">
+                                <span class="profile-field-label">Village / Area</span>
+                                <span class="profile-field-value">{{ addrVal(profile.spousePresentAddress, 'villageArea') }}</span>
+                            </div>
+                            <div class="profile-field-row">
+                                <span class="profile-field-label">Post office</span>
+                                <span class="profile-field-value">{{ addrVal(profile.spousePresentAddress, 'postOffice') }}</span>
+                            </div>
+                            <div class="profile-field-row">
+                                <span class="profile-field-label">Upazila / Thana</span>
+                                <span class="profile-field-value">{{ addrVal(profile.spousePresentAddress, 'upazilaThana') }}</span>
+                            </div>
+                            <div class="profile-field-row">
+                                <span class="profile-field-label">District</span>
+                                <span class="profile-field-value">{{ addrVal(profile.spousePresentAddress, 'district') }}</span>
+                            </div>
+                            <div class="profile-field-row">
+                                <span class="profile-field-label">Division</span>
+                                <span class="profile-field-value">{{ addrVal(profile.spousePresentAddress, 'division') }}</span>
+                            </div>
+                        }
+                    </div>
+                </div>
+            </div>
+        }
+
+        <!-- Reliever table -->
+        @if (profile.relievedBy && relieverTableRows.length > 0) {
+            <div class="profile-section">
+                <div class="profile-section-heading">RELIEVER INFORMATION</div>
+                <div class="reliever-table">
+                    <p-table [value]="relieverTableRows" [tableStyle]="{ 'min-width': '40rem' }" styleClass="p-datatable-sm p-datatable-gridlines">
+                        <ng-template pTemplate="header">
+                            <tr>
+                                <th style="width: 3rem">Ser</th>
+                                <th>Service ID</th>
+                                <th>Rank</th>
+                                <th>Corps</th>
+                                <th>Trade</th>
+                                <th>Name</th>
+                                <th>Wing/Battalion</th>
+                                <th>Appointment</th>
+                                <th style="width: 6rem">View</th>
+                            </tr>
+                        </ng-template>
+                        <ng-template pTemplate="body" let-r let-rowIndex="rowIndex">
+                            <tr>
+                                <td>{{ rowIndex + 1 }}.</td>
+                                <td>{{ r.serviceId || '-' }}</td>
+                                <td>{{ r.rank || '-' }}</td>
+                                <td>{{ r.corps || '-' }}</td>
+                                <td>{{ r.trade || '-' }}</td>
+                                <td>{{ r.name || '-' }}</td>
+                                <td>{{ r.wingBattalion || '-' }}</td>
+                                <td>{{ r.appointment || '-' }}</td>
+                                <td>
+                                    <button type="button" class="p-button p-button-sm p-component" (click)="onViewRelieverClick(r); $event.stopPropagation()">View</button>
+                                </td>
+                            </tr>
+                        </ng-template>
+                    </p-table>
+                </div>
+            </div>
+        }
+
+        <!-- Files / Documents -->
+        <div class="profile-section">
+            <div class="profile-section-heading">FILES</div>
+            @if (documentList.length === 0) {
+                <div class="text-500 py-2">No documents available.</div>
+            } @else {
+                <p-table
+                    [value]="documentList"
+                    styleClass="p-datatable-sm p-datatable-gridlines"
+                    [tableStyle]="{ 'min-width': '24rem' }"
+                >
+                    <ng-template pTemplate="header">
+                        <tr>
+                            <th style="width: 2rem">#</th>
+                            <th>Section</th>
+                            <th>File Name</th>
+                            <th style="width: 8rem">Action</th>
+                        </tr>
+                    </ng-template>
+                    <ng-template pTemplate="body" let-row let-rowIndex="rowIndex">
+                        <tr>
+                            <td>{{ rowIndex + 1 }}.</td>
+                            <td>{{ getDocumentSourceLabel(row) }}</td>
+                            <td>{{ getDocumentFileName(row) }}</td>
+                            <td>
+                                <p-button
+                                    icon="pi pi-download"
+                                    label="Download"
+                                    [rounded]="true"
+                                    [text]="true"
+                                    severity="secondary"
+                                    size="small"
+                                    (onClick)="downloadDocument(row)"
+                                    pTooltip="Download file"
+                                ></p-button>
+                            </td>
+                        </tr>
+                    </ng-template>
+                    <ng-template pTemplate="emptymessage">
+                        <tr>
+                            <td colspan="4" class="text-center text-500 py-3">No documents available.</td>
+                        </tr>
+                    </ng-template>
+                </p-table>
+            }
+        </div>
+    } @else if (!loading) {
+        <p class="text-500 m-0">No profile data available.</p>
+    }
+</div>
+
+<!-- Reliever profile modal -->
+<p-dialog header="Reliever Profile" [(visible)]="relieverDialogVisible" [modal]="true" [style]="{ width: '42rem' }" [draggable]="false" [resizable]="false" (onHide)="closeRelieverDialog()" [closable]="true" styleClass="text-900">
+    @if (relieverProfileLoading) {
+        <div class="flex align-items-center justify-content-center p-5">
+            <i class="pi pi-spin pi-spinner text-4xl text-500"></i>
+        </div>
+    } @else if (relieverProfile) {
+        <div class="profile-dialog-content text-900">
+            <div class="profile-section dialog-section">
+                <div class="profile-section-heading">SERVICE DETAILS</div>
+                <div class="profile-two-col">
+                    <div class="profile-field-list">
+                        <div class="profile-field-row"><span class="profile-field-label">Service ID</span> <span class="profile-field-value">{{ relieverProfile.serviceId || '-' }}</span></div>
+                        <div class="profile-field-row"><span class="profile-field-label">RAB ID</span> <span class="profile-field-value">{{ relieverProfile.rabId || '-' }}</span></div>
+                        <div class="profile-field-row"><span class="profile-field-label">Name</span> <span class="profile-field-value">{{ relieverProfile.name || '-' }}{{ relieverProfile.corpsName && relieverProfile.corpsName !== 'N/A' ? ', + ' + relieverProfile.corpsName : '' }}</span></div>
+                        <div class="profile-field-row"><span class="profile-field-label">Type of Member</span> <span class="profile-field-value">{{ relieverProfile.typeOfMember || '-' }}</span></div>
+                        <div class="profile-field-row"><span class="profile-field-label">Rank</span> <span class="profile-field-value">{{ relieverProfile.rank || '-' }}</span></div>
+                        <div class="profile-field-row"><span class="profile-field-label">Corps</span> <span class="profile-field-value">{{ relieverProfile.corpsName || relieverProfile.corps || '-' }}</span></div>
+                        <div class="profile-field-row"><span class="profile-field-label">Trade</span> <span class="profile-field-value">{{ relieverProfile.trade || 'N/A' }}</span></div>
+                    </div>
+                    <div class="profile-field-list">
+                        <div class="profile-field-row"><span class="profile-field-label">Mother Organization</span> <span class="profile-field-value">{{ relieverProfile.motherOrganization || '-' }}</span></div>
+                        <div class="profile-field-row"><span class="profile-field-label">Last Unit</span> <span class="profile-field-value">{{ relieverProfile.lastUnit || '-' }}</span></div>
+                        <div class="profile-field-row"><span class="profile-field-label">Last Unit District</span> <span class="profile-field-value">{{ relieverProfile.location || '-' }}</span></div>
+                        <div class="profile-field-row"><span class="profile-field-label">Appointment</span> <span class="profile-field-value">{{ relieverProfile.appointment || '-' }}</span></div>
+                        <div class="profile-field-row"><span class="profile-field-label">Date of Joining in RAB</span> <span class="profile-field-value">{{ formatDateOfJoining(getDateOfJoiningInRAB(relieverProfile)) }}</span></div>
+                    </div>
+                </div>
+            </div>
+            @if (hasAddress(relieverProfile.ownPermanentAddress) || hasAddress(relieverProfile.ownPresentAddress)) {
+                <div class="profile-section dialog-section">
+                    <div class="profile-two-col">
+                        <div class="profile-field-list">
+                            @if (hasAddress(relieverProfile.ownPermanentAddress)) {
+                                <div class="profile-col-heading">PERMANENT ADDRESS</div>
+                                <div class="profile-field-row"><span class="profile-field-label">Village / Area</span> <span class="profile-field-value">{{ addrVal(relieverProfile.ownPermanentAddress, 'villageArea') }}</span></div>
+                                <div class="profile-field-row"><span class="profile-field-label">Post office</span> <span class="profile-field-value">{{ addrVal(relieverProfile.ownPermanentAddress, 'postOffice') }}</span></div>
+                                <div class="profile-field-row"><span class="profile-field-label">Upazila / Thana</span> <span class="profile-field-value">{{ addrVal(relieverProfile.ownPermanentAddress, 'upazilaThana') }}</span></div>
+                                <div class="profile-field-row"><span class="profile-field-label">District</span> <span class="profile-field-value">{{ addrVal(relieverProfile.ownPermanentAddress, 'district') }}</span></div>
+                                <div class="profile-field-row"><span class="profile-field-label">Division</span> <span class="profile-field-value">{{ addrVal(relieverProfile.ownPermanentAddress, 'division') }}</span></div>
+                            }
+                        </div>
+                        <div class="profile-field-list">
+                            @if (hasAddress(relieverProfile.ownPresentAddress)) {
+                                <div class="profile-col-heading">PRESENT ADDRESS</div>
+                                <div class="profile-field-row"><span class="profile-field-label">Village / Area</span> <span class="profile-field-value">{{ addrVal(relieverProfile.ownPresentAddress, 'villageArea') }}</span></div>
+                                <div class="profile-field-row"><span class="profile-field-label">Post office</span> <span class="profile-field-value">{{ addrVal(relieverProfile.ownPresentAddress, 'postOffice') }}</span></div>
+                                <div class="profile-field-row"><span class="profile-field-label">Upazila / Thana</span> <span class="profile-field-value">{{ addrVal(relieverProfile.ownPresentAddress, 'upazilaThana') }}</span></div>
+                                <div class="profile-field-row"><span class="profile-field-label">District</span> <span class="profile-field-value">{{ addrVal(relieverProfile.ownPresentAddress, 'district') }}</span></div>
+                                <div class="profile-field-row"><span class="profile-field-label">Division</span> <span class="profile-field-value">{{ addrVal(relieverProfile.ownPresentAddress, 'division') }}</span></div>
+                            }
+                        </div>
+                    </div>
+                </div>
+            }
+            @if (hasAddress(relieverProfile.spousePermanentAddress) || hasAddress(relieverProfile.spousePresentAddress)) {
+                <div class="profile-section dialog-section">
+                    <div class="profile-two-col">
+                        <div class="profile-field-list">
+                            @if (hasAddress(relieverProfile.spousePermanentAddress)) {
+                                <div class="profile-col-heading">SPOUSE PERMANENT ADDRESS</div>
+                                <div class="profile-field-row"><span class="profile-field-label">Village / Area</span> <span class="profile-field-value">{{ addrVal(relieverProfile.spousePermanentAddress, 'villageArea') }}</span></div>
+                                <div class="profile-field-row"><span class="profile-field-label">Post office</span> <span class="profile-field-value">{{ addrVal(relieverProfile.spousePermanentAddress, 'postOffice') }}</span></div>
+                                <div class="profile-field-row"><span class="profile-field-label">Upazila / Thana</span> <span class="profile-field-value">{{ addrVal(relieverProfile.spousePermanentAddress, 'upazilaThana') }}</span></div>
+                                <div class="profile-field-row"><span class="profile-field-label">District</span> <span class="profile-field-value">{{ addrVal(relieverProfile.spousePermanentAddress, 'district') }}</span></div>
+                                <div class="profile-field-row"><span class="profile-field-label">Division</span> <span class="profile-field-value">{{ addrVal(relieverProfile.spousePermanentAddress, 'division') }}</span></div>
+                            }
+                        </div>
+                        <div class="profile-field-list">
+                            @if (hasAddress(relieverProfile.spousePresentAddress)) {
+                                <div class="profile-col-heading">SPOUSE PRESENT ADDRESS</div>
+                                <div class="profile-field-row"><span class="profile-field-label">Village / Area</span> <span class="profile-field-value">{{ addrVal(relieverProfile.spousePresentAddress, 'villageArea') }}</span></div>
+                                <div class="profile-field-row"><span class="profile-field-label">Post office</span> <span class="profile-field-value">{{ addrVal(relieverProfile.spousePresentAddress, 'postOffice') }}</span></div>
+                                <div class="profile-field-row"><span class="profile-field-label">Upazila / Thana</span> <span class="profile-field-value">{{ addrVal(relieverProfile.spousePresentAddress, 'upazilaThana') }}</span></div>
+                                <div class="profile-field-row"><span class="profile-field-label">District</span> <span class="profile-field-value">{{ addrVal(relieverProfile.spousePresentAddress, 'district') }}</span></div>
+                                <div class="profile-field-row"><span class="profile-field-label">Division</span> <span class="profile-field-value">{{ addrVal(relieverProfile.spousePresentAddress, 'division') }}</span></div>
+                            }
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+    }
+</p-dialog>

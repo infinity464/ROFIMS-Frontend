@@ -1,0 +1,135 @@
+<div class="card">
+<div class="calendar-wrapper">
+  <div class="calendar-header">
+    <div class="header-left">
+      <h2>Events  &amp; <em>Tasks</em></h2>
+      <p>All tasks and events shown on a unified calendar view</p>
+    </div>
+    <div class="header-right">
+      <button type="button" class="nav-btn" (click)="prevMonth()" aria-label="Previous month">&#8592;</button>
+      <button type="button" class="today-btn" (click)="goToToday()">Today</button>
+      <button type="button" class="nav-btn" (click)="nextMonth()" aria-label="Next month">&#8594;</button>
+      <span class="month-year">{{ monthYearLabel }}</span>
+    </div>
+  </div>
+
+  <div class="calendar-grid">
+    <div class="calendar-weekdays">
+      @for (day of weekDays; track day) {
+        <div class="calendar-weekday">{{ day }}</div>
+      }
+    </div>
+    @for (week of weeks; track week) {
+      <div class="calendar-week">
+        @for (day of week; track day.date.getTime()) {
+          <div
+            class="calendar-day"
+            [class.other-month]="!day.isCurrentMonth"
+            [class.today]="isToday(day.date)">
+            <div class="day-num">{{ day.date.getDate() }}</div>
+            <div class="day-events">
+              @for (ev of day.events; track ev.id) {
+                <button
+                  type="button"
+                  class="event-chip type-{{ ev.type }}"
+                  [title]="ev.title"
+                  (click)="onEventClick(ev)">
+                  @if (!ev.allDay) {
+                    <span class="event-time">{{ formatTime(ev.start) }}</span>
+                  }
+                  <span class="event-title">{{ ev.title }}</span>
+                </button>
+              }
+            </div>
+          </div>
+        }
+      </div>
+    }
+  </div>
+
+  <div class="legend">
+    <div class="legend-item">
+      <div class="legend-dot legend-task"></div>
+      Task
+    </div>
+    <div class="legend-item">
+      <div class="legend-dot legend-event"></div>
+      Event
+    </div>
+    <div class="legend-item">
+    <!-- <div class="legend-dot legend-deadline"></div>
+      Deadline
+    </div> -->
+  </div>
+</div>
+
+<!-- Event/Task detail dialog (same style as other components) -->
+<p-dialog
+  [header]="(selectedEvent?.type === 'task' ? 'Task' : selectedEvent?.type === 'deadline' ? 'Deadline' : 'Event') + ' details'"
+  [(visible)]="showDetailDialog"
+  [modal]="true"
+  [style]="{ width: '400px' }"
+  [closable]="true"
+  [draggable]="false"
+  [resizable]="false"
+  [contentStyle]="{'border-top': '2px solid var(--primary-color)'}"
+  (onHide)="closeDetail()"
+  styleClass="calendar-event-dialog">
+  <div class="event-detail-content" *ngIf="selectedEvent">
+    <div class="detail-row">
+      <i class="pi pi-tag detail-icon"></i>
+      <div>
+        <div class="detail-label">Title</div>
+        <div class="detail-value">{{ selectedEvent.title }}</div>
+      </div>
+    </div>
+    <div class="detail-row">
+      <i class="pi pi-calendar detail-icon"></i>
+      <div>
+        <div class="detail-label">Date</div>
+        <div class="detail-value">
+          {{ formatDate(selectedEvent.start) }}
+          @if (!selectedEvent.allDay) {
+            · {{ formatTime(selectedEvent.start) }}
+            @if (selectedEvent.end) {
+              – {{ formatTime(selectedEvent.end) }}
+            }
+          } @else {
+            (All day)
+          }
+        </div>
+      </div>
+    </div>
+    @if (selectedEvent.description) {
+      <div class="detail-row">
+        <i class="pi pi-align-left detail-icon"></i>
+        <div>
+          <div class="detail-label">Description</div>
+          <div class="detail-value">{{ selectedEvent.description }}</div>
+        </div>
+      </div>
+    }
+    @if (selectedEvent.reminder) {
+      <div class="detail-row">
+        <i class="pi pi-bell detail-icon"></i>
+        <div>
+          <div class="detail-label">Reminder</div>
+          <div class="detail-value">{{ selectedEvent.reminder }}</div>
+        </div>
+      </div>
+    }
+    <div class="detail-row">
+      <i class="pi pi-bookmark detail-icon"></i>
+      <div>
+        <div class="detail-label">Type</div>
+        <div class="detail-value">
+          <span class="type-badge badge-{{ selectedEvent.type }}">{{ selectedEvent.type }}</span>
+        </div>
+      </div>
+    </div>
+  </div>
+  <ng-template pTemplate="footer">
+    <p-button label="Close" (onClick)="closeDetail()"></p-button>
+  </ng-template>
+</p-dialog>
+</div>

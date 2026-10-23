@@ -1,0 +1,155 @@
+<p-toast position="top-center"></p-toast>
+
+<p-fluid>
+    <p-card>
+        <!-- Header: title -->
+        <ng-template pTemplate="header">
+            <div class="flex items-center justify-between gap-3 p-4 flex-wrap">
+                <div>
+                    <h2 class="text-2xl font-bold m-0">Completed RFTS courses</h2>
+                    <small class="text-color-secondary">Review courses that have been completed and their members</small>
+                </div>
+            </div>
+        </ng-template>
+
+        <!-- Count + sort hint -->
+        <div class="flex items-center justify-between mb-3 flex-wrap gap-2">
+            <span class="text-color-secondary">{{ rftsGroupedList.length }} course{{ rftsGroupedList.length === 1 ? '' : 's' }}</span>
+            <small class="text-color-secondary">Sorted by most recent</small>
+        </div>
+
+        <!-- Course cards. Click anywhere on the card to toggle the
+             members panel below. -->
+        @if (isLoadingCompleted) {
+            <div class="text-center py-4 text-color-secondary"><i class="pi pi-spin pi-spinner mr-2"></i>Loading completed courses…</div>
+        } @else if (rftsGroupedList.length === 0) {
+            <div class="rounded-lg border border-surface p-6 text-center text-color-secondary">
+                No RFTS completed records found.
+            </div>
+        } @else {
+            <div class="flex flex-col gap-2">
+                @for (g of rftsGroupedList; track g.courseNo) {
+                    <div class="rounded-lg border border-surface hover:bg-surface-50 dark:hover:bg-surface-800 p-3 flex items-center gap-4 cursor-pointer transition-colors"
+                         [class.border-l-4]="selectedGroup?.courseNo === g.courseNo"
+                         [class.border-l-green-500]="selectedGroup?.courseNo === g.courseNo"
+                         (click)="toggleGroup(g)">
+                        <!-- Course no -->
+                        <div class="flex flex-col min-w-20">
+                            <span class="text-2xl font-bold leading-tight">{{ g.courseNo }}</span>
+                            <small class="text-color-secondary">Course no</small>
+                        </div>
+
+                        <!-- Date range + members meta -->
+                        <div class="flex-1 min-w-0">
+                            <div class="font-semibold">
+                                {{ g.dateFrom ? (g.dateFrom | date:'dd MMM') : '—' }}
+                                <span class="mx-1 text-color-secondary">&#8594;</span>
+                                {{ g.dateTo ? (g.dateTo | date:'dd MMM yyyy') : '—' }}
+                                @if (g.dateFrom && g.dateTo) {
+                                    <span class="text-color-secondary font-normal text-sm">· {{ daysBetween(g.dateFrom, g.dateTo) }} day{{ daysBetween(g.dateFrom, g.dateTo) === 1 ? '' : 's' }}</span>
+                                }
+                            </div>
+                            <div class="text-color-secondary text-sm flex items-center gap-1 mt-1">
+                                <i class="pi pi-users text-xs"></i>
+                                <span>{{ g.memberCount }} {{ g.memberCount === 1 ? 'member' : 'members' }}</span>
+                                @if (g.courseNameDisplay) {
+                                    <span class="mx-1">·</span>
+                                    <span>{{ g.courseNameDisplay }}</span>
+                                }
+                            </div>
+                        </div>
+
+                        <!-- Actions: view toggle + nominal roll export. -->
+                        <div class="flex gap-1 shrink-0">
+                            <p-button [icon]="selectedGroup?.courseNo === g.courseNo ? 'pi pi-eye-slash' : 'pi pi-eye'"
+                                [rounded]="true" [text]="true" severity="info" size="small"
+                                [pTooltip]="selectedGroup?.courseNo === g.courseNo ? 'Hide Members' : 'View Members'"
+                                (onClick)="toggleGroup(g); $event.stopPropagation()"></p-button>
+                            <p-button icon="pi pi-print" [rounded]="true" [text]="true" severity="secondary" size="small"
+                                [disabled]="exportingCourseNo != null"
+                                [loading]="exportingCourseNo === (g.courseNo ?? '')"
+                                pTooltip="Print / PDF — নামীয় তালিকা" tooltipPosition="top"
+                                (onClick)="exportRoll(g, 'print', $event)"></p-button>
+                            <p-button icon="pi pi-file-word" [rounded]="true" [text]="true" severity="info" size="small"
+                                [disabled]="exportingCourseNo != null" pTooltip="Export Word" tooltipPosition="top"
+                                (onClick)="exportRoll(g, 'word', $event)"></p-button>
+                            <p-button icon="pi pi-file-excel" [rounded]="true" [text]="true" severity="success" size="small"
+                                [disabled]="exportingCourseNo != null" pTooltip="Export Excel" tooltipPosition="top"
+                                (onClick)="exportRoll(g, 'excel', $event)"></p-button>
+                        </div>
+                    </div>
+
+                    <!-- Members for this course — renders directly under its own card. -->
+                    @if (selectedGroup?.courseNo === g.courseNo) {
+                        <ng-container [ngTemplateOutlet]="membersPanel"></ng-container>
+                    }
+                }
+            </div>
+        }
+
+        <!-- ============== Members panel ==============
+             An ng-template so the accordion can render it inline beneath the
+             clicked course card rather than once at the foot of the list. -->
+        <ng-template #membersPanel>
+        @if (selectedGroup; as sel) {
+            <div class="rounded-lg border border-surface bg-surface-50 dark:bg-surface-800 p-4 mt-4">
+                <div class="flex items-center gap-2 mb-3 flex-wrap">
+                    <i class="pi pi-users text-color-secondary"></i>
+                    <span class="font-semibold text-lg">Members in</span>
+                    <span class="inline-block bg-primary-100 text-primary-700 dark:bg-primary-900 dark:text-primary-100 rounded-md px-2 py-1 font-semibold text-sm">
+                        {{ sel.courseNo }}
+                    </span>
+                </div>
+
+                @if (isLoadingMembers) {
+                    <div class="text-center py-4 text-color-secondary"><i class="pi pi-spin pi-spinner mr-2"></i>Loading members…</div>
+                }
+                <p-table
+                    [value]="sel.members"
+                    [loading]="isLoadingMembers"
+                    styleClass="p-datatable-sm"
+                    dataKey="id"
+                    [paginator]="sel.members.length > 10"
+                    [rows]="10"
+                    [rowsPerPageOptions]="[10, 20, 50]">
+                    <!-- Same column set as the printed নামীয় তালিকা, in English,
+                         plus the course Remarks this page records. -->
+                    <ng-template pTemplate="header">
+                        <tr>
+                            <th style="width: 4rem">Ser</th>
+                            <th>Personal No</th>
+                            <th>Rank</th>
+                            <th>Name</th>
+                            <th>Mother Org</th>
+                            <th>RAB ID</th>
+                            <th>Remarks</th>
+                        </tr>
+                    </ng-template>
+                    <ng-template pTemplate="body" let-row let-rowIndex="rowIndex">
+                        <tr>
+                            <td>{{ rowIndex + 1 }}</td>
+                            <td>{{ row.serviceId || '—' }}</td>
+                            <td>
+                                @if (row.rankName) {
+                                    <span class="inline-block bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-100 rounded-md px-2 py-1 text-sm">{{ row.rankName }}</span>
+                                } @else {
+                                    <span>N/A</span>
+                                }
+                            </td>
+                            <td class="font-semibold">{{ row.fullNameEN || '—' }}</td>
+                            <td>{{ row.motherUnitName || '—' }}</td>
+                            <td>{{ row.rabId || 'N/A' }}</td>
+                            <td>{{ row.remarks || '—' }}</td>
+                        </tr>
+                    </ng-template>
+                    <ng-template pTemplate="emptymessage">
+                        <tr>
+                            <td [attr.colspan]="7" class="text-center py-4 text-color-secondary">No members in this course.</td>
+                        </tr>
+                    </ng-template>
+                </p-table>
+            </div>
+        }
+        </ng-template>
+    </p-card>
+</p-fluid>

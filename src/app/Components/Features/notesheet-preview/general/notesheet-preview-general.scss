@@ -1,0 +1,238 @@
+﻿/* -- Whole-sheet font size (user-selectable) -----------
+   The export bar's font dropdown sets --ns-fs-delta on the component host: a point
+   offset (-2 ... +2 in 0.25 steps) that every body size below is expressed against
+   through fs(). With no offset the 0 fallback leaves every size exactly as it was.
+   The PDF restates the same offset on .pdf-flow in buildJsReportPdf() (via a matching
+   inline calc), because the export snapshots the paper's innerHTML, not the host. */
+@function fs($pt) {
+    @return calc(#{$pt}pt + var(--ns-fs-delta, 0) * 1pt);
+}
+
+/* ── Document font ─────────────────────────────────────
+   SolaimanLipi (bundled, see styles.scss) replaces SolaimanLipi as the Bangla
+   face for this preview. Times New Roman stays first so Latin text and digits
+   are unchanged — Bangla codepoints have no Times glyphs and fall through to
+   SolaimanLipi.
+
+   The `:host` prefix raises specificity above the shared notesheet-preview.scss
+   rule (`.a4-paper` alone), so this override wins no matter the stylesheet
+   order. .page-measure carries the SAME stack as the visible .a4-paper on
+   purpose: it is the hidden div the page-break math measures and the source
+   snapshot for the JsReport PDF — a different Bangla face there would compute
+   breaks against text of a different height than what is shown and printed. */
+:host .a4-paper,
+:host .page-measure {
+    font-family: 'Times New Roman', 'SolaimanLipi', Times, serif;
+
+    /* Beats the shared preview's !important rule that pins rich-text (Quill)
+       content to SolaimanLipi. */
+    ::ng-deep .ns-para-text,
+    ::ng-deep .ns-para-text *,
+    ::ng-deep .ns-ref-content,
+    ::ng-deep .ns-ref-content *,
+    ::ng-deep .ns-note,
+    ::ng-deep .ns-note * {
+        font-family: 'Times New Roman', 'SolaimanLipi', Times, serif !important;
+    }
+
+    /* Restore the icon font the blanket rule above would otherwise clobber. */
+    ::ng-deep .ns-ref-file-btn .pi {
+        font-family: 'primeicons' !important;
+    }
+}
+
+/* Tighter gap between a body paragraph's serial (১।) and its text. The shared
+   .ns-para-no uses 2em, which reads as too wide a tab at this 8pt size.
+   Kept as a plain (non-:host) selector so Angular scopes it to THIS component
+   (_ngcontent) — it overrides the shared 2em on screen AND in the JsReport PDF
+   (whose body is this component's innerHTML), while posting / ex-bd previews
+   keep their own spacing. Loaded after notesheet-preview.scss, so it wins. */
+.ns-para-no {
+    margin-right: 0.8em;
+    font-weight: normal;   /* serial numbers (১। ২। …) not bold */
+}
+
+/* Reference serials (ক। খ। …) not bold either. */
+.ns-ref-serial {
+    font-weight: normal;
+}
+
+/* Signature block: one size larger (9pt → 10pt), not bold. */
+.ns-sig-name,
+.ns-sig-rank,
+.ns-sig-appoint,
+.ns-sig-date {
+    font-size: fs(10);
+    font-weight: normal;
+}
+
+/* Reference label (সূত্রঃ / Reference:) not bold — overrides shared notesheet-preview.scss. */
+.ns-ref-key {
+    font-weight: normal;
+}
+
+/* Members table: align its left edge with the body paragraphs (১।/ক।) instead of
+   the shared 16px Word-style indent. Loaded after notesheet-preview.scss, so it wins. */
+.ns-members-preview-table {
+    margin-left: 1px;
+}
+
+/* Note has no serial — keep it on the same left edge as the members table/paragraphs. */
+.ns-note-para {
+    padding-left: 1px;
+}
+
+/* Small left/right gap so the content doesn't touch the page's inner border. */
+.ns-main-col {
+    padding: 0 8px;
+}
+
+/* Edit-mode per-column width (%) — friendly stepper: [−] [ 20 ] % [+] */
+.ns-edit-col-width {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+    margin-top: 3px;
+    padding: 1px 3px;
+    border-radius: 999px;
+    background: rgba(59, 130, 246, 0.08);
+    border: 1px solid rgba(59, 130, 246, 0.25);
+
+    input {
+        width: 32px;
+        padding: 1px 2px;
+        font-size: 7pt;
+        font-weight: 600;
+        text-align: center;
+        border: none;
+        background: transparent;
+        color: inherit;
+        -moz-appearance: textfield;
+
+        &::-webkit-outer-spin-button,
+        &::-webkit-inner-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
+    }
+
+    .ns-edit-col-width-pct {
+        font-size: 7pt;
+        opacity: 0.6;
+    }
+}
+
+.ns-edit-col-width-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 16px;
+    height: 16px;
+    padding: 0;
+    border: none;
+    border-radius: 50%;
+    background: var(--primary-color, #3b82f6);
+    color: #fff;
+    font-size: 11px;
+    line-height: 1;
+    cursor: pointer;
+
+    &:hover { filter: brightness(1.1); }
+    &:active { filter: brightness(0.92); }
+}
+
+/* ── Whole body at one uniform 10pt (general note-sheet only; header keeps its own sizes) ──
+   Visible page (.a4-paper) and hidden measure (.page-measure) must match for pagination.
+   Title (.ns-title-*) + org header have their own explicit sizes, so they are unaffected. */
+.a4-paper,
+.page-measure {
+    font-size: fs(10); /* base — anything without its own size */
+}
+/* Numbered paragraphs + note + last-text: shared style pins these at 8pt, so an
+   explicit override is required (the base bump alone does not reach them). */
+.ns-para,
+.ns-para-no {
+    font-size: fs(10);
+}
+.ns-cell-ref {
+    font-size: fs(10); /* সূত্রঃ / ক. / খ. — was 7pt */
+}
+.ns-members-preview-table,
+.ns-members-preview-table th {
+    font-size: fs(9); /* members table — 1pt smaller than body so columns fit */
+}
+.ns-sig-name,
+.ns-sig-rank,
+.ns-sig-paren,
+.ns-sig-appoint,
+.ns-sig-date {
+    font-size: fs(10); /* signature block */
+}
+
+/* Edit-mode members table: mark every editable data cell (same affordance as the
+   generate page) — soft tint + text cursor, with a pencil hint on hover. */
+.ns-edit-member-cell--editable {
+    cursor: text;
+    background: var(--primary-50, #eff6ff);
+    position: relative;
+
+    &:hover {
+        background: var(--primary-100, #dbeafe);
+
+        &::after {
+            content: '\270E'; // ✎ pencil
+            position: absolute;
+            top: 2px;
+            right: 4px;
+            font-size: 0.65rem;
+            line-height: 1;
+            color: var(--primary-color, #3b82f6);
+            opacity: 0.6;
+            pointer-events: none;
+        }
+    }
+}
+
+/* Edit mode uses a plain .a4-paper (no .paginated); the visible view-mode pages
+   are .a4-paper.paginated. Let the edit form span the full available width
+   instead of the fixed A4 column — view pages and the PDF stay A4. */
+.a4-paper:not(.paginated) {
+    width: 100%;
+    max-width: 100%;
+}
+
+/* Header block (notesheet no / date, subject, reference) shares the body's 1px
+   left edge. The shared style pads .ns-cell-ref 4px from the left, which left
+   the top block sitting right of the numbered paragraphs and members table. */
+.ns-cell-ref {
+    padding-left: 1px;
+}
+
+/* Signature block sits a little lower — 10px more breathing room above the
+   initiator signature than the shared 14px top padding gives. */
+.ns-initiator-area {
+    padding-top: 24px;
+}
+
+/* Note-sheet no. / date line and the subject line carry their padding inline in
+   the template; their size lives here so the export bar's font offset reaches
+   them too (an inline font-size would win over fs()). */
+.ns-notesheet-no,
+.ns-subject-line {
+    font-size: fs(10);
+}
+
+/* Export-bar detail toggle (কোর in the Name column) — sits inline with the
+   page-size / font dropdowns and buttons. */
+.ns-detail-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+
+    label {
+        cursor: pointer;
+        font-size: 0.875rem;
+        user-select: none;
+    }
+}

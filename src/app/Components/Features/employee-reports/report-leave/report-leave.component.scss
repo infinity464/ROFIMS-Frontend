@@ -1,0 +1,949 @@
+﻿:host {
+    display: block;
+}
+.filter-field {
+    min-width: 160px;
+}
+
+/* ── Stop the loader "shake" + auto-scroll while data loads ──────────
+   Reserve table height so the row swap doesn't collapse/grow the page,
+   disable scroll anchoring (the browser's jump-correction that fights
+   the height change), and keep the loading overlay calm & top-aligned. */
+:host ::ng-deep .rab-paper-table-wrap {
+    overflow-anchor: none;
+}
+/* Reserve room for the loading overlay ONLY while loading (no blank space after). */
+:host ::ng-deep .rab-paper-table-wrap.is-loading {
+    min-height: 240px;
+}
+:host ::ng-deep .rab-data-table .p-datatable-mask,
+:host ::ng-deep .rab-data-table .p-datatable-loading-overlay {
+    align-items: flex-start;
+    padding-top: 3rem;
+    background: rgba(255, 255, 255, 0.55);
+    overflow-anchor: none;
+}
+:host-context(.app-dark) ::ng-deep .rab-data-table .p-datatable-mask,
+:host-context(.app-dark) ::ng-deep .rab-data-table .p-datatable-loading-overlay {
+    background: rgba(13, 15, 19, 0.55);
+}
+
+/* ── Match report-address-location's page + title chrome ──────────── */
+.employee-reports-page {
+    background: transparent;
+    color: var(--text-color, inherit);
+    font-family: inherit;
+    margin: 0 auto;
+    padding: 0 0 1.5rem 0;
+}
+.report-filter-card-title {
+    padding: 0 0 0.75rem 0;
+    margin: 0 0 1.25rem 0;
+    border-bottom: 1px solid var(--surface-border, rgba(255, 255, 255, 0.08));
+}
+.report-page-title {
+    font-size: 1.75rem;
+    font-weight: 700;
+    color: var(--text-color, #fff);
+    margin: 0;
+    letter-spacing: 0;
+}
+:host-context(.app-dark) .report-page-title {
+    color: var(--text-color);
+}
+
+/* Exactly 4 filter fields per row (gap is 12px → 3 gaps = 36px). */
+:host ::ng-deep .report-fields-row .report-filter-field {
+    flex: 0 0 calc((100% - 36px) / 4);
+    max-width: calc((100% - 36px) / 4);
+}
+@media (max-width: 900px) {
+    :host ::ng-deep .report-fields-row .report-filter-field {
+        flex: 0 0 calc((100% - 12px) / 2);
+        max-width: calc((100% - 12px) / 2);
+    }
+}
+@media (max-width: 560px) {
+    :host ::ng-deep .report-fields-row .report-filter-field {
+        flex: 0 0 100%;
+        max-width: 100%;
+    }
+}
+
+/* Force datepicker to fill the same width as p-select dropdowns */
+:host ::ng-deep .report-fields-row .report-filter-field p-datepicker,
+:host ::ng-deep .report-fields-row .report-filter-field .p-datepicker {
+    display: block;
+    width: 100%;
+}
+
+:host ::ng-deep .report-fields-row .report-filter-field .p-datepicker .p-inputtext {
+    width: 100%;
+}
+
+/* ----- Column picker group (inside the filter card) ----- */
+.ds-field-group:not(:last-child) {
+    margin-bottom: 1rem;
+}
+
+.ds-group-divider {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin: 0.5rem 0 0.75rem;
+}
+
+.ds-group-label {
+    font-size: 0.72rem;
+    font-weight: 700;
+    color: var(--p-primary-color, #10b981);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    white-space: nowrap;
+}
+
+.ds-group-line {
+    flex: 1;
+    height: 1px;
+    background: linear-gradient(to right, color-mix(in srgb, var(--p-primary-color, #10b981) 25%, transparent), transparent);
+}
+
+.ds-field {
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+    min-width: 0;
+    margin-top: 0.5rem;
+}
+
+.ds-field-label {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--text-color, #fff);
+}
+
+:host-context(.app-dark) .ds-field-label {
+    color: var(--text-color);
+}
+
+/* =============================================================
+   RAB Formal Report Paper — ported from family-occupation.
+   ============================================================= */
+
+.rab-report-document {
+    --rab-bg: #ffffff;
+    --rab-paper-bg: #ffffff;
+    --rab-strip-bg: #f4f4f2;
+    --rab-strip-border: #d8d6d0;
+    --rab-border: #d8d6d0;
+    --rab-border-soft: #e6e4de;
+    --rab-text: #1a1a1a;
+    --rab-text-strong: #0b0b0b;
+    --rab-muted: #8a8a8a;
+    --rab-muted-strong: #4a4a4a;
+    --rab-accent: #b78b3b;
+    --rab-accent-soft: #d9b876;
+    --rab-table-head-bg: #0b0b0b;
+    --rab-table-head-text: #d9c79a;
+    --rab-row-stripe: #fafaf6;
+    --rab-row-hover: #f1ecdf;
+    --rab-red: #b03a3a;
+    --rab-red-soft: rgba(176, 58, 58, 0.18);
+
+    --rab-body-bg: #ffffff;
+    --rab-body-bg-alt: #fafaf6;
+    --rab-body-hover: #f3eedf;
+    --rab-body-ink: #0b0b0b;
+    --rab-body-ink-muted: #6b6b6b;
+    --rab-body-ink-faint: #b0b0b0;
+    --rab-body-border: #ece6d4;
+
+    --rab-serif: 'Times New Roman', serif;
+    --rab-mono: 'JetBrains Mono', 'SF Mono', Consolas, 'Liberation Mono', monospace;
+
+    margin-top: 1.25rem;
+    color: var(--rab-text);
+}
+
+:host-context(.app-dark) .rab-report-document,
+.app-dark .rab-report-document {
+    --rab-bg: #0d0f13;
+    --rab-paper-bg: #171a20;
+    --rab-strip-bg: #1e2128;
+    --rab-strip-border: #2d3038;
+    --rab-border: #2d3038;
+    --rab-border-soft: #23262c;
+    --rab-text: #e6d8b0;
+    --rab-text-strong: #f0dca2;
+    --rab-muted: #847a5e;
+    --rab-muted-strong: #b1a075;
+    --rab-accent: #d9b876;
+    --rab-accent-soft: #b78b3b;
+    --rab-table-head-bg: #1e2128;
+    --rab-table-head-text: #c4a86c;
+    --rab-row-stripe: #14171c;
+    --rab-row-hover: #22262e;
+    --rab-red: #d04d4d;
+    --rab-red-soft: rgba(208, 77, 77, 0.22);
+
+    --rab-body-bg: #171a20;
+    --rab-body-bg-alt: #1f232b;
+    --rab-body-hover: #262a33;
+    --rab-body-ink: #e6d8b0;
+    --rab-body-ink-muted: #95895f;
+    --rab-body-ink-faint: #5a5240;
+    --rab-body-border: #2d3038;
+}
+
+/* --- Screen-only toolbar above the paper --- */
+.rab-toolbar {
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    gap: 0.4rem;
+    margin-bottom: 0.65rem;
+
+    .report-lang-toggle,
+    .report-btn-export {
+        height: 28px;
+        padding: 0 12px;
+        border-radius: 2px;
+        border: 1px solid var(--rab-strip-border);
+        background: var(--rab-strip-bg);
+        color: var(--rab-text);
+        font-family: var(--rab-mono);
+        font-size: 0.66rem;
+        font-weight: 600;
+        letter-spacing: 0.18em;
+        text-transform: uppercase;
+        box-shadow: none;
+        transition:
+            border-color 0.15s,
+            color 0.15s,
+            background 0.15s;
+
+        &:hover:not(:disabled) {
+            border-color: var(--rab-accent);
+            color: var(--rab-accent);
+            background: var(--rab-strip-bg);
+            transform: none;
+            box-shadow: none;
+        }
+    }
+
+    .report-lang-toggle {
+        letter-spacing: 0.04em;
+    }
+
+    .rab-toolbar-search {
+        /* Border/glow follow the app's selected theme primary color
+           (PrimeNG --p-primary-color from the palette picker), gold fallback. */
+        --rab-search-accent: var(--p-primary-color, #b78b3b);
+        display: flex;
+        align-items: center;
+        height: 28px;
+        border: 1.5px solid var(--rab-search-accent);
+        border-radius: 4px;
+        background: #ffffff;
+        transition: border-color 0.2s ease, box-shadow 0.2s ease;
+        /* Idle: a gentle border shimmer that draws the eye to the search. */
+        animation: rab-search-border-pulse 2.6s ease-in-out infinite;
+
+        &:hover {
+            border-color: color-mix(in srgb, var(--rab-search-accent) 65%, #ffffff);
+        }
+
+        /* While typing, stop the idle pulse and hold a crisp focus ring. */
+        &:focus-within {
+            border-color: var(--rab-search-accent);
+            box-shadow: 0 0 0 3px color-mix(in srgb, var(--rab-search-accent) 25%, transparent);
+            animation: none;
+        }
+
+        input {
+            width: 198px;
+            height: 100%;
+            padding: 0 4px;
+            border: none;
+            outline: none;
+            background: transparent;
+            /* Fixed dark ink — the field is always white, so it must stay
+               readable even in dark theme (where --rab-text is light gold). */
+            color: #1a1a1a;
+            font-family: var(--rab-mono);
+            font-size: 0.7rem;
+            letter-spacing: 0.04em;
+
+            &::placeholder {
+                color: #000000;
+                opacity: 1;
+                text-transform: uppercase;
+                letter-spacing: 0.1em;
+            }
+        }
+
+        .rab-search-btn,
+        .rab-search-clear {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            padding: 0 8px;
+            border: none;
+            background: transparent;
+            color: var(--rab-search-accent);
+            cursor: pointer;
+
+            .pi {
+                font-size: 0.66rem;
+            }
+
+            &:hover {
+                color: color-mix(in srgb, var(--rab-search-accent) 65%, #000000);
+            }
+        }
+    }
+
+    @keyframes rab-search-border-pulse {
+        0%,
+        100% {
+            border-color: var(--rab-search-accent);
+            box-shadow: 0 0 0 0 color-mix(in srgb, var(--rab-search-accent) 0%, transparent);
+        }
+        50% {
+            border-color: color-mix(in srgb, var(--rab-search-accent) 60%, #ffffff);
+            box-shadow: 0 0 0 3px color-mix(in srgb, var(--rab-search-accent) 16%, transparent);
+        }
+    }
+
+    .report-export-dropdown {
+        background: var(--rab-paper-bg);
+        border-color: var(--rab-strip-border);
+        border-radius: 3px;
+
+        .report-export-item {
+            color: var(--rab-text);
+            font-family: var(--rab-mono);
+            font-size: 0.74rem;
+            letter-spacing: 0.04em;
+
+            &:hover {
+                background: var(--rab-row-hover);
+            }
+        }
+    }
+}
+
+/* --- The paper itself --- */
+.rab-paper {
+    background: var(--rab-paper-bg);
+    border: 1px solid var(--rab-border);
+    border-radius: 0.5rem;
+    padding: 2.25rem 2rem 1.25rem;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+    overflow: hidden;
+}
+
+:host-context(.app-dark) .rab-paper,
+.app-dark .rab-paper {
+    box-shadow: 0 4px 24px rgba(0, 0, 0, 0.4);
+}
+
+.rab-paper-head {
+    text-align: center;
+    padding-bottom: 1.25rem;
+}
+
+.rab-overline {
+    font-size: 0.7rem;
+    font-weight: 500;
+    letter-spacing: 0.32em;
+    color: var(--rab-muted-strong);
+    text-transform: uppercase;
+    margin-bottom: 0.5rem;
+}
+
+.rab-paper-title {
+    font-family: var(--rab-serif);
+    font-weight: 700;
+    font-size: 2.1rem;
+    line-height: 1.1;
+    margin: 0 0 0.4rem 0;
+    color: var(--rab-text-strong);
+    letter-spacing: 0.12em;
+}
+
+.rab-paper-sub {
+    font-family: var(--rab-serif);
+    font-size: 0.92rem;
+    color: var(--rab-muted-strong);
+    font-style: italic;
+    margin-bottom: 1rem;
+    em {
+        font-style: italic;
+    }
+}
+
+.rab-orn-divider {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.6rem;
+    margin: 0.5rem auto 1.25rem;
+    max-width: 60%;
+
+    .rab-orn-line {
+        flex: 1;
+        height: 1px;
+        background: linear-gradient(to right, transparent, var(--rab-accent-soft) 30%, var(--rab-accent-soft) 70%, transparent);
+    }
+
+    .rab-orn-diamond {
+        color: var(--rab-accent);
+        font-size: 0.7rem;
+        line-height: 1;
+        transform: translateY(-1px);
+    }
+}
+
+.rab-paper-section {
+    font-family: var(--rab-serif);
+    font-size: 1.15rem;
+    font-weight: 700;
+    letter-spacing: 0.18em;
+    color: var(--rab-text-strong);
+    margin: 0 0 0.25rem 0;
+    text-transform: uppercase;
+}
+
+.rab-paper-section-sub {
+    font-family: var(--rab-serif);
+    font-size: 0.92rem;
+    font-style: italic;
+    color: var(--rab-muted-strong);
+    em {
+        font-style: italic;
+    }
+}
+
+/* Scope-chip line below the paper section title (unit/member-type access). */
+.report-scope-line {
+    margin-top: 0.35rem;
+    font-size: 0.82rem;
+    color: var(--rab-accent);
+    font-weight: 500;
+    text-align: center;
+}
+
+/* ----- Selection Criteria strip ----- */
+.rab-criteria {
+    margin: 1rem 0 1.25rem;
+    border: 1px solid var(--rab-strip-border);
+    border-radius: 0.25rem;
+    overflow: hidden;
+}
+
+.rab-criteria-strip {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.55rem 0.95rem;
+    background: var(--rab-strip-bg);
+    border-bottom: 1px solid var(--rab-strip-border);
+    font-size: 0.7rem;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--rab-muted-strong);
+    font-weight: 600;
+}
+
+.rab-criteria-strip-title {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    color: var(--rab-text-strong);
+}
+
+.rab-diamond-bullet {
+    color: var(--rab-accent);
+    font-size: 0.6rem;
+    line-height: 1;
+}
+
+.rab-criteria-strip-date {
+    color: var(--rab-text-strong);
+    opacity: 0.75;
+    font-weight: 500;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 0.1rem;
+    text-align: right;
+}
+
+.rab-criteria-strip-total {
+    color: var(--rab-accent);
+    opacity: 1;
+    font-weight: 700;
+    text-transform: none;
+    letter-spacing: normal;
+}
+
+.rab-criteria-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+    background: var(--rab-paper-bg);
+}
+
+.rab-criteria-cell {
+    padding: 0.65rem 0.9rem 0.7rem;
+    border: 1px solid var(--rab-border-soft);
+    min-width: 0;
+}
+
+.rab-criteria-cell-label {
+    font-size: 0.65rem;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--rab-muted);
+    margin-bottom: 0.3rem;
+    font-weight: 600;
+}
+
+.rab-criteria-cell-value {
+    font-family: var(--rab-serif);
+    font-size: 0.95rem;
+    color: var(--rab-text-strong);
+    font-weight: 700;
+    line-height: 1.25;
+    word-break: break-word;
+    // Multi-line criteria values (e.g. the RAB Unit org-path list — one node
+    // per line) keep their newlines instead of collapsing to a single run.
+    white-space: pre-line;
+}
+
+.rab-criteria-stamp-only .rab-criteria-strip {
+    border-bottom: none;
+}
+
+/* Bangla overrides — drop Latin tracking, swap to Bangla-aware family. */
+.rab-paper.rab-lang-bn {
+    .rab-overline,
+    .rab-paper-title,
+    .rab-paper-sub,
+    .rab-paper-section,
+    .rab-paper-section-sub,
+    .rab-criteria-cell-value,
+    .rab-personnel-name,
+    .rab-personnel-meta {
+        letter-spacing: 0;
+        font-family: 'Times New Roman', 'SolaimanLipi', sans-serif;
+    }
+
+    .rab-criteria-strip,
+    .rab-criteria-cell-label,
+    .rab-foot-row {
+        letter-spacing: 0.04em;
+        font-family: 'Times New Roman', 'SolaimanLipi', sans-serif;
+        text-transform: none;
+    }
+
+    .rab-personnel-meta {
+        text-transform: none;
+    }
+
+    .rab-paper-title {
+        font-size: 1.85rem;
+    }
+}
+
+:host ::ng-deep .rab-paper.rab-lang-bn .rab-data-table .p-datatable-thead > tr > th {
+    letter-spacing: 0.04em;
+    font-family: 'Times New Roman', 'SolaimanLipi', sans-serif;
+}
+
+/* ----- Data table ----- */
+.rab-paper-table-wrap {
+    overflow-x: auto;
+    margin: 0 -0.25rem;
+}
+
+:host ::ng-deep .rab-data-table {
+    .p-datatable-table {
+        border-collapse: separate;
+        border-spacing: 0;
+        width: 100%;
+    }
+
+    .p-datatable-thead > tr > th {
+        background: var(--rab-table-head-bg);
+        color: var(--rab-table-head-text);
+        font-family: var(--rab-mono);
+        font-size: 0.65rem;
+        font-weight: 600;
+        letter-spacing: 0.18em;
+        text-transform: uppercase;
+        padding: 0.7rem 0.95rem;
+        border-bottom: 1px solid var(--rab-strip-border);
+        border-top: 1px solid var(--rab-strip-border);
+        text-align: left;
+        vertical-align: middle;
+        white-space: nowrap;
+    }
+
+    .p-datatable-tbody > tr {
+        background: var(--rab-body-bg);
+
+        > td {
+            padding: 0.85rem 0.95rem;
+            font-size: 0.84rem;
+            color: var(--rab-body-ink);
+            background: var(--rab-body-bg);
+            border-bottom: 1px solid var(--rab-body-border);
+            vertical-align: middle;
+        }
+
+        &:nth-child(even) {
+            background: var(--rab-body-bg-alt);
+            > td {
+                background: var(--rab-body-bg-alt);
+            }
+        }
+
+        &:hover {
+            background: var(--rab-body-hover);
+            > td {
+                background: var(--rab-body-hover);
+            }
+        }
+
+        &:last-child > td {
+            border-bottom: 1px solid var(--rab-strip-border);
+        }
+    }
+}
+
+/* Dark-theme tbody overrides — PrimeNG v18+ paints background per-td. */
+:host-context(.app-dark) ::ng-deep .rab-data-table .p-datatable-tbody > tr,
+:host-context(.app-dark) ::ng-deep .rab-data-table .p-datatable-tbody > tr > td,
+.app-dark :host ::ng-deep .rab-data-table .p-datatable-tbody > tr,
+.app-dark :host ::ng-deep .rab-data-table .p-datatable-tbody > tr > td {
+    background: #171a20;
+    color: #e6d8b0;
+    border-color: #2d3038;
+}
+
+:host-context(.app-dark) ::ng-deep .rab-data-table .p-datatable-tbody > tr:nth-child(even),
+:host-context(.app-dark) ::ng-deep .rab-data-table .p-datatable-tbody > tr:nth-child(even) > td,
+.app-dark :host ::ng-deep .rab-data-table .p-datatable-tbody > tr:nth-child(even),
+.app-dark :host ::ng-deep .rab-data-table .p-datatable-tbody > tr:nth-child(even) > td {
+    background: #1f232b;
+}
+
+:host-context(.app-dark) ::ng-deep .rab-data-table .p-datatable-tbody > tr:hover,
+:host-context(.app-dark) ::ng-deep .rab-data-table .p-datatable-tbody > tr:hover > td,
+.app-dark :host ::ng-deep .rab-data-table .p-datatable-tbody > tr:hover,
+.app-dark :host ::ng-deep .rab-data-table .p-datatable-tbody > tr:hover > td {
+    background: #262a33;
+}
+
+/* Column-width hints */
+:host ::ng-deep .rab-data-table {
+    .rab-th-ser,
+    .rab-td-ser {
+        width: 56px;
+        text-align: left;
+    }
+    .rab-th-personnel,
+    .rab-td-personnel {
+        min-width: 220px;
+    }
+    .rab-th-joiningDate,
+    .rab-td-date {
+        width: 110px;
+        font-family: var(--rab-mono);
+        letter-spacing: 0.02em;
+        white-space: nowrap;
+    }
+    .rab-th-rmks,
+    .rab-td-rmks {
+        min-width: 140px;
+    }
+    .rab-th-name,
+    .rab-td-name {
+        min-width: 150px;
+    }
+    .rab-th-rank,
+    .rab-td-rank {
+        min-width: 90px;
+    }
+    /* Corps/Trade: wrap only between whole words, never mid-word. */
+    .rab-td-corps,
+    .rab-td-trade {
+        word-break: normal;
+        overflow-wrap: normal;
+        white-space: normal;
+    }
+}
+
+/* Composite RAB-Personnel cell — name on top, mono-uppercase meta line under. */
+.rab-personnel-name {
+    font-family: 'Times New Roman', sans-serif;
+    font-weight: 600;
+    font-size: 0.92rem;
+    color: var(--rab-body-ink);
+    line-height: 1.2;
+    letter-spacing: -0.005em;
+}
+.rab-personnel-meta {
+    margin-top: 0.18rem;
+    font-family: var(--rab-mono);
+    font-size: 0.7rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--rab-body-ink-muted);
+}
+
+/* Cell helpers */
+:host ::ng-deep .rab-data-table .p-datatable-tbody {
+    .rab-ser {
+        color: var(--rab-body-ink-muted);
+        font-family: var(--rab-mono);
+        font-weight: 600;
+        font-size: 0.82rem;
+        letter-spacing: 0.04em;
+        white-space: nowrap;
+    }
+}
+
+/* Standalone paginator below the confidential strip. */
+.rab-paginator-bar {
+    display: flex;
+    justify-content: center;
+    padding: 0.75rem 0 0;
+}
+
+:host ::ng-deep .rab-paginator-bar .p-paginator {
+    background: transparent;
+    border: none;
+    padding: 0;
+    color: var(--rab-text);
+    gap: 0.15rem;
+
+    .p-paginator-page,
+    .p-paginator-prev,
+    .p-paginator-next,
+    .p-paginator-first,
+    .p-paginator-last {
+        min-width: 30px;
+        height: 30px;
+        color: var(--rab-text);
+        background: transparent;
+        border: 1px solid transparent;
+        border-radius: 2px;
+
+        &:not(.p-disabled):hover {
+            background: var(--rab-row-hover);
+            color: var(--rab-text-strong);
+        }
+
+        &.p-paginator-page-selected,
+        &.p-highlight {
+            background: var(--rab-accent);
+            color: #fff;
+            border-color: var(--rab-accent);
+        }
+    }
+
+    .p-select,
+    .p-dropdown {
+        height: 30px;
+        border: 1px solid var(--rab-strip-border);
+        border-radius: 2px;
+        background: var(--rab-strip-bg);
+        color: var(--rab-text);
+        font-family: var(--rab-mono);
+        font-size: 0.78rem;
+    }
+}
+
+/* ----- Confidential footer ----- */
+.rab-paper-foot {
+    margin-top: 1rem;
+    padding-top: 0.5rem;
+}
+
+.rab-foot-line {
+    height: 2px;
+    background: linear-gradient(to right, var(--rab-red) 0%, var(--rab-red) 25%, transparent 50%, var(--rab-red) 75%, var(--rab-red) 100%);
+    border-radius: 1px;
+    margin-bottom: 0.6rem;
+    opacity: 0.85;
+}
+
+.rab-foot-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+    font-family: var(--rab-mono);
+    font-size: 0.7rem;
+    font-weight: 600;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+}
+
+.rab-foot-confidential {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    color: var(--rab-red);
+}
+
+.rab-foot-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--rab-red);
+    display: inline-block;
+}
+
+.rab-foot-page {
+    color: var(--rab-muted-strong);
+    letter-spacing: 0.25em;
+}
+
+.rab-foot-warning {
+    color: var(--rab-red);
+}
+
+@media (max-width: 720px) {
+    .rab-paper {
+        padding: 1.5rem 1rem 1rem;
+    }
+    .rab-paper-title {
+        font-size: 1.5rem;
+        letter-spacing: 0.08em;
+    }
+    .rab-foot-row {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.35rem;
+    }
+}
+
+/* ── Drag-reorder chip strip for the column picker ───────────────── */
+.column-order-strip {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.45rem;
+    padding: 0.5rem 0.6rem;
+    border: 1px dashed #d6d6d6;
+    border-radius: 6px;
+    min-height: 44px;
+    background: #fafafa;
+}
+
+.column-order-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.3rem 0.55rem 0.3rem 0.45rem;
+    background: #ffffff;
+    border: 1px solid #d6d6d6;
+    border-radius: 14px;
+    font-size: 0.82rem;
+    line-height: 1.2;
+    color: #333;
+    cursor: grab;
+    user-select: none;
+    transition:
+        box-shadow 120ms ease,
+        transform 120ms ease,
+        opacity 120ms ease,
+        background 120ms ease;
+
+    &:hover {
+        background: #f0f0f0;
+        box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+    }
+    &:active {
+        cursor: grabbing;
+    }
+    &.dragging {
+        opacity: 0.4;
+        transform: scale(0.97);
+    }
+
+    .chip-handle {
+        color: #888;
+        font-size: 0.65rem;
+    }
+    .chip-label {
+        font-weight: 500;
+        color: inherit;
+    }
+    .chip-remove {
+        all: unset;
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 16px;
+        height: 16px;
+        margin-left: 0.15rem;
+        border-radius: 50%;
+        color: #888;
+        transition:
+            background 120ms ease,
+            color 120ms ease;
+
+        &:hover {
+            background: #eee;
+            color: #d32f2f;
+        }
+        i {
+            font-size: 0.65rem;
+        }
+    }
+}
+
+.column-order-empty {
+    font-size: 0.82rem;
+    font-style: italic;
+    color: #888;
+    padding: 0.25rem 0.4rem;
+}
+
+.column-order-label {
+    margin-top: 2pt;
+    margin-bottom: 2pt;
+}
+
+:host-context(.app-dark) {
+    .column-order-strip {
+        background: rgba(255, 255, 255, 0.04);
+        border-color: rgba(255, 255, 255, 0.18);
+    }
+    .column-order-chip {
+        background: rgba(255, 255, 255, 0.08);
+        border-color: rgba(255, 255, 255, 0.18);
+        color: rgba(255, 255, 255, 0.92);
+
+        .chip-handle,
+        .chip-remove {
+            color: rgba(255, 255, 255, 0.55);
+        }
+        &:hover {
+            background: rgba(255, 255, 255, 0.13);
+            box-shadow: 0 1px 4px rgba(0, 0, 0, 0.35);
+        }
+        .chip-remove:hover {
+            background: rgba(255, 255, 255, 0.13);
+            color: #ef4444;
+        }
+    }
+    .column-order-empty {
+        color: rgba(255, 255, 255, 0.55);
+    }
+}

@@ -1,0 +1,44 @@
+.rab-structure-tree {
+    :host ::ng-deep .rab-structure-tree-content {
+        border: none;
+        background: transparent;
+    }
+
+    .node-label {
+        font-weight: 500;
+    }
+
+    .node-actions {
+        opacity: 0.7;
+        transition: opacity 0.15s;
+    }
+
+    :host ::ng-deep .p-treenode-content:hover .node-actions {
+        opacity: 1;
+    }
+
+    // Style by level
+    :host ::ng-deep .p-tree .p-tree-container {
+        > .p-treenode .p-treenode-content .node-label {
+            color: var(--green-700);
+            font-weight: 600;
+        }
+
+        > .p-treenode .p-treenode-children > .p-treenode .p-treenode-content .node-label {
+            color: var(--text-color);
+        }
+
+        > .p-treenode .p-treenode-children .p-treenode-children > .p-treenode .p-treenode-content .node-label {
+            color: var(--primary-color);
+        }
+    }
+
+    :host ::ng-deep .p-treenode-content {
+        padding-right: 0.5rem;
+    }
+
+    :host ::ng-deep .p-treenode-content .p-treenode-label {
+        flex: 1;
+        margin-left: 0.25rem;
+    }
+}

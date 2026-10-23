@@ -1,0 +1,272 @@
+<p-toast position="top-center"></p-toast>
+
+<div class="employee-reports-page">
+<div class="report-filter-card">
+    <div class="report-filter-card-title">
+        <h1 class="report-page-title">Long Stay Nominal Roll</h1>
+    </div>
+    <div class="report-filter-header" [class.open]="filterOpen" (click)="toggleFilter()" role="button" tabindex="0" (keydown.enter)="toggleFilter()" (keydown.space)="toggleFilter()">
+        <div class="report-filter-header-left">
+            <div class="report-filter-icon"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M2 4h12M4 8h8M6 12h4" stroke="var(--primary-color)" stroke-width="1.8" stroke-linecap="round"/></svg></div>
+            <div>
+                <div class="report-filter-title">Search</div>
+                <div class="report-filter-subtitle">{{ filterSubtitle() }}</div>
+            </div>
+        </div>
+        <div class="report-filter-header-right">
+            <span class="report-filters-badge" [class.show]="activeFilterCount > 0">{{ activeFilterCount }} active</span>
+            <div class="report-chevron"><svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M2 4l4 4 4-4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+        </div>
+    </div>
+
+    <div class="report-filter-body" [class.open]="filterOpen">
+        <div class="report-filter-body-inner">
+            <div class="report-fields-row">
+                <div class="report-filter-field">
+                    <label>Minimum Stay <span style="color:#b03a3a">*</span></label>
+                    <p-inputNumber [(ngModel)]="minDuration" [min]="1" [showButtons]="true" inputStyleClass="w-full" styleClass="w-full"></p-inputNumber>
+                </div>
+                <div class="report-filter-field">
+                    <label>Unit</label>
+                    <p-select [options]="unitOptions" [(ngModel)]="unit" optionLabel="label" optionValue="value" placeholder="Select" styleClass="w-full" appendTo="body"></p-select>
+                </div>
+                <div class="report-filter-field">
+                    <label>Mother Org</label>
+                    <p-multiSelect [options]="orgOptions" [(ngModel)]="selectedOrgIds" (ngModelChange)="onOrgChange()"
+                        optionLabel="label" optionValue="value" display="chip" [filter]="true"
+                        placeholder="Select" styleClass="w-full" appendTo="body"></p-multiSelect>
+                </div>
+                <div class="report-filter-field">
+                    <label>Member Type</label>
+                    <p-multiSelect [options]="memberTypeOptions" [(ngModel)]="selectedMemberTypeIds" (ngModelChange)="onMemberTypeChange()"
+                        optionLabel="label" optionValue="value" display="chip" [filter]="true"
+                        placeholder="Select" styleClass="w-full" appendTo="body"></p-multiSelect>
+                </div>
+                <div class="report-filter-field">
+                    <label>Rank</label>
+                    <p-select [options]="rankOptions" [(ngModel)]="selectedRankId" (ngModelChange)="onRankChange()"
+                        optionLabel="label" optionValue="value" placeholder="Select" styleClass="w-full"
+                        [disabled]="selectedOrgIds.length === 0" [filter]="true" [showClear]="true" appendTo="body"></p-select>
+                </div>
+                <div class="report-filter-field">
+                    <label>RAB Rank</label>
+                    <p-select [options]="rabRankOptions" [(ngModel)]="selectedRabRankId" (ngModelChange)="onFilterChange()"
+                        optionLabel="label" optionValue="value" placeholder="Select" styleClass="w-full"
+                        [disabled]="selectedRankId != null" [filter]="true" [showClear]="true" appendTo="body"></p-select>
+                </div>
+                <div class="report-filter-field">
+                    <label>Corps</label>
+                    <p-multiSelect [options]="corpsOptions" [(ngModel)]="selectedCorpsIds" (ngModelChange)="onCorpsChange()"
+                        optionLabel="label" optionValue="value" display="chip" [filter]="true"
+                        [disabled]="selectedOrgIds.length === 0"
+                        placeholder="Select" styleClass="w-full" appendTo="body"></p-multiSelect>
+                </div>
+                <div class="report-filter-field">
+                    <label>Trade</label>
+                    <p-multiSelect [options]="tradeOptions" [(ngModel)]="selectedTradeIds"
+                        optionLabel="label" optionValue="value" display="chip" [filter]="true"
+                        [disabled]="selectedCorpsIds.length === 0"
+                        placeholder="Select" styleClass="w-full" appendTo="body"></p-multiSelect>
+                </div>
+                <div class="report-filter-field">
+                    <label>RAB Unit</label>
+                    <app-org-tree-multi-select [(ngModel)]="selectedOrgNodeIds"
+                        placeholder="Select units, wings, branches…"></app-org-tree-multi-select>
+                </div>
+                <div class="report-filter-field">
+                    <label>Nominal Roll Seniority</label>
+                    <p-select [options]="seniorityOptions" [(ngModel)]="selectedSeniority" (ngModelChange)="onSeniorityChange()"
+                        optionLabel="label" optionValue="value" placeholder="Select Seniority"
+                        styleClass="w-full" appendTo="body"></p-select>
+                </div>
+            </div>
+
+            @if (searched) {
+                <div class="ds-field-group">
+                    <div class="ds-group-divider"><span class="ds-group-label">Columns</span><span class="ds-group-line"></span></div>
+                    <div class="ds-field">
+                        <label class="ds-field-label">Visible columns</label>
+                        <p-multiSelect [options]="columnPickerOptions" [(ngModel)]="selectedColumnKeys"
+                            (ngModelChange)="onColumnsChange()"
+                            optionLabel="label" optionValue="value" display="chip" [filter]="true"
+                            placeholder="Pick columns…" styleClass="w-full" appendTo="body"></p-multiSelect>
+                    </div>
+                    <div class="ds-field">
+                        <label class="ds-field-label column-order-label">Column order — drag to rearrange</label>
+                        <div class="column-order-strip" (dragover)="onColumnDragOver($event)">
+                            @for (col of visibleColumns; track col.key) {
+                                <span class="column-order-chip" [class.dragging]="draggingColumnKey === col.key"
+                                    draggable="true" (dragstart)="onColumnDragStart(col.key, $event)"
+                                    (dragend)="onColumnDragEnd()" (dragover)="onColumnDragOver($event)"
+                                    (drop)="onColumnDrop(col.key, $event)">
+                                    <i class="pi pi-bars chip-handle" aria-hidden="true"></i>
+                                    <span class="chip-label">{{ lang === 'bn' ? col.labelBN : col.labelEN }}</span>
+                                    <button type="button" class="chip-remove" (click)="removeColumn(col.key)" title="Remove column">
+                                        <i class="pi pi-times" aria-hidden="true"></i>
+                                    </button>
+                                </span>
+                            }
+                            @if (visibleColumns.length === 0) {
+                                <span class="column-order-empty">Pick columns above to populate the table.</span>
+                            }
+                        </div>
+                    </div>
+                </div>
+            }
+
+            <div class="report-filter-actions">
+                <button type="button" class="report-btn-clear" (click)="clearFilters()">
+                    <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M1 1l10 10M11 1L1 11" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+                    Clear
+                </button>
+                <button type="button" class="report-btn-search" (click)="search()">
+                    <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><circle cx="6" cy="6" r="4.5" stroke="white" stroke-width="1.6"/><path d="M10 10l2.5 2.5" stroke="white" stroke-width="1.6" stroke-linecap="round"/></svg>
+                    Search
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@if (searched) {
+<div class="rab-report-document">
+    <div class="rab-toolbar">
+        <div class="rab-toolbar-search">
+            <button type="button" class="rab-search-btn" (click)="onIdSearch()" title="Search">
+                <i class="pi pi-search"></i>
+            </button>
+            <input
+                type="text"
+                [(ngModel)]="idSearchText"
+                (ngModelChange)="onIdSearchInput()"
+                (keydown.enter)="onIdSearch()"
+                [placeholder]="lang === 'bn' ? 'সার্ভিস আইডি / র‍্যাব আইডি' : 'Service ID / RAB ID'" />
+            @if (idSearchText) {
+                <button type="button" class="rab-search-clear" (click)="clearIdSearch()" title="Clear search">
+                    <i class="pi pi-times"></i>
+                </button>
+            }
+        </div>
+        <button type="button" class="report-lang-toggle" (click)="toggleLang()">{{ lang === 'en' ? 'বাংলা' : 'English' }}</button>
+        <div class="report-export-wrap">
+            <button type="button" class="report-btn-export" (click)="toggleExportDropdown($event)"
+                [disabled]="loading || exporting || list.length === 0">
+                @if (exporting) {
+                    <i class="pi pi-spin pi-spinner" style="font-size:13px"></i> Generating...
+                } @else {
+                    <svg width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M6.5 1v7M3.5 5.5l3 3 3-3M1.5 10.5h10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                    Export
+                }
+            </button>
+            @if (exportDropdownOpen) {
+                <div class="report-export-dropdown" (click)="$event.stopPropagation()">
+                    <button type="button" class="report-export-item report-export-print" (click)="exportAs('print')"><i class="pi pi-print" style="font-size:0.75rem"></i> Print</button>
+                    <button type="button" class="report-export-item report-export-word" (click)="exportAs('word')"><span class="report-export-icon">⬇</span> Word</button>
+                    <button type="button" class="report-export-item report-export-excel" (click)="exportAs('excel')"><span class="report-export-icon">⬇</span> Excel</button>
+                </div>
+            }
+        </div>
+    </div>
+
+    <div class="rab-paper" [class.rab-lang-bn]="lang === 'bn'">
+        <header class="rab-paper-head">
+            <div class="rab-overline">{{ rabOverlineText }}</div>
+            <h1 class="rab-paper-title">{{ rabOrgTitle }}</h1>
+            <div class="rab-paper-sub"><em>{{ rabOrgSubtitle }}</em></div>
+            <div class="rab-orn-divider"><span class="rab-orn-line"></span><span class="rab-orn-diamond">&#9670;</span><span class="rab-orn-line"></span></div>
+            <h2 class="rab-paper-section">{{ rabSectionTitle }}</h2>
+            @if (unitScopeLine) { <div class="report-scope-line">{{ unitScopeLine }}</div> }
+            @if (memberTypeScopeLine) { <div class="report-scope-line">{{ memberTypeScopeLine }}</div> }
+        </header>
+
+        @if (criteriaItems.length > 0) {
+            <div class="rab-criteria">
+                <div class="rab-criteria-strip">
+                    <span class="rab-criteria-strip-title"><span class="rab-diamond-bullet">&#9670;</span> {{ rabCriteriaTitle }}</span>
+                    <span class="rab-criteria-strip-date">
+                        <span class="rab-criteria-strip-total">{{ rabTotalText }}</span>
+                        <span class="rab-criteria-strip-gen">{{ rabGeneratedLabel }} &middot; {{ rabFormattedDate }}</span>
+                    </span>
+                </div>
+                <div class="rab-criteria-grid">
+                    @for (item of criteriaItems; track item.label) {
+                        <div class="rab-criteria-cell">
+                            <div class="rab-criteria-cell-label">{{ item.label }}</div>
+                            <div class="rab-criteria-cell-value">{{ item.value }}</div>
+                        </div>
+                    }
+                </div>
+            </div>
+        } @else {
+            <div class="rab-criteria rab-criteria-stamp-only">
+                <div class="rab-criteria-strip">
+                    <span class="rab-criteria-strip-title"><span class="rab-diamond-bullet">&#9670;</span> {{ rabCriteriaTitle }}</span>
+                    <span class="rab-criteria-strip-date">
+                        <span class="rab-criteria-strip-total">{{ rabTotalText }}</span>
+                        <span class="rab-criteria-strip-gen">{{ rabGeneratedLabel }} &middot; {{ rabFormattedDate }}</span>
+                    </span>
+                </div>
+            </div>
+        }
+
+        <div class="rab-paper-table-wrap">
+            <p-table [value]="list" [loading]="loading" [lazy]="true" [first]="first" [rows]="rows"
+                [totalRecords]="totalRecords" [paginator]="false" styleClass="rab-data-table p-datatable-sm">
+                <ng-template pTemplate="header">
+                    <tr>
+                        @for (col of visibleColumns; track col.key) {
+                            <th [class]="'rab-th-' + col.key">{{ lang === 'bn' ? col.labelBN : col.labelEN }}</th>
+                        }
+                    </tr>
+                </ng-template>
+                <ng-template pTemplate="body" let-row let-i="rowIndex">
+                    <tr>
+                        @for (col of visibleColumns; track col.key) {
+                            @switch (col.hint) {
+                                @case ('Serial') { <td class="rab-td-ser"><span class="rab-ser">{{ paddedSer(first + i + 1) }}</span></td> }
+                                @case ('Personnel') {
+                                    <td class="rab-td-personnel">
+                                        <div class="rab-personnel-name">{{ cellValue(row, 'name') }}</div>
+                                        @if (personnelMetaText(row); as meta) { @if (meta) { <div class="rab-personnel-meta">{{ meta }}</div> } }
+                                    </td>
+                                }
+                                @case ('CallNoRankName') {
+                                    <td class="rab-td-personnel">
+                                        <div class="rab-personnel-name">{{ callNoRankLine1(row) }}</div>
+                                        @if (callNoRankLine2(row); as l2) { @if (l2) { <div class="rab-personnel-name">{{ l2 }}</div> } }
+                                    </td>
+                                }
+                                @case ('Date') { <td class="rab-td-date">{{ cellValue(row, col.key) }}</td> }
+                                @case ('Duration') { <td class="rab-td-date">{{ cellValue(row, col.key) }}</td> }
+                                @case ('Remarks') { <td class="rab-td-rmks">{{ row.rmks || '' }}</td> }
+                                @case ('Plain') { <td>{{ cellValue(row, col.key) }}</td> }
+                                @default { <td>{{ cellValue(row, col.key) }}</td> }
+                            }
+                        }
+                    </tr>
+                </ng-template>
+                <ng-template pTemplate="emptymessage">
+                    <tr><td [attr.colspan]="visibleColumns.length || 1" class="text-center p-4">{{ lang === 'en' ? 'No records found.' : 'কোন তথ্য পাওয়া যায়নি।' }}</td></tr>
+                </ng-template>
+            </p-table>
+        </div>
+
+        <footer class="rab-paper-foot">
+            <div class="rab-foot-line"></div>
+            <div class="rab-foot-row">
+                <span class="rab-foot-confidential"><span class="rab-foot-dot"></span>{{ rabConfidentialLabel }}</span>
+                <span class="rab-foot-page">{{ rabPageOfLabel }}</span>
+                <span class="rab-foot-warning">{{ rabWarningLabel }}</span>
+            </div>
+        </footer>
+    </div>
+
+    @if (totalRecords > 0) {
+        <div class="rab-paginator-bar">
+            <p-paginator [first]="first" [rows]="rows" [totalRecords]="totalRecords"
+                [rowsPerPageOptions]="rowsPerPageOptions" (onPageChange)="onPage($event)" dropdownAppendTo="body"></p-paginator>
+        </div>
+    }
+</div>
+}
+</div>

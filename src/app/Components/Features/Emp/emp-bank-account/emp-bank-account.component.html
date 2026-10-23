@@ -1,1 +1,251 @@
-<p-fluid><div class="mb-5 card"><div class="flex align-items-center gap-3 mb-4">@if (mode !== 'search') { <p-button icon="pi pi-arrow-left" [rounded]="true" [text]="true" severity="secondary" pTooltip="Back to List" (onClick)="goBack()"></p-button> }<h3 class="m-0 text-xl font-bold text-900" style="display: inline-flex; align-items: center; gap: 0.5rem;">Bank Account Information Entry @if (mode === 'view') { <span class="text-500 text-base font-normal">(View Mode)</span> <p-button label="Edit" icon="pi pi-pencil" size="small" (onClick)="enableEditMode()"></p-button> } @if (mode === 'edit') { <span class="text-primary text-base font-normal">(Edit Mode)</span> }</h3></div>@if (mode === 'search') { <app-employee-search (onEmployeeFound)="onEmployeeSearchFound($event)" (onSearchReset)="onEmployeeSearchReset()"></app-employee-search> }@if (mode !== 'search' && employeeBasicInfo) { <div class="surface-50 border-round-2xl p-4 mb-4"><div class="flex flex-wrap gap-4"><div><span class="text-500 text-sm">Name:</span><span class="ml-2 font-semibold">{{ employeeBasicInfo.fullNameEN || employeeBasicInfo.FullNameEN || 'N/A' }}</span></div><div><span class="text-500 text-sm">RAB ID:</span><span class="ml-2 font-semibold">{{ employeeBasicInfo.rabid || employeeBasicInfo.Rabid || 'N/A' }}</span></div><div><span class="text-500 text-sm">Service ID:</span><span class="ml-2 font-semibold">{{ employeeBasicInfo.serviceId || employeeBasicInfo.ServiceId || 'N/A' }}</span></div></div></div> }@if (employeeFound) { <div class="surface-50 border-round-2xl p-4 mb-4"><p class="text-600">Form content will be displayed here...</p></div><div class="flex justify-end mt-4 gap-2">@if (mode === 'view') { <p-button label="Back to List" icon="pi pi-arrow-left" severity="secondary" [outlined]="true" (onClick)="goBack()"></p-button> <p-button label="Edit" icon="pi pi-pencil" (onClick)="enableEditMode()"></p-button> } @else if (mode === 'search' && isReadonly) { <p-button label="Reset" icon="pi pi-refresh" severity="secondary" [outlined]="true" (onClick)="resetForm()"></p-button> <p-button label="Edit" icon="pi pi-pencil" (onClick)="enableSearchEditMode()"></p-button> } @else { <p-button label="Reset" icon="pi pi-refresh" severity="secondary" [outlined]="true" (onClick)="resetForm()"></p-button> <p-button label="Save" icon="pi pi-check" (onClick)="saveData()"></p-button> }</div> }</div></p-fluid>
+<p-fluid>
+    <div class="form-card">
+        @if (!hideTitle) {
+            <div class="form-card-header">
+                <h3 class="form-card-title">
+                    Employee Bank Account Information
+                    @if (mode === 'view') { <span class="text-500 text-base font-normal">(View Mode)</span> }
+                    @if (mode === 'edit') { <span class="text-primary text-base font-normal">(Edit Mode)</span> }
+                </h3>
+                @if (mode === 'view') {
+                    <div class="form-card-actions">
+                        <p-button label="Edit" icon="pi pi-pencil" [class.perm-hidden]="!canUpdate" (onClick)="enableEditMode()"></p-button>
+                    </div>
+                }
+            </div>
+        }
+
+        @if (mode === 'search') {
+            <div class="form-section">
+                <app-employee-search
+                    [exMemberNotice]="true"
+                    (onEmployeeFound)="onEmployeeSearchFound($event)"
+                    (onSearchReset)="onEmployeeSearchReset()">
+                </app-employee-search>
+            </div>
+        }
+
+        @if (employeeFound) {
+            <div class="form-section">
+                <div class="flex align-items-center gap-3 mb-3 flex-wrap">
+                    <h3 class="form-subtitle m-0 white-space-nowrap">Bank Accounts</h3>
+                    @if (!showInlineForm) {
+                        <div class="ml-auto">
+                            <p-button label="Add Bank Account" icon="pi pi-plus" (onClick)="openAddDialog()"></p-button>
+                        </div>
+                    }
+                </div>
+
+                @if (showInlineForm) {
+                    <div class="surface-50 border-round-xl p-4 mb-4" style="border: 1px solid var(--surface-300);">
+                        <h4 class="m-0 text-700">{{ isEditMode ? 'Edit Bank Account' : 'Add Bank Account' }}</h4>
+                        <form [formGroup]="bankAccForm" class="mt-3">
+                            <div class="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label class="font-semibold block mb-2 text-700">Bank <span class="text-red-500">*</span></label>
+                                    <div style="display: flex; align-items: center; gap: 0.35rem;">
+                                        <div style="flex: 1; min-width: 0;">
+                                            <p-select
+                                                formControlName="bankId"
+                                                [options]="banks"
+                                                optionLabel="bankNameEN"
+                                                optionValue="bankId"
+                                                placeholder="Select Bank"
+                                                [filter]="true"
+                                                (onChange)="onBankChange()"
+                                                styleClass="w-full"
+                                                appendTo="body">
+                                            </p-select>
+                                        </div>
+                                        <button type="button" pButton icon="pi pi-plus"
+                                            class="p-button-sm p-button-outlined p-button-success"
+                                            style="flex-shrink: 0; width: 2rem; height: 2rem; padding: 0;"
+                                            pTooltip="Add New Bank" tooltipPosition="top"
+                                            (click)="openAddBankDialog()">
+                                        </button>
+                                    </div>
+                                    @if (bankAccForm.get('bankId')?.invalid && bankAccForm.get('bankId')?.touched) {
+                                        <small class="text-red-500">Bank is required</small>
+                                    }
+                                </div>
+                                <div>
+                                    <label class="font-semibold block mb-2 text-700">Branch <span class="text-red-500">*</span></label>
+                                    <div style="display: flex; align-items: center; gap: 0.35rem;">
+                                        <div style="flex: 1; min-width: 0;">
+                                            <p-select
+                                                formControlName="branchId"
+                                                [options]="branchOptions"
+                                                optionLabel="branchNameEN"
+                                                optionValue="bankBranchId"
+                                                placeholder="Select Branch"
+                                                [filter]="true"
+                                                styleClass="w-full"
+                                                appendTo="body">
+                                            </p-select>
+                                        </div>
+                                        <button type="button" pButton icon="pi pi-plus"
+                                            class="p-button-sm p-button-outlined p-button-success"
+                                            style="flex-shrink: 0; width: 2rem; height: 2rem; padding: 0;"
+                                            pTooltip="Add New Branch" tooltipPosition="top"
+                                            (click)="openAddBranchDialog()">
+                                        </button>
+                                    </div>
+                                    @if (bankAccForm.get('branchId')?.invalid && bankAccForm.get('branchId')?.touched) {
+                                        <small class="text-red-500">Branch is required</small>
+                                    }
+                                </div>
+                                <div>
+                                    <label class="font-semibold block mb-2 text-700">Account Number <span class="text-red-500">*</span></label>
+                                    <input pInputText formControlName="accountNumber" class="w-full" placeholder="Account Number" />
+                                    @if (bankAccForm.get('accountNumber')?.invalid && bankAccForm.get('accountNumber')?.touched) {
+                                        <small class="text-red-500">Account number is required</small>
+                                    }
+                                </div>
+                                <div>
+                                    <label class="font-semibold block mb-2 text-700">Account Name (English) <span class="text-red-500">*</span></label>
+                                    <input pInputText formControlName="accountNameEN" class="w-full" placeholder="Account Name (EN)" />
+                                    @if (bankAccForm.get('accountNameEN')?.invalid && bankAccForm.get('accountNameEN')?.touched) {
+                                        <small class="text-red-500">Account name is required</small>
+                                    }
+                                </div>
+                                <div>
+                                    <label class="font-semibold block mb-2 text-700">Routing Number</label>
+                                    <input pInputText formControlName="routingNumber" class="w-full" placeholder="Routing Number" />
+                                </div>
+                                <div>
+                                    <label class="font-semibold block mb-2 text-700">Swift Code</label>
+                                    <input pInputText formControlName="swiftCode" class="w-full" placeholder="Swift Code" />
+                                </div>
+                                <div class="col-span-2">
+                                    <label class="font-semibold block mb-2 text-700">Remarks</label>
+                                    <input pInputText formControlName="remarks" class="w-full" placeholder="Remarks" />
+                                </div>
+                                <div class="col-span-2 file-section-compact">
+                                    <app-file-references-form
+                                        #fileReferencesForm
+                                        [fileRows]="fileRows"
+                                        [isViewMode]="false"
+                                        title="Supporting Documents"
+                                        (fileRowsChange)="onFileRowsChange($event)"
+                                        (onDownloadFile)="onDownloadFile($event)">
+                                    </app-file-references-form>
+                                </div>
+                            </div>
+                        </form>
+                        <div class="flex justify-content-end gap-2 mt-3">
+                            <p-button label="Cancel" icon="pi pi-times" severity="secondary" [outlined]="true" (onClick)="showInlineForm = false" [disabled]="isSaving"></p-button>
+                            <p-button [label]="isEditMode ? 'Update' : 'Save'" icon="pi pi-check" [loading]="isSaving" [disabled]="isSaving" (onClick)="saveBankAcc()"></p-button>
+                        </div>
+                    </div>
+                }
+
+                <p-table [value]="bankAccList" [loading]="isLoading" [tableStyle]="{'min-width': '65rem'}" styleClass="p-datatable-sm">
+                    <ng-template pTemplate="header">
+                        <tr>
+                            <th>Bank</th>
+                            <th>Branch</th>
+                            <th>Account Number</th>
+                            <th>Account Name (EN)</th>
+                            <th>Routing Number</th>
+                            <th>Swift Code</th>
+                            <th>Remarks</th>
+                            @if (isReadonly) {
+                                <th style="width: 100px;">Actions</th>
+                            }
+                            @if (!isReadonly) {
+                                <th style="width: 120px;">Actions</th>
+                            }
+                        </tr>
+                    </ng-template>
+                    <ng-template pTemplate="body" let-row>
+                        <tr>
+                            <td>{{ getBankName(row.bankId) }}</td>
+                            <td>{{ getBranchName(row.branchId) }}</td>
+                            <td>{{ row.accountNumber }}</td>
+                            <td>{{ row.accountNameEN || 'N/A' }}</td>
+                            <td>{{ row.routingNumber || '—' }}</td>
+                            <td>{{ row.swiftCode || '—' }}</td>
+                            <td>{{ row.remarks || '—' }}</td>
+                            <td>
+                                <div class="flex gap-1">
+                                    <p-button icon="pi pi-pencil" [class.perm-hidden]="!canUpdate" [rounded]="true" [text]="true" severity="info" pTooltip="Edit" (onClick)="openEditDialog(row)"></p-button>
+                                    @if (!isReadonly) {
+                                        <p-button icon="pi pi-trash" [class.perm-hidden]="!canDelete" [rounded]="true" [text]="true" severity="danger" pTooltip="Delete" (onClick)="confirmDelete(row)"></p-button>
+                                    }
+                                </div>
+                            </td>
+                        </tr>
+                    </ng-template>
+                    <ng-template pTemplate="emptymessage">
+                        <tr>
+                            <td [attr.colspan]="8" class="text-center py-4">
+                                <div class="flex flex-column align-items-center gap-3">
+                                    <span class="text-500">No bank accounts found.</span>
+                                </div>
+                            </td>
+                        </tr>
+                    </ng-template>
+                </p-table>
+            </div>
+
+            <div class="form-actions">
+                <!-- <p-button type="button" label="Reset" icon="pi pi-refresh" severity="secondary" [outlined]="true" styleClass="form-btn-secondary" (onClick)="onEmployeeSearchReset()"></p-button> -->
+            </div>
+        }
+    </div>
+</p-fluid>
+
+<!-- Add New Bank dialog -->
+<p-dialog header="Add New Bank" [(visible)]="showAddBankDialog" [modal]="true" [style]="{width: '500px'}" [closable]="true" [contentStyle]="{'border-top': '2px solid var(--primary-color)'}" appendTo="body">
+    <div style="display: flex; flex-direction: column; gap: 1rem;">
+        <div>
+            <label class="font-semibold block mb-2 text-700">Bank Name (English) <span class="text-red-500">*</span></label>
+            <input pInputText style="width: 100%;" [(ngModel)]="newBankNameEN" placeholder="Enter bank name in English" />
+        </div>
+        <div>
+            <label class="font-semibold block mb-2 text-700">Bank Name (Bangla)</label>
+            <input pInputText style="width: 100%;" [(ngModel)]="newBankNameBN" placeholder="Enter bank name in Bangla" />
+        </div>
+        <div>
+            <label class="font-semibold block mb-2 text-700">Swift Code</label>
+            <input pInputText style="width: 100%;" [(ngModel)]="newBankSwiftCode" placeholder="Enter swift code" />
+        </div>
+    </div>
+    <ng-template pTemplate="footer">
+        <p-button label="Cancel" icon="pi pi-times" severity="secondary" [outlined]="true" (onClick)="showAddBankDialog = false"></p-button>
+        <p-button label="Save" icon="pi pi-check" [loading]="isSavingBank" [disabled]="!newBankNameEN?.trim()" (onClick)="saveNewBank()"></p-button>
+    </ng-template>
+</p-dialog>
+
+<!-- Add New Branch dialog (parent Bank is shown read-only) -->
+<p-dialog header="Add New Branch" [(visible)]="showAddBranchDialog" [modal]="true" [style]="{width: '500px'}" [closable]="true" [contentStyle]="{'border-top': '2px solid var(--primary-color)'}" appendTo="body">
+    <div style="display: flex; flex-direction: column; gap: 1rem;">
+        <div>
+            <label class="font-semibold block mb-2 text-700">Bank (Parent)</label>
+            <p-select [options]="banks" [ngModel]="addBranchBankId" optionLabel="bankNameEN" optionValue="bankId" [disabled]="true" styleClass="w-full" appendTo="body"></p-select>
+            <small class="text-500">The new branch will be added under this bank.</small>
+        </div>
+        <div>
+            <label class="font-semibold block mb-2 text-700">Branch Name (English) <span class="text-red-500">*</span></label>
+            <input pInputText style="width: 100%;" [(ngModel)]="newBranchNameEN" placeholder="Enter branch name in English" />
+        </div>
+        <div>
+            <label class="font-semibold block mb-2 text-700">Branch Name (Bangla)</label>
+            <input pInputText style="width: 100%;" [(ngModel)]="newBranchNameBN" placeholder="Enter branch name in Bangla" />
+        </div>
+        <div>
+            <label class="font-semibold block mb-2 text-700">Routing No</label>
+            <input pInputText style="width: 100%;" [(ngModel)]="newBranchRoutingNumber" placeholder="Enter routing number" />
+        </div>
+        <div>
+            <label class="font-semibold block mb-2 text-700">Location</label>
+            <input pInputText style="width: 100%;" [(ngModel)]="newBranchLocation" placeholder="Enter location" />
+        </div>
+    </div>
+    <ng-template pTemplate="footer">
+        <p-button label="Cancel" icon="pi pi-times" severity="secondary" [outlined]="true" (onClick)="showAddBranchDialog = false"></p-button>
+        <p-button label="Save" icon="pi pi-check" [loading]="isSavingBranch" [disabled]="!newBranchNameEN?.trim()" (onClick)="saveNewBranch()"></p-button>
+    </ng-template>
+</p-dialog>
+
+<p-confirmDialog></p-confirmDialog>

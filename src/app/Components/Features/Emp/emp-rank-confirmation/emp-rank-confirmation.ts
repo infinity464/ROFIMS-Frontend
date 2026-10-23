@@ -1,57 +1,442 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, Input, OnInit, ViewChild , inject } from '@angular/core';
+import { UserMenuService } from '@/services/user-menu.service';
 import { CommonModule } from '@angular/common';
-import { FormsModule, ReactiveFormsModule } from '@angular/forms';
+import { FormBuilder, FormGroup, Validators, FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
+import { of } from 'rxjs';
+import { catchError, map } from 'rxjs/operators';
+import { forkJoin } from 'rxjs';
+
 import { InputTextModule } from 'primeng/inputtext';
 import { ButtonModule } from 'primeng/button';
 import { Fluid } from 'primeng/fluid';
-import { MessageService } from 'primeng/api';
+import { MessageService, ConfirmationService } from 'primeng/api';
 import { TooltipModule } from 'primeng/tooltip';
+import { TableModule } from 'primeng/table';
+import { SelectModule } from 'primeng/select';
+import { DatePickerModule } from 'primeng/datepicker';
+import { DialogModule } from 'primeng/dialog';
+import { ConfirmDialogModule } from 'primeng/confirmdialog';
+
 import { EmpService } from '@/services/emp-service';
+import { buildUploadOwnerTag } from '@/shared/utils/upload-file-name.util';
+import { RankConfirmationInfoService, RankConfirmationInfoModel } from '@/services/rank-confirmation-info.service';
+import { CommonCodeService } from '@/services/common-code-service';
 import { EmployeeSearchComponent, EmployeeBasicInfo } from '@/Components/Shared/employee-search/employee-search';
+import { FileReferencesFormComponent, FileRowData } from '@components/Common/file-references-form/file-references-form';
+import { FlexibleDateDirective } from '@/shared/directives/flexible-date.directive';
+
+export interface RankConfirmationListRow extends RankConfirmationInfoModel {
+    filesReferences?: string | null;
+}
 
 @Component({
     selector: 'app-emp-rank-confirmation',
     standalone: true,
-    imports: [CommonModule, FormsModule, ReactiveFormsModule, InputTextModule, ButtonModule, Fluid, TooltipModule, EmployeeSearchComponent],
+    imports: [
+        CommonModule,
+        FormsModule,
+        ReactiveFormsModule,
+        InputTextModule,
+        ButtonModule,
+        Fluid,
+        TooltipModule,
+        TableModule,
+        SelectModule,
+        DatePickerModule,
+        DialogModule,
+        ConfirmDialogModule,
+        EmployeeSearchComponent,
+        FileReferencesFormComponent,
+        FlexibleDateDirective
+    ],
+    providers: [ConfirmationService],
     templateUrl: './emp-rank-confirmation.html',
     styleUrl: './emp-rank-confirmation.scss'
 })
 export class EmpRankConfirmationComponent implements OnInit {
+    private _router = inject(Router);
+    private _userMenuService = inject(UserMenuService);
+    canInsert = true;
+    canUpdate = true;
+    canDelete = true;
+
+    @ViewChild('fileReferencesForm') fileReferencesForm!: any;
+
+    /** When true (e.g. inside tab view), the "Rank Confirmation Information Entry" title and header actions are hidden. */
+    @Input() hideTitle = false;
+
     employeeFound = false;
     selectedEmployeeId: number | null = null;
     employeeBasicInfo: any = null;
+    selectedOrgId: number | null = null;
+    selectedMemberTypeId: number | null = null;
+    /** Raw ranks for the selected mother org (before member-type filter). */
+    private allRanksForOrg: any[] = [];
     mode: 'search' | 'view' | 'edit' = 'search';
     isReadonly = false;
 
-    constructor(private empService: EmpService, private messageService: MessageService, private route: ActivatedRoute, private router: Router) {}
+    rankList: RankConfirmationListRow[] = [];
+    isLoading = false;
 
-    ngOnInit(): void { this.checkRouteParams(); }
+    displayDialog = false;
+    showInlineForm = false;
+    isEditMode = false;
+    isSaving = false;
+    rankForm!: FormGroup;
+    editingRankConfirmId: number | null = null;
+
+    fileRows: FileRowData[] = [];
+    rankOptions: { label: string; value: number }[] = [];
+
+    constructor(
+        private fb: FormBuilder,
+        private empService: EmpService,
+        private rankConfirmationService: RankConfirmationInfoService,
+        private commonCodeService: CommonCodeService,
+        private messageService: MessageService,
+        private confirmationService: ConfirmationService,
+        private route: ActivatedRoute,
+        private router: Router
+    ) {}
+
+    ngOnInit(): void {
+        const _perms = this._userMenuService.getPermissionsByRoute(this._router.url);
+        this.canInsert = _perms.canInsert;
+        this.canUpdate = _perms.canUpdate;
+        this.canDelete = _perms.canDelete;
+
+        this.buildForm();
+        this.loadRankOptions();
+        this.checkRouteParams();
+    }
+
+    buildForm(): void {
+        this.rankForm = this.fb.group({
+            rankConfirmId: [null],
+            presentRank: [null, Validators.required],
+            rankConfirmDate: [null],
+            auth: [''],
+            remarks: ['']
+        });
+    }
+
+    private mapCommonCodeToOption(item: any): { label: string; value: number } {
+        const label = item?.codeValueEN ?? item?.CodeValueEN ?? item?.displayCodeValueEN ?? item?.DisplayCodeValueEN ?? String(item?.codeId ?? item?.CodeId ?? '');
+        const value = item?.codeId ?? item?.CodeId ?? 0;
+        return { label, value };
+    }
+
+    loadRankOptions(): void {
+        this.commonCodeService.getAllActiveCommonCodesType('Rank').pipe(catchError(() => of([] as any[]))).subscribe({
+            next: (list: any[]) => {
+                this.rankOptions = (Array.isArray(list) ? list : []).map((item: any) => this.mapCommonCodeToOption(item));
+            }
+        });
+    }
+
+    loadRankOptionsByOrg(orgId: number | null): void {
+        if (orgId == null) return;
+        this.commonCodeService.getAllActiveCommonCodesByOrgIdAndType(orgId, 'MotherOrgRank').pipe(catchError(() => of([] as any[]))).subscribe({
+            next: (list: any[]) => {
+                const arr = Array.isArray(list) ? list : [];
+                if (arr.length > 0) {
+                    this.allRanksForOrg = arr;
+                    this.applyRankMemberTypeFilter();
+                }
+            }
+        });
+    }
+
+    /** Filter the org-scoped ranks by selectedMemberTypeId (rank.parentCodeId === memberType). */
+    private applyRankMemberTypeFilter(): void {
+        const mt = this.selectedMemberTypeId;
+        const filtered = mt == null
+            ? this.allRanksForOrg
+            : this.allRanksForOrg.filter((r: any) => (r?.parentCodeId ?? r?.ParentCodeId ?? null) === mt);
+        this.rankOptions = filtered.map((item: any) => this.mapCommonCodeToOption(item));
+    }
+
+    toDateOnly(d: Date | string | null): string | null {
+        if (d == null) return null;
+        if (typeof d === 'string') {
+            const m = d.match(/^(\d{4})-(\d{2})-(\d{2})/);
+            if (m) return d.substring(0, 10);
+            const parsed = new Date(d);
+            if (isNaN(parsed.getTime())) return null;
+            return `${parsed.getFullYear()}-${String(parsed.getMonth() + 1).padStart(2, '0')}-${String(parsed.getDate()).padStart(2, '0')}`;
+        }
+        if (d instanceof Date) {
+            if (isNaN(d.getTime())) return null;
+            return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+        }
+        return null;
+    }
+
+    private toDateForPicker(d: Date | string | null): Date | null {
+        if (d == null) return null;
+        if (d instanceof Date) return isNaN(d.getTime()) ? null : d;
+        const parsed = new Date(d);
+        return isNaN(parsed.getTime()) ? null : parsed;
+    }
 
     checkRouteParams(): void {
         this.route.queryParams.subscribe(params => {
-            if (params['id']) { this.mode = params['mode'] === 'edit' ? 'edit' : 'view'; this.isReadonly = this.mode === 'view'; this.loadEmployeeById(parseInt(params['id'], 10)); }
+            const id = params['id'];
+            const modeParam = params['mode'];
+            if (id) {
+                this.mode = modeParam === 'edit' ? 'edit' : 'view';
+                this.isReadonly = this.mode === 'view';
+                this.loadEmployeeById(parseInt(id, 10));
+            }
         });
     }
 
     loadEmployeeById(employeeId: number): void {
-        this.empService.getEmployeeById(employeeId).subscribe({ next: (e: any) => { if (e) { this.employeeFound = true; this.selectedEmployeeId = e.employeeID || e.EmployeeID; this.employeeBasicInfo = e; } } });
+        this.empService.getEmployeeById(employeeId).subscribe({
+            next: (e: any) => {
+                if (e) {
+                    this.employeeFound = true;
+                    this.selectedEmployeeId = e.employeeID || e.EmployeeID;
+                    this.employeeBasicInfo = e;
+                    this.selectedOrgId = e.orgId ?? e.OrgId ?? e.lastMotherUnit ?? e.LastMotherUnit ?? null;
+                    this.selectedMemberTypeId = e.memberType ?? e.MemberType ?? null;
+                    this.loadRankOptionsByOrg(this.selectedOrgId);
+                    this.loadRankList();
+                }
+            },
+            error: err => console.error('Failed to load employee', err)
+        });
+    }
+
+    loadRankList(): void {
+        if (!this.selectedEmployeeId) return;
+        this.isLoading = true;
+        this.rankConfirmationService.getByEmployeeId(this.selectedEmployeeId).subscribe({
+            next: (list: any[]) => {
+                const arr = Array.isArray(list) ? list : [];
+                this.rankList = arr
+                    .filter((item: any) => (item.employeeId ?? item.EmployeeId) === this.selectedEmployeeId)
+                    .map((item: any) => ({
+                        employeeId: item.employeeId ?? item.EmployeeId,
+                        rankConfirmId: item.rankConfirmId ?? item.RankConfirmId,
+                        presentRank: item.presentRank ?? item.PresentRank ?? null,
+                        rankConfirmDate: item.rankConfirmDate ?? item.RankConfirmDate ?? null,
+                        auth: item.auth ?? item.Auth ?? null,
+                        remarks: item.remarks ?? item.Remarks ?? null,
+                        filesReferences: item.filesReferences ?? item.FilesReferences ?? null
+                    }));
+                this.isLoading = false;
+            },
+            error: (err: any) => { this.rankList = []; this.isLoading = false; }
+        });
+    }
+
+    getOptionLabel(options: { label: string; value: number }[], value: number | null): string {
+        if (value == null) return '—';
+        const opt = options.find(o => o.value === value);
+        return opt ? opt.label : String(value);
+    }
+
+    formatDate(value: Date | string | null): string {
+        if (value == null) return '—';
+        const d = typeof value === 'string' ? new Date(value) : value;
+        if (isNaN(d.getTime())) return '—';
+        const day = String(d.getDate()).padStart(2, '0');
+        const month = String(d.getMonth() + 1).padStart(2, '0');
+        return `${day}-${month}-${d.getFullYear()}`;
+    }
+
+    parseFileRowsFromReferences(refsJson: string | null | undefined): FileRowData[] {
+        if (!refsJson || typeof refsJson !== 'string') return [];
+        try {
+            const refs = JSON.parse(refsJson) as { FileId?: number; fileName?: string }[];
+            if (!Array.isArray(refs)) return [];
+            return refs.map((r) => ({ displayName: r.fileName ?? '', file: null, fileId: r.FileId }));
+        } catch {
+            return [];
+        }
+    }
+
+    onFileRowsChange(event: FileRowData[]): void {
+        if (event && Array.isArray(event)) this.fileRows = event;
+    }
+
+    onDownloadFile(payload: { fileId: number; fileName: string }): void {
+        this.empService.downloadFile(payload.fileId).subscribe({
+            next: (blob) => this.empService.triggerFileDownload(blob, payload.fileName || 'download'),
+            error: (err) => {
+                console.error('Download failed', err);
+                this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.message || 'Failed to download file' });
+            }
+        });
+    }
+
+    openAddDialog(): void {
+        if (this.selectedEmployeeId == null) {
+            this.messageService.add({ severity: 'warn', summary: 'Warning', detail: 'No employee selected.' });
+            return;
+        }
+        this.isEditMode = false;
+        this.editingRankConfirmId = null;
+        this.fileRows = [];
+        this.rankForm.reset({
+            rankConfirmId: null,
+            presentRank: null,
+            rankConfirmDate: null,
+            auth: '',
+            remarks: ''
+        });
+        this.showInlineForm = true;
+    }
+
+    openEditDialog(row: RankConfirmationListRow): void {
+        this.isEditMode = true;
+        this.editingRankConfirmId = row.rankConfirmId;
+        this.fileRows = this.parseFileRowsFromReferences(row.filesReferences);
+        const rankConfirmDate = this.toDateOnly(row.rankConfirmDate ?? null);
+        this.rankForm.patchValue({
+            rankConfirmId: row.rankConfirmId,
+            presentRank: row.presentRank,
+            rankConfirmDate: this.toDateForPicker(rankConfirmDate),
+            auth: row.auth ?? '',
+            remarks: row.remarks ?? ''
+        });
+        this.showInlineForm = true;
+    }
+
+    saveRank(): void {
+        if (!this.selectedEmployeeId) return;
+        if (this.rankForm.invalid) {
+            this.rankForm.markAllAsTouched();
+            return;
+        }
+        const existingRefs = this.fileReferencesForm?.getExistingFileReferences() || [];
+        const filesToUpload = this.fileReferencesForm?.getFilesToUpload() || [];
+
+        const doSave = (filesReferencesJson: string | null) => {
+            const v = this.rankForm.value;
+            const now = new Date().toISOString();
+            const newId = this.rankList.length > 0 ? Math.max(...this.rankList.map(r => r.rankConfirmId)) + 1 : 1;
+            const payload: Partial<RankConfirmationInfoModel> = {
+                employeeId: this.selectedEmployeeId!,
+                rankConfirmId: this.isEditMode ? (this.editingRankConfirmId ?? 0) : newId,
+                presentRank: v.presentRank ?? null,
+                rankConfirmDate: this.toDateOnly(v.rankConfirmDate),
+                auth: v.auth || null,
+                remarks: v.remarks ?? '',
+                createdBy: 'user',
+                createdDate: now,
+                lastUpdatedBy: 'user',
+                lastupdate: now,
+                filesReferences: filesReferencesJson ?? undefined
+            };
+            this.isSaving = true;
+            const req = this.isEditMode ? this.rankConfirmationService.saveUpdate(payload) : this.rankConfirmationService.save(payload);
+            req.pipe(
+                map((res: any) => {
+                    const code = res?.statusCode ?? res?.StatusCode ?? 200;
+                    if (code !== 200) throw new Error(res?.description ?? res?.Description ?? 'Save failed');
+                    return res;
+                }),
+                catchError(err => {
+                    this.messageService.add({ severity: 'error', summary: this.isEditMode ? 'Update failed' : 'Save failed', detail: String(err?.error?.description ?? err?.error?.Description ?? err?.message) });
+                    return of(null);
+                })
+            ).subscribe(res => {
+                this.isSaving = false;
+                if (res != null) {
+                    this.messageService.add({ severity: 'success', summary: 'Saved', detail: this.isEditMode ? 'Rank confirmation updated.' : 'Rank confirmation added.' });
+                    this.showInlineForm = false;
+                    this.loadRankList();
+                }
+            });
+        };
+
+        if (filesToUpload.length > 0) {
+            const uploads = filesToUpload.map((r: FileRowData) =>
+                this.empService.uploadEmployeeFile(r.file!, r.displayName?.trim() || r.file!.name, buildUploadOwnerTag(this.employeeBasicInfo?.rabid, this.selectedEmployeeId))
+            );
+            forkJoin(uploads).subscribe({
+                next: (results: unknown) => {
+                    const resultsArray = Array.isArray(results) ? results : [];
+                    const newRefs = (resultsArray as { fileId: number; fileName: string }[]).map((r) => ({ FileId: r.fileId, fileName: r.fileName }));
+                    const allRefs: { FileId: number; fileName: string }[] = [...existingRefs.map((r: { FileId: number; fileName: string }) => ({ FileId: r.FileId, fileName: r.fileName })), ...newRefs];
+                    const filesReferencesJson = allRefs.length > 0 ? JSON.stringify(allRefs) : null;
+                    doSave(filesReferencesJson);
+                },
+                error: (err) => {
+                    console.error('Error uploading files', err);
+                    this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.message || 'Failed to upload one or more files' });
+                }
+            });
+            return;
+        }
+        const filesReferencesJson = existingRefs.length > 0 ? JSON.stringify(existingRefs) : null;
+        doSave(filesReferencesJson);
+    }
+
+    confirmDelete(row: RankConfirmationListRow): void {
+        this.confirmationService.confirm({
+            message: 'Delete this rank confirmation record?',
+            header: 'Delete Confirmation',
+            icon: 'pi pi-exclamation-triangle',
+            rejectButtonProps: { label: 'Cancel', severity: 'secondary', outlined: true },
+            acceptButtonProps: { label: 'Delete', severity: 'danger' },
+            accept: () => this.deleteRank(row)
+        });
+    }
+
+    deleteRank(row: RankConfirmationListRow): void {
+        this.rankConfirmationService.delete(row.employeeId, row.rankConfirmId).subscribe({
+            next: () => {
+                this.messageService.add({ severity: 'success', summary: 'Deleted', detail: 'Rank confirmation deleted.' });
+                this.loadRankList();
+            },
+            error: err => this.messageService.add({ severity: 'error', summary: 'Error', detail: String(err?.error?.description ?? err?.error?.Description ?? err?.message ?? 'Delete failed') })
+        });
     }
 
     onEmployeeSearchFound(employee: EmployeeBasicInfo): void {
         this.employeeFound = true;
         this.selectedEmployeeId = employee.employeeID;
         this.employeeBasicInfo = employee;
-        this.isReadonly = true;
+        this.selectedOrgId = employee.motherOrganization ?? (employee as any).orgId ?? (employee as any).OrgId ?? null;
+        this.selectedMemberTypeId = (employee as any).memberType ?? (employee as any).MemberType ?? null;
+        this.isReadonly = false;
+        this.loadRankOptionsByOrg(this.selectedOrgId);
+        if (this.selectedOrgId != null) {
+            this.loadRankList();
+        } else {
+            this.empService.getEmployeeById(employee.employeeID).subscribe({
+                next: (full) => {
+                    this.employeeBasicInfo = full;
+                    this.selectedOrgId = (full as any).orgId ?? (full as any).OrgId ?? (full as any).lastMotherUnit ?? (full as any).LastMotherUnit ?? null;
+                    this.selectedMemberTypeId = (full as any).memberType ?? (full as any).MemberType ?? this.selectedMemberTypeId;
+                    this.loadRankOptionsByOrg(this.selectedOrgId);
+                    this.loadRankList();
+                },
+                error: (err: any) => this.loadRankList()
+            });
+        }
     }
 
-    onEmployeeSearchReset(): void {
-        this.resetForm();
-    }
-
+    onEmployeeSearchReset(): void { this.resetForm(); }
     enableEditMode(): void { this.mode = 'edit'; this.isReadonly = false; }
-    enableSearchEditMode(): void { this.isReadonly = false; }
+    cancelEdit(): void {
+        if (!this.selectedEmployeeId) return;
+        this.mode = 'view';
+        this.isReadonly = true;
+        this.loadRankList();
+        this.messageService.add({ severity: 'info', summary: 'Cancelled', detail: 'Changes discarded.' });
+    }
     goBack(): void { this.router.navigate(['/emp-list']); }
-    resetForm(): void { this.employeeFound = false; this.selectedEmployeeId = null; this.employeeBasicInfo = null; }
-    saveData(): void { this.messageService.add({ severity: 'info', summary: 'Info', detail: 'Save functionality to be implemented' }); }
+
+    resetForm(): void {
+        this.employeeFound = false;
+        this.selectedEmployeeId = null;
+        this.employeeBasicInfo = null;
+        this.selectedOrgId = null;
+        this.rankList = [];
+    }
 }

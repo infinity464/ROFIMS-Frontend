@@ -1,0 +1,137 @@
+<p-fluid>
+    <p-toast position="top-center"></p-toast>
+    <p-confirmDialog></p-confirmDialog>
+
+    <div class="card">
+        <div class="font-semibold text-xl mb-5">{{ title }} Setup</div>
+
+        <form [formGroup]="form" (ngSubmit)="assignSelected()">
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
+                <div>
+                    <label for="rabUnitId" class="block mb-2">RAB Unit <span class="text-red-500">*</span></label>
+                    <p-select
+                        id="rabUnitId"
+                        [options]="rabUnitOptions"
+                        optionLabel="label"
+                        optionValue="value"
+                        styleClass="w-full"
+                        placeholder="Select RAB Unit"
+                        formControlName="rabUnitId">
+                    </p-select>
+                    @if (form.get('rabUnitId')?.invalid && form.get('rabUnitId')?.touched) {
+                        <small class="text-red-500 block mt-1">RAB Unit is required</small>
+                    }
+                </div>
+                <div>
+                    <label for="locationOfBattalionHQ" class="block mb-2">Location of Battalion HQ</label>
+                    <input
+                        pInputText
+                        id="locationOfBattalionHQ"
+                        type="text"
+                        class="w-full"
+                        placeholder="Text"
+                        formControlName="locationOfBattalionHQ">
+                </div>
+                <div>
+                    <label for="locationOfBattalionHQBangla" class="block mb-2">Location of Battalion HQ Bangla</label>
+                    <input
+                        pInputText
+                        id="locationOfBattalionHQBangla"
+                        type="text"
+                        class="w-full"
+                        placeholder="বাংলা"
+                        formControlName="locationOfBattalionHQBangla">
+                </div>
+                <div>
+                    <label for="numberOfCamp" class="block mb-2">Number of Camp</label>
+                    <p-inputNumber
+                        id="numberOfCamp"
+                        styleClass="w-full"
+                        placeholder="Number"
+                        formControlName="numberOfCamp"
+                        [useGrouping]="false">
+                    </p-inputNumber>
+                </div>
+                <div>
+                    <label for="nameOfCamps" class="block mb-2">Name of Camps</label>
+                    <input
+                        pInputText
+                        id="nameOfCamps"
+                        type="text"
+                        class="w-full"
+                        placeholder="Text"
+                        formControlName="nameOfCamps">
+                </div>
+                <div>
+                    <label for="identificationColor" class="block mb-2">Identification Color</label>
+                    <div class="flex items-center gap-2">
+                        <p-colorPicker
+                            inputId="identificationColor"
+                            formControlName="identificationColor"
+                            [format]="'hex'">
+                        </p-colorPicker>
+                        <input
+                            pInputText
+                            type="text"
+                            class="flex-1"
+                            placeholder="#RRGGBB"
+                            formControlName="identificationColor">
+                    </div>
+                </div>
+            </div>
+            <div class="flex flex-col sm:flex-row gap-2 justify-end">
+                <p-button type="submit" label="Save" [disabled]="form.invalid || isSubmitting" [fluid]="false"></p-button>
+                <p-button type="button" label="Reset" severity="secondary" [fluid]="false" (click)="resetForm()"></p-button>
+            </div>
+        </form>
+    </div>
+
+    <div class="card mt-4 aor-search-card">
+        <label for="searchUpazilaId" class="block mb-2 text-color-secondary">Select Unit or Search by Upazila to load its unit's Area of Responsibility</label>
+        <p-select
+            id="searchUpazilaId"
+            [options]="allUpazilasPool"
+            optionLabel="name"
+            optionValue="id"
+            styleClass="w-full"
+            placeholder="Type to find an upazila…"
+            [filter]="true"
+            [showClear]="true"
+            [virtualScroll]="true"
+            [virtualScrollItemSize]="38"
+            [formControl]="$any(form.get('searchUpazilaId'))">
+        </p-select>
+    </div>
+
+    @if (assignedLoading || form.value.rabUnitId || assigned.length > 0) {
+        <div class="card mt-4 aor-list-card">
+            @if (assignedLoading) {
+                <div class="py-2">Loading...</div>
+            } @else if (form.value.rabUnitId && assigned.length === 0) {
+                <div class="text-color-secondary py-2">No area assigned. Use the form above to add.</div>
+            } @else if (assigned.length > 0) {
+                <div class="aor-card-grid">
+                    @for (row of assigned; track row.aorId) {
+                        <app-aor-card
+                            [data]="row"
+                            [canDelete]="canDelete"
+                            [canUpdate]="canUpdate"
+                            [availableDivisions]="allDivisionsPool"
+                            [availableDistricts]="allDistrictsPool"
+                            [availableUpazilas]="upazilasPoolForCard"
+                            [lockedUpazilas]="lockedUpazilas"
+                            (view)="onCardView()"
+                            (edit)="onCardEdit($event)"
+                            (delete)="removeAssignment($event.data, $event.event)"
+                            (setDivisions)="onCardSetDivisions($event)"
+                            (setDistricts)="onCardSetDistricts($event)"
+                            (setUpazilas)="onCardSetUpazilas($event)"
+                            (lockedUpazilaClick)="onLockedUpazilaClick($event)">
+                        </app-aor-card>
+                    }
+                </div>
+            }
+        </div>
+    }
+</p-fluid>
+

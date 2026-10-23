@@ -1,0 +1,149 @@
+<div class="system-monitoring">
+    <!-- Header -->
+    <div class="metric-card monitoring-header">
+        <div class="header-text">
+            <h2>System Monitoring</h2>
+            <p class="header-subtitle">Live server health — updates every 2 seconds</p>
+        </div>
+        <div class="connection-badge" [class]="'state-' + connectionState.toLowerCase()">
+            <span class="status-dot"></span>
+            <span class="status-label">{{ connectionState }}</span>
+        </div>
+    </div>
+
+    @if (metrics) {
+        <!-- Gauges Row -->
+        <div class="gauges-row">
+            <!-- CPU Card -->
+            <div class="metric-card">
+                <h3>CPU Usage</h3>
+                <div class="gauge-wrapper">
+                    <svg viewBox="0 0 120 120" class="gauge-svg">
+                        <circle cx="60" cy="60" r="54" fill="none"
+                                stroke="#e5e7eb" stroke-width="10" />
+                        <circle cx="60" cy="60" r="54" fill="none"
+                                [attr.stroke]="getGaugeColor(metrics.cpuUsagePercent, cpuThreshold)"
+                                stroke-width="10"
+                                stroke-linecap="round"
+                                [attr.stroke-dasharray]="gaugeCircumference"
+                                [attr.stroke-dashoffset]="cpuDashOffset"
+                                class="gauge-arc" />
+                    </svg>
+                    <div class="gauge-label">
+                        <span class="gauge-value"
+                              [style.color]="getGaugeColor(metrics.cpuUsagePercent, cpuThreshold)">
+                            {{ metrics.cpuUsagePercent | number:'1.1-1' }}%
+                        </span>
+                    </div>
+                </div>
+                <p class="metric-detail">{{ metrics.cpuCoreCount }} cores</p>
+            </div>
+
+            <!-- RAM Card -->
+            <div class="metric-card">
+                <h3>RAM Usage</h3>
+                <div class="gauge-wrapper">
+                    <svg viewBox="0 0 120 120" class="gauge-svg">
+                        <circle cx="60" cy="60" r="54" fill="none"
+                                stroke="#e5e7eb" stroke-width="10" />
+                        <circle cx="60" cy="60" r="54" fill="none"
+                                [attr.stroke]="getGaugeColor(metrics.ramUsedPercent, ramThreshold)"
+                                stroke-width="10"
+                                stroke-linecap="round"
+                                [attr.stroke-dasharray]="gaugeCircumference"
+                                [attr.stroke-dashoffset]="ramDashOffset"
+                                class="gauge-arc" />
+                    </svg>
+                    <div class="gauge-label">
+                        <span class="gauge-value"
+                              [style.color]="getGaugeColor(metrics.ramUsedPercent, ramThreshold)">
+                            {{ metrics.ramUsedPercent | number:'1.1-1' }}%
+                        </span>
+                    </div>
+                </div>
+                <p class="metric-detail">
+                    {{ metrics.ramUsedGB | number:'1.2-2' }} GB / {{ metrics.ramTotalGB | number:'1.2-2' }} GB
+                </p>
+            </div>
+
+            <!-- Storage Card -->
+            <div class="metric-card">
+                <h3>Storage</h3>
+                <div class="gauge-wrapper">
+                    <svg viewBox="0 0 120 120" class="gauge-svg">
+                        <circle cx="60" cy="60" r="54" fill="none"
+                                stroke="#e5e7eb" stroke-width="10" />
+                        <circle cx="60" cy="60" r="54" fill="none"
+                                [attr.stroke]="storageColor"
+                                stroke-width="10"
+                                stroke-linecap="round"
+                                [attr.stroke-dasharray]="gaugeCircumference"
+                                [attr.stroke-dashoffset]="storageDashOffset"
+                                class="gauge-arc" />
+                    </svg>
+                    <div class="gauge-label">
+                        <span class="gauge-value" [style.color]="storageColor">
+                            {{ overallStoragePercent | number:'1.1-1' }}%
+                        </span>
+                    </div>
+                </div>
+                <p class="metric-detail">
+                    {{ totalStorageUsedGB | number:'1.1-1' }} GB used of {{ totalStorageTotalGB | number:'1.1-1' }} GB
+                </p>
+            </div>
+        </div>
+
+        <!-- Per-drive breakdown -->
+        <div class="metric-card drives-card">
+            <h3>Drive Breakdown</h3>
+            <div class="drives-list">
+                @for (drive of metrics.drives; track drive.name) {
+                    <div class="drive-item">
+                        <div class="drive-header">
+                            <span class="drive-name">{{ drive.name }}</span>
+                            <div class="drive-meta">
+                                @if (isDriveCritical(drive.usedPercent)) {
+                                    <span class="drive-warning critical">Low disk space</span>
+                                } @else if (isDriveWarning(drive.usedPercent)) {
+                                    <span class="drive-warning warning">Disk filling up</span>
+                                }
+                                <span class="drive-info">
+                                    {{ (drive.totalGB - drive.freeGB) | number:'1.1-1' }} GB used of {{ drive.totalGB | number:'1.1-1' }} GB
+                                </span>
+                            </div>
+                        </div>
+                        <div class="drive-bar-wrapper">
+                            <div class="drive-bar"
+                                 [style.width.%]="drive.usedPercent"
+                                 [style.background-color]="getDriveColor(drive.usedPercent)">
+                            </div>
+                        </div>
+                        <div class="drive-footer">
+                            <span class="drive-free">{{ drive.freeGB | number:'1.1-1' }} GB free</span>
+                            <span class="drive-percent" [style.color]="getDriveColor(drive.usedPercent)">
+                                {{ drive.usedPercent | number:'1.1-1' }}%
+                            </span>
+                        </div>
+                    </div>
+                }
+            </div>
+        </div>
+
+        <!-- History Chart -->
+        <div class="metric-card history-card">
+            <h3>CPU &amp; RAM History (last ~2 min)</h3>
+            <div class="chart-container">
+                @if (historyChart) {
+                    <p-chart type="line"
+                             [data]="historyChart"
+                             [options]="historyOptions"
+                             height="300px" />
+                }
+            </div>
+        </div>
+    } @else {
+        <div class="loading-state">
+            <p>Waiting for metrics data...</p>
+        </div>
+    }
+</div>

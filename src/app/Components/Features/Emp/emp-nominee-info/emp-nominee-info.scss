@@ -1,1 +1,18 @@
-// emp-nominee-info styles
+// emp-nominee-info styles – aligned with emp-basic-info / emp-personal-info (form-theme)
+
+:host {
+    display: block;
+}
+
+:host ::ng-deep {
+  .file-section-compact {
+    app-file-references-form {
+      h3 {
+        font-size: 1rem !important;
+        font-weight: 600 !important;
+        color: var(--text-color-secondary) !important;
+        margin-bottom: 0.5rem !important;
+      }
+    }
+  }
+}

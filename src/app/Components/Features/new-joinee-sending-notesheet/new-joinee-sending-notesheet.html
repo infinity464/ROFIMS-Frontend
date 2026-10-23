@@ -1,0 +1,313 @@
+<p-toast position="top-center"></p-toast>
+
+<div class="employee-reports-page">
+    <!-- Filter card -->
+    <div class="report-filter-card">
+        <div class="report-filter-card-title">
+            <h1 class="report-page-title">New Joinee Sending Notesheet</h1>
+        </div>
+
+        <div class="report-filter-header" [class.open]="filterOpen" (click)="toggleFilter()" role="button" tabindex="0" (keydown.enter)="toggleFilter()" (keydown.space)="toggleFilter()">
+            <div class="report-filter-header-left">
+                <div class="report-filter-icon">
+                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                        <path d="M2 4h12M4 8h8M6 12h4" stroke="var(--primary-color)" stroke-width="1.8" stroke-linecap="round"/>
+                    </svg>
+                </div>
+                <div>
+                    <div class="report-filter-title">Search &amp; filter</div>
+                    <div class="report-filter-subtitle">Organization, member type, rank, trade, dates</div>
+                </div>
+            </div>
+            <div class="report-filter-header-right">
+                <span class="report-filters-badge" [class.show]="activeFilterCount > 0">{{ activeFilterCount }} active</span>
+                <div class="report-chevron">
+                    <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+                        <path d="M2 4l4 4 4-4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                </div>
+            </div>
+        </div>
+
+        <div class="report-filter-body" [class.open]="filterOpen">
+            <div class="report-filter-body-inner">
+                <div class="report-fields-row">
+                    <div class="report-filter-field">
+                        <label>Mother Organization</label>
+                        <p-select
+                            id="org"
+                            [options]="orgOptions"
+                            [(ngModel)]="selectedOrgId"
+                            (ngModelChange)="onOrgChange()"
+                            optionLabel="orgNameEN"
+                            optionValue="orgId"
+                            placeholder="Select"
+                            styleClass="w-full"
+                            [filter]="true"
+                            appendTo="body">
+                        </p-select>
+                    </div>
+                    <div class="report-filter-field">
+                        <label>Member Type</label>
+                        <p-multiSelect
+                            id="memberType"
+                            [options]="memberTypeOptions"
+                            [(ngModel)]="selectedMemberTypeIds"
+                            (ngModelChange)="onMemberTypeChange()"
+                            optionLabel="label"
+                            optionValue="value"
+                            display="chip"
+                            placeholder="Select"
+                            styleClass="w-full"
+                            [filter]="true"
+                            appendTo="body">
+                        </p-multiSelect>
+                    </div>
+                    <div class="report-filter-field">
+                        <label>Rank</label>
+                        <p-select
+                            id="rank"
+                            [options]="rankOptions"
+                            [(ngModel)]="selectedRankId"
+                            (ngModelChange)="onFilterChange()"
+                            optionLabel="label"
+                            optionValue="value"
+                            placeholder="Select"
+                            styleClass="w-full"
+                            [disabled]="selectedOrgId == null"
+                            appendTo="body">
+                        </p-select>
+                    </div>
+                    <div class="report-filter-field">
+                        <label>Trade</label>
+                        <p-select
+                            id="trade"
+                            [options]="tradeOptions"
+                            [(ngModel)]="selectedTradeId"
+                            (ngModelChange)="onFilterChange()"
+                            optionLabel="label"
+                            optionValue="value"
+                            placeholder="Select"
+                            styleClass="w-full"
+                            [disabled]="selectedOrgId == null"
+                            appendTo="body">
+                        </p-select>
+                    </div>
+                </div>
+                <div class="report-fields-row">
+                    <div class="report-filter-field report-filter-field-date">
+                        <label>Date of joining from</label>
+                        <p-datepicker
+                            [(ngModel)]="joiningDateFrom"
+                            (ngModelChange)="onFilterChange()"
+                            dateFormat="dd-mm-yy"
+                            placeholder="dd-mm-yyyy"
+                            appendTo="body"
+                            class="w-full"
+                            [inputStyle]="{'width':'100%'}">
+                        </p-datepicker>
+                    </div>
+                    <div class="report-filter-field report-filter-field-date">
+                        <label>Date of joining to</label>
+                        <p-datepicker
+                            [(ngModel)]="joiningDateTo"
+                            (ngModelChange)="onFilterChange()"
+                            dateFormat="dd-mm-yy"
+                            placeholder="dd-mm-yyyy"
+                            appendTo="body"
+                            class="w-full"
+                            [inputStyle]="{'width':'100%'}">
+                        </p-datepicker>
+                    </div>
+                    <div class="report-filter-field report-filter-field-date">
+                        <label>Data Entry Date From</label>
+                        <p-datepicker
+                            [(ngModel)]="createdDateFrom"
+                            (ngModelChange)="onFilterChange()"
+                            dateFormat="dd-mm-yy"
+                            placeholder="dd-mm-yyyy"
+                            appendTo="body"
+                            class="w-full"
+                            [inputStyle]="{'width':'100%'}">
+                        </p-datepicker>
+                    </div>
+                    <div class="report-filter-field report-filter-field-date">
+                        <label>Data Entry Date To</label>
+                        <p-datepicker
+                            [(ngModel)]="createdDateTo"
+                            (ngModelChange)="onFilterChange()"
+                            dateFormat="dd-mm-yy"
+                            placeholder="dd-mm-yyyy"
+                            appendTo="body"
+                            class="w-full"
+                            [inputStyle]="{'width':'100%'}">
+                        </p-datepicker>
+                    </div>
+                    <div class="report-filter-field">
+                        <label>Posting Status</label>
+                        <p-select
+                            id="postingStatus"
+                            [options]="postingStatusOptions"
+                            [(ngModel)]="selectedPostingStatus"
+                            (ngModelChange)="onFilterChange()"
+                            optionLabel="label"
+                            optionValue="value"
+                            placeholder="Select"
+                            styleClass="w-full"
+                            [showClear]="true"
+                            appendTo="body">
+                        </p-select>
+                    </div>
+                </div>
+
+                <div class="report-filter-actions">
+                    <button type="button" class="report-btn-secondary" (click)="clearFilters()"><i class="pi pi-times mr-1"></i>Clear</button>
+                    <button type="button" class="report-btn-primary" (click)="loadData()" [disabled]="loading"><i class="pi pi-search mr-1"></i>Search</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Results card -->
+    <div class="report-filter-card">
+        <div class="psm-results-header">
+            <h3 class="report-panel-title">
+                Results
+                <span class="report-results-count">{{ filteredList.length }} record(s)</span>
+            </h3>
+            <div class="njn-results-actions">
+                @if (selectedCount > 0) {
+                    <button type="button"
+                        class="report-btn-primary"
+                        [disabled]="isSendingSelection"
+                        [class.perm-hidden]="!canUpdate"
+                        (click)="sendSelectedToPosting()">
+                        <i class="pi pi-send mr-1"></i>
+                        Send {{ selectedCount }} to Posting
+                    </button>
+                    <button type="button"
+                        class="report-btn-secondary"
+                        [disabled]="isSendingSelection"
+                        (click)="clearSelection()">
+                        Clear
+                    </button>
+                }
+                <div class="report-search-wrap">
+                    <span class="report-search-icon">
+                        <i class="pi pi-search"></i>
+                    </span>
+                    <input
+                        pInputText
+                        type="text"
+                        placeholder="Search by Service ID / RAB ID / Name"
+                        [(ngModel)]="searchText"
+                        (ngModelChange)="onSearchChange()"
+                        class="report-search-input" />
+                </div>
+            </div>
+        </div>
+
+        <div class="report-table-wrap">
+            <p-table
+                [value]="filteredList"
+                [loading]="loading"
+                dataKey="employeeID"
+                [lazy]="false"
+                [first]="first"
+                [rows]="rows"
+                [paginator]="true"
+                (onPage)="onPage($event)"
+                [rowsPerPageOptions]="[10, 20, 50]"
+                [tableStyle]="{ 'min-width': '72rem' }"
+                styleClass="p-datatable-sm"
+                paginatorDropdownAppendTo="body"
+                [showCurrentPageReport]="true">
+                <ng-template pTemplate="header">
+                    <tr>
+                        <th style="width: 2.5rem">
+                            <input #headerCb type="checkbox"
+                                class="report-row-checkbox"
+                                [checked]="isAllSelectableSelected"
+                                [indeterminate]="isSelectableIndeterminate"
+                                (change)="toggleSelectAllVisible(headerCb.checked)"
+                                pTooltip="Select all on this page (skips already-posted rows)"
+                                tooltipPosition="top" />
+                        </th>
+                        <th>Ser</th>
+                        <th>Service ID</th>
+                        <th>Rank</th>
+                        <th>Corps</th>
+                        <th>Trade</th>
+                        <th>Name</th>
+                        <th>Mother Unit</th>
+                        <th>Date of Join in RAB</th>
+                        <th>RAB ID</th>
+                        <th>Remark</th>
+                        <th>Action</th>
+                    </tr>
+                </ng-template>
+                <ng-template pTemplate="body" let-row let-rowIndex="rowIndex">
+                    <tr>
+                        <td>
+                            <input #cb type="checkbox"
+                                class="report-row-checkbox"
+                                [checked]="isRowSelected(row)"
+                                [disabled]="!isSelectable(row) || isSendingSelection"
+                                (change)="onRowSelectionChange(row, cb.checked); cb.checked = isRowSelected(row)"
+                                [pTooltip]="isSelectable(row) ? '' : 'Already in posting list'"
+                                tooltipPosition="top" />
+                        </td>
+                        <td><span class="report-ser-num">{{ rowIndex + 1 }}</span></td>
+                        <td style="white-space: nowrap"><span class="font-semibold">{{ row.prefixName ? row.prefixName + " - " : "" }}{{ row.serviceId || '—' }}</span></td>
+                        <td>{{ row.rankName || '—' }}</td>
+                        <td>
+                            @if (row.corpsName) {
+                                <span class="report-badge-corps">{{ row.corpsName }}</span>
+                            } @else {
+                                <span class="report-dash">—</span>
+                            }
+                        </td>
+                        <td>{{ row.tradeName || '—' }}</td>
+                        <td>{{ row.fullNameEN || '—' }}{{ row.fullNameBN ? ' (' + row.fullNameBN + ')' : '' }}{{ row.corpsName ? ", " + row.corpsName : "" }}</td>
+                        <td>
+                            @if (row.motherUnitName) {
+                                <span class="report-badge-unit">{{ row.motherUnitName }}</span>
+                            } @else {
+                                <span class="report-dash">—</span>
+                            }
+                        </td>
+                        <td>{{ formatDate(row.joiningDate) }}</td>
+                        <td style="white-space: nowrap">{{ rabIdOf(row) || '—' }}</td>
+                        <td>
+                            <input pInputText type="text"
+                                [(ngModel)]="row.sendingRemark"
+                                placeholder="Remark"
+                                [disabled]="isPostingInProcess(row)"
+                                style="width: 100%; min-width: 120px;" />
+                        </td>
+                        <td>
+                            <span class="report-action-buttons">
+                                <a [routerLink]="['/supernumerary-profile', row.employeeID]" class="report-link-profile" pTooltip="Profile" tooltipPosition="top">
+                                    <i class="pi pi-user"></i>
+                                </a>
+                                <button type="button"
+                                    class="report-btn-secondary"
+                                    [ngClass]="getSendPostingListClass(row)"
+                                    [disabled]="isSendPostingListDisabled(row)"
+                                    [class.perm-hidden]="!canUpdate"
+                                    (click)="onSendNewPostingList(row)">
+                                    {{ getSendPostingListLabel(row) }}
+                                </button>
+                            </span>
+                        </td>
+                    </tr>
+                </ng-template>
+                <ng-template pTemplate="emptymessage">
+                    <tr>
+                        <td colspan="12" class="text-center p-4">No records found.</td>
+                    </tr>
+                </ng-template>
+            </p-table>
+        </div>
+    </div>
+</div>

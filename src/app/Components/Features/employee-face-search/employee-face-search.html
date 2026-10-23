@@ -1,0 +1,155 @@
+<p-toast position="top-center"></p-toast>
+
+<input #fileInput type="file" accept="image/png,image/jpeg,image/jpg" hidden (change)="onInputChange($event)" />
+
+<div class="fs-shell">
+    <!-- Header -->
+    <div class="fs-header">
+        <div class="fs-header-left">
+            <span class="fs-logo"><i class="pi pi-id-card"></i></span>
+            <div>
+                <h2 class="fs-title">Face Search</h2>
+                <div class="fs-subtitle">ROFIMS · BIOMETRIC IDENTIFICATION MODULE</div>
+            </div>
+        </div>
+        <span class="fs-status" [class.offline]="serviceOnline === false">
+            <span class="fs-status-dot"></span>
+            {{ serviceOnline === false ? 'System Offline' : (serviceOnline === null ? 'Checking…' : 'System Online') }}
+        </span>
+    </div>
+
+    <div class="fs-body">
+        <!-- ===================== Left: Query ===================== -->
+        <section class="fs-panel">
+            <div class="fs-section-label">— Query Image</div>
+
+            <!-- Drop zone -->
+            <div class="fs-dropzone"
+                 [class.drag]="dragOver"
+                 (click)="triggerFileInput()"
+                 (dragover)="onDragOver($event)"
+                 (dragleave)="onDragLeave($event)"
+                 (drop)="onDrop($event)">
+                <i class="pi pi-image fs-dropzone-icon"></i>
+                <div class="fs-dropzone-text">Drop image here or</div>
+                <button type="button" class="fs-btn fs-btn-primary" (click)="$event.stopPropagation(); triggerFileInput()">
+                    <i class="pi pi-upload"></i> Choose Image
+                </button>
+                <div class="fs-hint">PNG / JPG · max 10 MB</div>
+            </div>
+
+            <!-- Preview -->
+            <div class="fs-section-label mt-3">— Preview</div>
+            <div class="fs-preview" [class.has-image]="previewUrl">
+                <span class="corner tl"></span><span class="corner tr"></span>
+                <span class="corner bl"></span><span class="corner br"></span>
+                @if (previewUrl) {
+                    <img [src]="previewUrl" alt="Query image" />
+                } @else {
+                    <div class="fs-preview-empty">
+                        <i class="pi pi-id-card"></i>
+                        <span>No image loaded</span>
+                    </div>
+                }
+                @if (searching) {
+                    <div class="fs-scan"></div>
+                }
+            </div>
+
+            <!-- Actions -->
+            <div class="fs-actions">
+                <button type="button" class="fs-btn fs-btn-search" [disabled]="!selectedFile || searching" (click)="search()">
+                    @if (searching) { <i class="pi pi-spin pi-spinner"></i> Scanning… }
+                    @else { <i class="pi pi-search"></i> Search Face }
+                </button>
+                <button type="button" class="fs-btn fs-btn-ghost" [disabled]="searching" (click)="clear()" pTooltip="Clear">
+                    <i class="pi pi-times"></i>
+                </button>
+            </div>
+        </section>
+
+        <!-- ===================== Right: Result ===================== -->
+        <section class="fs-panel">
+            <div class="fs-section-label">— Match Result</div>
+
+            @if (!result) {
+                <div class="fs-result-empty">
+                    <i class="pi pi-user"></i>
+                    <p>Upload a photo and run the search<br />to identify a personnel record</p>
+                </div>
+            } @else if (result.matched && matched) {
+                <div class="fs-match">
+                    <div class="fs-match-head">
+                        <span class="fs-badge ok"><i class="pi pi-check-circle"></i> Match Found</span>
+                        <span class="fs-conf" [attr.data-sev]="confidenceSeverity(result.confidence)">
+                            {{ confidencePct }}% confidence
+                        </span>
+                    </div>
+
+                    <div class="fs-match-body">
+                        <div class="fs-photo">
+                            @if (matched.profileImageUrl) {
+                                <img [src]="matched.profileImageUrl" alt="Profile" />
+                            } @else {
+                                <i class="pi pi-user"></i>
+                            }
+                        </div>
+                        <div class="fs-fields">
+                            <div class="fs-field"><label>Name (EN)</label><span>{{ matched.fullNameEN || 'N/A' }}</span></div>
+                            <div class="fs-field"><label>Name (BN)</label><span>{{ matched.fullNameBN || 'N/A' }}</span></div>
+                            <div class="fs-field"><label>RAB ID</label><span>{{ matched.rabid || 'N/A' }}</span></div>
+                            <div class="fs-field"><label>Service ID</label><span>{{ matched.serviceId || 'N/A' }}</span></div>
+                            <div class="fs-field"><label>Rank</label><span>{{ matched.rankDisplay || 'N/A' }}</span></div>
+                            <div class="fs-field"><label>Corps</label><span>{{ matched.corpsDisplay || 'N/A' }}</span></div>
+                            <div class="fs-field"><label>Trade</label><span>{{ matched.tradeDisplay || 'N/A' }}</span></div>
+                            <div class="fs-field"><label>Mother Org</label><span>{{ matched.motherOrganizationDisplay || 'N/A' }}</span></div>
+                        </div>
+                    </div>
+
+                    <div class="fs-match-actions">
+                        <button type="button" class="fs-btn fs-btn-primary" (click)="viewProfile(matched.employeeID)">
+                            <i class="pi pi-user"></i> View Profile
+                        </button>
+                        <button type="button" class="fs-btn fs-btn-outline" (click)="viewEnrolledImages(matched.employeeID, matched.fullNameEN)">
+                            <i class="pi pi-images"></i> View Enrolled Faces
+                        </button>
+                    </div>
+                </div>
+            } @else {
+                <div class="fs-result-empty no-match">
+                    <i class="pi pi-info-circle"></i>
+                    <p><strong>No Match</strong><br />Best score {{ confidencePct }}% (below threshold)</p>
+                </div>
+            }
+        </section>
+    </div>
+</div>
+
+<!-- ================= Enrolled faces gallery ================= -->
+<p-dialog
+    [(visible)]="showImagesDialog"
+    [header]="galleryTitle"
+    [modal]="true"
+    [style]="{ width: '720px' }"
+    [draggable]="false"
+    [resizable]="false"
+    (onHide)="closeImagesDialog()">
+    @if (imagesLoading) {
+        <div class="flex align-items-center gap-2 py-4">
+            <i class="pi pi-spin pi-spinner" style="font-size: 1.25rem;"></i>
+            <span>Loading enrolled images…</span>
+        </div>
+    } @else if (galleryUrls.length === 0) {
+        <div class="py-4 text-600">No enrolled face images found for this employee.</div>
+    } @else {
+        <div class="flex flex-wrap gap-3 py-2">
+            @for (url of galleryUrls; track url) {
+                <img [src]="url" alt="Enrolled face"
+                     style="width: 150px; height: 150px; object-fit: cover; border-radius: 8px; border: 1px solid var(--surface-300);" />
+            }
+        </div>
+    }
+    <ng-template pTemplate="footer">
+        <p-button label="Close" severity="secondary" [outlined]="true" (onClick)="closeImagesDialog()"></p-button>
+    </ng-template>
+</p-dialog>

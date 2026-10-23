@@ -82,7 +82,7 @@
         </p-iconfield>
     </div>
 
-    <p-table [value]="filteredInstitutes" [paginator]="true" [first]="first" [rows]="rows" [totalRecords]="totalRecords"
+    <p-table [value]="filteredInstitutes" [paginator]="true" [(first)]="first" [rows]="rows" [totalRecords]="totalRecords"
         [rowsPerPageOptions]="[10, 25, 50]">
 
         <ng-template pTemplate="header">
@@ -106,10 +106,10 @@
 
                 <td>
                     <div class="flex gap-2">
-                        <button pButton icon="pi pi-pencil" (click)="onEdit(institute)">
+                        <button pButton icon="pi pi-pencil" [class.perm-hidden]="!canUpdate" (click)="onEdit(institute)">
                         </button>
 
-                        <button pButton icon="pi pi-trash" class="p-button-danger"
+                        <button pButton icon="pi pi-trash" [class.perm-hidden]="!canDelete" class="p-button-danger"
                             (click)="onDelete(institute, $event)">
                         </button>
                     </div>

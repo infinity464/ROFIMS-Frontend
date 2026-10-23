@@ -1,0 +1,355 @@
+<p-toast position="top-center"></p-toast>
+
+<!-- ═══════════ LIST MODE ═══════════ -->
+<div class="office-order-list" *ngIf="viewMode === 'list'">
+    <div class="form-card">
+        <div class="form-card-header">
+            <h3 class="form-card-title">Ex-BD Leave Office Order List</h3>
+        </div>
+
+        <p-table
+            #dt
+            [value]="orders"
+            [loading]="loadingList"
+            dataKey="id"
+            [tableStyle]="{ 'min-width': '60rem' }"
+            styleClass="p-datatable-striped p-datatable-gridlines"
+            [paginator]="true"
+            [rows]="10"
+            [rowsPerPageOptions]="[10, 25, 50]"
+            [globalFilterFields]="['letterNo', 'noteSheetNo', 'subject', 'approvalStatus', 'applicantName', 'applicantServiceId']"
+        >
+            <ng-template pTemplate="caption">
+                <div class="flex justify-content-end">
+                    <p-iconfield>
+                        <p-inputicon styleClass="pi pi-search"></p-inputicon>
+                        <input pInputText type="text" placeholder="Search..." (input)="onGlobalFilter(dt, $event)" />
+                    </p-iconfield>
+                </div>
+            </ng-template>
+            <ng-template pTemplate="header">
+                <tr>
+                    <th style="width: 50px">SL</th>
+                    <th style="min-width: 200px">Applicant</th>
+                    <th style="min-width: 160px">Letter No</th>
+                    <th style="min-width: 110px">Date</th>
+                    <th style="min-width: 200px">Subject</th>
+                    <th style="min-width: 140px">NoteSheet No</th>
+                    <th style="min-width: 120px">Status</th>
+                    <th style="min-width: 110px">Created Date</th>
+                    <th style="width: 80px">Action</th>
+                </tr>
+            </ng-template>
+            <ng-template pTemplate="body" let-row let-rowIndex="rowIndex">
+                <tr>
+                    <td>{{ rowIndex + 1 }}</td>
+                    <td>{{ (row.applicantPrefix && row.applicantServiceId ? row.applicantPrefix + '-' + row.applicantServiceId : row.applicantPrefix || row.applicantServiceId || '') }} {{ row.applicantName || '' }}</td>
+                    <td><span class="font-semibold">{{ row.letterNo || '-' }}</span></td>
+                    <td>{{ formatDate(row.letterDate) }}</td>
+                    <td>{{ row.subject || '-' }}</td>
+                    <td>{{ row.noteSheetNo || '-' }}</td>
+                    <td>
+                        <p-tag [value]="approvalStatusLabel(row.approvalStatus)" [severity]="approvalStatusSeverity(row.approvalStatus)"></p-tag>
+                    </td>
+                    <td>{{ formatDate(row.createdDate) }}</td>
+                    <td>
+                        <p-button icon="pi pi-eye" [rounded]="true" [text]="true" size="small" pTooltip="View" (onClick)="viewOrder(row)"></p-button>
+                        <p-button *ngIf="row.approvalStatus !== ApprovalStatus.Approve" icon="pi pi-pencil" [rounded]="true" [text]="true" size="small" severity="info" pTooltip="Edit" (onClick)="goEditFromList(row)"></p-button>
+                    </td>
+                </tr>
+            </ng-template>
+            <ng-template pTemplate="emptymessage">
+                <tr>
+                    <td colspan="9" class="text-center p-4">
+                        <div class="flex flex-column align-items-center gap-3 py-5">
+                            <i class="pi pi-inbox text-5xl text-400"></i>
+                            <span class="text-lg text-500">No office orders found.</span>
+                        </div>
+                    </td>
+                </tr>
+            </ng-template>
+        </p-table>
+    </div>
+</div>
+
+<!-- ═══════════ DETAIL MODE ═══════════ -->
+<div class="preview-page" *ngIf="viewMode === 'detail'">
+
+    <!-- ─── Toolbar ─── -->
+    <div class="preview-header no-print">
+        <div class="preview-actions">
+            <ng-container *ngIf="!loading && !error && order">
+                <p-button *ngIf="!isApproved" icon="pi pi-pencil" label="Edit" (onClick)="goEdit()" styleClass="p-button-outlined" severity="info"></p-button>
+                <select [(ngModel)]="selectedPageSize" class="page-size-select">
+                    <option value="a4">A4</option>
+                    <option value="legal">Legal</option>
+                </select>
+                <p-button icon="pi pi-file-word" label="Word" (onClick)="exportWord()" styleClass="p-button-outlined"></p-button>
+                <p-button icon="pi pi-file-pdf" label="PDF" (onClick)="exportPdf()" [loading]="exportingPdf" styleClass="p-button-outlined"></p-button>
+                <p-button icon="pi pi-print" label="Print Preview" (onClick)="printPreview()" [loading]="printingPreview" styleClass="p-button-outlined"></p-button>
+            </ng-container>
+        </div>
+
+        <!-- Approval Status (right side) -->
+        <div class="approval-header-right" *ngIf="order">
+            <p-tag [value]="approvalStatusLabel(order.approvalStatus)" [severity]="approvalStatusSeverity(order.approvalStatus)"></p-tag>
+            <span *ngIf="order.approvalStatus === ApprovalStatus.Cancel && order.cancelReason" class="text-500 text-xs">{{ order.cancelReason }}</span>
+            <ng-container *ngIf="isPending">
+                <p-button
+                    icon="pi pi-check"
+                    label="Approve"
+                    severity="success"
+                    size="small"
+                    (onClick)="selectApprovalAction(ApprovalStatus.Approve); showApprovalModal = true"
+                ></p-button>
+                <p-button
+                    icon="pi pi-times"
+                    label="Cancel"
+                    severity="danger"
+                    size="small"
+                    (onClick)="selectApprovalAction(ApprovalStatus.Cancel); showApprovalModal = true"
+                ></p-button>
+            </ng-container>
+        </div>
+    </div>
+
+    <!-- ─── Loading ─── -->
+    <div class="preview-loading" *ngIf="loading">
+        <i class="pi pi-spin pi-spinner" style="font-size:2rem"></i>
+        <p>Loading office order...</p>
+    </div>
+
+    <!-- ─── Error ─── -->
+    <div class="preview-error" *ngIf="error && !loading">
+        <i class="pi pi-exclamation-circle" style="font-size:3rem; color:var(--red-500)"></i>
+        <p>Failed to load office order.</p>
+        <p-button label="Go Back" icon="pi pi-arrow-left" (onClick)="goBack()"></p-button>
+    </div>
+
+    <!-- ─── Onulipi Filter ─── -->
+    <div class="oo-onulipi-filter no-print" *ngIf="!loading && !error && order && onulipiEntries.length > 0">
+        <span class="oo-onulipi-filter-toggle" (click)="showOnulipiFilter = !showOnulipiFilter">
+            <i class="pi" [ngClass]="showOnulipiFilter ? 'pi-chevron-down' : 'pi-chevron-right'"></i>
+            {{ isBangla ? 'অনুলিপি ফিল্টার' : 'Copy Filter' }}
+        </span>
+        <div class="oo-onulipi-filter-list" *ngIf="showOnulipiFilter">
+            <div *ngFor="let entry of onulipiEntries; let i = index" class="oo-onulipi-filter-item">
+                <button type="button" (click)="moveOnulipiUp(i)" [disabled]="i === 0" title="Up"
+                        style="border:none;background:none;padding:0 0.15rem;cursor:pointer;" [style.opacity]="i === 0 ? 0.3 : 1">
+                    <i class="pi pi-arrow-up" style="font-size:0.7rem;"></i>
+                </button>
+                <button type="button" (click)="moveOnulipiDown(i)" [disabled]="i === onulipiEntries.length - 1" title="Down"
+                        style="border:none;background:none;padding:0 0.15rem;cursor:pointer;" [style.opacity]="i === onulipiEntries.length - 1 ? 0.3 : 1">
+                    <i class="pi pi-arrow-down" style="font-size:0.7rem;"></i>
+                </button>
+                <p-checkbox [(ngModel)]="onulipiChecked[i]" [binary]="true" [inputId]="'onulipiChk' + i"></p-checkbox>
+                <label [for]="'onulipiChk' + i">{{ isBangla ? toBanglaDigits('' + (i + 1)) : (i + 1) }}। {{ entry.text }}</label>
+            </div>
+        </div>
+    </div>
+
+    <!-- ─── A4 Paper Preview ─── -->
+    <div class="legal-paper-container" *ngIf="!loading && !error && order">
+        <div class="legal-paper" [class.legal-paper--legal]="selectedPageSize === 'legal'" #legalPaper>
+            <div class="oo-doc-box">
+
+                <!-- Government Header -->
+                <div class="oo-doc-header">
+                    <div class="oo-doc-header-line">{{ isBangla ? 'গণপ্রজাতন্ত্রী বাংলাদেশ সরকার' : "People's Republic of Bangladesh" }}</div>
+                    <div class="oo-doc-header-line">{{ isBangla ? 'বাংলাদেশ পুলিশ' : 'Bangladesh Police' }}</div>
+                    <div class="oo-doc-header-line">{{ isBangla ? 'র‍্যাব ফোর্সেস সদর দপ্তর' : 'RAB Forces Headquarters' }}</div>
+                    <div class="oo-doc-header-line">{{ isBangla ? 'কুর্মিটোলা, ঢাকা।' : 'Kurmitola, Dhaka.' }}</div>
+                </div>
+
+                <!-- Letter No & Date -->
+                <div class="oo-doc-meta">
+                    <span><strong>{{ isBangla ? 'স্মারক নংঃ' : 'Letter No:' }}</strong> {{ order.letterNo || '.............' }}</span>
+                    <span>{{ isBangla ? 'তারিখঃ' : 'Date:' }} {{ formatDate(order.letterDate) }}</span>
+                </div>
+
+                <!-- Address To -->
+                <div class="oo-doc-section" *ngIf="order.addressTo">
+                    <div class="oo-doc-rich-content" [innerHTML]="order.addressTo"></div>
+                </div>
+
+                <!-- Subject -->
+                <div class="oo-doc-subject" *ngIf="order.subject">
+                    <span class="oo-doc-subject-label">{{ isBangla ? 'বিষয়ঃ ' : 'Subject: ' }}</span>
+                    <span class="oo-doc-subject-text">{{ order.subject }}</span>
+                </div>
+
+                <!-- Reference No -->
+                <div class="oo-doc-section oo-doc-reference" *ngIf="referenceEntries.length > 0">
+                    <!-- Single reference: label and value on the SAME line (সূত্র: 1234567890),
+                         no ক। serial — a serial only makes sense with two or more entries. -->
+                    <ng-container *ngIf="referenceEntries.length === 1; else refMulti">
+                        <span class="oo-doc-section-label oo-doc-reference-label">{{ isBangla ? 'সূত্রঃ' : 'Reference:' }}</span>
+                        <span class="oo-ref-inline">{{ referenceEntries[0].text }}</span>
+                    </ng-container>
+                    <!-- Two or more: label on its own line, serialed (ক।/খ।/…) list below. -->
+                    <ng-template #refMulti>
+                        <div class="oo-doc-section-label oo-doc-reference-label">{{ isBangla ? 'সূত্রঃ' : 'Reference:' }}</div>
+                        <div class="oo-doc-list">
+                            <p *ngFor="let ref of referenceEntries"><span class="oo-ref-serial">{{ ref.serial }}।</span>{{ ref.text }}</p>
+                        </div>
+                    </ng-template>
+                </div>
+
+                <!-- ═══ Body (exactly what is stored in DB) ═══ -->
+                <div class="oo-doc-body" *ngIf="order.body">
+                    <span class="oo-body-serial">{{ serial(1) }}</span><span class="oo-doc-rich-content oo-doc-rich-content--inline" [innerHTML]="getBodySafe()"></span>
+                </div>
+                <div class="oo-doc-body" *ngIf="order.remarks">
+                    <span class="oo-body-serial">{{ serial(2) }}</span>{{ order.remarks }}
+                </div>
+
+                <!-- ═══ Approver Signature (office-order approver — same person as the after-Onulipi block) ═══ -->
+                <div class="oo-doc-signature-area" *ngIf="order.approvalEmployeeName">
+                    <div class="oo-doc-signature-block">
+                        <ng-container *ngIf="approvalSignatureUrl && isApproved; else sigSpacer">
+                            <img [src]="approvalSignatureUrl" class="oo-doc-sig-img" alt="Signature" />
+                        </ng-container>
+                        <div class="oo-doc-sig-name">
+                            {{ isBangla ? (order.approvalEmployeeNameBN || order.approvalEmployeeName) : order.approvalEmployeeName }}
+                        </div>
+                        <div class="oo-doc-sig-rank" *ngIf="order.approvalEmployeeRank">
+                            {{ isBangla ? (order.approvalEmployeeRankBN || order.approvalEmployeeRank) : order.approvalEmployeeRank }}
+                        </div>
+                        <div class="oo-doc-sig-appointment" *ngIf="order.approvalEmployeeAppointment">
+                            {{ isBangla ? (order.approvalEmployeeAppointmentBN || order.approvalEmployeeAppointment) : order.approvalEmployeeAppointment }}
+                        </div>
+                        <div class="oo-doc-sig-onbehalf">
+                            {{ isBangla ? 'পক্ষে মহাপরিচালক' : 'On behalf of Director General' }}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ═══ Attachment (সংযুক্ত) — rendered above Onulipi ═══ -->
+                <div class="oo-doc-section oo-doc-attachments" *ngIf="attachmentEntries.length > 0">
+                    <div class="oo-doc-section-label">{{ isBangla ? 'সংযুক্ত:' : 'Attachment:' }}</div>
+                    <div class="oo-doc-list">
+                        <p *ngFor="let att of attachmentEntries; let i = index" class="oo-onulipi-item">
+                            <span class="oo-onulipi-serial">{{ isBangla ? toBanglaDigits('' + (i + 1)) : (i + 1) }}।</span>{{ att.text }}
+                        </p>
+                    </div>
+                </div>
+
+                <!-- ═══ Onulipi (Copy Distribution) ═══ -->
+                <div class="oo-doc-section oo-doc-onulipi" *ngIf="exportOnulipiEntries.length > 0">
+                    <div class="oo-doc-onulipi-header">
+                        <div class="oo-doc-onulipi-top">
+                            <!-- Repeats the office order's own memo no (same value as the স্মারক নং in the header),
+                                 not the linked note-sheet no. -->
+                            <div class="oo-doc-onulipi-ns-no" *ngIf="order.letterNo">{{ order.letterNo }}</div>
+                            <div class="oo-doc-onulipi-date" *ngIf="finalApproverDate">
+                                {{ isBangla ? 'তারিখঃ ' : 'Date: ' }}{{ finalApproverDate }}
+                            </div>
+                        </div>
+                        <div class="oo-doc-section-label oo-doc-onulipi-label">{{ isBangla ? 'অনুলিপি (জ্যেষ্ঠতার ভিত্তিতে নয়)ঃ' : 'Copy (not in order of seniority):' }}</div>
+                    </div>
+                    <div class="oo-doc-list">
+                        <p *ngFor="let entry of exportOnulipiEntries; let i = index" class="oo-onulipi-item">
+                            <span class="oo-onulipi-serial">{{ isBangla ? toBanglaDigits('' + (i + 1)) : (i + 1) }}।</span>{{ entry.text }}
+                        </p>
+                    </div>
+
+                    <!-- ═══ Signature after Onulipi ═══ -->
+                    <div class="oo-doc-signature-area" *ngIf="order.approvalEmployeeName">
+                        <div class="oo-doc-signature-block">
+                            <ng-container *ngIf="approvalSignatureUrl && isApproved; else sigSpacer">
+                                <img [src]="approvalSignatureUrl" class="oo-doc-sig-img" alt="Signature" />
+                            </ng-container>
+                            <div class="oo-doc-sig-name">
+                                {{ isBangla ? (order.approvalEmployeeNameBN || order.approvalEmployeeName) : order.approvalEmployeeName }}
+                            </div>
+                            <div class="oo-doc-sig-rank" *ngIf="order.approvalEmployeeRank">
+                                {{ isBangla ? (order.approvalEmployeeRankBN || order.approvalEmployeeRank) : order.approvalEmployeeRank }}
+                            </div>
+                            <div class="oo-doc-sig-appointment" *ngIf="order.approvalEmployeeAppointment">
+                                {{ isBangla ? (order.approvalEmployeeAppointmentBN || order.approvalEmployeeAppointment) : order.approvalEmployeeAppointment }}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+
+                <!-- Reserves the signature image's height before approval so the block
+                     sits at the same place once the signature appears. -->
+                <ng-template #sigSpacer><div class="oo-doc-sig-img-placeholder"></div></ng-template>
+
+            </div><!-- /oo-doc-box -->
+        </div>
+
+        <!-- ═══ File Attachments (Download buttons - outside paper, no-print) ═══ -->
+        <div class="oo-file-attachments no-print" *ngIf="viewFileAttachments.length > 0">
+            <div class="oo-file-attachments-label">
+                <i class="pi pi-paperclip"></i>
+                {{ isBangla ? 'সংযুক্তি ডাউনলোড' : 'Download Attachments' }} ({{ viewFileAttachments.length }})
+            </div>
+            <div class="oo-file-list">
+                <div class="oo-file-item" *ngFor="let file of viewFileAttachments; let fi = index">
+                    <i class="pi pi-file"></i>
+                    <span class="oo-file-name">{{ fi + 1 }}. {{ file.fileName }}</span>
+                    <button class="oo-file-download-btn" (click)="downloadAttachment(file)" pTooltip="Download">
+                        <i class="pi pi-download"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<!-- ─── Approval Modal ─── -->
+<p-dialog
+    [header]="approvalAction === ApprovalStatus.Approve
+        ? (isBangla ? 'অফিস আদেশ অনুমোদন' : 'Approve Office Order')
+        : (isBangla ? 'অফিস আদেশ বাতিল' : 'Cancel Office Order')"
+    [(visible)]="showApprovalModal"
+    [modal]="true"
+    [style]="{ width: '500px' }"
+    [closable]="true"
+>
+    <div class="mb-3" *ngIf="order">
+        <div class="flex gap-3 mb-2">
+            <span class="text-600">{{ isBangla ? 'স্মারক নংঃ' : 'Letter No:' }}</span>
+            <strong>{{ order.letterNo }}</strong>
+        </div>
+        <div class="flex gap-3 mb-3">
+            <span class="text-600">{{ isBangla ? 'তারিখ:' : 'Date:' }}</span>
+            <strong>{{ formatDate(order.letterDate) }}</strong>
+        </div>
+
+        @if (approvalAction) {
+            <div class="field">
+                <label class="font-semibold block mb-2 text-700">
+                    {{ approvalAction === ApprovalStatus.Approve
+                        ? (isBangla ? 'অনুমোদন মন্তব্য' : 'Approval Note')
+                        : (isBangla ? 'বাতিলের কারণ' : 'Cancel Reason') }}
+                </label>
+                <textarea
+                    pTextarea
+                    [(ngModel)]="approvalRemarks"
+                    rows="4"
+                    class="w-full"
+                    [placeholder]="approvalAction === ApprovalStatus.Approve
+                        ? (isBangla ? 'অনুমোদন মন্তব্য লিখুন...' : 'Enter approval note...')
+                        : (isBangla ? 'বাতিলের কারণ লিখুন...' : 'Enter cancel reason...')"
+                    [autoResize]="true"
+                ></textarea>
+            </div>
+
+            <div class="flex justify-content-end mt-3">
+                <p-button
+                    [label]="approvalAction === ApprovalStatus.Approve
+                        ? (isBangla ? 'অনুমোদন' : 'Approve')
+                        : (isBangla ? 'বাতিল করুন' : 'Cancel Order')"
+                    [icon]="approvalAction === ApprovalStatus.Approve ? 'pi pi-check' : 'pi pi-times'"
+                    [severity]="approvalAction === ApprovalStatus.Approve ? 'success' : 'danger'"
+                    [loading]="savingApproval"
+                    (onClick)="saveApproval()"
+                ></p-button>
+            </div>
+        }
+    </div>
+</p-dialog>

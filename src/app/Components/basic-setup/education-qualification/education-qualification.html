@@ -11,20 +11,78 @@
             [editingId]="editingId"
             (save)="submit($event)"
             (reset)="resetForm()"
-            [isSubmitting]="isSubmitting">
+            [isSubmitting]="isSubmitting"
+            [canInsert]="canInsert"
+            [canUpdate]="canUpdate">
         </app-dynamic-form>
           </div>
 </p-fluid>
 
-        <app-data-table
-            [config]="tableConfig"
-            [data]="commonCodeData"
-            [first]="first"
-            [totalRecords]="totalRecords"
-            [rows]="rows"
-            [loading]="loading"
-            (edit)="update($event)"
-             (delete)="delete($event.row, $event.event)"
-            (lazyLoad)="getCommonCodeWithPaging($event)"
-            (search)="onSearch($event)">
-        </app-data-table>
+        <div class="card mt-4">
+            <div class="flex justify-end mb-4">
+                <p-iconfield iconPosition="left">
+                    <p-inputicon><i class="pi pi-search"></i></p-inputicon>
+                    <input pInputText type="text" placeholder="Search keyword"
+                        (input)="searchSubject.next($any($event.target).value)" />
+                </p-iconfield>
+            </div>
+
+            @if (loading) {
+                <div class="flex justify-center py-8">
+                    <p-progressSpinner styleClass="w-8 h-8" strokeWidth="4"></p-progressSpinner>
+                </div>
+            } @else if (!commonCodeData.length) {
+                <div class="text-center text-muted-color py-8">No records found.</div>
+            } @else {
+                <div class="flex flex-col gap-3">
+                    @for (row of commonCodeData; track row.codeId) {
+                    <div class="eq-card flex items-center gap-4 p-4 border border-surface rounded-lg">
+                        <!-- Qualification -->
+                        <div class="shrink-0 w-44">
+                            <div class="text-xs font-semibold text-muted-color uppercase tracking-wide">Qualification</div>
+                            <div class="text-lg font-bold leading-tight">{{ row.codeValueEN }}</div>
+                            <div class="text-muted-color">{{ row.codeValueBN }}</div>
+                        </div>
+
+                        <!-- Departments -->
+                        <div class="flex-1 min-w-0">
+                            <div class="text-xs font-semibold text-muted-color uppercase tracking-wide mb-2">Departments</div>
+                            @if (row.departmentChips?.length) {
+                                <div class="flex flex-wrap gap-2">
+                                    @for (dept of row.departmentChips; track dept) {
+                                        <span class="eq-chip">{{ dept }}</span>
+                                    }
+                                </div>
+                            } @else {
+                                <span class="text-muted-color">—</span>
+                            }
+                        </div>
+
+                        <!-- Status -->
+                        <div class="shrink-0">
+                            <p-tag [value]="row.status ? 'Active' : 'Inactive'"
+                                [severity]="row.status ? 'success' : 'danger'"></p-tag>
+                        </div>
+
+                        <!-- Actions -->
+                        @if (canUpdate || canDelete) {
+                        <div class="shrink-0 flex gap-2">
+                            @if (canUpdate) {
+                                <button pButton icon="pi pi-pencil" severity="secondary" [outlined]="true"
+                                    (click)="update(row)"></button>
+                            }
+                            @if (canDelete) {
+                                <button pButton icon="pi pi-trash" severity="danger" [outlined]="true"
+                                    (click)="delete(row, $event)"></button>
+                            }
+                        </div>
+                        }
+                    </div>
+                    }
+                </div>
+
+                <p-paginator [first]="first" [rows]="rows" [totalRecords]="totalRecords"
+                    [rowsPerPageOptions]="[10, 25, 50]" (onPageChange)="onPageChange($event)"
+                    styleClass="mt-4"></p-paginator>
+            }
+        </div>

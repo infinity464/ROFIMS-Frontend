@@ -1,6 +1,8 @@
 import { CommonModule } from '@angular/common';
-import { Component, OnInit } from '@angular/core';
-import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
+import { Router } from '@angular/router';
+import { Component, OnInit, inject } from '@angular/core';
+import { UserMenuService } from '@/services/user-menu.service';
+import { FormBuilder, FormGroup, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
 import { DatePickerModule } from 'primeng/datepicker';
 import { Fluid } from 'primeng/fluid';
 import { InputNumberModule } from 'primeng/inputnumber';
@@ -17,15 +19,22 @@ import { TableModule } from "primeng/table";
 import { IconField } from "primeng/iconfield";
 import { InputIcon } from "primeng/inputicon";
 import { SharedService } from '@/shared/services/shared-service';
+import { FlexibleDateDirective } from '@/shared/directives/flexible-date.directive';
+import { MasterBasicSetupService } from '@/Components/basic-setup/shared/services/MasterBasicSetupService';
+
+interface OrgUnitRow extends OrganizationModel {
+    parentName?: string;
+}
 
 @Component({
     selector: 'app-organization-unit',
     imports: [
         Fluid,
+        FormsModule,
         ReactiveFormsModule,
         InputTextModule,
         SelectModule,
-        DatePickerModule,
+        DatePickerModule, FlexibleDateDirective,
         InputNumberModule,
         Button,
         TableModule,
@@ -39,11 +48,18 @@ import { SharedService } from '@/shared/services/shared-service';
     styleUrl: './organization-unit.scss'
 })
 export class OrganizationUnit implements OnInit {
+    private _router = inject(Router);
+    private _userMenuService = inject(UserMenuService);
+    canInsert = true;
+    canUpdate = true;
+    canDelete = true;
+
     organizationForm!: FormGroup;
     isSubmitting = false;
     motherOrg: OrganizationModel[] = [];
     organizations: OrganizationModel[] = [];
-    filteredOrganizations: OrganizationModel[] = [];
+    districtOptions: { label: string; value: number }[] = [];
+    filteredOrganizations: OrgUnitRow[] = [];
     editingId: number | null = null;
     currentUser : string = ""
 
@@ -52,7 +68,6 @@ export class OrganizationUnit implements OnInit {
     rows = 10;
     totalRecords = 0;
 
-    // Search
     searchValue = '';
 
     statusOptions = [
@@ -65,32 +80,85 @@ export class OrganizationUnit implements OnInit {
         private organizationService: OrganizationService,
         private messageService: MessageService,
         private confirmationService: ConfirmationService,
-        private sharedService: SharedService
+        private sharedService: SharedService,
+        private masterBasicSetupService: MasterBasicSetupService
     ) {}
 
     ngOnInit(): void {
+        const _perms = this._userMenuService.getPermissionsByRoute(this._router.url);
+        this.canInsert = _perms.canInsert;
+        this.canUpdate = _perms.canUpdate;
+        this.canDelete = _perms.canDelete;
 
-        this.GetAllOrgUnit();
-        this.loadMotherOrg();
         this.currentUser = this.sharedService.getCurrentUser();
         this.initForm();
+        this.setupFormFilterListeners();
+        this.loadDistricts();
+        this.loadMotherOrg(); // loads first, then GetAllOrgUnit so parentName can use both
+    }
+
+    onSearch() {
+        this.first = 0;
+        this.buildTableData();
+    }
+
+    private setupFormFilterListeners() {
+        this.organizationForm.get('parentOrg')?.valueChanges.subscribe(() => {
+            this.first = 0;
+            this.buildTableData();
+        });
+        this.organizationForm.get('status')?.valueChanges.subscribe(() => {
+            this.first = 0;
+            this.buildTableData();
+        });
+        this.organizationForm.get('districtId')?.valueChanges.subscribe(() => {
+            this.first = 0;
+            this.buildTableData();
+        });
+    }
+
+    loadDistricts() {
+        this.masterBasicSetupService.getAllByType('District').subscribe({
+            next: (districts) => {
+                const list = Array.isArray(districts) ? districts : [];
+                this.districtOptions = list.map((d: any) => ({
+                    label: d.codeValueBN ? `${d.codeValueEN} (${d.codeValueBN})` : d.codeValueEN,
+                    value: d.codeId
+                }));
+                this.buildTableData();
+            },
+            error: (err) => {
+                console.error('Error loading districts:', err);
+            }
+        });
+    }
+
+    getDistrictDisplay(id: number | null | undefined): string {
+        if (id == null) return '-';
+        const opt = this.districtOptions.find(o => o.value === id);
+        return opt?.label ?? '-';
+    }
+
+    getParentName(parentOrgId: number | null | undefined): string {
+        if (parentOrgId == null) return '-';
+        const parent = this.motherOrg.find(o => o.orgId === parentOrgId);
+        return parent?.orgNameEN ?? '-';
     }
 
     initForm() {
         this.organizationForm = this.fb.group({
             orgId: [0],
             orgNameEN: ['', Validators.required],
-            orgNameBN: ['', Validators.required],
+            orgNameBN: [''],
             contactName: [''],
             contactNumber: [''],
             locationCode: [''],
-            locationEN: [''],
-            locationBN: [''],
+            districtId: [null],
             email: [''],
             sortOrder: [0],
             status: [true],
             remarks: [''],
-            parentOrg: [Validators.required],
+            parentOrg: [null, Validators.required],
             createdBy: [this.currentUser],
             createdDate: [new Date() ],
             lastUpdatedBy: [this.currentUser],
@@ -104,54 +172,93 @@ export class OrganizationUnit implements OnInit {
             next: (res: OrganizationModel[]) => {
                 console.log('Organizations fetched successfully', res);
                 this.organizations = res;
-                this.filteredOrganizations = [...res];
-                this.totalRecords = res.length;
+                this.buildTableData();
             },
             error: (err: any) => {
                 console.log('Error fetching organizations');
                 this.messageService.add({
                     severity: 'error',
                     summary: 'Error',
-                    detail: 'Failed to fetch organizations'
+                    detail: err?.error?.message || 'Failed to fetch organizations'
                 });
             }
         });
     }
 
-    loadMotherOrg(){
+    loadMotherOrg() {
         this.organizationService.getAllActiveMotherOrgs().subscribe({
             next: (res: OrganizationModel[]) => {
                 this.motherOrg = res;
-
+                this.GetAllOrgUnit();
             },
             error: (err: any) => {
                 console.log('Error fetching organizations');
                 this.messageService.add({
                     severity: 'error',
                     summary: 'Error',
-                    detail: 'Failed to fetch organizations'
+                    detail: err?.error?.message || 'Failed to fetch organizations'
                 });
             }
         });
     }
 
-    onSearch(event: Event) {
-        const target = event.target as HTMLInputElement;
-        this.searchValue = target.value.toLowerCase().trim();
-
-        if (this.searchValue) {
-            this.filteredOrganizations = this.organizations.filter(org =>
-                org.orgNameEN?.toLowerCase().includes(this.searchValue) ||
-                org.orgNameBN?.toLowerCase().includes(this.searchValue)
-            );
-        } else {
-            this.filteredOrganizations = [...this.organizations];
-        }
-
-        this.totalRecords = this.filteredOrganizations.length;
-        this.first = 0; // Reset to first page
+    private resolveParentName(parentOrgId: number | null | undefined): string {
+        if (parentOrgId == null) return '';
+        const parent = this.motherOrg.find(o => o.orgId === parentOrgId);
+        return parent?.orgNameEN ?? '';
     }
 
+    private resolveParentSortOrder(parentOrgId: number | null | undefined): number {
+        if (parentOrgId == null) return Number.MAX_SAFE_INTEGER;
+        const parent = this.motherOrg.find(o => o.orgId === parentOrgId);
+        return parent?.sortOrder ?? Number.MAX_SAFE_INTEGER;
+    }
+
+    private buildTableData() {
+        let list = this.organizations.map(o => ({
+            ...o,
+            parentName: this.resolveParentName(o.parentOrg),
+            districtDisplay: this.getDistrictDisplay(o.districtId)
+        }));
+
+        const parentOrg = this.organizationForm?.get('parentOrg')?.value;
+        const status = this.organizationForm?.get('status')?.value;
+
+        if (parentOrg != null && parentOrg !== '') {
+            list = list.filter(org => org.parentOrg === parentOrg);
+        }
+        if (status != null) {
+            list = list.filter(org => org.status === status);
+        }
+
+        const districtId = this.organizationForm?.get('districtId')?.value;
+        if (districtId != null && districtId !== '') {
+            list = list.filter(org => org.districtId === districtId);
+        }
+
+        const q = (this.searchValue ?? '').toLowerCase().trim();
+        if (q) {
+            list = list.filter(org =>
+                org.orgNameEN?.toLowerCase().includes(q) ||
+                org.orgNameBN?.toLowerCase().includes(q) ||
+                (org.parentName && org.parentName.toLowerCase().includes(q)) ||
+                this.getDistrictDisplay(org.districtId).toLowerCase().includes(q)
+            );
+        }
+
+        // Order by the Mother Organization's sort order first (e.g. Army=1 group on top),
+        // then by the unit's own sort order within that group.
+        list.sort((a, b) => {
+            const parentDiff =
+                this.resolveParentSortOrder(a.parentOrg) - this.resolveParentSortOrder(b.parentOrg);
+            if (parentDiff !== 0) return parentDiff;
+            return (a.sortOrder ?? 0) - (b.sortOrder ?? 0);
+        });
+
+        this.filteredOrganizations = list;
+        this.totalRecords = list.length;
+        this.first = 0;
+    }
 
     onSubmit() {
         if (this.isSubmitting) return;
@@ -164,12 +271,15 @@ export class OrganizationUnit implements OnInit {
         if (this.editingId) {
             this.update();
         } else {
+            this.organizationForm.patchValue({ status: true });
             this.create();
         }
     }
 
     create() {
         this.isSubmitting = true;
+
+        const preservedParentOrg = this.organizationForm.get('parentOrg')?.value;
 
         this.organizationService.post(this.organizationForm.value).subscribe({
             next: (res: any) => {
@@ -180,6 +290,7 @@ export class OrganizationUnit implements OnInit {
                     detail: 'Organization created successfully'
                 });
                 this.onReset();
+                this.organizationForm.patchValue({ parentOrg: preservedParentOrg });
                 this.GetAllOrgUnit();
                 this.isSubmitting = false;
             },
@@ -188,7 +299,7 @@ export class OrganizationUnit implements OnInit {
                 this.messageService.add({
                     severity: 'error',
                     summary: 'Error',
-                    detail: 'Failed to create organization-unit'
+                    detail: err?.error?.message || 'Failed to create organization-unit'
                 });
                 this.isSubmitting = false;
             }
@@ -197,6 +308,8 @@ export class OrganizationUnit implements OnInit {
 
     update() {
         this.isSubmitting = true;
+
+        const preservedParentOrg = this.organizationForm.get('parentOrg')?.value;
 
         const updatePayload = {
             ...this.organizationForm.value,
@@ -212,6 +325,7 @@ export class OrganizationUnit implements OnInit {
                     detail: 'Organization updated successfully'
                 });
                 this.onReset();
+                this.organizationForm.patchValue({ parentOrg: preservedParentOrg });
                 this.GetAllOrgUnit();
                 this.isSubmitting = false;
             },
@@ -220,7 +334,7 @@ export class OrganizationUnit implements OnInit {
                 this.messageService.add({
                     severity: 'error',
                     summary: 'Error',
-                    detail: 'Failed to update organization-unit'
+                    detail: err?.error?.message || 'Failed to update organization-unit'
                 });
                 this.isSubmitting = false;
             }
@@ -267,7 +381,7 @@ export class OrganizationUnit implements OnInit {
                         this.messageService.add({
                             severity: 'error',
                             summary: 'Error',
-                            detail: 'Failed to delete organization-unit'
+                            detail: err?.error?.message || 'Failed to delete organization-unit'
                         });
                     }
                 });
@@ -277,15 +391,18 @@ export class OrganizationUnit implements OnInit {
 
     onReset() {
         this.editingId = null;
+        this.searchValue = '';
         this.organizationForm.reset({
             orgId: 0,
+            parentOrg: null,
+            districtId: null,
             status: true,
             createdDate: new Date(),
             lastupdate: new Date(),
             lastUpdatedBy: this.currentUser,
             createdBy: this.currentUser
-
         });
+        this.buildTableData();
         this.isSubmitting = false;
     }
 }

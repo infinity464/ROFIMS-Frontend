@@ -1,0 +1,172 @@
+<p-toast position="top-center"></p-toast>
+<p-confirmDialog></p-confirmDialog>
+
+<div class="card">
+    <!-- Header -->
+    <div class="mb-4">
+        <h2 class="m-0 text-2xl font-bold text-900">Role Menu Permissions</h2>
+    </div>
+
+    <!-- Controls Row -->
+    <div class="grid grid-cols-12 gap-3 align-items-end mb-4">
+        <div class="col-span-3">
+            <label class="font-semibold text-700 block mb-2">Select Role</label>
+            <p-select
+                [options]="roles"
+                [(ngModel)]="selectedRole"
+                optionLabel="name"
+                placeholder="Choose a role..."
+                [showClear]="true"
+                [filter]="true"
+                filterPlaceholder="Search role..."
+                (onChange)="onRoleChange()"
+                styleClass="w-full">
+            </p-select>
+        </div>
+        @if (selectedRole) {
+            <div class="col-span-3">
+                <label class="font-semibold text-700 block mb-2">Filter by Type</label>
+                <p-select
+                    [options]="menuTypeFilterOptions"
+                    [(ngModel)]="selectedMenuTypeFilter"
+                    optionLabel="label"
+                    optionValue="value"
+                    placeholder="All Types"
+                    [showClear]="true"
+                    [filter]="true"
+                    filterPlaceholder="Search type..."
+                    (onChange)="applyMenuTypeFilter()"
+                    styleClass="w-full">
+                </p-select>
+            </div>
+            <div class="col-span-3">
+                <label class="font-semibold text-700 block mb-2">Search Menu</label>
+                <p-iconfield>
+                    <p-inputicon styleClass="pi pi-search"></p-inputicon>
+                    <input pInputText type="text" [(ngModel)]="searchText" (ngModelChange)="onSearchChange()" placeholder="Search by name..." class="w-full" />
+                </p-iconfield>
+            </div>
+            <div class="col-span-3">
+                <label class="font-semibold text-700 block mb-2">&nbsp;</label>
+                <div class="flex gap-2">
+                    <p-button label="Expand All" icon="pi pi-angle-double-down" severity="secondary" [outlined]="true" size="small" (onClick)="expandAll()"></p-button>
+                    <p-button label="Collapse All" icon="pi pi-angle-double-up" severity="secondary" [outlined]="true" size="small" (onClick)="collapseAll()"></p-button>
+                </div>
+            </div>
+        }
+    </div>
+
+    <!-- Permission Matrix TreeTable -->
+    @if (selectedRole) {
+        <p-treeTable
+            [value]="treeData"
+            [loading]="loading"
+            [tableStyle]="{ 'table-layout': 'fixed', 'width': '100%' }">
+
+            <ng-template pTemplate="colgroup">
+                <colgroup>
+                    <col style="width: 30%">
+                    <col style="width: 12%">
+                    <col style="width: 10%">
+                    <col style="width: 10%">
+                    <col style="width: 10%">
+                    <col style="width: 10%">
+                    <col style="width: 10%">
+                    <col style="width: 8%">
+                </colgroup>
+            </ng-template>
+
+            <ng-template pTemplate="header">
+                <tr>
+                    <th>Menu Name</th>
+                    <th class="text-center">Type</th>
+                    <th class="text-center header-checkbox-col">
+                        <div class="flex flex-column align-items-center gap-1">
+                            <span>View</span>
+                            <p-checkbox [ngModel]="isAllChecked('canView')" [binary]="true" (onChange)="toggleAllColumn('canView', $event)" pTooltip="Toggle all View" tooltipPosition="top"></p-checkbox>
+                        </div>
+                    </th>
+                    <th class="text-center header-checkbox-col">
+                        <div class="flex flex-column align-items-center gap-1">
+                            <span>Create</span>
+                            <p-checkbox [ngModel]="isAllChecked('canInsert')" [binary]="true" (onChange)="toggleAllColumn('canInsert', $event)" pTooltip="Toggle all Create" tooltipPosition="top"></p-checkbox>
+                        </div>
+                    </th>
+                    <th class="text-center header-checkbox-col">
+                        <div class="flex flex-column align-items-center gap-1">
+                            <span>Edit</span>
+                            <p-checkbox [ngModel]="isAllChecked('canUpdate')" [binary]="true" (onChange)="toggleAllColumn('canUpdate', $event)" pTooltip="Toggle all Edit" tooltipPosition="top"></p-checkbox>
+                        </div>
+                    </th>
+                    <th class="text-center header-checkbox-col">
+                        <div class="flex flex-column align-items-center gap-1">
+                            <span>Delete</span>
+                            <p-checkbox [ngModel]="isAllChecked('canDelete')" [binary]="true" (onChange)="toggleAllColumn('canDelete', $event)" pTooltip="Toggle all Delete" tooltipPosition="top"></p-checkbox>
+                        </div>
+                    </th>
+                    <th class="text-center header-checkbox-col">
+                        <span>All</span>
+                    </th>
+                    <th class="text-center">
+                        <span>Status</span>
+                    </th>
+                </tr>
+            </ng-template>
+
+            <ng-template pTemplate="body" let-rowNode let-rowData="rowData">
+                <tr [class.parent-row]="!rowData.parentMenuId">
+                    <td class="cell-nowrap">
+                        <p-treeTableToggler [rowNode]="rowNode"></p-treeTableToggler>
+                        @if (rowData.iconName) {
+                            <i [class]="getIconClass(rowData)" class="mr-2 text-primary"></i>
+                        }
+                        <span [class]="rowData.parentMenuId ? 'text-700' : 'font-bold text-900'">{{ rowData.menuNameEn }}</span>
+                    </td>
+                    <td class="text-center">
+                        <p-tag [value]="getMenuTypeLabel(rowData.menuType)" [severity]="getMenuTypeSeverity(rowData.menuType)" [style]="{'font-size': '0.7rem'}"></p-tag>
+                    </td>
+                    <td class="text-center">
+                        <p-checkbox [(ngModel)]="rowData.canView" [binary]="true" (onChange)="onPermissionChange(rowData)"></p-checkbox>
+                    </td>
+                    <td class="text-center">
+                        <p-checkbox [(ngModel)]="rowData.canInsert" [binary]="true" (onChange)="onPermissionChange(rowData)"></p-checkbox>
+                    </td>
+                    <td class="text-center">
+                        <p-checkbox [(ngModel)]="rowData.canUpdate" [binary]="true" (onChange)="onPermissionChange(rowData)"></p-checkbox>
+                    </td>
+                    <td class="text-center">
+                        <p-checkbox [(ngModel)]="rowData.canDelete" [binary]="true" (onChange)="onPermissionChange(rowData)"></p-checkbox>
+                    </td>
+                    <td class="text-center">
+                        <p-checkbox [ngModel]="isRowAllChecked(rowData)" [binary]="true" (onChange)="toggleRowAll(rowData, $event.checked)" pTooltip="Toggle all permissions for this menu" tooltipPosition="top"></p-checkbox>
+                    </td>
+                    <td class="text-center">
+                        @if (rowData.canView || rowData.canInsert || rowData.canUpdate || rowData.canDelete) {
+                            <i class="pi pi-check-circle text-green-500"></i>
+                        } @else {
+                            <i class="pi pi-minus-circle text-400"></i>
+                        }
+                    </td>
+                </tr>
+            </ng-template>
+
+            <ng-template pTemplate="emptymessage">
+                <tr>
+                    <td colspan="8" class="text-center p-4">
+                        <div class="flex flex-column align-items-center gap-3 py-5">
+                            <i class="pi pi-shield text-5xl text-400"></i>
+                            <span class="text-lg text-500">No menus found. Please ensure menus are configured first.</span>
+                        </div>
+                    </td>
+                </tr>
+            </ng-template>
+        </p-treeTable>
+    } @else {
+        <!-- Placeholder when no role selected -->
+        <div class="surface-50 border-round-xl flex flex-column align-items-center gap-3 py-8">
+            <i class="pi pi-shield text-6xl text-300"></i>
+            <span class="text-xl font-medium text-500">Select a role to manage its menu permissions</span>
+            <span class="text-sm text-400">Choose a role from the dropdown above to view and edit the permission matrix</span>
+        </div>
+    }
+</div>

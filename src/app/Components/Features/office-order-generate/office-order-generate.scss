@@ -1,0 +1,42 @@
+.office-order-generate {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 1.5rem;
+}
+
+.form-card {
+    background: var(--surface-card);
+    border-radius: 12px;
+    padding: 2rem;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+.form-card-header {
+    margin-bottom: 1.5rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid var(--surface-border);
+}
+
+.form-card-title {
+    margin: 0;
+    font-size: 1.25rem;
+    color: var(--text-color);
+}
+
+.para-number {
+    min-width: 30px;
+    text-align: center;
+}
+
+.min-w-200px {
+    min-width: 200px;
+}
+
+.min-w-250px {
+    min-width: 250px;
+}
+
+.min-w-300px {
+    min-width: 300px;
+}
+

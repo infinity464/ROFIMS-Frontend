@@ -1,10 +1,10 @@
 @if (config) {
   @if (showCard) {
-  <p-fluid>
-    <div class="card my-0 py-0">
+
+    <div class="my-0 py-0">
       <ng-container *ngTemplateOutlet="addressContent"></ng-container>
     </div>
-  </p-fluid>
+
   } @else {
     <ng-container *ngTemplateOutlet="addressContent"></ng-container>
   }
@@ -14,32 +14,80 @@
   <form [formGroup]="addressForm">
     <!-- Header -->
     <div class="mb-2">
-      <div class="flex align-items-center gap-3 mb-2">
-        <h3 class="m-0 text-xl font-bold text-900">{{ formTitle }}</h3>
+      <div class="flex flex-wrap align-items-center gap-3 mb-2">
+        <h3 class="m-0 text-xl font-bold text-900" style="line-height: 1; font-size: calc(1.25rem - 1pt);">{{ formTitle }}</h3>
+
+        <!-- Inline "Same as" checkboxes: rendered on the title line (right-aligned) when sameAsInline is set -->
+        @if (sameAsInline && (showSameAsSecondaryCheckbox || showSameAsPresentCheckbox) && !isReadonly) {
+          <div class="flex flex-wrap align-items-center gap-4 ml-auto align-self-center">
+            @if (showSameAsSecondaryCheckbox) {
+              <div class="flex align-items-center">
+                <p-checkbox
+                  formControlName="sameAsSecondary"
+                  [binary]="true"
+                  [inputId]="'sameAsSecondary_' + config.addressType">
+                </p-checkbox>
+                <label [for]="'sameAsSecondary_' + config.addressType" class="ml-2 cursor-pointer font-semibold text-700" style="font-size: calc(1rem - 2pt);">
+                  {{ sameAsSecondaryCheckboxLabel }}
+                </label>
+              </div>
+            }
+
+            @if (showSameAsPresentCheckbox) {
+              <div class="flex align-items-center">
+                <p-checkbox
+                  formControlName="sameAsPresent"
+                  [binary]="true"
+                  [inputId]="'sameAsPresent_' + config.addressType">
+                </p-checkbox>
+                <label [for]="'sameAsPresent_' + config.addressType" class="ml-2 cursor-pointer font-semibold text-700" style="font-size: calc(1rem - 2pt);">
+                  {{ sameAsCheckboxLabel }}
+                </label>
+              </div>
+            }
+          </div>
+        }
       </div>
 
-      <!-- Same as Permanent Address Checkbox (below title) - hidden in readonly mode -->
-      @if (showSameAsPresentCheckbox && !isReadonly) {
-        <div class="flex align-items-center">
-          <p-checkbox
-            formControlName="sameAsPresent"
-            [binary]="true"
-            [inputId]="'sameAsPresent_' + config.addressType">
-          </p-checkbox>
-          <label [for]="'sameAsPresent_' + config.addressType" class="ml-2 cursor-pointer font-semibold text-700">
-            {{ sameAsCheckboxLabel }}
-          </label>
+      <!-- "Same as" Checkboxes (secondary rendered before the primary) - hidden in readonly mode -->
+      @if (!sameAsInline && (showSameAsSecondaryCheckbox || showSameAsPresentCheckbox) && !isReadonly) {
+        <div class="flex flex-wrap align-items-center gap-4">
+          @if (showSameAsSecondaryCheckbox) {
+            <div class="flex align-items-center">
+              <p-checkbox
+                formControlName="sameAsSecondary"
+                [binary]="true"
+                [inputId]="'sameAsSecondary_' + config.addressType">
+              </p-checkbox>
+              <label [for]="'sameAsSecondary_' + config.addressType" class="ml-2 cursor-pointer font-semibold text-700" style="font-size: calc(1rem - 2pt);">
+                {{ sameAsSecondaryCheckboxLabel }}
+              </label>
+            </div>
+          }
+
+          @if (showSameAsPresentCheckbox) {
+            <div class="flex align-items-center">
+              <p-checkbox
+                formControlName="sameAsPresent"
+                [binary]="true"
+                [inputId]="'sameAsPresent_' + config.addressType">
+              </p-checkbox>
+              <label [for]="'sameAsPresent_' + config.addressType" class="ml-2 cursor-pointer font-semibold text-700" style="font-size: calc(1rem - 2pt);">
+                {{ sameAsCheckboxLabel }}
+              </label>
+            </div>
+          }
         </div>
       }
     </div>
 
-    <div class="surface-50 border-round-xl p-3">
+    <div [class.surface-50]="showInnerWrapper" [class.border-round-xl]="showInnerWrapper" [class.py-3]="showInnerWrapper" [class.px-0]="showInnerWrapper">
 
       <!-- Row 1: Division -> District -> Upazila -> Post Office -->
       <div class="flex flex-wrap gap-3 mb-3">
 
         <!-- Division -->
-        <div class="flex-1" style="min-width: 200px">
+        <div class="flex-1" style="min-width: 160px">
           <label class="font-semibold block mb-2 text-700">
             Division <span class="text-red-500">*</span>
           </label>
@@ -61,7 +109,7 @@
         </div>
 
         <!-- District -->
-        <div class="flex-1" style="min-width: 200px">
+        <div class="flex-1" style="min-width: 160px">
           <label class="font-semibold block mb-2 text-700">
             District <span class="text-red-500">*</span>
           </label>
@@ -83,9 +131,9 @@
         </div>
 
         <!-- Upazila -->
-        <div class="flex-1" style="min-width: 200px">
+        <div class="flex-1" style="min-width: 160px">
           <label class="font-semibold block mb-2 text-700">
-            Upazila/Thana <span class="text-red-500">*</span>
+            Upazila/Thana
           </label>
           <p-select
             [options]="upazilas"
@@ -106,35 +154,51 @@
         </div>
 
         <!-- Post Office -->
-        <div class="flex-1" style="min-width: 200px">
+        <div class="flex-1" style="min-width: 170px">
           <label class="font-semibold block mb-2 text-700">
-            Post Office <span class="text-red-500">*</span>
+            Post Office
           </label>
-          <p-select
-            [options]="postOffices"
-            formControlName="postOffice"
-            optionLabel="codeValueEN"
-            optionValue="codeId"
-            placeholder="Select Post Office"
-            styleClass="w-full"
-            [filter]="true"
-            filterPlaceholder="Search Post Office"
-            [disabled]="!addressForm.get('upazila')?.value">
-          </p-select>
+          <div style="display: flex; align-items: center; gap: 0.35rem;">
+            <div style="flex: 1; min-width: 0;">
+              <p-select
+                [options]="postOffices"
+                formControlName="postOffice"
+                optionLabel="codeValueEN"
+                optionValue="codeId"
+                placeholder="Select Post Office"
+                styleClass="w-full"
+                [filter]="true"
+                filterPlaceholder="Search Post Office"
+                (onChange)="onPostOfficeChange($event.value)"
+                [disabled]="!addressForm.get('upazila')?.value">
+              </p-select>
+            </div>
+            <button
+              type="button"
+              pButton
+              icon="pi pi-plus"
+              class="p-button-sm p-button-outlined p-button-success"
+              style="flex-shrink: 0; width: 2rem; height: 2rem; padding: 0;"
+              pTooltip="Add New Post Office"
+              tooltipPosition="top"
+              (click)="openAddPostOfficeDialog()"
+              [disabled]="!addressForm.get('upazila')?.value">
+            </button>
+          </div>
           @if (isFieldInvalid('postOffice')) {
             <small class="text-red-500">{{ getErrorMessage('postOffice') }}</small>
           }
         </div>
 
         <!-- Post Code -->
-        <div class="flex-1" style="min-width: 150px">
+        <div class="flex-1" style="min-width: 120px; max-width: 160px">
           <label class="font-semibold block mb-2 text-700">
             Post Code
           </label>
           <input pInputText class="w-full" placeholder="Enter post code"
             formControlName="postCode" maxlength="10" />
           @if (isFieldInvalid('postCode')) {
-            <small class="text-red-500">Max length is 10 characters</small>
+            <small class="text-red-500">Max field width is 10 characters</small>
           }
         </div>
 
@@ -194,3 +258,39 @@
 
   </form>
 </ng-template>
+
+<!-- Add Post Office Dialog -->
+<p-dialog header="Add New Post Office" [(visible)]="showPostOfficeDialog" [modal]="true" [style]="{width: '500px'}" [closable]="true" [contentStyle]="{'border-top': '2px solid var(--primary-color)'}" appendTo="body">
+    <div style="display: flex; flex-direction: column; gap: 1rem;">
+        <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem;">
+            <div>
+                <label class="font-semibold block mb-2 text-700">Division</label>
+                <input pInputText style="width: 100%;" [value]="getSelectedDivisionName()" [disabled]="true" />
+            </div>
+            <div>
+                <label class="font-semibold block mb-2 text-700">District</label>
+                <input pInputText style="width: 100%;" [value]="getSelectedDistrictName()" [disabled]="true" />
+            </div>
+            <div>
+                <label class="font-semibold block mb-2 text-700">Upazila/Thana</label>
+                <input pInputText style="width: 100%;" [value]="getSelectedUpazilaName()" [disabled]="true" />
+            </div>
+        </div>
+        <div>
+            <label class="font-semibold block mb-2 text-700">Post Office Name (English) <span class="text-red-500">*</span></label>
+            <input pInputText style="width: 100%;" [(ngModel)]="newPostOfficeNameEN" placeholder="Enter post office name in English" />
+        </div>
+        <div>
+            <label class="font-semibold block mb-2 text-700">Post Office Name (Bangla)</label>
+            <input pInputText style="width: 100%;" [(ngModel)]="newPostOfficeNameBN" placeholder="Enter post office name in Bangla" />
+        </div>
+        <div>
+            <label class="font-semibold block mb-2 text-700">Post Code</label>
+            <input pInputText style="width: 100%;" [(ngModel)]="newPostOfficePostCode" placeholder="Enter post code" maxlength="20" />
+        </div>
+    </div>
+    <ng-template pTemplate="footer">
+        <p-button label="Cancel" icon="pi pi-times" severity="secondary" [outlined]="true" (onClick)="showPostOfficeDialog = false"></p-button>
+        <p-button label="Save" icon="pi pi-check" [loading]="isSavingPostOffice" [disabled]="!newPostOfficeNameEN?.trim()" (onClick)="saveNewPostOffice()"></p-button>
+    </ng-template>
+</p-dialog>

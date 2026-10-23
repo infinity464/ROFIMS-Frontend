@@ -9,6 +9,12 @@ export interface LoginResponse {
   roleId: string;
   roleName: string;
 
+  /**
+   * Role IDs whose users this caller may reset passwords for.
+   * `["*"]` = any role. `[]` / undefined = none.
+   */
+  canResetRoleIds?: string[];
+
   expiredTime: string;
   id: string;
 }

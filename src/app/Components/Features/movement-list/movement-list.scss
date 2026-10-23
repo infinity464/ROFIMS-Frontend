@@ -1,0 +1,8 @@
+/* Placeholder occupying one small rounded icon-button slot, so rows without
+   the Return button keep their remaining action icons aligned with rows that
+   have it. Width matches a PrimeNG small text+rounded p-button. */
+.action-btn-spacer {
+    display: inline-block;
+    width: 2rem;
+    height: 2rem;
+}

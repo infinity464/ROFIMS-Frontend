@@ -1,1 +1,40 @@
-// component styles
+// emp-rank-confirmation styles – aligned with form-theme
+
+:host {
+    display: block;
+}
+
+:host ::ng-deep .rank-form .p-fileupload-choose-button svg[data-p-icon='plus'],
+:host ::ng-deep .rank-form .p-fileupload-choose-button .p-button-icon,
+:host ::ng-deep .rank-form .p-fileupload-choose-button .p-button-icon-left {
+    display: none !important;
+}
+:host ::ng-deep .rank-form .p-fileupload-basic-content .p-fileupload-choose-button ~ *,
+:host ::ng-deep .rank-form .p-fileupload-basic-content > span {
+    display: none !important;
+}
+:host ::ng-deep .rank-form .p-fileupload,
+:host ::ng-deep .rank-form .p-fileupload-basic-content {
+    width: fit-content;
+    min-width: 0;
+    display: inline-flex;
+}
+
+:host ::ng-deep .surface-card .p-datatable .p-datatable-thead > tr > th,
+:host ::ng-deep .surface-card .p-datatable .p-datatable-tbody > tr > td {
+    vertical-align: middle;
+}
+
+:host ::ng-deep .rank-form p-datepicker,
+:host ::ng-deep .rank-form .p-datepicker .p-inputtext {
+    width: 100% !important;
+}
+
+:host ::ng-deep .file-section-compact {
+  app-file-references-form h3 {
+    font-size: 1rem !important;
+    font-weight: 600 !important;
+    color: var(--text-color-secondary) !important;
+    margin-bottom: 0.5rem !important;
+  }
+}

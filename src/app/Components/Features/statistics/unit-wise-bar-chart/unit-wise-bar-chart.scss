@@ -1,0 +1,252 @@
+:host {
+    display: block;
+    padding: 1.5rem;
+}
+
+.chart-results-card {
+    background: var(--surface-card, #fff);
+    border: 1px solid var(--surface-border, #e2e8f0);
+    border-radius: 10px;
+    overflow: hidden;
+}
+
+.chart-results-header {
+    display: flex;
+    flex-direction: column;
+    padding: 0.75rem 1.25rem 1rem;
+    border-bottom: 1px solid var(--surface-border, #e2e8f0);
+    background: var(--surface-section, #f8fafc);
+    gap: 0.5rem;
+}
+
+.chart-toolbar-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+}
+
+.filter-wrap {
+    min-width: 180px;
+    max-width: 280px;
+    flex: 1 1 200px;
+}
+
+::ng-deep .filter-select {
+    width: 100%;
+    font-size: 0.82rem;
+}
+
+.chart-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-shrink: 0;
+}
+
+.chart-lang-toggle {
+    height: 32px;
+    padding: 0 12px;
+    border-radius: 7px;
+    border: 0.5px solid var(--surface-border, #e2e8f0);
+    background: var(--surface-card, #fff);
+    color: var(--text-color, #1e293b);
+    font-size: 0.8rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: border-color 0.15s, background 0.15s;
+    &:hover { border-color: var(--primary-color, #4f46e5); background: var(--surface-hover, #f1f5f9); }
+}
+
+.chart-btn-print {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    height: 32px;
+    padding: 0 14px;
+    border-radius: 7px;
+    border: 0.5px solid var(--surface-border, #e2e8f0);
+    background: var(--surface-card, #fff);
+    color: var(--text-color, #1e293b);
+    font-size: 0.8rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: border-color 0.15s, background 0.15s;
+    &:hover:not(:disabled) { border-color: var(--primary-color, #4f46e5); background: var(--surface-hover, #f1f5f9); }
+    &:disabled { opacity: 0.45; cursor: not-allowed; }
+}
+
+.chart-export-wrap { position: relative; }
+
+.chart-export-dropdown {
+    position: absolute;
+    top: 100%;
+    right: 0;
+    margin-top: 6px;
+    min-width: 120px;
+    background: var(--surface-card, #fff);
+    border: 1px solid var(--surface-border, #e2e8f0);
+    border-radius: 8px;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.10);
+    z-index: 100;
+    overflow: hidden;
+}
+
+.chart-export-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+    padding: 8px 14px;
+    background: none;
+    border: none;
+    font-size: 0.85rem;
+    cursor: pointer;
+    text-align: left;
+    color: #555;
+    transition: background 0.12s;
+    &:hover { background: var(--surface-hover, #f7fafc); }
+}
+
+.chart-header-title-block { width: 100%; text-align: center; }
+
+.chart-main-title {
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: var(--text-color, #1e293b);
+    letter-spacing: 0.03em;
+    line-height: 1.4;
+}
+
+.chart-scope-line {
+    font-size: 0.85rem;
+    font-weight: 500;
+    color: var(--primary-color, #4f46e5);
+    margin-top: 0.2rem;
+    line-height: 1.35;
+    padding: 0.15rem 0.5rem;
+    display: inline-block;
+    background: rgba(79, 70, 229, 0.08);
+    border-radius: 6px;
+}
+
+.chart-date-line {
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: var(--text-color-secondary, #475569);
+    margin-top: 0.15rem;
+}
+
+/* Active-filter chips rendered below the title — mirrors the sample report layout */
+.chart-filter-chips {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 0.4rem;
+    margin-top: 0.5rem;
+}
+
+.chart-filter-chip {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.2rem 0.7rem;
+    font-size: 0.78rem;
+    font-weight: 500;
+    color: #0f766e;
+    background: rgba(20, 184, 166, 0.10);
+    border: 1px solid rgba(20, 184, 166, 0.35);
+    border-radius: 9999px;
+    line-height: 1.3;
+    white-space: nowrap;
+}
+
+/* Skeleton */
+.skeleton-wrapper { padding: 1.5rem; }
+
+.skeleton-bar {
+    width: 100%;
+    height: 400px;
+    background: var(--surface-border, #e2e8f0);
+    border-radius: 8px;
+    animation: skeleton-pulse 1.4s ease-in-out infinite;
+}
+
+@keyframes skeleton-pulse {
+    0%, 100% { opacity: 1; }
+    50%       { opacity: 0.4; }
+}
+
+/* Chart body */
+.chart-body { padding: 1.5rem; }
+
+.chart-container {
+    width: 100%;
+}
+
+.chart-total {
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: var(--text-color, #1e293b);
+    margin-bottom: 1rem;
+    text-align: right;
+}
+
+.chart-canvas-wrap {
+    width: 100%;
+    height: 480px;
+}
+
+/* ── Dark mode overrides ─────────────────────────────────────────────── */
+:host-context(.app-dark) {
+    .chart-results-card {
+        background: var(--surface-card) !important;
+        border-color: var(--surface-border);
+    }
+
+    .chart-results-header {
+        background: var(--surface-card) !important;
+        border-bottom-color: var(--surface-border);
+    }
+
+    .chart-main-title {
+        color: var(--text-color) !important;
+    }
+
+    .chart-date-line {
+        color: var(--text-color-secondary) !important;
+    }
+
+    .chart-lang-toggle,
+    .chart-btn-print {
+        background: var(--surface-ground) !important;
+        border-color: var(--surface-border);
+        color: var(--text-color);
+    }
+
+    .chart-export-dropdown {
+        background: var(--surface-card);
+        border-color: var(--surface-border);
+    }
+
+    .chart-export-item {
+        color: var(--text-color);
+        &:hover { background: var(--surface-hover); }
+    }
+
+    .chart-total {
+        color: var(--text-color);
+    }
+}
+
+/* Empty state */
+.empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 3rem 1rem;
+    color: var(--text-color-secondary, #64748b);
+    i { font-size: 3rem; margin-bottom: 0.75rem; }
+    p { margin: 0; font-size: 0.9rem; }
+}

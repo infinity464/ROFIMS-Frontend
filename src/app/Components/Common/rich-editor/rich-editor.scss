@@ -1,0 +1,535 @@
+// ─── Quill font content classes ───────────────────────────────────────────────
+// These must be global (ViewEncapsulation.None) so they apply inside .ql-editor
+.ql-font-arial        { font-family: Arial, sans-serif !important; }
+.ql-font-times-new-roman { font-family: 'Times New Roman', serif !important; }
+.ql-font-georgia      { font-family: Georgia, serif !important; }
+.ql-font-garamond     { font-family: Garamond, serif !important; }
+.ql-font-palatino     { font-family: 'Palatino Linotype', Palatino, serif !important; }
+.ql-font-verdana      { font-family: Verdana, sans-serif !important; }
+.ql-font-tahoma       { font-family: Tahoma, sans-serif !important; }
+.ql-font-trebuchet-ms { font-family: 'Trebuchet MS', sans-serif !important; }
+.ql-font-courier-new  { font-family: 'Courier New', Courier, monospace !important; }
+.ql-font-impact       { font-family: Impact, Charcoal, sans-serif !important; }
+.ql-font-comic-sans   { font-family: 'Comic Sans MS', cursive !important; }
+
+// ─── Font option labels in the toolbar dropdown ────────────────────────────────
+.ql-picker.ql-font {
+  width: 140px !important;
+
+  .ql-picker-label::before,
+  .ql-picker-item::before { content: 'Default'; }
+
+  .ql-picker-label[data-value='arial']::before,
+  .ql-picker-item[data-value='arial']::before         { content: 'Arial';           font-family: Arial, sans-serif; }
+
+  .ql-picker-label[data-value='times-new-roman']::before,
+  .ql-picker-item[data-value='times-new-roman']::before { content: 'Times New Roman'; font-family: 'Times New Roman', serif; }
+
+  .ql-picker-label[data-value='georgia']::before,
+  .ql-picker-item[data-value='georgia']::before       { content: 'Georgia';         font-family: Georgia, serif; }
+
+  .ql-picker-label[data-value='garamond']::before,
+  .ql-picker-item[data-value='garamond']::before      { content: 'Garamond';        font-family: Garamond, serif; }
+
+  .ql-picker-label[data-value='palatino']::before,
+  .ql-picker-item[data-value='palatino']::before      { content: 'Palatino';        font-family: 'Palatino Linotype', serif; }
+
+  .ql-picker-label[data-value='verdana']::before,
+  .ql-picker-item[data-value='verdana']::before       { content: 'Verdana';         font-family: Verdana, sans-serif; }
+
+  .ql-picker-label[data-value='tahoma']::before,
+  .ql-picker-item[data-value='tahoma']::before        { content: 'Tahoma';          font-family: Tahoma, sans-serif; }
+
+  .ql-picker-label[data-value='trebuchet-ms']::before,
+  .ql-picker-item[data-value='trebuchet-ms']::before  { content: 'Trebuchet MS';    font-family: 'Trebuchet MS', sans-serif; }
+
+  .ql-picker-label[data-value='courier-new']::before,
+  .ql-picker-item[data-value='courier-new']::before   { content: 'Courier New';     font-family: 'Courier New', monospace; }
+
+  .ql-picker-label[data-value='impact']::before,
+  .ql-picker-item[data-value='impact']::before        { content: 'Impact';          font-family: Impact, sans-serif; }
+
+  .ql-picker-label[data-value='comic-sans']::before,
+  .ql-picker-item[data-value='comic-sans']::before    { content: 'Comic Sans MS';   font-family: 'Comic Sans MS', cursive; }
+}
+
+// ─── Wrapper ───────────────────────────────────────────────────────────────────
+.re-wrapper {
+  position: relative;
+  width: 100%;
+}
+
+// ─── Table button ──────────────────────────────────────────────────────────────
+.re-table-wrap {
+  position: relative;
+  display: inline-flex !important;
+  align-items: center;
+}
+
+.re-table-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  border: none;
+  background: transparent;
+  padding: 3px 4px;
+  color: #444;
+  border-radius: 3px;
+  transition: color 0.15s, background 0.15s;
+
+  &:hover {
+    color: #06c;
+    background: rgba(0, 100, 200, 0.07);
+  }
+
+  svg {
+    display: block;
+  }
+}
+
+// ─── Table picker popup ────────────────────────────────────────────────────────
+.re-table-picker {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  z-index: 9999;
+  background: #fff;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  padding: 10px;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.14);
+  min-width: 160px;
+}
+
+.re-table-picker-label {
+  text-align: center;
+  font-size: 11px;
+  color: #666;
+  margin-bottom: 8px;
+  min-height: 16px;
+}
+
+.re-table-picker-grid {
+  display: grid;
+  grid-template-columns: repeat(6, 22px);
+  gap: 3px;
+}
+
+.re-table-cell {
+  width: 22px;
+  height: 22px;
+  border: 1px solid #d1d5db;
+  border-radius: 2px;
+  cursor: pointer;
+  transition: background 0.1s, border-color 0.1s;
+
+  &.re-table-cell--active,
+  &:hover {
+    background: #dbeafe;
+    border-color: #3b82f6;
+  }
+}
+
+// ─── Custom size row ───────────────────────────────────────────────────────────
+.re-table-custom {
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid #eee;
+}
+
+.re-table-custom-label {
+  display: block;
+  font-size: 10px;
+  color: #888;
+  margin-bottom: 5px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.re-table-custom-inputs {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.re-table-custom-input {
+  width: 46px;
+  padding: 3px 5px;
+  font-size: 12px;
+  border: 1px solid #d1d5db;
+  border-radius: 3px;
+  text-align: center;
+  outline: none;
+  color: #333;
+
+  &:focus {
+    border-color: #3b82f6;
+  }
+
+  // hide browser spinners
+  &::-webkit-inner-spin-button,
+  &::-webkit-outer-spin-button { opacity: 1; height: 16px; }
+}
+
+.re-table-custom-sep {
+  font-size: 13px;
+  color: #555;
+  flex-shrink: 0;
+}
+
+.re-table-custom-btn {
+  padding: 3px 10px;
+  font-size: 12px;
+  border: 1px solid #3b82f6;
+  border-radius: 3px;
+  background: #3b82f6;
+  color: #fff;
+  cursor: pointer;
+  transition: background 0.15s;
+  white-space: nowrap;
+
+  &:hover {
+    background: #2563eb;
+  }
+}
+
+// ─── Table right-border resize hint ────────────────────────────────────────────
+// Show a blue right-border on the whole table while the mouse is inside it.
+// This hints that the right edge is draggable (ew-resize cursor does the rest).
+.ql-editor table:hover {
+  border-right: 2.5px solid #3b82f6 !important;
+}
+
+// ─── Right-click context menu ──────────────────────────────────────────────────
+.re-ctx-menu {
+  position: fixed;
+  z-index: 99999;
+  background: #fff;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+  padding: 4px 0;
+  min-width: 180px;
+  font-size: 13px;
+  user-select: none;
+}
+
+.re-ctx-section {
+  padding: 4px 12px 2px;
+  font-size: 10px;
+  font-weight: 600;
+  color: #9ca3af;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.re-ctx-divider {
+  height: 1px;
+  background: #e5e7eb;
+  margin: 4px 0;
+}
+
+.re-ctx-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 6px 14px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: #111827;
+  text-align: left;
+  white-space: nowrap;
+  transition: background 0.1s;
+
+  i { font-size: 11px; color: #6b7280; }
+
+  &:hover {
+    background: #f3f4f6;
+  }
+
+  &--danger {
+    color: #dc2626;
+    i { color: #dc2626; }
+    &:hover { background: #fef2f2; }
+  }
+}
+
+// ─── Tables: editor + every preview/view area ─────────────────────────────────
+// Use !important so Tailwind's preflight (border-width:0) doesn't win.
+.ql-editor table,
+.notesheet-preview-body table,
+.ql-editor table,
+[innerHTML] table {
+  border-collapse: collapse !important;
+  width: 100%;
+  margin: 6px 0;
+}
+
+.ql-editor table td,
+.ql-editor table th,
+.notesheet-preview-body table td,
+.notesheet-preview-body table th {
+  border: 1px solid #bbb !important;
+  padding: 5px 10px;
+  min-width: 60px;
+}
+
+// Catch-all: any table rendered inside Angular [innerHTML] bindings
+.notesheet-preview-doc table td,
+.notesheet-preview-doc table th,
+.ns-preview-body-section table td,
+.ns-preview-body-section table th {
+  border: 1px solid #bbb !important;
+  padding: 5px 10px;
+}
+
+// Class-based fallback: re-ns-table is added to every inserted table so
+// even if Quill's Delta round-trip strips inline styles, the border still shows
+.re-ns-table {
+  border-collapse: collapse !important;
+  width: 100%;
+  margin: 6px 0;
+}
+
+.re-ns-table td,
+.re-ns-table th {
+  border: 1px solid #bbb !important;
+  padding: 5px 10px;
+  min-width: 60px;
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// Custom Ordered List Types
+// ═══════════════════════════════════════════════════════════════════════════════
+
+// ── @counter-style for Bangla (vowels first) ───────────────────────────────────
+// suffix: "" avoids extra "0" rendering in editor (space added in content instead)
+@counter-style bangla-alpha {
+  system: alphabetic;
+  symbols: "অ" "আ" "ই" "ঈ" "উ" "ঊ" "ঋ" "এ" "ঐ" "ও" "ঔ"
+           "ক" "খ" "গ" "ঘ" "ঙ" "চ" "ছ" "জ" "ঝ" "ঞ"
+           "ট" "ঠ" "ড" "ঢ" "ণ" "ত" "থ" "দ" "ধ" "ন"
+           "প" "ফ" "ব" "ভ" "ম" "য" "র" "ল" "শ" "ষ" "স" "হ"
+           "ড়" "ঢ়" "য়" "ৎ" "ং" "ঃ" "ঁ";
+  suffix: "";
+}
+
+// ── @counter-style for Bangla consonants (ক খ গ ঘ) ─────────────────────────────
+@counter-style bangla-ka {
+  system: alphabetic;
+  symbols: "ক" "খ" "গ" "ঘ" "ঙ" "চ" "ছ" "জ" "ঝ" "ঞ"
+           "ট" "ঠ" "ড" "ঢ" "ণ" "ত" "থ" "দ" "ধ" "ন"
+           "প" "ফ" "ব" "ভ" "ম" "য" "র" "ল" "শ" "ষ" "স" "হ"
+           "ড়" "ঢ়" "য়" "ৎ" "ং" "ঃ" "ঁ";
+  suffix: "";
+}
+
+// ── A. EDITOR: Quill's .ql-ui::before rendering ────────────────────────────────
+// Prevent blocks inside list items from resetting list counters (fixes extra "0" / "0.")
+// Quill sets counter-reset on .ql-editor p/h1-h6; modern browsers use counter-set.
+// Both must be overridden. See: https://github.com/quilljs/quill/issues/3529
+.re-wrapper .ql-editor li[data-list] p,
+.re-wrapper .ql-editor li[data-list] h1,
+.re-wrapper .ql-editor li[data-list] h2,
+.re-wrapper .ql-editor li[data-list] h3,
+.re-wrapper .ql-editor li[data-list] h4,
+.re-wrapper .ql-editor li[data-list] h5,
+.re-wrapper .ql-editor li[data-list] h6 {
+  counter-reset: none !important;
+}
+@supports (counter-set: none) {
+  .re-wrapper .ql-editor li[data-list] p,
+  .re-wrapper .ql-editor li[data-list] h1,
+  .re-wrapper .ql-editor li[data-list] h2,
+  .re-wrapper .ql-editor li[data-list] h3,
+  .re-wrapper .ql-editor li[data-list] h4,
+  .re-wrapper .ql-editor li[data-list] h5,
+  .re-wrapper .ql-editor li[data-list] h6 {
+    counter-set: none !important;
+  }
+}
+
+.ql-editor li[data-list="upper-roman"]       { counter-increment: list-0; }
+.ql-editor li[data-list="upper-roman"] > .ql-ui:before {
+  content: counter(list-0, upper-roman) '. ' !important;
+}
+
+.ql-editor li[data-list="lower-roman"]       { counter-increment: list-0; }
+.ql-editor li[data-list="lower-roman"] > .ql-ui:before {
+  content: counter(list-0, lower-roman) '. ' !important;
+}
+
+.ql-editor li[data-list="upper-alpha"]       { counter-increment: list-0; }
+.ql-editor li[data-list="upper-alpha"] > .ql-ui:before {
+  content: counter(list-0, upper-alpha) '. ' !important;
+}
+
+.ql-editor li[data-list="bangla-number"]     { counter-increment: list-0; }
+.ql-editor li[data-list="bangla-number"] > .ql-ui:before {
+  content: counter(list-0, bengali) " " !important;
+}
+
+.ql-editor li[data-list="lower-alpha"]       { counter-increment: list-0; }
+.ql-editor li[data-list="lower-alpha"] > .ql-ui:before {
+  content: counter(list-0, lower-alpha) '. ' !important;
+}
+
+.ql-editor li[data-list="bangla-alpha"]      { counter-increment: list-0; }
+.ql-editor li[data-list="bangla-alpha"] > .ql-ui:before {
+  content: counter(list-0, bangla-alpha) " " !important;
+}
+
+.ql-editor li[data-list="bangla-ka"]         { counter-increment: list-0; }
+.ql-editor li[data-list="bangla-ka"] > .ql-ui:before {
+  content: counter(list-0, bangla-ka) " " !important;
+}
+
+// Reset sub-counters for custom types (same as Quill does for "ordered")
+.ql-editor li[data-list="upper-roman"],
+.ql-editor li[data-list="lower-roman"],
+.ql-editor li[data-list="upper-alpha"],
+.ql-editor li[data-list="bangla-number"],
+.ql-editor li[data-list="lower-alpha"],
+.ql-editor li[data-list="bangla-alpha"],
+.ql-editor li[data-list="bangla-ka"] {
+  counter-reset: list-1 list-2 list-3 list-4 list-5 list-6 list-7 list-8 list-9;
+}
+
+// ── B. PREVIEW: [innerHTML] rendering (no .ql-ui span) ─────────────────────────
+
+li[data-list="upper-roman"],
+li[data-list="lower-roman"],
+li[data-list="upper-alpha"],
+li[data-list="bangla-number"],
+li[data-list="lower-alpha"],
+li[data-list="bangla-alpha"],
+li[data-list="ordered"],
+li[data-list="bullet"] {
+  list-style-type: none;
+}
+
+ol:has(> li[data-list]) {
+  counter-reset: preview-list-0;
+  padding-left: 1.5em;
+}
+
+// Ordered (decimal) — preview
+:not(.ql-editor) ol li[data-list="ordered"] { counter-increment: preview-list-0; }
+:not(.ql-editor) ol li[data-list="ordered"]::before {
+  content: counter(preview-list-0, decimal) '. ';
+  margin-right: 0.3em;
+}
+
+// Upper Roman — preview
+:not(.ql-editor) ol li[data-list="upper-roman"] { counter-increment: preview-list-0; }
+:not(.ql-editor) ol li[data-list="upper-roman"]::before {
+  content: counter(preview-list-0, upper-roman) '. ';
+  margin-right: 0.3em;
+}
+
+// Lower Roman — preview
+:not(.ql-editor) ol li[data-list="lower-roman"] { counter-increment: preview-list-0; }
+:not(.ql-editor) ol li[data-list="lower-roman"]::before {
+  content: counter(preview-list-0, lower-roman) '. ';
+  margin-right: 0.3em;
+}
+
+// Upper Alpha — preview
+:not(.ql-editor) ol li[data-list="upper-alpha"] { counter-increment: preview-list-0; }
+:not(.ql-editor) ol li[data-list="upper-alpha"]::before {
+  content: counter(preview-list-0, upper-alpha) '. ';
+  margin-right: 0.3em;
+}
+
+// Bangla Numbers — preview
+:not(.ql-editor) ol li[data-list="bangla-number"] { counter-increment: preview-list-0; }
+:not(.ql-editor) ol li[data-list="bangla-number"]::before {
+  content: counter(preview-list-0, bengali) '. ';
+  margin-right: 0.3em;
+}
+
+// Lower Alpha — preview
+:not(.ql-editor) ol li[data-list="lower-alpha"] { counter-increment: preview-list-0; }
+:not(.ql-editor) ol li[data-list="lower-alpha"]::before {
+  content: counter(preview-list-0, lower-alpha) '. ';
+  margin-right: 0.3em;
+}
+
+// Bangla Alpha (অ আ ই) — preview
+:not(.ql-editor) ol li[data-list="bangla-alpha"] { counter-increment: preview-list-0; }
+:not(.ql-editor) ol li[data-list="bangla-alpha"]::before {
+  content: counter(preview-list-0, bangla-alpha);
+  margin-right: 0.3em;
+}
+
+// Bangla Ka (ক খ গ ঘ) — preview
+:not(.ql-editor) ol li[data-list="bangla-ka"] { counter-increment: preview-list-0; }
+:not(.ql-editor) ol li[data-list="bangla-ka"]::before {
+  content: counter(preview-list-0, bangla-ka);
+  margin-right: 0.3em;
+}
+
+// Bullet — preview
+:not(.ql-editor) ol li[data-list="bullet"]::before {
+  content: '\2022';
+  margin-right: 0.3em;
+}
+
+// ── C. TOOLBAR: dropdown labels ────────────────────────────────────────────────
+
+.ql-picker.ql-list {
+  width: 110px !important;
+
+  .ql-picker-label::before,
+  .ql-picker-item::before {
+    content: 'List' !important;
+  }
+
+  .ql-picker-label[data-value="ordered"]::before,
+  .ql-picker-item[data-value="ordered"]::before {
+    content: '1, 2, 3' !important;
+  }
+
+  .ql-picker-label[data-value="upper-roman"]::before,
+  .ql-picker-item[data-value="upper-roman"]::before {
+    content: 'I, II, III' !important;
+  }
+
+  .ql-picker-label[data-value="bangla-number"]::before,
+  .ql-picker-item[data-value="bangla-number"]::before {
+    content: '১, ২, ৩' !important;
+  }
+
+  .ql-picker-label[data-value="lower-alpha"]::before,
+  .ql-picker-item[data-value="lower-alpha"]::before {
+    content: 'a, b, c' !important;
+  }
+
+  .ql-picker-label[data-value="upper-alpha"]::before,
+  .ql-picker-item[data-value="upper-alpha"]::before {
+    content: 'A, B, C' !important;
+  }
+
+  .ql-picker-label[data-value="lower-roman"]::before,
+  .ql-picker-item[data-value="lower-roman"]::before {
+    content: 'i, ii, iii' !important;
+  }
+
+  .ql-picker-label[data-value="bangla-alpha"]::before,
+  .ql-picker-item[data-value="bangla-alpha"]::before {
+    content: 'অ, আ, ই' !important;
+  }
+
+  .ql-picker-label[data-value="bangla-ka"]::before,
+  .ql-picker-item[data-value="bangla-ka"]::before {
+    content: 'ক, খ, গ, ঘ' !important;
+  }
+
+  .ql-picker-label[data-value="bullet"]::before,
+  .ql-picker-item[data-value="bullet"]::before {
+    content: '• Bullet' !important;
+  }
+}

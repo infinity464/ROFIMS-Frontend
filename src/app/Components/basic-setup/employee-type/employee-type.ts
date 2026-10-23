@@ -1,4 +1,6 @@
-import { Component } from '@angular/core';
+import { Component, inject } from '@angular/core';
+import { UserMenuService } from '@/services/user-menu.service';
+import { Router } from '@angular/router';
 import { CommonCode } from '../shared/models/common-code';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { MasterBasicSetupService } from '../shared/services/MasterBasicSetupService';
@@ -19,8 +21,14 @@ import { SharedService } from '@/shared/services/shared-service';
     styleUrl: './employee-type.scss'
 })
 export class EmployeeType {
+    private _router = inject(Router);
+    private _userMenuService = inject(UserMenuService);
+    canInsert = true;
+    canUpdate = true;
+    canDelete = true;
+
     codeType: string = 'EmployeeType';
-    title: string = 'Employee  Type';
+    title: string = 'Member Type';
     commonCodeData: CommonCode[] = [];
     editingId: number | null = null;
     commonCodeForm!: FormGroup;
@@ -37,13 +45,13 @@ export class EmployeeType {
         formFields: [
             {
                 name: 'codeValueEN',
-                label: 'Employee StatusType Name (English)',
+                label: 'Member Type Name (English)',
                 type: 'text',
                 required: true
             },
             {
                 name: 'codeValueBN',
-                label: 'Employee StatusType Name (Bangla)',
+                label: 'Member Type Name (Bangla)',
                 type: 'text',
                 required: true
             },
@@ -86,6 +94,11 @@ export class EmployeeType {
     ) {}
 
     ngOnInit(): void {
+        const _perms = this._userMenuService.getPermissionsByRoute(this._router.url);
+        this.canInsert = _perms.canInsert;
+        this.canUpdate = _perms.canUpdate;
+        this.canDelete = _perms.canDelete;
+
         this.initForm();
         this.getCommonCodeWithPaging({
             first: this.first,
@@ -133,7 +146,7 @@ export class EmployeeType {
                 this.messageService.add({
                     severity: 'error',
                     summary: 'Error',
-                    detail: 'Failed to load data'
+                    detail: err?.error?.message || 'Failed to load data'
                 });
                 this.loading = false;
             }
@@ -186,7 +199,7 @@ export class EmployeeType {
                 this.messageService.add({
                     severity: 'error',
                     summary: 'Error',
-                    detail: 'Failed to create employee-type'
+                    detail: err?.error?.message || 'Failed to create employee-type'
                 });
                 this.isSubmitting = false;
             }
@@ -222,7 +235,7 @@ export class EmployeeType {
                 this.messageService.add({
                     severity: 'error',
                     summary: 'Error',
-                    detail: 'Failed to update employee-type'
+                    detail: err?.error?.message || 'Failed to update employee-type'
                 });
                 this.isSubmitting = false;
             }
@@ -269,7 +282,7 @@ export class EmployeeType {
                         this.messageService.add({
                             severity: 'error',
                             summary: 'Error',
-                            detail: 'Failed to delete employee-type'
+                            detail: err?.error?.message || 'Failed to delete employee-type'
                         });
                     }
                 });

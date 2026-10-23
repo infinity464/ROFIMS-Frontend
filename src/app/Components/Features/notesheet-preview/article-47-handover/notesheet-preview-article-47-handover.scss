@@ -1,0 +1,19 @@
+/* Article 47 Handover page margins — left 1in (25.4mm), right 0.4in (10.16mm).
+   The shared notesheet-preview.scss gives every preview a 6mm side padding on
+   .a4-paper; this file is loaded LAST in the component's styleUrls so these
+   longhands win, and Angular's view encapsulation keeps them scoped to this
+   preview alone. Top/bottom padding is untouched.
+
+   The PDF (@page insets in buildJsReportPdf) and Word (section page margins in
+   buildWordDocument) exports carry the same two values — keep all three in sync. */
+.a4-paper {
+    padding-left: 25.4mm;
+    padding-right: 10.16mm;
+}
+
+@media print {
+    .a4-paper {
+        padding-left: 25.4mm !important;
+        padding-right: 10.16mm !important;
+    }
+}

@@ -1,0 +1,30 @@
+:host {
+    display: block;
+}
+
+.action-banner {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.5rem 0.75rem;
+    padding: 0.75rem 1rem;
+    border-radius: 0.75rem;
+    border: 1px solid var(--primary-color);
+    background: var(--primary-50, rgba(16, 185, 129, 0.05));
+
+    .pi {
+        color: var(--primary-color);
+        font-size: 1.1rem;
+    }
+
+    .action-banner-title {
+        font-weight: 700;
+        color: var(--primary-color);
+    }
+
+    .action-banner-sub {
+        color: var(--text-color-secondary, #6b7280);
+        font-size: 0.9rem;
+        flex: 1 1 100%;
+    }
+}

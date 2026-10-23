@@ -1,0 +1,43 @@
+<p-fluid>
+    <div class="card">
+        <div class="flex items-center justify-between flex-wrap gap-3 mb-5">
+            <div class="font-semibold text-xl">{{ title }} Setup</div>
+            <div class="flex items-center gap-2">
+                <label class="text-sm font-medium whitespace-nowrap">Filter by Type</label>
+                <p-select
+                    [(ngModel)]="selectedFilterType"
+                    [options]="filterTypeOptions"
+                    optionLabel="label"
+                    optionValue="value"
+                    (onChange)="onFilterTypeChange()"
+                    styleClass="w-56">
+                </p-select>
+            </div>
+        </div>
+
+        <app-dynamic-form
+            [config]="formConfig"
+            [form]="form"
+            [editingId]="editingId"
+            (save)="submit($event)"
+            (reset)="resetForm()"
+            [isSubmitting]="isSubmitting"
+            [canInsert]="canInsert"
+            [canUpdate]="canUpdate">
+        </app-dynamic-form>
+    </div>
+</p-fluid>
+
+<app-data-table
+    [config]="tableConfig"
+    [data]="data"
+    [first]="first"
+    [totalRecords]="totalRecords"
+    [rows]="rows"
+    [loading]="loading"
+    (edit)="update($event)"
+    (delete)="delete($event.row, $event.event)"
+    (lazyLoad)="load($event)"
+    (search)="onSearch($event)"
+    [canUpdate]="canUpdate" [canDelete]="canDelete">
+</app-data-table>

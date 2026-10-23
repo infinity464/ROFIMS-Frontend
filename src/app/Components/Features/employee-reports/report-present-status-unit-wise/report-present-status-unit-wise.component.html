@@ -1,0 +1,167 @@
+<!-- ── Results card ─────────────────────────────────────────────────────── -->
+<div class="report-results-card">
+
+    <!-- Header: toolbar + centered title -->
+    <div class="report-results-header">
+
+        <div class="report-toolbar-row">
+            <div class="report-filter-block">
+                <!-- Unit (Battalion) -->
+                <label class="filter-label">{{ lang === 'en' ? 'Unit:' : 'ইউনিট:' }}</label>
+                <p-select
+                    [options]="unitOptions"
+                    [(ngModel)]="selectedRabUnitId"
+                    optionValue="value"
+                    [showClear]="false"
+                    appendTo="body"
+                    styleClass="posting-status-select">
+                    <ng-template let-opt pTemplate="selectedItem">{{ unitOptionLabel(opt) }}</ng-template>
+                    <ng-template let-opt pTemplate="item">{{ unitOptionLabel(opt) }}</ng-template>
+                </p-select>
+
+                <!-- From Date -->
+                <label class="filter-label">{{ lang === 'en' ? 'From:' : 'হতে:' }}</label>
+                <p-datepicker
+                    [(ngModel)]="fromDate"
+                    dateFormat="dd-mm-yy"
+                    [showIcon]="true"
+                    styleClass="date-filter-picker">
+                </p-datepicker>
+
+                <!-- To Date -->
+                <label class="filter-label">{{ lang === 'en' ? 'To:' : 'পর্যন্ত:' }}</label>
+                <p-datepicker
+                    [(ngModel)]="toDate"
+                    dateFormat="dd-mm-yy"
+                    [showIcon]="true"
+                    styleClass="date-filter-picker">
+                </p-datepicker>
+
+                <!-- Posting Status -->
+                <label class="filter-label">{{ lang === 'en' ? 'Posting Status:' : 'পোস্টিং স্ট্যাটাস:' }}</label>
+                <p-select
+                    [options]="postingStatusOptions"
+                    [(ngModel)]="selectedPostingStatus"
+                    optionLabel="label"
+                    optionValue="value"
+                    [showClear]="false"
+                    appendTo="body"
+                    styleClass="posting-status-select">
+                </p-select>
+
+                <!-- Present Status Type -->
+                <label class="filter-label">{{ lang === 'en' ? 'Status Type:' : 'স্ট্যাটাস টাইপ:' }}</label>
+                <p-select
+                    [options]="presentStatusTypeOptions"
+                    [(ngModel)]="selectedPresentStatusType"
+                    optionLabel="label"
+                    optionValue="value"
+                    [showClear]="false"
+                    appendTo="body"
+                    styleClass="posting-status-select">
+                </p-select>
+
+                <!-- Search Button -->
+                <button type="button" class="report-btn-search" (click)="search()" [disabled]="loading">
+                    <i class="pi pi-search" style="font-size:12px"></i>
+                    {{ lang === 'en' ? 'Search' : 'খুঁজুন' }}
+                </button>
+            </div>
+
+            <div class="report-results-actions">
+                <button type="button" class="report-lang-toggle" (click)="toggleLang()">
+                    {{ lang === 'en' ? 'বাংলা' : 'English' }}
+                </button>
+
+                <div class="report-export-wrap">
+                    <button type="button" class="report-btn-export"
+                            (click)="toggleExportDropdown($event)"
+                            [disabled]="loading || exporting || rows.length === 0">
+                        @if (exporting) {
+                            <i class="pi pi-spin pi-spinner" style="font-size:13px"></i>
+                            Generating...
+                        } @else {
+                            <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
+                                <path d="M6.5 1v7M3.5 5.5l3 3 3-3M1.5 10.5h10"
+                                      stroke="currentColor" stroke-width="1.5"
+                                      stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                            Export
+                        }
+                    </button>
+
+                    @if (exportDropdownOpen) {
+                        <div class="report-export-dropdown" (click)="$event.stopPropagation()">
+                            <button type="button" class="report-export-item report-export-print"
+                                    (click)="exportAs('print')">
+                                <i class="pi pi-print" style="font-size:0.75rem"></i> Print
+                            </button>
+                            <button type="button" class="report-export-item report-export-word"
+                                    (click)="exportAs('word')">
+                                <span class="report-export-icon">&#11015;</span> Word
+                            </button>
+                            <button type="button" class="report-export-item report-export-excel"
+                                    (click)="exportAs('excel')">
+                                <span class="report-export-icon">&#11015;</span> Excel
+                            </button>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+
+        <div class="report-header-title-block">
+            <div class="report-main-title">{{ titleLabel }}</div>
+            <div class="report-date-line">{{ dateLine }}</div>
+            <div class="report-generate-line">{{ generateDateLabel }}</div>
+        </div>
+    </div>
+
+    <!-- Loading skeleton -->
+    <div *ngIf="loading" class="skeleton-wrapper">
+        <div *ngFor="let i of [1,2,3,4,5,6]" class="skeleton-row"></div>
+    </div>
+
+    <!-- Table -->
+    <div class="report-table-wrap" *ngIf="!loading">
+        <table class="report-table pivot-table">
+            <thead>
+                <tr>
+                    <th class="ser-col">{{ serHeader }}</th>
+                    <th class="unit-col">{{ unitHeader }}</th>
+                    <th *ngFor="let col of monthColumns" class="month-col">{{ colLabel(col) }}</th>
+                    <th class="month-col total-col">{{ totalHeader }}</th>
+                    <th class="rmks-col">{{ rmksHeader }}</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr *ngFor="let row of rows; let i = index">
+                    <td class="num-cell">{{ fmt(i + 1) }}</td>
+                    <td class="unit-name">{{ rowLabel(row) }}</td>
+                    <td *ngFor="let col of monthColumns" class="num-cell">
+                        {{ fmt(cellValue(row, col.monthNumber)) }}
+                    </td>
+                    <td class="num-cell total-col">{{ fmt(row.total) }}</td>
+                    <td class="rmks-cell"></td>
+                </tr>
+            </tbody>
+            <tfoot>
+                <tr class="totals-row">
+                    <td></td>
+                    <td class="totals-label">{{ totalHeader }}</td>
+                    <td *ngFor="let col of monthColumns" class="num-cell">
+                        {{ fmt(colTotalValue(col.monthNumber)) }}
+                    </td>
+                    <td class="num-cell total-col">{{ fmt(grandTotal) }}</td>
+                    <td></td>
+                </tr>
+            </tfoot>
+        </table>
+
+        <div *ngIf="rows.length === 0 || monthColumns.length === 0" class="empty-state">
+            <i class="pi pi-inbox"></i>
+            <p>{{ lang === 'en' ? 'No data found.' : 'কোনো তথ্য পাওয়া যায়নি।' }}</p>
+        </div>
+    </div>
+
+</div>

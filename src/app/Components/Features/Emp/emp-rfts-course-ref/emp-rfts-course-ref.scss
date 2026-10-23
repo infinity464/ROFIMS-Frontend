@@ -1,0 +1,8 @@
+// RFTS Course / Reference component styles.
+// Layout comes from the Tailwind utility classes in the template; this file
+// only holds the bits that need real CSS.
+
+:host ::ng-deep .p-datepicker,
+:host ::ng-deep .p-datepicker-input {
+    width: 100%;
+}

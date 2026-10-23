@@ -2,14 +2,182 @@
     display: block;
 }
 
-// Ensure image preview container stays within bounds
+// Image preview container (component-specific)
 .image-preview-container {
     position: relative;
     overflow: hidden;
     max-width: 220px;
 }
 
-// Ensure the card content doesn't overflow
-.card {
-    overflow: visible;
+// Profile photo thumbnail styles (component-specific)
+.profile-photo-wrapper {
+    text-align: center;
+}
+
+.profile-photo-container {
+    width: 80px;
+    height: 100px;
+    margin: 0 auto;
+    border-radius: 8px;
+    overflow: hidden;
+    border: 2px solid var(--surface-border, #dee2e6);
+    background: var(--surface-100, #f8f9fa);
+    cursor: pointer;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+
+    &:hover {
+        border-color: var(--primary-color, #3B82F6);
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+    }
+}
+
+.profile-photo {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    display: block;
+}
+
+.profile-photo-placeholder {
+    width: 80px;
+    height: 100px;
+    margin: 0 auto;
+    border-radius: 8px;
+    border: 2px dashed var(--surface-border, #dee2e6);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background: var(--surface-50, #fafafa);
+}
+
+// Files section: spacing between rows and button
+.files-section {
+    .file-row + .file-row {
+        margin-top: 1rem;
+    }
+    ::ng-deep .add-file-btn {
+        margin-top: 1rem;
+    }
+}
+
+// Each file row: card-style with subtle shadow, professional look
+.file-row {
+    background: var(--p-content-background, #fff);
+    border-radius: var(--p-border-radius-md, 0.5rem);
+    padding: 1.25rem 1.5rem;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+    border: 1px solid rgba(0, 0, 0, 0.06);
+    transition: box-shadow 0.2s ease;
+
+    &:hover {
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    }
+
+    // Responsive: stack on tablets (768px - 991px)
+    @media (max-width: 991px) {
+        padding: 1rem;
+
+        > div {
+            flex-direction: column !important;
+            align-items: stretch !important;
+
+            > div {
+                margin-bottom: 1rem;
+                min-width: 100% !important;
+                max-width: 100% !important;
+                flex: 1 1 100% !important;
+            }
+        }
+    }
+
+    // Responsive: stack on mobile (below 768px)
+    @media (max-width: 767px) {
+        padding: 1rem 0.75rem;
+
+        > div {
+            flex-direction: column !important;
+            align-items: stretch !important;
+            gap: 0.75rem !important;
+
+            > div {
+                margin-bottom: 0.5rem;
+                min-width: 100% !important;
+                max-width: 100% !important;
+                flex: 1 1 100% !important;
+                padding-top: 0 !important;
+            }
+        }
+    }
+}
+
+// File row delete button
+.file-row-delete-btn {
+    flex: 0 0 50px;
+    display: flex;
+    justify-content: flex-end;
+    align-items: flex-start;
+    padding-top: 32px;
+
+    @media (max-width: 991px) {
+        flex: 1 1 100%;
+        justify-content: flex-end;
+        align-items: center;
+        padding-top: 0;
+    }
+
+    @media (max-width: 767px) {
+        flex: 1 1 100%;
+        justify-content: flex-end;
+        align-items: center;
+        padding-top: 0;
+    }
+}
+
+// Add new file: small, compact button (narrow width)
+::ng-deep .add-file-btn {
+    font-weight: 500 !important;
+    font-size: 0.875rem !important;
+    padding: 0.4rem 0.75rem !important;
+    min-width: unset !important;
+    .p-button-icon {
+        margin-right: 0.35rem;
+        font-size: 0.875rem;
+    }
+}
+
+:host ::ng-deep .file-section-compact {
+  app-file-references-form h3 {
+    font-size: 1rem !important;
+    font-weight: 600 !important;
+    color: var(--text-color-secondary) !important;
+    margin-bottom: 0.5rem !important;
+  }
+}
+
+/* Profile link style to match presently-serving-members */
+.report-link-profile {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: var(--primary-color);
+  text-decoration: none;
+  padding: 4px 10px;
+  border-radius: 6px;
+  transition: background 0.15s, color 0.15s;
+}
+
+.report-link-profile:hover {
+  background: var(--report-accent-bg);
+  color: var(--primary-color);
+}
+
+:host-context(.app-dark) .report-link-profile {
+  color: var(--primary-color);
+}
+
+:host-context(.app-dark) .report-link-profile:hover {
+  background: var(--report-accent-bg);
 }

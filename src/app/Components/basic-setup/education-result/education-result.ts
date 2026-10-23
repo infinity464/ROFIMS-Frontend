@@ -1,4 +1,6 @@
-import { Component } from '@angular/core';
+import { Component, inject } from '@angular/core';
+import { UserMenuService } from '@/services/user-menu.service';
+import { Router } from '@angular/router';
 import { CommonCode } from '../shared/models/common-code';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { MasterBasicSetupService } from '../shared/services/MasterBasicSetupService';
@@ -19,6 +21,12 @@ import { SharedService } from '@/shared/services/shared-service';
     styleUrl: './education-result.scss'
 })
 export class EducationResult {
+    private _router = inject(Router);
+    private _userMenuService = inject(UserMenuService);
+    canInsert = true;
+    canUpdate = true;
+    canDelete = true;
+
     codeType: string = 'EducationResult';
     title: string = 'Education Result';
     commonCodeData: CommonCode[] = [];
@@ -87,6 +95,11 @@ export class EducationResult {
     ) {}
 
     ngOnInit(): void {
+        const _perms = this._userMenuService.getPermissionsByRoute(this._router.url);
+        this.canInsert = _perms.canInsert;
+        this.canUpdate = _perms.canUpdate;
+        this.canDelete = _perms.canDelete;
+
         this.initForm();
         this.getCommonCodeWithPaging({
             first: this.first,
@@ -134,7 +147,7 @@ export class EducationResult {
                 this.messageService.add({
                     severity: 'error',
                     summary: 'Error',
-                    detail: 'Failed to load data'
+                    detail: err?.error?.message || 'Failed to load data'
                 });
                 this.loading = false;
             }
@@ -187,7 +200,7 @@ export class EducationResult {
                 this.messageService.add({
                     severity: 'error',
                     summary: 'Error',
-                    detail: 'Failed to create education result'
+                    detail: err?.error?.message || 'Failed to create education result'
                 });
                 this.isSubmitting = false;
             }
@@ -223,7 +236,7 @@ export class EducationResult {
                 this.messageService.add({
                     severity: 'error',
                     summary: 'Error',
-                    detail: 'Failed to update'
+                    detail: err?.error?.message || 'Failed to update'
                 });
                 this.isSubmitting = false;
             }
@@ -270,7 +283,7 @@ export class EducationResult {
                         this.messageService.add({
                             severity: 'error',
                             summary: 'Error',
-                            detail: 'Failed to delete education result'
+                            detail: err?.error?.message || 'Failed to delete education result'
                         });
                     }
                 });

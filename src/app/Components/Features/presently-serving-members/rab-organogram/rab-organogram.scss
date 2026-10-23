@@ -1,0 +1,266 @@
+.rab-organogram-shell {
+    padding: 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+/* ═══════ HEADER CARD ═══════ */
+.header-card {
+    background: #ffffff;
+    border: 0.5px solid var(--p-surface-border);
+    border-radius: 12px;
+    padding: 1.25rem 1.5rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.75rem;
+    position: relative;
+    transition: background-color 0.2s ease;
+}
+
+.dark-mode .header-card {
+    background: #1e1e1e;
+    border-color: var(--p-surface-700);
+}
+
+.header-top-row {
+    position: absolute;
+    top: 0.75rem;
+    right: 0.75rem;
+}
+
+.header-center {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.35rem;
+}
+
+.header-title {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--p-text-color);
+    letter-spacing: 0.04em;
+}
+
+.count-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.4rem 1rem;
+    border-radius: 6px;
+    border: 1px solid rgba(29, 158, 117, 0.25);
+    background: rgba(29, 158, 117, 0.08);
+    color: #1d9e75;
+    font-size: 0.875rem;
+    font-weight: 600;
+    cursor: default;
+    user-select: none;
+}
+
+.chip-divider {
+    width: 1px;
+    height: 1rem;
+    background: rgba(29, 158, 117, 0.3);
+}
+
+.dark-mode .count-chip {
+    background: rgba(29, 158, 117, 0.12);
+    color: #5ee6b8;
+    border-color: rgba(94, 230, 184, 0.25);
+}
+
+.dark-mode .chip-divider {
+    background: rgba(94, 230, 184, 0.3);
+}
+
+.refresh-action {
+    width: 2rem;
+    height: 2rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 0.5px solid var(--p-surface-border);
+    border-radius: 8px;
+    background: none;
+    cursor: pointer;
+    color: var(--p-text-muted-color);
+    transition: all 0.2s ease;
+
+    &:hover:not(:disabled) {
+        background: var(--p-surface-hover);
+    }
+
+    &:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+    }
+}
+
+/* ═══════ TOGGLE CHIPS ═══════ */
+.header-toggles {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+    justify-content: center;
+}
+
+.toggle-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.3rem 0.75rem;
+    border-radius: 999px;
+    border: 0.5px solid var(--p-surface-border);
+    background: none;
+    font-size: 0.688rem;
+    font-weight: 500;
+    color: var(--p-text-muted-color);
+    cursor: pointer;
+    transition: all 0.2s ease;
+    white-space: nowrap;
+
+    i {
+        font-size: 0.688rem;
+    }
+
+    &:hover {
+        background: var(--p-surface-hover);
+    }
+
+    &.active {
+        background: var(--p-primary-100);
+        border-color: var(--p-primary-color);
+        color: var(--p-primary-color);
+    }
+}
+
+.dark-mode .toggle-chip.active {
+    background: rgba(var(--p-primary-color-rgb, 59, 130, 246), 0.15);
+}
+
+/* ═══════ GRID LOADING ═══════ */
+.grid-loading {
+    text-align: center;
+    padding: 3rem 1rem;
+    font-size: 0.875rem;
+    color: var(--p-text-muted-color);
+
+    i {
+        margin-right: 0.5rem;
+    }
+}
+
+/* ═══════ CARDS GRID — flex so hidden cards auto-adjust width ═══════ */
+.cards-grid {
+    display: flex;
+    gap: 1rem;
+    align-items: stretch;
+}
+
+/* ═══════ INDIVIDUAL CARD ═══════ */
+.org-card {
+    flex: 1 1 0;
+    min-width: 0;
+    background: #ffffff;
+    border: 0.5px solid var(--p-surface-border);
+    border-radius: 12px;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    transition: background-color 0.2s ease;
+}
+
+.dark-mode .org-card {
+    background: #1e1e1e;
+    border-color: var(--p-surface-700);
+}
+
+.card-header {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.875rem 1rem;
+    border-bottom: 0.5px solid var(--p-surface-border);
+}
+
+.card-badge {
+    font-size: 0.625rem;
+    font-weight: 600;
+    padding: 0.25rem 0.6rem;
+    border-radius: 999px;
+    color: #fff;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    min-width: 2rem;
+    text-align: center;
+}
+
+.card-header-text {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 0.1rem;
+    min-width: 0;
+}
+
+.card-title {
+    font-size: 0.813rem;
+    font-weight: 600;
+    color: var(--p-text-color);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.card-subtitle {
+    font-size: 0.688rem;
+    color: var(--p-text-muted-color);
+    font-weight: 500;
+}
+
+.card-body {
+    flex: 1;
+    padding: 0.5rem;
+    overflow: visible;
+}
+
+.tree-wrap {
+    overflow: visible;
+}
+
+.card-loading,
+.card-empty {
+    font-size: 0.813rem;
+    color: var(--p-text-muted-color);
+    text-align: center;
+    padding: 1.5rem 0.5rem;
+}
+
+/* ═══════ RESPONSIVE ═══════ */
+@media (max-width: 1200px) {
+    .cards-grid {
+        flex-wrap: wrap;
+    }
+
+    .org-card {
+        flex: 1 1 calc(50% - 0.5rem);
+        min-width: calc(50% - 0.5rem);
+    }
+}
+
+@media (max-width: 768px) {
+    .cards-grid {
+        flex-direction: column;
+    }
+
+    .org-card {
+        flex: none;
+        width: 100%;
+    }
+
+    .header-card {
+        padding: 1rem;
+    }
+}

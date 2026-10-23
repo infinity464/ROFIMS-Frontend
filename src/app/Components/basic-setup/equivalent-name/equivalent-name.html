@@ -11,7 +11,9 @@
             [editingId]="editingId"
             (save)="submit($event)"
             (reset)="resetForm()"
-            [isSubmitting]="isSubmitting">
+            [isSubmitting]="isSubmitting"
+            [canInsert]="canInsert"
+            [canUpdate]="canUpdate">
         </app-dynamic-form>
           </div>
 </p-fluid>
@@ -23,8 +25,9 @@
             [totalRecords]="totalRecords"
             [rows]="rows"
             [loading]="loading"
+            [lazy]="false"
             (edit)="update($event)"
-             (delete)="delete($event.row, $event.event)"
-            (lazyLoad)="getCommonCodeWithPaging($event)"
-            (search)="onSearch($event)">
+            (delete)="delete($event.row, $event.event)"
+            (search)="onSearch($event)"
+    [canUpdate]="canUpdate" [canDelete]="canDelete">
         </app-data-table>

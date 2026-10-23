@@ -1,0 +1,447 @@
+:host {
+    display: block;
+}
+
+/* Filter field: label on TOP of dropdown, not beside */
+.dist-filter-field {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.35rem;
+}
+
+.dist-dropdown-label {
+    display: block;
+    font-weight: 600;
+    text-transform: uppercase;
+    color: var(--primary-color, #22c55e);
+    width: 100%;
+}
+
+.dist-filter-field__input {
+    display: block;
+    width: 100%;
+    min-width: 180px;
+}
+
+.dist-filter-field--btn .dist-filter-field__input {
+    min-width: auto;
+}
+
+.dist-edit-hint {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 0.75rem;
+    margin-bottom: 0.75rem;
+    font-size: 0.85rem;
+    color: var(--primary-color, #22c55e);
+    background: rgba(34, 197, 94, 0.06);
+    border: 1px solid rgba(34, 197, 94, 0.2);
+    border-radius: 6px;
+}
+
+.dist-summary-wrap {
+    /* Scroll inside the wrap (both axes) so the sticky rank header and the frozen
+       Office column pin to the wrap's edges. max-height fills the viewport (not a
+       small box) — only kicks in once the table is taller than the screen. */
+    overflow: auto;
+    max-height: calc(100vh - 8rem);
+
+    /* Hide the VERTICAL scrollbar (still scrolls via wheel/trackpad) while keeping
+       the horizontal one visible. Defining the base scrollbar switches WebKit into
+       custom-styling mode so the per-axis rule below is honoured. */
+    &::-webkit-scrollbar {
+        height: 10px;   /* horizontal bar thickness */
+        width: 0;       /* collapse the vertical track */
+    }
+    &::-webkit-scrollbar:vertical {
+        display: none;
+    }
+    &::-webkit-scrollbar-thumb {
+        background: rgba(148, 163, 184, 0.5);
+        border-radius: 4px;
+    }
+}
+
+.dist-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.9rem;
+
+    thead tr {
+        border-bottom: 2px solid var(--surface-border);
+    }
+
+    tfoot tr.dist-row--footer {
+        border-top: 2px solid var(--surface-border);
+    }
+
+    th, td {
+        padding: 0.6rem 1rem;
+        text-align: left;
+        white-space: nowrap;
+        border-bottom: 1px solid var(--surface-border);
+    }
+
+    th {
+        font-weight: 600;
+        color: var(--text-color);
+        background: transparent;
+    }
+
+    .dist-table__rank,
+    .dist-table__total,
+    .dist-table__cell {
+        text-align: right;
+    }
+
+    .dist-table__office {
+        min-width: 12rem;
+    }
+
+    /* Freeze the Office (tree) column: it stays put while rank columns scroll
+       horizontally. Needs an opaque background so scrolled cells don't bleed
+       through, and a divider so the frozen column reads as separate. */
+    th.dist-table__office,
+    td.dist-table__office {
+        position: sticky;
+        left: 0;
+        z-index: 2;
+        background: var(--surface-card, var(--surface-0, #1e1e1e));
+        border-right: 1px solid var(--surface-border);
+    }
+    /* Header office cell must sit above both the frozen column and the
+       scrolling header cells. */
+    thead th.dist-table__office {
+        z-index: 3;
+    }
+    /* Footer total stays opaque while frozen too. */
+    tfoot td.dist-table__office {
+        z-index: 2;
+    }
+
+    /* Freeze the header row: rank columns stay visible while scrolling vertically.
+       Opaque background so body rows don't show through as they scroll under it. */
+    thead th {
+        position: sticky;
+        top: 0;
+        z-index: 4;
+        background: var(--surface-card, var(--surface-0, #1e1e1e));
+    }
+    /* Top-left corner cell is frozen on BOTH axes — must sit above everything. */
+    thead th.dist-table__office {
+        z-index: 5;
+    }
+
+    /* Row hover: highlight the whole row and emphasize the node (office) name.
+       The frozen office cell needs the same hover background re-applied so it
+       doesn't keep its default opaque colour while the rest of the row lights up. */
+    tbody tr:hover td {
+        background: var(--surface-hover, rgba(255, 255, 255, 0.06));
+    }
+    tbody tr:hover td.dist-table__office {
+        background: var(--surface-hover, rgba(255, 255, 255, 0.06));
+    }
+    tbody tr:hover .tree-label {
+        color: var(--primary-color);
+        font-weight: 600;
+        letter-spacing: 0.2px;
+    }
+    tbody tr:hover .tree-marker {
+        transform: scale(1.15);
+    }
+    .tree-label {
+        transition: color 0.12s ease, font-weight 0.12s ease;
+    }
+    .tree-marker {
+        transition: transform 0.12s ease;
+    }
+
+    .dist-table__rank,
+    .dist-table__cell {
+        min-width: 5rem;
+    }
+
+    .dist-table__total {
+        min-width: 5rem;
+        font-weight: 600;
+    }
+
+    /* Unit row: bold */
+    .dist-row--unit td {
+        font-weight: 700;
+    }
+
+    /* Wing, Branch, Sub-Branch, Section, Sub-Section: normal weight */
+    .dist-row--wing td,
+    .dist-row--branch td,
+    .dist-row--subbranch td,
+    .dist-row--section td,
+    .dist-row--subsection td {
+        font-weight: 400;
+    }
+
+    /* Footer total row */
+    .dist-row--footer td {
+        font-weight: 700;
+        background: transparent;
+    }
+
+    /* Body office cell needs zero vertical padding so tree connectors span full row height */
+    tbody td.dist-table__office {
+        padding-top: 0;
+        padding-bottom: 0;
+        height: 1px; /* trick so inner flex children can stretch */
+    }
+
+    /* Tree connector row */
+    .tree-row {
+        display: flex;
+        align-items: stretch;
+        min-height: 2.25rem;
+        height: 100%;
+        font-weight: inherit;
+    }
+
+    .tree-pipe,
+    .tree-connector {
+        flex: 0 0 auto;
+        width: 22px;
+        position: relative;
+        align-self: stretch;
+        /* Default line color — overridden by per-level rules below */
+        --tree-line-color: #94a3b8;
+        --tree-line-width: 2px;
+    }
+
+    /* Per-level palette (applied to pipes, connectors and markers via data-level) */
+    [data-level='0'] { --tree-line-color: #3b82f6; } /* blue   — Unit */
+    [data-level='1'] { --tree-line-color: #10b981; } /* emerald — Wing */
+    [data-level='2'] { --tree-line-color: #f59e0b; } /* amber  — Branch */
+    [data-level='3'] { --tree-line-color: #ef4444; } /* red    — Sub-Branch */
+    [data-level='4'] { --tree-line-color: #8b5cf6; } /* violet — Section */
+    [data-level='5'] { --tree-line-color: #ec4899; } /* pink   — Sub-Section */
+
+    /* Vertical pipe through ancestor column */
+    .tree-pipe::before {
+        content: '';
+        position: absolute;
+        left: 10px;
+        top: 0;
+        bottom: 0;
+        width: var(--tree-line-width);
+        background: var(--tree-line-color);
+        border-radius: 2px;
+    }
+    .tree-pipe.tree-pipe--blank::before {
+        display: none;
+    }
+
+    /* Elbow connector at current node */
+    .tree-connector::before {
+        /* vertical segment */
+        content: '';
+        position: absolute;
+        left: 10px;
+        top: 0;
+        width: var(--tree-line-width);
+        height: 50%;
+        background: var(--tree-line-color);
+        border-radius: 2px;
+    }
+    .tree-connector.tree-connector--mid::before {
+        /* ├ — vertical runs full height */
+        height: 100%;
+    }
+    .tree-connector::after {
+        /* horizontal segment to the right */
+        content: '';
+        position: absolute;
+        left: 10px;
+        top: 50%;
+        width: 12px;
+        height: var(--tree-line-width);
+        background: var(--tree-line-color);
+        border-radius: 2px;
+        transform: translateY(-50%);
+    }
+
+    .tree-marker {
+        flex: 0 0 auto;
+        width: 18px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        margin-right: 6px;
+        margin-left: 2px;
+        color: var(--tree-line-color);
+    }
+    .tree-marker--parent {
+        font-size: 0.65rem;
+    }
+    .tree-marker--leaf {
+        font-size: 1.2rem;
+        line-height: 1;
+    }
+
+    .tree-label {
+        display: inline-flex;
+        align-items: center;
+        white-space: nowrap;
+    }
+
+    /* Editable cell */
+    .dist-table__cell--editable {
+        cursor: pointer;
+        transition: background 0.12s;
+        &:hover { background: var(--surface-hover, #f1f5f9); }
+    }
+
+    .dist-table__cell--saving {
+        opacity: 0.6;
+        pointer-events: none;
+    }
+
+    /* Lock toggle button in the Office column */
+    .tree-lock-btn {
+        margin-left: 0.45rem;
+        padding: 0.1rem 0.3rem;
+        border: none;
+        background: transparent;
+        cursor: pointer;
+        color: var(--text-color-secondary, #94a3b8);
+        opacity: 0.55;
+        border-radius: 4px;
+        transition: opacity 0.12s, color 0.12s, background 0.12s;
+
+        &:hover:not(:disabled) { opacity: 1; background: var(--surface-hover, #f1f5f9); }
+        &:disabled { cursor: default; opacity: 0.5; }
+
+        &.tree-lock-btn--locked {
+            color: var(--red-500, #ef4444);
+            opacity: 0.9;
+        }
+
+        i { font-size: 0.75rem; }
+    }
+
+    .tree-lock-static {
+        margin-left: 0.45rem;
+        font-size: 0.72rem;
+        color: var(--red-500, #ef4444);
+        opacity: 0.8;
+    }
+
+    /* Locked (aggregate / parent) cell — not directly editable, but still shown in normal color */
+    .dist-table__cell--locked {
+        cursor: not-allowed;
+    }
+
+    /* Parent cell whose total splits into own + children — hover shows the breakdown */
+    .dist-table__cell--breakdown {
+        text-decoration: underline dotted var(--text-color-secondary, #94a3b8);
+        text-underline-offset: 3px;
+        cursor: help;
+    }
+}
+
+/* Own / Descendants breakdown popover — fixed to viewport, follows the cursor */
+.dist-breakdown-pop {
+    position: fixed;
+    z-index: 1200;
+    transform: translate(-50%, 18px);
+    min-width: 210px;
+    padding: 0.85rem 1rem 0.7rem;
+    background: #1e2233;
+    color: #e2e8f0;
+    border: 1.5px solid #f472b6;
+    border-radius: 14px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45);
+    pointer-events: none;
+    font-size: 0.9rem;
+
+    /* upward arrow centered on the top edge */
+    &::before,
+    &::after {
+        content: '';
+        position: absolute;
+        bottom: 100%;
+        left: 50%;
+        transform: translateX(-50%);
+        border-style: solid;
+    }
+    &::before {
+        border-width: 0 11px 11px 11px;
+        border-color: transparent transparent #f472b6 transparent;
+    }
+    &::after {
+        border-width: 0 9px 9px 9px;
+        border-color: transparent transparent #1e2233 transparent;
+        margin-bottom: -1.5px;
+    }
+
+    &__row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 1.5rem;
+        padding: 0.18rem 0;
+    }
+
+    &__label {
+        color: #94a3b8;
+        font-weight: 600;
+
+        &--total { color: #cbd5e1; }
+    }
+
+    &__val {
+        font-weight: 700;
+        font-variant-numeric: tabular-nums;
+
+        &--own { color: #60a5fa; }
+        &--desc { color: #34d399; }
+        &--total { color: #f472b6; }
+    }
+
+    &__divider {
+        height: 1px;
+        margin: 0.45rem 0;
+        background: rgba(148, 163, 184, 0.25);
+    }
+
+    &__formula {
+        margin-top: 0.4rem;
+        text-align: center;
+        color: #7dd3fc;
+        font-weight: 600;
+        font-variant-numeric: tabular-nums;
+    }
+}
+
+/* Inline cell input */
+.dist-cell-input {
+    width: 60px;
+    padding: 2px 4px;
+    font-size: 0.9rem;
+    text-align: right;
+    border: 1.5px solid var(--primary-color, #22c55e);
+    border-radius: 4px;
+    outline: none;
+    background: var(--surface-card, #fff);
+    color: var(--text-color, #111);
+    caret-color: var(--text-color, #111);
+
+    &:focus {
+        box-shadow: 0 0 0 2px rgba(34, 197, 94, 0.2);
+    }
+
+    /* Hide number spinner arrows */
+    &::-webkit-outer-spin-button,
+    &::-webkit-inner-spin-button {
+        -webkit-appearance: none;
+        margin: 0;
+    }
+    -moz-appearance: textfield;
+}

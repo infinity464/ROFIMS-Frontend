@@ -1,0 +1,33 @@
+.members-table-wrap {
+    width: 100%;
+    overflow-x: auto;
+}
+
+.members-table {
+    width: calc(100% - 8px);
+    border-collapse: collapse;
+    font-size: 7pt;
+    margin: 4px 0 4px 8px;
+    table-layout: fixed;
+
+    th, td {
+        border: 1px solid #000;
+        padding: 4px 6px;
+        text-align: center;
+        word-break: break-word;
+        overflow-wrap: break-word;
+    }
+
+    th {
+        font-weight: 600;
+        background: #f5f5f5;
+        font-size: 7pt;
+        text-transform: uppercase;
+    }
+
+    /* ক্রমিক / SL — 35px so the Bangla header sits on one line. */
+    th:first-child, td:first-child {
+        width: 35px;
+        min-width: 35px;
+    }
+}

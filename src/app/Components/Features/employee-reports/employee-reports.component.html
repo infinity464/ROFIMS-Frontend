@@ -1,0 +1,122 @@
+<div class="employee-reports-page">
+    <div class="report-type-card">
+        <div class="report-page-header">
+            <h1 class="report-page-title">{{ L['en']['report.pageTitle'] }}</h1>
+        </div>
+        <div class="report-type-row">
+            <div class="report-type-field">
+                <div class="rt-label">{{ L['en']['report.reportTypeLabel'] }}</div>
+                <div class="rt-select-wrap">
+                    <p-select
+                        [options]="reportTypes"
+                        [(ngModel)]="reportType"
+                        (ngModelChange)="onReportTypeChange()"
+                        optionLabel="label"
+                        optionValue="value"
+                        [inputId]="'report-type-select'"
+                        [placeholder]="L['en']['report.placeholderReportType']"
+                        appendTo="body"
+                        [filter]="true" />
+                </div>
+            </div>
+            <div class="report-type-field">
+                <div class="rt-label">{{ commonCodeDropdownLabelEn }}</div>
+                <div class="rt-select-wrap">
+                    @if (isMultiSelectType) {
+                        <p-multiSelect
+                            [options]="commonCodeOptions"
+                            [(ngModel)]="selectedTradeValues"
+                            (ngModelChange)="onTradeSelectionChange()"
+                            optionLabel="label"
+                            optionValue="value"
+                            [inputId]="'report-commoncode-select'"
+                            [placeholder]="commonCodePlaceholderEn"
+                            appendTo="body"
+                            [filter]="true"
+                            [virtualScroll]="true"
+                            [virtualScrollItemSize]="38" />
+                    } @else {
+                        <p-select
+                            [options]="commonCodeOptions"
+                            [(ngModel)]="selectedCommonCodeId"
+                            (ngModelChange)="onCommonCodeChange()"
+                            optionLabel="label"
+                            optionValue="value"
+                            [inputId]="'report-commoncode-select'"
+                            [placeholder]="commonCodePlaceholderEn"
+                            appendTo="body"
+                            [filter]="true" />
+                    }
+                </div>
+            </div>
+            <div class="report-type-field">
+                <div class="rt-label">Status</div>
+                <div class="rt-select-wrap">
+                    <p-select
+                        [options]="statusOptions"
+                        [(ngModel)]="selectedPostingStatus"
+                        (ngModelChange)="onStatusChange()"
+                        optionLabel="label"
+                        optionValue="value"
+                        [inputId]="'report-status-select'"
+                        placeholder="Select Status"
+                        appendTo="body"
+                        [disabled]="statusLocked"
+                        [showClear]="!statusLocked" />
+                    @if (statusLocked) {
+                        <small class="rt-field-hint">Locked to Presently Serving — your access scope is restricted.</small>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+
+    @if (hasSelection) {
+        <div>
+            @switch (reportType) {
+                @case ('memberAppointment') {
+                    <app-report-member-appointment [lang]="reportLang" [commonCodeId]="selectedCommonCodeId" [reportTypeLabel]="selectedReportTypeLabel" [commonCodeLabel]="selectedCommonCodeLabel" [postingStatus]="selectedPostingStatus" [statusLabel]="selectedStatusLabel" [statusLabelBn]="selectedStatusLabelBn" (langToggle)="toggleReportLang()" (scopeChange)="onChildScopeChange($event)" />
+                }
+                @case ('batchCourse') {
+                    <app-report-batch-course [lang]="reportLang" [commonCodeId]="selectedCommonCodeId" [reportTypeLabel]="selectedReportTypeLabel" [commonCodeLabel]="selectedCommonCodeLabel" [postingStatus]="selectedPostingStatus" [statusLabel]="selectedStatusLabel" [statusLabelBn]="selectedStatusLabelBn" (langToggle)="toggleReportLang()" (scopeChange)="onChildScopeChange($event)" />
+                }
+                @case ('education') {
+                    <app-report-education [lang]="reportLang" [commonCodeId]="selectedCommonCodeId" [reportTypeLabel]="selectedReportTypeLabel" [commonCodeLabel]="selectedCommonCodeLabel" [postingStatus]="selectedPostingStatus" [statusLabel]="selectedStatusLabel" [statusLabelBn]="selectedStatusLabelBn" (langToggle)="toggleReportLang()" (scopeChange)="onChildScopeChange($event)" />
+                }
+                @case ('motherOrg') {
+                    <app-report-mother-org [lang]="reportLang" [commonCodeId]="selectedCommonCodeId" [reportTypeLabel]="selectedReportTypeLabel" [commonCodeLabel]="selectedCommonCodeLabel" [postingStatus]="selectedPostingStatus" [statusLabel]="selectedStatusLabel" [statusLabelBn]="selectedStatusLabelBn" (langToggle)="toggleReportLang()" (scopeChange)="onChildScopeChange($event)" />
+                }
+                @case ('officerType') {
+                    <app-report-officer-type [lang]="reportLang" [commonCodeId]="selectedCommonCodeId" [reportTypeLabel]="selectedReportTypeLabel" [commonCodeLabel]="selectedCommonCodeLabel" [postingStatus]="selectedPostingStatus" [statusLabel]="selectedStatusLabel" [statusLabelBn]="selectedStatusLabelBn" (langToggle)="toggleReportLang()" (scopeChange)="onChildScopeChange($event)" />
+                }
+                @case ('rabUnit') {
+                    <app-report-rab-unit [lang]="reportLang" [commonCodeId]="selectedCommonCodeId" [reportTypeLabel]="selectedReportTypeLabel" [commonCodeLabel]="selectedCommonCodeLabel" [postingStatus]="selectedPostingStatus" [statusLabel]="selectedStatusLabel" [statusLabelBn]="selectedStatusLabelBn" (langToggle)="toggleReportLang()" (scopeChange)="onChildScopeChange($event)" />
+                }
+                @case ('bloodGroup') {
+                    <app-report-blood-group [lang]="reportLang" [reportTypeLabel]="selectedReportTypeLabel" [commonCodeLabel]="selectedCommonCodeLabel" [postingStatus]="selectedPostingStatus" [statusLabel]="selectedStatusLabel" [statusLabelBn]="selectedStatusLabelBn" (langToggle)="toggleReportLang()" (scopeChange)="onChildScopeChange($event)" />
+                }
+                @case ('personalQualification') {
+                    <app-report-personal-qualification [lang]="reportLang" [commonCodeId]="selectedCommonCodeId" [reportTypeLabel]="selectedReportTypeLabel" [commonCodeLabel]="selectedCommonCodeLabel" [postingStatus]="selectedPostingStatus" [statusLabel]="selectedStatusLabel" [statusLabelBn]="selectedStatusLabelBn" (langToggle)="toggleReportLang()" (scopeChange)="onChildScopeChange($event)" />
+                }
+                @case ('professionalQualification') {
+                    <app-report-professional-qualification [lang]="reportLang" [commonCodeId]="selectedCommonCodeId" [reportTypeLabel]="selectedReportTypeLabel" [commonCodeLabel]="selectedCommonCodeLabel" [postingStatus]="selectedPostingStatus" [statusLabel]="selectedStatusLabel" [statusLabelBn]="selectedStatusLabelBn" (langToggle)="toggleReportLang()" (scopeChange)="onChildScopeChange($event)" />
+                }
+                @case ('specialQualification') {
+                    <app-report-special-qualification [lang]="reportLang" [commonCodeId]="selectedCommonCodeId" [reportTypeLabel]="selectedReportTypeLabel" [commonCodeLabel]="selectedCommonCodeLabel" [postingStatus]="selectedPostingStatus" [statusLabel]="selectedStatusLabel" [statusLabelBn]="selectedStatusLabelBn" (langToggle)="toggleReportLang()" (scopeChange)="onChildScopeChange($event)" />
+                }
+                @case ('rabRank') {
+                    <app-report-rab-rank [lang]="reportLang" [commonCodeId]="selectedCommonCodeId" [reportTypeLabel]="selectedReportTypeLabel" [commonCodeLabel]="selectedCommonCodeLabel" [postingStatus]="selectedPostingStatus" [statusLabel]="selectedStatusLabel" [statusLabelBn]="selectedStatusLabelBn" (langToggle)="toggleReportLang()" (scopeChange)="onChildScopeChange($event)" />
+                }
+                @case ('corps') {
+                    <app-report-corps [lang]="reportLang" [commonCodeIds]="selectedCommonCodeIds" [reportTypeLabel]="selectedReportTypeLabel" [commonCodeLabel]="selectedCommonCodeLabel" [postingStatus]="selectedPostingStatus" [statusLabel]="selectedStatusLabel" [statusLabelBn]="selectedStatusLabelBn" (langToggle)="toggleReportLang()" (scopeChange)="onChildScopeChange($event)" />
+                }
+                @case ('trade') {
+                    <app-report-trade [lang]="reportLang" [commonCodeIds]="selectedCommonCodeIds" [reportTypeLabel]="selectedReportTypeLabel" [commonCodeLabel]="selectedCommonCodeLabel" [postingStatus]="selectedPostingStatus" [statusLabel]="selectedStatusLabel" [statusLabelBn]="selectedStatusLabelBn" (langToggle)="toggleReportLang()" (scopeChange)="onChildScopeChange($event)" />
+                }
+                @case ('decoration') {
+                    <app-report-decoration [kind]="'decoration'" [lang]="reportLang" [commonCodeIds]="selectedCommonCodeIds" [reportTypeLabel]="selectedReportTypeLabel" [commonCodeLabel]="selectedCommonCodeLabel" [postingStatus]="selectedPostingStatus" [statusLabel]="selectedStatusLabel" [statusLabelBn]="selectedStatusLabelBn" (langToggle)="toggleReportLang()" (scopeChange)="onChildScopeChange($event)" />
+                }
+            }
+        </div>
+    }
+</div>

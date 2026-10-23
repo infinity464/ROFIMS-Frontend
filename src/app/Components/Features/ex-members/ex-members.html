@@ -1,0 +1,304 @@
+<p-toast position="top-center"></p-toast>
+
+<div class="employee-reports-page">
+    <div class="report-filter-card">
+        <div class="report-filter-card-title ex-header-row">
+            <h1 class="report-page-title">Ex-Members List</h1>
+        </div>
+
+        <div class="report-filter-header" [class.open]="filterOpen" (click)="toggleFilter()" role="button" tabindex="0" (keydown.enter)="toggleFilter()" (keydown.space)="toggleFilter()">
+            <div class="report-filter-header-left">
+                <div class="report-filter-icon">
+                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                        <path d="M2 4h12M4 8h8M6 12h4" stroke="var(--primary-color)" stroke-width="1.8" stroke-linecap="round"/>
+                    </svg>
+                </div>
+                <div>
+                    <div class="report-filter-title">Search &amp; filter</div>
+                    <div class="report-filter-subtitle">By ID, name, unit, rank, district, appointment</div>
+                </div>
+            </div>
+            <div class="report-filter-header-right">
+                <span class="report-filters-badge" [class.show]="activeFilterCount > 0">{{ activeFilterCount }} active</span>
+                <div class="report-chevron">
+                    <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+                        <path d="M2 4l4 4 4-4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                </div>
+            </div>
+        </div>
+
+        <div class="report-filter-body" [class.open]="filterOpen">
+            <div class="report-filter-body-inner">
+                <div class="report-fields-row">
+                    <div class="report-filter-field">
+                        <label>RAB ID</label>
+                        <input pInputText type="text" [(ngModel)]="filter.rabId" placeholder="RAB ID" class="w-full" />
+                    </div>
+                    <div class="report-filter-field">
+                        <label>Service ID</label>
+                        <input pInputText type="text" [(ngModel)]="filter.serviceId" placeholder="Service ID" class="w-full" />
+                    </div>
+                    <div class="report-filter-field">
+                        <label>NID ID</label>
+                        <input pInputText type="text" [(ngModel)]="filter.nidId" placeholder="NID ID" class="w-full" />
+                    </div>
+                </div>
+                <div class="report-fields-row">
+                    <div class="report-filter-field">
+                        <label>Name (English)</label>
+                        <input pInputText type="text" [(ngModel)]="filter.nameEnglish" placeholder="Name English" class="w-full" />
+                    </div>
+                    <div class="report-filter-field">
+                        <label>Name (Bangla)</label>
+                        <input pInputText type="text" [(ngModel)]="filter.nameBangla" placeholder="Name Bangla" class="w-full" />
+                    </div>
+                    <div class="report-filter-field">
+                        <label>Employee permanent district</label>
+                        <p-select
+                            [(ngModel)]="filter.wonHomeDistrict"
+                            [options]="districtOptions"
+                            optionLabel="label"
+                            optionValue="value"
+                            placeholder="Select"
+                            [filter]="true"
+                            filterBy="label"
+                            [showClear]="true"
+                            styleClass="w-full"
+                            appendTo="body">
+                        </p-select>
+                    </div>
+                    <div class="report-filter-field">
+                        <label>Wife permanent district</label>
+                        <p-select
+                            [(ngModel)]="filter.spouseHomeDistrict"
+                            [options]="districtOptions"
+                            optionLabel="label"
+                            optionValue="value"
+                            placeholder="Select"
+                            [filter]="true"
+                            filterBy="label"
+                            [showClear]="true"
+                            styleClass="w-full"
+                            appendTo="body">
+                        </p-select>
+                    </div>
+                </div>
+                <div class="report-fields-row">
+                    <div class="report-filter-field">
+                        <label>Mother Organization</label>
+                        <p-select
+                            [(ngModel)]="filter.motherOrg"
+                            [options]="motherOrgOptions"
+                            optionLabel="label"
+                            optionValue="value"
+                            placeholder="Select"
+                            [filter]="true"
+                            filterBy="label"
+                            [showClear]="true"
+                            (onChange)="onMotherOrgChange()"
+                            (onClear)="onMotherOrgChange()"
+                            styleClass="w-full"
+                            appendTo="body">
+                        </p-select>
+                    </div>
+                    <div class="report-filter-field">
+                        <label>RAB Unit</label>
+                        <p-select
+                            [(ngModel)]="filter.rabUnit"
+                            [options]="rabUnitOptions"
+                            optionLabel="label"
+                            optionValue="value"
+                            placeholder="Select"
+                            [filter]="true"
+                            filterBy="label"
+                            [showClear]="true"
+                            styleClass="w-full"
+                            appendTo="body">
+                        </p-select>
+                    </div>
+                    <div class="report-filter-field">
+                        <label>Rank</label>
+                        <p-select
+                            [(ngModel)]="filter.rank"
+                            [options]="rankOptions"
+                            optionLabel="label"
+                            optionValue="value"
+                            placeholder="Select"
+                            [filter]="true"
+                            filterBy="label"
+                            [showClear]="true"
+                            styleClass="w-full"
+                            appendTo="body">
+                        </p-select>
+                    </div>
+                    <div class="report-filter-field">
+                        <label>Corps</label>
+                        <p-select
+                            [(ngModel)]="filter.corps"
+                            [options]="corpsOptions"
+                            optionLabel="label"
+                            optionValue="value"
+                            placeholder="Select"
+                            [filter]="true"
+                            filterBy="label"
+                            [showClear]="true"
+                            (onChange)="onCorpsChange()"
+                            (onClear)="onCorpsChange()"
+                            styleClass="w-full"
+                            appendTo="body">
+                        </p-select>
+                    </div>
+                    <div class="report-filter-field">
+                        <label>Trade</label>
+                        <p-select
+                            [(ngModel)]="filter.trade"
+                            [options]="tradeOptions"
+                            optionLabel="label"
+                            optionValue="value"
+                            placeholder="Select"
+                            [filter]="true"
+                            filterBy="label"
+                            [showClear]="true"
+                            styleClass="w-full"
+                            appendTo="body">
+                        </p-select>
+                    </div>
+                </div>
+                <div class="report-fields-row">
+                    <div class="report-filter-field report-filter-field-date">
+                        <label>RAB duration from</label>
+                        <p-datepicker
+                            [(ngModel)]="filter.durationFrom"
+                            placeholder="From"
+                            dateFormat="dd-mm-yy"
+                            [showIcon]="true"
+                            styleClass="w-full"
+                            appendTo="body">
+                        </p-datepicker>
+                    </div>
+                    <div class="report-filter-field report-filter-field-date">
+                        <label>RAB duration to</label>
+                        <p-datepicker
+                            [(ngModel)]="filter.durationTo"
+                            placeholder="To"
+                            dateFormat="dd-mm-yy"
+                            [showIcon]="true"
+                            styleClass="w-full"
+                            appendTo="body">
+                        </p-datepicker>
+                    </div>
+                    <div class="report-filter-field">
+                        <label>Appointment</label>
+                        <p-select
+                            [(ngModel)]="filter.appointment"
+                            [options]="appointmentOptions"
+                            optionLabel="label"
+                            optionValue="value"
+                            placeholder="Select"
+                            [filter]="true"
+                            filterBy="label"
+                            [showClear]="true"
+                            styleClass="w-full"
+                            appendTo="body">
+                        </p-select>
+                    </div>
+                </div>
+
+                <div class="report-filter-actions">
+                    <button type="button" class="report-btn-secondary" (click)="clearFilter()"><i class="pi pi-times mr-1"></i>Clear</button>
+                    <button type="button" class="report-btn-primary" (click)="search()" [disabled]="loading"><i class="pi pi-search mr-1"></i>Search</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Results card -->
+    <div class="report-filter-card">
+        <h3 class="report-panel-title">Ex-Members ({{ searchText ? filteredList.length : totalRecords }})</h3>
+
+        <div class="ex-results-toolbar">
+            <div class="ex-search-wrap">
+                <span class="ex-search-icon">
+                    <i class="pi pi-search"></i>
+                </span>
+                <input
+                    pInputText
+                    type="text"
+                    placeholder="Search by Service ID / RAB ID"
+                    [(ngModel)]="searchText"
+                    (ngModelChange)="onSearchChange()"
+                    class="ex-search-input" />
+            </div>
+        </div>
+
+        <div class="report-table-wrap">
+            <p-table
+                [value]="filteredList"
+                [lazy]="true"
+                [loading]="loading"
+                [paginator]="true"
+                [first]="first"
+                [rows]="rows"
+                [totalRecords]="totalRecords"
+                [rowsPerPageOptions]="[10, 20, 50]"
+                (onLazyLoad)="onLazyLoad($event)"
+                dataKey="employeeID"
+                [tableStyle]="{ 'min-width': '70rem' }"
+                styleClass="p-datatable-sm"
+                paginatorDropdownAppendTo="body"
+                currentPageReportTemplate="Showing {first} – {last} of {totalRecords}"
+                [showCurrentPageReport]="true">
+                <ng-template pTemplate="header">
+                    <tr>
+                        <th style="width: 4rem;">Ser</th>
+                        <th>Service ID</th>
+                        <th>Rank</th>
+                        <th>Corps</th>
+                        <th>Trade</th>
+                        <th>Name</th>
+                        <th>RAB Unit (Last Posting)</th>
+                        <th>Joining Date in RAB</th>
+                        <th>Home District (Permanent)</th>
+                        <th>Action</th>
+                    </tr>
+                </ng-template>
+                <ng-template pTemplate="body" let-row let-rowIndex="rowIndex">
+                    <tr>
+                        <td><span class="report-ser-num">{{ rowIndex + 1 }}</span></td>
+                        <td><span class="font-semibold">{{ row.serviceId || '—' }}</span></td>
+                        <td>{{ row.armyRank || '—' }}</td>
+                        <td>
+                            @if (row.corps) {
+                                <span class="report-badge-corps">{{ row.corps }}</span>
+                            } @else {
+                                <span class="report-dash">—</span>
+                            }
+                        </td>
+                        <td>{{ row.trade || '—' }}</td>
+                        <td>{{ row.nameEnglish || '—' }}</td>
+                        <td>
+                            @if (row.rabUnit) {
+                                <span class="report-badge-unit">{{ row.rabUnit }}</span>
+                            } @else {
+                                <span class="report-dash">—</span>
+                            }
+                        </td>
+                        <td>{{ formatDate(row.joiningDate) }}</td>
+                        <td>{{ row.permanentDistrictTypeName || '—' }}</td>
+                        <td>
+                            <a [routerLink]="['/members/profile', row.employeeID]" class="report-link-profile" title="View profile">
+                                <i class="pi pi-user"></i> Profile
+                            </a>
+                        </td>
+                    </tr>
+                </ng-template>
+                <ng-template pTemplate="emptymessage">
+                    <tr>
+                        <td colspan="10" class="text-center p-4">No records found.</td>
+                    </tr>
+                </ng-template>
+            </p-table>
+        </div>
+    </div>
+</div>

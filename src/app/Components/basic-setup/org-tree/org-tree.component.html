@@ -1,0 +1,62 @@
+<p-fluid>
+
+  <div class="card org-tree-shell" [class.dark-mode]="isDarkMode()">
+    <header class="org-tree-header">
+      <h2 class="title">Organizational Hierarchy</h2>
+      <div class="header-actions">
+        <button pButton type="button" label="New Unit" icon="pi pi-plus" class="p-button-primary"
+          (click)="openNewUnit()" [disabled]="loading()"></button>
+      </div>
+    </header>
+
+    <div class="tree-panel tree-panel-full">
+      @if (loading()) {
+        <div class="loading-state"><i class="pi pi-spin pi-spinner"></i> Loading…</div>
+      } @else if (treeNodes().length === 0) {
+        <div class="empty-state">No units. Click <strong>+ New Unit</strong> to create one.</div>
+      } @else {
+        <div class="tree-container">
+          @for (node of treeNodes(); track node.id) {
+            <app-tree-node
+              [node]="node"
+              [depth]="0"
+              [loadingParentId]="loadingParentId()"
+              (addChild)="onAddChild($event)"
+              (edit)="onEdit($event)"
+              (delete)="onDelete($event)"
+              (expandRequest)="onExpandRequest($event)"
+              (expandToggled)="onExpandToggled($event)" />
+          }
+        </div>
+      }
+    </div>
+  </div>
+</p-fluid>
+
+<p-dialog
+  [header]="formTitle()"
+  [visible]="formVisible()"
+  (visibleChange)="onDialogVisibleChange($event)"
+  [modal]="true"
+  [dismissableMask]="false"
+  [style]="{ width: '640px' }"
+  [closable]="true"
+  [contentStyle]="{ 'border-top': '2px solid var(--primary-color)' }"
+  (onHide)="onFormCancelled()"
+  [draggable]="false"
+  [resizable]="false"
+  appendTo="body">
+  <app-org-form
+    [mode]="formMode()"
+    [parentNode]="formMode() === 'add-child' ? selectedNode() : null"
+    [editNode]="formMode() === 'edit' ? selectedNode() : null"
+    [siblingCount]="siblingCount()"
+    [breadcrumbPath]="breadcrumbPath()"
+    [submitLabel]="formSubmitLabel()"
+    [cancelLabel]="'Exit'"
+    [hideTitle]="true"
+    (saved)="onFormSaved()"
+    (cancelled)="onFormCancelled()" />
+</p-dialog>
+
+<p-confirmDialog></p-confirmDialog>

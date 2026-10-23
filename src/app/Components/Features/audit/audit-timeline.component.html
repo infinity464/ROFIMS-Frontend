@@ -1,0 +1,143 @@
+<div class="audit-page">
+    <div class="audit-header">
+        <h2>Audit Log</h2>
+        <p class="subtitle">A timeline of every create, update and delete across the system.</p>
+    </div>
+
+    <!-- ── Filter bar ─────────────────────────────────────────────── -->
+    <div class="filter-bar">
+        <p-select
+            [options]="tableOptions()"
+            [(ngModel)]="selectedTable"
+            optionLabel="label"
+            optionValue="value"
+            placeholder="All tables"
+            [filter]="true"
+            styleClass="filter-control">
+        </p-select>
+
+        <p-select
+            [options]="actionOptions"
+            [(ngModel)]="selectedAction"
+            optionLabel="label"
+            optionValue="value"
+            placeholder="All actions"
+            styleClass="filter-control">
+        </p-select>
+
+        <input
+            pInputText
+            type="text"
+            [(ngModel)]="userText"
+            placeholder="User name"
+            class="filter-control"
+            (keyup.enter)="applyFilters()" />
+
+        <p-datepicker
+            [(ngModel)]="dateRange"
+            selectionMode="range"
+            [readonlyInput]="true"
+            placeholder="Date range"
+            dateFormat="dd M yy"
+            [showButtonBar]="true"
+            styleClass="filter-control">
+        </p-datepicker>
+
+        <p-button label="Apply" icon="pi pi-search" (onClick)="applyFilters()"></p-button>
+        <p-button label="Reset" icon="pi pi-times" severity="secondary" [outlined]="true" (onClick)="resetFilters()"></p-button>
+    </div>
+
+    <!-- ── Loading ────────────────────────────────────────────────── -->
+    @if (loading()) {
+        <div class="state-box">
+            <p-progressSpinner strokeWidth="4" [style]="{ width: '48px', height: '48px' }"></p-progressSpinner>
+            <span>Loading audit log…</span>
+        </div>
+    }
+
+    <!-- ── Error ──────────────────────────────────────────────────── -->
+    @else if (error()) {
+        <div class="state-box state-error">
+            <i class="pi pi-exclamation-triangle"></i>
+            <span>{{ error() }}</span>
+            <p-button label="Retry" icon="pi pi-refresh" size="small" (onClick)="load()"></p-button>
+        </div>
+    }
+
+    <!-- ── Empty ──────────────────────────────────────────────────── -->
+    @else if (!hasRows()) {
+        <div class="state-box">
+            <i class="pi pi-inbox" style="font-size: 2rem; opacity: 0.4;"></i>
+            <span>No audit entries match your filters.</span>
+        </div>
+    }
+
+    <!-- ── Timeline ───────────────────────────────────────────────── -->
+    @else {
+        <div class="timeline">
+            @for (row of rows(); track row.id) {
+                <div class="timeline-item" [class.expanded]="row.expanded">
+                    <div class="timeline-marker">
+                        <span [class]="badgeClass(row.action)">{{ row.action }}</span>
+                    </div>
+
+                    <div class="timeline-content">
+                        <button type="button" class="row-head" (click)="toggle(row)">
+                            <div class="row-main">
+                                <span class="summary">{{ row.summary }}</span>
+                                <span class="meta">
+                                    <span class="table-name">{{ row.friendlyTableName }}</span>
+                                    <span class="dot">•</span>
+                                    <span class="user">{{ row.userName || 'Unknown user' }}</span>
+                                    <span class="dot">•</span>
+                                    <span class="time" [pTooltip]="exactTime(row.timestampUtc)" tooltipPosition="top">
+                                        {{ relativeTime(row.timestampUtc) }}
+                                    </span>
+                                </span>
+                            </div>
+                            <i class="pi" [class.pi-chevron-down]="!row.expanded" [class.pi-chevron-up]="row.expanded"></i>
+                        </button>
+
+                        @if (row.expanded) {
+                            <div class="row-detail">
+                                @if (row.diffs.length) {
+                                    <table class="diff-table">
+                                        <thead>
+                                            <tr>
+                                                <th class="col-field">Field</th>
+                                                <th class="col-old">Old</th>
+                                                <th class="col-arrow"></th>
+                                                <th class="col-new">New</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            @for (d of row.diffs; track d.field) {
+                                                <tr>
+                                                    <td class="col-field">{{ d.field }}</td>
+                                                    <td class="col-old"><span class="val val-old">{{ d.oldVal }}</span></td>
+                                                    <td class="col-arrow"><i class="pi pi-arrow-right"></i></td>
+                                                    <td class="col-new"><span class="val val-new">{{ d.newVal }}</span></td>
+                                                </tr>
+                                            }
+                                        </tbody>
+                                    </table>
+                                } @else {
+                                    <p class="no-diff">No field-level details recorded for this change.</p>
+                                }
+                            </div>
+                        }
+                    </div>
+                </div>
+            }
+        </div>
+
+        <!-- ── Pagination ─────────────────────────────────────────── -->
+        <p-paginator
+            [first]="first"
+            [rows]="pageSize"
+            [totalRecords]="total()"
+            [rowsPerPageOptions]="[10, 20, 50, 100]"
+            (onPageChange)="onPage($event)">
+        </p-paginator>
+    }
+</div>

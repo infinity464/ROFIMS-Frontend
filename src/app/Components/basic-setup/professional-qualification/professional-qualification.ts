@@ -1,4 +1,6 @@
-import { Component } from '@angular/core';
+import { Component, inject } from '@angular/core';
+import { UserMenuService } from '@/services/user-menu.service';
+import { Router } from '@angular/router';
 import { FormConfig } from '../shared/models/formConfig';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { MasterBasicSetupService } from '../shared/services/MasterBasicSetupService';
@@ -12,16 +14,23 @@ import { SharedService } from '@/shared/services/shared-service';
 
 @Component({
   selector: 'app-professional-qualification',
-  imports: [DynamicFormComponent,  Fluid, DataTable],
+  imports: [DynamicFormComponent, Fluid, DataTable],
   providers: [],
   templateUrl: './professional-qualification.html',
   styleUrl: './professional-qualification.scss',
 })
 export class ProfessionalQualification {
+    private _router = inject(Router);
+    private _userMenuService = inject(UserMenuService);
+    canInsert = true;
+    canUpdate = true;
+    canDelete = true;
+
 
     codeType = "ProfessionalQualification";
     title = "Professional Qualification";
 
+    allData: any[] = [];
     commonData: any[] = [];
     editingId: number | null = null;
     commonForm!: FormGroup;
@@ -33,6 +42,7 @@ export class ProfessionalQualification {
     searchValue: string = '';
     isSubmitting = false;
 
+    orgOptions: { label: string; value: any }[] = [];
 
     formConfig: FormConfig = {
         formFields: [
@@ -40,8 +50,9 @@ export class ProfessionalQualification {
                 name: 'orgId',
                 label: 'Mother Organization',
                 type: 'select',
-                required: true,
-                options: [] // Will be populated in ngOnInit
+                required: false,
+                default: null,
+                options: []
             },
             {
                 name: 'codeValueEN',
@@ -59,8 +70,8 @@ export class ProfessionalQualification {
                 name: 'status',
                 label: 'Status',
                 type: 'select',
-                required: true,
-                default: true,
+                required: false,
+                default: null,
                 options: [
                     { label: 'Active', value: true },
                     { label: 'Inactive', value: false }
@@ -69,9 +80,9 @@ export class ProfessionalQualification {
         ]
     };
 
-        tableConfig: TableConfig = {
+    tableConfig: TableConfig = {
         tableColumns: [
-
+            { field: 'orgNameDisplay', header: 'Mother Organization' },
             { field: 'codeValueEN', header: 'Professional Qualification Name (EN)' },
             { field: 'codeValueBN', header: 'Professional Qualification Name (BN)' },
             {
@@ -85,7 +96,7 @@ export class ProfessionalQualification {
         ]
     };
 
-        constructor(
+    constructor(
         private masterBasicSetupService: MasterBasicSetupService,
         private messageService: MessageService,
         private confirmationService: ConfirmationService,
@@ -94,23 +105,30 @@ export class ProfessionalQualification {
     ) { }
 
     ngOnInit(): void {
+        const _perms = this._userMenuService.getPermissionsByRoute(this._router.url);
+        this.canInsert = _perms.canInsert;
+        this.canUpdate = _perms.canUpdate;
+        this.canDelete = _perms.canDelete;
+
         this.initForm();
-        this.loadActiveMotherOrgs(); // Load motherOrgRanks for dropdown
-        this.getCommonCodeWithPaging({
-            first: this.first,
-            rows: this.rows
-        });
+        this.setupFormFilterListeners();
+        this.loadActiveMotherOrgs();
     }
 
-      initForm() {
+    private setupFormFilterListeners() {
+        this.commonForm.get('orgId')?.valueChanges.subscribe(() => { this.first = 0; this.buildTableData(); });
+        this.commonForm.get('status')?.valueChanges.subscribe(() => { this.first = 0; this.buildTableData(); });
+    }
+
+    initForm() {
         this.commonForm = this.fb.group({
+            orgId: [null],
             codeValueEN: ['', Validators.required],
             codeValueBN: ['', Validators.required],
-            status: [true, Validators.required],
-            orgId: ['', Validators.required],
+            status: [null],
             codeId: [0],
             codeType: ['ProfessionalQualification'],
-            parentCodeId: [null], // Will store motherOrgId
+            parentCodeId: [null],
             commCode: [null],
             displayCodeValueEN: [null],
             displayCodeValueBN: [null],
@@ -123,152 +141,103 @@ export class ProfessionalQualification {
         });
     }
 
-    // Load all motherOrgRanks for the dropdown
     loadActiveMotherOrgs() {
         this.masterBasicSetupService.getAllActiveMotherOrgs().subscribe({
             next: (motherOrgRanks) => {
-                const motherOrgOptions = motherOrgRanks.map(d => ({
-                    label: d.orgNameEN,
-                    value: d.orgId
-                }));
-
-                // Update form config with motherOrg options
-                const motherOrgField = this.formConfig.formFields.find(f => f.name === 'orgId');
-                if (motherOrgField) {
-                    motherOrgField.options = motherOrgOptions;
-                }
+                this.orgOptions = motherOrgRanks.map(d => ({ label: d.orgNameEN, value: d.orgId }));
+                const orgField = this.formConfig.formFields.find(f => f.name === 'orgId');
+                if (orgField) orgField.options = this.orgOptions;
+                this.getAllData();
             },
             error: (err) => {
                 console.error('Error loading professional-qualification:', err);
-                this.messageService.add({
-                    severity: 'error',
-                    summary: 'Error',
-                    detail: 'Failed to load professional-qualification'
-                });
+                this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.message || 'Failed to load organizations' });
             }
         });
     }
 
-    getCommonCodeWithPaging(event?: any) {
+    getAllData() {
         this.loading = true;
-        const pageNo = event ? event.first / event.rows + 1 : 1;
-        const pageSize = event?.rows ?? this.rows;
-
-        const apiCall = this.searchValue
-            ? this.masterBasicSetupService.getByKeyordWithPaging('ProfessionalQualification', this.searchValue, pageNo, pageSize)
-            : this.masterBasicSetupService.getAllWithPaging('ProfessionalQualification', pageNo, pageSize);
-
-        apiCall.subscribe({
+        this.masterBasicSetupService.getAllByType('ProfessionalQualification').subscribe({
             next: (res) => {
-                this.commonData = res.datalist;
-                this.totalRecords = res.pages.rows;
-                this.rows = pageSize;
+                this.allData = Array.isArray(res) ? res : [];
+                this.buildTableData();
                 this.loading = false;
             },
             error: (err) => {
                 console.error('Error fetching data:', err);
-                this.messageService.add({
-                    severity: 'error',
-                    summary: 'Error',
-                    detail: 'Failed to load data'
-                });
+                this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.message || 'Failed to load data' });
                 this.loading = false;
             }
         });
     }
 
+    private buildTableData() {
+        const getOrgName = (id: number) => this.orgOptions.find((o: any) => o.value === id)?.label ?? '-';
+        let list = this.allData.map((r: any) => ({ ...r, orgNameDisplay: getOrgName(r.orgId ?? 0) }));
+        const orgId = this.commonForm?.get('orgId')?.value;
+        const status = this.commonForm?.get('status')?.value;
+        if (orgId != null && orgId !== '') list = list.filter((r: any) => r.orgId === orgId);
+        if (status != null) list = list.filter((r: any) => r.status === status);
+        const q = (this.searchValue ?? '').toLowerCase().trim();
+        if (q) list = list.filter((r: any) => r.codeValueEN?.toLowerCase().includes(q) || r.codeValueBN?.toLowerCase().includes(q));
+        this.commonData = list;
+        this.totalRecords = list.length;
+        this.first = 0;
+    }
+
     submit(data: any) {
+        const status = this.commonForm.get('status')?.value;
+        if (status == null) {
+            this.messageService.add({ severity: 'warn', summary: 'Validation', detail: 'Please select Status' });
+            return;
+        }
         if (this.commonForm.invalid) {
             this.commonForm.markAllAsTouched();
             return;
         }
 
         const currentUser = this.getCurrentUser();
-        const currentDateTime = this.shareService.getCurrentDateTime()
-
-
-        // this.commonForm.patchValue({
-        //     parentCodeId: this.commonForm.value.divisionId
-        // });
+        const currentDateTime = this.shareService.getCurrentDateTime();
 
         if (this.editingId) {
-            this.updateDistrict(currentUser, currentDateTime);
+            this.updateQualification(currentUser, currentDateTime);
         } else {
-            this.createDistrict(currentUser, currentDateTime);
+            this.createQualification(currentUser, currentDateTime);
         }
     }
 
-    private createDistrict(currentUser: string, currentDateTime: string) {
+    private createQualification(currentUser: string, currentDateTime: string) {
         this.isSubmitting = true;
-        const createPayload = {
-            ...this.commonForm.value,
-            createdBy: currentUser,
-            createdDate: currentDateTime,
-            lastUpdatedBy: currentUser,
-            lastupdate: currentDateTime
-        };
-
+        const createPayload = { ...this.commonForm.value, orgId: this.commonForm.get('orgId')?.value ?? 0, createdBy: currentUser, createdDate: currentDateTime, lastUpdatedBy: currentUser, lastupdate: currentDateTime };
         this.masterBasicSetupService.create(createPayload).subscribe({
-            next: (res) => {
-                console.log('Created:', res);
+            next: () => {
                 this.resetForm();
-                this.getCommonCodeWithPaging({
-                    first: this.first,
-                    rows: this.rows
-                });
-                this.messageService.add({
-                    severity: 'success',
-                    summary: 'Success',
-                    detail: 'Professional Qualification created successfully'
-                });
+                this.getAllData();
+                this.messageService.add({ severity: 'success', summary: 'Success', detail: 'Professional Qualification created successfully' });
                 this.isSubmitting = false;
             },
             error: (err) => {
                 console.error('Error creating:', err);
-                this.messageService.add({
-                    severity: 'error',
-                    summary: 'Error',
-                    detail: 'Failed to create professional-qualification'
-                });
-
+                this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.message || 'Failed to create professional-qualification' });
                 this.isSubmitting = false;
             }
         });
     }
 
-    private updateDistrict(currentUser: string, currentDateTime: string) {
+    private updateQualification(currentUser: string, currentDateTime: string) {
         this.isSubmitting = true;
-        const updatePayload = {
-            ...this.commonForm.value,
-            codeId: this.editingId,
-            lastUpdatedBy: currentUser,
-            lastupdate: currentDateTime,
-            createdDate: currentDateTime,
-            createdBy: currentUser,
-        };
-
+        const updatePayload = { ...this.commonForm.value, orgId: this.commonForm.get('orgId')?.value ?? 0, codeId: this.editingId, lastUpdatedBy: currentUser, lastupdate: currentDateTime, createdDate: currentDateTime, createdBy: currentUser };
         this.masterBasicSetupService.update(updatePayload).subscribe({
-            next: (res) => {
-                console.log('Updated:', res);
+            next: () => {
                 this.resetForm();
-                this.getCommonCodeWithPaging({
-                    first: this.first,
-                    rows: this.rows
-                });
-                this.messageService.add({
-                    severity: 'success',
-                    summary: 'Success',
-                    detail: 'Professional Qualification updated successfully'
-                });
+                this.getAllData();
+                this.messageService.add({ severity: 'success', summary: 'Success', detail: 'Professional Qualification updated successfully' });
                 this.isSubmitting = false;
             },
             error: (err) => {
                 console.error('Error updating:', err);
-                this.messageService.add({
-                    severity: 'error',
-                    summary: 'Error',
-                    detail: 'Failed to update professional-qualification'
-                });
+                this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.message || 'Failed to update professional-qualification' });
                 this.isSubmitting = false;
             }
         });
@@ -277,13 +246,12 @@ export class ProfessionalQualification {
     update(row: any) {
         this.editingId = row.codeId;
         this.commonForm.patchValue({
-            orgId: row.orgId, // parentCodeId contains divisionId
+            orgId: row.orgId,
             codeValueEN: row.codeValueEN,
             codeValueBN: row.codeValueBN,
             status: row.status,
             sortOrder: row.sortOrder
         });
-        console.log('Edit:', row);
     }
 
     delete(row: any, event: Event) {
@@ -293,35 +261,17 @@ export class ProfessionalQualification {
             header: 'Delete Confirmation',
             icon: 'pi pi-info-circle',
             rejectLabel: 'Cancel',
-            rejectButtonProps: {
-                label: 'Cancel',
-                severity: 'secondary',
-                outlined: true
-            },
-            acceptButtonProps: {
-                label: 'Delete',
-                severity: 'danger'
-            },
+            rejectButtonProps: { label: 'Cancel', severity: 'secondary', outlined: true },
+            acceptButtonProps: { label: 'Delete', severity: 'danger' },
             accept: () => {
                 this.masterBasicSetupService.delete(row.codeId).subscribe({
                     next: () => {
-                        this.getCommonCodeWithPaging({
-                            first: this.first,
-                            rows: this.rows
-                        });
-                        this.messageService.add({
-                            severity: 'success',
-                            summary: 'Success',
-                            detail: 'Professional Qualification deleted successfully'
-                        });
+                        this.getAllData();
+                        this.messageService.add({ severity: 'success', summary: 'Success', detail: 'Professional Qualification deleted successfully' });
                     },
                     error: (err) => {
                         console.error('Error deleting:', err);
-                        this.messageService.add({
-                            severity: 'error',
-                            summary: 'Error',
-                            detail: 'Failed to delete professional-qualification'
-                        });
+                        this.messageService.add({ severity: 'error', summary: 'Error', detail: err?.error?.message || 'Failed to delete professional-qualification' });
                     }
                 });
             }
@@ -331,11 +281,12 @@ export class ProfessionalQualification {
     resetForm() {
         this.editingId = null;
         this.isSubmitting = false;
+        this.searchValue = '';
         this.commonForm.reset({
-            orgId: '',
+            orgId: null,
             codeId: 0,
             codeType: 'ProfessionalQualification',
-            status: true,
+            status: null,
             parentCodeId: null,
             commCode: null,
             displayCodeValueEN: null,
@@ -347,18 +298,16 @@ export class ProfessionalQualification {
             lastUpdatedBy: '',
             lastupdate: ''
         });
+        this.buildTableData();
     }
 
     onSearch(keyword: string) {
-        this.searchValue = keyword;
+        this.searchValue = keyword ?? '';
         this.first = 0;
-        this.getCommonCodeWithPaging({ first: 0, rows: this.rows });
+        this.buildTableData();
     }
 
     private getCurrentUser(): string {
-        // TODO: Get from authentication service
-        return this.shareService.getCurrentUser()
+        return this.shareService.getCurrentUser();
     }
-
-
 }

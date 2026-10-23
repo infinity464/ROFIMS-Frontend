@@ -37,28 +37,6 @@
                     }
                 </div>
 
-                <!-- Branch Name -->
-                <div class="field">
-                    <label for="branchName" class="block mb-2">
-                        Branch Name
-                    </label>
-                    <input pInputText id="branchName"
-                           formControlName="branchName"
-                           placeholder="Enter branch name"
-                           class="w-full" />
-                </div>
-
-                <!-- Routing Number -->
-                <div class="field">
-                    <label for="routingNumber" class="block mb-2">
-                        Routing Number
-                    </label>
-                    <input pInputText id="routingNumber"
-                           formControlName="routingNumber"
-                           placeholder="Enter routing number"
-                           class="w-full" />
-                </div>
-
                 <!-- Swift Code -->
                 <div class="field">
                     <label for="swiftCode" class="block mb-2">
@@ -110,7 +88,7 @@
     <p-table
         [value]="filteredBanks"
         [paginator]="true"
-        [first]="first"
+        [(first)]="first"
         [rows]="rows"
         [totalRecords]="totalRecords"
         [rowsPerPageOptions]="[10, 25, 50]">
@@ -120,8 +98,6 @@
                 <th style="width:5%">#</th>
                 <th>Bank Name (English)</th>
                 <th>Bank Name (Bangla)</th>
-                <th>Branch</th>
-                <th>Routing No</th>
                 <th style="width:15%">Action</th>
             </tr>
         </ng-template>
@@ -131,20 +107,18 @@
                 <td>{{ first + rowIndex + 1 }}</td>
                 <td>{{ row.bankNameEN }}</td>
                 <td>{{ row.bankNameBN }}</td>
-                <td>{{ row.branchName || '-' }}</td>
-                <td>{{ row.routingNumber || '-' }}</td>
 
                 <td>
                     <div class="flex gap-2">
                         <button
                             pButton
-                            icon="pi pi-pencil"
+                            icon="pi pi-pencil" [class.perm-hidden]="!canUpdate"
                             (click)="onEdit(row)">
                         </button>
 
                         <button
                             pButton
-                            icon="pi pi-trash"
+                            icon="pi pi-trash" [class.perm-hidden]="!canDelete"
                             class="p-button-danger"
                             (click)="onDelete(row, $event)">
                         </button>

@@ -1,4 +1,6 @@
-import { Component } from '@angular/core';
+import { Component, inject } from '@angular/core';
+import { UserMenuService } from '@/services/user-menu.service';
+import { Router } from '@angular/router';
 import { CommonCode } from '../shared/models/common-code';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { MasterBasicSetupService } from '../shared/services/MasterBasicSetupService';
@@ -19,6 +21,12 @@ import { SharedService } from '@/shared/services/shared-service';
     styleUrl: './relationship.scss'
 })
 export class Relationship {
+    private _router = inject(Router);
+    private _userMenuService = inject(UserMenuService);
+    canInsert = true;
+    canUpdate = true;
+    canDelete = true;
+
     codeType: string = 'Relationship';
     divisionDate: CommonCode[] = [];
     editingId: number | null = null;
@@ -85,6 +93,11 @@ export class Relationship {
     ) {}
 
     ngOnInit(): void {
+        const _perms = this._userMenuService.getPermissionsByRoute(this._router.url);
+        this.canInsert = _perms.canInsert;
+        this.canUpdate = _perms.canUpdate;
+        this.canDelete = _perms.canDelete;
+
         this.initForm();
         this.getDivisionWithPaging({
             first: this.first,
@@ -132,7 +145,7 @@ export class Relationship {
                 this.messageService.add({
                     severity: 'error',
                     summary: 'Error',
-                    detail: 'Failed to load data'
+                    detail: err?.error?.message || 'Failed to load data'
                 });
                 this.loading = false;
             }
@@ -185,7 +198,7 @@ export class Relationship {
                 this.messageService.add({
                     severity: 'error',
                     summary: 'Error',
-                    detail: 'Failed to create relationship'
+                    detail: err?.error?.message || 'Failed to create relationship'
                 });
                 this.isSubmitting = false;
             }
@@ -221,7 +234,7 @@ export class Relationship {
                 this.messageService.add({
                     severity: 'error',
                     summary: 'Error',
-                    detail: 'Failed to update relationship'
+                    detail: err?.error?.message || 'Failed to update relationship'
                 });
                 this.isSubmitting = false;
             }
@@ -268,7 +281,7 @@ export class Relationship {
                         this.messageService.add({
                             severity: 'error',
                             summary: 'Error',
-                            detail: 'Failed to delete relationship'
+                            detail: err?.error?.message || 'Failed to delete relationship'
                         });
                     }
                 });

@@ -1,10 +1,11 @@
-import { Component, EventEmitter, Input, OnInit, Output } from '@angular/core';
+import { Component, EventEmitter, Input, OnChanges, OnInit, Output, SimpleChanges } from '@angular/core';
 import { FluidModule } from 'primeng/fluid';
 import { InputTextModule } from 'primeng/inputtext';
 import { ButtonModule } from 'primeng/button';
 import { SelectModule } from 'primeng/select';
 import { FormBuilder, FormGroup, FormsModule, Validators } from '@angular/forms';
 import { TextareaModule } from 'primeng/textarea';
+import { CheckboxModule } from 'primeng/checkbox';
 import { MultiSelectModule } from 'primeng/multiselect';
 import { SliderModule } from 'primeng/slider';
 import { Table, TableModule } from 'primeng/table';
@@ -30,6 +31,7 @@ import { FormConfig, FormField } from '../../models/formConfig';
         SelectModule,
         FormsModule,
         TextareaModule,
+        CheckboxModule,
         TableModule,
         MultiSelectModule,
         SelectModule,
@@ -52,17 +54,36 @@ import { FormConfig, FormField } from '../../models/formConfig';
 })
 
 
-export class DynamicFormComponent implements OnInit {
+export class DynamicFormComponent implements OnInit, OnChanges {
     @Input() isSubmitting: boolean = false;
     @Input() config!: FormConfig;
     @Input() form!: FormGroup;
     @Input() editingId: number | null = null;
+    /** When false the Save button is hidden in create mode (no editingId) */
+    @Input() canInsert = true;
+    /** When false the Update button is hidden in edit mode (has editingId) */
+    @Input() canUpdate = true;
     @Output() save = new EventEmitter<any>();
     @Output() reset = new EventEmitter<void>();
     @Output() fieldChange = new EventEmitter<{ fieldName: string; value: any }>();
 
     ngOnInit() {
         this.setupCascadingDropdowns();
+        this.applyCreateStatusDefault();
+    }
+
+    ngOnChanges(changes: SimpleChanges): void {
+        if (changes['editingId']) {
+            this.applyCreateStatusDefault();
+        }
+    }
+
+    private applyCreateStatusDefault(): void {
+        if (!this.form || this.editingId) return;
+        const statusCtrl = this.form.get('status');
+        if (statusCtrl && statusCtrl.value !== true) {
+            statusCtrl.setValue(true, { emitEvent: false });
+        }
     }
 
     setupCascadingDropdowns() {
@@ -111,7 +132,16 @@ export class DynamicFormComponent implements OnInit {
         return false;
     }
 
+    /** A field with `visibleWhen` shows only while the referenced control equals the value. */
+    isFieldVisible(field: FormField): boolean {
+        if (!field.visibleWhen) return true;
+        return this.form.get(field.visibleWhen.field)?.value === field.visibleWhen.equals;
+    }
+
     onSave() {
+        if (!this.editingId && this.form.contains('status')) {
+            this.form.get('status')?.setValue(true, { emitEvent: false });
+        }
         if (this.form.invalid) return;
         this.save.emit(this.form.value);
     }
@@ -119,5 +149,6 @@ export class DynamicFormComponent implements OnInit {
     onReset() {
         if (this.isSubmitting) return;
         this.reset.emit();
+        queueMicrotask(() => this.applyCreateStatusDefault());
     }
 }

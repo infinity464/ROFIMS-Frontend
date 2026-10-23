@@ -1,0 +1,235 @@
+<p-toast position="top-center"></p-toast>
+<p-confirmDialog></p-confirmDialog>
+
+<div class="add-draft-posting">
+    <!-- Page header card -->
+    <div class="form-card">
+        <div class="form-card-header">
+            <h3 class="form-card-title">{{ isEditMode ? 'Edit Draft New Posting' : 'Add Draft New Posting' }}</h3>
+        </div>
+
+        <!-- Draft Posting Master: Date, List No, Status (when editing) -->
+        <div class="draft-master-section mb-4 p-4 surface-50 border-round">
+            <div class="flex flex-wrap gap-4 align-items-end">
+                <div class="field">
+                    <label class="font-semibold block mb-2 text-700">Date <span class="text-red-500">*</span></label>
+                    <p-datepicker [(ngModel)]="draftPostingDate" dateFormat="dd-mm-yy" placeholder="Select Date" appendTo="body" styleClass="w-full"></p-datepicker>
+                </div>
+                <div class="field flex-1 min-w-200px">
+                    <label class="font-semibold block mb-2 text-700">Member Type <span class="text-red-500">*</span></label>
+                    <p-multiSelect
+                        [options]="memberTypeOptions"
+                        [(ngModel)]="selectedMemberTypeIds"
+                        (ngModelChange)="onMemberTypeChange()"
+                        optionLabel="label"
+                        optionValue="value"
+                        placeholder="Select Member Type(s)"
+                        display="chip"
+                        [filter]="true"
+                        appendTo="body"
+                        styleClass="w-full">
+                    </p-multiSelect>
+                </div>
+                <div class="field flex-1 min-w-200px">
+                    <label class="font-semibold block mb-2 text-700">Draft Posting List No <span class="text-red-500">*</span></label>
+                    <input pInputText class="w-full" [(ngModel)]="draftPostingListNo" [readonly]="!isEditMode" placeholder="Auto Generated" />
+                </div>
+                <div *ngIf="isEditMode" class="field min-w-150px">
+                    <label class="font-semibold block mb-2 text-700">Status</label>
+                    <p-select [options]="draftPostingStatusOptions" [(ngModel)]="editDraftStatus" optionLabel="label" optionValue="value" placeholder="Select status" styleClass="w-full"></p-select>
+                </div>
+            </div>
+        </div>
+
+        <!-- Add mode: label + Select All button -->
+        <div *ngIf="!isEditMode" class="draft-label-bar">
+            <span class="font-semibold text-700">Employees with draft status (select one or more)</span>
+            <p-button *ngIf="canInsert" label="Select All" icon="pi pi-check-square" size="small" [outlined]="true" (onClick)="onAddAll()"></p-button>
+        </div>
+
+        <!-- Employee list table -->
+        <p-table
+            [value]="displayList"
+            [loading]="loading"
+            [dataKey]="isEditMode ? 'id' : 'employeeID'"
+            [(selection)]="selectedRows"
+            selectionMode="multiple"
+            [tableStyle]="{ 'min-width': '60rem' }"
+            styleClass="p-datatable-striped p-datatable-gridlines"
+            [paginator]="true"
+            [rows]="10"
+            [rowsPerPageOptions]="[10, 25, 50]"
+        >
+            <ng-template pTemplate="header">
+                <tr>
+                    <th *ngIf="!isEditMode" style="width: 44px">
+                        <p-tableHeaderCheckbox></p-tableHeaderCheckbox>
+                    </th>
+                    <th style="width: 50px">Ser</th>
+                    <th style="min-width: 120px">Service ID</th>
+                    <th style="min-width: 100px">Rank</th>
+                    <th style="min-width: 100px">Corps</th>
+                    <th style="min-width: 100px">Trade</th>
+                    <th style="min-width: 180px">Name</th>
+                    <th *ngIf="!isEditMode" style="min-width: 130px">Member Type</th>
+                    <th style="min-width: 140px">Mother Unit</th>
+                    <th style="min-width: 130px">Date of Join in Rab</th>
+                    <th style="min-width: 140px">Remark</th>
+                    <th *ngIf="isEditMode" style="min-width: 140px">Transfer Unit</th>
+                    <th *ngIf="isEditMode" style="min-width: 140px">Remarks</th>
+                    <th *ngIf="!isEditMode && canDelete" style="width: 90px">Action</th>
+                </tr>
+            </ng-template>
+            <ng-template pTemplate="body" let-row let-rowIndex="rowIndex">
+                <tr>
+                    <td *ngIf="!isEditMode">
+                        <p-tableCheckbox [value]="row"></p-tableCheckbox>
+                    </td>
+                    <td>{{ rowIndex + 1 }}</td>
+                    <td><span class="font-semibold">{{ row.prefixName ? row.prefixName + ' - ' : '' }}{{ row.serviceId || '-' }}</span></td>
+                    <td>{{ (row.rankName ?? row.rank) || '-' }}</td>
+                    <td>{{ (row.corpsName ?? row.corps) || '-' }}</td>
+                    <td>{{ (row.tradeName ?? row.trade) || '-' }}</td>
+                    <td>{{ (row.fullNameEN ?? row.name) || '-' }}{{ (row.corpsName ?? row.corps) ? ', ' + (row.corpsName ?? row.corps) : '' }}</td>
+                    <td *ngIf="!isEditMode">{{ memberTypeName(row.memberTypeId) }}</td>
+                    <td>{{ (row.motherUnitName ?? row.motherUnit) || '-' }}</td>
+                    <td>{{ formatDate(row.joiningDateInRAB ?? row.joiningDate ?? row.rabJoingdate) }}</td>
+                    <td>{{ row.sendingRemark || row.remarks || '-' }}</td>
+                    <td *ngIf="isEditMode">{{ row.transferRabUnitName || '-' }}</td>
+                    <td *ngIf="isEditMode">{{ row.remarks || '-' }}</td>
+                    <td *ngIf="!isEditMode && canDelete" class="text-center">
+                        <p-button icon="pi pi-trash" severity="danger" size="small" [text]="true"
+                                  [loading]="removingEmployeeId === row.employeeID"
+                                  (onClick)="removeFromDraftList(row)"
+                                  pTooltip="Remove (return to Supernumerary List)"></p-button>
+                    </td>
+                </tr>
+            </ng-template>
+            <ng-template pTemplate="emptymessage">
+                <tr>
+                    <td [attr.colspan]="isEditMode ? 11 : (canDelete ? 12 : 11)" class="text-center p-4">
+                        <div class="flex flex-column align-items-center gap-3 py-5">
+                            <i class="pi pi-inbox text-5xl text-400"></i>
+                            <span class="text-lg text-500">No employees with draft status. Use Supernumerary List and click "Send New Posting list" to add here.</span>
+                        </div>
+                    </td>
+                </tr>
+            </ng-template>
+        </p-table>
+
+        <!-- Save / Cancel buttons -->
+        <div class="mt-3 flex justify-content-end gap-2">
+            <p-button *ngIf="isEditMode" label="Cancel" severity="secondary" (onClick)="onCancelEdit()"></p-button>
+            <p-button
+                [label]="isEditMode ? 'Update' : 'Save'"
+                icon="pi pi-save"
+                [loading]="saving"
+                [class.perm-hidden]="isEditMode ? !canUpdate : !canInsert"
+                (onClick)="onSave()"
+            ></p-button>
+        </div>
+    </div>
+
+    <!-- Draft New Posting list (saved drafts) -->
+    <div class="form-card mt-4">
+        <div class="form-card-header">
+            <h3 class="form-card-title">Draft New Posting</h3>
+        </div>
+        <p class="text-600 mt-0 mb-3">Saved draft posting lists. Click Edit to modify.</p>
+        <p-table
+            [value]="visibleDraftMasters"
+            [loading]="loadingMasters"
+            dataKey="id"
+            [tableStyle]="{ 'min-width': '40rem' }"
+            styleClass="p-datatable-striped p-datatable-gridlines"
+            [paginator]="true"
+            [rows]="10"
+            [rowsPerPageOptions]="[10, 25, 50]"
+        >
+            <ng-template pTemplate="header">
+                <tr>
+                    <th style="width: 60px">Ser</th>
+                    <th style="min-width: 140px">Draft Posting No</th>
+                    <th style="min-width: 120px">Date</th>
+                    <th style="min-width: 120px">Status</th>
+                    <th style="min-width: 160px">Member Type</th>
+                    <th style="width: 80px">Employees</th>
+                    <th style="min-width: 140px">Action</th>
+                </tr>
+            </ng-template>
+            <ng-template pTemplate="body" let-row let-rowIndex="rowIndex">
+                <tr>
+                    <td>{{ rowIndex + 1 }}</td>
+                    <td>{{ row.draftPostingNo }}</td>
+                    <td>{{ row.draftPostingDate }}</td>
+                    <td>{{ getDraftPostingStatusLabel(row.draftPostingStatus) }}</td>
+                    <td>{{ row.employeeTypeNames || '-' }}</td>
+                    <td>{{ row.detailCount }}</td>
+                    <td class="text-center">
+                        <p-button *ngIf="canView" icon="pi pi-users" label="View Member" severity="primary" size="small"
+                                  (onClick)="viewEmployees(row)"></p-button>
+                    </td>
+                </tr>
+            </ng-template>
+            <ng-template pTemplate="emptymessage">
+                <tr>
+                    <td colspan="7" class="text-center p-4 text-500">No Draft New Posting saved yet. Select employees above and click Save.</td>
+                </tr>
+            </ng-template>
+        </p-table>
+    </div>
+</div>
+
+<!-- Employee Preview Modal -->
+<p-dialog [(visible)]="showEmployeeModal" [header]="employeeModalTitle" [modal]="true" [dismissableMask]="true" [style]="{ width: '70vw' }" [maximizable]="true">
+    <p-table
+        [value]="employeeModalList"
+        [loading]="employeeModalLoading"
+        dataKey="id"
+        [tableStyle]="{ 'min-width': '50rem' }"
+        styleClass="p-datatable-striped p-datatable-gridlines p-datatable-sm"
+        [paginator]="employeeModalList.length > 10"
+        [rows]="10"
+        [rowsPerPageOptions]="[10, 25, 50]">
+        <ng-template pTemplate="header">
+            <tr>
+                <th style="width: 50px">Ser</th>
+                <th>Service ID</th>
+                <th>Rank</th>
+                <th>Corps</th>
+                <th>Trade</th>
+                <th>Name</th>
+                <th>Member Type</th>
+                <th>Mother Unit</th>
+                <th>Date of Join in RAB</th>
+                <th>Transfer Unit</th>
+                <th>Remarks</th>
+                <th *ngIf="!employeeModalHasNoteSheet && canDelete" style="width: 90px">Action</th>
+            </tr>
+        </ng-template>
+        <ng-template pTemplate="body" let-row let-rowIndex="rowIndex">
+            <tr>
+                <td>{{ rowIndex + 1 }}</td>
+                <td class="font-semibold">{{ row.serviceId || '-' }}</td>
+                <td>{{ row.rank || '-' }}</td>
+                <td>{{ row.corps || '-' }}</td>
+                <td>{{ row.trade || '-' }}</td>
+                <td>{{ row.name || '-' }}</td>
+                <td>{{ memberTypeName(row.memberTypeId) }}</td>
+                <td>{{ row.motherUnit || '-' }}</td>
+                <td>{{ formatDate(row.rabJoingdate) }}</td>
+                <td>{{ row.transferRabUnitName || '-' }}</td>
+                <td>{{ row.remarks || '-' }}</td>
+                <td *ngIf="!employeeModalHasNoteSheet && canDelete" class="text-center">
+                    <p-button icon="pi pi-trash" severity="danger" size="small" [text]="true"
+                              [loading]="removingMemberId === row.id" (onClick)="removeMember(row)" pTooltip="Remove member"></p-button>
+                </td>
+            </tr>
+        </ng-template>
+        <ng-template pTemplate="emptymessage">
+            <tr>
+                <td [attr.colspan]="(!employeeModalHasNoteSheet && canDelete) ? 12 : 11" class="text-center p-4 text-500">No employees found.</td>
+            </tr>
+        </ng-template>
+    </p-table>
+</p-dialog>

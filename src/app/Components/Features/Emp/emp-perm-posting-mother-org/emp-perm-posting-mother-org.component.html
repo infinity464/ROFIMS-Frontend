@@ -1,0 +1,240 @@
+<p-toast position="top-center"></p-toast>
+<p-fluid>
+    <div class="form-card">
+        <div class="form-card-header">
+            <h3 class="form-card-title">
+                Permanent Posting (Mother Org) Entry
+                @if (mode === 'view') {
+                    <span class="text-500 text-base font-normal">(View Mode)</span>
+                }
+                @if (mode === 'edit') {
+                    <span class="text-primary text-base font-normal">(Edit Mode)</span>
+                }
+            </h3>
+            @if (mode === 'view') {
+                <div class="form-card-actions">
+                    <p-button
+                        label="Edit"
+                        icon="pi pi-pencil" [class.perm-hidden]="!canUpdate"
+                        (onClick)="enableEditMode()">
+                    </p-button>
+                </div>
+            }
+        </div>
+
+        <!-- Search Section -->
+        @if (mode === 'search') {
+            <div class="form-section">
+                <app-employee-search
+                    [exMemberNotice]="true"
+                    (onEmployeeFound)="onEmployeeSearchFound($event)"
+                    (onSearchReset)="onEmployeeSearchReset()">
+                </app-employee-search>
+            </div>
+        }
+
+        <!-- Posting Records Table -->
+        @if (employeeFound) {
+            <div class="form-section">
+                <div class="flex align-items-center gap-3 mb-3 flex-wrap">
+                    <h3 class="form-subtitle m-0 white-space-nowrap">Posting Records</h3>
+                    <div class="ml-auto">
+                        <p-button label="Add New" icon="pi pi-plus" (onClick)="openAddDialog()"></p-button>
+                    </div>
+                </div>
+
+                <p-table [value]="recordList" [loading]="isLoading" [tableStyle]="{'min-width': '60rem'}" styleClass="p-datatable-sm">
+                    <ng-template pTemplate="header">
+                        <tr>
+                            <th>PO Received Date</th>
+                            <th>Reliever</th>
+                            <th>Reliever Join</th>
+                            <th>NS Clearance Date</th>
+                            <th>Clearance Given Date</th>
+                            <th style="width: 120px;">Actions</th>
+                        </tr>
+                    </ng-template>
+                    <ng-template pTemplate="body" let-row>
+                        <tr>
+                            <td>{{ formatDate(row.poReceivedDate) }}</td>
+                            <td>{{ row.hasReliever ? 'Yes' : 'No' }}</td>
+                            <td>{{ row.isRelieverJoinStatus === true ? 'Joined' : (row.isRelieverJoinStatus === false ? 'Not Joined' : 'N/A') }}</td>
+                            <td>{{ formatDate(row.nsClearanceCompDate) }}</td>
+                            <td>{{ formatDate(row.clearanceGivenDate) }}</td>
+                            <td>
+                                <div class="flex gap-2">
+                                    <p-button icon="pi pi-pencil" [class.perm-hidden]="!canUpdate" [rounded]="true" [text]="true" severity="info" pTooltip="Edit" (onClick)="openEditDialog(row)"></p-button>
+                                    <p-button icon="pi pi-trash" [class.perm-hidden]="!canDelete" [rounded]="true" [text]="true" severity="danger" pTooltip="Delete" (onClick)="confirmDelete(row)"></p-button>
+                                </div>
+                            </td>
+                        </tr>
+                    </ng-template>
+                    <ng-template pTemplate="emptymessage">
+                        <tr>
+                            <td [attr.colspan]="6" class="text-center py-4">
+                                <span class="text-500">No posting records found.</span>
+                            </td>
+                        </tr>
+                    </ng-template>
+                </p-table>
+            </div>
+
+            <div class="form-actions">
+                @if (mode === 'view') {
+                    <p-button label="Back to List" icon="pi pi-arrow-left" severity="secondary" [outlined]="true" styleClass="form-btn-secondary" (onClick)="goBack()"></p-button>
+                    <p-button label="Edit" icon="pi pi-pencil" [class.perm-hidden]="!canUpdate" (onClick)="enableEditMode()"></p-button>
+                } @else {
+                    <p-button label="Reset" icon="pi pi-refresh" severity="secondary" [outlined]="true" styleClass="form-btn-secondary" (onClick)="resetForm()"></p-button>
+                }
+            </div>
+        }
+    </div>
+</p-fluid>
+
+<!-- Add/Edit Dialog -->
+<p-dialog
+    [header]="isEditMode ? 'Edit Posting Record' : 'Add Posting Record'"
+    [(visible)]="displayDialog"
+    [modal]="true"
+    [style]="{width: '780px', maxHeight: '90vh'}"
+    [closable]="true"
+    [contentStyle]="{'overflow-y': 'auto', 'border-top': '2px solid var(--primary-color)'}">
+    <form [formGroup]="postingForm">
+        <div class="grid grid-cols-2 gap-4 p-3">
+            <div>
+                <label class="font-semibold block mb-2 text-700 text-sm">Posting Order Received</label>
+                <p-datepicker formControlName="poReceivedDate" dateFormat="dd-mm-yy" placeholder="Select Date" appendTo="body" styleClass="w-full"></p-datepicker>
+            </div>
+            <div>
+                <label class="font-semibold block mb-2 text-700 text-sm">Reliever</label>
+                <p-select
+                    formControlName="hasReliever"
+                    [options]="yesNoOptions"
+                    optionLabel="label"
+                    optionValue="value"
+                    placeholder="Select"
+                    [filter]="true"
+                    styleClass="w-full"></p-select>
+            </div>
+
+            @if (postingForm.get('hasReliever')?.value === true) {
+                    <div>
+                    <label class="font-semibold block mb-2 text-700 text-sm">Reliever Svc No</label>
+                    <p-select
+                        formControlName="relieverID"
+                        [options]="employeeOptions"
+                        optionLabel="label"
+                        optionValue="value"
+                        [filter]="true"
+                        filterBy="label"
+                        [showClear]="true"
+                        placeholder="Search & Select Reliever"
+                        appendTo="body"
+                        styleClass="w-full"
+                        (onChange)="onRelieverSelected($event)"></p-select>
+                </div>
+                <div>
+                    <label class="font-semibold block mb-2 text-700 text-sm">Reliever Name</label>
+                    <input pInputText [value]="relieverName" class="w-full" readonly placeholder="Auto Set" />
+                </div>
+                <div>
+                    <label class="font-semibold block mb-2 text-700 text-sm">Reliever Join</label>
+                    <p-select
+                        formControlName="isRelieverJoinStatus"
+                        [options]="joinStatusOptions"
+                        optionLabel="label"
+                        optionValue="value"
+                        placeholder="Select"
+                        [filter]="true"
+                        styleClass="w-full"></p-select>
+                </div>
+
+                @if (postingForm.get('isRelieverJoinStatus')?.value === true) {
+                    <div>
+                        <label class="font-semibold block mb-2 text-700 text-sm">Reliever Join Date</label>
+                        <p-datepicker formControlName="relieverJoinDate" dateFormat="dd-mm-yy" placeholder="Select Date" appendTo="body" styleClass="w-full"></p-datepicker>
+                    </div>
+                }
+            }
+
+
+            <div>
+                <label class="font-semibold block mb-2 text-700 text-sm">Note-Sheet Clearance Completed</label>
+                <p-select
+                    formControlName="nsClearanceCompleted"
+                    [options]="yesNoOptions"
+                    optionLabel="label"
+                    optionValue="value"
+                    placeholder="Select"
+                    [filter]="true"
+                    styleClass="w-full"></p-select>
+            </div>
+
+            @if (postingForm.get('nsClearanceCompleted')?.value === true) {
+                <div>
+                    <label class="font-semibold block mb-2 text-700 text-sm">NS Clearance Completed Date</label>
+                    <p-datepicker formControlName="nsClearanceCompDate" dateFormat="dd-mm-yy" placeholder="Select Date" appendTo="body" styleClass="w-full"></p-datepicker>
+                </div>
+            }
+
+            <div>
+                <label class="font-semibold block mb-2 text-700 text-sm">Clearance Given</label>
+                <p-select
+                    formControlName="clearanceGiven"
+                    [options]="yesNoOptions"
+                    optionLabel="label"
+                    optionValue="value"
+                    placeholder="Select"
+                    [filter]="true"
+                    styleClass="w-full"></p-select>
+            </div>
+
+            @if (postingForm.get('clearanceGiven')?.value === true) {
+                <div>
+                    <label class="font-semibold block mb-2 text-700 text-sm">Clearance Given Date</label>
+                    <p-datepicker formControlName="clearanceGivenDate" dateFormat="dd-mm-yy" placeholder="Select Date" appendTo="body" styleClass="w-full"></p-datepicker>
+                </div>
+            }
+
+
+            <div class="col-span-2 file-section-compact">
+                <app-file-references-form
+                    #postingOrderFileRef
+                    [fileRows]="postingOrderFileRows"
+                    [isViewMode]="false"
+                    title="Posting Order"
+                    (fileRowsChange)="onPostingOrderFileRowsChange($event)"
+                    (onDownloadFile)="onDownloadFile($event)">
+                </app-file-references-form>
+            </div>
+
+            <div class="col-span-2 file-section-compact">
+                <app-file-references-form
+                    #noteSheetFileRef
+                    [fileRows]="noteSheetFileRows"
+                    [isViewMode]="false"
+                    title="Note-Sheet"
+                    (fileRowsChange)="onNoteSheetFileRowsChange($event)"
+                    (onDownloadFile)="onDownloadFile($event)">
+                </app-file-references-form>
+            </div>
+
+            <div class="col-span-2 file-section-compact">
+                <app-file-references-form
+                    #clearanceLatterFileRef
+                    [fileRows]="clearanceLatterFileRows"
+                    [isViewMode]="false"
+                    title="Clearance Letter"
+                    (fileRowsChange)="onClearanceLatterFileRowsChange($event)"
+                    (onDownloadFile)="onDownloadFile($event)">
+                </app-file-references-form>
+            </div>
+        </div>
+    </form>
+    <ng-template pTemplate="footer">
+        <p-button label="Cancel" icon="pi pi-times" severity="secondary" [outlined]="true" (onClick)="displayDialog = false" [disabled]="isSaving"></p-button>
+        <p-button [label]="isEditMode ? 'Update' : 'Save'" icon="pi pi-check" [loading]="isSaving" [disabled]="isSaving" (onClick)="saveRecord()"></p-button>
+    </ng-template>
+</p-dialog>
+
+<p-confirmDialog></p-confirmDialog>

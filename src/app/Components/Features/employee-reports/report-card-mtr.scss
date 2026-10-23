@@ -1,0 +1,208 @@
+/* ============================================================
+   Member-type-reporting style overrides for employee-reports
+   child components. Apply by adding this file to a component's
+   styleUrls AFTER ../report-theme.scss so it wins on cold loads.
+   Mirrors report-member-type-serving.component.scss.
+   ============================================================ */
+
+:host ::ng-deep .report-filter-card,
+:host ::ng-deep .report-results-card {
+    background: var(--surface-card, rgba(255, 255, 255, 0.03));
+    border: 1px solid var(--surface-border, rgba(255, 255, 255, 0.08));
+    border-radius: 0.75rem;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+    padding: 1.5rem;
+    margin-bottom: 1.25rem;
+    overflow: visible;
+}
+
+/* Borderless collapsible header: blends into outer card */
+:host ::ng-deep .report-filter-header {
+    border: none;
+    border-radius: 0.5rem;
+    background: var(--surface-ground, rgba(0, 0, 0, 0.15));
+    padding: 0.75rem 1rem;
+    margin-top: 0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    cursor: pointer;
+    transition: background 0.18s;
+}
+
+:host ::ng-deep .report-filter-header:hover {
+    background: var(--surface-hover, rgba(255, 255, 255, 0.05));
+}
+
+:host ::ng-deep .report-filter-header.open {
+    border-bottom-color: transparent;
+    border-bottom-left-radius: 0;
+    border-bottom-right-radius: 0;
+}
+
+/* Filter body: no border, no max-height cap so all fields stay visible */
+:host ::ng-deep .report-filter-body {
+    background: var(--surface-ground, rgba(0, 0, 0, 0.1));
+    border: none;
+    border-bottom-left-radius: 0.5rem;
+    border-bottom-right-radius: 0.5rem;
+}
+
+:host ::ng-deep .report-filter-body.open {
+    max-height: none;
+    overflow: visible;
+}
+
+/* Unified PrimeNG inputs (34px height, green focus ring) inside the filter body */
+:host ::ng-deep .report-filter-body-inner {
+    --filter-input-h: 34px;
+    --filter-input-bg: var(--surface-card, rgba(255, 255, 255, 0.03));
+    --filter-input-border: var(--surface-border, rgba(255, 255, 255, 0.18));
+
+    p-select,
+    p-datepicker,
+    p-multiselect {
+        display: block;
+        width: 100%;
+    }
+
+    .p-select,
+    .p-datepicker,
+    .p-multiselect {
+        width: 100%;
+        height: var(--filter-input-h);
+        box-sizing: border-box;
+        border: 1px solid var(--filter-input-border);
+        border-radius: 0.5rem;
+        background: var(--filter-input-bg);
+        display: inline-flex;
+        align-items: center;
+        overflow: hidden;
+    }
+
+    input.p-inputtext {
+        height: var(--filter-input-h);
+        line-height: calc(var(--filter-input-h) - 2px);
+        box-sizing: border-box;
+        border: 1px solid var(--filter-input-border);
+        border-radius: 0.5rem;
+        padding: 0 12px;
+        font-size: 0.9rem;
+        color: var(--text-color, #fff);
+        background: var(--filter-input-bg);
+        width: 100%;
+    }
+
+    .p-select .p-select-label,
+    .p-multiselect .p-multiselect-label {
+        border: none;
+        background: transparent;
+        height: 100%;
+        line-height: calc(var(--filter-input-h) - 2px);
+        padding: 0 12px;
+        font-size: 0.9rem;
+        color: var(--text-color, #fff);
+        flex: 1 1 auto;
+        min-width: 0;
+    }
+
+    .p-datepicker input.p-inputtext {
+        flex: 1 1 auto;
+        min-width: 0;
+        height: 100%;
+        border: none;
+        background: transparent;
+        border-radius: 0;
+        padding: 0 12px;
+        box-shadow: none;
+    }
+
+    .p-datepicker .p-datepicker-dropdown,
+    .p-datepicker .p-datepicker-dropdown.p-button,
+    .p-select .p-select-dropdown,
+    .p-select .p-select-dropdown.p-button,
+    .p-multiselect .p-multiselect-trigger {
+        &,
+        &:hover,
+        &:focus,
+        &:active,
+        &:focus-visible,
+        &:enabled:hover,
+        &:enabled:focus,
+        &:enabled:active {
+            border: none !important;
+            background: transparent !important;
+            background-color: transparent !important;
+            background-image: none !important;
+            box-shadow: none !important;
+            outline: none !important;
+        }
+
+        color: var(--text-color-secondary, rgba(255, 255, 255, 0.55));
+        width: var(--filter-input-h);
+        height: var(--filter-input-h);
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+        padding: 0;
+        margin: 0;
+
+        .p-button-label {
+            display: none;
+        }
+
+        .p-icon,
+        svg {
+            width: 14px;
+            height: 14px;
+            color: inherit;
+            fill: currentColor;
+            stroke: currentColor;
+        }
+
+        i,
+        i.pi {
+            font-size: 14px;
+            line-height: 1;
+            color: inherit;
+        }
+    }
+
+    .p-select:focus-within,
+    .p-multiselect:focus-within,
+    .p-datepicker:focus-within,
+    input.p-inputtext:focus {
+        border-color: var(--p-primary-color, #10b981);
+        box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.18);
+        outline: none;
+    }
+
+    .p-select .p-select-label.p-placeholder,
+    .p-multiselect .p-multiselect-label.p-placeholder,
+    .p-datepicker-input::placeholder,
+    input::placeholder {
+        color: var(--text-color-secondary, rgba(255, 255, 255, 0.55)) !important;
+        opacity: 1;
+    }
+}
+
+:host-context(.app-dark) ::ng-deep .report-filter-body-inner {
+    --filter-input-bg: var(--surface-card);
+    --filter-input-border: var(--surface-border);
+}
+
+/* Field labels inside filter body — softer typography matching ds-field-label */
+:host ::ng-deep .report-filter-body-inner .report-filter-field label {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--text-color, #fff);
+    text-transform: none;
+    letter-spacing: 0;
+    margin-bottom: 0.4rem;
+    display: block;
+}
+
+:host-context(.app-dark) ::ng-deep .report-filter-body-inner .report-filter-field label {
+    color: var(--text-color);
+}
