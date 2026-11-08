@@ -40,6 +40,7 @@ import { CorpsOfficeService } from '@/services/corps-office.service';
 import { MotherOrgOfficeHeadService } from '@/Components/basic-setup/mother-org-office-head/mother-org-office-head-service';
 import { OrganizationService } from '@/Components/basic-setup/organization-setup/services/organization-service';
 import { decodeOrderId } from '@/shared/utils/order-id-codec';
+import { omitCurrentFromRabChain } from '@/shared/utils/rab-unit-path.util';
 import {
     Document, Packer, Paragraph, TextRun, Table, TableRow, TableCell, ImageRun,
     WidthType, BorderStyle, AlignmentType, PageOrientation, TabStopType, TabStopPosition, TableLayoutType, VerticalAlign
@@ -1091,25 +1092,26 @@ export class PostingOrderPreviewPageComponent implements OnInit {
         const district = (bn ? (emp.motherUnitDistrictNameBN || emp.motherUnitDistrictName) : emp.motherUnitDistrictName) || '';
         const motherUnit = unit && district ? unit + ', ' + district : (unit || district);
         if (!this.isInterPosting) return motherUnit;
-        // Inter-posting অংশ ২ — the member's FULL RAB posting history from the Previous
+        // Inter-posting অংশ ২ — the member's RAB posting history from the Previous
         // RAB Service page (PreviousRABServiceInfo): deepest node of every posting,
-        // oldest → present, "/ "-joined. The view already orders it (ServiceFrom
-        // ascending, currently-active posting last). Matches the notesheet's
+        // oldest → present, "/ "-joined. Matches the notesheet's
         // getInterPrevWorkplace — e.g. "৮ ফিল্ড রেজিঃ আর্টিঃ, যশোর/ র‌্যাব-১১/ র‌্যাব-৪/ ইন্ট উইং".
-        let chain = bn ? (emp.prevRabServiceChainBN || emp.prevRabServiceChain || '') : (emp.prevRabServiceChain || '');
-        if (!chain) {
-            // No history entered → fall back to the deepest node of the present posting.
-            // Outermost-first, so the last filled level is the one the member sits at.
-            const rabLevels = [
-                bn ? (emp.presentRabUnitNameBN || emp.presentRabUnitName || '') : (emp.presentRabUnitName || ''),
-                bn ? (emp.presentRabWingNameBN || emp.presentRabWingName || '') : (emp.presentRabWingName || ''),
-                bn ? (emp.presentRabBranchNameBN || emp.presentRabBranchName || '') : (emp.presentRabBranchName || ''),
-                bn ? (emp.presentRabSubBranchNameBN || emp.presentRabSubBranchName || '') : (emp.presentRabSubBranchName || ''),
-                bn ? (emp.presentRabSectionNameBN || emp.presentRabSectionName || '') : (emp.presentRabSectionName || ''),
-                bn ? (emp.presentRabSubSectionNameBN || emp.presentRabSubSectionName || '') : (emp.presentRabSubSectionName || ''),
-            ].filter(p => p);
-            chain = rabLevels[rabLevels.length - 1] ?? '';
-        }
+        // The chain ends at (and may include) the currently-active posting, and the
+        // new transfer may already be recorded in it too; neither belongs under
+        // পূর্ববতী কর্মস্থল, so both are dropped.
+        const presentLevels = [
+            bn ? (emp.presentRabUnitNameBN || emp.presentRabUnitName || '') : (emp.presentRabUnitName || ''),
+            bn ? (emp.presentRabWingNameBN || emp.presentRabWingName || '') : (emp.presentRabWingName || ''),
+            bn ? (emp.presentRabBranchNameBN || emp.presentRabBranchName || '') : (emp.presentRabBranchName || ''),
+            bn ? (emp.presentRabSubBranchNameBN || emp.presentRabSubBranchName || '') : (emp.presentRabSubBranchName || ''),
+            bn ? (emp.presentRabSectionNameBN || emp.presentRabSectionName || '') : (emp.presentRabSectionName || ''),
+            bn ? (emp.presentRabSubSectionNameBN || emp.presentRabSubSectionName || '') : (emp.presentRabSubSectionName || ''),
+        ].filter(p => p);
+        const presentDeepest = presentLevels[presentLevels.length - 1] ?? '';
+        const transferName = (bn ? (emp.transferRabUnitNameBN || emp.transferRabUnitName) : emp.transferRabUnitName) || '';
+
+        const rawChain = bn ? (emp.prevRabServiceChainBN || emp.prevRabServiceChain || '') : (emp.prevRabServiceChain || '');
+        const chain = omitCurrentFromRabChain(rawChain, [presentDeepest, transferName]);
 
         return [motherUnit, chain].filter(p => p).join('/ ');
     }

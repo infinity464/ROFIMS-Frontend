@@ -21,3 +21,37 @@ export function buildRabUnitPath(row: VwPreviousRABServiceInfoModel | undefined 
         lvl(row.rabSubSectionName, row.rabSubSectionNameBN)
     ].filter((p) => p !== '').join(', ');
 }
+
+/**
+ * Drop the present posting and the new transfer destination from a '/'-joined
+ * previous-RAB-service chain (the পূর্ববতী কর্মস্থল column).
+ *
+ * The view builds the chain oldest → present, so the member's currently-active
+ * posting is its last element; the new transfer posting may also already be
+ * recorded there. Neither is a *previous* workplace, so both are omitted.
+ *
+ * Each `omit` entry may be a single node name or a full comma-separated unit
+ * path. A chain segment is removed when it equals either form (ignoring
+ * whitespace and zero-width characters) or when its own deepest (last comma)
+ * node does.
+ */
+export function omitCurrentFromRabChain(chain: string | null | undefined, omit: (string | null | undefined)[]): string {
+    if (!chain) return '';
+    const norm = (v: string | null | undefined): string =>
+        (v ?? '').replace(/[\u200B-\u200D\uFEFF]/g, '').replace(/\s+/g, ' ').trim().toLowerCase();
+    const deepest = (v: string): string => v.split(',').pop()?.trim() ?? v;
+
+    const blocked = new Set<string>();
+    for (const raw of omit) {
+        const value = norm(raw);
+        if (!value) continue;
+        blocked.add(value);
+        blocked.add(norm(deepest(value)));
+    }
+
+    return chain
+        .split('/')
+        .map((part) => part.replace(/[\u200B-\u200D\uFEFF]/g, '').trim())
+        .filter((part) => part && !blocked.has(norm(part)) && !blocked.has(norm(deepest(part))))
+        .join('/ ');
+}
