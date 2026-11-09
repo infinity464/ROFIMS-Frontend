@@ -1099,9 +1099,9 @@ export class NotesheetPreviewPostingComponent extends NotesheetPreviewBase imple
      *           oldest → present, itself "/ "-joined, e.g.
      *           "র‌্যাব-১১/ র‌্যাব-৪/ ইন্ট উইং".
      *
-     * The chain ends at (and may include) the currently-active posting, and the new
-     * transfer may already be recorded in it too. Neither is a *previous* workplace,
-     * so both are omitted — a member with no older history shows only অংশ ১.
+     * The currently-active posting is the workplace being left, so it stays in the
+     * chain. The approved transfer destination is dropped if it is already recorded
+     * (only its newest occurrence — an earlier visit to the same unit is real history).
      */
     getInterPrevWorkplace(emp: DraftPostingEmployeeRow): string {
         const bn = !this.isEnglish();
@@ -1109,21 +1109,10 @@ export class NotesheetPreviewPostingComponent extends NotesheetPreviewBase imple
         const district = bn ? emp.motherUnitDistrictNameBN || emp.motherUnitDistrictName || '' : emp.motherUnitDistrictName || '';
         const motherPart = motherUnit && district ? motherUnit + ', ' + district : motherUnit || district;
 
-        // Present posting (deepest node) and new transfer destination — both excluded
-        // from অংশ ২ because they are not "previous" workplaces.
-        const rabLevels = [
-            bn ? emp.presentRabUnitNameBN || emp.presentRabUnitName || '' : emp.presentRabUnitName || '',
-            bn ? emp.presentRabWingNameBN || emp.presentRabWingName || '' : emp.presentRabWingName || '',
-            bn ? emp.presentRabBranchNameBN || emp.presentRabBranchName || '' : emp.presentRabBranchName || '',
-            bn ? emp.presentRabSubBranchNameBN || emp.presentRabSubBranchName || '' : emp.presentRabSubBranchName || '',
-            bn ? emp.presentRabSectionNameBN || emp.presentRabSectionName || '' : emp.presentRabSectionName || '',
-            bn ? emp.presentRabSubSectionNameBN || emp.presentRabSubSectionName || '' : emp.presentRabSubSectionName || ''
-        ].filter((p) => p);
-        const presentDeepest = rabLevels[rabLevels.length - 1] ?? '';
         const transferName = (bn ? emp.transferRabUnitNameBN || emp.transferRabUnitName : emp.transferRabUnitName) || '';
 
         const rawChain = bn ? emp.prevRabServiceChainBN || emp.prevRabServiceChain || '' : emp.prevRabServiceChain || '';
-        const chain = omitCurrentFromRabChain(rawChain, [presentDeepest, transferName]);
+        const chain = omitCurrentFromRabChain(rawChain, [transferName]);
 
         return [motherPart, chain].filter((p) => p).join('/ ');
     }

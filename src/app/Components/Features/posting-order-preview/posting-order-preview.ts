@@ -1096,22 +1096,14 @@ export class PostingOrderPreviewPageComponent implements OnInit {
         // RAB Service page (PreviousRABServiceInfo): deepest node of every posting,
         // oldest → present, "/ "-joined. Matches the notesheet's
         // getInterPrevWorkplace — e.g. "৮ ফিল্ড রেজিঃ আর্টিঃ, যশোর/ র‌্যাব-১১/ র‌্যাব-৪/ ইন্ট উইং".
-        // The chain ends at (and may include) the currently-active posting, and the
-        // new transfer may already be recorded in it too; neither belongs under
-        // পূর্ববতী কর্মস্থল, so both are dropped.
-        const presentLevels = [
-            bn ? (emp.presentRabUnitNameBN || emp.presentRabUnitName || '') : (emp.presentRabUnitName || ''),
-            bn ? (emp.presentRabWingNameBN || emp.presentRabWingName || '') : (emp.presentRabWingName || ''),
-            bn ? (emp.presentRabBranchNameBN || emp.presentRabBranchName || '') : (emp.presentRabBranchName || ''),
-            bn ? (emp.presentRabSubBranchNameBN || emp.presentRabSubBranchName || '') : (emp.presentRabSubBranchName || ''),
-            bn ? (emp.presentRabSectionNameBN || emp.presentRabSectionName || '') : (emp.presentRabSectionName || ''),
-            bn ? (emp.presentRabSubSectionNameBN || emp.presentRabSubSectionName || '') : (emp.presentRabSubSectionName || ''),
-        ].filter(p => p);
-        const presentDeepest = presentLevels[presentLevels.length - 1] ?? '';
+        // The chain ends at (and may include) the currently-active posting. That is the
+        // workplace being left, so it stays. The approved transfer destination is dropped
+        // if it is already recorded — only its newest occurrence, so an earlier visit to
+        // the same unit remains.
         const transferName = (bn ? (emp.transferRabUnitNameBN || emp.transferRabUnitName) : emp.transferRabUnitName) || '';
 
         const rawChain = bn ? (emp.prevRabServiceChainBN || emp.prevRabServiceChain || '') : (emp.prevRabServiceChain || '');
-        const chain = omitCurrentFromRabChain(rawChain, [presentDeepest, transferName]);
+        const chain = omitCurrentFromRabChain(rawChain, [transferName]);
 
         return [motherUnit, chain].filter(p => p).join('/ ');
     }
