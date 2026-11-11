@@ -4,7 +4,8 @@ import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { Subject, Subscription } from 'rxjs';
 import { debounceTime } from 'rxjs/operators';
-import { TableModule, TableLazyLoadEvent } from 'primeng/table';
+import { TableModule } from 'primeng/table';
+import { PaginatorModule, PaginatorState } from 'primeng/paginator';
 import { ButtonModule } from 'primeng/button';
 import { TooltipModule } from 'primeng/tooltip';
 import { SelectModule } from 'primeng/select';
@@ -70,7 +71,7 @@ const LABELS: Record<string, Record<string, string>> = {
 @Component({
     selector: 'app-posted-out-reliever-report',
     standalone: true,
-    imports: [CommonModule, FormsModule, TableModule, ButtonModule, TooltipModule, SelectModule, Toast, DatePickerModule, InputTextModule, IconFieldModule, InputIconModule],
+    imports: [CommonModule, FormsModule, TableModule, PaginatorModule, ButtonModule, TooltipModule, SelectModule, Toast, DatePickerModule, InputTextModule, IconFieldModule, InputIconModule],
     providers: [MessageService],
     templateUrl: './posted-out-reliever-report.html',
     styleUrl: './posted-out-reliever-report.scss'
@@ -108,8 +109,6 @@ export class PostedOutRelieverReportComponent implements OnInit, OnDestroy {
 
     private searchSubject = new Subject<string>();
     private searchSub?: Subscription;
-    private firstLazyLoadHandled = false;
-
     constructor(
         private recordSvc: PermanentPostingMORecordService,
         private commonCodeService: CommonCodeService,
@@ -130,19 +129,18 @@ export class PostedOutRelieverReportComponent implements OnInit, OnDestroy {
             },
             error: () => { this.rabUnitOptions = []; }
         });
+
+        this.loadList();
     }
 
     ngOnDestroy(): void {
         this.searchSub?.unsubscribe();
     }
 
-    onLazyLoad(event: TableLazyLoadEvent): void {
-        const rows = event.rows ?? this.pageSize;
-        const first = event.first ?? 0;
-        this.pageSize = rows;
-        this.first = first;
-        this.pageNumber = Math.floor(first / rows) + 1;
-        this.firstLazyLoadHandled = true;
+    onPageChange(event: PaginatorState): void {
+        this.pageSize = event.rows ?? this.pageSize;
+        this.first = event.first ?? 0;
+        this.pageNumber = Math.floor(this.first / this.pageSize) + 1;
         this.loadList();
     }
 
@@ -172,7 +170,9 @@ export class PostedOutRelieverReportComponent implements OnInit, OnDestroy {
         ).subscribe({
             next: (res) => {
                 this.records = res.datalist ?? [];
-                this.totalRecords = res.pages?.Rows ?? 0;
+                // ASP.NET's camel-case JSON policy returns `rows`; retain the
+                // uppercase fallback for deployments using property names verbatim.
+                this.totalRecords = res.pages?.rows ?? res.pages?.Rows ?? 0;
                 this.loading = false;
             },
             error: () => {
@@ -186,7 +186,6 @@ export class PostedOutRelieverReportComponent implements OnInit, OnDestroy {
     private reload(): void {
         this.pageNumber = 1;
         this.first = 0;
-        if (!this.firstLazyLoadHandled) return;
         this.loadList();
     }
 

@@ -41,11 +41,8 @@
     </div>
 
     <p-table [value]="records" [loading]="loading" dataKey="id"
-             [lazy]="true" (onLazyLoad)="onLazyLoad($event)"
              styleClass="p-datatable-striped p-datatable-gridlines themed-table"
-             [tableStyle]="{'min-width':'100rem'}"
-             [paginator]="true" [rows]="pageSize" [totalRecords]="totalRecords"
-             [first]="first" [rowsPerPageOptions]="[10,25,50]">
+             [tableStyle]="{'min-width':'100rem'}">
         <ng-template pTemplate="caption">
             <div class="filter-bar">
                 <div class="filter-group">
@@ -139,4 +136,13 @@
             </tr>
         </ng-template>
     </p-table>
+    <p-paginator
+        [first]="first"
+        [rows]="pageSize"
+        [totalRecords]="totalRecords"
+        [rowsPerPageOptions]="[10, 25, 50]"
+        [showCurrentPageReport]="true"
+        currentPageReportTemplate="Showing {first} to {last} of {totalRecords} records"
+        (onPageChange)="onPageChange($event)">
+    </p-paginator>
 </div>

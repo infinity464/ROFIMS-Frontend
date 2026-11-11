@@ -40,6 +40,7 @@ import { CorpsOfficeService } from '@/services/corps-office.service';
 import { MotherOrgOfficeHeadService } from '@/Components/basic-setup/mother-org-office-head/mother-org-office-head-service';
 import { OrganizationService } from '@/Components/basic-setup/organization-setup/services/organization-service';
 import { decodeOrderId } from '@/shared/utils/order-id-codec';
+import { omitCurrentFromRabChain } from '@/shared/utils/rab-unit-path.util';
 import {
     Document, Packer, Paragraph, TextRun, Table, TableRow, TableCell, ImageRun,
     WidthType, BorderStyle, AlignmentType, PageOrientation, TabStopType, TabStopPosition, TableLayoutType, VerticalAlign
@@ -1092,12 +1093,18 @@ export class PostingOrderPreviewPageComponent implements OnInit {
         const district = (bn ? (emp.motherUnitDistrictNameBN || emp.motherUnitDistrictName) : emp.motherUnitDistrictName) || '';
         const motherUnit = unit && district ? unit + ', ' + district : (unit || district);
         if (!this.isInterPosting) return motherUnit;
-        // Inter-posting অংশ ২ — the member's FULL RAB posting history from the Previous
+        // Inter-posting অংশ ২ — the member's RAB posting history from the Previous
         // RAB Service page (PreviousRABServiceInfo): deepest node of every posting,
-        // oldest → present, "/ "-joined. The view already orders it (ServiceFrom
-        // ascending, currently-active posting last). Matches the notesheet's
+        // oldest → present, "/ "-joined. Matches the notesheet's
         // getInterPrevWorkplace — e.g. "৮ ফিল্ড রেজিঃ আর্টিঃ, যশোর/ র‌্যাব-১১/ র‌্যাব-৪/ ইন্ট উইং".
-        let chain = bn ? (emp.prevRabServiceChainBN || emp.prevRabServiceChain || '') : (emp.prevRabServiceChain || '');
+        // The chain ends at (and may include) the currently-active posting. That is the
+        // workplace being left, so it stays. The approved transfer destination is dropped
+        // if it is already recorded — only its newest occurrence, so an earlier visit to
+        // the same unit remains.
+        const transferName = (bn ? (emp.transferRabUnitNameBN || emp.transferRabUnitName) : emp.transferRabUnitName) || '';
+
+        const rawChain = bn ? (emp.prevRabServiceChainBN || emp.prevRabServiceChain || '') : (emp.prevRabServiceChain || '');
+        let chain = omitCurrentFromRabChain(rawChain, [transferName]);
         if (!chain) {
             // No history entered → fall back to the deepest node of the present posting.
             // Outermost-first, so the last filled level is the one the member sits at.
