@@ -7,7 +7,12 @@ import { environment } from '@/Core/Environments/environment';
 
 export interface PaginatedResult<T> {
     datalist: T[];
-    pages: { Rows: number; TotalPages: number };
+    pages: {
+        Rows?: number;
+        TotalPages?: number;
+        rows?: number;
+        totalPages?: number;
+    };
 }
 
 export interface PermanentPostingMORecordModel {
