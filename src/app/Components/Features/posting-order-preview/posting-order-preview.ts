@@ -472,6 +472,7 @@ export class PostingOrderPreviewPageComponent implements OnInit {
     ngOnInit(): void {
         this.loadCurrentUserMemberTypePermissions();
         this.loadUnitSortOrders();
+        this.loadOfficerMemberTypeIds();
         this.loadCorpsOfficeMap();
         this.loadMotherOrgOfficeHeadMap();
         this.route.queryParams.subscribe(params => {
@@ -973,7 +974,7 @@ export class PostingOrderPreviewPageComponent implements OnInit {
 
     get hasMultipleReferences(): boolean { return this.referenceEntries.length > 1; }
 
-    /** One সূত্র line as "<no>, তারিখঃ <date>" (date omitted when absent). */
+    /** One সূত্র line as "<no> তারিখঃ <date>" (date omitted when absent). */
     referenceEntryText(entry: ReferenceEntry): string {
         const no = (entry.referenceNo ?? '').trim();
         if (!no) return '';
@@ -982,7 +983,7 @@ export class PostingOrderPreviewPageComponent implements OnInit {
             : '';
         if (!dateStr) return no;
         const dateLabel = this.isBangla ? 'তারিখঃ' : 'Date:';
-        return `${no}, ${dateLabel} ${dateStr}`;
+        return `${no} ${dateLabel} ${dateStr}`;
     }
 
     /** The single-line সূত্র (first entry) — used for the one-reference layout and Word. */
@@ -1103,7 +1104,24 @@ export class PostingOrderPreviewPageComponent implements OnInit {
         const transferName = (bn ? (emp.transferRabUnitNameBN || emp.transferRabUnitName) : emp.transferRabUnitName) || '';
 
         const rawChain = bn ? (emp.prevRabServiceChainBN || emp.prevRabServiceChain || '') : (emp.prevRabServiceChain || '');
-        const chain = omitCurrentFromRabChain(rawChain, [transferName]);
+        let chain = omitCurrentFromRabChain(rawChain, [transferName]);
+        if (!chain) {
+            // No history entered → fall back to the deepest node of the present posting.
+            // Outermost-first, so the last filled level is the one the member sits at.
+            const rabLevels = [
+                bn ? (emp.presentRabUnitNameBN || emp.presentRabUnitName || '') : (emp.presentRabUnitName || ''),
+                bn ? (emp.presentRabWingNameBN || emp.presentRabWingName || '') : (emp.presentRabWingName || ''),
+                bn ? (emp.presentRabBranchNameBN || emp.presentRabBranchName || '') : (emp.presentRabBranchName || ''),
+                bn ? (emp.presentRabSubBranchNameBN || emp.presentRabSubBranchName || '') : (emp.presentRabSubBranchName || ''),
+                bn ? (emp.presentRabSectionNameBN || emp.presentRabSectionName || '') : (emp.presentRabSectionName || ''),
+                bn ? (emp.presentRabSubSectionNameBN || emp.presentRabSubSectionName || '') : (emp.presentRabSubSectionName || ''),
+            ].filter(p => p);
+            chain = rabLevels[rabLevels.length - 1] ?? '';
+        } else if (emp.memberTypeId != null && this.officerMemberTypeIds.has(emp.memberTypeId)) {
+            // Officers show only the latest RAB posting (last in the chain) after the mother unit.
+            const parts = chain.split('/ ').filter(p => p.trim());
+            chain = parts[parts.length - 1] ?? '';
+        }
 
         return [motherUnit, chain].filter(p => p).join('/ ');
     }
@@ -1115,7 +1133,9 @@ export class PostingOrderPreviewPageComponent implements OnInit {
         if (emp.transferIsHq === true || this.isRabHq(parts[0] || '')) {
             const wing = parts[1] || parts[0];
             const branch = parts[2];
-            return branch ? `${wing} (${branch})` : wing;
+            if (branch) return `${wing} (${branch})`;
+            // Wing-level HQ destination → "<wing>, <HQ unit name>" (e.g. "ইন্ট উইং, র‌্যাব ফোর্সেস সদর দপ্তর").
+            return parts[1] ? `${wing}, ${parts[0]}` : wing;
         }
         // Non-HQ destinations show the FULL comma-separated path (matches the
         // notesheet preview's বদলি ইউনিট rule).
@@ -1193,6 +1213,7 @@ export class PostingOrderPreviewPageComponent implements OnInit {
         const bn = this.isBangla;
         const hqWings: string[] = [];
         const hqSeen = new Set<string>();
+        let hqName = '';                       // HQ unit name, appended after the পরিচালক wings
         const rabUnits: string[] = [];
         const rabSeen = new Set<string>();
         const commandant: string[] = [];       // RAB Forces Training School — its own কমান্ড্যান্ট line
@@ -1212,7 +1233,10 @@ export class PostingOrderPreviewPageComponent implements OnInit {
                 // Hard-coded: RAB Forces Training School is its own কমান্ড্যান্ট line, not a পরিচালক wing.
                 if (this.isRabTrainingSchool(wing)) {
                     if (!commandantSeen.has(wing)) { commandantSeen.add(wing); commandant.push(wing); }
-                } else if (!hqSeen.has(wing)) { hqSeen.add(wing); hqWings.push(wing); }
+                } else {
+                    if (parts[1] && !hqName) hqName = top;
+                    if (!hqSeen.has(wing)) { hqSeen.add(wing); hqWings.push(wing); }
+                }
             } else if (this.isRabBattalion(top)) {
                 if (!rabSeen.has(top)) { rabSeen.add(top); rabUnits.push(top); }
             } else if (this.isRabTrainingSchool(top)) {
@@ -1248,7 +1272,10 @@ export class PostingOrderPreviewPageComponent implements OnInit {
         }
 
         const lines: string[] = [];
-        if (hqWings.length) lines.push(`${bn ? 'পরিচালক' : 'Director'}, ${this.sortUnitsNaturally(hqWings).join('/ ')}`);
+        if (hqWings.length) {
+            const wings = this.sortUnitsNaturally(hqWings).filter((w) => w !== hqName).join('/ ');
+            lines.push(`${bn ? 'পরিচালক' : 'Director'}, ${[wings, hqName].filter(Boolean).join(', ')}`);
+        }
         if (commandant.length) lines.push(`${bn ? 'কমান্ড্যান্ট' : 'Commandant'}, ${this.sortUnitsNaturally(commandant).join('/ ')}`);
         if (rabUnits.length) lines.push(`${bn ? 'অধিনায়ক' : 'Commanding Officer'}, ${this.sortUnitsNaturally(rabUnits).join('/ ')}`);
         if (others.length) lines.push(this.sortUnitsNaturally(others).join(', '));
@@ -1281,6 +1308,20 @@ export class PostingOrderPreviewPageComponent implements OnInit {
                 }
             },
             error: () => { /* fall back to numeric sort below */ }
+        });
+    }
+
+    /** Member Type (EmployeeType CommonCode) ids labelled "Officer" — set on serving-member-entry. */
+    private officerMemberTypeIds = new Set<number>();
+
+    private loadOfficerMemberTypeIds(): void {
+        this.masterBasicSetupService.getAllByType('EmployeeType').subscribe({
+            next: (types) => {
+                this.officerMemberTypeIds = new Set(
+                    (types ?? []).filter(t => (t.codeValueEN ?? '').trim().toLowerCase() === 'officer').map(t => t.codeId)
+                );
+            },
+            error: () => { /* no officer ids → full chain for everyone */ }
         });
     }
 
