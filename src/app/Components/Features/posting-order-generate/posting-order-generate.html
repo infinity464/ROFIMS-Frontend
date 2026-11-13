@@ -173,15 +173,6 @@
                     <span *ngIf="selectedNoteSheetApprovedDate" class="text-600">| Approved: <strong>{{ formatDate(selectedNoteSheetApprovedDate) }}</strong></span>
                 }
             </div>
-            @if (!multi) {
-                <div class="text-600 text-sm mb-2">
-                    <i class="pi pi-info-circle mr-1"></i>
-                    {{ isBangla
-                        ? 'শুধু অবশিষ্ট সদস্যরা দেখানো হচ্ছে। কোনো সদস্যকে বাদ দিলে তিনি নোটশীটে অবশিষ্ট থাকবেন এবং পরে অন্য আদেশে দেওয়া যাবে।'
-                        : 'Only remaining members are listed. A member you leave out stays remaining in the notesheet and can go into a later order.' }}
-                </div>
-            }
-
             @if (multi) {
             <!-- Multi mode: rows grouped by source note-sheet; checked rows go into this order. -->
             <p-table

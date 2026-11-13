@@ -374,9 +374,7 @@ export class PostingOrderGenerateComponent implements OnInit {
         return this.approvedNoteSheets
             .filter(ns => this.memberTypeAccess.isAccessible(ns.employeeTypeIds, this.allowedMemberTypeIds))
             .map(ns => ({
-                label: ns.totalMembers != null && ns.remainingMembers != null
-                    ? `${ns.noteSheetNo} (${ns.remainingMembers}/${ns.totalMembers} ${this.isBangla ? 'অবশিষ্ট' : 'remaining'})`
-                    : ns.noteSheetNo,
+                label: ns.noteSheetNo,
                 value: ns.noteSheetId
             }));
     }
@@ -437,6 +435,33 @@ export class PostingOrderGenerateComponent implements OnInit {
         this.selectedNoteSheetNo = null;
         this.selectedNoteSheetApprovedDate = null;
         this.references = [];
+        if (!this.selectedNoteSheetId) return;
+
+        const selected = this.approvedNoteSheets.find(ns => ns.noteSheetId === this.selectedNoteSheetId);
+        const isPartiallyUsed = selected != null
+            && selected.totalMembers != null
+            && selected.remainingMembers != null
+            && selected.remainingMembers < selected.totalMembers;
+
+        if (isPartiallyUsed && selected) {
+            this.confirmationService.confirm({
+                header: this.isBangla ? 'আংশিকভাবে ব্যবহৃত নোটশীট' : 'Partially used notesheet',
+                message: this.isBangla
+                    ? `এই নোটশীটের ${selected.remainingMembers} জন সদস্য মোট ${selected.totalMembers} জনের মধ্যে অবশিষ্ট আছেন। অবশিষ্ট সদস্যদের নিয়ে চালিয়ে যেতে চান?`
+                    : `${selected.remainingMembers} of ${selected.totalMembers} members remain in this notesheet. Continue with the remaining members?`,
+                icon: 'pi pi-exclamation-triangle',
+                acceptLabel: this.isBangla ? 'হ্যাঁ' : 'Continue',
+                rejectLabel: this.isBangla ? 'না' : 'Cancel',
+                accept: () => this.loadSelectedNoteSheet(),
+                reject: () => { this.selectedNoteSheetId = null; }
+            });
+            return;
+        }
+
+        this.loadSelectedNoteSheet();
+    }
+
+    private loadSelectedNoteSheet(): void {
         if (!this.selectedNoteSheetId) return;
 
         this.loadingEmployees = true;
