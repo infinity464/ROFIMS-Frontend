@@ -1,3 +1,4 @@
+import { SendingRemarkType } from './sending-remark-type';
 /**
  * Posting module models (New Posting Order & Inter-Posting Order).
  * Ref: POSTING_MODULE_REQUIREMENTS.md
@@ -151,6 +152,8 @@ export interface DraftPostingMasterDto {
 
 /** Detail row for GetDraftNewPostingById (Edit). */
 export interface DraftPostingDetailDto {
+    sendingRemark?: string | null;
+    sendingRemarkType?: SendingRemarkType;
     id: number;
     employeeId: number;
     /** Member Type (EmployeeInfo.MemberType → CommonCode 'EmployeeType' id). */
@@ -248,6 +251,7 @@ export interface DraftPostingEmployeeRow {
     transferRabUnitNameBN?: string | null;
     remarks: string | null;
     sendingRemark: string | null;
+    sendingRemarkType?: SendingRemarkType;
     interPostingRemark?: string | null;
     isSendingNotesheetStatus: string | null;
     serviceId: string | null;
@@ -532,6 +536,7 @@ export interface PostingOrderEmployeeRow {
     detailRemarks: string | null;
     noteSheetRemarks: string | null;
     sendingRemark: string | null;
+    sendingRemarkType?: SendingRemarkType;
     interPostingRemark: string | null;
     transferRabUnitId: number | null;
     transferRabUnitName: string | null;

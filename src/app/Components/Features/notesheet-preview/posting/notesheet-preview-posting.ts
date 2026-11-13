@@ -1,3 +1,4 @@
+import { SendingRemarkType, SendingRemarkTypeOptions, sendingRemarkTypeLabel, sendingRemarkError } from '@/models/sending-remark-type';
 import { AfterViewChecked, ChangeDetectorRef, Component, ElementRef, Input, ViewChild, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -485,6 +486,17 @@ export class NotesheetPreviewPostingComponent extends NotesheetPreviewBase imple
     private unitNodeMap: Record<number, TreeNode> = {};
 
     // ── Remarks: original (from draft posting) + new (added in edit mode) ──
+    remarkTypeOptions = SendingRemarkTypeOptions;
+    remarkTypeLabel = sendingRemarkTypeLabel;
+    editSendingRemarks: Record<number, string> = {};
+    editSendingRemarkTypes: Record<number, SendingRemarkType> = {};
+
+    get canEditSendingRemark(): boolean {
+        const ns = this.noteSheet;
+        return !this.isInterPosting() && !!ns && ns.finalApprovalStatus !== 'approve'
+            && (ns.currentStatus === 'draft' || !!ns.isCurrentlyBacked);
+    }
+
     originalRemarks: Record<number, string> = {};
     newRemarks: Record<number, string> = {};
 
@@ -1458,6 +1470,8 @@ export class NotesheetPreviewPostingComponent extends NotesheetPreviewBase imple
         for (const emp of this.postingEmployees) {
             this.originalRemarks[emp.employeeId] = isInter ? (emp.interPostingRemark ?? '') : (emp.sendingRemark ?? '');
             this.newRemarks[emp.employeeId] = emp.remarks ?? '';
+            this.editSendingRemarks[emp.employeeId] = emp.sendingRemark ?? '';
+            this.editSendingRemarkTypes[emp.employeeId] = emp.sendingRemarkType ?? null;
         }
     }
 
@@ -1814,10 +1828,27 @@ export class NotesheetPreviewPostingComponent extends NotesheetPreviewBase imple
                 payload['filesReferences'] = filesReferencesJson;
             }
 
+            if (this.canEditSendingRemark) {
+                const invalid = this.postingEmployees.find(emp => sendingRemarkError(
+                    this.editSendingRemarks[emp.employeeId], this.editSendingRemarkTypes[emp.employeeId]));
+                if (invalid) {
+                    this.messageService.add({ severity: 'warn', summary: 'Sending remark', detail: sendingRemarkError(
+                        this.editSendingRemarks[invalid.employeeId], this.editSendingRemarkTypes[invalid.employeeId])! });
+                    this.saving = false;
+                    return;
+                }
+            }
+
             const postingDetailItems = this.postingEmployees.map((emp) => ({
                 id: emp.draftPostingDetailId,
                 transferRabUnitId: emp.transferRabUnitId,
-                remarks: (this.newRemarks[emp.employeeId] ?? '').trim() || null
+                remarks: (this.newRemarks[emp.employeeId] ?? '').trim() || null,
+                ...(this.canEditSendingRemark ? {
+                    sendingRemark: this.editSendingRemarks[emp.employeeId]?.trim() || null,
+                    sendingRemarkType: this.editSendingRemarkTypes[emp.employeeId] ?? null,
+                    updateSendingRemark: (this.editSendingRemarks[emp.employeeId]?.trim() || null) !== (emp.sendingRemark || null)
+                        || (this.editSendingRemarkTypes[emp.employeeId] ?? null) !== (emp.sendingRemarkType ?? null)
+                } : {})
             }));
 
             const noteSheetUpdate$ = this.http.post(`${this.api}/UpdateAsyn`, payload);

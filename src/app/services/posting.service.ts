@@ -155,7 +155,7 @@ export class PostingService {
     }
 
     /** Update TransferRabUnitId and Remarks on DraftPostingDetail rows. */
-    updateDraftPostingDetails(items: { id: number; transferRabUnitId: number | null; remarks: string | null }[]): Observable<{ statusCode: number; description: string }> {
+    updateDraftPostingDetails(items: { id: number; transferRabUnitId: number | null; remarks: string | null; sendingRemark?: string | null; sendingRemarkType?: import('@/models/sending-remark-type').SendingRemarkType; updateSendingRemark?: boolean }[]): Observable<{ statusCode: number; description: string }> {
         return this.http.post<{ statusCode: number; description: string }>(`${API}/UpdateDraftPostingDetails`, { items });
     }
 

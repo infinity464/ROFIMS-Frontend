@@ -1,4 +1,5 @@
 import { Component, OnInit } from '@angular/core';
+import { SendingRemarkTypeOptions, sendingRemarkTypeLabel, sendingRemarkError } from '@/models/sending-remark-type';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
@@ -46,6 +47,35 @@ import { IdentityUserMemberTypeAccessService } from '@/services/identity-user-me
     styleUrl: './add-draft-new-posting.scss'
 })
 export class AddDraftNewPostingComponent implements OnInit {
+    remarkTypeOptions = SendingRemarkTypeOptions;
+    remarkTypeLabel = sendingRemarkTypeLabel;
+    savingRemarkId: number | null = null;
+
+    saveSendingRemark(row: DraftPostingDetailDto): void {
+        if (!this.canUpdate || this.employeeModalHasNoteSheet || this.savingRemarkId != null) return;
+        const error = sendingRemarkError(row.sendingRemark, row.sendingRemarkType);
+        if (error) {
+            this.messageService.add({ severity: 'warn', summary: 'Remark', detail: error });
+            return;
+        }
+        this.savingRemarkId = row.id;
+        this.postingService.updateDraftPostingDetails([{
+            id: row.id, transferRabUnitId: row.transferRabUnitId, remarks: row.remarks,
+            sendingRemark: row.sendingRemark?.trim() || null,
+            sendingRemarkType: row.sendingRemarkType ?? null, updateSendingRemark: true
+        }]).subscribe({
+            next: () => {
+                this.savingRemarkId = null;
+                this.messageService.add({ severity: 'success', summary: 'Saved', detail: 'Sending remark updated.' });
+            },
+            error: err => {
+                this.savingRemarkId = null;
+                this.messageService.add({ severity: 'error', summary: 'Save failed',
+                    detail: err?.error?.description || err?.error?.message || 'Unable to update sending remark.' });
+            }
+        });
+    }
+
     draftPostingDate: Date | null = null;
     draftPostingListNo = '';
     list: EmployeeList[] = [];

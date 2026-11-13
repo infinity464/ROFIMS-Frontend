@@ -94,7 +94,7 @@
                     <td *ngIf="!isEditMode">{{ memberTypeName(row.memberTypeId) }}</td>
                     <td>{{ (row.motherUnitName ?? row.motherUnit) || '-' }}</td>
                     <td>{{ formatDate(row.joiningDateInRAB ?? row.joiningDate ?? row.rabJoingdate) }}</td>
-                    <td>{{ row.sendingRemark || row.remarks || '-' }}</td>
+                    <td>{{ row.sendingRemark || '-' }}<small class="block text-500" *ngIf="row.sendingRemarkType">{{ remarkTypeLabel(row.sendingRemarkType) }}</small></td>
                     <td *ngIf="isEditMode">{{ row.transferRabUnitName || '-' }}</td>
                     <td *ngIf="isEditMode">{{ row.remarks || '-' }}</td>
                     <td *ngIf="!isEditMode && canDelete" class="text-center">
@@ -203,6 +203,7 @@
                 <th>Mother Unit</th>
                 <th>Date of Join in SRB</th>
                 <th>Transfer Unit</th>
+                <th>Sending Remark / Type</th>
                 <th>Remarks</th>
                 <th *ngIf="!employeeModalHasNoteSheet && canDelete" style="width: 90px">Action</th>
             </tr>
@@ -219,6 +220,22 @@
                 <td>{{ row.motherUnit || '-' }}</td>
                 <td>{{ formatDate(row.rabJoingdate) }}</td>
                 <td>{{ row.transferRabUnitName || '-' }}</td>
+                <td style="min-width: 230px">
+                    <ng-container *ngIf="!employeeModalHasNoteSheet && canUpdate; else savedSendingRemark">
+                        <input pInputText [(ngModel)]="row.sendingRemark" maxlength="500" placeholder="Sending remark"
+                            [disabled]="savingRemarkId != null" class="w-full mb-2" />
+                        <p-select [options]="remarkTypeOptions" [(ngModel)]="row.sendingRemarkType"
+                            optionLabel="label" optionValue="value" placeholder="-" [showClear]="true"
+                            [disabled]="savingRemarkId != null" appendTo="body" ariaLabel="Remark Type" />
+                        <p-button icon="pi pi-save" label="Save remark" [text]="true" size="small"
+                            [loading]="savingRemarkId === row.id" [disabled]="savingRemarkId != null"
+                            (onClick)="saveSendingRemark(row)" />
+                    </ng-container>
+                    <ng-template #savedSendingRemark>
+                        {{ row.sendingRemark || '-' }}
+                        <small class="block text-500">{{ remarkTypeLabel(row.sendingRemarkType) }}</small>
+                    </ng-template>
+                </td>
                 <td>{{ row.remarks || '-' }}</td>
                 <td *ngIf="!employeeModalHasNoteSheet && canDelete" class="text-center">
                     <p-button icon="pi pi-trash" severity="danger" size="small" [text]="true"
@@ -228,7 +245,7 @@
         </ng-template>
         <ng-template pTemplate="emptymessage">
             <tr>
-                <td [attr.colspan]="(!employeeModalHasNoteSheet && canDelete) ? 12 : 11" class="text-center p-4 text-500">No employees found.</td>
+                <td [attr.colspan]="(!employeeModalHasNoteSheet && canDelete) ? 13 : 12" class="text-center p-4 text-500">No employees found.</td>
             </tr>
         </ng-template>
     </p-table>

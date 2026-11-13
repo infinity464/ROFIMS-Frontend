@@ -605,6 +605,7 @@
                 <span class="font-medium text-700 ml-1 mr-3">{{ emp.motherUnitName || '—' }}</span>
                 <span class="text-500 text-xs">Remarks&nbsp;:</span>
                 <span class="font-medium text-700 ml-1">{{ (isInterPostingDialog ? emp.interPostingRemark : emp.sendingRemark) || '—' }}</span>
+                <small *ngIf="!isInterPostingDialog && emp.sendingRemarkType"> ({{ remarkTypeLabel(emp.sendingRemarkType) }})</small>
               </ng-template>
               <ng-template let-emp pTemplate="item">
                 <div class="flex flex-column gap-1 py-1">
@@ -625,6 +626,7 @@
                     <span class="mr-2">{{ emp.tradeName || '—' }}</span>
                     <span class="text-400">Remarks&nbsp;:</span>
                     <span class="text-700 mr-2">{{ (isInterPostingDialog ? emp.interPostingRemark : emp.sendingRemark) || '—' }}</span>
+                <small *ngIf="!isInterPostingDialog && emp.sendingRemarkType"> ({{ remarkTypeLabel(emp.sendingRemarkType) }})</small>
                     <span class="text-400 ml-auto">{{ emp.RABID || emp.rabID || '' }}</span>
                   </div>
                 </div>

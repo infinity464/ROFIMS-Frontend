@@ -1,4 +1,5 @@
-﻿import { Component, Input, OnInit , inject } from '@angular/core';
+import { sendingRemarkTypeLabel } from '@/models/sending-remark-type';
+import { Component, Input, OnInit , inject } from '@angular/core';
 import { UserMenuService } from '@/services/user-menu.service';
 import { CommonModule } from '@angular/common';
 import { HttpClient } from '@angular/common/http';
@@ -184,6 +185,7 @@ export interface ApprovalLogEntry {
   styleUrl: './notesheet-list.scss'
 })
 export class NotesheetListComponent implements OnInit {
+    remarkTypeLabel = sendingRemarkTypeLabel;
     private _router = inject(Router);
     private _userMenuService = inject(UserMenuService);
     canInsert = true;

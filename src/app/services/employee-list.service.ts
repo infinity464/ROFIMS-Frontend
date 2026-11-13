@@ -140,11 +140,12 @@ export class EmployeeListService {
     }
 
     /** Sets IsSendingNotesheetStatus for an employee (e.g. when sending from Supernumerary List to new posting list). */
-    setIsSendingNotesheetStatus(employeeId: number, isSendingNotesheetStatus: string, sendingRemark?: string): Observable<{ statusCode?: number; description?: string }> {
+    setIsSendingNotesheetStatus(employeeId: number, isSendingNotesheetStatus: string, sendingRemark?: string, sendingRemarkType: import('@/models/sending-remark-type').SendingRemarkType = null): Observable<{ statusCode?: number; description?: string }> {
         return this.http.post<{ statusCode?: number; description?: string }>(`${this.apiUrl}/SetIsSendingNotesheetStatus`, {
             employeeId,
             isSendingNotesheetStatus,
-            sendingRemark: sendingRemark || null
+            sendingRemark: sendingRemark?.trim() || null,
+            sendingRemarkType: sendingRemarkType ?? null
         });
     }
 

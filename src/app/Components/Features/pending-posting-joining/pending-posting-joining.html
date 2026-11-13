@@ -457,13 +457,13 @@
         </div>
 
         <div class="receive-field">
-            <label for="remarks">Remarks</label>
+            <label for="remarks">Joining Remarks</label>
             <textarea
                 id="remarks"
                 pTextarea
                 [(ngModel)]="remarks"
                 rows="4"
-                placeholder="Optional remarks"
+                maxlength="500" placeholder="Optional joining remarks (separate from the sending remark)"
             ></textarea>
         </div>
     </div>
