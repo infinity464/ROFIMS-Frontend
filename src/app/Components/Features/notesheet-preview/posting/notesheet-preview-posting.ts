@@ -37,6 +37,7 @@ import {
 } from '@/models/enums';
 import { SharedService } from '@/shared/services/shared-service';
 import { FlexibleDateDirective } from '@/shared/directives/flexible-date.directive';
+import { omitCurrentFromRabChain } from '@/shared/utils/rab-unit-path.util';
 import { DraftPostingEmployeeRow, EmployeeRemovalInfo, CancelledInterPostingInfo } from '@/models/posting.model';
 import { OrgService } from '@/Components/basic-setup/org-tree/org.service';
 import { JsReportService } from '@/services/jsreport.service';
@@ -1093,15 +1094,14 @@ export class NotesheetPreviewPostingComponent extends NotesheetPreviewBase imple
      *   অংশ ১ — the mother unit, with its district after a comma
      *           ("বানৌজা হাজী মহসীন, চট্টগ্রাম"); either half is dropped when the
      *           other is missing.
-     *   অংশ ২ — the member's FULL RAB posting history from the Previous RAB Service
+     *   অংশ ২ — the member's RAB posting history from the Previous RAB Service
      *           page (PreviousRABServiceInfo): the deepest node of every posting,
-     *           oldest → present, itself "/ "-joined. The SP already orders it by
-     *           ServiceFrom ascending with the currently-active posting last, so this
-     *           reads e.g. "র‌্যাব-১১/ র‌্যাব-৪/ ইন্ট উইং".
+     *           oldest → present, itself "/ "-joined, e.g.
+     *           "র‌্যাব-১১/ র‌্যাব-৪/ ইন্ট উইং".
      *
-     * Fallback: a member with no history rows yet still shows the deepest node of the
-     * live serving posting (presentRab* from vw_ServingMemberFilter), so অংশ ২ is never
-     * blank mid-transfer.
+     * The currently-active posting is the workplace being left, so it stays in the
+     * chain. The approved transfer destination is dropped if it is already recorded
+     * (only its newest occurrence — an earlier visit to the same unit is real history).
      */
     getInterPrevWorkplace(emp: DraftPostingEmployeeRow): string {
         const bn = !this.isEnglish();
@@ -1109,21 +1109,10 @@ export class NotesheetPreviewPostingComponent extends NotesheetPreviewBase imple
         const district = bn ? emp.motherUnitDistrictNameBN || emp.motherUnitDistrictName || '' : emp.motherUnitDistrictName || '';
         const motherPart = motherUnit && district ? motherUnit + ', ' + district : motherUnit || district;
 
-        // অংশ ২: pre-built "/ "-joined chain of the RAB posting history.
-        let chain = bn ? emp.prevRabServiceChainBN || emp.prevRabServiceChain || '' : emp.prevRabServiceChain || '';
-        if (!chain) {
-            // No history entered → fall back to the deepest node of the present posting.
-            // Outermost-first, so the last filled one is the deepest node the member sits at.
-            const rabLevels = [
-                bn ? emp.presentRabUnitNameBN || emp.presentRabUnitName || '' : emp.presentRabUnitName || '',
-                bn ? emp.presentRabWingNameBN || emp.presentRabWingName || '' : emp.presentRabWingName || '',
-                bn ? emp.presentRabBranchNameBN || emp.presentRabBranchName || '' : emp.presentRabBranchName || '',
-                bn ? emp.presentRabSubBranchNameBN || emp.presentRabSubBranchName || '' : emp.presentRabSubBranchName || '',
-                bn ? emp.presentRabSectionNameBN || emp.presentRabSectionName || '' : emp.presentRabSectionName || '',
-                bn ? emp.presentRabSubSectionNameBN || emp.presentRabSubSectionName || '' : emp.presentRabSubSectionName || ''
-            ].filter((p) => p);
-            chain = rabLevels[rabLevels.length - 1] ?? '';
-        }
+        const transferName = (bn ? emp.transferRabUnitNameBN || emp.transferRabUnitName : emp.transferRabUnitName) || '';
+
+        const rawChain = bn ? emp.prevRabServiceChainBN || emp.prevRabServiceChain || '' : emp.prevRabServiceChain || '';
+        const chain = omitCurrentFromRabChain(rawChain, [transferName]);
 
         return [motherPart, chain].filter((p) => p).join('/ ');
     }
