@@ -151,7 +151,7 @@ export class EmployeeListService {
 
     /** Sets IsSendingNotesheetStatus for multiple employees in bulk (e.g. draftInterPosting from Presently Serving Members). Each item can include an optional interPostingRemark. */
     setBulkIsSendingNotesheetStatus(
-        employees: { employeeId: number; interPostingRemark?: string | null }[],
+        employees: { employeeId: number; interPostingRemark?: string | null; interPostingRemarkType?: import('@/models/sending-remark-type').SendingRemarkType }[],
         isSendingNotesheetStatus: string
     ): Observable<{ statusCode?: number; description?: string }> {
         return this.http.post<{ statusCode?: number; description?: string }>(`${this.apiUrl}/SetBulkIsSendingNotesheetStatus`, {

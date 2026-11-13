@@ -488,7 +488,7 @@ export class PostingService {
     }
 
     /** Update TransferRabUnitId and Remarks on DraftInterPostingDetail rows. */
-    updateDraftInterPostingDetails(items: { id: number; transferRabUnitId: number | null; remarks: string | null }[]): Observable<{ statusCode: number; description: string }> {
+    updateDraftInterPostingDetails(items: { id: number; transferRabUnitId: number | null; remarks: string | null; interPostingRemark?: string | null; interPostingRemarkType?: import('@/models/sending-remark-type').SendingRemarkType; updateInterPostingRemark?: boolean }[]): Observable<{ statusCode: number; description: string }> {
         return this.http.post<{ statusCode: number; description: string }>(`${API}/UpdateDraftInterPostingDetails`, { items });
     }
 

@@ -207,6 +207,8 @@ export interface DraftInterPostingMasterDto {
 
 /** Detail row for GetDraftInterPostingById (Edit). */
 export interface DraftInterPostingDetailDto {
+    interPostingRemark?: string | null;
+    interPostingRemarkType?: SendingRemarkType;
     id: number;
     employeeId: number;
     /** Member Type (EmployeeInfo.MemberType → CommonCode 'EmployeeType' id). */
@@ -253,6 +255,7 @@ export interface DraftPostingEmployeeRow {
     sendingRemark: string | null;
     sendingRemarkType?: SendingRemarkType;
     interPostingRemark?: string | null;
+    interPostingRemarkType?: SendingRemarkType;
     isSendingNotesheetStatus: string | null;
     serviceId: string | null;
     prefixName: string | null;
@@ -538,6 +541,7 @@ export interface PostingOrderEmployeeRow {
     sendingRemark: string | null;
     sendingRemarkType?: SendingRemarkType;
     interPostingRemark: string | null;
+    interPostingRemarkType?: SendingRemarkType;
     transferRabUnitId: number | null;
     transferRabUnitName: string | null;
     transferRabUnitNameBN: string | null;

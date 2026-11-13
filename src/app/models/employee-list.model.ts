@@ -40,6 +40,7 @@ export interface EmployeeList {
     sendingRemarkType?: SendingRemarkType;
     /** Remark entered when sending from Presently Serving Members to inter posting. */
     interPostingRemark?: string | null;
+    interPostingRemarkType?: SendingRemarkType;
     /** Date the record was inserted into the database (EmployeeInfo.CreatedDate). */
     createdDate?: string | null;
     /** Member Type (EmployeeInfo.MemberType → CommonCode 'EmployeeType' id). Used for access filtering. */

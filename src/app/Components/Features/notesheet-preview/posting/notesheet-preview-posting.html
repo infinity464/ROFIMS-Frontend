@@ -410,8 +410,15 @@
                                             </p-treeSelect>
                                         </td>
                                         <td style="min-width: 200px">
-                                            <div *ngIf="originalRemarks[emp.employeeId]" style="font-size: 0.85rem; color: #555; margin-bottom: 4px">{{ originalRemarks[emp.employeeId] }}</div>
+                                            <div class="mb-2" *ngIf="originalRemarks[emp.employeeId]">
+                                                <div>{{ originalRemarks[emp.employeeId] }}</div>
+                                                <small *ngIf="emp.interPostingRemarkType">{{ remarkTypeLabel(emp.interPostingRemarkType) }}</small>
+                                            </div>
                                             <input pInputText [(ngModel)]="newRemarks[emp.employeeId]" placeholder="{{ isEnglish() ? 'Add Remarks' : 'মন্তব্য যোগ করুন' }}" class="w-full" />
+                                            <p-select [options]="remarkTypeOptions" [(ngModel)]="remarkTypes[emp.employeeId]"
+                                                optionLabel="label" optionValue="value" placeholder="-" [showClear]="true"
+                                                [disabled]="saving" appendTo="body"
+                                                ariaLabel="Remark Type" styleClass="w-full" class="block mt-2" />
                                         </td>
                                     </tr>
                                 </ng-container>
@@ -448,18 +455,15 @@
                                             </p-treeSelect>
                                         </td>
                                         <td style="min-width: 200px">
-                                            <ng-container *ngIf="canEditSendingRemark; else savedNewSendingRemark">
-                                                <input pInputText [(ngModel)]="editSendingRemarks[emp.employeeId]" maxlength="500"
-                                                    placeholder="Sending remark" class="w-full mb-2" />
-                                                <p-select [options]="remarkTypeOptions" [(ngModel)]="editSendingRemarkTypes[emp.employeeId]"
-                                                    optionLabel="label" optionValue="value" placeholder="-" [showClear]="true"
-                                                    appendTo="body" ariaLabel="Remark Type" class="block mb-2" />
-                                            </ng-container>
-                                            <ng-template #savedNewSendingRemark>
+                                            <div class="mb-2" *ngIf="originalRemarks[emp.employeeId]">
                                                 <div>{{ originalRemarks[emp.employeeId] }}</div>
                                                 <small *ngIf="emp.sendingRemarkType">{{ remarkTypeLabel(emp.sendingRemarkType) }}</small>
-                                            </ng-template>
+                                            </div>
                                             <input pInputText [(ngModel)]="newRemarks[emp.employeeId]" placeholder="{{ isEnglish() ? 'Add Remarks' : 'মন্তব্য যোগ করুন' }}" class="w-full" />
+                                            <p-select [options]="remarkTypeOptions" [(ngModel)]="remarkTypes[emp.employeeId]"
+                                                optionLabel="label" optionValue="value" placeholder="-" [showClear]="true"
+                                                [disabled]="saving" appendTo="body"
+                                                ariaLabel="Remark Type" styleClass="w-full" class="block mt-2" />
                                         </td>
                                     </tr>
                                 </ng-container>

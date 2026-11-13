@@ -2078,7 +2078,7 @@ export class PostingOrderPreviewPageComponent implements OnInit {
         // previous note-sheet" (getRemovalRemark) and "previous transfer order cancelled"
         // (cancelledInterMap) — are no longer appended; only the manual remarks show.
         // To restore, add `this.getRemovalRemark(emp)` and the cancel note back to the list.
-        return [base, emp.noteSheetRemarks].filter(s => s?.trim()).join(', ');
+        return [...new Set([base, emp.noteSheetRemarks].map(s => s?.trim()).filter(Boolean))].join(', ');
     }
 
     trackByIndex(index: number): number {

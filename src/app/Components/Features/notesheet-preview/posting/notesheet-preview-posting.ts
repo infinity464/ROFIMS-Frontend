@@ -486,15 +486,12 @@ export class NotesheetPreviewPostingComponent extends NotesheetPreviewBase imple
     private unitNodeMap: Record<number, TreeNode> = {};
 
     // ── Remarks: original (from draft posting) + new (added in edit mode) ──
-    remarkTypeOptions = SendingRemarkTypeOptions;
     remarkTypeLabel = sendingRemarkTypeLabel;
-    editSendingRemarks: Record<number, string> = {};
-    editSendingRemarkTypes: Record<number, SendingRemarkType> = {};
+    remarkTypeOptions = SendingRemarkTypeOptions;
+    remarkTypes: Record<number, SendingRemarkType> = {};
 
-    get canEditSendingRemark(): boolean {
-        const ns = this.noteSheet;
-        return !this.isInterPosting() && !!ns && ns.finalApprovalStatus !== 'approve'
-            && (ns.currentStatus === 'draft' || !!ns.isCurrentlyBacked);
+    get canEditRemarkRouting(): boolean {
+        return !!this.noteSheet;
     }
 
     originalRemarks: Record<number, string> = {};
@@ -1462,16 +1459,15 @@ export class NotesheetPreviewPostingComponent extends NotesheetPreviewBase imple
         if (!Object.keys(this.districtNameToId).length) {
             this.loadDistrictMap();
         }
-        // For new-posting: sendingRemark readonly, remarks editable.
-        // For inter-posting: interPostingRemark readonly, remarks editable.
+        // The existing remarks input also supplies the text for the routing choice.
         this.originalRemarks = {};
         this.newRemarks = {};
+        this.remarkTypes = {};
         const isInter = this.isInterPosting();
         for (const emp of this.postingEmployees) {
             this.originalRemarks[emp.employeeId] = isInter ? (emp.interPostingRemark ?? '') : (emp.sendingRemark ?? '');
             this.newRemarks[emp.employeeId] = emp.remarks ?? '';
-            this.editSendingRemarks[emp.employeeId] = emp.sendingRemark ?? '';
-            this.editSendingRemarkTypes[emp.employeeId] = emp.sendingRemarkType ?? null;
+            this.remarkTypes[emp.employeeId] = (isInter ? emp.interPostingRemarkType : emp.sendingRemarkType) ?? null;
         }
     }
 
@@ -1582,10 +1578,8 @@ export class NotesheetPreviewPostingComponent extends NotesheetPreviewBase imple
         // TEMPORARILY HIDDEN (per request): the auto-generated "removed from previous
         // note-sheet" (removalHistoryMap) + "previous transfer order cancelled"
         // (getCancelledInterNote) notes are no longer appended; only manual remarks show.
-        if (this.isInterPosting()) {
-            return [emp.interPostingRemark, emp.remarks].filter((s) => s?.trim()).join(', ');
-        }
-        return [emp.sendingRemark, emp.remarks].filter((s) => s?.trim()).join(', ');
+        const sourceRemark = this.isInterPosting() ? emp.interPostingRemark : emp.sendingRemark;
+        return [...new Set([sourceRemark, emp.remarks].map(s => s?.trim()).filter(Boolean))].join(', ');
     }
 
     getNoteSafe(): SafeHtml {
@@ -1796,8 +1790,44 @@ export class NotesheetPreviewPostingComponent extends NotesheetPreviewBase imple
     }
 
     // ── Save changes ─────────────────────────────────────────
+    private hasRemarkRoutingChanges(emp: DraftPostingEmployeeRow): boolean {
+        const savedType = this.isInterPosting() ? emp.interPostingRemarkType : emp.sendingRemarkType;
+        return this.canEditRemarkRouting && (
+            ((this.newRemarks[emp.employeeId] ?? '').trim() || null) !== (emp.remarks?.trim() || null)
+            || (this.remarkTypes[emp.employeeId] ?? null) !== (savedType ?? null));
+    }
+
+    private buildPostingDetailItems() {
+        return this.postingEmployees.map(emp => {
+            const remarks = (this.newRemarks[emp.employeeId] ?? '').trim() || null;
+            const type = this.remarkTypes[emp.employeeId] ?? null;
+            return {
+                id: emp.draftPostingDetailId,
+                transferRabUnitId: emp.transferRabUnitId,
+                remarks,
+                ...(this.hasRemarkRoutingChanges(emp) ? (this.isInterPosting() ? {
+                    interPostingRemark: remarks,
+                    interPostingRemarkType: type,
+                    updateInterPostingRemark: true
+                } : {
+                    sendingRemark: remarks,
+                    sendingRemarkType: type,
+                    updateSendingRemark: true
+                }) : {})
+            };
+        });
+    }
+
     saveChanges(): void {
         if (!this.noteSheet || this.saving) return;
+        for (const emp of this.postingEmployees) {
+            if (!this.hasRemarkRoutingChanges(emp)) continue;
+            const error = sendingRemarkError(this.newRemarks[emp.employeeId], this.remarkTypes[emp.employeeId]);
+            if (error) {
+                this.messageService.add({ severity: 'warn', summary: 'Remarks', detail: error });
+                return;
+            }
+        }
         this.saving = true;
 
         const existingRefs = this.fileReferencesForm?.getExistingFileReferences() || [];
@@ -1828,28 +1858,7 @@ export class NotesheetPreviewPostingComponent extends NotesheetPreviewBase imple
                 payload['filesReferences'] = filesReferencesJson;
             }
 
-            if (this.canEditSendingRemark) {
-                const invalid = this.postingEmployees.find(emp => sendingRemarkError(
-                    this.editSendingRemarks[emp.employeeId], this.editSendingRemarkTypes[emp.employeeId]));
-                if (invalid) {
-                    this.messageService.add({ severity: 'warn', summary: 'Sending remark', detail: sendingRemarkError(
-                        this.editSendingRemarks[invalid.employeeId], this.editSendingRemarkTypes[invalid.employeeId])! });
-                    this.saving = false;
-                    return;
-                }
-            }
-
-            const postingDetailItems = this.postingEmployees.map((emp) => ({
-                id: emp.draftPostingDetailId,
-                transferRabUnitId: emp.transferRabUnitId,
-                remarks: (this.newRemarks[emp.employeeId] ?? '').trim() || null,
-                ...(this.canEditSendingRemark ? {
-                    sendingRemark: this.editSendingRemarks[emp.employeeId]?.trim() || null,
-                    sendingRemarkType: this.editSendingRemarkTypes[emp.employeeId] ?? null,
-                    updateSendingRemark: (this.editSendingRemarks[emp.employeeId]?.trim() || null) !== (emp.sendingRemark || null)
-                        || (this.editSendingRemarkTypes[emp.employeeId] ?? null) !== (emp.sendingRemarkType ?? null)
-                } : {})
-            }));
+            const postingDetailItems = this.buildPostingDetailItems();
 
             const noteSheetUpdate$ = this.http.post(`${this.api}/UpdateAsyn`, payload);
             const postingUpdate$ = this.isInterPosting() ? this.postingService.updateDraftInterPostingDetails(postingDetailItems) : this.postingService.updateDraftPostingDetails(postingDetailItems);

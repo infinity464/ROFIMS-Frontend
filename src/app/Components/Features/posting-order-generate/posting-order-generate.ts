@@ -232,7 +232,7 @@ export class PostingOrderGenerateComponent implements OnInit {
         // TEMPORARILY HIDDEN (per request): the auto-generated "removed from previous
         // note-sheet" (removalHistoryMap) + "previous transfer order cancelled"
         // (cancelledInterMap) notes are no longer appended; only the manual remarks show.
-        return [base, emp.remarks].filter(s => s?.trim()).join(', ');
+        return [...new Set([base, emp.remarks].map(s => s?.trim()).filter(Boolean))].join(', ');
     }
 
     /** RAB ID — Bangla digits when text type is Bangla, else as-is. */
