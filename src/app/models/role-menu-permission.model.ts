@@ -4,6 +4,7 @@ export interface RoleMenuPermissionModel {
     roleId: string;
     menuId: number;
     canView: boolean;
+    canSpecialView: boolean;
     canInsert: boolean;
     canUpdate: boolean;
     canDelete: boolean;
@@ -30,6 +31,7 @@ export interface MenuPermissionRow {
     /** Populated from RoleMenuPermission table; null if no row exists yet */
     permissionId: number | null;
     canView: boolean;
+    canSpecialView: boolean;
     canInsert: boolean;
     canUpdate: boolean;
     canDelete: boolean;
@@ -54,6 +56,7 @@ export interface UserMenuModel {
     sortOrder: number;
     permissionKey: string | null;
     canView: boolean;
+    canSpecialView: boolean;
     canInsert: boolean;
     canUpdate: boolean;
     canDelete: boolean;

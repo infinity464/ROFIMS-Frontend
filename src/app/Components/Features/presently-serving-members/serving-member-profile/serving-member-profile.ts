@@ -1,3 +1,6 @@
+import { inject } from '@angular/core';
+import { ProfileSensitiveInfoService } from '@/services/profile-sensitive-info.service';
+import { protectProfileExport } from '@/shared/utils/profile-sensitive-export.util';
 import { Component, HostListener, OnDestroy, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
@@ -38,11 +41,12 @@ import { formatPartialDate } from '@/shared/utils/partial-date.util';
     selector: 'app-serving-member-profile',
     standalone: true,
     imports: [CommonModule, RouterModule, ButtonModule, TableModule, Toast, DialogModule, TooltipModule, PartialDatePipe],
-    providers: [MessageService],
+    providers: [MessageService, ProfileSensitiveInfoService],
     templateUrl: './serving-member-profile.html',
     styleUrl: './serving-member-profile.scss'
 })
 export class ServingMemberProfile implements OnInit, OnDestroy {
+    readonly sensitive = inject(ProfileSensitiveInfoService);
     canInsert = true;
     canUpdate = true;
     canDelete = true;
@@ -117,7 +121,7 @@ export class ServingMemberProfile implements OnInit, OnDestroy {
             sections.push({ title: secTitle, columns, rows, noTableHeader, addressSection, colsPerRow });
         const kv = (label: string, value: string): [string, string] => [label, value];
 
-        if (!p) return { title, lang: this.profileLang, sections, showPageNumbers: true };
+        if (!p) return { title, lang: this.profileLang, sections: protectProfileExport(sections, L, this.sensitive.canSpecialView && !this.sensitive.error, this.sensitive.remarks), showPageNumbers: true };
 
         // Basic Service (same as web: label-value block, no "Field"/"Value" header)
         addSection(L['section.basicService'], [L['table.field'], L['table.value']], [
@@ -378,10 +382,13 @@ export class ServingMemberProfile implements OnInit, OnDestroy {
         if (docRows.length === 0) docRows.push([L['empty.noDocuments']]);
         addSection(L['section.documents'], [L['table.ser'], L['table.section'], L['table.fileName']], docRows);
 
-        return { title, lang: this.profileLang, sections, showPageNumbers: true };
+        return { title, lang: this.profileLang, sections: protectProfileExport(sections, L, this.sensitive.canSpecialView && !this.sensitive.error, this.sensitive.remarks), showPageNumbers: true };
     }
 
     async exportAs(type: 'pdf' | 'word'): Promise<void> {
+        if (this.employeeId == null || !this.profile) return;
+        await this.sensitive.refresh(this.employeeId);
+        if (!this.sensitive.canSpecialView) this.previousRabList = this.previousRabList.map(row => ({ ...row, remarks: null }));
         const config: ProfileExportConfig = { ...this.getExportData(), lang: this.profileLang };
         if (this.profileImageUrl) {
             try {
@@ -560,6 +567,7 @@ export class ServingMemberProfile implements OnInit, OnDestroy {
     }
 
     loadProfile(): void {
+        this.sensitive.clear();
         if (this.employeeId == null) return;
         const id = this.employeeId;
         this.loading = true;
@@ -604,6 +612,9 @@ export class ServingMemberProfile implements OnInit, OnDestroy {
      * when access is denied.
      */
     private loadRelatedProfileData(id: number): void {
+        void this.sensitive.refresh(id).then(() => {
+            if (!this.sensitive.canSpecialView) this.previousRabList = this.previousRabList.map(row => ({ ...row, remarks: null }));
+        });
         const currentYear = this.currentYear;
         forkJoin({
             family: this.familyInfoService.getFamilyInfoByEmployeeView(id),
@@ -655,6 +666,7 @@ export class ServingMemberProfile implements OnInit, OnDestroy {
     }
 
     ngOnDestroy(): void {
+        this.sensitive.clear();
         if (this.profileImageUrl) {
             URL.revokeObjectURL(this.profileImageUrl);
             this.profileImageUrl = null;

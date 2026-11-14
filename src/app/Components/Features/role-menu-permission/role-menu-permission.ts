@@ -140,6 +140,7 @@ export class RoleMenuPermission implements OnInit {
                 sortOrder: m.sortOrder,
                 permissionId: perm?.id ?? null,
                 canView: perm?.canView ?? false,
+                canSpecialView: perm?.canSpecialView ?? false,
                 canInsert: perm?.canInsert ?? false,
                 canUpdate: perm?.canUpdate ?? false,
                 canDelete: perm?.canDelete ?? false
@@ -226,6 +227,7 @@ export class RoleMenuPermission implements OnInit {
             roleId: this.selectedRole.id,
             menuId: row.menuId,
             canView: row.canView,
+            canSpecialView: row.canSpecialView,
             canInsert: row.canInsert,
             canUpdate: row.canUpdate,
             canDelete: row.canDelete,
@@ -252,7 +254,7 @@ export class RoleMenuPermission implements OnInit {
         });
     }
 
-    toggleAllColumn(column: 'canView' | 'canInsert' | 'canUpdate' | 'canDelete', event: any): void {
+    toggleAllColumn(column: 'canView' | 'canInsert' | 'canUpdate' | 'canDelete' | 'canSpecialView', event: any): void {
         const checked = event.checked;
         this.setColumnRecursive(this.treeData, column, checked);
         // Save all in batch
@@ -268,7 +270,7 @@ export class RoleMenuPermission implements OnInit {
         }
     }
 
-    isAllChecked(column: 'canView' | 'canInsert' | 'canUpdate' | 'canDelete'): boolean {
+    isAllChecked(column: 'canView' | 'canInsert' | 'canUpdate' | 'canDelete' | 'canSpecialView'): boolean {
         return this.checkAllRecursive(this.treeData, column);
     }
 
@@ -296,6 +298,7 @@ export class RoleMenuPermission implements OnInit {
                 roleId: this.selectedRole.id,
                 menuId: row.menuId,
                 canView: row.canView,
+            canSpecialView: row.canSpecialView,
                 canInsert: row.canInsert,
                 canUpdate: row.canUpdate,
                 canDelete: row.canDelete,
@@ -342,7 +345,18 @@ export class RoleMenuPermission implements OnInit {
         return result;
     }
 
+    get hasProfileSpecialViewMenu(): boolean {
+        return this.menus.some(menu => menu.permissionKey === 'MemberProfileSensitiveInfo');
+    }
+
+    showProfileSpecialViewMenu(): void {
+        this.selectedMenuTypeFilter = null;
+        this.searchText = this.menus.find(menu => menu.permissionKey === 'MemberProfileSensitiveInfo')?.menuNameEn ?? '';
+        this.applyFilters();
+    }
+
     toggleRowAll(row: MenuPermissionRow, checked: boolean): void {
+        row.canSpecialView = checked;
         row.canView = checked;
         row.canInsert = checked;
         row.canUpdate = checked;
@@ -351,7 +365,7 @@ export class RoleMenuPermission implements OnInit {
     }
 
     isRowAllChecked(row: MenuPermissionRow): boolean {
-        return row.canView && row.canInsert && row.canUpdate && row.canDelete;
+        return row.canSpecialView && row.canView && row.canInsert && row.canUpdate && row.canDelete;
     }
 
     expandAll(): void {

@@ -94,6 +94,7 @@ export class EmpPreviousRabService implements OnInit {
     private _router = inject(Router);
     private _userMenuService = inject(UserMenuService);
     canInsert = true;
+    canSpecialView = false;
     canUpdate = true;
     canDelete = true;
 
@@ -151,6 +152,10 @@ export class EmpPreviousRabService implements OnInit {
     ) {}
 
     ngOnInit(): void {
+        this._userMenuService.getMyProfilePermissions().subscribe({
+            next: permission => this.canSpecialView = permission.canSpecialView === true,
+            error: () => this.canSpecialView = false
+        });
         const _perms = this._userMenuService.getPermissionsByRoute(this._router.url);
         this.canInsert = _perms.canInsert;
         this.canUpdate = _perms.canUpdate;

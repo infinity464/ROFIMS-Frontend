@@ -1,4 +1,4 @@
-﻿import { Component, EventEmitter, HostListener, Input, OnInit, Output, OnDestroy } from '@angular/core';
+import { Component, EventEmitter, HostListener, Input, OnInit, Output, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { HttpClient } from '@angular/common/http';
 import { FormsModule } from '@angular/forms';
@@ -10,7 +10,7 @@ import { TableModule } from 'primeng/table';
 import { DialogModule } from 'primeng/dialog';
 import { Toast } from 'primeng/toast';
 import { MessageService } from 'primeng/api';
-import { forkJoin, of } from 'rxjs';
+import { firstValueFrom, forkJoin, of } from 'rxjs';
 import { catchError } from 'rxjs/operators';
 import { ReportService } from '@/services/report.service';
 import { ServingMembersService } from '@/services/serving-members.service';
@@ -410,7 +410,19 @@ export class ReportBioDataFullIndividualComponent implements OnInit, OnDestroy {
         this.editPanelId = this.panels[0].id;
     }
 
-    ngOnInit(): void { this._userMenuService.getPermissionsByRoute(this._router.url); }
+    canSpecialView = false;
+    private async refreshSpecialView(): Promise<void> {
+        this.canSpecialView = false;
+        try {
+            const permission = await firstValueFrom(this._userMenuService.getMyProfilePermissions());
+            this.canSpecialView = permission.canSpecialView === true;
+        } catch { this.canSpecialView = false; }
+        if (!this.canSpecialView) this.tableRows['previousRab'] = (this.tableRows['previousRab'] ?? []).map(row => ({ ...row, remarks: null }));
+    }
+    ngOnInit(): void {
+        this._userMenuService.getPermissionsByRoute(this._router.url);
+        void this.refreshSpecialView();
+    }
     ngOnDestroy(): void { if (this.profileImageUrl) { URL.revokeObjectURL(this.profileImageUrl); this.profileImageUrl = null; } }
 
     @HostListener('document:click')
@@ -535,7 +547,7 @@ export class ReportBioDataFullIndividualComponent implements OnInit, OnDestroy {
     }
     visibleCols(p: PanelDef): ColDef[] {
         const byKey = new Map(p.columns.map(c => [c.key, c]));
-        return (this.selectedCols[p.id] ?? []).map(k => byKey.get(k)).filter((c): c is ColDef => c != null);
+        return (this.selectedCols[p.id] ?? []).map(k => byKey.get(k)).filter((c): c is ColDef => c != null && (p.id !== 'previousRab' || c.key !== 'remarks' || this.canSpecialView));
     }
     rowsFor(p: PanelDef): any[] { return this.tableRows[p.id] ?? []; }
 
@@ -1021,6 +1033,7 @@ export class ReportBioDataFullIndividualComponent implements OnInit, OnDestroy {
     // ── Export ─────────────────────────────────────────────────────────
     toggleExportDropdown(event: Event): void { event.stopPropagation(); this.exportDropdownOpen = !this.exportDropdownOpen; }
     async exportAs(type: 'print' | 'word'): Promise<void> {
+        await this.refreshSpecialView();
         this.exportDropdownOpen = false;
         if (!this.profile) return;
         if (type === 'print') { this.printDoc(); return; }

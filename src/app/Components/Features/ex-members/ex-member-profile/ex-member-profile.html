@@ -524,7 +524,7 @@
                         <th>{{ L['table.serviceTo'] }}</th>
                         <th>{{ L['table.appointment'] }}</th>
                         <th>{{ L['table.postingAuth'] }}</th>
-                        <th>{{ L['table.remarks'] }}</th>
+                        @if (sensitive.canSpecialView) { <th>{{ L['table.remarks'] }}</th> }
                     </tr>
                 </ng-template>
                 <ng-template pTemplate="body" let-row let-rowIndex="rowIndex">
@@ -535,12 +535,12 @@
                         <td>{{ row.serviceTo | partialDate: row.serviceToPrecision : (isBn ? 'bn' : 'en') }}</td>
                         <td>{{ codeValue(row.appointmentName, row.appointmentNameBN) }}</td>
                         <td>{{ val(row.postingAuth) }}</td>
-                        <td>{{ val(row.remarks) }}</td>
+                        @if (sensitive.canSpecialView) { <td>{{ val(row.remarks) }}</td> }
                     </tr>
                 </ng-template>
                 <ng-template pTemplate="emptymessage">
                     <tr>
-                        <td colspan="7" class="text-center text-500 py-3">{{ L['empty.noPreviousRabRecords'] }}</td>
+                        <td [attr.colspan]="sensitive.canSpecialView ? 7 : 6" class="text-center text-500 py-3">{{ L['empty.noPreviousRabRecords'] }}</td>
                     </tr>
                 </ng-template>
             </p-table>
@@ -1208,6 +1208,23 @@
         <app-emp-additional-remarks [externalEmployeeId]="employeeId" [embedMode]="true" [hideTitle]="true" (saved)="onSectionSaved('additionalRemarks')" (cancelled)="closeSectionAndRefresh()"></app-emp-additional-remarks>
         }
     </div>
+
+    @if (sensitive.canSpecialView) {
+    <div class="sp-section">
+        <div class="sp-section-heading">{{ L['section.confidentialRemarks'] }}</div>
+        @if (sensitive.error) {
+            <div class="text-red-500 py-2">{{ L['error.confidentialRemarks'] }}</div>
+        } @else {
+        <div class="family-table-wrapper">
+            <p-table [value]="sensitive.remarks" [loading]="sensitive.loading" [tableStyle]="{ 'min-width': '40rem' }" styleClass="p-datatable-sm p-datatable-gridlines family-info-table">
+                <ng-template pTemplate="header"><tr><th style="width: 4rem">{{ L['table.ser'] }}</th><th>{{ L['table.confidentialRemarks'] }}</th></tr></ng-template>
+                <ng-template pTemplate="body" let-row let-rowIndex="rowIndex"><tr><td>{{ rowNum(rowIndex) }}.</td><td>{{ val(row.additionalRemarks) }}</td></tr></ng-template>
+                <ng-template pTemplate="emptymessage"><tr><td colspan="2" class="text-center text-500 py-3">{{ L['empty.noConfidentialRemarks'] }}</td></tr></ng-template>
+            </p-table>
+        </div>
+        }
+    </div>
+    }
 
     <!-- Note Sheets (all types + downstream status) -->
     <div class="sp-section">
