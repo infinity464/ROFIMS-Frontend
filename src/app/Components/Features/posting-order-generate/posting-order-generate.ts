@@ -58,6 +58,8 @@ interface NoteSheetEmployee {
     motherOrgLocationNameBN: string | null;
     previousRabUnits: string | null;
     previousRabUnitsBN: string | null;
+    approvedPreviousWorkplace?: string | null;
+    approvedPreviousWorkplaceBN?: string | null;
     transferRabUnitId: number | null;
     transferRabUnitName: string | null;
     transferRabUnitNameBN: string | null;
@@ -405,6 +407,8 @@ export class PostingOrderGenerateComponent implements OnInit {
             motherOrgLocationNameBN: e.motherOrgLocationNameBN,
             previousRabUnits: e.previousRabUnits ?? null,
             previousRabUnitsBN: e.previousRabUnitsBN ?? null,
+            approvedPreviousWorkplace: e.approvedPreviousWorkplace,
+            approvedPreviousWorkplaceBN: e.approvedPreviousWorkplaceBN,
             transferRabUnitId: e.transferRabUnitId,
             transferRabUnitName: e.transferRabUnitName,
             transferRabUnitNameBN: e.transferRabUnitNameBN ?? null,

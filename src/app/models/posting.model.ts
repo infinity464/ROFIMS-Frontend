@@ -299,6 +299,8 @@ export interface DraftPostingEmployeeRow {
      *  Ordered by the SP: ServiceFrom ascending with the currently-active posting last. */
     prevRabServiceChain?: string | null;
     prevRabServiceChainBN?: string | null;
+    approvedPreviousWorkplace?: string | null;
+    approvedPreviousWorkplaceBN?: string | null;
     /** Current RAB unit the employee is presently serving in. Inter-posting only. */
     presentRabUnitId?: number | null;
     presentRabUnitName?: string | null;
@@ -583,6 +585,8 @@ export interface PostingOrderEmployeeRow {
     // Ordered by the view: ServiceFrom ascending with the currently-active posting last.
     prevRabServiceChain?: string | null;
     prevRabServiceChainBN?: string | null;
+    approvedPreviousWorkplace?: string | null;
+    approvedPreviousWorkplaceBN?: string | null;
     // Present RAB unit hierarchy (current serving posting) — fallback for interposting
     // পূর্ববতী কর্মস্থল অংশ ২ when no previous-RAB-service history exists.
     presentRabUnitId?: number | null;

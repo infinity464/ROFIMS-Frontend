@@ -1113,6 +1113,8 @@ export class NotesheetPreviewPostingComponent extends NotesheetPreviewBase imple
      * (only its newest occurrence — an earlier visit to the same unit is real history).
      */
     getInterPrevWorkplace(emp: DraftPostingEmployeeRow): string {
+        const approved = this.isEnglish() ? emp.approvedPreviousWorkplace : emp.approvedPreviousWorkplaceBN;
+        if (approved != null) return approved;
         const bn = !this.isEnglish();
         const motherUnit = bn ? emp.motherUnitNameBN || emp.motherUnitName || '' : emp.motherUnitName || '';
         const district = bn ? emp.motherUnitDistrictNameBN || emp.motherUnitDistrictName || '' : emp.motherUnitDistrictName || '';

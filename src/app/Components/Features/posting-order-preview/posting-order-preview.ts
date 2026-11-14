@@ -1087,6 +1087,8 @@ export class PostingOrderPreviewPageComponent implements OnInit {
     }
 
     empPrevWorkplace(emp: PostingOrderEmployeeRow): string {
+        const approved = this.isBangla ? emp.approvedPreviousWorkplaceBN : emp.approvedPreviousWorkplace;
+        if (this.isInterPosting && approved != null) return approved;
         const bn = this.isBangla;
         const unit = (bn ? (emp.motherUnitNameBN || emp.motherUnitName) : emp.motherUnitName) || '';
         // Mother unit's district (EmployeeInfo.LastMotherUnitDistrictId) after a
