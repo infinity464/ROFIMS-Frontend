@@ -209,6 +209,7 @@ export class EmployeeSearchComponent implements OnChanges {
 
     searchRabId: string = '';
     searchServiceId: string = '';
+    private directLookupRequestId = 0;
     isSearching: boolean = false;
     employeeFound: boolean = false;
     employeeInfo: EmployeeBasicInfo | null = null;
@@ -546,6 +547,7 @@ export class EmployeeSearchComponent implements OnChanges {
             const id = Number(idChange.currentValue);
             if (id !== this.employeeInfo?.employeeID) this.loadEmployeeById(id);
         } else if (idChange && (idChange.currentValue == null || idChange.currentValue === 0)) {
+            ++this.directLookupRequestId;
             this.employeeFound = false;
             this.employeeInfo = null;
             this.searchRabId = '';
@@ -555,9 +557,14 @@ export class EmployeeSearchComponent implements OnChanges {
 
     /** Load employee by ID and show in card (used when opening draft for update). */
     loadEmployeeById(employeeId: number): void {
+        const requestId = ++this.directLookupRequestId;
+        this.employeeFound = false;
+        this.employeeInfo = null;
+        this.closeExMemberNotice();
         this.isSearching = true;
         this.empService.getEmployeeById(employeeId).subscribe({
             next: (employee: any) => {
+                if (requestId !== this.directLookupRequestId) return;
                 if (employee) {
                     const employeeID = employee.EmployeeID ?? employee.employeeID;
                     this.employeeInfo = {
@@ -579,16 +586,28 @@ export class EmployeeSearchComponent implements OnChanges {
                     this.searchServiceId = this.employeeInfo.serviceId || '';
                     this.finalizeAndEmit(employeeID);
                 } else {
-                    this.employeeFound = false;
-                    this.employeeInfo = null;
-                    this.isSearching = false;
+                    this.rejectDirectLookup();
                 }
             },
             error: (err: any) => {
-                this.isSearching = false;
-                this.employeeFound = false;
-                this.employeeInfo = null;
+                if (requestId !== this.directLookupRequestId) return;
+                this.rejectDirectLookup(err);
             }
+        });
+    }
+
+    private rejectDirectLookup(error?: { status?: number }): void {
+        this.isSearching = false;
+        this.employeeFound = false;
+        this.employeeInfo = null;
+        this.searchRabId = '';
+        this.searchServiceId = '';
+        this.onSearchReset.emit();
+        this.messageService.add({
+            severity: 'warn',
+            summary: error?.status === 403 ? 'Permission Denied' : 'Employee Unavailable',
+            detail: 'This employee could not be loaded or is outside your access permissions.',
+            life: 6000
         });
     }
 
