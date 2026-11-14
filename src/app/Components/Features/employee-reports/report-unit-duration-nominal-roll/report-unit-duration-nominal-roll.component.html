@@ -247,7 +247,13 @@
                                         @for (line of historyLines(row, col.key); track $index) { <div>{{ line }}</div> }
                                     </td>
                                 }
-                                @case ('Remarks') { <td class="rab-td-rmks">{{ row.rmks || '' }}</td> }
+                                @case ('Remarks') {
+                                    <td class="rab-td-rmks">
+                                        @for (line of remarksLines(row); track $index) {
+                                            <div class="rab-rmk-line">{{ line }}</div>
+                                        }
+                                    </td>
+                                }
                                 @case ('Plain') { <td>{{ cellValue(row, col.key) }}</td> }
                                 @default { <td>{{ cellValue(row, col.key) }}</td> }
                             }

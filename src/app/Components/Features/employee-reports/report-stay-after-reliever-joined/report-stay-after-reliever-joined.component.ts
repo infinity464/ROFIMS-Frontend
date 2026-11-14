@@ -15,6 +15,7 @@ import { CommonCodeService } from '@/services/common-code-service';
 import { PermanentPostingJoineeDetailService } from '@/services/permanent-posting-joinee-detail.service';
 import { UserMenuService } from '@/services/user-menu.service';
 import { BanglaNumerals } from '@/Core/i18n/bangla-numerals';
+import { reportRemarksValue, reportRemarksLines } from '@/shared/utils/report-remarks.util';
 import type { StayAfterRelieverJoinedReportRow, ReportAccessibleScope, DynamicReportCriterion, DynamicReportRow } from '@/models/report.model';
 import type { CommonCodeModel } from '@/models/common-code-model';
 import type { MotherOrganizationModel } from '@/models/mother-org-model';
@@ -29,8 +30,8 @@ type Lang = 'en' | 'bn';
 
 /**
  * Stay-After-Reliever-Joined Report — RAB-formal layout, dynamic column
- * picker, drag-to-reorder, Print/Word/Excel exports. Uses the existing
- * /GetStayAfterRelieverJoinedReport endpoint (access control is applied
+ * picker, drag-to-reorder, Print/Word/Excel exports. Uses the dynamic
+ * long-stay report endpoint (access control is applied
  * server-side via the same access-scope context as the other reports).
  */
 @Component({
@@ -222,7 +223,7 @@ export class ReportStayAfterRelieverJoinedComponent implements OnInit, OnDestroy
         presentUnit: 'presentUnit',
         postedOutUnit: 'postedOutUnit',
         relieverJoiningDate: 'relieverJoiningDate',
-        rmks: 'rmks',
+        rmks: 'allRemarks',
         // Derived Yes/No — needs the reliever ServiceId from the backend.
         relieverYesNo: 'relieverServiceId'
     };
@@ -997,6 +998,14 @@ export class ReportStayAfterRelieverJoinedComponent implements OnInit, OnDestroy
         // their own columns, so the meta sub-line is intentionally empty.
         return '';
     }
+    remarksCellValue(row: StayAfterRelieverJoinedReportRow): string {
+        return reportRemarksValue(row, this.lang);
+    }
+
+    remarksLines(row: StayAfterRelieverJoinedReportRow): string[] {
+        return reportRemarksLines(row, this.lang);
+    }
+
     cellValue(row: StayAfterRelieverJoinedReportRow, key: string): string {
         if (this.appliedMode === 'newPosting') return this.joineeCellValue(row as any, key);
         switch (key) {
@@ -1028,7 +1037,7 @@ export class ReportStayAfterRelieverJoinedComponent implements OnInit, OnDestroy
                 return this.lang === 'en' ? (has ? 'Yes' : 'No') : has ? 'হ্যাঁ' : 'না';
             }
             case 'rmks':
-                return row.rmks ?? '';
+                return this.remarksCellValue(row);
             default:
                 return this.extraCellValue(row, key);
         }
@@ -1081,7 +1090,8 @@ export class ReportStayAfterRelieverJoinedComponent implements OnInit, OnDestroy
             relieverServiceId: d['relieverServiceId'] as string,
             relieverJoiningDate: d['relieverJoiningDate'] as string,
             durationOfStay: null,
-            rmks: (d['rmks'] as string) ?? null
+            allRemarks: (d['allRemarks'] as string) ?? null,
+            allRemarksBN: (d['allRemarksBN'] as string) ?? null,
         } as StayAfterRelieverJoinedReportRow;
     }
 
@@ -1269,8 +1279,10 @@ export class ReportStayAfterRelieverJoinedComponent implements OnInit, OnDestroy
                     case 'Date':
                     case 'Duration':
                         return new TableCell({ ...cellOpts, children: [new Paragraph({ children: [run(this.cellValue(row, col.key), { fontKey: mono, chSp: isBn ? 0 : 4 })] })] });
-                    case 'Remarks':
-                        return new TableCell({ ...cellOpts, children: [new Paragraph({ children: [run(row.rmks || '', { color: C.gray })] })] });
+                    case 'Remarks': {
+                        const lines = this.remarksLines(row);
+                        return new TableCell({ ...cellOpts, children: (lines.length ? lines : ['']).map(line => new Paragraph({ children: [run(line, { color: C.gray })] })) });
+                    }
                     case 'Plain':
                     default:
                         return new TableCell({ ...cellOpts, children: [new Paragraph({ children: [run(this.cellValue(row, col.key))] })] });
@@ -1381,7 +1393,7 @@ export class ReportStayAfterRelieverJoinedComponent implements OnInit, OnDestroy
                         return l2 ? `${l1}\n${l2}` : l1;
                     }
                     case 'Remarks':
-                        return row.rmks || '';
+                        return this.remarksCellValue(row);
                     case 'Date':
                     case 'Duration':
                     case 'Plain':
@@ -1457,7 +1469,7 @@ export class ReportStayAfterRelieverJoinedComponent implements OnInit, OnDestroy
                 case 'Duration':
                     return `<td class="td-date">${esc(this.cellValue(row, col.key))}</td>`;
                 case 'Remarks':
-                    return `<td class="td-rmks">${esc(row.rmks || '')}</td>`;
+                    return `<td class="td-rmks">${this.remarksLines(row).map(line => `<div class="rmk-line">${esc(line)}</div>`).join('')}</td>`;
                 case 'Plain':
                 default:
                     return `<td>${esc(this.cellValue(row, col.key))}</td>`;
@@ -1517,6 +1529,8 @@ export class ReportStayAfterRelieverJoinedComponent implements OnInit, OnDestroy
     .personnel-name { font-family: ${sans}; font-weight: 600; font-size: 9.5pt; color: #0b0b0b; line-height: 1.2; }
     .personnel-meta { margin-top: 0.7mm; font-family: ${mono}; font-size: 7pt; letter-spacing: 0.08em; text-transform: uppercase; color: #6b6b6b; ${isBn ? 'letter-spacing:0;text-transform:none;font-family:' + sans + ';' : ''} }
     .td-date { font-family: ${mono}; letter-spacing: 0.02em; white-space: nowrap; }
+    .td-rmks { text-align: left; }
+    .rmk-line { text-align: left; padding-left: 0; text-indent: 0; }
 </style></head><body><div class="paper">
     <header class="paper-head">
         <div class="overline">${esc(this.rabOverlineText)}</div>

@@ -27,6 +27,12 @@ export interface ReportRowBase {
   presentUnitBN?: string | null;
 }
 
+/** Combined, non-confidential remark set supplied by vw_MemberAllRemarks. */
+export interface CombinedReportRemarks {
+  allRemarks?: string | null;
+  allRemarksBN?: string | null;
+}
+
 /** Report A: Appointment – Joining Date, Rmks. */
 export interface MemberAppointmentReportRow extends ReportRowBase {
   joiningDate?: string | null;
@@ -396,7 +402,7 @@ export interface PresentStatusUnitWiseReportResponse {
 // ── Unit & Specific Duration wise Nominal Roll ──────────────────────────
 
 /** One row of the Unit + Duration nominal roll (one per matching PreviousRABServiceInfo stint). */
-export interface UnitDurationNominalRollReportRow extends ReportRowBase {
+export interface UnitDurationNominalRollReportRow extends ReportRowBase, CombinedReportRemarks {
   /**
    * Full-career RAB posting history collapsed into one string, e.g.
    * "01-05-2026 to 03-08-2026 (RAB-4), 04-08-2026-Present (RAB HQ)".
@@ -438,7 +444,7 @@ export interface DeceasedReportRow {
 // ── Nominal Roll of Stay in RAB after Reliever Joined ──────────────────
 
 /** One row — subset of the long-stay row, minus Mother Unit / Posting Order Date. */
-export interface StayAfterRelieverJoinedReportRow {
+export interface StayAfterRelieverJoinedReportRow extends CombinedReportRemarks {
   ser?: number;
   serviceId?: string | null;
   rank?: string | null;
@@ -585,7 +591,7 @@ export interface PunishmentReportRow {
 }
 
 /** One row of the overall "Employee Present-Status Report". */
-export interface PresentStatusReportRow {
+export interface PresentStatusReportRow extends CombinedReportRemarks {
   ser?: number;
   serviceId?: string | null;
   rank?: string | null;
@@ -609,7 +615,7 @@ export interface PresentStatusReportRow {
 }
 
 /** One row of the "Rank-wise Report". */
-export interface RankWiseReportRow {
+export interface RankWiseReportRow extends CombinedReportRemarks {
   ser?: number;
   serviceId?: string | null;
   rank?: string | null;
@@ -632,7 +638,7 @@ export interface RankWiseReportRow {
 }
 
 /** One row of the long-stay nominal roll. */
-export interface LongStayNominalRollReportRow {
+export interface LongStayNominalRollReportRow extends CombinedReportRemarks {
   ser?: number;
   serviceId?: string | null;
   rank?: string | null;
