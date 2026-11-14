@@ -1,4 +1,5 @@
 import { Component, OnInit } from '@angular/core';
+import { SendingRemarkTypeOptions, sendingRemarkTypeLabel, sendingRemarkError } from '@/models/sending-remark-type';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
@@ -46,6 +47,40 @@ import { IdentityUserMemberTypeAccessService } from '@/services/identity-user-me
     styleUrl: './add-draft-inter-posting.scss'
 })
 export class AddDraftInterPostingComponent implements OnInit {
+    remarkTypeOptions = SendingRemarkTypeOptions;
+    remarkTypeLabel = sendingRemarkTypeLabel;
+    savingRemarkId: number | null = null;
+
+    get canCorrectInterPostingRemark(): boolean {
+        const master = this.draftMastersList.find(m => m.id === this.editDraftId);
+        return this.canUpdate && !!master && !master.hasNoteSheet;
+    }
+
+    saveInterPostingRemark(row: DraftInterPostingDetailDto): void {
+        if (!this.canCorrectInterPostingRemark || this.savingRemarkId != null) return;
+        const error = sendingRemarkError(row.interPostingRemark, row.interPostingRemarkType);
+        if (error) {
+            this.messageService.add({ severity: 'warn', summary: 'Remark', detail: error });
+            return;
+        }
+        this.savingRemarkId = row.id;
+        this.postingService.updateDraftInterPostingDetails([{
+            id: row.id, transferRabUnitId: row.transferRabUnitId, remarks: row.remarks,
+            interPostingRemark: row.interPostingRemark?.trim() || null,
+            interPostingRemarkType: row.interPostingRemarkType ?? null, updateInterPostingRemark: true
+        }]).subscribe({
+            next: () => {
+                this.savingRemarkId = null;
+                this.messageService.add({ severity: 'success', summary: 'Saved', detail: 'Inter-posting remark updated.' });
+            },
+            error: err => {
+                this.savingRemarkId = null;
+                this.messageService.add({ severity: 'error', summary: 'Save failed',
+                    detail: err?.error?.description || err?.error?.message || 'Unable to update inter-posting remark.' });
+            }
+        });
+    }
+
     draftPostingDate: Date | null = null;
     draftPostingListNo = '';
     list: EmployeeList[] = [];

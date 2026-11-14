@@ -1,3 +1,4 @@
+import { SendingRemarkType } from './sending-remark-type';
 /**
  * Single row from vw_EmployeeServiceOverview (basic service info of serving members).
  * API: GET EmployeeInfo/GetBasicServiceInformationOfServingMember
@@ -36,6 +37,7 @@ export interface EmployeeServiceOverview {
     postingStatus: string | null;
     isSendingNotesheetStatus: string | null;
     interPostingRemark?: string | null;
+    interPostingRemarkType?: SendingRemarkType;
     joiningDate: string | null;
     permanentDistrictType: number | null;
     permanentDistrictTypeName: string | null;

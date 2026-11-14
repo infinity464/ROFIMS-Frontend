@@ -80,6 +80,9 @@
                 @case ('batchCourse') {
                     <app-report-batch-course [lang]="reportLang" [commonCodeId]="selectedCommonCodeId" [reportTypeLabel]="selectedReportTypeLabel" [commonCodeLabel]="selectedCommonCodeLabel" [postingStatus]="selectedPostingStatus" [statusLabel]="selectedStatusLabel" [statusLabelBn]="selectedStatusLabelBn" (langToggle)="toggleReportLang()" (scopeChange)="onChildScopeChange($event)" />
                 }
+                @case ('batch') {
+                    <app-report-officer-type criterionFieldKey="batch" [lang]="reportLang" [commonCodeIds]="selectedCommonCodeIds" [reportTypeLabel]="selectedReportTypeLabel" [commonCodeLabel]="selectedCommonCodeLabel" [postingStatus]="selectedPostingStatus" [statusLabel]="selectedStatusLabel" [statusLabelBn]="selectedStatusLabelBn" (langToggle)="toggleReportLang()" (scopeChange)="onChildScopeChange($event)" />
+                }
                 @case ('education') {
                     <app-report-education [lang]="reportLang" [commonCodeId]="selectedCommonCodeId" [reportTypeLabel]="selectedReportTypeLabel" [commonCodeLabel]="selectedCommonCodeLabel" [postingStatus]="selectedPostingStatus" [statusLabel]="selectedStatusLabel" [statusLabelBn]="selectedStatusLabelBn" (langToggle)="toggleReportLang()" (scopeChange)="onChildScopeChange($event)" />
                 }

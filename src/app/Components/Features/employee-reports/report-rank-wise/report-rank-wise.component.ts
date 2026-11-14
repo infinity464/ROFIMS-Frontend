@@ -9,10 +9,12 @@ import { MultiSelectModule } from 'primeng/multiselect';
 import { PaginatorModule } from 'primeng/paginator';
 import { Toast } from 'primeng/toast';
 import { MessageService } from 'primeng/api';
+import { ReportSortControlsComponent, ReportSortState } from '@/shared/components/report-sort-controls/report-sort-controls.component';
 import { ReportService } from '@/services/report.service';
 import { CommonCodeService } from '@/services/common-code-service';
 import { UserMenuService } from '@/services/user-menu.service';
 import { BanglaNumerals } from '@/Core/i18n/bangla-numerals';
+import { reportRemarksValue, reportRemarksLines } from '@/shared/utils/report-remarks.util';
 import type { RankWiseReportRow, ReportAccessibleScope, DynamicReportCriterion, DynamicReportRow } from '@/models/report.model';
 import type { CommonCodeModel } from '@/models/common-code-model';
 import type { MotherOrganizationModel } from '@/models/mother-org-model';
@@ -35,12 +37,19 @@ type Lang = 'en' | 'bn';
 @Component({
     selector: 'app-report-rank-wise',
     standalone: true,
-    imports: [CommonModule, FormsModule, TableModule, ButtonModule, SelectModule, MultiSelectModule, PaginatorModule, Toast, OrgTreeMultiSelectComponent],
+    imports: [ReportSortControlsComponent, CommonModule, FormsModule, TableModule, ButtonModule, SelectModule, MultiSelectModule, PaginatorModule, Toast, OrgTreeMultiSelectComponent],
     providers: [MessageService],
     templateUrl: './report-rank-wise.component.html',
     styleUrls: ['../report-theme.scss', '../report-card-mtr.scss', './report-rank-wise.component.scss']
 })
 export class ReportRankWiseComponent implements OnInit, OnDestroy {
+    readonly reportSort = new ReportSortState();
+
+    onReportSortChange(): void {
+        this.first = 0;
+        if (this.searched) this.loadPage();
+    }
+
     lang: Lang = 'en';
 
     /** Toolbar quick search — matches Service ID or RAB ID (server-side). */
@@ -170,7 +179,7 @@ export class ReportRankWiseComponent implements OnInit, OnDestroy {
         joiningInRab: 'joiningInRab',
         joiningPresentUnit: 'joiningPresentUnit',
         presentWorkplace: 'presentWorkplace',
-        rmks: 'rmks'
+        rmks: 'allRemarks'
     };
     /** Extra (registry-keyed) columns rendered as formatted dates. */
     private static readonly extraDateKeys = new Set(['dob', 'joiningInRab', 'joiningPresentUnit', 'dateOfCommission']);
@@ -541,6 +550,7 @@ export class ReportRankWiseComponent implements OnInit, OnDestroy {
     }
 
     clearFilters(): void {
+        this.reportSort.reset();
         this.idSearchText = '';
         this.lastIdSearchApplied = '';
         this.selectedOrgIds = [];
@@ -676,6 +686,7 @@ export class ReportRankWiseComponent implements OnInit, OnDestroy {
 
         this.reportService
             .runDynamicRankWiseReport({
+            ...this.reportSort.request,
                 columns,
                 criteria,
                 idSearchText: (this.idSearchText ?? '').trim() || undefined,
@@ -751,6 +762,14 @@ export class ReportRankWiseComponent implements OnInit, OnDestroy {
         if (rank && rank !== '—') bits.push(rank);
         return bits.join(' · ');
     }
+    remarksCellValue(row: RankWiseReportRow): string {
+        return reportRemarksValue(row, this.lang);
+    }
+
+    remarksLines(row: RankWiseReportRow): string[] {
+        return reportRemarksLines(row, this.lang);
+    }
+
     cellValue(row: RankWiseReportRow, key: string): string {
         switch (key) {
             case 'serviceId': {
@@ -782,7 +801,7 @@ export class ReportRankWiseComponent implements OnInit, OnDestroy {
             case 'presentWorkplace':
                 return this.codeValue(row.presentWorkplace, row.presentWorkplaceBN);
             case 'rmks':
-                return row.rmks ?? '';
+                return this.remarksCellValue(row);
             default:
                 return this.extraCellValue(row, key);
         }
@@ -817,7 +836,8 @@ export class ReportRankWiseComponent implements OnInit, OnDestroy {
             joiningPresentUnit: d['joiningPresentUnit'] as string,
             presentWorkplace: d['presentWorkplace'] as string,
             presentWorkplaceBN: d['presentWorkplaceBN'] as string,
-            rmks: (d['rmks'] as string) ?? null
+            allRemarks: (d['allRemarks'] as string) ?? null,
+            allRemarksBN: (d['allRemarksBN'] as string) ?? null,
         } as RankWiseReportRow;
     }
 
@@ -992,8 +1012,10 @@ export class ReportRankWiseComponent implements OnInit, OnDestroy {
                     }
                     case 'Date':
                         return new TableCell({ ...cellOpts, children: [new Paragraph({ children: [run(this.cellValue(row, col.key), { fontKey: mono, chSp: isBn ? 0 : 4 })] })] });
-                    case 'Remarks':
-                        return new TableCell({ ...cellOpts, children: [new Paragraph({ children: [run(row.rmks || '', { color: C.gray })] })] });
+                    case 'Remarks': {
+                        const lines = this.remarksLines(row);
+                        return new TableCell({ ...cellOpts, children: (lines.length ? lines : ['']).map(line => new Paragraph({ children: [run(line, { color: C.gray })] })) });
+                    }
                     case 'Plain':
                     default:
                         return new TableCell({ ...cellOpts, children: [new Paragraph({ children: [run(this.cellValue(row, col.key))] })] });
@@ -1104,7 +1126,7 @@ export class ReportRankWiseComponent implements OnInit, OnDestroy {
                         return l2 ? `${l1}\n${l2}` : l1;
                     }
                     case 'Remarks':
-                        return row.rmks || '';
+                        return this.remarksCellValue(row);
                     case 'Date':
                     case 'Plain':
                     default:
@@ -1178,7 +1200,7 @@ export class ReportRankWiseComponent implements OnInit, OnDestroy {
                 case 'Date':
                     return `<td class="td-date">${esc(this.cellValue(row, col.key))}</td>`;
                 case 'Remarks':
-                    return `<td class="td-rmks">${esc(row.rmks || '')}</td>`;
+                    return `<td class="td-rmks">${this.remarksLines(row).map(line => `<div class="rmk-line">${esc(line)}</div>`).join('')}</td>`;
                 case 'Plain':
                 default:
                     return `<td>${esc(this.cellValue(row, col.key))}</td>`;
@@ -1236,6 +1258,8 @@ export class ReportRankWiseComponent implements OnInit, OnDestroy {
     .personnel-name { font-family: ${sans}; font-weight: 600; font-size: 9.5pt; color: #0b0b0b; line-height: 1.2; }
     .personnel-meta { margin-top: 0.7mm; font-family: ${mono}; font-size: 7pt; letter-spacing: 0.08em; text-transform: uppercase; color: #6b6b6b; ${isBn ? 'letter-spacing:0;text-transform:none;font-family:' + sans + ';' : ''} }
     .td-date { font-family: ${mono}; letter-spacing: 0.02em; white-space: nowrap; }
+    .td-rmks { text-align: left; }
+    .rmk-line { text-align: left; padding-left: 0; text-indent: 0; }
 </style></head><body><div class="paper">
     <header class="paper-head">
         <div class="overline">${esc(this.rabOverlineText)}</div>

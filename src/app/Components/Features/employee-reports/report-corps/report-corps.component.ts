@@ -8,6 +8,7 @@ import { MultiSelectModule } from 'primeng/multiselect';
 import { PaginatorModule } from 'primeng/paginator';
 import { Toast } from 'primeng/toast';
 import { MessageService } from 'primeng/api';
+import { ReportSortControlsComponent, ReportSortState } from '@/shared/components/report-sort-controls/report-sort-controls.component';
 import { ReportService } from '@/services/report.service';
 import { CommonCodeService } from '@/services/common-code-service';
 import { Router } from '@angular/router';
@@ -64,12 +65,19 @@ import { forkJoin, debounceTime, Subject, Subscription } from 'rxjs';
 @Component({
     selector: 'app-report-corps',
     standalone: true,
-    imports: [CommonModule, FormsModule, TableModule, ButtonModule, SelectModule, MultiSelectModule, PaginatorModule, Toast, OrgTreeMultiSelectComponent],
+    imports: [ReportSortControlsComponent, CommonModule, FormsModule, TableModule, ButtonModule, SelectModule, MultiSelectModule, PaginatorModule, Toast, OrgTreeMultiSelectComponent],
     providers: [MessageService],
     templateUrl: './report-corps.component.html',
     styleUrls: ['../report-theme.scss', '../report-card-mtr.scss', './report-corps.component.scss'],
 })
 export class ReportCorpsComponent implements OnInit, OnChanges, OnDestroy {
+    readonly reportSort = new ReportSortState();
+
+    onReportSortChange(): void {
+        this.first = 0;
+        if (this.searched) this.load();
+    }
+
     L = REPORT_LABELS;
     @Input() lang: ReportLang = 'en';
     /** Parent-locked Corps CodeId(s). Single-pick = one element; N/A bundle = many. */
@@ -1049,6 +1057,7 @@ export class ReportCorpsComponent implements OnInit, OnChanges, OnDestroy {
     }
 
     clearFilters(): void {
+        this.reportSort.reset();
         this.selectedMemberTypeIds = [];
         this.selectedRankIds = [];
         this.selectedTradeIds = [];
@@ -1116,6 +1125,7 @@ export class ReportCorpsComponent implements OnInit, OnChanges, OnDestroy {
             criteria.push({ fieldKey: 'rabOrgNode', idValues: this.selectedOrgNodeIds });
 
         this.reportService.runDynamicEmployeeBaseReport({
+            ...this.reportSort.request,
             columns: this.backendColumnKeys(),
             criteria,
             postingStatusFilter: this.postingStatus || null,

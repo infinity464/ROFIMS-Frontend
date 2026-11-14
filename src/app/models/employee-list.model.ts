@@ -1,3 +1,4 @@
+import { SendingRemarkType } from './sending-remark-type';
 /**
  * Request payload for GetEmployeeList API.
  */
@@ -36,8 +37,10 @@ export interface EmployeeList {
     rabUnit?: string | null;
     /** Remark entered when sending to new posting list. */
     sendingRemark?: string | null;
+    sendingRemarkType?: SendingRemarkType;
     /** Remark entered when sending from Presently Serving Members to inter posting. */
     interPostingRemark?: string | null;
+    interPostingRemarkType?: SendingRemarkType;
     /** Date the record was inserted into the database (EmployeeInfo.CreatedDate). */
     createdDate?: string | null;
     /** Member Type (EmployeeInfo.MemberType → CommonCode 'EmployeeType' id). Used for access filtering. */

@@ -1,0 +1,8 @@
+{
+    "extends": "./tsconfig.spec.json",
+    "include": [
+        "src/app/Components/Features/presently-serving-members/presently-serving-members.spec.ts",
+        "src/app/Components/Features/notesheet-preview/posting/notesheet-preview-posting.spec.ts",
+        "src/**/*.d.ts"
+    ]
+}

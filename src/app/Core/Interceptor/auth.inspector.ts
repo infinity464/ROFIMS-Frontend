@@ -1,7 +1,7 @@
 import { HttpInterceptorFn, HttpErrorResponse } from '@angular/common/http';
 import { inject } from '@angular/core';
 import { Observable, catchError, finalize, shareReplay, switchMap, throwError } from 'rxjs';
-import { AuthenticationService } from '@/Components/Features/Authentication/Service/authentication';
+import { AuthenticationService, IP_ADDRESS_DENIAL_REASON } from '@/Components/Features/Authentication/Service/authentication';
 import { Router } from '@angular/router';
 import { LoginResponse } from '@/Components/Features/Authentication/Model/login-response.model';
 
@@ -33,6 +33,11 @@ export const AuthInterceptor: HttpInterceptorFn = (req, next) => {
 
   return next(req).pipe(
     catchError((error: HttpErrorResponse) => {
+      if (error.status === 401 && error.error?.reason === IP_ADDRESS_DENIAL_REASON) {
+        auth.logout();
+        router.navigate(['/login'], { queryParams: { reason: IP_ADDRESS_DENIAL_REASON } });
+        return throwError(() => error);
+      }
       if (error.status === 401 && !isAuthEndpoint(req.url)) {
         // Reuse the in-flight refresh if one is already running; otherwise start it.
         if (!refreshInFlight$) {
@@ -51,9 +56,12 @@ export const AuthInterceptor: HttpInterceptorFn = (req, next) => {
             });
             return next(newReq);
           }),
-          catchError(() => {
+          catchError((refreshError) => {
             auth.logout();
-            router.navigate(['/login']);
+            const reason = refreshError?.reason ?? refreshError?.error?.reason;
+            router.navigate(['/login'], reason === IP_ADDRESS_DENIAL_REASON
+              ? { queryParams: { reason: IP_ADDRESS_DENIAL_REASON } }
+              : undefined);
             return throwError(() => error);
           })
         );

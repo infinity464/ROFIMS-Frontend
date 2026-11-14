@@ -179,7 +179,7 @@
                                     <label class="font-semibold block mb-2 text-700">Posting Authority</label>
                                     <input pInputText formControlName="postingAuth" class="w-full" placeholder="Posting Authority" />
                                 </div>
-                                <div>
+                                <div *ngIf="canSpecialView">
                                     <label class="font-semibold block mb-2 text-700">Remarks</label>
                                     <input pInputText formControlName="remarks" class="w-full" placeholder="Remarks" />
                                 </div>
@@ -215,7 +215,7 @@
                                 <th style="min-width: 120px; background: var(--surface-100)">Sub-Section</th>
                                 <th style="min-width: 120px; white-space: nowrap; background: var(--surface-100)">From</th>
                                 <th style="min-width: 120px; white-space: nowrap; background: var(--surface-100)">To</th>
-                                <th style="min-width: 150px; background: var(--surface-100)">Remarks</th>
+                                @if (canSpecialView) { <th style="min-width: 150px; background: var(--surface-100)">Remarks</th> }
                                 <th style="width: 120px; background: var(--surface-100)">Actions</th>
                             </tr>
                         </ng-template>
@@ -230,7 +230,7 @@
                                 <td>{{ row.rabSubSectionName || '—' }}</td>
                                 <td style="white-space: nowrap;">{{ row.serviceFrom | partialDate: row.servicePrecision }}</td>
                                 <td style="white-space: nowrap;">{{ row.isCurrentlyActive ? 'Present' : (row.serviceTo | partialDate: row.servicePrecision) }}</td>
-                                <td>{{ row.remarks || '—' }}</td>
+                                @if (canSpecialView) { <td>{{ row.remarks || '—' }}</td> }
                                 <td>
                                     <div class="flex gap-1">
                                         <p-button icon="pi pi-pencil" [class.perm-hidden]="!canUpdate" [rounded]="true" [text]="true" severity="info" pTooltip="Edit" (onClick)="openEditDialog(row)"></p-button>
@@ -243,7 +243,7 @@
                         </ng-template>
                         <ng-template pTemplate="emptymessage">
                             <tr>
-                                <td [attr.colspan]="11" class="text-center py-4 text-500">
+                                <td [attr.colspan]="canSpecialView ? 11 : 10" class="text-center py-4 text-500">
                                     No previous SRB service entries. Click "Add row" to add.
                                 </td>
                             </tr>

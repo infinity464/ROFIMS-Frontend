@@ -277,7 +277,7 @@
                                 [binary]="true"
                                 [ngModel]="allPageSelected"
                                 [indeterminate]="pagePartiallySelected"
-                                [disabled]="!selectablePageRows.length"
+                                [disabled]="savingInterPosting || !selectablePageRows.length"
                                 (onChange)="toggleCurrentPage($event.checked)"
                                 ariaLabel="Select all rows on this page">
                             </p-checkbox>
@@ -296,7 +296,8 @@
                         <th style="min-width: 200px">Remarks</th>
                         @if (interPostingMode) {
                         <th>Status</th>
-                        <th style="min-width: 180px">Remarks</th>
+                        <th style="min-width: 180px">Sending Remark</th>
+                        <th style="min-width: 185px">Remark Type</th>
                         }
                         <th>Action</th>
                     </tr>
@@ -308,7 +309,7 @@
                             <p-checkbox
                                 [binary]="true"
                                 [ngModel]="isRowSelected(row)"
-                                [disabled]="isInPostingProcess(row)"
+                                [disabled]="!canUpdate || savingInterPosting || isInPostingProcess(row)"
                                 (onChange)="toggleRow(row, $event.checked)"
                                 ariaLabel="Select row">
                             </p-checkbox>
@@ -353,9 +354,15 @@
                                     type="text"
                                     [ngModel]="interPostingRemarks[row.employeeID] || ''"
                                     (ngModelChange)="interPostingRemarks[row.employeeID] = $event"
-                                    placeholder="Enter remark..."
-                                    [disabled]="isInPostingProcess(row)"
+                                    placeholder="Enter remark..." maxlength="500"
+                                    [disabled]="!canUpdate || savingInterPosting || isInPostingProcess(row)"
                                     style="width: 100%; min-width: 160px;" />
+                            </td>
+                            <td>
+                                <p-select [options]="remarkTypeOptions" [(ngModel)]="interPostingRemarkTypes[row.employeeID]"
+                                    optionLabel="label" optionValue="value" placeholder="-" [showClear]="true"
+                                    [disabled]="!canUpdate || savingInterPosting || isInPostingProcess(row)"
+                                    appendTo="body" ariaLabel="Remark Type" [style]="{'min-width': '185px'}" />
                             </td>
                         }
                         <td>

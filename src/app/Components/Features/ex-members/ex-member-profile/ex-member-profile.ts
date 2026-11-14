@@ -1,3 +1,5 @@
+import { ProfileSensitiveInfoService } from '@/services/profile-sensitive-info.service';
+import { protectProfileExport } from '@/shared/utils/profile-sensitive-export.util';
 import { Component, HostListener, OnDestroy, OnInit, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { UserMenuService } from '@/services/user-menu.service';
@@ -111,13 +113,14 @@ export interface EmployeeNoteSheetProcessingRow {
         EmpAdditionalRemarks,
         PartialDatePipe
     ],
-    providers: [MessageService],
+    providers: [MessageService, ProfileSensitiveInfoService],
     templateUrl: './ex-member-profile.html',
     styleUrl: './ex-member-profile.scss'
 })
 export class ExMemberProfile implements OnInit, OnDestroy {
     private _router = inject(Router);
     private _userMenuService = inject(UserMenuService);
+    readonly sensitive = inject(ProfileSensitiveInfoService);
     canInsert = true;
     canUpdate = true;
     canDelete = true;
@@ -239,7 +242,7 @@ export class ExMemberProfile implements OnInit, OnDestroy {
         const addSection = (secTitle: string, columns: string[], rows: string[][], noTableHeader?: boolean, addressSection?: boolean, colsPerRow?: 2 | 3) => sections.push({ title: secTitle, columns, rows, noTableHeader, addressSection, colsPerRow });
         const kv = (label: string, value: string): [string, string] => [label, value];
 
-        if (!p) return { title, lang: this.profileLang, sections, showPageNumbers: true };
+        if (!p) return { title, lang: this.profileLang, sections: protectProfileExport(sections, L, this.sensitive.canSpecialView && !this.sensitive.error, this.sensitive.remarks), showPageNumbers: true };
 
         // Basic Service (same as web: label-value block, no "Field"/"Value" header)
         addSection(
@@ -539,10 +542,13 @@ export class ExMemberProfile implements OnInit, OnDestroy {
         if (docRows.length === 0) docRows.push([L['empty.noDocuments']]);
         addSection(L['section.documents'], [L['table.ser'], L['table.section'], L['table.fileName']], docRows);
 
-        return { title, lang: this.profileLang, sections, showPageNumbers: true };
+        return { title, lang: this.profileLang, sections: protectProfileExport(sections, L, this.sensitive.canSpecialView && !this.sensitive.error, this.sensitive.remarks), showPageNumbers: true };
     }
 
     async exportAs(type: 'pdf' | 'word'): Promise<void> {
+        if (this.employeeId == null || !this.profile) return;
+        await this.sensitive.refresh(this.employeeId);
+        if (!this.sensitive.canSpecialView) this.previousRabList = this.previousRabList.map(row => ({ ...row, remarks: null }));
         const config: ProfileExportConfig = { ...this.getExportData(), lang: this.profileLang };
         if (this.profileImageUrl) {
             try {
@@ -865,6 +871,7 @@ export class ExMemberProfile implements OnInit, OnDestroy {
     }
 
     loadProfile(onComplete?: () => void): void {
+        this.sensitive.clear();
         if (this.employeeId == null) return;
         const id = this.employeeId;
         this.loading = true;
@@ -909,6 +916,9 @@ export class ExMemberProfile implements OnInit, OnDestroy {
      * so one failing call only blanks its own table.
      */
     private loadRelatedProfileData(id: number, onComplete?: () => void): void {
+        void this.sensitive.refresh(id).then(() => {
+            if (!this.sensitive.canSpecialView) this.previousRabList = this.previousRabList.map(row => ({ ...row, remarks: null }));
+        });
         const currentYear = this.currentYear;
 
         // Hero/identity is already available from the stage-1 profile call — reveal it now
@@ -1102,6 +1112,7 @@ export class ExMemberProfile implements OnInit, OnDestroy {
     }
 
     ngOnDestroy(): void {
+        this.sensitive.clear();
         if (this.profileImageUrl) {
             URL.revokeObjectURL(this.profileImageUrl);
             this.profileImageUrl = null;

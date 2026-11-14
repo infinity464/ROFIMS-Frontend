@@ -12,6 +12,7 @@ import { PaginatorModule } from 'primeng/paginator';
 import { CheckboxModule } from 'primeng/checkbox';
 import { Toast } from 'primeng/toast';
 import { MessageService } from 'primeng/api';
+import { ReportSortControlsComponent, ReportSortState } from '@/shared/components/report-sort-controls/report-sort-controls.component';
 import { ReportService } from '@/services/report.service';
 import { CommonCodeService } from '@/services/common-code-service';
 import { UserMenuService } from '@/services/user-menu.service';
@@ -38,12 +39,19 @@ type Lang = 'en' | 'bn';
 @Component({
     selector: 'app-report-punishment',
     standalone: true,
-    imports: [CommonModule, FormsModule, TableModule, ButtonModule, SelectModule, MultiSelectModule, InputTextModule, DatePickerModule, PaginatorModule, CheckboxModule, Toast, OrgTreeMultiSelectComponent],
+    imports: [ReportSortControlsComponent, CommonModule, FormsModule, TableModule, ButtonModule, SelectModule, MultiSelectModule, InputTextModule, DatePickerModule, PaginatorModule, CheckboxModule, Toast, OrgTreeMultiSelectComponent],
     providers: [MessageService],
     templateUrl: './report-punishment.component.html',
     styleUrls: ['../report-theme.scss', '../report-card-mtr.scss', './report-punishment.component.scss']
 })
 export class ReportPunishmentComponent implements OnInit, OnDestroy {
+    readonly reportSort = new ReportSortState();
+
+    onReportSortChange(): void {
+        this.first = 0;
+        if (this.searched) this.loadPage();
+    }
+
     lang: Lang = 'en';
 
     /** Toolbar quick search — matches Service ID or RAB ID (server-side). */
@@ -638,6 +646,7 @@ export class ReportPunishmentComponent implements OnInit, OnDestroy {
     }
 
     clearFilters(): void {
+        this.reportSort.reset();
         this.idSearchText = '';
         this.lastIdSearchApplied = '';
         this.selectedOrgIds = [];
@@ -789,6 +798,7 @@ export class ReportPunishmentComponent implements OnInit, OnDestroy {
 
         this.reportService
             .runDynamicPunishmentReport({
+            ...this.reportSort.request,
                 columns,
                 criteria,
                 idSearchText: (this.idSearchText ?? '').trim() || undefined,

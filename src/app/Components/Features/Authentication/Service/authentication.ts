@@ -7,6 +7,8 @@ import { MEMBER_TYPE_ACCESS_CACHE_KEY } from '@/services/identity-user-member-ty
 import { clearAllAuth, getAuthItem, setAuthItem } from '@/shared/services/auth-storage';
 
 const REMEMBER_ME_EMAIL_KEY = 'remember_me_email';
+export const IP_ADDRESS_DENIAL_REASON = 'IpAddressNotAllowed';
+export const IP_ADDRESS_DENIAL_MESSAGE = 'Access is not allowed from this IP address. Contact your administrator.';
 
 @Injectable({ providedIn: 'root' })
 export class AuthenticationService {
@@ -144,8 +146,13 @@ export class AuthenticationService {
         setAuthItem('token', res.token);
         setAuthItem('refreshToken', res.refreshToken);
       }),
-      catchError(() => {
-        return throwError(() => ({ status: 401, message: 'Session expired. Please login again.' }));
+      catchError((err) => {
+        const reason = err?.error?.reason;
+        return throwError(() => ({
+          status: 401,
+          reason,
+          message: reason === IP_ADDRESS_DENIAL_REASON ? IP_ADDRESS_DENIAL_MESSAGE : 'Session expired. Please login again.'
+        }));
       })
     );
   }

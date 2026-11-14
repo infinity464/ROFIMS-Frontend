@@ -853,3 +853,14 @@
     white-space: nowrap;
     line-height: 1.4;
 }
+
+/* Match the member-type report: each remark is a separate, flush-left block. */
+:host ::ng-deep .rab-data-table .p-datatable-tbody .rab-td-rmks {
+    text-align: left;
+
+    .rab-rmk-line {
+        text-align: left;
+        padding-left: 0;
+        text-indent: 0;
+    }
+}

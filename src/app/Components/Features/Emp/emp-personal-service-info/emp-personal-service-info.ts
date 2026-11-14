@@ -82,8 +82,11 @@ export class EmpPersonalServiceInfoComponent implements OnInit {
     ngOnInit(): void {
         this.route.queryParams.subscribe((params) => {
             const id = params['id'];
-            this.selectedEmployeeId = id ? parseInt(id, 10) : null;
-            if (!id) this.employeeBasicInfo = null;
+            const parsedId = Number(id);
+            const nextId = Number.isInteger(parsedId) && parsedId > 0 ? parsedId : null;
+            if (nextId !== this.selectedEmployeeId) this.employeeBasicInfo = null;
+            this.selectedEmployeeId = nextId;
+            if (!nextId) this.employeeBasicInfo = null;
         });
 
         this.updateMenuItems();

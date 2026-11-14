@@ -8,6 +8,7 @@ import { MultiSelectModule } from 'primeng/multiselect';
 import { PaginatorModule } from 'primeng/paginator';
 import { Toast } from 'primeng/toast';
 import { MessageService } from 'primeng/api';
+import { ReportSortControlsComponent, ReportSortState } from '@/shared/components/report-sort-controls/report-sort-controls.component';
 import { ReportService } from '@/services/report.service';
 import { CommonCodeService } from '@/services/common-code-service';
 import { Router } from '@angular/router';
@@ -57,12 +58,19 @@ import { debounceTime, forkJoin, Subject, Subscription } from 'rxjs';
 @Component({
     selector: 'app-report-personal-qualification',
     standalone: true,
-    imports: [CommonModule, FormsModule, TableModule, ButtonModule, SelectModule, MultiSelectModule, PaginatorModule, Toast, OrgTreeMultiSelectComponent],
+    imports: [ReportSortControlsComponent, CommonModule, FormsModule, TableModule, ButtonModule, SelectModule, MultiSelectModule, PaginatorModule, Toast, OrgTreeMultiSelectComponent],
     providers: [MessageService],
     templateUrl: './report-personal-qualification.component.html',
     styleUrls: ['../report-theme.scss', '../report-card-mtr.scss', './report-personal-qualification.component.scss'],
 })
 export class ReportPersonalQualificationComponent implements OnInit, OnChanges, OnDestroy {
+    readonly reportSort = new ReportSortState();
+
+    onReportSortChange(): void {
+        this.first = 0;
+        if (this.searched) this.load();
+    }
+
     L = REPORT_LABELS;
     @Input() lang: ReportLang = 'en';
     @Input() commonCodeId: number | null = null;
@@ -972,6 +980,7 @@ export class ReportPersonalQualificationComponent implements OnInit, OnChanges, 
     }
 
     clearFilters(): void {
+        this.reportSort.reset();
         this.selectedOrgIds = [];
         this.selectedRankIds = [];
         this.selectedCorpsIds = [];
@@ -1125,6 +1134,7 @@ export class ReportPersonalQualificationComponent implements OnInit, OnChanges, 
             criteria.push({ fieldKey: 'personalQualification', idValue: this.commonCodeId });
 
         this.reportService.runDynamicEmployeeBaseReport({
+            ...this.reportSort.request,
             columns: this.backendColumnKeys(),
             criteria,
             postingStatusFilter: this.postingStatus || null,

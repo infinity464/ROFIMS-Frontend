@@ -29,6 +29,7 @@
 
     <div class="report-filter-body" [class.open]="filterOpen">
         <div class="report-filter-body-inner">
+                <app-report-sort-controls [state]="reportSort" (sortChange)="onReportSortChange()"></app-report-sort-controls>
             <div class="report-fields-row">
                 <div class="report-filter-field">
                     <label>Mother Org</label>
@@ -237,7 +238,13 @@
                                     </td>
                                 }
                                 @case ('Date') { <td class="rab-td-date">{{ cellValue(row, col.key) }}</td> }
-                                @case ('Remarks') { <td class="rab-td-rmks">{{ row.rmks || '' }}</td> }
+                                @case ('Remarks') {
+                                    <td class="rab-td-rmks">
+                                        @for (line of remarksLines(row); track $index) {
+                                            <div class="rab-rmk-line">{{ line }}</div>
+                                        }
+                                    </td>
+                                }
                                 @case ('Plain') { <td>{{ cellValue(row, col.key) }}</td> }
                                 @default { <td>{{ cellValue(row, col.key) }}</td> }
                             }

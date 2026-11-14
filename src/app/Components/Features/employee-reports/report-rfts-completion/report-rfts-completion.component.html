@@ -29,6 +29,7 @@
 
     <div class="report-filter-body" [class.open]="filterOpen">
         <div class="report-filter-body-inner">
+                <app-report-sort-controls [state]="reportSort" (sortChange)="onReportSortChange()"></app-report-sort-controls>
             <div class="report-fields-row">
                 <div class="report-filter-field">
                     <label>Completion Status</label>

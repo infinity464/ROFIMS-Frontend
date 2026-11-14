@@ -1,4 +1,4 @@
-﻿import { inject, Injectable, OnInit } from '@angular/core';
+import { inject, Injectable, OnInit } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { ActivatedRoute, Router } from '@angular/router';
 import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
@@ -23,6 +23,7 @@ import { normalizeRab } from '@/shared/utils/bangla-text.util';
 import { decodeNoteSheetId } from '@/shared/utils/notesheet-id-codec';
 
 export interface NoteSheetInfoFull {
+    isCurrentlyBacked?: boolean;
     noteSheetId: number;
     noteSheetNo: string;
     noteSheetDate: string;

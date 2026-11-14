@@ -179,7 +179,7 @@
                 @if (selectedCount > 0) {
                     <button type="button"
                         class="report-btn-primary"
-                        [disabled]="isSendingSelection"
+                        [disabled]="isSendingSelection || sendingEmployeeId != null"
                         [class.perm-hidden]="!canUpdate"
                         (click)="sendSelectedToPosting()">
                         <i class="pi pi-send mr-1"></i>
@@ -187,7 +187,7 @@
                     </button>
                     <button type="button"
                         class="report-btn-secondary"
-                        [disabled]="isSendingSelection"
+                        [disabled]="isSendingSelection || sendingEmployeeId != null"
                         (click)="clearSelection()">
                         Clear
                     </button>
@@ -243,6 +243,7 @@
                         <th>Date of Join in SRB</th>
                         <th>SRB ID</th>
                         <th>Remark</th>
+                        <th>Remark Type</th>
                         <th>Action</th>
                     </tr>
                 </ng-template>
@@ -282,8 +283,16 @@
                             <input pInputText type="text"
                                 [(ngModel)]="row.sendingRemark"
                                 placeholder="Remark"
-                                [disabled]="isPostingInProcess(row)"
+                                [disabled]="!canUpdate || isPostingInProcess(row) || isSendingSelection || sendingEmployeeId != null"
+                                maxlength="500"
                                 style="width: 100%; min-width: 120px;" />
+                        </td>
+                        <td>
+                            <p-select [options]="remarkTypeOptions" [(ngModel)]="row.sendingRemarkType"
+                                optionLabel="label" optionValue="value" placeholder="-" [showClear]="true"
+                                [disabled]="!canUpdate || isPostingInProcess(row) || isSendingSelection || sendingEmployeeId != null"
+                                appendTo="body" [style]="{'min-width': '185px'}" ariaLabel="Remark Type">
+                            </p-select>
                         </td>
                         <td>
                             <span class="report-action-buttons">
@@ -304,7 +313,7 @@
                 </ng-template>
                 <ng-template pTemplate="emptymessage">
                     <tr>
-                        <td colspan="12" class="text-center p-4">No records found.</td>
+                        <td colspan="13" class="text-center p-4">No records found.</td>
                     </tr>
                 </ng-template>
             </p-table>

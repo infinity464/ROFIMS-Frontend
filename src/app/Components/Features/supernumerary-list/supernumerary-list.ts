@@ -613,7 +613,7 @@ export class SupernumeraryList implements OnInit {
         this.isSendingSelection = true;
         const calls = ids.map(id => {
             const row = this.list.find(r => r.employeeID === id);
-            return this.employeeListService.setIsSendingNotesheetStatus(id, IsSendingNotesheetStatus.Draft, row?.sendingRemark ?? undefined).pipe(
+            return this.employeeListService.setIsSendingNotesheetStatus(id, IsSendingNotesheetStatus.Draft, row?.sendingRemark ?? undefined, row?.sendingRemarkType ?? null).pipe(
                 map(res => ({ id, ok: (res?.statusCode ?? 200) === 200, description: res?.description })),
                 catchError(err => of({ id, ok: false, description: err?.error?.message || 'Request failed' }))
             );
@@ -655,7 +655,7 @@ export class SupernumeraryList implements OnInit {
             });
             return;
         }
-        this.employeeListService.setIsSendingNotesheetStatus(row.employeeID, IsSendingNotesheetStatus.Draft, row.sendingRemark ?? undefined).subscribe({
+        this.employeeListService.setIsSendingNotesheetStatus(row.employeeID, IsSendingNotesheetStatus.Draft, row.sendingRemark ?? undefined, row.sendingRemarkType ?? null).subscribe({
             next: () => {
                 this.messageService.add({ severity: 'success', summary: 'Success', detail: 'Status updated to Posting in Process' });
                 this.loadData();

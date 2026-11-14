@@ -1,3 +1,4 @@
+import { SendingRemarkType } from './sending-remark-type';
 /**
  * Posting module models (New Posting Order & Inter-Posting Order).
  * Ref: POSTING_MODULE_REQUIREMENTS.md
@@ -151,6 +152,8 @@ export interface DraftPostingMasterDto {
 
 /** Detail row for GetDraftNewPostingById (Edit). */
 export interface DraftPostingDetailDto {
+    sendingRemark?: string | null;
+    sendingRemarkType?: SendingRemarkType;
     id: number;
     employeeId: number;
     /** Member Type (EmployeeInfo.MemberType → CommonCode 'EmployeeType' id). */
@@ -204,6 +207,8 @@ export interface DraftInterPostingMasterDto {
 
 /** Detail row for GetDraftInterPostingById (Edit). */
 export interface DraftInterPostingDetailDto {
+    interPostingRemark?: string | null;
+    interPostingRemarkType?: SendingRemarkType;
     id: number;
     employeeId: number;
     /** Member Type (EmployeeInfo.MemberType → CommonCode 'EmployeeType' id). */
@@ -248,7 +253,9 @@ export interface DraftPostingEmployeeRow {
     transferRabUnitNameBN?: string | null;
     remarks: string | null;
     sendingRemark: string | null;
+    sendingRemarkType?: SendingRemarkType;
     interPostingRemark?: string | null;
+    interPostingRemarkType?: SendingRemarkType;
     isSendingNotesheetStatus: string | null;
     serviceId: string | null;
     prefixName: string | null;
@@ -292,6 +299,8 @@ export interface DraftPostingEmployeeRow {
      *  Ordered by the SP: ServiceFrom ascending with the currently-active posting last. */
     prevRabServiceChain?: string | null;
     prevRabServiceChainBN?: string | null;
+    approvedPreviousWorkplace?: string | null;
+    approvedPreviousWorkplaceBN?: string | null;
     /** Current RAB unit the employee is presently serving in. Inter-posting only. */
     presentRabUnitId?: number | null;
     presentRabUnitName?: string | null;
@@ -429,9 +438,13 @@ export interface PostingOrderMasterDto {
     postingOrderNo: string;
     postingOrderDate: string;
     postingType: string;
+    /** Primary (first selected) note-sheet. */
     noteSheetId: number;
+    /** Every source note-sheet no, comma-separated (primary first) — several for a merged order. */
     noteSheetNo: string | null;
-    /** Linked note-sheet's member-type ids — used to scope the list by user access. */
+    /** Source note-sheet ids (primary first). */
+    noteSheetIds?: number[];
+    /** Union of the source note-sheets' member-type ids — used to scope the list by user access. */
     employeeTypeIds?: string | null;
     refPostingOrderMasterId: number | null;
     referenceNumber: string | null;
@@ -528,7 +541,9 @@ export interface PostingOrderEmployeeRow {
     detailRemarks: string | null;
     noteSheetRemarks: string | null;
     sendingRemark: string | null;
+    sendingRemarkType?: SendingRemarkType;
     interPostingRemark: string | null;
+    interPostingRemarkType?: SendingRemarkType;
     transferRabUnitId: number | null;
     transferRabUnitName: string | null;
     transferRabUnitNameBN: string | null;
@@ -570,6 +585,8 @@ export interface PostingOrderEmployeeRow {
     // Ordered by the view: ServiceFrom ascending with the currently-active posting last.
     prevRabServiceChain?: string | null;
     prevRabServiceChainBN?: string | null;
+    approvedPreviousWorkplace?: string | null;
+    approvedPreviousWorkplaceBN?: string | null;
     // Present RAB unit hierarchy (current serving posting) — fallback for interposting
     // পূর্ববতী কর্মস্থল অংশ ২ when no previous-RAB-service history exists.
     presentRabUnitId?: number | null;
@@ -602,6 +619,20 @@ export interface ApprovedNoteSheetItem {
     noteSheetType: string;
     /** Comma-separated CommonCode member-type ids — used to scope the dropdown by user access. */
     employeeTypeIds?: string | null;
+    /** 1 = Bangla, else English. */
+    textType?: number | null;
+    /** Final approval date — the সূত্র date for this note-sheet. */
+    finalApprovalApprovedDate?: string | null;
+    /** Members in the note-sheet's draft. */
+    totalMembers?: number;
+    /** Members not yet put in any posting order. */
+    remainingMembers?: number;
+}
+
+/** One member picked for a posting order, with the note-sheet it comes from (split / merge). */
+export interface PostingOrderMemberInput {
+    noteSheetId: number;
+    employeeId: number;
 }
 
 /** Pending joining item (approved posting order, not yet joined). */

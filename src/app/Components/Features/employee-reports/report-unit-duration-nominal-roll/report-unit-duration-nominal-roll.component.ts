@@ -10,10 +10,12 @@ import { PaginatorModule } from 'primeng/paginator';
 import { DatePickerModule } from 'primeng/datepicker';
 import { Toast } from 'primeng/toast';
 import { MessageService } from 'primeng/api';
+import { ReportSortControlsComponent, ReportSortState } from '@/shared/components/report-sort-controls/report-sort-controls.component';
 import { ReportService } from '@/services/report.service';
 import { CommonCodeService } from '@/services/common-code-service';
 import { UserMenuService } from '@/services/user-menu.service';
 import { BanglaNumerals } from '@/Core/i18n/bangla-numerals';
+import { reportRemarksValue, reportRemarksLines } from '@/shared/utils/report-remarks.util';
 import type { CommonCodeModel } from '@/models/common-code-model';
 import type { MotherOrganizationModel } from '@/models/mother-org-model';
 import type {
@@ -21,7 +23,6 @@ import type {
     ReportAccessibleScope,
     DynamicReportCriterion,
     DynamicReportRow,
-    NominalRollSeniority,
 } from '@/models/report.model';
 import { unitScopeLine, memberTypeScopeLine } from '../report-scope.helper';
 import { OrgTreeMultiSelectComponent } from '@/shared/components/org-tree-multi-select/org-tree-multi-select.component';
@@ -44,12 +45,19 @@ type Lang = 'en' | 'bn';
 @Component({
     selector: 'app-report-unit-duration-nominal-roll',
     standalone: true,
-    imports: [CommonModule, FormsModule, TableModule, ButtonModule, SelectModule, MultiSelectModule, PaginatorModule, DatePickerModule, Toast, OrgTreeMultiSelectComponent],
+    imports: [ReportSortControlsComponent, CommonModule, FormsModule, TableModule, ButtonModule, SelectModule, MultiSelectModule, PaginatorModule, DatePickerModule, Toast, OrgTreeMultiSelectComponent],
     providers: [MessageService],
     templateUrl: './report-unit-duration-nominal-roll.component.html',
     styleUrls: ['../report-theme.scss', '../report-card-mtr.scss', './report-unit-duration-nominal-roll.component.scss'],
 })
 export class ReportUnitDurationNominalRollComponent implements OnInit, OnDestroy {
+    readonly reportSort = new ReportSortState();
+
+    onReportSortChange(): void {
+        this.first = 0;
+        if (this.searched) this.loadPage();
+    }
+
     lang: Lang = 'en';
 
     /** Toolbar quick search — matches Service ID or RAB ID (server-side). */
@@ -175,7 +183,7 @@ export class ReportUnitDurationNominalRollComponent implements OnInit, OnDestroy
     private static readonly colKeyToBackend: Record<string, string> = {
         ser: 'ser', name: 'personnel', rank: 'armyRank', orgName: 'orgName',
         serviceId: 'serviceId', corps: 'corps', trade: 'trade', presentUnit: 'presentUnit',
-        durationOfStay: 'durationOfStay', serviceHistory: 'serviceHistory', rmks: 'rmks',
+        durationOfStay: 'durationOfStay', serviceHistory: 'serviceHistory', rmks: 'allRemarks',
     };
     /** Extra (registry-keyed) columns rendered as formatted dates. */
     private static readonly extraDateKeys = new Set([
@@ -284,21 +292,6 @@ export class ReportUnitDurationNominalRollComponent implements OnInit, OnDestroy
         (the backend only returns the columns requested at query time). */
     onColumnsChange(): void { if (this.searched) this.loadPage(); }
 
-    /**
-     * Nominal Roll Seniority — which seniority leads the row order. Organization
-     * Seniority is the server's default (and the canonical order), so it leads here.
-     */
-    seniorityOptions: { label: string; value: NominalRollSeniority }[] = [
-        { label: 'Organization Seniority', value: 'OrganizationSeniority' },
-        { label: 'SRB Rank Seniority',     value: 'RankSeniority' },
-    ];
-    selectedSeniority: NominalRollSeniority = 'OrganizationSeniority';
-
-    /** Seniority drives the server-side ORDER BY, so re-fetch from page 1. */
-    onSeniorityChange(): void {
-        this.first = 0;
-        if (this.searched) this.loadPage();
-    }
 
     constructor(
         private _router: Router,
@@ -572,9 +565,9 @@ export class ReportUnitDurationNominalRollComponent implements OnInit, OnDestroy
     }
     private buildFilterLines(): string[] { return this.criteriaItems.map(it => `${it.label}: ${it.value}`); }
     clearFilters(): void {
+        this.reportSort.reset();
         this.idSearchText = '';
         this.lastIdSearchApplied = '';
-        this.selectedSeniority = 'OrganizationSeniority';
         this.selectedOrgNodeIds = [];
         this.selectedOrgIds = [];
         this.selectedRankIds = [];
@@ -718,9 +711,9 @@ export class ReportUnitDurationNominalRollComponent implements OnInit, OnDestroy
         ]));
 
         this.reportService.runDynamicUnitDurationReport({
+            ...this.reportSort.request,
             columns,
             criteria,
-            nominalRollSeniority: this.selectedSeniority,
             // Leave null so the backend applies the access-based rule:
             // full-access users see ex + serving members who served the unit
             // during the period; org-scope-restricted users are forced to
@@ -786,6 +779,14 @@ export class ReportUnitDurationNominalRollComponent implements OnInit, OnDestroy
         // their own columns, so the meta sub-line is intentionally empty.
         return '';
     }
+    remarksCellValue(row: UnitDurationNominalRollReportRow): string {
+        return reportRemarksValue(row, this.lang);
+    }
+
+    remarksLines(row: UnitDurationNominalRollReportRow): string[] {
+        return reportRemarksLines(row, this.lang);
+    }
+
     cellValue(row: UnitDurationNominalRollReportRow, key: string): string {
         switch (key) {
             case 'serviceId': {
@@ -805,7 +806,7 @@ export class ReportUnitDurationNominalRollComponent implements OnInit, OnDestroy
             case 'presentUnit':    return this.codeValue(row.presentUnit, row.presentUnitBN);
             case 'serviceHistory': return this.codeValue(row.serviceHistory, row.serviceHistoryBN);
             case 'durationOfStay': return this.formatDuration(this.computeDurationString(row));
-            case 'rmks':           return row.rmks ?? '';
+            case 'rmks':           return this.remarksCellValue(row);
             default:               return this.extraCellValue(row, key);
         }
     }
@@ -887,7 +888,8 @@ export class ReportUnitDurationNominalRollComponent implements OnInit, OnDestroy
             joiningInRab:   d['joiningInRab']   as string,
             rabServiceTo:   d['rabServiceTo']   as string,
             postingStatus:  d['postingStatus']  as string,
-            rmks:           (d['rmks'] as string) ?? null,
+            allRemarks: (d['allRemarks'] as string) ?? null,
+            allRemarksBN: (d['allRemarksBN'] as string) ?? null,
         } as UnitDurationNominalRollReportRow;
     }
 
@@ -969,7 +971,10 @@ export class ReportUnitDurationNominalRollComponent implements OnInit, OnDestroy
                             new Paragraph({ spacing: { after: k < lines.length - 1 ? 40 : 0 }, children: [run(ln)] }));
                         return new TableCell({ ...cellOpts, children: paras });
                     }
-                    case 'Remarks': return new TableCell({ ...cellOpts, children: [new Paragraph({ children: [run(row.rmks || '', { color: C.gray })] })] });
+                    case 'Remarks': {
+                        const lines = this.remarksLines(row);
+                        return new TableCell({ ...cellOpts, children: (lines.length ? lines : ['']).map(line => new Paragraph({ children: [run(line, { color: C.gray })] })) });
+                    }
                     case 'Plain':
                     default: return new TableCell({ ...cellOpts, children: [new Paragraph({ children: [run(this.cellValue(row, col.key))] })] });
                 }
@@ -1017,7 +1022,7 @@ export class ReportUnitDurationNominalRollComponent implements OnInit, OnDestroy
                         const l2 = this.callNoRankLine2(row);
                         return l2 ? `${l1}\n${l2}` : l1;
                     }
-                    case 'Remarks': return row.rmks || '';
+                    case 'Remarks': return this.remarksCellValue(row);
                     case 'Date':
                     case 'Plain':
                     default: return this.cellValue(row, col.key);
@@ -1076,7 +1081,7 @@ export class ReportUnitDurationNominalRollComponent implements OnInit, OnDestroy
                     const lines = this.historyLines(row, col.key);
                     return `<td class="td-history">${lines.map(ln => `<div>${esc(ln)}</div>`).join('')}</td>`;
                 }
-                case 'Remarks': return `<td class="td-rmks">${esc(row.rmks || '')}</td>`;
+                case 'Remarks': return `<td class="td-rmks">${this.remarksLines(row).map(line => `<div class="rmk-line">${esc(line)}</div>`).join('')}</td>`;
                 case 'Plain':
                 default: return `<td>${esc(this.cellValue(row, col.key))}</td>`;
             }
@@ -1135,6 +1140,8 @@ export class ReportUnitDurationNominalRollComponent implements OnInit, OnDestroy
     .td-date { font-family: ${mono}; letter-spacing: 0.02em; white-space: nowrap; }
     .td-history { vertical-align: top; min-width: 48mm; }
     .td-history > div { white-space: nowrap; line-height: 1.35; }
+    .td-rmks { text-align: left; }
+    .rmk-line { text-align: left; padding-left: 0; text-indent: 0; }
 </style></head><body><div class="paper">
     <header class="paper-head">
         <div class="overline">${esc(this.rabOverlineText)}</div>

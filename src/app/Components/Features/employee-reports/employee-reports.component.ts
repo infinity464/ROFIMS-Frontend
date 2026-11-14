@@ -29,6 +29,7 @@ import type { ReportAccessibleScope } from '@/models/report.model';
 export type ReportType =
     | 'memberAppointment'
     | 'batchCourse'
+    | 'batch'
     | 'education'
     | 'motherOrg'
     | 'officerType'
@@ -56,6 +57,7 @@ function isNALabel(s: string | null | undefined): boolean {
 const COMMON_CODE_TYPE_BY_REPORT: Record<ReportType, string> = {
     memberAppointment: 'AppointmentCategory',
     batchCourse: 'CourseName',
+    batch: 'Batch',
     education: 'EducationQualification',
     motherOrg: 'MotherOrg',
     officerType: 'OfficerType',
@@ -123,6 +125,7 @@ export class EmployeeReportsComponent implements OnInit {
     reportTypes: { label: string; labelBn: string; value: ReportType }[] = [
         { label: 'Appointment', labelBn: 'নিয়োগ', value: 'memberAppointment' },
         { label: 'Course', labelBn: 'কোর্স', value: 'batchCourse' },
+        { label: 'Batch Wise', labelBn: 'ব্যাচ ভিত্তিক', value: 'batch' },
         { label: 'Education', labelBn: 'শিক্ষা', value: 'education' },
         { label: 'Mother Org', labelBn: 'মাতৃ সংস্থা', value: 'motherOrg' },
         { label: 'Officer Type', labelBn: 'অফিসার ধরণ', value: 'officerType' },
@@ -155,6 +158,7 @@ export class EmployeeReportsComponent implements OnInit {
      * so picking "Driver" returns all of them to the child (same mechanism as the N/A bundle).
      */
     private labelBundleIds = new Map<number, number[]>();
+    private commonCodeLoadId = 0;
 
     /**
      * Stable, cached array passed to the Corps / Trade child via `[commonCodeIds]`. Recomputed
@@ -267,11 +271,14 @@ export class EmployeeReportsComponent implements OnInit {
     }
 
     loadCommonCodeOptions(): void {
+        const loadId = ++this.commonCodeLoadId;
+        this.commonCodeOptions = [];
         this.naCommonCodeIds = [];
         this.labelBundleIds.clear();
         if (this.reportType === 'motherOrg') {
             this.commonCodeService.getAllActiveMotherOrgs().subscribe({
                 next: (list: MotherOrganizationModel[]) => {
+                    if (loadId !== this.commonCodeLoadId) return;
                     this.commonCodeOptions = (list || []).map((c) => ({
                         label: c.orgNameEN || String(c.orgId),
                         labelBn: c.orgNameBN || c.orgNameEN || String(c.orgId),
@@ -279,6 +286,7 @@ export class EmployeeReportsComponent implements OnInit {
                     }));
                 },
                 error: () => {
+                    if (loadId !== this.commonCodeLoadId) return;
                     this.commonCodeOptions = [];
                 },
             });
@@ -292,8 +300,9 @@ export class EmployeeReportsComponent implements OnInit {
         const codeType = COMMON_CODE_TYPE_BY_REPORT[this.reportType];
         this.commonCodeService.getAllActiveCommonCodesType(codeType).subscribe({
             next: (list: CommonCodeModel[]) => {
+                if (loadId !== this.commonCodeLoadId) return;
                 const raw = list || [];
-                if (this.reportType === 'corps' || this.reportType === 'trade' || this.reportType === 'officerType') {
+                if (this.reportType === 'corps' || this.reportType === 'trade' || this.reportType === 'officerType' || this.reportType === 'batch') {
                     // Multiple "N/A" CommonCode rows can exist (one per mother org); collapse them into
                     // a single synthetic option whose value is NA_SENTINEL_VALUE. We remember the
                     // underlying CodeIds so selectedCommonCodeIds can return them to the child component.
@@ -306,7 +315,7 @@ export class EmployeeReportsComponent implements OnInit {
                             naIds.push(c.codeId);
                             continue;
                         }
-                        const label = c.codeValueEN || String(c.codeId);
+                        const label = c.codeValueEN?.trim() || c.codeValueBN?.trim() || String(c.codeId);
                         const key = label.trim().toLowerCase();
                         const existing = groups.get(key);
                         if (existing) {
@@ -314,7 +323,7 @@ export class EmployeeReportsComponent implements OnInit {
                         } else {
                             groups.set(key, {
                                 label,
-                                labelBn: c.codeValueBN || c.codeValueEN || String(c.codeId),
+                                labelBn: c.codeValueBN?.trim() || label,
                                 codeIds: [c.codeId],
                             });
                         }
@@ -346,6 +355,7 @@ export class EmployeeReportsComponent implements OnInit {
                 }));
             },
             error: () => {
+                if (loadId !== this.commonCodeLoadId) return;
                 this.commonCodeOptions = [];
             },
         });
@@ -378,11 +388,13 @@ export class EmployeeReportsComponent implements OnInit {
      * "Common Code" caption.
      */
     get commonCodeDropdownLabelEn(): string {
+        if (this.reportType === 'batch') return 'Batch';
         const opt = this.reportTypes.find((o) => o.value === this.reportType);
         return opt?.label ?? this.L['en']['report.commonCodeLabel'];
     }
 
     get commonCodePlaceholderEn(): string {
+        if (this.reportType === 'batch') return 'Select Batch';
         const opt = this.reportTypes.find((o) => o.value === this.reportType);
         return opt ? `Select ${opt.label}` : this.L['en']['report.placeholderCommonCode'];
     }

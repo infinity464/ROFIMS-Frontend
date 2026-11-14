@@ -1,4 +1,5 @@
 import { Component, OnInit } from '@angular/core';
+import { SendingRemarkTypeOptions, sendingRemarkError } from '@/models/sending-remark-type';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterModule } from '@angular/router';
@@ -34,6 +35,15 @@ import { FlexibleDateDirective } from '@/shared/directives/flexible-date.directi
     styleUrls: ['./new-joinee-sending-notesheet.scss'],
 })
 export class NewJoineeSendingNotesheet implements OnInit {
+    remarkTypeOptions = SendingRemarkTypeOptions;
+    sendingEmployeeId: number | null = null;
+
+    private validateRemark(row: EmployeeList): boolean {
+        const error = sendingRemarkError(row.sendingRemark, row.sendingRemarkType);
+        if (error) this.messageService.add({ severity: 'warn', summary: row.serviceId || 'Remark', detail: error });
+        return !error;
+    }
+
     list: EmployeeList[] = [];
     loading = false;
     first = 0;
@@ -441,12 +451,14 @@ export class NewJoineeSendingNotesheet implements OnInit {
         const ids = Array.from(this.selectedIds);
         if (ids.length === 0 || this.isSendingSelection) return;
 
+        if (ids.some(id => !this.list.find(r => r.employeeID === id))
+            || !ids.map(id => this.list.find(r => r.employeeID === id)!).every(row => this.validateRemark(row))) return;
         this.isSendingSelection = true;
         const calls = ids.map(id => {
             const row = this.list.find(r => r.employeeID === id);
-            return this.employeeListService.setIsSendingNotesheetStatus(id, IsSendingNotesheetStatus.Draft, row?.sendingRemark ?? undefined).pipe(
+            return this.employeeListService.setIsSendingNotesheetStatus(id, IsSendingNotesheetStatus.Draft, row?.sendingRemark ?? undefined, row?.sendingRemarkType ?? null).pipe(
                 map(res => ({ id, ok: (res?.statusCode ?? 200) === 200, description: res?.description })),
-                catchError(err => of({ id, ok: false, description: err?.error?.message || 'Request failed' }))
+                catchError(err => of({ id, ok: false, description: err?.error?.description || err?.error?.message || 'Request failed' }))
             );
         });
         forkJoin(calls).subscribe(results => {
@@ -466,9 +478,15 @@ export class NewJoineeSendingNotesheet implements OnInit {
                     detail: `Could not update ${failCount} member(s).`
                 });
             }
+            for (const result of results.filter(r => r.ok)) {
+                const row = this.list.find(r => r.employeeID === result.id);
+                if (row) row.isSendingNotesheetStatus = IsSendingNotesheetStatus.Draft;
+                this.selectedIds.delete(result.id);
+            }
+            if (failCount > 0) this.messageService.add({ severity: 'error', summary: 'Send failed',
+                detail: results.find(r => !r.ok)?.description || 'Failed rows keep their remark and selection.' });
             this.isSendingSelection = false;
-            this.clearSelection();
-            this.loadData();
+            this.list = [...this.list];
         });
     }
 
@@ -477,7 +495,7 @@ export class NewJoineeSendingNotesheet implements OnInit {
             this.messageService.add({ severity: 'warn', summary: 'Permission Denied', detail: 'You do not have permission to perform this action.' });
             return;
         }
-        if (this.isPostingInProcess(row)) return;
+        if (this.isPostingInProcess(row) || this.sendingEmployeeId != null || this.isSendingSelection || !this.validateRemark(row)) return;
         if (!this.rabIdOf(row)) {
             this.messageService.add({
                 severity: 'warn',
@@ -486,17 +504,25 @@ export class NewJoineeSendingNotesheet implements OnInit {
             });
             return;
         }
-        this.employeeListService.setIsSendingNotesheetStatus(row.employeeID, IsSendingNotesheetStatus.Draft, row.sendingRemark ?? undefined).subscribe({
-            next: () => {
+        this.sendingEmployeeId = row.employeeID;
+        this.employeeListService.setIsSendingNotesheetStatus(row.employeeID, IsSendingNotesheetStatus.Draft, row.sendingRemark ?? undefined, row.sendingRemarkType ?? null).subscribe({
+            next: (res) => {
+                this.sendingEmployeeId = null;
+                if (res.statusCode !== 200) {
+                    this.messageService.add({ severity: 'error', summary: 'Send failed', detail: res.description || 'Failed to send member.' });
+                    return;
+                }
+                row.isSendingNotesheetStatus = IsSendingNotesheetStatus.Draft;
                 this.messageService.add({ severity: 'success', summary: 'Success', detail: 'Status updated to Posting in Process' });
-                this.loadData();
+                this.list = [...this.list];
             },
             error: (err) => {
+                this.sendingEmployeeId = null;
                 console.error('Failed to set IsSendingNotesheetStatus', err);
                 this.messageService.add({
                     severity: 'error',
                     summary: 'Error',
-                    detail: err?.error?.message || 'Failed to update status'
+                    detail: err?.error?.description || err?.error?.message || 'Failed to update status'
                 });
             }
         });

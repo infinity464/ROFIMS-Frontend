@@ -80,6 +80,8 @@ export function buildScopeExportLines(
   const preDate: string[] = [];
   const unit = unitScopeLine(scope, lang);
   if (unit) preDate.push(unit);
+  const organizations = (lang === 'bn' ? scope?.organizationNamesBN : scope?.organizationNames) ?? scope?.organizationNames;
+  if (organizations?.length) preDate.push(`Organizations: ${organizations.join(', ')}`);
 
   const belowDate: string[] = [];
   const mt = memberTypeScopeLine(scope, lang);

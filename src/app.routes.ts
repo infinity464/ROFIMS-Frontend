@@ -205,6 +205,10 @@ export const appRoutes: Routes = [
             { path: 'posting/inter-posting-notesheet-generate', loadComponent: () => import('@/Components/Features/inter-posting-notesheet-generate/inter-posting-notesheet-generate').then(m => m.InterPostingNotesheetGenerateComponent) },
             { path: 'posting/posting-order-generate', loadComponent: () => import('@/Components/Features/posting-order-generate/posting-order-generate').then(m => m.PostingOrderGenerateComponent), data: { postingType: 'NewPosting' } },
             { path: 'posting/inter-posting-order-generate', loadComponent: () => import('@/Components/Features/posting-order-generate/posting-order-generate').then(m => m.PostingOrderGenerateComponent), data: { postingType: 'InterPosting' } },
+            // Split / merge: same component in multi mode — members of several note-sheets into one order (merge),
+            // or one note-sheet's members across several orders (split).
+            { path: 'posting/posting-order-split-merge', loadComponent: () => import('@/Components/Features/posting-order-generate/posting-order-generate').then(m => m.PostingOrderGenerateComponent), data: { postingType: 'NewPosting', multi: true } },
+            { path: 'posting/inter-posting-order-split-merge', loadComponent: () => import('@/Components/Features/posting-order-generate/posting-order-generate').then(m => m.PostingOrderGenerateComponent), data: { postingType: 'InterPosting', multi: true } },
             { path: 'posting/posting-order-receive', loadComponent: () => import('@/Components/Features/posting-order-receive/posting-order-receive').then(m => m.PostingOrderReceiveComponent) },
             { path: 'posting/pending-posting-joining', loadComponent: () => import('@/Components/Features/pending-posting-joining/pending-posting-joining').then(m => m.PendingPostingJoiningComponent) },
             { path: 'posting/pending-joining-transfer-unit', loadComponent: () => import('@/Components/Features/pending-joining-transfer-unit/pending-joining-transfer-unit').then(m => m.PendingJoiningTransferUnitComponent) },

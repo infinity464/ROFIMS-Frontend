@@ -1,6 +1,6 @@
 import { Component, HostListener, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { Router, RouterModule } from '@angular/router';
+import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 
 import { ButtonModule } from 'primeng/button';
 import { CheckboxModule } from 'primeng/checkbox';
@@ -12,7 +12,7 @@ import { DialogModule } from 'primeng/dialog';
 import { ToastModule } from 'primeng/toast';
 import { MessageService } from 'primeng/api';
 
-import { AuthenticationService } from '../Service/authentication';
+import { AuthenticationService, IP_ADDRESS_DENIAL_REASON, IP_ADDRESS_DENIAL_MESSAGE } from '../Service/authentication';
 import { UserMenuService } from '@/services/user-menu.service';
 import { IdentityUserMemberTypeAccessService } from '@/services/identity-user-member-type-access.service';
 import { SessionPolicyService } from '@/shared/services/session-policy.service';
@@ -37,6 +37,7 @@ import { AppFloatingConfigurator } from '@/layout/component/app.floatingconfigur
   styleUrl: './login.scss'
 })
 export class Login implements OnInit {
+  ipDenialMessage = '';
   email = '';
   password = '';
   checked = false;
@@ -62,6 +63,7 @@ export class Login implements OnInit {
   constructor(
     private auth: AuthenticationService,
     private router: Router,
+    private route: ActivatedRoute,
     private messageService: MessageService,
     private userMenuService: UserMenuService,
     private memberTypeAccess: IdentityUserMemberTypeAccessService,
@@ -69,6 +71,9 @@ export class Login implements OnInit {
   ) {}
 
   ngOnInit(): void {
+    if (this.route.snapshot.queryParamMap.get('reason') === IP_ADDRESS_DENIAL_REASON) {
+      this.ipDenialMessage = IP_ADDRESS_DENIAL_MESSAGE;
+    }
     const remembered = this.auth.getRememberedEmail();
     if (remembered) {
       this.email = remembered;

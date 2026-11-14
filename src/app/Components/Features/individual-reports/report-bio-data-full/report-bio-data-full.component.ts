@@ -1,4 +1,4 @@
-﻿import { Component, EventEmitter, HostListener, Input, OnInit, Output, OnDestroy } from '@angular/core';
+import { Component, EventEmitter, HostListener, Input, OnInit, Output, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { HttpClient } from '@angular/common/http';
 import { FormsModule } from '@angular/forms';
@@ -10,8 +10,9 @@ import { TableModule } from 'primeng/table';
 import { DialogModule } from 'primeng/dialog';
 import { Toast } from 'primeng/toast';
 import { MessageService } from 'primeng/api';
-import { forkJoin, of } from 'rxjs';
+import { firstValueFrom, forkJoin, of } from 'rxjs';
 import { catchError } from 'rxjs/operators';
+import { ReportSortControlsComponent, ReportSortState } from '@/shared/components/report-sort-controls/report-sort-controls.component';
 import { ReportService } from '@/services/report.service';
 import { ServingMembersService } from '@/services/serving-members.service';
 import { EmpService } from '@/services/emp-service';
@@ -81,12 +82,18 @@ interface PanelDef {
 @Component({
     selector: 'app-report-bio-data-full-individual',
     standalone: true,
-    imports: [CommonModule, FormsModule, ButtonModule, InputTextModule, MultiSelectModule, SelectModule, TableModule, DialogModule, Toast],
+    imports: [ReportSortControlsComponent, CommonModule, FormsModule, ButtonModule, InputTextModule, MultiSelectModule, SelectModule, TableModule, DialogModule, Toast],
     providers: [MessageService],
     templateUrl: './report-bio-data-full.component.html',
     styleUrls: ['../../employee-reports/report-theme.scss', '../../employee-reports/report-card-mtr.scss', './report-bio-data-full.component.scss'],
 })
 export class ReportBioDataFullIndividualComponent implements OnInit, OnDestroy {
+    readonly reportSort = new ReportSortState();
+
+    onReportSortChange(): void {
+        if (this.searched) this.load();
+    }
+
     @Input() lang: ReportLang = 'en';
     @Output() langToggle = new EventEmitter<void>();
 
@@ -410,7 +417,19 @@ export class ReportBioDataFullIndividualComponent implements OnInit, OnDestroy {
         this.editPanelId = this.panels[0].id;
     }
 
-    ngOnInit(): void { this._userMenuService.getPermissionsByRoute(this._router.url); }
+    canSpecialView = false;
+    private async refreshSpecialView(): Promise<void> {
+        this.canSpecialView = false;
+        try {
+            const permission = await firstValueFrom(this._userMenuService.getMyProfilePermissions());
+            this.canSpecialView = permission.canSpecialView === true;
+        } catch { this.canSpecialView = false; }
+        if (!this.canSpecialView) this.tableRows['previousRab'] = (this.tableRows['previousRab'] ?? []).map(row => ({ ...row, remarks: null }));
+    }
+    ngOnInit(): void {
+        this._userMenuService.getPermissionsByRoute(this._router.url);
+        void this.refreshSpecialView();
+    }
     ngOnDestroy(): void { if (this.profileImageUrl) { URL.revokeObjectURL(this.profileImageUrl); this.profileImageUrl = null; } }
 
     @HostListener('document:click')
@@ -535,7 +554,7 @@ export class ReportBioDataFullIndividualComponent implements OnInit, OnDestroy {
     }
     visibleCols(p: PanelDef): ColDef[] {
         const byKey = new Map(p.columns.map(c => [c.key, c]));
-        return (this.selectedCols[p.id] ?? []).map(k => byKey.get(k)).filter((c): c is ColDef => c != null);
+        return (this.selectedCols[p.id] ?? []).map(k => byKey.get(k)).filter((c): c is ColDef => c != null && (p.id !== 'previousRab' || c.key !== 'remarks' || this.canSpecialView));
     }
     rowsFor(p: PanelDef): any[] { return this.tableRows[p.id] ?? []; }
 
@@ -698,7 +717,12 @@ export class ReportBioDataFullIndividualComponent implements OnInit, OnDestroy {
         const n = this.isBn ? BanglaNumerals.toBangla(String(this.activeFilterCount)) : String(this.activeFilterCount);
         return n + ' active filter(s)';
     }
-    clearFilters(): void { this.searchRabId = ''; this.searchServiceId = ''; this.searchNid = ''; }
+    clearFilters(): void {
+        this.reportSort.reset();
+        this.searchRabId = '';
+        this.searchServiceId = '';
+        this.searchNid = '';
+    }
 
     private isMemberTypeAllowed(memberTypeId: number | null | undefined): boolean {
         if (memberTypeId == null) return true;
@@ -722,6 +746,7 @@ export class ReportBioDataFullIndividualComponent implements OnInit, OnDestroy {
         const lookupColumns = ['rabId', 'serviceId', 'nameEnglish', 'nameBangla', 'armyRank', 'corps', 'trade', 'motherOrganization', 'rabUnit', 'prefix', 'postingStatus'];
 
         this.reportService.runDynamicEmployeeBaseReport({
+            ...this.reportSort.request,
             columns: lookupColumns, criteria: lookupCriteria, pagination: { page_no: 1, row_per_page: 100 },
         }).subscribe({
             next: (lookup) => {
@@ -1021,6 +1046,7 @@ export class ReportBioDataFullIndividualComponent implements OnInit, OnDestroy {
     // ── Export ─────────────────────────────────────────────────────────
     toggleExportDropdown(event: Event): void { event.stopPropagation(); this.exportDropdownOpen = !this.exportDropdownOpen; }
     async exportAs(type: 'print' | 'word'): Promise<void> {
+        await this.refreshSpecialView();
         this.exportDropdownOpen = false;
         if (!this.profile) return;
         if (type === 'print') { this.printDoc(); return; }

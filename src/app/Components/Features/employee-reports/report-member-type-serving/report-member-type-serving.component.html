@@ -28,6 +28,7 @@
 
     <div class="report-filter-body" [class.open]="filterOpen">
         <div class="report-filter-body-inner">
+                <app-report-sort-controls [state]="reportSort" (sortChange)="onReportSortChange()"></app-report-sort-controls>
             <div class="report-fields-row">
                 <div class="report-filter-field">
                     <label>{{ L['en']['report.search.memberType'] }}</label>
@@ -174,19 +175,6 @@
                     @if (statusLocked) {
                         <small class="report-filter-hint">Locked to Presently Serving — your access scope is restricted.</small>
                     }
-                </div>
-                <div class="report-filter-field">
-                    <label>Nominal Roll Seniority</label>
-                    <p-select
-                        [options]="seniorityOptions"
-                        [(ngModel)]="selectedSeniority"
-                        (ngModelChange)="onSeniorityChange()"
-                        optionLabel="label"
-                        optionValue="value"
-                        placeholder="Select Seniority"
-                        styleClass="w-full"
-                        appendTo="body">
-                    </p-select>
                 </div>
             </div>
 

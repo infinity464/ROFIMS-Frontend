@@ -10,6 +10,7 @@ import { InputTextModule } from 'primeng/inputtext';
 import { PaginatorModule } from 'primeng/paginator';
 import { Toast } from 'primeng/toast';
 import { MessageService } from 'primeng/api';
+import { ReportSortControlsComponent, ReportSortState } from '@/shared/components/report-sort-controls/report-sort-controls.component';
 import { ReportService } from '@/services/report.service';
 import { CommonCodeService } from '@/services/common-code-service';
 import { ExportService } from '@/services/export.service';
@@ -56,12 +57,19 @@ import { debounceTime, forkJoin, Subject, Subscription } from 'rxjs';
 @Component({
     selector: 'app-report-address-location',
     standalone: true,
-    imports: [CommonModule, FormsModule, TableModule, ButtonModule, SelectModule, MultiSelectModule, InputTextModule, PaginatorModule, Toast, OrgTreeMultiSelectComponent],
+    imports: [ReportSortControlsComponent, CommonModule, FormsModule, TableModule, ButtonModule, SelectModule, MultiSelectModule, InputTextModule, PaginatorModule, Toast, OrgTreeMultiSelectComponent],
     providers: [MessageService],
     templateUrl: './report-address-location.component.html',
     styleUrls: ['../report-theme.scss', '../report-card-mtr.scss', './report-address-location.component.scss'],
 })
 export class ReportAddressLocationComponent implements OnInit, OnDestroy {
+    readonly reportSort = new ReportSortState();
+
+    onReportSortChange(): void {
+        this.first = 0;
+        if (this.searched) this.load();
+    }
+
     canInsert = true;
     canUpdate = true;
     canDelete = true;
@@ -2357,6 +2365,7 @@ export class ReportAddressLocationComponent implements OnInit, OnDestroy {
     }
 
     clearFilters(): void {
+        this.reportSort.reset();
         this.selectedOrgIds = [];
         this.selectedMemberTypeIds = [];
         this.selectedRankIds = [];
@@ -2493,6 +2502,7 @@ export class ReportAddressLocationComponent implements OnInit, OnDestroy {
         if (this.searchNid.trim())              criteria.push({ fieldKey: 'nid',        textValue: this.searchNid.trim() });
 
         this.reportService.runDynamicReport({
+            ...this.reportSort.request,
             columns: this.backendColumnKeys(),
             criteria,
             idSearchText: (this.idSearchText ?? '').trim() || undefined,

@@ -10,6 +10,7 @@ import { PaginatorModule } from 'primeng/paginator';
 import { DatePickerModule } from 'primeng/datepicker';
 import { Toast } from 'primeng/toast';
 import { MessageService } from 'primeng/api';
+import { ReportSortControlsComponent, ReportSortState } from '@/shared/components/report-sort-controls/report-sort-controls.component';
 import { ReportService } from '@/services/report.service';
 import { CommonCodeService } from '@/services/common-code-service';
 import { UserMenuService } from '@/services/user-menu.service';
@@ -20,7 +21,6 @@ import type {
     ReportAccessibleScope,
     DynamicReportCriterion,
     DynamicReportRow,
-    NominalRollSeniority,
 } from '@/models/report.model';
 import type { MotherOrganizationModel } from '@/models/mother-org-model';
 import type { CommonCodeModel } from '@/models/common-code-model';
@@ -68,6 +68,7 @@ export type PhotoSizeKey = 'stamp' | 'intermediate' | 'passport';
     selector: 'app-report-member-type-serving',
     standalone: true,
     imports: [
+        ReportSortControlsComponent,
         CommonModule,
         FormsModule,
         TableModule,
@@ -86,6 +87,13 @@ export type PhotoSizeKey = 'stamp' | 'intermediate' | 'passport';
     styleUrls: ['../report-theme.scss', '../report-card-mtr.scss', './report-member-type-serving.component.scss'],
 })
 export class ReportMemberTypeServingComponent implements OnInit, OnDestroy {
+    readonly reportSort = new ReportSortState();
+
+    onReportSortChange(): void {
+        this.first = 0;
+        if (this.searched) this.load();
+    }
+
     L = REPORT_LABELS;
     lang: ReportLang = 'en';
 
@@ -158,16 +166,6 @@ export class ReportMemberTypeServingComponent implements OnInit, OnDestroy {
     /** Joining-in-RAB date range (maps to registry `joiningDate`). */
     joiningInRabFrom: Date | null = null;
     joiningInRabTo: Date | null = null;
-
-    /**
-     * Nominal Roll Seniority — which seniority leads the row order. Organization
-     * Seniority is the server's default (and every other report's), so it leads here.
-     */
-    seniorityOptions: { label: string; value: NominalRollSeniority }[] = [
-        { label: 'Organization Seniority', value: 'OrganizationSeniority' },
-        { label: 'SRB Rank Seniority',     value: 'RankSeniority' },
-    ];
-    selectedSeniority: NominalRollSeniority = 'OrganizationSeniority';
 
     /** Member Status — Servings (default) or Ex-Member only. */
     statusOptions: { label: string; labelBn: string; value: string }[] = [
@@ -1223,12 +1221,6 @@ export class ReportMemberTypeServingComponent implements OnInit, OnDestroy {
         if (this.searched) this.load();
     }
 
-    /** Seniority drives the server-side ORDER BY, so re-fetch from page 1. */
-    onSeniorityChange(): void {
-        this.first = 0;
-        if (this.searched) this.load();
-    }
-
     /** Column selection changed — re-fetch so newly added columns are populated. */
     onColumnsChange(): void {
         if (this.searched) this.load();
@@ -1260,6 +1252,7 @@ export class ReportMemberTypeServingComponent implements OnInit, OnDestroy {
     }
 
     clearFilters(): void {
+        this.reportSort.reset();
         this.idSearchText = '';
         this.lastIdSearchApplied = '';
         this.selectedMemberTypeIds = [];
@@ -1274,7 +1267,6 @@ export class ReportMemberTypeServingComponent implements OnInit, OnDestroy {
         this.refreshDependentOptions();
         this.joiningInRabFrom = null;
         this.joiningInRabTo = null;
-        this.selectedSeniority = 'OrganizationSeniority';
         if (!this.statusLocked) this.selectedPostingStatus = 'Servings';
         this.first = 0;
     }
@@ -1406,9 +1398,9 @@ export class ReportMemberTypeServingComponent implements OnInit, OnDestroy {
         }
 
         this.reportService.runDynamicEmployeeBaseReport({
+            ...this.reportSort.request,
             columns: this.backendColumnKeys(),
             criteria,
-            nominalRollSeniority: this.selectedSeniority,
             postingStatusFilter: this.selectedPostingStatus || 'Servings',
             idSearchText: (this.idSearchText ?? '').trim() || undefined,
             pagination: { page_no, row_per_page: this.rows },

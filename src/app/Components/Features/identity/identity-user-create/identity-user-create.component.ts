@@ -1,4 +1,8 @@
 import { Component, OnInit, inject } from '@angular/core';
+import { ipv4Validator } from '@/shared/validators/ipv4.validator';
+import { organizationScopeValidator } from '@/shared/validators/organization-scope.validator';
+import { IdentityUserOrganizationAccessService, OrganizationScopeOption } from '@/services/identity-user-organization-access.service';
+import { MultiSelectModule } from 'primeng/multiselect';
 import { UserMenuService } from '@/services/user-menu.service';
 import { Router } from '@angular/router';
 import { CommonModule } from '@angular/common';
@@ -47,7 +51,6 @@ import { LEVEL_COLORS } from '@/Components/basic-setup/org-tree/models/org-node.
 import { MasterBasicSetupService } from '@/Components/basic-setup/shared/services/MasterBasicSetupService';
 import { SharedService } from '@/shared/services/shared-service';
 import { OrgTreeMultiSelectComponent } from '@/shared/components/org-tree-multi-select/org-tree-multi-select.component';
-import { OrganizationModel } from '@/Components/basic-setup/organization-setup/models/organization';
 import {
   rulesAllow,
   type ApplicationRole,
@@ -58,6 +61,7 @@ import {
 } from '@/models/identity.model';
 
 interface UserRow extends UserListItem {
+  organizationNamesJoined?: string;
   employeeId?: number | null;
   employeeDisplay?: string;
   employeeName?: string | null;
@@ -120,6 +124,7 @@ interface UserActionConfig {
     InputTextModule,
     ButtonModule,
     SelectModule,
+    MultiSelectModule,
     RadioButtonModule,
     PasswordModule,
     IconFieldModule,
@@ -149,6 +154,7 @@ export class IdentityUserCreateComponent implements OnInit {
   private mappingService = inject(IdentityUserMappingService);
   private accessService = inject(IdentityUserMemberTypeAccessService);
   private rabUnitAccessService = inject(IdentityUserRabUnitAccessService);
+  private organizationAccessService = inject(IdentityUserOrganizationAccessService);
   private masterBasicSetupService = inject(MasterBasicSetupService);
   private messageService = inject(MessageService);
   private sharedService = inject(SharedService);
@@ -173,8 +179,13 @@ export class IdentityUserCreateComponent implements OnInit {
   private rabUnitAccesses: UserRabUnitAccessDto[] = [];
   editingUser: UserRow | null = null;
   isSubmitting = false;
-  organizationScopeOptions: OrganizationModel[] = [];
+  organizationScopeOptions: Array<{ orgId: number; orgNameEN: string; label: string }> = [];
   organizationScopeLoading = false;
+  organizationScopeLoadFailed = false;
+  accessSettingsLoading = false;
+  accessSettingsLoadFailed = false;
+  canGrantAllOrganizations = true;
+  private grantableOrganizationIds: number[] | null = null;
 
   resetDialogVisible = false;
   resetTargetUser: UserRow | null = null;
@@ -218,13 +229,21 @@ export class IdentityUserCreateComponent implements OnInit {
 
   loadOrganizationScope(): void {
     this.organizationScopeLoading = true;
-    this.masterBasicSetupService.getAllActiveMotherOrgs().subscribe({
-      next: (list) => {
-        this.organizationScopeOptions = Array.isArray(list) ? list : [];
+    this.organizationScopeLoadFailed = false;
+    forkJoin({ options: this.masterBasicSetupService.getAllActiveMotherOrgs(), mine: this.organizationAccessService.getMyScope() }).subscribe({
+      next: ({ options, mine }) => {
+        this.canGrantAllOrganizations = mine.organizationMode === 'all';
+        this.grantableOrganizationIds = this.canGrantAllOrganizations ? null : mine.organizationIds;
+        this.organizationScopeOptions = (Array.isArray(options) ? options : [])
+          .filter(o => this.grantableOrganizationIds === null || this.grantableOrganizationIds.includes(o.orgId))
+          .map(o => ({ orgId: o.orgId, orgNameEN: o.orgNameEN, label: o.orgNameEN }));
+        this.addSavedOrganizationOptions(this.editingUser?.organizations ?? []);
+        if (!this.editingUser && !this.canGrantAllOrganizations) this.form.patchValue({ organizationMode: 'specific' });
         this.organizationScopeLoading = false;
       },
       error: (err: any) => {
         this.organizationScopeLoading = false;
+        this.organizationScopeLoadFailed = true;
         this.messageService.add({
           severity: 'error',
           summary: 'Error',
@@ -232,6 +251,16 @@ export class IdentityUserCreateComponent implements OnInit {
         });
       }
     });
+  }
+
+  private addSavedOrganizationOptions(saved: OrganizationScopeOption[]): void {
+    for (const option of saved) {
+      if (!this.organizationScopeOptions.some(o => o.orgId === option.orgId)) {
+        this.organizationScopeOptions.push({ orgId: option.orgId, orgNameEN: option.orgNameEN,
+          label: option.orgNameEN + (option.isActive ? '' : ' (inactive)') });
+      }
+    }
+    this.organizationScopeOptions = [...this.organizationScopeOptions];
   }
 
   loadMemberTypes(): void {
@@ -315,6 +344,14 @@ export class IdentityUserCreateComponent implements OnInit {
       userName: (o['userName'] ?? o['UserName']) as string,
       email: (o['email'] ?? o['Email']) as string,
       phoneNumber: (o['phoneNumber'] ?? o['PhoneNumber']) as string | null,
+      ipAddress: (o['ipAddress'] ?? o['IpAddress'] ?? null) as string | null,
+      organizationIds: (o['organizationIds'] ?? o['OrganizationIds'] ?? []) as number[],
+      organizations: ((o['organizations'] ?? o['Organizations'] ?? []) as any[]).map(option => ({
+        orgId: option.orgId ?? option.OrgId,
+        orgNameEN: option.orgNameEN ?? option.OrgNameEN ?? '',
+        orgNameBN: option.orgNameBN ?? option.OrgNameBN,
+        isActive: (option.isActive ?? option.IsActive) === true
+      })),
       roleName: (o['roleName'] ?? o['RoleName']) as string,
       lockoutEnd: lockoutEnd ?? null,
       isHidden: (o['isHidden'] ?? o['IsHidden']) === true,
@@ -330,6 +367,7 @@ export class IdentityUserCreateComponent implements OnInit {
     const rabAccess = this.rabUnitAccesses.find((a) => a.userId === base.id);
     return {
       ...base,
+      organizationNamesJoined: (base.organizations ?? []).map(o => o.orgNameEN).join(' | '),
       employeeId: mapping?.employeeId ?? null,
       employeeDisplay: display,
       employeeName: mapping?.employeeName ?? null,
@@ -458,7 +496,7 @@ export class IdentityUserCreateComponent implements OnInit {
       email: ['', [Validators.required, Validators.email]],
       userName: ['', [Validators.required, Validators.minLength(3), Validators.pattern(USERNAME_PATTERN)]],
       phoneNumber: ['', [Validators.required, phoneValidator]],
-      ipAddress: [''],
+      ipAddress: ['', ipv4Validator],
       password: [
         '',
         [
@@ -469,12 +507,13 @@ export class IdentityUserCreateComponent implements OnInit {
       ],
       roleName: ['', Validators.required],
       employeeId: [null as number | null, Validators.required],
-      organizationScope: [null],
+      organizationMode: ['all'],
+      organizationIds: [[] as number[]],
       memberTypeIds: [[] as number[]],
       rabUnitMode: ['all' as 'all' | 'specific'],
       rabUnitIds: [[] as number[]],
       confirmUrl: [confirmUrl, Validators.required]
-    });
+    }, { validators: organizationScopeValidator });
   }
 
   loadRoles(): void {
@@ -564,6 +603,10 @@ export class IdentityUserCreateComponent implements OnInit {
   }
 
   onSubmit(): void {
+    if (this.organizationScopeLoading || this.organizationScopeLoadFailed || this.accessSettingsLoading || this.accessSettingsLoadFailed) {
+      this.messageService.add({ severity: 'warn', summary: 'Access settings', detail: 'Wait for access settings to load successfully before saving.' });
+      return;
+    }
     if (this.isSubmitting || this.form.invalid) {
       this.form.markAllAsTouched();
       return;
@@ -589,6 +632,9 @@ export class IdentityUserCreateComponent implements OnInit {
       const rabUnitIds: number[] = this.buildRabUnitIds();
       this.identityService
         .updateUser({
+          organizationMode: value.organizationMode,
+          organizationIds: value.organizationMode === 'all' ? [] : value.organizationIds,
+          ipAddress: value.ipAddress?.trim() || null,
           email: value.email,
           userName: value.userName || undefined,
           phoneNumber: value.phoneNumber || undefined,
@@ -652,6 +698,9 @@ export class IdentityUserCreateComponent implements OnInit {
 
     this.identityService
       .createUser({
+        organizationMode: value.organizationMode,
+        organizationIds: value.organizationMode === 'all' ? [] : value.organizationIds,
+        ipAddress: value.ipAddress?.trim() || null,
         email: value.email,
         userName: value.userName || undefined,
         phoneNumber: value.phoneNumber || undefined,
@@ -670,7 +719,7 @@ export class IdentityUserCreateComponent implements OnInit {
             });
             return;
           }
-          this.mapNewUser(createdEmail, employeeId, memberTypeIds, rabUnitIds, res.message, value.confirmUrl);
+          this.mapNewUser(createdEmail, employeeId, memberTypeIds, rabUnitIds, res.message, value.confirmUrl, res.userId);
         },
         error: (err) => {
           this.isSubmitting = false;
@@ -688,7 +737,8 @@ export class IdentityUserCreateComponent implements OnInit {
     memberTypeIds: number[],
     rabUnitIds: number[],
     createMsg: string | undefined,
-    confirmUrl: string
+    confirmUrl: string,
+    createdUserId?: string
   ): void {
     forkJoin({
       users: this.identityService.getManageableUsers(),
@@ -698,7 +748,7 @@ export class IdentityUserCreateComponent implements OnInit {
         this.mappings = Array.isArray(mappings) ? this.normMappings(mappings) : [];
         const arr = Array.isArray(users) ? users : [];
         this.setUsers(arr.map((u) => this.buildUserRow(u)));
-        const created = this.users.find((u) => (u.email ?? '').toLowerCase() === email.toLowerCase());
+        const created = createdUserId ? { id: createdUserId } : this.users.find((u) => (u.email ?? '').toLowerCase() === email.toLowerCase());
         if (!created?.id) {
           this.isSubmitting = false;
           this.messageService.add({
@@ -793,7 +843,8 @@ export class IdentityUserCreateComponent implements OnInit {
       rabUnitMode: 'all',
       rabUnitIds: [],
       ipAddress: '',
-      organizationScope: null,
+      organizationMode: this.canGrantAllOrganizations ? 'all' : 'specific',
+      organizationIds: [],
       confirmUrl
     });
   }
@@ -808,7 +859,13 @@ export class IdentityUserCreateComponent implements OnInit {
       return;
     }
     this.editingUser = user;
+    this.addSavedOrganizationOptions(user.organizations ?? []);
+    this.accessSettingsLoading = true;
+    this.accessSettingsLoadFailed = false;
     this.form.patchValue({
+      organizationMode: user.organizationIds?.length ? 'specific' : 'all',
+      organizationIds: user.organizationIds ?? [],
+      ipAddress: user.ipAddress ?? '',
       email: user.email,
       userName: user.userName ?? '',
       phoneNumber: user.phoneNumber ?? '',
@@ -828,17 +885,26 @@ export class IdentityUserCreateComponent implements OnInit {
     if (user.id) {
       forkJoin({
         memberTypeIds: this.accessService.getByUserId(user.id),
+        organization: this.organizationAccessService.getByUserId(user.id),
         rabUnitIds: this.rabUnitAccessService.getByUserId(user.id)
       }).subscribe({
-        next: ({ memberTypeIds, rabUnitIds }) => {
+        next: ({ memberTypeIds, rabUnitIds, organization }) => {
+          if (this.editingUser?.id !== user.id) return;
+          this.accessSettingsLoading = false;
+          this.addSavedOrganizationOptions(organization.organizations);
           const ids = Array.isArray(rabUnitIds) ? rabUnitIds : [];
           this.form.patchValue({
+            organizationMode: organization.organizationMode,
+            organizationIds: organization.organizationIds,
             memberTypeIds: Array.isArray(memberTypeIds) ? memberTypeIds : [],
             rabUnitMode: ids.length === 0 ? 'all' : 'specific',
             rabUnitIds: ids
           });
         },
         error: (err: any) => {
+          if (this.editingUser?.id !== user.id) return;
+          this.accessSettingsLoading = false;
+          this.accessSettingsLoadFailed = true;
           this.messageService.add({
             severity: 'warn',
             summary: 'Warning',
@@ -853,6 +919,8 @@ export class IdentityUserCreateComponent implements OnInit {
 
   onReset(): void {
     this.editingUser = null;
+    this.accessSettingsLoading = false;
+    this.accessSettingsLoadFailed = false;
     this.form.get('userName')?.enable();
     this.form.get('password')?.setValidators([
       Validators.required,
@@ -875,7 +943,8 @@ export class IdentityUserCreateComponent implements OnInit {
       rabUnitMode: 'all',
       rabUnitIds: [],
       ipAddress: '',
-      organizationScope: null,
+      organizationMode: this.canGrantAllOrganizations ? 'all' : 'specific',
+      organizationIds: [],
       confirmUrl: confirmUrl ?? ''
     });
   }

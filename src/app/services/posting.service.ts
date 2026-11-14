@@ -20,6 +20,7 @@ import {
     PostingOrderMasterWithDetailsDto,
     PostingOrderEmployeeRow,
     ApprovedNoteSheetItem,
+    PostingOrderMemberInput,
     PostingType,
     PostingNoteSheetStatus,
     PostingMemberRemovalHistoryDto,
@@ -154,7 +155,7 @@ export class PostingService {
     }
 
     /** Update TransferRabUnitId and Remarks on DraftPostingDetail rows. */
-    updateDraftPostingDetails(items: { id: number; transferRabUnitId: number | null; remarks: string | null }[]): Observable<{ statusCode: number; description: string }> {
+    updateDraftPostingDetails(items: { id: number; transferRabUnitId: number | null; remarks: string | null; sendingRemark?: string | null; sendingRemarkType?: import('@/models/sending-remark-type').SendingRemarkType; updateSendingRemark?: boolean }[]): Observable<{ statusCode: number; description: string }> {
         return this.http.post<{ statusCode: number; description: string }>(`${API}/UpdateDraftPostingDetails`, { items });
     }
 
@@ -487,7 +488,7 @@ export class PostingService {
     }
 
     /** Update TransferRabUnitId and Remarks on DraftInterPostingDetail rows. */
-    updateDraftInterPostingDetails(items: { id: number; transferRabUnitId: number | null; remarks: string | null }[]): Observable<{ statusCode: number; description: string }> {
+    updateDraftInterPostingDetails(items: { id: number; transferRabUnitId: number | null; remarks: string | null; interPostingRemark?: string | null; interPostingRemarkType?: import('@/models/sending-remark-type').SendingRemarkType; updateInterPostingRemark?: boolean }[]): Observable<{ statusCode: number; description: string }> {
         return this.http.post<{ statusCode: number; description: string }>(`${API}/UpdateDraftInterPostingDetails`, { items });
     }
 
@@ -565,6 +566,17 @@ export class PostingService {
         return this.http.get<ApprovedNoteSheetItem[]>(`${API}/GetApprovedNoteSheetsForPostingOrder`, { params: { noteSheetType } });
     }
 
+    /**
+     * Remaining members (not yet in any posting order) of one or more approved New/Inter posting
+     * note-sheets. Same row shape as getDraftPostingEmployees / getDraftInterPostingEmployees
+     * plus noteSheetId + noteSheetNo.
+     */
+    getRemainingNoteSheetMembers(noteSheetIds: number[], postingType: string): Observable<any[]> {
+        return this.http.get<any[]>(`${API}/GetRemainingNoteSheetMembers`, {
+            params: { noteSheetIds: noteSheetIds.map(String), postingType }
+        });
+    }
+
     /** Get notesheet employees (from DraftPostingDetail via DraftPostingMasterId). */
     getNoteSheetEmployees(noteSheetId: number): Observable<PostingOrderMasterWithDetailsDto | null> {
         return this.http.get<any>(`${this.NOTESHEET_API}/GetFilteredByKeysAsyn/${noteSheetId}`).pipe(
@@ -606,6 +618,8 @@ export class PostingService {
         remarks?: string | null;
         footerText?: string | null;
         employeeIds: number[];
+        /** Split / merge: members as (note-sheet, employee) pairs; overrides noteSheetId + employeeIds. */
+        members?: PostingOrderMemberInput[];
         createdBy: string;
         postingOrderNumberConfigId?: number | null;
         approvalEmployeeId?: number | null;

@@ -8,6 +8,7 @@ import { MultiSelectModule } from 'primeng/multiselect';
 import { PaginatorModule } from 'primeng/paginator';
 import { Toast } from 'primeng/toast';
 import { MessageService } from 'primeng/api';
+import { ReportSortControlsComponent, ReportSortState } from '@/shared/components/report-sort-controls/report-sort-controls.component';
 import { ReportService } from '@/services/report.service';
 import { CommonCodeService } from '@/services/common-code-service';
 import { Router } from '@angular/router';
@@ -50,7 +51,7 @@ import * as XLSX from 'xlsx';
 import { debounceTime, forkJoin, Subject, Subscription } from 'rxjs';
 
 /**
- * Officer Type Report — same shape as report-member-appointment.
+ * Shared Officer Type / Batch report — same shape as report-member-appointment.
  *
  * Parent's `commonCodeIds` is the selected OFFICER TYPE (CommonCode of type
  * "OfficerType") — every CodeId sharing the picked name, since the same
@@ -58,12 +59,14 @@ import { debounceTime, forkJoin, Subject, Subscription } from 'rxjs';
  * / Trade because Officer Type and Mother Org are independent dimensions.
  *
  * Backend: runs against runDynamicEmployeeBaseReport. The `officerType`
- * registry field maps to EmployeeInfo.OfficerType (CommonCode FK).
+ * registry field maps to EmployeeInfo.OfficerType (CommonCode FK). Batch mode
+ * uses the same roster, filters and exporters with EmployeeInfo.Batch instead.
  */
 @Component({
     selector: 'app-report-officer-type',
     standalone: true,
     imports: [
+        ReportSortControlsComponent,
         CommonModule,
         FormsModule,
         TableModule,
@@ -79,9 +82,17 @@ import { debounceTime, forkJoin, Subject, Subscription } from 'rxjs';
     styleUrls: ['../report-theme.scss', '../report-card-mtr.scss', './report-officer-type.component.scss'],
 })
 export class ReportOfficerTypeComponent implements OnInit, OnChanges, OnDestroy {
+    readonly reportSort = new ReportSortState();
+
+    onReportSortChange(): void {
+        this.first = 0;
+        if (this.searched) this.load();
+    }
+
     L = REPORT_LABELS;
     @Input() lang: ReportLang = 'en';
-    /** Parent-locked Officer Type CodeId(s). Same-name rows (one per mother org) arrive bundled. */
+    @Input() criterionFieldKey: 'officerType' | 'batch' = 'officerType';
+    /** Parent-locked CodeId(s). Same-name rows (one per mother org) arrive bundled. */
     @Input() commonCodeIds: number[] = [];
     @Input() reportTypeLabel = '';
     @Input() commonCodeLabel = '';
@@ -403,6 +414,11 @@ export class ReportOfficerTypeComponent implements OnInit, OnChanges, OnDestroy 
     private syncSelectedValueColumnLabel(): void {
         const col = this.columnCatalog.find((c) => c.key === 'selectedValue');
         if (!col) return;
+        if (this.criterionFieldKey === 'batch') {
+            col.labelEN = 'Batch';
+            col.labelBN = 'ব্যাচ';
+            return;
+        }
         const label = this.reportTypeLabel?.trim();
         col.labelEN = label || 'Selected Value';
         col.labelBN = label || 'নির্বাচিত মান';
@@ -453,7 +469,7 @@ export class ReportOfficerTypeComponent implements OnInit, OnChanges, OnDestroy 
             const suffix = this.lang === 'bn' ? 'প্রতিবেদন' : 'Report';
             return `${this.reportTypeLabel}: ${this.commonCodeLabel} ${suffix}`;
         }
-        return this.L[this.lang]['report.title.officerType'];
+        return this.defaultReportTitle;
     }
     get rabSubtitleText(): string {
         // Status moved into the Selection Criteria block (see criteriaItems);
@@ -498,7 +514,17 @@ export class ReportOfficerTypeComponent implements OnInit, OnChanges, OnDestroy 
             const suffix = this.lang === 'bn' ? 'প্রতিবেদন' : 'Report';
             return `${this.reportTypeLabel}: ${this.commonCodeLabel} ${suffix}${statusSuffix}`;
         }
-        return this.L[this.lang]['report.title.officerType'] + statusSuffix;
+        return this.defaultReportTitle + statusSuffix;
+    }
+
+    private get defaultReportTitle(): string {
+        return this.criterionFieldKey === 'batch'
+            ? (this.lang === 'bn' ? 'ব্যাচ ভিত্তিক প্রতিবেদন' : 'Batch Wise Report')
+            : this.L[this.lang]['report.title.officerType'];
+    }
+
+    private get exportFilePrefix(): string {
+        return this.criterionFieldKey === 'batch' ? 'batch-wise-report' : 'officer-type-report';
     }
 
     get dateLine(): string {
@@ -756,7 +782,7 @@ export class ReportOfficerTypeComponent implements OnInit, OnChanges, OnDestroy 
             }],
         });
         const blob = await Packer.toBlob(doc);
-        saveAs(blob, `officer-type-report_${this.lang}.docx`);
+        saveAs(blob, `${this.exportFilePrefix}_${this.lang}.docx`);
     }
 
     private exportRabExcel(): void {
@@ -825,7 +851,7 @@ export class ReportOfficerTypeComponent implements OnInit, OnChanges, OnDestroy 
 
         const wb = XLSX.utils.book_new();
         XLSX.utils.book_append_sheet(wb, ws, isBn ? 'প্রতিবেদন' : 'Report');
-        XLSX.writeFile(wb, `officer-type-report_${this.lang}.xlsx`);
+        XLSX.writeFile(wb, `${this.exportFilePrefix}_${this.lang}.xlsx`);
     }
 
     private openRabPrintWindow(): void {
@@ -1153,7 +1179,8 @@ export class ReportOfficerTypeComponent implements OnInit, OnChanges, OnDestroy 
     }
 
     ngOnChanges(changes: SimpleChanges): void {
-        if (changes['commonCodeIds'] && !changes['commonCodeIds'].firstChange) {
+        if ((changes['commonCodeIds'] && !changes['commonCodeIds'].firstChange)
+            || (changes['criterionFieldKey'] && !changes['criterionFieldKey'].firstChange)) {
             this.first = 0;
             this.load();
         } else if (changes['postingStatus'] && !changes['postingStatus'].firstChange) {
@@ -1193,6 +1220,7 @@ export class ReportOfficerTypeComponent implements OnInit, OnChanges, OnDestroy 
     }
 
     clearFilters(): void {
+        this.reportSort.reset();
         this.idSearchText = '';
         this.lastIdSearchApplied = '';
         this.selectedOrgIds = [];
@@ -1344,13 +1372,14 @@ export class ReportOfficerTypeComponent implements OnInit, OnChanges, OnDestroy 
             criteria.push({ fieldKey: 'rabOrgNode', idValues: this.selectedOrgNodeIds });
         if (Array.isArray(this.commonCodeIds) && this.commonCodeIds.length > 0) {
             if (this.commonCodeIds.length === 1) {
-                criteria.push({ fieldKey: 'officerType', idValue: this.commonCodeIds[0] });
+                criteria.push({ fieldKey: this.criterionFieldKey, idValue: this.commonCodeIds[0] });
             } else {
-                criteria.push({ fieldKey: 'officerType', idValues: [...this.commonCodeIds] });
+                criteria.push({ fieldKey: this.criterionFieldKey, idValues: [...this.commonCodeIds] });
             }
         }
 
         this.reportService.runDynamicEmployeeBaseReport({
+            ...this.reportSort.request,
             columns: this.backendColumnKeys(),
             criteria,
             postingStatusFilter: this.postingStatus || null,

@@ -58,6 +58,15 @@
 
     <!-- Permission Matrix TreeTable -->
     @if (selectedRole) {
+        <div class="surface-100 border-round p-3 mb-3 text-700">
+            Special View can be set for any menu.
+            @if (hasProfileSpecialViewMenu) {
+                For confidential remarks and the SRB service Remarks column, set it on the <strong>Member Profile Sensitive Information</strong> row.
+                <p-button label="Find profile permission" icon="pi pi-search" [text]="true" size="small" (onClick)="showProfileSpecialViewMenu()"></p-button>
+            } @else {
+                <span class="text-orange-700">The profile permission row is missing. Complete the Special View deployment, then reload this page.</span>
+            }
+        </div>
         <p-treeTable
             [value]="treeData"
             [loading]="loading"
@@ -65,8 +74,9 @@
 
             <ng-template pTemplate="colgroup">
                 <colgroup>
-                    <col style="width: 30%">
+                    <col style="width: 26%">
                     <col style="width: 12%">
+                    <col style="width: 10%">
                     <col style="width: 10%">
                     <col style="width: 10%">
                     <col style="width: 10%">
@@ -105,6 +115,12 @@
                         </div>
                     </th>
                     <th class="text-center header-checkbox-col">
+                        <div class="flex flex-column align-items-center gap-1">
+                            <span>Special View</span>
+                            <p-checkbox [ngModel]="isAllChecked('canSpecialView')" [binary]="true" (onChange)="toggleAllColumn('canSpecialView', $event)" pTooltip="Toggle all Special View" tooltipPosition="top"></p-checkbox>
+                        </div>
+                    </th>
+                    <th class="text-center header-checkbox-col">
                         <span>All</span>
                     </th>
                     <th class="text-center">
@@ -138,10 +154,13 @@
                         <p-checkbox [(ngModel)]="rowData.canDelete" [binary]="true" (onChange)="onPermissionChange(rowData)"></p-checkbox>
                     </td>
                     <td class="text-center">
+                        <p-checkbox [(ngModel)]="rowData.canSpecialView" [binary]="true" (onChange)="onPermissionChange(rowData)"></p-checkbox>
+                    </td>
+                    <td class="text-center">
                         <p-checkbox [ngModel]="isRowAllChecked(rowData)" [binary]="true" (onChange)="toggleRowAll(rowData, $event.checked)" pTooltip="Toggle all permissions for this menu" tooltipPosition="top"></p-checkbox>
                     </td>
                     <td class="text-center">
-                        @if (rowData.canView || rowData.canInsert || rowData.canUpdate || rowData.canDelete) {
+                        @if (rowData.canView || rowData.canInsert || rowData.canUpdate || rowData.canDelete || rowData.canSpecialView) {
                             <i class="pi pi-check-circle text-green-500"></i>
                         } @else {
                             <i class="pi pi-minus-circle text-400"></i>
@@ -152,7 +171,7 @@
 
             <ng-template pTemplate="emptymessage">
                 <tr>
-                    <td colspan="8" class="text-center p-4">
+                    <td colspan="9" class="text-center p-4">
                         <div class="flex flex-column align-items-center gap-3 py-5">
                             <i class="pi pi-shield text-5xl text-400"></i>
                             <span class="text-lg text-500">No menus found. Please ensure menus are configured first.</span>

@@ -1,4 +1,5 @@
 import { Component, OnDestroy, OnInit, ViewChild } from '@angular/core';
+import { SendingRemarkType, SendingRemarkTypeOptions, sendingRemarkError } from '@/models/sending-remark-type';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
@@ -129,6 +130,8 @@ export class PresentlyServingMembers implements OnInit, OnDestroy {
 
     /** Per-row remarks entered by user before sending to inter posting. Keyed by employeeID. */
     interPostingRemarks: Record<number, string> = {};
+    interPostingRemarkTypes: Record<number, SendingRemarkType> = {};
+    remarkTypeOptions = SendingRemarkTypeOptions;
 
     /** Quick search box above the table: matches Service ID OR RAB ID, server-side. */
     quickSearch = '';
@@ -197,7 +200,7 @@ export class PresentlyServingMembers implements OnInit, OnDestroy {
     get tableColspan(): number {
         let cols = 12; // ser + 9 data cols + remarks + action
         if (this.canUpdate) cols += 1; // checkbox
-        if (this.interPostingMode) cols += 2; // status + remark input
+        if (this.interPostingMode) cols += 3; // status + remark input + type
         return cols;
     }
 
@@ -309,9 +312,11 @@ export class PresentlyServingMembers implements OnInit, OnDestroy {
     private prefillRemarks(): void {
         if (!this.interPostingMode) return;
         for (const row of this.list) {
-            if (row.interPostingRemark && !this.interPostingRemarks[row.employeeID]) {
-                this.interPostingRemarks[row.employeeID] = row.interPostingRemark;
-            }
+            // Keep deliberate empty text / None selections when paging or filtering.
+            if (!(row.employeeID in this.interPostingRemarks))
+                this.interPostingRemarks[row.employeeID] = row.interPostingRemark ?? '';
+            if (!(row.employeeID in this.interPostingRemarkTypes))
+                this.interPostingRemarkTypes[row.employeeID] = row.interPostingRemarkType ?? null;
         }
     }
 
@@ -550,18 +555,30 @@ export class PresentlyServingMembers implements OnInit, OnDestroy {
             this.messageService.add({ severity: 'warn', summary: 'Selection Required', detail: 'Please select at least one member.' });
             return;
         }
+        if (this.savingInterPosting) return;
+        for (const row of this.selectedMap.values()) {
+            const error = sendingRemarkError(this.interPostingRemarks[row.employeeID], this.interPostingRemarkTypes[row.employeeID]);
+            if (error) {
+                this.messageService.add({ severity: 'warn', summary: row.serviceId || 'Remark', detail: error });
+                return;
+            }
+        }
         this.savingInterPosting = true;
         const employees = Array.from(this.selectedMap.values()).map(r => ({
             employeeId: r.employeeID,
-            interPostingRemark: this.interPostingRemarks[r.employeeID] || null
+            interPostingRemark: this.interPostingRemarks[r.employeeID]?.trim() || null,
+            interPostingRemarkType: this.interPostingRemarkTypes[r.employeeID] ?? null
         }));
         this.employeeListService.setBulkIsSendingNotesheetStatus(employees, IsSendingNotesheetStatus.DraftInterPosting).subscribe({
             next: (res) => {
                 this.savingInterPosting = false;
                 if (res.statusCode === 200) {
                     this.messageService.add({ severity: 'success', summary: 'Success', detail: res.description || 'Employees marked for inter posting.' });
+                    for (const id of this.selectedMap.keys()) {
+                        delete this.interPostingRemarks[id];
+                        delete this.interPostingRemarkTypes[id];
+                    }
                     this.selectedMap.clear();
-                    this.interPostingRemarks = {};
                     this.loadList(1, this.pageSize);
                 } else {
                     this.messageService.add({ severity: 'error', summary: 'Error', detail: res.description || 'Failed to update status.' });

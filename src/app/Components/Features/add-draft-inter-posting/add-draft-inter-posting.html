@@ -27,7 +27,8 @@
                         display="chip"
                         [filter]="true"
                         appendTo="body"
-                        styleClass="w-full">
+                        styleClass="w-full"
+                    >
                     </p-multiSelect>
                 </div>
                 <div class="field flex-1 min-w-200px">
@@ -77,6 +78,7 @@
                     <th style="min-width: 130px">Date of Join in Rab</th>
                     <th *ngIf="!isEditMode" style="min-width: 140px">Remarks</th>
                     <th *ngIf="isEditMode" style="min-width: 140px">Transfer Unit</th>
+                    <th *ngIf="isEditMode" style="min-width: 230px">Sending Remark / Type</th>
                     <th *ngIf="isEditMode" style="min-width: 140px">Remarks</th>
                     <th *ngIf="!isEditMode && canDelete" style="width: 90px">Action</th>
                 </tr>
@@ -96,20 +98,38 @@
                     <td>{{ (row.motherUnitName ?? row.motherUnit) || '-' }}</td>
                     <td>{{ row.rabUnit || row.rabUnitName || '-' }}</td>
                     <td>{{ formatDate(row.joiningDateInRAB ?? row.joiningDate ?? row.rabJoingdate) }}</td>
-                    <td *ngIf="!isEditMode">{{ row.interPostingRemark || '-' }}</td>
+                    <td *ngIf="!isEditMode">{{ row.interPostingRemark || '-' }}<small class="block text-500" *ngIf="row.interPostingRemarkType">{{ remarkTypeLabel(row.interPostingRemarkType) }}</small></td>
                     <td *ngIf="isEditMode">{{ row.transferRabUnitName || '-' }}</td>
+                    <td *ngIf="isEditMode">
+                        <ng-container *ngIf="canCorrectInterPostingRemark; else savedInterRemark">
+                            <input pInputText [(ngModel)]="row.interPostingRemark" maxlength="500" placeholder="Sending remark" [disabled]="savingRemarkId != null" class="w-full mb-2" />
+                            <p-select
+                                [options]="remarkTypeOptions"
+                                [(ngModel)]="row.interPostingRemarkType"
+                                optionLabel="label"
+                                optionValue="value"
+                                placeholder="-"
+                                [showClear]="true"
+                                [disabled]="savingRemarkId != null"
+                                appendTo="body"
+                                ariaLabel="Remark Type"
+                            />
+                            <p-button icon="pi pi-save" label="Save remark" [text]="true" size="small" [loading]="savingRemarkId === row.id" [disabled]="savingRemarkId != null" (onClick)="saveInterPostingRemark(row)" />
+                        </ng-container>
+                        <ng-template #savedInterRemark>
+                            {{ row.interPostingRemark || '-' }}
+                            <small class="block text-500">{{ remarkTypeLabel(row.interPostingRemarkType) }}</small>
+                        </ng-template>
+                    </td>
                     <td *ngIf="isEditMode">{{ row.remarks || '-' }}</td>
                     <td *ngIf="!isEditMode && canDelete" class="text-center">
-                        <p-button icon="pi pi-trash" severity="danger" size="small" [text]="true"
-                                  [loading]="removingEmployeeId === row.employeeID"
-                                  (onClick)="removeFromDraftList(row)"
-                                  pTooltip="Remove (return to Presently Serving)"></p-button>
+                        <p-button icon="pi pi-trash" severity="danger" size="small" [text]="true" [loading]="removingEmployeeId === row.employeeID" (onClick)="removeFromDraftList(row)" pTooltip="Remove (return to Presently Serving)"></p-button>
                     </td>
                 </tr>
             </ng-template>
             <ng-template pTemplate="emptymessage">
                 <tr>
-                    <td [attr.colspan]="isEditMode ? 11 : (canDelete ? 13 : 12)" class="text-center p-4">
+                    <td [attr.colspan]="isEditMode ? 12 : (canDelete ? 13 : 12)" class="text-center p-4">
                         <div class="flex flex-column align-items-center gap-3 py-5">
                             <i class="pi pi-inbox text-5xl text-400"></i>
                             <span class="text-lg text-500">No serving employees available for inter posting.</span>
@@ -122,13 +142,7 @@
         <!-- Save / Cancel buttons -->
         <div class="mt-3 flex justify-content-end gap-2">
             <p-button *ngIf="isEditMode" label="Cancel" severity="secondary" (onClick)="onCancelEdit()"></p-button>
-            <p-button
-                [label]="isEditMode ? 'Update' : 'Save'"
-                icon="pi pi-save"
-                [loading]="saving"
-                [class.perm-hidden]="isEditMode ? !canUpdate : !canInsert"
-                (onClick)="onSave()"
-            ></p-button>
+            <p-button [label]="isEditMode ? 'Update' : 'Save'" icon="pi pi-save" [loading]="saving" [class.perm-hidden]="isEditMode ? !canUpdate : !canInsert" (onClick)="onSave()"></p-button>
         </div>
     </div>
 
@@ -138,16 +152,7 @@
             <h3 class="form-card-title">Draft Inter Posting</h3>
         </div>
         <p class="text-600 mt-0 mb-3">Saved draft inter posting lists. Click Edit to modify.</p>
-        <p-table
-            [value]="visibleDraftMasters"
-            [loading]="loadingMasters"
-            dataKey="id"
-            [tableStyle]="{ 'min-width': '50rem' }"
-            styleClass="p-datatable-striped p-datatable-gridlines"
-            [paginator]="true"
-            [rows]="10"
-            [rowsPerPageOptions]="[10, 25, 50]"
-        >
+        <p-table [value]="visibleDraftMasters" [loading]="loadingMasters" dataKey="id" [tableStyle]="{ 'min-width': '50rem' }" styleClass="p-datatable-striped p-datatable-gridlines" [paginator]="true" [rows]="10" [rowsPerPageOptions]="[10, 25, 50]">
             <ng-template pTemplate="header">
                 <tr>
                     <th style="width: 60px">Ser</th>
@@ -170,8 +175,7 @@
                     <td>{{ row.detailCount }}</td>
                     <td>{{ row.createdBy || '-' }}</td>
                     <td class="text-center">
-                        <p-button *ngIf="canView" icon="pi pi-users" label="View Member" severity="primary" size="small"
-                                  (onClick)="viewEmployees(row)"></p-button>
+                        <p-button *ngIf="canView" icon="pi pi-users" label="View Member" severity="primary" size="small" (onClick)="viewEmployees(row)"></p-button>
                     </td>
                 </tr>
             </ng-template>
@@ -194,7 +198,8 @@
         styleClass="p-datatable-striped p-datatable-gridlines p-datatable-sm"
         [paginator]="employeeModalList.length > 10"
         [rows]="10"
-        [rowsPerPageOptions]="[10, 25, 50]">
+        [rowsPerPageOptions]="[10, 25, 50]"
+    >
         <ng-template pTemplate="header">
             <tr>
                 <th style="width: 50px">Ser</th>
@@ -227,8 +232,7 @@
                 <td>{{ row.transferRabUnitName || '-' }}</td>
                 <td>{{ row.remarks || '-' }}</td>
                 <td *ngIf="!employeeModalHasNoteSheet && canDelete" class="text-center">
-                    <p-button icon="pi pi-trash" severity="danger" size="small" [text]="true"
-                              [loading]="removingMemberId === row.id" (onClick)="removeMember(row)" pTooltip="Remove member"></p-button>
+                    <p-button icon="pi pi-trash" severity="danger" size="small" [text]="true" [loading]="removingMemberId === row.id" (onClick)="removeMember(row)" pTooltip="Remove member"></p-button>
                 </td>
             </tr>
         </ng-template>

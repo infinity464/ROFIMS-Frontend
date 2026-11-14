@@ -12,6 +12,10 @@ export class UserMenuService {
     private http = inject(HttpClient);
     private apiUrl = `${environment.apis.core}/RoleMenuPermission`;
 
+    getMyProfilePermissions(): Observable<{ canSpecialView: boolean }> {
+        return this.http.get<{ canSpecialView: boolean }>(`${this.apiUrl}/GetMyProfilePermissions`);
+    }
+
     /** Fetch user menus from backend by role ID */
     loadUserMenus(roleId: string): Observable<UserMenuModel[]> {
         return this.http.get<UserMenuModel[]>(`${this.apiUrl}/GetUserMenus/${roleId}`);
@@ -44,7 +48,7 @@ export class UserMenuService {
      */
     buildPrimeNGMenu(flatMenus: UserMenuModel[]): MenuItem[] {
         // Filter out menus where canView is explicitly false
-        const viewable = flatMenus.filter(m => m.canView !== false);
+        const viewable = flatMenus.filter(m => m.canView !== false && m.menuType !== MenuType.Action);
         const sorted = [...viewable].sort((a, b) => a.sortOrder - b.sortOrder);
 
         // First pass: create all MenuItems
@@ -94,18 +98,18 @@ export class UserMenuService {
      * @param permissionKey The permissionKey of the menu to check
      * @param action The permission action to check
      */
-    hasPermission(permissionKey: string, action: 'canView' | 'canInsert' | 'canUpdate' | 'canDelete'): boolean {
+    hasPermission(permissionKey: string, action: 'canView' | 'canInsert' | 'canUpdate' | 'canDelete' | 'canSpecialView'): boolean {
         const menus = this.getStoredMenus();
         const menu = menus.find(m => m.permissionKey === permissionKey);
-        return menu ? menu[action] : false;
+        return menu?.[action] === true;
     }
 
     /**
      * Get all permission flags for a menu identified by its route path.
      * Strips query params and leading/trailing slashes before matching.
      */
-    getPermissionsByRoute(routePath: string): { canView: boolean; canInsert: boolean; canUpdate: boolean; canDelete: boolean } {
-        const noPerms = { canView: false, canInsert: false, canUpdate: false, canDelete: false };
+    getPermissionsByRoute(routePath: string): { canView: boolean; canInsert: boolean; canUpdate: boolean; canDelete: boolean; canSpecialView: boolean } {
+        const noPerms = { canView: false, canInsert: false, canUpdate: false, canDelete: false, canSpecialView: false };
         if (!routePath) return noPerms;
 
         const normalize = (p: string) => p.split('?')[0].replace(/^\/+|\/+$/g, '').toLowerCase();
@@ -117,7 +121,8 @@ export class UserMenuService {
             canView: menu.canView,
             canInsert: menu.canInsert,
             canUpdate: menu.canUpdate,
-            canDelete: menu.canDelete
+            canDelete: menu.canDelete,
+            canSpecialView: menu.canSpecialView === true
         };
     }
 }
