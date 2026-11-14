@@ -1076,14 +1076,15 @@ export class NotesheetPreviewPostingComponent extends NotesheetPreviewBase imple
     calcTenure(joinDateStr: string | null | undefined): { y: number; m: number; d: number } {
         if (!joinDateStr) return { y: 0, m: 0, d: 0 };
         const join = new Date(joinDateStr);
-        if (isNaN(join.getTime())) return { y: 0, m: 0, d: 0 };
-        const now = new Date();
-        let y = now.getFullYear() - join.getFullYear();
-        let mo = now.getMonth() - join.getMonth();
-        let d = now.getDate() - join.getDate();
+        // Use the same date printed in the document header for preview and exports.
+        const asOf = new Date(this.noteSheet?.noteSheetDate ?? '');
+        if (isNaN(join.getTime()) || isNaN(asOf.getTime()) || join > asOf) return { y: 0, m: 0, d: 0 };
+        let y = asOf.getFullYear() - join.getFullYear();
+        let mo = asOf.getMonth() - join.getMonth();
+        let d = asOf.getDate() - join.getDate();
         if (d < 0) {
             mo--;
-            d += new Date(now.getFullYear(), now.getMonth(), 0).getDate();
+            d += new Date(asOf.getFullYear(), asOf.getMonth(), 0).getDate();
         }
         if (mo < 0) {
             y--;

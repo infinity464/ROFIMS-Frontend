@@ -2,6 +2,7 @@
     "extends": "./tsconfig.spec.json",
     "include": [
         "src/app/Components/Features/posting-order-preview/posting-order-preview.workplace.spec.ts",
+        "src/app/Components/Features/notesheet-preview/posting/notesheet-preview-posting.tenure.spec.ts",
         "src/**/*.d.ts"
     ]
 }
