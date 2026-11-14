@@ -305,6 +305,9 @@ export interface ReportPagedResponse<T> {
  * only currently-serving members carry a RAB placement to scope against).
  */
 export interface ReportAccessibleScope {
+  organizationScopeRestricted?: boolean;
+  organizationNames?: string[] | null;
+  organizationNamesBN?: string[] | null;
   rabUnitNames?: string[] | null;
   rabUnitNamesBN?: string[] | null;
   memberTypeNames?: string[] | null;

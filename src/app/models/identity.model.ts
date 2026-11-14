@@ -1,6 +1,8 @@
 /** Matches backend Identity.Models */
 
 export interface ApplicationUser {
+  organizationIds?: number[];
+  organizations?: import('@/services/identity-user-organization-access.service').OrganizationScopeOption[];
   ipAddress?: string | null;
   id: string;
   userName: string;
@@ -106,6 +108,8 @@ export interface CreateRoleModel {
 }
 
 export interface UserModel {
+  organizationMode?: 'all' | 'specific';
+  organizationIds?: number[];
   ipAddress?: string | null;
   email: string;
   userName?: string;
@@ -151,6 +155,7 @@ export interface UpdateRoleModel {
 }
 
 export interface Responses {
+  userId?: string;
   isSuccess: boolean;
   returnCode: string;
   message: string;

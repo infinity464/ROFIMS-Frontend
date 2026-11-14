@@ -8,6 +8,7 @@
         "watch": "ng build --watch --configuration development",
         "format": "prettier --write \"**/*.{js,mjs,ts,mts,d.ts,html}\" --cache",
         "test": "ng test",
+        "test:organization-scope": "ng test --watch=false --browsers=ChromeHeadless --ts-config=tsconfig.organization-scope.spec.json --include=src/app/Components/Features/identity/identity-user-create/*.spec.ts",
         "test:ip-binding": "ng test --watch=false --browsers=ChromeHeadless --ts-config=tsconfig.ip-binding.spec.json --include=src/app/shared/validators/ipv4.validator.spec.ts --include=src/app/Core/Interceptor/auth.inspector.spec.ts --include=src/app/Components/Features/identity/identity-user-create/identity-user-create.ip-binding.spec.ts",
         "test:report-sort": "ng test --watch=false --browsers=ChromeHeadless --ts-config=tsconfig.report-sort.spec.json --include=src/app/shared/components/report-sort-controls/**/*.spec.ts"
     },

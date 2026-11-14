@@ -281,19 +281,32 @@
             }
           </div>
           <div class="field">
-            <label for="organizationScope" class="block mb-2 font-medium">Organization Scope</label>
-            <p-select
-              id="organizationScope"
-              formControlName="organizationScope"
-              [options]="organizationScopeOptions"
-              optionLabel="orgNameEN"
-              optionValue="orgId"
-              placeholder="Loading organization scope…"
-              [loading]="organizationScopeLoading"
-              [showClear]="true"
-              appendTo="body"
-              styleClass="w-full"
-            />
+            <label class="block mb-2 font-medium">Organization Scope</label>
+            <p class="text-sm text-muted-color mb-3">Users see only records matching both their mother-organization scope and accessible unit scope.</p>
+            <div class="flex flex-wrap gap-4 mb-3">
+              <label for="organizationAll" class="flex gap-2 items-center">
+                <p-radioButton inputId="organizationAll" name="organizationMode" value="all" formControlName="organizationMode" [disabled]="!canGrantAllOrganizations" />
+                All organizations
+              </label>
+              <label for="organizationSpecific" class="flex gap-2 items-center">
+                <p-radioButton inputId="organizationSpecific" name="organizationMode" value="specific" formControlName="organizationMode" />
+                Specific organizations
+              </label>
+            </div>
+            @if (form.get('organizationMode')?.value === 'specific') {
+              <p-multiselect inputId="organizationScope" formControlName="organizationIds"
+                [options]="organizationScopeOptions" optionLabel="label" optionValue="orgId"
+                [filter]="true" display="chip" placeholder="Select organizations"
+                [loading]="organizationScopeLoading" appendTo="body" styleClass="w-full" />
+              @if (form.hasError('organizationRequired') && (form.touched || form.get('organizationIds')?.touched)) {
+                <small class="block mt-1 text-red-500">Select at least one organization, or choose All organizations.</small>
+              }
+            } @else {
+              <small class="text-muted-color">No additional organization restriction, including organizations added later.</small>
+            }
+            @if (organizationScopeLoadFailed || accessSettingsLoadFailed) {
+              <small role="alert" class="block mt-2 text-red-500">Access settings could not be loaded. Reload the page before saving.</small>
+            }
           </div>
         </div>
       </div>
@@ -339,7 +352,7 @@
       [rowsPerPageOptions]="[10, 25, 50]"
       size="small"
       styleClass="user-list-table"
-      [globalFilterFields]="['email','userName','phoneNumber','roleName','employeeName','employeeMeta','memberTypeNamesJoined','rabUnitNamesJoined']"
+      [globalFilterFields]="['email','userName','phoneNumber','roleName','employeeName','employeeMeta','memberTypeNamesJoined','rabUnitNamesJoined','organizationNamesJoined']"
     >
       <ng-template pTemplate="caption">
         <div class="flex flex-wrap items-center justify-between gap-2">
@@ -377,6 +390,7 @@
           <th class="uppercase text-xs tracking-wide">Mapped Employee</th>
           <th class="uppercase text-xs tracking-wide" style="width: 8rem">Type Access</th>
           <th class="uppercase text-xs tracking-wide" style="width: 8rem">Access Label</th>
+          <th class="uppercase text-xs tracking-wide">Organizations</th>
           <th class="uppercase text-xs tracking-wide" style="width: 9rem">Status</th>
           <th class="uppercase text-xs tracking-wide" style="width: 11rem">Actions</th>
         </tr>
@@ -475,6 +489,18 @@
                     tooltipPosition="top"
                     tooltipStyleClass="org-paths-tooltip"
                   />
+                }
+              </div>
+            }
+          </td>
+
+          <td>
+            @if (!user.organizationIds?.length) {
+              <p-tag value="All organizations" severity="success" />
+            } @else {
+              <div class="flex flex-wrap gap-1">
+                @for (organization of user.organizations ?? []; track organization.orgId) {
+                  <p-tag [value]="organization.orgNameEN + (organization.isActive ? '' : ' (inactive)')" severity="info" />
                 }
               </div>
             }
@@ -607,7 +633,7 @@
       </ng-template>
       <ng-template pTemplate="emptymessage">
         <tr>
-          <td colspan="7" class="text-center text-color-secondary">{{ showHidden ? 'No hidden users.' : 'No users found.' }}</td>
+          <td colspan="8" class="text-center text-color-secondary">{{ showHidden ? 'No hidden users.' : 'No users found.' }}</td>
         </tr>
       </ng-template>
     </p-table>

@@ -8,6 +8,8 @@ describe('User edit IP binding', () => {
     const component = Object.create(IdentityUserCreateComponent.prototype) as IdentityUserCreateComponent;
     Object.assign(component, {
       mappings: [], memberTypeAccesses: [], rabUnitAccesses: [],
+      organizationScopeOptions: [],
+      organizationAccessService: { getByUserId: () => of({ organizationMode: 'all', organizationIds: [], organizations: [] }) },
       accessService: { getByUserId: () => of([]) },
       rabUnitAccessService: { getByUserId: () => of([]) },
       form: new FormBuilder().group({
