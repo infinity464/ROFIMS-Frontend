@@ -176,17 +176,35 @@
                     }
                 </div>
                 <div class="report-filter-field">
+                    <label>Report Order</label>
+                    <p-select
+                        [options]="reportOrderOptions"
+                        [(ngModel)]="selectedReportOrder"
+                        (ngModelChange)="onSortOrderChange()"
+                        optionLabel="label"
+                        optionValue="value"
+                        styleClass="w-full"
+                        appendTo="body">
+                    </p-select>
+                    @if (selectedReportOrder === 'UnitSeniority') {
+                        <small class="report-filter-hint">Uses the unit Sort Order from Org Tree.</small>
+                    }
+                </div>
+                <div class="report-filter-field">
                     <label>Nominal Roll Seniority</label>
                     <p-select
                         [options]="seniorityOptions"
                         [(ngModel)]="selectedSeniority"
-                        (ngModelChange)="onSeniorityChange()"
+                        (ngModelChange)="onSortOrderChange()"
                         optionLabel="label"
                         optionValue="value"
                         placeholder="Select Seniority"
                         styleClass="w-full"
                         appendTo="body">
                     </p-select>
+                    @if (selectedReportOrder === 'UnitSeniority') {
+                        <small class="report-filter-hint">Orders members within each unit.</small>
+                    }
                 </div>
             </div>
 

@@ -21,6 +21,7 @@ import type {
     DynamicReportCriterion,
     DynamicReportRow,
     NominalRollSeniority,
+    NominalRollReportOrder,
 } from '@/models/report.model';
 import type { MotherOrganizationModel } from '@/models/mother-org-model';
 import type { CommonCodeModel } from '@/models/common-code-model';
@@ -159,10 +160,13 @@ export class ReportMemberTypeServingComponent implements OnInit, OnDestroy {
     joiningInRabFrom: Date | null = null;
     joiningInRabTo: Date | null = null;
 
-    /**
-     * Nominal Roll Seniority — which seniority leads the row order. Organization
-     * Seniority is the server's default (and every other report's), so it leads here.
-     */
+    reportOrderOptions: { label: string; value: NominalRollReportOrder }[] = [
+        { label: 'Overall Seniority', value: 'OverallSeniority' },
+        { label: 'Unit Seniority', value: 'UnitSeniority' },
+    ];
+    selectedReportOrder: NominalRollReportOrder = 'OverallSeniority';
+
+    /** Member seniority applies overall or within each unit, according to Report Order. */
     seniorityOptions: { label: string; value: NominalRollSeniority }[] = [
         { label: 'Organization Seniority', value: 'OrganizationSeniority' },
         { label: 'SRB Rank Seniority',     value: 'RankSeniority' },
@@ -1223,8 +1227,8 @@ export class ReportMemberTypeServingComponent implements OnInit, OnDestroy {
         if (this.searched) this.load();
     }
 
-    /** Seniority drives the server-side ORDER BY, so re-fetch from page 1. */
-    onSeniorityChange(): void {
+    /** Both ordering controls affect server-side ordering, so re-fetch from page 1. */
+    onSortOrderChange(): void {
         this.first = 0;
         if (this.searched) this.load();
     }
@@ -1275,6 +1279,7 @@ export class ReportMemberTypeServingComponent implements OnInit, OnDestroy {
         this.joiningInRabFrom = null;
         this.joiningInRabTo = null;
         this.selectedSeniority = 'OrganizationSeniority';
+        this.selectedReportOrder = 'OverallSeniority';
         if (!this.statusLocked) this.selectedPostingStatus = 'Servings';
         this.first = 0;
     }
@@ -1409,6 +1414,7 @@ export class ReportMemberTypeServingComponent implements OnInit, OnDestroy {
             columns: this.backendColumnKeys(),
             criteria,
             nominalRollSeniority: this.selectedSeniority,
+            reportOrder: this.selectedReportOrder,
             postingStatusFilter: this.selectedPostingStatus || 'Servings',
             idSearchText: (this.idSearchText ?? '').trim() || undefined,
             pagination: { page_no, row_per_page: this.rows },

@@ -713,6 +713,9 @@ export interface DynamicReportSort {
 /** Which seniority leads the nominal-roll ordering. Mirrors the server's values. */
 export type NominalRollSeniority = 'RankSeniority' | 'OrganizationSeniority';
 
+/** Whether unit seniority precedes the selected member seniority. */
+export type NominalRollReportOrder = 'OverallSeniority' | 'UnitSeniority';
+
 export interface DynamicReportRequest {
   columns: string[];
   criteria: DynamicReportCriterion[];
@@ -730,6 +733,8 @@ export interface DynamicReportRequest {
    * Omitted/null keeps Organization Seniority (the server default).
    */
   nominalRollSeniority?: NominalRollSeniority | null;
+  /** UnitSeniority uses Org Tree unit SortOrder first; omitted/null keeps overall seniority. */
+  reportOrder?: NominalRollReportOrder | null;
   /** "Servings" / "ExMember" / "Supernumerary" / "Pending" / "" (All). */
   postingStatusFilter?: string | null;
   /** "Permanent" / "Present" / "" (All). Matches base + Spouse* server-side. */
