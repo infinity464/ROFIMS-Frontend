@@ -7,7 +7,8 @@
         "build": "ng build",
         "watch": "ng build --watch --configuration development",
         "format": "prettier --write \"**/*.{js,mjs,ts,mts,d.ts,html}\" --cache",
-        "test": "ng test"
+        "test": "ng test",
+        "test:report-sort": "ng test --watch=false --browsers=ChromeHeadless --ts-config=tsconfig.report-sort.spec.json --include=src/app/shared/components/report-sort-controls/**/*.spec.ts"
     },
     "private": true,
     "dependencies": {

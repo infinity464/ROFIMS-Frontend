@@ -10,6 +10,7 @@ import { PaginatorModule } from 'primeng/paginator';
 import { InputNumberModule } from 'primeng/inputnumber';
 import { Toast } from 'primeng/toast';
 import { MessageService } from 'primeng/api';
+import { ReportSortControlsComponent, ReportSortState } from '@/shared/components/report-sort-controls/report-sort-controls.component';
 import { ReportService } from '@/services/report.service';
 import { CommonCodeService } from '@/services/common-code-service';
 import { UserMenuService } from '@/services/user-menu.service';
@@ -20,7 +21,6 @@ import type {
     ReportAccessibleScope,
     DynamicReportCriterion,
     DynamicReportRow,
-    NominalRollSeniority,
 } from '@/models/report.model';
 import type { CommonCodeModel } from '@/models/common-code-model';
 import type { MotherOrganizationModel } from '@/models/mother-org-model';
@@ -45,12 +45,19 @@ type Lang = 'en' | 'bn';
 @Component({
     selector: 'app-report-long-stay-nominal-roll',
     standalone: true,
-    imports: [CommonModule, FormsModule, TableModule, ButtonModule, SelectModule, MultiSelectModule, PaginatorModule, InputNumberModule, Toast, OrgTreeMultiSelectComponent],
+    imports: [ReportSortControlsComponent, CommonModule, FormsModule, TableModule, ButtonModule, SelectModule, MultiSelectModule, PaginatorModule, InputNumberModule, Toast, OrgTreeMultiSelectComponent],
     providers: [MessageService],
     templateUrl: './report-long-stay-nominal-roll.component.html',
     styleUrls: ['../report-theme.scss', '../report-card-mtr.scss', './report-long-stay-nominal-roll.component.scss'],
 })
 export class ReportLongStayNominalRollComponent implements OnInit, OnDestroy {
+    readonly reportSort = new ReportSortState();
+
+    onReportSortChange(): void {
+        this.first = 0;
+        if (this.searched) this.loadPage();
+    }
+
     lang: Lang = 'en';
 
     /** Toolbar quick search — matches Service ID or RAB ID (server-side). */
@@ -73,15 +80,6 @@ export class ReportLongStayNominalRollComponent implements OnInit, OnDestroy {
     minDuration = 2;
     unit: 'Years' | 'Months' = 'Years';
 
-    /**
-     * Nominal Roll Seniority — which seniority leads the row order. Organization
-     * Seniority is the server's default (and the canonical order), so it leads here.
-     */
-    seniorityOptions: { label: string; value: NominalRollSeniority }[] = [
-        { label: 'Organization Seniority', value: 'OrganizationSeniority' },
-        { label: 'SRB Rank Seniority',     value: 'RankSeniority' },
-    ];
-    selectedSeniority: NominalRollSeniority = 'OrganizationSeniority';
     unitOptions: { label: string; value: 'Years' | 'Months' }[] = [
         { label: 'Years', value: 'Years' },
         { label: 'Months', value: 'Months' },
@@ -307,11 +305,6 @@ export class ReportLongStayNominalRollComponent implements OnInit, OnDestroy {
         (the backend only returns the columns requested at query time). */
     onColumnsChange(): void { if (this.searched) this.loadPage(); }
 
-    /** Seniority drives the server-side ORDER BY, so re-fetch from page 1. */
-    onSeniorityChange(): void {
-        this.first = 0;
-        if (this.searched) this.loadPage();
-    }
     removeColumn(key: string): void { this.selectedColumnKeys = this.selectedColumnKeys.filter(k => k !== key); }
 
     constructor(
@@ -593,11 +586,11 @@ export class ReportLongStayNominalRollComponent implements OnInit, OnDestroy {
     private buildFilterLines(): string[] { return this.criteriaItems.map(it => `${it.label}: ${it.value}`); }
 
     clearFilters(): void {
+        this.reportSort.reset();
         this.idSearchText = '';
         this.lastIdSearchApplied = '';
         this.minDuration = 2;
         this.unit = 'Years';
-        this.selectedSeniority = 'OrganizationSeniority';
         this.selectedOrgIds = [];
         this.selectedRankId = null;
         this.selectedRabRankId = null;
@@ -737,9 +730,9 @@ export class ReportLongStayNominalRollComponent implements OnInit, OnDestroy {
         ]));
 
         this.reportService.runDynamicLongStayReport({
+            ...this.reportSort.request,
             columns,
             criteria,
-            nominalRollSeniority: this.selectedSeniority,
             postingStatusFilter: 'Servings',
             minStayValue: this.minDuration,
             minStayUnit: this.unit,

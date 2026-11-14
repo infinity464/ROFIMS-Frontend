@@ -10,6 +10,7 @@ import { DatePickerModule } from 'primeng/datepicker';
 import { PaginatorModule } from 'primeng/paginator';
 import { Toast } from 'primeng/toast';
 import { MessageService } from 'primeng/api';
+import { ReportSortControlsComponent, ReportSortState } from '@/shared/components/report-sort-controls/report-sort-controls.component';
 import { ReportService } from '@/services/report.service';
 import { CommonCodeService } from '@/services/common-code-service';
 import { UserMenuService } from '@/services/user-menu.service';
@@ -37,12 +38,19 @@ type Lang = 'en' | 'bn';
 @Component({
     selector: 'app-report-movement',
     standalone: true,
-    imports: [CommonModule, FormsModule, TableModule, ButtonModule, SelectModule, MultiSelectModule, DatePickerModule, PaginatorModule, Toast, OrgTreeMultiSelectComponent],
+    imports: [ReportSortControlsComponent, CommonModule, FormsModule, TableModule, ButtonModule, SelectModule, MultiSelectModule, DatePickerModule, PaginatorModule, Toast, OrgTreeMultiSelectComponent],
     providers: [MessageService],
     templateUrl: './report-movement.component.html',
     styleUrls: ['../report-theme.scss', '../report-card-mtr.scss', './report-movement.component.scss']
 })
 export class ReportMovementComponent implements OnInit, OnDestroy {
+    readonly reportSort = new ReportSortState();
+
+    onReportSortChange(): void {
+        this.first = 0;
+        if (this.searched) this.loadPage();
+    }
+
     lang: Lang = 'en';
 
     /** Toolbar quick search — matches Service ID or RAB ID (server-side). */
@@ -623,6 +631,7 @@ export class ReportMovementComponent implements OnInit, OnDestroy {
     }
 
     clearFilters(): void {
+        this.reportSort.reset();
         this.selectedOrgIds = [];
         this.selectedRankId = null;
         this.selectedRabRankId = null;
@@ -759,6 +768,7 @@ export class ReportMovementComponent implements OnInit, OnDestroy {
 
         this.reportService
             .runDynamicMovementReport({
+            ...this.reportSort.request,
                 columns,
                 criteria,
                 postingStatusFilter: 'Servings',

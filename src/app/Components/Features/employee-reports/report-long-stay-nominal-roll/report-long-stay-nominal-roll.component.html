@@ -21,6 +21,7 @@
 
     <div class="report-filter-body" [class.open]="filterOpen">
         <div class="report-filter-body-inner">
+                <app-report-sort-controls [state]="reportSort" (sortChange)="onReportSortChange()"></app-report-sort-controls>
             <div class="report-fields-row">
                 <div class="report-filter-field">
                     <label>Minimum Stay <span style="color:#b03a3a">*</span></label>
@@ -72,12 +73,6 @@
                     <label>SRB Unit</label>
                     <app-org-tree-multi-select [(ngModel)]="selectedOrgNodeIds"
                         placeholder="Select units, wings, branches…"></app-org-tree-multi-select>
-                </div>
-                <div class="report-filter-field">
-                    <label>Nominal Roll Seniority</label>
-                    <p-select [options]="seniorityOptions" [(ngModel)]="selectedSeniority" (ngModelChange)="onSeniorityChange()"
-                        optionLabel="label" optionValue="value" placeholder="Select Seniority"
-                        styleClass="w-full" appendTo="body"></p-select>
                 </div>
             </div>
 

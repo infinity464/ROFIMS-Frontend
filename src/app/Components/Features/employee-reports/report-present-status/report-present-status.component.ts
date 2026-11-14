@@ -10,6 +10,7 @@ import { DatePickerModule } from 'primeng/datepicker';
 import { PaginatorModule } from 'primeng/paginator';
 import { Toast } from 'primeng/toast';
 import { MessageService } from 'primeng/api';
+import { ReportSortControlsComponent, ReportSortState } from '@/shared/components/report-sort-controls/report-sort-controls.component';
 import { ReportService } from '@/services/report.service';
 import { CommonCodeService } from '@/services/common-code-service';
 import { UserMenuService } from '@/services/user-menu.service';
@@ -38,12 +39,19 @@ type Lang = 'en' | 'bn';
 @Component({
     selector: 'app-report-present-status',
     standalone: true,
-    imports: [CommonModule, FormsModule, TableModule, ButtonModule, SelectModule, MultiSelectModule, PaginatorModule, DatePickerModule, Toast, OrgTreeMultiSelectComponent],
+    imports: [ReportSortControlsComponent, CommonModule, FormsModule, TableModule, ButtonModule, SelectModule, MultiSelectModule, PaginatorModule, DatePickerModule, Toast, OrgTreeMultiSelectComponent],
     providers: [MessageService],
     templateUrl: './report-present-status.component.html',
     styleUrls: ['../report-theme.scss', '../report-card-mtr.scss', './report-present-status.component.scss']
 })
 export class ReportPresentStatusComponent implements OnInit, OnDestroy {
+    readonly reportSort = new ReportSortState();
+
+    onReportSortChange(): void {
+        this.first = 0;
+        if (this.searched) this.loadPage();
+    }
+
     lang: Lang = 'en';
 
     /** Toolbar quick search — matches Service ID or RAB ID (server-side). */
@@ -619,6 +627,7 @@ export class ReportPresentStatusComponent implements OnInit, OnDestroy {
     }
 
     clearFilters(): void {
+        this.reportSort.reset();
         this.selectedPresentStatus = null;
         this.statusDateFrom = null;
         this.statusDateTo = null;
@@ -762,6 +771,7 @@ export class ReportPresentStatusComponent implements OnInit, OnDestroy {
 
         this.reportService
             .runDynamicPresentStatusReport({
+            ...this.reportSort.request,
                 columns,
                 criteria,
                 postingStatusFilter: '',

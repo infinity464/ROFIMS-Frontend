@@ -723,7 +723,7 @@ export interface DynamicReportRequest {
   /** Toolbar quick-search: Contains match against Service ID OR RAB ID. */
   idSearchText?: string | null;
   /**
-   * Nominal Roll Seniority — which seniority leads the employee-base ordering.
+   * Nominal Roll Seniority — member ordering shared by seniority-based reports.
    * "RankSeniority" leads on the RAB (equivalent) rank ladder — the EquivalentName
    * SortOrder set on basic-setup/equivalent-name, reached through the
    * basic-setup/rank-equivalent map — then Mother Org, then the mother-org rank.
@@ -733,7 +733,7 @@ export interface DynamicReportRequest {
    * Omitted/null keeps Organization Seniority (the server default).
    */
   nominalRollSeniority?: NominalRollSeniority | null;
-  /** UnitSeniority uses Org Tree unit SortOrder first; omitted/null keeps overall seniority. */
+  /** UnitSeniority uses Org Tree unit SortOrder first; each report retains its remaining sort keys. */
   reportOrder?: NominalRollReportOrder | null;
   /** "Servings" / "ExMember" / "Supernumerary" / "Pending" / "" (All). */
   postingStatusFilter?: string | null;

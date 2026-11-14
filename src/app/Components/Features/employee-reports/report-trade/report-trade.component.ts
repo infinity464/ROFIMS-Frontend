@@ -9,6 +9,7 @@ import { PaginatorModule } from 'primeng/paginator';
 import { Toast } from 'primeng/toast';
 import { MessageService } from 'primeng/api';
 import { debounceTime, forkJoin, Subject, Subscription } from 'rxjs';
+import { ReportSortControlsComponent, ReportSortState } from '@/shared/components/report-sort-controls/report-sort-controls.component';
 import { ReportService } from '@/services/report.service';
 import { CommonCodeService } from '@/services/common-code-service';
 import { Router } from '@angular/router';
@@ -69,12 +70,19 @@ import * as XLSX from 'xlsx';
     // they push and which value they surface in the "Selected Value" column.
     selector: 'app-report-trade, app-report-decoration',
     standalone: true,
-    imports: [CommonModule, FormsModule, TableModule, ButtonModule, SelectModule, MultiSelectModule, PaginatorModule, Toast, OrgTreeMultiSelectComponent],
+    imports: [ReportSortControlsComponent, CommonModule, FormsModule, TableModule, ButtonModule, SelectModule, MultiSelectModule, PaginatorModule, Toast, OrgTreeMultiSelectComponent],
     providers: [MessageService],
     templateUrl: './report-trade.component.html',
     styleUrls: ['../report-theme.scss', '../report-card-mtr.scss', './report-trade.component.scss'],
 })
 export class ReportTradeComponent implements OnInit, OnChanges, OnDestroy {
+    readonly reportSort = new ReportSortState();
+
+    onReportSortChange(): void {
+        this.first = 0;
+        if (this.searched) this.load();
+    }
+
     L = REPORT_LABELS;
     @Input() lang: ReportLang = 'en';
     /**
@@ -1148,6 +1156,7 @@ export class ReportTradeComponent implements OnInit, OnChanges, OnDestroy {
     }
 
     clearFilters(): void {
+        this.reportSort.reset();
         this.selectedOrgIds = [];
         this.selectedMemberTypeIds = [];
         this.selectedRankIds = [];
@@ -1219,6 +1228,7 @@ export class ReportTradeComponent implements OnInit, OnChanges, OnDestroy {
             criteria.push({ fieldKey: 'rabOrgNode', idValues: this.selectedOrgNodeIds });
 
         this.reportService.runDynamicEmployeeBaseReport({
+            ...this.reportSort.request,
             columns: this.backendColumnKeys(),
             criteria,
             postingStatusFilter: this.postingStatus || null,

@@ -11,6 +11,7 @@ import { Toast } from 'primeng/toast';
 import { MessageService } from 'primeng/api';
 import { forkJoin, of } from 'rxjs';
 import { catchError } from 'rxjs/operators';
+import { ReportSortControlsComponent, ReportSortState } from '@/shared/components/report-sort-controls/report-sort-controls.component';
 import { ReportService } from '@/services/report.service';
 import { NomineeInfoService } from '@/services/nominee-info-service';
 import { FamilyInfoService } from '@/services/family-info-service';
@@ -68,12 +69,19 @@ interface CodeName { en: string | null; bn: string | null; }
 @Component({
     selector: 'app-report-nominee-individual',
     standalone: true,
-    imports: [CommonModule, FormsModule, TableModule, ButtonModule, MultiSelectModule, PaginatorModule, InputTextModule, DialogModule, Toast],
+    imports: [ReportSortControlsComponent, CommonModule, FormsModule, TableModule, ButtonModule, MultiSelectModule, PaginatorModule, InputTextModule, DialogModule, Toast],
     providers: [MessageService],
     templateUrl: './report-nominee.component.html',
     styleUrls: ['../../employee-reports/report-theme.scss', '../../employee-reports/report-card-mtr.scss', './report-nominee.component.scss'],
 })
 export class ReportNomineeIndividualComponent implements OnInit, OnChanges {
+    readonly reportSort = new ReportSortState();
+
+    onReportSortChange(): void {
+        this.first = 0;
+        if (this.searched) this.load();
+    }
+
     L = REPORT_LABELS;
     @Input() lang: ReportLang = 'en';
     @Output() langToggle = new EventEmitter<void>();
@@ -302,7 +310,13 @@ export class ReportNomineeIndividualComponent implements OnInit, OnChanges {
         const n = this.lang === 'bn' ? BanglaNumerals.toBangla(String(this.activeFilterCount)) : String(this.activeFilterCount);
         return n + ' active filter(s)';
     }
-    clearFilters(): void { this.searchRabId = ''; this.searchServiceId = ''; this.searchNid = ''; this.first = 0; }
+    clearFilters(): void {
+        this.reportSort.reset();
+        this.searchRabId = '';
+        this.searchServiceId = '';
+        this.searchNid = '';
+        this.first = 0;
+    }
     onPage(event: { first?: number; rows?: number }): void { this.first = event.first ?? 0; this.rows = event.rows ?? this.rows; }
 
     load(): void {
@@ -321,6 +335,7 @@ export class ReportNomineeIndividualComponent implements OnInit, OnChanges {
         const lookupColumns = ['rabId', 'serviceId', 'nameEnglish', 'nameBangla', 'armyRank', 'corps', 'trade', 'motherOrganization', 'rabUnit', 'prefix', 'postingStatus'];
 
         this.reportService.runDynamicEmployeeBaseReport({
+            ...this.reportSort.request,
             columns: lookupColumns,
             criteria: lookupCriteria,
             pagination: { page_no: 1, row_per_page: 100 },

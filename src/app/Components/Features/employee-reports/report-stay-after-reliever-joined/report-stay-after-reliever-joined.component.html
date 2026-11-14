@@ -29,6 +29,9 @@
 
     <div class="report-filter-body" [class.open]="filterOpen">
         <div class="report-filter-body-inner">
+                @if (relieverMode !== 'newPosting' && appliedMode !== 'newPosting') {
+                    <app-report-sort-controls [state]="reportSort" (sortChange)="onReportSortChange()"></app-report-sort-controls>
+                }
             <div class="report-fields-row">
                 <div class="report-filter-field" style="flex: 1 1 100%; max-width: 100%;">
                     <label>{{ lang === 'en' ? 'Report Type' : 'প্রতিবেদনের ধরন' }}</label>

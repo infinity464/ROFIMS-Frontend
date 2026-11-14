@@ -8,6 +8,7 @@ import { MultiSelectModule } from 'primeng/multiselect';
 import { PaginatorModule } from 'primeng/paginator';
 import { Toast } from 'primeng/toast';
 import { MessageService } from 'primeng/api';
+import { ReportSortControlsComponent, ReportSortState } from '@/shared/components/report-sort-controls/report-sort-controls.component';
 import { ReportService } from '@/services/report.service';
 import { CommonCodeService } from '@/services/common-code-service';
 import { REPORT_LABELS, type ReportLang } from '@/Core/i18n/report-labels';
@@ -44,6 +45,7 @@ interface ColumnPick {
     selector: 'app-report-dynamic',
     standalone: true,
     imports: [
+        ReportSortControlsComponent,
         CommonModule, FormsModule, TableModule, ButtonModule,
         SelectModule, MultiSelectModule, PaginatorModule, Toast,
     ],
@@ -52,6 +54,13 @@ interface ColumnPick {
     styleUrls: ['../report-theme.scss', '../report-card-mtr.scss', './report-dynamic.component.scss'],
 })
 export class ReportDynamicComponent implements OnInit {
+    readonly reportSort = new ReportSortState();
+
+    onReportSortChange(): void {
+        this.first = 0;
+        if (this.searched) this.load();
+    }
+
     L = REPORT_LABELS;
     lang: ReportLang = 'en';
 
@@ -253,6 +262,7 @@ export class ReportDynamicComponent implements OnInit {
         }
 
         this.reportService.runDynamicReport({
+            ...this.reportSort.request,
             columns: this.selectedColumnKeys,
             criteria,
             postingStatusFilter: this.selectedPostingStatus || null,
@@ -288,6 +298,7 @@ export class ReportDynamicComponent implements OnInit {
     }
 
     clearFilters(): void {
+        this.reportSort.reset();
         this.selectedAddressOwner = 'Self';
         this.selectedLocationType = 'Present';
         this.selectedPostingStatus = 'Servings';

@@ -10,6 +10,7 @@ import { PaginatorModule } from 'primeng/paginator';
 import { Toast } from 'primeng/toast';
 import { MessageService } from 'primeng/api';
 import { CommonCodeService } from '@/services/common-code-service';
+import { ReportSortControlsComponent, ReportSortState } from '@/shared/components/report-sort-controls/report-sort-controls.component';
 import { ReportService } from '@/services/report.service';
 import { UserMenuService } from '@/services/user-menu.service';
 import { REPORT_LABELS, type ReportLang } from '@/Core/i18n/report-labels';
@@ -61,6 +62,7 @@ import { debounceTime, forkJoin, Subject, Subscription } from 'rxjs';
     selector: 'app-report-supernumerary',
     standalone: true,
     imports: [
+        ReportSortControlsComponent,
         CommonModule,
         FormsModule,
         TableModule,
@@ -75,6 +77,13 @@ import { debounceTime, forkJoin, Subject, Subscription } from 'rxjs';
     styleUrls: ['../report-theme.scss', '../report-card-mtr.scss', './report-supernumerary.component.scss'],
 })
 export class ReportSupernumeraryComponent implements OnInit, OnDestroy {
+    readonly reportSort = new ReportSortState();
+
+    onReportSortChange(): void {
+        this.first = 0;
+        if (this.searched) this.load();
+    }
+
     L = REPORT_LABELS;
     lang: ReportLang = 'en';
 
@@ -552,6 +561,7 @@ export class ReportSupernumeraryComponent implements OnInit, OnDestroy {
     }
 
     clearFilters(): void {
+        this.reportSort.reset();
         this.idSearchText = '';
         this.lastIdSearchApplied = '';
         this.selectedOrgIds = [];
@@ -687,6 +697,7 @@ export class ReportSupernumeraryComponent implements OnInit, OnDestroy {
             criteria.push({ fieldKey: 'trade', idValues: this.selectedTradeIds });
 
         this.reportService.runDynamicEmployeeBaseReport({
+            ...this.reportSort.request,
             columns: this.backendColumnKeys(),
             criteria,
             postingStatusFilter: 'Supernumerary',

@@ -9,6 +9,7 @@ import { SelectModule } from 'primeng/select';
 import { PaginatorModule } from 'primeng/paginator';
 import { Toast } from 'primeng/toast';
 import { MessageService } from 'primeng/api';
+import { ReportSortControlsComponent, ReportSortState } from '@/shared/components/report-sort-controls/report-sort-controls.component';
 import { ReportService } from '@/services/report.service';
 import { CommonCodeService } from '@/services/common-code-service';
 import { ExportService } from '@/services/export.service';
@@ -48,12 +49,19 @@ import { OrgTreeMultiSelectComponent } from '@/shared/components/org-tree-multi-
 @Component({
     selector: 'app-report-family-occupation',
     standalone: true,
-    imports: [CommonModule, FormsModule, TableModule, ButtonModule, SelectModule, Toast, MultiSelectModule, PaginatorModule, OrgTreeMultiSelectComponent],
+    imports: [ReportSortControlsComponent, CommonModule, FormsModule, TableModule, ButtonModule, SelectModule, Toast, MultiSelectModule, PaginatorModule, OrgTreeMultiSelectComponent],
     providers: [MessageService],
     templateUrl: './report-family-occupation.component.html',
     styleUrls: ['../report-theme.scss', '../report-card-mtr.scss', './report-family-occupation.component.scss'],
 })
 export class ReportFamilyOccupationComponent implements OnInit, OnDestroy {
+    readonly reportSort = new ReportSortState();
+
+    onReportSortChange(): void {
+        this.first = 0;
+        if (this.searched) this.load();
+    }
+
     canInsert = true;
     canUpdate = true;
     canDelete = true;
@@ -1419,6 +1427,7 @@ export class ReportFamilyOccupationComponent implements OnInit, OnDestroy {
     }
 
     clearFilters(): void {
+        this.reportSort.reset();
         this.selectedOrgIds = [];
         this.selectedMemberTypeIds = [];
         this.selectedRankIds = [];
@@ -1538,6 +1547,7 @@ export class ReportFamilyOccupationComponent implements OnInit, OnDestroy {
             criteria.push({ fieldKey: 'occupation', idValue: this.selectedOccupationId });
 
         this.reportService.runDynamicFamilyReport({
+            ...this.reportSort.request,
             columns: this.backendColumnKeys(),
             criteria,
             idSearchText: (this.idSearchText ?? '').trim() || undefined,

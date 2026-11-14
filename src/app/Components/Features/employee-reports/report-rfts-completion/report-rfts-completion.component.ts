@@ -9,6 +9,7 @@ import { MultiSelectModule } from 'primeng/multiselect';
 import { PaginatorModule } from 'primeng/paginator';
 import { Toast } from 'primeng/toast';
 import { MessageService } from 'primeng/api';
+import { ReportSortControlsComponent, ReportSortState } from '@/shared/components/report-sort-controls/report-sort-controls.component';
 import { ReportService } from '@/services/report.service';
 import { CommonCodeService } from '@/services/common-code-service';
 import type { CommonCodeModel } from '@/models/common-code-model';
@@ -44,12 +45,19 @@ type CompletionStatus = 'Completed' | 'NotCompleted' | 'NotApplicable';
 @Component({
     selector: 'app-report-rfts-completion',
     standalone: true,
-    imports: [CommonModule, FormsModule, TableModule, ButtonModule, SelectModule, MultiSelectModule, PaginatorModule, Toast, OrgTreeMultiSelectComponent],
+    imports: [ReportSortControlsComponent, CommonModule, FormsModule, TableModule, ButtonModule, SelectModule, MultiSelectModule, PaginatorModule, Toast, OrgTreeMultiSelectComponent],
     providers: [MessageService],
     templateUrl: './report-rfts-completion.component.html',
     styleUrls: ['../report-theme.scss', '../report-card-mtr.scss', './report-rfts-completion.component.scss'],
 })
 export class ReportRftsCompletionComponent implements OnInit, OnDestroy {
+    readonly reportSort = new ReportSortState();
+
+    onReportSortChange(): void {
+        this.first = 0;
+        if (this.searched) this.load();
+    }
+
     lang: Lang = 'en';
 
     /** Toolbar quick search — matches Service ID or RAB ID (server-side). */
@@ -567,6 +575,7 @@ export class ReportRftsCompletionComponent implements OnInit, OnDestroy {
     }
 
     clearFilters(): void {
+        this.reportSort.reset();
         this.selectedCompletionStatus = 'Completed';
         this.selectedOrgIds = [];
         this.selectedMemberTypeIds = [];
@@ -710,6 +719,7 @@ export class ReportRftsCompletionComponent implements OnInit, OnDestroy {
 
         this.reportService
             .runDynamicRftsReport({
+            ...this.reportSort.request,
                 columns,
                 criteria,
                 rftsCompletionStatus: this.selectedCompletionStatus,

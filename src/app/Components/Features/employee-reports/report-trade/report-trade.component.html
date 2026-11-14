@@ -25,6 +25,7 @@
 
     <div class="report-filter-body" [class.open]="filterOpen">
         <div class="report-filter-body-inner">
+                <app-report-sort-controls [state]="reportSort" (sortChange)="onReportSortChange()"></app-report-sort-controls>
             <!-- Trade is parent-locked; Corps and Mother Org are implicit
                  (Trade.ParentCodeId → Corps; Corps.OrgId → MotherOrg). All
                  filters are multi-select; Rank is scoped to that mother org

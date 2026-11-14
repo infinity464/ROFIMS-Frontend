@@ -10,6 +10,7 @@ import { PaginatorModule } from 'primeng/paginator';
 import { DatePickerModule } from 'primeng/datepicker';
 import { Toast } from 'primeng/toast';
 import { MessageService } from 'primeng/api';
+import { ReportSortControlsComponent, ReportSortState } from '@/shared/components/report-sort-controls/report-sort-controls.component';
 import { ReportService } from '@/services/report.service';
 import { CommonCodeService } from '@/services/common-code-service';
 import { UserMenuService } from '@/services/user-menu.service';
@@ -22,7 +23,6 @@ import type {
     ReportAccessibleScope,
     DynamicReportCriterion,
     DynamicReportRow,
-    NominalRollSeniority,
 } from '@/models/report.model';
 import { unitScopeLine, memberTypeScopeLine } from '../report-scope.helper';
 import { OrgTreeMultiSelectComponent } from '@/shared/components/org-tree-multi-select/org-tree-multi-select.component';
@@ -45,12 +45,19 @@ type Lang = 'en' | 'bn';
 @Component({
     selector: 'app-report-unit-duration-nominal-roll',
     standalone: true,
-    imports: [CommonModule, FormsModule, TableModule, ButtonModule, SelectModule, MultiSelectModule, PaginatorModule, DatePickerModule, Toast, OrgTreeMultiSelectComponent],
+    imports: [ReportSortControlsComponent, CommonModule, FormsModule, TableModule, ButtonModule, SelectModule, MultiSelectModule, PaginatorModule, DatePickerModule, Toast, OrgTreeMultiSelectComponent],
     providers: [MessageService],
     templateUrl: './report-unit-duration-nominal-roll.component.html',
     styleUrls: ['../report-theme.scss', '../report-card-mtr.scss', './report-unit-duration-nominal-roll.component.scss'],
 })
 export class ReportUnitDurationNominalRollComponent implements OnInit, OnDestroy {
+    readonly reportSort = new ReportSortState();
+
+    onReportSortChange(): void {
+        this.first = 0;
+        if (this.searched) this.loadPage();
+    }
+
     lang: Lang = 'en';
 
     /** Toolbar quick search — matches Service ID or RAB ID (server-side). */
@@ -285,21 +292,6 @@ export class ReportUnitDurationNominalRollComponent implements OnInit, OnDestroy
         (the backend only returns the columns requested at query time). */
     onColumnsChange(): void { if (this.searched) this.loadPage(); }
 
-    /**
-     * Nominal Roll Seniority — which seniority leads the row order. Organization
-     * Seniority is the server's default (and the canonical order), so it leads here.
-     */
-    seniorityOptions: { label: string; value: NominalRollSeniority }[] = [
-        { label: 'Organization Seniority', value: 'OrganizationSeniority' },
-        { label: 'SRB Rank Seniority',     value: 'RankSeniority' },
-    ];
-    selectedSeniority: NominalRollSeniority = 'OrganizationSeniority';
-
-    /** Seniority drives the server-side ORDER BY, so re-fetch from page 1. */
-    onSeniorityChange(): void {
-        this.first = 0;
-        if (this.searched) this.loadPage();
-    }
 
     constructor(
         private _router: Router,
@@ -573,9 +565,9 @@ export class ReportUnitDurationNominalRollComponent implements OnInit, OnDestroy
     }
     private buildFilterLines(): string[] { return this.criteriaItems.map(it => `${it.label}: ${it.value}`); }
     clearFilters(): void {
+        this.reportSort.reset();
         this.idSearchText = '';
         this.lastIdSearchApplied = '';
-        this.selectedSeniority = 'OrganizationSeniority';
         this.selectedOrgNodeIds = [];
         this.selectedOrgIds = [];
         this.selectedRankIds = [];
@@ -719,9 +711,9 @@ export class ReportUnitDurationNominalRollComponent implements OnInit, OnDestroy
         ]));
 
         this.reportService.runDynamicUnitDurationReport({
+            ...this.reportSort.request,
             columns,
             criteria,
-            nominalRollSeniority: this.selectedSeniority,
             // Leave null so the backend applies the access-based rule:
             // full-access users see ex + serving members who served the unit
             // during the period; org-scope-restricted users are forced to

@@ -8,6 +8,7 @@ import { MultiSelectModule } from 'primeng/multiselect';
 import { PaginatorModule } from 'primeng/paginator';
 import { Toast } from 'primeng/toast';
 import { MessageService } from 'primeng/api';
+import { ReportSortControlsComponent, ReportSortState } from '@/shared/components/report-sort-controls/report-sort-controls.component';
 import { ReportService } from '@/services/report.service';
 import { CommonCodeService } from '@/services/common-code-service';
 import { Router } from '@angular/router';
@@ -67,6 +68,7 @@ import { debounceTime, forkJoin, Subject, Subscription } from 'rxjs';
     selector: 'app-report-mother-org',
     standalone: true,
     imports: [
+        ReportSortControlsComponent,
         CommonModule,
         FormsModule,
         TableModule,
@@ -82,6 +84,13 @@ import { debounceTime, forkJoin, Subject, Subscription } from 'rxjs';
     styleUrls: ['../report-theme.scss', '../report-card-mtr.scss', './report-mother-org.component.scss'],
 })
 export class ReportMotherOrgComponent implements OnInit, OnChanges, OnDestroy {
+    readonly reportSort = new ReportSortState();
+
+    onReportSortChange(): void {
+        this.first = 0;
+        if (this.searched) this.load();
+    }
+
     L = REPORT_LABELS;
     @Input() lang: ReportLang = 'en';
     /** Parent-locked Mother Org. Drives the `motherOrganization` criterion. */
@@ -1318,6 +1327,7 @@ export class ReportMotherOrgComponent implements OnInit, OnChanges, OnDestroy {
     }
 
     clearFilters(): void {
+        this.reportSort.reset();
         this.idSearchText = '';
         this.lastIdSearchApplied = '';
         this.selectedMemberTypeIds = [];
@@ -1387,6 +1397,7 @@ export class ReportMotherOrgComponent implements OnInit, OnChanges, OnDestroy {
             criteria.push({ fieldKey: 'rabOrgNode', idValues: this.selectedOrgNodeIds });
 
         this.reportService.runDynamicEmployeeBaseReport({
+            ...this.reportSort.request,
             columns: this.backendColumnKeys(),
             criteria,
             postingStatusFilter: this.postingStatus || null,

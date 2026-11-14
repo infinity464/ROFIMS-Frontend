@@ -11,6 +11,7 @@ import { DialogModule } from 'primeng/dialog';
 import { Toast } from 'primeng/toast';
 import { MessageService } from 'primeng/api';
 import { forkJoin, of } from 'rxjs';
+import { ReportSortControlsComponent, ReportSortState } from '@/shared/components/report-sort-controls/report-sort-controls.component';
 import { ReportService } from '@/services/report.service';
 import { EmpService } from '@/services/emp-service';
 import { FamilyInfoService } from '@/services/family-info-service';
@@ -96,6 +97,7 @@ interface CodeName { en: string | null; bn: string | null; }
     selector: 'app-report-address-individual',
     standalone: true,
     imports: [
+        ReportSortControlsComponent,
         CommonModule,
         FormsModule,
         TableModule,
@@ -112,6 +114,13 @@ interface CodeName { en: string | null; bn: string | null; }
     styleUrls: ['../../employee-reports/report-theme.scss', '../../employee-reports/report-card-mtr.scss', './report-address.component.scss'],
 })
 export class ReportAddressIndividualComponent implements OnInit, OnChanges {
+    readonly reportSort = new ReportSortState();
+
+    onReportSortChange(): void {
+        this.first = 0;
+        if (this.searched) this.load();
+    }
+
     L = REPORT_LABELS;
     @Input() lang: ReportLang = 'en';
     @Output() langToggle = new EventEmitter<void>();
@@ -449,6 +458,7 @@ export class ReportAddressIndividualComponent implements OnInit, OnChanges {
     }
 
     clearFilters(): void {
+        this.reportSort.reset();
         this.searchRabId = '';
         this.searchServiceId = '';
         this.searchNid = '';
@@ -499,6 +509,7 @@ export class ReportAddressIndividualComponent implements OnInit, OnChanges {
         ];
 
         this.reportService.runDynamicEmployeeBaseReport({
+            ...this.reportSort.request,
             columns: lookupColumns,
             criteria: lookupCriteria,
             pagination: { page_no: 1, row_per_page: 100 },

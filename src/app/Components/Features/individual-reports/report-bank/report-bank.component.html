@@ -32,6 +32,7 @@
 
         <div class="report-filter-body" [class.open]="filterOpen">
             <div class="report-filter-body-inner">
+                <app-report-sort-controls [state]="reportSort" (sortChange)="onReportSortChange()"></app-report-sort-controls>
                 <div class="ds-criteria-section">
                     <div class="ds-field-group">
                         <div class="ds-group-divider">

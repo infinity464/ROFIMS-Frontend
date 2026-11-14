@@ -21,6 +21,7 @@
 
     <div class="report-filter-body" [class.open]="filterOpen">
         <div class="report-filter-body-inner">
+                <app-report-sort-controls [state]="reportSort" (sortChange)="onReportSortChange()"></app-report-sort-controls>
             <div class="report-fields-row">
                 <div class="report-filter-field">
                     <label>{{ lang === 'en' ? 'SRB Unit' : 'এসআরবি ইউনিট' }} <span style="color:#b03a3a">*</span></label>
@@ -71,12 +72,6 @@
                 <div class="report-filter-field">
                     <label>{{ lang === 'en' ? 'Duration To' : 'সময়কাল পর্যন্ত' }}</label>
                     <p-datepicker [(ngModel)]="toDate" dateFormat="dd-mm-yy" [placeholder]="lang === 'en' ? 'Select' : 'নির্বাচন করুন'" [showIcon]="true" appendTo="body"></p-datepicker>
-                </div>
-                <div class="report-filter-field">
-                    <label>Nominal Roll Seniority</label>
-                    <p-select [options]="seniorityOptions" [(ngModel)]="selectedSeniority" (ngModelChange)="onSeniorityChange()"
-                        optionLabel="label" optionValue="value"
-                        placeholder="Select Seniority" styleClass="w-full" appendTo="body"></p-select>
                 </div>
             </div>
 

@@ -25,6 +25,7 @@
 
     <div class="report-filter-body" [class.open]="filterOpen">
         <div class="report-filter-body-inner">
+                <app-report-sort-controls [state]="reportSort" (sortChange)="onReportSortChange()"></app-report-sort-controls>
             <!-- Rank + Trade only. Mother Org is implicit (Corps is mother-org-specific).
                  Both pickers are scoped to the picked Corps — Rank via the Corps's
                  mother org, Trade as the Corps's CommonCode children. -->

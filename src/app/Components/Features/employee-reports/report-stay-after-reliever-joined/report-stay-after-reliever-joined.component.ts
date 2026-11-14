@@ -10,6 +10,7 @@ import { PaginatorModule } from 'primeng/paginator';
 import { DatePickerModule } from 'primeng/datepicker';
 import { Toast } from 'primeng/toast';
 import { MessageService } from 'primeng/api';
+import { ReportSortControlsComponent, ReportSortState } from '@/shared/components/report-sort-controls/report-sort-controls.component';
 import { ReportService } from '@/services/report.service';
 import { CommonCodeService } from '@/services/common-code-service';
 import { PermanentPostingJoineeDetailService } from '@/services/permanent-posting-joinee-detail.service';
@@ -37,12 +38,19 @@ type Lang = 'en' | 'bn';
 @Component({
     selector: 'app-report-stay-after-reliever-joined',
     standalone: true,
-    imports: [CommonModule, FormsModule, TableModule, ButtonModule, SelectModule, MultiSelectModule, PaginatorModule, DatePickerModule, Toast, OrgTreeMultiSelectComponent],
+    imports: [ReportSortControlsComponent, CommonModule, FormsModule, TableModule, ButtonModule, SelectModule, MultiSelectModule, PaginatorModule, DatePickerModule, Toast, OrgTreeMultiSelectComponent],
     providers: [MessageService],
     templateUrl: './report-stay-after-reliever-joined.component.html',
     styleUrls: ['../report-theme.scss', '../report-card-mtr.scss', './report-stay-after-reliever-joined.component.scss']
 })
 export class ReportStayAfterRelieverJoinedComponent implements OnInit, OnDestroy {
+    readonly reportSort = new ReportSortState();
+
+    onReportSortChange(): void {
+        this.first = 0;
+        if (this.searched) this.loadPage();
+    }
+
     lang: Lang = 'en';
 
     /** Toolbar quick search — matches Service ID or RAB ID (server-side). */
@@ -715,6 +723,7 @@ export class ReportStayAfterRelieverJoinedComponent implements OnInit, OnDestroy
     }
 
     clearFilters(): void {
+        this.reportSort.reset();
         this.idSearchText = '';
         this.lastIdSearchApplied = '';
         this.selectedOrgIds = [];
@@ -821,6 +830,7 @@ export class ReportStayAfterRelieverJoinedComponent implements OnInit, OnDestroy
 
         this.reportService
             .runDynamicLongStayReport({
+            ...this.reportSort.request,
                 columns,
                 criteria,
                 postingStatusFilter: 'Servings',

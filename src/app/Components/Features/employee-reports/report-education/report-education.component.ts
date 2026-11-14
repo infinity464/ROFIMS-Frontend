@@ -8,6 +8,7 @@ import { MultiSelectModule } from 'primeng/multiselect';
 import { PaginatorModule } from 'primeng/paginator';
 import { Toast } from 'primeng/toast';
 import { MessageService } from 'primeng/api';
+import { ReportSortControlsComponent, ReportSortState } from '@/shared/components/report-sort-controls/report-sort-controls.component';
 import { ReportService } from '@/services/report.service';
 import { CommonCodeService } from '@/services/common-code-service';
 import { Router } from '@angular/router';
@@ -28,12 +29,19 @@ import { debounceTime, forkJoin, Subject, Subscription } from 'rxjs';
 @Component({
     selector: 'app-report-education',
     standalone: true,
-    imports: [CommonModule, FormsModule, TableModule, ButtonModule, SelectModule, MultiSelectModule, PaginatorModule, Toast, OrgTreeMultiSelectComponent],
+    imports: [ReportSortControlsComponent, CommonModule, FormsModule, TableModule, ButtonModule, SelectModule, MultiSelectModule, PaginatorModule, Toast, OrgTreeMultiSelectComponent],
     providers: [MessageService],
     templateUrl: './report-education.component.html',
     styleUrls: ['../report-theme.scss', '../report-card-mtr.scss', './report-education.component.scss']
 })
 export class ReportEducationComponent implements OnInit, OnChanges, OnDestroy {
+    readonly reportSort = new ReportSortState();
+
+    onReportSortChange(): void {
+        this.first = 0;
+        if (this.searched) this.load();
+    }
+
     L = REPORT_LABELS;
     @Input() lang: ReportLang = 'en';
     /** Parent's CommonCode pick (Higher Education Qualification CodeId). */
@@ -762,6 +770,7 @@ export class ReportEducationComponent implements OnInit, OnChanges, OnDestroy {
     }
 
     clearFilters(): void {
+        this.reportSort.reset();
         this.idSearchText = '';
         this.lastIdSearchApplied = '';
         this.selectedOrgIds = [];
@@ -961,6 +970,7 @@ export class ReportEducationComponent implements OnInit, OnChanges, OnDestroy {
 
         this.reportService
             .runDynamicEmployeeBaseReport({
+            ...this.reportSort.request,
                 columns: this.backendColumnKeys(),
                 criteria,
                 postingStatusFilter: this.postingStatus || null,

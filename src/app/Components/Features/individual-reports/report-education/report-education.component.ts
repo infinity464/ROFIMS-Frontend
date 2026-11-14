@@ -9,6 +9,7 @@ import { InputTextModule } from 'primeng/inputtext';
 import { DialogModule } from 'primeng/dialog';
 import { Toast } from 'primeng/toast';
 import { MessageService } from 'primeng/api';
+import { ReportSortControlsComponent, ReportSortState } from '@/shared/components/report-sort-controls/report-sort-controls.component';
 import { ReportService } from '@/services/report.service';
 import { CommonCodeService } from '@/services/common-code-service';
 import { IdentityUserMemberTypeAccessService } from '@/services/identity-user-member-type-access.service';
@@ -95,6 +96,7 @@ type EducationReportRow = {
     selector: 'app-report-education-individual',
     standalone: true,
     imports: [
+        ReportSortControlsComponent,
         CommonModule,
         FormsModule,
         TableModule,
@@ -110,6 +112,13 @@ type EducationReportRow = {
     styleUrls: ['../../employee-reports/report-theme.scss', '../../employee-reports/report-card-mtr.scss', './report-education.component.scss'],
 })
 export class ReportEducationIndividualComponent implements OnInit, OnChanges {
+    readonly reportSort = new ReportSortState();
+
+    onReportSortChange(): void {
+        this.first = 0;
+        if (this.searched) this.load();
+    }
+
     L = REPORT_LABELS;
     @Input() lang: ReportLang = 'en';
     @Output() langToggle = new EventEmitter<void>();
@@ -573,6 +582,7 @@ export class ReportEducationIndividualComponent implements OnInit, OnChanges {
     }
 
     clearFilters(): void {
+        this.reportSort.reset();
         this.searchRabId = '';
         this.searchServiceId = '';
         this.searchNid = '';
@@ -628,6 +638,7 @@ export class ReportEducationIndividualComponent implements OnInit, OnChanges {
         ];
 
         this.reportService.runDynamicEmployeeBaseReport({
+            ...this.reportSort.request,
             columns: lookupColumns,
             criteria: lookupCriteria,
             pagination: { page_no: 1, row_per_page: 100 },
@@ -708,6 +719,7 @@ export class ReportEducationIndividualComponent implements OnInit, OnChanges {
         ]));
 
         this.reportService.runDynamicEmployeeEducationReport({
+            ...this.reportSort.request,
             columns: projectedColumns,
             criteria: [{ fieldKey: 'employeeIdRaw', idValue: employeeId }],
             pagination: { page_no: 1, row_per_page: 1000 },
