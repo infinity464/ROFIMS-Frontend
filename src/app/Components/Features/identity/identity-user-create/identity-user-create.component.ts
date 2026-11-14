@@ -1,4 +1,5 @@
 import { Component, OnInit, inject } from '@angular/core';
+import { ipv4Validator } from '@/shared/validators/ipv4.validator';
 import { UserMenuService } from '@/services/user-menu.service';
 import { Router } from '@angular/router';
 import { CommonModule } from '@angular/common';
@@ -315,6 +316,7 @@ export class IdentityUserCreateComponent implements OnInit {
       userName: (o['userName'] ?? o['UserName']) as string,
       email: (o['email'] ?? o['Email']) as string,
       phoneNumber: (o['phoneNumber'] ?? o['PhoneNumber']) as string | null,
+      ipAddress: (o['ipAddress'] ?? o['IpAddress'] ?? null) as string | null,
       roleName: (o['roleName'] ?? o['RoleName']) as string,
       lockoutEnd: lockoutEnd ?? null,
       isHidden: (o['isHidden'] ?? o['IsHidden']) === true,
@@ -458,7 +460,7 @@ export class IdentityUserCreateComponent implements OnInit {
       email: ['', [Validators.required, Validators.email]],
       userName: ['', [Validators.required, Validators.minLength(3), Validators.pattern(USERNAME_PATTERN)]],
       phoneNumber: ['', [Validators.required, phoneValidator]],
-      ipAddress: [''],
+      ipAddress: ['', ipv4Validator],
       password: [
         '',
         [
@@ -589,6 +591,7 @@ export class IdentityUserCreateComponent implements OnInit {
       const rabUnitIds: number[] = this.buildRabUnitIds();
       this.identityService
         .updateUser({
+          ipAddress: value.ipAddress?.trim() || null,
           email: value.email,
           userName: value.userName || undefined,
           phoneNumber: value.phoneNumber || undefined,
@@ -652,6 +655,7 @@ export class IdentityUserCreateComponent implements OnInit {
 
     this.identityService
       .createUser({
+        ipAddress: value.ipAddress?.trim() || null,
         email: value.email,
         userName: value.userName || undefined,
         phoneNumber: value.phoneNumber || undefined,
@@ -809,6 +813,7 @@ export class IdentityUserCreateComponent implements OnInit {
     }
     this.editingUser = user;
     this.form.patchValue({
+      ipAddress: user.ipAddress ?? '',
       email: user.email,
       userName: user.userName ?? '',
       phoneNumber: user.phoneNumber ?? '',

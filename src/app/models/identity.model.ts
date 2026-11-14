@@ -1,6 +1,7 @@
 /** Matches backend Identity.Models */
 
 export interface ApplicationUser {
+  ipAddress?: string | null;
   id: string;
   userName: string;
   email: string;
@@ -105,6 +106,7 @@ export interface CreateRoleModel {
 }
 
 export interface UserModel {
+  ipAddress?: string | null;
   email: string;
   userName?: string;
   phoneNumber?: string;

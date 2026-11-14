@@ -270,8 +270,15 @@
               id="ipAddress"
               formControlName="ipAddress"
               placeholder="e.g. 192.168.0.1"
+              maxlength="15"
+              aria-describedby="ipAddressHelp ipAddressError"
+              [attr.aria-invalid]="form.get('ipAddress')?.invalid && form.get('ipAddress')?.touched"
               class="w-full"
             />
+            <small id="ipAddressHelp" class="block mt-1 text-muted-color">Enter an IPv4 address, or leave blank to allow access from any IP address.</small>
+            @if (form.get('ipAddress')?.invalid && form.get('ipAddress')?.touched) {
+              <small id="ipAddressError" class="block mt-1 text-red-500">Enter a valid IPv4 address, for example 192.168.0.10.</small>
+            }
           </div>
           <div class="field">
             <label for="organizationScope" class="block mb-2 font-medium">Organization Scope</label>
